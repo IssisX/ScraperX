@@ -1,0 +1,258 @@
+{
+  "head": "1f92dca096c007e95681dc0f73f400a171c17f94",
+  "scope": "Proposed takeoff and forklift publication source only; unbuilt",
+  "files": {
+    "CMakeLists.txt": {
+      "working_sha256_at_capture": "0ed9e240bf6ab3bc1368da0ce90dadd7b684b266b95cd473078d6434d720afb2",
+      "base_sha256": "6d5828bd958891975600ca7ae2377548181252f0cd58369b74c9561f3e5b0648",
+      "proposed_sha256": "59d52b111c6f8673197f5fe6888e79fd9e1fa2b33fbd7ec2206f662f8facc2aa",
+      "modified_from_working": true
+    },
+    "src/sim/physical_foot_push.cpp": {
+      "working_sha256_at_capture": "2cfe101248c7e65e67bcbff2a4542a94fbc4ea154bb0c9a2b7489d713511c5c0",
+      "base_sha256": "cf49aee7cfeec85eee4fd843b9d74e88ef4165d27e31fb953b3505990fe8199e",
+      "proposed_sha256": "2cfe101248c7e65e67bcbff2a4542a94fbc4ea154bb0c9a2b7489d713511c5c0",
+      "modified_from_working": false
+    },
+    "src/sim/physical_foot_push.hpp": {
+      "working_sha256_at_capture": "582b4246a414bf7e9f4acfec93a217b86957004b54985204f55d40e87dd8c860",
+      "base_sha256": "90856b0832ddc94ac3bced514b24e9d912b38b7829868d2be6a78dc007a642f1",
+      "proposed_sha256": "582b4246a414bf7e9f4acfec93a217b86957004b54985204f55d40e87dd8c860",
+      "modified_from_working": false
+    },
+    "src/sim/simulation.cpp": {
+      "working_sha256_at_capture": "cd9d7148c8ca937b35b2c1108fa8cf36a8e21cd8f5b57b250d3ebb683715fc79",
+      "base_sha256": "d7010859784b5ee50f4aac8b6c6a2edddf223d8a60a35386d199b46fb6f2218d",
+      "proposed_sha256": "8b5512be43f12d932611838be75ec3ffe7cecda89b039fc012e9bed0bbc5ee71",
+      "modified_from_working": true
+    },
+    "src/sim/simulation.hpp": {
+      "working_sha256_at_capture": "2eae6317e29f857cd1ad82d70acd2e4a735cf7a6dc8d589bfe79e4df6962f99a",
+      "base_sha256": "57f165f39595c6100f3e8a094f7df7646ca6248c54a29d9be7c974c2b8285e1f",
+      "proposed_sha256": "7fef8f250357f40a2a3de33a29e6c193bb1f4d1edb3be0817d903ade86725e3f",
+      "modified_from_working": true
+    },
+    "src/sim/simulation/checkpoint.cpp": {
+      "working_sha256_at_capture": "72733eec2a0458026878e3017e4431f95b4d39fadf33dd4d6abe834a2362df7c",
+      "base_sha256": "b2e3085572a0dff780cff1d9cc9054cb5c293061042f5cf32857e4889530d8ae",
+      "proposed_sha256": "72733eec2a0458026878e3017e4431f95b4d39fadf33dd4d6abe834a2362df7c",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/constants.hpp": {
+      "working_sha256_at_capture": "1bed0fb2f51a2ea0aba2037138f2a675782405b90066587de7d6ae682b79a5d5",
+      "base_sha256": "63e7dff48276215ee45b41ac673c848d8d69a4654e8a9f8b31fe8aa6b702aa62",
+      "proposed_sha256": "1bed0fb2f51a2ea0aba2037138f2a675782405b90066587de7d6ae682b79a5d5",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/hand_transfer.cpp": {
+      "working_sha256_at_capture": "e43142734ea30a796bf2b70a1e3e5c61e0e3a4e8cc2f3868cbef1b41c195a53d",
+      "base_sha256": "15702c2c53b2250c7e8576508fa4cc178dc365cac1c0e909b20140cef6c5f001",
+      "proposed_sha256": "e43142734ea30a796bf2b70a1e3e5c61e0e3a4e8cc2f3868cbef1b41c195a53d",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/snapshot.cpp": {
+      "working_sha256_at_capture": "496cf64b8a3b7f01fd8a6edadcf0c73ea6381631fe78a6b35f2fd98b7120fb3d",
+      "base_sha256": "06f158edaf34fa53cc3c6c7f3343e4af46fce152646233e1f65def5d751ce8b3",
+      "proposed_sha256": "496cf64b8a3b7f01fd8a6edadcf0c73ea6381631fe78a6b35f2fd98b7120fb3d",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/tick.cpp": {
+      "working_sha256_at_capture": "a7e93b33a2b212907f43e402b5e8407357944141420eabb5778d0eca1d9d045f",
+      "base_sha256": "a9ecd8fe6d78cae435e72508145b913f02fe18d8056165954ef58112aa9a1f8c",
+      "proposed_sha256": "a7e93b33a2b212907f43e402b5e8407357944141420eabb5778d0eca1d9d045f",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/world.cpp": {
+      "working_sha256_at_capture": "fcf4624bff3db7811e561cf13671139b4c4ba724b4194702c07a423dc850c7c7",
+      "base_sha256": "9078864f61d2ebda803019346c5f7ca2939e43716e621dfd3f855d19ff51e16b",
+      "proposed_sha256": "fcf4624bff3db7811e561cf13671139b4c4ba724b4194702c07a423dc850c7c7",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/world.hpp": {
+      "working_sha256_at_capture": "2a0a8036d05721b97432ec221ad437bd6c282ca9f8340ef5f7e44aa440f4646e",
+      "base_sha256": "fd58312f8aab3ae9ce1ee8ac20de5f2148064de1dbc383e8ae4df482695f21ac",
+      "proposed_sha256": "2a0a8036d05721b97432ec221ad437bd6c282ca9f8340ef5f7e44aa440f4646e",
+      "modified_from_working": false
+    },
+    "src/bridge/scraperx_simulation.cpp": {
+      "working_sha256_at_capture": "328cf276ba534064c2dd9f4000ea7d0c070a11e2e50b573d1fb1747c2f9b0f99",
+      "base_sha256": "381a2ea7b48d3e38591f4ab0e6303d9aa70b5a25f6d063df8e835b4a0c53b878",
+      "proposed_sha256": "4923c5aac103e3c78ab55f7e7a0f823543aa4ecae3ccf512b9cbe03499c9d9a1",
+      "modified_from_working": true
+    },
+    "src/bridge/scraperx_simulation.hpp": {
+      "working_sha256_at_capture": "3412c1e8511e61766380227e5c850fc3c482c963866849f0e92c85e37b887324",
+      "base_sha256": "e7c1c8460a44f28bc32206237ead1349a1a2ef374652dc268b3024bb7d7a2c18",
+      "proposed_sha256": "7e41ab70e2251ec4b31c2c9d0579cd9546f30081e33f4c41496e979465fdeac3",
+      "modified_from_working": true
+    },
+    "godot/presentation/main.gd": {
+      "working_sha256_at_capture": "f51c23071e4a691559e4eaff73f286fcd8c5dddf02407e80b7c7d96413570f72",
+      "base_sha256": "ec323eba6f5393cd6a6bf14bab77c95297d7c6392ac1c43fb4de4c732496e271",
+      "proposed_sha256": "0ca15a0da158e03b5b03a7f455bf50fbabdcc2307e6914de1ad7ec5e57e91718",
+      "modified_from_working": true
+    },
+    "godot/presentation/ui/touch_controls.gd": {
+      "working_sha256_at_capture": "4df1c5740ea9990e56f787a30fbd17f62376cf4e1c5b194dd88bf7d383637b44",
+      "base_sha256": "c9e881fb6dd44ce6df6822de00560a9b1f98269163471e1fd9b9dc3e5b4e92ef",
+      "proposed_sha256": "4df1c5740ea9990e56f787a30fbd17f62376cf4e1c5b194dd88bf7d383637b44",
+      "modified_from_working": false
+    },
+    "tests/physical_foot_push_tests.cpp": {
+      "working_sha256_at_capture": "8ef9d87bef1f7fcb795f448b6fbf644f3035b31df9703456c9cdc6671ea9bc6e",
+      "base_sha256": "a986d90d920b2d291b8aa6658701bfd5fc7f7811f37aa27fb2dfd03f8c182314",
+      "proposed_sha256": "8ef9d87bef1f7fcb795f448b6fbf644f3035b31df9703456c9cdc6671ea9bc6e",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/parkour_intent.cpp": {
+      "working_sha256_at_capture": "4919088476ecbb7b8b4f4b77e2a214dd0a405bae638a1dfba4dcf02b782e26db",
+      "base_sha256": null,
+      "proposed_sha256": "4919088476ecbb7b8b4f4b77e2a214dd0a405bae638a1dfba4dcf02b782e26db",
+      "modified_from_working": false
+    },
+    "src/sim/simulation/forklift.cpp": {
+      "working_sha256_at_capture": "5f9b58d382725e2acd868d25ceb5ceb60347e26ea43f303f95d8560292670606",
+      "base_sha256": null,
+      "proposed_sha256": "5f9b58d382725e2acd868d25ceb5ceb60347e26ea43f303f95d8560292670606",
+      "modified_from_working": false
+    },
+    "src/sim/warehouse_forklift.cpp": {
+      "working_sha256_at_capture": "336b48358057b3a53cf3224f106af635dab4f0806465715534f84636afa2a778",
+      "base_sha256": null,
+      "proposed_sha256": "336b48358057b3a53cf3224f106af635dab4f0806465715534f84636afa2a778",
+      "modified_from_working": false
+    },
+    "src/sim/warehouse_forklift.hpp": {
+      "working_sha256_at_capture": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+      "base_sha256": null,
+      "proposed_sha256": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+      "modified_from_working": false
+    },
+    "src/sim/warehouse_forklift_yard.cpp": {
+      "working_sha256_at_capture": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+      "base_sha256": null,
+      "proposed_sha256": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+      "modified_from_working": false
+    },
+    "src/sim/warehouse_forklift_yard.hpp": {
+      "working_sha256_at_capture": "a0b00e8ded080483e5637e8f10df059e61b591648f44fcaa96168d9e00356dfb",
+      "base_sha256": null,
+      "proposed_sha256": "a0b00e8ded080483e5637e8f10df059e61b591648f44fcaa96168d9e00356dfb",
+      "modified_from_working": false
+    },
+    "tests/parkour_intent_flow_tests.cpp": {
+      "working_sha256_at_capture": "3d821ad77f541ef8ced1113268866d94cce9bd2beaec4abf3beb4c46093027df",
+      "base_sha256": null,
+      "proposed_sha256": "3d821ad77f541ef8ced1113268866d94cce9bd2beaec4abf3beb4c46093027df",
+      "modified_from_working": false
+    },
+    "tests/parkour_intent_buffer_tests.cpp": {
+      "working_sha256_at_capture": "015fe2fc45caa321ea7e69b13a2adebe48e90d979c7006f4978046e07c4e8aee",
+      "base_sha256": null,
+      "proposed_sha256": "015fe2fc45caa321ea7e69b13a2adebe48e90d979c7006f4978046e07c4e8aee",
+      "modified_from_working": false
+    },
+    "tests/warehouse_forklift_tests.cpp": {
+      "working_sha256_at_capture": "76cb34061b29962f49e8a80177b2527d617c381087164b9881b5114fae320764",
+      "base_sha256": null,
+      "proposed_sha256": "76cb34061b29962f49e8a80177b2527d617c381087164b9881b5114fae320764",
+      "modified_from_working": false
+    },
+    "tests/warehouse_forklift_flow_tests.cpp": {
+      "working_sha256_at_capture": "628109154544adfb4915af5bdfb70aaae4b0d3bab5e99d017fcbf198ad049661",
+      "base_sha256": null,
+      "proposed_sha256": "628109154544adfb4915af5bdfb70aaae4b0d3bab5e99d017fcbf198ad049661",
+      "modified_from_working": false
+    },
+    "tests/warehouse_forklift_route_tests.cpp": {
+      "working_sha256_at_capture": "e9f371cad33f8a133252fa87bf7a3cee8bac9ee5009f4db27f45f63268393f89",
+      "base_sha256": null,
+      "proposed_sha256": "e9f371cad33f8a133252fa87bf7a3cee8bac9ee5009f4db27f45f63268393f89",
+      "modified_from_working": false
+    },
+    "tests/forklift_route_walk.hpp": {
+      "working_sha256_at_capture": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73",
+      "base_sha256": null,
+      "proposed_sha256": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73",
+      "modified_from_working": false
+    },
+    "godot/presentation/forklift_view.gd": {
+      "working_sha256_at_capture": "bca57329671e07db5f95d76a65c6096642967294026ca53047b1efe931c31447",
+      "base_sha256": null,
+      "proposed_sha256": "bca57329671e07db5f95d76a65c6096642967294026ca53047b1efe931c31447",
+      "modified_from_working": false
+    },
+    "godot/tests/forklift_controls_test.gd": {
+      "working_sha256_at_capture": "c1590bccfbebeea17c44f313cc1681f2d04cd6b5e433238b47803f663601aaa7",
+      "base_sha256": null,
+      "proposed_sha256": "c1590bccfbebeea17c44f313cc1681f2d04cd6b5e433238b47803f663601aaa7",
+      "modified_from_working": false
+    }
+  },
+  "excluded": [
+    {
+      "file": "src/sim/grappling_gun.cpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "995c362d989861468cc42c15e19268ff45bb10e3d294f13b9d0a5fe552a4a20e"
+    },
+    {
+      "file": "src/sim/grappling_gun.hpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "e2f9e2216a615566c248ed67e92700d742b8dd26cb03eac23d37cdeaaa94dfe1"
+    },
+    {
+      "file": "src/sim/grappling_hook_geometry.hpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "38ba3a7edff0999e3e0f84b59a21303f3156a5ee50f8f55d15349d889a6b3c70"
+    },
+    {
+      "file": "src/sim/simulation/grapple.cpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "2b1b581a7e315d507dcecbf096f51f8dc953a47c70418ccb13ddda927d1b286c"
+    },
+    {
+      "file": "godot/presentation/grappling_gun_view.gd",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "efef5eb8c36d0bd94ab3317b4db117e3aa048ec742b9865265bd439f0c4008c2"
+    },
+    {
+      "file": "godot/tests/grappling_gun_test.gd",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "cc8a3dd9bbba090c02406f9933b3a59eb38284d4fd00f870d42f2cbaf7584ca0"
+    },
+    {
+      "file": "tests/grappling_gun_tests.cpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "66ea9e51f50ba8aacae696514883dcb7eba9721b6495de3fb50a9335a61b61dd"
+    },
+    {
+      "file": "tests/grappling_retention_observation.hpp",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "8a9d5cd6207187194083c8cf9ae776f020d93804fe74c27b6e98c22466e33ad2"
+    },
+    {
+      "file": "godot/presentation/solid_export.gd",
+      "proposed_equals_HEAD": true,
+      "working_sha256": "455ca937de6f43520d536fde074569976a18bd9abeba5587fc647e448106cf79"
+    }
+  ],
+  "route_files_pending_root_refresh": [
+    "tests/warehouse_forklift_route_tests.cpp",
+    "tests/forklift_route_walk.hpp"
+  ],
+  "transformations": {
+    "CMakeLists.txt": "Exclude physical_hook_gate TU/no-RTTI token; add full-route target beside Jolt-only forklift tests (pending root route freeze).",
+    "src/sim/simulation.hpp": "Restore HEAD Hook snapshot layout; retain ForkliftSnapshot/API/input/history.",
+    "src/sim/simulation.cpp": "Exclude only gate interpolation; retain forklift reset/input/history.",
+    "src/bridge/scraperx_simulation.hpp": "Exclude gate geometry API; keep forklift bindings.",
+    "src/bridge/scraperx_simulation.cpp": "Restore HEAD hook geometry function; exclude gate bind/snapshot fields; retain forklift dictionary/methods.",
+    "godot/presentation/main.gd": "Exclude unintegrated ParkourYard; restore HEAD single-argument hook configuration; retain all forklift UI/input/view changes."
+  },
+  "patch_sha256": "19c32257947822a7262c571fbf46dc5db11daf5e6fdcccda2bb0bcf23a6be29e",
+  "excluded_untracked": [
+    "src/sim/physical_hook_gate.cpp",
+    "src/sim/physical_hook_gate.hpp",
+    "src/sim/grappling_hook_gate_geometry.hpp",
+    "godot/presentation/parkour_yard.gd"
+  ]
+}

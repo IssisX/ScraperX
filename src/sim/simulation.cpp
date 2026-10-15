@@ -103,6 +103,7 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
+    forklift_input_ = {0, 0, 0, 0, 1};
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -139,6 +140,7 @@ bool Simulation::restart_checkpoint() noexcept {
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
+    forklift_input_ = {0, 0, 0, 0, 1};
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -594,6 +596,7 @@ void Simulation::step_fixed() noexcept {
     commands.needle_hoist_input = needle_hoist_input_;
     commands.service_lift_input = service_lift_input_;
     commands.supplied_machine_input = supplied_machine_input_;
+    commands.forklift_input = forklift_input_;
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.water_screw_toggle_requested = water_screw_toggle_requested_;
     commands.water_lift_valve_toggle_requested = water_lift_valve_toggle_requested_;
@@ -777,6 +780,7 @@ void Simulation::capture_render_history() noexcept {
     }
     previous_slingshot_state_ = slingshot_state();
     previous_grapple_gun_state_ = grapple_gun_state();
+    previous_forklift_state_ = forklift_state();
     previous_cable_points_.resize(kit_cable_count());
     for (std::uint32_t cable = 0; cable < previous_cable_points_.size(); ++cable) {
         auto &points = previous_cable_points_[cable];
@@ -842,6 +846,7 @@ GrappleGunSnapshot Simulation::render_grapple_gun_state() const noexcept {
                 float(hook.rotation.z), float(hook.rotation.w));
             const auto rotation = a.SLERP(b, alpha);
             hook.rotation = {rotation.GetX(), rotation.GetY(), rotation.GetZ(), rotation.GetW()};
+
         }
         if (out.line_attached && hook.body == out.active_hook) {
             const auto eye = JPH::Quat(float(hook.rotation.x), float(hook.rotation.y),

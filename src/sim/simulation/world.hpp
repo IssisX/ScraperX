@@ -23,6 +23,7 @@
 #include "sim/traversal_plan.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
+#include "sim/warehouse_forklift_yard.hpp"
 #include "sim/supplied_ascent.hpp"
 #include "sim/parkour_route.hpp"
 #include "sim/deformable_plank.hpp"
@@ -118,6 +119,7 @@ public:
         double needle_hoist_input = 0.0;
         double service_lift_input = 0.0;
         double supplied_machine_input = 0.0;
+        std::array<double, 5> forklift_input{0, 0, 0, 0, 1};
         bool valve_toggle_requested = false;
         bool water_screw_toggle_requested = false;
         bool water_lift_valve_toggle_requested = false;
@@ -138,6 +140,10 @@ public:
 
     static bool nearby_grapple_hook(const GrapplingGun::Readback &state);
     [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept;
+    [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
+    [[nodiscard]] bool forklift_controls_reachable(const JPH::BodyInterface &bodies) const noexcept;
+    void prepare_forklift(const StepCommands &commands, const JPH::BodyInterface &bodies);
+    void refresh_forklift_snapshot(const JPH::BodyInterface &bodies);
 
     void apply_grapple_commands(const StepCommands &commands);
 
@@ -883,6 +889,9 @@ private:
     void record_foot_contact(const JPH::BodyInterface &bodies, const SupportSample &support) noexcept;
 
     void refresh_rigid_transfer_foot() noexcept;
+    void prepare_trailing_plant(const StepCommands &commands) noexcept;
+    void retain_trailing_plant(const StepCommands &commands, bool jump_started) noexcept;
+    [[nodiscard]] bool try_begin_coyote_push(JPH::BodyInterface &bodies) noexcept;
 
     void pre_step_physical_foot(float delta_seconds) noexcept;
 
@@ -1044,6 +1053,9 @@ private:
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<DeformablePlank> deformable_plank_;
     std::unique_ptr<ServiceLift> service_lift_;
+    WarehouseForkliftYard forklift_yard_{};
+    std::unique_ptr<WarehouseForklift> warehouse_forklift_;
+    ForkliftSnapshot forklift_snapshot_{};
     std::unique_ptr<SuppliedAscent> supplied_ascent_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<Slingshot> slingshot_;
@@ -1061,7 +1073,8 @@ private:
     std::unique_ptr<GrapplingGun> grappling_gun_;
     bool grapple_acquired_ = false, grapple_equipped_ = false;
     bool foot_push_started_this_tick_ = false;
-    enum class FootPushPurpose { None, PlankJump, RigidTransfer };
+    enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush };
+    std::uint64_t trailing_foot_contact_tick_ = 0;
     FootPushPurpose foot_push_purpose_ = FootPushPurpose::None;
     FootContactSample foot_contact_{}, foot_push_contact_{};
     std::uint64_t contact_solve_serial_ = 0;
@@ -1251,6 +1264,7 @@ private:
         std::string cargo_net;
         std::string catch_net;
         ServiceLift::State service_lift{};
+        WarehouseForklift::Checkpoint forklift{};
         SuppliedAscent::Checkpoint supplied_ascent{};
         DeformablePlank::State deformable_plank{};
     };

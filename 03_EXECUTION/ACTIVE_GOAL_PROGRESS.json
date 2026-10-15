@@ -138,10 +138,10 @@
     "live_checkpoint": "03_EXECUTION/LIVE_RESUME_20261015.md",
     "owner_backlog": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md",
     "branch": "ChatGPT",
-    "published_head": "35de8a7dc59d00d27c48b4a7d31af8763ceb3ab0",
-    "active": "Make real forklift cargo pickup/placement/withdrawal create usable upward footholds and actual gallery exit/retry",
+    "published_head": "1f92dca096c007e95681dc0f73f400a171c17f94",
+    "active": "Publish accepted takeoff/forklift source onChatGPT and deliver its exact-source Android APK",
     "blocker": null,
-    "native_forklift": "Mechanical four-substep trial4 PASS; actual public station/lift/energy/invalid-input/leaving trial2 PASS; cargo route, matching native bridge/UI/APK pending",
+    "native_forklift": "Complete connected two600kg pickup/stack/withdrawal plus90tick released-hand cargo/gallery support, onward walk and actual grade retry PASS",
     "movement_plan": "03_EXECUTION/PARKOUR_PHASED_PLAN_20261015.md",
     "rendering": "Published0658f69; matched shipping4311\u21921036up/2893\u2192766down; strict up<1000 pending36; device fix unverified",
     "apk_candidate": {
@@ -160,12 +160,20 @@
     "canonical_deferred_scope_preserved": true,
     "takeoff_evidence": "evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md",
     "next_actions": [
-      "Actual approach/pickup/carry/stack/withdraw and player gallery footing/retry",
-      "Matching Linux native bridge and Godot controls/view integration",
-      "Exact-source committed/pushed APK delivery; retain full proof failures",
-      "Same-truck crane freight and complete movement/canonical scope"
+      "Selective source/docs commit and scoped GitHub push",
+      "Follow exact-source APK candidate through terminal artifact using shell worker",
+      "Same-truck crane freight; retain movement phases2\u20138 and full canonical scope"
     ],
-    "running_workers": []
+    "running_workers": [],
+    "native_archive": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a",
+      "sha256": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189"
+    },
+    "current_experiment": "Final selected-source connected cargo route trial9 PASS/exit0 in239.16s; no replay running. All failures retained.",
+    "godot_forklift": "SELECTED actual Main/native19checks PASS, import/runtime exit0, matching SO6b75c1bb...; noAPK/device claim",
+    "publication_prep": "31selected sourcefiles staged and matching accepted snapshot; preserve excluded grapple/gate and unintegrated terrain. Source commit/push/APK pending",
+    "scope_register": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md (R01\u2013R15 plus full canonical scope)",
+    "cargo_route_evidence": "evidence/forklift-2026-10-15/CARGO_ROUTE_ACCEPTANCE.md"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

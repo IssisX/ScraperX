@@ -1,0 +1,8 @@
+BOARDED truck=-100,0.604315,-56.0043 crate=-100,-5.96046e-08,-48 forks=-99.9999,0.139549,-54.2703 player=-100.266,1.2495,-57.6749 support=2440 reachable=1 lift=2.80922e-05 tilt=-0.000359736 force=1001.2
+PICKUP_APPROACH truck=-100,0.60431,-56.0043 crate=-100,-5.96046e-08,-48 forks=-99.9999,0.139597,-54.2702 player=-100.266,1.24944,-57.675 support=2440 reachable=1 lift=2.76297e-05 tilt=-0.000359695 force=1029.34
+PICKUP_APPROACH truck=-99.9989,0.604166,-54.1944 crate=-100,-5.96046e-08,-48 forks=-99.9989,0.140503,-52.46 player=-100.265,1.24819,-55.8732 support=2440 reachable=1 lift=-3.80427e-07 tilt=-0.000376433 force=980.021
+PICKUP_APPROACH truck=-99.998,0.604052,-51.8627 crate=-100,-5.96046e-08,-48 forks=-99.9979,0.139341,-50.1286 player=-100.264,1.2491,-53.5414 support=2440 reachable=1 lift=4.14246e-06 tilt=-0.000361564 force=1156.15
+FORKS_INSERTED truck=-99.9973,0.604034,-51.041 crate=-100,-5.96046e-08,-48 forks=-99.9975,0.139962,-49.3068 player=-100.264,1.24854,-52.7132 support=2440 reachable=1 lift=3.16239e-05 tilt=-0.000355247 force=1156.64
+CARGO_RAISED truck=-99.9974,0.602039,-51.0349 crate=-99.9973,0.661531,-48.0567 forks=-99.9976,0.842317,-49.3046 player=-100.264,1.26299,-52.7086 support=2440 reachable=1 lift=0.72145 tilt=-0.000420458 force=4991.89
+PICKUP_HELD truck=-99.9974,0.602727,-51.0371 crate=-99.9971,0.708249,-48.0245 forks=-99.9976,0.868689,-49.3205 player=-100.264,1.25726,-52.7099 support=2440 reachable=1 lift=0.721435 tilt=0.044669 force=3844.29
+PASS actual public boarding and600kg contact pickup; route placement still pending

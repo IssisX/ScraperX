@@ -128,15 +128,17 @@ struct Actuator final {
     }
 };
 
-void limits(const PhysicalFootPush::Readback &state, double previous_work) {
+void limits(const PhysicalFootPush::Readback &state, double previous_work, bool planted_profile = false) {
     require(std::isfinite(state.command_work_bound_j) &&
                 std::isfinite(state.nominal_spring_storage_j) &&
                 std::isfinite(state.last_impulse_ns) && finite(state.player_force),
             "native force and separate work/storage diagnostics stay finite");
     require(state.command_work_bound_j >= previous_work - 1.0e-8 &&
                 state.command_work_bound_j <= 1285.625 + 1.0e-5 &&
-                state.last_command_work_bound_j <= 5000.0 * kDt + 1.0e-4,
-            "actual representable target advances respect command budget and power");
+                state.last_command_work_bound_j <= 5000.0 * kDt + 1.0e-4 &&
+                (!planted_profile || (state.motor_positive_work_j == state.command_work_bound_j &&
+                    state.target_storage_delta_j == 0 && state.nominal_spring_storage_j == 0)),
+            "actual target advances respect total work and the selected profile power limit");
     require(state.commanded_stroke_m >= -1.0e-6F && state.commanded_stroke_m <= .3F + 1.0e-6F &&
                 state.elapsed_seconds <= .25 + kDt + 1.0e-6,
             "finite physical push respects stroke and duration limits");
@@ -144,8 +146,17 @@ void limits(const PhysicalFootPush::Readback &state, double previous_work) {
                 state.last_impulse_ns <= 3500.0F * kDt + 1.0e-4F &&
                 state.peak_load_n <= 3500.01F,
             "one native collision row is compression-only and force-capped");
-    require(std::abs(state.command_work_bound_j - 3500.0 * state.commanded_stroke_m) < 2.0e-3,
-            "charged command work equals force bound times actual target extension");
+    if (planted_profile) {
+        require(state.planted_motor_profile && state.commanded_stroke_m == 0 &&
+                    state.rest_distance_m == state.initial_distance_m &&
+                    state.motor_absorbed_work_j >= 0 && state.retired_nominal_storage_j >= 0 &&
+                    std::abs(state.actual_motor_extension_m -
+                        std::max(0.0F, state.actual_distance_m - state.initial_distance_m)) < 1.0e-6F,
+                "motor receipts separate actual geometry, positive work, absorption and retired storage");
+    } else {
+        require(std::abs(state.command_work_bound_j - 3500.0 * state.commanded_stroke_m) < 2.0e-3,
+                "charged command work equals force bound times actual target extension");
+    }
 }
 
 void zero_preload_and_line_impulse(bool offset, Quat basis = Quat::sIdentity()) {
@@ -328,6 +339,302 @@ void held_target_retains_row_and_finite_lifetime() {
             "fresh attachment can command extension after held predecessor expires");
 }
 
+void passive_plant_activation_retains_row() {
+    scenario = "passive_plant_activation_retains_row";
+    Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
+    Actuator actuator(pair);
+    const auto support = pair.kit.body_id(pair.cell);
+    require(!actuator.push.activate_planted_push(), "an absent row cannot activate");
+    require(actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()),
+            "actual material point accepts a passive plant");
+    const auto initial = actuator.push.readback();
+    require(initial.passive_plant && initial.target_held && initial.active &&
+                initial.rest_distance_m == initial.actual_distance_m &&
+                initial.command_work_bound_j == 0 && initial.nominal_spring_storage_j == 0,
+            "passive plant captures actual distance without artificial preload");
+    for (int tick = 0; tick < 4; ++tick) {
+        actuator.tick();
+        const auto &state = actuator.push.readback();
+        require(state.active && state.passive_plant && state.target_held &&
+                    state.command_work_bound_j == 0 && state.commanded_stroke_m == 0 &&
+                    state.last_impulse_ns == 0 && state.nominal_spring_storage_j == 0,
+                "unloaded passive solves add neither command work nor preload impulse");
+    }
+    // External compression must still receive a real passive row reaction.
+    pair.fixture.system.GetBodyInterface().SetLinearVelocity(pair.kit.body_id(pair.player), Vec3(0, -.1F, 0));
+    actuator.tick();
+    actuator.tick();
+    const auto before = actuator.push.readback();
+    require(before.last_impulse_ns > 0 && before.command_work_bound_j == 0,
+            "external compression loads the zero-command passive row");
+    require(!actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()),
+            "passive acquisition cannot replace an existing row");
+    const auto cell_before_clutch = snapshot(pair.fixture, support);
+    const auto player_before_clutch = snapshot(pair.fixture, pair.kit.body_id(pair.player));
+    require(before.nominal_spring_storage_j > 0, "clutch fixture has real stored passive compression");
+    require(actuator.push.activate_planted_push(), "retained passive row activates once");
+    const auto activated = actuator.push.readback();
+    require(activated.active && !activated.passive_plant && !activated.target_held &&
+                activated.support == before.support && activated.world_anchor == before.world_anchor &&
+                activated.initial_distance_m == before.initial_distance_m &&
+                activated.rest_distance_m == before.rest_distance_m &&
+                activated.elapsed_seconds == before.elapsed_seconds &&
+                activated.command_work_bound_j == before.command_work_bound_j &&
+                activated.planted_motor_profile && activated.nominal_spring_storage_j == 0 &&
+                activated.retired_nominal_storage_j == before.nominal_spring_storage_j &&
+                activated.motor_positive_work_j == 0 && activated.motor_absorbed_work_j == 0,
+            "clutch preserves material identity, rest and clock while retiring unfunded passive storage");
+    const auto cell_after_clutch = snapshot(pair.fixture, support);
+    const auto player_after_clutch = snapshot(pair.fixture, pair.kit.body_id(pair.player));
+    require(cell_after_clutch.center == cell_before_clutch.center &&
+                player_after_clutch.center == player_before_clutch.center &&
+                cell_after_clutch.velocity == cell_before_clutch.velocity &&
+                player_after_clutch.velocity == player_before_clutch.velocity &&
+                cell_after_clutch.angular == cell_before_clutch.angular &&
+                player_after_clutch.angular == player_before_clutch.angular,
+            "activation supplies neither pose nor velocity preload");
+    require(!actuator.push.activate_planted_push() &&
+                actuator.push.readback().elapsed_seconds == activated.elapsed_seconds &&
+                actuator.push.readback().last_impulse_ns == activated.last_impulse_ns,
+            "second activation is refused without changing the row");
+    actuator.tick();
+    const auto &powered = actuator.push.readback();
+    limits(powered, before.command_work_bound_j, true);
+    require(powered.last_impulse_ns > 0 && powered.command_work_bound_j > 0 &&
+                powered.elapsed_seconds > before.elapsed_seconds,
+            "activation produces a positive bounded real impulse on the original clock");
+    std::cout << "FOOT_PASSIVE_ACTIVATION passive_impulse_ns=" << before.last_impulse_ns
+              << " powered_impulse_ns=" << powered.last_impulse_ns
+              << " elapsed_before_s=" << before.elapsed_seconds
+              << " elapsed_after_s=" << powered.elapsed_seconds << '\n';
+
+    actuator.push.clear();
+    const auto foot = actuator.push.readback().world_anchor;
+    require(actuator.push.begin_passive_plant(support, foot, Vec3::sAxisY()), "expiry fixture replants");
+    for (int tick = 0; tick < 92 && actuator.push.active(); ++tick) actuator.tick();
+    const auto expired = actuator.push.readback();
+    require(!expired.active && expired.stop_reason == PhysicalFootPush::StopReason::Expired &&
+                expired.command_work_bound_j == 0 && !actuator.push.activate_planted_push() &&
+                actuator.push.readback().elapsed_seconds == expired.elapsed_seconds,
+            "expired passive attachment cannot rearm or renew its lifetime");
+
+    require(actuator.push.begin(support, actuator.push.readback().world_anchor, Vec3::sAxisY()),
+            "ordinary begin still starts a powered row");
+    actuator.push.hold_target();
+    require(!actuator.push.readback().passive_plant && !actuator.push.activate_planted_push() &&
+                actuator.push.readback().target_held,
+            "ordinary held push cannot be mistaken for a passive plant");
+}
+
+void planted_reach_uses_the_same_radial_geometry_before_and_after_activation() {
+    scenario = "planted_swivel_reach_and_legacy_cylinder";
+    for (const bool planted : {false, true}) {
+        Pair pair(Vec3(0, .019F, 0), Vec3(.4F, .9F, 0), Quat::sIdentity(), 5000);
+        const auto support = pair.kit.body_id(pair.cell), player = pair.kit.body_id(pair.player);
+        pair.fixture.system.GetBodyInterface().SetLinearVelocity(player, Vec3(1, 0, 0));
+        Actuator actuator(pair);
+        require(planted ? actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()) :
+                          actuator.push.begin(support, pair.foot, Vec3::sAxisY()),
+                "actual finite initial reach is admitted");
+        actuator.push.hold_target();
+        for (unsigned step = 0; step < 40 && actuator.push.active(); ++step) actuator.tick();
+        const auto held = actuator.push.readback();
+        if (!planted) {
+            require(!held.active && held.stop_reason == PhysicalFootPush::StopReason::LateralReachLost,
+                    "legacy pushes retain their existing cylindrical reach limit");
+            continue;
+        }
+        const auto player_state = snapshot(pair.fixture, player);
+        const Vec3 leg(player_state.center - held.world_anchor);
+        require(held.active && leg.GetX() > .5F && leg.GetX() < .85F * leg.GetY() &&
+                    held.actual_distance_m < held.initial_distance_m + .3F && held.command_work_bound_j == 0,
+                "real unpowered plant can swivel beyond the legacy cylinder within length and traction");
+        require(actuator.push.activate_planted_push() &&
+                    actuator.push.readback().elapsed_seconds == held.elapsed_seconds &&
+                    actuator.push.readback().initial_distance_m == held.initial_distance_m,
+                "activation preserves the already valid geometry, anchor and original clock");
+        bool loaded = false;
+        for (unsigned step = 0; step < 40 && actuator.push.active() && !loaded; ++step) {
+            actuator.tick();
+            loaded = actuator.push.readback().last_impulse_ns > 0;
+        }
+        require(loaded && actuator.push.active(),
+                "same retained radial plant supplies finite motor impulse without advancing its rest target");
+    }
+    Pair slipping(Vec3(0, .019F, 0), Vec3(.5F, .5F, 0), Quat::sIdentity(), 5000);
+    Actuator refused(slipping);
+    require(!refused.push.begin_passive_plant(slipping.kit.body_id(slipping.cell), slipping.foot,
+                Vec3::sAxisY(), .85F), "radial planted reach never bypasses the actual material friction cone");
+}
+
+// This fixture has no contacts, gravity or damping. The isolated impulse event
+// can close kinetic energy; this does not claim continuous world/contact closure.
+void planted_motor_impulse_work_and_reaction(bool crossing_zero, Quat basis = Quat::sIdentity()) {
+    scenario = crossing_zero ? "planted_motor_brakes_then_pays_for_positive_work" :
+                               "planted_motor_offset_spinning_support";
+    constexpr float support_mass = kCellMass;
+    Pair pair(Vec3(.06F, .019F, 0), Vec3(.2F, .9F, 0), basis, support_mass);
+    const auto support = pair.kit.body_id(pair.cell), player = pair.kit.body_id(pair.player);
+    const Vec3 n = Vec3(snapshot(pair.fixture, player).center - pair.foot).Normalized();
+    pair.fixture.system.GetBodyInterface().SetAngularVelocity(support, basis * Vec3(0, 0, .7F));
+    const auto initial_support = snapshot(pair.fixture, support);
+    const Vec3 r(pair.foot - initial_support.center);
+    const double incoming = crossing_zero ? -2.0 : 3.0;
+    const Vec3 point_velocity = initial_support.velocity + initial_support.angular.Cross(r);
+    pair.fixture.system.GetBodyInterface().SetLinearVelocity(player, point_velocity + float(incoming) * n);
+    Actuator actuator(pair);
+    require(actuator.push.begin_passive_plant(support, pair.foot, basis * Vec3::sAxisY()) &&
+                actuator.push.activate_planted_push(), "isolated real two-body motor activates");
+    const auto before_support = snapshot(pair.fixture, support), before_player = snapshot(pair.fixture, player);
+    const double u = n.Dot(before_player.velocity - before_support.velocity - before_support.angular.Cross(r));
+    const Vec3 rxn = r.Cross(n);
+    const double w = 1.0 / kPlayerMass + 1.0 / support_mass +
+        rxn.Dot(before_support.inertia.Inversed3x3() * rxn);
+    actuator.tick();
+    const auto after_support = snapshot(pair.fixture, support), after_player = snapshot(pair.fixture, player);
+    const auto state = actuator.push.readback();
+    limits(state, 0, true);
+    const Vec3 impulse = kPlayerMass * (after_player.velocity - before_player.velocity);
+    const Vec3 reaction = support_mass * (after_support.velocity - before_support.velocity);
+    const double j = impulse.Dot(n);
+    const Vec3 expected_spin = before_support.inertia.Inversed3x3() * r.Cross(-impulse);
+    require(j > 0 && impulse.Cross(n).Length() < 3.0e-4F &&
+                (impulse + reaction).Length() < 3.0e-4F &&
+                (after_support.angular - before_support.angular - expected_spin).Length() < .003F &&
+                after_player.angular.Length() < 1.0e-5F &&
+                std::abs(state.last_impulse_ns - j) < 3.0e-4,
+            "motor has one reciprocal impulse and the actual offset-support angular reaction");
+    const double final_speed = u + w * j;
+    const double positive = (std::pow(std::max(final_speed, 0.0), 2) -
+                             std::pow(std::max(u, 0.0), 2)) / (2 * w);
+    const double absorbed = (std::pow(std::min(u, 0.0), 2) -
+                             std::pow(std::min(final_speed, 0.0), 2)) / (2 * w);
+    const double kinetic_delta = after_player.energy + after_support.energy -
+                                 before_player.energy - before_support.energy;
+    require(std::abs(kinetic_delta - (positive - absorbed)) < .008 &&
+                std::abs(state.motor_positive_work_j - positive) < .003 &&
+                std::abs(state.motor_absorbed_work_j - absorbed) < .003 &&
+                std::abs(state.last_command_work_bound_j - positive) < .003,
+            "real linear plus rotational kinetic change equals paid positive work minus uncredited absorption");
+    require(positive <= 5000.0 * kDt + .003 && j <= 3500.0 * kDt + .0003 &&
+                positive > 5000.0 * kDt - .01,
+            "power-limited motor uses available positive work without violating force cap");
+    if (crossing_zero) require(u < 0 && final_speed > 0 && absorbed > .1 &&
+                state.command_work_bound_j > kinetic_delta + .1,
+            "crossing zero charges all positive work instead of refunding absorbed incoming energy");
+    std::cout << "FOOT_MOTOR_EVENT scenario=" << scenario << " u_before_mps=" << u
+              << " u_after_mps=" << final_speed << " impulse_ns=" << j
+              << " kinetic_delta_j=" << kinetic_delta << " positive_j=" << positive
+              << " absorbed_j=" << absorbed << " receipt_positive_j=" << state.motor_positive_work_j
+              << " receipt_absorbed_j=" << state.motor_absorbed_work_j << '\n';
+}
+
+void planted_motor_solver_iterations_and_substeps() {
+    scenario = "planted_motor_40_iterations_four_collision_steps";
+    Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
+    auto settings = pair.fixture.system.GetPhysicsSettings();
+    settings.mNumVelocitySteps = 40;
+    pair.fixture.system.SetPhysicsSettings(settings);
+    Actuator actuator(pair);
+    const auto player = pair.kit.body_id(pair.player), support = pair.kit.body_id(pair.cell);
+    require(actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()) &&
+                actuator.push.activate_planted_push(), "iteration fixture activates");
+    const auto before_player = snapshot(pair.fixture, player), before_support = snapshot(pair.fixture, support);
+    require(pair.fixture.system.Update(4 * kDt, 4, &pair.fixture.allocator, &pair.fixture.jobs) ==
+                EPhysicsUpdateError::None, "four production collision steps solve without capacity errors");
+    actuator.push.post_step(kDt);
+    const auto after_player = snapshot(pair.fixture, player), after_support = snapshot(pair.fixture, support);
+    const auto state = actuator.push.readback();
+    limits(state, 0, true);
+    const double total_impulse = kPlayerMass * (after_player.velocity.GetY() - before_player.velocity.GetY());
+    require(std::abs(total_impulse - 4 * 3500.0 * kDt) < .002 &&
+                std::abs(state.last_impulse_ns - 3500.0 * kDt) < .0002 &&
+                std::abs(state.elapsed_seconds - 4.0 * kDt) < 1.0e-8,
+            "forty solver iterations apply exactly one capped impulse per collision step");
+    const double kinetic_delta = after_player.energy + after_support.energy -
+                                 before_player.energy - before_support.energy;
+    require(state.command_work_bound_j <= 4 * 5000.0 * kDt + .0001 &&
+                std::abs(state.motor_positive_work_j - kinetic_delta) < .003 &&
+                state.motor_absorbed_work_j == 0 && state.last_command_work_bound_j > 0,
+            "substep command work debits once per actual impulse and closes isolated kinetic energy");
+    std::cout << "FOOT_MOTOR_SUBSTEPS total_impulse_ns=" << total_impulse
+              << " last_impulse_ns=" << state.last_impulse_ns
+              << " kinetic_j=" << kinetic_delta << " positive_work_j=" << state.motor_positive_work_j << '\n';
+}
+
+void planted_motor_geometric_limits_stop_real_drive(bool cone) {
+    scenario = cone ? "planted_motor_finite_cone" : "planted_motor_finite_radial_extent";
+    Pair pair(Vec3(0, .019F, 0), cone ? Vec3(.6F, .9F, 0) : Vec3(0, .9F, 0),
+              Quat::sIdentity(), 5000);
+    const auto support = pair.kit.body_id(pair.cell), player = pair.kit.body_id(pair.player);
+    pair.fixture.system.GetBodyInterface().SetLinearVelocity(player, cone ? Vec3(10, 0, 0) : Vec3(0, 5, 0));
+    Actuator actuator(pair);
+    require(actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()) &&
+                actuator.push.activate_planted_push(), "finite geometry motor activates");
+    double work = 0;
+    for (unsigned step = 0; step < 50 && actuator.push.active(); ++step) {
+        actuator.tick();
+        const auto state = actuator.push.readback();
+        limits(state, work, true);
+        work = state.command_work_bound_j;
+    }
+    const auto stopped = actuator.push.readback();
+    require(!stopped.active && stopped.stop_reason == (cone ? PhysicalFootPush::StopReason::TractionLost :
+                                                            PhysicalFootPush::StopReason::VerticalReachLost),
+            "actual motor ends when original radial reach or material cone is lost");
+    const auto player_state = snapshot(pair.fixture, player), support_state = snapshot(pair.fixture, support);
+    const Vec3 leg(player_state.center - stopped.world_anchor);
+    require(cone ? std::abs(leg.GetX()) > .85F * leg.GetY() :
+                   stopped.actual_distance_m > stopped.initial_distance_m + .3F,
+            "geometric termination is supported by actual endpoint positions");
+    actuator.tick();
+    require(actuator.push.readback().command_work_bound_j == work &&
+                actuator.push.readback().last_impulse_ns == 0 &&
+                (snapshot(pair.fixture, player).velocity - player_state.velocity).Length() < 1.0e-6F &&
+                (snapshot(pair.fixture, support).velocity - support_state.velocity).Length() < 1.0e-6F &&
+                !actuator.push.activate_planted_push(),
+            "finite geometric stop preserves departure momentum and refuses reactivation");
+}
+
+void planted_motor_hold_stops_drive_on_original_clock() {
+    scenario = "planted_motor_hold_has_no_spring_or_clock_renewal";
+    Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
+    Actuator actuator(pair);
+    const auto support = pair.kit.body_id(pair.cell), player = pair.kit.body_id(pair.player);
+    require(actuator.push.begin_passive_plant(support, pair.foot, Vec3::sAxisY()), "hold plant attaches");
+    for (int tick = 0; tick < 4; ++tick) actuator.tick();
+    require(actuator.push.activate_planted_push(), "hold plant activates after elapsed passive time");
+    actuator.tick();
+    const auto powered = actuator.push.readback();
+    require(powered.last_impulse_ns > 0 && powered.command_work_bound_j > 0, "motor drives before hold");
+    actuator.push.hold_target();
+    // A new external fixture compression discriminates a resurrected passive
+    // spring from a stopped motor; it does not represent commanded muscle work.
+    pair.fixture.system.GetBodyInterface().SetLinearVelocity(player, Vec3(0, -.1F, 0));
+    const auto before_player = snapshot(pair.fixture, player), before_support = snapshot(pair.fixture, support);
+    for (int tick = 5; tick < 90; ++tick) {
+        actuator.push.hold_target();
+        actuator.tick();
+        const auto state = actuator.push.readback();
+        limits(state, powered.command_work_bound_j, true);
+        require(state.active && state.target_held && state.last_impulse_ns == 0 &&
+                    state.command_work_bound_j == powered.command_work_bound_j &&
+                    state.last_command_work_bound_j == 0 && state.nominal_spring_storage_j == 0 &&
+                    !actuator.push.activate_planted_push(),
+                "held motor remains attached without warm start, new work or resurrected spring");
+    }
+    require((snapshot(pair.fixture, player).velocity - before_player.velocity).Length() < 1.0e-6F &&
+                (snapshot(pair.fixture, support).velocity - before_support.velocity).Length() < 1.0e-6F,
+            "externally compressing held motor produces no hidden velocity change");
+    actuator.tick();
+    const auto expired = actuator.push.readback();
+    require(!expired.active && expired.stop_reason == PhysicalFootPush::StopReason::Expired &&
+                std::abs(expired.elapsed_seconds - 90.0 * kDt) < 1.0e-8 &&
+                expired.command_work_bound_j == powered.command_work_bound_j &&
+                !actuator.push.activate_planted_push(),
+            "held motor expires on original passive-attachment clock and cannot rearm");
+}
+
 void finite_actuation_and_energy() {
     scenario = "finite_stroke_power_time_energy";
     Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
@@ -397,6 +704,15 @@ int main() {
     contact_owner_loss_cancels(false, true);
     contact_owner_loss_cancels(true, true);
     held_target_retains_row_and_finite_lifetime();
+    passive_plant_activation_retains_row();
+    planted_reach_uses_the_same_radial_geometry_before_and_after_activation();
+    planted_motor_impulse_work_and_reaction(false);
+    planted_motor_impulse_work_and_reaction(false, Quat::sRotation(Vec3::sAxisY(), .47F));
+    planted_motor_impulse_work_and_reaction(true);
+    planted_motor_solver_iterations_and_substeps();
+    planted_motor_geometric_limits_stop_real_drive(false);
+    planted_motor_geometric_limits_stop_real_drive(true);
+    planted_motor_hold_stops_drive_on_original_clock();
     finite_actuation_and_energy();
     UnregisterTypes();
     delete Factory::sInstance;

@@ -82,7 +82,9 @@ void Simulation::PhysicsWorld::record_foot_contact(const JPH::BodyInterface &bod
 
 void Simulation::PhysicsWorld::refresh_rigid_transfer_foot() noexcept {
     rigid_transfer_foot_valid_ = false;
-    if (foot_push_purpose_ != FootPushPurpose::RigidTransfer || !physical_foot_push_->active() ||
+    if ((foot_push_purpose_ != FootPushPurpose::RigidTransfer &&
+         foot_push_purpose_ != FootPushPurpose::TrailingPlant &&
+         foot_push_purpose_ != FootPushPurpose::CoyotePush) || !physical_foot_push_->active() ||
         crouched_ || !foot_push_contact_.valid) return;
     const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
     rigid_transfer_foot_valid_ = lock.Succeeded() && lock.GetBody().IsInBroadPhase() &&

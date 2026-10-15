@@ -1,7 +1,7 @@
 {
   "objective": "Operate the actual warehouse forklift from real platform footing and place heavy cargo into a usable upward route",
   "budget_seconds": 1200.0,
-  "started": 1792095707.6639972,
+  "started": 1792099236.3488817,
   "failures": 0,
   "trials": [
     {
@@ -37,8 +37,175 @@
       "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-2.log",
       "exit": 0,
       "finished": 1792095716.2633395
+    },
+    {
+      "stage": "public-boarding-and-pickup",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "b8f16888ccc7f5c8a5c0d5fe79ce217354b607d68ff2e07a008d763a12247529",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954"
+      },
+      "started": 1792096365.9774446,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-3.log",
+      "exit": 0,
+      "finished": 1792096397.750051
+    },
+    {
+      "stage": "public-first-placement-and-withdrawal",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "4529ff16084441f715e56dabf11966f75fa5df3a04db6ef92143012e7e9082ae",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954"
+      },
+      "started": 1792096556.098349,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-4.log",
+      "exit": 1,
+      "finished": 1792096609.1128838
+    },
+    {
+      "stage": "public-long-blade-placement-and-withdrawal",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "72edd24849f078f309b7b9dc9d9067e4c22c3d561505f839d5011fff36552646",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/libscraperx_sim.a": "1b99a1332e46e44ebee52b5b96ea8f35c8f139ff546418263c64f7e80d1214ae"
+      },
+      "started": 1792096722.2508132,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-5.log",
+      "exit": 0,
+      "finished": 1792096780.2379618
+    },
+    {
+      "stage": "public-second-load-and-offset-stack",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "5f12a4b2ae54be5dcba079a04d8dc21a54c66bcea54a78672e5a9574817f3c06",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/libscraperx_sim.a": "1b99a1332e46e44ebee52b5b96ea8f35c8f139ff546418263c64f7e80d1214ae"
+      },
+      "started": 1792096943.147526,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-6.log",
+      "exit": 1,
+      "finished": 1792097297.6836145
+    },
+    {
+      "stage": "public-stack-load-transfer-and-player-route",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "60534088e0d49fd57e72c0b485c48960c2d7995fea4e3193f3b639463ac1f892",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/forklift_route_walk.hpp": "e03246c58e9bc50720cadb893ec460baa88af943932134ec92bc048d1712ba58",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/libscraperx_sim.a": "1b99a1332e46e44ebee52b5b96ea8f35c8f139ff546418263c64f7e80d1214ae"
+      },
+      "started": 1792097449.1144676,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-7.log",
+      "exit": 1,
+      "finished": 1792097766.6502905
+    },
+    {
+      "stage": "selected-candidate-connected-cargo-gallery-route",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/scraperx_warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/tests/warehouse_forklift_route_tests.cpp": "789726158aa7e4e64ba70d4280d9f1f2f47f803c46b6eeb6402d4b8a304dd8eb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/tests/forklift_route_walk.hpp": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/src/sim/warehouse_forklift_yard.cpp": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/scraperx_warehouse_forklift_route_tests": "1f11ff3eaa62f0fb9f9984733698942eb35fc1791e2b191d25eef8ed389a14a3"
+      },
+      "started": 1792098748.2144485,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-8.log",
+      "exit": 1,
+      "finished": 1792099017.266
+    },
+    {
+      "stage": "selected-candidate-aligned-cargo-gallery-route",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/scraperx_warehouse_forklift_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/tests/warehouse_forklift_route_tests.cpp": "e9f371cad33f8a133252fa87bf7a3cee8bac9ee5009f4db27f45f63268393f89",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/tests/forklift_route_walk.hpp": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/src/sim/warehouse_forklift_yard.cpp": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/scraperx_warehouse_forklift_route_tests": "db30cfea14bbb0214dff59c6f5f591d7d08d41c7a55ef8e226df409c279eb3f1"
+      },
+      "started": 1792099236.5844195,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-9.log",
+      "exit": 0,
+      "finished": 1792099475.747831
     }
   ],
-  "reassessments": [],
+  "reassessments": [
+    {
+      "at": 1792096934.9451785,
+      "cause": "Original short-fork transport failed at cargo COM; trial5 proves physically longer weighted blades retain600kg through transport, placement and withdrawal. Remaining phase is second-load maneuver/offset stack; initial20minute world window elapsed during next-phase implementation.",
+      "change": "Keep finite native owners/caps unchanged; use source-derived broad rear-steer waypoints outside gallery posts, real Bpickup and.9m stepped offset; replay actual placement/withdrawal before player ascent.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/STACK_ROUTE_GEOMETRY.md",
+      "evidence_sha256": "59e757bd50530e3af10f9092fb1edc28236460a89b143493b7febb897ee4d8e6",
+      "previous_failures": 1,
+      "previous_started": 1792095707.6639972,
+      "previous_pending": false
+    },
+    {
+      "at": 1792098171.570993,
+      "cause": "Trial7 provesactualtwo-cratestackand90tickplayerfootingonboth; finalhandoffdriver usedonlyanunconfirmedairborneAction thenstoppedintent. Boundeddiagnostic catchesactual5.9mdeck thenfreshAction completesactual1440footingtick160 withoutproductionchanges; originalpreciserejectbranchunlogged, no geometrydefectproven.",
+      "change": "Input-onlydriver waitsforobservedactualgalleryhang/twohandsandphysicaltransferreach, thenfreshAction/neutral. Preserveallcargo/force/withdrawal/90tick/onward/grade-retry checks; addactualstate/hand/targettrace. No nativegeometryoractuatorchange.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/GALLERY_HANDOFF_DIAGNOSIS.md",
+      "evidence_sha256": "42d79c475f7806c727ce1a9379f7b39c7b7d22636d93c7c42710e75a9ff44fda",
+      "previous_failures": 2,
+      "previous_started": 1792096934.9455318,
+      "previous_pending": false
+    },
+    {
+      "at": 1792099236.3485918,
+      "cause": "Trial8 actual final approach drifts right with residual truck heading and zero steering; cargo center -99.7993 fails unchanged0.20m placement bound. Remaining window cannot fit measured269s replay.",
+      "change": "Correct only final forward driver steering from actual cargo/receiver position, chassis heading and load reach; keep all physics and acceptance unchanged, relink only route test.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/FINAL_PLACEMENT_ALIGNMENT.md",
+      "evidence_sha256": "c7f973cf87f865342f7d878478ea609de583d6a429ce3a7a444e912d38c55673",
+      "previous_failures": 1,
+      "previous_started": 1792098171.571255,
+      "previous_pending": false
+    }
+  ],
   "pending": false
 }

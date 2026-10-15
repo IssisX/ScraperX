@@ -1,0 +1,7 @@
+# Real load transfer before upper-fork withdrawal
+
+World trial6 completed actual player boarding, first600kg pickup/placement/withdrawal, physical rear-steer maneuvers around posts, second600kg pickup and loaded return. It correctly FAILED upper withdrawal: Bbase1.50356m atstack position(-99.8006,1.50356,-87.9469), but lift force7030.23N still carried it. Reversing then moved Btoz-90.938 with forks, leaving itsheight~1.503m. A geometric near-touch did not establish receiving support. No stack or player-route PASS claimed.
+
+Supported correction is in the public test driver's actual control sequence, not the finite mechanical owner: lower until Bbase matches actual Aroof AND postsolve hydraulic force drops below1800N for8native ticks with low cargo vertical speed. Unloaded carriage40kg+forks72kg need~1099N gravity support; a600kg load requires about~6985N, separating these cases. Preserve fork-bottom clearance>Aroof+.025m while lowering. The player already has the native hydraulic-load gauge, and uses the same raise/lower/tilt controls. No placed flag or cargo constraint is introduced. Withdrawal/disjoint fork material and subsequent static-height/player actual-support checks remain necessary.
+
+Next replay incorporates this real unload sequence and then public player cargo climb/gallery transfer/onward walk/grade retry. Unchanged geometry archive1b99a133… and finite-owner primitive evidence reused. This is one supported correction aftertrial6, not a reset or parameter sweep.

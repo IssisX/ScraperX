@@ -1,0 +1,65 @@
+{
+  "selected_patch_sha256": "d36f270e32dde9ca54c63927ff307cee7712e4dcd499f4af656029a83be2c52d",
+  "native_archive_sha256": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189",
+  "bridge_sha256": "6b75c1bb618d8ce52c898e8c939434428e7b620fc18859d84d67ff54ddf6e329",
+  "test_sha256": "43017a026fe9d078a5065aade6a9e6f55527e6d6baccaefa76d64a96510a7dfa",
+  "headless": true,
+  "device": false,
+  "rendered_pixels": false,
+  "source_sha256": {
+    "godot/main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "godot/presentation/main.gd": "0ca15a0da158e03b5b03a7f455bf50fbabdcc2307e6914de1ad7ec5e57e91718",
+    "godot/presentation/forklift_view.gd": "bca57329671e07db5f95d76a65c6096642967294026ca53047b1efe931c31447",
+    "godot/presentation/ui/touch_controls.gd": "4df1c5740ea9990e56f787a30fbd17f62376cf4e1c5b194dd88bf7d383637b44",
+    "godot/presentation/ui/input_router.gd": "27fa5dc39c1b8c801172f3d3fdc3fbea9f0efc6e1ebf2d3d6b8deaacd4603d1b",
+    "src/sim/simulation.hpp": "7fef8f250357f40a2a3de33a29e6c193bb1f4d1edb3be0817d903ade86725e3f",
+    "src/bridge/scraperx_simulation.hpp": "7e41ab70e2251ec4b31c2c9d0579cd9546f30081e33f4c41496e979465fdeac3",
+    "src/bridge/scraperx_simulation.cpp": "4923c5aac103e3c78ab55f7e7a0f823543aa4ecae3ccf512b9cbe03499c9d9a1"
+  },
+  "steps": [
+    {
+      "name": "selected-import",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/godot-selected-main",
+        "--editor",
+        "--quit"
+      ],
+      "exit": 0,
+      "errors": [],
+      "output": []
+    },
+    {
+      "name": "selected-main",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/godot-selected-main",
+        "--script",
+        "res://tests/forklift_main_native_test.gd"
+      ],
+      "exit": 0,
+      "errors": [],
+      "output": [
+        "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+        "FORKLIFT_MAIN_RECEIPT {\"battery_after_j\":11984215.8662933,\"battery_before_j\":11996222.977695,\"drive\":0.70710676908493,\"leave_brake\":1.0,\"leave_drive\":0.0,\"lift_after_m\":0.241627991199493,\"lift_before_m\":0.00000385342582376325,\"operator_travel_m\":0.00147494918201119,\"pause_tick\":190,\"ready_reachable\":true,\"steer_rad\":0.0622222311794758,\"support\":2440,\"wheel_count\":3,\"work_after_j\":271.680379364485,\"work_before_j\":0.0}",
+        "SCRAPERX_FORKLIFT_MAIN_NATIVE PASS checks=19"
+      ]
+    }
+  ],
+  "godot_sha256": "8e53c8740db03581bdd3fd7835f15046a25126baf9d78458fc6a7d4d1c312f45",
+  "selected_source_stable": true
+}

@@ -132,6 +132,8 @@ inline constexpr std::uint32_t kJumpVaultWindowTicks =
 // Intent lasts eleven native ticks (~122 ms). Contact sampled at a tick's
 // end is eligible on the following tick; this window supplies no support.
 inline constexpr std::uint32_t kOrdinaryJumpIntentTicks = 11;
+// Intent ceiling only: real foot reach, traction and lifetime can end sooner.
+inline constexpr std::uint32_t kCoyotePlantIntentTicks = 8;
 
 // Hang band expressed against the capsule centre: hands reach a ledge between
 // chest height and just above the head.

@@ -1,0 +1,61 @@
+{
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_yard.cpp.o"
+    ],
+    [
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_yard.cpp.o"
+    ],
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-route-20261015/warehouse_forklift_route_tests"
+    ]
+  ],
+  "source_sha256": "5b2c39feb07e61f2ed09537859cab43f2809209f25d9c8799581bc4aecba62b8",
+  "base_archive_sha256": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954",
+  "archive_sha256": "1b99a1332e46e44ebee52b5b96ea8f35c8f139ff546418263c64f7e80d1214ae",
+  "object_sha256": "145e59add7cd674bc3902c0fd58b3c9cb07b4d5038145e5aa25bfb210e5fd7d1",
+  "test_sha256": "5f12a4b2ae54be5dcba079a04d8dc21a54c66bcea54a78672e5a9574817f3c06",
+  "exit": 0
+}

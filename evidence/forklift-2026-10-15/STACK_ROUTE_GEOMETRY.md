@@ -1,0 +1,15 @@
+# Independent Sol/high stack-route geometry review
+
+Read-only specialist reviewed actual dirty source at1f92dca; root persisted returned findings. No additional tests run by reviewer. Relevant owners: `warehouse_forklift_yard.cpp`, `simulation/constants.hpp`, `simulation/geometry.cpp`, `simulation/hand_transfer.cpp`. Actual first-placement/withdrawal trial5 nowPASS after root physically lengthened/weighted forks; source-bound public evidence remains distinct from this geometric reasoning.
+
+Original.8m Boffset left an exposed.8m tread. Existing mantle inset.47m then leaves.33m to Bface, less than capsule radius.35m. Use.9m offset: Bcenter(-100,1.5,-87.9), .9m exposed A tread, .08m nominal mantle clearance,1.5m overlap and.3m BCOM margin inside A footprint. This is a candidate operating geometry, not proof of stability under player load.
+
+Upper edgez-89.1 to galleryedge-91.5 yields2.4m horizontal gap/2.9m rise. Existing finite jump/catch reach permits a plausible jump-catch; actual solve/topout still pending. Preserve existing reach/force/clearance rules. Galleryposts x-103/-97,z-92/-96,.14m halfwidth: do not turn fromwithdrawal(-100,-93.2). New forks put nose3.53m beyond chassis, swept radius~3.6m. Reverse straight centered toz<=-101 (prefer-103), then broad maneuver outside rear posts, westlane aroundx-108; alignB at(-105,-56) before finalforkapproach. Return low viawestlane, shiftto x-100 beyondrearend, then advanceunderframe. Raise Bbase>=1.55m before chassisz~-92.4, finalchassis~-90.9; level/lower/withdraw through real material slot.
+
+Actual mast rails/crossbar are climbable and could offer an earned alternative when truck is parked near gallery. Do not claim two-crate placement is the exclusive necessary route without a real negative that falsifies that alternative. This feature must prove a usable cargo-created route, not forbid legitimate physical creativity. Gallery builder currently lacks an onward connection: receiving footing alone is insufficient completion. Public stack, loaded player footing/onward path, incomplete/missed placement and retry remain pending.
+
+## Recorded next experiment after initial20minute window
+
+Trial4 rejected original short-fork transport. Trial5 now proves actual boarding,600kg pickup,~39m reverse transport, real placement and fork withdrawal; independent cargo remains atbasey~-0.000064m,z-86.9517 after withdrawal. The remaining unresolved interaction is the second load/offset stack and player transfer, not a coefficient retune of the accepted mechanics.
+
+Root added an input-only public driver for finite rear-steer paths outside the actual gallery posts and a source-derived.9m stepped-stack placement. It never sets body transforms/velocities or latches cargo. Next replay follows same actual approach and completed first load, then fetches B, stacks it, withdraws. Time budget reached while coding this next physical phase; retain all earlier trials/failure and explicitly reassess the same world-window record. No passing cargo path may be claimed until that replay succeeds.

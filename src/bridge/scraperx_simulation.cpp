@@ -44,6 +44,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("restart_gravity_reclaim_attempt"), &ScraperXSimulation::restart_gravity_reclaim_attempt);
     godot::ClassDB::bind_method(godot::D_METHOD("set_service_lift_input", "value"), &ScraperXSimulation::set_service_lift_input);
     godot::ClassDB::bind_method(godot::D_METHOD("get_service_lift_state"), &ScraperXSimulation::get_service_lift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_input", "drive", "steer", "lift", "tilt", "brake"), &ScraperXSimulation::set_forklift_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_render_state"), &ScraperXSimulation::get_forklift_render_state);
     godot::ClassDB::bind_method(godot::D_METHOD("restart_service_lift_attempt"), &ScraperXSimulation::restart_service_lift_attempt);
     godot::ClassDB::bind_method(godot::D_METHOD("set_slingshot_input", "draw", "yaw", "elevation"), &ScraperXSimulation::set_slingshot_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);
@@ -572,6 +575,55 @@ godot::Dictionary ScraperXSimulation::get_supplied_machine_state()const {
 }
 bool ScraperXSimulation::set_service_lift_input(double value) {
     return simulation_->set_service_lift_input(value);
+}
+
+namespace {
+godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
+    godot::Dictionary out;
+    out["available"] = state.available;
+    out["controls_reachable"] = state.controls_reachable;
+    out["chassis_entity"] = static_cast<std::int64_t>(state.chassis_entity);
+    out["station_position"] = to_godot(state.station_position);
+    out["battery_j"] = state.battery_j;
+    out["capacity_j"] = state.capacity_j;
+    out["lift_position_m"] = state.lift_position_m;
+    out["tilt_angle_rad"] = state.tilt_angle_rad;
+    out["lift_force_n"] = state.lift_force_n;
+    out["tilt_torque_nm"] = state.tilt_torque_nm;
+    out["energy_cutoff"] = state.energy_cutoff;
+    out["coupled"] = state.coupled;
+    out["applied_drive"] = state.applied_drive;
+    out["applied_brake"] = state.applied_brake;
+    out["positive_work_j"] = state.positive_work_j;
+    out["reservation_excess_j"] = state.reservation_excess_j;
+    godot::Array wheels;
+    for (const auto &wheel : state.wheels) {
+        godot::Dictionary receipt;
+        receipt["transform"] = godot::Transform3D(godot::Basis(to_godot(wheel.rotation)), to_godot(wheel.position));
+        receipt["contact"] = wheel.contact;
+        receipt["radius_m"] = wheel.radius_m;
+        receipt["width_m"] = wheel.width_m;
+        receipt["normal_force_n"] = wheel.normal_force_n;
+        receipt["contact_body"] = static_cast<std::int64_t>(wheel.contact_body);
+        receipt["contact_position"] = to_godot(wheel.contact_position);
+        receipt["contact_normal"] = to_godot(wheel.contact_normal);
+        receipt["angular_velocity_rad_s"] = wheel.angular_velocity_rad_s;
+        receipt["steer_rad"] = wheel.steer_rad;
+        wheels.append(receipt);
+    }
+    out["wheels"] = wheels;
+    return out;
+}
+} // namespace
+
+bool ScraperXSimulation::set_forklift_input(double drive, double steer, double lift, double tilt, double brake) {
+    return simulation_->set_forklift_input(drive, steer, lift, tilt, brake);
+}
+godot::Dictionary ScraperXSimulation::get_forklift_state() const {
+    return forklift_dictionary(simulation_->forklift_state());
+}
+godot::Dictionary ScraperXSimulation::get_forklift_render_state() const {
+    return forklift_dictionary(simulation_->render_forklift_state());
 }
 bool ScraperXSimulation::restart_service_lift_attempt() {
     return simulation_->restart_service_lift_attempt();

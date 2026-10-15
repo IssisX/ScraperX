@@ -1,0 +1,55 @@
+{
+  "started": 1792099202.783756,
+  "native_archive_sha256": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189",
+  "route_sources": {
+    "tests/warehouse_forklift_route_tests.cpp": "e9f371cad33f8a133252fa87bf7a3cee8bac9ee5009f4db27f45f63268393f89",
+    "tests/forklift_route_walk.hpp": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73"
+  },
+  "commands": [
+    {
+      "command": [
+        "/usr/bin/c++",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src/Build/..",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-o",
+        "CMakeFiles/scraperx_warehouse_forklift_route_tests.dir/tests/warehouse_forklift_route_tests.cpp.o",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/source/tests/warehouse_forklift_route_tests.cpp"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/CMakeFiles/scraperx_warehouse_forklift_route_tests.dir/tests/warehouse_forklift_route_tests.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/scraperx_warehouse_forklift_route_tests"
+      ],
+      "exit": 0
+    }
+  ],
+  "finished": 1792099213.939835,
+  "binary_sha256": "db30cfea14bbb0214dff59c6f5f591d7d08d41c7a55ef8e226df409c279eb3f1"
+}

@@ -24,7 +24,9 @@ void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds)
     // The same finite actuator law runs once per collision step in every
     // world. Slingshot worlds invoke this from their substep listener;
     // single-step worlds invoke it after lifecycle/face validation below.
-    const bool face_valid = foot_push_purpose_ == FootPushPurpose::RigidTransfer
+    const bool rigid_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush;
+    const bool face_valid = rigid_foot
         ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
             deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
     physical_foot_push_->pre_step(delta_seconds, face_valid);
@@ -44,6 +46,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     foot_push_started_this_tick_ = false;
     const bool jump_cancelled = commands.cancel_jump_requested ||
         commands.release_requested || commands.set_down_requested || commands.sling_drop;
+    prepare_trailing_plant(commands);
     // An involuntary hand loss must not erase an already valid real foot.
     // Explicit cancel/death/restart still use full cleanup.
     if (!jump_cancelled && !commands.crouch_held && cargo_transfer_active_ &&
@@ -52,11 +55,15 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (jump_cancelled || commands.crouch_held ||
         (traversal_state_ != TraversalState::None && !foot_overlap_is_legal()))
         physical_foot_push_->clear();
+    const bool passive_trailing_foot = foot_push_purpose_ == FootPushPurpose::TrailingPlant;
     const bool finishing_transfer_foot = traversal_before_commands == TraversalState::None &&
         foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active();
-    if (jump_cancelled || traversal_before_commands != TraversalState::None ||
+    // Crouch cancels prior intent rather than deferring a surprise landing
+    // jump. A fresh Jump still owns its established stand-and-jump request.
+    if (jump_cancelled || (commands.crouch_held && !commands.jump_requested) ||
+        traversal_before_commands != TraversalState::None ||
         (slingshot_ && slingshot_->controls_player()) ||
-        (physical_foot_push_->active() && !finishing_transfer_foot)) {
+        (physical_foot_push_->active() && !finishing_transfer_foot && !passive_trailing_foot)) {
         ordinary_jump_ticks_left_ = 0;
     } else if (commands.jump_requested) {
         ordinary_jump_ticks_left_ = kOrdinaryJumpIntentTicks;
@@ -65,6 +72,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     landing_applied_force_ = JPH::Vec3::sZero();
 
     auto &bodies = physics_system_.GetBodyInterface();
+    prepare_forklift(commands, bodies);
     air_control_force_ = JPH::Vec3::sZero();
     const auto rider_velocity_before = bodies.GetLinearVelocity(player_id_);
     if (regression_fixtures_) {
@@ -152,12 +160,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
             if (commands.move_input_x != 0.0 || commands.move_input_z != 0.0)
                 slingshot_->note_external_influence();
         } else {
+            jump_started = try_begin_coyote_push(bodies);
             auto locomotion_commands = commands;
             locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
                 grounded_ && !support_sample_.body_id.IsInvalid() && !crouched_ &&
                 !physical_foot_push_->active();
             const bool ordinary_jump_requested = locomotion_commands.jump_requested;
-            jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds);
+            jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds) || jump_started;
             if (ordinary_jump_requested && jump_started) ordinary_jump_ticks_left_ = 0;
         }
         if (!jump_started) {
@@ -259,6 +268,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (((traversal_state_ != TraversalState::None || physical_hands_->active()) && !foot_overlap_is_legal()) ||
         carry_constraint_ != nullptr || sling_controlling)
         physical_foot_push_->clear();
+    retain_trailing_plant(commands, jump_started);
     refresh_rigid_transfer_foot();
     // Hands/foot actions can acquire authority after locomotion. Only
     // tighten the published mode here: a consumed Jump must not re-enable
@@ -312,6 +322,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
     }
     if (service_lift_) service_lift_->post_step();
+    if (warehouse_forklift_) warehouse_forklift_->post_step();
     if (supplied_ascent_) supplied_ascent_->post_step();
     kit_->post_step(delta_seconds);
     if (slingshot_) slingshot_->post_step(delta_seconds);
@@ -382,7 +393,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
             std::llround(next_time_seconds/Simulation::kFixedStepSeconds)));
     state_.checkpoint_footing_valid = !died_this_tick && grounded_ &&
         traversal_state_ == TraversalState::None && footing_is_firm(bodies);
-    if (state_.checkpoint_footing_valid && !physical_foot_push_->active()) {
+    if (state_.checkpoint_footing_valid && (!physical_foot_push_->active() ||
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant)) {
         catch_episode_active_ = false;
         commit_checkpoint(bodies);
     }

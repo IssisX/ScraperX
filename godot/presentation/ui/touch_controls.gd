@@ -172,7 +172,7 @@ func _layout() -> void:
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
 	# Stationary machines use the left thumb for their pendant. The portable
-	# grapple keeps the movement stick and places reel controls to its right.
+	# grapple and forklift keep the stick and place tool controls to its right.
 	_pendant_center = Vector2(_safe.position.x + _safe.size.x * 0.56, corner.y - m - 470.0 * _u) \
 		if _portable_tool else _stick_home + Vector2(20.0, -40.0) * _u
 	var arm := (190.0 if _portable_tool else 158.0) * _u
@@ -409,7 +409,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var station: StringName = ctx["operating"]
 	_operating = station != &""
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
-	var portable_tool := station == &"grappling_gun"
+	var portable_tool := station in [&"grappling_gun", &"forklift"]
 	if _portable_tool != portable_tool:
 		_portable_tool = portable_tool
 		_layout()
@@ -428,7 +428,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	crouch.icon = &"stand" if folded else &"crouch"
 	crouch.label = ("EXTEND" if folded else "TUCK") if tuck_available else ("STAND" if folded else "CROUCH")
 	crouch.tone = TONE_SAFE if folded else TONE_NORMAL
-	var has_x := station == &"jib" or station == &"intake"
+	var has_x := station in [&"jib", &"intake", &"forklift"]
 	_buttons[B_UP].shown = _operating
 	_buttons[B_DOWN].shown = _operating
 	_buttons[B_LEFT].shown = _operating and has_x
@@ -438,6 +438,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	sling.label = "RELEASE PACK" if ctx["slung"] else "ATTACH PACK"
 	sling.tone = TONE_PRIMARY
 	match station:
+		&"forklift":
+			_axis_names = ["RAISE / LOWER", "TILT BACK / FORWARD"]
 		&"grappling_gun":
 			_axis_names = ["TIGHTEN / PAY OUT", ""]
 		&"service_lift":

@@ -42,6 +42,28 @@ struct Quaternion final {
     double w = 1.0;
 };
 
+struct ForkliftSnapshot final {
+    struct Wheel final {
+        Vector3 position{};
+        Quaternion rotation{};
+        Vector3 contact_position{}, contact_normal{};
+        std::uint32_t contact_body = ~std::uint32_t{0};
+        double radius_m = 0, width_m = 0, normal_force_n = 0;
+        double angular_velocity_rad_s = 0, steer_rad = 0;
+        bool contact = false;
+    };
+    bool available = false, controls_reachable = false;
+    bool coupled = false, energy_cutoff = false;
+    std::uint64_t chassis_entity = 0;
+    Vector3 station_position{};
+    double battery_j = 0, capacity_j = 0;
+    double lift_position_m = 0, tilt_angle_rad = 0;
+    double lift_force_n = 0, tilt_torque_nm = 0;
+    double applied_drive = 0, applied_brake = 1;
+    double positive_work_j = 0, reservation_excess_j = 0;
+    std::array<Wheel, 3> wheels{};
+};
+
 struct GrappleGunSnapshot final {
     struct Hook final {
         bool present = false;
@@ -738,6 +760,10 @@ public:
     [[nodiscard]] bool request_grapple_release() noexcept;
     [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept;
     [[nodiscard]] GrappleGunSnapshot render_grapple_gun_state() const noexcept;
+    [[nodiscard]] bool set_forklift_input(double drive, double steer, double lift,
+                                        double tilt, double brake) noexcept;
+    [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
+    [[nodiscard]] ForkliftSnapshot render_forklift_state() const noexcept;
 
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
     // not a one-shot: while true and the body is on the ground outside a
@@ -922,6 +948,7 @@ private:
     double needle_hoist_input_ = 0.0;
     double service_lift_input_ = 0.0;
     double supplied_machine_input_ = 0.0;
+    std::array<double, 5> forklift_input_{0, 0, 0, 0, 1};
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;
@@ -942,6 +969,7 @@ private:
     std::vector<std::vector<Vector3>> previous_cable_points_;
     SlingshotSnapshot previous_slingshot_state_{};
     GrappleGunSnapshot previous_grapple_gun_state_{};
+    ForkliftSnapshot previous_forklift_state_{};
     Vector3 grapple_aim_{0, 0, -1};
     double grapple_reel_input_ = 0;
     bool grapple_equipped_input_ = false, grapple_equip_requested_ = false;

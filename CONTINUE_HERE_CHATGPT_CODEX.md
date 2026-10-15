@@ -1,7 +1,9 @@
 <!-- CURRENT_PARKOUR_RENDER_CHECKPOINT -->
 # Current live checkpoint
 
-Read [LIVE_RESUME_20261015](03_EXECUTION/LIVE_RESUME_20261015.md) and [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) first. Published documentation35de8a7, implementation0658f69; matching APK candidate38791786743 GREEN, separate full proof38791786804 FAILURE. Native responsive takeoff goal COMPLETE with source-bound receipts; unpublished/matching APK pending. Actual forklift station/lift/leaving PASS; next real pickup/stack/withdraw/player-ascent route. All pause/no-push/worker status below is historical. Preserve every dirty file and full canonical scope. The linked live checkpoint owns current state and next action.
+Read [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) and [LIVE_RESUME_20261015](03_EXECUTION/LIVE_RESUME_20261015.md) first. They preserve current priorities, all recent requests, source/artifacts, actual running work, failures and next actions. `ACTIVE_GOAL_PHASED_SCOPE.md` retains the full canonical scope. Update these records at implementation, failure and delivery boundaries; do not reconstruct tasks from conversation memory.
+
+Everything below is historical and does not override those current records. Preserve all dirty/untracked work. No repeated permission/settings audits or accepted-check campaigns.
 
 # Live checkpoint — actual full Actions repair, 2026-10-15
 

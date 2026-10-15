@@ -25,9 +25,11 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/fixture_build.cpp
     src/sim/simulation/geometry.cpp
     src/sim/simulation/grapple.cpp
+    src/sim/simulation/forklift.cpp
     src/sim/simulation/hand_transfer.cpp
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
+    src/sim/simulation/parkour_intent.cpp
     src/sim/simulation/machine_build.cpp
     src/sim/simulation/machine_update.cpp
     src/sim/simulation/queries.cpp
@@ -60,6 +62,8 @@ add_library(scraperx_sim STATIC
     src/sim/catch_net_route.cpp
     src/sim/suspended_ladder.cpp
     src/sim/service_lift.cpp
+    src/sim/warehouse_forklift.cpp
+    src/sim/warehouse_forklift_yard.cpp
     src/sim/gravity_wheel_geometry.cpp
     src/sim/gravity_cart_geometry.cpp
     src/sim/supplied_ascent.cpp
@@ -82,7 +86,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -180,6 +184,14 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
 
+    add_executable(scraperx_parkour_intent_flow_tests tests/parkour_intent_flow_tests.cpp)
+    target_link_libraries(scraperx_parkour_intent_flow_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.parkour_intent_flow COMMAND scraperx_parkour_intent_flow_tests)
+
+    add_executable(scraperx_parkour_intent_buffer_tests tests/parkour_intent_buffer_tests.cpp)
+    target_link_libraries(scraperx_parkour_intent_buffer_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.parkour_intent_buffer COMMAND scraperx_parkour_intent_buffer_tests)
+
     add_executable(scraperx_ground_yard_tests tests/ground_yard_tests.cpp)
     target_link_libraries(scraperx_ground_yard_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.ground_yard COMMAND scraperx_ground_yard_tests)
@@ -236,6 +248,15 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_physical_foot_push_tests tests/physical_foot_push_tests.cpp)
         target_link_libraries(scraperx_physical_foot_push_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_foot_push COMMAND scraperx_physical_foot_push_tests)
+        add_executable(scraperx_warehouse_forklift_tests tests/warehouse_forklift_tests.cpp)
+        target_link_libraries(scraperx_warehouse_forklift_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.warehouse_forklift COMMAND scraperx_warehouse_forklift_tests)
+        add_executable(scraperx_warehouse_forklift_flow_tests tests/warehouse_forklift_flow_tests.cpp)
+        target_link_libraries(scraperx_warehouse_forklift_flow_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.warehouse_forklift_flow COMMAND scraperx_warehouse_forklift_flow_tests)
+        add_executable(scraperx_warehouse_forklift_route_tests tests/warehouse_forklift_route_tests.cpp)
+        target_link_libraries(scraperx_warehouse_forklift_route_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.warehouse_forklift_route COMMAND scraperx_warehouse_forklift_route_tests)
         add_executable(scraperx_wood_foot_push_player_tests tests/wood_foot_push_player_tests.cpp)
         target_link_libraries(scraperx_wood_foot_push_player_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.wood_foot_push_player COMMAND scraperx_wood_foot_push_player_tests)

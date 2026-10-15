@@ -1,6 +1,6 @@
 {
   "active_phase": null,
-  "active_goal": "Make real forklift cargo pickup/placement/withdrawal create usable upward footholds and actual gallery exit/retry",
+  "active_goal": "Publish accepted takeoff/forklift source and deliver exact-source Android APK",
   "phase0": "complete",
   "phases": {
     "0": "complete",
@@ -32,7 +32,7 @@
   },
   "master_backlog": "OWNER_DELIVERY_BACKLOG_20261015.md",
   "forklift_and_crane": {
-    "status": "Native mechanics and public station/lift/leaving PASS; cargo route/bridge/APK active; same-truck crane pending",
+    "status": "Complete selected-source native cargo/gallery/onward/grade-retry route and actual Main19checks PASS; source publication/APK active; same-truck crane pending",
     "scope": "Same truck ground and higher bays; driving/lift/tilt/modular forks/claw/clamp plus actual crane transfer",
     "design": "FORKLIFT_AND_CRANE_ROUTE_SYSTEM_20261015.md"
   },

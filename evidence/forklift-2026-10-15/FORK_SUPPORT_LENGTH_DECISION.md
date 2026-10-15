@@ -1,0 +1,7 @@
+# Support-length correction after actual transport failure
+
+Public world trial3 boarding/contact pickup PASS. Trial4 loaded reverse transport FAIL: forks at(-99.9976,.868689,-49.3205), blade tipz-48.0205 vs600kg crate originz-48.0245. The original1.3m tines barely reached the2.4m-deep cargo COM. Cargo fell atz-48.2564 while truck continued reversing unloaded; the placement assertion rejected that result. No placement/route acceptance claimed.
+
+Supported correction at authored geometry owner `warehouse_forklift_yard.cpp`: actual1.8m blades, unchanged.16m width/.10m thickness/x±.48 spacing, each21kg instead of15kg, total fork body72kg instead of60kg. Geometry-derived COM/inertia updates through Kit. This adds approximately.5m support margin beyond cargo COM and retains actual clearance under the.22m tunnel plate. No force cap, stiffness, friction coefficient, cargo joint, motor law or test acceptance threshold is changed. Both blades retain collision. Finite native mechanical owner remains unchanged; reuse its accepted primitive evidence.
+
+Route replay now observes retained actual load during travel and fails immediately on loss. Pickup, level/lower, physical fork withdrawal and stable cargo after withdrawal remain required; upper stack/player route still pending. Next experiment: rebuild only the changed yard translation unit, replace that archive member, relink the public route test, run the same transport/placement path with source-bound receipt.

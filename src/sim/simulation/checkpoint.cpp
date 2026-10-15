@@ -25,6 +25,7 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
     rider_specific_acceleration_ = JPH::Vec3::sZero();
     clear_catch_history();
+    trailing_foot_contact_tick_ = 0;
     grounded_ = false;
     state_.checkpoint_footing_valid = false;
     air_control_force_ = JPH::Vec3::sZero();
@@ -109,6 +110,7 @@ void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterfa
         if (cargo_net_) checkpoint.cargo_net = cargo_net_->capture();
         if (catch_net_) checkpoint.catch_net = catch_net_->capture();
         if (service_lift_) checkpoint.service_lift = service_lift_->state();
+        if (warehouse_forklift_) warehouse_forklift_->capture(checkpoint.forklift);
         if (supplied_ascent_) checkpoint.supplied_ascent = supplied_ascent_->capture();
         return;
     }
@@ -221,6 +223,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     if (catch_net_) catch_net_->restore(checkpoint_.catch_net);
     clear_catch_history();
     if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
+    if (warehouse_forklift_) warehouse_forklift_->restore(checkpoint_.forklift);
     if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
     JPH::Vec3 restored_transport = JPH::Vec3::sZero();
     const auto saved_support = kit_->body_for_entity(checkpoint_.support_entity);
@@ -263,6 +266,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
 
     }
 
+    trailing_foot_contact_tick_ = 0;
     grounded_ = false;
     jump_vault_ticks_left_ = ordinary_jump_ticks_left_ = 0;
     state_.checkpoint_footing_valid = false;

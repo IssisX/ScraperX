@@ -19,6 +19,9 @@ var _ground_yard: GroundYard
 const YardAmbience := preload("res://presentation/audio/yard_ambience.gd")
 var _yard_ambience: Node3D
 
+const ForkliftView := preload("res://presentation/forklift_view.gd")
+var _forklift_view: ForkliftView
+
 const WorksiteMachineView := preload("res://presentation/worksite_machine_view.gd")
 var _machine_view: WorksiteMachineView
 
@@ -348,6 +351,9 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_setup_kit_view()
+	_forklift_view = ForkliftView.new()
+	_forklift_view.name = "ForkliftWheels"
+	add_child(_forklift_view)
 	_grapple_view = GrapplingGunViewScript.new()
 	_grapple_view.name = "GrapplingGunPresentation"
 	_grapple_view.configure_hook_geometry(_native.get_grapple_hook_geometry())
@@ -437,7 +443,7 @@ func _process(delta: float) -> void:
 	var forward := Vector2(-sin(_yaw), -cos(_yaw))
 	var right := Vector2(cos(_yaw), -sin(_yaw))
 	var world_move := right * desired.x + forward * desired.y
-	if sling_recovering:
+	if sling_recovering or _operating == &"forklift":
 		world_move = Vector2.ZERO
 	if not _native.set_move_input(world_move.x, world_move.y):
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
@@ -448,9 +454,10 @@ func _process(delta: float) -> void:
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
 	_native.set_sprint_input(bool(intent["sprint_held"]))
 
+	_deliver_forklift_input(intent)
 	var pendant_input: Vector2 = intent["pendant"]
 	_native.set_grapple_reel_input(pendant_input.y if _operating == &"grappling_gun" else 0.0)
-	var jib_input := Vector2.ZERO if _operating == &"grappling_gun" else pendant_input
+	var jib_input := Vector2.ZERO if _operating in [&"grappling_gun", &"forklift"] else pendant_input
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
 	# The B00 yard jib shares the same pendant axes. Both are station-gated
@@ -709,6 +716,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
 	_reset_grapple_feedback()
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic()
@@ -815,6 +823,8 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 				# A jump stands a crouched body first (natively), and ends the toggle.
 				_crouch_toggled = false
 				_crouch_toggle_from_hang = false
+				if _operating == &"forklift":
+					_end_operation()
 				_native.request_jump()
 			&"action":
 				_crouch_toggled = false
@@ -941,7 +951,21 @@ func _perform_action() -> void:
 			_native.request_traversal()
 
 
+func _deliver_forklift_input(intent: Dictionary) -> void:
+	var state: Dictionary = _native.get_forklift_state()
+	if _paused or _operating != &"forklift" or not bool(state.get("controls_reachable", false)):
+		_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
+		return
+	var move: Vector2 = intent["move"]
+	var pendant: Vector2 = intent["pendant"]
+	# Raw axes stay in truck space even while the player looks around.
+	_native.set_forklift_input(move.y, move.x, pendant.y, -pendant.x,
+		1.0 if is_zero_approx(move.y) else 0.0)
+
+
 func _end_operation() -> void:
+	if _operating == &"forklift":
+		_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
 	if _operating == &"grappling_gun":
 		_native.set_grapple_reel_input(0.0)
 		_native.set_grapple_equipped(false)
@@ -978,6 +1002,7 @@ func _read_context() -> Dictionary:
 	var grapple: Dictionary = _native.get_grapple_gun_state()
 	var service_lift: Dictionary = _native.get_service_lift_state()
 	var balance: Dictionary = _native.get_supplied_machine_state()
+	var forklift: Dictionary = _native.get_forklift_state()
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
@@ -986,6 +1011,8 @@ func _read_context() -> Dictionary:
 		# Native acknowledgment owns acquisition. A rendering frame before the
 		# next90Hz tick cannot cancel a still-pending equip command.
 		_operating = &"grappling_gun"
+	elif bool(forklift.get("controls_reachable", false)):
+		station = &"forklift"
 	elif int(service_lift["station"]) != 0 or (_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0):
 		station = &"service_lift"
 	elif int(balance["station"]) != 0 or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0):
@@ -1014,11 +1041,12 @@ func _read_context() -> Dictionary:
 	# Reach preserves the pendant through brief unweighting; only native
 	# supported footing authorizes drive effort on each physics tick.
 	var lift_reachable := ((_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0) \
-		or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0)) \
+		or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0) \
+		or (_operating == &"forklift" and bool(forklift.get("controls_reachable", false)))) \
 		and free and int(_native.get_carrying_entity_id()) == 0
 	var tool_active := station == &"grappling_gun" and free
 	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable and not tool_active) or not free \
-			or (_operating in [&"service_lift", &"supplied_machine"] and not lift_reachable)):
+			or (_operating in [&"service_lift", &"supplied_machine", &"forklift"] and not lift_reachable)):
 		_end_operation()
 	var climb_ok := grounded and free and ledge
 	# AS-003: what is on the carry point, and what a pick-up would take --
@@ -1096,6 +1124,8 @@ func _read_context() -> Dictionary:
 		var running := bool(_native.is_water_screw_motor_enabled())
 		action = {"id": &"screw_toggle", "label": "STOP SCREW" if running else "START SCREW",
 			"icon": &"operate", "detail": "UPPER TANK %.2f / 2.00 M3" % float(_native.get_water_screw_tank_volume_m3())}
+	elif grounded and station == &"forklift":
+		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": "FORKLIFT"}
 	elif grounded and station == &"service_lift":
 		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": "SERVICE LIFT"}
 	elif grounded and station == &"supplied_machine":
@@ -1229,6 +1259,15 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"forklift":
+			var truck: Dictionary = _native.get_forklift_state()
+			var cutoff := bool(truck.get("energy_cutoff", false))
+			return {"title": "FORKLIFT", "subtitle": "MOVE: DRIVE / STEER  /  RELEASE: BRAKE",
+				"rows": [["BATTERY", "EMPTY" if cutoff else "%.0f%%" % (100.0 * float(truck.get("battery_j", 0.0)) / maxf(1.0, float(truck.get("capacity_j", 1.0)))), 2 if cutoff else 0],
+					["FORKS", "%.1f M" % float(truck.get("lift_position_m", 0.0)), 0],
+					["LOAD", "%.0f KN" % (float(truck.get("lift_force_n", 0.0)) / 1000.0), 0],
+					["DRIVE", "BRAKED" if float(truck.get("applied_brake", 1.0)) > 0.0 else "POWER EMPTY" if cutoff else "DRIVING" if absf(float(truck.get("applied_drive", 0.0))) > 0.0 else "COASTING", 0]],
+				"verbs": [[&"hoist", "RAISE / LOWER"], [&"slew", "TILT BACK / FORWARD"], [&"leave", "DONE"]]}
 		&"grappling_gun":
 			var gun: Dictionary = _native.get_grapple_gun_state()
 			var drop_label := "RELEASE" if bool(gun.get("line_attached", false)) else "STOW"
@@ -1915,6 +1954,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			float(_native.get_orifice_mass_flow_kg_per_s()))
 		_machine_view.mirror_water_screw(_native)
 	_kit_view.render_view()
+	_forklift_view.render_state(_native.get_forklift_render_state())
 	if _inspection_balance_feedback != null:
 		_inspection_balance_feedback.update_from_native(_native, delta, not _settings.launch_cinematics)
 	if _grapple_view != null:

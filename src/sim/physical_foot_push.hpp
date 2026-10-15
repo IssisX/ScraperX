@@ -37,13 +37,22 @@ public:
         float last_load_n = 0;
         float peak_load_n = 0;
         double elapsed_seconds = 0;
-        double command_work_bound_j = 0; // Fmax * representable rest increment.
+        // Legacy: Fmax * representable rest increment. Planted motor:
+        // sum of admitted positive work of its actual frozen-Jacobian impulses.
+        double command_work_bound_j = 0;
         double last_command_work_bound_j = 0;
-        // Nominal compression-spring diagnostic, not a second actuator budget
-        // or a complete energy ledger for the force-capped implicit solver.
+        // Nominal passive/legacy spring storage, not a complete energy ledger
+        // for the force-capped implicit solver. Motor activation retires it;
+        // the direct motor does not move a spring reference or store preload.
         double nominal_spring_storage_j = 0;
         double target_storage_delta_j = 0;
         bool target_held = false;
+        bool passive_plant = false;
+        bool planted_motor_profile = false;
+        double motor_positive_work_j = 0;
+        double motor_absorbed_work_j = 0; // Never credited to command budget.
+        double retired_nominal_storage_j = 0; // Diagnostic at dissipative clutch-over.
+        float actual_motor_extension_m = 0; // Actual L-L0, not commanded rest travel.
     };
 
     PhysicalFootPush(JPH::PhysicsSystem &system, JPH::BodyID player);
@@ -57,9 +66,25 @@ public:
     bool begin(JPH::BodyID support, JPH::RVec3 world_material_point,
                JPH::Vec3 world_surface_normal, float friction = .85F,
                float requested_stroke_m = maximum_stroke_m());
+    // Retain a zero-command compression row at the actual attachment distance.
+    // The held row still responds to external compression and expires normally.
+    // A planted leg swivels within its original radial reach plus .30m and the
+    // material friction cone. That same geometry survives activation/hold;
+    // legacy begin retains its separate .45m tangential-cylinder restriction.
+    bool begin_passive_plant(JPH::BodyID support, JPH::RVec3 world_material_point,
+                             JPH::Vec3 world_surface_normal, float friction = .85F);
+    // Engage a finite force motor on the existing valid passive row without
+    // renewing its anchor, rest target, work ledger or original finite lifetime.
+    // One reciprocal impulse per collision step is capped at3500N*h and its
+    // positive event work at5000W*h plus the unchanged total budget. The old
+    // spring's nominal storage is retired, never credited to the motor. Active
+    // motor rows have no warm start; holding stops drive without adding a spring.
+    // A refused activation leaves the row unchanged.
+    bool activate_planted_push();
     void clear(StopReason reason = StopReason::Cleared);
     // Stop further target extension without changing the actual row, its
     // compression or its original finite lifetime. Only a new begin resets it.
+    // On a planted motor this stops drive; it never restores a spring.
     void hold_target() noexcept;
     // Only advance/validate/disable the existing row here; no manager mutation.
     // Face and traction validity come from the existing native contact owner.
@@ -81,6 +106,9 @@ public:
     [[nodiscard]] static constexpr float lateral_reach_m() noexcept { return .45F; }
 
 private:
+    bool begin_contact(JPH::BodyID support, JPH::RVec3 world_material_point,
+                       JPH::Vec3 world_surface_normal, float friction,
+                       float requested_stroke_m, bool planted_geometry);
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
