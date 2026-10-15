@@ -22,6 +22,12 @@ Recurring contact, dissipation, reaction or momentum failures belong at their sh
 
 The game is a human-limited first-person ascent through an enormous working industrial structure, beyond 1,000 m toward the existing 1,600 m tower. Parkour, machinery, coherent places, meaningful decisions, fear/recovery and gorgeous material detail are all primary work. Use breadth through depth. Reuse primitives without copying whole encounters. Preserve strategic movement, justify geometry changes physically, and give encounters varied extents, including substantial 20–50 m-plus machines where suitable. There is no restrictive parts whitelist; GDD §16 owns readability and purpose. Avoid repeated lift/ladder templates, hidden tiny mechanisms, gratuitous tool chores and fallback bypasses. Materials must behave consistently with their appearance. Smooth movement/interpolation and bounded native-state-driven camera/audio/haptics communicate physical events.
 
+## Delivery-first execution revision2026-10-14
+
+Owner requested a faster coding system after repeated failed feature iterations. Apply `/storage/emulated/0/Download/ScraperX-efficient-agent-prompt.txt` as current execution guidance; it supersedes older orchestration defaults without reducing the canonical scope or physics/delivery acceptance. Root codes the critical path. Use ready independent local/MCP deliverables, not staffing activity. Normal root integration effort medium; choose real task-specific effort under the device-wide policy and verify applied versus live settings honestly.
+
+For an uncertain mechanism, run one small matched production-owner causal fixture before the full world (10minute diagnostic budget). Fixtures diagnose, never establish shipping gameplay. After two failures or time expiry, reject/reassess that candidate from measured contacts/forces; no silent timebox resets, geometry/parameter sweeps or endless adviser chain. Full-encounter diagnosis has a visible20minute budget/reassessment; preserve all actual acceptance. Complete the smallest connected player path before expanding presentation tests, and freeze interfaces/source before final bridge/view verification. Preserve one source receipt per meaningful artifact; no repeated catalogs/recon or duplicate handoffs.
+
 ## Collaboration, agents and context
 
 Use American English spelling in communication, documentation and new code comments. Preserve existing code identifiers.
@@ -35,6 +41,15 @@ Owner dynamic reasoning policy2026-10-12 supersedes fixed effort defaults: prese
 Owner orchestration source: `/storage/emulated/0/Download/ScraperX-efficient-agent-prompt.txt` supersedes fixed effort/pool presets. Use an elastic shared local/MCP/separate-task budget: normally3–5 useful workers; up to11 excludingroot only with ready independent deliverables and actualhost capacity. Count Superparent and eachchild; never multiply parent instances or fill slots. Use ScraperX Crew as the project coordinator. Select only applicable installed Superpowers modules, Causal Mechanism Compiler, ThreeSpine and Godot specialist references. Godot studio is a knowledge library, not another coordinator. Read actual instructions; report unavailable skills honestly. Never load entire packs or broad tool catalogs. Discover exact tool names/narrow prefixes and return bounded fields. Parse/filter large files and logs locally; avoid repeated full-file reads and duplicate polling. Keep histories, giant logs and detailed audits out of the startup chain.
 
 ## Verification, delivery and permissions
+
+## Owner correction: implement, do not repeatedly verify —2026-10-14
+
+Goals must describe the next useful behavior or requested deliverable. Never select a verification-only goal for already accepted work. When a goal is achieved, proceed to the next authorized implementation goal; preserve deferred scope.
+
+Run necessary affected checks once after a meaningful behavior change or repair. Reuse matching results until relevant source changes, actual failures or new material uncertainty invalidate them. New messages, delegation, reports, handoffs and goal boundaries never require another run by themselves. Inspect useful worker evidence instead of automatically duplicating it. Do not expand passing checks into full campaigns without a supported dependency. Read startup/workspace/settings facts once per working context and refresh only facts actually changed or uncertain. No repeated model/tier/reviewer audits.
+
+Checks remain part of implementation acceptance; preserve honest source/build/runtime/device distinctions and never claim an unrun result. This owner correction overrides repetitive fresh-verification and re-consultation triggers in local skills and older workflow guidance.
+
 
 Verification must reject actual defects. Never let checking/testing become the main task or expand into redundant campaigns. Reuse evidence until relevant changes invalidate it. Distinguish native tests, Godot input/rendered checks, APK builds and device observations; report introduced, pre-existing, environmental or unresolved failures. Screenshots are optional diagnostics. Update affected authoritative documentation alongside changes.
 

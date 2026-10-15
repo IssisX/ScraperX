@@ -24,6 +24,10 @@ struct CargoNetConfig final {
     CargoNetSurface surface = CargoNetSurface::OpenWeave;
     float clip_stiffness = 5000.0F, clip_damping = 25.0F;
     bool paired_sleep = false;
+    // Additional finite rigid members of the real constraint-connected assembly.
+    // Frame and piston are included automatically. Author actual body identities;
+    // these members share velocity-gated native sleep and wake with the cloth.
+    std::vector<JPH::BodyID> sleep_coupled_bodies;
     bool internally_integrated_clips = false;
     // Opt-in finite tension-only membrane tether. Material X/Y are grid
     // coordinates, Z must be zero; anchor is the real frame's body-local point.
@@ -32,6 +36,17 @@ struct CargoNetConfig final {
     JPH::Vec3 tether_anchor_body_local = JPH::Vec3::sZero();
     float tether_rest_length_m = 1.0F;
     float tether_stiffness = 0.0F, tether_damping = 0.0F; // N/m, N s/m
+    // Optional finite zero-rest elastomer clip/spring-dashpot to a real dynamic piston.
+    // Invalid body disables it; the piston must be distinct from the frame.
+    // Anchor is body-origin-local; material X/Y are grid coordinates, Z is zero.
+    JPH::BodyID piston_body = JPH::BodyID();
+    JPH::Vec3 piston_body_local = JPH::Vec3(0,0.55F,0);
+    JPH::Vec3 piston_material = JPH::Vec3(20,20,0);
+    float piston_stiffness = 40000.0F, piston_damping = 400.0F; // N/m, N s/m
+    // Uniform triangular reinforcement, area-lumped onto the actual membrane
+    // face containing piston_material. Zero preserves the original mass law;
+    // the pad remains physical even when piston_body is invalid.
+    float piston_pad_mass_kg = 0.0F;
 };
 // One actual Jolt soft body. Read-back is the same deforming mesh used for
 // collision, grip material coordinates, rider load and Godot presentation.
@@ -49,9 +64,10 @@ public:
     // Caller context must outlive this net. Callback must not lock or mutate physics.
     using ContactFrictionCallback = float (*)(void *, JPH::BodyID, JPH::Vec3, JPH::Vec3, float) noexcept;
     void set_contact_friction_callback(ContactFrictionCallback callback, void *context);
+    // Serialized native listener, before rigid/soft position integration.
     void pre_step(float dt);
     // Owner thread, after PhysicsSystem::Update, refresh and contact measurement.
-    // Keeps the finite clip-connected net/frame in one native sleep lifecycle.
+    // Keeps the finite clip/constraint-connected assembly in one native sleep lifecycle.
     void post_step(float dt, bool externally_touched = false);
     ~CargoNet();
     CargoNet(const CargoNet &) = delete;
@@ -73,6 +89,11 @@ public:
     // including implicit integration loss, not full scene energy closure.
     // Transient diagnostic: construction/restore starts a new measurement.
     [[nodiscard]] double tether_dissipated_work() const noexcept { return tether_dissipated_work_; }
+    [[nodiscard]] JPH::RVec3 piston_material_endpoint() const noexcept;
+    [[nodiscard]] JPH::RVec3 piston_anchor_endpoint() const noexcept;
+    [[nodiscard]] double piston_elastic_energy() const noexcept;
+    // Discrete relative-point predictor loss, not complete scene energy closure.
+    [[nodiscard]] double piston_dissipated_work() const noexcept { return piston_dissipated_work_; }
     void impulse(JPH::Vec3 material, JPH::Vec3 world_impulse);
     // Owner thread, outside Update: one ongoing finite material load. Internal
     // clips integrate it at native cloth cadence; legacy nets use impulse(F*dt).
@@ -84,6 +105,8 @@ public:
     [[nodiscard]] std::vector<JPH::RVec3> render_vertices(float alpha) const;
     [[nodiscard]] JPH::RVec3 render_world_point(JPH::Vec3 material, float alpha) const noexcept;
     [[nodiscard]] const std::vector<std::uint32_t> &indices() const noexcept { return indices_; }
+    // Same immutable native face indices used to add the reinforcement mass.
+    [[nodiscard]] const std::vector<std::uint32_t> &reinforcement_indices() const noexcept { return reinforcement_indices_; }
     [[nodiscard]] std::string capture() const;
     void restore(const std::string &state);
 private:
@@ -100,6 +123,7 @@ private:
     [[nodiscard]] MaterialSample sample(float c, float r) const noexcept;
     CargoNetConfig config_;
     std::vector<std::uint32_t> attachment_vertices_;
+    std::vector<std::uint32_t> reinforcement_indices_;
     JPH::PhysicsSystem &system_;
     JPH::BodyID body_;
     JPH::BodyID frame_;
@@ -108,9 +132,10 @@ private:
     std::vector<JPH::RVec3> previous_vertices_;
     std::vector<std::uint32_t> indices_;
     float equilibrium_time_ = 0.0F;
-    bool sleeping_frame_valid_ = false;
-    JPH::RVec3 sleeping_frame_position_ = JPH::RVec3::sZero();
-    JPH::Quat sleeping_frame_rotation_ = JPH::Quat::sIdentity();
+    bool sleeping_assembly_valid_ = false;
+    std::vector<JPH::BodyID> sleep_rigid_bodies_;
+    std::vector<JPH::RVec3> sleeping_rigid_positions_;
+    std::vector<JPH::Quat> sleeping_rigid_rotations_;
     bool clip_step_started_ = false;
     JPH::RMat44 clip_frame_transform_ = JPH::RMat44::sIdentity();
     JPH::Mat44 clip_frame_inverse_inertia_ = JPH::Mat44::sZero();
@@ -122,10 +147,21 @@ private:
     float tether_tension_ = 0.0F;
     double tether_dissipated_work_ = 0.0;
     JPH::RVec3 tether_anchor_com_local_ = JPH::RVec3::sZero();
+    JPH::RVec3 piston_anchor_com_local_ = JPH::RVec3::sZero();
+    double piston_dissipated_work_ = 0;
+    // One real reciprocal impulse, spread over the native cloth integrations.
+    // The rigid linear reaction is delivered before its position advances;
+    // actual cloth application points supply the remaining reaction moment.
+    JPH::Vec3 piston_pending_reaction_ = JPH::Vec3::sZero();
+    JPH::RVec3 piston_reaction_point_ = JPH::RVec3::sZero();
+    JPH::Vec3 piston_reaction_moment_ = JPH::Vec3::sZero();
+    std::uint32_t piston_pending_iterations_ = 0;
+    void apply_piston_step(float dt);
     void internal_clip_step(float dt);
     void finish_clip_step(JPH::BodyInterface &bodies);
-    void wake_pair();
-    [[nodiscard]] bool sleeping_frame_changed() const;
+    void wake_assembly();
+    [[nodiscard]] bool assembly_asleep() const;
+    [[nodiscard]] bool sleeping_assembly_changed() const;
     // Transient owner force, deliberately outside serialized native state.
     std::array<std::uint32_t,16> force_vertices_{};
     std::array<float,16> force_weights_{};

@@ -65,6 +65,13 @@ var rustles := 0
 var clangs := 0
 var creaks := 0
 var birds := 0
+var grapple_launches := 0
+var grapple_failures := 0
+var grapple_warnings := 0
+# Requested physical activity, also observable with the silent Dummy driver.
+var grapple_motor_active := false
+var _grapple_motor: AudioStreamPlayer
+var _grapple_load: AudioStreamPlayer
 
 # The time of day, for the birds. Set by main.gd.
 var sky: Node = null
@@ -175,6 +182,8 @@ func _ready() -> void:
 	_bullet_time = AudioStreamPlayer.new()
 	_bullet_time.bus = BUS_EFFECTS
 	add_child(_bullet_time)
+	_grapple_motor = _looping_player(BUS_EFFECTS)
+	_grapple_load = _looping_player(BUS_EFFECTS)
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
@@ -209,6 +218,7 @@ func _exit_tree() -> void:
 # Maker -- whose mixing ends with the recording -- gives it a few frames
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
+	reset_grapple_feedback()
 	_silent = true
 	fall_reactions.quiesce()
 	cancel_launch_cinematic()
@@ -747,6 +757,14 @@ func catch_net_strain(at: Vector3, approach_speed_mps: float) -> void:
 	_play_at(&"creak", at, lerpf(-14.0, -3.0, strength), lerpf(0.85, 0.65, strength))
 
 
+# Actual slow bridge motion resonates through the existing positional steel
+# creak bank. The observer owns its sparse cadence; no animation drives sound.
+func inspection_span_strain(at: Vector3, strength: float) -> void:
+	if not at.is_finite() or strength <= 0.0:
+		return
+	_play_at(&"creak", at, lerpf(-17.0, -6.0, clampf(strength, 0.0, 1.0)), 0.62)
+
+
 func climb_regrip(at: Vector3, initial_grasp: bool = false) -> void:
 	climb_regrips += 1
 	last_climb_regrip_position = at
@@ -771,3 +789,75 @@ func update_suspended_ladder(delta: float, velocity: Vector3, held: bool) -> voi
 	if _bank_ready and not _silent:
 		_ladder_strain.volume_db = linear_to_db(maxf(_ladder_gain, 0.0001)) - (7.0 if held else 14.0)
 		_ladder_strain.pitch_scale = lerpf(0.65, 1.12, _ladder_gain)
+
+
+# Root owns native event identity and lifecycle. No inferred capture, work,
+# auto-reel intention, or tension by itself can manufacture a motor cue.
+func update_grapple_feedback(feedback: Dictionary, _delta: float) -> void:
+	if not bool(feedback.get("equipped", false)):
+		reset_grapple_feedback()
+		return
+	if bool(feedback.get("fresh", false)):
+		if bool(feedback.get("launch", false)):
+			grapple_launches += 1
+			_play(&"grapple_launch", -9.0, 1.0)
+		if bool(feedback.get("failed", false)):
+			grapple_failures += 1
+			_play(&"grapple_failure", -17.0, 1.0)
+		if bool(feedback.get("warning", false)):
+			grapple_warnings += 1
+			_play(&"grapple_warning", -20.0, 1.0)
+	# Continuous targets persist between native ticks. Stopping on each
+	# zero-tick render would chop/restart the loop at high display rates.
+	var winding := _grapple_unit(feedback.get("winding", 0.0))
+	var power := _grapple_unit(feedback.get("power", 0.0))
+	var load := _grapple_unit(feedback.get("load", 0.0))
+	grapple_motor_active = winding > 0.0 or power > 0.0
+	if not grapple_motor_active:
+		_stop_grapple_motor()
+		return
+	# Slack really moves the spool but does no work. Only measured power
+	# brings up the deeper loaded gear layer; hanging still stays silent.
+	_grapple_motor.volume_db = lerpf(-32.0, -25.0, winding) + 10.0 * power
+	_grapple_motor.pitch_scale = clampf(0.85 + 0.4 * winding - 0.12 * power * load, 0.65, 1.35)
+	_grapple_load.volume_db = lerpf(-60.0, -18.0, power)
+	_grapple_load.pitch_scale = lerpf(1.05, 0.75, power * load)
+	if not _bank_ready or _silent:
+		return
+	if not _grapple_motor.playing:
+		_grapple_motor.stream = _bank.clips[&"grapple_winding_loop"][0]
+		_grapple_motor.play()
+	if power > 0.0:
+		if not _grapple_load.playing:
+			_grapple_load.stream = _bank.clips[&"grapple_load_loop"][0]
+			_grapple_load.play()
+	else:
+		_grapple_load.stop()
+		_grapple_load.stream = null
+
+
+func _grapple_unit(value: Variant) -> float:
+	var number := float(value)
+	return clampf(number, 0.0, 1.0) if is_finite(number) else 0.0
+
+
+func _stop_grapple_motor() -> void:
+	if _grapple_motor != null:
+		_grapple_motor.stop()
+		_grapple_motor.stream = null
+		_grapple_motor.volume_db = -80.0
+	if _grapple_load != null:
+		_grapple_load.stop()
+		_grapple_load.stream = null
+		_grapple_load.volume_db = -80.0
+
+
+func reset_grapple_feedback() -> void:
+	grapple_motor_active = false
+	_stop_grapple_motor()
+	# Discretes use the existing bounded pool. Stop only this tool's voices,
+	# including a launch tail when stow/pause/death interrupts it.
+	for voice in _voices:
+		if voice.stream != null and voice.stream.resource_name.begins_with("grapple_"):
+			voice.stop()
+			voice.stream = null

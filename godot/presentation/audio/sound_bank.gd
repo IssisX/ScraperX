@@ -79,6 +79,7 @@ func build() -> void:
 	clips[&"hiss_loop"] = [_loop(_hiss(1.6), 0.3)]
 	clips[&"rattle_loop"] = [_loop(_rattle(1.4), 0.2)]
 	clips[&"motor_loop"] = [_loop(_motor(1.8), 0.3)]
+	_build_grapple_clips()
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -616,4 +617,77 @@ func _bullet_time() -> PackedFloat32Array:
 		bloom += (sin(TAU * 310.0 * t) + sin(TAU * 317.0 * t)) * exp(-t * 1.9) * 0.16
 		var sweep := noise * lerpf(0.12, 0.62, orbit) + sin(phase) * lerpf(0.19, 0.07, orbit)
 		out[i] = (bloom + sweep) * fade
+	return out
+
+
+# Append after every legacy recipe. A private seeded generator preserves both
+# the existing PCM and the legacy variant-pick RNG state after bank build.
+func _build_grapple_clips() -> void:
+	var legacy_rng := _rng
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = 0x47524150
+	clips[&"grapple_launch"] = [_wav(_grapple_launch())]
+	clips[&"grapple_failure"] = [_wav(_grapple_failure())]
+	clips[&"grapple_warning"] = [_wav(_grapple_warning())]
+	clips[&"grapple_winding_loop"] = [_loop(_grapple_winding(), 0.12)]
+	clips[&"grapple_load_loop"] = [_loop(_grapple_loaded(), 0.12)]
+	for name in [&"grapple_launch", &"grapple_failure", &"grapple_warning", &"grapple_winding_loop", &"grapple_load_loop"]:
+		clips[name][0].resource_name = String(name)
+	_rng = legacy_rng
+
+
+# Cartridge pop, compressed air tail and a damped mechanism report.
+func _grapple_launch() -> PackedFloat32Array:
+	var out := _silence(0.30)
+	_add_band_noise(out, 0.0, 0.025, 0.8, 0.005, 700.0, 7200.0)
+	_add_band_noise(out, 0.006, 0.23, 0.45, 0.047, 450.0, 4200.0)
+	_add_tone(out, 175.0, 0.0, 0.12, 0.35, 0.022)
+	_add_tone(out, 720.0, 0.012, 0.10, 0.21, 0.016)
+	_add_tone(out, 1230.0, 0.026, 0.07, 0.12, 0.011)
+	return out
+
+
+# Short line relaxation: dry fiber snap and descending tension, no impact clang.
+func _grapple_failure() -> PackedFloat32Array:
+	var out := _silence(0.24)
+	_add_band_noise(out, 0.0, 0.018, 0.45, 0.004, 1200.0, 5400.0)
+	_add_band_noise(out, 0.008, 0.18, 0.24, 0.035, 350.0, 2200.0)
+	var phase := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		phase += TAU * (160.0 + 580.0 * exp(-t * 22.0)) / MIX_RATE
+		out[i] += sin(phase) * 0.26 * exp(-t * 24.0)
+	return out
+
+
+func _grapple_warning() -> PackedFloat32Array:
+	var out := _silence(0.16)
+	_add_tone(out, 1180.0, 0.0, 0.065, 0.22, 0.024)
+	_add_tone(out, 1470.0, 0.075, 0.075, 0.20, 0.025)
+	return out
+
+
+# Periodic tooth pulses and small gear whirr; the crossfade seals the seam.
+func _grapple_winding() -> PackedFloat32Array:
+	var out := _silence(0.72)
+	_add_tone(out, 450.0, 0.0, 0.72, 0.045, 0.0)
+	for tooth in 36:
+		var at := float(tooth) * 0.02
+		_add_band_noise(out, at, 0.008, 0.16, 0.0018, 1100.0, 4200.0)
+		_add_tone(out, 1850.0, at, 0.012, 0.08, 0.002)
+	# Give each tooth a 1 ms attack so wrapping at a tooth boundary cannot
+	# jump directly into a random noise sample.
+	for i in out.size():
+		out[i] *= smoothstep(0.0, 0.001, float(i % 441) / MIX_RATE)
+	return out
+
+
+func _grapple_loaded() -> PackedFloat32Array:
+	var out := _silence(0.72)
+	_add_tone(out, 150.0, 0.0, 0.72, 0.20, 0.0)
+	_add_tone(out, 300.0, 0.0, 0.72, 0.14, 0.0)
+	_add_tone(out, 600.0, 0.0, 0.72, 0.10, 0.0)
+	var gear := _band_noise_buffer(out.size(), 600.0, 2100.0)
+	for i in out.size():
+		out[i] += gear[i] * 0.11
 	return out

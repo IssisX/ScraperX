@@ -44,7 +44,7 @@ struct World {
         BodyCreationSettings g(new BoxShape(Vec3(60,.5F,30)),RVec3(-34,-.5,-150),Quat::sIdentity(),EMotionType::Static,0);
         ground=system.GetBodyInterface().CreateAndAddBody(g,EActivation::DontActivate);
         frame=build_catch_net_route(*kit);
-        net=std::make_unique<CargoNet>(system,1,kit->body_id(frame),catch_net_config());frame_reference=system.GetBodyInterface().GetCenterOfMassPosition(kit->body_id(frame));
+        net=std::make_unique<CargoNet>(system,1,kit->body_id(frame),catch_net_config(*kit));frame_reference=system.GetBodyInterface().GetCenterOfMassPosition(kit->body_id(frame));
         const auto inverse=system.GetBodyInterface().GetCenterOfMassTransform(kit->body_id(frame)).Inversed();
         const auto &cfg=net->config();
         const int corners=cfg.surface==CargoNetSurface::OpenWeave?4:1;
@@ -60,7 +60,7 @@ struct World {
     }
     ~World(){system.RemoveStepListener(&listener);net.reset();kit.reset();auto &b=system.GetBodyInterface();if(!player.IsInvalid()){b.RemoveBody(player);b.DestroyBody(player);}b.RemoveBody(ground);b.DestroyBody(ground);}
     void tick(){contacts.this_tick=false;kit->pre_step(1.0F/90);check(system.Update(1.0F/90,4,&temp,&jobs)==EPhysicsUpdateError::None,"native update capacity");kit->post_step(1.0F/90);net->refresh();net->post_step(1.0F/90,contacts.this_tick);}
-    void capsule(float y,EMotionQuality quality=EMotionQuality::LinearCast){BodyCreationSettings p(new CapsuleShape(.55F,.35F),RVec3(-34,y,-150),Quat::sIdentity(),EMotionType::Dynamic,1);
+    void capsule(float y,EMotionQuality quality=EMotionQuality::LinearCast,float offset_z=0){BodyCreationSettings p(new CapsuleShape(.55F,.35F),RVec3(-34,y,-150+offset_z),Quat::sIdentity(),EMotionType::Dynamic,1);
         p.mOverrideMassProperties=EOverrideMassProperties::CalculateInertia;p.mMassPropertiesOverride.mMass=85;
         p.mAllowedDOFs=EAllowedDOFs::TranslationX|EAllowedDOFs::TranslationY|EAllowedDOFs::TranslationZ;
         p.mLinearDamping=0;p.mAngularDamping=0;p.mFriction=.8F;p.mRestitution=0;p.mMotionQuality=quality;
@@ -77,6 +77,11 @@ void defaults(){World w;
         try{CargoNet invalid(w.system,1,w.kit->body_id(w.frame),config);}catch(const std::invalid_argument &){rejected=true;}
         check(rejected,"invalid axial material damping is rejected before native creation");
     }
+    for(const float mass:{-1.0F,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()}){
+        auto config=catch_net_config();config.piston_pad_mass_kg=mass;bool rejected=false;
+        try{CargoNet invalid(w.system,1,w.kit->body_id(w.frame),config);}catch(const std::invalid_argument &){rejected=true;}
+        check(rejected,"invalid reinforcement mass is rejected before native creation");
+    }
     for(const bool zero_compliance:{false,true}){
         auto config=catch_net_config();
         if(zero_compliance)config.stretch_compliance=0;else config.internally_integrated_clips=false;
@@ -87,18 +92,60 @@ void defaults(){World w;
     check(vertical.config().axial_damping_ratio==0&&w.net->config().axial_damping_ratio==.05F,
           "strain-rate material loss preserves legacy default");
     check(!vertical.config().paired_sleep&&w.net->config().paired_sleep,"paired sleep preserves legacy default");
+    check(vertical.config().sleep_coupled_bodies.empty()&&w.net->config().sleep_coupled_bodies.size()==3,
+          "catch sleep lifecycle includes all real slider stages and preserves legacy defaults");
+    for(const auto id:{BodyID(),w.ground}){
+        auto cfg=catch_net_config();cfg.sleep_coupled_bodies={id};bool rejected=false;
+        try{CargoNet invalid(w.system,1,w.kit->body_id(w.frame),cfg);}catch(const std::invalid_argument &){rejected=true;}
+        check(rejected,"assembly sleep rejects invalid or non-dynamic members before native creation");
+    }
     check(!vertical.config().internally_integrated_clips&&w.net->config().internally_integrated_clips,
           "internal clip integration preserves legacy default");
     {BodyLockRead lock(w.system.GetBodyLockInterface(),vertical.body());check(!lock.GetBody().GetAllowSleeping(),"legacy net native sleeping remains disabled");}
     check(vertical.vertices().size()==828&&vertical.indices().size()==3534,"legacy woven topology");
     check(vertical.columns()==9&&vertical.rows()==23&&vertical.attachment_count()==72,"legacy end rows");
+    check(vertical.config().piston_pad_mass_kg==0&&vertical.reinforcement_indices().empty(),
+          "disabled reinforcement preserves legacy vertical cloth");
     check(w.net->vertices().size()==1681&&w.net->indices().size()==9600&&w.net->attachment_count()==160,"continuous physical catch has unique nodes and real faces");
+    const auto check_reinforcement=[&](const CargoNet &net){
+        const auto &cfg=net.config();const auto &pad=net.reinforcement_indices();
+        if(cfg.piston_pad_mass_kg>0){
+            check(pad.size()==3&&pad[0]!=pad[1]&&pad[0]!=pad[2]&&pad[1]!=pad[2],
+                  "reinforcement names three unique actual native vertices");
+            bool native_face=false;const auto &faces=net.indices();
+            for(std::size_t i=0;i<faces.size();i+=3){
+                bool same=true;for(int corner=0;corner<3;++corner)
+                    same&=std::find(pad.begin(),pad.end(),faces[i+corner])!=pad.end();
+                native_face|=same;
+            }
+            check(native_face,"reinforcement corners belong to one actual collision triangle");
+        }else check(pad.empty(),"disabled reinforcement has no selected native triangle");
+        const BodyLockRead lock(w.system.GetBodyLockInterface(),net.body());
+        const auto *motion=static_cast<const SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+        for(std::size_t i=0;i<motion->GetVertices().size();++i){
+            const bool reinforced=std::find(pad.begin(),pad.end(),std::uint32_t(i))!=pad.end();
+            const float expected=cfg.vertex_mass+(reinforced?cfg.piston_pad_mass_kg/3:0);
+            check(std::abs(1/motion->GetVertex(i).mInvMass-expected)<1e-6F,
+                  "live triangle corner masses gain equal pad thirds and other vertices retain base mass");
+        }
+    };
+    check_reinforcement(vertical);check_reinforcement(*w.net);
+    {
+        CargoNetConfig cfg;cfg.surface=CargoNetSurface::ContinuousMembrane;cfg.columns=cfg.rows=2;
+        cfg.piston_pad_mass_kg=1.35F;cfg.piston_material=Vec3(.2F,.7F,0);
+        CargoNet pad(w.system,1,w.kit->body_id(w.frame),cfg);
+        check(cfg.piston_body.IsInvalid(),"pad fixture disables the piston attachment");
+        check_reinforcement(pad);
+        auto corners=pad.reinforcement_indices();std::sort(corners.begin(),corners.end());
+        check(corners==std::vector<std::uint32_t>({0,2,3}),
+              "pad follows the sampled native triangle even with unequal force weights and no piston body");
+    }
     for(CargoNet *net:{&vertical,w.net.get()}) {
         const auto &cfg=net->config();float mass=0;
         {BodyLockRead lock(w.system.GetBodyLockInterface(),net->body());
          const auto *motion=static_cast<const SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
          for(const auto &v:motion->GetVertices())mass+=1/v.mInvMass;}
-        check(std::abs(mass-cfg.columns*cfg.rows*(cfg.surface==CargoNetSurface::OpenWeave?4:1)*cfg.vertex_mass)<.01F,"all cloth vertices retain declared finite mass");
+        check(std::abs(mass-(cfg.columns*cfg.rows*(cfg.surface==CargoNetSurface::OpenWeave?4:1)*cfg.vertex_mass+cfg.piston_pad_mass_kg))<.01F,"actual cloth mass includes declared base and reinforcement mass");
         const Vec3 hole(cfg.dx*.5F,cfg.dy*.5F,0);
         const auto cross=[](Vec3 a,Vec3 b){return a.GetX()*b.GetY()-a.GetY()*b.GetX();};
         const auto &indices=net->indices();
@@ -120,7 +167,11 @@ void defaults(){World w;
         check((net->render_world_point(material,1)-point).Length()<.001F,"render uses same material basis");
     }
 }
-bool asleep(World &w){auto &b=w.system.GetBodyInterface();return !b.IsActive(w.net->body())&&!b.IsActive(w.kit->body_id(w.frame));}
+bool asleep(World &w){auto &b=w.system.GetBodyInterface();
+    if(b.IsActive(w.net->body())||b.IsActive(w.kit->body_id(w.frame)))return false;
+    for(auto entity=kCatchPistonFirstEntity;entity<=kCatchPistonTopEntity;++entity)
+        if(b.IsActive(w.kit->body_id(w.kit->body_for_entity(entity))))return false;
+    return true;}
 void settle(World &w){int ticks=0;while(!asleep(w)&&ticks<1800){w.tick();++ticks;}
     float max_speed_sq=0,kinetic=0;
     {const BodyLockRead lock(w.system.GetBodyLockInterface(),w.net->body());
@@ -133,7 +184,11 @@ std::vector<std::pair<Vec3,Vec3>> vertex_state(World &w){
     const auto *m=static_cast<const SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
     std::vector<std::pair<Vec3,Vec3>> out;for(const auto &v:m->GetVertices())out.emplace_back(v.mPosition,v.mVelocity);return out;
 }
-void clip_reciprocity(){World w;auto &b=w.system.GetBodyInterface();const auto frame=w.kit->body_id(w.frame);
+void clip_reciprocity(){World w;
+    // This closure measures clips only; piston reciprocity has its own fixture.
+    auto clips_only=w.net->config();clips_only.piston_body=BodyID();clips_only.piston_stiffness=clips_only.piston_damping=0;
+    w.net.reset();w.net=std::make_unique<CargoNet>(w.system,1,w.kit->body_id(w.frame),clips_only);w.listener.net=w.net.get();
+    auto &b=w.system.GetBodyInterface();const auto frame=w.kit->body_id(w.frame);
     w.system.SetGravity(Vec3::sZero());const auto centre=b.GetCenterOfMassPosition(frame);
     const auto cloth_momentum=[&](){const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),w.net->body());
         const auto &body=lock.GetBody();const auto *motion=static_cast<const SoftBodyMotionProperties *>(body.GetMotionProperties());
@@ -350,8 +405,101 @@ void native_tether(){World w;w.system.SetGravity(Vec3::sZero());auto &b=w.system
                  <<" linear_error="<<linear_error<<" angular_error="<<angular_error<<'\n';
     }
 }
+// Read the actual authored native rows; a freely moving cosmetic pole fails.
+void piston_route(){World w;auto &b=w.system.GetBodyInterface();
+    const auto top=w.kit->body_for_entity(1977);
+    check(top.valid()&&w.net->config().piston_body==w.kit->body_id(top),"cloth attachment names actual telescopic top body");
+    float low=float((b.GetWorldTransform(w.kit->body_id(top))*RVec3(w.net->config().piston_body_local)).GetY()),high=low;
+    unsigned rows=0;
+    for(std::uint64_t entity=1975;entity<=1977;++entity){
+        const auto stage=w.kit->body_for_entity(entity);check(stage.valid(),"three actual telescopic stage bodies exist");
+        const float mass=w.kit->body_mass(stage);
+        check(std::isfinite(mass)&&mass>0,"telescopic stage has finite positive native mass");
+        const BodyID id=w.kit->body_id(stage);unsigned matching=0;
+        for(const auto &constraint:w.system.GetConstraints())if(constraint->GetSubType()==EConstraintSubType::Slider){
+            const auto *slider=static_cast<const SliderConstraint *>(constraint.GetPtr());
+            if(slider->GetBody2()->GetID()!=id)continue;
+            ++matching;++rows;
+            check(slider->GetBody1()->GetID()==w.kit->body_id(entity==1975?w.frame:w.kit->body_for_entity(entity-1)),"nested slider has actual preceding carrier");
+            check(slider->HasLimits()&&std::abs(slider->GetLimitsMax()-slider->GetLimitsMin()-.95F)<1e-5F,
+                  "each actual slider has finite authored .95 metre stroke");
+            check(slider->GetMaxFrictionForce()>0&&std::isfinite(slider->GetMaxFrictionForce())&&slider->GetMotorState()==EMotorState::Off,
+                  "sliding restriction has finite passive friction and no driving motor");
+            check(std::abs(slider->GetCurrentPosition())<1e-5F,"native slider initial offset is accounted in travel limits");
+            low+=slider->GetLimitsMin();high+=slider->GetLimitsMax();
+        }
+        check(matching==1,"each telescopic stage owns exactly one actual slider row");
+    }
+    check(rows==3&&std::abs(low-1.56F)<.01F&&std::abs(high-4.41F)<.01F,"actual nested constraints yield full 1.56 to 4.41 metre eye stroke");
+    std::cout<<"CATCH_PISTON_ROUTE rows="<<rows<<" low_y="<<low<<" high_y="<<high<<'\n';
+}
+// Isolate the same native attachment owner from gravity, mounts and slider
+// reactions: actual native steps advance both endpoints. Include body spin
+// and orbital momentum about the same origin; no unmeasured external load.
+void native_piston(int iterations=1){World w;w.system.SetGravity(Vec3::sZero());auto &b=w.system.GetBodyInterface();
+    // An isotropic receiver isolates attachment torque from Jolt's default
+    // disabled gyroscopic correction; COM offset and all3 torque axes remain.
+    kit::Part part;part.half=Vec3(.2F,.2F,.2F);part.offset=Vec3(.1F,-.05F,.04F);
+    const auto piston=w.kit->add_body(1998,{part},RVec3(100,100,100),Quat::sIdentity(),7,.2F);
+    w.kit->set_damping(piston,0,0);const auto id=w.kit->body_id(piston),frame=w.kit->body_id(w.frame);
+    CargoNetConfig cfg;cfg.surface=CargoNetSurface::ContinuousMembrane;cfg.columns=cfg.rows=2;
+    cfg.origin=RVec3(100.1,100.2,100.4);cfg.dx=cfg.dy=.1F;cfg.knot_half_width=.01F;
+    cfg.iterations=iterations;cfg.internally_integrated_clips=true;cfg.damping=cfg.clip_stiffness=cfg.clip_damping=0;
+    cfg.stretch_compliance=cfg.shear_compliance=cfg.bend_compliance=1e20F;
+    cfg.piston_body=id;cfg.piston_material=Vec3(.25F,.75F,0);
+    cfg.piston_body_local=Vec3(.145F,.245F,.44F);cfg.piston_stiffness=40000;cfg.piston_damping=400;
+    CargoNet net(w.system,1,frame,cfg);const auto centre=b.GetCenterOfMassPosition(id);
+    check((net.piston_anchor_endpoint()-(b.GetWorldTransform(id)*RVec3(cfg.piston_body_local))).Length()<2e-5,
+          "piston attachment converts authored local point through actual displaced centre of mass");
+    const auto energy=[&](){double total=w.kit->body_kinetic_energy(piston)+net.piston_elastic_energy();
+        const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+        const auto *m=static_cast<const SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+        for(const auto &v:m->GetVertices())total+=.5*v.mVelocity.LengthSq()/v.mInvMass;
+        for(const auto &edge:m->GetSettings()->mEdgeConstraints){const double extension=
+            (m->GetVertex(edge.mVertex[1]).mPosition-m->GetVertex(edge.mVertex[0]).mPosition).Length()-edge.mRestLength;
+            total+=.5*extension*extension/edge.mCompliance;}
+        return total;};
+    const auto cloth_momentum=[&](){const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+        const auto &body=lock.GetBody();const auto *m=static_cast<const SoftBodyMotionProperties *>(body.GetMotionProperties());
+        Vec3 linear=Vec3::sZero(),angular=Vec3::sZero();
+        for(const auto &v:m->GetVertices()){const auto momentum=body.GetRotation()*v.mVelocity/v.mInvMass;
+            linear+=momentum;angular+=Vec3(body.GetCenterOfMassTransform()*RVec3(v.mPosition)-centre).Cross(momentum);}
+        return std::make_pair(linear,angular);};
+    {const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+     auto *m=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+     for(unsigned i=0;i<4;++i)m->GetVertex(i).mInvMass=1.0F/(1+i);}
+    Listener piston_listener;piston_listener.net=&net;
+    w.system.AddStepListener(&piston_listener);
+    struct RemoveListener {
+        PhysicsSystem &system;PhysicsStepListener *listener;
+        ~RemoveListener(){system.RemoveStepListener(listener);}
+    } listener_lifetime{w.system,&piston_listener};
+    net.impulse(cfg.piston_material,Vec3(.3F,-.5F,.7F));const auto before=cloth_momentum();const double initial_energy=energy();
+    // No initial collision overlap; advance the complete physical pair, not
+    // CustomUpdate of cloth alone with the rigid endpoint frozen in place.
+    for(int step=0;step<4;++step) {
+        check(w.system.Update(1.0F/360,1,&w.temp,&w.jobs)==EPhysicsUpdateError::None,
+              "isolated complete native pair advances without capacity failure");
+        net.refresh();const double step_energy=energy();
+        std::cout<<"CATCH_PISTON_STEP tick="<<step<<" energy="<<step_energy<<std::endl;
+        check(step_energy<=initial_energy+1e-4,"actual complete pair cannot create unpaid energy at an intermediate tick");
+    }
+    const auto after=cloth_momentum();const auto rigid=b.GetLinearVelocity(id)*w.kit->body_mass(piston);
+    Vec3 angular;{const BodyLockRead lock(w.system.GetBodyLockInterface(),id);const auto &body=lock.GetBody();
+        angular=body.GetMotionProperties()->GetInverseInertiaForRotation(Mat44::sRotation(body.GetRotation())).Inversed3x3()*body.GetAngularVelocity()+
+                Vec3(body.GetCenterOfMassPosition()-centre).Cross(rigid);}
+    const float linear_error=(after.first+rigid-before.first).Length(),angular_error=(after.second+angular-before.second).Length();
+    net.refresh();const double final_energy=energy();
+    std::cout<<"CATCH_PISTON_ENERGY initial="<<initial_energy<<" final="<<final_energy<<" stored="<<net.piston_elastic_energy()<<" radial_loss="<<net.piston_dissipated_work()<<std::endl;
+    check(std::isfinite(final_energy)&&final_energy<=initial_energy+1e-4,"isolated actual piston spring and dashpot cannot add unpaid kinetic or elastic energy");
+    check(std::abs(rigid.GetX())>.001F&&std::abs(rigid.GetY())>.001F&&std::abs(rigid.GetZ())>.001F&&angular.Length()>.001F,
+          "actual three dimensional piston attachment transposes finite offaxis impulse and body point torque");
+    std::cout<<"CATCH_PISTON_MOMENTUM linear="<<linear_error<<" angular="<<angular_error<<std::endl;
+    check(linear_error<5e-4F&&angular_error<5e-4F,"actual cloth plus finite piston conserve equal opposite linear and angular impulse");
+    std::cout<<"CATCH_PISTON iterations="<<iterations<<" initial_energy_j="<<initial_energy<<" final_energy_j="<<final_energy<<" impulse="<<rigid.Length()<<" torque_impulse="<<angular.Length()<<" linear_error="<<linear_error<<" angular_error="<<angular_error<<'\n';
+}
 void sleeping(){World w;settle(w);const auto state=vertex_state(w);const auto point=w.net->world_point(Vec3(12,12,0));const auto saved=w.net->capture();
-    for(int i=0;i<90;++i){w.tick();check(asleep(w),"native paired sleep remains sustained");}
+    for(int i=0;i<90;++i){w.tick();check(asleep(w),"native paired sleep remains sustained for every real slider stage");}
     const auto after=vertex_state(w);check(after.size()==state.size(),"sleep retains topology");
     for(std::size_t i=0;i<state.size();++i){
         check((state[i].first-after[i].first).LengthSq()==0,"sleep preserves every vertex position");
@@ -369,8 +517,17 @@ void sleeping(){World w;settle(w);const auto state=vertex_state(w);const auto po
     std::cout<<"CATCH_SLEEP material_rebound_vy="<<rebound<<" frame_motion="<<frame_motion<<'\n';
     settle(w);b.AddImpulse(frame,Vec3(1000,0,0));check(b.IsActive(frame),"real frame impulse wakes native frame");
     w.tick();check(b.IsActive(w.net->body()),"moving physical frame wakes net before clips");
+    settle(w);const auto lower=w.kit->body_id(w.kit->body_for_entity(kCatchPistonFirstEntity));
+    b.AddImpulse(lower,Vec3(0,1,0));check(b.IsActive(lower),"real lower slider impulse wakes its native body");
+    w.tick();check(b.IsActive(w.net->body())&&b.IsActive(frame),"moving lower slider wakes the actual cloth and mounted frame");
+    for(auto entity=kCatchPistonFirstEntity;entity<=kCatchPistonTopEntity;++entity)
+        check(b.IsActive(w.kit->body_id(w.kit->body_for_entity(entity))),"lower slider load wakes every actual coupled stage");
+    settle(w);b.SetPosition(lower,b.GetPosition(lower)+RVec3(0,.001,0),EActivation::DontActivate);
+    check(asleep(w),"external pose edit leaves native activation unchanged until owner step");
+    w.net->pre_step(1.0F/90);
+    check(b.IsActive(w.net->body())&&b.IsActive(frame)&&b.IsActive(lower),"changed inactive lower slider pose wakes the assembly before coupling");
     settle(w);w.net->restore(saved);check(b.IsActive(w.net->body())&&b.IsActive(frame),"restored material state wakes paired bodies");
-    std::cout<<"CATCH_SLEEP sustained_ticks=90 material_wake=1 frame_wake=1 restore_wake=1\n";
+    std::cout<<"CATCH_SLEEP sustained_ticks=90 material_wake=1 frame_wake=1 lower_stage_wake=1 inactive_stage_pose_wake=1 restore_wake=1\n";
     for(const auto quality:{EMotionQuality::Discrete,EMotionQuality::LinearCast}){
         World impact;check(!asleep(impact),"restart creates active physical net and frame");settle(impact);
         impact.capsule(8,quality);impact.system.GetBodyInterface().SetLinearVelocity(impact.player,Vec3(0,quality==EMotionQuality::LinearCast?-40.0F:-5.0F,0));
@@ -379,11 +536,18 @@ void sleeping(){World w;settle(w);const auto state=vertex_state(w);const auto po
         std::cout<<"CATCH_SLEEP motion_quality="<<int(quality)<<" wake="<<woke<<" contacts="<<impact.contacts.contacts<<'\n';
     }
 }
-void fall(float height){World w;const double initial_tether_energy=w.net->tether_elastic_energy();for(int i=0;i<180;++i)w.tick();w.capsule(height);
+void fall(float height,float offset_z=0){World w;
+    const auto piston_body_energy=[&](){double energy=0;for(std::uint64_t entity=1975;entity<=1977;++entity){
+        const auto stage=w.kit->body_for_entity(entity);
+        check(stage.valid(),"energy diagnostic includes every actual piston stage");
+        energy+=w.kit->body_kinetic_energy(stage)+w.kit->body_mass(stage)*9.81*w.kit->body_center_of_mass_position(stage).GetY();
+    }return energy;};
+    const double initial_piston_energy=piston_body_energy()+w.net->piston_elastic_energy();
+    const double initial_tether_energy=w.net->tether_elastic_energy();for(int i=0;i<180;++i)w.tick();w.capsule(height,EMotionQuality::LinearCast,offset_z);
     auto &b=w.system.GetBodyInterface();float min_vertex=100,min_player=100,min_caught_player=100,max_rebound=0,max_frame_speed=0,peak_ke=0,peak_strain=0,peak_clip_energy=0,peak_exposed_energy=0;
     bool descending=false,reversed=false,contacted=false,separated=false,recontacted=false;const int steps=height>=40?1800:4500;
     float late_peak_speed=0,late_min_y=100,late_max_y=-100;unsigned late_contacts=0;
-    float apex=0,first_apex=0,impact=0;float peak_terms[7]{};unsigned clear_ticks=0;
+    float apex=0,first_apex=0,impact=0;float peak_terms[8]{};unsigned clear_ticks=0;
     RVec3 previous_player=b.GetCenterOfMassPosition(w.player);float late_actual_speed=0;
     for(int i=0;i<steps;++i){w.contacts.this_tick=false;w.tick();
         if(w.contacts.this_tick){if(separated)recontacted=true;contacted=true;clear_ticks=0;}
@@ -408,7 +572,8 @@ void fall(float height){World w;const double initial_tether_energy=w.net->tether
         float clip_energy=0;const auto transform=b.GetCenterOfMassTransform(w.kit->body_id(w.frame));
         for(const auto &clip:w.clips){const auto d=transform*clip.second-w.net->vertices()[clip.first];clip_energy+=.5F*w.net->config().clip_stiffness*d.LengthSq();}
         peak_clip_energy=std::max(peak_clip_energy,clip_energy);
-        float cloth_gravity=0;for(const auto &q:w.net->vertices())cloth_gravity+=w.net->config().vertex_mass*9.81F*q.GetY();
+        float cloth_gravity=0;for(std::size_t vertex=0;vertex<m->GetVertices().size();++vertex)
+            cloth_gravity+=9.81F*w.net->vertices()[vertex].GetY()/m->GetVertex(vertex).mInvMass;
         float mount_energy=0;for(const auto &mount:w.mounts){const auto d=transform*mount.second-mount.first;mount_energy+=.5F*3e6F*d.LengthSq();}
         const auto q=b.GetRotation(w.kit->body_id(w.frame));const float angle=2*std::atan2(q.GetXYZ().Length(),std::abs(q.GetW()));
         // Native mounts have isotropic rotational stiffness. Their measured
@@ -416,17 +581,18 @@ void fall(float height){World w;const double initial_tether_energy=w.net->tether
         check(angle<.01F,"mount small-angle energy diagnostic remains valid");
         mount_energy+=4*.5F*5e6F*angle*angle;
         const float frame_gravity=w.kit->body_mass(w.frame)*9.81F*(b.GetCenterOfMassPosition(w.kit->body_id(w.frame)).GetY()-w.frame_reference.GetY());
-        const float exposed=ke+strain+clip_energy+mount_energy+cloth_gravity+frame_gravity+float(w.net->tether_elastic_energy())+
+        const float piston_energy=float(piston_body_energy()+w.net->piston_elastic_energy());
+        const float exposed=piston_energy+ke+strain+clip_energy+mount_energy+cloth_gravity+frame_gravity+float(w.net->tether_elastic_energy())+
             85*(.5F*v.LengthSq()+9.81F*p.GetY())+w.kit->body_kinetic_energy(w.frame);
         if(exposed>peak_exposed_energy){peak_exposed_energy=exposed;
             peak_terms[0]=ke;peak_terms[1]=strain;peak_terms[2]=clip_energy;peak_terms[3]=mount_energy;
-            peak_terms[4]=cloth_gravity+frame_gravity;peak_terms[5]=85*(.5F*v.LengthSq()+9.81F*p.GetY());peak_terms[6]=w.kit->body_kinetic_energy(w.frame);}
+            peak_terms[4]=cloth_gravity+frame_gravity;peak_terms[5]=85*(.5F*v.LengthSq()+9.81F*p.GetY());peak_terms[6]=w.kit->body_kinetic_energy(w.frame);peak_terms[7]=piston_energy;}
 
         if(i%450==449)std::cout<<"CATCH_TRACE tick="<<i+1<<" x="<<p.GetX()<<" z="<<p.GetZ()<<" y="<<p.GetY()<<" vy="<<v.GetY()<<" sag_min="<<min_vertex<<" rebound="<<max_rebound<<" apex="<<apex<<" strain="<<strain<<std::endl;
     }
     const auto final=b.GetCenterOfMassPosition(w.player),velocity=b.GetLinearVelocity(w.player);
-    std::cout<<"CATCH_MODEL height="<<height<<" impact_speed="<<impact<<" mesh_min_y="<<min_vertex<<" caught_capsule_min_y="<<min_caught_player<<" capsule_min_y="<<min_player<<" rebound_vy="<<max_rebound<<" apex_y="<<apex<<" first_apex_y="<<first_apex<<" frame_speed="<<max_frame_speed<<" mesh_peak_ke_j="<<peak_ke<<" edge_peak_strain_j="<<peak_strain<<" clip_peak_strain_j="<<peak_clip_energy<<" exposed_peak_energy_j="<<peak_exposed_energy<<" final_y="<<final.GetY()<<" final_speed="<<velocity.Length()<<" contact_events="<<w.contacts.contacts<<" separation="<<separated<<" recontact="<<recontacted<<" late_peak_speed="<<late_peak_speed<<" late_y_range="<<(late_max_y-late_min_y)<<" late_contact_ticks="<<late_contacts<<" simulated_seconds="<<steps/90.0F<<" listener_calls="<<w.listener.calls<<'\n';
-    std::cout<<"CATCH_ENERGY simultaneous_peak net_ke="<<peak_terms[0]<<" edge="<<peak_terms[1]<<" clips="<<peak_terms[2]<<" mounts="<<peak_terms[3]<<" gravity="<<peak_terms[4]<<" player="<<peak_terms[5]<<" frame_ke="<<peak_terms[6]<<" tether_stored_j="<<w.net->tether_elastic_energy()<<" tether_radial_loss_j="<<w.net->tether_dissipated_work()<<" late_actual_position_speed="<<late_actual_speed<<'\n';
+    std::cout<<"CATCH_MODEL height="<<height<<" offset_z="<<offset_z<<" impact_speed="<<impact<<" mesh_min_y="<<min_vertex<<" caught_capsule_min_y="<<min_caught_player<<" capsule_min_y="<<min_player<<" rebound_vy="<<max_rebound<<" apex_y="<<apex<<" first_apex_y="<<first_apex<<" frame_speed="<<max_frame_speed<<" mesh_peak_ke_j="<<peak_ke<<" edge_peak_strain_j="<<peak_strain<<" clip_peak_strain_j="<<peak_clip_energy<<" exposed_peak_energy_j="<<peak_exposed_energy<<" final_y="<<final.GetY()<<" final_speed="<<velocity.Length()<<" contact_events="<<w.contacts.contacts<<" separation="<<separated<<" recontact="<<recontacted<<" late_peak_speed="<<late_peak_speed<<" late_y_range="<<(late_max_y-late_min_y)<<" late_contact_ticks="<<late_contacts<<" simulated_seconds="<<steps/90.0F<<" listener_calls="<<w.listener.calls<<'\n';
+    std::cout<<"CATCH_ENERGY simultaneous_peak net_ke="<<peak_terms[0]<<" edge="<<peak_terms[1]<<" clips="<<peak_terms[2]<<" mounts="<<peak_terms[3]<<" gravity="<<peak_terms[4]<<" player="<<peak_terms[5]<<" frame_ke="<<peak_terms[6]<<" piston_gravity_ke_elastic_j="<<peak_terms[7]<<" tether_stored_j="<<w.net->tether_elastic_energy()<<" tether_radial_loss_j="<<w.net->tether_dissipated_work()<<" late_actual_position_speed="<<late_actual_speed<<'\n';
     check(w.listener.calls==4*unsigned(180+steps),"actual four-substep90Hz cadence");
     check(min_vertex<3.7F,"actual sag under load");check(reversed&&max_rebound>1,"neutral elastic rebound");
     check(min_vertex>.12F&&min_caught_player>.95F,"mesh and contacted capsule retain grade clearance");
@@ -440,12 +606,12 @@ void fall(float height){World w;const double initial_tether_energy=w.net->tether
     check(max_frame_speed>.0001F&&max_frame_speed<2,"finite reactive mounted frame");
     // Conservative native energy falsifier: finite solver/discretization tolerance;
     // no solved contact-impulse or dissipation receipt is available here.
-    check(peak_exposed_energy<1.02F*(85*9.81F*height+150*9.81F*4+initial_tether_energy),
+    check(peak_exposed_energy<1.02F*(85*9.81F*height+(150+w.net->config().piston_pad_mass_kg)*9.81F*4+initial_tether_energy+initial_piston_energy),
           "native total stored energy cannot create gross unpaid work");
     check(late_peak_speed<.2F&&late_max_y-late_min_y<.05F,"passive settling persists across final two seconds");
 }
 }
 int main(int argc,char **argv){std::cout<<std::unitbuf;RegisterDefaultAllocator();Factory::sInstance=new Factory;RegisterTypes();
-    int result=0;try{if(argc>1&&std::string(argv[1])=="friction"){contact_friction();}else if(argc>1&&std::string(argv[1])=="force"){phased_force();phased_force(CargoNetSurface::ContinuousMembrane);phased_force(CargoNetSurface::ContinuousMembrane,true);native_tether();}else{defaults();clip_reciprocity();if(argc>1&&std::string(argv[1])=="clips"){}else if(argc>1&&std::string(argv[1])=="sleep")sleeping();else if(argc>1)fall(std::stof(argv[1]));else{sleeping();fall(45);fall(10);}}std::cout<<"PASS catch native model\n";}
+    int result=0;try{if(argc>1&&std::string(argv[1])=="friction"){contact_friction();}else if(argc>1&&std::string(argv[1])=="force"){phased_force();phased_force(CargoNetSurface::ContinuousMembrane);phased_force(CargoNetSurface::ContinuousMembrane,true);native_tether();piston_route();native_piston();native_piston(12);}else{defaults();clip_reciprocity();if(argc>1&&std::string(argv[1])=="clips"){}else if(argc>1&&std::string(argv[1])=="sleep")sleeping();else if(argc>1)fall(std::stof(argv[1]),argc>2?std::stof(argv[2]):0);else{sleeping();fall(45);fall(45,.45F);fall(10);}}std::cout<<"PASS catch native model\n";}
     catch(const std::exception &e){std::cerr<<"FAIL catch native model: "<<e.what()<<'\n';result=1;}
     UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;return result;}

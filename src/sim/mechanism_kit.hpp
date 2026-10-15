@@ -131,6 +131,9 @@ public:
     // the line's own stiffness would settle: a handle bumped on its line
     // stops swinging in a second or two.
     void set_damping(BodyIndex body, float linear, float angular);
+    // Opt-in compensated integration for heavy, slowly balanced machinery.
+    // Forces, inertia and the shared solver remain unchanged.
+    void set_accurate_integration(BodyIndex body, bool enabled = true);
     void set_body_mass(BodyIndex body, float mass_kg);
     void set_mass_properties(BodyIndex body, const JPH::MassProperties &mass);
     // Impulse mobility of the actual fixed-joint cluster at a world point.

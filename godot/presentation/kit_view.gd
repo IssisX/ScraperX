@@ -63,7 +63,14 @@ func _kit_tube(outer: float, inner: float, half_length: float, material: Materia
 				na * radius - Vector3.UP * half_length]
 			var order := [0, 2, 1, 0, 3, 2] if radius == outer else [0, 1, 2, 0, 2, 3]
 			for i in order:
-				surface.set_normal((na if i in [0, 3] else nb) * sign_normal)
+				var at_start: bool = i in [0, 3]
+				var radial: Vector3 = na if at_start else nb
+				surface.set_normal(radial * sign_normal)
+				# Unwrap each wall along its circumference and length. Retain
+				# the UV seam and reverse handedness for the inward bore normal.
+				surface.set_uv(Vector2(float(segment if at_start else segment + 1) / 32.0,
+					1.0 if i in [0, 1] else 0.0))
+				surface.set_tangent(Plane(Vector3(-radial.z, 0, radial.x), -sign_normal))
 				surface.add_vertex(corners[i])
 		for side in [-1.0, 1.0]:
 			var end: Vector3 = Vector3.UP * half_length * side
@@ -72,7 +79,12 @@ func _kit_tube(outer: float, inner: float, half_length: float, material: Materia
 			var order := [0, 1, 2, 0, 2, 3] if side > 0 else [0, 2, 1, 0, 3, 2]
 			for i in order:
 				surface.set_normal(Vector3.UP * side)
+				surface.set_uv(Vector2(corners[i].x, corners[i].z) / (2.0 * outer) + Vector2(0.5, 0.5))
+				surface.set_tangent(Plane(Vector3.RIGHT, -side))
 				surface.add_vertex(corners[i])
+	# Match indexed primitive meshes so same-material tubes and boxes use
+	# the existing shared batch while retaining all bore and end triangles.
+	surface.index()
 	return surface.commit()
 
 
@@ -282,6 +294,12 @@ func _build_junction_materials(palette: Array[Material]) -> void:
 		"service_frame": [0, Color("69746c"), 0.08, 0.83, 0.28],
 		"service_pipe": [1, Color("a17b59"), 0.0, 0.88, 0.32],
 		"service_footing": [5, Color("afb6af"), 0.12, 0.72, 0.42],
+		# The 473m split access is weathered zinc over cool structural steel.
+		# Boot-scoured oxide on the narrow girder is warmer and smoother;
+		# its diffuse response keeps the real .55m footing visible in shade.
+		"split_frame": [0, Color("576467"), 0.12, 0.84, 0.30],
+		"split_walk": [1, Color("ad9476"), 0.18, 0.66, 0.22],
+		"split_footing": [5, Color("b9c1b9"), 0.18, 0.68, 0.42],
 	}
 	for key in finishes:
 		var finish: Array = finishes[key]
@@ -293,7 +311,7 @@ func _build_junction_materials(palette: Array[Material]) -> void:
 		material.uv1_scale = Vector3.ONE
 		material.uv1_triplanar_sharpness = 4.0
 		_junction_materials[key] = material
-	for key in ["footing", "recovery", "transfer_footing", "service_footing"]:
+	for key in ["footing", "recovery", "transfer_footing", "service_footing", "split_footing"]:
 		var material: StandardMaterial3D = _junction_materials[key]
 		material.normal_enabled = true
 		material.normal_texture = (_inspection_materials[5] as StandardMaterial3D).normal_texture
@@ -304,7 +322,18 @@ func _build_junction_materials(palette: Array[Material]) -> void:
 
 func _junction_part_material(entity: int, index: int, half: Vector3,
 		local: Transform3D, original: Material) -> Material:
-	if entity == 2935:
+	if entity in [1973, 1974, 1978, 1979, 1902, 1903, 1904, 1905, 1997]:
+		# Only the authored split route: native galvanised parts are its
+		# landing plates/roof shoe, Rust is the girder's actual walking beam,
+		# and Steel is the welded load path plus the duck-under conduit/posts.
+		# One cached finish per native class preserves existing batch counts.
+		if index == 5:
+			return _junction_materials["split_footing"]
+		if index == 1:
+			return _junction_materials["split_walk"]
+		if index == 0:
+			return _junction_materials["split_frame"]
+	elif entity == 2935:
 		# The worn grip belongs to the real moving bar, the warm painted
 		# arm to its passive hanger. Neither finish implies a powered motor.
 		if index == 0:
@@ -614,7 +643,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_build_cart_materials(palette)
 		if (entity == 1932 or entity == 1933 or entity == 1935 or entity == 1936) and _inspection_materials.is_empty():
 			_build_inspection_materials(palette)
-		if entity in [1935, 1936, 1937, 1938, 1939, 2935] and _junction_materials.is_empty():
+		if entity in [1935, 1936, 1937, 1938, 1939, 1973, 1974, 1978, 1979, 1902, 1903, 1904, 1905, 1997, 2935] and _junction_materials.is_empty():
 			if _inspection_materials.is_empty():
 				_build_inspection_materials(palette)
 			_build_junction_materials(palette)
@@ -701,8 +730,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				if _is_plank_segment(entity) and material_index == 2:
 					mesh = _plank_grain_mesh(mesh, entity)
 			for surface_index in mesh.get_surface_count():
-				# Indexed boxes and the unindexed tube bore need separate
-				# surfaces; mixing them would omit the unindexed triangles.
+				# Preserve every channel when grouping compatible primitives;
+				# tubes carry the same indexed UV/tangent format as boxes.
 				var channels := 0
 				var arrays := mesh.surface_get_arrays(surface_index)
 				for channel in arrays.size():

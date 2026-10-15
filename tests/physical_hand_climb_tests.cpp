@@ -15,6 +15,7 @@
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/RegisterTypes.h>
+#include <Jolt/Physics/StateRecorderImpl.h>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -274,6 +275,131 @@ void single_radial_hands() {
               "single real row gives reciprocal dynamic support reaction and measured momentum");
         std::cout<<"SINGLE_BACKEND index="<<index<<" recoil="<<recoil<<" player_receipt="<<dynamic.max_player_impulse_error
                  <<" support_receipt="<<dynamic.max_support_impulse_error<<'\n';
+    }
+}
+std::string saved_row(const Constraint &row) {
+    StateRecorderImpl saved;row.SaveState(saved);return saved.GetData();
+}
+std::string saved_settings(const Constraint &row) {
+    StateRecorderImpl saved;row.GetConstraintSettings()->SaveBinaryState(saved);return saved.GetData();
+}
+void radial_second_hand() {
+    for(unsigned planted=0;planted<2;++planted) {
+        const unsigned missing=1-planted;
+        World w(false,Vec3(0,-.4F,.2F),false,25,true,RVec3(0,4.3,-.2),true);
+        PhysicalHandClimb hands(w.system,w.player);
+        const RVec3 old_grip(planted?.2F:-.2F,5,.55),new_grip(missing?.2F:-.2F,5,.55);
+        check(!hands.attach_radial_hand(missing,w.support,new_grip),"empty owner cannot create radial hand");
+        check(hands.attach(planted,w.support,old_grip),"existing solo rigid grip acquired");
+        check(!hands.attach_radial_hand(missing,w.support,new_grip)&&hands.attached_count()==1,
+              "Cartesian solo cannot bypass radial owner entry");
+        check(hands.set_radial_profile(true),"solo radial recovery fixture enters existing owner");
+        w.tick(hands,45);
+        for(unsigned i=0;i<8;++i){check(hands.advance_radial_targets(.02F,h)>0,"solo creates paid posture preload");w.tick(hands,1);}
+        check(hands.actuator_positive_work_j()>0&&hands.hand_force(planted).Length()>1,
+              "planted row has actual loaded solve and paid history to preserve");
+        const auto old=w.system.GetConstraints()[0];
+        const std::string old_state=saved_row(*old),old_settings=saved_settings(*old);
+        const auto grip=hands.grip_readback(planted);
+        const auto missing_generation=hands.grip_readback(missing).generation;
+        const float rest=hands.radial_commanded_span_m(),peak=hands.peak_hand_force_n();
+        const auto old_force=hands.hand_force(planted);
+        const double command=hands.command_work_bound_j(),last_command=hands.last_command_work_bound_j();
+        const double positive=hands.actuator_positive_work_j(),absorbed=hands.actuator_absorbed_work_j();
+        const double last_positive=hands.last_actuator_positive_work_j();
+        auto &bodies=w.system.GetBodyInterface();
+        const auto player_position=bodies.GetPosition(w.player),support_position=bodies.GetPosition(w.support);
+        const auto player_velocity=bodies.GetLinearVelocity(w.player),support_velocity=bodies.GetLinearVelocity(w.support);
+        const auto player_angular=bodies.GetAngularVelocity(w.player),support_angular=bodies.GetAngularVelocity(w.support);
+        const auto unchanged_owner=[&]() {
+            const auto actual=hands.grip_readback(planted);
+            check(hands.radial_active()&&hands.attached(planted)&&w.system.GetConstraints()[0].GetPtr()==old.GetPtr()&&
+                  saved_row(*old)==old_state&&saved_settings(*old)==old_settings,
+                  "attachment preserves planted native pointer/rest/preload/warm-start state");
+            check(actual.generation==grip.generation&&actual.support==grip.support&&
+                  Vec3(actual.world_anchor-grip.world_anchor).LengthSq()==0&&
+                  (hands.hand_force(planted)-old_force).LengthSq()==0&&hands.peak_hand_force_n()==peak,
+                  "planted grip identity, material point and actual force receipt remain unchanged");
+            check(hands.command_work_bound_j()==command&&hands.last_command_work_bound_j()==last_command&&
+                  hands.actuator_positive_work_j()==positive&&hands.actuator_absorbed_work_j()==absorbed&&
+                  hands.last_actuator_positive_work_j()==last_positive,
+                  "attachment does not reset/refund or charge existing actuator ledgers");
+            check(Vec3(bodies.GetPosition(w.player)-player_position).LengthSq()==0&&
+                  Vec3(bodies.GetPosition(w.support)-support_position).LengthSq()==0&&
+                  (bodies.GetLinearVelocity(w.player)-player_velocity).LengthSq()==0&&
+                  (bodies.GetLinearVelocity(w.support)-support_velocity).LengthSq()==0&&
+                  (bodies.GetAngularVelocity(w.player)-player_angular).LengthSq()==0&&
+                  (bodies.GetAngularVelocity(w.support)-support_angular).LengthSq()==0,
+                  "attachment preserves both bodies' instantaneous pose and momentum");
+        };
+        const auto reject=[&](unsigned index,BodyID support,RVec3 candidate) {
+            check(!hands.attach_radial_hand(index,support,candidate),"invalid missing radial hand request accepted");
+            unchanged_owner();check(hands.attached_count()==1&&w.system.GetConstraints().size()==1&&
+                hands.radial_commanded_span_m()==rest&&hands.grip_readback(missing).generation==missing_generation,
+                "invalid recovery leaves sole radial topology/rest/missing identity unchanged");
+        };
+        reject(2,w.support,new_grip);reject(planted,w.support,new_grip);
+        reject(missing,BodyID(),new_grip);reject(missing,w.player,new_grip);
+        reject(missing,w.support,RVec3(std::numeric_limits<float>::quiet_NaN(),5,.55));
+        reject(missing,w.support,player_position+Vec3(0,1.751F,0));
+        reject(missing,w.support,player_position);
+        BodyCreationSettings sensor_settings(new BoxShape(Vec3(.1F,.1F,.1F)),new_grip,
+            Quat::sIdentity(),EMotionType::Static,0);sensor_settings.mIsSensor=true;
+        const BodyID sensor=w.add(sensor_settings);reject(missing,sensor,new_grip);
+        BodyCreationSettings inactive_settings(new BoxShape(Vec3(.1F,.1F,.1F)),new_grip,
+            Quat::sIdentity(),EMotionType::Static,0);
+        const BodyID inactive=w.add(inactive_settings);bodies.RemoveBody(inactive);
+        reject(missing,inactive,new_grip);bodies.AddBody(inactive,EActivation::DontActivate);
+        Ref<SoftBodySharedSettings> mesh=new SoftBodySharedSettings;
+        for(Vec3 point:{Vec3(0,0,0),Vec3(.1F,0,0),Vec3(0,.1F,0)}) {
+            SoftBodySharedSettings::Vertex vertex;point.StoreFloat3(&vertex.mPosition);mesh->mVertices.push_back(vertex);
+        }
+        SoftBodySharedSettings::Face face;face.mVertex[0]=0;face.mVertex[1]=1;face.mVertex[2]=2;mesh->AddFace(face);
+        const SoftBodySharedSettings::VertexAttributes material(1e-5F,1e-5F,1e-5F);
+        mesh->CreateConstraints(&material,1);mesh->Optimize();
+        SoftBodyCreationSettings soft_settings(mesh,new_grip,Quat::sIdentity(),1);
+        const BodyID soft=bodies.CreateAndAddSoftBody(soft_settings,EActivation::Activate);
+        check(!soft.IsInvalid(),"soft rejection candidate allocated");w.ids.push_back(soft);reject(missing,soft,new_grip);
+        const float new_radius=Vec3(new_grip-bodies.GetCenterOfMassPosition(w.player)).Length();
+        check(new_radius>0&&new_radius<1.75F,"actual second grip remains within existing radial reach");
+        check(hands.attach_radial_hand(missing,w.support,new_grip),"missing rigid radial hand recovers without cycling profile");
+        unchanged_owner();radial_rows_only(w);
+        const auto acquired=hands.grip_readback(missing);
+        check(hands.attached_count()==2&&hands.compatible_hands()&&acquired.attached&&!acquired.material&&
+              acquired.support==w.support&&acquired.generation==missing_generation+1&&
+              Vec3(acquired.world_anchor-new_grip).Length()<1.e-6F&&hands.hand_force(missing).LengthSq()==0,
+              "only missing hand receives a new actual rigid grip/generation with zero initial force receipt");
+        check(std::abs(2*hands.radial_commanded_span_m()-rest-new_radius)<2.e-6F,
+              "new radial rest is actual full radius at zero error; old preload retained");
+        const auto added=w.system.GetConstraints()[1];
+        check(added.GetPtr()!=old.GetPtr()&&saved_row(*old)==old_state,
+              "one new radial row is added without rebuilding planted row");
+        const auto pair_state=saved_row(*added);
+        check(!hands.attach_radial_hand(missing,w.support,new_grip)&&saved_row(*old)==old_state&&
+              saved_row(*added)==pair_state&&w.system.GetConstraints().size()==2,
+              "already complete radial pair cannot reattach or reset either row");
+        double max_work=0;float max_stroke=0;bool both_loaded=false;
+        for(unsigned i=0;i<90;++i) {
+            const float old_rest=hands.radial_commanded_span_m();
+            const double paid=hands.actuator_positive_work_j();
+            const float shortened=hands.advance_radial_targets(i<30?.02F:0,h);
+            const double work=hands.actuator_positive_work_j()-paid;
+            const float stroke=old_rest-hands.radial_commanded_span_m();
+            check(std::abs(stroke-shortened)<2.e-6F&&std::abs(stroke)<=.6F*h+1.e-6F&&
+                  work>=0&&work<=500*h+.00001&&hands.active_command_power_bound_w()==500,
+                  "recovered pair shares existing500W and0.6m/s posture limits");
+            max_work=std::max(max_work,work);max_stroke=std::max(max_stroke,std::abs(stroke));
+            w.tick(hands,1);radial_force_bounds(w,hands);
+            both_loaded|=hands.hand_force(0).Length()>1&&hands.hand_force(1).Length()>1;
+            check(hands.radial_active()&&hands.attached_count()==2&&
+                  bodies.GetGravityFactor(w.player)==1&&w.contacts.count==0,
+                  "actual two-row gravity-on solve has no competing contact support");
+        }
+        check(both_loaded&&w.max_player_impulse_error<=.01&&max_work>0&&max_stroke>0,
+              "both recovered rows actually solve finite paid posture under gravity");
+        std::cout<<"RADIAL_SECOND planted="<<planted<<" old_state_bytes="<<old_state.size()
+            <<" old_rest="<<rest<<" new_rest="<<new_radius<<" max_work="<<max_work
+            <<" max_stroke="<<max_stroke<<" impulse_error="<<w.max_player_impulse_error<<'\n';
     }
 }
 void passive_radial_arc() {
@@ -652,6 +778,70 @@ void kinematic_tracking_and_regrip() {
     check(w.contacts.count == 0, "kinematic fixture contact faked hand support");
     std::cout << "kinematic regrip tracking_vx=" << departure.GetX() << '\n';
 }
+// Rejects centroid velocity, stale world anchors, and failed-request generations.
+void grip_readback() {
+    World w(false,Vec3::sZero(),true);
+    PhysicalHandClimb hands(w.system,w.player);
+    check(!hands.grip_readback(2).attached && hands.grip_readback(0).generation==0,
+          "unattached readback is not empty");
+    w.acquire(hands);
+    auto &bodies=w.system.GetBodyInterface();
+    bodies.SetPositionAndRotation(w.support,RVec3(2,6,3),
+        Quat::sRotation(Vec3::sAxisY(),JPH_PI/2),EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(w.support,Vec3(1,2,3),Vec3(0,2,0));
+    // Local edge points (-/+ .2,-.1,-.1), rotated 90 degrees about Y.
+    for(unsigned i=0;i<2;++i) {
+        const auto r=hands.grip_readback(i);
+        const float z=i ? -.2F : .2F;
+        check(r.attached && !r.material && r.support==w.support && r.generation==1,
+              "rigid readback lost real identity");
+        check(Vec3(r.world_anchor-RVec3(1.9,5.9,3+z)).Length()<.00001F,
+              "rigid readback used stale or shared anchor");
+        check((r.point_velocity-Vec3(1+2*z,2,3.2F)).Length()<.00001F,
+              "rigid readback omitted per-point angular velocity");
+    }
+    const auto generation=hands.grip_readback(0).generation;
+    check(!hands.regrip(0,BodyID(),RVec3::sZero()) &&
+          hands.grip_readback(0).generation==generation,"failed regrip advanced generation");
+    check(hands.regrip(0,w.support,RVec3(2,6,3)),"readback regrip failed");
+    check(hands.grip_readback(0).generation==generation+1 &&
+          hands.grip_readback(1).generation==1,"regrip generation is not per hand");
+    bodies.SetPosition(w.player,RVec3(2,5,3),EActivation::Activate);
+    check(hands.set_radial_profile(true),"readback radial handoff failed");
+    check(Vec3(hands.grip_readback(0).world_anchor-RVec3(2,6,3)).Length()<.00001F &&
+          hands.grip_readback(0).generation==generation+1,"profile changed grip identity");
+    hands.detach(0);
+    check(!hands.grip_readback(0).attached && hands.grip_readback(0).generation==generation+2,
+          "detach did not invalidate readback");
+    hands.detach(0);
+    check(hands.grip_readback(0).generation==generation+2,"empty detach changed generation");
+    hands.clear();
+    check(hands.grip_readback(1).generation==2,"clear did not invalidate other hand");
+    check(hands.attach(0,w.support,RVec3(2,6,3)),"missing support fixture attach failed");
+    bodies.RemoveBody(w.support);
+    check(!hands.grip_readback(0).attached,"removed support still reported available");
+    hands.clear();
+    bodies.AddBody(w.support,EActivation::Activate);
+}
+void material_grip_readback() {
+    World w;
+    scraperx::sim::CargoNet net(w.system,1,w.support);
+    PhysicalHandClimb hands(w.system,w.player,&net);
+    const auto grip=net.world_point(Vec3(4,10,0));
+    check(hands.attach(0,net.body(),grip),"material readback fixture attach failed");
+    // Four .06kg corners share this integer material knot: .24Ns gives1m/s.
+    net.impulse(Vec3(4,10,0),Vec3(.24F,0,0));
+    const auto r=hands.grip_readback(0);
+    check((r.point_velocity-Vec3(1,0,0)).Length()<.0001F,
+          "material readback omitted actual vertex velocity");
+    check(r.attached && r.material && r.support==net.body() && r.generation==1,
+          "material readback lost actual soft body identity");
+    check(Vec3(r.world_anchor-grip).Length()<.0001F && finite(r.point_velocity),
+          "material readback lost material point");
+    hands.pre_step(h/4);
+    check((hands.grip_readback(0).player_force-hands.hand_force(0)).LengthSq()==0,
+          "readback force differs from solved hand owner");
+}
 void soft_material_reaction() {
     World w;
     scraperx::sim::CargoNet net(w.system,1,w.support);
@@ -785,12 +975,16 @@ void invalid_holds_and_cleanup() {
 int main(int argc,char **argv) {
     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
     unsigned failures = 0;
+    const bool second_only=argc>1&&std::string(argv[1])=="radial_second_hand";
+    const bool readback_only=argc>1&&std::string(argv[1])=="readback";
     const bool single_only=argc>1&&std::string(argv[1])=="single_hand";
     const bool fixed_only=argc>1&&std::string(argv[1])=="free_arc_fixed_light";
     const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
     const bool handoff_only=argc>1&&std::string(argv[1])=="free_arc_handoff";
     const bool angular_only=argc>1&&std::string(argv[1])=="free_arc_angular";
-    const std::vector<std::pair<const char *, void (*)()>> tests=single_only?
+    const std::vector<std::pair<const char *, void (*)()>> tests=second_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"radial_second_hand",radial_second_hand}}:readback_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"grip_readback",grip_readback},{"material_grip_readback",material_grip_readback}}:single_only?
         std::vector<std::pair<const char *,void (*)()>>{{"single_radial_hands",single_radial_hands}}:fixed_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_fixed_light_catch",radial_fixed_light_catch}}:angular_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_dynamic_reciprocity",radial_dynamic_reciprocity}}:handoff_only?
@@ -798,6 +992,7 @@ int main(int argc,char **argv) {
         std::vector<std::pair<const char *, void (*)()>> {{"passive_radial_arc",passive_radial_arc},
           {"radial_dynamic_reciprocity",radial_dynamic_reciprocity},{"radial_work_and_handoffs",radial_work_and_handoffs}}:
         std::vector<std::pair<const char *, void (*)()>> {
+        { "grip_readback",grip_readback }, { "material_grip_readback",material_grip_readback },
         { "static_load_and_release", static_load_and_release }, { "command_sign_and_budget", command_sign_and_budget },
         { "measured_swing_actuation", measured_swing_actuation },
         { "dynamic_recoil", dynamic_recoil }, { "finite_landing_catch", finite_landing_catch },
@@ -808,7 +1003,7 @@ int main(int argc,char **argv) {
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup },
         {"passive_radial_arc",passive_radial_arc},{"radial_dynamic_reciprocity",radial_dynamic_reciprocity},
         {"radial_work_and_handoffs",radial_work_and_handoffs},{"radial_fixed_light_catch",radial_fixed_light_catch},
-        {"single_radial_hands",single_radial_hands} };
+        {"single_radial_hands",single_radial_hands},{"radial_second_hand",radial_second_hand} };
     for (const auto &test : tests) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }

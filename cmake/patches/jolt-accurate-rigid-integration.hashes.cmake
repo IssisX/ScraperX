@@ -1,0 +1,22 @@
+# Pinned Jolt e77f175595e64cb44218cc9d9d56fc365ad0e36a. Disjoint from the passive soft-body patch.
+set(SCRAPERX_JOLT_ATTACHMENT_FILES
+    "Jolt/Physics/Body/Body.h"
+    "Jolt/Physics/Body/Body.inl"
+    "Jolt/Physics/Body/Body.cpp"
+    "Jolt/Physics/Body/MotionProperties.h"
+    "Jolt/Physics/Body/MotionProperties.cpp"
+)
+set(SCRAPERX_JOLT_ATTACHMENT_ORIGINAL_SHA256
+    "d4350b669abcc4fc8645fb45707eda8c015bad7db2cbea716ed82d26164a385d"
+    "fb96c60165572c4498f33e0db1121009b7c850763f172c2bcbb6b471d2386d2f"
+    "efc180941e7a7138f404faf29edcffce5d9dfd535e54a92781c36e577e8417ab"
+    "8b02f46f4434f8fb20d2a7e56615710f849f5a8172214cad9a4cedb707d5024f"
+    "9f16b5c16d74adcbb732b7d9829a37336ead0cda1399c2226890f01d80e0adb8"
+)
+set(SCRAPERX_JOLT_ATTACHMENT_PATCHED_SHA256
+    "872d16b09e82962b9931ea0ba6f1d80717f9ddcdb11459a9e978ac2e17ba2b84"
+    "a56fc6efc0498a197753de885782792ec8a0b3ac1ffcac7255008d5ee2e385b5"
+    "e83e09ef835bf4db8a827f017ccc51df84e5d86c1f755586b948b84d6824b0fa"
+    "dddd20da5bc56bf40713633e50bfad2e8d27d8fa219ffb862bc04642b2281ae0"
+    "85dfd84386a18bef1b45b045d4ebb20dff9730621e915981437c9d56e1d95374"
+)

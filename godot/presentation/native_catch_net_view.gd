@@ -5,6 +5,8 @@ extends Node3D
 # No authored surface, collider, cloth animation, or second physics authority.
 const HALF_DEPTH := 0.035
 const TETHER_RADIUS := 0.01 # 20 mm diameter protective woven shockcord casing.
+const PATCH_FRONT_OFFSET := 0.001
+const PATCH_BACK_OFFSET := 0.024 # 25 mm total display thickness about native midsurface.
 var _native: Object
 var _indices := PackedInt32Array()
 var _material: StandardMaterial3D
@@ -18,8 +20,13 @@ var _canvas_mesh: ArrayMesh
 var _canvas_uv := PackedVector2Array()
 var _canvas_u := Vector3.RIGHT
 var _vertex_count := 0
-var _tether: MeshInstance3D
+var _casing_mesh: CylinderMesh
 var _last_tether_vertices := PackedVector3Array()
+var _patch: MeshInstance3D
+var _patch_mesh: ArrayMesh
+var _patch_material: StandardMaterial3D
+var _patch_uv := PackedVector2Array()
+var _last_patch_vertices := PackedVector3Array()
 
 
 func setup(native: Object, material: StandardMaterial3D) -> void:
@@ -47,8 +54,12 @@ func _configure_topology(vertices: PackedVector3Array, indices: PackedInt32Array
 	_strands = null
 	_canvas = null
 	_canvas_mesh = null
-	_tether = null
+	_casing_mesh = null
 	_last_tether_vertices.clear()
+	_patch = null
+	_patch_mesh = null
+	_patch_uv.clear()
+	_last_patch_vertices.clear()
 	_links.clear()
 	_cross_edges.clear()
 	_last_vertices.clear()
@@ -124,54 +135,161 @@ func _canvas_textures(cloth: StandardMaterial3D) -> void:
 	cloth.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
-func _render_tether() -> void:
-	# A straight reduced-order connector for the native massless tension-only
-	# spring/damper. Its casing is presentation, not discretized cord collision.
-	# Both ends come from the same interpolated snapshot as the canvas/frame.
-	if _canvas == null or not _native.has_method("get_catch_net_tether_vertices"):
+func _patch_rubber() -> StandardMaterial3D:
+	if _patch_material != null:
+		return _patch_material
+	_patch_material = StandardMaterial3D.new()
+	_patch_material.albedo_color = Color.WHITE
+	_patch_material.vertex_color_use_as_albedo = true
+	_patch_material.metallic = 0.0
+	_patch_material.roughness = 0.88
+	# Closed, outward-facing prism: underside and edges have their own faces.
+	_patch_material.cull_mode = BaseMaterial3D.CULL_BACK
+	# Shared braided micrograin keeps both rubber and woven casing matte.
+	# Scalar roughness keeps rubber matte without another texture or shader.
+	var grain := Image.create(64, 64, false, Image.FORMAT_RGB8)
+	for y in 64:
+		for x in 64:
+			var seed_value := (x * 374761393 + y * 668265263) % 2147483647
+			seed_value = (seed_value ^ (seed_value >> 13)) * 1274126177
+			var crossing := cos(TAU * float(x + y) / 8.0) * cos(TAU * float(x - y) / 8.0)
+			var tone := 0.82 + 0.09 * float(seed_value & 255) / 255.0 + 0.09 * crossing
+			grain.set_pixel(x, y, Color(tone, tone, tone))
+	grain.generate_mipmaps()
+	_patch_material.albedo_texture = ImageTexture.create_from_image(grain)
+	_patch_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	return _patch_material
+
+
+func _render_reinforcement() -> void:
+	# One opaque surface batches the native pad prism and protective casing.
+	# Both follow interpolated native points, with no collision or forces.
+	if _canvas == null:
 		return
-	var endpoints: PackedVector3Array = _native.get_catch_net_tether_vertices()
-	if endpoints.size() != 2 or not endpoints[0].is_finite() or not endpoints[1].is_finite() \
-			or endpoints[0].distance_squared_to(endpoints[1]) < 0.000001:
-		if _tether != null:
-			_tether.visible = false
+	var corners := PackedVector3Array()
+	if _native.has_method("get_catch_net_patch_vertices"):
+		corners = _native.get_catch_net_patch_vertices()
+	var patch_valid := corners.size() == 3
+	for point in corners:
+		patch_valid = patch_valid and point.is_finite()
+	var face_normal := Vector3.ZERO
+	if patch_valid:
+		face_normal = (corners[2] - corners[0]).cross(corners[1] - corners[0])
+		patch_valid = face_normal.length_squared() > 0.000000000001
+	if not patch_valid:
+		corners.clear()
+		_patch_uv.clear()
+	var endpoints := PackedVector3Array()
+	if _native.has_method("get_catch_net_tether_vertices"):
+		endpoints = _native.get_catch_net_tether_vertices()
+	var tether_valid := endpoints.size() == 2
+	for point in endpoints:
+		tether_valid = tether_valid and point.is_finite()
+	if tether_valid:
+		tether_valid = endpoints[0].distance_squared_to(endpoints[1]) >= 0.000001
+	if not tether_valid:
+		endpoints.clear()
+	if not patch_valid and not tether_valid:
+		if _patch != null:
+			_patch.visible = false
+		_last_patch_vertices.clear()
 		_last_tether_vertices.clear()
 		return
-	if _tether == null:
-		var casing := CylinderMesh.new()
-		casing.top_radius = 1.0
-		casing.bottom_radius = 1.0
-		casing.height = 1.0
-		casing.radial_segments = 12
-		casing.rings = 1
-		var rubber := StandardMaterial3D.new()
-		rubber.albedo_color = Color(0.95, 0.24, 0.035)
-		rubber.roughness = 0.88
-		# Fine braided sheath detail stays on a single opaque surface.
-		var weave := Image.create(64, 64, false, Image.FORMAT_RGB8)
-		for y in 64:
-			for x in 64:
-				var crossing := cos(TAU * float(x + y) / 8.0) * cos(TAU * float(x - y) / 8.0)
-				var tone := 0.87 + 0.13 * crossing
-				weave.set_pixel(x, y, Color(tone, tone, tone))
-		weave.generate_mipmaps()
-		rubber.albedo_texture = ImageTexture.create_from_image(weave)
-		rubber.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		_tether = MeshInstance3D.new()
-		_tether.name = "Tether"
-		_tether.mesh = casing
-		_tether.material_override = rubber
-		add_child(_tether)
-	_tether.visible = true
-	if endpoints == _last_tether_vertices:
+	if _patch == null:
+		_patch_mesh = ArrayMesh.new()
+		_patch = MeshInstance3D.new()
+		_patch.name = "RubberReinforcement"
+		_patch.mesh = _patch_mesh
+		_patch.material_override = _patch_rubber()
+		add_child(_patch)
+	_patch.visible = true
+	if corners == _last_patch_vertices and endpoints == _last_tether_vertices:
 		return
-	var delta := endpoints[1] - endpoints[0]
-	var along := delta.normalized()
-	var reference := Vector3.UP if absf(along.dot(Vector3.UP)) < 0.99 else Vector3.RIGHT
-	var right := reference.cross(along).normalized()
-	var forward := right.cross(along).normalized()
-	_tether.transform = Transform3D(Basis(right * TETHER_RADIUS, delta,
-		forward * TETHER_RADIUS), (endpoints[0] + endpoints[1]) * 0.5)
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var colors := PackedColorArray()
+	var uv := PackedVector2Array()
+	if patch_valid:
+		face_normal = face_normal.normalized()
+		var front := PackedVector3Array()
+		var back := PackedVector3Array()
+		for corner in corners:
+			front.append(corner + face_normal * PATCH_FRONT_OFFSET)
+			back.append(corner - face_normal * PATCH_BACK_OFFSET)
+		vertices = PackedVector3Array([front[0], front[1], front[2], back[0], back[2], back[1]])
+		normals = PackedVector3Array([face_normal, face_normal, face_normal,
+			-face_normal, -face_normal, -face_normal])
+		indices = PackedInt32Array([0, 1, 2, 3, 4, 5])
+		# Freeze material UVs until removal/topology replacement to avoid swimming.
+		var initialize_uv := _patch_uv.is_empty()
+		if initialize_uv:
+			var u := (corners[1] - corners[0]).normalized()
+			var v := u.cross(face_normal)
+			var uv_a := Vector2.ZERO
+			var uv_b := Vector2(corners[0].distance_to(corners[1]), 0.0) * 16.0
+			var offset_c := corners[2] - corners[0]
+			var uv_c := Vector2(offset_c.dot(u), offset_c.dot(v)) * 16.0
+			_patch_uv = PackedVector2Array([uv_a, uv_b, uv_c, uv_a, uv_c, uv_b])
+		for i in 3:
+			var j := (i + 1) % 3
+			var side_normal := face_normal.cross(corners[j] - corners[i]).normalized()
+			var start := vertices.size()
+			vertices.append_array(PackedVector3Array([front[i], back[i], back[j], front[j]]))
+			for unused in 4:
+				normals.append(side_normal)
+			indices.append_array(PackedInt32Array([start, start + 1, start + 2,
+				start, start + 2, start + 3]))
+			if initialize_uv:
+				var length_uv := corners[i].distance_to(corners[j]) * 16.0
+				var depth_uv := (PATCH_FRONT_OFFSET + PATCH_BACK_OFFSET) * 16.0
+				_patch_uv.append_array(PackedVector2Array([Vector2.ZERO,
+					Vector2(0.0, depth_uv), Vector2(length_uv, depth_uv), Vector2(length_uv, 0.0)]))
+		uv.append_array(_patch_uv)
+		for unused in vertices.size():
+			colors.append(Color(0.075, 0.082, 0.085))
+	if tether_valid:
+		if _casing_mesh == null:
+			_casing_mesh = CylinderMesh.new()
+			_casing_mesh.top_radius = 1.0
+			_casing_mesh.bottom_radius = 1.0
+			_casing_mesh.height = 1.0
+			_casing_mesh.radial_segments = 12
+			_casing_mesh.rings = 1
+		var casing_arrays := _casing_mesh.surface_get_arrays(0)
+		var casing_vertices: PackedVector3Array = casing_arrays[Mesh.ARRAY_VERTEX]
+		var casing_normals: PackedVector3Array = casing_arrays[Mesh.ARRAY_NORMAL]
+		var casing_indices: PackedInt32Array = casing_arrays[Mesh.ARRAY_INDEX]
+		var delta := endpoints[1] - endpoints[0]
+		var along := delta.normalized()
+		var reference := Vector3.UP if absf(along.dot(Vector3.UP)) < 0.99 else Vector3.RIGHT
+		var right := reference.cross(along).normalized()
+		var forward := right.cross(along).normalized()
+		var pose := Transform3D(Basis(right * TETHER_RADIUS, delta,
+			forward * TETHER_RADIUS), (endpoints[0] + endpoints[1]) * 0.5)
+		var normal_basis := Basis(right, along, forward)
+		var start := vertices.size()
+		for i in casing_vertices.size():
+			vertices.append(pose * casing_vertices[i])
+			normals.append(normal_basis * casing_normals[i])
+			colors.append(Color(0.95, 0.24, 0.035))
+		uv.append_array(casing_arrays[Mesh.ARRAY_TEX_UV])
+		for index in casing_indices:
+			indices.append(start + index)
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	arrays[Mesh.ARRAY_INDEX] = indices
+	_patch_mesh.clear_surfaces()
+	_patch_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var bounds := AABB(vertices[0], Vector3.ZERO)
+	for point in vertices:
+		bounds = bounds.expand(point)
+	_patch.custom_aabb = bounds.grow(0.0001)
+	_last_patch_vertices = corners
 	_last_tether_vertices = endpoints
 
 
@@ -290,7 +408,7 @@ func render_view() -> void:
 			visible = false
 			return
 	visible = true
-	_render_tether()
+	_render_reinforcement()
 	# Immutable interpolated snapshots require no uploads while unchanged.
 	if vertices == _last_vertices:
 		return

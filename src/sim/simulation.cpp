@@ -12,9 +12,13 @@
 #include "sim/facade_route.hpp"
 #include "sim/cargo_net_route.hpp"
 #include "sim/catch_net_route.hpp"
+#include "sim/split_inspection_route.hpp"
+#include "sim/grapple_practice_route.hpp"
+#include "sim/grappling_gun.hpp"
 #include "sim/cargo_net.hpp"
 #include "sim/physical_hand_climb.hpp"
 #include "sim/physical_foot_push.hpp"
+#include "sim/traversal_plan.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
 #include "sim/supplied_ascent.hpp"
@@ -1278,11 +1282,18 @@ struct SupportSample final {
     float approach_tangent_speed = 0.0F;
     JPH::BodyID body_id;
     JPH::Vec3 soft_material = JPH::Vec3::sZero();
+    JPH::SubShapeID subshape{};
+    JPH::Vec3 material_point = JPH::Vec3::sZero();
+    JPH::Vec3 material_normal = JPH::Vec3::sAxisY();
+    const JPH::Shape *shape_identity = nullptr;
+    float friction = 0;
+    bool bottom_contact = false;
 };
 
 [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
     return entity == scraperx::sim::kCatchNetEntity || entity == scraperx::sim::kCatchNetFrameEntity || scraperx::sim::is_parkour_route_entity(entity) || scraperx::sim::SuppliedAscent::owns_support(entity) || scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
         scraperx::sim::is_facade_route_entity(entity) ||
+        scraperx::sim::is_grapple_practice_route_entity(entity) ||
         scraperx::sim::is_deformable_plank_segment_entity(entity) ||
         entity == scraperx::sim::kDeformablePlankSeatEntity;
 }
@@ -1294,6 +1305,7 @@ struct SupportSample final {
     // Mechanism-kit bodies that move are machines by construction.
     return scraperx::sim::kit::is_dynamic_entity(entity_id) ||
            scraperx::sim::is_facade_route_entity(entity_id) ||
+           scraperx::sim::is_grapple_practice_route_entity(entity_id) ||
            entity_id == Sim::kTranslatingSupportEntityId ||
            entity_id == Sim::kRotatingSupportEntityId ||
            entity_id == Sim::kMovingLedgeEntityId ||
@@ -1326,11 +1338,23 @@ public:
     void set_slingshot(scraperx::sim::Slingshot *launcher) noexcept {
         slingshot_ = launcher;
     }
+    // Owner-thread selection before Update. This records a separate actual
+    // contact receipt; it never changes Jolt contacts or general ground rank.
+    void set_transfer_receiver(JPH::BodyID body, JPH::SubShapeID subshape) noexcept {
+        lock();
+        transfer_receiver_ = body;
+        transfer_subshape_ = subshape;
+        unlock();
+    }
     void begin_tick() noexcept {
         lock();
         sample_ = {};
+        transfer_sample_ = {};
+        transfer_receiver_ = JPH::BodyID();
+        transfer_subshape_ = JPH::SubShapeID();
         impact_sample_ = {};
         reclaim_sample_={};
+        inspection_seat_contact_ = false;
         unlock();
     }
 
@@ -1339,7 +1363,16 @@ public:
         // Stance belongs to the current substep; impact_sample_ retains the
         // strongest rigid strike across the entire tick for consequences.
         sample_ = {};
+        transfer_sample_ = {};
+        inspection_seat_contact_ = false;
         unlock();
+    }
+
+    [[nodiscard]] bool inspection_span_seat_contact() const noexcept {
+        lock();
+        const bool result = inspection_seat_contact_;
+        unlock();
+        return result;
     }
 
     [[nodiscard]] SupportSample sample() const noexcept {
@@ -1351,6 +1384,12 @@ public:
     [[nodiscard]] SupportSample impact_sample() const noexcept {
         lock();
         const auto result = impact_sample_;
+        unlock();
+        return result;
+    }
+    [[nodiscard]] SupportSample transfer_sample() const noexcept {
+        lock();
+        const auto result = transfer_sample_;
         unlock();
         return result;
     }
@@ -1424,6 +1463,7 @@ public:
                         const JPH::ContactManifold &manifold,
                         JPH::ContactSettings &) override {
         observe_slingshot(first, second);
+        observe_inspection_seat(first, second, manifold);
         observe_support(first, second, manifold);
         observe_reclaim(first,second,manifold);
     }
@@ -1433,10 +1473,38 @@ public:
                             const JPH::ContactManifold &manifold,
                             JPH::ContactSettings &) override {
         observe_slingshot(first, second);
+        observe_inspection_seat(first, second, manifold);
         observe_support(first, second, manifold);
     }
 
 private:
+    void observe_inspection_seat(const JPH::Body &first, const JPH::Body &second,
+                                 const JPH::ContactManifold &manifold) noexcept {
+        using namespace scraperx::sim;
+        const bool span_first = first.GetUserData() == kSplitInspectionGirderEntity &&
+                                second.GetUserData() == kSplitInspectionSpanSeatEntity;
+        const bool span_second = second.GetUserData() == kSplitInspectionGirderEntity &&
+                                 first.GetUserData() == kSplitInspectionSpanSeatEntity;
+        if ((!span_first && !span_second) || first.IsSensor() || second.IsSensor() ||
+            manifold.mRelativeContactPointsOn1.empty()) return;
+        const auto &span = span_first ? first : second;
+        const auto &seat = span_first ? second : first;
+        if (span.GetShape()->GetType() != JPH::EShapeType::Compound ||
+            seat.GetShape()->GetType() != JPH::EShapeType::Compound) return;
+        JPH::SubShapeID remainder;
+        const auto span_part = static_cast<const JPH::CompoundShape *>(span.GetShape())
+            ->GetSubShapeIndexFromID(span_first ? manifold.mSubShapeID1 : manifold.mSubShapeID2, remainder);
+        const auto seat_part = static_cast<const JPH::CompoundShape *>(seat.GetShape())
+            ->GetSubShapeIndexFromID(span_first ? manifold.mSubShapeID2 : manifold.mSubShapeID1, remainder);
+        const auto normal = span_first ? -manifold.mWorldSpaceNormal : manifold.mWorldSpaceNormal;
+        // Part0 is the beveled tip; part1 is the full-depth walking box.
+        // The receiving plate is seat part0; bracket/side contact cannot pass.
+        if (span_part != 1 || seat_part != 0 || normal.GetY() < kSupportNormalThreshold) return;
+        lock();
+        inspection_seat_contact_ = true;
+        unlock();
+    }
+
     void observe_reclaim(const JPH::Body&first,const JPH::Body&second,const JPH::ContactManifold&manifold)noexcept {
         const auto is_fragment=[this](std::uint64_t e){return reclaim_first_!=0&&e>=reclaim_first_&&e<=reclaim_last_;};
         if((!is_fragment(first.GetUserData())&&!is_fragment(second.GetUserData()))||manifold.mRelativeContactPointsOn1.empty())return;
@@ -1517,7 +1585,7 @@ private:
         const JPH::Vec3 player_velocity = player_body->GetPointVelocity(player_contact_point);
         const JPH::Vec3 relative = player_velocity - point_velocity;
         const float normal_velocity = relative.Dot(normal);
-        const SupportSample candidate{
+        SupportSample candidate{
             true,
             support_entity,
             {support_contact_point.GetX(), support_contact_point.GetY(), support_contact_point.GetZ()},
@@ -1530,8 +1598,26 @@ private:
             (relative - normal * normal_velocity).Length(),
             support_body->GetID(),
         };
+        candidate.subshape = support_body == &first ? manifold.mSubShapeID1 : manifold.mSubShapeID2;
+        candidate.material_point = JPH::Vec3(support_body->GetInverseCenterOfMassTransform() * support_contact_point);
+        candidate.material_normal = support_body->GetRotation().Conjugated() * normal;
+        candidate.shape_identity = support_body->GetShape();
+        candidate.friction = support_body->GetFriction();
+        const auto foot_delta = JPH::Vec3(player_contact_point - player_body->GetPosition());
+        const auto half = player_body->GetShape()->GetLocalBounds().GetExtent().GetY();
+        candidate.bottom_contact = foot_delta.GetY() <= -(half - kPlayerRadius) &&
+            foot_delta.GetY() >= -half - .20F &&
+            foot_delta.GetX()*foot_delta.GetX() + foot_delta.GetZ()*foot_delta.GetZ() <=
+                (kPlayerRadius+.15F)*(kPlayerRadius+.15F);
 
         lock();
+        // A compound may expose several coplanar children under the foot.
+        // General stance ranking can select a different child even while
+        // the accepted receiver also has a real solved bottom contact.
+        if (candidate.bottom_contact && candidate.body_id == transfer_receiver_ &&
+            candidate.subshape == transfer_subshape_ &&
+            (!transfer_sample_.grounded || candidate.normal_y > transfer_sample_.normal_y))
+            transfer_sample_ = candidate;
         if (!impact_sample_.grounded || candidate.approach_normal_speed > impact_sample_.approach_normal_speed ||
             (candidate.approach_normal_speed == impact_sample_.approach_normal_speed &&
              candidate.entity_id < impact_sample_.entity_id))
@@ -1560,8 +1646,12 @@ private:
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     bool landing_feedback_ = false;
     SupportSample sample_{};
+    SupportSample transfer_sample_{};
+    JPH::BodyID transfer_receiver_;
+    JPH::SubShapeID transfer_subshape_;
     SupportSample impact_sample_{};
     ReclaimImpactSample reclaim_sample_{};
+    bool inspection_seat_contact_ = false;
     std::uint64_t reclaim_first_=0,reclaim_last_=0;
     std::atomic<std::uint64_t> carried_entity_{0};
     scraperx::sim::Slingshot *slingshot_ = nullptr;
@@ -1802,6 +1892,7 @@ struct LedgeProbe final {
     JPH::RVec3 ledge_point{};
     JPH::RVec3 landing_centre{};
     JPH::BodyID landing_body;
+    JPH::SubShapeID landing_subshape;
     std::uint64_t landing_entity_id = 0;
     float rise = 0.0F;
 };
@@ -2107,13 +2198,20 @@ public:
         if (cargo_net_) {
             const auto frame = build_catch_net_route(*kit_);
             catch_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,
-                kit_->body_id(frame), catch_net_config());
+                kit_->body_id(frame), catch_net_config(*kit_));
             catch_net_->set_contact_friction_callback(&soft_foot_contact_friction, &soft_foot_policy_);
+        }
+        // New inspection crossing appends without renumbering retained bodies.
+        if (content == WorldContent::Slingshot) {
+            build_split_inspection_route(*kit_);
+            (void)build_grapple_practice_route(*kit_);
         }
         soft_contact_listener_.set_player(player_id_);
         physics_system_.SetSoftBodyContactListener(&soft_contact_listener_);
         physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_, cargo_net_.get());
         physical_foot_push_ = std::make_unique<PhysicalFootPush>(physics_system_, player_id_);
+        if (content == WorldContent::Slingshot)
+            grappling_gun_ = std::make_unique<GrapplingGun>(physics_system_, player_id_, object_layers::kMoving);
         if (slingshot_) physics_system_.AddStepListener(this);
         contact_listener_.set_slingshot(slingshot_.get());
         physics_system_.OptimizeBroadPhase();
@@ -2127,6 +2225,7 @@ public:
 
     ~PhysicsWorld() {
         if (slingshot_) physics_system_.RemoveStepListener(this);
+        grappling_gun_.reset();
         if (cargo_net_) cargo_net_->set_contact_friction_callback(nullptr, nullptr);
         if (catch_net_) catch_net_->set_contact_friction_callback(nullptr, nullptr);
         physical_foot_push_.reset();
@@ -2226,7 +2325,98 @@ public:
         bool intake_sling_attach_requested = false;
         double sling_draw = 0.0, sling_yaw = 0.0, sling_elevation = 1.4311699866353502;
         bool sling_action = false, sling_drop = false;
+        Vector3 grapple_aim{0, 0, -1};
+        double grapple_reel = 0;
+        bool grapple_equip_requested = false, grapple_equipped = false;
+        bool grapple_action = false, grapple_release = false;
+        bool grapple_auto_reel_requested = false, grapple_auto_reel = false;
     };
+
+    static bool nearby_grapple_hook(const GrapplingGun::Readback &state) {
+        for (const auto &hook:state.hooks) if (hook.present &&
+            (hook.position+hook.rotation*GrapplingGun::hook_eye_local()-state.player_endpoint).LengthSq()<=2.25)
+            return true;
+        return false;
+    }
+    [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept {
+        GrappleGunSnapshot out;
+        if (!grappling_gun_) return out;
+        out.available = true;
+        out.acquired = grapple_acquired_;
+        out.equipped = grapple_equipped_;
+        const auto player = physics_system_.GetBodyInterface().GetPosition(player_id_);
+        const auto platform=kit_->body_for_entity(kGrapplePracticeDepartureEntity);
+        const JPH::RVec3 rack=platform.valid() ? kit_->body_position(platform)+
+            kit_->body_rotation(platform)*JPH::Vec3(-.7F,.9F,0) : JPH::RVec3::sZero();
+        out.rack_position = to_vector3(rack);
+        out.station_available = platform.valid() && grounded_ && traversal_state_ == TraversalState::None &&
+            carried_entity_ == 0 && (player - rack).LengthSq() <= 2.56;
+        const auto state = grappling_gun_->readback();
+        out.state = unsigned(state.state);
+        out.failure = unsigned(state.failure);
+        out.cartridges = state.cartridges;
+        out.available_hooks = state.available_hooks;
+        out.line_attached = grappling_gun_->line_active();
+        out.action_recovers_hook = state.state==GrapplingGun::LineState::Locked ||
+            (state.state!=GrapplingGun::LineState::PayingOut && nearby_grapple_hook(state));
+        out.active_hook = state.hook.GetIndexAndSequenceNumber();
+        out.player_endpoint = to_vector3(state.player_endpoint);
+        out.hook_endpoint = to_vector3(state.hook_endpoint);
+        out.line_length_m = state.line_length_m;
+        out.tension_n = state.tension_n;
+        out.extension_m = state.extension_m;
+        out.launch_work_j = state.launch_work_j;
+        out.last_launch_work_j = state.last_launch_work_j;
+        out.reel_work_j = state.reel_work_j;
+        out.auto_reel = state.auto_reel;
+        out.stored_elastic_energy_j = state.stored_elastic_energy_j;
+        out.spool_absorbed_energy_j = state.spool_absorbed_energy_j;
+        out.release_discarded_elastic_energy_j = state.release_discarded_elastic_energy_j;
+        for (unsigned i = 0; i < out.hooks.size(); ++i) {
+            const auto &hook = state.hooks[i];
+            out.hooks[i] = {hook.present, hook.body.GetIndexAndSequenceNumber(),
+                to_vector3(hook.position), {hook.rotation.GetX(), hook.rotation.GetY(),
+                hook.rotation.GetZ(), hook.rotation.GetW()}};
+        }
+        return out;
+    }
+
+    void apply_grapple_commands(const StepCommands &commands) {
+        if (!grappling_gun_) return;
+        if (commands.grapple_equip_requested) {
+            if (!commands.grapple_equipped) {
+                grappling_gun_->release();
+                grapple_equipped_ = false;
+            } else if (traversal_state_ == TraversalState::None && carried_entity_ == 0 &&
+                       !(slingshot_ && slingshot_->controls_player()) &&
+                       (grapple_acquired_ || grapple_gun_state().station_available)) {
+                grapple_acquired_ = grapple_equipped_ = true;
+            }
+        }
+        if (commands.grapple_auto_reel_requested && grapple_equipped_)
+            (void)grappling_gun_->set_auto_reel(commands.grapple_auto_reel);
+        if (commands.grapple_release) grappling_gun_->release();
+        grappling_gun_->set_reel_input(grapple_equipped_ ? float(commands.grapple_reel) : 0.0F);
+        if (!commands.grapple_action || !grapple_equipped_ ||
+            traversal_state_ != TraversalState::None || carried_entity_ != 0) return;
+        const auto before = grappling_gun_->readback();
+        if (before.state == GrapplingGun::LineState::PayingOut) {
+            (void)grappling_gun_->lock_line();
+        } else if (before.state == GrapplingGun::LineState::Locked) {
+            (void)grappling_gun_->retrieve();
+        } else {
+            // Physical retrieval is tried only at actual reach. A distant spent
+            // hook remains a body; firing consumes another finite cartridge.
+            if (nearby_grapple_hook(before)) {
+                (void)grappling_gun_->retrieve();
+                // A failed recovery retains its real cause and inventory.
+                // Action must not silently fall through into another shot.
+                return;
+            }
+            (void)grappling_gun_->fire(JPH::Vec3(float(commands.grapple_aim.x),
+                float(commands.grapple_aim.y), float(commands.grapple_aim.z)));
+        }
+    }
 
     void OnStep(const JPH::PhysicsStepListenerContext &context) override {
         // One listener owns every rider write. Jolt may run separate listeners
@@ -2238,9 +2428,11 @@ public:
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
         if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
-        physical_foot_push_->pre_step(context.mDeltaTime,
-            deformable_plank_ && !crouched_ &&
-            deformable_plank_->fragment_supported(physical_foot_push_->readback().support));
+        if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
+        const bool foot_face_valid = foot_push_purpose_ == FootPushPurpose::RigidTransfer
+            ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
+                deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
+        physical_foot_push_->pre_step(context.mDeltaTime, foot_face_valid);
         slingshot_->collision_step(context);
         if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
         if (supplied_ascent_) supplied_ascent_->collision_step(context.mDeltaTime);
@@ -2251,14 +2443,22 @@ public:
               const double next_time_seconds) noexcept {
         // WO-008: captured before anything this tick can change grounded_, so
         // it means exactly "was the player standing on something one tick ago."
+        second_hand_added_this_tick_ = false;
         const bool was_grounded_before_tick = grounded_;
         const bool was_soft_grounded_before_tick = grounded_ && net_for_body(support_sample_.body_id);
         const auto foot_transfers_before_tick = state_.foot_transfer_count;
         const auto traversal_before_commands = traversal_state_;
+        apply_grapple_commands(commands);
         foot_push_started_this_tick_ = false;
         const bool jump_cancelled = commands.cancel_jump_requested ||
             commands.release_requested || commands.set_down_requested || commands.sling_drop;
-        if (jump_cancelled || commands.crouch_held || traversal_before_commands != TraversalState::None)
+        // An involuntary hand loss must not erase an already valid real foot.
+        // Explicit cancel/death/restart still use full cleanup.
+        if (!jump_cancelled && !commands.crouch_held && cargo_transfer_active_ &&
+            foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active() &&
+            !physical_hands_->compatible_hands()) clear_traversal(true);
+        if (jump_cancelled || commands.crouch_held ||
+            (traversal_state_ != TraversalState::None && !foot_overlap_is_legal()))
             physical_foot_push_->clear();
         if (jump_cancelled || traversal_before_commands != TraversalState::None ||
             (slingshot_ && slingshot_->controls_player()) || physical_foot_push_->active()) {
@@ -2344,7 +2544,7 @@ public:
         if (sling_was_controlling || sling_controlling || jump_cancelled ||
             traversal_before_commands != TraversalState::None ||
             traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
-        if (traversal_state_ != TraversalState::None || carry_constraint_ != nullptr)
+        if ((traversal_state_ != TraversalState::None && !foot_overlap_is_legal()) || carry_constraint_ != nullptr)
             physical_foot_push_->clear();
         publish_soft_foot_policy(commands);
         bool jump_started = false;
@@ -2458,26 +2658,53 @@ public:
         }
         // Late contextual catches can start after ordinary locomotion. Remove
         // the leg before either hand/launcher authority solves this tick.
-        if (traversal_state_ != TraversalState::None || physical_hands_->active() ||
+        if (((traversal_state_ != TraversalState::None || physical_hands_->active()) && !foot_overlap_is_legal()) ||
             carry_constraint_ != nullptr || sling_controlling)
             physical_foot_push_->clear();
+        refresh_rigid_transfer_foot();
         // Hands/foot actions can acquire authority after locomotion. Only
         // tighten the published mode here: a consumed Jump must not re-enable
         // passive friction in the same tick as its push-off impulse.
         soft_foot_policy_.passive = soft_foot_policy_.passive && !jump_started &&
             passive_soft_feet_requested(commands);
         soft_foot_policy_.half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        // Hand/machine acquisition can occur late in this tick. One physical
+        // interaction owns the player; remove the tool line before it solves.
+        if (grappling_gun_ && (physical_hands_->active() || carry_constraint_ != nullptr || sling_controlling)) {
+            grappling_gun_->release();
+            grappling_gun_->set_reel_input(0);
+            grapple_equipped_ = false;
+        }
+        contact_listener_.set_transfer_receiver(cargo_transfer_active_ ? traversal_plan_.receiver : JPH::BodyID(),
+                                                traversal_plan_.receiver_subshape);
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+        if (grappling_gun_) grappling_gun_->post_step();
         if (cargo_net_) cargo_net_->refresh();
         if (catch_net_) catch_net_->refresh();
         kit_->finish_weld_steps();
         if (deformable_plank_) deformable_plank_->finish_collision_steps();
         physical_foot_push_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
-        if (physical_foot_push_->active() && deformable_plank_ &&
+        if (physical_foot_push_->active() && foot_push_purpose_ == FootPushPurpose::PlankJump && deformable_plank_ &&
             (deformable_plank_->capture().broken_mask != foot_push_start_broken_mask_ ||
              !deformable_plank_->fragment_supported(physical_foot_push_->readback().support)))
             physical_foot_push_->clear(PhysicalFootPush::StopReason::MaterialFaceLost);
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+        if (physical_hands_->active() && physical_foot_push_->active() && foot_overlap_is_legal()) {
+            const bool receiver_transfer = foot_push_purpose_ == FootPushPurpose::RigidTransfer;
+            // An entry push acts on its original timber, not the receiver.
+            // It cannot satisfy a later top-out plan's receiving-foot solve.
+            if (receiver_transfer) ++traversal_plan_.shared_solved_ticks;
+            ++state_.hand_foot_overlap_solved_ticks;
+            state_.hand_foot_last_solve_tick = static_cast<std::uint64_t>(
+                std::llround(next_time_seconds/Simulation::kFixedStepSeconds));
+            state_.hand_foot_last_hand_load_n = physical_hands_->hand_force(0).Length()+
+                physical_hands_->hand_force(1).Length();
+            state_.hand_foot_last_foot_load_n = physical_foot_push_->readback().player_force.Length();
+            if (receiver_transfer) traversal_plan_.phase = TraversalPhase::SharedHandFoot;
+        }
+        if (!physical_foot_push_->active()) foot_push_purpose_ = FootPushPurpose::None;
+        if (cargo_transfer_active_ && traversal_plan_.foot_started && !physical_foot_push_->active())
+            traversal_plan_.phase = TraversalPhase::HandSupported;
         if (!landing_applied_force_.IsNearZero()) {
             const auto support_point_now = from_support_local(bodies, landing_force_support_id_,
                 landing_force_support_local_point_);
@@ -2509,6 +2736,10 @@ public:
             support = {};
         }
         support_sample_ = support;
+        ++contact_solve_serial_;
+        const auto transfer_contact = contact_listener_.transfer_sample();
+        record_foot_contact(bodies, cargo_transfer_active_ && support.grounded && transfer_contact.grounded
+            ? transfer_contact : support);
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
         if(grounded_ && physical_step_pending_) {
@@ -2545,6 +2776,11 @@ public:
             restore_from_checkpoint(bodies);
             died_this_tick = true;
         }
+        // Contact and both actuators have now solved. Finish on this evidence
+        // outside Update, without an extra pre-step tick or another command.
+        if (!died_this_tick && cargo_transfer_active_)
+            (void)try_finish_cargo_transfer(bodies,static_cast<std::uint64_t>(
+                std::llround(next_time_seconds/Simulation::kFixedStepSeconds)));
         state_.checkpoint_footing_valid = !died_this_tick && grounded_ &&
             traversal_state_ == TraversalState::None && footing_is_firm(bodies);
         if (state_.checkpoint_footing_valid && !physical_foot_push_->active()) {
@@ -2645,6 +2881,8 @@ public:
         if (!shape_pose_is_clear(player_shape_.GetPtr(), destination, .02F)) return false;
         auto &bodies = physics_system_.GetBodyInterface();
         if (slingshot_) slingshot_->cancel_player_interaction();
+        if (grappling_gun_) grappling_gun_->clear_transients();
+        grapple_equipped_ = false;
         slingshot_flight_ = false;
         causal_airborne_ = false;
         physical_step_pending_ = false;
@@ -2715,6 +2953,9 @@ public:
 
     [[nodiscard]] const scraperx::sim::kit::Kit &kit() const noexcept {
         return *kit_;
+    }
+    [[nodiscard]] bool inspection_span_seat_contact() const noexcept {
+        return contact_listener_.inspection_span_seat_contact();
     }
     [[nodiscard]] const PipeBridge *pipe_bridge() const noexcept { return pipe_bridge_.get(); }
     [[nodiscard]] const Slingshot *slingshot() const noexcept { return slingshot_.get(); }
@@ -5313,6 +5554,7 @@ private:
                                         wall_point.GetZ() + inward.GetZ() * kLandingInset);
 
         JPH::BodyID landing_body = top_hit.mBodyID;
+        JPH::SubShapeID landing_subshape = top_hit.mSubShapeID2;
         if (require_supported_landing) {
             const JPH::RVec3 support_origin(landing_centre.GetX(),
                                             ledge_point.GetY() + kLandingSupportProbeUp,
@@ -5336,6 +5578,7 @@ private:
                         kLandingSupportTolerance) return probe;
             }
             landing_body = landing_hit.mBodyID;
+            landing_subshape = landing_hit.mSubShapeID2;
         }
 
         if (require_clear_landing && !capsule_pose_is_clear(landing_centre)) {
@@ -5352,6 +5595,7 @@ private:
         probe.ledge_point = ledge_point;
         probe.landing_centre = landing_centre;
         probe.landing_body = landing_body;
+        probe.landing_subshape = landing_subshape;
         probe.landing_entity_id = bodies.GetUserData(landing_body);
         probe.rise = rise;
         return probe;
@@ -5736,13 +5980,21 @@ private:
         }
         if ((traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
             physical_hands_->active() && !physical_hands_->compatible_hands()) {
-            // A solo rigid catch owns only its passive radial row. Action
-            // cannot authorize a two-hand top-out or a muscle jump from it.
+            // Action may add a separately verified free-hand grip. It never
+            // converts the same input transaction into a top-out or jump.
             if (commands.release_requested || commands.jump_requested) {
                 if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
                 else let_go_climb(bodies);
             } else if (commands.traversal_requested) {
-                ++rejected_traversal_count_;
+                const Grip candidate = missing_radial_grip(bodies);
+                const unsigned missing = physical_hands_->attached(0) ? 1U : 0U;
+                if (candidate.valid && physical_hands_->attach_radial_hand(missing,candidate.body,candidate.point)) {
+                    hands_[missing].body = candidate.body;
+                    hands_[missing].local = to_support_local(bodies,candidate.body,candidate.point);
+                    hands_[missing].valid = true;
+                    ++hands_[missing].generation;
+                    second_hand_added_this_tick_ = true;
+                } else ++rejected_traversal_count_;
             }
             return;
         }
@@ -5841,7 +6093,7 @@ private:
         if (!probe.valid) {
             return false;
         }
-        if(entity_is_causal_section_support(probe.ledge_entity_id))
+        if(!regression_fixtures_ || entity_is_causal_section_support(probe.ledge_entity_id))
             return begin_cargo_transfer(bodies,probe,at);
         JPH::RVec3 landing_centre;
         JPH::BodyID landing_body;
@@ -6193,6 +6445,7 @@ private:
                         JPH::RVec3(point.x, point.y, point.z),
                         JPH::Vec3(float(normal.x), float(normal.y), float(normal.z)), friction, .15F)) return false;
                     foot_push_start_broken_mask_ = deformable_plank_->capture().broken_mask;
+                    foot_push_purpose_ = FootPushPurpose::PlankJump;
                     ++foot_push_start_count_;
                     foot_push_started_this_tick_ = true;
                     airborne_inherited_velocity_ = current_support_point_velocity(bodies);
@@ -6458,6 +6711,7 @@ private:
         bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, rise + 0.01F, 0.0F),
                            JPH::EActivation::Activate);
         ++step_up_count_;
+        ++step_up_pose_count_;
         return false;
     }
 
@@ -6622,6 +6876,7 @@ private:
             hands_[hand].local = to_support_local(bodies, traversal_body_, actual.ledge);
             hands_[hand].valid = true;
         }
+        regrip_cooldown_ticks_ = 0;
         bodies.SetGravityFactor(player_id_, 1.0F);
         return true;
     }
@@ -6699,7 +6954,7 @@ private:
         const LedgeProbe vault_probe =
             probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false);
         if (vault_probe.valid) {
-            if(entity_is_causal_section_support(vault_probe.ledge_entity_id))
+            if(!regression_fixtures_ || entity_is_causal_section_support(vault_probe.ledge_entity_id))
                 return begin_cargo_transfer(bodies,vault_probe,origin);
             JPH::RVec3 landing_centre;
             JPH::BodyID landing_body;
@@ -6719,7 +6974,7 @@ private:
         // legacy fixture/vault owners until their replacements are proven.
         // A reachable lip must engage both hands; there is no gravity-off
         // fallback when the real attachment or receiving clearance fails.
-        if(entity_is_causal_section_support(mantle_probe.ledge_entity_id) ||
+        if(!regression_fixtures_ || entity_is_causal_section_support(mantle_probe.ledge_entity_id) ||
            (!regression_fixtures_ && (mantle_probe.ledge_entity_id==Simulation::kTowerEntityId ||
                                      mantle_probe.ledge_entity_id==2801)))
             return begin_cargo_transfer(bodies,mantle_probe,origin);
@@ -6796,6 +7051,10 @@ private:
     void begin_mantle(JPH::BodyInterface &bodies,
                       const LedgeProbe &probe,
                       const JPH::RVec3 origin) noexcept {
+        if (!regression_fixtures_) {
+            (void)begin_cargo_transfer(bodies,probe,origin);
+            return;
+        }
         const JPH::RVec3 approach = mantle_approach_end(bodies, probe, origin);
         const float step_length = static_cast<float>(
             std::hypot(approach.GetX() - origin.GetX(), approach.GetZ() - origin.GetZ()));
@@ -6845,13 +7104,24 @@ private:
             return;
         }
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
-        if(entity_is_causal_section_support(traversal_entity_id_) ||
+        if(!regression_fixtures_ || entity_is_causal_section_support(traversal_entity_id_) ||
            (traversal_entity_id_==1901 && physical_hands_->active())) {
+            const auto remembered_ledge =
+                from_support_local(bodies,traversal_body_,traversal_local_ledge_);
+            const Lip lip = probe_lip(remembered_ledge,traversal_normal_);
+            if (!lip.valid || lip.body != traversal_body_ ||
+                JPH::Vec3(lip.ledge-remembered_ledge).Length() > .15F) {
+                ++rejected_traversal_count_;
+                return;
+            }
             LedgeProbe probe;
-            probe.ledge_body=traversal_body_;
-            probe.ledge_entity_id=traversal_entity_id_;
+            probe.ledge_body=lip.body;
+            // A reconstructed hang probe must retain the actual compound
+            // child identity. A default SubShapeID cannot validate a plan.
+            probe.ledge_sub_shape=lip.sub_shape;
+            probe.ledge_entity_id=lip.entity_id;
             probe.landing_body=traversal_target_body_;
-            probe.ledge_point=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
+            probe.ledge_point=lip.ledge;
             probe.landing_centre=landing;
             probe.inward=traversal_normal_;
             if(!begin_cargo_transfer(bodies,probe,origin)) ++rejected_traversal_count_;
@@ -6876,6 +7146,10 @@ private:
                      const JPH::RVec3 landing_centre,
                      const JPH::BodyID landing_body,
                      const JPH::RVec3 origin) noexcept {
+        if (!regression_fixtures_) {
+            (void)begin_cargo_transfer(bodies,probe,origin);
+            return;
+        }
         const JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         const JPH::Vec3 support_velocity =
             grounded_ ? current_support_point_velocity(bodies) : airborne_inherited_velocity_;
@@ -7058,7 +7332,7 @@ private:
     }
 
     void release_hang(JPH::BodyInterface &bodies) noexcept {
-        if(entity_is_causal_section_support(traversal_entity_id_)) causal_airborne_=true;
+        if(!regression_fixtures_ || entity_is_causal_section_support(traversal_entity_id_)) causal_airborne_=true;
         JPH::Vec3 support_velocity=JPH::Vec3::sZero();
         if (physical_hands_->active() && !physical_hands_->compatible_hands()) {
             support_velocity=climb_support_velocity(bodies);
@@ -7429,6 +7703,27 @@ private:
         return true;
     }
 
+    [[nodiscard]] Grip missing_radial_grip(const JPH::BodyInterface &bodies) const noexcept {
+        if (!radial_ownership_eligible() || !physical_hands_->radial_active() ||
+            physical_hands_->attached_count()!=1 || !actual_hands_in_reach(bodies) ||
+            physical_hands_->swinging() || physical_foot_push_->active()) return {};
+        const unsigned missing=physical_hands_->attached(0)?1U:0U;
+        const auto planted=physical_hands_->grip_readback(1U-missing);
+        if (!planted.attached || planted.material || planted.support!=traversal_body_) return {};
+        const auto centre=bodies.GetCenterOfMassPosition(player_id_);
+        const float height=missing==0?kClimbHandMid:kClimbHandMid+.2F;
+        const auto aim=hand_aim(centre,height,missing==0?-kClimbHandSpan:kClimbHandSpan);
+        const Grip candidate=find_grip(centre,aim,traversal_normal_);
+        // Two existing 41 mm rendered palm radii give an 82 mm planning
+        // footprint. This is a reduced-order clearance tuning bound, not
+        // articulated hand collision or a new actuator limit.
+        constexpr float palm_spacing_m=2*.041F;
+        if (!candidate.valid || candidate.body!=planted.support ||
+            JPH::Vec3(candidate.point-centre).Length()>1.75F ||
+            JPH::Vec3(candidate.point-planted.world_anchor).Length()<palm_spacing_m) return {};
+        return candidate;
+    }
+
     [[nodiscard]] bool hanging_posture_eligible(const JPH::BodyInterface &bodies) const noexcept {
         if (!radial_ownership_eligible() || !actual_hands_in_reach(bodies)) return false;
         // Once acquired, the actual attached radius/reach/owner retain this
@@ -7474,10 +7769,15 @@ private:
         const double side_input=commands.move_input_x*right.GetX()+commands.move_input_z*right.GetZ();
         // Use the same physical traversal axes as climb/shimmy. Independent
         // world-axis deadzones swallow valid low-throw input at diagonal grips.
-        const bool neutral=std::isfinite(commands.move_input_x) && std::isfinite(commands.move_input_z) &&
+        // The successful reach consumes its entire transaction through both
+        // profile syncs. A held direction cannot rebuild the planted row in
+        // the very solve that adds its partner.
+        const bool neutral=second_hand_added_this_tick_ ||
+            (std::isfinite(commands.move_input_x) && std::isfinite(commands.move_input_z) &&
             std::abs(climb_input)<=kClimbInputDeadzone && std::abs(side_input)<=kClimbInputDeadzone &&
-            !(physical_hands_->swinging() && commands.move_input_x!=0.0);
-        const bool action=commands.jump_requested || commands.traversal_requested || commands.release_requested;
+            !(physical_hands_->swinging() && commands.move_input_x!=0.0));
+        const bool action=!second_hand_added_this_tick_ &&
+            (commands.jump_requested || commands.traversal_requested || commands.release_requested);
         if (physical_hands_->radial_active()) {
             if (radial_ownership_eligible() && !actual_hands_in_reach(bodies)) {
                 if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
@@ -7485,7 +7785,7 @@ private:
                 return;
             }
             if (!neutral || action || !radial_ownership_eligible()) (void)leave_radial_profile(bodies);
-        } else if (neutral && !action && hanging_posture_eligible(bodies)) {
+        } else if (neutral && !action && !plank_entry_overlap_is_legal() && hanging_posture_eligible(bodies)) {
             (void)physical_hands_->set_radial_profile(true);
         }
         if (physical_hands_->radial_active()) {
@@ -7759,7 +8059,7 @@ private:
         if (!probe.valid) {
             return false;
         }
-        if ((cargo_net_ && traversal_body_ == cargo_net_->body()) ||
+        if (!regression_fixtures_ || (cargo_net_ && traversal_body_ == cargo_net_->body()) ||
             entity_is_causal_section_support(traversal_entity_id_) ||
             entity_is_causal_section_support(probe.ledge_entity_id) ||
             // North-frame ladder top-outs retain their actual hands until
@@ -7777,6 +8077,87 @@ private:
         return true;
     }
 
+    [[nodiscard]] bool plank_entry_overlap_is_legal() const noexcept {
+        // Retain only the already-started physical stroke. The leg continues
+        // to own material, traction, reach and its remaining finite budget.
+        return foot_push_purpose_ == FootPushPurpose::PlankJump &&
+            physical_foot_push_->active() && !physical_foot_push_->stop_requested() &&
+            !cargo_transfer_active_ && cargo_push_seconds_ < 0 &&
+            (traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
+            physical_hands_->compatible_hands() && !physical_hands_->radial_active() &&
+            !physical_hands_->swinging() && deformable_plank_ && !crouched_ &&
+            deformable_plank_->capture().broken_mask == foot_push_start_broken_mask_ &&
+            deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
+    }
+
+    [[nodiscard]] bool foot_overlap_is_legal() const noexcept {
+        return plank_entry_overlap_is_legal() ||
+            (cargo_transfer_active_ && traversal_plan_.kind == TraversalPlanKind::LedgeCatchTopOut &&
+            traversal_state_ == TraversalState::Climbing && physical_hands_->active() &&
+            physical_hands_->compatible_hands() && !physical_hands_->radial_active() &&
+            !physical_hands_->swinging() && cargo_push_seconds_ < 0 &&
+            foot_push_purpose_ == FootPushPurpose::RigidTransfer &&
+            foot_push_contact_.valid && foot_push_contact_.body == traversal_plan_.receiver &&
+            foot_push_contact_.subshape == traversal_plan_.receiver_subshape);
+    }
+
+    void record_foot_contact(const JPH::BodyInterface &bodies, const SupportSample &support) noexcept {
+        foot_contact_ = {};
+        if (!support.grounded || !support.bottom_contact || support.body_id.IsInvalid() ||
+            net_for_body(support.body_id) || support.normal_y < kSupportNormalThreshold) return;
+        foot_contact_.valid = true;
+        foot_contact_.body = support.body_id;
+        foot_contact_.subshape = support.subshape;
+        foot_contact_.entity_id = support.entity_id;
+        foot_contact_.solved_tick = contact_solve_serial_;
+        foot_contact_.local_point = support.material_point;
+        foot_contact_.world_point = from_support_local(bodies, support.body_id, support.material_point);
+        foot_contact_.local_normal = support.material_normal;
+        foot_contact_.world_normal = bodies.GetRotation(support.body_id) * support.material_normal;
+        foot_contact_.point_velocity = support_point_velocity(bodies, support.body_id, foot_contact_.world_point);
+        foot_contact_.friction = support.friction;
+        foot_contact_.shape_identity = support.shape_identity;
+    }
+
+    void refresh_rigid_transfer_foot() noexcept {
+        rigid_transfer_foot_valid_ = false;
+        if (foot_push_purpose_ != FootPushPurpose::RigidTransfer || !physical_foot_push_->active() ||
+            crouched_ || !foot_push_contact_.valid) return;
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
+        rigid_transfer_foot_valid_ = lock.Succeeded() && lock.GetBody().IsInBroadPhase() &&
+            !lock.GetBody().IsSensor() && lock.GetBody().GetShape() == foot_push_contact_.shape_identity &&
+            lock.GetBody().GetUserData() == foot_push_contact_.entity_id;
+        // The foot owner continuously checks real distance, traction and
+        // compression itself. A new ray cannot renew this material anchor.
+    }
+
+    void try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 landing) noexcept {
+        if (traversal_plan_.foot_started || physical_foot_push_->active() ||
+            !traversal_plan_.accepts(foot_contact_, contact_solve_serial_) || crouched_ ||
+            (deformable_plank_ && deformable_plank_->logical_member_for_body(foot_contact_.body))) return;
+        const auto relative = foot_contact_.local_point - traversal_plan_.receiver_local_target;
+        // Bound the real contact to the accepted receiver footprint, rather
+        // than accepting some other face of a large compound body.
+        const auto world_offset = bodies.GetRotation(foot_contact_.body) * relative;
+        if (std::hypot(world_offset.GetX(), world_offset.GetZ()) > kPlayerRadius) return;
+        const float remaining = float(landing.GetY() - bodies.GetPosition(player_id_).GetY());
+        const float stroke = std::clamp(remaining, kLandingSkin, PhysicalFootPush::maximum_stroke_m());
+        // Refresh BOTH coordinates from the same material frame at acquisition:
+        // a kinematic support may have moved since the last completed solve.
+        foot_contact_.world_point = from_support_local(bodies,foot_contact_.body,foot_contact_.local_point);
+        foot_contact_.world_normal = bodies.GetRotation(foot_contact_.body) * foot_contact_.local_normal;
+        if (!physical_foot_push_->begin(foot_contact_.body, foot_contact_.world_point,
+                foot_contact_.world_normal, foot_contact_.friction, stroke)) return;
+        traversal_plan_.foot_started = true;
+        foot_push_contact_ = foot_contact_;
+        foot_push_purpose_ = FootPushPurpose::RigidTransfer;
+        ++foot_push_start_count_;
+        foot_push_started_this_tick_ = true;
+        traversal_plan_.last_contact_tick = foot_contact_.solved_tick;
+        traversal_plan_.phase = TraversalPhase::SharedHandFoot;
+        refresh_rigid_transfer_foot();
+    }
+
     bool begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,
                               JPH::RVec3 origin) noexcept {
         if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
@@ -7786,6 +8167,39 @@ private:
         if (shoulder_to_lip>1.05F) return false;
         Lip lips[2];
         if(!probe_lip_pair(probe.ledge_point,probe.inward,probe.ledge_body,lips)) return false;
+        // Revalidate a real receiving surface, including reconstructed hang
+        // probes. This prospective ray only identifies the plan; it cannot
+        // start the physical foot row.
+        const auto receiver_origin = probe.landing_centre - JPH::Vec3(0,kPlayerHalfHeight-kLandingSupportProbeUp,0);
+        const JPH::Vec3 down(0,-(kLandingSupportProbeUp+kLandingSupportTolerance),0);
+        JPH::RayCastResult receiver_hit;
+        if (!cast_ray(receiver_origin,down,receiver_hit) || receiver_hit.mBodyID != probe.landing_body ||
+            !shape_pose_is_clear(player_shape_.GetPtr(),probe.landing_centre)) return false;
+        const auto receiver_point = JPH::RRayCast(receiver_origin,down).GetPointOnRay(receiver_hit.mFraction);
+        if (surface_normal(receiver_hit.mBodyID,receiver_hit.mSubShapeID2,receiver_point).GetY() < kSupportNormalThreshold)
+            return false;
+        TraversalAffordance candidate;
+        candidate.rigid.body = probe.ledge_body;
+        candidate.rigid.subshape = probe.ledge_sub_shape;
+        candidate.rigid.entity_id = probe.ledge_entity_id;
+        candidate.rigid.geometry_generation = std::uint64_t(probe.ledge_body.GetIndexAndSequenceNumber())+1;
+        candidate.rigid.local_point = to_support_local(bodies,probe.ledge_body,probe.ledge_point);
+        candidate.rigid.local_normal = bodies.GetRotation(probe.ledge_body).Conjugated()*JPH::Vec3::sAxisY();
+        candidate.rigid.local_tangent = bodies.GetRotation(probe.ledge_body).Conjugated()*probe.inward.Cross(JPH::Vec3::sAxisY());
+        candidate.receiver_body = probe.landing_body;
+        candidate.receiver_subshape = receiver_hit.mSubShapeID2;
+        candidate.receiver_entity_id = bodies.GetUserData(probe.landing_body);
+        candidate.grip_capable = candidate.receiver_footing_capable = true;
+        {
+            const JPH::BodyID ids[]{probe.ledge_body,probe.landing_body};
+            const JPH::BodyLockMultiRead locks(physics_system_.GetBodyLockInterface(),ids,2);
+            if (!locks.GetBody(0) || !locks.GetBody(1)) return false;
+            candidate.rigid.shape_identity = locks.GetBody(0)->GetShape();
+            candidate.receiver_shape_identity = locks.GetBody(1)->GetShape();
+        }
+        const auto generation = traversal_affordances_.remember(candidate,contact_solve_serial_);
+        const auto *accepted = traversal_affordances_.refresh(generation,physics_system_,contact_solve_serial_);
+        if (!accepted) return false;
         hanging_posture_offset_m_ = 0.0F;
         for (unsigned hand=0;hand<2;++hand) {
             if (!physical_hands_->attach(hand,lips[hand].body,lips[hand].ledge)) {
@@ -7811,36 +8225,62 @@ private:
         const float damping = traversal_entity_id_ == 1901 ? (from_hang ? 400.0F : 480.0F) : 600.0F;
         physical_hands_->set_transfer_profile(damping);
         cargo_transfer_active_=true;
+        traversal_plan_.latch(*accepted,traversal_local_target_,candidate.receiver_shape_identity,contact_solve_serial_);
         cargo_transfer_peak_hand_load_n_=0;
         // Attach/detach changes the load path without resetting rider velocity.
         return true;
     }
 
+    [[nodiscard]] bool try_finish_cargo_transfer(JPH::BodyInterface &bodies,
+                                                std::uint64_t event_tick = 0) noexcept {
+        if (!cargo_transfer_active_ || traversal_plan_.shared_solved_ticks == 0 ||
+            !traversal_plan_.accepts(foot_contact_,contact_solve_serial_)) return false;
+        const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
+        const auto actual=bodies.GetPosition(player_id_);
+        if (!grounded_ || !footing_is_firm(bodies) ||
+            support_sample_.body_id != traversal_target_body_ ||
+            !shape_pose_is_clear(player_shape_.GetPtr(),landing) ||
+            std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ()) >= .10) return false;
+        const auto contact=from_support_local(bodies,foot_contact_.body,foot_contact_.local_point);
+        const auto relative=bodies.GetLinearVelocity(player_id_)-
+            support_point_velocity(bodies,foot_contact_.body,contact);
+        if (std::hypot(relative.GetX(),relative.GetZ()) >= .20) return false;
+        cargo_transfer_peak_hand_load_n_=std::max(cargo_transfer_peak_hand_load_n_,
+            double((physical_hands_->hand_force(0)+physical_hands_->hand_force(1)).Length()));
+        ++accepted_traversal_count_;
+        ++state_.foot_transfer_count;
+        if (event_tick) state_.foot_transfer_tick=event_tick;
+        state_.foot_transfer_support_entity_id=support_sample_.entity_id;
+        state_.foot_transfer_peak_hand_load_n=cargo_transfer_peak_hand_load_n_;
+        clear_traversal(foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active());
+        return true;
+    }
+
     void update_cargo_transfer(JPH::BodyInterface &bodies,double up_input,float dt) noexcept {
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),traversal_plan_.receiver);
+            if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() || lock.GetBody().IsSensor() ||
+                lock.GetBody().GetShape() != traversal_plan_.receiver_shape ||
+                lock.GetBody().GetUserData() != traversal_plan_.receiver_entity) {
+                traversal_plan_.phase = TraversalPhase::HandSupported;
+                traversal_plan_.rejection = TraversalRejection::InvalidReceiver;
+                return;
+            }
+        }
         cargo_transfer_peak_hand_load_n_=std::max(cargo_transfer_peak_hand_load_n_,
             double((physical_hands_->hand_force(0)+physical_hands_->hand_force(1)).Length()));
         const auto actual=bodies.GetPosition(player_id_);
         const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
-        const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
-                                     support_sample_.contact_point.z);
-        const auto relative_velocity=bodies.GetLinearVelocity(player_id_)-
-            (support_sample_.body_id.IsInvalid()?JPH::Vec3::sZero():
-             support_point_velocity(bodies,support_sample_.body_id,contact));
         const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
         const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
-        // A rounded edge contact alone is not a stable top-out. Keep finite
-        // hands until the intended footprint is reached and slip is small.
-        if (grounded_ && footing_is_firm(bodies) && horizontal<0.10 &&
-            std::hypot(relative_velocity.GetX(),relative_velocity.GetZ())<0.20 &&
-            (support_sample_.body_id==traversal_target_body_ ||
-             support_sample_.body_id==traversal_body_)) {
-            ++accepted_traversal_count_;
-            ++state_.foot_transfer_count;
-            state_.foot_transfer_support_entity_id = support_sample_.entity_id;
-            state_.foot_transfer_peak_hand_load_n = cargo_transfer_peak_hand_load_n_;
-            clear_traversal();
+        if (!shape_pose_is_clear(player_shape_.GetPtr(),landing)) {
+            traversal_plan_.rejection = TraversalRejection::BlockedClearance;
             return;
         }
+        traversal_plan_.rejection = TraversalRejection::None;
+        if (!traversal_plan_.foot_started) traversal_plan_.phase = TraversalPhase::AwaitingFootContact;
+        try_begin_transfer_foot(bodies,landing);
+        if (try_finish_cargo_transfer(bodies)) return;
         // A deliberate top-out/Action authorizes the bounded muscle action.
         // Releasing the stick does not cancel that input transaction; pushing
         // away pauses it while the real hand constraints keep taking load.
@@ -7892,7 +8332,7 @@ private:
 
     void let_go_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::Vec3 support_velocity = climb_support_velocity(bodies);
-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_))
+        if(!regression_fixtures_ || cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_))
             causal_airborne_=true;
         // The rotating/deforming support velocity remains the reference for
         // airborne steering. It must not replace the body's actual velocity.
@@ -7908,7 +8348,7 @@ private:
 
     // Springing back off the structure, away from it and up.
     void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity ||
+        if(!regression_fixtures_ || cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity ||
            entity_is_causal_section_support(traversal_entity_id_) ||
            (traversal_entity_id_==1901 && physical_hands_->active())) {
             // North-frame rungs use the same finite hand stroke and passive
@@ -7973,6 +8413,10 @@ private:
     // does not stop a shimmy; only climbing up needs the landing clear.
     void update_shimmy(JPH::BodyInterface &bodies, const StepCommands &commands,
                        const float delta_seconds) noexcept {
+        // Climbing and Hanging are exclusive owners of this existing clock.
+        // Idle/blocked ticks count too; it gates placement, not body actuation.
+        const bool regrip_ready = regrip_cooldown_ticks_ == 0;
+        if (regrip_cooldown_ticks_ > 0) --regrip_cooldown_ticks_;
         if (physical_hands_->active() && !physical_hands_->compatible_hands()) return;
         if (physical_hands_->radial_active()) return;
         const JPH::Vec3 right = traversal_right();
@@ -7981,35 +8425,62 @@ private:
         if (std::abs(side_input) <= kClimbInputDeadzone || traversal_normal_.IsNearZero()) {
             return;
         }
+        const std::array<PhysicalHandClimb::GripReadback,2> grips{
+            physical_hands_->grip_readback(0),physical_hands_->grip_readback(1)};
+        // This owner shimmies one continuous rigid ledge. Material climbing
+        // and a handoff between separate bodies retain their existing owners.
+        for (const auto &grip : grips)
+            if (!grip.attached || grip.material || grip.support != traversal_body_) return;
+        if (!actual_hands_in_reach(bodies)) {
+            release_hang(bodies);
+            return;
+        }
+        const float sign = side_input > 0.0 ? 1.0F : -1.0F;
         const float lead = side_input > 0.0 ? 0.25F : -0.25F;
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
         const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::Vec3 step = right * (static_cast<float>(side_input) * kShimmySpeed * delta_seconds);
         const Lip at = probe_lip(ledge + step, traversal_normal_);
         const Lip ahead = probe_lip(ledge + step + right * lead, traversal_normal_);
-        if (!at.valid || !ahead.valid || std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
+        if (!at.valid || !ahead.valid || at.body != traversal_body_ || ahead.body != traversal_body_ ||
+            std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
             !climb_move_clear(bodies.GetPosition(player_id_),
                               bodies.GetPosition(player_id_) + JPH::Vec3(at.hold - hold))) {
             return;
         }
-        std::array<JPH::RVec3, 2> grips;
         for (unsigned hand = 0; hand < 2; ++hand) {
             const auto aim = at.ledge + right * (hand == 0 ? -kHangHandSpan : kHangHandSpan);
             const auto actual = probe_lip(aim, traversal_normal_);
             if (!actual.valid || actual.body != at.body ||
                 std::abs(actual.ledge.GetY() - at.ledge.GetY()) > 0.15) return;
-            grips[hand] = actual.ledge;
         }
-        for (unsigned hand = 0; hand < 2; ++hand) {
-            const auto grip = grips[hand];
-            if (!physical_hands_->regrip(hand, at.body, grip)) {
-                release_hang(bodies);
-                return;
-            }
+        // Recompute the actual trailing hand on every direction change. A
+        // leading placement must remain distinct from the planted material
+        // point; the existing0.35m climbing lead avoids coincident palms.
+        const unsigned hand = JPH::Vec3(grips[0].world_anchor-grips[1].world_anchor).Dot(right)*sign <= 0 ? 0U : 1U;
+        const Lip next = probe_lip(at.ledge + right*(sign*kClimbSideLead),traversal_normal_);
+        const bool next_valid = next.valid && next.body == traversal_body_ &&
+            std::abs(next.ledge.GetY()-at.ledge.GetY()) <= .15F;
+        // Missing optional lead space stops placement, not valid movement
+        // still supported by the existing planted pair.
+        const bool place = regrip_ready && next_valid &&
+            JPH::Vec3(next.ledge-grips[1U-hand].world_anchor).Dot(right)*sign >= .10F &&
+            JPH::Vec3(next.ledge-bodies.GetCenterOfMassPosition(player_id_)).Length() <= 1.75F;
+        // A cooldown cannot let the target run indefinitely beyond the real
+        // planted pair. Reuse the existing attached-hand reach envelope.
+        for (unsigned i=0;i<2;++i) {
+            const auto anchor = place && i==hand ? next.ledge : grips[i].world_anchor;
+            if (JPH::Vec3(anchor-at.hold).Length() > 1.75F) return;
+        }
+        if (place) {
+            // replace validates first and preserves spring extension and
+            // momentum. A rejected placement leaves both old rows intact.
+            if (!physical_hands_->regrip(hand, traversal_body_, next.ledge)) return;
             ++hands_[hand].generation;
-            hands_[hand].body = at.body;
-            hands_[hand].local = to_support_local(bodies, at.body, grip);
+            hands_[hand].body = traversal_body_;
+            hands_[hand].local = to_support_local(bodies, traversal_body_, next.ledge);
             hands_[hand].valid = true;
+            regrip_cooldown_ticks_ = kClimbRegripTicks;
         }
         traversal_body_ = at.body;
         traversal_entity_id_ = at.entity_id;
@@ -8068,7 +8539,7 @@ private:
         traversal_duration_ = kLoweringSeconds;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
-        if(entity_is_causal_section_support(lip.entity_id)) {
+        if(!regression_fixtures_ || entity_is_causal_section_support(lip.entity_id)) {
             bodies.SetGravityFactor(player_id_,1.0F);
             if(!acquire_hang_hands(bodies)) {
                 clear_traversal();
@@ -8183,13 +8654,25 @@ private:
         return beam;
     }
 
-    void clear_traversal() noexcept {
+    void clear_traversal(bool preserve_valid_foot = false) noexcept {
+        second_hand_added_this_tick_ = false;
+        regrip_cooldown_ticks_ = 0;
         hanging_posture_offset_m_ = 0.0F;
         hanging_posture_input_ = false;
         cargo_transfer_active_=false;
         cargo_push_seconds_=-1.0F;
         if (physical_hands_) physical_hands_->clear();
-        if (physical_foot_push_) physical_foot_push_->clear();
+        if (physical_foot_push_ && !preserve_valid_foot) physical_foot_push_->clear();
+        if (!preserve_valid_foot) {
+            foot_push_purpose_ = FootPushPurpose::None;
+            foot_contact_ = {};
+            foot_push_contact_ = {};
+            rigid_transfer_foot_valid_ = false;
+            state_.hand_foot_last_solve_tick=0;
+            state_.hand_foot_last_hand_load_n=state_.hand_foot_last_foot_load_n=0;
+        }
+        traversal_plan_.clear();
+        traversal_affordances_.clear();
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -8344,6 +8827,8 @@ private:
     // publishing a snapshot that mixes a teleported position with a contact
     // sample that referred to the pre-restore position.
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        if (grappling_gun_) grappling_gun_->clear_transients();
+        grapple_equipped_ = false;
         clear_traversal();
         if (slingshot_) slingshot_->detach();
         slingshot_flight_ = false;
@@ -8787,13 +9272,15 @@ private:
         }
         if (traversal_state_ == TraversalState::Climbing ||
             traversal_state_ == TraversalState::Hanging) {
-            if (hands_[0].valid && physical_hands_->attached(0)) {
-                state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
-                state_.traversal_left_hand_generation = hands_[0].generation;
+            const auto left = physical_hands_->grip_readback(0);
+            const auto right = physical_hands_->grip_readback(1);
+            if (left.attached) {
+                state_.traversal_left_hand = to_vector3(left.world_anchor);
+                state_.traversal_left_hand_generation = left.generation;
             }
-            if (hands_[1].valid && physical_hands_->attached(1)) {
-                state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
-                state_.traversal_right_hand_generation = hands_[1].generation;
+            if (right.attached) {
+                state_.traversal_right_hand = to_vector3(right.world_anchor);
+                state_.traversal_right_hand_generation = right.generation;
             }
         } else if ((traversal_state_ == TraversalState::Hanging ||
                     traversal_state_ == TraversalState::Lowering) &&
@@ -8810,6 +9297,20 @@ private:
         }
         state_.traversal_hand_constraint_count = physical_hands_ ?
             unsigned(physical_hands_->attached(0)) + unsigned(physical_hands_->attached(1)) : 0;
+        state_.traversal_plan_kind = static_cast<std::uint8_t>(traversal_plan_.kind);
+        state_.traversal_phase = static_cast<std::uint8_t>(traversal_plan_.phase);
+        state_.traversal_rejection_reason = static_cast<std::uint8_t>(traversal_plan_.rejection);
+        state_.traversal_plan_generation = traversal_plan_.generation;
+        state_.traversal_receiver_entity_id = traversal_plan_.receiver_entity;
+        state_.foot_contact_tick = foot_contact_.valid ? foot_contact_.solved_tick : 0;
+        state_.foot_push_source_contact_tick = foot_push_purpose_ == FootPushPurpose::RigidTransfer
+            ? foot_push_contact_.solved_tick : 0;
+        state_.hand_foot_overlap_active = physical_hands_->active() && physical_foot_push_->active();
+        state_.actual_hand_load_n = physical_hands_->hand_force(0).Length() + physical_hands_->hand_force(1).Length();
+        state_.actual_foot_load_n = physical_foot_push_->readback().player_force.Length();
+        const auto actuator_load = state_.actual_hand_load_n + state_.actual_foot_load_n;
+        state_.actual_hand_load_fraction = actuator_load > 0 ? state_.actual_hand_load_n/actuator_load : 0;
+        state_.actual_foot_load_fraction = actuator_load > 0 ? state_.actual_foot_load_n/actuator_load : 0;
         state_.traversal_left_hand_force = physical_hands_ ?
             to_vector3(physical_hands_->hand_force(0)) : Vector3{};
         state_.traversal_right_hand_force = physical_hands_ ?
@@ -8821,6 +9322,7 @@ private:
         state_.hanging_free_arc_active = physical_hands_ && physical_hands_->radial_active();
         state_.hanging_commanded_span_m = state_.hanging_free_arc_active ? physical_hands_->radial_commanded_span_m() : 0.0;
         state_.hanging_actual_span_m = state_.hanging_free_arc_active ? physical_hands_->radial_actual_span_m() : 0.0;
+        state_.missing_hand_grip_available = missing_radial_grip(bodies).valid;
         state_.swing_tuck_available = hanging_posture_eligible(bodies);
         state_.swing_tuck_requested = state_.swing_tuck_available && hanging_posture_input_;
         state_.swing_body_below_grip_m = 0.0;
@@ -8877,6 +9379,7 @@ private:
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.world_solid_bodies = world_solid_bodies_;
         state_.step_up_count = step_up_count_;
+        state_.step_up_pose_count = step_up_pose_count_;
         state_.jump_vault_count = jump_vault_count_;
         state_.world_solid_mirrors = world_solid_mirrors_;
         state_.world_solid_rejected = world_solid_rejected_;
@@ -9005,7 +9508,16 @@ private:
     bool catch_episode_active_ = false;
     std::unique_ptr<PhysicalHandClimb> physical_hands_;
     std::unique_ptr<PhysicalFootPush> physical_foot_push_;
+    std::unique_ptr<GrapplingGun> grappling_gun_;
+    bool grapple_acquired_ = false, grapple_equipped_ = false;
     bool foot_push_started_this_tick_ = false;
+    enum class FootPushPurpose { None, PlankJump, RigidTransfer };
+    FootPushPurpose foot_push_purpose_ = FootPushPurpose::None;
+    FootContactSample foot_contact_{}, foot_push_contact_{};
+    std::uint64_t contact_solve_serial_ = 0;
+    bool rigid_transfer_foot_valid_ = false;
+    TraversalAffordanceCache traversal_affordances_;
+    TraversalPlanState traversal_plan_;
     std::uint16_t foot_push_start_broken_mask_ = 0;
     std::uint64_t foot_push_start_count_ = 0;
     std::unique_ptr<TeeterRise> teeter_rise_;
@@ -9076,6 +9588,7 @@ private:
     double rotating_support_yaw_radians_ = 0.0;
 
     std::uint64_t step_up_count_ = 0;
+    std::uint64_t step_up_pose_count_ = 0;
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
     std::uint32_t ordinary_jump_ticks_left_ = 0;
@@ -9094,6 +9607,7 @@ private:
     JPH::Vec3 swing_rest_offset_ = JPH::Vec3::sZero();
     float hanging_posture_offset_m_ = 0.0F;
     bool hanging_posture_input_ = false;
+    bool second_hand_added_this_tick_ = false;
     TraversalState traversal_state_ = TraversalState::None;
     JPH::BodyID traversal_body_;
     JPH::BodyID traversal_target_body_;
@@ -9523,6 +10037,17 @@ std::vector<Vector3> Simulation::render_catch_net_tether_vertices() const {
     return {{material.GetX(),material.GetY(),material.GetZ()},
             {position.x+anchor.GetX(),position.y+anchor.GetY(),position.z+anchor.GetZ()}};
 }
+std::vector<Vector3> Simulation::render_catch_net_patch_vertices() const {
+    const auto *net=physics_world_->catch_net();
+    if(!net || net->reinforcement_indices().empty()) return {};
+    const auto vertices=net->render_vertices(float(snapshot().interpolation_alpha));
+    std::vector<Vector3> out;out.reserve(3);
+    for(const auto index:net->reinforcement_indices()) {
+        if(index>=vertices.size()) return {};
+        const auto &v=vertices[index];out.push_back({v.GetX(),v.GetY(),v.GetZ()});
+    }
+    return out;
+}
 CatchNetSnapshot Simulation::catch_net_state() const noexcept { return physics_world_->catch_net_state(); }
 
 std::uint32_t Simulation::kit_body_count() const noexcept {
@@ -9603,6 +10128,10 @@ double Simulation::kit_body_mass(const std::uint32_t body) const noexcept {
 
 double Simulation::kit_body_kinetic_energy(const std::uint32_t body) const noexcept {
     return physics_world_->kit().body_kinetic_energy(kit::BodyIndex{body});
+}
+
+bool Simulation::inspection_span_seat_contact() const noexcept {
+    return physics_world_->inspection_span_seat_contact();
 }
 
 Vector3 Simulation::kit_carry_grip_position(const std::uint32_t body) const noexcept {
@@ -9739,6 +10268,44 @@ bool Simulation::request_intake_sling_attach() noexcept {
     return true;
 }
 
+bool Simulation::set_grapple_aim(double x, double y, double z) noexcept {
+    const double norm = std::hypot(x, y, z);
+    if (!std::isfinite(norm) || norm < 1.0e-6) return false;
+    grapple_aim_ = {x / norm, y / norm, z / norm};
+    return true;
+}
+bool Simulation::set_grapple_equipped(bool equipped) noexcept {
+    grapple_equipped_input_ = equipped;
+    grapple_equip_requested_ = true;
+    return true;
+}
+bool Simulation::set_grapple_reel_input(double input) noexcept {
+    if (!std::isfinite(input) || input < -1 || input > 1) return false;
+    grapple_reel_input_ = input;
+    return true;
+}
+bool Simulation::set_grapple_auto_reel(bool enabled) noexcept {
+    grapple_auto_reel_input_=enabled;
+    grapple_auto_reel_requested_=true;
+    return true;
+}
+bool Simulation::request_grapple_action() noexcept {
+    grapple_action_requested_ = true;
+    return true;
+}
+bool Simulation::request_grapple_release() noexcept {
+    grapple_release_requested_ = true;
+    return true;
+}
+GrappleGunSnapshot Simulation::grapple_gun_state() const noexcept {
+    auto out = physics_world_->grapple_gun_state();
+    const JPH::Vec3 aim = JPH::Vec3(float(grapple_aim_.x),float(grapple_aim_.y),float(grapple_aim_.z)).Normalized();
+    out.launch_direction = to_vector3(JPH::RVec3(aim));
+    out.launch_origin = to_vector3(GrapplingGun::launch_origin(
+        JPH::RVec3(float(out.player_endpoint.x),float(out.player_endpoint.y),float(out.player_endpoint.z)),aim));
+    return out;
+}
+
 void Simulation::step_fixed() noexcept {
     const std::uint64_t previous_death_count = snapshot_.death_count;
     const bool previous_crouched = snapshot_.player_crouched;
@@ -9781,8 +10348,18 @@ void Simulation::step_fixed() noexcept {
     commands.sling_elevation = sling_elevation_;
     commands.sling_action = sling_action_;
     commands.sling_drop = sling_drop_;
+    commands.grapple_aim = grapple_aim_;
+    commands.grapple_reel = grapple_reel_input_;
+    commands.grapple_equip_requested = grapple_equip_requested_;
+    commands.grapple_equipped = grapple_equipped_input_;
+    commands.grapple_action = grapple_action_requested_;
+    commands.grapple_release = grapple_release_requested_;
+    commands.grapple_auto_reel = grapple_auto_reel_input_;
+    commands.grapple_auto_reel_requested = grapple_auto_reel_requested_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = sling_drop_ = false;
+    grapple_equip_requested_ = grapple_action_requested_ = grapple_release_requested_ = false;
+    grapple_auto_reel_requested_ = false;
     jump_requested_ = jump_cancel_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -9931,6 +10508,7 @@ void Simulation::capture_render_history() noexcept {
         previous_kit_rotations_[i] = kit_body_rotation(i);
     }
     previous_slingshot_state_ = slingshot_state();
+    previous_grapple_gun_state_ = grapple_gun_state();
     previous_cable_points_.resize(kit_cable_count());
     for (std::uint32_t cable = 0; cable < previous_cable_points_.size(); ++cable) {
         auto &points = previous_cable_points_[cable];
@@ -9973,6 +10551,38 @@ Quaternion Simulation::render_kit_body_rotation(const std::uint32_t body) const 
     const JPH::Quat a(float(previous.x), float(previous.y), float(previous.z), float(previous.w));
     const JPH::Quat b(float(current.x), float(current.y), float(current.z), float(current.w));
     return to_quaternion(a.SLERP(b, float(std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0))));
+}
+
+GrappleGunSnapshot Simulation::render_grapple_gun_state() const noexcept {
+    auto out = grapple_gun_state();
+    const float alpha = float(snapshot().interpolation_alpha);
+    out.player_endpoint = render_player_position();
+    out.launch_origin = to_vector3(GrapplingGun::launch_origin(
+        JPH::RVec3(float(out.player_endpoint.x),float(out.player_endpoint.y),float(out.player_endpoint.z)),
+        JPH::Vec3(float(out.launch_direction.x),float(out.launch_direction.y),float(out.launch_direction.z))));
+    for (unsigned i = 0; i < out.hooks.size(); ++i) {
+        auto &hook = out.hooks[i];
+        const auto &previous = previous_grapple_gun_state_.hooks[i];
+        if (!hook.present) continue;
+        if (previous.present && previous.body == hook.body) {
+            hook.position = {previous.position.x + (hook.position.x - previous.position.x) * alpha,
+                previous.position.y + (hook.position.y - previous.position.y) * alpha,
+                previous.position.z + (hook.position.z - previous.position.z) * alpha};
+            const JPH::Quat a(float(previous.rotation.x), float(previous.rotation.y),
+                float(previous.rotation.z), float(previous.rotation.w));
+            const JPH::Quat b(float(hook.rotation.x), float(hook.rotation.y),
+                float(hook.rotation.z), float(hook.rotation.w));
+            const auto rotation = a.SLERP(b, alpha);
+            hook.rotation = {rotation.GetX(), rotation.GetY(), rotation.GetZ(), rotation.GetW()};
+        }
+        if (out.line_attached && hook.body == out.active_hook) {
+            const auto eye = JPH::Quat(float(hook.rotation.x), float(hook.rotation.y),
+                float(hook.rotation.z), float(hook.rotation.w)) * GrapplingGun::hook_eye_local();
+            out.hook_endpoint = {hook.position.x + eye.GetX(), hook.position.y + eye.GetY(),
+                hook.position.z + eye.GetZ()};
+        }
+    }
+    return out;
 }
 
 SlingshotSnapshot Simulation::render_slingshot_state() const noexcept {

@@ -264,6 +264,11 @@ void Kit::set_damping(const BodyIndex body, const float linear, const float angu
     motion->SetAngularDamping(angular);
 }
 
+void Kit::set_accurate_integration(const BodyIndex body, const bool enabled) {
+    if (!bodies_[body.value].dynamic) return;
+    jolt_body(body).GetMotionProperties()->SetUseAccurateIntegration(enabled);
+}
+
 void Kit::set_mass_properties(const BodyIndex body, const JPH::MassProperties &mass) {
     jolt_body(body).GetMotionProperties()->SetMassProperties(JPH::EAllowedDOFs::All, mass);
     bodies_[body.value].mass = mass.mMass;

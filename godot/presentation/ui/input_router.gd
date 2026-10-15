@@ -10,7 +10,8 @@ extends Node
 #
 # Verbs: jump, action, drop, chute, back (pad B: drop / leave controls),
 # alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
-# crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
+# crouch (a toggle: C, right-stick click, the touch button), toggle_grapple,
+# auto_reel, pause, telemetry. Tool controls do not replace contextual Action.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 # Sprint is held too: Shift; a left-stick click, latched until the stick comes
 # back to rest; the touch stick pushed on past its ring. frame() reports it
@@ -185,6 +186,10 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"sling_release")
 		KEY_G:
 			_verbs.append(&"sling_attach")
+		KEY_T:
+			_verbs.append(&"toggle_grapple")
+		KEY_B:
+			_verbs.append(&"auto_reel")
 		KEY_ESCAPE:
 			_verbs.append(&"pause")
 		KEY_F3:
@@ -210,6 +215,10 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_verbs.append(&"back")
 		JOY_BUTTON_Y:
 			_verbs.append(&"alt")
+		JOY_BUTTON_LEFT_SHOULDER:
+			_verbs.append(&"toggle_grapple")
+		JOY_BUTTON_RIGHT_SHOULDER:
+			_verbs.append(&"auto_reel")
 		JOY_BUTTON_RIGHT_STICK:
 			_verbs.append(&"crouch")
 		JOY_BUTTON_LEFT_STICK:

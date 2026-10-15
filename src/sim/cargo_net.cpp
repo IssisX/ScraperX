@@ -23,6 +23,16 @@ CargoNet::CargoNet(JPH::PhysicsSystem &system,JPH::ObjectLayer layer,JPH::BodyID
         throw std::invalid_argument("Invalid cargo net material or grid");
     if(config_.axial_damping_ratio>0 && !config_.internally_integrated_clips)
         throw std::invalid_argument("Axial cargo damping requires internal native integration");
+    if(config_.piston_pad_mass_kg<0 || !std::isfinite(config_.piston_pad_mass_kg))
+        throw std::invalid_argument("Invalid cargo reinforcement pad mass");
+    if(config_.piston_pad_mass_kg>0) {
+        const auto material=config_.piston_material;
+        if(config_.surface!=CargoNetSurface::ContinuousMembrane ||
+           !std::isfinite(material.GetX()) || !std::isfinite(material.GetY()) || !std::isfinite(material.GetZ()) ||
+           material.GetZ()!=0 || material.GetX()<0 || material.GetX()>config_.columns-1 ||
+           material.GetY()<0 || material.GetY()>config_.rows-1)
+            throw std::invalid_argument("Invalid membrane reinforcement pad material point");
+    }
     if(config_.tether_enabled) {
         const auto material=config_.tether_material,anchor=config_.tether_anchor_body_local;
         if(!config_.internally_integrated_clips || config_.surface!=CargoNetSurface::ContinuousMembrane ||
@@ -44,6 +54,36 @@ CargoNet::CargoNet(JPH::PhysicsSystem &system,JPH::ObjectLayer layer,JPH::BodyID
                 (frame_body.GetWorldTransform()*JPH::RVec3(config_.tether_anchor_body_local));
         }
     }
+    if(!config_.piston_body.IsInvalid()) {
+        const auto material=config_.piston_material,anchor=config_.piston_body_local;
+        if(!config_.internally_integrated_clips || config_.piston_body==frame_ ||
+           !std::isfinite(material.GetX()) || !std::isfinite(material.GetY()) || !std::isfinite(material.GetZ()) ||
+           !std::isfinite(anchor.GetX()) || !std::isfinite(anchor.GetY()) || !std::isfinite(anchor.GetZ()) || material.GetZ()!=0 ||
+           material.GetX()<0 || material.GetX()>config_.columns-1 ||
+           material.GetY()<0 || material.GetY()>config_.rows-1 ||
+           !(config_.piston_stiffness>0) || config_.piston_damping<0 ||
+           !std::isfinite(config_.piston_stiffness+config_.piston_damping))
+            throw std::invalid_argument("Invalid finite internally integrated piston attachment");
+        const JPH::BodyLockRead lock(system_.GetBodyLockInterface(),config_.piston_body);
+        if(!lock.Succeeded() || !lock.GetBody().IsRigidBody() || !lock.GetBody().IsDynamic())
+            throw std::invalid_argument("Cargo piston attachment requires a finite dynamic rigid body");
+        const auto &piston=lock.GetBody();
+        piston_anchor_com_local_=piston.GetCenterOfMassTransform().Inversed()*
+            (piston.GetWorldTransform()*JPH::RVec3(anchor));
+    }
+    sleep_rigid_bodies_.push_back(frame_);
+    if(!config_.piston_body.IsInvalid()) sleep_rigid_bodies_.push_back(config_.piston_body);
+    for(const auto id:config_.sleep_coupled_bodies) {
+        if(!config_.paired_sleep || id.IsInvalid())
+            throw std::invalid_argument("Coupled cargo sleep requires paired sleep and valid body identities");
+        const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(),id);
+        if(!lock.Succeeded() || !lock.GetBody().IsRigidBody() || !lock.GetBody().IsDynamic())
+            throw std::invalid_argument("Coupled cargo sleep requires finite dynamic rigid bodies");
+        if(std::find(sleep_rigid_bodies_.begin(),sleep_rigid_bodies_.end(),id)==sleep_rigid_bodies_.end())
+            sleep_rigid_bodies_.push_back(id);
+    }
+    sleeping_rigid_positions_.resize(sleep_rigid_bodies_.size());
+    sleeping_rigid_rotations_.resize(sleep_rigid_bodies_.size());
     using namespace JPH;
     Ref<SoftBodySharedSettings> settings=new SoftBodySharedSettings;
     // Open weave retains four corners per knot and real holes. A continuous
@@ -55,6 +95,18 @@ CargoNet::CargoNet(JPH::PhysicsSystem &system,JPH::ObjectLayer layer,JPH::BodyID
              r*config_.dy+(woven?((corner&2)?config_.knot_half_width:-config_.knot_half_width):0),0).StoreFloat3(&v.mPosition);
         v.mInvMass=1.0F/config_.vertex_mass;
         settings->mVertices.push_back(v);
+    }
+    if(config_.piston_pad_mass_kg>0) {
+        // sample() uses only the grid topology: no body exists yet. Uniform
+        // triangle area lumping gives each corner one third of the pad mass,
+        // independent of the attachment point's barycentric force weights.
+        const auto triangle=sample(config_.piston_material.GetX(),config_.piston_material.GetY());
+        if(triangle.count!=3 || triangle.vertices[0]==triangle.vertices[1] ||
+           triangle.vertices[0]==triangle.vertices[2] || triangle.vertices[1]==triangle.vertices[2])
+            throw std::invalid_argument("Cargo reinforcement pad requires three unique membrane vertices");
+        reinforcement_indices_.assign(triangle.vertices.begin(),triangle.vertices.begin()+3);
+        const float inverse_mass=float(1.0/(double(config_.vertex_mass)+double(config_.piston_pad_mass_kg)/3.0));
+        for(const auto index:reinforcement_indices_) settings->mVertices[index].mInvMass=inverse_mass;
     }
     const auto face=[&](std::uint32_t a,std::uint32_t b,std::uint32_t c) {
         SoftBodySharedSettings::Face f; f.mVertex[0]=a;f.mVertex[1]=b;f.mVertex[2]=c;
@@ -120,9 +172,10 @@ void CargoNet::pre_step(float dt) {
     // are already held during the listener, so use the no-lock interfaces.
     auto &bodies=system_.GetBodyInterfaceNoLock();
     if(config_.paired_sleep) {
-        if(!bodies.IsActive(body_) && !bodies.IsActive(frame_) && !sleeping_frame_changed()) return;
-        wake_pair();
+        if(assembly_asleep() && !sleeping_assembly_changed()) return;
+        wake_assembly();
     }
+    apply_piston_step(dt);
     if(config_.internally_integrated_clips) return;
     const JPH::BodyLockWrite lock(system_.GetBodyLockInterfaceNoLock(),body_);
     if(!lock.Succeeded()) return;
@@ -143,6 +196,72 @@ void CargoNet::pre_step(float dt) {
         bodies.AddImpulse(frame_,-impulse,actual);
     }
 }
+void CargoNet::apply_piston_step(float dt) {
+    if(config_.piston_body.IsInvalid() || !(dt>0) || !std::isfinite(dt)) return;
+    // The serialized native pre-step listener runs before rigid and soft
+    // position integration. Deliver the rigid reaction and stage the identical
+    // cloth impulse for its native force integrations.
+    const JPH::BodyLockWrite cloth_lock(system_.GetBodyLockInterfaceNoLock(),body_);
+    const JPH::BodyLockRead piston_lock(system_.GetBodyLockInterfaceNoLock(),config_.piston_body);
+    if(!cloth_lock.Succeeded() || !piston_lock.Succeeded()) return;
+    auto &body=cloth_lock.GetBody();
+    auto *motion=static_cast<JPH::SoftBodyMotionProperties *>(body.GetMotionProperties());
+    const auto &piston=piston_lock.GetBody();
+    const auto *piston_motion=piston.GetMotionProperties();
+    const auto transform=body.GetCenterOfMassTransform();
+    const auto rotation=body.GetRotation();
+    const auto piston_transform=piston.GetCenterOfMassTransform();
+    const auto piston_inverse_inertia=piston_motion->GetInverseInertiaForRotation(JPH::Mat44::sRotation(piston.GetRotation()));
+    const float piston_inverse_mass=piston_motion->GetInverseMass();
+    const auto piston_linear=piston.GetLinearVelocity(),piston_angular=piston.GetAngularVelocity();
+    const auto weights=sample(config_.piston_material.GetX(),config_.piston_material.GetY());
+    JPH::Vec3 local_point=JPH::Vec3::sZero(),local_velocity=JPH::Vec3::sZero();
+    float material_inverse_mass=0;
+    for(std::size_t i=0;i<weights.count;++i) {
+        const auto &v=motion->GetVertex(weights.vertices[i]);
+        local_point+=v.mPosition*weights.weights[i];
+        local_velocity+=v.mVelocity*weights.weights[i];
+        material_inverse_mass+=weights.weights[i]*weights.weights[i]*v.mInvMass;
+    }
+    const auto actual=transform*JPH::RVec3(local_point);
+    const auto anchor=piston_transform*piston_anchor_com_local_;
+    // A finite elastomer eye uses the same actual-point reaction law as
+    // perimeter clips. Body rotation carries both spring and shear loss;
+    // the actual cloth lever closes total linear/angular impulse.
+    const auto lever=JPH::Vec3(actual-piston_transform.GetTranslation());
+    const auto delta=JPH::Vec3(actual-anchor);
+    const auto relative=rotation*local_velocity-(piston_linear+piston_angular.Cross(lever));
+    const auto cross=JPH::Mat44::sCrossProduct(lever);
+    const auto inverse_mass=JPH::Mat44::sScale(material_inverse_mass+piston_inverse_mass)-
+        cross*piston_inverse_inertia*cross;
+    const auto iterations=motion->GetNumIterations();
+    // A constant finite cloth force is integrated N times while the rigid
+    // reaction precedes its one position integration. The cloth displacement
+    // response is (N+1)/(2N), derived from sum(1..N)/N², not a tuning factor.
+    // The dashpot uses this actual discrete geometric strain rate. With A
+    // below and M=inverse_mass, A-M/2 is positive semidefinite, so the isolated
+    // linear predictor loses hc|v-AJ|² + J.(A-M/2)J + kh²|v-AJ|²/2.
+    const float alpha=(float(iterations)+1)/(2.0F*float(iterations));
+    const auto displacement_inverse_mass=inverse_mass-
+        JPH::Mat44::sScale((1-alpha)*material_inverse_mass);
+    const float h=dt,k=config_.piston_stiffness,c=config_.piston_damping;
+    const float spring_dashpot=c+h*k;
+    const auto reaction=(JPH::Mat44::sIdentity()+displacement_inverse_mass*(h*spring_dashpot)).Inversed3x3()*
+        ((delta*k+relative*spring_dashpot)*h);
+    piston_pending_reaction_=reaction;piston_pending_iterations_=iterations;
+    piston_reaction_point_=actual;piston_reaction_moment_=JPH::Vec3::sZero();
+    // Rigid reaction still precedes rigid integration. The same finite cloth
+    // impulse is consumed by internal_clip_step at the cloth's real cadence,
+    // avoiding the whole-tick kick that edge solves reverse at idle equilibrium.
+    system_.GetBodyInterfaceNoLock().AddImpulse(config_.piston_body,reaction,actual);
+    const auto mobility_impulse=inverse_mass*reaction;
+    const auto next_delta=delta+(relative-displacement_inverse_mass*reaction)*h;
+    const double loss=reaction.Dot(relative)-.5*reaction.Dot(mobility_impulse)+
+        .5*k*(double(delta.LengthSq())-next_delta.LengthSq());
+    // Relative predictor loss includes integration loss. Actual endpoint
+    // geometry/energy is read independently after the native tick.
+    piston_dissipated_work_+=std::max(0.0,loss);
+}
 void CargoNet::internal_clip_step(float dt) {
     // Jolt's last constraint group serializes each iteration for this soft body.
     // Rigid solve has completed, but other soft bodies may run concurrently:
@@ -151,6 +270,25 @@ void CargoNet::internal_clip_step(float dt) {
     if(!lock.Succeeded()) return;
     auto &body=lock.GetBody();
     auto *motion=static_cast<JPH::SoftBodyMotionProperties *>(body.GetMotionProperties());
+    if(piston_pending_iterations_>0) {
+        // Divide the remaining impulse by the remaining native integrations;
+        // the last consumes the exact remainder rather than leaving a tail.
+        const auto reaction=piston_pending_reaction_/float(piston_pending_iterations_);
+        piston_pending_reaction_-=reaction;--piston_pending_iterations_;
+        const auto weights=sample(config_.piston_material.GetX(),config_.piston_material.GetY());
+        JPH::Vec3 local_point=JPH::Vec3::sZero();
+        const auto local_impulse=body.GetRotation().Conjugated()*(-reaction);
+        for(std::size_t i=0;i<weights.count;++i) {
+            auto &v=motion->GetVertex(weights.vertices[i]);
+            local_point+=v.mPosition*weights.weights[i];
+            v.mVelocity+=local_impulse*(weights.weights[i]*v.mInvMass);
+        }
+        const auto actual=body.GetCenterOfMassTransform()*JPH::RVec3(local_point);
+        // The early rigid impulse already supplied x_initial cross J. These
+        // are the remaining real moments of the distributed actual-point
+        // reactions, serialized with the other native rigid writebacks.
+        piston_reaction_moment_+=JPH::Vec3(actual-piston_reaction_point_).Cross(reaction);
+    }
     if(force_remaining_seconds_>0) {
         double elapsed=std::min(double(dt),force_remaining_seconds_);
         force_remaining_seconds_-=elapsed;
@@ -224,6 +362,7 @@ void CargoNet::internal_clip_step(float dt) {
         clip_frame_linear_+=reaction*clip_frame_inverse_mass_;
         clip_frame_angular_+=clip_frame_inverse_inertia_*torque;
     }
+
     tether_tension_=0;
     if(config_.tether_enabled && dt>0) {
         const auto weights=sample(config_.tether_material.GetX(),config_.tether_material.GetY());
@@ -278,25 +417,39 @@ void CargoNet::finish_clip_step(JPH::BodyInterface &bodies) {
     // Both bodies were awakened by pre_step; only finite real impulses act here.
     if(clip_reaction_.LengthSq()>0) bodies.AddImpulse(frame_,clip_reaction_);
     if(clip_torque_.LengthSq()>0) bodies.AddAngularImpulse(frame_,clip_torque_);
+    if(piston_reaction_moment_.LengthSq()>0)
+        bodies.AddAngularImpulse(config_.piston_body,piston_reaction_moment_);
+    piston_reaction_moment_=JPH::Vec3::sZero();
     clip_reaction_=JPH::Vec3::sZero();clip_torque_=JPH::Vec3::sZero();
     clip_step_started_=false;
 }
-void CargoNet::wake_pair() {
+void CargoNet::wake_assembly() {
     auto &bodies=system_.GetBodyInterfaceNoLock();
     // Activating an already-active body resets Jolt's sleep timer. Only wake
     // the inactive side so ongoing equilibrium can accumulate normally.
     if(!bodies.IsActive(body_)) bodies.ActivateBody(body_);
-    if(!bodies.IsActive(frame_)) bodies.ActivateBody(frame_);
-    sleeping_frame_valid_=false;
+    for(const auto id:sleep_rigid_bodies_)
+        if(!bodies.IsActive(id)) bodies.ActivateBody(id);
+    sleeping_assembly_valid_=false;
 }
-bool CargoNet::sleeping_frame_changed() const {
-    if(!sleeping_frame_valid_) return true;
+bool CargoNet::assembly_asleep() const {
     const auto &bodies=system_.GetBodyInterfaceNoLock();
-    const auto rotation=bodies.GetRotation(frame_);
-    return (bodies.GetCenterOfMassPosition(frame_)-sleeping_frame_position_).LengthSq()>0 ||
-        (rotation.GetXYZ()-sleeping_frame_rotation_.GetXYZ()).LengthSq()>0 ||
-        rotation.GetW()!=sleeping_frame_rotation_.GetW() ||
-        bodies.GetLinearVelocity(frame_).LengthSq()>0 || bodies.GetAngularVelocity(frame_).LengthSq()>0;
+    if(bodies.IsActive(body_)) return false;
+    for(const auto id:sleep_rigid_bodies_) if(bodies.IsActive(id)) return false;
+    return true;
+}
+bool CargoNet::sleeping_assembly_changed() const {
+    if(!sleeping_assembly_valid_) return true;
+    const auto &bodies=system_.GetBodyInterfaceNoLock();
+    for(std::size_t i=0;i<sleep_rigid_bodies_.size();++i) {
+        const auto id=sleep_rigid_bodies_[i];
+        const auto rotation=bodies.GetRotation(id);
+        if((bodies.GetCenterOfMassPosition(id)-sleeping_rigid_positions_[i]).LengthSq()>0 ||
+           (rotation.GetXYZ()-sleeping_rigid_rotations_[i].GetXYZ()).LengthSq()>0 ||
+           rotation.GetW()!=sleeping_rigid_rotations_[i].GetW() ||
+           bodies.GetLinearVelocity(id).LengthSq()>0 || bodies.GetAngularVelocity(id).LengthSq()>0) return true;
+    }
+    return false;
 }
 void CargoNet::post_step(float dt,bool externally_touched) {
     if(!config_.paired_sleep) return;
@@ -305,11 +458,10 @@ void CargoNet::post_step(float dt,bool externally_touched) {
     const JPH::BodyLockRead frame_lock(system_.GetBodyLockInterfaceNoLock(),frame_);
     if(!net_lock.Succeeded() || !frame_lock.Succeeded()) return;
     const auto &net_body=net_lock.GetBody();
-    const auto &frame_body=frame_lock.GetBody();
     bool interacting=externally_touched;
     JPH::BodyIDVector active;
     system_.GetActiveBodies(JPH::EBodyType::RigidBody,active);
-    for(const auto id:active) if(id!=frame_) {
+    for(const auto id:active) if(std::find(sleep_rigid_bodies_.begin(),sleep_rigid_bodies_.end(),id)==sleep_rigid_bodies_.end()) {
         const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(),id);
         if(lock.Succeeded() && lock.GetBody().GetWorldSpaceBounds().Overlaps(net_body.GetWorldSpaceBounds())) {
             interacting=true;
@@ -318,14 +470,14 @@ void CargoNet::post_step(float dt,bool externally_touched) {
     }
     if(interacting) {
         equilibrium_time_=0;
-        wake_pair();
+        wake_assembly();
         return;
     }
-    if(!net_body.IsActive() && !frame_body.IsActive()) {
-        if(sleeping_frame_changed()) {equilibrium_time_=0;wake_pair();}
+    if(assembly_asleep()) {
+        if(sleeping_assembly_changed()) {equilibrium_time_=0;wake_assembly();}
         return;
     }
-    wake_pair();
+    wake_assembly();
     const auto *motion=static_cast<const JPH::SoftBodyMotionProperties *>(net_body.GetMotionProperties());
     float max_vertex_speed_sq=0;
     for(const auto &v:motion->GetVertices()) {
@@ -333,27 +485,38 @@ void CargoNet::post_step(float dt,bool externally_touched) {
         if(!std::isfinite(speed_sq)) {equilibrium_time_=0;return;}
         max_vertex_speed_sq=std::max(max_vertex_speed_sq,speed_sq);
     }
-    const auto &bounds=frame_body.GetWorldSpaceBounds();
-    const float radius=(JPH::RVec3(bounds.GetCenter())-frame_body.GetCenterOfMassPosition()).Length()+bounds.GetExtent().Length();
-    const float frame_point_speed=frame_body.GetLinearVelocity().Length()+frame_body.GetAngularVelocity().Length()*radius;
+    float max_rigid_point_speed=0;
+    for(const auto id:sleep_rigid_bodies_) {
+        const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(),id);
+        if(!lock.Succeeded()) {equilibrium_time_=0;return;}
+        const auto &rigid=lock.GetBody();
+        const auto &bounds=rigid.GetWorldSpaceBounds();
+        const float radius=(JPH::RVec3(bounds.GetCenter())-rigid.GetCenterOfMassPosition()).Length()+bounds.GetExtent().Length();
+        const float speed=rigid.GetLinearVelocity().Length()+rigid.GetAngularVelocity().Length()*radius;
+        if(!std::isfinite(speed)) {equilibrium_time_=0;return;}
+        max_rigid_point_speed=std::max(max_rigid_point_speed,speed);
+    }
     const auto &settings=system_.GetPhysicsSettings();
     // Match the pinned Jolt soft-body squared-speed test and conservatively
-    // bound every frame point by its linear speed plus angular speed * radius.
-    if(!(dt>0) || !std::isfinite(dt) || !std::isfinite(max_vertex_speed_sq+frame_point_speed) ||
-       max_vertex_speed_sq>settings.mPointVelocitySleepThreshold || frame_point_speed>settings.mPointVelocitySleepThreshold) {
+    // bound every coupled rigid point by linear speed plus angular speed * radius.
+    if(!(dt>0) || !std::isfinite(dt) ||
+       max_vertex_speed_sq>settings.mPointVelocitySleepThreshold || max_rigid_point_speed>settings.mPointVelocitySleepThreshold) {
         equilibrium_time_=0;
         return;
     }
     equilibrium_time_+=dt;
     if(equilibrium_time_<settings.mTimeBeforeSleep) return;
-    // Outside the step listener: both bodies retain finite mass, vertex state,
+    // Outside the step listener: all bodies retain finite mass, vertex state,
     // spring strain and their dynamic collision shapes. Native deactivation
     // only clears aggregate velocities within the native equilibrium tolerance.
-    const JPH::BodyID pair[]={body_,frame_};
-    bodies.DeactivateBodies(pair,2);
-    sleeping_frame_position_=frame_body.GetCenterOfMassPosition();
-    sleeping_frame_rotation_=frame_body.GetRotation();
-    sleeping_frame_valid_=true;
+    auto assembly=sleep_rigid_bodies_;
+    assembly.push_back(body_);
+    bodies.DeactivateBodies(assembly.data(),int(assembly.size()));
+    for(std::size_t i=0;i<sleep_rigid_bodies_.size();++i) {
+        sleeping_rigid_positions_[i]=bodies.GetCenterOfMassPosition(sleep_rigid_bodies_[i]);
+        sleeping_rigid_rotations_[i]=bodies.GetRotation(sleep_rigid_bodies_[i]);
+    }
+    sleeping_assembly_valid_=true;
     equilibrium_time_=0;
 }
 CargoNet::~CargoNet() { auto &b=system_.GetBodyInterface();b.RemoveBody(body_);b.DestroyBody(body_); }
@@ -476,6 +639,17 @@ double CargoNet::tether_elastic_energy() const noexcept {
         config_.tether_rest_length_m);
     return 0.5*config_.tether_stiffness*extension*extension;
 }
+JPH::RVec3 CargoNet::piston_material_endpoint() const noexcept {
+    return world_point(config_.piston_material);
+}
+JPH::RVec3 CargoNet::piston_anchor_endpoint() const noexcept {
+    if(config_.piston_body.IsInvalid()) return JPH::RVec3::sZero();
+    return system_.GetBodyInterfaceNoLock().GetCenterOfMassTransform(config_.piston_body)*piston_anchor_com_local_;
+}
+double CargoNet::piston_elastic_energy() const noexcept {
+    if(config_.piston_body.IsInvalid()) return 0;
+    return 0.5*config_.piston_stiffness*double(JPH::Vec3(piston_material_endpoint()-piston_anchor_endpoint()).LengthSq());
+}
 bool CargoNet::grip(JPH::RVec3 centre,JPH::RVec3 aim,JPH::Vec3 facing,JPH::RVec3 &point) const noexcept {
     const auto local=config_.rotation.Conjugated()*JPH::Vec3(centre-config_.origin);
     if(local.GetX()<-.8F || local.GetX()>(config_.columns-1)*config_.dx+.8F ||
@@ -507,7 +681,7 @@ float CargoNet::material_inverse_mass(JPH::Vec3 material) const noexcept {
     return inverse_mass;
 }
 void CargoNet::impulse(JPH::Vec3 material,JPH::Vec3 world_impulse) {
-    if(config_.paired_sleep && world_impulse.LengthSq()>0) {equilibrium_time_=0;wake_pair();}
+    if(config_.paired_sleep && world_impulse.LengthSq()>0) {equilibrium_time_=0;wake_assembly();}
     const auto weights=sample(material.GetX(),material.GetY());
     const JPH::BodyLockWrite lock(system_.GetBodyLockInterfaceNoLock(),body_);
     if(!lock.Succeeded()) return;
@@ -536,7 +710,7 @@ void CargoNet::force(JPH::Vec3 material,JPH::Vec3 world_force,float duration_sec
     const auto weights=sample(material.GetX(),material.GetY());
     force_vertices_=weights.vertices;force_weights_=weights.weights;force_vertex_count_=weights.count;
     pending_world_force_=world_force;force_remaining_seconds_=duration_seconds;
-    equilibrium_time_=0;wake_pair();
+    equilibrium_time_=0;wake_assembly();
 }
 std::string CargoNet::capture() const {
     const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(),body_);
@@ -547,14 +721,17 @@ std::string CargoNet::capture() const {
 void CargoNet::restore(const std::string &state) {
     force_remaining_seconds_=0;pending_world_force_=JPH::Vec3::sZero();
     tether_tension_=0;tether_dissipated_work_=0;
-    if(state.empty()) return;
+    piston_dissipated_work_=0;
+    piston_pending_reaction_=JPH::Vec3::sZero();piston_pending_iterations_=0;
+    piston_reaction_moment_=JPH::Vec3::sZero();
     clip_reaction_=JPH::Vec3::sZero();clip_torque_=JPH::Vec3::sZero();clip_step_started_=false;
+    if(state.empty()) return;
     JPH::StateRecorderImpl stream;stream.WriteBytes(state.data(),state.size());stream.Rewind();
     { const JPH::BodyLockWrite lock(system_.GetBodyLockInterfaceNoLock(),body_);
       static_cast<JPH::SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties())->RestoreState(stream); }
     auto &b=system_.GetBodyInterface();
     b.NotifyShapeChanged(body_,JPH::Vec3::sZero(),false,JPH::EActivation::Activate);
-    if(config_.paired_sleep) {equilibrium_time_=0;wake_pair();}
+    if(config_.paired_sleep) {equilibrium_time_=0;wake_assembly();}
     refresh();
     previous_vertices_=vertices_;
 }

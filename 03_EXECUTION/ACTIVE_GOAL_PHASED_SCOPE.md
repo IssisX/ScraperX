@@ -125,16 +125,15 @@ The player is a capable, human-limited climber inside an enormous working indust
 
 For each encounter, resolve its purpose, what the approach teaches, the meaningful choice, the physical state changed, the movement skill required, the rise and release of tension, what happens after a miss, the feasible recovery, the persistent aftermath, and how its exit prepares the next experience.
 
-### Phase 7 — Prioritize the gravity-fed Ferris-wheel encounter
+### Phase 7 — Prioritize the Ferris-wheel encounter
 
 - Treat `ferris-wheel-machine.jpg` as an **important machine priority** after the current safe integration boundary.
-- Preserve its defining principle: actual falling material physically loads and drives the wheel to enable player ascent.
-- Stone is not mandatory. Choose stone, dirt, sand, or another coherent material based on the mechanism, setting, readability, and mobile performance.
-- Give the material deliberately high-quality geometry, surfaces, collision, mass/inertia, impacts, sound, retention, and spilling. Generic low-quality debris does not satisfy this requirement.
-- Author the entire encounter: approach and observation, understandable feeding controls, finite material supply, boarding decisions, exposed ascent, challenging exit, failure/recovery, reset/reload, and persistent aftermath.
-- Resolve bucket geometry, loading, discharge, wheel dynamics, player loading, reactions, energy transfer, and timing before claiming integration.
-- Do not substitute decorative falling material around a powered wheel.
-- Reuse suitable components while preserving this encounter’s distinct mechanical and experiential identity.
+- Owner correction2026-10-14: gravity feeding is optional. Choose a coherent physical power source: finite motor/drive linkage, gravity-fed material, or another suitable industrial mechanism.
+- Account for actual torque, power/work, wheel/player loads, support reactions and timing. Any material presented as driving the wheel must actually transfer load/energy.
+- If falling material is used, stone is optional; choose coherent material with high-quality geometry, surfaces, collision, mass/inertia, impacts, sound, retention and spilling.
+- Author the whole encounter: approach/observation, understandable controls, boarding decisions, exposed ascent, challenging exit, failure/recovery, reset and persistent aftermath. Include finite supply/reload if its power source requires it.
+- Resolve drive/bearing/wheel dynamics, player loading, swept clearance, energy transfer and timing; include bucket loading/discharge when used.
+- Reuse suitable components while preserving this encounter's distinct mechanical and experiential identity.
 
 ### Phase 8 — Continue through the remaining supplied designs
 
@@ -252,3 +251,15 @@ The intended result is compounding productivity: dependable primitives support i
 ### Owner attachment reinforcement addition —2026-10-13
 
 Add a convincing reinforced square patch at the underside catch-tether attachment: distribute actual native load and give added material physically meaningful mass/stiffness/thickness. Preserve proven catch/clearance/settling/exit; complete current candidate delivery boundary first. This remains recorded follow-up, not implemented or waived.
+
+### Owner addition — physical trapeze encounter (2026-10-13)
+
+Pending later encounter: a real suspended bar with deliberate catch, finite phase-sensitive pumping and timed transfer to a real hold/ledge, connected approach/exit and feasible failure/retry. Reuse native physical systems without copying the Crown encounter. Placement follows current parkour completion. Detailed to-do: [physical trapeze](PLANNING/VISIBLE_PLAYER_VALUE_NEXT_SLICE.md#owner-added-later-encounter--physical-trapeze). Not implemented or verified.
+
+### Owner-selected world dynamics and movement addition (2026-10-13)
+
+Pending staged implementation: useful loose objects; deliberate emergency bracing; visible persistent changes; small coherent human encounters. Implement one integration at a time after the current inspection encounter. Owner also requests quick angled plant-and-push-off with actual contact, finite work/reactions and preserved momentum; existing plank-specific leg actuation is partial reusable groundwork, not demonstrated generalized support. Details/status: [selected world dynamics](PLANNING/SELECTED_WORLD_DYNAMICS.md). These requirements remain pending until demonstrated or explicitly changed.
+
+### Owner addition — later throwing and grappling hook (2026-10-13)
+
+Owner-selected current equipment slice: physically throw objects/tools, including a portable grappling-hook gun. Native primary is verified; recovery, automatic reel-in, matching Godot and delivery remain pending. Actual finite work/reaction, ballistic collision, legitimate hook anchorage, finite rope length/tension/strength, preserved momentum and feasible failure/recovery. Movable weight/counterweight follows the completed gun slice. See [selected dynamics and equipment](PLANNING/SELECTED_WORLD_DYNAMICS.md#owner-requested-later-throwing-and-grappling-hook). Full slice not yet delivered.

@@ -492,6 +492,8 @@ void held(const Snapshot &v,const Snapshot &entry){
 void catch_one(Simulation &s){setup(s);require(s.request_traversal(),"ordinary Action queued");tick(s);state("catch",s.snapshot());
     require(s.snapshot().traversal_hand_constraint_count==1,"visible single hand must survive blocked partner");}
 int run(){Simulation s;catch_one(s);const auto entry=s.snapshot();held(entry,entry);
+    const auto before_action=s.snapshot();require(s.request_traversal(),"immediate blocked single Action input queued");tick(s);held(s.snapshot(),entry);
+    require(s.snapshot().rejected_traversal_count>before_action.rejected_traversal_count,"immediate missing-hand query rejects without granting paired authority");
     double base=entry.hanging_commanded_span_m,tucked=0,extended=0,normal=0;
     const double work=entry.traversal_actuator_positive_work_j;
     for(int phase=0;phase<3;++phase){require(s.set_crouch_input(phase==1),"explicit posture input");
@@ -516,8 +518,6 @@ int run(){Simulation s;catch_one(s);const auto entry=s.snapshot();held(entry,ent
     }
     require(normal-tucked>.10&&extended-tucked>.10&&s.snapshot().traversal_actuator_positive_work_j>work,
             "one actual body responds to paid tuck and explicit extension");
-    const auto before_action=s.snapshot();require(s.request_traversal(),"single Action input queued");tick(s);held(s.snapshot(),entry);
-    require(s.snapshot().rejected_traversal_count>before_action.rejected_traversal_count,"single Action rejects paired mantle authority");
     const double before_move_work=s.snapshot().traversal_actuator_positive_work_j;
     require(s.set_move_input(1,0),"single directional input queued");tick(s);held(s.snapshot(),entry);
     require(s.snapshot().traversal_actuator_positive_work_j==before_move_work,"single directional input cannot run paired climb servo");

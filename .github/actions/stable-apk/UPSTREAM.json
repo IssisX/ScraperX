@@ -1,0 +1,11 @@
+{
+  "repository": "IssisX/ScraperX",
+  "revision": "882517e021841deaa915c86bbb3e92bbf4fda185",
+  "original_sha256": {
+    "action.yml": "f8fbc08100502b8918ee764ca7ee4ed656b4ba16c3747c54036711e782b91bca",
+    "create-lineage.py": "b7952c9f3293882d8364ed41e65c4626df66e059c066f188ecba7794b3924a55",
+    "prepare-apk.py": "691c14ec38f980cb3cb8da1eb8f5fd6497f5dd60a70684dfa6f01036f4a57e49",
+    "sign-apks.py": "5868cedddaa518538371b0256d9b44125bf226070b28614b602c7edf90ded8f9"
+  },
+  "purpose": "Preserve source signer/upgrade lineage; align ZIP shared libraries at16K before signing. Existing public CI legacy keystore supplied by action caller."
+}

@@ -29,6 +29,8 @@ const B_LEFT := &"pendant_left"
 const B_RIGHT := &"pendant_right"
 const B_SLING := &"sling"
 const B_REEL := &"slingshot_reel"
+const B_AUTO_REEL := &"auto_reel"
+const B_GRAPPLE := &"grapple"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -77,7 +79,7 @@ var touch_scale := 1.0
 var _u := 1.0
 var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
-	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL]
+	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -87,6 +89,9 @@ var _safe := Rect2()
 var _look_index := -1
 var _look_accum := Vector2.ZERO
 var _operating := false
+var _portable_tool := false
+var _split_drop_chute := false
+var _movement_blocked := false
 var _retrieving := false
 var _axis_names := ["", ""]
 var _pendant_center := Vector2.ZERO
@@ -115,6 +120,10 @@ func _ready() -> void:
 	_buttons[B_REEL].icon = &"operate"
 	_buttons[B_REEL].label = "HOLD TO REEL"
 	_buttons[B_REEL].tone = TONE_PRIMARY
+	_buttons[B_AUTO_REEL].icon = &"operate"
+	_buttons[B_AUTO_REEL].tone = TONE_PRIMARY
+	_buttons[B_GRAPPLE].icon = &"hook"
+	_buttons[B_GRAPPLE].tone = TONE_PRIMARY
 	resized.connect(_layout)
 	_layout()
 
@@ -150,19 +159,25 @@ func _layout() -> void:
 	_place(B_ACTION, jump + Vector2(-236.0, -150.0) * _u, 98.0)
 	# Over Jump, toward the edge: the same thumb slides up to it.
 	_place(B_CROUCH, jump + Vector2(40.0, -252.0) * _u, 78.0)
-	# Drop and Chute share one slot: hanging and free-falling never overlap,
-	# and "drop, then open the canopy" becomes the same thumb in one place.
+	# Drop and Chute normally share a slot. An equipped grapple can offer
+	# both during a fall, so give Chute a distinct hit area in that context.
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
-	_place(B_CHUTE, jump + Vector2(-306.0, 96.0) * _u, 86.0)
+	_place(B_CHUTE, jump + Vector2(-306.0, -450.0 if _split_drop_chute else 96.0) * _u, 86.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
+	# Leave the HUD altimeter its unscaled 394-unit top-right strip. The
+	# equipment circle keeps a 66-unit gap even when touch size changes.
+	var grapple_x := corner.x - 394.0 * UiStyle.unit(self) - 126.0 * _u
+	_place(B_GRAPPLE, Vector2(grapple_x, _safe.position.y + 108.0 * _u), 60.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
-	# The pendant takes the stick's place: while operating, the left thumb
-	# is on the machine and the right thumb stays free to watch the load.
-	_pendant_center = _stick_home + Vector2(20.0, -40.0) * _u
-	var arm := 158.0 * _u
+	# Stationary machines use the left thumb for their pendant. The portable
+	# grapple keeps the movement stick and places reel controls to its right.
+	_pendant_center = Vector2(_safe.position.x + _safe.size.x * 0.56, corner.y - m - 470.0 * _u) \
+		if _portable_tool else _stick_home + Vector2(20.0, -40.0) * _u
+	var arm := (190.0 if _portable_tool else 158.0) * _u
 	_place(B_REEL, _pendant_center, 110.0)
+	_place(B_AUTO_REEL, _pendant_center, 60.0)
 	_place(B_UP, _pendant_center + Vector2(0.0, -arm), 80.0)
 	_place(B_DOWN, _pendant_center + Vector2(0.0, arm), 80.0)
 	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)
@@ -193,6 +208,10 @@ func _verb_for(id: StringName) -> StringName:
 			return &"pause"
 		B_SLING:
 			return &"sling_toggle"
+		B_AUTO_REEL:
+			return &"auto_reel"
+		B_GRAPPLE:
+			return &"toggle_grapple"
 	return &""
 
 
@@ -202,10 +221,9 @@ func reset_touches() -> void:
 	_look_accum = Vector2.ZERO
 	move_vector = Vector2.ZERO
 	sprint_latched = false
-	pendant_axes = Vector2.ZERO
-	reel_effort = 0.0
 	for button in _buttons.values():
 		button.index = -1
+	_refresh_held_controls()
 	queue_redraw()
 
 
@@ -239,13 +257,14 @@ func _touch_down(index: int, at: Vector2) -> bool:
 			continue
 		button.index = index
 		button.press_position = at
+		_refresh_held_controls()
 		button.flash = 1.0
 		if not button.hold and router != null:
 			router.push_verb(_verb_for(id))
 		pressed_feedback.emit()
 		queue_redraw()
 		return true
-	if _stick_index == -1 and not _operating and not _retrieving and _stick_zone.has_point(at):
+	if _stick_index == -1 and not _movement_blocked and _stick_zone.has_point(at):
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
@@ -303,7 +322,7 @@ func _touch_up(index: int) -> bool:
 			button.index = -1
 			released = true
 	if released:
-		reel_effort = _held(B_REEL)
+		_refresh_held_controls()
 		queue_redraw()
 	return released
 
@@ -346,23 +365,29 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
-	# Passive release already has the ordinary Jump and Drop slots. Avoid a
-	# third identical touch button; keyboard/pad Action dispatch is unchanged.
-	action.shown = not passive_release
-	# While hanging, Jump already reads CLIMB UP (the same native mantle);
-	# a second identical button beside it is noise, so Action rests.
-	action.enabled = act["id"] != &"" and not hanging and not passive_release
+	var reach_hand: bool = act["id"] == &"reach_hand"
+	# A solo hold offers an explicit second hand independently of its release
+	# buttons. Keep the blocked offer visible while native reports no grip.
+	action.shown = reach_hand or not passive_release
+	# Ordinary two-hand hanging already has CLIMB UP on Jump.
+	action.enabled = (bool(ctx.get("missing_hand_grip_available", false)) if reach_hand
+		else act["id"] != &"" and not hanging and not passive_release)
 	action.icon = act["icon"]
 	action.label = act["label"]
-	action.tone = TONE_PRIMARY if action.enabled else TONE_GHOST
+	action.tone = TONE_PRIMARY if action.enabled or reach_hand else TONE_GHOST
 
 	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
 	# body lowers it over into a hang.
 	var drop: TouchButton = _buttons[B_DROP]
 	drop.shown = ctx.get("drop_ok", hanging)
-	drop.label = "LET GO" if passive_release else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN")
+	drop.label = ("RELEASE" if ctx.get("grapple_line_attached", false) else "STOW") \
+		if ctx.get("grapple_equipped", false) else ("LET GO" if passive_release else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN"))
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
+	var split_drop_chute: bool = drop.shown and chute.shown
+	if _split_drop_chute != split_drop_chute:
+		_split_drop_chute = split_drop_chute
+		_layout()
 	chute.icon = &"chute"
 	chute.label = "STOW" if ctx["chute"] else "CHUTE"
 	if ctx["chute"]:
@@ -373,14 +398,32 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		chute.tone = TONE_NORMAL
 	_buttons[B_PAUSE].shown = true
 
+	# Native acknowledgement owns equipped state; pressing never changes it here.
+	var grapple: TouchButton = _buttons[B_GRAPPLE]
+	var equipped := bool(ctx.get("grapple_equipped", false))
+	grapple.shown = equipped or bool(ctx.get("grapple_draw_available", false))
+	grapple.enabled = grapple.shown
+	grapple.label = "STOW" if equipped else "DRAW"
+	grapple.tone = TONE_SAFE if equipped else TONE_PRIMARY
+
 	var station: StringName = ctx["operating"]
 	_operating = station != &""
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
+	var portable_tool := station == &"grappling_gun"
+	if _portable_tool != portable_tool:
+		_portable_tool = portable_tool
+		_layout()
+	_movement_blocked = (_operating and not _portable_tool) or _retrieving
 	_buttons[B_REEL].shown = _retrieving
+	var auto_reel: TouchButton = _buttons[B_AUTO_REEL]
+	auto_reel.shown = bool(ctx.get("grapple_equipped", false)) and bool(ctx.get("grapple_line_attached", false))
+	auto_reel.enabled = auto_reel.shown
+	auto_reel.label = "STOP REEL" if bool(ctx.get("grapple_auto_reel", false)) else "AUTO REEL"
+	auto_reel.tone = TONE_SAFE if bool(ctx.get("grapple_auto_reel", false)) else TONE_PRIMARY
 	var crouch: TouchButton = _buttons[B_CROUCH]
 	var tuck_available: bool = ctx.get("swing_tuck_available", false)
 	var tuck_requested: bool = ctx.get("swing_tuck_requested", false)
-	crouch.shown = not _operating and not _retrieving and (tuck_available or (not hanging and not climbing))
+	crouch.shown = not _movement_blocked and (tuck_available or (not hanging and not climbing))
 	var folded: bool = tuck_requested if tuck_available else bool(ctx["crouched"])
 	crouch.icon = &"stand" if folded else &"crouch"
 	crouch.label = ("EXTEND" if folded else "TUCK") if tuck_available else ("STAND" if folded else "CROUCH")
@@ -395,6 +438,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	sling.label = "RELEASE PACK" if ctx["slung"] else "ATTACH PACK"
 	sling.tone = TONE_PRIMARY
 	match station:
+		&"grappling_gun":
+			_axis_names = ["TIGHTEN / PAY OUT", ""]
 		&"service_lift":
 			_axis_names = ["SERVICE LIFT", ""]
 		&"jib":
@@ -405,19 +450,23 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 			_axis_names = ["RAISE / LOWER", ""]
 		_:
 			_axis_names = ["", ""]
-	if (_operating or _retrieving) and _stick_index != -1:
+	if _movement_blocked and _stick_index != -1:
 		_touch_up(_stick_index)
 
 	for button in _buttons.values():
-		if not button.shown and button.index != -1:
+		if (not button.shown or not button.enabled) and button.index != -1:
 			button.index = -1
 		button.appear = move_toward(button.appear, 1.0 if button.shown else 0.0, APPEAR_RATE * delta)
 		button.flash = maxf(0.0, button.flash - delta * 3.5)
+	_refresh_held_controls()
+	if visible:
+		queue_redraw()
+
+
+func _refresh_held_controls() -> void:
 	pendant_axes = Vector2(
 		_held(B_RIGHT) - _held(B_LEFT), _held(B_UP) - _held(B_DOWN))
 	reel_effort = _held(B_REEL)
-	if visible:
-		queue_redraw()
 
 
 func _held(id: StringName) -> float:
@@ -426,7 +475,7 @@ func _held(id: StringName) -> float:
 
 
 func _draw() -> void:
-	if not _operating and not _retrieving:
+	if not _movement_blocked:
 		_draw_stick()
 	for id in _order:
 		_draw_button(_buttons[id])
@@ -523,7 +572,7 @@ func _draw_hints() -> void:
 	var alpha := clampf(_hint_clock * 2.0, 0.0, 1.0) * clampf(HINT_SECONDS - _hint_clock, 0.0, 1.0)
 	var size := int(roundf(26.0 * _u))
 	var font := UiStyle.font_label()
-	if not _moved and not _operating:
+	if not _moved and not _movement_blocked:
 		UiStyle.text_centered(self, font, "MOVE", _stick_home + Vector2(0.0, -STICK_THROW * _u - 34.0 * _u),
 			size, UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
 	if not _looked:

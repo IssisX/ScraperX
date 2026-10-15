@@ -2528,8 +2528,20 @@ func _touch_single_hand_catch(right_hand: bool = false, release_with_action: boo
 		return _fail("single-hand extension lost the hand or touch toggle label")
 	var release_y := _position().y
 	if release_with_action:
-		# Keyboard E reaches the contextual Action gateway on this real hold.
+		# The retained scenario ID now probes Reach Hand, then explicitly drops.
+		# Action may add a valid partner; it must never release the planted hand.
+		var action_tick := int(_native().get_tick_index())
 		_act(InputRouter.Device.KEYBOARD_MOUSE)
+		if not await _wait_until(func() -> bool: return int(_native().get_tick_index()) > action_tick, 0.5):
+			return _fail("single-hand Reach Action did not reach a native tick")
+		var reached: Dictionary = _native().get_landing_state()
+		if (int(reached.get("traversal_hand_constraint_count", 0)) < 1
+				or int(reached.get(generation_key, 0)) != held_generation):
+			return _fail("Reach Hand Action released the actual planted hand")
+		var after_reach: Dictionary = _main._audio.get_grip_feedback_stats()
+		contact_count = int(after_reach["climb_regrips"])
+		contact_playbacks = int(after_reach["grab_playbacks"])
+		_tap(1, _center(&"drop"))
 	else:
 		_tap(1, _center(&"drop" if right_hand else &"jump"))
 	if not await _wait_until(func() -> bool:
@@ -2552,7 +2564,7 @@ func _touch_single_hand_catch(right_hand: bool = false, release_with_action: boo
 			or int(_main._audio.get_grip_feedback_stats()["grab_playbacks"]) != contact_playbacks:
 		return _fail("single-hand release invented a contact sound")
 	_detail = "normal_world=1 initial_stages=1 viewport_action_crouch_release=1 solo_controls_honest=1 release_control=%s actual_hands=%s initial_contact_cues=1 initial_grab_playbacks=1 passive_extra_cues=0 actual_span_shortening_m=%.4f target_shortening_m=%.4f paid_work_j=%.4f honest_arms=1 passive_release=1" % [
-		"keyboard_action" if release_with_action else ("touch_drop" if right_hand else "touch_jump"),
+		"keyboard_reach_then_touch_drop" if release_with_action else ("touch_drop" if right_hand else "touch_jump"),
 		"right_only" if right_hand else "left_only", span_before - float(tucked["hanging_actual_span_m"]), target_before - target_tucked,
 		float(tucked["hand_actuator_positive_work_j"]) - work_before]
 	return _campaign_world_intact()
@@ -2612,14 +2624,15 @@ func _single_hand_arms_honest(right_hand: bool = false) -> bool:
 # HUD renderer synchronously does not alter input or native physical state.
 func _single_hand_controls_honest(posture_label: String) -> bool:
 	var ctx := _ctx()
-	if not bool(ctx.get("single_hand_hold", false)) or ctx["action"]["id"] != &"release" \
-			or ctx["action"]["label"] != "LET GO" \
-			or _main._touch.is_button_shown(&"action") \
-			or not _main._touch.is_button_shown(&"jump") \
-			or not _main._touch.is_button_shown(&"drop") \
-			or _main._touch.button_label(&"jump") != "LET GO" \
-			or _main._touch.button_label(&"drop") != "LET GO" \
-			or _main._touch.button_label(&"crouch") != posture_label:
+	if (not bool(ctx.get("single_hand_hold", false)) or ctx["action"]["id"] != &"reach_hand"
+			or ctx["action"]["label"] != "REACH HAND"
+			or not _main._touch.is_button_shown(&"action")
+			or bool(_main._touch._buttons[&"action"].enabled) != bool(ctx.get("missing_hand_grip_available", false))
+			or not _main._touch.is_button_shown(&"jump")
+			or not _main._touch.is_button_shown(&"drop")
+			or _main._touch.button_label(&"jump") != "LET GO"
+			or _main._touch.button_label(&"drop") != "LET GO"
+			or _main._touch.button_label(&"crouch") != posture_label):
 		return false
 	var hud = _main._hud
 	var was_touch: bool = hud.touch_active
@@ -2628,13 +2641,15 @@ func _single_hand_controls_honest(posture_label: String) -> bool:
 	hud.touch_active = was_touch
 	var release_prompt := false
 	var posture_prompt := false
+	var reach_prompt := false
 	for prompt in prompts:
 		var wording := String(prompt["text"]) + " " + String(prompt["detail"])
 		if "CLIMB UP" in wording or "JUMP OFF" in wording or "MOVE TO LEAN" in wording:
 			return false
+		reach_prompt = reach_prompt or (prompt["verb"] == &"action" and prompt["text"] == "REACH HAND")
 		release_prompt = release_prompt or (prompt["verb"] in [&"jump", &"drop"] and prompt["text"] == "LET GO")
 		posture_prompt = posture_prompt or (prompt["verb"] == &"crouch" and prompt["text"] == posture_label)
-	return release_prompt and posture_prompt
+	return release_prompt and posture_prompt and reach_prompt
 
 
 func _single_hand_feedback_quiet(right_hand: bool, generation: int, count: int, playbacks: int) -> bool:

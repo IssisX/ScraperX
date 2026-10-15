@@ -17,6 +17,27 @@ template<class V> bool finite(const V &v) {
 double length(JPH::Vec3 v) {
     return std::hypot(double(v.GetX()), double(v.GetY()), double(v.GetZ()));
 }
+JPH::Ref<JPH::SixDOFConstraint> rigid_hand_template(JPH::Body &player,JPH::Body &hold,
+    JPH::RVec3 player_anchor,JPH::RVec3 grip,JPH::Vec3 target) {
+    using namespace JPH;
+    SixDOFConstraintSettings settings;
+    settings.mSpace=EConstraintSpace::WorldSpace;
+    settings.mPosition1=player_anchor;
+    settings.mPosition2=grip;
+    settings.mNumVelocityStepsOverride=40;
+    settings.mNumPositionStepsOverride=8;
+    for(int i=0;i<SixDOFConstraintSettings::EAxis::Num;++i)
+        settings.MakeFreeAxis(static_cast<SixDOFConstraintSettings::EAxis>(i));
+    for(int i=0;i<3;++i) {
+        settings.mMotorSettings[i].mSpringSettings=SpringSettings(ESpringMode::StiffnessAndDamping,5000.0F,180.0F);
+        settings.mMotorSettings[i].SetForceLimit(kAxisForce);
+    }
+    Ref<SixDOFConstraint> result=static_cast<SixDOFConstraint *>(settings.Create(player,hold));
+    for(int i=0;i<3;++i)result->SetMotorState(static_cast<SixDOFConstraint::EAxis>(i),EMotorState::Position);
+    result->SetTargetPositionCS(target);
+    result->SetTargetVelocityCS(Vec3::sZero());
+    return result;
+}
 }
 
 // Private native settings, not an unbounded DistanceConstraint approximation.
@@ -177,6 +198,56 @@ PhysicalHandClimb::~PhysicalHandClimb() { clear(); }
 bool PhysicalHandClimb::attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
     return replace(hand, support, actual_grip, false);
 }
+bool PhysicalHandClimb::attach_radial_hand(unsigned missing,JPH::BodyID support,JPH::RVec3 actual_grip) {
+    using namespace JPH;
+    if(missing>=hands_.size() || !radial_profile_ || attached_count()!=1 || attached(missing) ||
+       soft_[0].attached || soft_[1].attached || player_.IsInvalid() || support.IsInvalid() ||
+       support==player_ || (net_ && support==net_->body()) || !finite(actual_grip))return false;
+    const unsigned planted=1-missing;
+    if(!hands_[planted] || !radial_hands_[planted] || radial_hands_[missing])return false;
+    const BodyID old_support=hands_[planted]->GetBody2()->GetID();
+    const BodyID ids[]{player_,support,old_support};
+    Ref<SixDOFConstraint> anchor;
+    Ref<TwoBodyConstraint> radial;
+    float span=0;
+    bool wake_support=false;
+    {
+        BodyLockMultiWrite lock(system_.GetBodyLockInterface(),ids,3);
+        Body *player=lock.GetBody(0),*hold=lock.GetBody(1),*old_hold=lock.GetBody(2);
+        if(!player || !hold || !old_hold || !player->IsRigidBody() || !player->IsDynamic() ||
+           !hold->IsRigidBody() || !old_hold->IsRigidBody() || player->IsSensor() ||
+           hold->IsSensor() || old_hold->IsSensor() || !player->IsInBroadPhase() ||
+           !hold->IsInBroadPhase() || !old_hold->IsInBroadPhase())return false;
+        const auto translation=EAllowedDOFs::TranslationX|EAllowedDOFs::TranslationY|EAllowedDOFs::TranslationZ;
+        if(player->GetMotionProperties()->GetAllowedDOFs()!=translation)return false;
+        const Vec3 radius(actual_grip-player->GetCenterOfMassPosition());
+        span=radius.Length();
+        if(!finite(radius) || !std::isfinite(span) || span<=1.0e-6F || span>1.75F)return false;
+        anchor=rigid_hand_template(*player,*hold,actual_grip,actual_grip,Vec3::sZero());
+        RadialHandConstraintSettings settings;
+        settings.mLocalGrip=anchor->GetConstraintToBody2Matrix().GetTranslation();
+        settings.mRestLength=span;
+        const auto saved=anchor->GetConstraintSettings();
+        settings.mNumVelocityStepsOverride=saved->mNumVelocityStepsOverride;
+        settings.mNumPositionStepsOverride=saved->mNumPositionStepsOverride;
+        settings.mConstraintPriority=saved->mConstraintPriority;
+        settings.mUserData=saved->mUserData;
+        radial=new RadialHandConstraint(*player,*hold,settings,anchor.GetPtr());
+        wake_support=hold->IsDynamic();
+    }
+    // No profile handoff: the existing registered row, its dormant template,
+    // spring preload, solved impulse cache and command receipts stay untouched.
+    hands_[missing]=anchor;
+    radial_hands_[missing]=radial;
+    radial_lengths_[missing]=span;
+    forces_[missing]=Vec3::sZero();
+    ++grip_generations_[missing];
+    system_.AddConstraint(radial.GetPtr());
+    auto &bodies=system_.GetBodyInterface();
+    bodies.ActivateBody(player_);
+    if(wake_support)bodies.ActivateBody(support);
+    return true;
+}
 bool PhysicalHandClimb::regrip(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
     return replace(hand, support, actual_grip, true);
 }
@@ -206,8 +277,10 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
         Vec3 offset(lock.GetBody().GetPosition()-actual);
         if (preserve_extension && soft_[hand].attached)
             offset=soft_[hand].rest_offset+Vec3(net_->world_point(soft_[hand].material)-actual);
+        const auto generation=grip_generations_[hand];
         detach(hand);
         soft_[hand]={true,material,offset};
+        grip_generations_[hand]=generation+1;
         return true;
     }
     const BodyID previous_support = hands_[hand] ? hands_[hand]->GetBody2()->GetID() : support;
@@ -224,9 +297,7 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
             player->IsSensor() || hold->IsSensor() || !player->IsInBroadPhase() || !hold->IsInBroadPhase()) return false;
         const auto translation = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
         if (player->GetMotionProperties()->GetAllowedDOFs() != translation) return false;
-        SixDOFConstraintSettings settings;
-        settings.mSpace = EConstraintSpace::WorldSpace;
-        settings.mPosition1 = settings.mPosition2 = actual_grip;
+        RVec3 player_anchor=actual_grip;
         Vec3 target = Vec3::sZero();
         if (preserve_extension && attached(hand)) {
             const Body *previous = lock.GetBody(2);
@@ -234,32 +305,22 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
             const auto &old = hands_[hand];
             const RVec3 old_grip = previous->GetCenterOfMassTransform() *
                                   old->GetConstraintToBody2Matrix().GetTranslation();
-            settings.mPosition1 = player->GetCenterOfMassTransform() *
+            player_anchor = player->GetCenterOfMassTransform() *
                                   old->GetConstraintToBody1Matrix().GetTranslation();
             // The upright player's constraint axes are world identity. Moving
             // the support anchor changes separation and target equally, so
             // neither existing spring error nor body momentum is reset.
             target = old->GetTargetPositionCS() + Vec3(actual_grip - old_grip);
         }
-        settings.mNumVelocityStepsOverride = 40;
-        settings.mNumPositionStepsOverride = 8;
-        for (int i = 0; i < SixDOFConstraintSettings::EAxis::Num; ++i)
-            settings.MakeFreeAxis(static_cast<SixDOFConstraintSettings::EAxis>(i));
-        for (int i = 0; i < 3; ++i) {
-            settings.mMotorSettings[i].mSpringSettings = SpringSettings(ESpringMode::StiffnessAndDamping, 5000.0F, 180.0F);
-            settings.mMotorSettings[i].SetForceLimit(kAxisForce);
-        }
-        constraint = static_cast<SixDOFConstraint *>(settings.Create(*player, *hold));
-        for (int i = 0; i < 3; ++i)
-            constraint->SetMotorState(static_cast<SixDOFConstraint::EAxis>(i), EMotorState::Position);
-        constraint->SetTargetPositionCS(target);
-        constraint->SetTargetVelocityCS(Vec3::sZero());
+        constraint=rigid_hand_template(*player,*hold,player_anchor,actual_grip,target);
         wake_support = hold->IsDynamic();
     }
     // Invalid replacement leaves the old hand intact. A valid replacement only
     // changes constraints; neither body's instantaneous velocity is overwritten.
+    const auto generation=grip_generations_[hand];
     detach(hand);
     hands_[hand] = constraint;
+    grip_generations_[hand]=generation+1;
     system_.AddConstraint(constraint.GetPtr());
     auto &bodies = system_.GetBodyInterface();
     bodies.ActivateBody(player_);
@@ -269,6 +330,7 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
 void PhysicalHandClimb::detach(unsigned hand) {
     if (!attached(hand)) return;
     if (radial_profile_ && !set_radial_profile(false)) { clear(); return; }
+    ++grip_generations_[hand];
     soft_[hand].attached=false;
     if (hands_[hand]) system_.RemoveConstraint(hands_[hand].GetPtr());
     hands_[hand] = nullptr;
@@ -282,6 +344,7 @@ void PhysicalHandClimb::clear() {
         radial=nullptr;
     }
     for (unsigned i=0;i<hands_.size();++i) {
+        if (attached(i)) ++grip_generations_[i];
         if (hands_[i] && !radial_profile_) system_.RemoveConstraint(hands_[i].GetPtr());
         hands_[i]=nullptr;
         soft_[i].attached=false;
@@ -496,6 +559,32 @@ float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
     return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached);
+}
+PhysicalHandClimb::GripReadback PhysicalHandClimb::grip_readback(unsigned hand) const {
+    GripReadback result;
+    if (hand>=hands_.size()) return result;
+    result.generation=grip_generations_[hand];
+    if (!attached(hand)) return result;
+    const bool material=soft_[hand].attached;
+    const auto *constraint=radial_hands_[hand] ? radial_hands_[hand].GetPtr() : hands_[hand].GetPtr();
+    if (material && !net_) return result;
+    const auto support=material ? net_->body() : constraint->GetBody2()->GetID();
+    const JPH::BodyLockRead lock(system_.GetBodyLockInterface(),support);
+    if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase()) return result;
+    const auto &body=lock.GetBody();
+    if (material) {
+        result.world_anchor=net_->world_point(soft_[hand].material);
+        result.point_velocity=net_->material_velocity(soft_[hand].material);
+    } else {
+        result.world_anchor=body.GetCenterOfMassTransform()*
+            constraint->GetConstraintToBody2Matrix().GetTranslation();
+        result.point_velocity=body.GetPointVelocity(result.world_anchor);
+    }
+    result.attached=true;
+    result.material=material;
+    result.support=support;
+    result.player_force=forces_[hand];
+    return result;
 }
 unsigned PhysicalHandClimb::attached_count() const noexcept {
     return unsigned(attached(0))+unsigned(attached(1));

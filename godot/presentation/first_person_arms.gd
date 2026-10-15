@@ -63,6 +63,7 @@ const POSE_BALANCE := 10
 const POSE_BRACE := 11
 const POSE_ROLL := 12
 const POSE_STUMBLE := 13
+const POSE_GRAPPLE := 14
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -120,6 +121,7 @@ var _remote_led: MeshInstance3D
 var _risers: Array[MeshInstance3D] = []
 var _canopy: MeshInstance3D
 var _grip_forward := Vector3.FORWARD
+var _hang_shoulder_right := Vector3.RIGHT
 var _last_traversal := 0
 var _clock := 0.0
 
@@ -388,10 +390,14 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			_grip_forward = normal.normalized()
 		else:
 			_grip_forward = to_ledge.normalized() if to_ledge.length_squared() > 1.0e-4 else forward
+	var was_hanging := _last_traversal == TRAVERSAL_HANGING
 	_last_traversal = traversal
 	var torso_right := forward.cross(Vector3.UP).normalized()
 	var speed := Vector2(velocity.x, velocity.z).length()
-	var operating: StringName = state["operating"]
+	var grapple := bool(state.get("grapple_equipped", false))
+	# A carried gun is not the crane's handheld radio. Native equipment
+	# acknowledgement selects its pose; the presented tool supplies wrists.
+	var operating: StringName = &"" if grapple else state["operating"]
 	var chute: bool = state["chute"]
 	var landing: Dictionary = state.get("landing", {})
 	var recovering := bool(landing.get("landing_recovering", false))
@@ -407,6 +413,18 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 
 	var single_hand := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING] \
 		and int(landing.get("traversal_hand_constraint_count", 0)) == 1
+	if traversal == TRAVERSAL_HANGING:
+		var span: Vector3 = Vector3.ZERO if single_hand else state["hand_right"] - state["hand_left"]
+		if span.length_squared() > 1.0e-6:
+			var pair_right := span.normalized()
+			# Hand-over-hand placements can reverse the grip pair's order.
+			# Keep the torso's orientation continuous while each wrist follows
+			# its own native anchor; crossing hands cannot exchange shoulders.
+			if was_hanging and pair_right.dot(_hang_shoulder_right) < 0.0:
+				pair_right = -pair_right
+			_hang_shoulder_right = pair_right
+		elif not was_hanging:
+			_hang_shoulder_right = _grip_forward.cross(Vector3.UP).normalized()
 	for hand in _hands:
 		var attached := not single_hand or bool(landing.get(
 			"left_hand_attached" if hand.side < 0.0 else "right_hand_attached", false))
@@ -414,14 +432,10 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		if traversal == TRAVERSAL_HANGING and attached:
-			# Hanging hand indices come from the native lip pair. Orient the
-			# shoulders from that pair too: normal-derived right can reverse
-			# their assignment and make both arms reach across the torso.
-			var grip_span: Vector3 = Vector3.ZERO if single_hand else state["hand_right"] - state["hand_left"]
-			var grip_right := grip_span.normalized() if grip_span.length_squared() > 1.0e-6 \
-				else _grip_forward.cross(Vector3.UP).normalized()
+			# Initial native pair establishes the body's handedness. Later
+			# crossing placements retain it independently of head rotation.
 			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
-				+ grip_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
+				+ _hang_shoulder_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
 		var pose := POSE_REST
 		var reachable := true
 		if single_hand and not attached:
@@ -447,6 +461,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 				pose = POSE_AIR if traversal == TRAVERSAL_VAULTING else POSE_REST
 		elif traversal == TRAVERSAL_VAULTING:
 			pose = POSE_AIR
+		elif grapple:
+			pose = POSE_GRAPPLE
 		elif operating != &"":
 			pose = POSE_REMOTE
 		elif int(state.get("carrying", 0)) != 0:
@@ -597,6 +613,14 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var wrist := camera.origin + right * (0.33 * side) + up * (0.10 - pull) - back * 0.46
 			var basis := _hand_basis(up * 0.5 - back * 0.8, right * side)
 			return [wrist, basis, false, 12.0, 1.0, 0.8]
+		POSE_GRAPPLE:
+			var tool: Transform3D = state["grapple_frame"]
+			var local_wrist := Vector3(0.053, -0.12, 0.02) if side > 0.0 else Vector3(-0.10, -0.065, -0.11)
+			if side > 0.0:
+				local_wrist += state.get("grapple_receiver_offset", Vector3.ZERO)
+			var wrist := tool * local_wrist
+			var basis := _hand_basis(tool.basis.y * 0.9 - tool.basis.z * 0.2, tool.basis.x * side)
+			return [wrist, basis, false, 20.0, 0.83 if side > 0.0 else 0.68, 0.35]
 		POSE_REMOTE:
 			# Wrist behind the box's midplane: fingers wrap the back, the
 			# thumb comes round onto the face -- a book held by its edge.
@@ -703,7 +727,7 @@ func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 			return right * side * 0.8 + Vector3.DOWN * 0.6 - forward * 0.3
 		POSE_ROLL:
 			return right * side * 0.25 + Vector3.DOWN * 1.0 - forward * 0.2
-		POSE_REMOTE, POSE_CHUTE:
+		POSE_REMOTE, POSE_CHUTE, POSE_GRAPPLE:
 			return right * side * 0.9 + Vector3.DOWN * 1.0
 	return right * side * 0.5 + Vector3.DOWN * 1.0 - forward * 0.4
 

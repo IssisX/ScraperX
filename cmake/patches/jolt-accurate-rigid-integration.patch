@@ -1,0 +1,165 @@
+--- a/Jolt/Physics/Body/Body.h
++++ b/Jolt/Physics/Body/Body.h
+@@ -362,8 +362,8 @@
+ 	static inline bool		sFindCollidingPairsCanCollide(const Body &inBody1, const Body &inBody2);
+ 
+ 	/// Update position using an Euler step (used during position integrate & constraint solving)
+-	inline void				AddPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime)			{ JPH_ASSERT(IsRigidBody()); JPH_ASSERT(BodyAccess::sCheckRights(BodyAccess::sPositionAccess(), BodyAccess::EAccess::ReadWrite)); mPosition += mMotionProperties->LockTranslation(inLinearVelocityTimesDeltaTime); JPH_ASSERT(!mPosition.IsNaN()); }
+-	inline void				SubPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime)			{ JPH_ASSERT(IsRigidBody()); JPH_ASSERT(BodyAccess::sCheckRights(BodyAccess::sPositionAccess(), BodyAccess::EAccess::ReadWrite)); mPosition -= mMotionProperties->LockTranslation(inLinearVelocityTimesDeltaTime); JPH_ASSERT(!mPosition.IsNaN()); }
++	inline void				AddPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime);
++	inline void				SubPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime);
+ 
+ 	/// Update rotation using an Euler step (used during position integrate & constraint solving)
+ 	inline void				AddRotationStep(Vec3Arg inAngularVelocityTimesDeltaTime);
+--- a/Jolt/Physics/Body/Body.inl
++++ b/Jolt/Physics/Body/Body.inl
+@@ -78,6 +78,34 @@
+ 	return true;
+ }
+ 
++void Body::AddPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime)
++{
++	JPH_ASSERT(IsRigidBody());
++	JPH_ASSERT(BodyAccess::sCheckRights(BodyAccess::sPositionAccess(), BodyAccess::EAccess::ReadWrite));
++	if (mMotionProperties->mUseAccurateIntegration)
++	{
++		// Error feedback: retain only the part lost when rounding the world position.
++		Vec3 delta = mMotionProperties->LockTranslation(inLinearVelocityTimesDeltaTime + mMotionProperties->mPositionIntegrationResidual);
++		RVec3 previous = mPosition;
++		mPosition += delta;
++		mMotionProperties->mPositionIntegrationResidual = delta - Vec3(mPosition - previous);
++	}
++	else
++		mPosition += mMotionProperties->LockTranslation(inLinearVelocityTimesDeltaTime);
++	JPH_ASSERT(!mPosition.IsNaN());
++}
++
++void Body::SubPositionStep(Vec3Arg inLinearVelocityTimesDeltaTime)
++{
++	JPH_ASSERT(IsRigidBody());
++	JPH_ASSERT(BodyAccess::sCheckRights(BodyAccess::sPositionAccess(), BodyAccess::EAccess::ReadWrite));
++	if (mMotionProperties->mUseAccurateIntegration)
++		AddPositionStep(-inLinearVelocityTimesDeltaTime);
++	else
++		mPosition -= mMotionProperties->LockTranslation(inLinearVelocityTimesDeltaTime);
++	JPH_ASSERT(!mPosition.IsNaN());
++}
++
+ void Body::AddRotationStep(Vec3Arg inAngularVelocityTimesDeltaTime)
+ {
+ 	JPH_ASSERT(IsRigidBody());
+@@ -95,6 +123,13 @@
+ 		mRotation = (Quat::sRotation(inAngularVelocityTimesDeltaTime / len, len) * mRotation).Normalized();
+ 		JPH_ASSERT(!mRotation.IsNaN());
+ 	}
++	else if (mMotionProperties != nullptr && mMotionProperties->mUseAccurateIntegration && len > 0.0f)
++	{
++		// For angles <= 1e-6, sin(theta/2)/theta rounds to 0.5 and cos(theta/2) to 1.
++		Vec3 half_step = 0.5f * inAngularVelocityTimesDeltaTime;
++		mRotation = (Quat(half_step.GetX(), half_step.GetY(), half_step.GetZ(), 1.0f) * mRotation).Normalized();
++		JPH_ASSERT(!mRotation.IsNaN());
++	}
+ }
+ 
+ void Body::SubRotationStep(Vec3Arg inAngularVelocityTimesDeltaTime)
+@@ -107,6 +142,13 @@
+ 	if (len > 1.0e-6f)
+ 	{
+ 		mRotation = (Quat::sRotation(inAngularVelocityTimesDeltaTime / len, -len) * mRotation).Normalized();
++		JPH_ASSERT(!mRotation.IsNaN());
++	}
++	else if (mMotionProperties != nullptr && mMotionProperties->mUseAccurateIntegration && len > 0.0f)
++	{
++		// For angles <= 1e-6, sin(theta/2)/theta rounds to 0.5 and cos(theta/2) to 1.
++		Vec3 half_step = -0.5f * inAngularVelocityTimesDeltaTime;
++		mRotation = (Quat(half_step.GetX(), half_step.GetY(), half_step.GetZ(), 1.0f) * mRotation).Normalized();
+ 		JPH_ASSERT(!mRotation.IsNaN());
+ 	}
+ }
+--- a/Jolt/Physics/Body/Body.cpp
++++ b/Jolt/Physics/Body/Body.cpp
+@@ -48,6 +48,9 @@
+ 
+ 	if (mMotionProperties != nullptr)
+ 	{
++		// A new motion mode starts a new integration history.
++		mMotionProperties->mPositionIntegrationResidual = Vec3::sZero();
++
+ 		// Update cache
+ 		JPH_IF_ENABLE_ASSERTS(mMotionProperties->mCachedMotionType = inMotionType;)
+ 
+@@ -103,6 +106,8 @@
+ {
+ 	JPH_ASSERT(BodyAccess::sCheckRights(BodyAccess::sPositionAccess(), BodyAccess::EAccess::ReadWrite));
+ 
++	if (mMotionProperties != nullptr)
++		mMotionProperties->mPositionIntegrationResidual = Vec3::sZero();
+ 	mPosition = inPosition + inRotation * mShape->GetCenterOfMass();
+ 	mRotation = inRotation;
+ 
+@@ -116,6 +121,9 @@
+ 
+ void Body::UpdateCenterOfMassInternal(Vec3Arg inPreviousCenterOfMass, bool inUpdateMassProperties)
+ {
++	if (mMotionProperties != nullptr)
++		mMotionProperties->mPositionIntegrationResidual = Vec3::sZero();
++
+ 	// Update center of mass position so the world position for this body stays the same
+ 	mPosition += mRotation * (mShape->GetCenterOfMass() - inPreviousCenterOfMass);
+ 
+--- a/Jolt/Physics/Body/MotionProperties.h
++++ b/Jolt/Physics/Body/MotionProperties.h
+@@ -274,6 +274,12 @@
+ 	/// Accumulate sleep time and return if a body can go to sleep
+ 	inline ECanSleep		AccumulateSleepTime(float inDeltaTime, float inTimeBeforeSleep);
+ 
++	/// Opt in to retaining rounded-away rigid position steps and tiny rotations.
++	/// Set only outside PhysicsSystem::Update. Changing the mode clears any
++	/// fractional displacement; existing bodies use the original arithmetic by default.
++	void					SetUseAccurateIntegration(bool inUse)						{ if (mUseAccurateIntegration != inUse) { mUseAccurateIntegration = inUse; mPositionIntegrationResidual = Vec3::sZero(); } }
++	bool					GetUseAccurateIntegration() const							{ return mUseAccurateIntegration; }
++
+ 	/// Saving state for replay
+ 	void					SaveState(StateRecorder &inStream) const;
+ 
+@@ -329,6 +335,10 @@
+ #ifdef JPH_TRACK_SIMULATION_STATS
+ 	SimulationStats			mSimulationStats;
+ #endif // JPH_TRACK_SIMULATION_STATS
++
++	// Appended to preserve the offsets of all existing MotionProperties members.
++	Vec3					mPositionIntegrationResidual { Vec3::sZero() };			///< Signed displacement not representable at the current center of mass
++	bool					mUseAccurateIntegration = false;
+ };
+ 
+ JPH_NAMESPACE_END
+--- a/Jolt/Physics/Body/MotionProperties.cpp
++++ b/Jolt/Physics/Body/MotionProperties.cpp
+@@ -11,6 +11,9 @@
+ 
+ void MotionProperties::SetMassProperties(EAllowedDOFs inAllowedDOFs, const MassProperties &inMassProperties)
+ {
++	// Changing mass/DOFs begins a new integration history.
++	mPositionIntegrationResidual = Vec3::sZero();
++
+ 	// Store allowed DOFs
+ 	mAllowedDOFs = inAllowedDOFs;
+ 
+@@ -73,6 +76,8 @@
+ 	inStream.Write(mSleepTestSpheres);
+ 	inStream.Write(mSleepTestTimer);
+ 	inStream.Write(mAllowSleeping);
++	inStream.Write(mUseAccurateIntegration);
++	inStream.Write(mPositionIntegrationResidual);
+ }
+ 
+ void MotionProperties::RestoreState(StateRecorder &inStream)
+@@ -87,6 +92,8 @@
+ 	inStream.Read(mSleepTestSpheres);
+ 	inStream.Read(mSleepTestTimer);
+ 	inStream.Read(mAllowSleeping);
++	inStream.Read(mUseAccurateIntegration);
++	inStream.Read(mPositionIntegrationResidual);
+ }
+ 
+ JPH_NAMESPACE_END

@@ -1,4 +1,5 @@
 #include "bridge/scraperx_simulation.hpp"
+#include "sim/grappling_hook_geometry.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/supplied_ascent.hpp"
 
@@ -48,6 +49,15 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"), &ScraperXSimulation::request_slingshot_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_aim", "x", "y", "z"), &ScraperXSimulation::set_grapple_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_equipped", "equipped"), &ScraperXSimulation::set_grapple_equipped);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_reel_input", "input"), &ScraperXSimulation::set_grapple_reel_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_action"), &ScraperXSimulation::request_grapple_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_release"), &ScraperXSimulation::request_grapple_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_auto_reel", "enabled"), &ScraperXSimulation::set_grapple_auto_reel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_grapple_gun_state"), &ScraperXSimulation::get_grapple_gun_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_grapple_gun_render_state"), &ScraperXSimulation::get_grapple_gun_render_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_grapple_hook_geometry"), &ScraperXSimulation::get_grapple_hook_geometry);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_render_state"), &ScraperXSimulation::get_slingshot_render_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_prediction"), &ScraperXSimulation::get_slingshot_prediction);
@@ -386,6 +396,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_vertices"), &ScraperXSimulation::get_catch_net_vertices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_indices"), &ScraperXSimulation::get_catch_net_indices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_tether_vertices"), &ScraperXSimulation::get_catch_net_tether_vertices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_patch_vertices"), &ScraperXSimulation::get_catch_net_patch_vertices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_state"), &ScraperXSimulation::get_catch_net_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
                                 &ScraperXSimulation::get_kit_body_count);
@@ -586,6 +597,87 @@ bool ScraperXSimulation::request_slingshot_action() {
 bool ScraperXSimulation::request_slingshot_drop() {
     return simulation_->request_slingshot_drop();
 }
+bool ScraperXSimulation::set_grapple_aim(double x, double y, double z) {
+    return simulation_->set_grapple_aim(x, y, z);
+}
+bool ScraperXSimulation::set_grapple_equipped(bool equipped) {
+    return simulation_->set_grapple_equipped(equipped);
+}
+bool ScraperXSimulation::set_grapple_reel_input(double input) {
+    return simulation_->set_grapple_reel_input(input);
+}
+bool ScraperXSimulation::request_grapple_action() { return simulation_->request_grapple_action(); }
+bool ScraperXSimulation::set_grapple_auto_reel(bool enabled) { return simulation_->set_grapple_auto_reel(enabled); }
+bool ScraperXSimulation::request_grapple_release() { return simulation_->request_grapple_release(); }
+
+namespace {
+godot::Dictionary grapple_dictionary(const scraperx::sim::GrappleGunSnapshot &state) {
+    godot::Dictionary out;
+    const char *const names[]{"READY", "PAYING OUT", "LOCKED", "RELEASED", "FAILED"};
+    const char *const failures[]{"", "INVALID AIM", "NO CARTRIDGE", "LINE BUSY", "MUZZLE BLOCKED",
+        "HOOK UNAVAILABLE", "LINE SNAGGED", "LINE BROKEN", "HOOK OUT OF REACH", "LINE LOADED",
+        "HOOK BLOCKED", "HOOK MOVING"};
+    out["available"] = state.available;
+    out["acquired"] = state.acquired;
+    out["equipped"] = state.equipped;
+    out["station_available"] = state.station_available;
+    out["rack_position"] = godot::Vector3(state.rack_position.x, state.rack_position.y, state.rack_position.z);
+    out["launch_origin"] = godot::Vector3(state.launch_origin.x, state.launch_origin.y, state.launch_origin.z);
+    out["launch_direction"] = godot::Vector3(state.launch_direction.x, state.launch_direction.y, state.launch_direction.z);
+    out["line_attached"] = state.line_attached;
+    out["action_recovers_hook"] = state.action_recovers_hook;
+    out["state"] = state.state;
+    out["state_name"] = names[std::min(state.state, 4U)];
+    out["last_failure"] = failures[std::min(state.failure, 11U)];
+    out["cartridges_remaining"] = state.cartridges;
+    out["hooks_remaining"] = state.available_hooks;
+    out["rope_start"] = godot::Vector3(state.player_endpoint.x, state.player_endpoint.y, state.player_endpoint.z);
+    out["rope_end"] = godot::Vector3(state.hook_endpoint.x, state.hook_endpoint.y, state.hook_endpoint.z);
+    out["paid_out_length"] = state.line_length_m;
+    out["tension_n"] = state.tension_n;
+    out["extension_m"] = state.extension_m;
+    out["launch_energy_j"] = state.last_launch_work_j;
+    out["total_launch_work_j"] = state.launch_work_j;
+    out["reel_work_j"] = state.reel_work_j;
+    out["auto_reel"] = state.auto_reel;
+    out["elastic_energy_j"] = state.stored_elastic_energy_j;
+    out["spool_absorbed_energy_j"] = state.spool_absorbed_energy_j;
+    out["release_discarded_elastic_energy_j"] = state.release_discarded_elastic_energy_j;
+    godot::Array hooks;
+    for (const auto &hook : state.hooks) {
+        godot::Dictionary pose;
+        pose["active"] = hook.present;
+        pose["position"] = godot::Vector3(hook.position.x, hook.position.y, hook.position.z);
+        pose["rotation"] = godot::Quaternion(hook.rotation.x, hook.rotation.y, hook.rotation.z, hook.rotation.w);
+        hooks.push_back(pose);
+    }
+    out["hooks"] = hooks;
+    return out;
+}
+}
+godot::Dictionary ScraperXSimulation::get_grapple_gun_state() const {
+    return grapple_dictionary(simulation_->grapple_gun_state());
+}
+godot::Dictionary ScraperXSimulation::get_grapple_gun_render_state() const {
+    return grapple_dictionary(simulation_->render_grapple_gun_state());
+}
+
+godot::Array ScraperXSimulation::get_grapple_hook_geometry() const {
+    godot::Array out;
+    for (const auto &part : sim::grappling_hook_layout().parts) {
+        godot::PackedVector3Array polygon;
+        for (const auto &point : part.polygon) {
+            polygon.push_back(godot::Vector3(point.GetX(), point.GetY(), point.GetZ()));
+        }
+        godot::Dictionary prism;
+        prism["polygon"] = polygon;
+        prism["z_low"] = part.z_low;
+        prism["z_high"] = part.z_high;
+        out.push_back(prism);
+    }
+    return out;
+}
+
 godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     const auto s = simulation_->slingshot_state();
     godot::Dictionary out;
@@ -674,6 +766,22 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["checkpoint_footing_valid"] = s.checkpoint_footing_valid;
     out["player_gravity_factor"] = s.player_gravity_factor;
     out["traversal_hand_constraint_count"] = s.traversal_hand_constraint_count;
+    out["traversal_plan_kind"] = s.traversal_plan_kind;
+    out["traversal_phase"] = s.traversal_phase;
+    out["traversal_rejection_reason"] = s.traversal_rejection_reason;
+    out["traversal_plan_generation"] = s.traversal_plan_generation;
+    out["traversal_receiver_entity_id"] = s.traversal_receiver_entity_id;
+    out["foot_contact_tick"] = s.foot_contact_tick;
+    out["foot_push_source_contact_tick"] = s.foot_push_source_contact_tick;
+    out["hand_foot_overlap_active"] = s.hand_foot_overlap_active;
+    out["hand_foot_overlap_solved_ticks"] = s.hand_foot_overlap_solved_ticks;
+    out["hand_foot_last_solve_tick"] = s.hand_foot_last_solve_tick;
+    out["hand_foot_last_hand_load_n"] = s.hand_foot_last_hand_load_n;
+    out["hand_foot_last_foot_load_n"] = s.hand_foot_last_foot_load_n;
+    out["actual_hand_load_n"] = s.actual_hand_load_n;
+    out["actual_foot_load_n"] = s.actual_foot_load_n;
+    out["actual_hand_load_fraction"] = s.actual_hand_load_fraction;
+    out["actual_foot_load_fraction"] = s.actual_foot_load_fraction;
     const bool physical_hand_state = s.traversal_hand_constraint_count > 0 &&
         (s.traversal_state == sim::TraversalState::Climbing || s.traversal_state == sim::TraversalState::Hanging);
     // Both slots are real whenever the backend reports two attachments,
@@ -690,6 +798,7 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["hand_actuator_positive_work_j"] = s.traversal_actuator_positive_work_j;
     out["hand_actuator_absorbed_work_j"] = s.traversal_actuator_absorbed_work_j;
     out["hanging_free_arc_active"] = s.hanging_free_arc_active;
+    out["missing_hand_grip_available"] = s.missing_hand_grip_available;
     out["hanging_commanded_span_m"] = s.hanging_commanded_span_m;
     out["hanging_actual_span_m"] = s.hanging_actual_span_m;
     out["swing_tuck_available"] = s.swing_tuck_available;
@@ -1341,6 +1450,11 @@ godot::PackedVector3Array ScraperXSimulation::get_catch_net_vertices() const {
 godot::PackedVector3Array ScraperXSimulation::get_catch_net_tether_vertices() const {
     godot::PackedVector3Array out;
     for(const auto &v:simulation_->render_catch_net_tether_vertices()) out.push_back(to_godot(v));
+    return out;
+}
+godot::PackedVector3Array ScraperXSimulation::get_catch_net_patch_vertices() const {
+    godot::PackedVector3Array out;
+    for(const auto &v:simulation_->render_catch_net_patch_vertices()) out.push_back(to_godot(v));
     return out;
 }
 godot::PackedInt32Array ScraperXSimulation::get_catch_net_indices() const {

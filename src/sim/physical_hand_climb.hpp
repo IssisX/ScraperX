@@ -3,6 +3,7 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <array>
+#include <cstdint>
 #include <optional>
 
 namespace scraperx::sim {
@@ -12,11 +13,29 @@ namespace scraperx::sim {
 class CargoNet;
 class PhysicalHandClimb final {
 public:
+    struct GripReadback final {
+        bool attached = false;
+        bool material = false;
+        JPH::BodyID support;
+        JPH::RVec3 world_anchor = JPH::RVec3::sZero();
+        JPH::Vec3 point_velocity = JPH::Vec3::sZero();
+        JPH::Vec3 player_force = JPH::Vec3::sZero();
+        std::uint64_t generation = 0;
+    };
+    // Owner thread, outside Update: actual per-hand anchor/point velocity and
+    // last solved player force. Missing bodies yield an unattached readback.
+    // Generation changes only on successful attachment/regrip or actual release;
+    // switching actuator profiles preserves the attachment identity.
+    [[nodiscard]] GripReadback grip_readback(unsigned hand) const;
     PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player, CargoNet *net = nullptr);
     ~PhysicalHandClimb();
     PhysicalHandClimb(const PhysicalHandClimb &) = delete;
     PhysicalHandClimb &operator=(const PhysicalHandClimb &) = delete;
     bool attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip);
+    // Owner thread, outside Update: add only a missing rigid radial hand.
+    // Retains the planted row/rest/cache/identity and all actuator ledgers;
+    // the new row starts at its actual radius with no added spring preload.
+    bool attach_radial_hand(unsigned missing, JPH::BodyID support, JPH::RVec3 actual_grip);
     // Relocate a real grip while preserving the current spring extension.
     bool regrip(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip);
     void detach(unsigned hand);
@@ -88,6 +107,7 @@ private:
         JPH::Vec3 rest_offset=JPH::Vec3::sZero();
     };
     std::array<SoftHand, 2> soft_;
+    std::array<std::uint64_t, 2> grip_generations_{};
     // In radial mode these SixDOFs are dormant anchor/profile readback only.
     // Exactly one backend is registered per rigid hand. Private User2 radial
     // settings recreate the finite law; global archive registration is not owned

@@ -1,0 +1,210 @@
+# Candidate prefix deliberately excludes tested-release publication.
+# Full gameplay gates remain required and unchanged in the separate proof workflow.
+name: ScraperX ChatGPT — downloadable APK candidate
+'on':
+  push:
+    branches:
+    - ChatGPT
+  workflow_dispatch: null
+permissions:
+  contents: read
+concurrency:
+  group: chatgpt-apk-candidate-${{ github.sha }}
+  cancel-in-progress: false
+env:
+  GODOT_VERSION: 4.7-stable
+  GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+  GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_VERSION: 29.0.14206865
+  GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/ci/android/ScraperX-ChatGPT-debug.keystore
+  GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+  GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+  CHATGPT_SIGNER_SHA256: 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
+jobs:
+  android-apk-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+    - name: Checkout exact source
+      uses: actions/checkout@v4
+    - name: Configure Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Install build and render prerequisites
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+        SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+        test -x "${SDKMANAGER_PATH}"
+        yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+        "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+    - name: Install verified Godot 4.7 editor and Android template
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+        curl --fail --location --retry 3 \
+          --output tools/godot/godot.zip \
+          "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+        echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+        unzip -q tools/godot/godot.zip -d tools/godot
+        mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+        chmod +x tools/godot/godot
+
+        curl --fail --location --retry 3 \
+          --output tools/godot/templates.tpz \
+          "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+        echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+        unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+          -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+        tools/godot/godot --version
+    - name: Build host bridge for Godot resource import (no gameplay test claim)
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake -S . -B build/candidate-host -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+          -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
+          -DGODOTCPP_TARGET=template_release \
+          -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
+        cmake --build build/candidate-host --target scraperx_native --parallel 2
+        mkdir -p artifacts/apk
+    - name: Cross-compile native graph for Android arm64
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake -S . -B build/android-arm64 -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+          -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+          -DANDROID_ABI=arm64-v8a \
+          -DANDROID_PLATFORM=android-24 \
+          -DSCRAPERX_BUILD_BRIDGE=ON \
+          -DSCRAPERX_WITH_JOLT=ON \
+          -DGODOTCPP_TARGET=template_release \
+          -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
+        cmake --build build/android-arm64 --target scraperx_native --parallel 2
+        test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+        file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+    - name: Import shipping Godot project with matching host bridge
+      shell: bash
+      run: |
+        set -euo pipefail
+        tools/godot/godot --headless --editor --path godot --import --quit 2>&1 | tee artifacts/godot-candidate-import.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/godot-candidate-import.log; then
+          exit 1
+        fi
+    - name: Export ChatGPT Android arm64 APK
+      shell: bash
+      run: |
+        set -euo pipefail
+        APK_NAME="ScraperX-ChatGPT.apk"
+        PACKAGE_ID="com.cory.scraperx.chatgpt"
+        APP_LABEL="ScraperX-ChatGPT"
+
+        # Branch-author identity is a delivery contract, not cosmetic metadata.
+        # Keep commit provenance in CHECKPOINT.txt while the APK filename and
+        # installed app identity stay stable and immediately recognizable.
+        grep -F 'config/name="ScraperX-ChatGPT"' godot/project.godot
+        grep -F 'export_path="../build/apk/ScraperX-ChatGPT.apk"' godot/export_presets.cfg
+        grep -F 'package/unique_name="com.cory.scraperx.chatgpt"' godot/export_presets.cfg
+        grep -F 'package/name="ScraperX-ChatGPT"' godot/export_presets.cfg
+
+        # A fresh GitHub runner must not invent a new signing identity. The
+        # committed debug-only keystore is the branch authority for test APKs.
+        test -s "${GODOT_ANDROID_KEYSTORE_DEBUG_PATH}"
+        keytool -list -v \
+          -keystore "${GODOT_ANDROID_KEYSTORE_DEBUG_PATH}" \
+          -storepass "${GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD}" \
+          -alias "${GODOT_ANDROID_KEYSTORE_DEBUG_USER}" \
+          | tee artifacts/chatgpt-debug-keystore.txt
+        KEYSTORE_SIGNER_SHA256="$(awk '/SHA256:/{gsub(":", "", $2); print tolower($2); exit}' artifacts/chatgpt-debug-keystore.txt)"
+        test "${KEYSTORE_SIGNER_SHA256}" = "${CHATGPT_SIGNER_SHA256}"
+
+        mkdir -p build/apk artifacts/apk
+        tools/godot/godot --headless --path godot \
+          --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
+          2>&1 | tee artifacts/godot-android-export.log
+
+        test -s "build/apk/${APK_NAME}"
+        mapfile -t produced_apks < <(find build/apk -maxdepth 1 -type f -name '*.apk' -printf '%f\n' | sort)
+        test "${#produced_apks[@]}" -eq 1
+        test "${produced_apks[0]}" = "${APK_NAME}"
+
+        unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
+        grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+
+        AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+        test -x "${AAPT}"
+        "${AAPT}" dump badging "build/apk/${APK_NAME}" | tee artifacts/apk-badging.txt
+        grep -F "package: name='${PACKAGE_ID}'" artifacts/apk-badging.txt
+        grep -F "application-label:'${APP_LABEL}'" artifacts/apk-badging.txt
+
+        APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+        test -x "${APKSIGNER}"
+        "${APKSIGNER}" verify --verbose --print-certs "build/apk/${APK_NAME}" \
+          | tee artifacts/apk-signing.txt
+        # Build-tools 36 prints "V3.0 Signer: ..." while earlier versions
+        # printed "Signer #1 ...". Verify the single signer and its digest,
+        # independent of that presentation label.
+        grep -F "Number of signers: 1" artifacts/apk-signing.txt
+        awk -v expected="${CHATGPT_SIGNER_SHA256}" '
+          /certificate SHA-256 digest:/ && tolower($NF) == expected { matched = 1 }
+          END { exit !matched }
+        ' artifacts/apk-signing.txt
+
+        cp "build/apk/${APK_NAME}" artifacts/apk/
+        sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
+        printf 'author=%s\nbranch=%s\ncommit=%s\napk=%s\npackage=%s\nlabel=%s\nsigner_sha256=%s\n' \
+          "ChatGPT" "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" "${PACKAGE_ID}" "${APP_LABEL}" "${CHATGPT_SIGNER_SHA256}" \
+          > artifacts/apk/CHECKPOINT.txt
+    - name: Preserve Android updates across download channels
+      uses: ./.github/actions/stable-apk
+      with:
+        files: artifacts/**/*.apk
+        keystore: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+        password: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+    - name: Record candidate identity and explicit proof boundaries
+      shell: bash
+      run: |
+        set -euo pipefail
+        APK=artifacts/apk/ScraperX-ChatGPT.apk
+        ZIPALIGN="$(find "${ANDROID_HOME}/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+        "${ZIPALIGN}" -c -P 16 -v 4 "${APK}" > artifacts/apk-zip-alignment.log
+        python3 ci/record_apk_candidate.py
+        cat >> artifacts/apk/CHECKPOINT.txt <<'BOUNDARY'
+        quality_status=build-candidate-only
+        full_gameplay_proof=separate-required-workflow
+        installed_android_play=not-run
+        BOUNDARY
+        sha256sum "${APK}" > artifacts/apk/SHA256SUMS.txt
+    - name: Upload downloadable ChatGPT APK candidate
+      uses: actions/upload-artifact@v4
+      with:
+        name: ScraperX-ChatGPT-candidate-${{ github.sha }}
+        path: artifacts/apk/
+        if-no-files-found: error
+        retention-days: 90
+    - name: Explain download and quality status
+      shell: bash
+      run: |
+        cat >> "${GITHUB_STEP_SUMMARY}" <<'SUMMARY'
+        ## ChatGPT APK build candidate
+        Download **ScraperX-ChatGPT-candidate-<commit>** under this run's Artifacts, then extract `ScraperX-ChatGPT.apk`.
+        This job compiles the native graph, imports the Godot project, exports and verifies the signed Android package.
+        The full native/Godot gameplay proof remains a separate required workflow. A successful APK build does not mark that proof green or update the tested `apk-latest` release.
+        This artifact has not been installed or playtested on Android. The exact source, checksums, final signer and APK version are included.
+        SUMMARY
+    - name: Retain candidate build failure diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ScraperX-ChatGPT-candidate-diagnostics-${{ github.sha }}
+        path: artifacts/
+        if-no-files-found: ignore
+        retention-days: 14

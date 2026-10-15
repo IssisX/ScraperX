@@ -123,11 +123,23 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 		if ctx["chute_ok"] and danger:
 			out.append(_prompt(&"chute", "OPEN THE CHUTE", "", TONE_DANGER))
 		return out
+	if bool(ctx.get("grapple_equipped", false)):
+		var gun_action: Dictionary = ctx["action"]
+		out.append(_prompt(&"action", gun_action["label"]))
+		if bool(ctx.get("grapple_line_attached", false)):
+			out.append(_prompt(&"auto_reel", "STOP REEL" if bool(ctx.get("grapple_auto_reel", false)) else "AUTO REEL"))
+			out.append(_prompt(&"drop", "RELEASE"))
+		out.append(_prompt(&"toggle_grapple", "STOW"))
+		return out
 	if ctx["operating"] != &"":
+		if bool(ctx.get("grapple_draw_available", false)):
+			out.append(_prompt(&"toggle_grapple", "DRAW GRAPPLE"))
 		out.append(_prompt(&"done", "DONE"))
 		return out
 	var posture := "EXTEND" if bool(ctx.get("swing_tuck_requested", false)) else "TUCK"
 	if bool(ctx.get("single_hand_hold", false)):
+		var reach: Dictionary = ctx["action"]
+		out.append(_prompt(&"action", reach["label"], reach["detail"]))
 		out.append(_prompt(&"jump", "LET GO"))
 		out.append(_prompt(&"drop", "LET GO"))
 		if bool(ctx.get("swing_tuck_available", false)):
@@ -167,6 +179,8 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			out.append(_prompt(&"valve", action["label"], action["detail"]))
 	if ctx.get("drop_ok", false):
 		out.append(_prompt(&"drop", "DROP DOWN", "OVER THE EDGE"))
+	if bool(ctx.get("grapple_draw_available", false)):
+		out.append(_prompt(&"toggle_grapple", "DRAW GRAPPLE"))
 	return out
 
 

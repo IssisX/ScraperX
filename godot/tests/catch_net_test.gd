@@ -147,21 +147,43 @@ func _pose(label: String) -> bool:
 			"canvas has an opaque woven material visible from either side at " + label):
 		return false
 	var endpoints: PackedVector3Array = _native.get_catch_net_tether_vertices()
-	var tether := net.get_node_or_null("Tether") as MeshInstance3D
+	var details := net.get_node_or_null("RubberReinforcement") as MeshInstance3D
 	if not _check(endpoints.size() == 2 and endpoints[0].is_finite() and endpoints[1].is_finite()
 			and endpoints[0].distance_squared_to(endpoints[1]) >= 0.000001
-			and tether != null and tether.is_visible_in_tree() and tether.mesh is CylinderMesh,
-			"visible shockcord uses two finite native attachment endpoints at " + label):
+			and details != null and details.is_visible_in_tree() and details.mesh is ArrayMesh
+			and details.mesh.get_surface_count() == 1,
+			"visible batched shockcord uses finite native endpoints at " + label):
 		return false
-	var casing := tether.mesh as CylinderMesh
-	var from := tether.transform * Vector3(0.0, -0.5 * casing.height, 0.0)
-	var to := tether.transform * Vector3(0.0, 0.5 * casing.height, 0.0)
-	if not _check(from.distance_to(endpoints[0]) < 0.0002 and to.distance_to(endpoints[1]) < 0.0002
-			and absf(tether.transform.basis.x.length() * casing.top_radius - 0.01) < 0.00001
-			and absf(tether.transform.basis.z.length() * casing.bottom_radius - 0.01) < 0.00001
-			and absf(tether.transform.basis.x.dot(tether.transform.basis.y)) < 0.00001
-			and absf(tether.transform.basis.z.dot(tether.transform.basis.y)) < 0.00001,
-			"20 mm shockcord casing connects actual native endpoints without offsets at " + label):
+	var details_arrays := details.mesh.surface_get_arrays(0)
+	var detail_points: PackedVector3Array = details_arrays[Mesh.ARRAY_VERTEX]
+	var detail_colors: PackedColorArray = details_arrays[Mesh.ARRAY_COLOR]
+	if not _check(detail_colors.size() == detail_points.size(), "contact detail vertex tints at " + label):
+		return false
+	var axis := endpoints[1] - endpoints[0]
+	var casing_length := axis.length()
+	axis /= casing_length
+	var min_along := INF
+	var max_along := -INF
+	var casing_vertices := 0
+	var max_radius := 0.0
+	for i in detail_points.size():
+		# Inspect actual orange casing geometry, independently of its source primitive.
+		if detail_colors[i].r < 0.5:
+			continue
+		var point := details.transform * detail_points[i]
+		var offset := point - endpoints[0]
+		var along := offset.dot(axis)
+		var radius := (offset - axis * along).length()
+		if not _check(point.is_finite() and along >= -0.0002 and along <= casing_length + 0.0002
+				and radius <= 0.01002, "casing stays on native axis within physical radius at " + label):
+			return false
+		min_along = minf(min_along, along)
+		max_along = maxf(max_along, along)
+		max_radius = maxf(max_radius, radius)
+		casing_vertices += 1
+	if not _check(casing_vertices >= 24 and absf(min_along) < 0.0002
+			and absf(max_along - casing_length) < 0.0002 and absf(max_radius - 0.01) < 0.00002,
+			"20 mm batched shockcord spans actual native endpoints without offsets at " + label):
 		return false
 	var frame_index := int(_native.get_kit_body_index(FRAME))
 	var frame := kit.get_node("KitBody2963") as Node3D

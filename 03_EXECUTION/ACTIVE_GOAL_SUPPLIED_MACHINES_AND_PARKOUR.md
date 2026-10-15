@@ -59,24 +59,15 @@ records implementation progress and evidence against this full scope.
   record its actual reason. Preserve the eight delivered player repairs and
   existing cargo, monorail, scissor-lift and successful campaign behavior.
 
-## 2. IMPORTANT: gravity-fed falling-material Ferris wheel
+## 2. IMPORTANT: Ferris wheel
 
-`ferris-wheel-machine.jpg` is a priority because the owner identifies it as
-especially representative of the desired machinery. Give it precedence after
-the current complete integration/movement boundary when placement is coherent.
+`ferris-wheel-machine.jpg` remains an important machine priority after the current complete integration/movement boundary when placement is coherent.
 
-Preserve **falling material → real wheel loading and torque → player ascent**.
-Choose stone, dirt, sand or another coherent material; stone is not required.
-Implement a finite supply, reachable feeding/controls, actual impact and load
-transfer, retention and discharge/spill, boarding, timed/usable exit and
-recovery/reset/reload. A powered wheel with decorative material does not satisfy
-this requirement.
+Owner correction2026-10-14: **the wheel does not have to be gravity-fed**. Choose a suitable finite motor, mechanical drive linkage, gravity-fed material, or other coherent industrial power source. Real torque/work, wheel/player loading, bearings/support reactions and motion remain authoritative.
 
-High-quality falling material is part of the deliverable: varied and convincing
-geometry, deliberate surfaces/textures, matching consequential collision and
-mass/inertia, appropriate feeding/spill/contact behavior and sound. Generic
-low-quality debris does not satisfy the owner's request. Choose detail and
-active-body counts for mobile performance while retaining the real load path.
+Build reachable understandable controls, meaningful boarding decisions, exposed ascent, usable timed exit, recovery/reset and persistent consequences. Include finite material supply, feeding, retention/discharge/spill and reload when that design uses material power; material claimed to drive the wheel must transfer real load/energy. Stone remains optional.
+
+Maintain deliberately high-quality geometry/materials, consequential collision/mass/inertia and appropriate sound. If falling material is used, its geometry/surfaces/contact/spill must meet that same quality bar; generic low-quality debris does not satisfy it. Choose detail/body counts for mobile performance while retaining the actual load path.
 
 ## 3. World experience and encounter design
 
@@ -134,11 +125,11 @@ a miss and feasible recovery; the useful persistent aftermath; and how the exit
 prepares the next experience. Complete this depth, then move onward.
 
 Prioritize place, decisions and emotional pacing. Add detail when it strengthens
-those outcomes. For the important gravity-fed wheel, author the whole approach,
-observation, finite material feeding, boarding decisions, exposed ascent,
+those outcomes. For the important Ferris wheel, author the whole approach,
+observation, understandable drive controls, boarding decisions, exposed ascent,
 challenging exit, failure/recovery and persistent aftermath, with deliberately
-high-quality geometry/material/contact/audio/retention/spill behavior. Falling
-material physically drives the wheel.
+high-quality geometry/material/contact/audio behavior. Gravity feeding is optional;
+the selected source must actually drive the wheel through a finite physical load path.
 
 ## 4. Challenging parkour and human-limited movement
 

@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-13",
+  "as_of": "2026-10-15T03:05:32Z",
   "method": "Weighted rough engineering estimate against canonical full scope; demonstrated implementations, partial source work and remaining connected/delivery requirements. Never automatic credit for elapsed time or isolated passes. Reassess on each user-facing report; unchanged estimates need an explanation.",
   "phase_weights_percent": [
     3,
@@ -26,16 +26,16 @@
     50
   ],
   "overall_estimate_percent": 61,
-  "limits": "Verified shared rigid/material paidposture, passivecoupling, actual per-hand approach and deliberate single-rigid-hand passivecatch/realfeedback. Universalshapes, automatic/materialonehand, fullonehandclimb/promotion, articulatedlimbs, phonefeel and fullmovementcoverage remains pending; baseline fullGREEN/APK verified.",
-  "evidence_frontier": "Local corrected contact/friction/force/36m catch/45m model/ordinary36m exit PASS. Publication and full exact-source GREEN/render/APK pending; previous candidates are historical.",
+  "limits": "Overall61% retained: worldwide carried grapple, feedback, alternating shimmy and native-aligned gun delivered; broad canonical scope remains. No full GREEN/device-ready claim.",
+  "evidence_frontier": "Selected857281inputdebugAPKaa8c772a...; gunstatusactualMain21PASS; secondhandnativepublic/Android+Mainphone28PASS; nativebyteidentityfa826... . All prior850\u2013856 progression/evidence preserved. Deviceplay remains unobserved.",
   "queued_movement_update": {
     "source": "ScraperX_Primate_Traversal_Research_Bundle.zip",
     "sha256": "b04ff9315aabebf7da3e55b728fed239041f2d715ad3151d5bcf10267f19164f",
-    "status": "PARTIALmodule3 verifiednative integrations; currentclosure honestrelease/postureUI. Furtherhandpromotion/automatic/materialonehand andfullonehandclimbingdeferred underlatestownerpriority.",
+    "status": "PARTIAL broad movement integration: explicit solo catch/posture/release, alternating planted-hand shimmy and native explicit same-rigid-support second-hand recovery implemented. Material/cross-body recovery, automatic catch policy, articulated limbs and broader canonical modules remain deferred; actualphone recovery acceptance pending.",
     "scope": "03_EXECUTION/PRIMATE_TRAVERSAL_INTAKE_2026-10-10.md",
     "encounter": "Shared appropriate hanging attachments; first complete hanging-bar integration plus static/moving ledge tests",
     "rough_module_progress_percent": 42,
-    "estimate_basis": "Rough42% retained because broadshape/material/automaticonehand/promotion/articulatedlimbs/phonefeel andothermodules remainopen; explicitsinglecatch/feedback completions tracked separately, notfullscope completion.",
+    "estimate_basis": "Broad42% estimate retained pending material/crossbody/corner/automatic/articulated/device-feel and remaining modules. Concrete delivered additions are tracked separately; no automatic numeric credit for elapsed time or check counts.",
     "proposed_first_slice": "Shared condition-based deliberate paid0.25m tuck/extension through existing native hands, real controls/COM response/manualtiming/release/receiver/recovery; then general passive free-arc swinging."
   },
   "system_maintenance": {
@@ -46,7 +46,7 @@
     "publication": "local only; no push/build",
     "scope_unchanged": true
   },
-  "owner_movement_intent": "Expert parkour fluency: extraordinary climbing, precise footwork, confident catches and smooth momentum-bearing transitions, nearly monkey-like agility with physical causality. Every hangable part uses appropriate shared mechanics. Hook launcher brainstorming only; implementation after movement.",
+  "owner_movement_intent": "Expert contact-rich parkour with physical causality, extraordinary motion and presentation. Latest owner priority: carried grappling gun usable throughout the world with automatic reel; delivered850\u2013855. Then useful complete canonical movement slices, now explicit same-rigid-support second-hand recovery.",
   "agent_reasoning_policy": {
     "owner": "/storage/emulated/0/Download/Agent_Reasoning_Policy.md",
     "supported_installed_sol_levels": [
@@ -63,9 +63,9 @@
     ],
     "models_preserved": true,
     "saved_default_tier": "default (Standard)",
-    "fallback_effort": "low",
-    "current_assignment": "Medium spill diagnosis and Low consequence verification complete/released. Root quiet cost/integration/delivery; no idle worker staffing. SavedSuperLow/Standard; root live controls unavailable.",
-    "runtime_limits": "Currentroot liveeffort/tier cannotbe set/verified by availableAPI; existinglocalfollowup hasnoeffort override; newworkers neededforchangedlevel. MCPswithoutcontrol cannotbe claimedchanged.",
+    "fallback_effort": "medium",
+    "current_assignment": "Bounded Sol/medium Android native worker complete; root integrated and delivered updateddebugAPK. No settings audits.",
+    "runtime_limits": "Owner says no repeatedsettingsaudits; acceptedmedium live/future/default controls already recorded, no new active-rootsampling inference.",
     "verification": "/storage/emulated/0/Download/Agent_Reasoning_Settings_Verification.json"
   },
   "deferred_catch_net_exit_roll": {
@@ -95,101 +95,205 @@
   },
   "historical_execution_records": "evidence/state-refresh-2026-10-13/ACTIVE_GOAL_PROGRESS.json",
   "execution_state": {
-    "updated_utc": "2026-10-13T20:03:32.455222+00:00",
-    "goal": "Deliver corrected physical catch-net GREEN/APK, then build and deliver one challenging462\u2013484m parkour connection with stable exit and real missed-jump recovery",
-    "published_parent": "a72e3b623f1188b849201f1048906888994ead92",
-    "candidate_status": "Local41x41 canvas+finitegroundtether native45m/force/player and rebuilt-bridgeGodotday PASS; publication and fullnormalActions pending",
-    "host_goal_ui": "combined two-stage goal active; created after owner cleared prior goal",
-    "current_evidence": "evidence/canvas-contact-resolution-2026-10-13/FINAL_ACCEPTANCE.md",
-    "native_checks": [
-      "14contact cases",
-      "existing friction/force",
-      "36m neutral catch",
-      "45m model",
-      "ordinary36m exit to grade"
+    "goal": "Final delivery handoff",
+    "status": "three-hourwindow complete; finalhandoff saved; selected857 delivered",
+    "root_owner": [
+      "src/sim/simulation.cpp",
+      "src/sim/simulation.hpp",
+      "src/bridge/scraperx_simulation.cpp",
+      "integration/documentation/delivery"
     ],
-    "pending": [
-      "normal full67native/16Godot Actions",
-      "8 LOW day/night capture inspection/day profile",
-      "exact stable APK/source/hash/signer/increasing version/artifact link"
+    "completed_workers": [
+      "movable_weight_owner_map",
+      "balance_block_ui",
+      "counterweight_payoff",
+      "inspection_motion_feedback"
     ],
-    "current_source_cost": "not measured; historical quiet/loaded windows are not current-source proof",
-    "active_workers": [],
-    "next_action": "Commit/push integratedcandidate after remote ancestry check, start one normalexactsourceActions; requirefullGREEN and matchingAPK beforeStage2",
-    "last_ci": {
-      "source": "d37b793f5e6c12a0338b59552acda68350b3a338",
-      "run": 38445877254,
-      "status": "RED64/67native",
-      "failed": [
-        "material_hanging_posture",
-        "catch_net_model",
-        "catch_net_player"
-      ],
-      "captures_reached": false,
-      "apk_reached": false
+    "next_action": "Nextauthorizedimplementation packet:03_EXECUTION/PLANNING/NEXT_CONTACT_SLICE_AFTER_857.md. Oneactualcornerregrip fromexistingowners; preserve462\u2013484gate/catchdebugexclusion. No completedcampaign/settingsaudit.",
+    "no_catch_debugging": true,
+    "no_apk": false,
+    "precision_evidence": "evidence/inspection-drawbridge-2026-10-14/precision/RESULT.md",
+    "current_frontier": "Selected857281inputdebugAPKaa8c772a...; gunstatusactualMain21PASS; secondhandnativepublic/Android+Mainphone28PASS; nativebyteidentityfa826... . All prior850\u2013856 progression/evidence preserved. Deviceplay remains unobserved."
+  },
+  "deferred_physical_trapeze_encounter": {
+    "owner_requested": "2026-10-13",
+    "status": "to-do after current462\u2013484m parkour connection",
+    "implemented": false,
+    "scope": "03_EXECUTION/PLANNING/VISIBLE_PLAYER_VALUE_NEXT_SLICE.md#owner-added-later-encounter--physical-trapeze",
+    "acceptance": "Actual catch, manually timed finite-work swing/pumping, momentum-preserving release to realhold/ledge, stableexit and feasiblemiss/retry. Placement notselected; no catch-netdependency."
+  },
+  "selected_world_dynamics": {
+    "owner_requested": "2026-10-13",
+    "status": "First movablecounterweight encounter demonstrated fullordinarynativePASS13585; widerbracing/persistence/humans remain pending",
+    "scope": "03_EXECUTION/PLANNING/SELECTED_WORLD_DYNAMICS.md",
+    "requirements": [
+      "useful loose objects",
+      "deliberate emergency bracing",
+      "visible persistent changes",
+      "small coherent human encounters"
+    ],
+    "first_loose_object_choice": "ownerselected movableweight/counterweight; engineering choices autonomous",
+    "implemented": true
+  },
+  "angled_plant_and_push_off": {
+    "status": "pending bounded native movement addition",
+    "implemented": false,
+    "existing_owner": "src/sim/physical_foot_push.cpp andnativejumpcontroller",
+    "limits": "Existing finiteleg wiredplank-only; generalangledplant notdemonstrated. Realcontact/reach/traction, finiteforce/work/reaction, promptintent andmomentum; retainstandardjumpbaseline."
+  },
+  "later_throwing_and_grappling_hook": {
+    "owner_requested": "2026-10-13",
+    "status": "Physically causal gun/worldwidecarriedcontrols/autoreel/nativefeedback/nativealignedtool delivered850\u2013856; additionalcanonicalthrowing/encounters remain deferred",
+    "implemented": true,
+    "scope": "03_EXECUTION/PLANNING/SELECTED_WORLD_DYNAMICS.md#owner-requested-later-throwing-and-grappling-hook",
+    "limits": "Finite4cartridge/hookinventory,18mline,realgeometry/collision/traction/momentum/failure; no fakeanchors/elevationgrants. Independent407 demonstrates loadedrise/exit, not407platformtoparrival. No installedGodotAndroiddevicefeel proof."
+  },
+  "owner_scope_corrections": {
+    "ferris_wheel": "2026-10-14 gravityfeedingoptional; coherentfinitepowereddriveallowed, existingcode-linkedgravityidentifierspreserved",
+    "portable_grappling_gun": "2026-10-14 ownerwantstoolawayfrompracticebay; acquirednativeequippingalreadyhasnolocalrackrequirement, multi-anchorcoverageandAPKpending",
+    "automatic_reel": "2026-10-14 one-tapAUTO REEL/STOPREELimplementedandverifiednative/Godot",
+    "apk_delivery_20261014": "Build a playable debug APK after currentphysicaltopout affectednative/Godotchecks; earliernoAPKboundarysuperseded. Reportknownremainingdefects; no automaticcommercial-readyclaim.",
+    "critical_collaboration": "Userrequiresplainpushback: treatownerclaims/designs asfalliblehypotheses, useactualevidence andobjectivepreservingengineeringjudgment."
+  },
+  "portable_grappling_rail_20261014": {
+    "status": "native verified PASS3394; original primary2135/unit20/20/final same-life miss-retry4503",
+    "owner": "root",
+    "production_change": "Initial muzzle yaw/pitch covariance only; free flight remains actual torque/contact-owned",
+    "anchor": "Existing entity1966 part31 50mm square return leg, same assembly reverse-use from receiver away from acquisition rack",
+    "acceptance": "ordinary acquisition/crossing/walk/fire; physical square capture45ticks and180tick pause; AUTO finite reel403.455770J/22 consecutive airborne ticks>250N; Stop/Drop/real receiver90tick firm footing/zero deaths/two spent cartridges",
+    "evidence": "evidence/grappling-gun-2026-10-14/portable-rail/RESULT.md",
+    "current_native_archive_sha256": "96b121638ac05c9e0d8af846a5b033a90306a69b92c8b60d4678d93a990e1508",
+    "limits": "Same assembly, not independent route/arbitrary surface. Prior Godot111/render31 remains on preserved2b87 archive. New yaw candidate no Godot/phone/APK proof. CTest registration added; private native runners actually executed.",
+    "historical_scope_note": "This portable-rail card preserves its exact historical96b12163fixture. Current worldwide/feedback/launchframe/secondhand deliveries and accepted evidence are tracked in later cards; old new-yaw/Godot/APK pending wording does not describe current frontier."
+  },
+  "living_inspection_drawbridge": {
+    "status": "Complete native ordinary encounter; raisedGodotpresentation/feedback accepted, no device/APK claim",
+    "plan": "03_EXECUTION/PLANNING/LIVING_INSPECTION_DRAWBRIDGE.md",
+    "active_goal": "Wake and cross the28m span through real movable counterweight placement and physical hatch/cable coupling",
+    "milestone": "Native counterbalanced span, structural seat, real hatch cable, ordinary pickup/drop/operator-assisted lowering and affected Godot attachment presentation implemented. Full connected hold/recover/retry/cross remains pending.",
+    "next_goals": [
+      "Life between actions",
+      "Returning/improvisation payoff",
+      "Next extraordinary canonical encounter"
+    ],
+    "owner_direction": "Dynamics, effects, beautiful mechanics, life and motion; only extraordinary in-depth experiences",
+    "verification_policy": "affected checks once; valid evidence reused; no verification-only goals",
+    "native_entity_ids": {
+      "block": 1902,
+      "bearing": 1903,
+      "seat": 1904,
+      "cable_frame": 1905
     },
-    "last_delivered": {
-      "source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
-      "run": 38324998786,
-      "artifact": 11783310983,
-      "version": 214017513,
-      "contains_catch": false
+    "current_native_archive_sha256": "5cfb996e55e0eb1edca8873c72aebb18d3379f0216f7250d432015acf37ac46a",
+    "current_frontier": "PASS13585 exit0 zero deaths, fullordinary462mapproach+blockhold/recover/physicalrestore/retry+girder/conduit+stableexisting484roof. Sourcebound evidence ordinary-counterweight/. Reuse this result until affected sourcechanges. Next worksite-life goal starts separately.",
+    "evidence": "evidence/inspection-drawbridge-2026-10-14/ordinary-counterweight/RESULT.md"
+  },
+  "inspection_worksite_life": {
+    "status": "complete",
+    "shipping_helper": "godot/presentation/inspection_worksite_life.gd",
+    "acceptance": "standaloneheadless+actualGodotrenderPASS7291,Mainsetup/updateAPIexecuted,rootlower/uppervisualinspection",
+    "evidence": "evidence/inspection-drawbridge-2026-10-14/rendered/worksite-life-5cfb996e/RESULT.md",
+    "limits": "Noncollidingambientcloth/lamps only; purposefulhumanencounter andreturn/improvisationremain"
+  },
+  "real_movement_integration": {
+    "status": "first_rigid_slice_complete_later_migration_preserved",
+    "intake": "03_EXECUTION/PLANNING/REAL_MOVEMENT_CONTACT_INTEGRATION.md",
+    "native_archive_sha256": "c1ef1194404a55ef42e27a503c802a7c71fafc90a7575fde8a42d8cbaa924b32",
+    "evidence": "evidence/newmovement/",
+    "later_scope": [
+      "broader entry/material/cargo-transfer overlap",
+      "materialcache adapter",
+      "462\u2013484 genuinecatch path beyond accepted currentconnections",
+      "corner/crossbody/material shimmy beyond accepted alternatingrigidshimmy",
+      "swing/brachiation",
+      "palmpropvault",
+      "landing/roll/stumble/balance extensions",
+      "optionaltrainedadvisor"
+    ],
+    "next_delivery": "Selected857 includesaccepted856secondhandandgunstatus21; nativebyteidentical856Androidproof reused. Allpriorfirstslice/entry/shimmy accepted evidence retained.",
+    "postsolve_handoff": "PublicPASS269; northPASS1.7s; GodotPASS705; restartPASS both boundaries; frameequivalencePASS fixed90/caller60/360/grouped4.",
+    "entry_overlap_frontier": "complete for valid existing PlankJump into compatible Cartesian hands at actual receiver rail; source-bound public natural/entry/release/expired/radial and Godot evidence accepted",
+    "additional_delivered": "Alternatingrigidshimmy +focusedactualcompoundreceivercontact852; explicitmissingrigidradialhand856. Each has sourceboundper-fixture evidence; no automaticfull-suiteclaim."
+  },
+  "android_debug_delivery": {
+    "status": "final_three_hour_debug_apk_delivered",
+    "evidence": "evidence/android-grapple-status-debug-2026-10-14/build-provenance.json",
+    "version_code": 213671857,
+    "package": "com.cory.scraperx.chatgpt",
+    "device_installed": false,
+    "limitations": "Sleeve/shoulder ends can cross nearplane; deviceplay and broad canonical scope remain unverified",
+    "android_native_runtime": "Byteidentical856nativeSO: acceptedactualAndroidsecondhandneutral/directionheldAction260/pairedcontrols/Drop/restart reused; no installedGodotapp proof",
+    "apk": "/storage/emulated/0/Download/ScraperX-2026-10-14-213671857/ScraperX-ChatGPT.apk",
+    "apk_sha256": "aa8c772ade3c46a59ae26361c7d33b6cae2448085bc67336e47dabb4dca8e856",
+    "native_sha256": "fa826e7aa7c44451d24dd042710acedf40bea2d389d15f658e7e9658603d95d1",
+    "identity": "PASS expectedpackage/version/label/signature/nativebytes/16Kalignment",
+    "prior_delivery_preserved": "848\u2013856 retained;853/854 rejectedvisualintermediates retained with exact source/evidence"
+  },
+  "worldwide_grapple_20261014": {
+    "status": "complete",
+    "goal": "Carried gun accessible throughout world and loaded use on independent real structure, preserving physical collision/rope/reel laws",
+    "controls": "Godot Main/native25 and touch220 PASS; current nearverticalaim accepted; keyboardT/padLB/touchDRAW-STOW, keyboardB/padRB/touchAUTO-STOP",
+    "independent_route": "publicindependent407PASS4417 on8a1614d4:0.300751m loadedrise/496.328956J/39airborne-loadedticks,45capture+90passive,release/firmtray/2.4mexit,zero deaths; not407toparrival",
+    "native_frontier": "8a1614d4 native20/20 primary2136 independent4417 missretry4951 PASS; currentdrawbridgebf8PASS11302; matchingAndroid20/20PASS",
+    "delivery": "APK213671850 delivered/sourcebound, SHA55c6f03894ba9b421377a8479f534d224083138a59cce6dfc3e68ed39503c03b;269inputs+Androidarchivespreserved; no installedGodotAndroidplayclaim",
+    "deferred": "catch debugging; all later canonical scope preserved"
+  },
+  "grapple_feedback_20261014": {
+    "status": "complete",
+    "goal": "Native-receipt launch report/tool-only recoil, real winding/spool, finite-load tone, tension danger and actual failure; quiet lifecycle transitions",
+    "ownership": "Rootmodel/Main/GunView; MCP Solmediumaudio workerSoundBank/AudioDirector; localSolmedium runtime/build workers",
+    "scope": "presentation followsnativefacts; no captureguess/contactclang/newforces; nextmatchingAPK851 afteraffectedchecks",
+    "acceptance": "current integrated54/audio39PASS; actualready/launch/windingsoftwarecaptures rootviewed; APK851delivered sourcebound, unchangedAndroidSOccb77ereuses850native20/20",
+    "next": "Alternating planted-hand Hanging shimmy on existing canopy path; rootimplements existingSimulation/finitehandowner, no true single-hand-supportedsolve claim"
+  },
+  "alternating_shimmy_20261014": {
+    "status": "complete; debugAPK852 delivered",
+    "goal": "Alternating planted-hand Hanging shimmy along existing canopy/pocket path, preserve finite owners",
+    "root_changes": "Simulation only; one actual trailing hand at distinct reachable lead, keep plantedanchor/gen, samecontinuousrigidsupport, placementcooldown/lifecycleresets; no force/work/velocity/gravitychanges",
+    "candidate_native": "f4afbaecc7cb93f822ee7674239b69536addb8a7ab5f47a4a3cfc5baae88cd14",
+    "baseline": "Matched final fixture on8a: ordinary catch52, old BOTH497/cadencefalse; topout fails1073 Hanging2, no transferplan/foot. Failure on this route pre-exists newalternation.",
+    "acceptance": "Native+actualAndroidpublicPASS1161 unchanged153deadline/firm90; BOTH0/L12/R14/cadence/planted/trailing; affectedtopout/blocked/release/no-candidate/restart/framesPASS; Godotarmsfixture7 andactualMain/nativebridge16PASS.",
+    "delivery": "APK213671852 delivered SHA2b76a3e5d57baee762a8e07b9c516d02bc67db768868d7fb43a99de1911932a6; SOd0ca6b2c10eed37893c780d4944f55ed1a5267cd8eea4d43242271c4f67ae26c;276inputs+actualAndroidarchives preserved; no installedapp/devicefeel claim",
+    "scope": "No true one-hand-supportedsolve; latercrossbody/material/corner scope preserved"
+  },
+  "gun_launch_presentation_20261014": {
+    "status": "complete; debug855 delivered",
+    "goal": "Visiblegunbarrel aligns with authoritative native launchorigin/direction, preserve physicalshotlaws; rootowns integration",
+    "baseline": "Accepted851 render shows projectile offset fromvisiblebarrel; currentmodelcameraoffset(.23,-.19,-.43) vsnativeCOM+.35up+.85aim",
+    "delivery": "855SHA4d8f1334ec1c0571547c641a258b6f03e60ee2f1cf7b2cf1ff72934c56671ace;278frozeninputs; isolatedsourceexport;853/854 rejectedintermediates preserved",
+    "native": "ccaa9444138b98f2ef3b832abe04dafce6ac0b1b5b8cf160924f7c81ffcd2509 native20/20; actualAndroid85320/20; initialGodot45+54PASS",
+    "visual": "Correctedshippingnear.25/eye.62 fixture39/actualMain55/feedback54PASS; rootviewedall3captures andacceptedtool/palms/sightline. Sleeveendsclipping remains explicit separate limitation."
+  },
+  "explicit_second_hand_20261014": {
+    "status": "complete; debug856 delivered",
+    "native": "e542da42f3b320cd97bb0975ba31d3f93f27e0aa426c8110d582a285a8a28d71",
+    "accepted": "Privatehandprimitive18/18 exactintegratedidentity; highsource review; nativepublic bothneutral+helddirectionAction260/500W/.6mps/Drop/restart PASS; oldsoloPASS reused",
+    "pending": "Material/cross-body/corner/automatic acquisition and installed phone feel remain deferred",
+    "scope": "Explicit same-rigid-support missinghand;82mm derivedpalmspacing; no auto/material/crossbody/acquisitiontopout",
+    "candidate_delivery": {
+      "version_code": 213671856,
+      "apk": "/storage/emulated/0/Download/ScraperX-2026-10-14-213671856/ScraperX-ChatGPT.apk",
+      "apk_sha256": "9ebd774bc3cd7e6216ce3b5fad796012f6cc1c866ffc8dc83d0e515dd74c2414",
+      "native_sha256": "fa826e7aa7c44451d24dd042710acedf40bea2d389d15f658e7e9658603d95d1",
+      "freeze_inputs": 280,
+      "identity": "PASS; candidate not selected until actualphone andAndroidnative acceptance"
     },
-    "published_candidate": "d37b793f5e6c12a0338b59552acda68350b3a338",
-    "stage2": {
-      "status": "prepared; blocked byStage1GREEN dependency, no gameplay integration",
-      "entry": "earned462.25m west roof",
-      "middle": "sparse473m north-brace inspection junction",
-      "exit": "existing484.25m roof",
-      "acceptance": [
-        "ordinary reachable approach and physical open-gap jump",
-        "stable actual484m receiving/onward footing",
-        "miss lands/retries from real462m support"
-      ],
-      "scope": "proposal dimensions require actual geometry/runtime validation; no observed prior route failure claimed",
-      "super_agent_review": "Advisory Sol/Medium complete,0children; identified receiver-obstructing upper-girder start and484.25 exit-height mismatch. Suggested43/45-riser stair geometry is a proposal, not accepted runtime behavior; root will prefer existing brace ascent when proven reachable, preserving distinct parkour challenge."
-    },
-    "reference_branch": {
-      "branch": "ScraperX-Claude",
-      "revision": "27cedcaa648c5d2a8ad19edb8a9e67af5313a1d1",
-      "checkout": "/data/data/com.termux/files/usr/tmp/scraperx-claude-reference-20261013",
-      "mode": "read-only reference; never target write authority or bulk merge",
-      "notes": "03_EXECUTION/PLANNING/CLAUDE_REUSE_NOTES_2026-10-13/",
-      "status": "Bothreaders completed; findings saved in assigned notes"
-    },
-    "native_checks_architecture": "ARM candidate45m/force/player/failure/underside/restartPASS; x86 normalfullsuite pending",
-    "active_local_run": null,
-    "replacement": {
-      "type": "actual continuous reinforcedcanvas catch, not openweave rope mesh",
-      "status": "ARM changednative/input/rendered paths PASS; normalx86/Godot/Android delivery pending",
-      "vertices": 1681,
-      "triangles": 3200,
-      "attachments": 160,
-      "total_mass_kg": 150,
-      "source_owners": "native and rendering workers finished; root owns integration",
-      "preserves": "defaultcargo1953 openweave, nativeJolt ownership,90Hz, existingfall/injury/exit criteria",
-      "reason": "owner authorized faster coherent alternative to unproductive solver investigation",
-      "tether": {
-        "anchor_body_local": [
-          -34,
-          0.4,
-          -150
-        ],
-        "material_grid": [
-          20,
-          20,
-          0
-        ],
-        "rest_length_m": 2.5,
-        "stiffness_N_per_m": 600,
-        "damping_Ns_per_m": 300,
-        "physics": "finite unilateral implicit radial material-to-frame reaction; actual native endpoints; slightpreload",
-        "evidence": "ARM45mPASS latepeak.139552m/s range.0233545m; nativeactualforce/slack/taut/P/L/energyPASS; actualdayrender running"
-      }
-    },
-    "host_goal_estimate": {
-      "percent": 45,
-      "scope": "current two-delivery goal only; rough estimate, fullcanonical scope unchanged"
-    }
+    "phone": "ActualMain/native28PASS private864viewportonly; productioninputs856byteidentical; rootviewed3captures. Full2160softpipebudget run incomplete, notPASS."
+  },
+  "gun_status_20261014": {
+    "status": "complete; selected857 delivered; allactualprocessreceipts closed",
+    "root_change": "Main STATUS row uses actualnative last_failure hazardtone or state_name neutral; no new native/input/physics authority",
+    "native_reuse": "857SOfa826e7aa7c44451d24dd042710acedf40bea2d389d15f658e7e9658603d95d1 byteidentical to actual856Androidnativeaccepted; no rerun",
+    "candidate_apk": "/storage/emulated/0/Download/ScraperX-2026-10-14-213671857/ScraperX-ChatGPT.apk",
+    "candidate_sha256": "aa8c772ade3c46a59ae26361c7d33b6cae2448085bc67336e47dabb4dca8e856",
+    "visual": "ActualMain/nativePASS21 naturalexit0; rootviewedHOOKOUTOFREACHhazard and clearedRELEASEDneutralcaptures; stock/timeunchanged. ExactMain/test857 source; noinstalleddeviceclaim.",
+    "test_limits": "Originalframepertickrender budget stop143; rootfixturewrongbuttonIDfailed1correctedtoactualgrapple. Preserveboth; neverclaimthemPASS."
+  },
+  "github_apk_delivery_20261015": {
+    "status": "publishing preserved source and independent APK candidate workflow",
+    "objective": "Recent downloadable ChatGPT-branch APK with exact-source provenance; retain separate full gameplay release gates",
+    "cause": "Recent APK850\u2013857 remained local; last full GitHub proof failed deferred catch-net and skipped export",
+    "delivery_guide": "ci/APK_DELIVERY.md",
+    "scope_unchanged": true
   }
 }

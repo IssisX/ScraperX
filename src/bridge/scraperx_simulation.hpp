@@ -4,6 +4,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
@@ -49,6 +50,15 @@ public:
     [[nodiscard]] bool request_slingshot_drop();
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] godot::Dictionary get_slingshot_render_state() const;
+    [[nodiscard]] bool set_grapple_aim(double x, double y, double z);
+    [[nodiscard]] bool set_grapple_equipped(bool equipped);
+    [[nodiscard]] bool set_grapple_reel_input(double input);
+    [[nodiscard]] bool set_grapple_auto_reel(bool enabled);
+    [[nodiscard]] bool request_grapple_action();
+    [[nodiscard]] bool request_grapple_release();
+    [[nodiscard]] godot::Dictionary get_grapple_gun_state() const;
+    [[nodiscard]] godot::Dictionary get_grapple_gun_render_state() const;
+    [[nodiscard]] godot::Array get_grapple_hook_geometry() const;
     [[nodiscard]] godot::Dictionary get_landing_state() const;
     [[nodiscard]] godot::PackedVector3Array get_slingshot_prediction() const;
     [[nodiscard]] bool request_parachute();
@@ -236,6 +246,7 @@ public:
     [[nodiscard]] godot::PackedVector3Array get_catch_net_vertices() const;
     [[nodiscard]] godot::PackedInt32Array get_catch_net_indices() const;
     [[nodiscard]] godot::PackedVector3Array get_catch_net_tether_vertices() const;
+    [[nodiscard]] godot::PackedVector3Array get_catch_net_patch_vertices() const;
     [[nodiscard]] godot::Dictionary get_catch_net_state() const;
     [[nodiscard]] std::int64_t get_kit_body_count() const;
     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;

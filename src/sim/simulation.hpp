@@ -2,6 +2,7 @@
 
 #include "sim/steam_plant.hpp"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -39,6 +40,29 @@ struct Quaternion final {
     double y = 0.0;
     double z = 0.0;
     double w = 1.0;
+};
+
+struct GrappleGunSnapshot final {
+    struct Hook final {
+        bool present = false;
+        std::uint32_t body = ~std::uint32_t{0};
+        Vector3 position{};
+        Quaternion rotation{};
+    };
+    bool available = false, acquired = false, equipped = false;
+    bool station_available = false, line_attached = false;
+    bool action_recovers_hook = false, auto_reel = false;
+    unsigned state = 0, failure = 0, cartridges = 0, available_hooks = 0;
+    std::uint32_t active_hook = ~std::uint32_t{0};
+    Vector3 player_endpoint{}, hook_endpoint{}, rack_position{};
+    // Validated pending input and existing native launch geometry; prospective,
+    // not a new body/attachment or a claim that a cartridge has fired.
+    Vector3 launch_origin{}, launch_direction{0, 0, -1};
+    double line_length_m = 0, tension_n = 0, extension_m = 0;
+    double launch_work_j = 0, last_launch_work_j = 0, reel_work_j = 0;
+    double stored_elastic_energy_j = 0, spool_absorbed_energy_j = 0;
+    double release_discarded_elastic_energy_j = 0;
+    std::array<Hook, 4> hooks{};
 };
 
 // Production never constructs the retired campaign. Regression scenes are explicit test inputs.
@@ -214,12 +238,28 @@ struct Snapshot final {
     // bound; it does not claim measured muscle work or energy conservation.
     double player_gravity_factor = 1.0;
     std::uint32_t traversal_hand_constraint_count = 0;
+    std::uint8_t traversal_plan_kind = 0;
+    std::uint8_t traversal_phase = 0;
+    std::uint8_t traversal_rejection_reason = 0;
+    std::uint64_t traversal_plan_generation = 0;
+    std::uint64_t traversal_receiver_entity_id = 0;
+    std::uint64_t foot_contact_tick = 0;
+    std::uint64_t foot_push_source_contact_tick = 0;
+    bool hand_foot_overlap_active = false;
+    std::uint64_t hand_foot_overlap_solved_ticks = 0;
+    // Durable receipt of an actual shared solve, including a handoff that
+    // finishes before a caller/render frame samples the transient phase.
+    std::uint64_t hand_foot_last_solve_tick = 0;
+    double hand_foot_last_hand_load_n = 0, hand_foot_last_foot_load_n = 0;
+    double actual_hand_load_n = 0, actual_foot_load_n = 0;
+    double actual_hand_load_fraction = 0, actual_foot_load_fraction = 0;
     Vector3 traversal_left_hand_force{};
     Vector3 traversal_right_hand_force{};
     double traversal_command_work_bound_j = 0.0;
     double traversal_actuator_positive_work_j = 0.0;
     double traversal_actuator_absorbed_work_j = 0.0;
     bool hanging_free_arc_active = false;
+    bool missing_hand_grip_available = false;
     double hanging_commanded_span_m = 0.0;
     double hanging_actual_span_m = 0.0;
     bool swing_tuck_available = false;
@@ -268,6 +308,8 @@ struct Snapshot final {
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
     std::uint64_t step_up_count = 0;
+    // Only the legacy SetPosition step branch; physical steps retain total count.
+    std::uint64_t step_up_pose_count = 0;
     // Vaults begun by a second Jump inside the window after a takeoff.
     std::uint64_t jump_vault_count = 0;
     std::uint32_t world_solid_bodies = 0;
@@ -688,6 +730,15 @@ public:
     [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
 
+    [[nodiscard]] bool set_grapple_aim(double x, double y, double z) noexcept;
+    [[nodiscard]] bool set_grapple_equipped(bool equipped) noexcept;
+    [[nodiscard]] bool set_grapple_reel_input(double input) noexcept;
+    [[nodiscard]] bool set_grapple_auto_reel(bool enabled) noexcept;
+    [[nodiscard]] bool request_grapple_action() noexcept;
+    [[nodiscard]] bool request_grapple_release() noexcept;
+    [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept;
+    [[nodiscard]] GrappleGunSnapshot render_grapple_gun_state() const noexcept;
+
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
     // not a one-shot: while true and the body is on the ground outside a
     // traversal, it takes a 1.2 m capsule with its feet where they were;
@@ -794,6 +845,7 @@ public:
     [[nodiscard]] std::vector<Vector3> catch_net_vertices(double alpha=1.0) const;
     [[nodiscard]] std::vector<std::uint32_t> catch_net_indices() const;
     [[nodiscard]] std::vector<Vector3> render_catch_net_tether_vertices() const;
+    [[nodiscard]] std::vector<Vector3> render_catch_net_patch_vertices() const;
     [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] double pipe_bridge_tip_height() const noexcept;
@@ -815,6 +867,9 @@ public:
     [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_kinetic_energy(std::uint32_t body) const noexcept;
+    // Actual final-substep, non-sensor upward contact between the inspection
+    // walking box and receiving seat. Readback only; never controls the span.
+    [[nodiscard]] bool inspection_span_seat_contact() const noexcept;
     [[nodiscard]] Vector3 kit_carry_grip_position(std::uint32_t body) const noexcept;
     [[nodiscard]] std::uint32_t kit_body_index(std::uint64_t entity) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
@@ -883,6 +938,12 @@ private:
     std::vector<Quaternion> previous_kit_rotations_;
     std::vector<std::vector<Vector3>> previous_cable_points_;
     SlingshotSnapshot previous_slingshot_state_{};
+    GrappleGunSnapshot previous_grapple_gun_state_{};
+    Vector3 grapple_aim_{0, 0, -1};
+    double grapple_reel_input_ = 0;
+    bool grapple_equipped_input_ = false, grapple_equip_requested_ = false;
+    bool grapple_action_requested_ = false, grapple_release_requested_ = false;
+    bool grapple_auto_reel_requested_ = false, grapple_auto_reel_input_ = false;
     double sling_draw_ = 0.0, sling_yaw_ = 0.0, sling_elevation_ = 1.4311699866353502;
     bool sling_action_ = false, sling_drop_ = false;
 };

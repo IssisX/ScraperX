@@ -21,7 +21,13 @@ const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const KitView := preload("res://presentation/kit_view.gd")
+const GrapplingGunViewScript := preload("res://presentation/grappling_gun_view.gd")
+const GrappleFeedbackModel := preload("res://presentation/grapple_feedback_model.gd")
 const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
+const InspectionBalanceFeedback := preload("res://presentation/inspection_balance_feedback.gd")
+var _inspection_balance_feedback: InspectionBalanceFeedback
+const InspectionWorksiteLife := preload("res://presentation/inspection_worksite_life.gd")
+var _inspection_worksite_life: InspectionWorksiteLife
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
@@ -395,6 +401,8 @@ var _hook5_door_pivot: Node3D
 var _hook5_bar_node: Node3D
 var _hook5_block_node: Node3D
 var _kit_view: KitView
+var _grapple_view: GrapplingGunViewScript
+var _grapple_feedback := GrappleFeedbackModel.new()
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
 var _sump_grate_safe_material: Material
@@ -518,6 +526,11 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_setup_kit_view()
+	_grapple_view = GrapplingGunViewScript.new()
+	_grapple_view.name = "GrapplingGunPresentation"
+	_grapple_view.configure_hook_geometry(_native.get_grapple_hook_geometry())
+	add_child(_grapple_view)
+	_grapple_view.configure(_camera)
 	if bool(_native.get_slingshot_state().get("available", false)):
 		_slingshot_view = SlingshotView.new()
 		add_child(_slingshot_view)
@@ -574,7 +587,9 @@ func _process(delta: float) -> void:
 			_pitch = float(launcher["elevation_rad"])
 		else:
 			_yaw -= look.x
-			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+			# The equipped overhead tool needs an honest high shot. Other movement
+			# keeps its established look range; aim excludes all cosmetic head motion.
+			_pitch = clampf(_pitch - look.y, -1.25, PI * 0.5 - 0.001 if bool(_ctx.get("grapple_equipped", false)) else 1.35)
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
@@ -601,11 +616,14 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
 	_native.set_facing(facing.x, facing.y)
+	_native.set_grapple_aim(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
 	_native.set_sprint_input(bool(intent["sprint_held"]))
 
-	var jib_input: Vector2 = intent["pendant"]
+	var pendant_input: Vector2 = intent["pendant"]
+	_native.set_grapple_reel_input(pendant_input.y if _operating == &"grappling_gun" else 0.0)
+	var jib_input := Vector2.ZERO if _operating == &"grappling_gun" else pendant_input
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
 	# The B00 yard jib shares the same pendant axes. Both are station-gated
@@ -659,6 +677,9 @@ func _process(delta: float) -> void:
 	_hud.update_hud(_ctx, delta)
 	_ambient_clock += delta
 	_update_ambient_dressing()
+	if _inspection_worksite_life != null:
+		_inspection_worksite_life.update_from_native(_native, delta,
+			not _settings.launch_cinematics, _sky_cycle.hour if _sky_cycle != null else 10.5)
 
 	if _ci_mode:
 		_ci_observe()
@@ -791,6 +812,8 @@ func _apply_settings() -> void:
 	# AUDIO
 	_audio.set_volumes(0.0 if _settings.audio_muted else _settings.master_volume, _settings.effects_volume,
 		_settings.ambience_volume, _settings.interface_volume)
+	if _inspection_balance_feedback != null:
+		_inspection_balance_feedback.set_volumes(0.0 if _settings.audio_muted else _settings.master_volume, _settings.effects_volume)
 	# DISPLAY
 	_fov_base = _settings.fov
 	_head_bob_on = _settings.head_bob
@@ -857,6 +880,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_reset_grapple_feedback()
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic()
 	_audio.cancel_launch_cinematic()
@@ -904,6 +928,7 @@ func _restart_reclaim_attempt() -> void:
 
 
 func _after_restart() -> void:
+	_reset_grapple_feedback()
 	_landing_camera.reset()
 	if _reclaim_dust != null:
 		_reclaim_dust.reset()
@@ -978,19 +1003,41 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 				if _crouch_toggle_from_hang:
 					_crouch_toggled = false
 					_crouch_toggle_from_hang = false
-				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+				if bool(_ctx.get("grapple_equipped", false)):
+					if bool(_ctx.get("grapple_line_attached", false)):
+						_native.request_grapple_release()
+					else:
+						_end_operation()
+				elif bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
 					_native.request_slingshot_drop()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
 					_native.request_release()
+			&"auto_reel":
+				var gun: Dictionary = _native.get_grapple_gun_state()
+				if bool(gun.get("equipped", false)) and bool(gun.get("line_attached", false)):
+					_native.set_grapple_auto_reel(not bool(gun.get("auto_reel", false)))
+			&"toggle_grapple":
+				# Equipment has its own verb: a nearby grip, load or machine
+				# must not hide a carried tool. Native hand/ownership rules
+				# still accept or reject drawing on the next simulation tick.
+				var gun: Dictionary = _native.get_grapple_gun_state()
+				if bool(gun.get("equipped", false)):
+					_native.set_grapple_equipped(false)
+					if _operating == &"grappling_gun":
+						_operating = &""
+				elif bool(_ctx.get("grapple_draw_available", false)):
+					_native.set_grapple_equipped(true)
 			&"chute":
 				_native.request_parachute()
 			&"back":
 				if _crouch_toggle_from_hang:
 					_crouch_toggled = false
 					_crouch_toggle_from_hang = false
-				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+				if bool(_ctx.get("grapple_line_attached", false)):
+					_native.request_grapple_release()
+				elif bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
 					_native.request_slingshot_drop()
 				elif _ctx["hanging"] or _ctx["climbing"] or _ctx["lowering"]:
 					_native.request_release()
@@ -1026,6 +1073,10 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"equip_grapple":
+			_native.set_grapple_equipped(true)
+		&"grapple_action":
+			_native.request_grapple_action()
 		&"slingshot":
 			if bool(_native.get_slingshot_state().get("recovering", false)):
 				_native.request_slingshot_drop()
@@ -1033,7 +1084,7 @@ func _perform_action() -> void:
 				_native.request_slingshot_action()
 		&"release":
 			_native.request_release()
-		&"climb_up", &"climb", &"catch":
+		&"climb_up", &"climb", &"catch", &"reach_hand":
 			_native.request_traversal()
 		&"operate":
 			_operating = _ctx["station"]
@@ -1062,6 +1113,9 @@ func _perform_action() -> void:
 
 
 func _end_operation() -> void:
+	if _operating == &"grappling_gun":
+		_native.set_grapple_reel_input(0.0)
+		_native.set_grapple_equipped(false)
 	if _operating == &"supplied_machine":
 		_native.set_supplied_machine_input(0.0)
 		_router.clear_held()
@@ -1092,12 +1146,18 @@ func _read_context() -> Dictionary:
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
+	var grapple: Dictionary = _native.get_grapple_gun_state()
 	var service_lift: Dictionary = _native.get_service_lift_state()
 	var balance: Dictionary = _native.get_supplied_machine_state()
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
-	if int(service_lift["station"]) != 0 or (_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0):
+	if bool(grapple.get("equipped", false)):
+		station = &"grappling_gun"
+		# Native acknowledgment owns acquisition. A rendering frame before the
+		# next90Hz tick cannot cancel a still-pending equip command.
+		_operating = &"grappling_gun"
+	elif int(service_lift["station"]) != 0 or (_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0):
 		station = &"service_lift"
 	elif int(balance["station"]) != 0 or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0):
 		station = &"supplied_machine"
@@ -1127,7 +1187,8 @@ func _read_context() -> Dictionary:
 	var lift_reachable := ((_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0) \
 		or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0)) \
 		and free and int(_native.get_carrying_entity_id()) == 0
-	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable) or not free \
+	var tool_active := station == &"grappling_gun" and free
+	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable and not tool_active) or not free \
 			or (_operating in [&"service_lift", &"supplied_machine"] and not lift_reachable)):
 		_end_operation()
 	var climb_ok := grounded and free and ledge
@@ -1135,6 +1196,9 @@ func _read_context() -> Dictionary:
 	# both the native's own reading, never guessed here.
 	var carrying := int(_native.get_carrying_entity_id())
 	var carry_target := int(_native.get_carry_target_entity_id())
+	var grapple_draw_available := free and carrying == 0 and not sling_seated \
+		and not bool(sling.get("recovering", false)) \
+		and (bool(grapple.get("acquired", false)) or bool(grapple.get("station_available", false)))
 	# AS-006: the native's own rig reading -- hook what is carried onto the
 	# anchor in reach, or take a slack hooked end off -- and what kind of
 	# thing a pick-up would take.
@@ -1149,8 +1213,10 @@ func _read_context() -> Dictionary:
 			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
 	elif hanging or climbing:
 		if single_hand_hold:
-			# One actual hand supports a passive hold, with no solo top-out.
-			action = {"id": &"release", "label": "LET GO", "icon": &"drop", "detail": ""}
+			# Action asks for the missing hand even when its target is blocked.
+			# Only Jump/Drop release; native reach/contact rules accept the hand.
+			action = {"id": &"reach_hand", "label": "REACH HAND", "icon": &"climb",
+				"detail": "" if bool(landing.get("missing_hand_grip_available", false)) else "NO CLEAR GRIP"}
 		else:
 			# The native swinging subtype releases these hands on Action;
 			# ordinary climbing still requests its contextual top-out.
@@ -1166,6 +1232,10 @@ func _read_context() -> Dictionary:
 		# Both hands are on it: letting go is the only thing Action can do.
 		action = {"id": &"set_down", "label": "LET GO" if _is_kit(carrying) else "SET DOWN",
 			"icon": &"set_down", "detail": _carry_name(carrying)}
+	elif tool_active:
+		var line_state := int(grapple.get("state", 0))
+		action = {"id": &"grapple_action", "label": "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(grapple.get("action_recovers_hook", line_state == 2)) else "FIRE HOOK"),
+			"icon": &"hook", "detail": "TIGHTEN AT LIP, THEN STEER TOWARD LANDING" if line_state == 2 else "ARC THE HOOK OVER THE CROSSBAR"}
 	elif _operating != &"":
 		action = {"id": &"done", "label": "DONE", "icon": &"done", "detail": ""}
 	elif grounded and carry_target != 0:
@@ -1217,6 +1287,8 @@ func _read_context() -> Dictionary:
 	elif grounded and station == &"sump":
 		action = {"id": &"valve", "icon": &"valve", "detail": "SUMP",
 			"label": "OPEN VALVE" if bool(_native.is_sump_isolated()) else "CLOSE VALVE"}
+	elif free and (bool(grapple.get("station_available", false)) or bool(grapple.get("acquired", false))):
+		action = {"id": &"equip_grapple", "label": "DRAW GRAPPLE GUN", "icon": &"hook", "detail": ""}
 	return {
 		"position": position,
 		"velocity": velocity,
@@ -1225,6 +1297,7 @@ func _read_context() -> Dictionary:
 		"traversal": traversal,
 		"hanging": hanging,
 		"single_hand_hold": single_hand_hold,
+		"missing_hand_grip_available": bool(landing.get("missing_hand_grip_available", false)),
 		"swinging": bool(landing.get("player_swinging", false)),
 		"swing_tuck_available": bool(landing.get("swing_tuck_available", false)),
 		"swing_tuck_requested": bool(landing.get("swing_tuck_requested", false)),
@@ -1233,7 +1306,11 @@ func _read_context() -> Dictionary:
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
 		"slingshot_seated": sling_seated,
 		"slingshot_recovering": bool(sling.get("recovering", false)),
-		"drop_ok": sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or (grounded and free and edge_drop and carrying == 0),
+		"grapple_equipped": bool(grapple.get("equipped", false)),
+		"grapple_draw_available": grapple_draw_available,
+		"grapple_line_attached": bool(grapple.get("line_attached", false)),
+		"grapple_auto_reel": bool(grapple.get("auto_reel", false)),
+		"drop_ok": bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
@@ -1289,6 +1366,8 @@ func _carry_name(entity: int) -> String:
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
 	match entity:
+		1902:
+			return "BALANCE BLOCK · 25 kg"
 		2505:
 			return "BRIDGE RELEASE"
 		2530:
@@ -1321,6 +1400,24 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"grappling_gun":
+			var gun: Dictionary = _native.get_grapple_gun_state()
+			var drop_label := "RELEASE" if bool(gun.get("line_attached", false)) else "STOW"
+			var line_state := int(gun.get("state", 0))
+			var action_label := "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(gun.get("action_recovers_hook", false)) else "FIRE HOOK")
+			var failure := str(gun.get("last_failure", ""))
+			var status := failure if not failure.is_empty() else str(gun.get("state_name", "READY"))
+			var verbs := [[&"action", action_label], [&"hoist", "TIGHTEN / PAY OUT"]]
+			if bool(gun.get("line_attached", false)):
+				verbs.append([&"auto_reel", "STOP REEL" if bool(gun.get("auto_reel", false)) else "AUTO REEL"])
+				verbs.append([&"drop", "RELEASE"])
+			verbs.append([&"toggle_grapple", "STOW"])
+			return {"title": "GRAPPLING GUN", "subtitle": "UP: TIGHTEN / DOWN: PAY OUT / DROP: " + drop_label,
+				"rows": [["SHOTS", str(int(gun.get("cartridges_remaining", 0))), 0],
+					["LINE", "%.1f M" % float(gun.get("paid_out_length", 0.0)), 0],
+					["TENSION", "%d N" % int(gun.get("tension_n", 0.0)), 2 if float(gun.get("tension_n", 0.0)) >= 2500.0 else 0],
+					["STATUS", status, 2 if not failure.is_empty() else 0]],
+				"verbs": verbs}
 		&"supplied_machine":
 			var balance: Dictionary = _native.get_supplied_machine_state()
 			var cutoff := bool(balance["energy_cutoff"])
@@ -1796,6 +1893,9 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"chute": bool(_ctx["chute"]),
 		"operating": _operating,
 		"carrying": int(_ctx["carrying"]),
+		"grapple_equipped": bool(_ctx.get("grapple_equipped", false)),
+		"grapple_frame": _grapple_view._tool.global_transform if _grapple_view != null else Transform3D.IDENTITY,
+		"grapple_receiver_offset": _grapple_view.RECEIVER_OFFSET if _grapple_view != null else Vector3.ZERO,
 		"carry_center": _carry_center(int(_ctx["carrying"])),
 		"carry_half": _carry_half(int(_ctx["carrying"])),
 		"pendant": intent["pendant"],
@@ -1982,6 +2082,31 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			float(_native.get_orifice_mass_flow_kg_per_s()))
 		_mirror_water_screw()
 	_kit_view.render_view()
+	if _inspection_balance_feedback != null:
+		_inspection_balance_feedback.update_from_native(_native, delta, not _settings.launch_cinematics)
+	if _grapple_view != null:
+		_update_grapple_feedback(delta)
+		_grapple_view.update_state(_native.get_grapple_gun_render_state())
+
+
+func _reset_grapple_feedback() -> void:
+	_grapple_feedback.reset()
+	if _grapple_view != null:
+		_grapple_view.reset_feedback()
+	if _audio != null:
+		_audio.reset_grapple_feedback()
+
+
+func _update_grapple_feedback(delta: float) -> void:
+	# Consume native receipts once per90Hz tick; interpolated hook poses never
+	# create sound, motor work, launch recoil or a claim of physical capture.
+	var feedback := _grapple_feedback.sample(int(_native.get_tick_index()),
+		int(_native.get_death_count()), _native.get_grapple_gun_state())
+	if bool(feedback.get("reset", false)):
+		_grapple_view.reset_feedback()
+		_audio.reset_grapple_feedback()
+	_grapple_view.present_feedback(feedback, delta, not _settings.launch_cinematics)
+	_audio.update_grapple_feedback(feedback, delta)
 
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
@@ -4686,8 +4811,20 @@ func _add_box_to(node_name: String, size: Vector3, at: Vector3, material: Materi
 # declaration, so what the player sees is exactly what collides; nothing is
 # authored twice. Kit bodies live outside $TowerPresentation: they are native
 # collision already, never part of the exported solid dressing.
+func _on_inspection_span_strain(at: Vector3, strength: float) -> void:
+	if _audio != null:
+		_audio.inspection_span_strain(at, strength)
+
+
 func _setup_kit_view() -> void:
 	_kit_view = KitView.new()
+	_inspection_worksite_life = InspectionWorksiteLife.new()
+	_inspection_worksite_life.name = "InspectionWorksiteLife"
+	add_child(_inspection_worksite_life)
+	_inspection_balance_feedback = InspectionBalanceFeedback.new()
+	_inspection_balance_feedback.name = "InspectionBalanceFeedback"
+	_inspection_balance_feedback.span_strain.connect(_on_inspection_span_strain)
+	add_child(_inspection_balance_feedback)
 	_kit_view.name = "KitPresentation"
 	add_child(_kit_view)
 	# Indexed by the native's Material enum: steel, rust, timber, concrete,

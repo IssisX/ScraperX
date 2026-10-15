@@ -127,6 +127,20 @@ void build_inspection_junction_route(kit::Kit &kit) {
     for (const float x : {-23.65F, -19.55F})
         for (const float z : {-128.85F, -126.7F}) bolt(structure, {x, top - .02F, z});
     for (const float z : {-128.55F, -126.05F}) bolt(structure, {.95F, top - .02F, z});
+
+    // A short maintenance grab rail belongs to the receiving transom. Its
+    // feet overlap the steel edge; none of it spans the unsupported timber.
+    // The clear walking centerline remains open beside this outer-edge rail.
+    constexpr float grab_height = 1.30F; // Authored standing chest/hand height.
+    const float rail_z = walk_z - half_width - .12F;
+    for (const float x : {-5.4F, -4.8F}) {
+        frame({x - .07F, top, walk_z - half_width - .13F},
+              {x + .07F, top + .03F, walk_z - half_width + .13F}, Material::Galvanised);
+        frame({x - .025F, top + .03F, rail_z - .025F},
+              {x + .025F, top + grab_height, rail_z + .025F}, Material::Galvanised);
+    }
+    frame({-5.55F, top + grab_height - .025F, rail_z - .025F},
+          {-4.65F, top + grab_height + .025F, rail_z + .025F}, Material::Galvanised);
     const auto bearing = kit.add_body(kInspectionFrameEntity, structure,
                                       RVec3::sZero(), Quat::sIdentity(), 0, .85F);
 

@@ -20,11 +20,16 @@ add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/physical_hand_climb.cpp
     src/sim/physical_foot_push.cpp
+    src/sim/traversal_affordance.cpp
+    src/sim/traversal_plan.cpp
     src/sim/parkour_route.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
     src/sim/north_transfer_route.cpp
     src/sim/pipe_service_route.cpp
+    src/sim/split_inspection_route.cpp
+    src/sim/grappling_gun.cpp
+    src/sim/grapple_practice_route.cpp
     src/sim/deformable_plank.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
@@ -57,7 +62,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -111,6 +116,18 @@ if(SCRAPERX_WITH_JOLT)
     if(NOT scraperx_jolt_patch_result EQUAL 0)
         message(FATAL_ERROR "Pinned Jolt attachment patch verification failed")
     endif()
+    # Separate default-off rigid integration extension; the passive soft-body
+    # extension keeps its independent pinned receipt and unchanged source.
+    execute_process(COMMAND ${CMAKE_COMMAND}
+        "-DJOLT_SOURCE=${jolt_SOURCE_DIR}"
+        "-DJOLT_PATCH=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-accurate-rigid-integration.patch"
+        "-DJOLT_PATCH_MANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-accurate-rigid-integration.hashes.cmake"
+        "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ApplyJoltPatch.cmake"
+        RESULT_VARIABLE scraperx_jolt_rigid_patch_result)
+    if(NOT scraperx_jolt_rigid_patch_result EQUAL 0)
+        message(FATAL_ERROR "Pinned Jolt accurate rigid integration patch failed")
+    endif()
     set_target_properties(Jolt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
@@ -129,10 +146,52 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
 
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
+    add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)
+    target_link_libraries(scraperx_grappling_gun_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.grappling_gun COMMAND scraperx_grappling_gun_tests)
+    add_executable(scraperx_grapple_practice_route_tests tests/grapple_practice_route_tests.cpp)
+    target_link_libraries(scraperx_grapple_practice_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.grapple_practice_route COMMAND scraperx_grapple_practice_route_tests primary)
+    add_test(NAME scraperx_sim.grapple_portable_rail COMMAND scraperx_grapple_practice_route_tests portable-rail)
+    add_test(NAME scraperx_sim.grapple_independent407 COMMAND scraperx_grapple_practice_route_tests independent407)
+    add_test(NAME scraperx_sim.grapple_practice_recovery COMMAND scraperx_grapple_practice_route_tests miss-retry)
+    add_test(NAME scraperx_sim.grapple_failed_retrieval COMMAND scraperx_grapple_practice_route_tests failed-retrieval)
+    if(SCRAPERX_WITH_JOLT)
+        add_executable(scraperx_second_hand_recovery_tests tests/second_hand_recovery_tests.cpp)
+        target_link_libraries(scraperx_second_hand_recovery_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.second_hand_recovery COMMAND scraperx_second_hand_recovery_tests)
+        add_executable(scraperx_alternating_shimmy_tests tests/alternating_shimmy_tests.cpp)
+        target_link_libraries(scraperx_alternating_shimmy_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.alternating_shimmy COMMAND scraperx_alternating_shimmy_tests)
+        add_executable(scraperx_grapple_bay_clearance_tests tests/grapple_bay_clearance_tests.cpp)
+        target_link_libraries(scraperx_grapple_bay_clearance_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.grapple_bay_clearance COMMAND scraperx_grapple_bay_clearance_tests)
+    endif()
     target_link_libraries(scraperx_physical_hand_climb_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_hand_climb COMMAND scraperx_physical_hand_climb_tests)
 
     if(SCRAPERX_WITH_JOLT)
+        add_executable(scraperx_traversal_affordance_tests tests/traversal_affordance_tests.cpp)
+        target_link_libraries(scraperx_traversal_affordance_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.traversal_affordance COMMAND scraperx_traversal_affordance_tests)
+        add_executable(scraperx_hand_foot_transfer_tests tests/hand_foot_transfer_tests.cpp)
+        target_link_libraries(scraperx_hand_foot_transfer_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.hand_foot_transfer COMMAND scraperx_hand_foot_transfer_tests)
+        add_executable(scraperx_physical_topout_tests tests/physical_topout_tests.cpp)
+        target_link_libraries(scraperx_physical_topout_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.physical_topout COMMAND scraperx_physical_topout_tests)
+        add_test(NAME scraperx_sim.physical_topout_release COMMAND scraperx_physical_topout_tests release)
+        add_test(NAME scraperx_sim.physical_topout_no_candidate COMMAND scraperx_physical_topout_tests no-candidate)
+        add_test(NAME scraperx_sim.physical_topout_blocked COMMAND scraperx_physical_topout_tests blocked)
+        add_test(NAME scraperx_sim.physical_topout_restart COMMAND scraperx_physical_topout_tests restart)
+        add_test(NAME scraperx_sim.physical_topout_frames COMMAND scraperx_physical_topout_tests frames)
+        add_executable(scraperx_physical_entry_overlap_tests tests/physical_entry_overlap_tests.cpp)
+        target_link_libraries(scraperx_physical_entry_overlap_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.physical_entry_overlap COMMAND scraperx_physical_entry_overlap_tests entry)
+        add_test(NAME scraperx_sim.physical_entry_natural COMMAND scraperx_physical_entry_overlap_tests natural)
+        add_test(NAME scraperx_sim.physical_entry_release COMMAND scraperx_physical_entry_overlap_tests release)
+        add_test(NAME scraperx_sim.physical_entry_expired COMMAND scraperx_physical_entry_overlap_tests expired)
+        add_test(NAME scraperx_sim.physical_entry_radial COMMAND scraperx_physical_entry_overlap_tests radial)
         add_executable(scraperx_physical_foot_push_tests tests/physical_foot_push_tests.cpp)
         target_link_libraries(scraperx_physical_foot_push_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_foot_push COMMAND scraperx_physical_foot_push_tests)
@@ -248,6 +307,13 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.north_transfer_route COMMAND scraperx_north_transfer_route_tests)
     add_test(NAME scraperx_sim.north_transfer_recovery
         COMMAND scraperx_north_transfer_route_tests miss-retry)
+    add_executable(scraperx_split_inspection_route_tests tests/split_inspection_route_tests.cpp)
+    target_link_libraries(scraperx_split_inspection_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.split_inspection_route COMMAND scraperx_split_inspection_route_tests primary)
+    add_test(NAME scraperx_sim.split_inspection_recovery COMMAND scraperx_split_inspection_route_tests miss-retry)
+    add_executable(scraperx_rigid_integration_precision_tests tests/rigid_integration_precision_tests.cpp)
+    target_link_libraries(scraperx_rigid_integration_precision_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.rigid_integration_precision COMMAND scraperx_rigid_integration_precision_tests)
     add_executable(scraperx_pipe_service_route_tests tests/pipe_service_route_tests.cpp)
     target_link_libraries(scraperx_pipe_service_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.pipe_service_quick COMMAND scraperx_pipe_service_route_tests quick)
