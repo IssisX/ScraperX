@@ -1,0 +1,814 @@
+{
+  "base_commit": "dc53244d99a833888f1004af1b74a392887b34d5",
+  "methods": {
+    "PhysicsWorld": {
+      "module": "world.cpp",
+      "body_sha256": "bc08041464a06f8fb8ee1130503e93385af74820ac015a97937677e5cc74795a"
+    },
+    "~PhysicsWorld": {
+      "module": "world.cpp",
+      "body_sha256": "3bdbf991da8f0d43b229769d5039e7553bfe939d270347f3ae2c03733dad5060"
+    },
+    "nearby_grapple_hook": {
+      "module": "grapple.cpp",
+      "body_sha256": "0b51f81af88f76ba01d82858fae90f9e9a98341c3e9c2e4dfc2e74fe886cef98"
+    },
+    "grapple_gun_state": {
+      "module": "grapple.cpp",
+      "body_sha256": "c0273ffa677fd15ce880199843ffd6fc4471803e171df54b9e6d6d22f527554e"
+    },
+    "apply_grapple_commands": {
+      "module": "grapple.cpp",
+      "body_sha256": "5acef6b58fd48a3e4f28f2128bb2ffbd54a9b794bec2027f215188a046b9c52a"
+    },
+    "OnStep": {
+      "module": "tick.cpp",
+      "body_sha256": "c1d538904e0a9d33d5c3bad803606ed55f17850e9c46aec0eb96801f0141086c"
+    },
+    "step": {
+      "module": "tick.cpp",
+      "body_sha256": "4b72533d5d53afe9fcf9c577d2bc986b95fd47c679904d071f9dfb36b8d4292d"
+    },
+    "entity_body_count": {
+      "module": "snapshot.cpp",
+      "body_sha256": "6d20640eaa8f47cc395a3f3730992aef931c0e25154f992de3662ec932596b5a"
+    },
+    "moving_body_count": {
+      "module": "snapshot.cpp",
+      "body_sha256": "dcfe2f03fdc98f38942088871897ba6c9d34f42ac238b7470fba10e8fcfb0325"
+    },
+    "cargo_net": {
+      "module": "snapshot.cpp",
+      "body_sha256": "28e0759c8fea2cf79c955d45c0ac2c022804d35a6ba996dc2681874be72d4955"
+    },
+    "catch_net": {
+      "module": "snapshot.cpp",
+      "body_sha256": "f8a771eabf3988a03573f71f28be67b3c4a5e20d80ee0714cbbcd9aad9f0a7cb"
+    },
+    "catch_net_state": {
+      "module": "snapshot.cpp",
+      "body_sha256": "a631c4d53f1544a5630194c1c245f214b903e0b05212e998b69ff25f725ec284"
+    },
+    "render_hand_anchor": {
+      "module": "snapshot.cpp",
+      "body_sha256": "5ccb4dc0eb5bc58435f921c883da6a6e62e0a11b4b5a94889934bba898639d03"
+    },
+    "state": {
+      "module": "snapshot.cpp",
+      "body_sha256": "0955a378562edb5b28baf48d3d2fa6dd10e36574443e2a4ca6f16cc8dd02f68f"
+    },
+    "debug_restart_at": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "b654961944ea7bd0da8821129b9c5e8642ae5a50d296fedfa4862b7bdc331251"
+    },
+    "select_service_lift_retry": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "bd3c3f7e023077d5468eaed43c3273f2fbd415dd7ac55a197d6e751d44261600"
+    },
+    "can_restart_gravity_reclaim_attempt": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "971e949c256f47c34724372b73f54bde38f96fe2dac6f08cce78210e2cfca41b"
+    },
+    "select_gravity_reclaim_retry": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "95a6b736ad548c798d5719774d20811115ab559f187038e0cc8b73ddb6f0a84a"
+    },
+    "restart_checkpoint": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "85b97312b64ccae34236f907b850dabdbbddd5676a76b1ff22887b56d84d47a0"
+    },
+    "traversal_committed": {
+      "module": "snapshot.cpp",
+      "body_sha256": "94c703ec669a84b182a3c5dee459e840242c25ff2dad9d0143350bf01900f60a"
+    },
+    "kit": {
+      "module": "snapshot.cpp",
+      "body_sha256": "36b9d387755dc9b5876a1808492289e28a1d9312527f10dd492ec32a3269218b"
+    },
+    "inspection_span_seat_contact": {
+      "module": "snapshot.cpp",
+      "body_sha256": "dab510aaaaa0a5b805fe9bc3938177f5ed012848e595dc263a0274cf8f434232"
+    },
+    "pipe_bridge": {
+      "module": "snapshot.cpp",
+      "body_sha256": "8e5cf3005b37042f591c1fb8d657ef4e838197f2ef4538204b6a66003178d8d3"
+    },
+    "slingshot": {
+      "module": "snapshot.cpp",
+      "body_sha256": "40ba9768509c1ac16b382d26129ab2b97998ab6f0bc06340491b546a644c0074"
+    },
+    "rider_specific_acceleration": {
+      "module": "snapshot.cpp",
+      "body_sha256": "e5e9852174f7e5da19a27ce7d13cf0a87242d86de2ab5c95fddd82596924c3b1"
+    },
+    "slingshot_prediction": {
+      "module": "snapshot.cpp",
+      "body_sha256": "a2bd45b8c1078ed2797749040e10c82b42586eb8e3cc40c5e927e787ee591c8e"
+    },
+    "set_feed_enabled": {
+      "module": "snapshot.cpp",
+      "body_sha256": "6783dff571100b8866d09c1e48342aaffcd0e0143525b7557caba061cc23ec77"
+    },
+    "set_water_screw_motor_torque_limit_nm": {
+      "module": "snapshot.cpp",
+      "body_sha256": "d19a392ead7495f6d04a20a5dc28e4d60a97d14dd1ae610b102dd8c5d300d1be"
+    },
+    "set_water_screw_outlet_blocked": {
+      "module": "snapshot.cpp",
+      "body_sha256": "cac33d4efafb56c0b2a9e99b09f6a30fb616f255e7c58609bb7866f03478d178"
+    },
+    "set_water_screw_drive_direction": {
+      "module": "snapshot.cpp",
+      "body_sha256": "cdb882beeb45f387cd499ac8da4f47560ee1eaf280bd6da001cde84213f83d8c"
+    },
+    "set_water_screw_basin_volume_m3": {
+      "module": "snapshot.cpp",
+      "body_sha256": "8cfe466a668cfa86afc213f35583e7b4eac799d7db48c8379ee1c2bbcfa351ee"
+    },
+    "set_water_screw_tank_volume_m3_for_proof": {
+      "module": "snapshot.cpp",
+      "body_sha256": "69c6d0cd918e75e3cec02d4b73f3999d76a7c2f0955586fe402a7a7a4c85d66b"
+    },
+    "set_water_lift_rope_connected": {
+      "module": "snapshot.cpp",
+      "body_sha256": "66126f9170758f2a4720201e4fd08e750a86641b1ff05ebd1e9b0128c80e8c95"
+    },
+    "set_water_lift_cage_mass_kg": {
+      "module": "snapshot.cpp",
+      "body_sha256": "b79bdacd3f14d5b50df9087651067e2b9a97d83a444a28f8bf29830aa9559ff2"
+    },
+    "remove_and_destroy": {
+      "module": "world.cpp",
+      "body_sha256": "7b6dca7550af6bc5e0fec03aa85d38decf63f13b6be106fc7a5fd5ae539d5260"
+    },
+    "add_shape_body": {
+      "module": "world.cpp",
+      "body_sha256": "afe92e1cbc0b68ecb8ec9ea12af7bed1de05764ac16da33514cb37a44e5519ca"
+    },
+    "add_box": {
+      "module": "world.cpp",
+      "body_sha256": "a732d18aefddeb981bee1410b2fa7b72efed5acbffacb4cd35260ec8ae25d446"
+    },
+    "normalized_horizontal": {
+      "module": "world.cpp",
+      "body_sha256": "8f561e3eebf2f6695f4f2851a17cea34fe1ac76abd1937749f527cb1480601dc"
+    },
+    "body_id_for_entity": {
+      "module": "world.cpp",
+      "body_sha256": "7d137f420ac061955c9a5235b9248eb1143e8404b6e4bb4aa5d90346384c3fa4"
+    },
+    "build_machine": {
+      "module": "machine_build.cpp",
+      "body_sha256": "835d2099e8904750bc4bf55711059b55391e54e22df52043683c04d4ac21338b"
+    },
+    "build_kernel_jib": {
+      "module": "machine_build.cpp",
+      "body_sha256": "9f69a46880a1fe6ffe210e9420208fd1d3f8d259e676208d602a1cda0b740d74"
+    },
+    "build_kernel_needle": {
+      "module": "machine_build.cpp",
+      "body_sha256": "27420d8c9a52ae2879a92491b2e1dd1b8a82d52cfc7d5f5fd61ee6f67e26277f"
+    },
+    "build_world_solids": {
+      "module": "world_geometry.cpp",
+      "body_sha256": "d16c176cf919d4efd6a9b310eae005905691b91d4533e393bd490d91bcd27875"
+    },
+    "mirrors_owned_body": {
+      "module": "world_geometry.cpp",
+      "body_sha256": "c95dc7c5402f297eb57469cd5e136934d5cf3c021f29691ad243f9022713e1a5"
+    },
+    "build_stack": {
+      "module": "world_geometry.cpp",
+      "body_sha256": "85e1f3586090d18a046c4f29f0c036e63309495755d9c8ba51f27d06b61108c1"
+    },
+    "build_intake_rise": {
+      "module": "fixture_build.cpp",
+      "body_sha256": "c7824dd03901d3c072b22a6cb61a90f9785428045bfec1871d5a2f065816aac3"
+    },
+    "build_water_screw": {
+      "module": "fixture_build.cpp",
+      "body_sha256": "0984c8e9125659280a279aa789c1b8694cf57e9b8d11faf21cdda37b0e5fa51c"
+    },
+    "build_legal_forty": {
+      "module": "fixture_build.cpp",
+      "body_sha256": "69ae3b8a9ec21b307980dcf556a3170f3144ac96e6df88d856995a00e261c67c"
+    },
+    "build_hook5_rack": {
+      "module": "fixture_build.cpp",
+      "body_sha256": "a0e9605a7f93631f7f132f4cf77fc4866ec594ff3e8f78bd7ad26cd9afe6e231"
+    },
+    "build_kernel_sump": {
+      "module": "fixture_build.cpp",
+      "body_sha256": "9e309ab06ad48396d81452afff2ec94cb00e2aba4ce966c8eb2166d634baac23"
+    },
+    "settle_machine": {
+      "module": "machine_build.cpp",
+      "body_sha256": "ed2fd57855dca33b69acff7448207e6e92485b2f0672ee4a2840075b5210da0d"
+    },
+    "add_hinge": {
+      "module": "machine_build.cpp",
+      "body_sha256": "cd1c15379701c11516dd8c91e3a40ad6590d1269b73f5b146d5019082ccbe6e0"
+    },
+    "add_slider": {
+      "module": "machine_build.cpp",
+      "body_sha256": "a390beca189254bd7d4538ba6c92db4432207540cfc43b9830290c3231f89c4f"
+    },
+    "add_vertical_hinge": {
+      "module": "machine_build.cpp",
+      "body_sha256": "d9bad3ad1f0c25abd8d88585af983f9fbdf0d1044610719dbed6888c7c62c9ee"
+    },
+    "add_motorized_slider": {
+      "module": "machine_build.cpp",
+      "body_sha256": "5a2ce089ac54b029bb8db4f930eb059b7a2e886a3b3a95455f9aa6f8d46a4b19"
+    },
+    "add_point_link": {
+      "module": "machine_build.cpp",
+      "body_sha256": "6347b6f44f4410ce375463393a0b5239fd09d062843cf6960055c25220455d14"
+    },
+    "add_rope": {
+      "module": "machine_build.cpp",
+      "body_sha256": "ee3306278b87201b9b885b760813c542a5d3d7adebd31b141708b9a07275ca02"
+    },
+    "add_treadle_cable": {
+      "module": "machine_build.cpp",
+      "body_sha256": "86f826163e37585659aba4ab0cc3753f9dde691eb37750bc3c6a21875feb2bd8"
+    },
+    "add_pulley": {
+      "module": "machine_build.cpp",
+      "body_sha256": "6d1c478e4c8ffa05a62d6449198fd9e0c1ea96db0958ea0289c475d552182483"
+    },
+    "create_constraint": {
+      "module": "machine_build.cpp",
+      "body_sha256": "b748911de626ec25037e762b289010e6a33d05174b950b37f4d78020fb148cfd"
+    },
+    "update_scoop": {
+      "module": "machine_update.cpp",
+      "body_sha256": "b12e086d98ab91d2567de0f2edeacd73bfff6de2456d67e0d8fe91ae89e7bb8c"
+    },
+    "update_plant": {
+      "module": "machine_update.cpp",
+      "body_sha256": "c2c16e8bcc9b35a40bdbe290d72c2a72118a9a5de517a61ef83707540bbe9e0b"
+    },
+    "update_jib": {
+      "module": "machine_update.cpp",
+      "body_sha256": "adc5ab21b484186efd8b32a61b211c9d15cb7344e1bfabccff5232e4c93e9043"
+    },
+    "update_needle": {
+      "module": "machine_update.cpp",
+      "body_sha256": "d35558d127552122d3767b7fba3254fe652aefbad67c6fd0ff865cdf98fc942a"
+    },
+    "seat_needle": {
+      "module": "machine_update.cpp",
+      "body_sha256": "13476062222042f26931f0dc8cb4efc7df8dc131e8185bf85a410079a998feaa"
+    },
+    "unseat_needle": {
+      "module": "machine_update.cpp",
+      "body_sha256": "8b9658cf026f0a4f2a662aa43c61962a0a704e4303fde1da50459d61970ab480"
+    },
+    "restore_needle_topology": {
+      "module": "machine_update.cpp",
+      "body_sha256": "f3c4f73692ed04b5cddb447752d98bf8bdb937a84174876c810952c0e010d3e4"
+    },
+    "update_water_screw": {
+      "module": "machine_update.cpp",
+      "body_sha256": "2266cd4ec32ff40855a79a206fe2d443a9f5e7a84418124993c3f6f1cd7a188c"
+    },
+    "update_water_lift": {
+      "module": "machine_update.cpp",
+      "body_sha256": "1ef098745a7a0c0e5f2a8d95665f28e100c7cef2cf4184892444d9e95cd4af4b"
+    },
+    "update_intake": {
+      "module": "machine_update.cpp",
+      "body_sha256": "df31b9b23c35acf4e7f9561a4b1e0d6b7d717be11874ad5ff2ee23eaf1d498d4"
+    },
+    "update_legal_forty": {
+      "module": "machine_update.cpp",
+      "body_sha256": "09e503b73f28770321222d13e3f619f53bce6c97af655b4125588ee65181d09c"
+    },
+    "intake_pack_seated_on_cradle": {
+      "module": "machine_update.cpp",
+      "body_sha256": "9709f9d6c5d66c91d8f4ab2817a6ed9b3999507b06c07bba9d6425afc6d404c8"
+    },
+    "release_pack_to_cradle": {
+      "module": "machine_update.cpp",
+      "body_sha256": "b1aa19ac5fdb5e8a46c85f134f5789a62d7f381645a93e11fd436fb07df42096"
+    },
+    "sling_pack": {
+      "module": "machine_update.cpp",
+      "body_sha256": "553a29539f37b143790a508ac3f7d8f36f48eb1e7dd2713cdcebda6d6062f0b8"
+    },
+    "create_sling_pin": {
+      "module": "machine_update.cpp",
+      "body_sha256": "13fa79e45870d9fd2267d4996cb2da7e7866ac5cab8268ab751cb539b42bfc4f"
+    },
+    "remove_sling_pin": {
+      "module": "machine_update.cpp",
+      "body_sha256": "3ef46c74c6f56561bdf56b5ad95d8e5a81bb6ee6f2843162a635a4613191845d"
+    },
+    "restore_legal_forty_topology": {
+      "module": "machine_update.cpp",
+      "body_sha256": "9a828a25e678f0df7afb846a02045a32dcaf00afbf2710ab4e847a2b5ffb607e"
+    },
+    "update_sump": {
+      "module": "machine_update.cpp",
+      "body_sha256": "1222fe20cf8bbb77a2db939949d225ccc131f26d5d5700178b44c4df880bde30"
+    },
+    "net_for_body": {
+      "module": "support.cpp",
+      "body_sha256": "24419aa4d52af77892cdf2696f86204329a1708e8b29a0c3f4160293e47cc5cf"
+    },
+    "support_point_velocity": {
+      "module": "support.cpp",
+      "body_sha256": "71304b40826a38ae5f066315c54d031f7ceb6db609bd7909015329ecd53b3fd2"
+    },
+    "support_material": {
+      "module": "support.cpp",
+      "body_sha256": "aa61e70b5be13bfe3c792834da1108b134aa1dc73c6ac43f460ba715b80509e4"
+    },
+    "support_traction_normal": {
+      "module": "support.cpp",
+      "body_sha256": "46915a8cf3db7fd5640b77504045bceaf5bbf6ee45d2e1a0cc212e0ea13870ce"
+    },
+    "clear_catch_history": {
+      "module": "support.cpp",
+      "body_sha256": "82d75f8ecb44de474811f60143a8659010a91ba0a3745d744438560252d574bd"
+    },
+    "refresh_catch_geometry": {
+      "module": "support.cpp",
+      "body_sha256": "dc90af35b247210a0725be77bc32e04b14d2531d4990d3a59afa5665929bbebd"
+    },
+    "contact_on_bottom_capsule_cap": {
+      "module": "support.cpp",
+      "body_sha256": "faf38b311b01edcb3a33bf39c5c5d75426ef667306411311ffd5c6581094408b"
+    },
+    "passive_soft_feet_requested": {
+      "module": "support.cpp",
+      "body_sha256": "6571da1e565e92bee896767f924cc5fffd51e9b1de3c6452fbcc29008f1bfcb5"
+    },
+    "publish_soft_foot_policy": {
+      "module": "support.cpp",
+      "body_sha256": "a30c40107453a667f2e710774c1dd9ae7aa7ada2f407ea1169b4788d7f51a1fa"
+    },
+    "reset_soft_foot_policy": {
+      "module": "support.cpp",
+      "body_sha256": "ceb462da74b842fda0392c64ad5a8a6f125fbf846790b52d45d1ae121478e8a8"
+    },
+    "soft_foot_contact_friction": {
+      "module": "support.cpp",
+      "body_sha256": "9496764dc241e38368163862b485b66b2cbafffaa2267e9eba9080684fc0c550"
+    },
+    "observe_soft_support": {
+      "module": "support.cpp",
+      "body_sha256": "dd2cd1a1536f34410fee61a6d3baa87cb23cee8522608653825ed14138aed03a"
+    },
+    "measure_catch_load": {
+      "module": "support.cpp",
+      "body_sha256": "5bf1c9a8b4862882efac2202d0d1c0b9edfb968753d2fac8c867d9c8a73b7e30"
+    },
+    "current_support_point_velocity": {
+      "module": "support.cpp",
+      "body_sha256": "f4708938eac111809ceb0037e0f7f581d8c75bf46cf2cb49fa0e4aa7d9f0eed5"
+    },
+    "update_support_motion": {
+      "module": "support.cpp",
+      "body_sha256": "6b12bf1f7edea85de0d5b776f43b34e425d5aa12460d74972b8df10e37c41e64"
+    },
+    "cast_ray": {
+      "module": "geometry.cpp",
+      "body_sha256": "2a221aade0744ecb6fe0606a86f8aa66bda39b84963f331f7530df14ef1a2ad0"
+    },
+    "cast_wall": {
+      "module": "geometry.cpp",
+      "body_sha256": "2a3f73b5f2194b0cdd15a06355d3fd605194574f461d81bff88915dabbaf7209"
+    },
+    "is_hold": {
+      "module": "geometry.cpp",
+      "body_sha256": "c17b3f311b52852a0b63e4044d5f64bc4f370044e1b0ca9ee0e018482a78c4ab"
+    },
+    "surface_normal": {
+      "module": "geometry.cpp",
+      "body_sha256": "6eaba2a0c2947c03246324d5b970df4755a85adbf7d39d6f7590e994d97d7927"
+    },
+    "footing_is_firm": {
+      "module": "geometry.cpp",
+      "body_sha256": "76482985ab85ab4090623e515169eb816772fb70048f086a63c885ed724c463c"
+    },
+    "active_player_shape": {
+      "module": "geometry.cpp",
+      "body_sha256": "de26966dcd6fa307d95f6d90835eebc12007dcdbfdcc8b515db0f2a22a85cb18"
+    },
+    "capsule_pose_is_clear": {
+      "module": "geometry.cpp",
+      "body_sha256": "2129357e64e412bf6af67eabd2b461e939d5364b469d8ebb8f850af685e3de27"
+    },
+    "shape_pose_is_clear": {
+      "module": "geometry.cpp",
+      "body_sha256": "0f521ea0b67da08e3c398d7659e59c4c6a7f26e7a738b2636f4b0a8929eba769"
+    },
+    "probe_ledge": {
+      "module": "geometry.cpp",
+      "body_sha256": "d4dade4464cffa9aaf6e6c00559d45d012a6b497ed98787f0fffaae2ee976c63"
+    },
+    "probe_ledge_from_wall": {
+      "module": "geometry.cpp",
+      "body_sha256": "74d4e59809aeece263401c53a0c17bfef317e5c9d7c936262590442d353d06f2"
+    },
+    "probe_vault_landing": {
+      "module": "geometry.cpp",
+      "body_sha256": "bc316da1b7880655ce92860dfec00f2117a0348e9c6e8ecca9141d110bf09702"
+    },
+    "to_support_local": {
+      "module": "geometry.cpp",
+      "body_sha256": "52e9d19c6b2fcc5d82c22779d516c3f9d1ea66a0b4f42faf9435ea7bacbb634a"
+    },
+    "from_support_local": {
+      "module": "geometry.cpp",
+      "body_sha256": "26e7ed97f00254e59734def812b067a9547ea2dbf9f7eb6a104b9d496cb481df"
+    },
+    "carry_hand_offset": {
+      "module": "carry.cpp",
+      "body_sha256": "c97a31aac624c6bca89d45a19013e4766c005f0201c996e18d44df67a04e3862"
+    },
+    "carry_hand_bearing": {
+      "module": "carry.cpp",
+      "body_sha256": "ef2c700bbd325a12ed3ba59ca836706e13fea47f7c69b946af066a4e21ff8d99"
+    },
+    "carry_handle": {
+      "module": "carry.cpp",
+      "body_sha256": "6a2835dc5ba06f90627fbe7ddb38e0394ee340975ac8d8f1db7058939cdd3502"
+    },
+    "carry_candidate": {
+      "module": "carry.cpp",
+      "body_sha256": "f9b491b306710a62bdc04702237b4f3ce5856d7efc1cdc89ca1828afd186c01d"
+    },
+    "attach_carry": {
+      "module": "carry.cpp",
+      "body_sha256": "b53b541375071b400eadebc846d17ec155185e9c216ef5570d70af7c70460bd4"
+    },
+    "release_carry": {
+      "module": "carry.cpp",
+      "body_sha256": "3f838bd51550a3edef50b62f7f9f09f991f960cb2262bda742c724c73498d73a"
+    },
+    "update_carry": {
+      "module": "carry.cpp",
+      "body_sha256": "b3bdc05d8899cee9fb47a720a53ee6babb6cbbef05f975b09efab54fe00001eb"
+    },
+    "restore_carry_topology": {
+      "module": "carry.cpp",
+      "body_sha256": "f7c41837480f782df6fd42e259c6dbc1a51839aca69b7cd7717aa89557bd2c58"
+    },
+    "hand_position": {
+      "module": "carry.cpp",
+      "body_sha256": "c5a383db32496028da16a1184bcb8d06e993601757866a2c6a723114ba42d33b"
+    },
+    "find_rig_action": {
+      "module": "carry.cpp",
+      "body_sha256": "c59d6dace3e8cf6822866591ae9df26ebcaeaf2f343a808f970ca7f64888d6d5"
+    },
+    "update_rig": {
+      "module": "carry.cpp",
+      "body_sha256": "8404d505dddaa088729a343dab5121b86a89b1be60e99b23165e7bd167fc28a5"
+    },
+    "update_crouch": {
+      "module": "locomotion.cpp",
+      "body_sha256": "a2931abc7855cf64b1b64516d8fcb05bbbdf1818dfd13c5fe4182f63dd55aa98"
+    },
+    "try_stand": {
+      "module": "locomotion.cpp",
+      "body_sha256": "39bc3291e157951946686638fe8d924068b5c2e5595327c9f70a2b24448869ea"
+    },
+    "apply_traversal_commands": {
+      "module": "locomotion.cpp",
+      "body_sha256": "e641e6f42042af0cc7b41794c538f1a3a7932a65026c2bfc8d707b404a88dc3e"
+    },
+    "try_begin_jump_vault": {
+      "module": "locomotion.cpp",
+      "body_sha256": "3c88eafee1b67da65f4783e7eec3232240c791c1560e444cf69911af740e13d4"
+    },
+    "clear_landing_recovery": {
+      "module": "locomotion.cpp",
+      "body_sha256": "1c9f35ae461d8c4d901609fbf3a2dc45b773abbea2ab6c5d9220fb721fa0d118"
+    },
+    "record_landing": {
+      "module": "locomotion.cpp",
+      "body_sha256": "df73805c375267880994db0a19c6f0e694ba7dd0a6d762554f6e520d662c61a5"
+    },
+    "apply_ground_contact_force": {
+      "module": "locomotion.cpp",
+      "body_sha256": "6fda30b9addaf3c96ef8a477fd519d9c1666ff6f248b143365dcb607f6d5d1b5"
+    },
+    "apply_landing_recovery": {
+      "module": "locomotion.cpp",
+      "body_sha256": "36c455be8c6dba5a2c6b592c1842d8110074eee37d3c816588edf1b98450cea2"
+    },
+    "sprint_is_eligible": {
+      "module": "locomotion.cpp",
+      "body_sha256": "d7ccd09fc4b1fc1565d9fda0e909ac95facc9299adebf04416d02d2dfd8723bc"
+    },
+    "push_off_ordinary_support": {
+      "module": "locomotion.cpp",
+      "body_sha256": "5938360d70f9424674453f058cd99cbf949b1015f0e49f3d10917b254f072d03"
+    },
+    "apply_locomotion": {
+      "module": "locomotion.cpp",
+      "body_sha256": "d04162a1dabae68d11d2eeceed3bfb6f08f52dbfc9689383338224c7239197a7"
+    },
+    "cast_capsule": {
+      "module": "locomotion.cpp",
+      "body_sha256": "5bf3b684819e97e1c8cdaeaf0e401a7be8c18e881a4e706105aed1791623ae0f"
+    },
+    "try_step_up": {
+      "module": "locomotion.cpp",
+      "body_sha256": "000d96a57dfe7405527696d63338513dc1f4fc10a6d17c0b0e65186c4876c51b"
+    },
+    "apply_parachute_drag": {
+      "module": "locomotion.cpp",
+      "body_sha256": "9002efd8ab694c5bb7df4cf3c3671846f9dcbe989cc657d97d41f5a622190504"
+    },
+    "probe_lip_pair": {
+      "module": "climb.cpp",
+      "body_sha256": "0ea9216528084193b455847946b331f5d4e9d329ec81c20542fa6b19db1ad99f"
+    },
+    "hang_hold": {
+      "module": "climb.cpp",
+      "body_sha256": "029f40813a246e314cfa9c7231ebac741fe3a320367e4ebe608f961858b1eee2"
+    },
+    "hang_ledge_is_reachable": {
+      "module": "climb.cpp",
+      "body_sha256": "434e5fcb9473c8cbee504c78f7d5d48a2a238d081d1fbd0fe26690b5673b53f7"
+    },
+    "probe_hang_ledge": {
+      "module": "climb.cpp",
+      "body_sha256": "69e0eaa06027df54528c26d5c17765e20f1e628f3b20ceb64b56222adcec6fe4"
+    },
+    "acquire_hang_hands": {
+      "module": "climb.cpp",
+      "body_sha256": "9fe571ff123579f88649a76604f5a7741ecf4c310995217014909c8078c44a08"
+    },
+    "try_begin_hang": {
+      "module": "climb.cpp",
+      "body_sha256": "3d8c3031483bf8e6a23a903085307afb903084b6d8c74130a0bd7f336de62ba6"
+    },
+    "try_begin_ground_traversal": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "5a2b7ed06b34cb31c8171d2eca1acb662ed50bea8b023de7ef0f1a538a90dbf4"
+    },
+    "step_is_supported": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "236c8d7957c2f93cbeba9a336ffb3e571851c6f087617c1fdba9d53066469753"
+    },
+    "mantle_approach_end": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "750754ea155f0fd0b7cf8b107f256a23ada4c96accd089aca1d23eff909b3d0d"
+    },
+    "begin_mantle": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "87c1910b4ec62713e4bd06c5987c43d0eb8268a0a772419389c78f68d7e556a4"
+    },
+    "begin_mantle_from_hang": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "e80d387ffbdd9ac0ae0cd49c0f8ee0b8bb2b9f30d5955ed4561b8d2cc8711390"
+    },
+    "begin_vault": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "71b19d01a4a8c7b7abd5a2e23b28b31068961e64a415ee9558b676dd41b1d6ab"
+    },
+    "traversal_point": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "5105d3d74be0c89ff3ebdb95f0bb73ef9555ad4a7cf8ea4dab15df58ff2304e9"
+    },
+    "drive_traversal": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "6a5734b6459e293471dc070ada91bfc426e1097cbaf86c68439cf99150f249c5"
+    },
+    "resolve_traversal_outcome": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "13f35b63150d39408b5ec77b57132cea1e0a688120c49b37828866c1ae576639"
+    },
+    "traversal_support_point_velocity": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "aa1ce3babd3936515a35b988b395fcfb026c73586e46640be3d2ffc6a2b99805"
+    },
+    "complete_traversal": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "8e2e11252f4d520c45b313dc74eeecbb5adaa7a16d9152289be472f173f5f951"
+    },
+    "abort_traversal": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "85c2934d8c22d60c8822418d2614b0ce04894ff6a5addbaccc5a37a922868c66"
+    },
+    "release_hang": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "fa46858f470fe3c603037e8c77a7e91ee5ab657416cf31d31757d821d943fc38"
+    },
+    "load_hold": {
+      "module": "legacy_traversal.cpp",
+      "body_sha256": "2ca0931876fcd905af2e7deb397b776f3a9f485315206d4ded944ec0e5c5f96d"
+    },
+    "traversal_right": {
+      "module": "climb.cpp",
+      "body_sha256": "89d05eec18f9ee4341155cf874db650b4dcb0c424320402ab1a9bf6c55ae6ea8"
+    },
+    "grip_approach_visible": {
+      "module": "climb.cpp",
+      "body_sha256": "f42a8a0496234293634bf457c722f7738c091d829d1342365b06913a974bcbc5"
+    },
+    "find_grip": {
+      "module": "climb.cpp",
+      "body_sha256": "900085939c32d42ccd8a6e9f438a61b515d64218d3679009a21462716e5e56e7"
+    },
+    "hand_aim": {
+      "module": "climb.cpp",
+      "body_sha256": "b6ccca699df89c30ac3ff825a540c1f89c6dbfa5340afa725c477b3e39d97cc1"
+    },
+    "hand_point": {
+      "module": "climb.cpp",
+      "body_sha256": "5238e215c01b71b77984fa576e18a7f7af213a2e121c532d4ecacb76f015a9c9"
+    },
+    "grip_matches_climb_backend": {
+      "module": "climb.cpp",
+      "body_sha256": "355b44ac4bfe45486252ef881f880bcd4f15ee8bd17f40f3d8f4e556532cd17b"
+    },
+    "set_hand": {
+      "module": "climb.cpp",
+      "body_sha256": "36b9f8adcfea0d6c4c54a94f49f634847b961985a4d518e4df13869c2c48da89"
+    },
+    "take_hand_holds": {
+      "module": "climb.cpp",
+      "body_sha256": "204505a986dc119ba90df6bdf14bbb1aca2922f3aaad9fe0b66fa2c41cd7c093"
+    },
+    "climb_move_clear": {
+      "module": "climb.cpp",
+      "body_sha256": "4b2cd5ed6da84661ff4b0858e74531f10443b73bb8d9be2e46a63b4af54028e1"
+    },
+    "begin_climb": {
+      "module": "climb.cpp",
+      "body_sha256": "bc08d44af4ed1a5f51ec161c6b8f4b0c0dc4dfd813e916ddc11b601f604b63cd"
+    },
+    "grip_in_front": {
+      "module": "climb.cpp",
+      "body_sha256": "01666783f5cc65212500691fc2519d8d441868488a2d1fc1f7225660b3c9ba24"
+    },
+    "radial_ownership_eligible": {
+      "module": "climb.cpp",
+      "body_sha256": "0f39e26100af8a7b0368eceb12ad3d5b50b0a1cd143618480463e1e302006f71"
+    },
+    "actual_hands_in_reach": {
+      "module": "climb.cpp",
+      "body_sha256": "cbb214b125754869bd3863c0322ee609d5a22a74759e371ae2c9ef1bcfa06db0"
+    },
+    "missing_radial_grip": {
+      "module": "climb.cpp",
+      "body_sha256": "7dfa527de067dadc77fbd5e0cae0cae011b22f0225979d2d554026cbba3afcc7"
+    },
+    "hanging_posture_eligible": {
+      "module": "climb.cpp",
+      "body_sha256": "3520ca030dff134905634d29763714374595b3cfbfe603d078d1d90a3e303966"
+    },
+    "leave_radial_profile": {
+      "module": "climb.cpp",
+      "body_sha256": "047a2dd65912a51fb15542a6c2ac81ebcdf01f3c28141b177914267a309d2bb5"
+    },
+    "sync_radial_profile": {
+      "module": "climb.cpp",
+      "body_sha256": "fcf3ca884728965427734c9c305c4543e9ce517d8d9c426f652d8a4c4412187e"
+    },
+    "advance_hanging_posture": {
+      "module": "climb.cpp",
+      "body_sha256": "69d8c8c2e22a08b2719e2e96994ca3e2fcd370b1429680a603af770d6c6a99e4"
+    },
+    "update_climb": {
+      "module": "climb.cpp",
+      "body_sha256": "cb8a3cad1a70e7b0da33674f743b3d838d46120d61ee4d64a8a74914a474a42e"
+    },
+    "move_hands": {
+      "module": "climb.cpp",
+      "body_sha256": "68d590e79d8fd4b7ce4ff7fb7a7961bc67656efd76fb64f85511ca036554b7da"
+    },
+    "feet_on_ground": {
+      "module": "climb.cpp",
+      "body_sha256": "484019764d0e6c5d14924bcad4a2a560f2a9190a47e33cbf916a8c3594e8add7"
+    },
+    "try_top_out": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "4cb62b8a99104524f192a6b4dee25df64a475cbff9e0566380cd0fee59a5ed42"
+    },
+    "plank_entry_overlap_is_legal": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "907122e8293edd7487868e032aef4bc99f7246ba29c45b2a333b48e514456e16"
+    },
+    "foot_overlap_is_legal": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "daf861a0eabe13ff2b58944ae54fd174361895ae8fe0fe503d44fde2002b6f07"
+    },
+    "record_foot_contact": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "2323e48641c5576901150f89091463e74414dacce091737215270bc1972ba067"
+    },
+    "refresh_rigid_transfer_foot": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "e352c75803ba7f76dd41e8a2241392c34db689b2acd1b30ccb8294da51c48d92"
+    },
+    "try_begin_transfer_foot": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "99022c42e5f7fe0a876aae1905a0a0ca90622f5011ad8dcd96c67cf1f6d33fcb"
+    },
+    "begin_cargo_transfer": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "9ca1b32438d40129f940884846a78a390231f08995de6e878fe66c7b3eac08f9"
+    },
+    "try_finish_cargo_transfer": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "50b92cf53e13b6eb2a6536838faf0e98ff504cbd7751e4738b167668dacd7d26"
+    },
+    "update_cargo_transfer": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "5b7e2e576cc22cb875408e6e5670d37df585db448d11d40c69dc98c352827d7a"
+    },
+    "step_off_climb": {
+      "module": "climb.cpp",
+      "body_sha256": "9d323df63e0a49b75fc998873c66ae900a1df1fdb611289477616712868a1132"
+    },
+    "climb_support_velocity": {
+      "module": "climb.cpp",
+      "body_sha256": "f254653ef97196adea418ee33982ca07137989bc9be43b30780add7f16cde358"
+    },
+    "let_go_climb": {
+      "module": "climb.cpp",
+      "body_sha256": "f5a4933491191591b719d8307983eb5a951fd6df0be8c0ce3d394266c3650570"
+    },
+    "jump_off_climb": {
+      "module": "climb.cpp",
+      "body_sha256": "9a3dbce58663c61ef56dc0f7a6d237554906f9c80c1f23ee2601f4bb91de570e"
+    },
+    "probe_lip": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "a8d796b74ead268fb5518a95e1f7b14dceec89b2d86e8ab3aa332d132f15c4ff"
+    },
+    "update_shimmy": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "0357f73894900854d678c36ae86fb224eba5cf35f3f563e5f0b2c3247aef1a61"
+    },
+    "probe_edge_drop": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "55a224e62d0be0df218f48c37f2f5a191b1449a191c235dba147d05330f33855"
+    },
+    "try_begin_lowering": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "9e3474fdf5b1513acd1d07246b1e63d710232911efdab6b85a2a129623f9c091"
+    },
+    "update_physical_lowering": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "3d9440329c5c127c0970a8722f9ce5da78abf24e14aacc880833909bc1122181"
+    },
+    "finish_lowering": {
+      "module": "hand_transfer.cpp",
+      "body_sha256": "3ede0ca99db1267f5a49544a53946eb005d5140e24e61061d352c604610df349"
+    },
+    "beam_underfoot": {
+      "module": "affordance.cpp",
+      "body_sha256": "cb62323cd57f92e37131f4566befd168e67e01a2d7f52f0c11b38c9ed9c55682"
+    },
+    "clear_traversal": {
+      "module": "affordance.cpp",
+      "body_sha256": "352412cb80e5c1f8a2b6f6ee995de50825f5ba9d6eacc77d25f8086452558209"
+    },
+    "update_affordance": {
+      "module": "affordance.cpp",
+      "body_sha256": "59f33c2bb3ebe5acac51862deafe8c37d6e8b90a95232a221ea6aaa08fee4570"
+    },
+    "capture_machine_checkpoint": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "132e9e035e53349d5550f59832f81e3733650ef5dbbcd8319130d89e44f023e8"
+    },
+    "commit_machine_checkpoint": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "e879860ab78cfd157fb384ed1521424ea308e1a7aa1ccce62c512ac2c1032bc6"
+    },
+    "commit_checkpoint": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "536a34476257abc04c9f1e48a81b3c55cae82b504898b8fb951e384316f97a81"
+    },
+    "restore_from_checkpoint": {
+      "module": "checkpoint.cpp",
+      "body_sha256": "0d7d650858283ffb752a9abe5089505cf7b78efeb315314adaa06e34ffb09a58"
+    },
+    "supplied_machine_station": {
+      "module": "snapshot.cpp",
+      "body_sha256": "b3bc00a4b30feb43b60e2361463908d87a9aad64e124dc6338c6ecdd4a7c646c"
+    },
+    "service_lift_station": {
+      "module": "snapshot.cpp",
+      "body_sha256": "575472df79082f4cf7ca62bfd4c286f30b8becf915904ec55806baf0b2c24b54"
+    },
+    "read_machine_state": {
+      "module": "snapshot.cpp",
+      "body_sha256": "3673636162b0510d9174901aef244be270590f5e164eef2f7f05a0378bf327e2"
+    },
+    "read_state": {
+      "module": "snapshot.cpp",
+      "body_sha256": "08a82a8c8c45612d280f040a67c320118ad6cf85b3a675d2e9e81cd308ba09f9"
+    }
+  },
+  "original_lines": 10633
+}

@@ -95,25 +95,31 @@
   },
   "historical_execution_records": "evidence/state-refresh-2026-10-13/ACTIVE_GOAL_PROGRESS.json",
   "execution_state": {
-    "goal": "Final delivery handoff",
-    "status": "three-hourwindow complete; finalhandoff saved; selected857 delivered",
-    "root_owner": [
+    "objective": "Modularize the largest mixed-responsibility source files while preserving gameplay",
+    "status": "refactor acceptance complete; publishing exact-source candidate, then in-depth CI failure repair",
+    "baseline_commit": "dc53244d99a833888f1004af1b74a392887b34d5",
+    "root_ownership": [
       "src/sim/simulation.cpp",
-      "src/sim/simulation.hpp",
-      "src/bridge/scraperx_simulation.cpp",
-      "integration/documentation/delivery"
+      "src/sim/simulation/",
+      "CMakeLists.txt",
+      "integration and documentation"
     ],
-    "completed_workers": [
-      "movable_weight_owner_map",
-      "balance_block_ui",
-      "counterweight_payoff",
-      "inspection_motion_feedback"
+    "worker_results": [
+      "Main4920\u21922347, bodyequivalence56moved/60retained",
+      "UIdriver5564\u2192297,142bodies/66scenarios preserved"
     ],
-    "next_action": "Nextauthorizedimplementation packet:03_EXECUTION/PLANNING/NEXT_CONTACT_SLICE_AFTER_857.md. Oneactualcornerregrip fromexistingowners; preserve462\u2013484gate/catchdebugexclusion. No completedcampaign/settingsaudit.",
-    "no_catch_debugging": true,
-    "no_apk": false,
-    "precision_evidence": "evidence/inspection-drawbridge-2026-10-14/precision/RESULT.md",
-    "current_frontier": "Selected857281inputdebugAPKaa8c772a...; gunstatusactualMain21PASS; secondhandnativepublic/Android+Mainphone28PASS; nativebyteidentityfa826... . All prior850\u2013856 progression/evidence preserved. Deviceplay remains unobserved."
+    "next": "Scoped push and actual APK artifact; diagnose shared transfer/footing completion and independent hook retention; repair supported causes",
+    "full_canonical_scope_preserved": true,
+    "native_test_runner": "4365\u219222;12compiledsuites;fullrunnerPASS182.55s",
+    "native_acceptance": "14focusedcasesPASS;allmodulescompile",
+    "godot_acceptance": "import/keyboard/secondhandPASS;normal+fixturecollisionbyteidentical",
+    "ci_repair_authorization": "Owner2026-10-15 requires actual Actions failures repaired in depth, no flattening or weakened checks",
+    "baseline_failures": {
+      "run": 38733308608,
+      "passed": 71,
+      "failed": 21,
+      "total": 92
+    }
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

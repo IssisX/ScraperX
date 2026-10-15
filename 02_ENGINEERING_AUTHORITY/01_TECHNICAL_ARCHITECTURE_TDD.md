@@ -121,6 +121,10 @@ A state not listed here does not acquire authority by accident. Add it deliberat
 
 ---
 
+### Source organization
+
+The current implementation ownership and compiled native/Godot module boundaries are documented in [Source ownership map](SOURCE_MODULE_MAP.md). The public native API, single PhysicsWorld state, fixed-tick ordering and Godot presentation authority remain unchanged by the 2026-10-15 modularization.
+
 ## 3. Runtime topology
 
 ```text

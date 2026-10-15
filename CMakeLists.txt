@@ -18,6 +18,25 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/simulation/affordance.cpp
+    src/sim/simulation/carry.cpp
+    src/sim/simulation/checkpoint.cpp
+    src/sim/simulation/climb.cpp
+    src/sim/simulation/fixture_build.cpp
+    src/sim/simulation/geometry.cpp
+    src/sim/simulation/grapple.cpp
+    src/sim/simulation/hand_transfer.cpp
+    src/sim/simulation/legacy_traversal.cpp
+    src/sim/simulation/locomotion.cpp
+    src/sim/simulation/machine_build.cpp
+    src/sim/simulation/machine_update.cpp
+    src/sim/simulation/queries.cpp
+    src/sim/simulation/runtime.cpp
+    src/sim/simulation/snapshot.cpp
+    src/sim/simulation/support.cpp
+    src/sim/simulation/tick.cpp
+    src/sim/simulation/world.cpp
+    src/sim/simulation/world_geometry.cpp
     src/sim/physical_hand_climb.cpp
     src/sim/physical_foot_push.cpp
     src/sim/traversal_affordance.cpp
@@ -135,7 +154,22 @@ endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     # Exercise the current integration blocker first; every gate still runs once.
-    add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
+    add_executable(scraperx_sim_tests
+        tests/simulation_tests.cpp
+        tests/simulation/athletic_traversal_tests.cpp
+        tests/simulation/counterweight_well_tests.cpp
+        tests/simulation/foundation_support_tests.cpp
+        tests/simulation/freight_jib_tests.cpp
+        tests/simulation/ground_water_tests.cpp
+        tests/simulation/hook5_rack_tests.cpp
+        tests/simulation/intake_rise_tests.cpp
+        tests/simulation/legal_forty_tests.cpp
+        tests/simulation/plant_recovery_tests.cpp
+        tests/simulation/process_sump_tests.cpp
+        tests/simulation/structural_needle_tests.cpp
+        tests/simulation/test_utilities.cpp
+        tests/simulation/world_crouch_tests.cpp
+    )
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>

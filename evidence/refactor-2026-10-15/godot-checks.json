@@ -1,0 +1,142 @@
+{
+  "bridge": {
+    "commands": [
+      [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-accurate-rigid-20261014/jolt-src",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/godot_cpp-build/gen/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/gdextension",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/register_types.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/register_types.cpp.o"
+      ],
+      [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-accurate-rigid-20261014/jolt-src",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/godot_cpp-build/gen/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/gdextension",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/scraperx_simulation.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/scraperx_simulation.cpp.o"
+      ],
+      [
+        "/usr/bin/c++",
+        "-shared",
+        "-pthread",
+        "-static-libgcc",
+        "-static-libstdc++",
+        "-s",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/register_types.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/scraperx_simulation.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-accurate-rigid-20261014/jolt-build/libJolt.a"
+      ]
+    ],
+    "archive_sha256": "04e4c40080c53c49e0550fa3ed47c55c467f4aedbacc0f349490ba0db7959d22",
+    "native_so_sha256": "6d68d615b3fa5d1742da4ca7134d219eedabd4dbf980219b742bf8344327159f",
+    "host_only_adapter": "private copied project adds Linuxarm64 library selectors; shipping extension unchanged"
+  },
+  "checks": [
+    {
+      "name": "ordinary_solids",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/godot",
+        "--",
+        "--export-solids=/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/ordinary.inc"
+      ],
+      "exit_code": 0,
+      "seconds": 2.91,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/ordinary_solids.godot.log",
+      "collision_table_byte_match": true,
+      "tail": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_SOLIDS boxes=1316 hulls=666 counts={ \"solid\": 1982, \"moving\": 0, \"non_solid\": 557, \"mirror\": 385, \"disc\": 0 }\n"
+    },
+    {
+      "name": "fixture_solids",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/godot",
+        "--",
+        "--regression-fixtures",
+        "--export-solids=/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/fixtures.inc"
+      ],
+      "exit_code": 0,
+      "seconds": 2.9,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/fixture_solids-fixed.godot.log",
+      "collision_table_byte_match": true,
+      "tail": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_SOLIDS boxes=1149 hulls=660 counts={ \"solid\": 1797, \"moving\": 361, \"non_solid\": 570, \"mirror\": 280, \"disc\": 12 }\n",
+      "initial_failure": "Extracted water-screw root was parented under TowerPresentation instead of original Main root; restored explicit scene-root input, preserving native-owned geometry exclusion."
+    },
+    {
+      "name": "routed_keyboard_core",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/godot",
+        "--fixed-fps",
+        "60",
+        "--",
+        "--uitest=keyboard_core"
+      ],
+      "exit_code": 0,
+      "seconds": 5.42,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/routed_keyboard_core.godot.log",
+      "collision_table_byte_match": null,
+      "tail": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006\nSCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000\nSCRAPERX_AUDIO_BANK clips=33 msec=408 driver=Dummy\nSCRAPERX_UITEST_POSE keyboard_pause tick=300 position=(6.0, 0.888587, -31.76319) elapsed_ms=5123\nSCRAPERX_UITEST PASS keyboard_core forward_m=3.71 rejected=0->1\n"
+    },
+    {
+      "name": "second_hand_bridge",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/godot",
+        "--script",
+        "res://tests/second_hand_reach_bridge_test.gd"
+      ],
+      "exit_code": 0,
+      "seconds": 11.89,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/second_hand_bridge.godot.log",
+      "collision_table_byte_match": null,
+      "tail": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000\nSECOND_HAND_STATE tick=260 traversal=4 generations=1,1 material_error_m=0.00001525878906\nSECOND_HAND_REACH PASS checks=25 native_tick=261 diagnostic_stage=1 phone_input=1 device_play=0\nSCRAPERX_AUDIO_BANK clips=33 msec=429 driver=Dummy\n"
+    }
+  ]
+}

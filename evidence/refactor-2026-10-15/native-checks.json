@@ -1,0 +1,169 @@
+{
+  "archive_sha256": "04e4c40080c53c49e0550fa3ed47c55c467f4aedbacc0f349490ba0db7959d22",
+  "checks": [
+    {
+      "name": "physical_topout_tests",
+      "mode": "topout",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests",
+        "topout"
+      ],
+      "exit_code": 0,
+      "seconds": 5.9,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests-topout.log",
+      "tail": "SHARED tick=179 contact=178 hand_n=938.026 foot_n=733.746\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=133 final_tick=269\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "blocked",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests",
+        "blocked"
+      ],
+      "exit_code": 0,
+      "seconds": 0.12,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests-blocked.log",
+      "tail": "PASS PHYSICAL_TOPOUT blocked_receiver no_legacy_action_started=1\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "restart",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests",
+        "restart"
+      ],
+      "exit_code": 0,
+      "seconds": 5.49,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests-restart.log",
+      "tail": "PASS PHYSICAL_TOPOUT restart\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "frames",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests",
+        "frames"
+      ],
+      "exit_code": 0,
+      "seconds": 28.95,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_topout_tests-frames.log",
+      "tail": "PASS PHYSICAL_TOPOUT frame_equivalence fixed90_caller60_360_grouped4=1 tolerance_m=0.0001\n"
+    },
+    {
+      "name": "physical_entry_overlap_tests",
+      "mode": "natural",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests",
+        "natural"
+      ],
+      "exit_code": 0,
+      "seconds": 17.71,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests-natural.log",
+      "tail": "32,408.3,-128.645 support_velocity=0,0,0\nENTRY_OVERLAP mode=natural phase=ordinary_jump_cartesian_catch event=finite_shared_progress tick=914 position=-5.86495,407.986,-128.2 velocity=-0.00627996,0.376636,7.32763e-10 grounded=0 support=0 active=0 foot_support=2890 starts=1 stop=9 command_j=524.999 stroke_m=0.15 time_s=0.25 peak_n=1632.73 impulse_ns=0 distance_m=0.993269 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=13 overlap=0 shared_tick=913 hand_n=990.184 foot_n=1605.69 radial=0 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.44032,408.3,-128.645 support_velocity=0,0,0\nENTRY_OVERLAP mode=natural phase=ordinary_receiver_exit event=tick tick=990 position=-5.1166,407.9,-128.2 velocity=0.0810776,0,-9.39045e-06 grounded=1 support=1935 active=0 foot_support=2890 starts=1 stop=9 command_j=524.999 stroke_m=0.15 time_s=0.25 peak_n=1632.73 impulse_ns=0 distance_m=0.993269 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.373978 traversal=0 hands=0 shared=13 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=0,0,0\nENTRY_OVERLAP mode=natural phase=ordinary_receiver_exit event=firm_receiver_exit tick=1074 position=-5.10263,407.9,-128.2 velocity=0.000384151,0,-4.44925e-08 grounded=1 support=1935 active=0 foot_support=2890 starts=1 stop=9 command_j=524.999 stroke_m=0.15 time_s=0.25 peak_n=1632.73 impulse_ns=0 distance_m=0.993269 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.373978 traversal=0 hands=0 shared=13 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=0,0,0\nPASS PHYSICAL_ENTRY_OVERLAP mode=natural public_input=1 actual_jolt=1 gravity=1 deaths=0\n"
+    },
+    {
+      "name": "physical_entry_overlap_tests",
+      "mode": "release",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests",
+        "release"
+      ],
+      "exit_code": 0,
+      "seconds": 22.04,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests-release.log",
+      "tail": "481,407.892,-128.2 velocity=-0.0021384,0.00253831,-4.83682e-11 grounded=1 support=2890 active=1 foot_support=2890 starts=1 stop=0 command_j=46.6666 stroke_m=0.0133333 time_s=0.0222222 peak_n=533.435 impulse_ns=1.48176 distance_m=0.897232 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=1 overlap=1 shared_tick=893 hand_n=1.3801 foot_n=533.435 radial=0 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.44053,408.3,-128.645 support_velocity=0.00073573,-0.0246746,2.29787e-09\nENTRY_OVERLAP mode=release phase=deliberate_shared_release event=tick tick=900 position=-5.86494,407.892,-128.2 velocity=-0.00123004,0.0020884,6.68358e-12 grounded=1 support=2890 active=0 foot_support=2890 starts=1 stop=1 command_j=46.6666 stroke_m=0.0133333 time_s=0.0222222 peak_n=533.435 impulse_ns=0 distance_m=0.897232 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=0 hands=0 shared=1 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=-0.062971,-0.0133043,-1.63941e-08\nENTRY_OVERLAP mode=release phase=deliberate_shared_release event=released_without_restart tick=924 position=-5.86508,407.892,-128.2 velocity=-0.000127142,0.00107274,4.12554e-10 grounded=1 support=2890 active=0 foot_support=2890 starts=1 stop=1 command_j=46.6666 stroke_m=0.0133333 time_s=0.0222222 peak_n=533.435 impulse_ns=0 distance_m=0.897232 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=0 hands=0 shared=1 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=-0.0607172,-0.0147942,-1.88917e-08\nPASS PHYSICAL_ENTRY_OVERLAP mode=release public_input=1 actual_jolt=1 gravity=1 deaths=0\n"
+    },
+    {
+      "name": "physical_entry_overlap_tests",
+      "mode": "expired",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests",
+        "expired"
+      ],
+      "exit_code": 0,
+      "seconds": 22.77,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests-expired.log",
+      "tail": "inite_command tick=892 position=-5.86479,407.892,-128.2 velocity=-0.0010088,0.00265963,1.51453e-10 grounded=1 support=2890 active=1 foot_support=2890 starts=1 stop=0 command_j=23.3333 stroke_m=0.00666666 time_s=0.0111111 peak_n=266.713 impulse_ns=0.740871 distance_m=0.897232 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=0 hands=0 shared=0 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=0.000503587,-0.0246003,9.49847e-10\nENTRY_OVERLAP mode=expired phase=naturally_expired_foot_catch event=tick tick=900 position=-5.86459,407.901,-128.2 velocity=0.00487609,0.334785,1.4833e-09 grounded=1 support=2890 active=1 foot_support=2890 starts=1 stop=0 command_j=210 stroke_m=0.0599999 time_s=0.1 peak_n=1536.49 impulse_ns=4.26802 distance_m=0.909893 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=0 hands=0 shared=0 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=0,0,0 right=0,0,0 support_velocity=-0.0654074,-0.0427631,-1.34922e-09\nENTRY_OVERLAP mode=expired phase=naturally_expired_foot_catch event=expired_catch tick=936 position=-5.86321,407.897,-128.2 velocity=0.00196103,-1.47827,1.13615e-09 grounded=1 support=2890 active=0 foot_support=2890 starts=1 stop=9 command_j=524.999 stroke_m=0.15 time_s=0.25 peak_n=1558.1 impulse_ns=0 distance_m=1.01844 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=0 overlap=0 shared_tick=0 hand_n=0 foot_n=0 radial=0 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.43897,408.3,-128.645 support_velocity=-0.000489786,-0.0278995,1.97182e-09\nPASS PHYSICAL_ENTRY_OVERLAP mode=expired public_input=1 actual_jolt=1 gravity=1 deaths=0\n"
+    },
+    {
+      "name": "physical_entry_overlap_tests",
+      "mode": "radial",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests",
+        "radial"
+      ],
+      "exit_code": 0,
+      "seconds": 22.42,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_entry_overlap_tests-radial.log",
+      "tail": "ort=0 active=1 foot_support=2890 starts=1 stop=0 command_j=280 stroke_m=0.0799999 time_s=0.133333 peak_n=1666.78 impulse_ns=4.62931 distance_m=0.923203 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=11 overlap=1 shared_tick=903 hand_n=394.629 foot_n=1666.55 radial=0 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.44053,408.3,-128.645 support_velocity=0,0,0\nENTRY_OVERLAP mode=radial phase=crouch_changes_airborne_shared_cartesian_to_radial event=radial_transition tick=904 position=-5.86543,407.918,-128.2 velocity=-0.00684118,0.389833,-6.86989e-11 grounded=0 support=0 active=0 foot_support=2890 starts=1 stop=1 command_j=280 stroke_m=0.0799999 time_s=0.133333 peak_n=1666.78 impulse_ns=0 distance_m=0.923203 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=11 overlap=0 shared_tick=903 hand_n=394.629 foot_n=1666.55 radial=1 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.44053,408.3,-128.645 support_velocity=0,0,0\nENTRY_OVERLAP mode=radial phase=crouch_changes_airborne_shared_cartesian_to_radial event=radial_held_without_restart tick=919 position=-5.84994,407.886,-128.22 velocity=0.0780622,-0.0985934,-0.127121 grounded=1 support=2891 active=0 foot_support=2890 starts=1 stop=1 command_j=280 stroke_m=0.0799999 time_s=0.133333 peak_n=1666.78 impulse_ns=0 distance_m=0.923203 initial_distance_m=0.897232 gravity=1 deaths=0 broken=0 peak_strength=0.358971 traversal=4 hands=2 shared=11 overlap=0 shared_tick=903 hand_n=394.629 foot_n=1666.55 radial=0 kind=0 rejection=0 left=-5.55,408.3,-128.645 right=-5.44053,408.3,-128.645 support_velocity=-0.0277136,-0.149774,4.72466e-05\nPASS PHYSICAL_ENTRY_OVERLAP mode=radial public_input=1 actual_jolt=1 gravity=1 deaths=0\n"
+    },
+    {
+      "name": "second_hand_recovery_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/second_hand_recovery_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 19.01,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/second_hand_recovery_tests-default.log",
+      "tail": "RECOVERED tick=260 separation=0.0840581 generation=1,1 recovery_direction=0\nRECOVERED tick=260 separation=0.0840581 generation=1,1 recovery_direction=1\nPASS SECOND_HAND publicAction260 paired_controls Drop restart\n"
+    },
+    {
+      "name": "alternating_shimmy_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/alternating_shimmy_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 20.58,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/alternating_shimmy_tests-default.log",
+      "tail": "CATCH tick=52 z=-180.6\nREGRIP tick=134 changed=0,1 hand_z=-180.82,-180.957\nREGRIP tick=153 changed=1,0 hand_z=-181.083,-180.957\nREGRIP tick=172 changed=0,1 hand_z=-181.083,-181.21\nREGRIP tick=191 changed=1,0 hand_z=-181.337,-181.21\nREGRIP tick=210 changed=0,1 hand_z=-181.337,-181.463\nREGRIP tick=260 changed=0,1 hand_z=-181.337,-180.843\nREGRIP tick=279 changed=1,0 hand_z=-180.717,-180.843\nREGRIP tick=298 changed=0,1 hand_z=-180.717,-180.59\nREGRIP tick=317 changed=1,0 hand_z=-180.463,-180.59\nREGRIP tick=336 changed=0,1 hand_z=-180.463,-180.337\nREGRIP tick=355 changed=1,0 hand_z=-180.21,-180.337\nREGRIP tick=374 changed=0,1 hand_z=-180.21,-180.083\nBLOCKED_EDGE tick=619 z=-180.253\nREGRIP tick=656 changed=0,1 hand_z=-180.21,-180.61\nREGRIP tick=675 changed=1,0 hand_z=-180.737,-180.61\nREGRIP tick=694 changed=0,1 hand_z=-180.737,-180.863\nREGRIP tick=713 changed=1,0 hand_z=-180.99,-180.863\nREGRIP tick=732 changed=0,1 hand_z=-180.99,-181.117\nREGRIP tick=751 changed=1,0 hand_z=-181.243,-181.117\nREGRIP tick=770 changed=0,1 hand_z=-181.243,-181.37\nREGRIP tick=789 changed=1,0 hand_z=-181.497,-181.37\nREGRIP tick=808 changed=0,1 hand_z=-181.497,-181.623\nREGRIP tick=827 changed=1,0 hand_z=-181.75,-181.623\nREGRIP tick=846 changed=0,1 hand_z=-181.75,-181.877\nREGRIP tick=865 changed=1,0 hand_z=-182.004,-181.877\nREGRIP tick=884 changed=0,1 hand_z=-182.004,-182.13\nREGRIP tick=903 changed=1,0 hand_z=-182.257,-182.13\nALTERNATION both=0 left=12 right=14 cadence=1 planted=1 trailing=1\nPASS SHIMMY ordinary_jump_canopy_reversal_clear_topout firm90=1 tick=1161\n"
+    },
+    {
+      "name": "grapple_practice_route_tests",
+      "mode": "primary",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/grapple_practice_route_tests",
+        "primary"
+      ],
+      "exit_code": 0,
+      "seconds": 30.9,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/grapple_practice_route_tests-primary.log",
+      "tail": "165924,-135.500320,0.097221,0.000002,0.001344,1,1968,0,3,0,3,15.970232,490.191406,-135.500305,0.000000,0.000000,1092.424498\n[DEBUG-grapple-pose] receiver_braking,actual_support_stable cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=0.0151403,-0.0848452,-0.000492125\nGRAPPLE_ROUTE,receiver_braking,actual_support_stable,1889,20.100201,485.165924,-135.500320,0.000314,-0.000002,0.000004,1,1968,0,3,0,3,15.982612,490.193146,-135.500366,0.000000,0.000000,1092.424498\n[DEBUG-grapple-pose] original_roof_exit,begin cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=0.0151403,-0.0848452,-0.000492125\nGRAPPLE_ROUTE,original_roof_exit,begin,1889,20.100201,485.165924,-135.500320,0.000314,-0.000002,0.000004,1,1968,0,3,0,3,15.982612,490.193146,-135.500366,0.000000,0.000000,1092.424498\n[DEBUG-grapple-pose] original_roof_exit,arrived cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=0.0154772,-0.0847084,-0.000417007\nGRAPPLE_ROUTE,original_roof_exit,arrived,2046,19.998741,485.149994,-132.765823,0.003624,0.000000,-0.116658,1,51,0,3,0,3,15.967629,490.196075,-135.500214,0.000000,0.000000,1092.424498\n[DEBUG-grapple-pose] original_roof_exit,stable cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=0.00370621,-0.0891999,-0.000476256\nGRAPPLE_ROUTE,original_roof_exit,stable,2136,19.998764,485.149994,-132.766571,0.000000,0.000000,0.000000,1,51,0,3,0,3,15.901740,490.210968,-135.500275,0.000000,0.000000,1092.424498\nGRAPPLE_PORTABLE away_from_rack=1 stow_re_equip=1 finite_stock=1\nPASS GRAPPLE_ROUTE mode=primary initial_staging_only=1 native_head_seated=1 passive_loaded=1 loaded_reel_work=1 receiver1968=1 original_roof_exit=1 deaths=0\n"
+    },
+    {
+      "name": "grapple_practice_route_tests",
+      "mode": "independent407",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/grapple_practice_route_tests",
+        "independent407"
+      ],
+      "exit_code": 0,
+      "seconds": 70.88,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/grapple_practice_route_tests-independent407.log",
+      "tail": "99906,404.399963,-129.796158,-0.003559,0.000000,-0.132078,1,1936,0,3,0,3,-5.091898,408.066193,-128.711700,0.000000,0.000000,496.328956\n[DEBUG-grapple-pose] independent_tray_braking,actual_support_stable cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=-21.085,-82.2212,6.84378\nGRAPPLE_ROUTE,independent_tray_braking,actual_support_stable,4179,-5.100510,404.399963,-129.818756,-0.000012,0.000000,-0.000427,1,1936,0,3,0,3,-5.091898,408.066193,-128.711700,0.000000,0.000000,496.328956\n[DEBUG-grapple-pose] independent_firm_exit,begin cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=-21.085,-82.2212,6.84378\nGRAPPLE_ROUTE,independent_firm_exit,begin,4179,-5.100510,404.399963,-129.818756,-0.000012,0.000000,-0.000427,1,1936,0,3,0,3,-5.091898,408.066193,-128.711700,0.000000,0.000000,496.328956\n[DEBUG-grapple-pose] independent_firm_exit,arrived cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=-21.085,-82.2212,6.84378\nGRAPPLE_ROUTE,independent_firm_exit,arrived,4327,-7.523124,404.399963,-129.799576,0.138750,0.000000,-0.001602,1,1936,0,3,0,3,-5.091898,408.066193,-128.711700,0.000000,0.000000,496.328956\n[DEBUG-grapple-pose] independent_firm_exit,actual_support_stable cup=16,490.499,-135.501 q=-7.91815e-05,-3.8112e-07,-5.76705e-06,1\n[DEBUG-grapple-head] local=-21.085,-82.2212,6.84378\nGRAPPLE_ROUTE,independent_firm_exit,actual_support_stable,4417,-7.499191,404.399963,-129.799576,0.000449,0.000000,-0.000005,1,1936,0,3,0,3,-5.091898,408.066193,-128.711700,0.000000,0.000000,496.328956\nPASS INDEPENDENT407 actual_square_rail=1 acquired_same_life=1 rise_m=0.300751 reel_j=496.328956 consecutive_airborne_loaded_ticks=39 release_firm_tray=1 spent_cartridges=1 deaths=0\n"
+    },
+    {
+      "name": "physical_traversal_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_traversal_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 133.59,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/physical_traversal_tests-default.log",
+      "tail": "PASS lowering_release cargo=1 immediate=1 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109013\nPASS lowering_release cargo=1 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109099\nPASS lowering_release cargo=0 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=3.24249e-08\nPASS passive_departure surface=rigid_shipping_vent before_vy=1.01504 after_vy=0.906044 expected_vy=0.906044 error=3.24249e-08 grounded=0\nPASS passive_departure surface=deforming_cargo_net before_vy=0.299287 after_vy=0.190287 expected_vy=0.190287 error=1.22786e-08 grounded=0\nPASS cargo_jump finite_stroke_debit=599.4 departure_vy=1.45046\nPASS ordinary_tread_traction force_work_delta=0.403336 dvx=0.0872\nPASS receiver_walk_off momentum_error=0\nPASS passive_departure surface=rotating_as026 before_vy=0.566459 after_vy=0.457459 expected_vy=0.457459 error=3.24249e-08 grounded=0\n"
+    },
+    {
+      "name": "landing_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/landing_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 55.63,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-refactor-20261015/landing_tests-default.log",
+      "tail": "landing normal=2.80675 energy=334.809 observed_impulse=238.574 balance=0.95217 recovery=0.206304 deaths=0\nlanding normal=8.85624 energy=3333.4 observed_impulse=752.78 balance=0.5238 recovery=0.478531 deaths=0\nlanding normal=14.0338 energy=8370.26 observed_impulse=1192.87 balance=0.1 recovery=0.711521 deaths=0\nlanding normal=22.1544 energy=20859.7 observed_impulse=1883.12 balance=1 recovery=0 deaths=1\ncabinet approach at=20,11.8758,-121.434 recovery=0 step_ups=0\nrocker support=2800 at=30.9985,67.0974,-138.45\nroll normal=17.7398 tangent=5.5 compact=1 retained_momentum=1\nPASS physical landing energy, finite recovery, dynamic supports and restart\n"
+    }
+  ]
+}
