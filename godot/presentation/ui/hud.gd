@@ -25,6 +25,7 @@ var _safe := Rect2()
 var _clock := 0.0
 var _ledge_cue := 0.0
 var _hang_cue := 0.0
+var _precision_cue := 0.0
 var _gauge := 0.0
 var _prompt_alpha := 0.0
 var _prompts: Array[Dictionary] = []
@@ -74,6 +75,7 @@ func update_hud(ctx: Dictionary, delta: float) -> void:
 	var hanging: bool = ctx["hanging"]
 	_ledge_cue = move_toward(_ledge_cue, 1.0 if (ctx["climb_ok"] or ctx["grab_hint"]) else 0.0, delta * 7.0)
 	_hang_cue = move_toward(_hang_cue, 1.0 if hanging else 0.0, delta * 7.0)
+	_precision_cue = move_toward(_precision_cue, 1.0 if bool(ctx.get("precision", false)) else 0.0, delta * 9.0)
 	var falling := not grounded and int(ctx["traversal"]) == 0 \
 		and (-velocity.y > GAUGE_MIN_FALL_MPS or bool(ctx["chute"]))
 	_gauge = move_toward(_gauge, 1.0 if falling else 0.0, delta * 5.0)
@@ -165,6 +167,8 @@ func _draw() -> void:
 		_draw_prompts(center)
 	if _alt_alpha > 0.01:
 		_draw_altimeter()
+	if _precision_cue > 0.01:
+		_draw_precision()
 	if not _toasts.is_empty():
 		_draw_toasts()
 	if not caption.is_empty():
@@ -379,3 +383,21 @@ func _draw_caption() -> void:
 		0.0, 10.0 * u)
 	UiStyle.text(self, UiStyle.font_label(), caption, Vector2(cx, rect.position.y + 41.0 * u), font_size,
 		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+
+# The precision jump's sighted landing: a small ring laid on the surface the
+# eyes are on, where the feet will come down.
+func _draw_precision() -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var point: Vector3 = _ctx.get("precision_point", Vector3.ZERO)
+	if camera.is_position_behind(point):
+		return
+	var at := camera.unproject_position(point)
+	var u := _u
+	var color := UiStyle.with_alpha(UiStyle.AMBER, 0.85 * _precision_cue)
+	var radius := lerpf(22.0, 14.0, UiStyle.ease_out_back(_precision_cue)) * u
+	UiStyle.ring(self, at, radius, color, 2.5 * u)
+	UiStyle.disc(self, at, 2.5 * u, color)

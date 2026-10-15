@@ -181,6 +181,14 @@ constexpr float kWallStepPushMps = 1.2F;
 constexpr float kWallFriction = 0.8F;
 constexpr float kWallKickMps = 3.0F;
 constexpr double kWallRunHoldSeconds = 0.3;
+// PARKOUR_MOVE_SET.md M7, the tic-tac: the kick goes where the stick points
+// as well as out from the wall -- up to kWallKickAlongMps (CHOSEN, the legs'
+// push turned along the wall) in the stick's direction across the wall's
+// normal -- so the body can be sent at a ledge or the facing wall, and the
+// steps start again there. At most kWallKicksMax kicks in one flight: the
+// legs' push is finite.
+constexpr float kWallKickAlongMps = 2.0F;
+constexpr std::uint32_t kWallKicksMax = 2;
 // Parkour step 5: the grappling hook, a toy found up the tower. A hook of
 // kHookMassKg is fired along the aim at kHookLaunchMps on a line of at most
 // kHookLineMaxM (tension only), and flies under gravity as a body like any
@@ -354,6 +362,27 @@ constexpr std::uint32_t kJumpVaultWindowTicks =
 // spends it.
 constexpr std::uint32_t kJumpBufferTicks =
     static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+// PARKOUR_MOVE_SET.md M3, the precision jump: the sighted, committed jump
+// onto a lip or ledge the eyes have picked. Grounded, the look (facing and
+// pitch) is cast ahead; a surface it meets between kPrecisionMinM and
+// kPrecisionMaxM out, within kPrecisionDropMaxM below or kPrecisionRiseMaxM
+// above the feet, with a clear stand on it, is the sighted landing. JUMP
+// then takes off at the legs' 5.5 m/s up and at the one horizontal speed
+// that lands the feet there (DERIVED each jump from the arc), changed from
+// the run's by at most kPrecisionPushMps (CHOSEN: the legs' push, so a
+// standing precision reaches ~1.5 m and a sprint one the far side of a 4 m
+// gap) and never past the sprint's speed: a landing further than the legs
+// can send the body is jumped at short, no magic. The feet set down with the
+// point under the sole (the capsule's radius plus kPrecisionLandingSlack)
+// land as a prepared landing: the legs were ready for it. No air steering is
+// added: a committed arc.
+constexpr float kPrecisionMinM = 0.8F;
+constexpr float kPrecisionMaxM = 4.5F;
+constexpr float kPrecisionRiseMaxM = 1.2F;
+constexpr float kPrecisionDropMaxM = 2.0F;
+constexpr float kPrecisionPushMps = 3.0F;
+constexpr float kPrecisionLandingSlack = 0.15F;
+constexpr float kPrecisionLookMaxM = 9.0F;   // the look's cast, to the ground
 
 // Hang band expressed against the capsule centre: hands reach a ledge between
 // chest height and just above the head.
@@ -364,7 +393,19 @@ constexpr float kHangWallGap = 0.06F;
 // From the hold, kHangWallGap off the wall, to where the climb-up stands the
 // body, kLandingInset past it: the ground a climb-up covers from the hold.
 constexpr double kHangHoldToLandingMeters = kPlayerRadius + kHangWallGap + kLandingInset;
-constexpr float kHangMaximumClimbSpeed = 0.2F;
+// PARKOUR_MOVE_SET.md M6: the hands close on a lip or a hold near the apex
+// of a jump, still rising (an expert's cat leap catches on the way up, and
+// lands soft in the arms); past kHangMaximumClimbSpeed it is going by too
+// fast for them. Up to kHangApexSpeed the body is at its apex or falling and
+// the hands close as they always did; rising faster they close only in
+// flight from a jump (a step's lift pops the body up as fast, reaching for
+// nothing), and on a hold only where the body can pull on from it (a rising
+// body pinned under the rung it has just struck is no catch: it keeps its
+// flight and catches on the way down, clear). The hands reach only where
+// the stick is held (kHangIntentDotThreshold): where the eyes are and the
+// thumb points, never at whatever the body happens to be passing.
+constexpr float kHangMaximumClimbSpeed = 2.5F;
+constexpr float kHangApexSpeed = 0.2F;
 constexpr double kHangIntentDotThreshold = 0.3;
 // A caught ledge pulls the body in to its hold at this speed, never in one
 // tick: the probe takes a wall up to kTraversalReach past the capsule, and
@@ -441,6 +482,12 @@ constexpr float kMantleApproachSweepMargin = 0.02F;
 constexpr float kMantleApproachSupportSpacing = 0.10F;
 constexpr float kMantleApproachFrameDriftMps = 0.05F;  // ground vs ledge
 constexpr float kMantleApproachMaximumEntrySlope = 3.0F;
+// PARKOUR_MOVE_SET.md M5: a mantle made at a run leaves at a run. The speed
+// the body carried in along the facing, less what the hands' and the knee's
+// push onto the top costs (CHOSEN, about a walking step's worth), is the
+// speed it steps off the top with; a standing mantle still stands. A
+// climb-up from a hang carried nothing in and leaves with nothing.
+constexpr float kMantleExitCostMps = 1.5F;
 
 // After a deliberate release the controller stops offering an automatic re-grab
 // for a moment, so letting go is a real decision rather than an instant re-hang.
@@ -1553,6 +1600,7 @@ public:
         double move_input_z = 0.0;
         double facing_x = 0.0;
         double facing_z = 0.0;
+        double look_pitch = 0.0;   // radians, up positive
         bool jump_requested = false;
         bool traversal_requested = false;
         bool release_requested = false;
@@ -1610,6 +1658,7 @@ public:
             --regrab_lockout_ticks_;
         }
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
+        look_pitch_ = static_cast<float>(commands.look_pitch);
 
         // Harnessed into the slingshot's pouch or the swing's seat, the body
         // is the machine's: no crouch, carry, rig or traversal begins.
@@ -1735,8 +1784,19 @@ public:
                 restore_from_checkpoint(bodies);
                 died_this_tick = true;
             } else {
-                record_landing(bodies, commands.crouch_held);
+                bool prepared = commands.crouch_held;
+                if (precision_target_valid_) {
+                    const JPH::RVec3 at = bodies.GetPosition(player_id_);
+                    const float off = static_cast<float>(std::hypot(at.GetX() - precision_target_.GetX(),
+                                                                    at.GetZ() - precision_target_.GetZ()));
+                    if (off <= kPlayerRadius + kPrecisionLandingSlack) {
+                        prepared = true;   // the legs were set for exactly this landing
+                        ++precision_landing_count_;
+                    }
+                }
+                record_landing(bodies, prepared);
             }
+            precision_target_valid_ = false;
         }
         if (!died_this_tick) {
             advance_recovery(bodies, delta_seconds);
@@ -1763,6 +1823,7 @@ public:
         }
 
         update_affordance(bodies);
+        update_precision_sight(bodies);
         read_state();
     }
 
@@ -3706,16 +3767,25 @@ private:
         if (grounded_) {
             flight_from_jump_ = false;
             wall_steps_this_flight_ = 0;
+            wall_kicks_this_flight_ = 0;
             wall_step_cooldown_ = 0;
         }
-        if (commands.jump_requested && !grounded_ && wall_running()) {
-            // Kicked off the wall: out along its normal, and up by what the
-            // wall's friction gives that push.
-            player_velocity += wall_normal_ * kWallKickMps;
+        if (commands.jump_requested && !grounded_ && wall_running() && wall_kicks_this_flight_ < kWallKicksMax) {
+            // Kicked off the wall: out along its normal, along it where the
+            // stick points (the tic-tac), and up by what the wall's friction
+            // gives that push.
+            const JPH::Vec3 along(-wall_normal_.GetZ(), 0.0F, wall_normal_.GetX());
+            const float steer = std::clamp(static_cast<float>(commands.move_input_x * along.GetX() +
+                                                              commands.move_input_z * along.GetZ()),
+                                           -1.0F, 1.0F);
+            player_velocity += wall_normal_ * kWallKickMps + along * (steer * kWallKickAlongMps);
             player_velocity.SetY(std::max(player_velocity.GetY() - reference_velocity.GetY(), 0.0F) +
                                  reference_velocity.GetY() + kWallFriction * kWallKickMps);
-            wall_steps_this_flight_ = kWallStepsMax;
+            // The steps start again off the kick: a second wall can be run.
+            wall_steps_this_flight_ = 0;
+            wall_step_cooldown_ = kWallStepTicks;
             wall_run_seconds_left_ = 0.0;
+            ++wall_kicks_this_flight_;
             ++wall_kick_count_;
             kicked = true;
         }
@@ -3726,6 +3796,39 @@ private:
         }
         if (jump_started) {
             flight_from_jump_ = true;
+            precision_target_valid_ = false;
+            if (precision_sighted_) {
+                // The sighted landing: the horizontal speed that lands the
+                // feet there under the jump's own arc, within the legs' push.
+                const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+                const float feet_y = static_cast<float>(centre.GetY()) - kPlayerHalfHeight;
+                const float rise = static_cast<float>(precision_point_.GetY()) - feet_y;
+                const float gravity = -physics_system_.GetGravity().GetY();
+                const float disc = kJumpSpeed * kJumpSpeed - 2.0F * gravity * rise;
+                if (disc > 0.0F) {
+                    const float flight = (kJumpSpeed + std::sqrt(disc)) / gravity;   // the later root: landing
+                    const JPH::Vec3 to(static_cast<float>(precision_point_.GetX() - centre.GetX()), 0.0F,
+                                       static_cast<float>(precision_point_.GetZ() - centre.GetZ()));
+                    const float ahead = to.Length();
+                    if (ahead > 1.0e-3F && flight > 1.0e-3F) {
+                        const JPH::Vec3 dir = to / ahead;
+                        const JPH::Vec3 wanted =
+                            dir * std::min(ahead / flight,
+                                           kPlayerMaximumRelativeSpeed * static_cast<float>(kSprintSpeedScale));
+                        const JPH::Vec3 have(player_velocity.GetX() - reference_velocity.GetX(), 0.0F,
+                                             player_velocity.GetZ() - reference_velocity.GetZ());
+                        JPH::Vec3 change = wanted - have;
+                        const float size = change.Length();
+                        if (size > kPrecisionPushMps) {
+                            change *= kPrecisionPushMps / size;
+                        }
+                        player_velocity += change;
+                        precision_target_valid_ = true;
+                        precision_target_ = precision_point_;
+                        ++precision_jump_count_;
+                    }
+                }
+            }
             const float push = reference_velocity.GetY() + kJumpSpeed - player_velocity.GetY();
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
             // The legs push off what they stand on: a dynamic support takes the
@@ -3833,7 +3936,10 @@ private:
         if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0) {
             return;
         }
-        if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) {
+        // Rising, the hands close only in a jump (M6's cat leap): a step's
+        // lift pops the body up at the same 2 m/s, reaching for nothing.
+        const float rising = bodies.GetLinearVelocity(player_id_).GetY();
+        if (rising > (flight_from_jump_ ? kHangMaximumClimbSpeed : kHangApexSpeed)) {
             return;
         }
         if (facing_.IsNearZero()) {
@@ -3852,12 +3958,16 @@ private:
                                              kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
                                              true);
         if (!probe.valid) {
-            // No ledge: a hold reached for in the air is caught and climbed.
+            // No ledge: a hold reached for in the air is caught and climbed --
+            // rising (M6), only where the first pull up from it is clear.
             const Grip grip = find_grip(
                 origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
                 facing_);
             if (grip.valid) {
-                begin_climb(bodies, grip);
+                if (rising <= kHangApexSpeed ||
+                    climb_move_clear(origin, origin + JPH::Vec3(0.0F, kClimbMoveAim, 0.0F))) {
+                    begin_climb(bodies, grip);
+                }
                 return;
             }
             // None in front: a bar or pipe over the head is swung from -- in
@@ -4041,7 +4151,13 @@ private:
         traversal_approach_entry_slope_ = entry_slope;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
-        traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
+        {
+            const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) -
+                                       bodies.GetPointVelocity(probe.ledge_body, origin);
+            const float along = std::max(0.0F, relative.GetX() * facing_.GetX() + relative.GetZ() * facing_.GetZ() -
+                                                   kMantleExitCostMps);
+            traversal_exit_relative_velocity_ = facing_ * along;
+        }
         bodies.SetGravityFactor(player_id_, 0.0F);
     }
 
@@ -4356,7 +4472,7 @@ private:
     void complete_traversal(JPH::BodyInterface &bodies) noexcept {
         const JPH::Vec3 support_velocity = traversal_support_point_velocity(bodies);
         JPH::Vec3 exit_velocity = support_velocity;
-        if (traversal_state_ == TraversalState::Vaulting) {
+        if (traversal_state_ == TraversalState::Vaulting || traversal_state_ == TraversalState::Mantling) {
             exit_velocity.SetX(support_velocity.GetX() + traversal_exit_relative_velocity_.GetX());
             exit_velocity.SetZ(support_velocity.GetZ() + traversal_exit_relative_velocity_.GetZ());
         }
@@ -5177,6 +5293,43 @@ private:
         traversal_vault_clear_progress_ = 0.0F;
     }
 
+    // M3: the landing the eyes are on, if any (see kPrecisionMinM). The look
+    // is cast from the eye to the ground; what it meets is the sighted point
+    // when it lies in the jump's reach, is level enough to stand on, and a
+    // standing capsule fits there.
+    void update_precision_sight(const JPH::BodyInterface &bodies) noexcept {
+        precision_sighted_ = false;
+        if (!grounded_ || crouched_ || sliding_ || traversal_state_ != TraversalState::None ||
+            carry_constraint_ != nullptr || facing_.IsNearZero() || look_pitch_ > -0.05F) {
+            return;
+        }
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        const JPH::RVec3 eye(centre.GetX(), centre.GetY() + kPlayerHalfHeight - 0.15F, centre.GetZ());
+        const float cos_p = std::cos(look_pitch_);
+        const JPH::Vec3 look(facing_.GetX() * cos_p, std::sin(look_pitch_), facing_.GetZ() * cos_p);
+        JPH::RayCastResult hit;
+        if (!cast_ray(eye, look * kPrecisionLookMaxM, hit)) {
+            return;
+        }
+        const JPH::RVec3 point = JPH::RRayCast(eye, look * kPrecisionLookMaxM).GetPointOnRay(hit.mFraction);
+        if (surface_normal(hit.mBodyID, hit.mSubShapeID2, point).GetY() < kLedgeTopNormalThreshold) {
+            return;
+        }
+        const float feet_y = static_cast<float>(centre.GetY()) - kPlayerHalfHeight;
+        const float rise = static_cast<float>(point.GetY()) - feet_y;
+        const float ahead = static_cast<float>(std::hypot(point.GetX() - centre.GetX(), point.GetZ() - centre.GetZ()));
+        if (ahead < kPrecisionMinM || ahead > kPrecisionMaxM || rise > kPrecisionRiseMaxM ||
+            rise < -kPrecisionDropMaxM) {
+            return;
+        }
+        const JPH::RVec3 stand(point.GetX(), point.GetY() + kPlayerHalfHeight + kLandingSkin, point.GetZ());
+        if (!capsule_pose_is_clear(stand)) {
+            return;
+        }
+        precision_sighted_ = true;
+        precision_point_ = point;
+    }
+
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
         affordance_ = {};
         grip_affordance_ = {};
@@ -5478,6 +5631,7 @@ public:
         state_.player_sliding = sliding_;
         state_.slide_count = slide_count_;
         state_.wall_step_count = wall_step_count_;
+        state_.wall_kick_count = wall_kick_count_;
         state_.player_wall_running = wall_running();
         state_.has_hook = has_hook_;
         state_.hook_take_available = hook_take_in_reach(bodies);
@@ -5595,6 +5749,10 @@ public:
         state_.step_up_count = step_up_count_;
         state_.step_up_meters = step_up_meters_;
         state_.jump_vault_count = jump_vault_count_;
+        state_.precision_sighted = precision_sighted_;
+        state_.precision_point = precision_sighted_ ? to_vector3(precision_point_) : Vector3{};
+        state_.precision_jump_count = precision_jump_count_;
+        state_.precision_landing_count = precision_landing_count_;
         state_.world_solid_mirrors = world_solid_mirrors_;
         state_.world_solid_rejected = world_solid_rejected_;
         state_.rejected_traversal_count = rejected_traversal_count_;
@@ -5828,6 +5986,15 @@ public:
     std::uint32_t wall_step_cooldown_ = 0;
     double wall_run_seconds_left_ = 0.0;
     JPH::Vec3 wall_normal_ = JPH::Vec3::sZero();
+    std::uint32_t wall_kicks_this_flight_ = 0;
+    // M3, the precision jump (see kPrecisionMinM).
+    float look_pitch_ = 0.0F;
+    bool precision_sighted_ = false;
+    JPH::RVec3 precision_point_ = JPH::RVec3::sZero();
+    bool precision_target_valid_ = false;
+    JPH::RVec3 precision_target_ = JPH::RVec3::sZero();
+    std::uint64_t precision_jump_count_ = 0;
+    std::uint64_t precision_landing_count_ = 0;
     std::uint64_t wall_step_count_ = 0;
     std::uint64_t wall_kick_count_ = 0;
     // The grappling hook.
@@ -5888,6 +6055,14 @@ bool Simulation::set_move_input(double world_x, double world_z) noexcept {
     }
     move_input_x_ = world_x;
     move_input_z_ = world_z;
+    return true;
+}
+
+bool Simulation::set_look_pitch(const double radians) noexcept {
+    if (!std::isfinite(radians)) {
+        return false;
+    }
+    look_pitch_input_ = std::clamp(radians, -1.5, 1.5);
     return true;
 }
 
@@ -6276,6 +6451,7 @@ void Simulation::step_fixed() noexcept {
     commands.move_input_x = move_input_x_;
     commands.move_input_z = move_input_z_;
     commands.facing_x = facing_x_;
+    commands.look_pitch = look_pitch_input_;
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
     commands.traversal_requested = traversal_requested_;

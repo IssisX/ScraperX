@@ -44,6 +44,16 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::set_move_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_facing", "world_x", "world_z"),
                                 &ScraperXSimulation::set_facing);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_look_pitch", "radians"),
+                                &ScraperXSimulation::set_look_pitch);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_precision_sighted"),
+                                &ScraperXSimulation::is_precision_sighted);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_precision_point"),
+                                &ScraperXSimulation::get_precision_point);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_precision_jump_count"),
+                                &ScraperXSimulation::get_precision_jump_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_precision_landing_count"),
+                                &ScraperXSimulation::get_precision_landing_count);
     godot::ClassDB::bind_method(godot::D_METHOD("request_jump"),
                                 &ScraperXSimulation::request_jump);
     godot::ClassDB::bind_method(godot::D_METHOD("request_traversal"),
@@ -322,6 +332,27 @@ bool ScraperXSimulation::set_move_input(const double world_x, const double world
 
 bool ScraperXSimulation::set_facing(const double world_x, const double world_z) {
     return simulation_->set_facing(world_x, world_z);
+}
+
+bool ScraperXSimulation::set_look_pitch(const double radians) {
+    return simulation_->set_look_pitch(radians);
+}
+
+bool ScraperXSimulation::is_precision_sighted() const {
+    return simulation_->snapshot().precision_sighted;
+}
+
+godot::Vector3 ScraperXSimulation::get_precision_point() const {
+    const auto &p = simulation_->snapshot().precision_point;
+    return {static_cast<float>(p.x), static_cast<float>(p.y), static_cast<float>(p.z)};
+}
+
+std::int64_t ScraperXSimulation::get_precision_jump_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().precision_jump_count);
+}
+
+std::int64_t ScraperXSimulation::get_precision_landing_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().precision_landing_count);
 }
 
 bool ScraperXSimulation::request_jump() {

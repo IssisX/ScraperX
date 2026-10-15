@@ -465,6 +465,7 @@ struct Snapshot final {
     // Parkour step 4: steps taken on a wall in the air (see kWallStepPushMps),
     // and whether one was taken in the last kWallRunHoldSeconds.
     std::uint64_t wall_step_count = 0;
+    std::uint64_t wall_kick_count = 0;
     bool player_wall_running = false;
     // Parkour step 5, the grappling hook. hook_state: 0 stowed, 1 flying,
     // 2 bitten. The line runs from the body's chest to hook_position;
@@ -534,6 +535,12 @@ struct Snapshot final {
     double step_up_meters = 0.0;
     // Vaults begun by a second Jump inside the window after a takeoff.
     std::uint64_t jump_vault_count = 0;
+    // M3, the precision jump: a landing the eyes are on now, and the jumps
+    // made at one and the landings that hit it.
+    bool precision_sighted = false;
+    Vector3 precision_point{};
+    std::uint64_t precision_jump_count = 0;
+    std::uint64_t precision_landing_count = 0;
     std::uint32_t world_solid_bodies = 0;
     std::uint32_t world_solid_mirrors = 0;
     std::uint32_t world_solid_rejected = 0;
@@ -852,6 +859,9 @@ public:
 
     [[nodiscard]] bool set_move_input(double world_x, double world_z) noexcept;
     [[nodiscard]] bool set_facing(double world_x, double world_z) noexcept;
+    // The view's pitch, radians, up positive: what the eyes are on, for the
+    // precision jump (PARKOUR_MOVE_SET.md M3).
+    [[nodiscard]] bool set_look_pitch(double radians) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
     // Let go: of a hung ledge or a climb's holds; on the ground, with an edge
@@ -992,6 +1002,7 @@ private:
     double move_input_z_ = 0.0;
     double facing_x_ = 0.0;
     double facing_z_ = 0.0;
+    double look_pitch_input_ = 0.0;
     bool jump_requested_ = false;
     bool traversal_requested_ = false;
     bool release_requested_ = false;

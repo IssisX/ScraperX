@@ -665,6 +665,42 @@ threw the rider, and its slow motion ran too long and slowed the push itself.
   of CHUTE. Rendered (local, 540×464): `launch_back`, `launch_forward`, `chute_up`.
 - **Not observed:** on the phone.
 
+**Parkour, the movement under everything (native, task #103; the owner's IMPORTANT TASK).**
+The research and the move set are in `03_EXECUTION/PLANNING/PARKOUR_MOVE_SET.md`: what an
+elite traceur's body does (eight findings), an audit of the native's eleven built moves with
+five gaps, thirteen moves specified (trigger, physics, feedback, legal transitions), the timing
+windows, and the tuning values. Built this pass, all in `src/sim/simulation.cpp`:
+- **G1, momentum through a mantle** (M5). A mantle made at a run leaves at a run: the speed
+  carried in along the facing less `kMantleExitCostMps` (1.5) is the speed it steps off with.
+  Proof: an 8 m/s running mantle leaves at 6.3 m/s; a standing one still stands.
+- **G2, the rising catch** (M6, the cat leap). The hands close on a lip or a hold while still
+  rising, up to `kHangMaximumClimbSpeed` (2.5 m/s, was 0.2) -- in flight from a jump only, and
+  on a hold only where the first pull up from it is clear. Proof: a jump at the proving ground's
+  hang ledge catches at +1.58 m/s rising, peak 2.27 m.
+- **G3, the tic-tac** (M7). A kick off a wall goes where the stick points along it as well as
+  out from it (`kWallKickAlongMps` 2.0), and the steps start again off the kick, up to
+  `kWallKicksMax` (2) kicks a flight. Proof: the same kick with the stick pulled back leaves
+  2.0 m/s slower along the wall than with it neutral.
+- **G4, the precision jump** (M3). The look (facing and pitch, `set_look_pitch`, new on the
+  bridge) is cast ahead; a standable surface 0.8-4.5 m out and within -2.0..+1.2 m of the feet,
+  with a clear stand on it, is the sighted landing, and JUMP takes off at the one horizontal
+  speed that puts the feet there, within the legs' push (`kPrecisionPushMps` 3.0). Landing on it
+  counts as prepared. The HUD lays an amber ring on the sighted point. Proof: native, the vault
+  rail's top sighted from x 2.0 lands the feet on it at x 4.66; touch (`touch_precision`, new,
+  73rd scenario, in CI), a walk up, the eyes down until the ring is on the rail, JUMP: landed
+  x 5.12, prepared.
+- **Tried and withdrawn.** A momentum catch with the stick neutral (closing at 1 m/s or more)
+  caught holds the thumb never pointed at: a walk-off the 220 ring south grabbed AS-007's
+  ladder below the lip instead of falling, a run up the yard curb hung from the compressor's
+  top, and a slingshot flight would have snagged the first hold in front of the eyes. Hands reach
+  where the thumb points. The first rising catch, taken on a step's lift too, swung from a rail
+  over deck 8 on the walk into S3's cage; and a rising catch pinned under the rung the jump had
+  just struck (C2's davit ladder) never climbed. Both are the two conditions above.
+- **Still open from the owner's list:** rolling on a landing, the slide, coyote time and input
+  buffering, the ledge grab and wall-run were already built (M9-M12, audit §2); physical mantles
+  are decision 2 below.
+- **Not observed:** on the phone.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

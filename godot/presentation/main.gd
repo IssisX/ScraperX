@@ -536,6 +536,7 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
 	_native.set_facing(facing.x, facing.y)
+	_native.set_look_pitch(_pitch)
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
 	# A hand line (the pitman lift's) is hauled while ACTION is held.
@@ -1211,6 +1212,9 @@ func _read_context() -> Dictionary:
 		"landing": landing_state,
 		"chute": chute,
 		"jump_ok": grounded and free,
+		# The precision jump's sighted landing (PARKOUR_MOVE_SET.md M3).
+		"precision": grounded and free and bool(_native.is_precision_sighted()),
+		"precision_point": _native.get_precision_point(),
 		"climb_ok": climb_ok,
 		# Airborne, is_ledge_available is the native hang probe: an edge in
 		# the grab band, which engages as soon as the player pushes into it.

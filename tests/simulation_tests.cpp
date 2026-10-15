@@ -7552,7 +7552,166 @@ void run_jump_buffer() {
     std::cout << "PASS scraperx_sim jump buffer: land_tick=" << land_tick << " window_ticks=9\n";
 }
 
+// PARKOUR_MOVE_SET.md, the seams between moves. Each proof fails without its
+// change: a running mantle that stops on top (M5), a lip missed while still
+// rising (M6), a kick that goes only straight out from a wall (M7), and a
+// jump at a sighted landing that is the plain jump (M3).
+void run_parkour_seams() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const double dt = Simulation::kFixedStepSeconds;
+
+    // M5: a mantle made at a run leaves at a run. The mantle ledge's face is
+    // at x = 9.0 (top 1.55 m); from the spawn 1.1 m short of it, running east,
+    // the ledge is taken at a run and the body is still moving east on top.
+    {
+        Simulation m(InitialSpawn::MantleApproach);
+        require(m.set_facing(1.0, 0.0) && m.advance_frame(0.5).accepted, "running mantle settle");
+        require(m.set_move_input(-1.0, 0.0) && advance_until(m, [](const Snapshot &n) { return n.player_position.x < 5.9; }, 3.0),
+                "running mantle: back off from the ledge");
+        require(m.set_move_input(1.0, 0.0) && m.set_sprint_input(true), "running mantle: run at it");
+        // Taken the moment it is offered at a run, as a player's thumb does.
+        double entry_speed = 0.0;
+        require(advance_until(m, [&](const Snapshot &n) {
+                    if (n.traversal_state == TraversalState::Mantling) {
+                        return true;
+                    }
+                    entry_speed = n.player_linear_velocity.x;
+                    if (n.ledge_available && n.ledge_entity_id == Simulation::kMantleLedgeEntityId) {
+                        (void)m.request_traversal();
+                    }
+                    return false;
+                }, 4.0),
+                "running at the mantle ledge, the body must take it");
+        require(entry_speed > 5.0, "the mantle must have been entered at a run");
+        require(advance_until(m, [](const Snapshot &n) {
+                    return n.player_grounded && n.support_entity_id == Simulation::kMantleLedgeEntityId;
+                }, 2.5),
+                "the running mantle must end on the ledge");
+        const Snapshot top = m.snapshot();
+        require(top.player_linear_velocity.x > 2.5,
+                "a mantle made at a run must leave at a run, not standing (x speed on top)");
+        std::cout << "PASS scraperx_sim parkour running mantle: entry_mps=" << entry_speed
+                  << " exit_mps=" << top.player_linear_velocity.x << "\n";
+    }
+
+    // M6: the lip is caught on the way up. From the deck under the hang
+    // ledge's lip (its top at 3.6 m, the deck at 0), a sprint jump at it
+    // catches with the body still rising, and before the apex of the jump.
+    {
+        Simulation h(InitialSpawn::HangApproach);
+        require(h.advance_frame(1.0).accepted, "rising catch settle");
+        // The hang ledge's face is at x = 8.5; walk to 1.2 m short of it on
+        // the deck below, then run and jump at the lip.
+        require(walk_to(h, 5.8, 4.0, 4.0, 0.1), "rising catch: back from the ledge's foot");
+        require(h.set_facing(1.0, 0.0) && h.set_move_input(1.0, 0.0) && h.set_sprint_input(true), "rising catch run");
+        require(advance_until(h, [](const Snapshot &n) { return n.player_position.x > 7.3; }, 3.0),
+                "rising catch: up to the face");
+        require(h.request_jump(), "rising catch jump");
+        double catch_vy = -100.0;
+        double peak_y = -100.0;
+        const bool caught = advance_until(h, [&](const Snapshot &n) {
+            peak_y = std::max(peak_y, n.player_position.y);
+            if (n.traversal_state == TraversalState::Hanging) {
+                catch_vy = n.player_linear_velocity.y;
+                return true;
+            }
+            return false;
+        }, 2.0);
+        require(caught, "a sprint jump at the lip must catch it");
+        require(catch_vy > 0.3, "the lip must be caught while the body is still rising");
+        std::cout << "PASS scraperx_sim parkour rising catch: catch_vy=" << catch_vy << " peak_y=" << peak_y << "\n";
+    }
+
+    // M7: the tic-tac. On the run wall (its face at z = -26.75, run along +x),
+    // a kick with the stick held back along the wall (-x) sends the body
+    // out (+z) and back (-x); straight out with the stick neutral.
+    {
+        const auto kick = [&](const double stick_x, double &vx_change, double &vz_change, std::uint64_t &kicks) {
+            Simulation k(InitialSpawn::WallRunApproach);
+            require(k.advance_frame(0.3).accepted && k.set_facing(1.0, 0.0) && k.set_move_input(1.0, 0.0) &&
+                        k.set_sprint_input(true),
+                    "tic-tac run");
+            require(advance_until(k, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0),
+                    "tic-tac approach");
+            require(k.request_jump() && k.advance_frame(dt * 2).accepted && k.set_move_input(1.0, -0.4), "tic-tac jump");
+            require(advance_until(k, [](const Snapshot &n) { return n.player_wall_running; }, 1.5), "tic-tac: on the wall");
+            const Snapshot before = k.snapshot();
+            require(k.set_move_input(stick_x, -0.4) && k.request_jump() && k.advance_frame(dt).accepted, "the kick");
+            const Snapshot after = k.snapshot();
+            vx_change = after.player_linear_velocity.x - before.player_linear_velocity.x;
+            vz_change = after.player_linear_velocity.z - before.player_linear_velocity.z;
+            kicks = after.wall_kick_count;
+        };
+        double back_vx = 0.0, back_vz = 0.0, neutral_vx = 0.0, neutral_vz = 0.0;
+        std::uint64_t back_kicks = 0, neutral_kicks = 0;
+        kick(-1.0, back_vx, back_vz, back_kicks);
+        kick(0.0, neutral_vx, neutral_vz, neutral_kicks);
+        require(back_kicks == 1 && neutral_kicks == 1, "each run must kick once");
+        require(back_vz > 2.0 && neutral_vz > 2.0, "a kick must throw the body out from the wall");
+        require(back_vx < neutral_vx - 1.5,
+                "the stick held back along the wall must turn the kick back along it (the tic-tac)");
+        std::cout << "PASS scraperx_sim parkour tic-tac: back_dvx=" << back_vx << " neutral_dvx=" << neutral_vx
+                  << " out_dvz=" << back_vz << "\n";
+    }
+
+    // M3: the precision jump. From the deck east of the vault rail (top at
+    // 0.95, 2.5 m long in z), standing 3.0 m short of the rail's top and
+    // looking down at it, the sighted landing is offered; JUMP lands the feet
+    // on the rail's top, a jump the plain jump (2.2 m from a stand at most
+    // ~1.5 m out) does not make.
+    {
+        const auto attempt = [&](const bool look_at_it, bool &sighted, double &landed_x, bool &on_rail,
+                                 std::uint64_t &precise) {
+            Simulation j(InitialSpawn::VaultApproach);
+            require(j.advance_frame(0.5).accepted, "precision settle");
+            // Walk west to 2.4 m short of the rail's top (its west face at
+            // x = 4.78; its top centre line at x = 5.0).
+            require(walk_to(j, 2.0, -6.0, 4.0, 0.1), "precision: to the mark");
+            require(j.set_facing(1.0, 0.0) && j.set_move_input(0.0, 0.0), "precision facing");
+            // The eyes find the rail's top: the look is lowered until the
+            // sighted point lies on the rail (a player's eyes settle on it).
+            sighted = false;
+            if (look_at_it) {
+                for (double pitch = -0.15; pitch > -0.6 && !sighted; pitch -= 0.01) {
+                    require(j.set_look_pitch(pitch) && j.advance_frame(dt * 2).accepted, "precision look");
+                    const Snapshot n = j.snapshot();
+                    sighted = n.precision_sighted && n.precision_point.y > 0.9 && n.precision_point.x > 4.7 &&
+                              n.precision_point.x < 5.1;
+                }
+            } else {
+                require(j.set_look_pitch(0.0) && j.advance_frame(0.3).accepted, "precision level look");
+                sighted = j.snapshot().precision_sighted;
+            }
+            require(j.request_jump(), "precision jump");
+            require(advance_until(j, [](const Snapshot &n) { return !n.player_grounded; }, 0.5), "precision takeoff");
+            require(advance_until(j, [](const Snapshot &n) { return n.player_grounded; }, 3.0), "precision landing");
+            const Snapshot l = j.snapshot();
+            landed_x = l.player_position.x;
+            on_rail = l.support_entity_id == Simulation::kVaultRailEntityId;
+            precise = l.precision_landing_count;
+        };
+        bool sighted = false, plain_sighted = false, on_rail = false, plain_on_rail = false;
+        double landed = 0.0, plain_landed = 0.0;
+        std::uint64_t precise = 0, plain_precise = 0;
+        attempt(true, sighted, landed, on_rail, precise);
+        attempt(false, plain_sighted, plain_landed, plain_on_rail, plain_precise);
+        require(sighted, "looking at the rail's top from 3 m, the precision landing must be sighted");
+        require(!plain_sighted, "looking level, nothing is sighted");
+        require(on_rail, "the precision jump must land the feet on the sighted rail top");
+        require(precise == 1, "a landing on the sighted point must count as the prepared landing it was");
+        require(!plain_on_rail && plain_precise == 0, "the plain standing jump must not reach the rail's top");
+        std::cout << "PASS scraperx_sim parkour precision: landed_x=" << landed << " plain_x=" << plain_landed << "\n";
+    }
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour") {
+        run_parkour_seams();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "jumpbuffer") {
         run_jump_buffer();
         return EXIT_SUCCESS;
@@ -9812,6 +9971,7 @@ int main() {
     run_save();
     run_landing();
     run_jump_buffer();
+    run_parkour_seams();
     run_teeter();
     run_trapeze();
     run_tram();

@@ -25,6 +25,7 @@ const SCENARIOS := {
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
 	"touch_speed_vault": 3,
+	"touch_precision": 3,
 	"touch_wall_run": 41,
 	"touch_crouch": 0,
 	"touch_slide": 0,
@@ -209,8 +210,8 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_wall_run",
-			"touch_hang_drop",
+	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
+			"touch_wall_run", "touch_hang_drop",
 			"touch_hang_climb", "touch_monkey_bars", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
@@ -252,6 +253,8 @@ func _run() -> void:
 			ok = await _touch_double_tap_vault()
 		"touch_speed_vault":
 			ok = await _touch_speed_vault()
+		"touch_precision":
+			ok = await _touch_precision()
 		"touch_wall_run":
 			ok = await _touch_wall_run()
 		"touch_crouch":
@@ -557,6 +560,44 @@ func _touch_vault() -> bool:
 		return _fail("vault never completed")
 	_detail = "x_after=%.2f" % _position().x
 	return _position().x > 5.6
+
+
+# PARKOUR_MOVE_SET.md M3 on the same rail: a short walk up to it, the eyes
+# down on its top (the HUD lays its ring there), JUMP from a stand: the legs
+# take off at the one speed that puts the feet on the rail, and the landing
+# counts as prepared.
+func _touch_precision() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_stick_push(Vector2(0.0, -1.0))
+	var walked: bool = await _wait_until(func() -> bool: return _position().x > 1.9, 2.0)
+	_touch(0, _main._touch.stick_home(), false)
+	if not walked:
+		return _fail("never walked up to the rail (x %.2f)" % _position().x)
+	await _wait_until(func() -> bool: return _walk_speed().length() < 0.1, 1.5)
+	# The eyes come down until the rail's near half is the sighted landing.
+	var sighted := false
+	var pitch := -0.15
+	while pitch > -0.65 and not sighted:
+		_main._pitch = pitch
+		await _frames(3)
+		if bool(_ctx()["precision"]):
+			var point: Vector3 = _ctx()["precision_point"]
+			sighted = point.x > 4.6 and point.x < 5.1 and point.y > 0.9
+		pitch -= 0.03
+	if not sighted:
+		return _fail("the rail's top was never the sighted landing")
+	await _pose("precision_sight")
+	_tap(1, _center(&"jump"))
+	var took_off: bool = await _wait_until(func() -> bool: return int(_native().get_precision_jump_count()) >= 1, 0.3)
+	if not took_off:
+		return _fail("JUMP did not take the sighted landing")
+	var down: bool = await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not down:
+		return _fail("never landed")
+	await _frames(6)
+	_detail = "landed_x=%.2f y=%.2f prepared=%d" % [_position().x, _position().y, int(_native().get_precision_landing_count())]
+	return int(_native().get_precision_landing_count()) >= 1 and _position().x > 4.5 and _position().x < 5.3 \
+		and _position().y > 1.6
 
 
 # The same rail at a sprint (the stick past its ring): ACTION is offered well

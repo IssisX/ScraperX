@@ -23,6 +23,11 @@ public:
     [[nodiscard]] bool configure_initial_spawn(std::int64_t initial_spawn);
     [[nodiscard]] bool set_move_input(double world_x, double world_z);
     [[nodiscard]] bool set_facing(double world_x, double world_z);
+    [[nodiscard]] bool set_look_pitch(double radians);
+    [[nodiscard]] bool is_precision_sighted() const;
+    [[nodiscard]] godot::Vector3 get_precision_point() const;
+    [[nodiscard]] std::int64_t get_precision_jump_count() const;
+    [[nodiscard]] std::int64_t get_precision_landing_count() const;
     [[nodiscard]] bool request_jump();
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_release();
