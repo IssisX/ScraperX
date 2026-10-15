@@ -406,7 +406,28 @@ void place_balance_block(Simulation&s){
  }
  require(seated,"placed block lowers actual28m span onto receiving seat after player leaves",s);
  const auto hold_start=span_toe(s);
- for(int i=0;i<450;++i){tick(s);fixed_ballast_wait(s,cable);require(std::abs(span_toe(s).y-scraperx::sim::kSplitInspectionTopY)<.08&&actual_span_seat_contact(s),"physical ballast keeps span at actual seat without player load",s);}
+ auto previous_span=s.kit_body_rotation(s.kit_body_index(kGirder));
+ auto previous_hatch=s.kit_body_rotation(s.kit_body_index(kHatch));
+ for(int i=0;i<450;++i){
+  tick(s);fixed_ballast_wait(s,cable);
+  const auto span_q=s.kit_body_rotation(s.kit_body_index(kGirder));
+  const auto hatch_q=s.kit_body_rotation(s.kit_body_index(kHatch));
+  const auto angular_step=[](scraperx::sim::Quaternion previous,scraperx::sim::Quaternion current){
+   const JPH::Quat p(float(previous.x),float(previous.y),float(previous.z),float(previous.w));
+   auto delta=JPH::Quat(float(current.x),float(current.y),float(current.z),float(current.w))*p.Conjugated();
+   if(delta.GetW()<0)delta=-delta;
+   const auto xyz=delta.GetXYZ();const float sine=xyz.Length();
+   return sine>1.e-12F?xyz*(2*std::atan2(sine,delta.GetW())/(sine*float(Simulation::kFixedStepSeconds))):JPH::Vec3::sZero();
+  };
+  const auto span_rate=angular_step(previous_span,span_q),hatch_rate=angular_step(previous_hatch,hatch_q);
+  if(i%10==0||!actual_span_seat_contact(s))
+   std::cout<<"SPLIT_HOLD tick="<<s.snapshot().tick_index<<" contact="<<actual_span_seat_contact(s)
+    <<" toe_y="<<span_toe(s).y<<" span_omega_est="<<span_rate.GetX()<<','<<span_rate.GetY()<<','<<span_rate.GetZ()
+    <<" hatch_omega_est="<<hatch_rate.GetX()<<','<<hatch_rate.GetY()<<','<<hatch_rate.GetZ()
+    <<" span_ke="<<s.kit_body_kinetic_energy(s.kit_body_index(kGirder))<<'\n';
+  previous_span=span_q;previous_hatch=hatch_q;
+  require(std::abs(span_toe(s).y-scraperx::sim::kSplitInspectionTopY)<.08&&actual_span_seat_contact(s),"physical ballast keeps span at actual seat without player load",s);
+ }
  require(std::abs(span_toe(s).y-hold_start.y)<.02,"seated span settles rather than merely passing useful height",s);
  sample(s,"ballast_alone_holds_span");
  // Recover the same real body; no inventory grant or relocation repairs it.

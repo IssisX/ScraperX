@@ -1,0 +1,32 @@
+name: Native repair diagnosis
+
+on:
+  push:
+    branches: [ChatGPT]
+    paths:
+      - ci/native-repair-request.json
+      - ci/run_native_repair.py
+      - .github/workflows/native-repair.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check experiment execution limits
+        run: python3 -m unittest discover -s ci -p test_mechanics_trial.py
+      - name: Build and exercise requested native owners
+        run: python3 ci/run_native_repair.py
+      - name: Preserve exact-source diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-repair-${{ github.sha }}
+          path: |
+            artifacts/native-repair/
+            build/native-repair/Testing/Temporary/LastTest.log
+          if-no-files-found: warn

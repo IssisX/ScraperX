@@ -1,0 +1,4 @@
+{
+  "reason": "Capture x86 receiver-catch and stair-departure states; preserve actual split-seat gap evidence. Diagnosis only, never full gameplay or APK certification.",
+  "checks": ["suspended_ladder_route", "swing_stair_route_2", "split_inspection_route"]
+}

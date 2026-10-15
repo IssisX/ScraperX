@@ -38,6 +38,16 @@ void report(Simulation &s, const char *label) {
             << " tip " << s.pipe_bridge_tip_height() << " pipes "
             << s.pipe_bridge_retained_pipes() << " support "
             << p.support_entity_id << " deaths " << p.death_count << std::endl;
+  std::cout << "STAIR_PLAYER tick=" << p.tick_index
+            << " velocity=" << p.player_linear_velocity.x << ','
+            << p.player_linear_velocity.y << ',' << p.player_linear_velocity.z
+            << " grounded=" << p.player_grounded
+            << " traversal=" << int(p.traversal_state)
+            << " hands=" << p.traversal_hand_constraint_count
+            << " gravity=" << p.player_gravity_factor
+            << " foot=" << p.foot_push_active
+            << " impact=" << p.last_impact_speed_mps
+            << " landings=" << p.landing_count << std::endl;
   if(s.entity_body_count(2600)) {
     const auto beam=s.kit_body_rotation(s.kit_body_index(2600));
     const auto lever=s.kit_body_rotation(s.kit_body_index(2601));
@@ -423,7 +433,12 @@ int main(int argc, char **argv) {
       if(abandoned_front<departure_front+.05) {
         std::cerr<<"FAIL mode2 receiver did not move after abandoning stair\n"; return 56;
       }
-      if(!wait_for(s,10,[](const Snapshot &v){return v.death_count==1 && v.player_grounded;})) {
+      const auto abandoned_tick=s.snapshot().tick_index;
+      if(!wait_for(s,10,[&](const Snapshot &v){
+            if((v.tick_index-abandoned_tick)%90==0)report(s,"STAIR_ABANDON_WAIT");
+            return v.death_count==1 && v.player_grounded;
+          })) {
+        report(s,"STAIR_ABANDON_RECOVERY_FAIL");
         std::cerr<<"FAIL mode2 fall did not restore checkpoint\n"; return 54;
       }
       report(s,"STAIR_FALL_RESTORED");

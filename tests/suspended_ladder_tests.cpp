@@ -252,6 +252,20 @@ int main() {
         if(state.player_grounded)break;
     }
     require(caught_receiver,"swing departure reaches a real receiver lip catch within the flight budget",s);
+    const auto catch_receipt=[&](int ordinal) {
+        const auto v=s.snapshot();
+        std::cout<<"RECEIVER_CATCH ordinal="<<ordinal<<" tick="<<v.tick_index
+            <<" position="<<v.player_position.x<<','<<v.player_position.y<<','<<v.player_position.z
+            <<" velocity="<<v.player_linear_velocity.x<<','<<v.player_linear_velocity.y<<','<<v.player_linear_velocity.z
+            <<" traversal="<<int(v.traversal_state)<<" support="<<v.traversal_support_entity_id
+            <<" hands="<<v.traversal_hand_constraint_count
+            <<" reach="<<distance(v.player_position,v.traversal_left_hand)<<','<<distance(v.player_position,v.traversal_right_hand)
+            <<" force="<<distance(v.traversal_left_hand_force,{})<<','<<distance(v.traversal_right_hand_force,{})
+            <<" command_j="<<v.traversal_command_work_bound_j
+            <<" supplied_j="<<v.traversal_actuator_positive_work_j
+            <<" absorbed_j="<<v.traversal_actuator_absorbed_work_j<<'\n';
+    };
+    catch_receipt(-1);
     // Let the real radial hang absorb the falling catch before commanding
     // the Cartesian shimmy. Crouch commands the existing paid radial shortening.
     require(s.set_crouch_input(true),"paid radial shortening uses ordinary crouch input",s);
@@ -261,6 +275,7 @@ int main() {
         tick(s);
         require_physical_receipt();
         const auto state=s.snapshot();
+        catch_receipt(i);
         require(state.traversal_state==TraversalState::Hanging && state.traversal_support_entity_id==1960 &&
                     state.traversal_hand_constraint_count==2,
                 "actual receiver hands arrest the fall before lateral transfer",s);
