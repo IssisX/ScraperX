@@ -98,11 +98,9 @@ void climb_to_shelf(Simulation &s, double top_y, double side_input,
         tick(s);
         require_climbing(s, "next Action engages actual hands", expected_support);
     }
-    bool arrived = false;
     for (int i = 0; i < tick_budget; ++i) {
         const auto v = s.snapshot();
         if (on_support_top(v, top_y, expected_support)) {
-            arrived = true;
             break;
         }
         require(v.traversal_state == TraversalState::Climbing ||
@@ -188,6 +186,7 @@ void traverse_laterally(Simulation &s, double direction, int ticks, const char *
     require_climbing(s, "lateral transfer begins with real route hand contacts");
     const auto before = s.snapshot();
     const double hand_z_before = .5 * (before.traversal_left_hand.z + before.traversal_right_hand.z);
+    bool junction_reached = false;
     for (int i = 0; i < ticks; ++i) {
         // Direction is a facing-relative side command; map it to world-space
         // Z because native movement axes are world-space. Here the bar is
@@ -195,10 +194,21 @@ void traverse_laterally(Simulation &s, double direction, int ticks, const char *
         require(s.set_move_input(0, direction * -1.0), "ordinary lateral traverse input accepted", s);
         tick(s);
         require_climbing(s, "low-clearance traverse retains both real hand contacts");
+        // The next rail starts at z=-136.8 with a55mm half section. Reach
+        // its actual joint with a planted hand before reversing; the body
+        // may still hang behind the hand while the next grip takes load.
+        const auto at = s.snapshot();
+        if (std::max(at.traversal_left_hand.z, at.traversal_right_hand.z) >= -136.80 - .055) {
+            junction_reached = true;
+            break;
+        }
     }
     (void)s.set_move_input(0, 0);
     tick(s, 20);
     const auto after = s.snapshot();
+    require(junction_reached &&
+            std::max(after.traversal_left_hand.z, after.traversal_right_hand.z) >= -136.80 - .055,
+            "planted hand reaches the actual bar-to-rising-rail joint before reversing climb", s);
     const double hand_z_after = .5 * (after.traversal_left_hand.z + after.traversal_right_hand.z);
     require(std::abs(hand_z_after - hand_z_before) >= .12 &&
                 std::abs(hand_z_after - hand_z_before) <= 2.2,
@@ -351,7 +361,7 @@ void run_route() {
     // The miss remains under the actual jump, gravity, and landing rules.
     miss_apex_and_recover(s);
     jump_and_catch_bar(s, "ordinary retry Action recatches the horizontal bar");
-    traverse_laterally(s, -1.0, 90,
+    traverse_laterally(s, -1.0, 2 * 90,
                        "bar traverse reaches the reverse rail at world +Z and changes hand anchors");
 
     // Reverse diagonal ascent from the bar must transfer body weight to the

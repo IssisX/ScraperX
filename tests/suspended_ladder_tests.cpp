@@ -20,13 +20,26 @@ Vector3 rotate(Quaternion q,Vector3 v) {
             v.y+q.w*t.y+q.z*t.x-q.x*t.z,
             v.z+q.w*t.z+q.x*t.y-q.y*t.x};
 }
-Vector3 local(Quaternion q,Vector3 origin,Vector3 point) {
-    return rotate({-q.x,-q.y,-q.z,q.w},sub(point,origin));
-}
 void require(bool value, const char *why, const Simulation &s) {
     if(value) return;
     auto p=s.snapshot();
-    std::cerr << "FAIL AS-026 " << why << " at=" << p.player_position.x << ',' << p.player_position.y << ',' << p.player_position.z << " traversal=" << int(p.traversal_state) << " grip=" << p.grip_entity_id << " support=" << p.support_entity_id << '\n';
+    std::cerr << "FAIL AS-026 " << why << " at=" << p.player_position.x << ',' << p.player_position.y << ',' << p.player_position.z << " traversal=" << int(p.traversal_state) << " grip=" << p.grip_entity_id << " support=" << p.support_entity_id
+        << " phase=" << int(p.traversal_phase) << " rejection=" << int(p.traversal_rejection_reason)
+        << " plan=" << int(p.traversal_plan_kind) << ':' << p.traversal_plan_generation
+        << " receiver=" << p.traversal_receiver_entity_id
+        << " target=" << p.traversal_target_point.x << ',' << p.traversal_target_point.y << ',' << p.traversal_target_point.z
+        << " ledge=" << p.traversal_ledge_point.x << ',' << p.traversal_ledge_point.y << ',' << p.traversal_ledge_point.z
+        << " contact_tick=" << p.foot_contact_tick << " foot_source_tick=" << p.foot_push_source_contact_tick
+        << " foot=" << p.foot_push_active << ':' << p.foot_push_support_entity_id << ':' << int(p.foot_push_stop_reason)
+        << " foot_start=" << p.foot_push_start_count << " stroke=" << p.foot_push_stroke_m << ':' << p.foot_push_stroke_limit_m
+        << " foot_elapsed=" << p.foot_push_elapsed_seconds << " foot_load=" << p.foot_push_last_load_n << ':' << p.foot_push_peak_load_n
+        << " foot_work=" << p.foot_push_command_work_bound_j << " overlap=" << p.hand_foot_overlap_solved_ticks
+        << " transfer=" << p.foot_transfer_count << '\n';
+    for(bool left:{false,true}) {
+        const auto anchor=s.traversal_hand_anchor(left);
+        std::cerr << "HAND left=" << left << " valid=" << anchor.valid << " body=" << anchor.support
+            << " generation=" << anchor.generation << " local=" << anchor.local.x << ',' << anchor.local.y << ',' << anchor.local.z << '\n';
+    }
     std::exit(1);
 }
 void tick(Simulation &s) { require(s.advance_frame(Simulation::kFixedStepSeconds).accepted,"fixed tick",s); }
@@ -107,9 +120,11 @@ int main() {
     std::cout << "PASS AS-026 launch shelf supported\n";
     const auto body=s.kit_body_index(2960);
     for(bool left:{false,true}) {
-        const auto current=left?s.snapshot().traversal_left_hand:s.snapshot().traversal_right_hand;
-        const auto grip=local(s.kit_body_rotation(body),s.kit_body_position(body),current);
-        const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),grip));
+        const auto anchor=s.traversal_hand_anchor(left);
+        require(anchor.valid && !anchor.deforming && anchor.kit_body==body &&
+                    anchor.support!=~std::uint32_t{0} && anchor.generation>0,
+                "acquisition exposes the actual rigid ladder hand identity and local anchor",s);
+        const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),anchor.local));
         require(distance(s.render_traversal_hand(left),expected)<.000015,
                 "acquisition plants the new grip on the rendered support, without blending previous action",s);
     }
@@ -119,25 +134,35 @@ int main() {
     int retained_samples=0,transfer_samples=0;
     double maximum_chord_error=0,maximum_rendered_chord_distance=0;
     const auto sample_hands=[&]() {
-        const auto before=s.snapshot();const auto origin=s.kit_body_position(body);const auto q=s.kit_body_rotation(body);
+        const auto before=s.snapshot();
+        const Simulation::RenderHandAnchor before_anchors[]{s.traversal_hand_anchor(true),s.traversal_hand_anchor(false)};
         require(s.advance_frame(Simulation::kFixedStepSeconds*(before.interpolation_alpha>.25?.5:1)).steps_advanced==1,"next interpolation endpoint",s);
-        const auto after=s.snapshot();const auto new_origin=s.kit_body_position(body);const auto new_q=s.kit_body_rotation(body);
+        const auto after=s.snapshot();const auto new_origin=s.kit_body_position(body);
         require(s.advance_frame(Simulation::kFixedStepSeconds*.5).steps_advanced==0,"half tick renders without physics",s);
         for(bool left:{false,true}) {
             const auto a=left?before.traversal_left_hand:before.traversal_right_hand;
             const auto b=left?after.traversal_left_hand:after.traversal_right_hand;
             const auto r=s.render_traversal_hand(left);
-            const auto old_local=local(q,origin,a),new_local=local(new_q,new_origin,b);
+            const auto &old_anchor=before_anchors[left?0:1];
+            const auto anchor=s.traversal_hand_anchor(left);
             if(before.traversal_state==TraversalState::Climbing && after.traversal_state==TraversalState::Climbing &&
                before.traversal_support_entity_id==2960 && after.traversal_support_entity_id==2960) {
-                if(distance(old_local,new_local)<.0001) {
-                    const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),scale(add(old_local,new_local),.5)));
+                require(old_anchor.valid && anchor.valid && !old_anchor.deforming && !anchor.deforming &&
+                            old_anchor.kit_body==body && anchor.kit_body==body &&
+                            old_anchor.support==anchor.support,
+                        "sampled hands retain the exact rigid ladder support",s);
+                // World endpoints have float spacing up to15micrometers here.
+                // Use the native local receipt, then independently evaluate the
+                // quaternion transform in double precision at the render clock.
+                if(old_anchor.generation==anchor.generation) {
+                    const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),scale(add(old_anchor.local,anchor.local),.5)));
                     maximum_chord_error=std::max(maximum_chord_error,distance(expected,scale(add(a,b),.5)));
                     maximum_rendered_chord_distance=std::max(maximum_rendered_chord_distance,distance(r,scale(add(a,b),.5)));
                     require(distance(r,expected)<.000015,"retained hand stays on SLERP-rendered rotating support",s);
                     ++retained_samples;
-                } else if(distance(old_local,new_local)>.01) {
-                    const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),new_local));
+                } else {
+                    require(anchor.generation>old_anchor.generation,"regrip advances actual hand identity",s);
+                    const auto expected=add(s.render_kit_body_position(body),rotate(s.render_kit_body_rotation(body),anchor.local));
                     require(distance(r,expected)<.000015,
                             "regrip plants the new local hold on the rendered support instead of the physics endpoint",s);
                     ++transfer_samples;
@@ -171,10 +196,127 @@ int main() {
     for(int i=0;i<600 && s.kit_body_velocity(body).x<0.12;++i)tick(s);
     require(s.kit_body_velocity(body).x>0.1,"release is timed with rightward swing",s);
     (void)s.set_move_input(.7,.35);(void)s.request_jump();
-    tick(s);
+    // Production Jump commands a0.20s finite hand stroke. Contact remains
+    // authoritative through that stroke, then the following fixed tick releases.
+    const int departure_tick_budget=static_cast<int>(std::ceil(.20/Simulation::kFixedStepSeconds))+1;
+    bool departed=false;
+    for(int i=0;i<departure_tick_budget;++i) {
+        tick(s);
+        const auto state=s.snapshot();
+        require(state.player_gravity_factor==1.0 && state.death_count==0,
+                "finite departure stroke keeps ordinary gravity and the same life",s);
+        if(state.traversal_state==TraversalState::None) {
+            departed=true;
+            break;
+        }
+        require(state.traversal_state==TraversalState::Climbing &&
+                    state.traversal_support_entity_id==2960 && state.traversal_hand_constraint_count==2 &&
+                    s.traversal_hand_anchor(true).valid && s.traversal_hand_anchor(false).valid &&
+                    distance(s.render_traversal_hand(true),{})>0 && distance(s.render_traversal_hand(false),{})>0,
+                "finite departure stroke retains actual attached and rendered hands",s);
+    }
+    require(departed,"finite hand stroke departs within0.20s plus one release tick",s);
     require(distance(s.render_traversal_hand(true),{})==0 && distance(s.render_traversal_hand(false),{})==0,
-            "departure immediately releases rendered planted hands",s);
-    for(int i=0;i<150;++i) {tick(s);if(i%30==0)std::cout<<"FLIGHT x="<<s.snapshot().player_position.x<<" y="<<s.snapshot().player_position.y<<" z="<<s.snapshot().player_position.z<<"\n"; if(s.snapshot().player_grounded)break;}
+            "actual departure immediately releases rendered planted hands",s);
+    const auto require_physical_receipt=[&]() {
+        const auto state=s.snapshot();
+        require(state.player_gravity_factor==1.0 && state.death_count==0 &&
+                    std::isfinite(state.traversal_command_work_bound_j) && state.traversal_command_work_bound_j>=0 &&
+                    std::isfinite(state.traversal_actuator_positive_work_j) && state.traversal_actuator_positive_work_j>=0 &&
+                    std::isfinite(state.traversal_actuator_absorbed_work_j) && state.traversal_actuator_absorbed_work_j>=0 &&
+                    distance(state.traversal_left_hand_force,{})<=1500.01 &&
+                    distance(state.traversal_right_hand_force,{})<=1500.01,
+                "receiver handoff preserves gravity and finite bounded hand forces and work",s);
+        if(state.foot_push_active)
+            require(state.foot_push_peak_load_n<=3500.01 && state.foot_push_stroke_m<=.300001 &&
+                        state.foot_push_command_work_bound_j<=1285.62501,
+                    "receiver top-out preserves existing finite foot limits",s);
+    };
+    bool caught_receiver=false;
+    for(int i=0;i<150;++i) {
+        const auto before=s.snapshot();
+        require(s.set_facing(9-before.player_position.x,-178.45-before.player_position.z),
+                "ordinary airborne facing reaches toward the receiver lip",s);
+        tick(s);
+        require_physical_receipt();
+        const auto state=s.snapshot();
+        if(i%30==0)std::cout<<"FLIGHT x="<<state.player_position.x<<" y="<<state.player_position.y<<" z="<<state.player_position.z
+            <<" traversal="<<int(state.traversal_state)<<" support="<<state.traversal_support_entity_id<<"\n";
+        if(state.traversal_state==TraversalState::Hanging) {
+            require(state.traversal_support_entity_id==1960 && state.traversal_hand_constraint_count==2 &&
+                        s.traversal_hand_anchor(true).valid && s.traversal_hand_anchor(false).valid,
+                    "descending reach catches the actual receiver lip with two real hands",s);
+            caught_receiver=true;
+            break;
+        }
+        if(state.player_grounded)break;
+    }
+    require(caught_receiver,"swing departure reaches a real receiver lip catch within the flight budget",s);
+    // Let the real radial hang absorb the falling catch before commanding
+    // the Cartesian shimmy. Crouch commands the existing paid radial shortening.
+    require(s.set_crouch_input(true),"paid radial shortening uses ordinary crouch input",s);
+    require(s.set_move_input(0,0),"neutral input retains the finite physical catch",s);
+    bool descent_arrested=false;
+    for(int i=0;i<2*90 && !descent_arrested;++i) {
+        tick(s);
+        require_physical_receipt();
+        const auto state=s.snapshot();
+        require(state.traversal_state==TraversalState::Hanging && state.traversal_support_entity_id==1960 &&
+                    state.traversal_hand_constraint_count==2,
+                "actual receiver hands arrest the fall before lateral transfer",s);
+        const auto velocity=state.player_linear_velocity;
+        descent_arrested=velocity.y>=0;
+    }
+    require(descent_arrested,"finite paid receiver catch arrests descent before shimmy",s);
+    // Keep paid shortened posture while approaching a genuine mantle stance.
+    const auto caught=s.snapshot();
+    const auto caught_left=s.traversal_hand_anchor(true),caught_right=s.traversal_hand_anchor(false);
+    require(s.set_facing(0,1) && s.set_move_input(1,0),"ordinary shimmy moves inboard along the receiver lip",s);
+    bool shimmy_inboard=false;
+    for(int i=0;i<3*90;++i) {
+        const auto state=s.snapshot();
+        require(state.traversal_state==TraversalState::Hanging && state.traversal_support_entity_id==1960 &&
+                    state.traversal_hand_constraint_count==2 &&
+                    s.traversal_hand_anchor(true).valid && s.traversal_hand_anchor(false).valid,
+                "inboard shimmy retains the actual receiver lip and both hands",s);
+        const bool actual_regrip=s.traversal_hand_anchor(true).generation>caught_left.generation ||
+            s.traversal_hand_anchor(false).generation>caught_right.generation;
+        const double moved_anchor=.5*(state.traversal_left_hand.x+state.traversal_right_hand.x)-
+            .5*(caught.traversal_left_hand.x+caught.traversal_right_hand.x);
+        if(state.player_position.x>=8.25 && state.traversal_ledge_point.x>=8.25 &&
+           distance(add(state.player_position,{0,.45,0}),state.traversal_ledge_point)<=1.05 &&
+           actual_regrip && moved_anchor>.1) {shimmy_inboard=true;break;}
+        tick(s);
+        require_physical_receipt();
+    }
+    require(shimmy_inboard,"real receiver shimmy clears the capsule footprint from the corner within3seconds",s);
+    require((s.traversal_hand_anchor(true).generation>caught_left.generation ||
+             s.traversal_hand_anchor(false).generation>caught_right.generation) &&
+                (.5*(s.snapshot().traversal_left_hand.x+s.snapshot().traversal_right_hand.x)-
+                 .5*(caught.traversal_left_hand.x+caught.traversal_right_hand.x))>.1,
+            "inboard shimmy uses actual hand regrips and material anchor movement",s);
+    require(s.set_move_input(0,1) && s.request_traversal(),
+            "one ordinary Action requests top-out after the real inboard shimmy",s);
+    bool receiver_topout=false;
+    // This deep catch needs backoff, rise, then forward transfer. Its measured
+    // mean hand-target path is3.624m; even the2.2m/s target limit needs1.65s,
+    // before finite-force response and real footing settle. Use the existing
+    // three-second maneuver scale; shallow top-out tests retain153ticks.
+    for(int i=0;i<3*90;++i) {
+        tick(s);
+        require_physical_receipt();
+        const auto state=s.snapshot();
+        if(state.player_grounded && state.support_entity_id==1960 && state.player_position.y>119.7 &&
+           state.traversal_state==TraversalState::None && state.traversal_hand_constraint_count==0) {
+            require(state.foot_transfer_count>caught.foot_transfer_count,
+                    "receiver footing follows an actual physical hand-to-foot transfer",s);
+            receiver_topout=true;
+            break;
+        }
+    }
+    require(receiver_topout,"real receiver hand-to-foot top-out completes within3seconds after the deep catch",s);
+    require(s.set_crouch_input(false),"ordinary crouch release after actual top-out",s);
+    (void)s.set_move_input(.7,.35);
     require(s.snapshot().player_grounded && s.snapshot().support_entity_id==1960,"swing release reaches offset receiver",s);
     stop(s);
     std::cout<<"RECEIVER "<<s.snapshot().player_position.x<<","<<s.snapshot().player_position.y<<","<<s.snapshot().player_position.z<<"\n";

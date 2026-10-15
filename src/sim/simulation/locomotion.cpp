@@ -68,8 +68,8 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
         }
         return;
     }
-    if ((traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Climbing) &&
-        (commands.jump_requested || commands.traversal_requested) && !leave_radial_profile(bodies)) return;
+    // Each accepted action changes its own load topology. Merely requesting
+    // a top-out must not unload a radial catch that validation then rejects.
     if (traversal_state_ == TraversalState::Hanging) {
         if (commands.release_requested) {
             release_hang(bodies);

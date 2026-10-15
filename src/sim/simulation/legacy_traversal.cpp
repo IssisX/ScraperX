@@ -148,7 +148,6 @@ void Simulation::PhysicsWorld::begin_mantle(JPH::BodyInterface &bodies,
 
 void Simulation::PhysicsWorld::begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return;
-    if (!leave_radial_profile(bodies)) return;
     // Catching a lip needs room for a hanging body. Climbing onto it is
     // separately guarded by the current full standing capsule clearance.
     // The support may have moved, or the player may have shimmied to a

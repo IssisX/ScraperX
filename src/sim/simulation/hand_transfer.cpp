@@ -6,7 +6,6 @@ using namespace detail;
 
 [[nodiscard]] bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept {
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
-    if (!leave_radial_profile(bodies)) return false;
     // Action may reaffirm this physical handoff, never change its owner.
     if (cargo_transfer_active_ || cargo_push_seconds_>=0.0F) return true;
     const JPH::RVec3 origin = bodies.GetPosition(player_id_);
@@ -123,7 +122,6 @@ void Simulation::PhysicsWorld::try_begin_transfer_foot(JPH::BodyInterface &bodie
 bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,
                           JPH::RVec3 origin) noexcept {
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
-    if (!leave_radial_profile(bodies)) return false;
     const auto shoulder=origin+JPH::Vec3(0,kClimbHandMid,0);
     const float shoulder_to_lip = JPH::Vec3(probe.ledge_point-shoulder).Length();
     if (shoulder_to_lip>1.05F) return false;
@@ -164,6 +162,9 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
     const auto generation = traversal_affordances_.remember(candidate,contact_solve_serial_);
     const auto *accepted = traversal_affordances_.refresh(generation,physics_system_,contact_solve_serial_);
     if (!accepted) return false;
+    // A rejected top-out must retain the actual radial hang. Change the load
+    // profile only after reach, grip, receiver and clearance gates all pass.
+    if (!leave_radial_profile(bodies)) return false;
     hanging_posture_offset_m_ = 0.0F;
     for (unsigned hand=0;hand<2;++hand) {
         if (!physical_hands_->attach(hand,lips[hand].body,lips[hand].ledge)) {
@@ -341,12 +342,13 @@ void Simulation::PhysicsWorld::update_shimmy(JPH::BodyInterface &bodies, const S
                           bodies.GetPosition(player_id_) + JPH::Vec3(at.hold - hold))) {
         return;
     }
-    for (unsigned hand = 0; hand < 2; ++hand) {
-        const auto aim = at.ledge + right * (hand == 0 ? -kHangHandSpan : kHangHandSpan);
-        const auto actual = probe_lip(aim, traversal_normal_);
-        if (!actual.valid || actual.body != at.body ||
-            std::abs(actual.ledge.GetY() - at.ledge.GetY()) > 0.15) return;
-    }
+    Lip pair[2];
+    // Acquisition may use a narrower verified pair at a corner. Refresh that
+    // same legal footprint while moving; a full-width-only probe would reject
+    // the legitimate hold before the body could move inboard.
+    if (!probe_lip_pair(at.ledge, traversal_normal_, at.body, pair)) return;
+    for (const auto &lip : pair)
+        if (std::abs(lip.ledge.GetY() - at.ledge.GetY()) > 0.15) return;
     // Recompute the actual trailing hand on every direction change. A
     // leading placement must remain distinct from the planted material
     // point; the existing0.35m climbing lead avoids coincident palms.

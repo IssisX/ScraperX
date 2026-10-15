@@ -164,12 +164,14 @@ void build_west_brace_bay_route(kit::Kit &kit) {
     structure.push_back(span({-24.265F, 395.78F, -139.18F},
                              {-24.08F, 396.02F, -138.82F}, Material::Steel));
 
-    // Mount the transverse bar through folded end brackets at the frame posts,
-    // outside its active traverse span rather than through the climber's torso.
-    structure.push_back(span({-24.44F, 384.46F, south_post_z - 0.14F},
-                             {-24.16F, 384.74F, -141.15F}, Material::Steel));
-    structure.push_back(span({-24.44F, 384.46F, -136.85F},
-                             {-24.16F, 384.74F, north_post_z + 0.14F}, Material::Steel));
+    // The folded brackets bear on the REAR of the hand line. Their original
+    // front faces obscured both grips at the north bar/diagonal junction.
+    // Keep the full280mm sections and35-40mm rail overlap, joined to the same
+    // post crossheads, while exposing the inboard grip approach.
+    structure.push_back(span({-24.60F, 384.46F, south_post_z - 0.14F},
+                             {-24.32F, 384.74F, -141.15F}, Material::Steel));
+    structure.push_back(span({-24.60F, 384.46F, -136.85F},
+                             {-24.32F, 384.74F, north_post_z + 0.14F}, Material::Steel));
     for (const float post_z : {south_post_z, north_post_z}) {
         structure.push_back(span({post_x - 0.18F, 384.46F, post_z - 0.14F},
                                  {-24.16F, 384.74F, post_z + 0.14F}, Material::Steel));

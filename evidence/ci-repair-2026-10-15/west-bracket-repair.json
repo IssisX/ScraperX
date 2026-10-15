@@ -1,0 +1,61 @@
+{
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-west-reverse-probe-20261015/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/west_brace_bay_route.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/west_brace_bay_route.cpp.o"
+    ],
+    [
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/west_brace_bay_route.cpp.o"
+    ],
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-west-reverse-probe-20261015/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/driver.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-west-bracket-repair-20261015/route"
+    ]
+  ],
+  "exit_code": 0,
+  "seconds": 48.231686387909576,
+  "base_sha256": "18cc2d81b7628927b2acbbf1997a417e670e1851a738d4f2270d00673b12bb0d",
+  "archive_sha256": "675988e174c91dcbd26a795552d602056e52e4b15cb39bdd8be14179b8c7d97b",
+  "source_sha256": "2e7ab81e94195f722e2d8d347f54b0cb87bdbee9132b0fc8eaf9a1bd5a1311bc",
+  "tail": "PASS WEST_BRACE_BAY lower374.25/diagonal-climb381.9/jump-Action-bar/lateral-miss-recovery-retry/reverse-ascent389.4/final-mantle396.25/onward ordinary_inputs_only=1\n"
+}

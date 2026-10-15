@@ -1,0 +1,24 @@
+[
+  {
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-radial-rejection-20261015/second_hand_recovery_tests"
+    ],
+    "exit": 0,
+    "seconds": 22.669173063943163
+  },
+  {
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-radial-rejection-20261015/physical_topout_tests",
+      "topout"
+    ],
+    "exit": 0,
+    "seconds": 7.463450049050152
+  },
+  {
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-radial-rejection-20261015/suspended_ladder_tests"
+    ],
+    "exit": 0,
+    "seconds": 46.1619692009408
+  }
+]

@@ -126,9 +126,37 @@ void paired_restart() {
     for(int i=0;i<10;++i){tick(s);require(s.snapshot().traversal_hand_constraint_count==0,
         "restart never revives missing-hand attachment",s);}
 }
+void rejected_topout_keeps_radial_target() {
+    Simulation s;recover(s);
+    require(s.set_crouch_input(true),"paid paired tuck before rejected top-out",s);
+    for(int i=0;i<30;++i)tick(s);
+    const auto before=s.snapshot();
+    require(before.hanging_free_arc_active&&before.traversal_hand_constraint_count==2,
+            "rejection starts with a real loaded radial pair",s);
+    require(s.request_traversal(),"ordinary early top-out Action",s);tick(s);
+    const auto after=s.snapshot();
+    require(after.rejected_traversal_count==before.rejected_traversal_count+1&&
+            after.traversal_plan_kind==0&&after.traversal_hand_constraint_count==2&&
+            after.hanging_free_arc_active&&
+            after.traversal_left_hand_generation==before.traversal_left_hand_generation&&
+            after.traversal_right_hand_generation==before.traversal_right_hand_generation,
+            "rejected top-out preserves the loaded radial topology and planted pair",s);
+    require(std::abs(after.hanging_commanded_span_m-before.hanging_commanded_span_m)<=
+                .6*Simulation::kFixedStepSeconds+.00001&&
+            after.traversal_actuator_positive_work_j>=before.traversal_actuator_positive_work_j&&
+            after.traversal_actuator_positive_work_j-before.traversal_actuator_positive_work_j<=
+                500*Simulation::kFixedStepSeconds+.00001,
+            "rejection cannot reset radial preload or bypass paid command limits",s);
+    no_other_support(s);
+    require(s.request_release(),"Drop after rejected top-out",s);tick(s);
+    require(s.snapshot().traversal_hand_constraint_count==0&&!s.snapshot().hanging_free_arc_active,
+            "deliberate Drop still removes the preserved radial pair",s);
+    std::cout<<"PASS SECOND_HAND rejected_topout preserves_radial_load=1 finite_command=1 Drop=1\n";
+}
 }
 int main(int argc,char**argv){
-    if(argc>1&&std::string(argv[1])=="direction")paired_restart();
-    else {paid_controls_and_release();paired_restart();}
+    if(argc>1&&std::string(argv[1])=="rejected-topout")rejected_topout_keeps_radial_target();
+    else if(argc>1&&std::string(argv[1])=="direction")paired_restart();
+    else {paid_controls_and_release();paired_restart();rejected_topout_keeps_radial_target();}
     std::cout<<"PASS SECOND_HAND publicAction260 paired_controls Drop restart\n";
 }

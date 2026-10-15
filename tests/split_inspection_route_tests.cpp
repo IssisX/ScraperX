@@ -35,6 +35,42 @@ void sample(const Simulation &s, const char *event) {
 void require(bool condition, const char *why, const Simulation &s) {
     if (condition) return;
     sample(s, "failure");
+    // Capture the failing host's real apparatus state. A passing ARM replay
+    // cannot diagnose an x86 contact loss, and this receipt grants no support.
+    std::cerr << std::setprecision(12);
+    for (const auto entity : {kGirder, kHatch,
+            scraperx::sim::kSplitInspectionSpanSeatEntity,
+            scraperx::sim::kSplitInspectionBalanceBlockEntity}) {
+        const auto body = s.kit_body_index(entity);
+        const auto p = s.kit_body_position(body), v = s.kit_body_velocity(body);
+        const auto q = s.kit_body_rotation(body);
+        std::cerr << "SPLIT_FAILURE_BODY entity=" << entity << " index=" << body
+                  << " position=" << p.x << ',' << p.y << ',' << p.z
+                  << " rotation=" << q.x << ',' << q.y << ',' << q.z << ',' << q.w
+                  << " velocity=" << v.x << ',' << v.y << ',' << v.z
+                  << " kinetic_j=" << s.kit_body_kinetic_energy(body) << '\n';
+    }
+    const auto girder = s.kit_body_index(kGirder);
+    const auto seat = s.kit_body_index(scraperx::sim::kSplitInspectionSpanSeatEntity);
+    if (s.kit_body_part_count(girder) > 1 && s.kit_body_part_count(seat) > 0) {
+        const auto as_vec = [](scraperx::sim::Vector3 p) {
+            return JPH::Vec3(float(p.x), float(p.y), float(p.z));
+        };
+        const auto as_quat = [](scraperx::sim::Quaternion q) {
+            return JPH::Quat(float(q.x), float(q.y), float(q.z), float(q.w));
+        };
+        const auto gp = s.kit_body_part(girder, 1), sp = s.kit_body_part(seat, 0);
+        const auto gq = as_quat(s.kit_body_rotation(girder));
+        const auto sq = as_quat(s.kit_body_rotation(seat));
+        const auto normal = gq * as_quat(gp.rotation) * JPH::Vec3::sAxisY();
+        const auto bottom = as_vec(s.kit_body_position(girder)) +
+            gq * (as_vec(gp.offset) + as_quat(gp.rotation) * JPH::Vec3(0, -float(gp.half.y), 0));
+        const auto top = as_vec(s.kit_body_position(seat)) +
+            sq * (as_vec(sp.offset) + as_quat(sp.rotation) * JPH::Vec3(0, float(sp.half.y), 0));
+        std::cerr << "SPLIT_FAILURE_SEAT contact=" << s.inspection_span_seat_contact()
+                  << " underside_plane_gap_m=" << (bottom - top).Dot(normal)
+                  << " span_part=1 seat_part=0 span_normal_y=" << normal.GetY() << '\n';
+    }
     std::cerr << "FAIL SPLIT_INSPECTION phase=" << phase << " reason=" << why << '\n';
     std::exit(EXIT_FAILURE);
 }
