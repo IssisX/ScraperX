@@ -611,7 +611,9 @@ say why. Both archive designs are in the source (`src/sim/vertical/`) and unplac
 - **The gravity balance** (`gravity_balance.cpp`): a 2.5 t ballast falls on a rope over a sheave
   and lifts the deck, its slide motor only resisting. That is the counter-mass lift the route
   already has at AS-006 A, with S1 and O as variants. Placed, it would be one more stage where the
-  rider waits on a falling weight (the no-repetition rule).
+  rider waits on a falling weight (the no-repetition rule). The release plan (item 16) sites it at
+  462.25–487.25 m, the only rise above 340 m with only a ladder; its site and whether it gets an
+  action of its own are the owner's there.
 - **The rack climber** (`rack_climber.cpp`): a motor turns the pinion that walks the deck up its
   rack: board, press RAISE, wait. That is the kind of machine decision 1 asks the owner about, and
   its drive is a motor inside the pinion. If the owner chooses rework, it can be reworked with the
