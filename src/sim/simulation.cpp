@@ -218,6 +218,12 @@ constexpr float kSlideSteerAcceleration = 2.0F;
 // tick by tick and never adds up to a shift.
 constexpr float kSupportJoltMargin = 0.15F;
 constexpr float kSupportJoltSpan = 0.5F;
+// A blow from something moving: counted only when a body closed on the player
+// at kShoveClosingMps or more across a side contact (CHOSEN: faster than a
+// careful brush), and only what it gave the body past kShoveMinimumMps
+// (CHOSEN: the contact solver's own settling).
+constexpr float kShoveClosingMps = 0.5F;
+constexpr float kShoveMinimumMps = 0.1F;
 
 // Phase 4: balance at an edge, by the reduced-order extrapolated centre of
 // mass, XCoM = COM + v / sqrt(g / h), with v the horizontal velocity relative
@@ -701,7 +707,19 @@ public:
     void begin_tick() noexcept {
         lock();
         sample_ = {};
+        struck_closing_ = 0.0F;
         unlock();
+    }
+
+    // Phase 4: the fastest a moving body came at the player this tick across a
+    // side contact (normal within 60 degrees of horizontal), its own velocity
+    // toward the player, m/s; 0 for none. Walking into a wall, or into
+    // anything standing still, is never being struck.
+    [[nodiscard]] float struck_closing() const noexcept {
+        lock();
+        const float result = struck_closing_;
+        unlock();
+        return result;
     }
 
     [[nodiscard]] SupportSample sample() const noexcept {
@@ -789,6 +807,20 @@ private:
         // callbacks, but will not cause any collision responses" -- so without
         // this check a sensor would read as real support from geometry alone,
         // with nothing holding the player up. A sensor is never a support.
+        if (support_body != nullptr && !support_body->IsSensor() && std::abs(support_normal_y) < 0.5F &&
+            support_body->GetMotionType() != JPH::EMotionType::Static) {
+            // Toward the player: the manifold normal points from body 1 to body 2.
+            // The body's own motion toward the player, not the closing of the
+            // two: walking into something that stands still is not being struck.
+            const JPH::Vec3 to_player =
+                support_body == &second ? -manifold.mWorldSpaceNormal : manifold.mWorldSpaceNormal;
+            const float closing = support_body->GetPointVelocity(support_contact_point).Dot(to_player);
+            if (closing > 0.0F) {
+                lock();
+                struck_closing_ = std::max(struck_closing_, closing);
+                unlock();
+            }
+        }
         if (support_body == nullptr || support_body->IsSensor() ||
             support_normal_y < kSupportNormalThreshold || support_rank(support_entity) == 0) {
             return;
@@ -847,6 +879,7 @@ private:
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     SupportSample sample_{};
+    float struck_closing_ = 0.0F;
     std::atomic<std::uint64_t> carried_entity_{0};
 };
 
@@ -1646,6 +1679,7 @@ public:
         crew_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
+        struck_closing_mps_ = contact_listener_.struck_closing();
         if (jump_started || traversal_state_ != TraversalState::None) {
             support = {};
         }
@@ -3385,6 +3419,26 @@ private:
         }
     }
 
+    // Phase 4: struck by something moving (kShoveClosingMps closing at a side
+    // contact). What the blow gave the body since the feet last set its
+    // velocity, horizontally, moves the XCoM just as a support jerked under
+    // the feet does: it joins the same reckoning (kSupportJoltMargin), and
+    // past half a foot of shift it is a stumble.
+    void take_shove(const JPH::Vec3 velocity_now) noexcept {
+        if (!last_set_valid_ || struck_closing_mps_ < kShoveClosingMps) {
+            return;
+        }
+        const JPH::Vec3 given = velocity_now - last_set_velocity_;
+        const JPH::Vec3 horizontal(given.GetX(), 0.0F, given.GetZ());
+        if (horizontal.LengthSq() < kShoveMinimumMps * kShoveMinimumMps) {
+            return;
+        }
+        // The jolt reckons the support's change under the feet; a blow to the
+        // body is the same relative motion with the opposite sign.
+        support_jolt_ -= horizontal;
+        ++shove_count_;
+    }
+
     void clear_support_jolt() noexcept {
         jolt_support_entity_ = 0;
         jolt_support_velocity_ = JPH::Vec3::sZero();
@@ -3428,6 +3482,7 @@ private:
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
+            take_shove(player_velocity);
             track_support_jolt(reference_velocity, delta_seconds);
             const Beam beam = beam_underfoot(bodies);
             const double input = std::hypot(commands.move_input_x, commands.move_input_z);
@@ -3618,6 +3673,8 @@ private:
             jump_vault_ticks_left_ = kJumpVaultWindowTicks;
         }
         bodies.SetLinearVelocity(player_id_, player_velocity);
+        last_set_velocity_ = player_velocity;
+        last_set_valid_ = grounded_ && !jump_started;
         if (!jump_started && grounded_ && support_entity_id_ != 0) {
             try_step_up(bodies, player_velocity - reference_velocity, delta_seconds);
         }
@@ -5414,6 +5471,7 @@ public:
         state_.support_jolt_peak_m = support_jolt_peak_m_;
         state_.support_stumble_count = support_stumble_count_;
         state_.jump_reaction_count = jump_reactions_;
+        state_.shove_count = shove_count_;
         state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
         state_.grip_available = grip_affordance_.valid;
         state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
@@ -5619,6 +5677,13 @@ public:
     bool flight_from_jump_ = false;
     // Jumps whose push-off went into a dynamic support.
     std::uint64_t jump_reactions_ = 0;
+    // Phase 4 shoves (take_shove): the last velocity the feet set, whether
+    // it was set on the ground, the fastest closing at a side contact this
+    // tick, and the blows counted.
+    JPH::Vec3 last_set_velocity_ = JPH::Vec3::sZero();
+    bool last_set_valid_ = false;
+    float struck_closing_mps_ = 0.0F;
+    std::uint64_t shove_count_ = 0;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;

@@ -7172,6 +7172,30 @@ void run_workers() {
                   << " fastest_mps=" << fastest << "\n";
     }
     {
+        // Phase 4: struck by something moving. Standing still in the runner's
+        // lane, the player is walked into at 1.45 m/s by an 80 kg body: the
+        // blow moves the XCoM past half a foot and the player stumbles. The
+        // walk across the yard to get there, past kerbs and walls, is never a
+        // shove: a wall does not close.
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(0.2).accepted, "settle");
+        require(walk_to(s, -30.0, -60.0, 20.0, 0.15), "to the runner's lane");
+        const auto standing = s.snapshot();
+        require(standing.shove_count == 0, "walking across the yard is never a shove");
+        bool shoved = false;
+        for (int tick = 0; tick < 90 * 45 && !shoved; ++tick) {
+            (void)s.set_move_input(0.0, 0.0);
+            require(s.advance_frame(dt).accepted, "tick");
+            shoved = s.snapshot().shove_count > 0;
+        }
+        (void)s.advance_frame(0.3);
+        const Snapshot n = s.snapshot();
+        std::cout << "  shoved by the runner: shoves=" << n.shove_count << " stumbles="
+                  << n.stumble_count - standing.stumble_count << " loss=" << n.landing_balance_loss << "\n";
+        require(shoved && n.stumble_count > standing.stumble_count && n.death_count == 0,
+                "walked into by a worker, the standing player must stumble, and live");
+    }
+    {
         // Walking at the foreman as he sets off from his first station: he
         // steps aside, and nobody is shoved.
         Simulation s(InitialSpawn::ExteriorGrade);
