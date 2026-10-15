@@ -434,9 +434,33 @@ int main(int argc, char **argv) {
         std::cerr<<"FAIL mode2 receiver did not move after abandoning stair\n"; return 56;
       }
       const auto abandoned_tick=s.snapshot().tick_index;
+      unsigned declined_rescues=0;
+      // The first Jump may legitimately catch a stair bar. Deliberately
+      // decline that rescue with Drop, then keep ordinary outboard input
+      // until both the capsule and hand reach clear the outer stringer.
+      // Stair rotation is about Z: its +Z edge stays at hinge + .95 + .06.
+      // The1.75m native COM-to-grip bound also exceeds capsule radius. The
+      // .95m shoulder-to-hand bound alone would understate acquisition reach.
+      constexpr double outboard_clear_z=-122.10+.95+.06+1.75;
       if(!wait_for(s,10,[&](const Snapshot &v){
             if((v.tick_index-abandoned_tick)%90==0)report(s,"STAIR_ABANDON_WAIT");
-            return v.death_count==1 && v.player_grounded;
+            if(v.death_count==1 && v.player_grounded) {
+              (void)s.set_move_input(0,0);
+              return true;
+            }
+            const bool holding=v.traversal_state==TraversalState::Hanging ||
+                v.traversal_state==TraversalState::Climbing ||
+                v.traversal_state==TraversalState::Lowering;
+            // Never send Drop while unattached: even a rejected request
+            // cancels the finite Jump that is still carrying us outward.
+            if(holding && s.request_release()) {
+              ++declined_rescues;
+              report(s,"STAIR_RESCUE_DECLINED");
+            }
+            if(declined_rescues) {
+              (void)s.set_move_input(0,v.player_position.z<outboard_clear_z?1:0);
+            }
+            return false;
           })) {
         report(s,"STAIR_ABANDON_RECOVERY_FAIL");
         std::cerr<<"FAIL mode2 fall did not restore checkpoint\n"; return 54;

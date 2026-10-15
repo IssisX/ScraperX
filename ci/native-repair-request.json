@@ -1,4 +1,6 @@
 {
-  "reason": "Capture x86 receiver-catch and stair-departure states; preserve actual split-seat gap evidence. Diagnosis only, never full gameplay or APK certification.",
-  "checks": ["suspended_ladder_route", "swing_stair_route_2", "split_inspection_route"]
+  "reason": "Test deliberate stair abandonment using public Drop to decline the legitimate x86 rescue; original lethal impact, restore and onward exit assertions remain intact. Other owners unchanged; no repeat of their accepted/failure captures.",
+  "checks": [
+    "swing_stair_route_2"
+  ]
 }
