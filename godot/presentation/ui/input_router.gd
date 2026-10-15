@@ -51,6 +51,7 @@ const AXIS_COUNT := 6
 var device := Device.KEYBOARD_MOUSE
 var pad_family := UiStyle.Family.XBOX
 var active_pad := -1
+var forklift_mode := false
 var enabled := true
 var gameplay_active := true
 # Desktop touch-emulation mode (--touch): the mouse is the finger, so mouse
@@ -97,12 +98,25 @@ func glyph_family() -> int:
 	return UiStyle.Family.KEYBOARD
 
 
+func set_forklift_mode(value: bool) -> void:
+	if forklift_mode == value:
+		return
+	forklift_mode = value
+	if touch != null:
+		touch.set_forklift_mode(value)
+	clear_held()
+	_verbs.clear()
+
+
 func push_verb(verb: StringName) -> void:
+	if forklift_mode and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel"]:
+		return
 	if gameplay_active:
 		_verbs.append(verb)
 
 
 func clear_held() -> void:
+	_verbs.clear()
 	_keys.clear()
 	_buttons.clear()
 	_axes.fill(0.0)
@@ -169,6 +183,17 @@ func _handle_key(key: InputEventKey) -> void:
 	set_device(Device.KEYBOARD_MOUSE)
 	if not gameplay_active:
 		return
+	if forklift_mode:
+		match code:
+			KEY_F: _verbs.append(&"forklift_forward")
+			KEY_N: _verbs.append(&"forklift_neutral")
+			KEY_R: _verbs.append(&"forklift_reverse")
+			KEY_P: _verbs.append(&"forklift_park")
+			KEY_E: _verbs.append(&"action")
+			KEY_Q: _verbs.append(&"drop")
+			KEY_ESCAPE: _verbs.append(&"pause")
+			KEY_F3: _verbs.append(&"telemetry")
+		return
 	match code:
 		KEY_SPACE:
 			_verbs.append(&"jump")
@@ -205,6 +230,17 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 	set_device(Device.GAMEPAD)
 	_buttons[button.button_index] = true
 	if not gameplay_active:
+		return
+	if forklift_mode:
+		match button.button_index:
+			JOY_BUTTON_RIGHT_SHOULDER: _verbs.append(&"forklift_forward")
+			JOY_BUTTON_LEFT_SHOULDER: _verbs.append(&"forklift_reverse")
+			JOY_BUTTON_Y: _verbs.append(&"forklift_neutral")
+			JOY_BUTTON_LEFT_STICK: _verbs.append(&"forklift_park")
+			JOY_BUTTON_X: _verbs.append(&"action")
+			JOY_BUTTON_B: _verbs.append(&"back")
+			JOY_BUTTON_START: _verbs.append(&"pause")
+			JOY_BUTTON_BACK: _verbs.append(&"telemetry")
 		return
 	match button.button_index:
 		JOY_BUTTON_A:
@@ -342,6 +378,7 @@ func frame(delta: float) -> Dictionary:
 	var crouch_held := false
 	var sprint_held := false
 	var reel := 0.0
+	var forklift := {}
 	if enabled and gameplay_active:
 		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
@@ -372,8 +409,24 @@ func frame(delta: float) -> Dictionary:
 			_pad_button(JOY_BUTTON_DPAD_UP) - _pad_button(JOY_BUTTON_DPAD_DOWN))
 		pendant.y += _trigger(JOY_AXIS_TRIGGER_RIGHT) - _trigger(JOY_AXIS_TRIGGER_LEFT)
 		pendant = Vector2(clampf(pendant.x, -1.0, 1.0), clampf(pendant.y, -1.0, 1.0))
+		if forklift_mode:
+			var touch_move: Vector2 = touch.move_vector if touch != null else Vector2.ZERO
+			var touch_axes: Vector2 = touch.pendant_axes if touch != null else Vector2.ZERO
+			forklift = {
+				"throttle": clampf(_held(KEY_W) + _trigger(JOY_AXIS_TRIGGER_RIGHT) + maxf(0.0, touch_move.y), 0.0, 1.0),
+				"brake": clampf(maxf(_held(KEY_S), _held(KEY_SPACE)) + _trigger(JOY_AXIS_TRIGGER_LEFT) + maxf(0.0, -touch_move.y), 0.0, 1.0),
+				"steer": clampf(_held(KEY_D) - _held(KEY_A) + left.x + touch_move.x, -1.0, 1.0),
+				"lift": clampf(_held(KEY_UP) - _held(KEY_DOWN) + _pad_button(JOY_BUTTON_DPAD_UP) - _pad_button(JOY_BUTTON_DPAD_DOWN) + touch_axes.y, -1.0, 1.0),
+				"tilt": clampf(_held(KEY_LEFT) - _held(KEY_RIGHT) + _pad_button(JOY_BUTTON_DPAD_LEFT) - _pad_button(JOY_BUTTON_DPAD_RIGHT) - touch_axes.x, -1.0, 1.0),
+				"inch": maxf(maxf(_held(KEY_SHIFT), _pad_button(JOY_BUTTON_RIGHT_STICK)), float(touch.forklift_inch) if touch != null else 0.0),
+				"horn": _keys.has(KEY_H) or _buttons.has(JOY_BUTTON_A) or (touch != null and bool(touch.forklift_horn))}
+			move = Vector2.ZERO
+			pendant = Vector2.ZERO
+			sprint_held = false
+			crouch_held = false
+			reel = 0.0
 	_mouse_look = Vector2.ZERO
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
 	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held, "reel": reel}
+		"crouch_held": crouch_held, "sprint_held": sprint_held, "reel": reel, "forklift": forklift}

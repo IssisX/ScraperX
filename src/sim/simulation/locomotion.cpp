@@ -677,7 +677,10 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
                  const float delta_seconds, const bool deliberate_step) {
     // The still-contacting finite leg already owns this push-off. A
     // separate step impulse must not stack its own vertical work on it.
-    if (physical_foot_push_->active() || net_for_body(support_sample_.body_id)) return false;
+    const bool passive_plant = physical_foot_push_->active() &&
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant;
+    if ((physical_foot_push_->active() && !passive_plant) ||
+        net_for_body(support_sample_.body_id)) return false;
     const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
     const float speed = horizontal.Length();
     if (speed < kStepMinimumSpeed) {
@@ -719,6 +722,10 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
     if (teeter_member_crossing && physical_step_pending_) return false;
     const bool physical=entity_is_causal_section_support(support_entity_id_) ||
         entity_is_causal_section_support(bodies.GetUserData(obstacle)) || teeter_member_crossing ||
+        // Boarding a real vehicle step uses the same finite reciprocal leg
+        // push as other machinery, never the legacy static-riser pose write.
+        support_entity_id_ == WarehouseForkliftYard::kChassisEntity ||
+        obstacle_entity == WarehouseForkliftYard::kChassisEntity ||
         support_entity_id_ == SwingStair::kStairEntity ||
         bodies.GetUserData(obstacle) == SwingStair::kStairEntity;
     const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
@@ -735,13 +742,26 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
     if (rise < kStepMinimumHeight) {
         return false;
     }
+    if (passive_plant) {
+        // A remembered opportunity never starts a step. Only a validated
+        // physical riser and fresh real support can hand the passive leg to
+        // the existing finite step push. Remove its row before that impulse,
+        // preserving the mutex for every already-powered foot action.
+        if (!physical || !grounded_ || !foot_contact_.valid ||
+            foot_contact_.solved_tick != contact_solve_serial_ ||
+            foot_contact_.body != support_sample_.body_id) return false;
+        physical_foot_push_->clear();
+        foot_push_purpose_ = FootPushPurpose::None;
+    }
     if(physical) {
         // A swept low riser requests leg work, never a prescribed pose.
         // The actual current foot contact takes the reciprocal impulse;
         // native gravity/contact decide whether the step is achieved.
         if(support_sample_.body_id.IsInvalid()) return false;
-        const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
-                                      support_sample_.contact_point.z);
+        const auto contact = passive_plant ?
+            from_support_local(bodies, foot_contact_.body, foot_contact_.local_point) :
+            JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
+                      support_sample_.contact_point.z);
         const auto support=support_sample_.body_id;
         const auto relative=bodies.GetLinearVelocity(player_id_)-support_point_velocity(bodies,support,contact);
         const float takeoff=std::sqrt(2.0F*-physics_system_.GetGravity().GetY()*(rise+0.08F));

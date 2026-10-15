@@ -189,7 +189,9 @@ void WarehouseForklift::Impl::collision_step(float dt){
     if(enabled){m.state.battery_j-=reserve;m.state.reserved_debit_j+=reserve;}
     m.hydraulic_reserve=enabled?hydraulic_reserve:0;
     m.state.steering_rad=enabled?approach(m.state.steering_rad,m.command.steer*c.steering_angle_rad,c.steering_rate_rad_s*dt):m.state.steering_rad;
-    m.state.applied_drive=enabled?m.command.drive:0;m.state.applied_brake=std::max(m.command.brake,(!wants_drive||!enabled)?1.F:0.F);
+    // Accelerator release selects neutral torque, not a service-brake pedal.
+    // The host's default unauthorized command still requests full braking.
+    m.state.applied_drive=enabled?m.command.drive:0;m.state.applied_brake=std::max(m.command.brake,!enabled?1.F:0.F);
     auto&driver=m.controller();driver.GetTransmission().Set(m.state.applied_drive==0?0:(m.state.applied_drive>0?1:-1),m.state.applied_drive==0?0:1);
     // Rear steering reverses the wheel's ordinary front-steer sign.
     driver.SetDriverInput(std::abs(m.state.applied_drive),-m.state.steering_rad/c.steering_angle_rad,m.state.applied_brake,0);

@@ -138,40 +138,52 @@
     "live_checkpoint": "03_EXECUTION/LIVE_RESUME_20261015.md",
     "owner_backlog": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md",
     "branch": "ChatGPT",
-    "published_head": "1f92dca096c007e95681dc0f73f400a171c17f94",
-    "active": "Publish accepted takeoff/forklift source onChatGPT and deliver its exact-source Android APK",
+    "published_head": "8569c721432e4139df6286b8e8d1cce94b2db9ca",
+    "active": "Finish and deliver first-person stand-on forklift, intuitive independent controls and real loaded cargo handling; then same-truck crane11m transfer",
     "blocker": null,
-    "native_forklift": "Complete connected two600kg pickup/stack/withdrawal plus90tick released-hand cargo/gallery support, onward walk and actual grade retry PASS",
+    "native_forklift": "Finalsource-v2 fullpubliccargo route trial14PASS including actualwalkboarding, both600kg loads, stack/withdrawal, actualgallery footing/onwardwalk/grade retry",
     "movement_plan": "03_EXECUTION/PARKOUR_PHASED_PLAN_20261015.md",
     "rendering": "Published0658f69; matched shipping4311\u21921036up/2893\u2192766down; strict up<1000 pending36; device fix unverified",
     "apk_candidate": {
-      "run": 38791786743,
-      "artifact": 12000457736,
-      "status": "GREEN candidate only",
-      "source": "0658f69f7629ae629b33a87a16ebf1529a9d1a54"
+      "run": 38809891195,
+      "artifact": 12008850176,
+      "status": "GREEN build candidate, downloaded APK/native hashes matched",
+      "source": "8569c721432e4139df6286b8e8d1cce94b2db9ca",
+      "version_code": 214263105,
+      "apk_sha256": "5fff4d7a88447678253cf4c604d53b02325d29413de8cc8a3e2cff9124a52ced",
+      "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/38809891195/artifacts/12008850176"
     },
     "full_proof": {
-      "run": 38791786804,
-      "status": "FAILURE; candidate separate, not fullGREEN"
+      "run": 38809891198,
+      "status": "FAIL native92/101, buildpassed; ninefailedchecks classified in evidence/forklift-2026-10-15/FULL_PROOF_FAILURES.md",
+      "previous_failures": [
+        38791786804,
+        38780294851
+      ]
     },
     "takeoff": "Native implementation goal complete; late1.22795m/s/414.746J, sprint carry, early/negative/cancel/reset and60/90/360/grouped equivalence PASS; unpublished/matching APK pending",
-    "crane": "Same-truck transfer explicitly retained; pending usable ground handling and real rigging/bays",
+    "crane": "Parkedforownerforklift-first; realYardCrane/PoweredCable/geometry authored, primitivehoistPASS. IsolatedassembledrigAttachFAIL5.4mmlengthshortage captured; actualemptyhoistloweringtestauthoredunrun. Currenttruck3372.956kg aftercab/steps, no completedcraneclaim.",
     "all_dirty_work_preserved": true,
     "canonical_deferred_scope_preserved": true,
     "takeoff_evidence": "evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md",
     "next_actions": [
-      "Selective source/docs commit and scoped GitHub push",
-      "Follow exact-source APK candidate through terminal artifact using shell worker",
-      "Same-truck crane freight; retain movement phases2\u20138 and full canonical scope"
+      "Publish acceptedstand-onforkliftcab/controls/load source and obtain actualGitHubAPK",
+      "Resolve remainingtaper recovery at supportedowner without rerunning acceptedroutes",
+      "Integrate same-truck finitecrane11m actualsupport/release/drive-in/recovery",
+      "Retain22m/higherfreight and allcanonicalmovement/environment/performance scope"
     ],
-    "running_workers": [],
+    "running_workers": [
+      "taper_recovery_cause Sol/high: onefirsttransitionmatchedmiddleobserver, no productionwrites",
+      "crane_loaded_cycle Sol/medium: realmast-forward/forksdownstow and actualloadedcrane cycle",
+      "root: selectedcommit/GitHubpush/matchingAPK"
+    ],
     "native_archive": {
-      "path": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a",
-      "sha256": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189"
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a",
+      "sha256": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
     },
-    "current_experiment": "Final selected-source connected cargo route trial9 PASS/exit0 in239.16s; no replay running. All failures retained.",
-    "godot_forklift": "SELECTED actual Main/native19checks PASS, import/runtime exit0, matching SO6b75c1bb...; noAPK/device claim",
-    "publication_prep": "31selected sourcefiles staged and matching accepted snapshot; preserve excluded grapple/gate and unintegrated terrain. Source commit/push/APK pending",
+    "current_experiment": "Completefirst-personforklift cargo/native/render/finalinputs accepted; correctedcompat3PASS. OriginalNorthprimary/retry/intent/buffer/taperprimaryPASS; tapermiddle unresolved separatelydiagnosed. Preparing actualacceptedselectedsourcepublication.",
+    "godot_forklift": "ActualMain/native rendered36PASS,5rootinspectedcaptures; finalQexit/pad-inch focusedevent/dispatchchecks bothPASS",
+    "publication_prep": "Accepted source8569c72 actually pushed; matching APK candidate38809891195/artifact12008850176 obtained. Current checkpoint/topology updates intentionally local until next meaningful source push; preserve all excluded WIP.",
     "scope_register": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md (R01\u2013R15 plus full canonical scope)",
     "cargo_route_evidence": "evidence/forklift-2026-10-15/CARGO_ROUTE_ACCEPTANCE.md"
   },

@@ -31,6 +31,12 @@ const B_SLING := &"sling"
 const B_REEL := &"slingshot_reel"
 const B_AUTO_REEL := &"auto_reel"
 const B_GRAPPLE := &"grapple"
+const B_FORWARD := &"forklift_forward"
+const B_NEUTRAL := &"forklift_neutral"
+const B_REVERSE := &"forklift_reverse"
+const B_PARK := &"forklift_park"
+const B_INCH := &"forklift_inch"
+const B_HORN := &"forklift_horn"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -75,11 +81,15 @@ var sprint_latched := false
 var pendant_axes := Vector2.ZERO
 var reel_effort := 0.0
 var touch_scale := 1.0
+var forklift_mode := false
+var forklift_inch := 0.0
+var forklift_horn := false
 
 var _u := 1.0
 var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
-	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE]
+	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE,
+	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -107,7 +117,7 @@ func _ready() -> void:
 	for id in _order:
 		var button := TouchButton.new()
 		button.id = id
-		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT, B_REEL]
+		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT, B_REEL, B_INCH, B_HORN]
 		_buttons[id] = button
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
@@ -124,6 +134,8 @@ func _ready() -> void:
 	_buttons[B_AUTO_REEL].tone = TONE_PRIMARY
 	_buttons[B_GRAPPLE].icon = &"hook"
 	_buttons[B_GRAPPLE].tone = TONE_PRIMARY
+	for id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN]:
+		_buttons[id].label = {B_FORWARD: "F", B_NEUTRAL: "N", B_REVERSE: "R", B_PARK: "PARK", B_INCH: "INCH", B_HORN: "HORN"}[id]
 	resized.connect(_layout)
 	_layout()
 
@@ -183,7 +195,32 @@ func _layout() -> void:
 	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)
 	_place(B_RIGHT, _pendant_center + Vector2(arm, 0.0), 80.0)
 	_place(B_SLING, _pendant_center + Vector2(arm + 250.0 * _u, -arm * 0.6), 78.0)
+	if forklift_mode:
+		_layout_forklift()
 	queue_redraw()
+
+
+func set_forklift_mode(value: bool) -> void:
+	if forklift_mode == value:
+		return
+	forklift_mode = value
+	reset_touches()
+	_layout()
+
+
+func _layout_forklift() -> void:
+	# A thumb-sized operator deck at the bottom leaves the upper right for look.
+	_stick_home = _safe.position + _safe.size * Vector2(0.18, 0.79)
+	_stick_zone = Rect2(_safe.position + _safe.size * Vector2(0.0, 0.55), _safe.size * Vector2(0.37, 0.45))
+	for row in [[B_FORWARD, 0.10], [B_NEUTRAL, 0.23], [B_REVERSE, 0.36], [B_PARK, 0.49], [B_INCH, 0.62]]:
+		_place(row[0], _safe.position + _safe.size * Vector2(row[1], 0.46), 82.0)
+	_place(B_UP, _safe.position + _safe.size * Vector2(0.47, 0.69), 84.0)
+	_place(B_DOWN, _safe.position + _safe.size * Vector2(0.47, 0.87), 84.0)
+	_place(B_LEFT, _safe.position + _safe.size * Vector2(0.63, 0.69), 84.0)
+	_place(B_RIGHT, _safe.position + _safe.size * Vector2(0.63, 0.87), 84.0)
+	_place(B_HORN, _safe.position + _safe.size * Vector2(0.78, 0.87), 84.0)
+	_place(B_ACTION, _safe.position + _safe.size * Vector2(0.92, 0.87), 84.0)
+	_pendant_center = _safe.position + _safe.size * Vector2(0.55, 0.58)
 
 
 func _place(id: StringName, center: Vector2, radius: float) -> void:
@@ -193,6 +230,8 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 
 
 func _verb_for(id: StringName) -> StringName:
+	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK]:
+		return id
 	match id:
 		B_JUMP:
 			return &"jump"
@@ -280,7 +319,7 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	if index == _stick_index:
 		var throw := STICK_THROW * _u
 		var offset := at - _stick_origin
-		if offset.length() > throw * SPRINT_OVERSHOOT and -offset.y > absf(offset.x):
+		if not forklift_mode and offset.length() > throw * SPRINT_OVERSHOOT and -offset.y > absf(offset.x):
 			sprint_latched = true
 		if offset.length() > throw:
 			# The base follows a thumb that overshoots, so the stick never
@@ -407,6 +446,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	grapple.tone = TONE_SAFE if equipped else TONE_PRIMARY
 
 	var station: StringName = ctx["operating"]
+	set_forklift_mode(station == &"forklift")
 	_operating = station != &""
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
 	var portable_tool := station in [&"grappling_gun", &"forklift"]
@@ -452,6 +492,22 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 			_axis_names = ["RAISE / LOWER", ""]
 		_:
 			_axis_names = ["", ""]
+	for id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN]:
+		_buttons[id].shown = forklift_mode
+	if forklift_mode:
+		for id in [B_JUMP, B_CROUCH, B_DROP, B_CHUTE, B_GRAPPLE, B_AUTO_REEL, B_REEL]:
+			_buttons[id].shown = false
+		_buttons[B_UP].label = "LIFT +"
+		_buttons[B_DOWN].label = "LIFT -"
+		_buttons[B_LEFT].label = "TILT BACK"
+		_buttons[B_RIGHT].label = "TILT FWD"
+		var operator: Dictionary = ctx.get("forklift_operator", {})
+		for entry in [[B_FORWARD, 1], [B_NEUTRAL, 0], [B_REVERSE, -1]]:
+			_buttons[entry[0]].tone = TONE_SAFE if int(operator.get("gear", 0)) == entry[1] else TONE_NORMAL
+		_buttons[B_PARK].tone = TONE_SAFE if bool(operator.get("parking", true)) else TONE_NORMAL
+	else:
+		for id in [B_UP, B_DOWN, B_LEFT, B_RIGHT]:
+			_buttons[id].label = ""
 	if _movement_blocked and _stick_index != -1:
 		_touch_up(_stick_index)
 
@@ -469,6 +525,8 @@ func _refresh_held_controls() -> void:
 	pendant_axes = Vector2(
 		_held(B_RIGHT) - _held(B_LEFT), _held(B_UP) - _held(B_DOWN))
 	reel_effort = _held(B_REEL)
+	forklift_inch = _held(B_INCH)
+	forklift_horn = _held(B_HORN) > 0.0
 
 
 func _held(id: StringName) -> float:
@@ -530,6 +588,10 @@ func _draw_button(button: TouchButton) -> void:
 func _draw_stick() -> void:
 	var throw := STICK_THROW * _u
 	var knob := STICK_KNOB * _u
+	if forklift_mode:
+		for caption in [["ACCEL", Vector2(0.0, -205.0)], ["BRAKE", Vector2(0.0, 225.0)], ["STEER", Vector2(0.0, 0.0)]]:
+			UiStyle.text_centered(self, UiStyle.font_label(), caption[0], _stick_home + caption[1] * _u,
+				int(roundf(30.0 * _u)), UiStyle.PAPER, int(roundf(5.0 * _u)))
 	if _stick_index == -1:
 		UiStyle.ring(self, _stick_home, throw, UiStyle.with_alpha(UiStyle.PAPER, 0.16), 3.0 * _u)
 		UiStyle.disc(self, _stick_home, knob, UiStyle.with_alpha(UiStyle.PAPER, 0.12))
@@ -574,7 +636,7 @@ func _draw_hints() -> void:
 	var alpha := clampf(_hint_clock * 2.0, 0.0, 1.0) * clampf(HINT_SECONDS - _hint_clock, 0.0, 1.0)
 	var size := int(roundf(26.0 * _u))
 	var font := UiStyle.font_label()
-	if not _moved and not _movement_blocked:
+	if not forklift_mode and not _moved and not _movement_blocked:
 		UiStyle.text_centered(self, font, "MOVE", _stick_home + Vector2(0.0, -STICK_THROW * _u - 34.0 * _u),
 			size, UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
 	if not _looked:

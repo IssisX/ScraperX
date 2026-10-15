@@ -99,6 +99,12 @@ void Simulation::PhysicsWorld::refresh_forklift_snapshot(const JPH::BodyInterfac
     result.chassis_entity = WarehouseForkliftYard::kChassisEntity;
     result.station_position = to_vector3(bodies.GetWorldTransform(
         kit_->body_id(forklift_yard_.truck.chassis)) * forklift_yard_.control_station);
+    result.steering_mount = to_vector3(WarehouseForkliftYard::steering_mount());
+    result.lift_lever_mount = to_vector3(WarehouseForkliftYard::lift_lever_mount());
+    result.tilt_lever_mount = to_vector3(WarehouseForkliftYard::tilt_lever_mount());
+    const auto chassis = kit_->body_id(forklift_yard_.truck.chassis);
+    result.forward_speed_mps = bodies.GetLinearVelocity(chassis).Dot(
+        bodies.GetRotation(chassis) * JPH::Vec3::sAxisZ());
     const auto state = warehouse_forklift_->state();
     result.battery_j = state.battery_j;
     result.capacity_j = warehouse_forklift_->config().battery_capacity_j;
@@ -110,6 +116,9 @@ void Simulation::PhysicsWorld::refresh_forklift_snapshot(const JPH::BodyInterfac
     result.tilt_torque_nm = state.tilt_torque_nm;
     result.applied_drive = state.applied_drive;
     result.applied_brake = state.applied_brake;
+    result.steering_rad = state.steering_rad;
+    result.lift_target_mps = state.lift_target_mps;
+    result.tilt_target_rad_s = state.tilt_target_rad_s;
     result.positive_work_j = state.hydraulic_positive_work_j;
     result.reservation_excess_j = state.reservation_excess_j;
     const auto wheels = warehouse_forklift_->wheels();

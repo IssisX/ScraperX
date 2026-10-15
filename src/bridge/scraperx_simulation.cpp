@@ -584,6 +584,9 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     out["controls_reachable"] = state.controls_reachable;
     out["chassis_entity"] = static_cast<std::int64_t>(state.chassis_entity);
     out["station_position"] = to_godot(state.station_position);
+    out["steering_mount"] = to_godot(state.steering_mount);
+    out["lift_lever_mount"] = to_godot(state.lift_lever_mount);
+    out["tilt_lever_mount"] = to_godot(state.tilt_lever_mount);
     out["battery_j"] = state.battery_j;
     out["capacity_j"] = state.capacity_j;
     out["lift_position_m"] = state.lift_position_m;
@@ -594,6 +597,10 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     out["coupled"] = state.coupled;
     out["applied_drive"] = state.applied_drive;
     out["applied_brake"] = state.applied_brake;
+    out["forward_speed_mps"] = state.forward_speed_mps;
+    out["steering_rad"] = state.steering_rad;
+    out["lift_target_mps"] = state.lift_target_mps;
+    out["tilt_target_rad_s"] = state.tilt_target_rad_s;
     out["positive_work_j"] = state.positive_work_j;
     out["reservation_excess_j"] = state.reservation_excess_j;
     godot::Array wheels;

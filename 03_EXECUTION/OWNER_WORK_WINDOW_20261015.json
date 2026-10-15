@@ -1,0 +1,8 @@
+{
+  "owner_request": "keep working for5hours or until all goals are met",
+  "started_utc": "2026-10-15T22:06:52.637362+00:00",
+  "deadline_utc": "2026-10-16T03:06:52.637362+00:00",
+  "duration_seconds": 18000,
+  "scope": "Current real same-truck crane goal then next authorized useful goals; full owner register/canonical scope retained",
+  "rule": "Do not reset this owner deadline at goal/context boundaries. Keep each mechanics experiment separate and bounded;5h authorization is not an experiment-window reset."
+}

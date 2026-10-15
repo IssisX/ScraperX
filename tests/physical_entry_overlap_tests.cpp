@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include "passive_receiver_plant_observation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -30,6 +31,8 @@ void sample(const Simulation &s, const char *event) {
               << " active=" << v.foot_push_active << " foot_support=" << v.foot_push_support_entity_id
               << " starts=" << v.foot_push_start_count << " stop=" << int(v.foot_push_stop_reason)
               << " command_j=" << v.foot_push_command_work_bound_j << " stroke_m=" << v.foot_push_stroke_m
+              << " stroke_limit_m=" << v.foot_push_stroke_limit_m
+              << " force_n=" << v.foot_push_player_force.x << ',' << v.foot_push_player_force.y << ',' << v.foot_push_player_force.z
               << " time_s=" << v.foot_push_elapsed_seconds << " peak_n=" << v.foot_push_peak_load_n
               << " impulse_ns=" << v.foot_push_last_impulse_ns << " distance_m=" << v.foot_push_actual_distance_m
               << " initial_distance_m=" << v.foot_push_initial_distance_m
@@ -55,6 +58,7 @@ void require(bool condition, const char *message, const Simulation &s) {
 }
 void tick(Simulation &s, int count = 1) {
     while (count-- > 0) {
+        const auto previous = s.snapshot();
         const auto result = s.advance_frame(Simulation::kFixedStepSeconds);
         require(result.accepted && result.steps_advanced == 1, "one ordinary native tick", s);
         const auto v = s.snapshot();
@@ -69,8 +73,9 @@ void tick(Simulation &s, int count = 1) {
                     v.foot_push_last_impulse_ns <= 3500.0 / 360.0 + .0001,
                 "actual last collision row and command stay within finite physical limits", s);
         if (v.foot_push_active)
-            require(v.foot_push_support_entity_id >= 2880 && v.foot_push_support_entity_id <= 2891,
-                    "active foot remains attached to real material, not steel or world", s);
+            require((v.foot_push_support_entity_id >= 2880 && v.foot_push_support_entity_id <= 2891) ||
+                        scraperx::test::passive_receiver_plant(v, previous, kSteel),
+                    "active foot is powered material or a finite zero-command plant from actual receiver contact", s);
         if (v.tick_index % 90 == 0) sample(s, "tick");
     }
 }

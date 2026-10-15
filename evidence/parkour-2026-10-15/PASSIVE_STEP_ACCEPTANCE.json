@@ -1,0 +1,46 @@
+{
+  "archive_sha256": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b",
+  "passed": [
+    "matched North observer",
+    "North primary",
+    "North miss-retry",
+    "intent flow all",
+    "intent buffer all",
+    "entry overlap entry",
+    "entry overlap natural",
+    "wood foot push both"
+  ],
+  "unresolved": "original taper middle recovery tick1814: airborne/traversal1/hands2 at apron exit; primary passes; upper unrun",
+  "preserved_trials": [
+    25,
+    26,
+    27,
+    28,
+    29
+  ],
+  "logs": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/observer-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/observe.log": "bb1e2aa883926cf9fe29390c198bc2634fb049bb9983d3e9b3f7f1ec9f9e185d",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/build-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/north_transfer_route.log": "e215bebc91fbd7fbabb782519fba223646ec8be9d0cdeef73428a04794293439",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/north_transfer_route-miss-retry.log": "d9b52a9d3719c1a57961f15cde7b4c73e280fdc5d2c4bc3addf082f2744affcd",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/taper_inspection_route.log": "c87ba3c307f89cb54331cf487ba7b6198f0c35e74b281b3514568df05cb38f3d",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/physical_entry_overlap-entry.log": "cbe3a1c5c33f50b0367724cee020a077936d5e096de24b1d431f3b2f4c04cbfd",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/taper-interrupted-trial26.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/parkour_intent_flow-all.log": "2a73243e6fe7ed9c5345bea1c0041d41899ff2a8020aa7be4e1bdbd12347eaee",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/corrected-build-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/corrected-build-1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/parkour_intent_buffer.log": "b0c59a890d5803bbc366de1eebe64aaa81572c589ce3e74119dceb8f544379f1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/physical_entry_overlap-corrected-entry.log": "b2bf2eb76de8eee2f2ac4e3e8def81d5c33faeef74ec596685057c9b71b9683e",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/physical_entry_overlap-corrected-natural.log": "584ab63d43984a451e9937d10dc9a8d5a5f74aba6d93d56863538e3bc7707cf6",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/wood_foot_push_player-corrected.log": "d6173b497f39f574c0eaa988748e5d9347388a4ff7f8feff421ddf9f17fdd74d",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/acceptance-results.json": "19da03fc3268cee9efe3481fca2d3f32f5224d4c16c7c81cb38bf1b76db61d01",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/independent-results.json": "4daf63926f0e3b5e1020a680198d06699577131b46dcd3c3e94c65bbfc97d71e",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-step-20261015/compat-corrected-results.json": "5ae3ccbd837b1e18a5a41f83b6cbb0afd198f176251080f38dc5cfb615249b69"
+  }
+}

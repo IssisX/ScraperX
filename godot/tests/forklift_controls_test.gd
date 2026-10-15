@@ -11,10 +11,14 @@ var failed := false
 class ReceiptBridge extends RefCounted:
 	var reachable := true
 	var input: Array = []
+	var release_calls := 0
 	func get_forklift_state() -> Dictionary:
 		return {"available": true, "controls_reachable": reachable}
 	func set_forklift_input(drive: float, steer: float, lift: float, tilt: float, brake: float) -> bool:
 		input = [drive, steer, lift, tilt, brake]
+		return true
+	func request_release() -> bool:
+		release_calls += 1
 		return true
 
 func check(ok: bool, label: String) -> void:
@@ -29,12 +33,21 @@ func _run() -> void:
 	var main := Main.new()
 	var bridge := ReceiptBridge.new()
 	main._native = bridge
-	var intent := {"move": Vector2(0.5, 0.75), "pendant": Vector2(-0.5, 1.0)}
+	var idle := {"throttle": 0.0, "brake": 0.0, "steer": 0.0, "lift": 0.0, "tilt": 0.0, "inch": 0.0, "horn": false}
+	var controls: Dictionary = idle.duplicate()
+	controls.merge({"throttle": 0.75, "steer": 0.5, "lift": 1.0, "tilt": 0.5}, true)
+	var intent := {"forklift": controls}
+	var main_router := Router.new()
+	root.add_child(main_router)
+	main._router = main_router
+	main._forklift_controls.enter()
+	main._forklift_controls.handle_verb(&"forklift_forward")
 	main._operating = &"forklift"
+	main._deliver_forklift_input({"forklift": idle})
 	main._deliver_forklift_input(intent)
 	check(bridge.input == [0.75, 0.5, 1.0, 0.5, 0.0], "raw local axes and back tilt")
-	main._deliver_forklift_input({"move": Vector2.ZERO, "pendant": Vector2.ZERO})
-	check(bridge.input == [0.0, 0.0, 0.0, 0.0, 1.0], "released drive applies brake")
+	main._deliver_forklift_input({"forklift": idle})
+	check(bridge.input == [0.0, 0.0, 0.0, 0.0, 0.0], "released pedals allow native coasting")
 	main._paused = true
 	main._deliver_forklift_input(intent)
 	check(bridge.input == [0.0, 0.0, 0.0, 0.0, 1.0], "pause clears held throttle")
@@ -43,9 +56,11 @@ func _run() -> void:
 	main._deliver_forklift_input(intent)
 	check(bridge.input == [0.0, 0.0, 0.0, 0.0, 1.0], "lost native reach clears throttle")
 	bridge.reachable = true
-	main._end_operation()
+	main._dispatch([&"drop"], 1.0 / 90.0)
 	check(main._operating == &"" and bridge.input == [0.0, 0.0, 0.0, 0.0, 1.0], "leaving operation brakes immediately")
+	check(bridge.release_calls == 0, "forklift Q leaves controls without requesting a ledge drop")
 	main.free()
+	main_router.queue_free()
 	var view := Wheels.new()
 	root.add_child(view)
 	var pose := Transform3D(Basis(Vector3.FORWARD, 0.3), Vector3(3.0, 2.0, -1.0))
@@ -69,6 +84,7 @@ func _run() -> void:
 		"action": {"id": &"done", "icon": &"done", "label": "DONE"},
 		"drop_ok": false, "chute_ok": false, "chute": false, "danger": 0.0,
 		"operating": &"forklift", "crouched": false, "slung": false}
+	router.set_forklift_mode(true)
 	touch.update_context(ctx, 1.0)
 	check(not touch._movement_blocked, "forklift touch movement stick remains usable")
 	for id in [&"pendant_up", &"pendant_down", &"pendant_left", &"pendant_right"]:
@@ -78,22 +94,22 @@ func _run() -> void:
 	finger.position = touch.button_center(&"pendant_left")
 	finger.pressed = true
 	touch.handle_touch(finger)
-	check(router.frame(1.0 / 90.0)["pendant"] == Vector2(-1.0, 0.0), "touch tilt-back uses shared pendant axis")
+	check(router.frame(1.0 / 90.0)["forklift"]["tilt"] == 1.0, "touch tilt-back uses dedicated positive axis")
 	finger.pressed = false
 	touch.handle_touch(finger)
-	check(router.frame(1.0 / 90.0)["pendant"] == Vector2.ZERO, "touch release clears tilt")
+	check(router.frame(1.0 / 90.0)["forklift"]["tilt"] == 0.0, "touch release clears tilt")
 	var keyboard := InputEventKey.new()
 	keyboard.physical_keycode = KEY_W
 	keyboard.pressed = true
 	router._input(keyboard)
-	check(router.frame(1.0 / 90.0)["move"] == Vector2(0.0, 1.0), "keyboard feeds local forward movement axis")
+	check(router.frame(1.0 / 90.0)["forklift"]["throttle"] == 1.0, "keyboard feeds independent accelerator")
 	router.clear_held()
 	var pad := InputEventJoypadMotion.new()
 	pad.device = 0
 	pad.axis = JOY_AXIS_LEFT_X
 	pad.axis_value = 1.0
 	router._input(pad)
-	check(router.frame(1.0 / 90.0)["move"] == Vector2(1.0, 0.0), "gamepad feeds local steering axis")
+	check(router.frame(1.0 / 90.0)["forklift"]["steer"] == 1.0, "gamepad feeds local steering axis")
 	router.clear_held()
 	touch.queue_free()
 	router.queue_free()

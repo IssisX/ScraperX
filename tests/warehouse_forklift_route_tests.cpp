@@ -51,13 +51,15 @@ void board(Simulation &s) {
     require(s.snapshot().player_grounded && !s.forklift_state().controls_reachable,
             "approach begins outside truck on actual grade");
     require(s.set_facing(1, 0), "face actual rear platform from its open side");
-    require(s.request_jump(), "ordinary foot-powered boarding jump");
+    const auto pose_steps_before = s.snapshot().step_up_pose_count;
+    // Walk through the real side tread and open guard; a full parkour jump
+    // legitimately catches the overhead guard instead of boarding the cab.
     for (unsigned i = 0; i < 270; ++i) {
         const auto target = s.kit_body_position(s.kit_body_index(2440));
         const auto player = s.snapshot().player_position;
         const auto velocity = s.snapshot().player_linear_velocity;
-        const double x = std::clamp(1.2 * (target.x - player.x) - .45 * velocity.x, -.42, .42);
-        const double z = std::clamp(1.2 * (target.z - 1.65 - player.z) - .45 * velocity.z, -.3, .3);
+        const double x = std::clamp(1.2 * (target.x - player.x) - .45 * velocity.x, -.3, .3);
+        const double z = std::clamp(1.2 * (target.z - 1.65 - player.z) - .45 * velocity.z, -.15, .15);
         require(s.set_move_input(x, z), "boarding direction accepted");
         tick(s);
         if (s.forklift_state().controls_reachable) {
@@ -65,11 +67,13 @@ void board(Simulation &s) {
             tick(s, 30);
             observe(s, "BOARDED");
             require(s.forklift_state().controls_reachable, "real platform footing retained");
+            require(s.snapshot().step_up_pose_count == pose_steps_before,
+                    "boarding uses real finite steps without legacy pose correction");
             return;
         }
     }
     observe(s, "BOARDING_FAILED");
-    require(false, "actual jump and landing reaches rear operator platform");
+    require(false, "ordinary walking and physical steps reach rear operator platform");
 }
 void pickup(Simulation &s, std::uint64_t cargo_entity = 2444) {
     const auto cargo = s.kit_body_index(cargo_entity);

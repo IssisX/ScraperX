@@ -56,10 +56,13 @@ struct ForkliftSnapshot final {
     bool coupled = false, energy_cutoff = false;
     std::uint64_t chassis_entity = 0;
     Vector3 station_position{};
+    Vector3 steering_mount{}, lift_lever_mount{}, tilt_lever_mount{};
     double battery_j = 0, capacity_j = 0;
     double lift_position_m = 0, tilt_angle_rad = 0;
     double lift_force_n = 0, tilt_torque_nm = 0;
     double applied_drive = 0, applied_brake = 1;
+    double forward_speed_mps = 0, steering_rad = 0;
+    double lift_target_mps = 0, tilt_target_rad_s = 0;
     double positive_work_j = 0, reservation_excess_j = 0;
     std::array<Wheel, 3> wheels{};
 };

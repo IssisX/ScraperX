@@ -1,0 +1,639 @@
+{
+  "native_build": {
+    "started": 1792104082.5108705,
+    "source": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2",
+    "jobs_max": 2,
+    "steps": [
+      {
+        "name": "src/sim/simulation.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "75565732597e9d58ad7f7b3fb9b7aaf900c08763cb53ff9ea8fe4c5a58cb5940"
+      },
+      {
+        "name": "src/sim/simulation/affordance.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "8db108a6c929ae15540d8b1e781d04f4a72c7b2691c9769aa2bdf56c99db4363"
+      },
+      {
+        "name": "src/sim/simulation/carry.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "fd92a4977549a04f720567c30455f76919a1583e7b54e9dad9f84264f910a05d"
+      },
+      {
+        "name": "src/sim/simulation/checkpoint.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "aae3e17d404e5df93e58e1a780fa6a9b482cb988857b5fd0dbfdd3b28a574fc0"
+      },
+      {
+        "name": "src/sim/simulation/climb.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "0231ce6078b27b9c3c5215e370d1b682e36eae476723e5263ce810858597499d"
+      },
+      {
+        "name": "src/sim/simulation/fixture_build.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "a4267b7b6fefb19ac3adf08f8712e3157b4e606ce961d15c9852c99229e6084c"
+      },
+      {
+        "name": "src/sim/simulation/geometry.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "0b23a799a37cce5980d0b35af3e6a8451ff0e947866da8180c99385858d43776"
+      },
+      {
+        "name": "src/sim/simulation/grapple.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "becfe5cfa5262f40ad5ed26540542c1cd59ba481d555a9b28ab611f4ff82382b"
+      },
+      {
+        "name": "src/sim/simulation/forklift.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "ffee25e570b28e9de3a8c14ca58ce06bde208a0cc26fa40628f30b1cea117bf6"
+      },
+      {
+        "name": "src/sim/simulation/hand_transfer.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "16badb51b8a9fba6c872cc367c2cd022b71d4ed16a0a1a88e187a5b9c6437ee7"
+      },
+      {
+        "name": "src/sim/simulation/legacy_traversal.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "ea2d706271efad04cf2eb4651575a3486a4301b1fb2bc091162a9b8029c9c838"
+      },
+      {
+        "name": "src/sim/simulation/locomotion.cpp",
+        "command": [
+          "/usr/bin/c++",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-DNDEBUG",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src/Build/..",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-pthread",
+          "-o",
+          "CMakeFiles/scraperx_sim.dir/src/sim/simulation/locomotion.cpp.o",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src/sim/simulation/locomotion.cpp"
+        ],
+        "cwd": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2",
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/src_sim_simulation_locomotion.cpp.log"
+      },
+      {
+        "name": "src/sim/simulation/parkour_intent.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "4ae5467beaad6f2251b5b3f59cd0f07213b3872ecb0810d78b9d751ae8058427"
+      },
+      {
+        "name": "src/sim/simulation/machine_build.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e9e30cdacc8e719c59526970619e95c5e48ec375632f4814e8b66e2f05aedcad"
+      },
+      {
+        "name": "src/sim/simulation/machine_update.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "929f4867965c744601aaf1abd60d578791a09c79549b7288d2ce26863f6a3a89"
+      },
+      {
+        "name": "src/sim/simulation/queries.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "7afdd98cfbbfd47c711f9d407af1d33272830b66eb58ed3b0928167a7296664d"
+      },
+      {
+        "name": "src/sim/simulation/runtime.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "7e891b73836a20e4dcae9aa90f6c4f3f2f4156c2c29c1f4ac9521c0101107e82"
+      },
+      {
+        "name": "src/sim/simulation/snapshot.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "27ebbcaf602aba57bd4987d90a22cc829f529cb77127e1762b9885bce5be2d2f"
+      },
+      {
+        "name": "src/sim/simulation/support.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "f03cf50dbbb99aa7bbcd575946738623c09741138c9e995b7d27458487ec306b"
+      },
+      {
+        "name": "src/sim/simulation/tick.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "9dfe9da9bb41726554e931adf10230dc6384d4ecfefd67bf4db44b28e59b48c1"
+      },
+      {
+        "name": "src/sim/simulation/world.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "425fa747dd2f4deb2b44b28d21f212e69d768c9b0cb78d016fc53e4ab1a123f9"
+      },
+      {
+        "name": "src/sim/simulation/world_geometry.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "af5f4cd0747801c3f1a62e6dc30c48aff9823a71647191c230c8a5c30f6ff644"
+      },
+      {
+        "name": "src/sim/physical_hand_climb.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "dfcc88fb734304b67e4c754e82a3496d85e134a5a8266c435aff0aa77e74233f"
+      },
+      {
+        "name": "src/sim/physical_foot_push.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "788c78a6c8d23b89a531828122623a3f0f3d3aba6b4a46e7ea053f06cf4b8626"
+      },
+      {
+        "name": "src/sim/traversal_affordance.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "f61e17d11ca17c2e8fee85cd01c117fffa2c215e3e380f2150bc69a283f74df9"
+      },
+      {
+        "name": "src/sim/traversal_plan.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "cc7bdac2f44c1e235f82a1277c1cf2bef1056bde8a85e844435b8cf7cd818635"
+      },
+      {
+        "name": "src/sim/traversal_receiver.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "3fa285d5b5bca46112e4cd16b701ba6ad5ad65b20557971e2566367f71d7fe95"
+      },
+      {
+        "name": "src/sim/parkour_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "c02c95c8c4cbdaf554c514805e137b8636b1f8fd5e1da7925dc306587cdb9a50"
+      },
+      {
+        "name": "src/sim/west_brace_bay_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "730c84408237857f75d53578fe91705b744af4b73db7aeb9995907147cb5202e"
+      },
+      {
+        "name": "src/sim/inspection_junction_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "a1d26cba32a9cdc5c9ab7a18107edad2310a1b427d360b035dd1660996efdbfd"
+      },
+      {
+        "name": "src/sim/north_transfer_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e0885c9ae5bb606bf3857776c78a3d6b7d4449cb7b49b60d3622c21333a3553f"
+      },
+      {
+        "name": "src/sim/pipe_service_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e9428e73823c002ab50f5ba80b05cdec1d6fe13eba717641d13acba6921342ed"
+      },
+      {
+        "name": "src/sim/split_inspection_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "5db2b0926a0e5d3e0c8ada233d774428c0065c7f8f2e5263b00e3f9ed7056642"
+      },
+      {
+        "name": "src/sim/grappling_gun.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e60471ff08b8eeafac637cc11165aaeffd3c0f630285b3a2757582812fc1c263"
+      },
+      {
+        "name": "src/sim/grapple_practice_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "d3bc70b79548339a6e1d29e8764e71c94e29e50aa519b1a25dab886b5d8aa1d4"
+      },
+      {
+        "name": "src/sim/deformable_plank.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "5689fb0d1977c051687ecd9108b6d5a5054c35a72ed79ec5026de7448aaef457"
+      },
+      {
+        "name": "src/sim/steam_plant.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "60277636d741d9f9696bf925ffc8597a360384f3e933b45359752d2dce0e3951"
+      },
+      {
+        "name": "src/sim/water_screw.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "b30a66e456f60d7b2980a21d42dbbc3f3b9621c8953e7ae811762211982c2d41"
+      },
+      {
+        "name": "src/sim/mechanism_kit.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "0a96cb2ebdfe19a7ac8ca3d390ecbbeedbe451aa4097e96d5f29c140c8912ad7"
+      },
+      {
+        "name": "src/sim/facade_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "576579c1081334413f8772b24749d53612855f86447944edd1673030e8f05eb8"
+      },
+      {
+        "name": "src/sim/cargo_net_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "16872aab3895b033a75819032cb6308b957ed0a241fd0466bcfbe3beaa05fe5c"
+      },
+      {
+        "name": "src/sim/cargo_net.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "cbdee11c38b8e5a6b621a8beab123ba12111d171efd0a2ad13e9e0918e929279"
+      },
+      {
+        "name": "src/sim/catch_net_route.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e7d416465ef6c9017a1ab30f89d9c2078bcfdb31d62658ad0ad1f3134577a66f"
+      },
+      {
+        "name": "src/sim/suspended_ladder.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "1569d250090ebe2302d7a624ae5f30fd5cb5680618bb06a093958b64f5054735"
+      },
+      {
+        "name": "src/sim/service_lift.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "3dbe9d7aeca4f4a591ae0d4961ecf209b3118aba7a7e1d41d8d071a334edd4a9"
+      },
+      {
+        "name": "src/sim/warehouse_forklift.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "0fb5871da6b26cf2f715bf8bbcc4934bcb54f0d23bb8762f1d3494628350326a"
+      },
+      {
+        "name": "src/sim/warehouse_forklift_yard.cpp",
+        "command": [
+          "/usr/bin/c++",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-DNDEBUG",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src/Build/..",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-pthread",
+          "-o",
+          "CMakeFiles/scraperx_sim.dir/src/sim/warehouse_forklift_yard.cpp.o",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src/sim/warehouse_forklift_yard.cpp"
+        ],
+        "cwd": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2",
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/src_sim_warehouse_forklift_yard.cpp.log"
+      },
+      {
+        "name": "src/sim/gravity_wheel_geometry.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "20b61f75c4d2180c5f7e59fb29a92b58146b26ad2e920c3cf43ad55d3e72f478"
+      },
+      {
+        "name": "src/sim/gravity_cart_geometry.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "eb7b7ca8a1454f86510b5aee093d9e45eeb70756e0dd744860fb6b166835a126"
+      },
+      {
+        "name": "src/sim/supplied_ascent.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "0b388f3dc11e3b8a7f3688b3901db52c832a1235103ff6bc3c9081edf9b4a270"
+      },
+      {
+        "name": "src/sim/supplied/vertical_machine.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "85c26d87d673cf46821d257b39c3ebd64f9bdf37900739d9b7fbb94f9e79a83a"
+      },
+      {
+        "name": "src/sim/supplied/gravity_balance.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "ea6f52668af3f3b7d672accde8636b38ca13cf25d44eed9f7104f53e9e17c0d5"
+      },
+      {
+        "name": "src/sim/supplied/crown_gondola.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "ed9409dd8e8cee3a7ee90aa9ec8a70540845c7752c0998fa60ac4dad5789efe9"
+      },
+      {
+        "name": "src/sim/supplied/traction_tram.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "c4b1759eefc0bfad42db6e5eb5c767274b9a9421eea86dcfc9aab9259f1a545a"
+      },
+      {
+        "name": "src/sim/supplied/barrel_helix.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e69e15c34a09eae92fc15c6f4900c47512e04b347cf83ddb3f4c954de4ea4a93"
+      },
+      {
+        "name": "src/sim/supplied/cascade_mast.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "9efb63e5effa6aa5401de69e7e5c3f55305aeedb6d8f74f7c89623454d01b0de"
+      },
+      {
+        "name": "src/sim/supplied/pitman_lift.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "e3c4e16d731d315213714403b6d8087957b2ce0abc9c98c73d30bf17e8dd0ac6"
+      },
+      {
+        "name": "src/sim/slingshot.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "ce14aac7ad362e96576bebd5762208577c9d721c64bd9d2d76a03ada83f7375a"
+      },
+      {
+        "name": "src/sim/slingshot_model.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "5aae10d44c0dbbedff910fc39d4cf28e20231a663f4ebede577228413b2e5890"
+      },
+      {
+        "name": "src/sim/pipe_bridge.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "4959e4d0f44e19f5efc5c87ea4fcac50273c999ab9d5f9f3d066cd8bba74202e"
+      },
+      {
+        "name": "src/sim/swing_stair.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "beabc729f8956cdbbef797fd84e6d56fcdee745e6ce4cff51e6eee5d7ec18932"
+      },
+      {
+        "name": "src/sim/upper_ascent.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "27e8b510212e47894019e09002e53c2782edf673fbbddf760f8ee68d9873abc0"
+      },
+      {
+        "name": "src/sim/teeter_rise.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "a1102fa7ef4796c54fda9b24ded64116aa9f7ccf5c56007c4a5ba50be3ef1fa6"
+      },
+      {
+        "name": "src/sim/braced_bay.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "04ae29bbf4397f09773876d72d26e20d842c8e9c7c916835ee4ad4726ef0c1a1"
+      },
+      {
+        "name": "src/sim/north_service_frame.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "fbae9a3cadb0f5b90493e8a2a3d5cc11adacc41d93fcd759b0ed9da5ee42b837"
+      },
+      {
+        "name": "src/sim/band_counterweight_well.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "4d8f0776b5b1516ac2cfafce510b68d639bd4fbe21715ec5483a7c740302c3c4"
+      },
+      {
+        "name": "src/sim/band_ground_water_lift.cpp",
+        "exit": 0,
+        "reused": true,
+        "object_sha256": "9fc73f8bb1cd7d9d28e9d395dd5577c3e961dd3abbb362696b1c94aae3d105ca"
+      },
+      {
+        "name": "bridge-link",
+        "command": [
+          "/usr/bin/c++",
+          "-fPIC",
+          "-O3",
+          "-DNDEBUG",
+          "-shared",
+          "-pthread",
+          "-static-libgcc",
+          "-static-libstdc++",
+          "-s",
+          "-Wl,--no-undefined",
+          "-Wl,-soname,libscraperx_native.so",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_native.so",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/register_types.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/scraperx_simulation.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a"
+        ],
+        "cwd": null,
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/bridge-link.log"
+      },
+      {
+        "name": "warehouse_forklift_route_tests",
+        "command": [
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/tests/warehouse_forklift_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/warehouse_forklift_route_tests"
+        ],
+        "cwd": null,
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/warehouse_forklift_route_tests.log"
+      },
+      {
+        "name": "forklift_boarding_tests",
+        "command": [
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v2/tests/forklift_boarding_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/forklift_boarding_tests"
+        ],
+        "cwd": null,
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/forklift_boarding_tests.log"
+      }
+    ],
+    "reused_native_objects": [],
+    "bridge_ABI": "Snapshot and all headers unchanged from v1; both bridgeTUs sourceidentical, valid existing objects reused and linked with newarchive",
+    "upstream_jolt_rebuilt": false,
+    "source_stable": true,
+    "finished": 1792104093.2332587,
+    "outputs": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_native.so": "fb460f42aec63587a64392b168de53c37a04cf5af2def560ee54099476df9238",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/warehouse_forklift_route_tests": "098044578a2be489a3e015f2d3dea90a4494cea16e57432b74e17dd0d2303031",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/forklift_boarding_tests": "960905ca381619ad6a1180ea1b6805b9f12e584e9a2b247d71253ad0ad332fff"
+    }
+  },
+  "cargo_route": {
+    "stage": "physical-cab-loaded-cargo-route",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/warehouse_forklift_route_tests"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/warehouse_forklift_route_tests": "098044578a2be489a3e015f2d3dea90a4494cea16e57432b74e17dd0d2303031",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_route_tests.cpp": "a48b61c8253f7501c68df79cff7fd7eeaefd0f3639fa3e555f10e7a5f922293d",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/forklift_route_walk.hpp": "d9677e1f817eb6e68ab80664ebd2b05c73fbb2641ccdc51db4a6e0001bde6c73",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/locomotion.cpp": "54df5d149150e7693963fb53307ebaa9519336e4442e62c77263d3fc668993f4"
+    },
+    "started": 1792104193.8305295,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-14.log",
+    "exit": 0,
+    "finished": 1792104869.2021413
+  },
+  "render": {
+    "exit": 0,
+    "checks": 36,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/operator-v2-render.log",
+    "log_sha256": "ddcc3331953508294ecc16522e914274247c3a12907c8894f9cb01b22e48bcef",
+    "godot_manifest": {
+      "selected_godot": {
+        "godot/presentation/main.gd": "5779a87c2ce502cecf4c7e486f48dcb4952ef4b68e89ea4b0e6852807999980c",
+        "godot/presentation/forklift_view.gd": "dc0d8c7f3e1c78bf3654c6079703bff9cc57c9bea3aa9b0363cd5f59715c65ac",
+        "godot/presentation/first_person_arms.gd": "fdc2ce66434f41c785c026154ee664aec1358999aef609299926c40f74ac9207",
+        "godot/presentation/audio/forklift_audio.gd": "2ff8e10fc8e42d62e62347651bdaf373d3f76a2a13cb25e0df3bce392a85e803",
+        "godot/presentation/ui/forklift_controls.gd": "cbf0c45f45b8c8b8a735005df19783823f1c4fada973567abaac30e91a1a470a",
+        "godot/presentation/ui/forklift_panel.gd": "2490f176ea52809219581d25f56d9a1ca28fd996ca1a38868e9191c1f87f2eaa",
+        "godot/presentation/ui/input_router.gd": "99c710ac7219d53075ed262cba5f2e7bd5cf590e34c40c413f80ba88a3a25bb3",
+        "godot/presentation/ui/touch_controls.gd": "820c81b0f1b45b357f781e5b0bd86519abee0ad18a8cdb10573f19c822540da9",
+        "godot/tests/forklift_controls_test.gd": "6d63881d31c86de55817a7eee772010dfa6c7e00eb16f0819740e06073b347bb",
+        "godot/tests/forklift_operator_inputs_test.gd": "58cc280f689b04070e5793b9bc451bdc4bce4ffec17018012e7d42af2115c391",
+        "godot/tests/forklift_cab_view_test.gd": "e5c8611da449ceeee129486c8de3ffc78503f935d452e6ef8ed68c528f88064c",
+        "godot/tests/forklift_audio_test.gd": "0937a18bf4f06e278b70a9c1708a1364be901e077c23d0d0f853581e7e9fc7cc",
+        "godot/tests/forklift_operator_main_native_test.gd": "661b6cf7a4723bd23848c5b394cd107c311285e4d53ad26e1c60e4554f34a0f1",
+        "godot/presentation/ui/hud.gd": "e9f6e0d9d9f79434efd84c5e50be1e88769fd94943743bc6fd8e8b0d4dcf852c"
+      },
+      "working": {
+        "godot/presentation/main.gd": "a3d901e5ac192a9df94ce26d1d43c92031f5a9fbb4cb1fb8b56e7da586d3ab5b",
+        "godot/presentation/forklift_view.gd": "dc0d8c7f3e1c78bf3654c6079703bff9cc57c9bea3aa9b0363cd5f59715c65ac",
+        "godot/presentation/first_person_arms.gd": "fdc2ce66434f41c785c026154ee664aec1358999aef609299926c40f74ac9207",
+        "godot/presentation/audio/forklift_audio.gd": "2ff8e10fc8e42d62e62347651bdaf373d3f76a2a13cb25e0df3bce392a85e803",
+        "godot/presentation/ui/forklift_controls.gd": "cbf0c45f45b8c8b8a735005df19783823f1c4fada973567abaac30e91a1a470a",
+        "godot/presentation/ui/forklift_panel.gd": "2490f176ea52809219581d25f56d9a1ca28fd996ca1a38868e9191c1f87f2eaa",
+        "godot/presentation/ui/input_router.gd": "99c710ac7219d53075ed262cba5f2e7bd5cf590e34c40c413f80ba88a3a25bb3",
+        "godot/presentation/ui/touch_controls.gd": "820c81b0f1b45b357f781e5b0bd86519abee0ad18a8cdb10573f19c822540da9",
+        "godot/tests/forklift_controls_test.gd": "6d63881d31c86de55817a7eee772010dfa6c7e00eb16f0819740e06073b347bb",
+        "godot/tests/forklift_operator_inputs_test.gd": "58cc280f689b04070e5793b9bc451bdc4bce4ffec17018012e7d42af2115c391",
+        "godot/tests/forklift_cab_view_test.gd": "e5c8611da449ceeee129486c8de3ffc78503f935d452e6ef8ed68c528f88064c",
+        "godot/tests/forklift_audio_test.gd": "0937a18bf4f06e278b70a9c1708a1364be901e077c23d0d0f853581e7e9fc7cc",
+        "godot/tests/forklift_operator_main_native_test.gd": "661b6cf7a4723bd23848c5b394cd107c311285e4d53ad26e1c60e4554f34a0f1",
+        "godot/presentation/ui/hud.gd": "e9f6e0d9d9f79434efd84c5e50be1e88769fd94943743bc6fd8e8b0d4dcf852c"
+      },
+      "bridge_sha256": "fb460f42aec63587a64392b168de53c37a04cf5af2def560ee54099476df9238",
+      "native_archive_sha256": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+    },
+    "root_inspected": [
+      {
+        "path": "/storage/emulated/0/Download/ScraperX-builds/forklift-operator-preview-v2/01-operator-forward.png",
+        "sha256": "f214161289ca2264070d4abb9cd76e8923813b2db63b7da6ef28b290246791bb"
+      },
+      {
+        "path": "/storage/emulated/0/Download/ScraperX-builds/forklift-operator-preview-v2/02-hydraulic-controls.png",
+        "sha256": "28db18d7f5c35adad439301a0df8c9d3497bfb5f4e4d2b76fd5d98fd8d7535ab"
+      },
+      {
+        "path": "/storage/emulated/0/Download/ScraperX-builds/forklift-operator-preview-v2/03-operator-rearward.png",
+        "sha256": "2eb6e0b94a11ac7b77bede037171c0272a4a33fb15b8fbc6270c60d5308659c3"
+      },
+      {
+        "path": "/storage/emulated/0/Download/ScraperX-builds/forklift-operator-preview-v2/04-fork-tip-view.png",
+        "sha256": "5be8b8dbfed6f73ec511affab5cb8535a2c319f11fc43114f8f31c6c3edb33cd"
+      },
+      {
+        "path": "/storage/emulated/0/Download/ScraperX-builds/forklift-operator-preview-v2/05-touch-operator-layout.png",
+        "sha256": "92bcbcef05b169a8b41de6c1ee65ac7de8e6663a8a56760b916ea9647e0a69b8"
+      }
+    ]
+  },
+  "limits": "Host native/Godot rendering; no installed device play. Final Q-exit/pad-inch focused check recorded separately."
+}

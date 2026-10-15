@@ -361,8 +361,10 @@ func _draw_station_panel() -> void:
 	var alpha := _panel_alpha
 	var rows: Array = _panel["rows"]
 	var verbs: Array = [] if touch_active else _panel["verbs"]
+	var help_lines: Array = _panel.get("help_lines", [])
 	var width := 620.0 * u
 	var height := 118.0 * u + 46.0 * u * float(rows.size()) + 24.0 * u
+	height += 28.0 * u * float(help_lines.size())
 	if not verbs.is_empty():
 		height += 30.0 * u + 56.0 * u * float(verbs.size())
 	var origin := Vector2(_safe.position.x + 64.0 * u, _safe.position.y + _safe.size.y * 0.29)
@@ -390,6 +392,10 @@ func _draw_station_panel() -> void:
 			UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha))
 		UiStyle.text(self, UiStyle.font_digits(), row[1], Vector2(right, y), int(roundf(27.0 * u)),
 			UiStyle.with_alpha(tone_color, alpha), HORIZONTAL_ALIGNMENT_RIGHT)
+	for help in help_lines:
+		y += 28.0 * u
+		UiStyle.text(self, UiStyle.font_label(), help, Vector2(left, y), int(roundf(18.0 * u)),
+			UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha))
 	if verbs.is_empty():
 		return
 	y += 30.0 * u
@@ -402,7 +408,8 @@ func _draw_station_panel() -> void:
 		var glyph_center := Vector2(left, y - 9.0 * u)
 		var used := UiStyle.draw_binding(self, family, entry[0], glyph_center, h, alpha)
 		# Pads hoist on the triggers too; the panel shows both ways in.
-		if entry[0] == &"hoist" and family not in [UiStyle.Family.KEYBOARD, UiStyle.Family.TOUCH]:
+		if entry[0] == &"hoist" and bool(_panel.get("hoist_analog", true)) \
+				and family not in [UiStyle.Family.KEYBOARD, UiStyle.Family.TOUCH]:
 			used += 10.0 * u + UiStyle.draw_binding(self, family, &"hoist_analog",
 				glyph_center + Vector2(used + 10.0 * u, 0.0), h, alpha)
 		UiStyle.text(self, font, entry[1], Vector2(left + used + 16.0 * u, y), size,

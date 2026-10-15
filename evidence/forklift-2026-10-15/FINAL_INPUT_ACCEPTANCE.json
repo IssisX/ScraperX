@@ -1,0 +1,70 @@
+{
+  "started": 1792105169.1113863,
+  "native_so_sha256": "fb460f42aec63587a64392b168de53c37a04cf5af2def560ee54099476df9238",
+  "steps": [
+    {
+      "name": "forklift_controls_test",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-final",
+        "--script",
+        "res://tests/forklift_controls_test.gd"
+      ],
+      "exit": 0,
+      "errors": [],
+      "result": [
+        "SCRAPERX_FORKLIFT_CONTROLS PASS"
+      ]
+    },
+    {
+      "name": "forklift_operator_inputs_test",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-final",
+        "--script",
+        "res://tests/forklift_operator_inputs_test.gd"
+      ],
+      "exit": 0,
+      "errors": [],
+      "result": [
+        "SCRAPERX_FORKLIFT_OPERATOR_INPUTS PASS"
+      ]
+    }
+  ],
+  "scope": "Final Q leaves controls without ledgeDrop; held gamepad right-stick inch and release. Existing rendered36/native cargo proof reused.",
+  "finished": 1792105179.6837373,
+  "godot_source_manifest": {
+    "created": 1792105115.5172205,
+    "native_archive_sha256": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b",
+    "godot": {
+      "godot/presentation/main.gd": "acf314469cb869e2a139bb633e13a3187d87a45d360720a9fd755033ed93f3f6",
+      "godot/presentation/forklift_view.gd": "dc0d8c7f3e1c78bf3654c6079703bff9cc57c9bea3aa9b0363cd5f59715c65ac",
+      "godot/presentation/first_person_arms.gd": "fdc2ce66434f41c785c026154ee664aec1358999aef609299926c40f74ac9207",
+      "godot/presentation/audio/forklift_audio.gd": "2ff8e10fc8e42d62e62347651bdaf373d3f76a2a13cb25e0df3bce392a85e803",
+      "godot/presentation/ui/forklift_controls.gd": "cbf0c45f45b8c8b8a735005df19783823f1c4fada973567abaac30e91a1a470a",
+      "godot/presentation/ui/forklift_panel.gd": "113807c1087aac7ebd8225ed85f6c8e76e8278adafc06f6c94eb36ce523eac71",
+      "godot/presentation/ui/input_router.gd": "748d4932e91d7d7264159004d1c3427f2991b354a780ba34c1f3e34294056763",
+      "godot/presentation/ui/touch_controls.gd": "820c81b0f1b45b357f781e5b0bd86519abee0ad18a8cdb10573f19c822540da9",
+      "godot/tests/forklift_controls_test.gd": "250933f7c47571c72d8751ffbda28ca496ce6a9b2118964259c838dd23a40cbd",
+      "godot/tests/forklift_operator_inputs_test.gd": "8738d598602b87ad43da30b645e908609ef8361470bb7f10ccc0bc8273706832",
+      "godot/tests/forklift_cab_view_test.gd": "e5c8611da449ceeee129486c8de3ffc78503f935d452e6ef8ed68c528f88064c",
+      "godot/tests/forklift_audio_test.gd": "0937a18bf4f06e278b70a9c1708a1364be901e077c23d0d0f853581e7e9fc7cc",
+      "godot/tests/forklift_operator_main_native_test.gd": "661b6cf7a4723bd23848c5b394cd107c311285e4d53ad26e1c60e4554f34a0f1",
+      "godot/presentation/ui/hud.gd": "e9f6e0d9d9f79434efd84c5e50be1e88769fd94943743bc6fd8e8b0d4dcf852c"
+    }
+  }
+}

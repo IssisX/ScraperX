@@ -64,6 +64,7 @@ const POSE_BRACE := 11
 const POSE_ROLL := 12
 const POSE_STUMBLE := 13
 const POSE_GRAPPLE := 14
+const POSE_FORKLIFT := 15
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -398,6 +399,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	# A carried gun is not the crane's handheld radio. Native equipment
 	# acknowledgement selects its pose; the presented tool supplies wrists.
 	var operating: StringName = &"" if grapple else state["operating"]
+	var forklift := operating == &"forklift" and bool(state.get("forklift_active", false))
 	var chute: bool = state["chute"]
 	var landing: Dictionary = state.get("landing", {})
 	var recovering := bool(landing.get("landing_recovering", false))
@@ -406,7 +408,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	var remote_frame := Transform3D()
 	if operating != &"":
 		remote_frame = _remote_transform(camera)
-	_remote.visible = operating != &""
+	_remote.visible = operating != &"" and operating != &"forklift"
 	if _remote.visible:
 		_remote.global_transform = remote_frame
 		_update_remote_buttons(state["pendant"])
@@ -431,6 +433,11 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var raised := attached and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
+		if forklift and state.has("forklift_frame"):
+			# Head yaw/pitch does not swivel shoulders away from the cab.
+			var cab: Transform3D = state["forklift_frame"]
+			shoulder = camera.origin + cab.basis * Vector3(-SHOULDER_LOCAL.x * hand.side,
+				SHOULDER_LOCAL.y, -SHOULDER_LOCAL.z)
 		if traversal == TRAVERSAL_HANGING and attached:
 			# Initial native pair establishes the body's handedness. Later
 			# crossing placements retain it independently of head rotation.
@@ -463,7 +470,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			pose = POSE_AIR
 		elif grapple:
 			pose = POSE_GRAPPLE
-		elif operating != &"":
+		elif forklift:
+			pose = POSE_FORKLIFT
+		elif operating != &"" and operating != &"forklift":
 			pose = POSE_REMOTE
 		elif int(state.get("carrying", 0)) != 0:
 			pose = POSE_CARRY
@@ -539,7 +548,13 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var deficit := reach.length() - (UPPER_ARM + FOREARM - 0.015)
 		if deficit > 0.0:
 			shoulder += reach.normalized() * minf(deficit, MAX_LEAN)
-		_solve_arm(hand, shoulder, wrist, hand_basis, _pole(pose, hand.side, forward, torso_right))
+		var pole_forward := forward
+		var pole_right := torso_right
+		if forklift and state.has("forklift_frame"):
+			var cab: Transform3D = state["forklift_frame"]
+			pole_forward = cab.basis.z
+			pole_right = -cab.basis.x
+		_solve_arm(hand, shoulder, wrist, hand_basis, _pole(pose, hand.side, pole_forward, pole_right))
 		_pose_fingers(hand)
 
 	_canopy.visible = chute
@@ -621,6 +636,15 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var wrist := tool * local_wrist
 			var basis := _hand_basis(tool.basis.y * 0.9 - tool.basis.z * 0.2, tool.basis.x * side)
 			return [wrist, basis, false, 20.0, 0.83 if side > 0.0 else 0.68, 0.35]
+		POSE_FORKLIFT:
+			var wrist: Vector3 = state["forklift_left_hand_world" if side < 0.0 else "forklift_right_hand_world"]
+			# Controls stay world anchored while the operator looks around.
+			# Derive the glove frame from the two actual grips, not head yaw.
+			var span: Vector3 = state["forklift_right_hand_world"] - state["forklift_left_hand_world"]
+			var cab_right := span.normalized() if span.length_squared() > 1.0e-6 else torso_right
+			var cab_forward := Vector3.UP.cross(cab_right).normalized()
+			var basis := _hand_basis(Vector3.UP * .8 + cab_forward * .4, cab_right * side)
+			return [wrist, basis, true, 24.0, .82, .55]
 		POSE_REMOTE:
 			# Wrist behind the box's midplane: fingers wrap the back, the
 			# thumb comes round onto the face -- a book held by its edge.
@@ -727,7 +751,7 @@ func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 			return right * side * 0.8 + Vector3.DOWN * 0.6 - forward * 0.3
 		POSE_ROLL:
 			return right * side * 0.25 + Vector3.DOWN * 1.0 - forward * 0.2
-		POSE_REMOTE, POSE_CHUTE, POSE_GRAPPLE:
+		POSE_REMOTE, POSE_CHUTE, POSE_GRAPPLE, POSE_FORKLIFT:
 			return right * side * 0.9 + Vector3.DOWN * 1.0
 	return right * side * 0.5 + Vector3.DOWN * 1.0 - forward * 0.4
 

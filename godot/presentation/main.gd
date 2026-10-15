@@ -21,6 +21,13 @@ var _yard_ambience: Node3D
 
 const ForkliftView := preload("res://presentation/forklift_view.gd")
 var _forklift_view: ForkliftView
+const ForkliftAudio := preload("res://presentation/audio/forklift_audio.gd")
+var _forklift_audio: ForkliftAudio
+const ForkliftControls := preload("res://presentation/ui/forklift_controls.gd")
+const ForkliftPanel := preload("res://presentation/ui/forklift_panel.gd")
+var _forklift_controls := ForkliftControls.new()
+var _forklift_view_heading := 0.0
+var _forklift_view_heading_valid := false
 
 const WorksiteMachineView := preload("res://presentation/worksite_machine_view.gd")
 var _machine_view: WorksiteMachineView
@@ -354,6 +361,9 @@ func _ready() -> void:
 	_forklift_view = ForkliftView.new()
 	_forklift_view.name = "ForkliftWheels"
 	add_child(_forklift_view)
+	_forklift_audio = ForkliftAudio.new()
+	_forklift_audio.name = "ForkliftAudio"
+	add_child(_forklift_audio)
 	_grapple_view = GrapplingGunViewScript.new()
 	_grapple_view.name = "GrapplingGunPresentation"
 	_grapple_view.configure_hook_geometry(_native.get_grapple_hook_geometry())
@@ -401,6 +411,7 @@ func _process(delta: float) -> void:
 	var sling_recovering := bool(launcher.get("recovering", false))
 	var aim_locked := bool(launcher.get("aim_locked", true))
 	var intent: Dictionary = _router.frame(delta)
+	_update_forklift_view_heading()
 	if aiming and not _sling_was_seated:
 		_sling_goal_yaw = float(launcher["yaw_rad"])
 		_sling_goal_elevation = float(launcher["elevation_rad"])
@@ -717,6 +728,10 @@ func _open_pause(from_system: bool = false) -> void:
 		return
 	_paused = true
 	_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
+	if _operating == &"forklift":
+		_forklift_controls.enter()
+	if _forklift_audio != null:
+		_forklift_audio.reset()
 	_reset_grapple_feedback()
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic()
@@ -818,6 +833,12 @@ func _resume() -> void:
 # which request the other contextual verbs mean; native authority accepts it.
 func _dispatch(verbs: Array, _delta: float) -> void:
 	for verb in verbs:
+		if _operating == &"forklift" and verb in [&"drop", &"back"]:
+			_end_operation()
+			continue
+		if _operating == &"forklift" and String(verb).begins_with("forklift_"):
+			_forklift_controls.handle_verb(verb)
+			continue
 		match verb:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
@@ -927,6 +948,11 @@ func _perform_action() -> void:
 			_native.request_traversal()
 		&"operate":
 			_operating = _ctx["station"]
+			if _operating == &"forklift":
+				_forklift_controls.enter()
+				_router.set_forklift_mode(true)
+				_forklift_view_heading_valid = false
+				_update_forklift_view_heading()
 		&"done":
 			_end_operation()
 		&"valve":
@@ -956,16 +982,41 @@ func _deliver_forklift_input(intent: Dictionary) -> void:
 	if _paused or _operating != &"forklift" or not bool(state.get("controls_reachable", false)):
 		_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
 		return
-	var move: Vector2 = intent["move"]
-	var pendant: Vector2 = intent["pendant"]
-	# Raw axes stay in truck space even while the player looks around.
-	_native.set_forklift_input(move.y, move.x, pendant.y, -pendant.x,
-		1.0 if is_zero_approx(move.y) else 0.0)
+	var input: Array = _forklift_controls.sample(intent.get("forklift", {}),
+		float(state.get("forward_speed_mps", 0.0)))
+	# The native owner still requires current real operator-floor contact.
+	# Looking around cannot change the truck-space steering or pedal axes.
+	_native.set_forklift_input(input[0], input[1], input[2], input[3], input[4])
+
+
+func _forklift_chassis_frame() -> Transform3D:
+	var index := int(_native.get_kit_body_index(2440))
+	return _native.get_kit_body_render_transform(index) if index >= 0 else Transform3D.IDENTITY
+
+
+func _update_forklift_view_heading() -> void:
+	if _operating != &"forklift":
+		_forklift_view_heading_valid = false
+		return
+	var front := _forklift_chassis_frame().basis.z
+	if Vector2(front.x, front.z).length_squared() < 0.001:
+		return
+	var heading := atan2(-front.x, -front.z)
+	if _forklift_view_heading_valid:
+		_yaw += wrapf(heading - _forklift_view_heading, -PI, PI)
+	else:
+		_yaw = heading
+		_pitch = -0.12
+	_forklift_view_heading = heading
+	_forklift_view_heading_valid = true
 
 
 func _end_operation() -> void:
 	if _operating == &"forklift":
 		_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
+		_forklift_controls.leave()
+		_router.set_forklift_mode(false)
+		_forklift_view_heading_valid = false
 	if _operating == &"grappling_gun":
 		_native.set_grapple_reel_input(0.0)
 		_native.set_grapple_equipped(false)
@@ -1185,6 +1236,7 @@ func _read_context() -> Dictionary:
 		"lethal": lethal,
 		"station": station,
 		"operating": _operating,
+		"forklift_operator": _forklift_controls.ui_state(),
 		"slung": bool(_native.is_legal_forty_pack_slung()),
 		"carrying": carrying,
 		"action": action,
@@ -1260,14 +1312,7 @@ func _kit_anchor_name(entity: int) -> String:
 func _station_panel() -> Dictionary:
 	match _operating:
 		&"forklift":
-			var truck: Dictionary = _native.get_forklift_state()
-			var cutoff := bool(truck.get("energy_cutoff", false))
-			return {"title": "FORKLIFT", "subtitle": "MOVE: DRIVE / STEER  /  RELEASE: BRAKE",
-				"rows": [["BATTERY", "EMPTY" if cutoff else "%.0f%%" % (100.0 * float(truck.get("battery_j", 0.0)) / maxf(1.0, float(truck.get("capacity_j", 1.0)))), 2 if cutoff else 0],
-					["FORKS", "%.1f M" % float(truck.get("lift_position_m", 0.0)), 0],
-					["LOAD", "%.0f KN" % (float(truck.get("lift_force_n", 0.0)) / 1000.0), 0],
-					["DRIVE", "BRAKED" if float(truck.get("applied_brake", 1.0)) > 0.0 else "POWER EMPTY" if cutoff else "DRIVING" if absf(float(truck.get("applied_drive", 0.0))) > 0.0 else "COASTING", 0]],
-				"verbs": [[&"hoist", "RAISE / LOWER"], [&"slew", "TILT BACK / FORWARD"], [&"leave", "DONE"]]}
+			return ForkliftPanel.describe(_native.get_forklift_state(), _forklift_controls.ui_state(), _router.device)
 		&"grappling_gun":
 			var gun: Dictionary = _native.get_grapple_gun_state()
 			var drop_label := "RELEASE" if bool(gun.get("line_attached", false)) else "STOW"
@@ -1742,6 +1787,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 	var velocity: Vector3 = _ctx["velocity"]
 	if bool(_ctx["grounded"]):
 		velocity -= _native.get_support_point_linear_velocity()
+	var forklift_hands: Dictionary = _forklift_view.get_operator_hand_targets() if _forklift_view != null else {}
 	return {
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
@@ -1760,6 +1806,10 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"grounded": bool(_ctx["grounded"]),
 		"chute": bool(_ctx["chute"]),
 		"operating": _operating,
+		"forklift_active": _operating == &"forklift",
+		"forklift_left_hand_world": forklift_hands.get("left_hand_world", Vector3.ZERO),
+		"forklift_right_hand_world": forklift_hands.get("right_hand_world", Vector3.ZERO),
+		"forklift_frame": forklift_hands.get("operator_frame", Transform3D.IDENTITY),
 		"carrying": int(_ctx["carrying"]),
 		"grapple_equipped": bool(_ctx.get("grapple_equipped", false)),
 		"grapple_frame": _grapple_view._tool.global_transform if _grapple_view != null else Transform3D.IDENTITY,
@@ -1902,6 +1952,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var grounded := bool(_native.is_player_grounded())
 	var crouched := bool(_native.is_player_crouched())
 
+	_update_forklift_view_heading()
 	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if _ground_yard != null and _sky_cycle != null:
 		_ground_yard.update(position, delta, not _head_bob_on, _sky_cycle.hour)
@@ -1954,7 +2005,12 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			float(_native.get_orifice_mass_flow_kg_per_s()))
 		_machine_view.mirror_water_screw(_native)
 	_kit_view.render_view()
-	_forklift_view.render_state(_native.get_forklift_render_state())
+	var forklift_frame := _forklift_chassis_frame()
+	_forklift_view.render_state(_native.get_forklift_render_state(), forklift_frame)
+	var forklift_state: Dictionary = _native.get_forklift_state()
+	_forklift_audio.update_from_native(forklift_state, forklift_frame.origin,
+		_operating == &"forklift" and bool(forklift_state.get("controls_reachable", false)) \
+		and bool(_forklift_controls.ui_state().get("horn", false)), delta)
 	if _inspection_balance_feedback != null:
 		_inspection_balance_feedback.update_from_native(_native, delta, not _settings.launch_cinematics)
 	if _grapple_view != null:
