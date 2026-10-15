@@ -2511,6 +2511,33 @@ func _build_yard(concrete: Material, faded: Material, tar: Material) -> void:
 		_add_box("KerbRun", Vector3(86.0, 0.28, 0.5), Vector3(-6.0, 0.14, z), concrete)
 	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), tar)
 	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), tar)
+	_build_walkway(faded)
+
+
+# The first cue (release plan item 13): the yard's painted pedestrian
+# walkway, as any works has, from the start to S1's cage door. Two edge lines
+# and chevrons pointing the way, broken where the kerbs cross it; paint only
+# (solid_export.gd: WalkwayPaint).
+const WALKWAY_X := 10.0
+const WALKWAY_HALF_WIDTH := 1.4
+const WALKWAY_RUNS := [Vector2(-27.0, -60.5), Vector2(-59.5, -117.5)]   # z from, to
+
+
+func _build_walkway(paint: Material) -> void:
+	for run: Vector2 in WALKWAY_RUNS:
+		var length := absf(run.x - run.y)
+		var mid_z := 0.5 * (run.x + run.y)
+		for side: float in [-1.0, 1.0]:
+			_add_box("WalkwayPaint", Vector3(0.12, 0.008, length),
+				Vector3(WALKWAY_X + side * WALKWAY_HALF_WIDTH, 0.006, mid_z), paint)
+		var z := run.x - 4.0
+		while z > run.y + 1.0:
+			# A chevron: two bars meeting ahead, toward the tower (-z).
+			for side: float in [-1.0, 1.0]:
+				var bar := _add_box("WalkwayPaint", Vector3(0.16, 0.008, 1.3),
+					Vector3(WALKWAY_X + side * 0.42, 0.006, z + 0.45), paint)
+				bar.rotation.y = side * 0.75
+			z -= 9.0
 
 
 # Stock in the yard south of the start, where the player looks first when

@@ -634,7 +634,12 @@ say why. Both archive designs are in the source (`src/sim/vertical/`) and unplac
   label now also names what the landing would be, at the same thresholds: M/S FALL, then HARD
   LANDING from 0.55 of the native lethal speed, then LETHAL from 0.8. At LETHAL the arc thickens.
   `touch_lethal_feedback` requires LETHAL at 0.8.
-- **Still open (item 13):** in-world cues for the first moves.
+- **An in-world cue for the first moves.** The yard's painted pedestrian walkway, as any works
+  has, runs from the start to S1's cage door: two edge lines with chevrons pointing the way, broken
+  where the two kerbs cross it. It is site marking, not a painted parkour stripe (which the plan
+  forbids), and paint only: `world_solids.inc` is unchanged. Rendered on the title view.
+- **Still open (item 13):** cues for moves beyond walking to the first machine. Touch already
+  labels MOVE, DRAG TO LOOK and each button's verb.
 
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.

@@ -36,7 +36,7 @@ const MOVING := [
 # a native surface (a solid lip there would snag every step), light glow,
 # cloth, rope and cable, low scrub, water, sky.
 const NON_SOLID := [
-	"DeckPlank", "DeckStreak", "StairTread", "Tread", "SkinRungPlate", "LaneStripe",
+	"DeckPlank", "DeckStreak", "StairTread", "Tread", "SkinRungPlate", "LaneStripe", "WalkwayPaint",
 	"EdgeStripe", "FloorLight", "FloorLightHigh", "ColumnLichen", "UpperLightBand",
 	"StandingWater", "StandingWaterTwo", "BannerMark", "SignPlateMark", "Banner",
 	"Rope", "LiftRope", "JibRope", "JibSling", "JibHoistCable", "NeedleHoistCable",
