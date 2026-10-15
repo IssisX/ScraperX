@@ -5103,7 +5103,8 @@ void run_save() {
     // Two fresh simulations given the same save play on bit for bit (the
     // initial state determines the final state). The original, restored from
     // its own save, plays on within 1 mm of them: it keeps the solver's
-    // contact history, which a save does not carry.
+    // history (its contacts' and ropes' last impulses), which a save does not
+    // carry.
     Simulation c(InitialSpawn::Deck2South);
     (void)c.advance_frame(0.5);
     require(c.load_game(bytes.data(), bytes.size()) && a.load_game(bytes.data(), bytes.size()),

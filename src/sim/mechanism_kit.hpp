@@ -3,8 +3,9 @@
 // The mechanism kit (03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md §4): the
 // parts every lift stage of the mechanism ascent is built from. Bodies are
 // declared here with the boxes they are made of, so the presentation draws
-// exactly what collides. Ropes are real tension-only PulleyConstraints whose
-// loose end is a shackle body the player carries and hooks onto an anchor.
+// exactly what collides. Ropes are real tension-only constraints
+// (rope_constraint.hpp) whose loose end is a shackle body the player carries
+// and hooks onto an anchor.
 // Guides are SliderConstraints whose governor is a velocity motor that may
 // only ever oppose motion. Catches hold a body while a pin is seated; a trip
 // line turns the pin's lever. Nothing here reads a flag to decide motion:
@@ -21,6 +22,8 @@
 #include <Jolt/Physics/Constraints/RackAndPinionConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+
+#include "sim/rope_constraint.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -553,7 +556,7 @@ private:
         float clutch_angle = 0.0F;
         bool clutch_engaged = false;
         float tension = 0.0F;
-        JPH::Ref<JPH::PulleyConstraint> constraint;
+        JPH::Ref<RopeConstraint> constraint;
     };
     struct Lever final {
         BodyIndex body;

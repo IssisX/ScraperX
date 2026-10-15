@@ -510,6 +510,40 @@ built since (always last) still start as built. The format key moves to SXCLIMB2
   stained ground, and a layered skyline behind the rim. `touch_title` unchanged in framing.
 - **Not observed:** the phone; the yard at night.
 
+**Ropes no longer drop their load for a tick (native, every rope machine).** Adding the stock
+yard's solids (below) failed O: its rope read no tension for one tick, the cab fell free at g for
+11 ms, and the next tick snatched it at 24 kN, twice its load.
+- **Cause.** Every kit rope and trip line was Jolt's pulley constraint. Jolt solves one only in a
+  step that begins with the rope at or past its length. A loaded rope sits exactly at its length,
+  and 735 m up, single-precision positions put that length in steps of 6.1e-5 m. A taut rope read
+  one step short was left out of the whole tick. Which ticks did turned on rounding, so any change
+  to the world could move them: the yard's solids, 700 m below, did.
+- **Fix.** The kit's ropes and trip lines are now the kit's own constraint
+  (`src/sim/rope_constraint.hpp`). It is solved every step, speculatively, as Jolt solves contacts:
+  a slack rope may run out the slack it has within the step and no more, so it takes up its load
+  in the step it comes taut. The arithmetic is Jolt's, plus that one bias.
+- **Proof (native).** O with the stock yard: lowest rope tension 11,528 N (it was 0), as it was
+  before the yard. All 100 native tests pass; 47 moved within their bounds. S1's cage now leaves the
+  yard with 243 kg of water in its bucket, 8 kg past its 235 kg balance; it took 278 kg while its
+  rope flickered. O's ride is 1.1 s shorter. The snatch when AS-006's falsifiers drop a load is
+  lower (A's bollard 62.6 to 37.7 kN, B's cleat 113 to 72 kN). A save's original now runs 0.17 mm
+  from fresh loads of it (bound 1 mm): ropes keep their last impulse, which a save does not carry.
+- **Not observed:** any rope machine ridden by hand or on the phone since the change.
+
+**The first sight: stock in the yard (Godot, task 93).** South of the start, the grade was empty.
+- **What stands there.**
+  - On the west, a block of shipping containers, two high in places.
+  - On the east, steel stock: beams on sleepers, plate, drums on pallets and a pipe rack.
+  - 95 m south of the start, a row of seven containers, two high in three places, closes the yard.
+  - The containers are ribbed (a corrugation normal map) in five paints. Each has the four locking
+    bars of its doors.
+- **All solid.** The export adds 69 bodies (`world_solids.inc`: 1,059 boxes, 641 hulls). The door
+  bars, 5 cm and flush, are drawn only. All of it is clear of the start, the proving ground's
+  fixtures and the crew's routes.
+- **Rendered (local, 540×464).** `touch_workers` from the start: the container row stands on the
+  horizon line, the west block to the left.
+- **Not observed:** the phone; any of it climbed (no scenario climbs the containers).
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

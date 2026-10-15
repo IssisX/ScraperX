@@ -18,6 +18,7 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/mechanism_kit.cpp
+    src/sim/rope_constraint.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/swing.cpp
@@ -46,6 +47,10 @@ add_library(scraperx_sim STATIC
     src/sim/vertical/stone_wheel.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
+# A Jolt constraint subclass must be built as Jolt is, without RTTI: Jolt's
+# base classes have no typeinfo for a derived one's to name.
+set_source_files_properties(src/sim/rope_constraint.cpp PROPERTIES COMPILE_OPTIONS
+    "$<IF:$<CXX_COMPILER_ID:MSVC>,/GR-,-fno-rtti>")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>

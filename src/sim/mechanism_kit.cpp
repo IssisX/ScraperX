@@ -432,8 +432,7 @@ LineIndex Kit::add_trip_line(const BodyIndex lever_body, const JPH::Vec3 lever_p
     line.handle_point = handle_point;
     line.sheave1 = sheave1;
     line.sheave2 = sheave2;
-    line.constraint = static_cast<JPH::TwoBodyConstraint *>(
-        settings.Create(jolt_body(lever_body), jolt_body(handle_body)));
+    line.constraint = new RopeConstraint(jolt_body(lever_body), jolt_body(handle_body), settings);
     system_.AddConstraint(line.constraint);
     lines_.push_back(line);
     return LineIndex{static_cast<std::uint32_t>(lines_.size() - 1U)};
@@ -1202,8 +1201,7 @@ void Kit::connect_rope(Rope &rope) {
         settings.mMinLength = rope.length;
         settings.mMaxLength = rope.length + 1.0e4F;
     }
-    rope.constraint = static_cast<JPH::PulleyConstraint *>(
-        settings.Create(jolt_body(rope.body1), jolt_body(end)));
+    rope.constraint = new RopeConstraint(jolt_body(rope.body1), jolt_body(end), settings);
     system_.AddConstraint(rope.constraint);
     auto &bodies = system_.GetBodyInterface();
     bodies.ActivateBody(bodies_[rope.body1.value].id);
