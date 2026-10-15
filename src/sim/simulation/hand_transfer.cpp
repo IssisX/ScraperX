@@ -1,4 +1,5 @@
 #include "sim/simulation/world.hpp"
+#include "sim/traversal_receiver.hpp"
 
 namespace scraperx::sim {
 using namespace detail;
@@ -59,7 +60,7 @@ using namespace detail;
         !physical_hands_->swinging() && cargo_push_seconds_ < 0 &&
         foot_push_purpose_ == FootPushPurpose::RigidTransfer &&
         foot_push_contact_.valid && foot_push_contact_.body == traversal_plan_.receiver &&
-        foot_push_contact_.subshape == traversal_plan_.receiver_subshape);
+        traversal_plan_.receiver_patch.contains(foot_push_contact_.subshape));
 }
 
 void Simulation::PhysicsWorld::record_foot_contact(const JPH::BodyInterface &bodies, const SupportSample &support) noexcept {
@@ -149,6 +150,8 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
     candidate.rigid.local_tangent = bodies.GetRotation(probe.ledge_body).Conjugated()*probe.inward.Cross(JPH::Vec3::sAxisY());
     candidate.receiver_body = probe.landing_body;
     candidate.receiver_subshape = receiver_hit.mSubShapeID2;
+    if (!collect_receiver_surface_patch(physics_system_, JPH::RRayCast(receiver_origin,down),
+            receiver_hit, candidate.receiver_patch)) return false;
     candidate.receiver_entity_id = bodies.GetUserData(probe.landing_body);
     candidate.grip_capable = candidate.receiver_footing_capable = true;
     {

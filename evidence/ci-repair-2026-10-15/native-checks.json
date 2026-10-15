@@ -1,0 +1,98 @@
+{
+  "archive_sha256": "6a61594113b4e218c5d18b4452037a489e69091e21e68e7360417e0e91b15513",
+  "checks": [
+    {
+      "name": "traversal_affordance_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/traversal_affordance_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 0.09,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/traversal_affordance_tests-default.log",
+      "tail": "traversal affordance: PASS 69 checks (Release-safe)\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "single-step",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests",
+        "single-step"
+      ],
+      "exit_code": 0,
+      "seconds": 0.29,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests-single-step.log",
+      "tail": "SHARED tick=181 contact=180 hand_n=937.469 foot_n=661.109\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=135 final_tick=271\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "topout",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests",
+        "topout"
+      ],
+      "exit_code": 0,
+      "seconds": 21.5,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests-topout.log",
+      "tail": "SHARED tick=179 contact=178 hand_n=938.026 foot_n=733.746\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=133 final_tick=269\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "frames",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests",
+        "frames"
+      ],
+      "exit_code": 0,
+      "seconds": 78.65,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/physical_topout_tests-frames.log",
+      "tail": "PASS PHYSICAL_TOPOUT frame_equivalence fixed90_caller60_360_grouped4=1 tolerance_m=0.0001\n"
+    },
+    {
+      "name": "ascent_route_tests",
+      "mode": "--mantle-feel",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/ascent_route_tests",
+        "--mantle-feel"
+      ],
+      "exit_code": 0,
+      "seconds": 33.75,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/ascent_route_tests---mantle-feel.log",
+      "tail": "mantle tick=0 y=11.8722 z=-121.233 vy=0.0319112 support=1600 state=4\nmantle tick=30 y=12.2509 z=-121.234 vy=2.08003 support=0 state=4\nmantle tick=60 y=12.9095 z=-121.233 vy=1.91134 support=0 state=4\nmantle tick=90 y=13.552 z=-121.233 vy=1.58579 support=0 state=4\nmantle tick=120 y=13.653 z=-121.56 vy=-0.23425 support=0 state=4\nmantle tick=150 y=13.649 z=-122.24 vy=-0.221036 support=0 state=4\nmantle tick=180 y=13.5952 z=-122.299 vy=0.103655 support=2560 state=0\nmantle tick=210 y=13.5826 z=-122.306 vy=0.000149155 support=2560 state=0\nmantle tick=240 y=13.5826 z=-122.307 vy=0.00014333 support=2560 state=0\nmantle tick=270 y=13.5826 z=-122.307 vy=0.000150817 support=2560 state=0\nmantle tick=300 y=13.5826 z=-122.307 vy=0.000149447 support=2560 state=0\nmantle tick=330 y=13.5826 z=-122.307 vy=0.000147299 support=2560 state=0\nmantle arrival_s=1.78889 peak_vy=2.09117\nPASS responsive stable mantle pos 20,13.5826,-122.307 target 0 carrying 0 tip 0 pipes 0 support 2560 deaths 0\n"
+    },
+    {
+      "name": "braced_bay_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/braced_bay_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 12.42,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/braced_bay_tests-default.log",
+      "tail": "on=25.8651,88.9,-127.957 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=1\nBRACE_FOOT position=28.0443,77.9,-130.985 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nFIRST_LANDING position=28.0008,82.9,-143.954 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nGAP_TAKEOFF position=29.8116,82.9,-144.191 velocity=3.706,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nGAP_LANDING position=33.613,82.895,-144.2 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nBRACE_FOOT position=28.0443,77.9,-130.985 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nFIRST_LANDING position=28.0008,82.9,-143.954 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nGAP_TAKEOFF position=30.3275,82.9,-143.806 velocity=4.69951,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nGAP_LANDING position=33.6449,82.895,-143.8 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nBRACE_FOOT position=28.0443,77.9,-130.985 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nFIRST_LANDING position=28.0008,82.9,-143.954 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nGAP_WITHOUT_JUMP position=32.4281,80.5367,-143.997 velocity=0.0278915,2.04601,-0.0023632 grounded=0 support=0 balance=0 crouch=0 deaths=0\nGAP_RECOVERY position=32.4553,77.88,-144 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nDELIBERATE_BALANCE_CORRECTION position=27.9958,80.1883,-136.958 velocity=-0.1,-2.76346e-09,-9.17454e-10 grounded=1 support=1900 balance=1 crouch=0 deaths=0\nDELIBERATE_SIDE_EXIT position=31.671,77.88,-136.804 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0\nPASS scraperx_sim AS-021 braced bay parkour to +88, gap, crouch and recovery\n"
+    },
+    {
+      "name": "north_service_frame_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/north_service_frame_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 31.86,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/north_service_frame_tests-default.log",
+      "tail": "PASS north frame paid Jump/recovery/retry stroke_ticks=19 command_j=599.4 spring_positive_j=278.088 ordinary_inputs_only=1\nFIRST_REST 16,94.9072,-180.513 physical_topout_s=1.7\nSECOND_REST 10,98.4073,-178.588\nPRE_CATCH pos=15.1053,104.741,-180.596 vel=-0.870428,4.846,0 grounded=0 support=0 deaths=1 impact=0.620663\nFIRST_HANG pos=15.0944,104.791,-180.596 vel=-0.979519,4.51059,0 grounded=0 support=0 deaths=1 impact=0.620663\nHANG_START 15.0944,104.791,-180.596\nRELEASE_RESULT pos=14.38,104.4,-180.596 vel=0,-0.11879,0 grounded=1 support=1901 deaths=1 impact=5.19041\nNORTH_HANG_TRANSFER seconds=1.68889 peak_hand_n=1754.3\nPASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90\n"
+    },
+    {
+      "name": "swing_stair_route_tests",
+      "mode": "0",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/swing_stair_route_tests",
+        "0"
+      ],
+      "exit_code": 0,
+      "seconds": 20.13,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-repairs-20261015/swing_stair_route_tests-0.log",
+      "tail": "e=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_X pos -12.0396,36.7591,-122.1 target 0 carrying 0 tip 8.06839 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.0374449 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_X pos -10.0126,38.6938,-122.101 target 0 carrying 0 tip 8.0807 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.0374869 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_X pos -8.02343,40.5535,-122.1 target 0 carrying 0 tip 8.07325 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.0374111 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_X pos -5.09136,43.2336,-122.1 target 0 carrying 0 tip 8.0859 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.0370574 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_X pos -2.74731,45.3581,-122.1 target 0 carrying 0 tip 8.07708 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.037336 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_TOP pos -2.74731,45.3581,-122.1 target 0 carrying 0 tip 8.07708 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.037336 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nPAD_FRONT 0.521902\nTOP_SETTLED pos -2.74091,45.3519,-122.1 target 0 carrying 0 tip 8.06125 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.0368215 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_EXIT_READY pos -2.21635,45.3781,-122.384 target 0 carrying 0 tip 8.06431 pipes 20 support 2600 deaths 0\nSTAIR_STATE body_angle=0.036768 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nSTAIR_44M pos -2.183,44.88,-125.451 target 0 carrying 0 tip 8.08584 pipes 20 support 11 deaths 0\nSTAIR_STATE body_angle=0.0370324 lever_angle=0.450014 handle_y=34.3392 front=0.521902\nPASS grade -> pipe -> facade -> stair: supported +44m mode=0\n"
+    }
+  ]
+}

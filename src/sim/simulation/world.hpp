@@ -884,6 +884,8 @@ private:
 
     void refresh_rigid_transfer_foot() noexcept;
 
+    void pre_step_physical_foot(float delta_seconds) noexcept;
+
     void try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 landing) noexcept;
 
     bool begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,

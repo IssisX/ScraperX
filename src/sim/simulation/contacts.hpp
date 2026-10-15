@@ -2,6 +2,7 @@
 
 #include "sim/simulation/constants.hpp"
 #include "sim/slingshot.hpp"
+#include "sim/traversal_affordance.hpp"
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
@@ -51,10 +52,10 @@ public:
     }
     // Owner-thread selection before Update. This records a separate actual
     // contact receipt; it never changes Jolt contacts or general ground rank.
-    void set_transfer_receiver(JPH::BodyID body, JPH::SubShapeID subshape) noexcept {
+    void set_transfer_receiver(JPH::BodyID body, const ReceiverSurfacePatch &patch) noexcept {
         lock();
         transfer_receiver_ = body;
-        transfer_subshape_ = subshape;
+        transfer_patch_ = patch;
         unlock();
     }
     void begin_tick() noexcept {
@@ -62,7 +63,7 @@ public:
         sample_ = {};
         transfer_sample_ = {};
         transfer_receiver_ = JPH::BodyID();
-        transfer_subshape_ = JPH::SubShapeID();
+        transfer_patch_ = {};
         impact_sample_ = {};
         reclaim_sample_={};
         inspection_seat_contact_ = false;
@@ -326,7 +327,7 @@ private:
         // General stance ranking can select a different child even while
         // the accepted receiver also has a real solved bottom contact.
         if (candidate.bottom_contact && candidate.body_id == transfer_receiver_ &&
-            candidate.subshape == transfer_subshape_ &&
+            transfer_patch_.contains(candidate.subshape) &&
             (!transfer_sample_.grounded || candidate.normal_y > transfer_sample_.normal_y))
             transfer_sample_ = candidate;
         if (!impact_sample_.grounded || candidate.approach_normal_speed > impact_sample_.approach_normal_speed ||
@@ -359,7 +360,7 @@ private:
     SupportSample sample_{};
     SupportSample transfer_sample_{};
     JPH::BodyID transfer_receiver_;
-    JPH::SubShapeID transfer_subshape_;
+    ReceiverSurfacePatch transfer_patch_;
     SupportSample impact_sample_{};
     ReclaimImpactSample reclaim_sample_{};
     bool inspection_seat_contact_ = false;

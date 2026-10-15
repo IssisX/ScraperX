@@ -42,7 +42,10 @@ std::uint64_t TraversalAffordanceCache::remember(const TraversalAffordance &samp
         sample.rigid.geometry_generation == 0 || !sample.rigid.shape_identity ||
         sample.receiver_body.IsInvalid() || sample.receiver_entity_id == 0 ||
         !sample.receiver_shape_identity || !sample.grip_capable ||
-        !sample.receiver_footing_capable || !surface_frame(sample.rigid) ||
+        !sample.receiver_footing_capable || sample.receiver_patch.overflow ||
+        sample.receiver_patch.count > sample.receiver_patch.subshapes.size() ||
+        (sample.receiver_patch.count != 0 && !sample.receiver_patch.contains(sample.receiver_subshape)) ||
+        !surface_frame(sample.rigid) ||
         generation_ == std::numeric_limits<std::uint64_t>::max())
         return 0;
 
@@ -55,6 +58,7 @@ std::uint64_t TraversalAffordanceCache::remember(const TraversalAffordance &samp
 
     auto &entry = entries_[next_slot_];
     entry = sample;
+    if (entry.receiver_patch.count == 0) entry.receiver_patch.add(entry.receiver_subshape);
     entry.observed_tick = tick;
     entry.generation = ++generation_;
     last_refresh_tick_[next_slot_] = tick;
@@ -85,6 +89,10 @@ const TraversalAffordance *TraversalAffordanceCache::refresh(const std::uint64_t
         if (!valid_body(support, entry.rigid.entity_id, entry.rigid.shape_identity, entry.rigid.subshape) ||
             !valid_body(receiver, entry.receiver_entity_id, entry.receiver_shape_identity, entry.receiver_subshape))
             return invalidate();
+
+        for (unsigned i = 0; i < entry.receiver_patch.count; ++i)
+            if (!valid_body(receiver, entry.receiver_entity_id, entry.receiver_shape_identity,
+                            entry.receiver_patch.subshapes[i])) return invalidate();
 
         entry.world_point = support->GetCenterOfMassTransform() * JPH::RVec3(entry.rigid.local_point);
         entry.world_normal = support->GetRotation() * entry.rigid.local_normal;

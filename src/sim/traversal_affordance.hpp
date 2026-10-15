@@ -25,11 +25,31 @@ struct RigidTraversalAnchor {
     const JPH::Shape *shape_identity = nullptr;
 };
 
+// Prospective identity only. No entry is evidence of physical support.
+struct ReceiverSurfacePatch {
+    std::array<JPH::SubShapeID, 8> subshapes{};
+    unsigned count = 0;
+    bool overflow = false;
+    [[nodiscard]] bool contains(JPH::SubShapeID id) const noexcept {
+        if (overflow || count > subshapes.size()) return false;
+        for (unsigned i = 0; i < count; ++i) if (subshapes[i] == id) return true;
+        return false;
+    }
+    bool add(JPH::SubShapeID id) noexcept {
+        if (overflow || count > subshapes.size()) { overflow = true; return false; }
+        if (contains(id)) return true;
+        if (count == subshapes.size()) { overflow = true; return false; }
+        subshapes[count++] = id;
+        return true;
+    }
+};
+
 struct TraversalAffordance {
     TraversalAnchorKind anchor_kind = TraversalAnchorKind::RigidSubshape;
     RigidTraversalAnchor rigid;
     JPH::BodyID receiver_body;
     JPH::SubShapeID receiver_subshape;
+    ReceiverSurfacePatch receiver_patch;
     std::uint64_t receiver_entity_id = 0;
     const JPH::Shape *receiver_shape_identity = nullptr;
     std::uint64_t observed_tick = 0;

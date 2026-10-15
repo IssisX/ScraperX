@@ -40,6 +40,7 @@ struct TraversalPlanState {
     std::uint64_t shared_solved_ticks = 0;
     JPH::BodyID receiver;
     JPH::SubShapeID receiver_subshape;
+    ReceiverSurfacePatch receiver_patch;
     std::uint64_t receiver_entity = 0;
     const JPH::Shape *receiver_shape = nullptr;
     JPH::Vec3 receiver_local_target = JPH::Vec3::sZero();

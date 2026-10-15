@@ -31,8 +31,8 @@ void stage(Simulation&s) {
     require(s.snapshot().player_grounded,"actual approach footing",s);
     require(s.set_facing(-1,0)&&s.set_move_input(0,0),"ordinary facing and neutral input",s);
 }
-Snapshot topout() {
-    Simulation s;
+Snapshot topout(WorldContent content = WorldContent::Slingshot) {
+    Simulation s(InitialSpawn::ExteriorGrade, content);
     stage(s);
     const auto before=s.snapshot();
     require(s.request_traversal(),"ordered Action",s);tick(s);
@@ -170,5 +170,6 @@ int main(int argc,char**argv) {
     else if(mode=="blocked")blocked();
     else if(mode=="restart")restart();
     else if(mode=="frames")frame_equivalence();
+    else if(mode=="single-step") (void)topout(WorldContent::PipeBridge);
     else (void)topout();
 }

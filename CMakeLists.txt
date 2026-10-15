@@ -41,6 +41,7 @@ add_library(scraperx_sim STATIC
     src/sim/physical_foot_push.cpp
     src/sim/traversal_affordance.cpp
     src/sim/traversal_plan.cpp
+    src/sim/traversal_receiver.cpp
     src/sim/parkour_route.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
@@ -214,6 +215,7 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_physical_topout_tests tests/physical_topout_tests.cpp)
         target_link_libraries(scraperx_physical_topout_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_topout COMMAND scraperx_physical_topout_tests)
+        add_test(NAME scraperx_sim.physical_topout_single_step COMMAND scraperx_physical_topout_tests single-step)
         add_test(NAME scraperx_sim.physical_topout_release COMMAND scraperx_physical_topout_tests release)
         add_test(NAME scraperx_sim.physical_topout_no_candidate COMMAND scraperx_physical_topout_tests no-candidate)
         add_test(NAME scraperx_sim.physical_topout_blocked COMMAND scraperx_physical_topout_tests blocked)

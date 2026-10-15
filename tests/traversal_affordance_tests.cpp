@@ -1,4 +1,10 @@
 #include "sim/traversal_affordance.hpp"
+#include "sim/traversal_receiver.hpp"
+#include "sim/traversal_plan.hpp"
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Physics/PhysicsSystem.h>
@@ -174,11 +180,80 @@ void rejection_and_capacity() {
     auto same = cache.remember(a, 10);
     check(cache.refresh(same, w.system, 10) != nullptr, "same support and receiver lock safely");
 }
+// Removing the coplanar collector or accepting the whole body must fail these
+// queries and the downstream solved-contact acceptance checks.
+void receiver_surface_patch() {
+    World w;
+    StaticCompoundShapeSettings compound;
+    compound.AddShape(Vec3::sZero(), Quat::sIdentity(), new BoxShape(Vec3(1,1,1)));
+    compound.AddShape(Vec3(0,.9F,0), Quat::sIdentity(), new BoxShape(Vec3(.8F,.1F,.8F)));
+    compound.AddShape(Vec3(0,.2F,0), Quat::sIdentity(), new BoxShape(Vec3(.5F,1,.5F)));
+    compound.AddShape(Vec3(2,0,0), Quat::sIdentity(), new BoxShape(Vec3(.5F,1,.5F)));
+    compound.AddShape(Vec3(0,1.F-1.F/std::cos(.2F),0), Quat::sRotation(Vec3::sAxisZ(),.2F),
+                      new BoxShape(Vec3(.5F,1,.5F)));
+    const auto shape = compound.Create().Get();
+    w.system.GetBodyInterface().SetShape(w.receiver, shape, true, EActivation::Activate);
+    const RRayCast ray(RVec3(6,7,8), Vec3(0,-3,0));
+    const auto *root = static_cast<const CompoundShape *>(shape.GetPtr());
+    const auto leaf = [root](int i) { return root->GetSubShapeIDFromIndex(i, SubShapeIDCreator()).GetID(); };
+    RayCastResult canonical;
+    canonical.mBodyID = w.receiver;
+    canonical.mSubShapeID2 = leaf(0);
+    canonical.mFraction = 1.F/3.F;
+    ReceiverSurfacePatch patch;
+    check(collect_receiver_surface_patch(w.system, ray, canonical, patch), "real compound ray collects receiver patch");
+    check(patch.count == 2 && patch.contains(leaf(0)) && patch.contains(leaf(1)), "structural top and coplanar cover accepted");
+    check(!patch.contains(leaf(2)) && !patch.contains(leaf(3)) && !patch.contains(leaf(4)), "raised, neighboring and sloped leaves excluded");
+    auto a = w.sample(); a.receiver_subshape = leaf(0); a.receiver_patch = patch;
+    TraversalPlanState plan; plan.latch(a, Vec3::sZero(), shape.GetPtr(), 10);
+    FootContactSample contact;
+    contact.valid = true; contact.body = w.receiver; contact.subshape = leaf(1);
+    contact.entity_id = 42; contact.shape_identity = shape.GetPtr(); contact.friction = .7F; contact.solved_tick = 11;
+    check(plan.accepts(contact, 11), "actual solved cover contact accepted");
+    contact.subshape = leaf(2);
+    check(!plan.accepts(contact, 11), "same-body raised face remains rejected");
+    contact.subshape = leaf(3);
+    check(!plan.accepts(contact, 11), "same-body unlisted face remains rejected");
+    contact.subshape = leaf(1); contact.solved_tick = 10;
+    check(!plan.accepts(contact, 10), "patch cannot renew stale contact");
+    contact.solved_tick = 11; contact.body = w.support;
+    check(!plan.accepts(contact, 11), "patch cannot accept another body");
+    TraversalAffordanceCache cache;
+    check(cache.remember(a, 10) != 0, "validated explicit patch cached");
+    a.receiver_patch.overflow = true;
+    check(cache.remember(a, 10) == 0, "overflowed patch rejected");
+    a.receiver_patch = patch;
+    for (unsigned i = 0; i < a.receiver_patch.count; ++i)
+        if (a.receiver_patch.subshapes[i] == leaf(0)) a.receiver_patch.subshapes[i] = leaf(3);
+    check(cache.remember(a, 10) == 0, "explicit patch missing canonical identity rejected");
+    a.receiver_patch = {};
+    plan.latch(a, Vec3::sZero(), shape.GetPtr(), 10);
+    contact.body = w.receiver; contact.subshape = leaf(0);
+    check(plan.accepts(contact, 11), "legacy candidate retains exact singleton identity");
+    contact.subshape = leaf(1);
+    check(!plan.accepts(contact, 11), "legacy fallback never accepts another leaf");
+    StaticCompoundShapeSettings too_many;
+    for (unsigned i = 0; i != 9; ++i)
+        too_many.AddShape(Vec3(0,.01F*float(i),0), Quat::sIdentity(),
+                          new BoxShape(Vec3(1,1.F-.01F*float(i),1)));
+    const auto crowded_shape = too_many.Create().Get();
+    w.system.GetBodyInterface().SetShape(w.receiver, crowded_shape, true, EActivation::Activate);
+    canonical.mSubShapeID2 = static_cast<const CompoundShape *>(crowded_shape.GetPtr())
+        ->GetSubShapeIDFromIndex(0, SubShapeIDCreator()).GetID();
+    check(!collect_receiver_surface_patch(w.system, ray, canonical, patch) && patch.count == 0,
+          "actual query rejects more coincident leaves than patch capacity");
+    canonical.mBodyID = BodyID();
+    check(!collect_receiver_surface_patch(w.system, ray, canonical, patch), "invalid receiver body rejected");
+    ReceiverSurfacePatch capacity;
+    for (unsigned i = 0; i != 8; ++i) { SubShapeID id; id.SetValue(i); check(capacity.add(id), "bounded patch accepts unique identity"); }
+    SubShapeID extra; extra.SetValue(8);
+    check(!capacity.add(extra) && !capacity.contains(extra) && capacity.overflow, "ninth identity invalidates patch");
+}
 } // namespace
 
 int main() {
     RegisterDefaultAllocator(); Factory::sInstance = new Factory; RegisterTypes();
-    rigid_motion_and_age(); identities(); rejection_and_capacity();
+    rigid_motion_and_age(); identities(); rejection_and_capacity(); receiver_surface_patch();
     UnregisterTypes(); delete Factory::sInstance; Factory::sInstance = nullptr;
     std::cout << "traversal affordance: PASS " << checks << " checks (Release-safe)\n";
 }

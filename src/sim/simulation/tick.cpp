@@ -14,13 +14,20 @@ void Simulation::PhysicsWorld::OnStep(const JPH::PhysicsStepListenerContext &con
     if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
     physical_hands_->pre_step(context.mDeltaTime, true);
     if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
-    const bool foot_face_valid = foot_push_purpose_ == FootPushPurpose::RigidTransfer
-        ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
-            deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
-    physical_foot_push_->pre_step(context.mDeltaTime, foot_face_valid);
+    pre_step_physical_foot(context.mDeltaTime);
     slingshot_->collision_step(context);
     if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
     if (supplied_ascent_) supplied_ascent_->collision_step(context.mDeltaTime);
+}
+
+void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds) noexcept {
+    // The same finite actuator law runs once per collision step in every
+    // world. Slingshot worlds invoke this from their substep listener;
+    // single-step worlds invoke it after lifecycle/face validation below.
+    const bool face_valid = foot_push_purpose_ == FootPushPurpose::RigidTransfer
+        ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
+            deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
+    physical_foot_push_->pre_step(delta_seconds, face_valid);
 }
 
 void Simulation::PhysicsWorld::step(const StepCommands &commands,
@@ -261,7 +268,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         grapple_equipped_ = false;
     }
     contact_listener_.set_transfer_receiver(cargo_transfer_active_ ? traversal_plan_.receiver : JPH::BodyID(),
-                                            traversal_plan_.receiver_subshape);
+                                            traversal_plan_.receiver_patch);
+    if (!slingshot_) pre_step_physical_foot(delta_seconds);
     physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
     if (grappling_gun_) grappling_gun_->post_step();
     if (cargo_net_) cargo_net_->refresh();
