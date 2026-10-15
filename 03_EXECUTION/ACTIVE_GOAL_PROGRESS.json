@@ -138,10 +138,10 @@
     "live_checkpoint": "03_EXECUTION/LIVE_RESUME_20261015.md",
     "owner_backlog": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md",
     "branch": "ChatGPT",
-    "published_head": "0658f69f7629ae629b33a87a16ebf1529a9d1a54",
-    "active": "Root physical forklift world/public interaction integration; complete pickup/stack/withdraw/player-ascent route",
-    "blocker": "Public test link rejects ignored nodiscard advance_frame at tests/warehouse_forklift_flow_tests.cpp:18; fix result handling and relink existing native archive, then public runtime",
-    "native_forklift": "Final four-substep primitive compile/run PASS; root world closure compiled; no public gameplay PASS",
+    "published_head": "35de8a7dc59d00d27c48b4a7d31af8763ceb3ab0",
+    "active": "Make real forklift cargo pickup/placement/withdrawal create usable upward footholds and actual gallery exit/retry",
+    "blocker": null,
+    "native_forklift": "Mechanical four-substep trial4 PASS; actual public station/lift/energy/invalid-input/leaving trial2 PASS; cargo route, matching native bridge/UI/APK pending",
     "movement_plan": "03_EXECUTION/PARKOUR_PHASED_PLAN_20261015.md",
     "rendering": "Published0658f69; matched shipping4311\u21921036up/2893\u2192766down; strict up<1000 pending36; device fix unverified",
     "apk_candidate": {
@@ -152,12 +152,20 @@
     },
     "full_proof": {
       "run": 38791786804,
-      "status": "in_progress at checkpoint; not fullGREEN"
+      "status": "FAILURE; candidate separate, not fullGREEN"
     },
-    "takeoff": "Finite burst primitive PASS; public peakvy.714369 FAIL original>1 acceptance; phase1 incomplete",
+    "takeoff": "Native implementation goal complete; late1.22795m/s/414.746J, sprint carry, early/negative/cancel/reset and60/90/360/grouped equivalence PASS; unpublished/matching APK pending",
     "crane": "Same-truck transfer explicitly retained; pending usable ground handling and real rigging/bays",
     "all_dirty_work_preserved": true,
-    "canonical_deferred_scope_preserved": true
+    "canonical_deferred_scope_preserved": true,
+    "takeoff_evidence": "evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md",
+    "next_actions": [
+      "Actual approach/pickup/carry/stack/withdraw and player gallery footing/retry",
+      "Matching Linux native bridge and Godot controls/view integration",
+      "Exact-source committed/pushed APK delivery; retain full proof failures",
+      "Same-truck crane freight and complete movement/canonical scope"
+    ],
+    "running_workers": []
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

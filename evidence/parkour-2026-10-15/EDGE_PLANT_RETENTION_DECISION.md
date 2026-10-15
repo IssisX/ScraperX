@@ -1,0 +1,7 @@
+# Retain the real edge plant before capsule roll-off
+
+Actual trial10 predeparture trace supplies the discriminator: first attachment tick176 vy−.918403, normal(0,.865507,.500896), rest.881699; next tick177 recreates at a different actual point/normal, rest.877741. Elapsed resets from.011111 to.011111 while still grounded. By contact loss vy−1.00886. The arbitrary half-radius lateral acquisition gate waits through eight ticks of downhill roll. Moving-reference public drive trial9 improves peak to.838943 but still fails>1 unchanged. No power/rate/cap sweep follows.
+
+Correction is at the planner: use existing coverage/firm-footing query only to detect diminishing support, then acquire solely from the fresh solved bottom contact with actual trailing relative motion. Preserve the first material anchor/rest/clock across consecutive same-body+subshape actual grounded contact. Such fresh actual contact updates input age only, not actuator lifetime. Clear on another support, cancellation, expiry or an ordinary grounded Jump (which keeps its established actual-support push owner). When capsule support ends, activate the retained finite row only within remaining actual reach/traction and eight-tick input grace. Never attach from geometry, renew a quarter-second lifetime or force grounded true.
+
+The public test now rejects a consecutive active plant whose elapsed clock restarts. Original useful late-lift requirement remains>1m/s and passive+1; no acceptance relaxed. All tests/replays remain under the same persistent coyote-window state.

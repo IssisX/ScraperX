@@ -1,0 +1,33 @@
+PLANT_ACQUIRE tick=176 centre=(35.000000,1.724761,-45.087246) anchor=(35.000000,0.863275,-45.274956) normal=(0.000000,0.865507,0.500896) velocity=(0.000000,-0.918403,2.147543)
+PLANT_ACQUIRE tick=177 centre=(35.000000,1.714142,-45.063366) anchor=(35.000000,0.861634,-45.272312) normal=(0.000000,0.832675,0.553762) velocity=(0.000000,-0.965890,2.152871)
+EDGE i=125 airborne=-1 grounded=1 y=1.76564 z=-45.2318 vy=-0.278248 vz=2.18974 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=126 airborne=-1 grounded=1 y=1.7618 z=-45.2075 vy=-0.386205 vz=2.18308 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=127 airborne=-1 grounded=1 y=1.75677 z=-45.1833 vy=-0.493724 vz=2.17635 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=128 airborne=-1 grounded=1 y=1.75054 z=-45.1592 vy=-0.600767 vz=2.16949 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=129 airborne=-1 grounded=1 y=1.74312 z=-45.1351 vy=-0.70728 vz=2.16243 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=130 airborne=-1 grounded=1 y=1.73453 z=-45.1111 vy=-0.81319 vz=2.15514 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=131 airborne=-1 grounded=1 y=1.72476 z=-45.0872 vy=-0.918403 vz=2.14754 active=0 time=0 initial=0 length=0 forceY=0 forceZ=0 work=0
+EDGE i=132 airborne=-1 grounded=1 y=1.71414 z=-45.0634 vy=-0.96589 vz=2.15287 active=1 time=0.0111111 initial=0.881699 length=0.87678 forceY=614.969 forceZ=148.138 work=0
+EDGE i=133 airborne=0 grounded=0 y=1.70303 z=-45.0395 vy=-1.00886 vz=2.14948 active=1 time=0.0111111 initial=0.877741 length=0.873013 forceY=585.755 forceZ=157.401 work=0
+EDGE i=134 airborne=1 grounded=0 y=1.69164 z=-45.0151 vy=-1.0338 vz=2.22432 active=1 time=0.0222222 initial=0.877741 length=0.868947 forceY=670.904 forceZ=202.217 work=0
+EDGE i=135 airborne=2 grounded=0 y=1.68003 z=-44.9903 vy=-1.04975 vz=2.23005 active=1 time=0.0333333 initial=0.877741 length=0.865612 forceY=731.432 forceZ=245.588 work=0
+EDGE i=136 airborne=3 grounded=0 y=1.66968 z=-44.965 vy=-0.856024 vz=2.30845 active=1 time=0.0444444 initial=0.877741 length=0.864493 forceY=2431.47 forceZ=902.622 work=55.5553
+EDGE i=137 airborne=4 grounded=0 y=1.66172 z=-44.9393 vy=-0.628931 vz=2.33241 active=1 time=0.0555556 initial=0.877741 length=0.866646 forceY=2635.64 forceZ=1073.48 work=111.111
+EDGE i=138 airborne=5 grounded=0 y=1.65641 z=-44.9132 vy=-0.386344 vz=2.35108 active=1 time=0.0666667 initial=0.877741 length=0.872139 forceY=2705.65 forceZ=1198.61 work=166.666
+EDGE i=139 airborne=6 grounded=0 y=1.65381 z=-44.887 vy=-0.143943 vz=2.36334 active=1 time=0.0777778 initial=0.877741 length=0.88091 forceY=2664.64 forceZ=1273.3 work=222.221
+EDGE i=140 airborne=7 grounded=0 y=1.65382 z=-44.8607 vy=0.0854306 vz=2.37657 active=1 time=0.0888889 initial=0.877741 length=0.892759 forceY=2532.9 forceZ=1295.47 work=277.777
+EDGE i=141 airborne=8 grounded=0 y=1.65623 z=-44.8342 vy=0.29179 vz=2.38861 active=1 time=0.1 initial=0.877741 length=0.907384 forceY=2333.32 forceZ=1268.41 work=333.332
+EDGE i=142 airborne=9 grounded=0 y=1.66072 z=-44.8076 vy=0.46821 vz=2.39363 active=1 time=0.111111 initial=0.877741 length=0.924398 forceY=2089.4 forceZ=1199.7 work=388.887
+EDGE i=143 airborne=10 grounded=0 y=1.66694 z=-44.781 vy=0.610687 vz=2.38696 active=1 time=0.122222 initial=0.877741 length=0.943339 forceY=1822.91 forceZ=1099.39 work=444.443
+EDGE i=144 airborne=11 grounded=0 y=1.6745 z=-44.7546 vy=0.717872 vz=2.36542 active=1 time=0.133333 initial=0.877741 length=0.963712 forceY=1552.99 forceZ=978.861 work=499.998
+EDGE i=145 airborne=12 grounded=0 y=1.68302 z=-44.7286 vy=0.790638 vz=2.32729 active=1 time=0.144444 initial=0.877741 length=0.98503 forceY=1295.4 forceZ=849.551 work=555.553
+EDGE i=146 airborne=13 grounded=0 y=1.6921 z=-44.7029 vy=0.830421 vz=2.29976 active=1 time=0.155556 initial=0.877741 length=1.00692 forceY=1047.12 forceZ=711.849 work=611.109
+EDGE i=147 airborne=14 grounded=0 y=1.70142 z=-44.6775 vy=0.838943 vz=2.28153 active=1 time=0.166667 initial=0.877741 length=1.02911 forceY=814.067 forceZ=572.063 work=666.664
+EDGE i=148 airborne=15 grounded=0 y=1.71062 z=-44.6522 vy=0.818962 vz=2.26375 active=1 time=0.177778 initial=0.877741 length=1.05132 forceY=605.541 forceZ=438.958 work=722.219
+EDGE i=149 airborne=16 grounded=0 y=1.71943 z=-44.6272 vy=0.773974 vz=2.24723 active=1 time=0.188889 initial=0.877741 length=1.07331 forceY=424.873 forceZ=317.236 work=777.775
+EDGE i=150 airborne=17 grounded=0 y=1.72759 z=-44.6023 vy=0.707792 vz=2.23252 active=1 time=0.2 initial=0.877741 length=1.09488 forceY=273.939 forceZ=210.466 work=833.33
+EDGE i=151 airborne=18 grounded=0 y=1.73488 z=-44.5776 vy=0.624365 vz=2.21997 active=1 time=0.211111 initial=0.877741 length=1.11589 forceY=153.276 forceZ=121.099 work=888.885
+EDGE i=152 airborne=19 grounded=0 y=1.74116 z=-44.553 vy=0.527614 vz=2.20983 active=1 time=0.222222 initial=0.877741 length=1.13623 forceY=62.3021 forceZ=50.6043 work=944.441
+EDGE i=153 airborne=20 grounded=0 y=1.74629 z=-44.5285 vy=0.421323 vz=2.20223 active=1 time=0.233333 initial=0.877741 length=1.15582 forceY=0 forceZ=0 work=999.996
+EDGE i=154 airborne=21 grounded=0 y=1.75022 z=-44.504 vy=0.312323 vz=2.2 active=1 time=0.244444 initial=0.877741 length=1.17467 forceY=0 forceZ=0 work=1050
+OBSERVATION_ONLY gameplay_pass=0

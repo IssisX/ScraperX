@@ -34,7 +34,8 @@ Parallel work is elastic: root codes the integration path; independent workers o
 ## Current goal ledger
 
 - Phase0: COMPLETE — research-backed spec and full phased plan written2026-10-15.
-- Phase1: NEXT — audit live movement owners; implement actual missing responsive takeoff/intent behavior.
+- Phase1: NATIVE COMPLETE — real early/late Jump, sprint carry, cancellation/expiry/reset and caller-frame equivalence accepted. [Source-bound results and limits](../evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md). Source remains unpublished; matching APK belongs to delivery work, not a claimed result.
+- Cross-stream active goal: real forklift cargo pickup/stack/withdraw → actual player route to5.9m gallery; matching bridge/UI/APK next. Phase2 is the next parkour phase, not canceled by machinery work.
 - Phases2–8: PENDING; all listed scope retained. Existing capabilities earn credit only after audit identifies their actual public behavior/evidence; do not rewrite working mechanics for activity.
 
 ## Tuning ownership

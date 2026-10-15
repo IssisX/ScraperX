@@ -1,0 +1,11 @@
+{
+  "exit": 0,
+  "sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "6887a3c3cdf9bff768870ed4163baf3463bcefb9d5c05286d905f275f304d64d",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "84e8e8a47a30f80f6b9cadd01602bdafef8323ecf15e0f6bce0cca2437df4e42",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "dee257145d13bd27ff637bb231c7bec2d12c67261960a6004c338d49d658808b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-passive-foot-20261015/physical_foot_push_tests": "87eabede11c947cabe4b08d35465383ec25694e17653eb8b5558238a83c16503"
+  },
+  "evidence": "Worker Sol/medium focused native suite; actual log /data/data/com.termux/files/usr/tmp/scraperx-passive-foot-20261015/run.log inspected by root",
+  "scope": "isolated actuator, not player integration"
+}

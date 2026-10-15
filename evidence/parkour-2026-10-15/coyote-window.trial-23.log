@@ -1,0 +1,8 @@
+PUBLIC_MODE air
+PASS physical parkour intent air
+PUBLIC_MODE expiry
+PASS physical parkour intent expiry
+PUBLIC_MODE cancel
+PASS physical parkour intent cancel
+PUBLIC_MODE restart
+PASS physical parkour intent restart

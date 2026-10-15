@@ -1,0 +1,44 @@
+{
+  "objective": "Operate the actual warehouse forklift from real platform footing and place heavy cargo into a usable upward route",
+  "budget_seconds": 1200.0,
+  "started": 1792095707.6639972,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "four-substep-forklift-mechanics",
+      "exit": 0,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "336b48358057b3a53cf3224f106af635dab4f0806465715534f84636afa2a778",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_tests.cpp": "76cb34061b29962f49e8a80177b2527d617c381087164b9881b5114fae320764",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-owner-20261015/build.py": "d067d59f049a2699cf9de2c10ece6e6b31d94cfdb3921d68bf930043e0f61602",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "reused_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/mechanical-prerequisite.json",
+      "receipt_sha256": "536855fbfb7786c90dfa5344dca6c830aab729e1b68f77d6ab79d35cc7f906c2"
+    },
+    {
+      "stage": "public-station-lift-and-leave",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/warehouse_forklift_flow_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/forklift.cpp": "5f9b58d382725e2acd868d25ceb5ceb60347e26ea43f303f95d8560292670606",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "244d8cdd7ad62280a87d0b8a9ed6f3f2ffb2a086a322bfe3beb31d03145dbefd",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_flow_tests.cpp": "628109154544adfb4915af5bdfb70aaae4b0d3bab5e99d017fcbf198ad049661",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/warehouse_forklift_flow_tests": "b4cde8d4f05ad7d9f89162ebfc28eb70473b96870f9af127c825712974c42703",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954"
+      },
+      "started": 1792095707.859944,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-15/world-window.trial-2.log",
+      "exit": 0,
+      "finished": 1792095716.2633395
+    }
+  ],
+  "reassessments": [],
+  "pending": false
+}

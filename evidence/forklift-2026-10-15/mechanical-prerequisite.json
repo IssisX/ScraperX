@@ -1,0 +1,22 @@
+{
+  "stage": "four-substep-build-and-run",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/usr/bin/python3",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-owner-20261015/build.py"
+  ],
+  "sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "336b48358057b3a53cf3224f106af635dab4f0806465715534f84636afa2a778",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/warehouse_forklift_tests.cpp": "76cb34061b29962f49e8a80177b2527d617c381087164b9881b5114fae320764",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-owner-20261015/build.py": "d067d59f049a2699cf9de2c10ece6e6b31d94cfdb3921d68bf930043e0f61602",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+  },
+  "started": 1792092049.8411484,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-owner-20261015/trial.trial-4.log",
+  "exit": 0,
+  "finished": 1792092064.7776852
+}

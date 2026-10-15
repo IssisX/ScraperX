@@ -1,0 +1,22 @@
+{
+  "link_command": [
+    "/usr/bin/c++",
+    "-pthread",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-tests-20261015/physical_foot_push_tests.o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/physical_foot_push.cpp.o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/libscraperx_sim.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-tests-20261015/physical_foot_push_tests"
+  ],
+  "sha256": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "8ef9d87bef1f7fcb795f448b6fbf644f3035b31df9703456c9cdc6671ea9bc6e",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "2cfe101248c7e65e67bcbff2a4542a94fbc4ea154bb0c9a2b7489d713511c5c0",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "ee77ef604b66bbe6ff53865b7140ad1ba6aeabe627b34507ab8a01227164a65c",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/physical_foot_push.cpp.o": "788c78a6c8d23b89a531828122623a3f0f3d3aba6b4a46e7ea053f06cf4b8626",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/libscraperx_sim.a": "4076e1db51fe545181fca456c939eec6a01bc622fbaefec3b4093dace317126f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-tests-20261015/physical_foot_push_tests": "4c6691d5aca71b34f162facc505fc1b7f8e332b8aa182e95adfd64b202d06b5d"
+  },
+  "build_exit": 0
+}

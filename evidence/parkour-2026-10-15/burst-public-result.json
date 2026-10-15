@@ -1,0 +1,120 @@
+{
+  "exit": 1,
+  "classification": "unresolved public acceptance failure; new burst profile improves baseline but remains below original threshold",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests",
+    "late"
+  ],
+  "guard_trial": {
+    "stage": "burst-public-late-jump",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests",
+      "late"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests": "69b60f9dfaa010952e5b9319884ecbf48e2389ea5d4a0313112e584b23a171e2",
+      "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/libscraperx_sim.a": "d688402b6ec665b3d4cc32aa7d029e2ad1bf1d9958d9c013071554295a79a00d",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "d585507cef0957fd6e25f1b361d9a58d6db6761ef34c2a0ab83a6b37fd73ff40"
+    },
+    "started": 1792090351.5294056,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-5.log",
+    "exit": 1,
+    "finished": 1792090363.2889562
+  },
+  "build": {
+    "commands": [
+      [
+        "/usr/bin/ar",
+        "rcs",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/physical_foot_push.cpp.o"
+      ],
+      [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+        "-O3",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_flow_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests"
+      ],
+      [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+        "-O3",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_flow_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_flow_tests"
+      ]
+    ],
+    "archive_sha256": "d688402b6ec665b3d4cc32aa7d029e2ad1bf1d9958d9c013071554295a79a00d",
+    "base_archive_sha256": "3b59851f38140442c3b3df164dca1aa620549c4a8dd55bb628662c27057fa84e",
+    "jolt_archive_sha256": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b",
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_flow_tests.cpp": "9e086a1b624104a4e151d79f070e5b6ad49509378762f001a49b144b5556c8f3",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_flow_tests.cpp": "aaa4437c10f764f3b0dc33e4d3fc65abdcabace5e1fafc28a2984c8f649148c2"
+    },
+    "build_exit": 0
+  },
+  "peak_vy_m_per_s": 0.714369,
+  "command_bound_j": 1050,
+  "required_peak_vy_m_per_s_exclusive_minimum": 1,
+  "original_test_unchanged": true,
+  "sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_flow_tests.cpp": "9e086a1b624104a4e151d79f070e5b6ad49509378762f001a49b144b5556c8f3",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_flow_tests.cpp": "aaa4437c10f764f3b0dc33e4d3fc65abdcabace5e1fafc28a2984c8f649148c2"
+  },
+  "source_hashes_still_match": true,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-5.log",
+  "log_sha256": "b532fbb812b780ce347dc74965a0c2a218e8857f67f54601e2b5261785d04d8d",
+  "skipped_after_failed_positive": [
+    "air",
+    "expiry",
+    "cancel",
+    "restart",
+    "sprint",
+    "parkour_flow_tests"
+  ],
+  "next_discriminator": "Run the existing causal observer relinked to this exact archive through the same guard: compare actual upward force/impulse, rest target, stroke, stop reason and storage/work timeline against the old trace. Determine whether work/stroke exhaustion, force direction or finite lifetime limits the takeoff; do not sweep target rate."
+}

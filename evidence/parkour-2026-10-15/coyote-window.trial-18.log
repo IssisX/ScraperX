@@ -1,0 +1,14 @@
+PUBLIC_MODE air
+PASS physical parkour intent air
+PUBLIC_MODE expiry
+PASS physical parkour intent expiry
+PUBLIC_MODE cancel
+FAIL Jump then explicit Drop ordered
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining.py", line 6, in <module>
+    subprocess.run(['proot-distro','login','ubuntu','--',str(binary),mode],check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['proot-distro', 'login', 'ubuntu', '--', '/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests', 'cancel']' returned non-zero exit status 1.

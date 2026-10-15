@@ -1,0 +1,98 @@
+{
+  "sources_and_headers": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/tick.cpp": "a7e93b33a2b212907f43e402b5e8407357944141420eabb5778d0eca1d9d045f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_buffer_tests.cpp": "c1576de2e20ec8c77f208e4b0e850ca2ff56c4fc50b1e4c122f719178667d249",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "2eae6317e29f857cd1ad82d70acd2e4a735cf7a6dc8d589bfe79e4df6962f99a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world.hpp": "2a0a8036d05721b97432ec221ad437bd6c282ca9f8340ef5f7e44aa440f4646e",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/constants.hpp": "1bed0fb2f51a2ea0aba2037138f2a675782405b90066587de7d6ae682b79a5d5",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "2d9d6b17053c383ca68887d73be2a88831e1bb59382c26e57edc789d517cae48"
+  },
+  "base_archive_sha256": "3d5a31fe9c34906915f3299979749ceb96a9e60fc213d1f1a501fedd4b4d71fb",
+  "jolt_archive_sha256": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b",
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/tick.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/fresh-crouch-objects/tick.o"
+    ],
+    [
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/libscraperx_sim-fresh-crouch.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/fresh-crouch-objects/tick.o"
+    ],
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_buffer_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/libscraperx_sim-fresh-crouch.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/parkour_intent_buffer_tests-fresh-crouch-corrected"
+    ],
+    [
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/parkour_intent_buffer_tests-fresh-crouch-corrected",
+      "fresh_crouch"
+    ],
+    [
+      "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/parkour_intent_buffer_tests-fresh-crouch-corrected",
+      "cancel"
+    ]
+  ],
+  "results": [
+    {
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "exit": 0,
+      "output": "fixture first_support_tick=23 support=1\nfresh_crouch stood=1 departed=1 peak_vy=5.391 jump_work_J=1285.62\nPASS fresh_crouch\n"
+    },
+    {
+      "exit": 0,
+      "output": "fixture first_support_tick=23 support=1\ncancel=release peak_vy=0 jump_work_J=0\ncancel=crouch peak_vy=0 jump_work_J=0\nPASS cancel\n"
+    }
+  ],
+  "tick_object_sha256": "7f142155b47804842f331d9306fdb4e221c7f19917773c234216d2885b288d57",
+  "archive_sha256": "91051fdaf344e304334e9d5ae72ab7daf8c73edefee4f3a05e4370ff3a9711b9",
+  "source_stable_after_run": true
+}

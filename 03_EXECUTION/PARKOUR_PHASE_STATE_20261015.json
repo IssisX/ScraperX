@@ -1,10 +1,10 @@
 {
-  "active_phase": 1,
-  "active_goal": "Make run-to-jump and early/late input flow through real foot contact",
+  "active_phase": null,
+  "active_goal": "Make real forklift cargo pickup/placement/withdrawal create usable upward footholds and actual gallery exit/retry",
   "phase0": "complete",
   "phases": {
     "0": "complete",
-    "1": "active",
+    "1": "native complete; matching APK delivery pending in phase8",
     "2": "pending",
     "3": "pending",
     "4": "pending",
@@ -17,21 +17,24 @@
   "branch": "ChatGPT",
   "spec": "PARKOUR_MOVEMENT_SPEC_20261015.md",
   "plan": "PARKOUR_PHASED_PLAN_20261015.md",
-  "acceptance": {},
+  "acceptance": {
+    "1": "evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md"
+  },
   "playground_scope": "Ground, service-deck and rooftop route network; Mirror Edge principles researched; independent west-yard blockout assigned Sol/medium",
   "rendering_priority": {
-    "status": "active",
+    "status": "published; remaining budget/device limits retained",
     "target_draw_calls": 1000,
     "first_candidate_up": 1036,
     "first_candidate_down": 766,
     "device_fix": "unverified",
     "upward_sub1000": "pending by36",
-    "delivery": "commit/push/APK pending"
+    "delivery": "0658f69 published; candidate38791786743 GREEN; separate full proof38791786804 FAILURE"
   },
   "master_backlog": "OWNER_DELIVERY_BACKLOG_20261015.md",
   "forklift_and_crane": {
-    "status": "authorized design, implementation pending",
+    "status": "Native mechanics and public station/lift/leaving PASS; cargo route/bridge/APK active; same-truck crane pending",
     "scope": "Same truck ground and higher bays; driving/lift/tilt/modular forks/claw/clamp plus actual crane transfer",
     "design": "FORKLIFT_AND_CRANE_ROUTE_SYSTEM_20261015.md"
-  }
+  },
+  "next_parkour_phase": 2
 }

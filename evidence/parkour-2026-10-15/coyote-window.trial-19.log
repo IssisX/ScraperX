@@ -1,0 +1,14 @@
+PUBLIC_MODE cancel
+PASS physical parkour intent cancel
+PUBLIC_MODE restart
+PASS physical parkour intent restart
+PUBLIC_MODE sprint
+FAIL real sprint reaches speed before takeoff
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining-unrun.py", line 6, in <module>
+    subprocess.run(['proot-distro','login','ubuntu','--',str(binary),mode],check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['proot-distro', 'login', 'ubuntu', '--', '/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/intent-contract-tests', 'sprint']' returned non-zero exit status 1.

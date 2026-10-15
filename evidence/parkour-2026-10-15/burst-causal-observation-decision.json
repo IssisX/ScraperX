@@ -1,0 +1,11 @@
+{
+  "evidence": "burst-public-result.md and coyote-window.trial-5.log",
+  "supported_fact": "Increasing target speed under unchanged force/work/stroke/lifetime raised peak vy only to .714369m/s; rate alone did not meet useful takeoff acceptance.",
+  "ranked_hypotheses": [
+    "Actual impulse ends at lateral reach/traction before enough upward momentum can accumulate.",
+    "Stored spring energy or completed command remains undelivered because implicit damping or lifetime dominates.",
+    "Input/support loss happens after the capsule already falls significantly; passive anchor is acquired too late or at an unsuitable bottom-contact point."
+  ],
+  "next_discriminator": "Relink existing per-tick observer against the current rebuilt world archive. Observe same public edge/input path, force direction/impulse/stroke/length/elapsed/stop and initial downward speed. No force/rate/tolerance tuning.",
+  "constraint": "Keep original public >1m/s and passive+1m/s gate, genuine material point, existing caps and finite cancellation."
+}

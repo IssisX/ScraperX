@@ -1,0 +1,514 @@
+{
+  "objective": "Useful late takeoff through a retained actual finite foot plant, without airborne support grants",
+  "budget_seconds": 600.0,
+  "started": 1792095169.59598,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "passive-foot-units",
+      "exit": 0,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "6887a3c3cdf9bff768870ed4163baf3463bcefb9d5c05286d905f275f304d64d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "84e8e8a47a30f80f6b9cadd01602bdafef8323ecf15e0f6bce0cca2437df4e42",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "dee257145d13bd27ff637bb231c7bec2d12c67261960a6004c338d49d658808b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-passive-foot-20261015/physical_foot_push_tests": "87eabede11c947cabe4b08d35465383ec25694e17653eb8b5558238a83c16503"
+      },
+      "reused_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/passive-foot-accepted.json",
+      "receipt_sha256": "ab97677b572a451931a23a46efc6d9eb2234fbad9ea8f5dfb6a788acefdfb495"
+    },
+    {
+      "stage": "public-late-jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-phase1-20261015/parkour_intent_flow_tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-phase1-20261015/parkour_intent_flow_tests": "bffcaaa52eceb84a8c4ff65c43b918926c0f6db899510afc75fa22f57a8d3558",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "d585507cef0957fd6e25f1b361d9a58d6db6761ef34c2a0ab83a6b37fd73ff40"
+      },
+      "started": 1792089146.7271018,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-2.log",
+      "exit": 1,
+      "finished": 1792089155.4749928
+    },
+    {
+      "stage": "trailing-plant-force-observation",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-phase1-20261015/observe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-phase1-20261015/observe": "beeebe29bdf76fb27ff493e492e25c1cf99b1916211257111bd91187dadf33d6"
+      },
+      "started": 1792089287.9175243,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-3.log",
+      "exit": 0,
+      "finished": 1792089296.6629093
+    },
+    {
+      "stage": "burst-foot-units",
+      "exit": 0,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "0531fea8440ec6af3558a80a1df2fca62e48d70ab6dfbec3da690d71e68131c0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-burst-20261015/physical_foot_push.o": "bf0250eac2b60351d6626c187952c5cddd20b981875eb98f810caa64a9d377f1"
+      },
+      "reused_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/burst-public-primitive-accepted.json",
+      "receipt_sha256": "237148d1d4776c700580c3edfea45c591445d316b2323a6d0871457a30d6bb89"
+    },
+    {
+      "stage": "burst-public-late-jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/parkour_intent_flow_tests": "69b60f9dfaa010952e5b9319884ecbf48e2389ea5d4a0313112e584b23a171e2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-parkour-burst-public-20261015/libscraperx_sim.a": "d688402b6ec665b3d4cc32aa7d029e2ad1bf1d9958d9c013071554295a79a00d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "d585507cef0957fd6e25f1b361d9a58d6db6761ef34c2a0ab83a6b37fd73ff40"
+      },
+      "started": 1792090351.5294056,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-5.log",
+      "exit": 1,
+      "finished": 1792090363.2889562
+    },
+    {
+      "stage": "burst-impulse-termination-observation",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/takeoff-observe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/takeoff-observe": "c373aacdc7253ecdd87f4d52d8f6fece3af7c7bd3dddbe3c52dd4f4769a03760",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-world-20261015/libscraperx_sim.a": "4076e1db51fe545181fca456c939eec6a01bc622fbaefec3b4093dace317126f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "d585507cef0957fd6e25f1b361d9a58d6db6761ef34c2a0ab83a6b37fd73ff40"
+      },
+      "started": 1792092980.509265,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-6.log",
+      "exit": 0,
+      "finished": 1792093013.4156315
+    },
+    {
+      "stage": "moving-damper-reference-red",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/red-tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "241ce8e81252676a148da2b8838671140b908ac830831756eccc08b8b4437b2f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/red-tests": "fa5c138254a71b08d537bb7f54eb29452a7efb6b0160b892acf572c147559975"
+      },
+      "started": 1792093296.2505794,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-7.log",
+      "exit": 1,
+      "finished": 1792093297.3369806
+    },
+    {
+      "stage": "moving-reference-foot-units",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "b98c4c93b43af4f2c3be2f356afedc8ded8c657eaeb8612965d7af7d3f59caec",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "8f2a26a0eb96a6347fb2ddc97614534d6349b8684fa27d9c0c0985cc6a434b2a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "36c84abbf632dc0d1d5149a8375822a698fdd42548f633db4f4836d4e6727543",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests": "30dbd3e188a85e47354b23ff2e4339f209cc4f49270695d2604023d0410b386f"
+      },
+      "started": 1792093390.78832,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-8.log",
+      "exit": 0,
+      "finished": 1792093391.212266
+    },
+    {
+      "stage": "moving-reference-public-late",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/libscraperx_sim.a": "a40d5dfbb52e6ec988e12967a25fd54406b5747fd4b1f1c538ea2ca0dbe447df",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests": "323c6f948cb5223d37bef3a879f213b5f13bc41ed23d711df14b427e8f6a3dfc",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "d585507cef0957fd6e25f1b361d9a58d6db6761ef34c2a0ab83a6b37fd73ff40"
+      },
+      "started": 1792093398.1428323,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-9.log",
+      "exit": 1,
+      "finished": 1792093408.9313784
+    },
+    {
+      "stage": "predeparture-material-plant-observation",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/edge-observe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/edge-observe": "38c84bec7feefbe04c13acd284f0dc752603f282edee553be3acf8c99c007954",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/edge-observe.a": "889566a183b2fa30ab7f34ed22803b89daa3b96c896fef33987eab8ad89f57cf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_observe.cpp": "23b4a20e443072706aefb72d84a961acf225fba9c98b56b21af4d902d4ab0027"
+      },
+      "started": 1792093526.6814704,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-10.log",
+      "exit": 0,
+      "finished": 1792093533.506949
+    },
+    {
+      "stage": "retained-edge-plant-public-late",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-plant-tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-plant.a": "a3341810b5b287a6409d4d7e30456c9d57fd496883adc762fb13b58482f7bbb7",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-plant-tests": "e1d433c4423001c1dc85b19e9bdbc402b239beee4942ded0f4b7d309094a1ad6",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "4919088476ecbb7b8b4f4b77e2a214dd0a405bae638a1dfba4dcf02b782e26db",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/tick.cpp": "1bb8e31b95d754fe6b18e01dddce32a1bca38a4408172fde24867baadd0fac73"
+      },
+      "started": 1792093730.2251217,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-11.log",
+      "exit": 1,
+      "finished": 1792093746.0663297
+    },
+    {
+      "stage": "retained-plant-termination-observation",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-observe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-observe": "dc2f2d1c9acf980088eaee1bbea59ba565731602ebc697563f028ff6187cc1a0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-plant.a": "a3341810b5b287a6409d4d7e30456c9d57fd496883adc762fb13b58482f7bbb7"
+      },
+      "started": 1792093798.338904,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-12.log",
+      "exit": 0,
+      "finished": 1792093805.4192033
+    },
+    {
+      "stage": "retained-plant-stop-reason",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/reach-observe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/reach-observe": "7b2f0c334881974428432caae15e332ebbd7e9a39b30cbc8af5cd3fa4efaf5a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/retained-plant.a": "a3341810b5b287a6409d4d7e30456c9d57fd496883adc762fb13b58482f7bbb7"
+      },
+      "started": 1792093872.245637,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-13.log",
+      "exit": 0,
+      "finished": 1792093882.0212862
+    },
+    {
+      "stage": "planted-radial-geometry-red",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/red-tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "f4a05a97eca1885ac43cfd5f353d94a2c65c9c23d454de9207ffead972fa1db3",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/red-tests": "0cbf66548e230f3b054b72006b02486850be2c6b2dcc8648ae528506a8bdeb55"
+      },
+      "started": 1792093996.0028913,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-14.log",
+      "exit": 1,
+      "finished": 1792093996.5347738
+    },
+    {
+      "stage": "radial-planted-foot-units",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "5479f7d9f8adfc87bc80c0b60a2b7fed078db3c2a494038f439365d1f436d649",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "2d9d6b17053c383ca68887d73be2a88831e1bb59382c26e57edc789d517cae48",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "f4a05a97eca1885ac43cfd5f353d94a2c65c9c23d454de9207ffead972fa1db3",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests": "ddb3f6283513e6b23787c1bc9790596e8b65dd8e1669d0b5bd29a22276e7f773"
+      },
+      "started": 1792094064.3156958,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-15.log",
+      "exit": 1,
+      "finished": 1792094065.1493309
+    },
+    {
+      "stage": "radial-planted-foot-units-corrected",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "5479f7d9f8adfc87bc80c0b60a2b7fed078db3c2a494038f439365d1f436d649",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "2d9d6b17053c383ca68887d73be2a88831e1bb59382c26e57edc789d517cae48",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "544f6e0159b01d4bdfd56075307b2ce9ac953415d2a815015653052281af89e2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/physical_foot_push_tests": "9057f4680c7c7c9445e1c0b5d933c6eadf6cead9fc5208d19526ba75c30c1c05"
+      },
+      "started": 1792094285.352764,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-16.log",
+      "exit": 0,
+      "finished": 1792094286.233384
+    },
+    {
+      "stage": "radial-plant-public-late",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/libscraperx_sim.a": "3d5a31fe9c34906915f3299979749ceb96a9e60fc213d1f1a501fedd4b4d71fb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests": "ab48fa8d4b7729a0a1b3f130b034a2266b7067c6042d1d1fa66392b4aafcd15b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "4919088476ecbb7b8b4f4b77e2a214dd0a405bae638a1dfba4dcf02b782e26db",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/tick.cpp": "1bb8e31b95d754fe6b18e01dddce32a1bca38a4408172fde24867baadd0fac73"
+      },
+      "started": 1792094291.939937,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-17.log",
+      "exit": 1,
+      "finished": 1792094302.62165
+    },
+    {
+      "stage": "physical-intent-remaining-public",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining.py": "83bac13a69d9c7dab107a02f38588e0b931ef576a5489a627311e45f6983e053",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/libscraperx_sim.a": "3d5a31fe9c34906915f3299979749ceb96a9e60fc213d1f1a501fedd4b4d71fb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/parkour_intent_flow_tests": "ab48fa8d4b7729a0a1b3f130b034a2266b7067c6042d1d1fa66392b4aafcd15b"
+      },
+      "started": 1792094452.4165225,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-18.log",
+      "exit": 1,
+      "finished": 1792094468.3043556
+    },
+    {
+      "stage": "cancellation-restart-sprint-public",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining-unrun.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/remaining-unrun.py": "f49b3256dddcfa0a3b74ba901bd174e34f73178620a715fe9bc0eee0ae3fa186",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/intent-contract-tests": "84471757cf58a2d0e7b2216762a69d5787e23947e04d3d9a9ab5e19223c4092b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-drive-20261015/libscraperx_sim.a": "3d5a31fe9c34906915f3299979749ceb96a9e60fc213d1f1a501fedd4b4d71fb"
+      },
+      "started": 1792094708.7824266,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-19.log",
+      "exit": 1,
+      "finished": 1792094737.2192452
+    },
+    {
+      "stage": "finite-motor-foot-units",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-tests-20261015/physical_foot_push_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "2cfe101248c7e65e67bcbff2a4542a94fbc4ea154bb0c9a2b7489d713511c5c0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "582b4246a414bf7e9f4acfec93a217b86957004b54985204f55d40e87dd8c860",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "8ef9d87bef1f7fcb795f448b6fbf644f3035b31df9703456c9cdc6671ea9bc6e",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/physical_foot_push.cpp.o": "788c78a6c8d23b89a531828122623a3f0f3d3aba6b4a46e7ea053f06cf4b8626",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-tests-20261015/physical_foot_push_tests": "4c6691d5aca71b34f162facc505fc1b7f8e332b8aa182e95adfd64b202d06b5d"
+      },
+      "started": 1792095176.9905946,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-20.log",
+      "exit": 0,
+      "finished": 1792095177.766738
+    },
+    {
+      "stage": "finite-motor-public-late",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/parkour_intent_flow_tests",
+        "late"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/parkour_intent_flow_tests": "bb1cf0c508f812d392745367e9cf03257594fecde19bdc41169748a51f351917",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/parkour_intent.cpp": "4919088476ecbb7b8b4f4b77e2a214dd0a405bae638a1dfba4dcf02b782e26db",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/tick.cpp": "a7e93b33a2b212907f43e402b5e8407357944141420eabb5778d0eca1d9d045f"
+      },
+      "started": 1792095183.42666,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-21.log",
+      "exit": 0,
+      "finished": 1792095202.531574
+    },
+    {
+      "stage": "finite-motor-sprint-momentum",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/sprint-flow-tests",
+        "sprint"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_flow_tests.cpp": "3d821ad77f541ef8ced1113268866d94cce9bd2beaec4abf3beb4c46093027df",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/sprint-flow-tests": "c6799c98d42ce58a25bffa483c4e6e0c970c150e02c70c6b452886ce42f0af07",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954"
+      },
+      "started": 1792095339.9033062,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-22.log",
+      "exit": 0,
+      "finished": 1792095348.0675845
+    },
+    {
+      "stage": "finite-motor-public-negatives",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/negative-paths.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/negative-paths.py": "8c19099e5dac0eb9dc2bcd5a16b888093be621dcca910e395c42a2020b3bbc43",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/sprint-flow-tests": "c6799c98d42ce58a25bffa483c4e6e0c970c150e02c70c6b452886ce42f0af07",
+        "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954"
+      },
+      "started": 1792095418.399181,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-23.log",
+      "exit": 0,
+      "finished": 1792095437.1641126
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792090346.1574483,
+      "cause": "rate 1.2 m/s insufficient: measured peak vy 0.188031 with 909.999 J bound; force trace shows delayed rise",
+      "change": "5.5 m/s activated target, fixed-pose 5000 W storage cap, unchanged 3500 N and total work/stroke/lifetime, loaded target hold",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/burst-public-decision.json",
+      "evidence_sha256": "da024e7db21009d2ca26bc92c076e24f62cdbf78386de04f3bc5e7a24d350133",
+      "previous_failures": 1,
+      "previous_started": 1792089146.6170962,
+      "previous_pending": false
+    },
+    {
+      "at": 1792092946.390982,
+      "cause": "Faster activated target alone still fails useful upward impulse; actual force/termination not yet attributed",
+      "change": "Observe unchanged public path against current world archive to distinguish early reach/traction cutoff, dissipative delivery and late acquisition; no tuning",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/burst-causal-observation-decision.json",
+      "evidence_sha256": "2d17c48b255ab860a8ceb888dc5357d38531803d6a1d2336953ff9c5203dac38",
+      "previous_failures": 1,
+      "previous_started": 1792090346.1577547,
+      "previous_pending": false
+    },
+    {
+      "at": 1792093384.8507752,
+      "cause": "Trial6 excludes early cutoff; trial7 rejects moving-reference impulse; previous model damps body motion against stationary reference",
+      "change": "Explicit activated-only moving spring/damper reference with exact implicit bias, conservative 5000W Fmax*actualdr debit, unchanged anchor/caps/stroke/original clock; primitive then original public gate",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/PLANTED_DRIVE_DECISION.md",
+      "evidence_sha256": "a153a82da2e57305dcf7f5c35210d0d744251190a1ecd7f3797c8624fd90ae4a",
+      "previous_failures": 1,
+      "previous_started": 1792092946.3912015,
+      "previous_pending": false
+    },
+    {
+      "at": 1792093695.9703724,
+      "cause": "Trial10 proves late acquisition at vy-.918 and repeated grounded anchor/clock replacement; new finite drive alone still fails at.838943",
+      "change": "Sense diminished coverage but acquire only actual bottom contact; retain first same-support plant without clock renewal, actual-contact age only; preserve ordinary grounded Jump and all original lift gates",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/EDGE_PLANT_RETENTION_DECISION.md",
+      "evidence_sha256": "8862f2ae21e24c1b31a95a995c4e5b1b6830305d96eb4780a823283d116aa829",
+      "previous_failures": 1,
+      "previous_started": 1792093384.8509352,
+      "previous_pending": false
+    },
+    {
+      "at": 1792094030.9882867,
+      "cause": "Trial13 proves LateralReachLost at length.9345 before radial1.2000/clock.25; trial14 rejects the legacy cylinder for a real passive swiveling plant",
+      "change": "Explicit planted-only radial+friction-cone geometry from passive acquisition through activation/hold; retain legacy cylinder and every force/work/stroke/clock bound; original public gate unchanged",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/PLANTED_REACH_DECISION.md",
+      "evidence_sha256": "df9c924e3c900afa25c59effb001acf8531e517e5610689a25829ae9f337f429",
+      "previous_failures": 2,
+      "previous_started": 1792093695.9708426,
+      "previous_pending": false
+    },
+    {
+      "at": 1792094198.9633605,
+      "cause": "Trial14 wrong red baseline fails earlier power predicate; trial15 assumes immediate force despite real slack after passive separation",
+      "change": "Correct geometry test to wait for bounded real slack takeup on original clock; production model unchanged; rerun primitive then original public gate",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/PLANTED_REACH_FIXTURE_CORRECTION.md",
+      "evidence_sha256": "ae838c8b72260e2ca6d47bdbd822537fb0cb873110c55900e308fc028082e809",
+      "previous_failures": 1,
+      "previous_started": 1792094030.9885468,
+      "previous_pending": false
+    },
+    {
+      "at": 1792094533.6045685,
+      "cause": "Late takeoff remains deficient; remaining acceptance stopped on incorrect empty-handed Release return expectation before physics",
+      "change": "Correct command-return fixture only and finish unrun cancellation/restart/sprint; independently preserve fresh Jump override when correcting crouch buffer cancellation; no additional late-jump tuning",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/INTENT_ACCEPTANCE_CORRECTION.md",
+      "evidence_sha256": "fd11e8f9f96266f7dccaf36e79de3857d13e836fd77f12eed9fac005c4440494",
+      "previous_failures": 2,
+      "previous_started": 1792094198.9637222,
+      "previous_pending": false
+    },
+    {
+      "at": 1792095169.5956826,
+      "cause": "Three measured spring-reference candidates cannot deliver useful late lift; finiteforce bounds still permit it; xhigh derived conservative one-impulse motor alternative",
+      "change": "New activated-only finiteforce profile in same native reciprocal row, positive event work admission without warmstart/iteration refunds, explicit dissipative clutch diagnostics; legacy unchanged; primitive then unchanged public gate",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/FINITE_PLANTED_MOTOR_DECISION.md",
+      "evidence_sha256": "93192a2127248e97554ec3840f0194478d3cc3d3f8221fced482f53d67959665",
+      "previous_failures": 1,
+      "previous_started": 1792094533.604943,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}

@@ -1,0 +1,12 @@
+{
+  "exit": 0,
+  "sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "0531fea8440ec6af3558a80a1df2fca62e48d70ab6dfbec3da690d71e68131c0",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-burst-20261015/physical_foot_push.o": "bf0250eac2b60351d6626c187952c5cddd20b981875eb98f810caa64a9d377f1"
+  },
+  "reused_actual_result": "/data/data/com.termux/files/usr/tmp/scraperx-planted-burst-20261015/result-receipt.json",
+  "result_sha256": "e13ce60e6e303187e47bccec33301eb084c2ede2815588f03f2d5d6b484e96a3",
+  "test_log_sha256": "a73b29d1cc2afa738210b3d864e04c9710eceddd1b73713cff23f6d1fe7d88ab"
+}

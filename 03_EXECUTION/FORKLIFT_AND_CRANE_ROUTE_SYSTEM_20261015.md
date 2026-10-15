@@ -1,6 +1,6 @@
 # Forklift and crane route system — authorized implementation design
 
-Status: native mechanical owner and Godot controls/view implemented; root native world integration compiles. Public station test link currently fails on ignored nodiscard advance_frame, so no integrated route PASS. Same-truck crane transfer and later attachments remain pending. Detailed evidence/next action are in the live checkpoint. Powered actuation is expressly authorized; use honest finite native Jolt owners.
+Status: native mechanics and actual public station/lift/energy/leaving flow PASS; Godot controls/view implemented. Cargo pickup/stack/withdraw/player-ascent, matching native bridge/UI and APK remain pending. Public source-bound evidence: `evidence/forklift-2026-10-15/world-window.json`, trial2. This is not a complete route PASS. Same-truck crane transfer and later attachments remain pending. Detailed next action is in the live checkpoint. Powered actuation is expressly authorized; use honest finite native Jolt owners.
 
 ## First complete player interaction
 

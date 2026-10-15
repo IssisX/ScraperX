@@ -1,0 +1,24 @@
+{
+  "cause": "Supported target rate 1.2 m/s delivers only peak vy 0.188031 m/s despite 909.999 J commanded bound; trace shows force arrives too slowly as plant geometry extends.",
+  "baseline_failure_log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-2.log",
+  "baseline_trace": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-15/coyote-window.trial-3.log",
+  "correction": "Activated target rate 5.5 m/s with fixed-pose nominal storage delta <= 5000 W*h, unchanged 3500 N limit, finite total work/stroke/lifetime and loaded target hold.",
+  "primitive_result_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-planted-burst-20261015/result-receipt.json",
+  "primitive_sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_foot_push_tests.cpp": "0531fea8440ec6af3558a80a1df2fca62e48d70ab6dfbec3da690d71e68131c0"
+  },
+  "archive_closure_changes": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.cpp": {
+      "built": "6887a3c3cdf9bff768870ed4163baf3463bcefb9d5c05286d905f275f304d64d",
+      "current": "ec5c7763e0b74d63aaf2127a4a3b0ad4a1af715b27ae4fef6931cd4678dd7a2f"
+    },
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_foot_push.hpp": {
+      "built": "84e8e8a47a30f80f6b9cadd01602bdafef8323ecf15e0f6bce0cca2437df4e42",
+      "current": "bf5f7548312305616b2f76c8977a85393b46993746dd3342000e632de8c94946"
+    }
+  },
+  "header_change_evidence": "Root and implementer confirm burst header changes are comments only relative to phase1 passive-field API; prior passive_plant bool was already compiled in phase1. No new Readback ABI.",
+  "archive_closure_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-parkour-phase1-20261015/build-receipt.json"
+}

@@ -1,0 +1,45 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-DNDEBUG",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+    "-O3",
+    "-std=c++17",
+    "-fPIC",
+    "-pthread",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_intent_buffer_tests.cpp",
+    "/data/data/com.termux/files/usr/tmp/scraperx-planted-force-20261015/libscraperx_sim.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/parkour_intent_buffer_tests-caller-rates"
+  ],
+  "source_sha256": "441e141d3bf06499a4dd83bc9eac811ad7eceb27b389e6e212406e943ad7fce4",
+  "archive_sha256": "a662ca86c2417b2e074831d53fdb472799c07fb406020fdbff0c2a1ed1788954",
+  "jolt_sha256": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b",
+  "headers": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "2eae6317e29f857cd1ad82d70acd2e4a735cf7a6dc8d589bfe79e4df6962f99a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/steam_plant.hpp": "d4e00e6fdea537988af6717f5d6c3e9e04e90842f00ada5b4df25bf6b734d7a3"
+  },
+  "build_exit": 0,
+  "run_command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-takeoff-buffer-20261015/parkour_intent_buffer_tests-caller-rates",
+    "caller_rates"
+  ],
+  "run_exit": 0,
+  "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nfixture first_support_tick=23 support=1\ncaller_rate=90Hz native_steps=180 work_events=1 peak_vy=5.391 returned=1\ncaller_rate=60Hz native_steps=180 work_events=1 peak_vy=5.391 returned=1\nmatched_rate=60Hz checkpoints=60 max_position_error_m=0 max_velocity_error_mps=0\ncaller_rate=360Hz native_steps=180 work_events=1 peak_vy=5.391 returned=1\nmatched_rate=360Hz checkpoints=60 max_position_error_m=0 max_velocity_error_mps=0\ncaller_rate=grouped3ticks native_steps=180 work_events=1 peak_vy=5.391 returned=1\nmatched_rate=grouped3ticks checkpoints=60 max_position_error_m=0 max_velocity_error_mps=0\nPASS caller_rates\n",
+  "source_stable_after_run": true,
+  "headers_stable_after_run": true
+}

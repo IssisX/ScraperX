@@ -1,0 +1,7 @@
+# Planted radial reach contract
+
+Actual stop reason is confirmed as LateralReachLost(7) in trial13, elapsed.20s, length.934503 vs existing radial ceiling1.200021. Trial14 rejects the legacy cylinder for a freely swiveling unpowered planted leg driven across.45m by its actual initial motion. This is an explicit reachable-set/model change for the newly introduced planted profile, not deletion of a redundant check or a Jolt bug.
+
+For q=COM−material_anchor, L=|q|, h=q·material_normal and t=|q−hn|, planted geometry requires L≤L0+.30m, h>0, t≤friction*h. Those actual length and traction constraints remain finite: atLmax1.2 andmu.85, t≤.777m. The legacy .45m normal-tangential cylinder is an additional joint restriction with no articulated joint in this reduced planted-strut model. Legacy begin/plank/topout keep it unchanged. Select planted geometry at passive acquisition and retain it through activation and hold; Jump must not instantly expand the reach set. No anchor migration or clock renewal.
+
+Sol/high mechanics reviewer independently confirmed this distinction and cautioned it still does not establish useful public lift. Keep original force3500N, k40000, c1000, power5000W, total debit1285.625J, stroke.30m, original lifetime.25s and original public>1/passive+1 gate. No parameter search. Primitive acceptance must reject traction/radial/expiry violations and legacy reach regressions. First real contact remains the sole acquisition authority; no ray or remembered geometry grants support.

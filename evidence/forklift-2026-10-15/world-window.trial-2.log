@@ -1,0 +1,3 @@
+FORKLIFT_PLATFORM grounded=1 support=2440 reachable=1 player_y=1.24867
+FORKLIFT_PUBLIC_LIFT stroke=0.241614 energy=1.1988e+07 force=981.461
+PASS forklift public station, energy, release and finite-input flow
