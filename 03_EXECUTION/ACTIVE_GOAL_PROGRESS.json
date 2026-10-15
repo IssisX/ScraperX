@@ -135,22 +135,29 @@
     }
   ],
   "execution_state": {
-    "objective": "Make the ground a coherent lived-in industrial place and improve movement fluidity from actual device feedback",
-    "status": "First receiving-yard and native stance slice implemented; focused native/audio acceptance passed; exact-source APK build next",
-    "published_head_before_slice": "e6553ccc1fbe918495b49833f958193e2d99fb0e",
-    "root_ownership": [
-      "ground_yard.gd",
-      "main.gd integration",
-      "world_solids.inc",
-      "CMake",
-      "publication"
-    ],
-    "next": "Publish isolated yard/stance slice and follow candidate to artifact; retain all deferred physics and broader device-feel scope",
-    "no_more_wheels": true,
-    "acceptance": "evidence/ground-life-2026-10-15/ACCEPTANCE.md",
-    "full_canonical_scope_preserved": true,
-    "deferred_hook": "hinge40 identical trace; actual control effect unresolved, no gameplay PASS; dirty gate remains unshipped",
-    "device_feel": "Unverified for this slice; owner prior APK feedback is the target"
+    "live_checkpoint": "03_EXECUTION/LIVE_RESUME_20261015.md",
+    "owner_backlog": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md",
+    "branch": "ChatGPT",
+    "published_head": "0658f69f7629ae629b33a87a16ebf1529a9d1a54",
+    "active": "Root physical forklift world/public interaction integration; complete pickup/stack/withdraw/player-ascent route",
+    "blocker": "Public test link rejects ignored nodiscard advance_frame at tests/warehouse_forklift_flow_tests.cpp:18; fix result handling and relink existing native archive, then public runtime",
+    "native_forklift": "Final four-substep primitive compile/run PASS; root world closure compiled; no public gameplay PASS",
+    "movement_plan": "03_EXECUTION/PARKOUR_PHASED_PLAN_20261015.md",
+    "rendering": "Published0658f69; matched shipping4311\u21921036up/2893\u2192766down; strict up<1000 pending36; device fix unverified",
+    "apk_candidate": {
+      "run": 38791786743,
+      "artifact": 12000457736,
+      "status": "GREEN candidate only",
+      "source": "0658f69f7629ae629b33a87a16ebf1529a9d1a54"
+    },
+    "full_proof": {
+      "run": 38791786804,
+      "status": "in_progress at checkpoint; not fullGREEN"
+    },
+    "takeoff": "Finite burst primitive PASS; public peakvy.714369 FAIL original>1 acceptance; phase1 incomplete",
+    "crane": "Same-truck transfer explicitly retained; pending usable ground handling and real rigging/bays",
+    "all_dirty_work_preserved": true,
+    "canonical_deferred_scope_preserved": true
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

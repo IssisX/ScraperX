@@ -1,12 +1,12 @@
 # Forklift and crane route system — authorized implementation design
 
-Status: native ownership mapped; no vehicle/crane implementation or runtime proof claimed. Owner explicitly requires the same truck to travel between levels. First ground slice is a dependency, not final scope. Model of reference is an industrial electric counterbalance truck; hydraulic/powered actuation is expressly requested, so the macro compiler's default prohibition on concealed power is inapplicable. Apply native Jolt mechanics ownership and honest finite actuation instead.
+Status: native mechanical owner and Godot controls/view implemented; root native world integration compiles. Public station test link currently fails on ignored nodiscard advance_frame, so no integrated route PASS. Same-truck crane transfer and later attachments remain pending. Detailed evidence/next action are in the live checkpoint. Powered actuation is expressly authorized; use honest finite native Jolt owners.
 
 ## First complete player interaction
 
-Use a new warehouse bay west of the west-apron practice area, without moving accepted routes. A600kg,6m×.9m walkway beam starts on real dunnage with fork-entry clearance. Approach perpendicular to its length, pick centrally on two forks, raise clear, tilt back, reverse/steer, and lower both ends onto corbels about4.8m apart. Withdraw the forks. The still-dynamic beam is supported only by contact. Leave the truck's control platform, climb a1.2m approach, cross the beam near2.2m height, and reach a2.8m onward deck. An ordinary ground perimeter provides retry. All dimensions/masses here are **CHOSEN draft values**, not measured results; lip/overlap/clearance and operating envelope require actual authored geometry.
+Use the new warehouse bay west of the west-apron practice area, without moving accepted routes. Truck authored chassis2800kg, mast220kg, carriage40kg, forks60kg; geometry-derived COM/inertia and real wheel contact. Two600kg hollow forkable crates provide actual entry tunnels below a.22m plate ceiling. Pick, carry, place and stack them into real upward footholds toward a5.9m receiving gallery. Withdraw the forks, leave the real rear operator platform and climb onto the actually supported cargo toward the gallery. Ground perimeter provides retry. This is the current authored route proposal, **not a demonstrated public completion**.
 
-No 'beam placed' flag opens a route. Forks beside/above the beam cannot lift it; a missed receiver can rock/fall. Cargo has no parenting or universal weld to the truck. Later movable blocks/containers and off-center loads use the same Kit bodies and real contact.
+The separate600kg,6m beam on dunnage remains a useful handling prop. The earlier beam-only gap proposal could be cleared by sprint-jump and did not establish a necessary machine interaction; it is superseded as the first acceptance route. No placement flag opens a route. Missed/off-center cargo can slip/tip/fall; no cargo parenting or universal weld. Actual pickup, stacking, withdrawal and player onward footing are still required before calling the interaction complete.
 
 ## Native ownership and mechanics
 
@@ -36,7 +36,7 @@ Primary-source references for sizing, not copied game constants: [Toyota core-el
 
 ## Required falsifiers and delivery
 
-One affected acceptance set must reject no-contact lifting, airborne traction, unlimited lift/stall power, hidden upright rescue, unsafe off-center/high-load cornering, false receiver completion, snapping couplers and repeated-reset body/constraint duplication. Demonstrate actual dynamic beam support after withdrawal, player beam contact and onward footing. Retry restores Kit state plus vehicle spin/transmission/suspension, owner battery/coupler, joint warm starts and render history; Kit transforms alone are insufficient.
+One affected acceptance set must reject no-contact lifting, airborne traction, unlimited lift/stall power, hidden upright rescue, unsafe off-center/high-load cornering, false receiver completion, snapping couplers and repeated-reset body/constraint duplication. Demonstrate actual dynamic crate support after fork withdrawal, player cargo contact and onward gallery footing. Retry restores Kit state plus vehicle spin/transmission/suspension, owner battery/coupler, joint warm starts and render history; Kit transforms alone are insufficient.
 
 Native/public/bridge input checks and exact-source APK build are distinct from device operation. No placeholder vehicle, shell animation or delivery claim based on the design.
 

@@ -1,6 +1,7 @@
-# Current owner task register and live checkpoint
+<!-- CURRENT_PARKOUR_RENDER_CHECKPOINT -->
+# Current live checkpoint
 
-Read [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) and [live checkpoint](03_EXECUTION/LIVE_RESUME_20261015.md). These record the current parkour/rendering/forklift/crane work and supersede historical no-push/stopping boundaries below. Preserve pending canonical scope and dirty WIP.
+Read [LIVE_RESUME_20261015](03_EXECUTION/LIVE_RESUME_20261015.md) and [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) first. Current implementation source0658f69 is published; matching APK candidate38791786743 GREEN, separate full proof pending. Root is integrating the real forklift public route. All pause/no-push/worker status below is historical; preserve all dirty work and canonical scope. The linked live checkpoint owns current source, exact blocker and next action.
 
 # Live checkpoint — actual full Actions repair, 2026-10-15
 
