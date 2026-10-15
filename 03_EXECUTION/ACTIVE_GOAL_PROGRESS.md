@@ -596,6 +596,15 @@ landed was dropped: on touch that reads as "I pressed jump and nothing happened"
   not. In neither case does it rise in the air. With the buffer at zero the first case fails.
 - **Not observed:** on the phone.
 
+**Phase 2, wet footing: tried and taken out (native).** The scope asks for traction earned from
+friction. The only surface the world marks as different is Wet Isolation's, drawn wet from 219
+to 341 m, so its static footing was given the grip of wet steel (0.7 of dry). The native suite
+then failed "along the 220 ring, D's spool seated and its fill thrown": the carried spool could
+no longer be walked to its seat and stopped there. The scope also says to keep a route's feel
+and clearances until a comparison shows an improvement, and slicker footing on a carried route
+is not one. Left out. Real grip per surface needs the surfaces to carry a material, and routes
+proven against it, first.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 
