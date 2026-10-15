@@ -511,6 +511,22 @@ var worker_steps := 0
 var worker_strikes := 0
 
 
+# The body's own mishaps, heard: the hands torn off a hold (a scrape and a
+# grab that fails), a stumble's scuff of the feet.
+var slips_heard := 0
+var stumbles_heard := 0
+
+
+func body_slip() -> void:
+	slips_heard += 1
+	_play(&"scrape", 0.0, randf_range(0.78, 0.88))
+
+
+func body_stumble(loss: float) -> void:
+	stumbles_heard += 1
+	_play(&"scrape", linear_to_db(clampf(0.4 + loss, 0.4, 1.0)) - 4.0, randf_range(1.05, 1.18))
+
+
 func worker_step(at: Vector3) -> void:
 	worker_steps += 1
 	_play_at(&"step_concrete", at, -11.0, randf_range(0.85, 1.0), BUS_AMBIENCE)

@@ -566,6 +566,7 @@ func _build_display_page() -> void:
 	_slider_row("BRIGHTNESS", &"brightness", SettingsStore.BRIGHTNESS_RANGE, 0.05, "%.2fx")
 	_toggle_row("HEAD BOB", &"head_bob")
 	_toggle_row("SPEED FOV KICK", &"speed_fov")
+	_toggle_row("REDUCED MOTION", &"reduced_motion")
 	_choice_row("TIME OF DAY", &"time_of_day", SettingsStore.TIME_OF_DAY_NAMES)
 	_slider_row("DAY LENGTH", &"day_minutes", SettingsStore.DAY_MINUTES_RANGE, 1.0, "%.0f MIN")
 	_end_page(PAGE_DISPLAY, first, "")

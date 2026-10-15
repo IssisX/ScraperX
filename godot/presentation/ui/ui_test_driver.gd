@@ -127,6 +127,8 @@ const SCENARIOS := {
 	# CROUCH tapped in the air, and the native rolls on: the momentum kept,
 	# little balance lost, the view turned once over.
 	"touch_roll": 8,
+	# The same roll with REDUCED MOTION on: still a roll, the view not turned over.
+	"touch_roll_reduced": 8,
 	# Phase 3 on touch: the yard's trapeze. Up its ramp, run off the launch
 	# stand, GRAB the hanging bar in the air, pump it with Crouch (pull up
 	# through the bottom, let down at the ends), LET GO near the far end and
@@ -354,6 +356,8 @@ func _run() -> void:
 			ok = await _save(InputRouter.Device.TOUCH)
 		"touch_roll":
 			ok = await _roll()
+		"touch_roll_reduced":
+			ok = await _roll(true)
 		"touch_trapeze":
 			ok = await _trapeze()
 		"touch_title":
@@ -3725,8 +3729,11 @@ func _teeter() -> bool:
 	return true
 
 
-func _roll() -> bool:
+func _roll(reduced := false) -> bool:
 	var device := InputRouter.Device.TOUCH
+	if reduced:
+		_main._settings.reduced_motion = true
+		_main._apply_settings()
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not (await _go(device, Vector2(6.0, -70.0), 0.2, 20.0) and \
 			await _go(device, Vector2(-13.4, -86.0), 0.2, 20.0) and \
@@ -3759,11 +3766,15 @@ func _roll() -> bool:
 			turned = true
 			await _pose("roll_mid")
 	turned = pitch_min < -2.5
+	if reduced:
+		# Reduced motion: the roll is the native's, the view stays upright.
+		turned = pitch_min > -0.3
 	landing = _native().get_landing_state()
 	if float(landing["roll_travel"]) < 1.5:
 		return _fail("roll: travelled %.2f m" % float(landing["roll_travel"]))
 	if not turned:
-		return _fail("roll: the view did not turn over (min pitch offset %.2f)" % pitch_min)
+		return _fail("roll: the view %s (min pitch offset %.2f)" % [
+			"turned with REDUCED MOTION on" if reduced else "did not turn over", pitch_min])
 	if int(_native().get_death_count()) != 0:
 		return _fail("roll: died")
 	if _felt(&"roll") < 1:

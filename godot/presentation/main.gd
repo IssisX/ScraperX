@@ -238,6 +238,11 @@ var _step_meters_seen := 0.0
 var _fov_base := FOV_BASE
 var _head_bob_on := true
 var _speed_fov_on := true
+var _reduced_motion := false
+# A hang torn off: a short drop of the view, as the hands go (seconds left).
+const SLIP_JOLT_SECONDS := 0.3
+var _slip_jolt := 0.0
+var _haul_phase := 0.0
 var _fps_label: Label
 var _fps_clock := 0.0
 var _viewport_size := Vector2.ZERO
@@ -672,8 +677,9 @@ func _apply_settings() -> void:
 		_settings.ambience_volume, _settings.interface_volume)
 	# DISPLAY
 	_fov_base = _settings.fov
-	_head_bob_on = _settings.head_bob
-	_speed_fov_on = _settings.speed_fov
+	_reduced_motion = _settings.reduced_motion
+	_head_bob_on = _settings.head_bob and not _reduced_motion
+	_speed_fov_on = _settings.speed_fov and not _reduced_motion
 	if _settings.time_of_day == 0:
 		_sky_cycle.day_minutes = _settings.day_minutes
 	else:
@@ -1412,6 +1418,7 @@ var _fb_hang_slips := 0
 var _fb_swing_reaches := 0
 var _fb_trapeze_slips := 0
 var _fb_strain_s := 0.0
+var _fb_haul_n := 0.0   # the pull in the hands on the pitman's line, N
 
 
 func _update_body_feedback(delta: float) -> void:
@@ -1419,6 +1426,7 @@ func _update_body_feedback(delta: float) -> void:
 	var stumbles := int(landing["stumbles"])
 	if stumbles > _fb_stumbles:
 		_haptic(&"stumble", clampf(float(landing["loss"]) * 2.0, 0.4, 1.0))
+		_audio.body_stumble(float(landing["loss"]))
 	_fb_stumbles = stumbles
 	var rolls := int(landing["rolls"])
 	if rolls > _fb_rolls:
@@ -1441,6 +1449,8 @@ func _update_body_feedback(delta: float) -> void:
 	var trapeze_slips := int(_native.get_trapeze_state()["slips"])
 	if hang_slips > _fb_hang_slips or trapeze_slips > _fb_trapeze_slips:
 		_haptic(&"slip")
+		_audio.body_slip()
+		_slip_jolt = SLIP_JOLT_SECONDS
 	_fb_hang_slips = hang_slips
 	_fb_trapeze_slips = trapeze_slips
 	var reaches := int(hands["swing_reaches"])
@@ -1448,6 +1458,7 @@ func _update_body_feedback(delta: float) -> void:
 		_haptic(&"reach")
 	_fb_swing_reaches = reaches
 	var haul := float(_native.get_lift_state()["pitman_haul_n"])
+	_fb_haul_n = haul
 	_fb_strain_s -= delta
 	if haul > 1.0 and _fb_strain_s <= 0.0:
 		_haptic(&"strain", clampf(haul / 700.0, 0.3, 1.0))
@@ -1772,6 +1783,22 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		lateral_bob += 0.025 * sway
 		_cam_bank += 0.015 * sway
 
+	# A hang torn off: the view drops and tips down as the hands go.
+	var slip_pitch := 0.0
+	if _slip_jolt > 0.0:
+		_slip_jolt = maxf(0.0, _slip_jolt - delta)
+		var slip_wave := sin(PI * (1.0 - _slip_jolt / SLIP_JOLT_SECONDS))
+		dip += -0.09 * slip_wave
+		slip_pitch = -0.07 * slip_wave
+	# Hauling the pitman's line: the body heaves with each pull, by the force
+	# in the hands.
+	var haul := _fb_haul_n
+	if haul > 1.0:
+		_haul_phase += delta * 2.6
+		dip += -0.018 * clampf(haul / 700.0, 0.0, 1.0) * (0.5 + 0.5 * sin(_haul_phase))
+	# Reduced motion: what moves the view by itself is turned down.
+	var motion := 0.25 if _reduced_motion else 1.0
+	dip *= motion
 	var eye := position + EYE_OFFSET
 	_crouch_eye = move_toward(_crouch_eye, 1.0 if crouched else 0.0, delta / CROUCH_EYE_SECONDS)
 	if crouched or _crouch_eye > 0.0:
@@ -1814,7 +1841,10 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var lean: Vector3 = landing.get("beam_lean", Vector3.ZERO)
 	_beam_bank = lerpf(_beam_bank, clampf(lean.dot(right_vector), -1.5, 1.5), 1.0 - exp(-12.0 * delta))
 	stagger -= 0.07 * _beam_bank
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn, _yaw, _cam_bank + stagger)
+	if _reduced_motion:
+		roll_turn = 0.0
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion, _yaw,
+		_cam_bank + stagger * motion)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
 	var fov_fall := 0.0

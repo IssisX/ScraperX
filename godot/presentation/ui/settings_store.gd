@@ -64,6 +64,9 @@ var fov := 82.0
 var brightness := 1.0
 var head_bob := true
 var speed_fov := true
+# Turns down what moves the view by itself: no roll turnover, no head bob or
+# speed FOV kick, and a quarter of the stagger, sway and body dips.
+var reduced_motion := false
 var time_of_day := 0
 var day_minutes := 24.0
 var master_volume := 0.8
@@ -113,6 +116,7 @@ func load_from_disk() -> void:
 	brightness = _read_range(file, "brightness", brightness, BRIGHTNESS_RANGE)
 	head_bob = _read_bool(file, "head_bob", head_bob)
 	speed_fov = _read_bool(file, "speed_fov", speed_fov)
+	reduced_motion = _read_bool(file, "reduced_motion", reduced_motion)
 	time_of_day = _read_index(file, "time_of_day", time_of_day, TIME_OF_DAY_NAMES.size())
 	day_minutes = _read_range(file, "day_minutes", day_minutes, DAY_MINUTES_RANGE)
 	master_volume = _read_range(file, "master_volume", master_volume, VOLUME_RANGE)
@@ -135,7 +139,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "vibration", vibration)
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
-			"fov", "brightness", "head_bob", "speed_fov", "time_of_day", "day_minutes",
+			"fov", "brightness", "head_bob", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(PATH)
