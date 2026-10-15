@@ -346,6 +346,14 @@ constexpr float kVaultFaceGap = 0.02F;
 // vault the ground itself would have refused (Governing Law 4).
 constexpr std::uint32_t kJumpVaultWindowTicks =
     static_cast<std::uint32_t>(0.30 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+// Jump pressed in the air this soon before the feet come down is kept for the
+// legs to use on the first tick they stand, so a press a frame early is not
+// lost. It is a press held over, never a jump in the air: it fires only from
+// real support (and not crouched under a ceiling), and anything else that
+// takes the press -- a wall kick, the double-tap vault, a hand, a harness --
+// spends it.
+constexpr std::uint32_t kJumpBufferTicks =
+    static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
 
 // Hang band expressed against the capsule centre: hands reach a ledge between
 // chest height and just above the head.
@@ -1640,6 +1648,12 @@ public:
             slingshot_flight_ = false;
         }
 
+        if (sling_controlling || traversal_state_ != TraversalState::None) {
+            jump_buffer_ticks_ = 0;
+        }
+        if (jump_buffer_ticks_ > 0) {
+            --jump_buffer_ticks_;
+        }
         bool jump_started = false;
         // A teeter is ordinary locomotion's; whatever else holds the body
         // (harness, hands, a throw) ends it.
@@ -3686,7 +3700,9 @@ private:
         }
 
         // Crouched here means there was no room to stand, so no room to jump.
-        const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
+        const bool jump_wanted = commands.jump_requested || jump_buffer_ticks_ > 0;
+        const bool jump_started = jump_wanted && grounded_ && !crouched_;
+        bool kicked = false;
         if (grounded_) {
             flight_from_jump_ = false;
             wall_steps_this_flight_ = 0;
@@ -3701,6 +3717,12 @@ private:
             wall_steps_this_flight_ = kWallStepsMax;
             wall_run_seconds_left_ = 0.0;
             ++wall_kick_count_;
+            kicked = true;
+        }
+        if (jump_started) {
+            jump_buffer_ticks_ = 0;
+        } else if (commands.jump_requested && !grounded_ && !kicked && jump_vault_ticks_left_ == 0) {
+            jump_buffer_ticks_ = kJumpBufferTicks;
         }
         if (jump_started) {
             flight_from_jump_ = true;
@@ -5275,6 +5297,7 @@ private:
         teetering_ = false;
         flight_from_jump_ = false;
         jump_vault_ticks_left_ = 0;
+        jump_buffer_ticks_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
         airborne_inherited_velocity_ = JPH::Vec3::sZero();
@@ -5676,6 +5699,7 @@ public:
     double step_up_meters_ = 0.0;
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
+    std::uint32_t jump_buffer_ticks_ = 0;   // kJumpBufferTicks
     float jump_takeoff_feet_y_ = 0.0F;
     bool crouched_ = false;
     std::uint32_t world_solid_bodies_ = 0;

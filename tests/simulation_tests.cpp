@@ -7494,7 +7494,69 @@ void run_c7() {
               << " top_y=" << top.player_position.y << " wind_peak_n=" << top.wind_peak_force_n << "\n";
 }
 
+// Jump pressed in the air just before the feet land is kept and spent on the
+// first tick they stand; pressed too early it is gone; it never jumps in the
+// air.
+void run_jump_buffer() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    const double dt = Simulation::kFixedStepSeconds;
+    // A plain jump on the flat grade: how many ticks from the press to the
+    // feet back down.
+    Simulation probe(InitialSpawn::ExteriorGrade);
+    (void)probe.advance_frame(1.0);
+    require(probe.snapshot().player_grounded, "jump buffer: the body must start on the grade");
+    (void)probe.request_jump();
+    int airborne = 0;
+    int land_tick = -1;
+    for (int t = 1; t < 300 && land_tick < 0; ++t) {
+        (void)probe.advance_frame(dt);
+        airborne = probe.snapshot().player_grounded ? airborne : airborne + 1;
+        if (airborne > 5 && probe.snapshot().player_grounded) {
+            land_tick = t;
+        }
+    }
+    require(land_tick > 40, "jump buffer: a plain jump must leave the grade and come down");
+    // Pressed `early` ticks before that landing, mid-air: true if the body
+    // took off again within a few ticks of landing, and never rose in the air.
+    const auto pressed = [&](const int early, bool &rose_in_air) {
+        Simulation sim(InitialSpawn::ExteriorGrade);
+        (void)sim.advance_frame(1.0);
+        (void)sim.request_jump();
+        double last_vy = 1.0e9;
+        rose_in_air = false;
+        bool again = false;
+        for (int t = 1; t < land_tick + 30; ++t) {
+            if (t == land_tick - early) {
+                require(!sim.snapshot().player_grounded, "jump buffer: the early press must be made in the air");
+                (void)sim.request_jump();
+            }
+            (void)sim.advance_frame(dt);
+            const auto now = sim.snapshot();
+            const double vy = now.player_linear_velocity.y;
+            if (t < land_tick && t > 2) {
+                rose_in_air = rose_in_air || vy > last_vy + 1e-3;
+            }
+            last_vy = vy;
+            again = again || (t >= land_tick && vy > 4.0);
+        }
+        return again;
+    };
+    bool rose_late = false;
+    bool rose_early = false;
+    const bool late = pressed(5, rose_late);
+    const bool early = pressed(25, rose_early);
+    require(!rose_late && !rose_early, "jump buffer: a press in the air must never lift the body in the air");
+    require(late, "jump buffer: jump pressed 5 ticks before landing must take off on landing");
+    require(!early, "jump buffer: jump pressed 25 ticks before landing must be gone by then");
+    std::cout << "PASS scraperx_sim jump buffer: land_tick=" << land_tick << " window_ticks=9\n";
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "jumpbuffer") {
+        run_jump_buffer();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "workers") {
         run_workers();
         return EXIT_SUCCESS;
@@ -9749,6 +9811,7 @@ int main() {
     run_wheel();
     run_save();
     run_landing();
+    run_jump_buffer();
     run_teeter();
     run_trapeze();
     run_tram();

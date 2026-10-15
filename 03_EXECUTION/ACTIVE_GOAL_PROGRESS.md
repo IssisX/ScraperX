@@ -583,6 +583,19 @@ the owner saw pine-tree shapes inside the clouds and the sky sheared into straig
     to the screen from the camera's own axes.
 - **Not yet known:** whether the tree shapes are gone. They need a look on the phone.
 
+**Phase 2, a jump pressed a moment early is kept (native).** The scope asks for short native-tick
+buffering of intent, executed only from valid contact. A jump pressed a tick before the feet
+landed was dropped: on touch that reads as "I pressed jump and nothing happened".
+- **Now.** A jump pressed in the air within 0.1 s (9 ticks) of touching down is spent on the first
+  tick the feet stand. It fires only from real support, and not when crouched under a ceiling.
+  It is never a jump in the air, and gives no free jump after leaving an edge.
+- **Spent by anything else that takes the press.** A wall kick, the double-tap vault's window, a
+  hang, a harness or a respawn clears it.
+- **Proof (native `jump buffer`).** On the flat grade a jump lands after 101 ticks. Pressed 5
+  ticks before landing, the body takes off again on landing; pressed 25 ticks before, it does
+  not. In neither case does it rise in the air. With the buffer at zero the first case fails.
+- **Not observed:** on the phone.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 
