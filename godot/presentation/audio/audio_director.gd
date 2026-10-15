@@ -364,11 +364,21 @@ func update_pours(pours: Array, listener: Vector3) -> void:
 
 # Wind rises with altitude; a falling body hears the air tear past. The
 # yard's distant industrial bed thins out as the climb leaves it below.
+var _gust_clock := 0.0
+
+
 func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:
 	if not _bank_ready or _silent:
 		return
+	# The height heard: the wind grows over the first 150 m and keeps growing
+	# to 600 m, and comes in gusts, slow swells that deepen with the height.
 	var altitude := clampf(position.y / 150.0, 0.0, 1.0)
-	_wind_db = lerpf(_wind_db, lerpf(-12.0, -4.0, altitude), 1.0 - exp(-2.0 * delta))
+	var exposure := clampf((position.y - 150.0) / 450.0, 0.0, 1.0)
+	_gust_clock += delta
+	var gust := 0.5 + 0.5 * sin(_gust_clock * 0.37) * sin(_gust_clock * 0.11 + 1.3)
+	var wind_target := lerpf(-12.0, -4.0, altitude) + 3.0 * exposure + lerpf(1.0, 5.0, exposure) * (gust - 0.5)
+	_wind_db = lerpf(_wind_db, wind_target, 1.0 - exp(-2.0 * delta))
+	_wind.pitch_scale = lerpf(1.0, 0.86, exposure) + 0.06 * (gust - 0.5)
 	_drone_db = lerpf(_drone_db, lerpf(-13.0, -24.0, altitude), 1.0 - exp(-1.5 * delta))
 	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0

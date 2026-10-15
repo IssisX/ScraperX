@@ -105,6 +105,9 @@ const SCENARIOS := {
 	# crown to 778 m, and the luffing derrick's cradle up and in to 802.6 m.
 	"touch_high": 37,
 	"perf_top": 37,
+	# The cloud layer (the height felt): from the yard, a broken ceiling far
+	# overhead round the tower, looked at up and out in four directions.
+	"touch_clouds": 8,
 	"perf_grade": 8,
 	# The owner's slab incline from the game's start: across the yard east of
 	# the slingshot, up the ramp onto its platform, onto the trolley, RAISE,
@@ -342,6 +345,8 @@ func _run() -> void:
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":
 			ok = await _high(InputRouter.Device.TOUCH)
+		"touch_clouds":
+			ok = await _clouds()
 		"perf_top", "perf_grade":
 			ok = await _perf_probe()
 		"touch_incline":
@@ -2585,6 +2590,25 @@ func _kit_origin(entity: int) -> Vector3:
 # shadow quality a phone on LOW runs, so the regression cannot come back
 # unseen; the HIGH figures are reported alongside.
 const PERF_DRAW_BUDGET := 700
+
+
+func _clouds() -> bool:
+	await _seconds(1.0)
+	var clouds: Node3D = _main._clouds
+	if clouds == null or int(clouds.puff_count()) < 50:
+		return _fail("no cloud layer")
+	# Round the climb at its own height: a puff within 200 m of the tower's
+	# axis at 480 m, so the climber passes them.
+	var near := float(clouds.nearest(Vector3(0.0, 480.0, -150.0)))
+	if near > 200.0:
+		return _fail("the nearest cloud to the climb at 480 m is %.0f m off" % near)
+	for i in 4:
+		_main._yaw = float(i) * PI * 0.5
+		_main._pitch = 0.75
+		await _seconds(0.4)
+		await _pose("clouds_%d" % i)
+	_detail = "puffs=%d nearest_to_climb_m=%.0f" % [int(clouds.puff_count()), near]
+	return true
 
 
 func _perf_probe() -> bool:

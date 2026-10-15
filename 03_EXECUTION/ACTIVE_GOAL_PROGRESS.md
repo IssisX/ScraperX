@@ -337,3 +337,19 @@ an XCoM shift past half a foot (0.15 m) is a stumble, with debt.
   one stumble, balance loss 0.12) and lives. The whole native suite passes with it.
 - **Haptics.** The stumble pulse and scuff already follow every stumble.
 - **Not observed:** a machine part (a ram, a swinging cabin) striking a rider in play.
+
+**The height felt (Godot): a cloud layer and the wind (task 90).**
+- **The clouds.** A broken layer lies between 455 and 505 m, partway up the climb: 42 clouds of
+  four soft lobes each, with lit tops and shaded flat bases. They drift slowly and wrap round an
+  annulus about the tower, kept 75 m clear of its axis so no cloud cuts the structure. From the
+  yard they are a ceiling overhead around the tower. The climb through AS-008's band passes them
+  at their own height; from above they lie below. A cloud fades out as the eye comes into it.
+  One MultiMesh draw (`perf_top` LOW worst 390, against 389 before).
+- **The wind.** It kept growing only to 150 m. It now keeps growing to 600 m, drops in pitch with
+  exposure, and comes in slow gusts that deepen with height.
+- **Proof.** `touch_clouds` (in CI) checks that the layer exists and that a cloud lies within
+  200 m of the climb's axis at 480 m. Rendered locally from the yard looking up, the clouds read
+  as broken cumulus round and above the tower. The first version (single crisp ovals) read as
+  white petals and was redone.
+- **Not observed:** the view from inside or just above the layer, overdraw on a phone, and the
+  wind by ear.

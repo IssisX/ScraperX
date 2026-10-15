@@ -26,6 +26,7 @@ const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const Works := preload("res://presentation/life/works.gd")
+const CloudLayer := preload("res://presentation/cloud_layer.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -316,6 +317,7 @@ var _hauling := false
 var _crew: Node3D
 # The structure at work: beacons on moving machines, steam from the vents.
 var _works: Node3D
+var _clouds: Node3D
 var _vent_tops := PackedVector3Array()
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
@@ -434,6 +436,8 @@ func _ready() -> void:
 	_build_kit()
 	_works = Works.new()
 	add_child(_works)
+	_clouds = CloudLayer.new()
+	add_child(_clouds)
 	_works.setup(_vent_tops)
 	for m in _machines.size():
 		if float(_machines[m]["mass"]) >= Works.BEACON_MIN_KG:
@@ -3523,6 +3527,8 @@ func _sample_machines(delta: float) -> void:
 	_audio.update_machines(delta, _machines)
 	if _works != null:
 		_works.update(delta, _camera.global_position, _machines)
+	if _clouds != null:
+		_clouds.update(delta, _camera)
 
 
 func _build_hook_gun() -> Node3D:
