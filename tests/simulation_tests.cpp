@@ -4556,6 +4556,43 @@ void run_wheel() {
     require(peak < 2.5, "wheel: the brake must hold the turn to its pace");
     require(walk_to(s, 17.81, -113.3, 6.0) && s.advance_frame(0.5).accepted && s.snapshot().support_entity_id == kExit,
             "wheel: off onto the upper receiver");
+    // The reload: at the receiver's north-east corner the skip's trip line
+    // hangs. Taken and pulled back, it opens the skip's gate and the skip
+    // pours into the hopper, kilogram for kilogram; let go, the gate shuts.
+    {
+        using scraperx::sim::vertical::Route;
+        const auto lift = [&s]() { return s.lift_state(); };
+        const double hopper0 = lift().wheel_hopper_kg;
+        const double skip0 = lift().wheel_skip_kg;
+        require(skip0 > Route::kWheelSkipKg - 1.0, "wheel reload: the skip stands full");
+        (void)s.advance_frame(3.0);
+        require(std::abs(lift().wheel_skip_kg - skip0) < 1.0, "wheel reload: untouched, the skip keeps its stone");
+        require(walk_to(s, 19.0, -112.9, 4.0, 0.08), "wheel reload: to the handle at the receiver's corner");
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.advance_frame(0.3);
+        require(s.request_pick_up() && s.advance_frame(0.5).accepted &&
+                    s.snapshot().carrying_entity_id == Route::kWheelReloadHandleEntity,
+                "wheel reload: the handle taken");
+        // The gate's 0.6 rad stop lets the line out about 0.3 m: a step back
+        // until it is taut; further would tear the handle from the hands.
+        require(walk_to(s, 19.0, -113.25, 4.0, 0.06), "wheel reload: stepped back with it");
+        (void)s.advance_frame(10.0);
+        const double hopper1 = lift().wheel_hopper_kg;
+        const double skip1 = lift().wheel_skip_kg;
+        std::cout << "  wheel reload: hopper " << hopper0 << " -> " << hopper1 << " skip " << skip0 << " -> " << skip1
+                  << '\n';
+        require(hopper1 - hopper0 > 1000.0, "wheel reload: pulled, the skip refills the hopper");
+        require(std::abs((hopper1 - hopper0) - (skip0 - skip1)) < 5.0,
+                "wheel reload: every kilogram in the hopper came from the skip");
+        (void)s.request_set_down();
+        (void)s.advance_frame(2.0);
+        const double skip2 = lift().wheel_skip_kg;
+        (void)s.advance_frame(3.0);
+        require(std::abs(lift().wheel_skip_kg - skip2) < 1.0, "wheel reload: let go, the gate shuts and the pour stops");
+        require(walk_to(s, 17.81, -113.3, 4.0) && s.advance_frame(0.5).accepted &&
+                    s.snapshot().support_entity_id == kExit,
+                "wheel reload: back on the receiver");
+    }
     require(walk_to(s, 17.81, -125.5, 12.0) && s.advance_frame(1.0).accepted, "wheel: down the ramp onto deck 4");
     const auto end = s.snapshot();
     require(end.death_count == 0 && end.player_grounded && end.player_position.y > 44.7 && end.player_position.y < 45.2,

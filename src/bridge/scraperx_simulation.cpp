@@ -1191,6 +1191,8 @@ godot::Dictionary ScraperXSimulation::get_lift_state() const {
     out["derrick_holding"] = state.derrick_holding;
     out["pitman"] = static_cast<std::int64_t>(state.pitman);
     out["pitman_haul_n"] = state.pitman_haul_n;
+    out["wheel_hopper_kg"] = state.wheel_hopper_kg;
+    out["wheel_skip_kg"] = state.wheel_skip_kg;
     godot::PackedFloat64Array travels;
     for (int i = 0; i < state.machine_count && i < static_cast<int>(state.travels.size()); ++i) {
         travels.push_back(state.travels[static_cast<std::size_t>(i)]);

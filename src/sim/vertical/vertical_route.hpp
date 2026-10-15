@@ -93,6 +93,12 @@ public:
     // its counterweight, rises governed.
     [[nodiscard]] int pitman() const noexcept { return pitman_; }
     [[nodiscard]] bool pitman_hauling() const noexcept { return pitman_haul_n_ > 0.0F; }
+    // The stone wheel's stone: in its hopper, and in the skip over it (kg).
+    // The stone wheel's reload skip, gate and handle: built after every other
+    // body (Simulation calls it last), so saves written before it line up.
+    void build_wheel_reload();
+    [[nodiscard]] float wheel_hopper_kg() const noexcept;
+    [[nodiscard]] float wheel_skip_kg() const noexcept;
     [[nodiscard]] float pitman_haul_n() const noexcept { return pitman_haul_n_; }
     // The hands: at most kHaulMaxN, falling to nothing at kHaulLineMps of
     // line through them (a human pull's force-speed limit, CHOSEN: a strong
@@ -102,6 +108,12 @@ public:
     // The counterweight: deck 1,200 + rod's half 425 + half a rider 42.5 kg.
     static constexpr float kPitmanCounterweightKg = 1667.5F;
     static constexpr std::uint64_t kPitmanCounterweightEntity = 2975;
+    // The stone wheel's reload (built late): the skip over the hopper (fixed),
+    // its gate, and the trip line's handle at the upper receiver.
+    static constexpr std::uint64_t kWheelSkipEntity = 2976;
+    static constexpr std::uint64_t kWheelSkipGateEntity = 2978;
+    static constexpr std::uint64_t kWheelReloadHandleEntity = 2979;
+    static constexpr float kWheelSkipKg = 8000.0F;
     // The brake on the deck's guide, and the governed speed the empty deck
     // rises at when freed from the upper receiver.
     static constexpr float kPitmanBrakeN = 30000.0F;
@@ -196,6 +208,7 @@ private:
     int pitman_ = -1;
     BodyIndex pitman_counterweight_;
     float pitman_haul_n_ = 0.0F;
+    kit::BinIndex wheel_skip_bin_{};
 };
 
 } // namespace scraperx::sim::vertical

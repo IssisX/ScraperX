@@ -244,6 +244,9 @@ struct LiftSnapshot final {
     // when hauling its line (N; 0 when not).
     int pitman = -1;
     double pitman_haul_n = 0.0;
+    // The stone wheel's stone: in its hopper, and in the reload skip over it.
+    double wheel_hopper_kg = 0.0;
+    double wheel_skip_kg = 0.0;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it

@@ -2871,6 +2871,32 @@ func _wheel(device: int) -> bool:
 	await _pose("wheel_top")
 	if not await _go(device, Vector2(17.81, -113.3), 0.15, 8.0):
 		return _fail("wheel: the step off onto the upper receiver stalled at %s" % str(_position()))
+	# The reload: the skip's line hangs at the receiver's north-east corner.
+	# Taken and pulled back until taut, the skip pours into the hopper; let
+	# go, it stops.
+	var hopper0 := float(_native().get_lift_state()["wheel_hopper_kg"])
+	if not await _go(device, Vector2(19.0, -112.9), 0.08, 4.0):
+		return _fail("wheel reload: the walk to the skip's line stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "GRAB", "SKIP LINE"):
+		return _fail("wheel reload: GRAB SKIP LINE not offered (offered %s)" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2979, 1.0):
+		return _fail("wheel reload: the line was not taken")
+	_move(device, -0.35)
+	await _wait_until(func() -> bool: return _position().z <= -113.2, 2.0)
+	_move(device, 0.0)
+	await _pose("wheel_reload")
+	await _seconds(6.0)
+	var poured := float(_native().get_lift_state()["wheel_hopper_kg"]) - hopper0
+	if poured < 500.0:
+		return _fail("wheel reload: pulled, the skip poured only %.0f kg into the hopper" % poured)
+	if not await _offered(&"set_down", "LET GO", "SKIP LINE"):
+		return _fail("wheel reload: LET GO not offered on the line (offered %s)" % _action_label())
+	_act(device)
+	await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 1.0)
+	if not await _go(device, Vector2(17.81, -113.3), 0.15, 6.0):
+		return _fail("wheel reload: back onto the receiver stalled at %s" % str(_position()))
 	if not await _go(device, Vector2(17.81, -125.5), 0.15, 12.0):
 		return _fail("wheel: the ramp down onto deck 4 stalled at %s" % str(_position()))
 	await _seconds(1.0)

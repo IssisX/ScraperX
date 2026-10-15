@@ -1489,6 +1489,8 @@ public:
         // C7, the west face's exposed climb from the 264 ring to the
         // mast-pitman walkway: the alternative to riding the mast. Last too.
         ClimbC7::build(*kit_);
+        // After C7, so every save written before it still lines up.
+        vertical_->build_wheel_reload();
         // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
         crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
 
@@ -5338,7 +5340,7 @@ public:
         bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
                   r.pod(loaded.carrying_entity) && r.list_up_to(k.bodies, c.bodies.size()) &&
                   r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
-                  r.list(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
+                  r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
                   r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
                   r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
                   r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
@@ -5358,6 +5360,9 @@ public:
         // last, after every body before them) start as built.
         for (std::size_t index = k.bodies.size(); ok && index < c.bodies.size(); ++index) {
             k.bodies.push_back(c.bodies[index]);
+        }
+        for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
+            k.bin_contents.push_back(c.bin_contents[index]);
         }
         if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
             !std::isfinite(position.GetZ())) {
@@ -6629,6 +6634,8 @@ LiftSnapshot Simulation::lift_state() const noexcept {
     result.derrick_holding = route.derrick_holding();
     result.pitman = route.pitman();
     result.pitman_haul_n = route.pitman_haul_n();
+    result.wheel_hopper_kg = route.wheel_hopper_kg();
+    result.wheel_skip_kg = route.wheel_skip_kg();
     return result;
 }
 

@@ -256,6 +256,88 @@ void Route::build_late() {
     m.no_collision(p.deck, pitman_counterweight_);
 }
 
+void Route::build_wheel_reload() {
+    if (wheel_ < 0 || wheel_skip_bin_.valid()) {
+        return;
+    }
+    // Over the hopper a skip of stone stands on four posts on its rim, its
+    // mouth over the hopper's middle under a gate like the hopper's own:
+    // hinged at its west edge, a counterweight beyond the hinge shutting it.
+    // A trip line from that counterweight runs up over a sheave, across to a
+    // second over the upper receiver's north-east corner and down to a
+    // handle there. Taken and pulled back, it lifts the counterweight; the
+    // gate swings open and the skip pours into the hopper (a bin pours into
+    // the first bin under its mouth). Let go, the counterweight shuts it.
+    Placed &p = placed_[static_cast<std::size_t>(wheel_)];
+    Machine &m = *p.machine;
+    BodyIndex hopper{};
+    BodyIndex exit{};
+    for (const NamedBody &named : m.bodies) {
+        if (named.name == "hopper") hopper = named.index;
+        if (named.name == "exit") exit = named.index;
+    }
+    if (!hopper.valid() || !exit.valid()) {
+        return;
+    }
+    const RVec3 hopper_at = kit_.body_position(hopper);   // its mouth, under its floor
+    const RVec3 skip_at = hopper_at + Vec3(0.0F, 4.0F, 0.0F);
+    std::vector<Part> skip = {
+        box(Vec3(1.1F, .08F, 1.1F), Material::Rust),                          // floor first
+        box(Vec3(1.2F, .6F, .08F), Material::Rust, Vec3(0.0F, .6F, 1.15F)),
+        box(Vec3(1.2F, .6F, .08F), Material::Rust, Vec3(0.0F, .6F, -1.15F)),
+        box(Vec3(.08F, .6F, 1.1F), Material::Rust, Vec3(1.15F, .6F, 0.0F)),
+        box(Vec3(.08F, .6F, 1.1F), Material::Rust, Vec3(-1.15F, .6F, 0.0F)),
+    };
+    for (const float x : {-1.25F, 1.25F}) {
+        for (const float z : {-1.25F, 1.25F}) {
+            skip.push_back(box(Vec3(.07F, .58F, .07F), Material::Steel, Vec3(x, -.6F, z)));   // posts to the rim
+        }
+    }
+    const BodyIndex skip_body = kit_.add_body(kWheelSkipEntity, skip, skip_at, Quat::sIdentity(), 0.0F, .8F);
+    // The mouth in the skip's front half: the frame's arm that carries the
+    // hopper reaches in over its back half, and a stream down the middle
+    // would land on it.
+    const Vec3 mouth_local(0.0F, -.1F, -.6F);
+    const RVec3 mouth = skip_at + mouth_local;
+    const RVec3 pivot = mouth + Vec3(-.35F, -.05F, 0.0F);
+    const BodyIndex gate = kit_.add_body(
+        kWheelSkipGateEntity,
+        {box(Vec3(.35F, .05F, .4F), Material::Yellow, Vec3(.35F, 0.0F, 0.0F)),
+         box(Vec3(.25F, .25F, .25F), Material::Steel, Vec3(-.5F, .3F, 0.0F))},
+        pivot, Quat::sIdentity(), 40.0F, .6F);
+    const kit::LeverIndex gate_lever =
+        kit_.add_lever(gate, pivot, -Vec3::sAxisZ(), Vec3::sAxisX(), 0.0F, .6F);
+    wheel_skip_bin_ = kit_.add_bin(skip_body, kWheelSkipKg, kWheelSkipKg, mouth_local, gate_lever, .3F, 2.0F, 250.0F);
+    m.no_collision(hopper, gate);
+    m.no_collision(skip_body, gate);
+    // The trip line and its handle at the upper receiver's north-east corner,
+    // clear of the walk off it toward deck 4.
+    const RVec3 exit_at = kit_.body_position(exit);
+    const float exit_floor = static_cast<float>(exit_at.GetY()) + .3F;
+    const RVec3 weight = pivot + Vec3(-.5F, .3F, 0.0F);
+    const RVec3 sheave_skip = weight + Vec3(0.0F, 1.8F, 0.0F);
+    const RVec3 hang(exit_at.GetX() + 1.2, exit_floor + 3.4, exit_at.GetZ() + 1.0);
+    constexpr float kHandleHalfY = .22F;
+    const Vec3 handle_top(0.0F, kHandleHalfY, 0.0F);
+    const BodyIndex handle = kit_.add_body(
+        kWheelReloadHandleEntity, {box(Vec3(.22F, kHandleHalfY, .04F), Material::Yellow)},
+        RVec3(hang.GetX(), exit_floor + 1.35, hang.GetZ()), Quat::sIdentity(), 3.0F, .9F);
+    kit_.set_carry(handle, kit::CarryKind::Handle, handle_top);
+    kit_.set_damping(handle, 1.5F, 1.5F);
+    (void)kit_.add_trip_line(gate, Vec3(-.5F, .3F, 0.0F), handle, handle_top, sheave_skip, hang);
+}
+
+float Route::wheel_hopper_kg() const noexcept {
+    if (wheel_ < 0 || placed_[static_cast<std::size_t>(wheel_)].machine->bins.empty()) {
+        return 0.0F;
+    }
+    return kit_.bin_contents(placed_[static_cast<std::size_t>(wheel_)].machine->bins.front());
+}
+
+float Route::wheel_skip_kg() const noexcept {
+    return wheel_skip_bin_.valid() ? kit_.bin_contents(wheel_skip_bin_) : 0.0F;
+}
+
 void Route::pre_step(float dt, bool action, std::uint64_t support, bool haul) {
     if (pitman_ >= 0) {
         // The pitman is worked by the hands, never Action.

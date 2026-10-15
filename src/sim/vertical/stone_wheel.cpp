@@ -31,8 +31,11 @@
 // - Discharge: at the bottom on the falling side a striker stands each
 //   bucket's gate open as it passes, and the spent stone falls onto the pile
 //   at the foot, which stays.
-// - Supply: the hopper holds 16 t and is not refilled. A ride needs more than
-//   85 kg; a bucket takes 400 kg. Stone poured past that spills to the pile.
+// - Supply: the hopper holds up to 16 t and starts with 6 t. A ride needs
+//   more than 85 kg; a bucket takes 400 kg. Stone poured past that spills to
+//   the pile. Over the hopper a skip holds 8 t more; its gate is opened from
+//   the upper receiver by a trip line (vertical_route.cpp, build_late), and
+//   what it pours refills the hopper.
 namespace scraperx::sim::vertical {
 std::unique_ptr<Machine> stone_wheel(BuildContext c) {
     constexpr float kRadius = 13.0f;      // the pins' circle
@@ -166,7 +169,7 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
     const Vec3 gate_axis = m->direction(-Vec3::sAxisZ());
     const auto gate_lever = c.kit.add_lever(gate, m->point(gate_pivot), gate_axis,
                                             m->direction(Vec3::sAxisX()), 0.0f, .6f);
-    c.kit.add_bin(hopper, 16000.0f, 16000.0f, Vec3(0, -.1f, 0), gate_lever, .3f, 2.0f, 40.0f);
+    m->bins.push_back(c.kit.add_bin(hopper, 6000.0f, 16000.0f, Vec3(0, -.1f, 0), gate_lever, .3f, 2.0f, 40.0f));
 
     // The feed plank: 6 m of timber, 0.6 m wide, its deck flush with the
     // receiver; 330 kg of iron under its inner end. With the player 2 m out

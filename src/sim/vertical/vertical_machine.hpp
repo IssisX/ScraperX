@@ -75,6 +75,8 @@ public:
     std::vector<Ref<SliderConstraint>> holds;
     // Loose loads a rider can carry off (the derrick's iron pigs).
     std::vector<BodyIndex> iron;
+    // Bins the route reads (the stone wheel's hopper).
+    std::vector<kit::BinIndex> bins;
     BuildContext context;
     RVec3 point(Vec3 local) const;
     Vec3 direction(Vec3 local) const;
