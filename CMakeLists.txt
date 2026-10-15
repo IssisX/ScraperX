@@ -17,6 +17,12 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/physics_world.cpp
+    src/sim/physics_world_probes.cpp
+    src/sim/physics_world_movement.cpp
+    src/sim/physics_world_traversal.cpp
+    src/sim/physics_world_climb.cpp
+    src/sim/physics_world_state.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
     src/sim/slingshot.cpp
