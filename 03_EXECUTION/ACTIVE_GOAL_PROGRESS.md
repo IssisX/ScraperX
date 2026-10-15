@@ -431,6 +431,28 @@ listener (`audio_director.gd` `REGIONS`). A band is heard soon after it is enter
   none of its own sounds. Under CI's dummy audio driver, that proves the scheduling only.
 - **Not observed:** the mix heard through a speaker, here or on the phone.
 
+**Phase 6, Wet Isolation looks wet; beacons no longer dazzle their riders (Godot).**
+- **The wet core.** The Atlas makes B03 a band of live water: a header, a sump, a stair it can
+  flood. Its standing structure (219–341 m) is now drawn wet.
+  - Porous surfaces (rust, concrete, timber, paint) darken to 0.8 and take a film: roughness
+    × 0.35.
+  - Bare metal (metallic ≥ 0.5) keeps its colour and gains only a little gloss (× 0.85).
+  - Done in the static batcher, so it costs a handful of extra batches. Moving machines keep
+    their own finish: they travel between bands.
+- **Two tries that failed.**
+  - All surfaces at 0.62 darkened the rust wall of E's shaft to near-black.
+  - Wet metal went black with white glitter on C7's walkway. The sky is not mirrored (it turned
+    the asphalt white), so a glossy metal shows only pinpoint sun glints off its bump map.
+- **The beacons.** A machine's amber beacon sat in the middle of its top, which is where its
+  rider stands. Riding E's cab, its glare filled the lower half of the view (seen in
+  `touch_wet`'s frame at 299 m). It now sits on a corner of the machine's highest part, set in
+  0.15 m. Its blades and glow fade within about 2.5–7 m of the eye, so it is still seen from
+  across the well.
+- **Rendered (local, low resolution).**
+  - `touch_wet` at 257 m and 299 m: the glare is gone.
+  - `touch_c7`: the rust reads as wet steel, and the walkway is no longer black glitter.
+- **Not observed:** the phone; the band at night.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

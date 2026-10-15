@@ -164,7 +164,10 @@ void vertex() { lit = INSTANCE_CUSTOM.r; }
 void fragment() {
 	float edge = 1.0 - abs(UV.y - 0.5) * 2.0;
 	float along = 1.0 - UV.x;
-	ALBEDO = vec3(1.0, 0.55, 0.12) * lit * edge * along * 1.6;
+	// Seen from a few metres, the blades sweep across the whole view: they
+	// fade in with distance, so a rider beside the beacon is not dazzled.
+	float near = smoothstep(2.5, 7.0, length(VERTEX));
+	ALBEDO = vec3(1.0, 0.55, 0.12) * lit * edge * along * 1.6 * near;
 }
 """
 	else:
@@ -174,7 +177,9 @@ varying float lit;
 void vertex() { lit = INSTANCE_CUSTOM.r; }
 void fragment() {
 	ALBEDO = mix(vec3(0.35, 0.18, 0.04), vec3(1.0, 0.6, 0.15), lit);
-	EMISSION = vec3(1.0, 0.5, 0.1) * lit * 4.0;
+	// Bright enough to bloom from across the tower; close up, a lamp.
+	float near = smoothstep(2.5, 7.0, length(VERTEX));
+	EMISSION = vec3(1.0, 0.5, 0.1) * lit * mix(0.6, 4.0, near);
 	ROUGHNESS = 0.3;
 }
 """

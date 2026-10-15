@@ -3019,6 +3019,20 @@ const BATCH_FAR_LAYER := 2
 const LAMP_REACH := 100.0
 const VIEW_PROP_RANGE := 250.0
 const KIT_CABLE_RANGE := 200.0
+# Wet Isolation (AS-007, 220 -> 340 m) is wet: its standing structure is
+# drawn as wet. A porous surface (rust, concrete, timber, paint) soaks the
+# water up: darker, and glossy with its film. Bare metal does not soak:
+# only a little glossier. (The sky is not mirrored -- sky_cycle.gd -- so a
+# glossy metal would show black but for pinpoint glints off its bump map:
+# observed on C7's walkway.) A part is wet by where its middle stands.
+# Moving bodies keep their own finish (they travel between bands).
+const WET_BAND_LOW := 219.0
+const WET_BAND_HIGH := 341.0
+const WET_POROUS_BELOW_METALLIC := 0.5
+const WET_DARKEN := 0.8
+const WET_ROUGHNESS := 0.35
+const WET_METAL_ROUGHNESS := 0.85
+const WET_ROUGHNESS_MIN := 0.12
 
 
 class Batcher:
@@ -3040,11 +3054,15 @@ class Batcher:
 	var finishes := {}    # finish signature -> the shared material drawing it
 	var far_material: StandardMaterial3D
 	var parts := 0
+	var wet_parts := 0
 
 	func add(mesh: Mesh, surface: int, at: Transform3D, material: Material, fine: bool) -> void:
-		var finish := _finish(material)
 		var bounds := at * mesh.get_aabb()
 		var centre := bounds.get_center()
+		var wet := centre.y >= WET_BAND_LOW and centre.y <= WET_BAND_HIGH
+		var finish := _finish(material, wet)
+		if wet and finish[2]:
+			wet_parts += 1
 		var cell := Vector3(floorf(centre.x / BATCH_CELL_XZ), floorf(centre.y / BATCH_CELL_Y),
 			floorf(centre.z / BATCH_CELL_XZ))
 		# Each batch stands at its section's middle (its vertices relative to
@@ -3064,33 +3082,49 @@ class Batcher:
 			var far_group := _group(far, "%d/%d/%d" % [far_cell.x, far_cell.y, far_cell.z],
 				(far_cell + Vector3(0.5, 0.5, 0.5)) * BATCH_FAR_CELL, far_material)
 			var standard := material as StandardMaterial3D
+			var far_colour := standard.albedo_color if standard != null else Color(0.35, 0.33, 0.3)
 			Batcher.append_arrays(far_group, mesh, surface, at,
-				standard.albedo_color if standard != null else Color(0.35, 0.33, 0.3))
+				Batcher._wet_colour(far_colour) if wet and finish[2] and Batcher._porous(standard) else far_colour)
 		parts += 1
 
 	# A material's finish: what it looks like but for its colour, which the
-	# batch carries in its vertices. [signature, vertex colour]. A material
-	# with a colour texture or a shader of its own is drawn as it is.
-	func _finish(material: Material) -> Array:
+	# batch carries in its vertices. [signature, vertex colour, wet]. A
+	# material with a colour texture or a shader of its own is drawn as it is,
+	# never wet; so is glowing or see-through material (lamps, glass, water).
+	func _finish(material: Material, wet: bool = false) -> Array:
 		var standard := material as StandardMaterial3D
 		if standard == null or standard.albedo_texture != null:
 			var own := "id%d" % material.get_instance_id()
 			if not finishes.has(own):
 				finishes[own] = material
-			return [own, Color.WHITE]
+			return [own, Color.WHITE, false]
+		wet = wet and not standard.emission_enabled \
+			and standard.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
 		var normal := standard.normal_texture.get_instance_id() if standard.normal_enabled \
 			and standard.normal_texture != null else 0
 		var signature := "%.3f|%.3f|%s|%.2f|%d|%d|%s" % [standard.metallic, standard.roughness,
 			standard.emission.to_html() if standard.emission_enabled else "-",
 			standard.normal_scale if standard.normal_enabled else 0.0, normal, standard.cull_mode,
-			str(standard.uv1_scale)]
+			str(standard.uv1_scale)] + ("|wet" if wet else "")
 		if not finishes.has(signature):
 			var shared := standard.duplicate() as StandardMaterial3D
 			shared.albedo_color = Color.WHITE
 			shared.vertex_color_use_as_albedo = true
 			shared.vertex_color_is_srgb = true
+			if wet:
+				shared.roughness = maxf(WET_ROUGHNESS_MIN, standard.roughness *
+					(WET_ROUGHNESS if Batcher._porous(standard) else WET_METAL_ROUGHNESS))
 			finishes[signature] = shared
-		return [signature, standard.albedo_color]
+		var colour := standard.albedo_color
+		if wet and Batcher._porous(standard):
+			colour = Batcher._wet_colour(colour)
+		return [signature, colour, wet]
+
+	static func _porous(standard: StandardMaterial3D) -> bool:
+		return standard.metallic < WET_POROUS_BELOW_METALLIC
+
+	static func _wet_colour(colour: Color) -> Color:
+		return Color(colour.r * WET_DARKEN, colour.g * WET_DARKEN, colour.b * WET_DARKEN, colour.a)
 
 	static func _group(groups: Dictionary, key: String, origin: Vector3, material: Material) -> Group:
 		if not groups.has(key):
@@ -3230,7 +3264,7 @@ func _batch_static_dressing(root: Node3D) -> void:
 			instance.queue_free()
 		else:
 			instance.mesh = null
-	_batch_report += "dressing %d parts -> %d meshes; " % [merged.size(), made]
+	_batch_report += "dressing %d parts -> %d meshes, %d wet; " % [merged.size(), made, batcher.wet_parts]
 
 
 func _surface_material(instance: MeshInstance3D, surface: int) -> Material:
@@ -3345,11 +3379,12 @@ func _build_kit() -> void:
 			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
 				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
 				"tip_at": Vector3.ZERO, "mass": float(_native.get_kit_body_mass(body)),
-				"top": _top_centre(parts)})
+				"top": _beacon_seat(parts)})
 	var statics := Node3D.new()
 	statics.name = "KitStatics"
 	_kit_root.add_child(statics)
-	_batch_report += "kit statics %d parts -> %d meshes; " % [statics_batcher.parts, statics_batcher.emit(statics)]
+	_batch_report += "kit statics %d parts -> %d meshes, %d wet; " % [statics_batcher.parts,
+		statics_batcher.emit(statics), statics_batcher.wet_parts]
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)
@@ -3471,11 +3506,13 @@ func _build_kit() -> void:
 	_render_kit()
 
 
-# The corner of a body's parts farthest from its origin, in its own frame.
-# The middle of a body's top, in its own frame: where a beacon sits.
-func _top_centre(parts: PackedFloat32Array) -> Vector3:
-	var low := Vector3.INF
-	var high := -Vector3.INF
+# Where a machine's beacon sits, in its own frame: on the highest corner of
+# its highest part, set in a little from the edge. On a roof's corner, not
+# its middle, where a rider stands and would have it lit at their feet.
+func _beacon_seat(parts: PackedFloat32Array) -> Vector3:
+	var best := Vector3.ZERO
+	var best_centre := Vector3.ZERO
+	var found := false
 	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 		var basis := Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9]))
 		var centre := Vector3(parts[p + 3], parts[p + 4], parts[p + 5])
@@ -3483,13 +3520,21 @@ func _top_centre(parts: PackedFloat32Array) -> Vector3:
 			var flip := Vector3(1.0 if corner & 1 else -1.0, 1.0 if corner & 2 else -1.0,
 				1.0 if corner & 4 else -1.0)
 			var at := centre + basis * (flip * Vector3(parts[p], parts[p + 1], parts[p + 2]))
-			low = low.min(at)
-			high = high.max(at)
-	if low == Vector3.INF:
+			# The first corner within a centimetre of the top wins: the same
+			# seat every run.
+			if not found or at.y > best.y + 0.01:
+				best = at
+				best_centre = centre
+				found = true
+	if not found:
 		return Vector3.ZERO
-	return Vector3((low.x + high.x) * 0.5, high.y, (low.z + high.z) * 0.5)
+	var inward := Vector2(best_centre.x - best.x, best_centre.z - best.z)
+	if inward.length() > 0.001:
+		inward = inward.normalized() * minf(0.15, inward.length() * 0.5)
+	return Vector3(best.x + inward.x, best.y, best.z + inward.y)
 
 
+# The corner of a body's parts farthest from its origin, in its own frame.
 func _farthest_corner(parts: PackedFloat32Array) -> Vector3:
 	var best := Vector3.ZERO
 	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
