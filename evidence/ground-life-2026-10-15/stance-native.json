@@ -1,0 +1,62 @@
+{
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-fPIC",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-stance-render-20261015/api.o"
+    ],
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_flow_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-stance-render-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-stance-render-20261015/stance-green"
+    ],
+    [
+      "/data/data/com.termux/files/usr/tmp/scraperx-stance-render-20261015/stance-green",
+      "--stance-interpolation-only"
+    ]
+  ],
+  "source_sha256": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "8914256450ffb9f85ebb77bbafd073784ecc4850fcff41e0f5a6f264dcff1ac3",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "8eb77122dfd4113f78ceea96e7035c07278396c69021b70af30ba4bd5e792365",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world.hpp": "fd58312f8aab3ae9ce1ee8ac20de5f2148064de1dbc383e8ae4df482695f21ac",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/constants.hpp": "63e7dff48276215ee45b41ac673c848d8d69a4654e8a9f8b31fe8aa6b702aa62",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_flow_tests.cpp": "aaa4437c10f764f3b0dc33e4d3fc65abdcabace5e1fafc28a2984c8f649148c2"
+  },
+  "base_archive_sha256": "e65ff141d441d344c0340f3276d8adcb62318712e06f72a7d65c68f790809c86",
+  "tested_archive_sha256": "3931f978f961f3e2f4de45afbd8f61ea8c70e6e616e809e5254156d5b5e66167",
+  "runtime_exit": 0
+}

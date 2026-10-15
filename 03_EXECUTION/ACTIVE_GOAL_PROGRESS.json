@@ -93,45 +93,64 @@
     ],
     "limits": "No complete suite, current-source render, new CI/APK or phone verification; kinematic frame and full energy closure remain outside this correction"
   },
-  "historical_execution_records": "evidence/state-refresh-2026-10-13/ACTIVE_GOAL_PROGRESS.json",
-  "execution_state": {
-    "objective": "Repair actual GitHub Actions defects in depth and deliver the full GREEN APK workflow",
-    "status": "receiver/foot fixes published; native velocity, held transfer target and onward Jump repairs accepted in affected paths",
-    "baseline_commit": "dc53244d99a833888f1004af1b74a392887b34d5",
-    "root_ownership": [
-      "src/sim/simulation.cpp",
-      "src/sim/simulation/",
-      "CMakeLists.txt",
-      "integration and documentation"
-    ],
-    "worker_results": [
-      "Main4920\u21922347, bodyequivalence56moved/60retained",
-      "UIdriver5564\u2192297,142bodies/66scenarios preserved"
-    ],
-    "next": "Publish coherent repair slices; finish actual hook hardware/ladder and West handoffs/catch rebound, then full GREEN delivery",
-    "full_canonical_scope_preserved": true,
-    "native_test_runner": "4365\u219222;12compiledsuites;fullrunnerPASS182.55s",
-    "native_acceptance": "14focusedcasesPASS;allmodulescompile",
-    "godot_acceptance": "import/keyboard/secondhandPASS;normal+fixturecollisionbyteidentical",
-    "ci_repair_authorization": "Owner2026-10-15 requires actual Actions failures repaired in depth, no flattening or weakened checks",
-    "baseline_failures": {
-      "run": 38733308608,
-      "passed": 71,
-      "failed": 21,
-      "total": 92
-    },
-    "refactor_commit": "74d9c9320c46148df03af9507c77605564eb1f12",
-    "refactor_candidate_run": 38748692757,
-    "receiver_foot_archive": "6a61594113b4e218c5d18b4452037a489e69091e21e68e7360417e0e91b15513",
-    "receiver_foot_checks": "8/8 focused executions PASS; 69 affordance checks; positive shared loads and finite expiry; independent review no findings",
-    "integrated_archive": "18cc2d81b7628927b2acbbf1997a417e670e1851a738d4f2270d00673b12bb0d",
-    "integrated_results": "force gate1.85e-6 linear PASS; drift/edge/restore PASS;28contact cases PASS; finitefoot unit/fullteeter PASS; onwardJump/single-step/frames PASS; laterWest reverseclimb unresolved",
-    "refactor_full_proof": {
-      "run": 38748693287,
-      "failed": 21,
-      "total": 92,
-      "new_failure_groups": 0
+  "historical_execution_records": [
+    {
+      "objective": "Repair actual GitHub Actions defects in depth and deliver the full GREEN APK workflow",
+      "status": "receiver/foot fixes published; native velocity, held transfer target and onward Jump repairs accepted in affected paths",
+      "baseline_commit": "dc53244d99a833888f1004af1b74a392887b34d5",
+      "root_ownership": [
+        "src/sim/simulation.cpp",
+        "src/sim/simulation/",
+        "CMakeLists.txt",
+        "integration and documentation"
+      ],
+      "worker_results": [
+        "Main4920\u21922347, bodyequivalence56moved/60retained",
+        "UIdriver5564\u2192297,142bodies/66scenarios preserved"
+      ],
+      "next": "Publish coherent repair slices; finish actual hook hardware/ladder and West handoffs/catch rebound, then full GREEN delivery",
+      "full_canonical_scope_preserved": true,
+      "native_test_runner": "4365\u219222;12compiledsuites;fullrunnerPASS182.55s",
+      "native_acceptance": "14focusedcasesPASS;allmodulescompile",
+      "godot_acceptance": "import/keyboard/secondhandPASS;normal+fixturecollisionbyteidentical",
+      "ci_repair_authorization": "Owner2026-10-15 requires actual Actions failures repaired in depth, no flattening or weakened checks",
+      "baseline_failures": {
+        "run": 38733308608,
+        "passed": 71,
+        "failed": 21,
+        "total": 92
+      },
+      "refactor_commit": "74d9c9320c46148df03af9507c77605564eb1f12",
+      "refactor_candidate_run": 38748692757,
+      "receiver_foot_archive": "6a61594113b4e218c5d18b4452037a489e69091e21e68e7360417e0e91b15513",
+      "receiver_foot_checks": "8/8 focused executions PASS; 69 affordance checks; positive shared loads and finite expiry; independent review no findings",
+      "integrated_archive": "18cc2d81b7628927b2acbbf1997a417e670e1851a738d4f2270d00673b12bb0d",
+      "integrated_results": "force gate1.85e-6 linear PASS; drift/edge/restore PASS;28contact cases PASS; finitefoot unit/fullteeter PASS; onwardJump/single-step/frames PASS; laterWest reverseclimb unresolved",
+      "refactor_full_proof": {
+        "run": 38748693287,
+        "failed": 21,
+        "total": 92,
+        "new_failure_groups": 0
+      }
     }
+  ],
+  "execution_state": {
+    "objective": "Make the ground a coherent lived-in industrial place and improve movement fluidity from actual device feedback",
+    "status": "First receiving-yard and native stance slice implemented; focused native/audio acceptance passed; exact-source APK build next",
+    "published_head_before_slice": "e6553ccc1fbe918495b49833f958193e2d99fb0e",
+    "root_ownership": [
+      "ground_yard.gd",
+      "main.gd integration",
+      "world_solids.inc",
+      "CMake",
+      "publication"
+    ],
+    "next": "Publish isolated yard/stance slice and follow candidate to artifact; retain all deferred physics and broader device-feel scope",
+    "no_more_wheels": true,
+    "acceptance": "evidence/ground-life-2026-10-15/ACCEPTANCE.md",
+    "full_canonical_scope_preserved": true,
+    "deferred_hook": "hinge40 identical trace; actual control effect unresolved, no gameplay PASS; dirty gate remains unshipped",
+    "device_feel": "Unverified for this slice; owner prior APK feedback is the target"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

@@ -672,3 +672,22 @@ Downstream work must use those atlas facts rather than author a second tower.
 > **ScraperX is a kinetic first-person industrial ascent through one enormous persistent skyscraper: move like an athlete, understand and operate life-size machinery, physically change structure and systems, survive height and consequence, exploit the resulting causal chains, and reach the summit.**
 
 Every major addition should make that statement more physically true.
+
+
+### Ground receiving yard — player-feedback slice, 2026-10-15
+
+The production ground area includes an open repair bay, usable sheltered aisle,
+workbenches and organized receiving stock on both sides of the clear central
+approach. Its posts, roof, wall sheets, timber and steel are exported through
+`solid_export.gd` into native static collision. Paint, lamp lenses, flexible
+pennants and airborne dust provide surface detail and atmosphere without
+becoming rigid supports. Two spatial environmental air textures distinguish the
+sheltered bay and exposed stores; they obey the existing Ambience/Master controls
+and fade out with distance and altitude. They do not impersonate machine events.
+No additional wheel encounter is part of this slice.
+
+Crouch and stand preserve ongoing horizontal and machine render interpolation.
+Only the prior player center's capsule-height offset is rebased on stance change;
+death still resets all histories. Native movement forces and solved poses retain
+their existing authority. This resolves a demonstrated stance hitch, while the
+owner's broader fluidity and atmosphere feedback remains a device-play target.

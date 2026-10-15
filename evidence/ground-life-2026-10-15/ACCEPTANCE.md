@@ -1,0 +1,11 @@
+# Ground environment and stance fluidity — 2026-10-15
+
+Owner device feedback takes priority: ground is empty/eerie and movement lacks fluidity. Existing wheels are accepted; no further wheel work.
+
+Implemented one production receiving yard: open repair shed and benches, organized steel/timber stock, task lamps, worn paint and shared seeded weathered albedo, flexible pennants and culled dust. Its 84 tangible additions are exported as native static boxes; cloth/paint/air remain presentation. Regression fixtures are unchanged. Two spatial authored environmental air textures use the existing Ambience bus, distance/height culling, mute and lifecycle cleanup. They do not substitute for physical machine feedback or human characters.
+
+Native yard acceptance passed actual walking through the open front, collision against the back sheet, a falling-player landing with positive observed impulse on stored steel and stable footing, and a clear 20-meter central walk. Native stance regression was RED before the fix and GREEN after: crouch/stand preserve X/Z interpolation while rebasing only the capsule center-height offset. Death retains full history reset. Receipt JSONs include commands/source hashes and distinguish the private expanded-Snapshot archive from published source.
+
+Sol/medium audio worker ran Godot 4.7 normal headless lifecycle and actual Movie Maker mixing. Reported shed peak 0.15511, salvage peak 0.12245, mute peak 0.00000; distinct loops, seam, distance/height culling and cleanup passed. Root inspected the implementation and meaningful assertions, without repeating its matching check. Reproduce: `godot --audio-driver Dummy --write-movie <path.avi> --fixed-fps 60 --script res://tests/yard_ambience_test.gd` in an imported project. Termux uses proot Ubuntu and softpipe; llvmpipe's signal4 is environmental.
+
+Normal static export completed without parse errors: 1400 boxes/666 hulls, no unknown parts. Root viewed isolated shed captures; the first flat material pass was revised. Full-scene software rendering was stopped as too slow and is not runtime/feel proof. No phone play or full-green claim. Broader movement fluidity and a fully inhabited environment remain unfinished; this is the first visible slice. Preserve deferred grappling/catch/route failures and dirty gate hardware.

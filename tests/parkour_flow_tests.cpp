@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string_view>
 
 namespace {
 
@@ -97,6 +98,45 @@ void rendered_pose_fills_between_fixed_ticks() {
             "display pose is halfway between authoritative positions");
     require(std::abs(run.snapshot().player_position.x - after.x) < 1.0e-8,
             "render interpolation does not move native physics");
+}
+
+void stance_changes_preserve_render_motion() {
+    using namespace scraperx::sim;
+    Simulation run(InitialSpawn::StaticDeck, WorldContent::RegressionFixtures);
+    require(run.advance_frame(1.0).accepted && run.snapshot().player_grounded,
+            "stance interpolation fixture settles on the deck");
+    require(run.set_move_input(1.0, 0.5), "stance interpolation movement accepted");
+    require(run.advance_frame(Simulation::kFixedStepSeconds * 10).accepted,
+            "stance interpolation player gains motion");
+    for (const bool crouch : {true, false}) {
+        const auto before = run.snapshot();
+        require(run.set_crouch_input(crouch), "stance input accepted");
+        const auto result = run.advance_frame(Simulation::kFixedStepSeconds);
+        const auto after = run.snapshot();
+        require(result.accepted && result.steps_advanced == 1 &&
+                    after.player_crouched == crouch && after.death_count == before.death_count,
+                "requested stance changes on one live physics tick");
+        require(after.player_position.x > before.player_position.x &&
+                    after.player_position.z > before.player_position.z,
+                "player moves in both horizontal axes during stance change");
+        require(run.advance_frame(Simulation::kFixedStepSeconds * 0.5).steps_advanced == 0,
+                "stance pose sampled halfway without another physics tick");
+        const auto rendered = run.render_player_position();
+        require(std::abs(rendered.x - (before.player_position.x + after.player_position.x) * 0.5) < 1e-5 &&
+                    std::abs(rendered.z - (before.player_position.z + after.player_position.z) * 0.5) < 1e-5,
+                "stance change retains horizontal render interpolation");
+        // Authored capsule half heights are 0.9m standing and 0.6m crouched.
+        // Rebase the prior centre to the new shape while retaining real vertical motion.
+        const double previous_half_height = before.player_crouched ? 0.6 : 0.9;
+        const double current_half_height = crouch ? 0.6 : 0.9;
+        const double expected_soles = ((before.player_position.y - previous_half_height) +
+                                      (after.player_position.y - current_half_height)) * 0.5;
+        require(std::abs(rendered.y - current_half_height - expected_soles) < 1e-5,
+                "stance change interpolates soles without blending capsule resize");
+        require(run.advance_frame(Simulation::kFixedStepSeconds * 0.5).accepted,
+                "finish fractional stance sample before next transition");
+    }
+    std::cout << "PASS stance render interpolation\n";
 }
 
 double horizontal_speed(const scraperx::sim::Snapshot &s) {
@@ -610,7 +650,11 @@ void sprint_keeps_jump_momentum() {
 
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "--stance-interpolation-only") {
+        stance_changes_preserve_render_motion();
+        return EXIT_SUCCESS;
+    }
     ordinary_jump_intent_uses_native_contact_and_clock();
     ordinary_tower_walk_uses_finite_contact_work();
     airborne_work_uses_world_momentum();
@@ -618,6 +662,7 @@ int main() {
     neutral_airborne_input_preserves_horizontal_momentum();
     sprint_keeps_jump_momentum();
     rendered_pose_fills_between_fixed_ticks();
+    stance_changes_preserve_render_motion();
     std::cout << "PASS scraperx_sim parkour flow\n";
     return EXIT_SUCCESS;
 }

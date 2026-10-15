@@ -36,6 +36,7 @@ const MOVING := [
 # a native surface (a solid lip there would snag every step), light glow,
 # cloth, rope and cable, low scrub, water, sky.
 const NON_SOLID := [
+	"YardPaint", "YardLens", "YardPennant",
 	# Passive slack cable and paint have no rigid-body obstruction.
 	"SaggingServiceCable", "HazardSlash", "RustyValveWheel",
 	"DeckPlank", "DeckStreak", "Tread", "SkinRungPlate", "LaneStripe",
@@ -257,6 +258,7 @@ static func _f(value: float) -> String:
 
 
 const SOLID := [
+	"YardStructure", "YardStock",
 	# AS-025: rigid service fixtures remain tangible in the normal tower.
 	"InteriorProcessRiser", "InteriorReturnLine", "RiserCoupling", "RiserBracket",
 	"ServiceCatwalkGrate", "CatwalkGrateBar", "CagedServiceLamp", "LampGuard",

@@ -1,0 +1,68 @@
+{
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-fPIC",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world_geometry.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/world_geometry.o"
+    ],
+    [
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/world_geometry.o"
+    ],
+    [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/ground_yard_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/ground-yard-tests"
+    ],
+    [
+      "/data/data/com.termux/files/usr/tmp/scraperx-yard-native-20261015/ground-yard-tests"
+    ]
+  ],
+  "source_sha256": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/ground_yard_tests.cpp": "520e0d77bd0ac845cef4319c16fec942f3425fc9db44c5925897d5f999529170",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/world_solids.inc": "8dd898df6e3671031ce8db4e56d9a6da4aec4fef2d9b9cc7de832df2581de6e9",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world_geometry.cpp": "304ffcc57f0e977382c7acea99bb8c8c59348fec2d02dd01b3a16177e6ab38e2",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "8eb77122dfd4113f78ceea96e7035c07278396c69021b70af30ba4bd5e792365",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world.hpp": "fd58312f8aab3ae9ce1ee8ac20de5f2148064de1dbc383e8ae4df482695f21ac"
+  },
+  "base_archive_sha256": "3931f978f961f3e2f4de45afbd8f61ea8c70e6e616e809e5254156d5b5e66167",
+  "tested_archive_sha256": "8dd87e44d27011e7feac95881121317032eb29e8fe1e4b094007b6fa693e7fdb",
+  "jolt_sha256": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b",
+  "runtime_exit": 0
+}

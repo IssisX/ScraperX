@@ -12,6 +12,10 @@ const AlpineWorldBuilder := preload("res://presentation/alpine_world_builder.gd"
 var _geometry: WorldGeometry
 var _stack_world: StackWorldBuilder
 var _alpine_world: AlpineWorldBuilder
+const GroundYard := preload("res://presentation/ground_yard.gd")
+var _ground_yard: GroundYard
+const YardAmbience := preload("res://presentation/audio/yard_ambience.gd")
+var _yard_ambience: Node3D
 
 const WorksiteMachineView := preload("res://presentation/worksite_machine_view.gd")
 var _machine_view: WorksiteMachineView
@@ -308,6 +312,10 @@ func _ready() -> void:
 	_audio.regression_machines = _regression_scene
 	_audio.sky = _sky_cycle
 	add_child(_audio)
+	if not _regression_scene:
+		_yard_ambience = YardAmbience.new()
+		_yard_ambience.name = "ReceivingYardAmbience"
+		add_child(_yard_ambience)
 	_build_arms()
 	_build_interface()
 	_layout_hud()
@@ -1847,6 +1855,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var crouched := bool(_native.is_player_crouched())
 
 	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
+	if _ground_yard != null and _sky_cycle != null:
+		_ground_yard.update(position, delta, not _head_bob_on, _sky_cycle.hour)
+	if _yard_ambience != null:
+		_yard_ambience.update(delta, position)
 	if delta > 0.0:
 		var ladder := int(_native.get_kit_body_index(2960))
 		if ladder >= 0:
@@ -2151,6 +2163,9 @@ func _build_world() -> void:
 		_machine_view.build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
 	else:
 		_stack_world.build_continuation(oxidised, rust_deep, mill_scale, galvanised, faded_yellow)
+	if not _regression_scene:
+		_ground_yard = GroundYard.new(_geometry)
+		_ground_yard.build()
 	_alpine_world.build_backdrop()
 	_build_kellerworks_signage(timber, faded_yellow)
 	if _regression_scene:

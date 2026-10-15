@@ -180,6 +180,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
 
+    add_executable(scraperx_ground_yard_tests tests/ground_yard_tests.cpp)
+    target_link_libraries(scraperx_ground_yard_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.ground_yard COMMAND scraperx_ground_yard_tests)
+
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)
     target_link_libraries(scraperx_grappling_gun_tests PRIVATE scraperx_sim)

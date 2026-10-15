@@ -638,9 +638,12 @@ void Simulation::step_fixed() noexcept {
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
-    if (snapshot_.death_count != previous_death_count ||
-        snapshot_.player_crouched != previous_crouched) {
+    if (snapshot_.death_count != previous_death_count) {
         capture_render_history();
+    } else if (snapshot_.player_crouched != previous_crouched) {
+        // Capsule resizing shifts its centre while preserving the soles. Rebase
+        // only that shape offset so motion and unrelated render histories survive.
+        previous_player_position_.y += snapshot_.player_crouched ? -kCrouchDrop : kCrouchDrop;
     }
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds =
