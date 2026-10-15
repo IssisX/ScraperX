@@ -4,9 +4,12 @@ extends Node3D
 ## above it, it lies below like a floor with the yard showing through.
 ##
 ## Presentation only. CLUSTERS clouds of LOBES soft, lit quads each (PUFFS in
-## all, one MultiMesh), scattered in an annulus round the tower (kept CLEAR_M clear of its axis so no puff cuts the
-## structure) between LAYER_LOW and LAYER_HIGH, each turned to face the camera
-## and drifting slowly with the wind, wrapping round the annulus. A puff fades
+## all, one MultiMesh), scattered in an annulus round the tower (kept CLEAR_M
+## clear of its axis so no puff cuts the structure) between LAYER_LOW and
+## LAYER_HIGH, drifting slowly with the wind, wrapping round the annulus. Each
+## is drawn square to the screen by its shader, whichever way the eye looks
+## (straight up included), and is clear at and beyond its edge whatever its
+## noise reads, so no quad ever shows as a band across the sky. A puff fades
 ## out as the eye comes into it, never a hard plane through the view.
 
 const CLUSTERS := 42
@@ -70,8 +73,9 @@ func _process(delta: float) -> void:
 		_update(delta, camera.global_position)
 
 
-# Once per rendered frame: drift, wrap, and face the eye.
-func _update(delta: float, eye: Vector3) -> void:
+# Once per rendered frame: drift and wrap. The shader faces each puff to the
+# screen.
+func _update(delta: float, _eye: Vector3) -> void:
 	for i in PUFFS:
 		var p := _at[i] + Vector3(WIND.x, 0.0, WIND.y) * delta
 		var flat := Vector2(p.x, p.z) - CENTER
@@ -82,11 +86,8 @@ func _update(delta: float, eye: Vector3) -> void:
 			flat = flat.normalized() * CLEAR_M
 		p = Vector3(CENTER.x + flat.x, p.y, CENTER.y + flat.y)
 		_at[i] = p
-		var to_eye := eye - p
-		var facing := Basis.looking_at(-to_eye.normalized() if to_eye.length() > 0.01 else Vector3.FORWARD,
-			Vector3.UP)
 		var size := _size[i]
-		_mm.set_instance_transform(i, Transform3D(facing.scaled(Vector3(size, size, size)), p))
+		_mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(size, size, size)), p))
 		_mm.set_instance_custom_data(i, Color(_shade[i], size, 0.0, 0.0))
 
 
@@ -112,11 +113,22 @@ varying float near_fade;
 void vertex() {
 	shade = INSTANCE_CUSTOM.r;
 	float size = INSTANCE_CUSTOM.g;
-	vec3 centre = (MODELVIEW_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+	// Square to the screen: the camera's own axes, at the puff's place.
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * size, INV_VIEW_MATRIX[1] * size,
+		INV_VIEW_MATRIX[2] * size, MODEL_MATRIX[3]);
+	MODELVIEW_NORMAL_MATRIX = mat3(VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1],
+		INV_VIEW_MATRIX[2], vec4(0.0, 0.0, 0.0, 1.0)));
+	vec3 centre = MODELVIEW_MATRIX[3].xyz;
 	// Fade out as the eye comes within the puff, so it never cuts the view.
 	near_fade = smoothstep(size * 0.25, size * 0.7, length(centre));
 }
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// No sin(): at a phone's float precision sin of a large number is noise of its
+// own, and the puffs came out as flat sheets.
+float hash(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * 0.1031);
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.x + q.y) * q.z);
+}
 float noise(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);
@@ -141,6 +153,8 @@ void fragment() {
 	body *= body;
 	float n = fbm(UV * 3.2 + shade * 23.0);
 	float a = clamp(body * 1.6 + (n - 0.55) * 1.1 - 0.12, 0.0, 1.0);
+	// Clear at the edge and past it, whatever the noise reads.
+	a *= 1.0 - smoothstep(0.78, 0.98, r);
 	// A flat, shaded base and a sunlit top, as cumulus have.
 	float base = mix(1.0, 0.72, smoothstep(0.35, 1.0, UV.y));
 	ALBEDO = vec3(0.94, 0.95, 0.97) * shade * base;

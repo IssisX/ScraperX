@@ -48,8 +48,10 @@ void fragment() {
 	// Tar-sealed cracks along the cells' edges where the surface has
 	// broken up (the worn ground, not everywhere), and oil soaked into it.
 	float crack = (1.0 - smoothstep(0.0, 0.04, edge)) * smoothstep(0.5, 0.7, big * 0.55 + mid * 0.45);
-	float stain = smoothstep(0.80, 0.86, texture(patches, p * 0.05 + vec2(0.71, 0.29)).r);
-	colour = mix(colour, vec3(0.025, 0.024, 0.022), max(crack * 0.85, stain * 0.6));
+	// Stains a metre or two across, soft-edged, where a vehicle stood: not
+	// puddles of black (they were 5-10 m, hard-edged, and read as holes).
+	float stain = smoothstep(0.78, 0.9, texture(patches, p * 0.17 + vec2(0.71, 0.29)).r);
+	colour = mix(colour, vec3(0.025, 0.024, 0.022), max(crack * 0.85, stain * 0.42));
 	ALBEDO = colour;
 	ROUGHNESS = clamp(mix(0.62, 0.9, wear) - 0.25 * max(crack, stain), 0.2, 1.0);
 	SPECULAR = 0.35;

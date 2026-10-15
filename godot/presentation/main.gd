@@ -2644,8 +2644,9 @@ func _build_mountains_and_waterfall() -> void:
 	for index in near_peaks.size():
 		var base: Vector3 = near_peaks[index]
 		var peak_height: float = near_sizes[index]
-		var radius := peak_height * 0.62
-		_add_peak("MountainPeak", radius, peak_height, base, rock, Color("5a6067"), index)
+		var radius := peak_height * MountainMesh.ASPECT
+		_add_peak("MountainPeak", radius, peak_height, base, rock, Color("5a6067"), index,
+			0.56 + 0.03 * float(index % 3))
 		_add_cone("MountainSnowCap", radius * 0.34, peak_height * 0.3,
 			base + Vector3(0.0, peak_height * 0.92, 0.0), snow).visible = false
 
@@ -2656,8 +2657,8 @@ func _build_mountains_and_waterfall() -> void:
 	for index in far_peaks.size():
 		var base: Vector3 = far_peaks[index]
 		var peak_height := 900.0
-		var radius := peak_height * 0.7
-		_add_peak("MountainRidgeFar", radius, peak_height, base, rock_far, Color("68707a"), index + 3)
+		var radius := peak_height * MountainMesh.ASPECT
+		_add_peak("MountainRidgeFar", radius, peak_height, base, rock_far, Color("68707a"), index + 3, 0.52)
 		_add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
 			base + Vector3(0.0, peak_height * 0.9, 0.0), snow).visible = false
 
@@ -2703,10 +2704,10 @@ func _build_basin() -> void:
 		var angle := TAU * float(index) / float(BASIN_RIM_RIDGES) + rng.randf_range(-0.01, 0.01)
 		var reach := BASIN_RIM_RADIUS + rng.randf_range(-15.0, 15.0)
 		var height := rng.randf_range(280.0, 470.0)
-		var radius := height * 0.62
+		var radius := height * MountainMesh.ASPECT
 		var base := BASIN_CENTER + Vector3(sin(angle) * reach, 0.0, cos(angle) * reach)
 		_add_peak("RimRidge", radius, height, base, rock if index % 3 != 0 else rock_warm,
-			Color("5d636a") if index % 3 != 0 else Color("67615a"), index, height > 400.0)
+			Color("5d636a") if index % 3 != 0 else Color("67615a"), index, 0.7 if height > 400.0 else 0.0)
 		if height > 400.0:
 			_add_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
 				base + Vector3(0.0, height * 0.93, 0.0), snow).visible = false
@@ -2721,10 +2722,11 @@ func _build_basin() -> void:
 		var angle := TAU * (float(index) + back.randf_range(-0.3, 0.3)) / float(BACK_RANGE_PEAKS)
 		var reach := back.randf_range(1900.0, 2400.0)
 		var height := back.randf_range(680.0, 1100.0)
-		var radius := minf(height * back.randf_range(0.55, 0.8), reach - BACK_RANGE_CLEAR_M)
+		var radius := minf(height * MountainMesh.ASPECT, reach - BACK_RANGE_CLEAR_M)
 		_peaks.append({"foot": BASIN_CENTER + Vector3(sin(angle) * reach, VALLEY_FLOOR_TOP - 2.0,
 			cos(angle) * reach), "radius": radius, "height": height, "variant": index + 11,
-			"rock": Color("56606e") if index % 2 == 0 else Color("5c5f68"), "snowy": height > 1020.0})
+			"rock": Color("56606e") if index % 2 == 0 else Color("5c5f68"),
+			"snowline": 0.5 + 0.12 * fposmod(float(index) * 0.618, 1.0) if height > 820.0 else 0.0})
 
 	# Conifers scattered over the meadow, clear of the yard and the tower.
 	var placed := 0
@@ -2944,18 +2946,18 @@ func _add_chevron_mark(at: Vector3, scale: float, accent: Material) -> void:
 
 
 # A mountain: its solid cone (what the world collides with, read by
-# solid_export.gd) kept in the scene but hidden, and a carved peak drawn on
-# the same foot, never standing proud of the cone (mountain_mesh.gd; drawn
-# all at once by _build_mountains_and_waterfall). A peak too low for snow is
-# drawn bare.
+# solid_export.gd) kept in the scene but hidden, and a peak drawn on the same
+# foot, carved down from the cone and never above it (mountain_mesh.gd; drawn
+# all at once by _build_mountains_and_waterfall). Snow lies above
+# `snowline`, a fraction of the height; 0 draws the peak bare.
 var _peaks: Array = []
 
 
 func _add_peak(node_name: String, radius: float, height: float, foot: Vector3, cone_material: Material,
-		rock: Color, variant: int, snowy := true) -> void:
+		rock: Color, variant: int, snowline: float) -> void:
 	_add_cone(node_name, radius, height, foot + Vector3(0.0, height * 0.5, 0.0), cone_material).visible = false
 	_peaks.append({"foot": foot, "radius": radius, "height": height, "variant": variant, "rock": rock,
-		"snowy": snowy})
+		"snowline": snowline})
 
 
 func _add_cone(node_name: String, radius: float, height: float, at: Vector3, material: Material,

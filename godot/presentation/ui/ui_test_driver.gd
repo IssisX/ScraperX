@@ -822,6 +822,12 @@ func _touch_workers() -> bool:
 		return _fail("walking at the foreman never made him step aside")
 	await _seconds(0.6)
 	await _pose("workers_aside")
+	if not _capture_prefix.is_empty():
+		for look in [["sky_up", 0.0, 1.05], ["sky_up_east", 1.2, 0.9], ["sky_up_west", -1.4, 1.2]]:
+			_main._yaw = float(look[1])
+			_main._pitch = float(look[2])
+			await _seconds(0.4)
+			await _pose(look[0])
 	await _seconds(1.5)
 	var counts: Dictionary = _native().get_worker_counts()
 	if int(counts["stumbles"]) != 0:

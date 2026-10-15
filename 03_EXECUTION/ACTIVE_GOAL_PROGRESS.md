@@ -544,6 +544,45 @@ yard's solids (below) failed O: its rope read no tension for one tick, the cab f
   horizon line, the west block to the left.
 - **Not observed:** the phone; any of it climbed (no scenario climbs the containers).
 
+**The first sight: mountains that read as mountains (Godot, task 93).** From the start the basin's
+peaks read as pale, near-identical cones.
+- **Why.** Their shader added its own distance haze on top of the scene's fog, so the rim, about
+  1 km out, was some 44% haze where the fog alone gives 20%. And every carved peak kept its cone's
+  outline: the carving cut gullies but never the silhouette.
+- **Now** (`mountain_mesh.gd`). Each peak is a height field carved down from its cone, never above
+  it.
+  - The top is a crest that rises and dips to a summit and lesser tops; gullies cut the flanks;
+    rock bands step the faces.
+  - The lowest 12% of each peak, the part a walker can reach, is the cone itself, so the rock seen
+    there is the rock that stops them. Checked over every vertex of all eight variants: none
+    above its cone, and the foot exactly on it.
+  - Colour comes from height and slope: scrub low down where it is not too steep, rock in bands,
+    scree on benches, snow above each peak's snowline (lower in gullies) only where it can lie.
+  - The fog is the only haze. Peaks scale uniformly, so the lighting's normals are true. The four
+    far cones in the basin now share the 0.62 width-to-height ratio, so their drawn feet are their
+    solid feet (`world_solids.inc`: four cones narrower).
+- **The yard's oil stains** were 5–10 m hard-edged black blobs that read as holes. They are now a
+  metre or two across, soft-edged and lighter.
+- **Rendered (local, 540×464).** `touch_workers` from the start: dark ridged rock with snow on the
+  higher tops, scrub at the feet, the back range layered paler behind. `touch_title`: ridged slopes
+  behind the tower.
+- **Not observed:** sunrise, night, the phone.
+
+**The clouds, looking up (Godot; the owner's report from the phone).** Looking up from the ground,
+the owner saw pine-tree shapes inside the clouds and the sky sheared into straight-edged bands.
+- **Not reproduced here.** The owner had graphics near LOW. The desktop renderer is clean at
+  HIGH and at LOW (0.75 scale, no MSAA, no bloom), by day and at dusk, with the old clouds and
+  the old mountains as on the phone. The dusk peaks there are the flat brown cones in the owner's
+  shot, so the build and the hour match; the bands and the trees do not appear. They belong to
+  the phone's GPU. `touch_workers` now also captures three views straight up.
+- **Fixed what can make flat bands on any GPU.**
+  - The puffs' noise hashed with `sin()` of large numbers, which a phone's float precision turns
+    into noise of its own.
+  - Their alpha was not forced to zero outside the puff, so bad noise showed the whole quad.
+  - Each puff was turned toward the eye on the CPU every frame. The shader now squares each puff
+    to the screen from the camera's own axes.
+- **Not yet known:** whether the tree shapes are gone. They need a look on the phone.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 
