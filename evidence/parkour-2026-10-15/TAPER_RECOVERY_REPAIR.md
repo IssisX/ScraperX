@@ -1,0 +1,7 @@
+# Grounded reversal releases passive outgoing plant
+
+One matched observation proved the new trailing foot plant causes the taper recovery failure: deliberate return input opposes outward support-relative motion, passive compression starts changing body state1755, actual contact is lost1761, and unintended hanging follows1814. Suppressing only post1597 acquisition permits the unchanged physical step1768/firstwalk1846. Detailed frames/receipts: TAPER_RECOVERY_CAUSE.md.
+
+Root changed only native parkour_intent.cpp: while still on the same fresh grounded contact, deliberate horizontal braking releases a passive TrailingPlant; the same predicate prevents immediate reacquisition. Neutral input, airborne retained real plants and already commanded CoyotePush remain unchanged. No force/stiffness/work/geometry/catch/driver gates changed.
+
+Strict source-v3 compile/link PASS; unchanged native headers/all other objects and both bridge objects reused correctly. Archive2047ba4fae525ebcba4315091b9471dd4f0cb79097384c834c254a7f5b9eb7fd; SOc5cfefc9403c5580a4c52ec88166beb24a6d40910d966d26dfde8238f97c3b8e. Existing persistent coyote-window trial31PASS. Original public taper middle58.81s and upper63.50s now PASS, plus original intentall36.47s and bufferall65.39s. Actual durations/commands/log hashes in TAPER_RECOVERY_REPAIR.json take precedence over rounded prose. Previously completed North/cargo/render checks were not repeated. CI runs complete exact-source suite after publication; no fullGREEN/device claim.

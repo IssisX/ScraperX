@@ -3,6 +3,14 @@
 namespace scraperx::sim {
 using namespace detail;
 
+namespace {
+bool braking_horizontal_motion(double move_x, double move_z,
+                               JPH::Vec3Arg relative) noexcept {
+    return std::hypot(move_x, move_z) > .001 &&
+        move_x * relative.GetX() + move_z * relative.GetZ() < 0;
+}
+} // namespace
+
 void Simulation::PhysicsWorld::prepare_trailing_plant(const StepCommands &commands) noexcept {
     const bool trailing = foot_push_purpose_ == FootPushPurpose::TrailingPlant;
     const bool commanded = foot_push_purpose_ == FootPushPurpose::CoyotePush;
@@ -24,7 +32,21 @@ void Simulation::PhysicsWorld::prepare_trailing_plant(const StepCommands &comman
         contact_solve_serial_ - trailing_foot_contact_tick_ > kCoyotePlantIntentTicks;
     const bool ordinary_jump = grounded_ &&
         (commands.jump_requested || ordinary_jump_ticks_left_ > 0);
-    if (cancelled || (trailing && (expired || ordinary_jump || (grounded_ && !same_contact)))) {
+    bool returning_on_contact = false;
+    if (trailing && grounded_ && same_contact) {
+        const auto &bodies = physics_system_.GetBodyInterface();
+        const auto anchor = from_support_local(bodies, foot_contact_.body, foot_contact_.local_point);
+        const auto relative = bodies.GetLinearVelocity(player_id_) -
+            support_point_velocity(bodies, foot_contact_.body, anchor);
+        returning_on_contact = braking_horizontal_motion(
+            commands.move_input_x, commands.move_input_z, relative);
+    }
+    // A trailing plant preserves an outgoing step. During deliberate return
+    // input its compression can instead lift the capsule off a rounded edge
+    // before ordinary traction/stepping recovers. Release only this passive
+    // grounded topology; neutral/airborne plants and commanded pushes remain.
+    if (cancelled || (trailing && (expired || ordinary_jump || returning_on_contact ||
+                                  (grounded_ && !same_contact)))) {
         physical_foot_push_->clear();
         foot_push_purpose_ = FootPushPurpose::None;
     }
@@ -48,7 +70,9 @@ void Simulation::PhysicsWorld::retain_trailing_plant(const StepCommands &command
     const JPH::Vec3 horizontal(delta.GetX(), 0, delta.GetZ());
     const auto relative = bodies.GetLinearVelocity(player_id_) -
         support_point_velocity(bodies, foot_contact_.body, anchor);
-    if (horizontal.Dot(relative) <= 0 || footing_is_firm(bodies) ||
+    if (horizontal.Dot(relative) <= 0 ||
+        braking_horizontal_motion(commands.move_input_x, commands.move_input_z, relative) ||
+        footing_is_firm(bodies) ||
         delta.GetY() < kPlayerHalfHeight - kPlayerRadius - kStandClearanceSkin ||
         delta.GetY() > kPlayerHalfHeight + kStandClearanceSkin) return;
     {
