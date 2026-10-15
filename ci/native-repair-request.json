@@ -1,6 +1,6 @@
 {
-  "reason": "Test deliberate stair abandonment using public Drop to decline the legitimate x86 rescue; original lethal impact, restore and onward exit assertions remain intact. Other owners unchanged; no repeat of their accepted/failure captures.",
+  "reason": "Capture the first x86 forklift tread/second-riser transition that diverges from the accepted AArch64 control. Read-only native contact/sweep/pending-step observations, ordinary public walk, stops at first unintended traversal or real operator footing. No gameplay repair inferred from roof hang alone.",
   "checks": [
-    "swing_stair_route_2"
+    "forklift_boarding_diagnostic"
   ]
 }
