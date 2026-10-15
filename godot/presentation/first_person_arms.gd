@@ -124,6 +124,8 @@ var _remote: Node3D
 var _remote_buttons := {}
 var _remote_led: MeshInstance3D
 var _risers: Array[MeshInstance3D] = []
+# Where each riser meets the canopy's lines (canopy_view.gd), per hand.
+var riser_tops: Array = [Vector3.ZERO, Vector3.ZERO]
 var _grip_forward := Vector3.FORWARD
 var _last_traversal := 0
 var _clock := 0.0
@@ -698,8 +700,8 @@ func _pose_fingers(hand: Hand) -> void:
 	(hand.thumb[1] as Node3D).rotation = Vector3(-0.7 * hand.thumb_curl, 0.0, 0.0)
 
 
-# Canopy risers from each toggle up and out of frame; the canopy itself is
-# above the view, where a real one would be.
+# Canopy risers from each toggle up to where the canopy's lines fan out from
+# them (canopy_view.gd draws the lines and the canopy).
 func _update_risers(show: bool) -> void:
 	for i in _risers.size():
 		var line := _risers[i]
@@ -709,9 +711,10 @@ func _update_risers(show: bool) -> void:
 		var fist := _hands[i].root.global_transform * Vector3(0.0, 0.07, 0.0)
 		var outward := _hands[i].root.global_position - _hands[1 - i].root.global_position
 		outward.y = 0.0
-		var top := fist + Vector3.UP * 2.6
+		var top := fist + Vector3.UP * 1.5
 		if outward.length_squared() > 1.0e-6:
-			top += outward.normalized() * 0.35
+			top += outward.normalized() * 0.3
+		riser_tops[i] = top
 		var span := top - fist
 		var basis := _basis_from_y(span, Vector3.RIGHT)
 		line.global_transform = Transform3D(Basis(basis.x, basis.y * span.length(), basis.z),

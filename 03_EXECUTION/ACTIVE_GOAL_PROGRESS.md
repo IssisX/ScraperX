@@ -641,6 +641,30 @@ say why. Both archive designs are in the source (`src/sim/vertical/`) and unplac
 - **Still open (item 13):** cues for moves beyond walking to the first machine. Touch already
   labels MOVE, DRAG TO LOOK and each button's verb.
 
+**The slingshot's launch shot, and a canopy you can see (Godot; the owner's 1A).** The owner
+remembered a slow-motion 360° launch. It was the ChatGPT branch's (`launch_cinematic.gd`); this
+branch never had one. The owner's notes on it: it looked scripted, as if the sling were not what
+threw the rider, and its slow motion ran too long and slowed the push itself.
+- **The shot** (`launch_shot.gd`).
+  - The push plays at full speed and in the rider's own eyes.
+  - The shot starts on the tick the pouch lets the rider go (the native's `flight`), when the
+    bands have done all their work.
+  - Time then eases to 0.3× in 0.12 s and holds to 0.55 s. Meanwhile the view turns back to see
+    the bands and the yard below, then forward to the tower, and all is normal by 1.2 s.
+  - Slow time is fewer native ticks per second and nothing else, so the flight is the flight it
+    would have been. The mix slows with it.
+  - REDUCED MOTION keeps the slow time but not the turn.
+- **The canopy** (`canopy_view.gd`). A chute showed only two risers running out of frame. Now a
+  ram-air canopy of eleven cells, orange and cream, flies 4.4 m overhead on lines fanned from
+  the risers in the fists. It fills from its bag in 0.7 s, and its trailing edge works in the
+  air. Its drag is still the native's.
+- **Proof** (`touch_slingshot`). Time never slows while the bands push. The rider leaves the
+  bands at 69.1 m/s. 0.3 s later time is at 0.3× and the view is on the bands. 1.3 s after the
+  release all is back to full speed, and those 1.3 s ran 70 native ticks against 117 at full
+  rate. The apex is 254.2 m, the same as before. The canopy must be seen fully open within 0.9 s
+  of CHUTE. Rendered (local, 540×464): `launch_back`, `launch_forward`, `chute_up`.
+- **Not observed:** on the phone.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

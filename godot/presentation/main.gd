@@ -25,6 +25,8 @@ const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
+const LaunchShot := preload("res://presentation/launch_shot.gd")
+const CanopyView := preload("res://presentation/canopy_view.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
 const Works := preload("res://presentation/life/works.gd")
 const CloudLayer := preload("res://presentation/cloud_layer.gd")
@@ -286,6 +288,9 @@ var _kit_root: Node3D
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
 # second while a rider sits drawn), and the aim the look is steering.
 var _slingshot_view: Node3D
+# The slingshot's launch shot: slow time and a look back, after the push.
+var _launch_shot := LaunchShot.new()
+var _canopy: Node3D
 var _swing_view: Node3D
 var _sling_prediction := PackedVector3Array()
 var _sling_preview_clock := 0.0
@@ -543,7 +548,12 @@ func _process(delta: float) -> void:
 	_native.set_sprint_input(bool(intent["sprint_held"]))
 
 
-	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA)))
+	_launch_shot.update(delta, _native.get_slingshot_state())
+	var time_scale := _launch_shot.time_scale()
+	# The launch shot's slow time: fewer native ticks this frame, each the
+	# same 90 Hz step. Heard too: the mix slows with it.
+	AudioServer.playback_speed_scale = time_scale
+	var steps_advanced := int(_native.advance_frame(minf(delta * time_scale, MAX_SIM_FRAME_DELTA)))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
@@ -552,6 +562,10 @@ func _process(delta: float) -> void:
 	_ctx = _read_context()
 	_save_climb()
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	if _canopy == null:
+		_canopy = CanopyView.new()
+		add_child(_canopy)
+	_canopy.update(bool(_ctx.get("chute", false)), _camera.global_position, _yaw, _arms.riser_tops, delta)
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
@@ -1854,6 +1868,8 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		roll_turn = 0.0
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion, _yaw,
 		_cam_bank + stagger * motion)
+	if _launch_shot.active() and not _reduced_motion:
+		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
 	var fov_fall := 0.0

@@ -2198,8 +2198,36 @@ func _slingshot(device: int) -> bool:
 	if not await _offered(&"slingshot", "RELEASE"):
 		return _fail("drawn %.2f m, Action read '%s', not RELEASE" % [draw_m, _action_label()])
 	_act(device)
-	if not await _wait_until(func() -> bool: return bool(_sling()["flight"]), 3.0):
+	# The push is never slowed: time runs at full rate until the pouch lets the
+	# rider go.
+	var push := {"slowed": false}
+	if not await _wait_until(func() -> bool:
+		push["slowed"] = bool(push["slowed"]) or (_main._launch_shot.time_scale() < 1.0 and not bool(_sling()["flight"]))
+		return bool(_sling()["flight"]), 3.0):
 		return _fail("RELEASE did not throw the rider off the bands")
+	if bool(push["slowed"]):
+		return _fail("time slowed while the bands were still pushing")
+	var off_bands_mps := _velocity().length()
+	# Off the bands: time slows, the eyes go back to the bands, then all is
+	# normal again within the shot's 1.2 s.
+	var shot_tick := int(_native().get_tick_index())
+	await _seconds(0.3)
+	if _main._launch_shot.time_scale() > 0.35 or _main._launch_shot.look_weight() < 0.95:
+		return _fail("0.3 s off the bands: time at %.2f, eyes %.2f of the way back" % [
+			_main._launch_shot.time_scale(), _main._launch_shot.look_weight()])
+	var to_bands: Vector3 = (_main._launch_shot._look_back - _main._camera.global_position).normalized()
+	if (-_main._camera.global_transform.basis.z).dot(to_bands) < 0.97:
+		return _fail("0.3 s off the bands, the view is not on the bands")
+	await _pose("launch_back")
+	await _seconds(0.55)
+	await _pose("launch_forward")
+	await _seconds(0.45)
+	var shot_ticks := int(_native().get_tick_index()) - shot_tick
+	if _main._launch_shot.active() or _main._launch_shot.time_scale() != 1.0:
+		return _fail("1.3 s off the bands, the launch shot still runs")
+	# 1.3 s of the wall clock at full rate is 117 ticks; slowed, far fewer.
+	if shot_ticks > 85:
+		return _fail("the launch shot's 1.3 s ran %d native ticks: time did not slow" % shot_ticks)
 	# Up the tower's face; coming down over it, the chute.
 	# A lambda cannot write a local: the apex is kept in a dictionary.
 	var flight := {"apex": 0.0}
@@ -2216,7 +2244,21 @@ func _slingshot(device: int) -> bool:
 	# Steer onto the ring, the stick pushed toward it relative to the view.
 	var target := Vector2(-3.0, -128.7)
 	var waited := 0.0
+	var canopy_seen := false
+	var posed := false
 	while waited < 20.0 and not bool(_native().is_player_grounded()):
+		# Over the rider, a canopy on its lines, filled within a second;
+		# looked up at (capture only) without letting go of the steering.
+		if not canopy_seen and waited >= 0.9:
+			if _main._canopy == null or not _main._canopy.visible or _main._canopy.open_fraction() < 1.0:
+				return _fail("the chute is out but no open canopy is drawn over the rider")
+			canopy_seen = true
+		if canopy_seen and not posed and not _capture_prefix.is_empty():
+			var pitch_before: float = _main._pitch
+			_main._pitch = 1.05
+			await _pose("chute_up")
+			_main._pitch = pitch_before
+			posed = true
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
 		var yaw := float(_main._yaw)
@@ -2227,6 +2269,8 @@ func _slingshot(device: int) -> bool:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
 	_move_dir(device, Vector2.ZERO)
+	if not canopy_seen:
+		return _fail("the canopy was never seen open over the rider")
 	await _seconds(0.5)
 	await _pose("sling_landed")
 	var at_end := _position()
@@ -2235,8 +2279,9 @@ func _slingshot(device: int) -> bool:
 	if not bool(_native().is_player_grounded()) or at_end.y < 221.0 or at_end.y > 221.3 or \
 			at_end.z < -130.73 or at_end.z > -126.73:
 		return _fail("the rider came down at %s, not on the 220 ring (apex %.1f m)" % [str(at_end), apex])
-	_detail = "ring220_y=%.2f draw_m=%.2f energy_kJ=%.0f apex=%.1f seconds=%.1f" % [at_end.y, draw_m, energy_kj,
-		apex, float(int(_native().get_tick_index()) - started) / 90.0]
+	_detail = "ring220_y=%.2f draw_m=%.2f energy_kJ=%.0f apex=%.1f seconds=%.1f off_bands_mps=%.1f shot_ticks=%d" % [
+		at_end.y, draw_m, energy_kj, apex, float(int(_native().get_tick_index()) - started) / 90.0, off_bands_mps,
+		shot_ticks]
 	return true
 
 
