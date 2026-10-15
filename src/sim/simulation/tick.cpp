@@ -52,8 +52,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (jump_cancelled || commands.crouch_held ||
         (traversal_state_ != TraversalState::None && !foot_overlap_is_legal()))
         physical_foot_push_->clear();
+    const bool finishing_transfer_foot = traversal_before_commands == TraversalState::None &&
+        foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active();
     if (jump_cancelled || traversal_before_commands != TraversalState::None ||
-        (slingshot_ && slingshot_->controls_player()) || physical_foot_push_->active()) {
+        (slingshot_ && slingshot_->controls_player()) ||
+        (physical_foot_push_->active() && !finishing_transfer_foot)) {
         ordinary_jump_ticks_left_ = 0;
     } else if (commands.jump_requested) {
         ordinary_jump_ticks_left_ = kOrdinaryJumpIntentTicks;
@@ -151,7 +154,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         } else {
             auto locomotion_commands = commands;
             locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
-                grounded_ && !support_sample_.body_id.IsInvalid() && !crouched_;
+                grounded_ && !support_sample_.body_id.IsInvalid() && !crouched_ &&
+                !physical_foot_push_->active();
             const bool ordinary_jump_requested = locomotion_commands.jump_requested;
             jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds);
             if (ordinary_jump_requested && jump_started) ordinary_jump_ticks_left_ = 0;
@@ -174,7 +178,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     }
 
     if (traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
-    else if (ordinary_jump_ticks_left_ > 0) --ordinary_jump_ticks_left_;
+    // A fresh onward Jump can wait for the already finite transfer row. It
+    // cannot stack a second push, restart that row or extend its lifetime.
+    else if (ordinary_jump_ticks_left_ > 0 && !finishing_transfer_foot) --ordinary_jump_ticks_left_;
 
     if (traversal_state_ == TraversalState::Lowering && physical_hands_->active())
         update_physical_lowering(bodies,delta_seconds);

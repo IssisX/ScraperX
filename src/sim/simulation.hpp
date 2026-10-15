@@ -835,6 +835,19 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    // Read-only current support-anchor receipt; no render interpolation applied.
+    // Physical holds remain owned by PhysicsWorld. Rigid local points use the
+    // visible shape origin, not its COM; deforming points use material space.
+    // support is the exact opaque native body identity (index and sequence).
+    struct RenderHandAnchor final {
+        std::uint32_t support = ~std::uint32_t{0};
+        std::uint32_t kit_body = ~std::uint32_t{0};
+        std::uint64_t generation = 0;
+        Vector3 local{}, origin{};
+        Quaternion rotation{};
+        bool valid = false, deforming = false;
+    };
+    [[nodiscard]] RenderHandAnchor traversal_hand_anchor(bool left) const noexcept;
     [[nodiscard]] Vector3 render_traversal_hand(bool left) const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
@@ -882,16 +895,6 @@ public:
                                                         std::uint32_t capacity) const noexcept;
 
 private:
-    // Render metadata only. Physical holds remain owned by PhysicsWorld;
-    // rigid local points here use the visible shape origin, not its COM.
-    struct RenderHandAnchor final {
-        std::uint32_t support = ~std::uint32_t{0};
-        std::uint32_t kit_body = ~std::uint32_t{0};
-        std::uint64_t generation = 0;
-        Vector3 local{}, origin{};
-        Quaternion rotation{};
-        bool valid = false, deforming = false;
-    };
     class PhysicsWorld;
 
     void step_fixed() noexcept;

@@ -551,11 +551,13 @@ void fall(float height,float offset_z=0){World w;
     RVec3 previous_player=b.GetCenterOfMassPosition(w.player);float late_actual_speed=0;
     for(int i=0;i<steps;++i){w.contacts.this_tick=false;w.tick();
         if(w.contacts.this_tick){if(separated)recontacted=true;contacted=true;clear_ticks=0;}
-        else if(contacted&&++clear_ticks>=9)separated=true;const auto p=b.GetCenterOfMassPosition(w.player);const auto v=b.GetLinearVelocity(w.player);
+        else if(contacted&&++clear_ticks>=9)separated=true;
+        const auto p=b.GetCenterOfMassPosition(w.player);const auto v=b.GetLinearVelocity(w.player);
         if(i>=steps-180){late_peak_speed=std::max(late_peak_speed,v.Length());late_actual_speed=std::max(late_actual_speed,float((p-previous_player).Length()*90));late_min_y=std::min(late_min_y,float(p.GetY()));late_max_y=std::max(late_max_y,float(p.GetY()));if(w.contacts.this_tick)++late_contacts;}
         const float actual_vy=float((p-previous_player).GetY()*90);previous_player=p;
         min_player=std::min(min_player,float(p.GetY()));
-        if(w.contacts.this_tick)min_caught_player=std::min(min_caught_player,float(p.GetY()));max_frame_speed=std::max(max_frame_speed,b.GetLinearVelocity(w.kit->body_id(w.frame)).Length());
+        if(w.contacts.this_tick)min_caught_player=std::min(min_caught_player,float(p.GetY()));
+        max_frame_speed=std::max(max_frame_speed,b.GetLinearVelocity(w.kit->body_id(w.frame)).Length());
         for(const auto &q:w.net->vertices()){check(std::isfinite(q.GetY()),"finite mesh");min_vertex=std::min(min_vertex,float(q.GetY()));}
         if(v.GetY()<-1){descending=true;impact=std::max(impact,-v.GetY());}
         if(descending&&v.GetY()>0.1F)reversed=true;

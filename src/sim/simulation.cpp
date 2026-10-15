@@ -700,6 +700,10 @@ Vector3 Simulation::render_player_position() const noexcept {
     };
 }
 
+Simulation::RenderHandAnchor Simulation::traversal_hand_anchor(const bool left) const noexcept {
+    return physics_world_->render_hand_anchor(left ? 0 : 1);
+}
+
 Vector3 Simulation::render_traversal_hand(const bool left) const noexcept {
     const auto current = left ? snapshot_.traversal_left_hand : snapshot_.traversal_right_hand;
     const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);

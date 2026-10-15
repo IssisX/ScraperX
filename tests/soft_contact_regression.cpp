@@ -37,7 +37,7 @@ struct Contact : SoftBodyContactListener {
     }
 };
 
-bool run(bool dynamic, float previous_normal, float current_normal, float restitution,
+bool run(bool corrected, bool dynamic, float previous_normal, float current_normal, float restitution,
          float friction = 0, float tangent = 0, bool history = false) {
     constexpr float dt = 1.0F / 90, mass = 85, tolerance = 2e-5F;
     BP bp; BV bv; LP lp;
@@ -80,6 +80,7 @@ bool run(bool dynamic, float previous_normal, float current_normal, float restit
         // Serialized CustomUpdate takes its own receiver locks.
         BodyLockWrite lock(system.GetBodyLockInterfaceNoLock(), particle);
         auto *motion = static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+        motion->SetPreserveIntegratedVelocity(corrected);
         motion->CustomUpdate(dt, lock.GetBody(), system);
         after = motion->GetVertex(0).mVelocity;
         height = (lock.GetBody().GetCenterOfMassTransform() * motion->GetVertex(0).mPosition).GetY();
@@ -103,7 +104,7 @@ bool run(bool dynamic, float previous_normal, float current_normal, float restit
         pass &= (after - before_contact).Length() < tolerance && receiver_velocity.Length() < tolerance;
     if (current_normal < 0 && friction > 0)
         pass &= after.GetX() < tangent - .01F && energy_after < energy_before - .01F;
-    std::cout << "SOFT_CONTACT dynamic=" << dynamic << " history=" << history
+    std::cout << "SOFT_CONTACT corrected=" << corrected << " dynamic=" << dynamic << " history=" << history
         << " previous_normal=" << previous_normal << " current_normal=" << current_normal
         << " restitution=" << restitution << " friction=" << friction
         << " contacts=" << contact.calls << " relative_normal=" << relative_normal
@@ -121,14 +122,14 @@ bool run(bool dynamic, float previous_normal, float current_normal, float restit
 // The existing model-test executable owns allocator/type/factory lifetime.
 bool soft_contact_regression() {
     bool pass = true;
-    for (bool dynamic : {true, false}) {
-        pass = run(dynamic, 1, 1, 0) && pass;
-        pass = run(dynamic, -1, -1, 0) && pass;
-        pass = run(dynamic, 1, 1, 0, .8F, 2) && pass;
-        pass = run(dynamic, -1, -1, 0, .8F, 2) && pass;
-        pass = run(dynamic, -1, -1, .5F) && pass;
-        pass = run(dynamic, -1, .1F, .5F, 0, 0, true) && pass;
-        pass = run(dynamic, -1, 1, .5F, 0, 0, true) && pass;
+    for (bool corrected : {false, true}) for (bool dynamic : {true, false}) {
+        pass = run(corrected, dynamic, 1, 1, 0) && pass;
+        pass = run(corrected, dynamic, -1, -1, 0) && pass;
+        pass = run(corrected, dynamic, 1, 1, 0, .8F, 2) && pass;
+        pass = run(corrected, dynamic, -1, -1, 0, .8F, 2) && pass;
+        pass = run(corrected, dynamic, -1, -1, .5F) && pass;
+        pass = run(corrected, dynamic, -1, .1F, .5F, 0, 0, true) && pass;
+        pass = run(corrected, dynamic, -1, 1, .5F, 0, 0, true) && pass;
     }
     return pass;
 }

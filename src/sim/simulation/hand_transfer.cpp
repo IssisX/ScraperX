@@ -216,7 +216,11 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
     if (event_tick) state_.foot_transfer_tick=event_tick;
     state_.foot_transfer_support_entity_id=support_sample_.entity_id;
     state_.foot_transfer_peak_hand_load_n=cargo_transfer_peak_hand_load_n_;
-    clear_traversal(foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active());
+    const bool preserve_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active();
+    // Firm receiving contact completes the pull-up command. Retain the actual
+    // finite foot row and its compression, but do not keep extending its target.
+    if (preserve_foot) physical_foot_push_->hold_target();
+    clear_traversal(preserve_foot);
     return true;
 }
 

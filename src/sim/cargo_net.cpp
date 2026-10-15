@@ -157,6 +157,7 @@ CargoNet::CargoNet(JPH::PhysicsSystem &system,JPH::ObjectLayer layer,JPH::BodyID
     if(config_.internally_integrated_clips) {
         const BodyLockWrite lock(system_.GetBodyLockInterfaceNoLock(),body_);
         auto *motion=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+        motion->SetPreserveIntegratedVelocity(true);
         motion->SetExternalForceCallbacks(
             [](void *owner,float dt){static_cast<CargoNet *>(owner)->internal_clip_step(dt);},
             [](void *owner,BodyInterface &bodies){static_cast<CargoNet *>(owner)->finish_clip_step(bodies);},this);

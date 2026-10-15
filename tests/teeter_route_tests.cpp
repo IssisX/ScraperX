@@ -252,8 +252,14 @@ int main() {
     for (int tick = 0; tick < 1800; ++tick) {
         (void)rider.advance_frame(Simulation::kFixedStepSeconds);
         if (tick % 180 == 179) report(rider, "CLIMB_STEP");
-        if (rider.snapshot().player_position.y > 77.5 ||
-            rider.snapshot().death_count > 0) break;
+        const auto state = rider.snapshot();
+        // Height alone can be reached with both hands still carrying the
+        // player. Keep the climb input until actual receiving footing closes
+        // the physical transfer and releases those hands.
+        if ((state.player_position.y > 77.5 && state.player_grounded &&
+             state.support_entity_id == 1800 &&
+             state.traversal_state == scraperx::sim::TraversalState::None) ||
+            state.death_count > 0) break;
     }
     (void)rider.set_move_input(0.0, 0.0);
     advance(rider, 1.0);

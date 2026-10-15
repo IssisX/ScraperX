@@ -1,0 +1,46 @@
+{
+  "commands": [
+    [
+      "/usr/bin/cmake",
+      "-DJOLT_SOURCE=/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-DJOLT_PATCH=/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/cmake/patches/jolt-passive-soft-attachments.patch",
+      "-DJOLT_PATCH_MANIFEST=/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/cmake/patches/jolt-passive-soft-attachments.hashes.cmake",
+      "-DGIT_EXECUTABLE=/usr/bin/git",
+      "-P",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/cmake/ApplyJoltPatch.cmake"
+    ],
+    [
+      "/usr/bin/cmake",
+      "-S",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src/Build",
+      "-B",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCMAKE_CXX_COMPILER=/usr/bin/c++",
+      "-DCMAKE_C_COMPILER=/usr/bin/cc",
+      "-DTARGET_UNIT_TESTS=OFF",
+      "-DTARGET_HELLO_WORLD=OFF",
+      "-DTARGET_PERFORMANCE_TEST=OFF",
+      "-DTARGET_SAMPLES=OFF",
+      "-DTARGET_VIEWER=OFF",
+      "-DINTERPROCEDURAL_OPTIMIZATION=OFF",
+      "-DENABLE_ALL_WARNINGS=OFF",
+      "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+      "-DENABLE_INSTALL=OFF",
+      "-DJPH_BUILD_SHARED_LIBS=OFF",
+      "-DJPH_USE_CPU_COMPUTE=OFF",
+      "-DJPH_USE_VK=OFF",
+      "-DJPH_USE_MTL=OFF",
+      "-DJPH_USE_DX12=OFF",
+      "-DGENERATE_DEBUG_SYMBOLS=OFF"
+    ],
+    [
+      "/usr/bin/cmake",
+      "--build",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build",
+      "--parallel",
+      "2"
+    ]
+  ],
+  "jolt_sha256": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+}

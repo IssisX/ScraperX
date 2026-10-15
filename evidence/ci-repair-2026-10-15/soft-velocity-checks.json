@@ -1,0 +1,160 @@
+[
+  {
+    "name": "cargo-build",
+    "command": [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/cargo_net.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/cargo_net.cpp.o"
+    ],
+    "exit_code": 0,
+    "seconds": 4.095804946962744,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/cargo-build.log",
+    "tail": ""
+  },
+  {
+    "name": "archive-build",
+    "command": [
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/cargo_net.cpp.o"
+    ],
+    "exit_code": 0,
+    "seconds": 0.1685432291124016,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/archive-build.log",
+    "tail": ""
+  },
+  {
+    "name": "soft_velocity_tests-build",
+    "command": [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/soft_velocity_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/soft_velocity_tests"
+    ],
+    "exit_code": 0,
+    "seconds": 2.8420232280623168,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/soft_velocity_tests-build.log",
+    "tail": ""
+  },
+  {
+    "name": "catch_net_model_tests-build",
+    "command": [
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/catch_net_model_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/soft_contact_regression.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests"
+    ],
+    "exit_code": 0,
+    "seconds": 6.056542341131717,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests-build.log",
+    "tail": ""
+  },
+  {
+    "name": "soft-velocity",
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/soft_velocity_tests"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03787807212211192,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/soft-velocity.log",
+    "tail": "PASS soft velocity drift/real edge correction/mode restore\n"
+  },
+  {
+    "name": "native-force",
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests",
+      "force"
+    ],
+    "exit_code": 0,
+    "seconds": 0.12048338493332267,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/native-force.log",
+    "tail": "CATCH_FORCE phases=4 native_callbacks=48 individually_checked_callbacks=48 transpose/live_mass/momentum/wake/overlap/restore/legacy PASS\nCATCH_FORCE phases=4 native_callbacks=48 individually_checked_callbacks=48 transpose/live_mass/momentum/wake/overlap/restore/legacy PASS\nCATCH_FORCE phases=4 native_callbacks=48 individually_checked_callbacks=48 transpose/live_mass/momentum/wake/overlap/restore/legacy PASS\nCATCH_TETHER taut=0 preload_j=0 initial_j=0 final_j=0 linear_error=0 angular_error=0\nCATCH_TETHER taut=1 preload_j=125 initial_j=125 final_j=124.924 linear_error=0 angular_error=3.09569e-05\nCATCH_PISTON_ROUTE rows=3 low_y=1.56 high_y=4.41\nCATCH_PISTON_STEP tick=0 energy=44.8604\nCATCH_PISTON_STEP tick=1 energy=30.682\nCATCH_PISTON_STEP tick=2 energy=19.4032\nCATCH_PISTON_STEP tick=3 energy=11.8023\nCATCH_PISTON_ENERGY initial=58.0552 final=11.8023 stored=9.39244 radial_loss=46.2715\nCATCH_PISTON_MOMENTUM linear=1.88486e-07 angular=1.02458e-05\nCATCH_PISTON iterations=1 initial_energy_j=58.0552 final_energy_j=11.8023 impulse=2.33428 torque_impulse=0.685276 linear_error=1.88486e-07 angular_error=1.02458e-05\nCATCH_PISTON_STEP tick=0 energy=45.3188\nCATCH_PISTON_STEP tick=1 energy=30.9351\nCATCH_PISTON_STEP tick=2 energy=19.4906\nCATCH_PISTON_STEP tick=3 energy=11.8123\nCATCH_PISTON_ENERGY initial=58.0552 final=11.8123 stored=9.37277 radial_loss=46.26\nCATCH_PISTON_MOMENTUM linear=1.85087e-06 angular=2.0474e-05\nCATCH_PISTON iterations=12 initial_energy_j=58.0552 final_energy_j=11.8123 impulse=2.40602 torque_impulse=0.678974 linear_error=1.85087e-06 angular_error=2.0474e-05\nPASS catch native model\n"
+  },
+  {
+    "name": "contact-friction",
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests",
+      "friction"
+    ],
+    "exit_code": 0,
+    "seconds": 0.06864296901039779,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/contact-friction.log",
+    "tail": "0.5 friction=0 contacts=1 relative_normal=0.5 expected_normal=0.5 vertex_y=0.482558 receiver_y=-0.0174419 tangent=0 momentum_error=0 energy_before=0.5 energy_after=0.12936 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=1 history=1 previous_normal=-1 current_normal=0.1 restitution=0.5 friction=0 contacts=1 relative_normal=0.5 expected_normal=0.5 vertex_y=0.495349 receiver_y=-0.00465118 tangent=0 momentum_error=1.87755e-06 energy_before=0.005 energy_after=0.123605 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=1 history=1 previous_normal=-1 current_normal=1 restitution=0.5 friction=0 contacts=1 relative_normal=1 expected_normal=1 vertex_y=1 receiver_y=0 tangent=0 momentum_error=2.6226e-06 energy_before=0.5 energy_after=0.500003 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=0 previous_normal=1 current_normal=1 restitution=0 friction=0 contacts=1 relative_normal=1 expected_normal=1 vertex_y=1 receiver_y=0 tangent=0 momentum_error=0 energy_before=0.5 energy_after=0.5 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=0 previous_normal=-1 current_normal=-1 restitution=0 friction=0 contacts=1 relative_normal=0 expected_normal=0 vertex_y=0 receiver_y=0 tangent=0 momentum_error=1 energy_before=0.5 energy_after=0 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=0 previous_normal=1 current_normal=1 restitution=0 friction=0.8 contacts=1 relative_normal=1 expected_normal=1 vertex_y=1 receiver_y=0 tangent=2 momentum_error=0 energy_before=2.5 energy_after=2.5 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=0 previous_normal=-1 current_normal=-1 restitution=0 friction=0.8 contacts=1 relative_normal=0 expected_normal=0 vertex_y=0 receiver_y=0 tangent=0 momentum_error=2.23607 energy_before=2.5 energy_after=0 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=0 previous_normal=-1 current_normal=-1 restitution=0.5 friction=0 contacts=1 relative_normal=0.5 expected_normal=0.5 vertex_y=0.5 receiver_y=0 tangent=0 momentum_error=1.5 energy_before=0.5 energy_after=0.125 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=1 previous_normal=-1 current_normal=0.1 restitution=0.5 friction=0 contacts=1 relative_normal=0.5 expected_normal=0.5 vertex_y=0.5 receiver_y=0 tangent=0 momentum_error=0.4 energy_before=0.005 energy_after=0.125 height=0.5 verdict=PASS\nSOFT_CONTACT corrected=1 dynamic=0 history=1 previous_normal=-1 current_normal=1 restitution=0.5 friction=0 contacts=1 relative_normal=1 expected_normal=1 vertex_y=1 receiver_y=0 tangent=0 momentum_error=2.6226e-06 energy_before=0.5 energy_after=0.500003 height=0.5 verdict=PASS\nCATCH_FRICTION calls=16 rigid_tangent_impulse=1.89079 zero_energy_j=1.90343 friction_energy_j=0.0281364\nPASS catch native model\n"
+  },
+  {
+    "name": "rebound45",
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests",
+      "45"
+    ],
+    "exit_code": 1,
+    "seconds": 29.51281196810305,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/rebound45.log",
+    "tail": "CATCH_CLIP frame_impulse=0.287418 frame_torque_impulse=3.00272 linear_error=0.000804023 angular_error=0.00119649\nCATCH_MATERIAL initial_energy_j=364.4 final_energy_j=359.826\nCATCH_TRACE tick=450 x=-33.1591 z=-149.913 y=20.6415 vy=-0.469124 sag_min=1.67969 rebound=18.1683 apex=20.6532 strain=68.7682\nCATCH_TRACE tick=900 x=-33.6522 z=-150.042 y=6.20782 vy=3.0167 sag_min=1.67969 rebound=18.1683 apex=20.6532 strain=128.049\nCATCH_TRACE tick=1350 x=-33.8498 z=-149.562 y=4.08221 vy=-0.0799428 sag_min=1.67969 rebound=18.1683 apex=20.6532 strain=216.32\nCATCH_TAIL tick=1530 y=4.11639 velocity_y=0.0213357 position_speed_y=-0.00231743 cloth_ke_j=0.19788 strain_j=183.862\nCATCH_TAIL tick=1620 y=4.10711 velocity_y=-0.00536682 position_speed_y=-0.0326157 cloth_ke_j=0.0401212 strain_j=192.239\nCATCH_TAIL tick=1710 y=4.10609 velocity_y=0.0372126 position_speed_y=0.00909805 cloth_ke_j=0.0295738 strain_j=193.061\nCATCH_TAIL tick=1800 y=4.10878 velocity_y=0.0332013 position_speed_y=0.00630856 cloth_ke_j=0.0217135 strain_j=190.637\nCATCH_TRACE tick=1800 x=-33.8512 z=-149.561 y=4.10878 vy=0.0332013 sag_min=1.67969 rebound=18.1683 apex=20.6532 strain=190.637\nCATCH_MODEL height=45 offset_z=0 impact_speed=28.2016 mesh_min_y=1.67969 caught_capsule_min_y=2.61442 capsule_min_y=2.61442 rebound_vy=18.1683 apex_y=20.6532 first_apex_y=20.6532 frame_speed=0.0767176 mesh_peak_ke_j=9113.24 edge_peak_strain_j=18927.7 clip_peak_strain_j=9660.71 exposed_peak_energy_j=43188.8 final_y=4.10878 final_speed=0.0332142 contact_events=3165 separation=1 recontact=1 late_peak_speed=0.0559116 late_y_range=0.00693846 late_contact_ticks=180 simulated_seconds=20 listener_calls=7920\nCATCH_ENERGY simultaneous_peak net_ke=1.47787 edge=68.5019 clips=62.4275 mounts=506.083 gravity=4624.19 player=37523.1 frame_ke=0.0021155 piston_gravity_ke_elastic_j=316.546 tether_stored_j=41.2249 tether_radial_loss_j=7060.7 late_actual_position_speed=0.0324869\nFAIL catch native model: first rebound can supply rigid fatal grade descent\n"
+  },
+  {
+    "name": "contact-both-modes",
+    "command": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/catch_net_model_tests",
+      "clips"
+    ],
+    "exit_code": 0,
+    "seconds": 0.17698427103459835,
+    "contact_cases": 0,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/contact-both-modes.log",
+    "tail": "CATCH_CLIP frame_impulse=0.287418 frame_torque_impulse=3.00272 linear_error=0.000804023 angular_error=0.00119649\nCATCH_MATERIAL initial_energy_j=364.4 final_energy_j=359.826\nPASS catch native model\n"
+  }
+]

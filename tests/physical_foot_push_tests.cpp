@@ -257,7 +257,7 @@ void externally_loaded_row_hits_force_cap() {
               << " command_bound_j=" << state.command_work_bound_j << '\n';
 }
 
-void contact_owner_loss_cancels(bool traction_loss) {
+void contact_owner_loss_cancels(bool traction_loss, bool hold_target = false) {
     scenario = traction_loss ? "traction_owner_loss" : "material_face_owner_loss";
     Pair pair;
     Actuator actuator(pair);
@@ -266,6 +266,7 @@ void contact_owner_loss_cancels(bool traction_loss) {
     const auto before_cell = snapshot(pair.fixture, pair.kit.body_id(pair.cell));
     const auto before_player = snapshot(pair.fixture, pair.kit.body_id(pair.player));
     const double charged = actuator.push.readback().command_work_bound_j;
+    if (hold_target) actuator.push.hold_target();
     actuator.listener.face_valid = traction_loss;
     actuator.listener.traction_valid = !traction_loss;
     actuator.tick();
@@ -279,6 +280,52 @@ void contact_owner_loss_cancels(bool traction_loss) {
                 (after_player.velocity - before_player.velocity).Length() < 1.0e-5F &&
                 actuator.push.readback().command_work_bound_j == charged,
             "lost support receives neither warmed-start boost nor new actuation work");
+}
+
+void held_target_retains_row_and_finite_lifetime() {
+    scenario = "held_target_retains_loaded_row_and_expiry";
+    Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
+    Actuator actuator(pair);
+    const auto support = pair.kit.body_id(pair.cell);
+    require(actuator.push.begin(support, pair.foot, Vec3::sAxisY()), "hold fixture attaches");
+    for (int tick = 0; tick < 4; ++tick) actuator.tick();
+    const auto before = actuator.push.readback();
+    require(before.last_load_n > 0 && before.nominal_spring_storage_j > 0,
+            "hold begins with a real loaded compression row");
+    actuator.push.hold_target();
+    const auto held = actuator.push.readback();
+    require(actuator.push.active() && held.target_held && held.support == before.support &&
+                held.rest_distance_m == before.rest_distance_m &&
+                held.nominal_spring_storage_j == before.nominal_spring_storage_j &&
+                held.last_impulse_ns == before.last_impulse_ns &&
+                held.elapsed_seconds == before.elapsed_seconds,
+            "hold preserves actual row, preload, cached impulse and original clock");
+    require(!actuator.push.begin(support, pair.foot, Vec3::sAxisY()),
+            "begin cannot reopen an existing held row");
+    bool loaded_after_hold = false;
+    for (int tick = 4; tick < 90; ++tick) {
+        actuator.push.hold_target(); // Reaffirming a hold cannot renew its clock.
+        actuator.tick();
+        const auto &state = actuator.push.readback();
+        limits(state, before.command_work_bound_j);
+        require(actuator.push.active() && state.target_held &&
+                    state.rest_distance_m == before.rest_distance_m &&
+                    state.command_work_bound_j == before.command_work_bound_j &&
+                    state.last_command_work_bound_j == 0 && state.target_storage_delta_j == 0,
+                "held real solves advance time without adding target stroke or work");
+        loaded_after_hold = loaded_after_hold || state.last_load_n > 0;
+    }
+    require(loaded_after_hold, "held row still supplies its actual compressive reaction");
+    actuator.tick();
+    require(!actuator.push.active() && actuator.push.readback().stop_reason == PhysicalFootPush::StopReason::Expired &&
+                std::abs(actuator.push.readback().elapsed_seconds - 90.0 * kDt) < 1.0e-8,
+            "hold expires on the original finite lifetime without renewal");
+    const auto foot = actuator.push.readback().world_anchor;
+    require(actuator.push.begin(support, foot, Vec3::sAxisY()) && !actuator.push.readback().target_held,
+            "only a fresh valid attachment starts a new extension transaction");
+    actuator.tick();
+    require(actuator.push.readback().command_work_bound_j > 0,
+            "fresh attachment can command extension after held predecessor expires");
 }
 
 void finite_actuation_and_energy() {
@@ -347,6 +394,9 @@ int main() {
     externally_loaded_row_hits_force_cap();
     contact_owner_loss_cancels(false);
     contact_owner_loss_cancels(true);
+    contact_owner_loss_cancels(false, true);
+    contact_owner_loss_cancels(true, true);
+    held_target_retains_row_and_finite_lifetime();
     finite_actuation_and_energy();
     UnregisterTypes();
     delete Factory::sInstance;

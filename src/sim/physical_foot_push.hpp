@@ -43,6 +43,7 @@ public:
         // or a complete energy ledger for the force-capped implicit solver.
         double nominal_spring_storage_j = 0;
         double target_storage_delta_j = 0;
+        bool target_held = false;
     };
 
     PhysicalFootPush(JPH::PhysicsSystem &system, JPH::BodyID player);
@@ -57,6 +58,9 @@ public:
                JPH::Vec3 world_surface_normal, float friction = .85F,
                float requested_stroke_m = maximum_stroke_m());
     void clear(StopReason reason = StopReason::Cleared);
+    // Stop further target extension without changing the actual row, its
+    // compression or its original finite lifetime. Only a new begin resets it.
+    void hold_target() noexcept;
     // Only advance/validate/disable the existing row here; no manager mutation.
     // Face and traction validity come from the existing native contact owner.
     void pre_step(float collision_dt, bool material_face_valid = true,

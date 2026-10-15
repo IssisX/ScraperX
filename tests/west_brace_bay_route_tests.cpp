@@ -241,7 +241,11 @@ void miss_apex_and_recover(Simulation &s) {
         const auto after = s.snapshot();
         unsupported = unsupported || (!after.player_grounded && after.support_entity_id == 0);
         descending = descending || (!after.player_grounded && after.player_linear_velocity.y < -1.0);
-        if (on_support_top(after, 381.9, kRouteEntity)) {
+        // The finite push begins while the capsule still touches takeoff
+        // footing. Recovery requires the attempted catch and real flight;
+        // otherwise that first contact ends the observation before launch.
+        if (late_request_sent && unsupported && descending &&
+            on_support_top(after, 381.9, kRouteEntity)) {
             recovered = true;
             break;
         }

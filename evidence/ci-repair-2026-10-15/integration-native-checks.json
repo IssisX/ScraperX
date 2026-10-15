@@ -1,0 +1,52 @@
+{
+  "archive_sha256": "18cc2d81b7628927b2acbbf1997a417e670e1851a738d4f2270d00673b12bb0d",
+  "checks": [
+    {
+      "name": "physical_topout_tests",
+      "mode": "jump-buffer",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests",
+        "jump-buffer"
+      ],
+      "exit_code": 0,
+      "seconds": 14.25,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests-jump-buffer.log",
+      "tail": "PASS PHYSICAL_TOPOUT onward_jump_buffer real_receiving_contact=1 no_foot_restart=1\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "single-step",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests",
+        "single-step"
+      ],
+      "exit_code": 0,
+      "seconds": 0.39,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests-single-step.log",
+      "tail": "SHARED tick=181 contact=180 hand_n=937.469 foot_n=661.109\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=135 final_tick=271\n"
+    },
+    {
+      "name": "physical_topout_tests",
+      "mode": "frames",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests",
+        "frames"
+      ],
+      "exit_code": 0,
+      "seconds": 64.35,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/physical_topout_tests-frames.log",
+      "tail": "PASS PHYSICAL_TOPOUT frame_equivalence fixed90_caller60_360_grouped4=1 tolerance_m=0.0001\n"
+    },
+    {
+      "name": "west_brace_bay_route_tests",
+      "mode": "",
+      "command": [
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/west_brace_bay_route_tests"
+      ],
+      "exit_code": 1,
+      "seconds": 71.17,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-integration-20261015/west_brace_bay_route_tests-default.log",
+      "tail": "FAIL WEST_BRACE_BAY reverse diagonal ascent reaches the real389.4m shelf tick=3412 pos=-23.7395,384.472,-140.806 velocity=4.91864e-05,-0.000283157,-0.000786982 grounded=0 support=0 traversal=4 traversal_support=1934 grip=0:0 hands=2 hand_l=-24.3,384.6,-140.606 hand_r=-24.3,384.6,-141.006 gravity=1 landings=4 deaths=0\n"
+    }
+  ]
+}

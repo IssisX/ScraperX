@@ -1,6 +1,6 @@
 --- a/Jolt/Physics/SoftBody/SoftBodyMotionProperties.h
 +++ b/Jolt/Physics/SoftBody/SoftBodyMotionProperties.h
-@@ -176,6 +176,35 @@
+@@ -176,6 +176,41 @@
  	/// Update the velocities of all rigid bodies that we collided with. Not part of the public API.
  	void								UpdateRigidBodyVelocities(const SoftBodyUpdateContext &inContext, BodyInterface &inBodyInterface);
  
@@ -33,10 +33,16 @@
 +		mContactFrictionUserData = inUserData;
 +	}
 +
++	/// Preserve integrated velocity and add only XPBD position-correction velocity.
++	/// Default off retains upstream arithmetic. Set only outside Update. The mode
++	/// is saved/restored; the exact rounded predictor scratch is substep-local.
++	void SetPreserveIntegratedVelocity(bool inEnabled) { mPreserveIntegratedVelocity = inEnabled; }
++	bool GetPreserveIntegratedVelocity() const { return mPreserveIntegratedVelocity; }
++
  	/// Set a flag to indicate that the ContactListener::OnSoftBodyContactAdded should be called
  	inline void							RequestContactCallback()					{ mNeedContactCallback.store(true, memory_order_relaxed); }
  
-@@ -313,6 +342,11 @@
+@@ -313,6 +348,11 @@
  	RMat44								mSkinStateTransform = RMat44::sIdentity();	///< The matrix that transforms mSkinState to world space
  #endif // JPH_DEBUG_RENDERER
  
@@ -48,6 +54,14 @@
  	RefConst<SoftBodySharedSettings>	mSettings;									///< Configuration of the particles and constraints
  	Array<Vertex>						mVertices;									///< Current state of all vertices in the simulation
  	Array<RodState>						mRodStates;									///< Current state of all rods in the simulation
+@@ -331,6 +371,7 @@
+ 	atomic<bool>						mNeedContactCallback = false;				///< True if the soft body has collided with anything in the last update
+ 	bool								mEnableSkinConstraints = true;				///< If skin constraints are enabled
+ 	bool								mSkinStatePreviousPositionValid = false;	///< True if the skinning was updated in the last update so that the previous position of the skin state is valid
++	bool mPreserveIntegratedVelocity = false;
+ };
+ 
+ JPH_NAMESPACE_END
 --- a/Jolt/Physics/SoftBody/SoftBodyMotionProperties.cpp
 +++ b/Jolt/Physics/SoftBody/SoftBodyMotionProperties.cpp
 @@ -3,6 +3,7 @@
@@ -58,10 +72,35 @@
  
  #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
  #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
-@@ -732,6 +733,16 @@
+@@ -345,8 +346,10 @@
+ 
+ 		// Integrate
+ 		Vec3 position = v.mPosition;
+-		v.mPreviousPosition = position;
+-		v.mPosition = position + v.mVelocity * dt;
++		Vec3 predicted = position + v.mVelocity * dt;
++		// Retain the actual rounded predictor, not a separately recomputed value.
++		v.mPreviousPosition = mPreserveIntegratedVelocity? predicted : position;
++		v.mPosition = predicted;
+ 	}
+ 
+ 	// Integrate rod orientations
+@@ -711,7 +714,9 @@
+ 			Vec3 prev_v = v.mVelocity;
+ 
+ 			// XPBD velocity update
+-			v.mVelocity = (v.mPosition - v.mPreviousPosition) / dt;
++			v.mVelocity = mPreserveIntegratedVelocity?
++				prev_v + (v.mPosition - v.mPreviousPosition) / dt :
++				(v.mPosition - v.mPreviousPosition) / dt;
+ 
+ 			// Satisfy collision constraint
+ 			static_assert(int(BodyID::cBroadPhaseBit) < 0); // CCD contacts should be negative too (see: SoftBodyVertex::MarkCCDContact)
+@@ -731,6 +736,16 @@
+ 					CollidingShape &cs = mCollidingShapes[v.mCollidingShapeIndex];
  					Vec3 contact_normal = v.mCollisionPlane.GetNormal();
  					v.mPosition += contact_normal * projected_distance;
- 
++
 +					float friction = cs.mFriction;
 +					if (mContactFrictionCallback != nullptr)
 +					{
@@ -71,11 +110,10 @@
 +						if (std::isfinite(selected) && selected >= 0.0f)
 +							friction = selected;
 +					}
-+
+ 
  					// Apply friction as described in Detailed Rigid Body Simulation with Extended Position Based Dynamics - Matthias Muller et al.
  					// See section 3.6:
- 					// Inverse mass: w1 = 1 / m1, w2 = 1 / m2 + (r2 x n)^T I^-1 (r2 x n) = 0 for a static object
-@@ -766,18 +777,24 @@
+@@ -766,18 +781,24 @@
  						Vec3 r2_cross_n = r2.Cross(contact_normal);
  						float w2 = cs.mInvMass + r2_cross_n.Dot(cs.mInvInertia * r2_cross_n);
  						float w1_plus_w2 = vertex_inv_mass + w2;
@@ -103,7 +141,7 @@
  							if (prev_v_normal < restitution_threshold)
  								dv += cs.mRestitution * prev_v_normal * contact_normal;
  
-@@ -804,15 +821,22 @@
+@@ -804,15 +825,22 @@
  						Vec3 v_tangential = v.mVelocity - v_normal;
  						float v_tangential_length = v_tangential.Length();
  
@@ -133,7 +171,7 @@
  					}
  				}
  			}
-@@ -929,6 +953,9 @@
+@@ -929,6 +957,9 @@
  		if (cs.mUpdateVelocities)
  			inBodyInterface.AddLinearAndAngularVelocity(cs.mBodyID, inContext.mCenterOfMassTransform.Multiply3x3(cs.mLinearVelocity - cs.mOriginalLinearVelocity), inContext.mCenterOfMassTransform.Multiply3x3(cs.mAngularVelocity - cs.mOriginalAngularVelocity));
  
@@ -143,7 +181,7 @@
  	// Clear colliding shapes/sensors to avoid hanging on to references to shapes
  	mCollidingShapes.clear();
  	mCollidingSensors.clear();
-@@ -962,6 +989,9 @@
+@@ -962,6 +993,9 @@
  void SoftBodyMotionProperties::StartNextIteration(const SoftBodyUpdateContext &ioContext)
  {
  	ApplyPressure(ioContext);
@@ -153,3 +191,30 @@
  
  	IntegratePositions(ioContext);
  }
+@@ -1446,6 +1480,7 @@
+ void SoftBodyMotionProperties::SaveState(StateRecorder &inStream) const
+ {
+ 	MotionProperties::SaveState(inStream);
++	inStream.Write(mPreserveIntegratedVelocity);
+ 
+ 	for (const Vertex &v : mVertices)
+ 	{
+@@ -1475,6 +1510,7 @@
+ void SoftBodyMotionProperties::RestoreState(StateRecorder &inStream)
+ {
+ 	MotionProperties::RestoreState(inStream);
++	inStream.Read(mPreserveIntegratedVelocity);
+ 
+ 	for (Vertex &v : mVertices)
+ 	{
+--- a/Jolt/Physics/SoftBody/SoftBodyVertex.h
++++ b/Jolt/Physics/SoftBody/SoftBodyVertex.h
+@@ -31,7 +31,7 @@
+ 		mHasContact = true;
+ 	}
+ 
+-	Vec3			mPreviousPosition;					///< Internal use only. Position at the previous time step
++	Vec3			mPreviousPosition;					///< Internal velocity scratch: previous position, or rounded predictor when PreserveIntegratedVelocity is enabled
+ 	Vec3			mPosition;							///< Position, relative to the center of mass of the soft body
+ 	Vec3			mVelocity;							///< Velocity, relative to the center of mass of the soft body
+ 	Plane			mCollisionPlane;					///< Internal use only. Nearest collision plane, relative to the center of mass of the soft body

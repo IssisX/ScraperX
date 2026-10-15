@@ -161,6 +161,31 @@ void frame_equivalence() {
     }
     std::cout<<"PASS PHYSICAL_TOPOUT frame_equivalence fixed90_caller60_360_grouped4=1 tolerance_m=0.0001\n";
 }
+void jump_after_transfer() {
+    Simulation s; stage(s);
+    require(s.request_traversal(),"request real transfer before onward Jump",s);
+    bool received=false;
+    for(int i=0;i<153;++i) {
+        tick(s);
+        if(s.snapshot().accepted_traversal_count>0&&s.snapshot().traversal_hand_constraint_count==0) {
+            received=true;break;
+        }
+    }
+    const auto before=s.snapshot();
+    require(received&&before.player_grounded&&before.foot_push_active,
+            "onward Jump begins on receiving contact with previous finite foot still alive",s);
+    require(s.set_move_input(0,0)&&s.request_jump(),"fresh onward Jump request",s);
+    bool jumped=false;
+    for(int i=0;i<35;++i) {
+        tick(s);
+        const auto v=s.snapshot();
+        require(v.foot_push_start_count==before.foot_push_start_count,
+                "ordinary onward Jump does not restart the transfer foot",s);
+        if(!v.player_grounded&&v.player_linear_velocity.y>3) {jumped=true;break;}
+    }
+    require(jumped,"fresh Jump survives the bounded previous transfer-foot lifetime",s);
+    std::cout<<"PASS PHYSICAL_TOPOUT onward_jump_buffer real_receiving_contact=1 no_foot_restart=1\n";
+}
 }
 
 int main(int argc,char**argv) {
@@ -170,6 +195,7 @@ int main(int argc,char**argv) {
     else if(mode=="blocked")blocked();
     else if(mode=="restart")restart();
     else if(mode=="frames")frame_equivalence();
+    else if(mode=="jump-buffer")jump_after_transfer();
     else if(mode=="single-step") (void)topout(WorldContent::PipeBridge);
     else (void)topout();
 }

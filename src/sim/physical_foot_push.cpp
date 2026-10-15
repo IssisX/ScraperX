@@ -274,6 +274,10 @@ void PhysicalFootPush::clear(StopReason reason) {
     impl_->state.player_force = JPH::Vec3::sZero();
 }
 
+void PhysicalFootPush::hold_target() noexcept {
+    if (impl_->row && !impl_->state.stop_requested) impl_->state.target_held = true;
+}
+
 void PhysicalFootPush::pre_step(float dt, bool face_valid, bool traction_valid) noexcept {
     auto &owner = *impl_;
     owner.state.last_command_work_bound_j = 0;
@@ -301,6 +305,10 @@ void PhysicalFootPush::pre_step(float dt, bool face_valid, bool traction_valid) 
     if (!owner.row->traction_ok()) { owner.request_stop(StopReason::TractionLost); return; }
     if (owner.state.elapsed_seconds + double(dt) > duration_seconds() + 1.0e-8) {
         owner.request_stop(StopReason::Expired); return;
+    }
+    if (owner.state.target_held) {
+        owner.state.elapsed_seconds += double(dt);
+        return;
     }
     const double previous = owner.row->rest_distance();
     const double stroke_left = double(owner.requested_stroke_m) -
