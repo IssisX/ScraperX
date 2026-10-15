@@ -24,6 +24,7 @@ const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
+const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const Works := preload("res://presentation/life/works.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
@@ -2431,24 +2432,26 @@ func _build_mountains_and_waterfall() -> void:
 		var base: Vector3 = near_peaks[index]
 		var peak_height: float = near_sizes[index]
 		var radius := peak_height * 0.62
-		_add_cone("MountainPeak", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock)
+		_add_peak("MountainPeak", radius, peak_height, base, rock, Color("5a6067"), index)
 		_add_cone("MountainSnowCap", radius * 0.34, peak_height * 0.3,
-			base + Vector3(0.0, peak_height * 0.92, 0.0), snow)
+			base + Vector3(0.0, peak_height * 0.92, 0.0), snow).visible = false
 
 	var far_peaks := [
 		Vector3(-640.0, 0.0, -880.0), Vector3(-240.0, 0.0, -950.0),
 		Vector3(260.0, 0.0, -930.0), Vector3(680.0, 0.0, -900.0),
 	]
-	for base in far_peaks:
+	for index in far_peaks.size():
+		var base: Vector3 = far_peaks[index]
 		var peak_height := 900.0
 		var radius := peak_height * 0.7
-		_add_cone("MountainRidgeFar", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock_far)
+		_add_peak("MountainRidgeFar", radius, peak_height, base, rock_far, Color("68707a"), index + 3)
 		_add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
-			base + Vector3(0.0, peak_height * 0.9, 0.0), snow)
+			base + Vector3(0.0, peak_height * 0.9, 0.0), snow).visible = false
 
 	_build_waterfall(Vector3(200.0, 0.0, -560.0))
 	_build_foothill_forest()
 	_build_basin()
+	MountainMesh.draw($TowerPresentation, _peaks)
 
 
 # The yard sits in an alpine basin, not on a slab in a void. The valley floor
@@ -2487,11 +2490,11 @@ func _build_basin() -> void:
 		var height := rng.randf_range(280.0, 470.0)
 		var radius := height * 0.62
 		var base := BASIN_CENTER + Vector3(sin(angle) * reach, 0.0, cos(angle) * reach)
-		_add_cone("RimRidge", radius, height, base + Vector3(0.0, height * 0.5, 0.0),
-			rock if index % 3 != 0 else rock_warm)
+		_add_peak("RimRidge", radius, height, base, rock if index % 3 != 0 else rock_warm,
+			Color("5d636a") if index % 3 != 0 else Color("67615a"), index, height > 400.0)
 		if height > 400.0:
 			_add_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
-				base + Vector3(0.0, height * 0.93, 0.0), snow)
+				base + Vector3(0.0, height * 0.93, 0.0), snow).visible = false
 
 	# Conifers scattered over the meadow, clear of the yard and the tower.
 	var placed := 0
@@ -2708,6 +2711,21 @@ func _add_chevron_mark(at: Vector3, scale: float, accent: Material) -> void:
 	_add_box_to("ChevronSpine", Vector3(0.14, 0.9, 0.05) * scale, Vector3(-0.32, 0.0, 0.0) * scale, accent, mark)
 	_add_box_to("ChevronUpper", Vector3(0.62, 0.14, 0.05) * scale, Vector3(0.05, 0.24, 0.0) * scale, accent, mark, -0.55)
 	_add_box_to("ChevronLower", Vector3(0.62, 0.14, 0.05) * scale, Vector3(0.05, -0.24, 0.0) * scale, accent, mark, 0.55)
+
+
+# A mountain: its solid cone (what the world collides with, read by
+# solid_export.gd) kept in the scene but hidden, and a carved peak drawn on
+# the same foot, never standing proud of the cone (mountain_mesh.gd; drawn
+# all at once by _build_mountains_and_waterfall). A peak too low for snow is
+# drawn bare.
+var _peaks: Array = []
+
+
+func _add_peak(node_name: String, radius: float, height: float, foot: Vector3, cone_material: Material,
+		rock: Color, variant: int, snowy := true) -> void:
+	_add_cone(node_name, radius, height, foot + Vector3(0.0, height * 0.5, 0.0), cone_material).visible = false
+	_peaks.append({"foot": foot, "radius": radius, "height": height, "variant": variant, "rock": rock,
+		"snowy": snowy})
 
 
 func _add_cone(node_name: String, radius: float, height: float, at: Vector3, material: Material,

@@ -261,3 +261,22 @@ one kit body (`src/sim/climb_c7.cpp`, built last so older saves line up):
     against the bar and belong in the look pass (task 93).
 - **Not observed:** whether a first-time player sees the galleries as the way from the band, and
   the phone.
+
+**The look: the basin's mountains (Godot).** The peaks were 9-sided cones with a white cone on
+each tip. They went through the static batcher, which recolours every vertex to its material's
+colour and draws far sections in one flat material, so they read as pale grey tents.
+- **Collision is unchanged.** The cones stay in the scene, hidden, because they are the world's
+  solid (`solid_export.gd` reads them). The regenerated `world_solids.inc` is byte-identical.
+- **What is drawn.** A carved peak stands on each cone's foot (`godot/presentation/mountain_mesh.gd`).
+  - **Shape.** Ridged noise cuts ridges and gullies down the flanks; the summit is ragged and the
+    profile slightly concave. Nothing stands proud of the cone by more than 3% of its radius.
+  - **Snow.** It comes lower in the gullies.
+  - **Haze.** Distance lifts the rock toward the horizon's haze. The haze is part of the lit
+    surface, so the slopes still go dark at night.
+- **Cost.** There are eight carved variants, each drawn as one MultiMesh with the rock tint and
+  snow carried per instance. Worst draw calls at LOW from the top (`perf_top`) are 389, against
+  398 recorded before.
+- **Rendered (local, 540×464).** On the title, the ridges now read as layered, hazy rock behind
+  the tower instead of pale tents. From the 751 m deck the far peaks read as snowy pyramids in
+  the haze.
+- **Not observed:** sunrise or night, the higher graphics presets, and the phone.
