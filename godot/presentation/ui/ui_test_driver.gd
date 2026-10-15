@@ -986,6 +986,8 @@ func _touch_pipe_gallery() -> bool:
 	if not lip:
 		return _fail("held forward, the swing never carried the hands to the platform's lip (hands at x %.2f)" % [
 			_native().get_traversal_left_hand().x])
+	if _felt(&"reach") < 1:
+		return _fail("swung bar to bar, the hands felt no reach (haptics %s)" % str(_main.haptic_counts))
 	_touch(0, _main._touch.stick_home(), false)
 	await _seconds(0.3)
 	if _main._touch.button_label(&"jump") != "CLIMB UP":
@@ -2464,6 +2466,8 @@ func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: 
 			return _fail("%s: hauling, the right hand is not on the line (pose %d)" % [name,
 				int(_main._arms.hand_poses()[0])])
 		await _pose("machine_%d_haul" % index)
+		if _felt(&"strain") < 1:
+			return _fail("%s: hauling, the hands felt no strain (haptics %s)" % [name, str(_main.haptic_counts)])
 	else:
 		if not await _offered(&"lift", "RAISE", name):
 			return _fail("%s: RAISE not offered on the deck (offered %s)" % [name, _action_label()])
@@ -3713,6 +3717,8 @@ func _teeter() -> bool:
 		return _fail("teeter: the native never teetered (speed %.2f)" % speed)
 	if _position().y > 44.0:
 		return _fail("teeter: a sprint let go 2 m from the edge stopped on the deck (z %.2f)" % _position().z)
+	if _felt(&"teeter") < 1:
+		return _fail("teeter: the hands felt nothing at the edge (haptics %s)" % str(_main.haptic_counts))
 	_detail = "sprint_mps=%.2f teeters=%d fell_to_y=%.2f" % [speed,
 		int(_native().get_landing_state()["teeters"]), _position().y]
 	return true
@@ -3759,6 +3765,8 @@ func _roll() -> bool:
 		return _fail("roll: the view did not turn over (min pitch offset %.2f)" % pitch_min)
 	if int(_native().get_death_count()) != 0:
 		return _fail("roll: died")
+	if _felt(&"roll") < 1:
+		return _fail("roll: the hands felt no roll (haptics %s)" % str(_main.haptic_counts))
 	_tap(1, _center(&"crouch"))
 	await _seconds(0.5)
 	_detail = "drop_m=%.2f normal_mps=%.2f forward_mps=%.2f balance_after=%.2f roll_travel_m=%.2f" % [
@@ -4146,6 +4154,11 @@ func _standing_above(y: float) -> bool:
 
 # Turns to face `target` and walks to it, the way a player crosses open ground;
 # on the keyboard the mouse keeps the view on it along the way.
+# Pulses of `kind` the game has sent the hands (counted in CI, never sent).
+func _felt(kind: StringName) -> int:
+	return int(_main.haptic_counts.get(kind, 0))
+
+
 func _go(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
 	var at := _position()
 	var to := target - Vector2(at.x, at.z)

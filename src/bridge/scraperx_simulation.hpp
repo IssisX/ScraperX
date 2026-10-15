@@ -160,6 +160,7 @@ public:
     // keyed by its field names.
     // Phase 4: the last landing and the recovery from it (Snapshot fields).
     [[nodiscard]] godot::Dictionary get_landing_state() const;
+    [[nodiscard]] godot::Dictionary get_hand_state() const;
     [[nodiscard]] godot::Dictionary get_wet_state() const;
     [[nodiscard]] godot::Dictionary get_shop_state() const;
     [[nodiscard]] godot::Dictionary get_crane_state() const;

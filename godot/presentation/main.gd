@@ -1344,6 +1344,13 @@ const HAPTICS := {
 	&"vault": [24, 0.65],
 	&"mantle": [42, 0.75],
 	&"balance": [18, 0.30],
+	&"teeter": [26, 0.45],
+	&"stumble": [40, 0.70],
+	&"roll": [55, 0.55],
+	&"slip": [70, 0.85],
+	&"reach": [20, 0.45],
+	&"release": [14, 0.30],
+	&"strain": [28, 0.40],
 	&"land": [34, 0.85],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
@@ -1351,8 +1358,25 @@ const HAPTICS := {
 }
 
 
+# Kinds that always get through the throttle: they mark a moment that
+# matters more than whatever buzzed a few milliseconds before.
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"warn", &"slip"]
+const HAPTIC_GAP_MS := 50
+var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
+var _haptic_next_ms := 0
+
+
 func _haptic(kind: StringName, strength: float = 1.0) -> void:
-	if _ci_mode or not _settings.vibration or not HAPTICS.has(kind):
+	if not _settings.vibration or not HAPTICS.has(kind):
+		return
+	# Coalesced: pulses closer than HAPTIC_GAP_MS run together into a buzz
+	# the hand cannot read, so the later one is dropped (monotonic clock).
+	var now := Time.get_ticks_msec()
+	if now < _haptic_next_ms and not kind in HAPTIC_PRIORITY:
+		return
+	_haptic_next_ms = now + HAPTIC_GAP_MS
+	haptic_counts[kind] = int(haptic_counts.get(kind, 0)) + 1
+	if _ci_mode:
 		return
 	var spec: Array = HAPTICS[kind]
 	var duration_ms := int(float(spec[0]) * lerpf(0.6, 1.0, strength))
@@ -1366,6 +1390,68 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 				var heavy := kind in [&"land", &"death", &"warn"]
 				Input.start_joy_vibration(_router.active_pad, amplitude * 0.8,
 					amplitude if heavy else amplitude * 0.25, float(duration_ms) / 1000.0)
+
+
+# The body's own physics in the hands (Phase 5): each pulse is a native
+# event or load, scaled by its size.
+#   - a stumble: by the balance the landing took (the native's loss);
+#   - a roll: one long, soft pulse as the shoulder goes down;
+#   - an edge teeter: a pulse as the XCoM goes past the footing, and again
+#     while it stays there;
+#   - a beam: corrections pulse faster and harder as the XCoM nears the
+#     edge of what the hips can catch (|beam_xcom| 0.5 to 1);
+#   - the hands: a hang torn off by the load, a reach caught from bar to bar,
+#     a letting go into free flight;
+#   - a haul on the pitman's line: the strain, by the pull in the hands.
+var _fb_stumbles := 0
+var _fb_rolls := 0
+var _fb_teetering := false
+var _fb_teeter_s := 0.0
+var _fb_balance_s := 0.0
+var _fb_hang_slips := 0
+var _fb_swing_reaches := 0
+var _fb_trapeze_slips := 0
+var _fb_strain_s := 0.0
+
+
+func _update_body_feedback(delta: float) -> void:
+	var landing: Dictionary = _native.get_landing_state()
+	var stumbles := int(landing["stumbles"])
+	if stumbles > _fb_stumbles:
+		_haptic(&"stumble", clampf(float(landing["loss"]) * 2.0, 0.4, 1.0))
+	_fb_stumbles = stumbles
+	var rolls := int(landing["rolls"])
+	if rolls > _fb_rolls:
+		_haptic(&"roll")
+	_fb_rolls = rolls
+	var teetering := bool(landing["teetering"])
+	_fb_teeter_s -= delta
+	if teetering and (not _fb_teetering or _fb_teeter_s <= 0.0):
+		_haptic(&"teeter")
+		_fb_teeter_s = 0.3
+	_fb_teetering = teetering
+	var xcom := absf(float(landing["beam_xcom"]))
+	_fb_balance_s -= delta
+	if bool(_ctx["balancing"]) and xcom > 0.5 and _fb_balance_s <= 0.0:
+		var near := clampf((xcom - 0.5) / 0.5, 0.0, 1.0)
+		_haptic(&"balance", lerpf(0.5, 1.0, near))
+		_fb_balance_s = lerpf(0.4, 0.15, near)
+	var hands: Dictionary = _native.get_hand_state()
+	var hang_slips := int(hands["hang_slips"])
+	var trapeze_slips := int(_native.get_trapeze_state()["slips"])
+	if hang_slips > _fb_hang_slips or trapeze_slips > _fb_trapeze_slips:
+		_haptic(&"slip")
+	_fb_hang_slips = hang_slips
+	_fb_trapeze_slips = trapeze_slips
+	var reaches := int(hands["swing_reaches"])
+	if reaches > _fb_swing_reaches:
+		_haptic(&"reach")
+	_fb_swing_reaches = reaches
+	var haul := float(_native.get_lift_state()["pitman_haul_n"])
+	_fb_strain_s -= delta
+	if haul > 1.0 and _fb_strain_s <= 0.0:
+		_haptic(&"strain", clampf(haul / 700.0, 0.3, 1.0))
+		_fb_strain_s = 0.6
 
 
 # State transitions become feedback: a grab, a landing, a canopy, a lethal
@@ -1382,6 +1468,8 @@ func _update_feedback(delta: float) -> void:
 			_haptic(&"mantle")
 		elif traversal != TRAVERSAL_NONE:
 			_haptic(&"tick")
+		elif _fb_traversal == TRAVERSAL_SWINGING and not bool(_ctx["grounded"]):
+			_haptic(&"release")   # let go of the bar, into free flight
 		_fb_traversal = traversal
 	var sliding: bool = _ctx.get("sliding", false)
 	if sliding and not _fb_sliding:
@@ -1391,6 +1479,7 @@ func _update_feedback(delta: float) -> void:
 	if wall_steps > _fb_wall_steps:
 		_haptic(&"tick")   # a foot on the wall
 	_fb_wall_steps = wall_steps
+	_update_body_feedback(delta)
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]

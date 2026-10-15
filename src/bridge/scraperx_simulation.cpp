@@ -256,6 +256,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
@@ -833,6 +834,18 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["summit_seconds"] = s.summit_seconds;
     out["summit_deaths"] = static_cast<std::int64_t>(s.summit_deaths);
     out["route_top"] = sim::Simulation::kRouteTopMeters;
+    return out;
+}
+
+// What the hands have done, as counts the presentation turns into feel:
+// hangs torn off by a load past the grip, bars and pipes caught overhead,
+// and reaches from one to the next.
+godot::Dictionary ScraperXSimulation::get_hand_state() const {
+    const sim::Snapshot &s = simulation_->snapshot();
+    godot::Dictionary out;
+    out["hang_slips"] = static_cast<std::int64_t>(s.hang_slip_count);
+    out["swing_catches"] = static_cast<std::int64_t>(s.swing_catch_count);
+    out["swing_reaches"] = static_cast<std::int64_t>(s.swing_reach_count);
     return out;
 }
 
