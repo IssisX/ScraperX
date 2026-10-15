@@ -14,9 +14,11 @@
 
 namespace scraperx::sim::kit {
 
-RopeConstraint::RopeConstraint(JPH::Body &body1, JPH::Body &body2, const JPH::PulleyConstraintSettings &settings)
+RopeConstraint::RopeConstraint(JPH::Body &body1, JPH::Body &body2, const JPH::PulleyConstraintSettings &settings,
+                               const bool direct)
     : JPH::TwoBodyConstraint(body1, body2, settings), fixed1_(settings.mFixedPoint1), fixed2_(settings.mFixedPoint2),
-      ratio_(settings.mRatio), min_length_(settings.mMinLength), max_length_(settings.mMaxLength) {
+      ratio_(direct ? 1.0F : settings.mRatio), direct_(direct), min_length_(settings.mMinLength),
+      max_length_(settings.mMaxLength) {
     if (settings.mSpace == JPH::EConstraintSpace::WorldSpace) {
         local1_ = JPH::Vec3(body1.GetInverseCenterOfMassTransform() * settings.mBodyPoint1);
         local2_ = JPH::Vec3(body2.GetInverseCenterOfMassTransform() * settings.mBodyPoint2);
@@ -36,6 +38,17 @@ RopeConstraint::RopeConstraint(JPH::Body &body1, JPH::Body &body2, const JPH::Pu
 float RopeConstraint::update_geometry() {
     world1_ = mBody1->GetCenterOfMassTransform() * local1_;
     world2_ = mBody2->GetCenterOfMassTransform() * local2_;
+    if (direct_) {
+        // Straight between the ends: d(length)/dt = n . (v1 - v2), so the
+        // ends' normals are n and -n and the pulley's solver is unchanged.
+        const JPH::Vec3 run(world1_ - world2_);
+        const float length = run.Length();
+        if (length > 0.0F) {
+            normal1_ = run / length;
+            normal2_ = -normal1_;
+        }
+        return length;
+    }
     const JPH::Vec3 run1(world1_ - fixed1_);
     const JPH::Vec3 run2(world2_ - fixed2_);
     const float length1 = run1.Length();
@@ -124,18 +137,34 @@ void RopeConstraint::SetupVelocityConstraint(const float delta_time) {
     if (!update_mass()) {
         total_lambda_ = 0.0F;
     }
+    // The winch pulls only on a rope working at its length.
+    motor_impulse_max_ = motor_force_ * delta_time;
+    if (motor_rate_ <= 0.0F || side_ != Side::Pull || effective_mass_ == 0.0F) {
+        motor_lambda_ = 0.0F;
+    }
 }
 
-void RopeConstraint::ResetWarmStart() { total_lambda_ = 0.0F; }
+void RopeConstraint::ResetWarmStart() {
+    total_lambda_ = 0.0F;
+    motor_lambda_ = 0.0F;
+}
 
 void RopeConstraint::WarmStartVelocityConstraint(const float warm_start_impulse_ratio) {
     total_lambda_ *= warm_start_impulse_ratio;
-    (void)apply_impulse(total_lambda_);
+    motor_lambda_ *= warm_start_impulse_ratio;
+    (void)apply_impulse(total_lambda_ + motor_lambda_);
 }
 
 bool RopeConstraint::SolveVelocityConstraint(const float /*delta_time*/) {
     if (effective_mass_ == 0.0F) {
         return false;
+    }
+    bool applied = false;
+    if (motor_rate_ > 0.0F && side_ == Side::Pull) {
+        // Toward d(length)/dt = -rate, with no more than the winch's force.
+        const float motor = std::clamp(motor_lambda_ - effective_mass_ * (rate() + motor_rate_), -motor_impulse_max_, 0.0F);
+        applied = apply_impulse(motor - motor_lambda_);
+        motor_lambda_ = motor;
     }
     constexpr float kNone = std::numeric_limits<float>::max();
     const float low = side_ == Side::Push ? 0.0F : -kNone;
@@ -145,7 +174,7 @@ bool RopeConstraint::SolveVelocityConstraint(const float /*delta_time*/) {
     const float total = std::clamp(total_lambda_ - effective_mass_ * (rate() - allowed_rate_), low, high);
     const float lambda = total - total_lambda_;
     total_lambda_ = total;
-    return apply_impulse(lambda);
+    return apply_impulse(lambda) || applied;
 }
 
 bool RopeConstraint::SolvePositionConstraint(const float /*delta_time*/, const float baumgarte) {

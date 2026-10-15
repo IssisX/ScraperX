@@ -32,8 +32,11 @@ public:
     JPH_OVERRIDE_NEW_DELETE
 
     // The settings as Jolt's pulley takes them: a negative minimum or
-    // maximum length is the length as laid.
-    RopeConstraint(JPH::Body &body1, JPH::Body &body2, const JPH::PulleyConstraintSettings &settings);
+    // maximum length is the length as laid. A direct rope runs straight from
+    // body1's point to body2's, over no sheave (the grappling hook's line):
+    // its length |p1 - p2|, the fixed points unused.
+    RopeConstraint(JPH::Body &body1, JPH::Body &body2, const JPH::PulleyConstraintSettings &settings,
+                   bool direct = false);
 
     [[nodiscard]] JPH::EConstraintSubType GetSubType() const override { return JPH::EConstraintSubType::User1; }
     void NotifyShapeChanged(const JPH::BodyID &body_id, JPH::Vec3Arg delta_com) override;
@@ -57,6 +60,19 @@ public:
 
     [[nodiscard]] float GetMinLength() const noexcept { return min_length_; }
     [[nodiscard]] float GetMaxLength() const noexcept { return max_length_; }
+    // Paid out or reeled in: the length the rope may run to from the next step.
+    void SetMaxLength(const float length) noexcept { max_length_ = length; }
+    // A winch on the rope (the grappling hook's reel): while pulling, it
+    // takes the rope in at up to `rate` m/s with at most `force` N, over and
+    // above holding it at its length; past that force it stalls. A rate of
+    // 0 is off. The winch is solved before the rope's limit, each with its
+    // own impulse, so a stalled winch still has the rope's full hold behind it.
+    void SetMotor(const float rate, const float force) noexcept {
+        motor_rate_ = rate;
+        motor_force_ = force;
+    }
+    // The winch's impulse in the last step, N s (negative: pulling).
+    [[nodiscard]] float GetMotorLambda() const noexcept { return motor_lambda_; }
     // The impulse along the rope in the last step, N s: negative pulling,
     // positive pushing.
     [[nodiscard]] float GetTotalLambdaPosition() const noexcept { return total_lambda_; }
@@ -78,6 +94,7 @@ private:
     JPH::RVec3 fixed1_;
     JPH::RVec3 fixed2_;
     float ratio_ = 1.0F;
+    bool direct_ = false;
     float min_length_ = 0.0F;
     float max_length_ = 0.0F;
 
@@ -96,6 +113,10 @@ private:
     // rope acts: the slack it may run out, over the step.
     float allowed_rate_ = 0.0F;
     float total_lambda_ = 0.0F;
+    float motor_rate_ = 0.0F;
+    float motor_force_ = 0.0F;
+    float motor_impulse_max_ = 0.0F;
+    float motor_lambda_ = 0.0F;
 };
 
 } // namespace scraperx::sim::kit

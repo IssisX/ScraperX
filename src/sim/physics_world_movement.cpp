@@ -575,8 +575,22 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
             sprinting_ = true;
         }
         // Balance at an edge (see kTeeterComHeight).
+        // The feet push only as hard as they are pressed down: a hook's line
+        // taking part of the body's weight takes that share of their traction
+        // (task #102), so a reel that lifts drags the soles rather than
+        // being out-pushed by them.
+        float pressed = 1.0F;
+        if (hook_state_ == HookState::Bitten && hook_tension_n_ > 0.0F) {
+            const JPH::Vec3 line(hook_anchor(bodies) - hook_chest(bodies));
+            const float length = line.Length();
+            if (length > 1.0e-3F) {
+                const float lift = hook_tension_n_ * line.GetY() / length;
+                const float weight = kPlayerMassKg * -physics_system_.GetGravity().GetY();
+                pressed = std::clamp(1.0F - lift / weight, 0.0F, 1.0F);
+            }
+        }
         const float traction = carry_ground_acceleration() * static_cast<float>(0.25 + 0.75 * recovery_balance()) *
-                               ground_grip(bodies);
+                               ground_grip(bodies) * pressed;
         // While teetering, the most the feet may take off the speed toward
         // the edge in one second; steering across it keeps full traction.
         float teeter_brake = 0.0F;

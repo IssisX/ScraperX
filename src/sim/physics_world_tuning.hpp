@@ -156,10 +156,11 @@ constexpr std::uint32_t kWallKicksMax = 2;
 // pipe, rung or rail: see find_grip) they strike within kHookBiteReach; on
 // anything else it glances off, and with no bite in kHookMissSeconds it is
 // reeled back in. Bitten, the line holds the body at its length: it hangs and
-// swings on it. The reel takes the line in at kHookReelSpeedMps while the
-// line's tension is under kHookReelForceN (CHOSEN, 1.5 body weights): past
-// that it stalls, so it lifts the body but cannot tear it off a hold or out of
-// a machine. On the taut line the stick pumps the swing as on a bar
+// swings on it. The reel is a winch on the line (rope_constraint.hpp): it
+// takes the line in at up to kHookReelSpeedMps pulling with at most
+// kHookReelForceN (CHOSEN, 1.5 body weights); past that it stalls and its
+// brake holds, so it lifts the body but cannot tear it off a hold or out of
+// a machine, and it never moves the body faster than the line comes in. On the taut line the stick pumps the swing as on a bar
 // (kSwingKipForceN), not as air control. Let go, the body keeps its velocity.
 constexpr float kHookMassKg = 1.5F;
 constexpr float kHookRadius = 0.08F;
@@ -172,6 +173,23 @@ constexpr float kHookReelForceN = 1200.0F;
 constexpr float kHookLineShortestM = 1.0F;
 constexpr float kHookTautTensionN = 30.0F;
 constexpr float kHookRackReach = 1.6F;
+// A real rope (task #102): the line bends round what it meets. Where the
+// straight line from the chest to its anchor (the bite, or the last bend)
+// would pass through a body the hook could bite on (static, or of at least
+// kGripMinBodyMassKg), it catches on that body's edge instead: a bend there,
+// kHookWrapStandoffM off the face, takes the line, and the rope from it back
+// to the anchor lies still against the steel; the reel and the swing work the
+// free length from the chest to the bend. The edge is where the line, swept
+// from where the chest was the tick before, first met the body (a bisection,
+// kHookWrapSearchSteps halvings: ~1 mm over a swing's 30 cm tick). Swung back
+// round the bend (its turn reverses) with the anchor before it in sight, the
+// line comes off. Hits within kHookWrapEndM of the line's far end are the
+// member it is fast to, not an edge. At most kHookBendsMax bends: past that a
+// line runs straight (bounded state; counted in hook_bends_refused).
+constexpr std::uint32_t kHookBendsMax = 8;
+constexpr float kHookWrapStandoffM = 0.03F;
+constexpr float kHookWrapEndM = 0.15F;
+constexpr int kHookWrapSearchSteps = 12;
 constexpr float kSlideMinimumSpeed = 5.0F;
 constexpr float kSlideFriction = 0.35F;
 constexpr float kSlideSteerAcceleration = 2.0F;

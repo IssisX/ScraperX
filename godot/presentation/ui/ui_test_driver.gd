@@ -31,6 +31,7 @@ const SCENARIOS := {
 	"touch_monkey_bars": 39,
 	"touch_pipe_gallery": 40,
 	"touch_hook": 39,
+	"touch_hook_rope": 16,
 	"touch_birds": 8,
 	"touch_workers": 8,
 	"touch_works": 27,
@@ -229,6 +230,8 @@ func _run() -> void:
 			ok = await _touch_pipe_gallery()
 		"touch_hook":
 			ok = await _touch_hook()
+		"touch_hook_rope":
+			ok = await _touch_hook_rope()
 		"touch_birds":
 			ok = await _touch_birds()
 		"touch_workers":

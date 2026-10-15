@@ -649,14 +649,21 @@ void Simulation::PhysicsWorld::hook_pre_step(JPH::BodyInterface &bodies, const S
                                     static_cast<float>(commands.hook_aim_z)));
         return;
     }
-    if (hook_state_ == HookState::Bitten && commands.hook_reel && hook_line_ != nullptr) {
-        const float length = std::min(hook_line_->GetMaxDistance(),
-                                      JPH::Vec3(hook_end(bodies) - hook_chest(bodies)).Length());
-        // The reel's motor stalls at kHookReelForceN.
-        if (hook_tension_n_ < kHookReelForceN) {
-            hook_line_->SetDistance(0.0F, std::max(kHookLineShortestM, length - kHookReelSpeedMps * dt));
+    if (hook_state_ == HookState::Bitten && hook_line_ != nullptr) {
+        // The reel is a winch on the free line, chest to the nearest bend (or
+        // the bite): what lies laid round the structure beyond stays laid.
+        // Turning, it takes the line in at kHookReelSpeedMps with at most
+        // kHookReelForceN and pays none out (the line's length follows it
+        // in); past that force it stalls and holds. Let go, it holds.
+        const float lies = JPH::Vec3(hook_anchor(bodies) - hook_chest(bodies)).Length();
+        if (commands.hook_reel && lies > kHookLineShortestM) {
+            hook_line_->SetMaxLength(std::max(kHookLineShortestM, std::min(hook_line_->GetMaxLength(), lies)));
+            hook_line_->SetMotor(kHookReelSpeedMps, kHookReelForceN);
+            if (-hook_line_->GetMotorLambda() >= kHookReelForceN * dt * 0.999F) {
+                ++hook_stall_ticks_;
+            }
         } else {
-            ++hook_stall_ticks_;
+            hook_line_->SetMotor(0.0F, 0.0F);
         }
     }
 }
@@ -673,14 +680,8 @@ void Simulation::PhysicsWorld::fire_hook(JPH::BodyInterface &bodies, JPH::Vec3 a
                      ->GetID();
     bodies.SetMotionQuality(hook_body_, JPH::EMotionQuality::LinearCast);
     bodies.SetLinearVelocity(hook_body_, bodies.GetLinearVelocity(player_id_) + aim * kHookLaunchMps);
-    JPH::DistanceConstraintSettings settings;
-    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-    settings.mPoint1 = hook_chest(bodies);
-    settings.mPoint2 = start;
-    settings.mMinDistance = 0.0F;
-    settings.mMaxDistance = kHookLineMaxM;
-    hook_line_ = static_cast<JPH::DistanceConstraint *>(
-        create_constraint(settings, player_id_, hook_body_, false));
+    hook_bend_count_ = 0;
+    attach_hook_line(bodies, hook_body_, start, kHookLineMaxM);
     hook_state_ = HookState::Flying;
     hook_flight_seconds_ = 0.0;
     hook_tension_n_ = 0.0F;
@@ -699,6 +700,7 @@ void Simulation::PhysicsWorld::stow_hook(JPH::BodyInterface &bodies) noexcept {
     }
     hook_state_ = HookState::Stowed;
     hook_tension_n_ = 0.0F;
+    hook_bend_count_ = 0;
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::closest_on_hold(const LeafBox &box, const std::uint32_t long_axis,
@@ -720,8 +722,11 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
     if (hook_state_ == HookState::Stowed) {
         return;
     }
-    hook_tension_n_ = hook_line_ != nullptr ? std::abs(hook_line_->GetTotalLambdaPosition()) / dt : 0.0F;
-    if (hook_state_ != HookState::Flying) {
+    hook_tension_n_ = hook_line_ != nullptr
+                          ? std::abs(hook_line_->GetTotalLambdaPosition() + hook_line_->GetMotorLambda()) / dt
+                          : 0.0F;
+    if (hook_state_ == HookState::Bitten) {
+        bend_hook_line(bodies);
         return;
     }
     hook_flight_seconds_ += dt;
@@ -762,13 +767,9 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
         bodies.RemoveBody(hook_body_);
         bodies.DestroyBody(hook_body_);
         hook_body_ = {};
-        JPH::DistanceConstraintSettings line;
-        line.mSpace = JPH::EConstraintSpace::WorldSpace;
-        line.mPoint1 = hook_chest(bodies);
-        line.mPoint2 = bite;
-        line.mMinDistance = 0.0F;
-        line.mMaxDistance = length;
-        hook_line_ = static_cast<JPH::DistanceConstraint *>(create_constraint(line, player_id_, held, false));
+        hook_bend_count_ = 0;
+        hook_last_chest_ = hook_chest(bodies);
+        attach_hook_line(bodies, held, bite, length);
         hook_state_ = HookState::Bitten;
         ++hook_bite_count_;
         return;
@@ -776,6 +777,147 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
     if (hook_flight_seconds_ > kHookMissSeconds) {
         stow_hook(bodies);   // no bite: reeled back in
     }
+}
+
+// The line from the chest to `at` on `anchor`, at most `max_length` long:
+// the kit's rope run direct (rope_constraint.hpp), solved every step, so a
+// body hung at the line's length never drops its load for a tick at
+// altitude (Jolt's distance constraint, which it was before, sat out any
+// step it began a hair slack). Replaces the line there was.
+void Simulation::PhysicsWorld::attach_hook_line(JPH::BodyInterface &bodies, const JPH::BodyID anchor,
+                                                const JPH::RVec3 at, const float max_length) noexcept {
+    if (hook_line_ != nullptr) {
+        physics_system_.RemoveConstraint(hook_line_);
+        hook_line_ = nullptr;
+    }
+    JPH::PulleyConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mBodyPoint1 = hook_chest(bodies);
+    settings.mBodyPoint2 = at;
+    settings.mFixedPoint1 = at;
+    settings.mFixedPoint2 = at;
+    settings.mMinLength = 0.0F;
+    settings.mMaxLength = max_length;
+    const JPH::BodyID ids[2] = {player_id_, anchor};
+    JPH::BodyLockMultiWrite lock(physics_system_.GetBodyLockInterface(), ids, 2);
+    JPH::Body *chest = lock.GetBody(0);
+    JPH::Body *held = lock.GetBody(1);
+    if (chest == nullptr || held == nullptr) {
+        return;
+    }
+    hook_line_ = new kit::RopeConstraint(*chest, *held, settings, true);
+    physics_system_.AddConstraint(hook_line_);
+}
+
+JPH::RVec3 Simulation::PhysicsWorld::hook_bend_point(const JPH::BodyInterface &bodies,
+                                                     const std::uint32_t bend) const noexcept {
+    return from_support_local(bodies, hook_bends_[bend].body, hook_bends_[bend].local);
+}
+
+// Where the free line ends: the nearest bend, or the hook.
+JPH::RVec3 Simulation::PhysicsWorld::hook_anchor(const JPH::BodyInterface &bodies) const noexcept {
+    return hook_bend_count_ > 0 ? hook_bend_point(bodies, hook_bend_count_ - 1) : hook_end(bodies);
+}
+
+// Whether the straight line from `from` to `to` passes through a body the
+// rope catches on (static, or as heavy as a hold's body): the player, the
+// hook, sensors and light loose bodies do not take it, and a hit within
+// kHookWrapEndM of `to` is the member the line is fast to there.
+bool Simulation::PhysicsWorld::hook_line_blocked(const JPH::RVec3 from, const JPH::RVec3 to,
+                                                 JPH::RayCastResult &hit) const noexcept {
+    class Takes final : public JPH::BodyFilter {
+    public:
+        Takes(const JPH::BodyID player, const JPH::BodyID hook) : player_(player), hook_(hook) {}
+        bool ShouldCollide(const JPH::BodyID &id) const override { return id != player_ && id != hook_; }
+        bool ShouldCollideLocked(const JPH::Body &body) const override {
+            return !body.IsSensor() &&
+                   (!body.IsDynamic() ||
+                    body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg <= 1.0F);
+        }
+
+    private:
+        JPH::BodyID player_;
+        JPH::BodyID hook_;
+    };
+    const JPH::Vec3 run(to - from);
+    const float length = run.Length();
+    if (length <= kHookWrapEndM) {
+        return false;
+    }
+    hit.Reset();
+    const Takes takes(player_id_, hook_body_);
+    if (!physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(from, run), hit, {}, {}, takes)) {
+        return false;
+    }
+    return hit.mFraction * length < length - kHookWrapEndM;
+}
+
+// The rope against the structure, once a tick while the hook is bitten:
+// off the nearest bend if the line has swung back round it, then onto any
+// edge the free line now crosses (see kHookBendsMax).
+void Simulation::PhysicsWorld::bend_hook_line(JPH::BodyInterface &bodies) noexcept {
+    if (hook_line_ == nullptr) {
+        return;
+    }
+    const JPH::RVec3 chest = hook_chest(bodies);
+    JPH::RayCastResult hit;
+    if (hook_bend_count_ > 0) {
+        const HookBend &bend = hook_bends_[hook_bend_count_ - 1];
+        const JPH::RVec3 at = hook_bend_point(bodies, hook_bend_count_ - 1);
+        const bool first = hook_bend_count_ == 1;
+        const JPH::RVec3 before = first ? hook_end(bodies) : hook_bend_point(bodies, hook_bend_count_ - 2);
+        const JPH::Vec3 turn = JPH::Vec3(at - before).Cross(JPH::Vec3(chest - at));
+        if (turn.Dot(bend.turn) <= 0.0F && !hook_line_blocked(chest, before, hit)) {
+            const float free = hook_line_->GetMaxLength() + bend.laid_m;
+            const JPH::BodyID body = first ? hook_bite_target_ : hook_bends_[hook_bend_count_ - 2].body;
+            --hook_bend_count_;
+            attach_hook_line(bodies, body, before, free);
+            ++hook_unwrap_count_;
+        }
+    }
+    const JPH::RVec3 anchor = hook_anchor(bodies);
+    if (hook_line_ != nullptr && hook_line_blocked(chest, anchor, hit)) {
+        if (hook_bend_count_ >= kHookBendsMax) {
+            ++hook_bends_refused_;
+        } else {
+            // Where the line, swept from the chest's last place to this one,
+            // first met the body: its edge.
+            JPH::RVec3 from = chest;
+            JPH::RayCastResult edge = hit;
+            JPH::RayCastResult probe;
+            if (!hook_line_blocked(hook_last_chest_, anchor, probe)) {
+                float clear = 0.0F;
+                float blocked = 1.0F;
+                for (int step = 0; step < kHookWrapSearchSteps; ++step) {
+                    const float mid = 0.5F * (clear + blocked);
+                    const JPH::RVec3 at = hook_last_chest_ + JPH::Vec3(chest - hook_last_chest_) * mid;
+                    if (hook_line_blocked(at, anchor, probe)) {
+                        blocked = mid;
+                        from = at;
+                        edge = probe;
+                    } else {
+                        clear = mid;
+                    }
+                }
+            }
+            const JPH::Vec3 run(anchor - from);
+            const JPH::RVec3 point = JPH::RRayCast(from, run).GetPointOnRay(edge.mFraction);
+            const JPH::RVec3 bend_at = point + surface_normal(edge.mBodyID, edge.mSubShapeID2, point) * kHookWrapStandoffM;
+            const float laid = JPH::Vec3(anchor - bend_at).Length();
+            const float free = hook_line_->GetMaxLength() - laid;
+            if (laid > kHookWrapEndM && free > 0.0F) {
+                HookBend &bend = hook_bends_[hook_bend_count_];
+                bend.body = edge.mBodyID;
+                bend.local = to_support_local(bodies, edge.mBodyID, bend_at);
+                bend.turn = JPH::Vec3(bend_at - anchor).Cross(JPH::Vec3(chest - bend_at));
+                bend.laid_m = laid;
+                ++hook_bend_count_;
+                attach_hook_line(bodies, edge.mBodyID, bend_at, free);
+                ++hook_wrap_count_;
+            }
+        }
+    }
+    hook_last_chest_ = chest;
 }
 
 } // namespace scraperx::sim

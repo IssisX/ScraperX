@@ -478,6 +478,17 @@ struct Snapshot final {
     double hook_tension_n = 0.0;
     std::uint64_t hook_fire_count = 0;
     std::uint64_t hook_bite_count = 0;
+    // The line as it lies (task #102): from the chest, through each place it
+    // bends round the structure (nearest the body first), to hook_position.
+    // hook_line_length is the whole rope out: the free length to the nearest
+    // bend plus what lies laid beyond it.
+    static constexpr std::uint32_t kHookLinePointsMax = 10;
+    std::uint32_t hook_line_point_count = 0;
+    std::array<Vector3, kHookLinePointsMax> hook_line_points{};
+    std::uint32_t hook_bend_count = 0;
+    std::uint64_t hook_wrap_count = 0;
+    std::uint64_t hook_unwrap_count = 0;
+    std::uint64_t hook_bends_refused = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
     std::array<WorkerView, 14> workers{};

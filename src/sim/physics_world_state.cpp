@@ -346,7 +346,28 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.hook_take_available = hook_take_in_reach(bodies);
     state_.hook_state = static_cast<std::uint8_t>(hook_state_);
     state_.hook_position = hook_state_ == HookState::Stowed ? Vector3{} : to_vector3(hook_end(bodies));
-    state_.hook_line_length = hook_line_ != nullptr ? hook_line_->GetMaxDistance() : 0.0;
+    {
+        double laid = 0.0;
+        for (std::uint32_t bend = 0; bend < hook_bend_count_; ++bend) {
+            laid += hook_bends_[bend].laid_m;
+        }
+        state_.hook_line_length = hook_line_ != nullptr ? hook_line_->GetMaxLength() + laid : 0.0;
+        // The line as it lies: chest, the bends nearest-first, the hook.
+        static_assert(kHookBendsMax + 2 <= Snapshot::kHookLinePointsMax, "the line's points fit the snapshot");
+        std::uint32_t points = 0;
+        if (hook_state_ != HookState::Stowed) {
+            state_.hook_line_points[points++] = to_vector3(hook_chest(bodies));
+            for (std::uint32_t bend = hook_bend_count_; bend > 0; --bend) {
+                state_.hook_line_points[points++] = to_vector3(hook_bend_point(bodies, bend - 1));
+            }
+            state_.hook_line_points[points++] = to_vector3(hook_end(bodies));
+        }
+        state_.hook_line_point_count = points;
+        state_.hook_bend_count = hook_bend_count_;
+        state_.hook_wrap_count = hook_wrap_count_;
+        state_.hook_unwrap_count = hook_unwrap_count_;
+        state_.hook_bends_refused = hook_bends_refused_;
+    }
     state_.hook_tension_n = hook_tension_n_;
     state_.hook_fire_count = hook_fire_count_;
     state_.hook_bite_count = hook_bite_count_;

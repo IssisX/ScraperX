@@ -369,25 +369,45 @@ void run_hook() {
     require(std::abs(bit.x - 3.0) < 0.25 && std::abs(bit.y - 3.1) < 0.25, "the hook must bite at the bar it hit");
     const double y0 = s.snapshot().player_position.y;
     require(s.set_hook_reel(true), "reel");
-    double worst_climb = 0.0;
+    // The line as it lies, chest to hook (the snapshot's own points).
+    const auto line_lies = [](const Snapshot &n) {
+        double length = 0.0;
+        for (std::uint32_t i = 1; i < n.hook_line_point_count; ++i) {
+            const auto a = n.hook_line_points[i - 1];
+            const auto b = n.hook_line_points[i];
+            length += std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+        }
+        return length;
+    };
+    // The reel is a winch (kHookReelForceN): it drags the soles toward the
+    // bar (a line carrying part of the weight takes that share of their
+    // grip), lifts the body and swings it under the bar. What it may not do
+    // is take the line in faster than it turns.
+    double worst_reel = 0.0;
     double worst_tension = 0.0;
-    double last_y = y0;
+    double peak_y = y0;
+    double last_line = line_lies(s.snapshot());
     for (int tick = 0; tick < 90 * 3; ++tick) {
         require(s.advance_frame(dt).accepted, "reel tick");
         const Snapshot n = s.snapshot();
-        worst_climb = std::max(worst_climb, (n.player_position.y - last_y) / dt);
+        const double line = line_lies(n);
+        worst_reel = std::max(worst_reel, (last_line - line) / dt);
         worst_tension = std::max(worst_tension, n.hook_tension_n);
-        last_y = n.player_position.y;
+        peak_y = std::max(peak_y, n.player_position.y);
+        last_line = line;
     }
     const Snapshot reeled = s.snapshot();
-    require(reeled.player_position.y > y0 + 0.8 && !reeled.player_grounded,
+    require(peak_y > y0 + 0.8 && !reeled.player_grounded,
             "reeled in, the hook must lift the body off the deck");
-    require(worst_climb < 3.0 * 1.15, "the reel must take the line in no faster than it turns");
+    require(worst_reel < 3.0 * 1.15, "the reel must take the line in no faster than it turns");
     require(s.set_hook_reel(false) && s.request_hook_release(), "let go");
     require(s.advance_frame(0.3).accepted, "let-go fall");
     require(s.snapshot().hook_state == 0 && s.snapshot().player_linear_velocity.y < -0.5,
             "let go, the hook comes back and the body falls");
     require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 2.0), "down again");
+    // Reeled, the winch swung the body in under the bars: back to the open
+    // deck it was taken from before firing anywhere else.
+    require(walk_to(s, -1.0, -20.0, 8.0), "back out from under the bars");
 
     // At the sky: no bite, and it comes back.
     aim_at(-1.0, 50.0, -20.0);
@@ -413,7 +433,92 @@ void run_hook() {
     require(l.advance_frame(0.1).accepted && l.load_game(saved.data(), saved.size()), "the save must load");
     require(l.advance_frame(Simulation::kFixedStepSeconds).accepted && l.snapshot().has_hook,
             "the hook must be kept through a save and a load");
-    std::cout << "PASS scraperx_sim hook: lifted_m=" << reeled.player_position.y - y0 << " worst_climb_mps=" << worst_climb
+
+    // A real rope (task #102): bitten at bar 0 from 5 m west of it and
+    // walked south-east past the frame's west post, the line catches on
+    // the post's edge instead of passing through it; walked back, it comes
+    // off. Checked against the post's own box here, not the native's test:
+    // no stretch of the line may cross it (the box is taken 1 cm in, the
+    // bend sits 3 cm off its face). Round the bend, the line as it lies is
+    // never longer than the rope out.
+    {
+        Simulation w(InitialSpawn::SwingApproach);
+        require(w.advance_frame(0.4).accepted && w.request_hook_take() && w.advance_frame(dt).accepted &&
+                    w.snapshot().has_hook,
+                "wrap: the hook must be taken");
+        require(walk_to(w, -5.0, -20.0, 8.0, 0.1), "wrap: back off 5 m west of the bars");
+        const auto p = w.snapshot().player_position;
+        require(w.set_hook_aim(0.0 - p.x, 3.1 - (p.y + 0.6), -20.0 - p.z) && w.request_hook_fire(), "wrap: fire");
+        require(advance_until(w, [](const Snapshot &n) { return n.hook_state == 2; }, 1.0), "wrap: bite on bar 0");
+        const double rope = w.snapshot().hook_line_length;
+        // The west post nearer the walk: x -0.9, z -19.26, 0.12 half, 3.38 tall.
+        const auto crosses_post = [](const scraperx::sim::Vector3 a, const scraperx::sim::Vector3 b) {
+            const double lo[3] = {-1.02 + 0.01, 0.0 + 0.01, -19.38 + 0.01};
+            const double hi[3] = {-0.78 - 0.01, 3.38 - 0.01, -19.14 - 0.01};
+            const double from[3] = {a.x, a.y, a.z};
+            const double run[3] = {b.x - a.x, b.y - a.y, b.z - a.z};
+            double t0 = 0.0;
+            double t1 = 1.0;
+            for (int k = 0; k < 3; ++k) {
+                if (std::abs(run[k]) < 1.0e-12) {
+                    if (from[k] < lo[k] || from[k] > hi[k]) {
+                        return false;
+                    }
+                    continue;
+                }
+                double ta = (lo[k] - from[k]) / run[k];
+                double tb = (hi[k] - from[k]) / run[k];
+                if (ta > tb) {
+                    std::swap(ta, tb);
+                }
+                t0 = std::max(t0, ta);
+                t1 = std::min(t1, tb);
+                if (t0 > t1) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        int crossings = 0;
+        std::uint32_t most_bends = 0;
+        double worst_over = 0.0;
+        const auto watch = [&](const Snapshot &n) {
+            for (std::uint32_t i = 1; i < n.hook_line_point_count; ++i) {
+                crossings += crosses_post(n.hook_line_points[i - 1], n.hook_line_points[i]) ? 1 : 0;
+            }
+            most_bends = std::max(most_bends, n.hook_bend_count);
+            worst_over = std::max(worst_over, line_lies(n) - n.hook_line_length);
+            return false;
+        };
+        const auto walk_watching = [&](const double x, const double z, const double seconds) {
+            for (int tick = 0; tick < static_cast<int>(seconds / dt); ++tick) {
+                const auto at = w.snapshot().player_position;
+                if (std::hypot(x - at.x, z - at.z) < 0.15) {
+                    break;
+                }
+                steer_toward(w, x, z);
+                require(w.advance_frame(dt).accepted, "wrap walk tick");
+                (void)watch(w.snapshot());
+            }
+            (void)w.set_move_input(0.0, 0.0);
+        };
+        walk_watching(-3.5, -17.2, 6.0);
+        const Snapshot wrapped = w.snapshot();
+        require(most_bends >= 1 && wrapped.hook_wrap_count >= 1,
+                "walked past the post, the line must catch on its edge");
+        walk_watching(-5.0, -20.0, 6.0);
+        const Snapshot back = w.snapshot();
+        require(back.hook_bend_count == 0 && back.hook_unwrap_count >= 1,
+                "walked back, the line must come off the post");
+        require(crossings == 0, "no stretch of the line may pass through the post");
+        require(worst_over < 0.02, "the line as it lies must never be longer than the rope out");
+        require(std::abs(back.hook_line_length - rope) < 0.02,
+                "round the bend and off it again, no rope may be made or lost");
+        std::cout << "PASS scraperx_sim hook rope: bends=" << most_bends << " wraps=" << wrapped.hook_wrap_count
+                  << " unwraps=" << back.hook_unwrap_count << " crossings=" << crossings
+                  << " worst_over_m=" << worst_over << "\n";
+    }
+    std::cout << "PASS scraperx_sim hook: lifted_m=" << peak_y - y0 << " worst_reel_mps=" << worst_reel
               << " worst_tension_n=" << worst_tension << "\n";
 }
 

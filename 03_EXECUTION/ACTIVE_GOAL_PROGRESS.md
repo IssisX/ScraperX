@@ -701,6 +701,53 @@ windows, and the tuning values. Built this pass, all in `src/sim/simulation.cpp`
   are decision 2 below.
 - **Not observed:** on the phone.
 
+**The four giant files split (task #112, the owner's top priority).** `simulation.cpp` (6,863
+lines), `simulation_tests.cpp` (9,990), `ui_test_driver.gd` (5,005) and `main.gd` (4,209) are now
+37 files of 270-960 lines, each one subsystem or one family of tests:
+- **Native** (`d73a89d`): `physics_world_tuning.hpp` (every constant), `physics_world_support.hpp`,
+  `physics_world.hpp` (the class), and `physics_world.cpp`, `_probes`, `_movement`, `_traversal`,
+  `_climb`, `_state` (the members by subsystem); `simulation.cpp` keeps the public API.
+- **Native tests** (`48717ae`): `sim_tests.hpp` and fourteen files, one per band or family;
+  `simulation_tests.cpp` keeps `main()`, its run order and its `SCRAPERX_ONLY` groups.
+- **GDScript** (`069a4a9`): `main.gd` and `ui_test_driver.gd` are each the top of an `extends`
+  chain (geometry, world, machines, context, feel, main; base, moves, bands, rides, service, stack,
+  driver). Each layer calls only itself and below; the engine checks that on every load.
+- **Proof that nothing changed.** All four splits were done by script as pure moves. Every
+  original line has its counterpart; GCC and clang build clean with `-Werror`; the native suite's
+  output is byte-identical to the run before (105 PASS, DEBUG lines included); the world's solids
+  re-exported through the split builders are byte-identical to `world_solids.inc`; all 73 touch
+  scenarios pass. Runtime speed is unchanged; what changes is the work: an edit to one subsystem
+  recompiles ~800 lines, and the files build in parallel.
+
+**The grappling hook's line is a real rope (task #102, native + touch).** The hook already flew as
+a body and bit only on holds; its line was a straight Jolt distance constraint that passed through
+steel and sat out any tick it began a hair slack. Now:
+- **The rope wraps.** Where the line from the chest to its anchor would pass through a static or
+  heavy body, it catches on that body's edge: a bend there (found by sweeping the line from where
+  the chest was a tick before; `kHookBendsMax` 8), the rope beyond it laid against the steel, the
+  free length to the bend worked by the reel and the swing. Swung back round, it comes off. No rope
+  is made or lost. Walk off the 220 ring's edge with the hook bitten and the line catches over the
+  deck's lip and holds you hanging below it.
+- **The line is the kit's rope, run direct** (`rope_constraint`): solved every step, so a hung body
+  never drops its load for a tick at altitude.
+- **The reel is a winch**: it takes the line in at up to 3 m/s pulling with at most 1.2 kN, and its
+  brake holds when it stalls; it no longer moves the body by position. A line carrying part of the
+  body's weight takes that share of the feet's grip, so a winch drags the soles toward the bar
+  instead of being out-pushed by the legs, then lifts and swings the body.
+- **Drawn as it lies**: the fist holds the line toward its first bend; a segment per bend runs on to
+  the hook.
+- **Proof.** Native `hook`: the reel takes the line in no faster than 3 m/s (measured on the line
+  itself: 3.0); bitten on bar 0 and walked past the fixture's post, the line bends round it, comes
+  off when walked back, never crosses the post's box (checked against the box in the test, not by
+  the native), and the rope out is unchanged. Touch `touch_hook_rope` (new, 74th, in CI): on the
+  220 ring, take the hook, bite a member over the well, walk off the ring's south edge; the line
+  catches over the lip (y 220.28), the body hangs at 218.0 m alive, the reel winds it up. Rendered:
+  `hook_rope`, looking up the line over the lip.
+- **Changed by it.** A long diagonal reel now drags the rider and swings them (it used to lift them
+  straight up, which a winch cannot); swung into a bar at speed, the line's peak tension reads the
+  impact (16 kN). DROP lets go.
+- **Not observed:** on the phone.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

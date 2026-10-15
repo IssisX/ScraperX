@@ -7,6 +7,8 @@
 
 #include "sim/physics_world_support.hpp"
 
+#include <array>
+
 namespace scraperx::sim {
 
 using namespace scraperx::sim::detail;
@@ -289,6 +291,16 @@ private:
     [[nodiscard]] JPH::RVec3 hook_end(const JPH::BodyInterface &bodies) const noexcept;
 
     void hook_post_step(JPH::BodyInterface &bodies, const float dt) noexcept;
+
+    void attach_hook_line(JPH::BodyInterface &bodies, JPH::BodyID anchor, JPH::RVec3 at, float max_length) noexcept;
+
+    [[nodiscard]] JPH::RVec3 hook_bend_point(const JPH::BodyInterface &bodies, std::uint32_t bend) const noexcept;
+
+    [[nodiscard]] JPH::RVec3 hook_anchor(const JPH::BodyInterface &bodies) const noexcept;
+
+    [[nodiscard]] bool hook_line_blocked(JPH::RVec3 from, JPH::RVec3 to, JPH::RayCastResult &hit) const noexcept;
+
+    void bend_hook_line(JPH::BodyInterface &bodies) noexcept;
 
     [[nodiscard]] bool wall_running() const noexcept { return wall_run_seconds_left_ > 0.0; }
 
@@ -733,7 +745,22 @@ public:
     kit::BodyIndex hook_gun_{};
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
-    JPH::Ref<JPH::DistanceConstraint> hook_line_;
+    JPH::Ref<kit::RopeConstraint> hook_line_;
+    // The line's bends (see kHookBendsMax), from the bite outward: each held
+    // on its body, with the rope laid from it back to the anchor before it
+    // and the sense the line turned round it.
+    struct HookBend final {
+        JPH::BodyID body;
+        JPH::Vec3 local = JPH::Vec3::sZero();
+        JPH::Vec3 turn = JPH::Vec3::sZero();
+        float laid_m = 0.0F;
+    };
+    std::array<HookBend, kHookBendsMax> hook_bends_{};
+    std::uint32_t hook_bend_count_ = 0;
+    JPH::RVec3 hook_last_chest_ = JPH::RVec3::sZero();
+    std::uint64_t hook_wrap_count_ = 0;
+    std::uint64_t hook_unwrap_count_ = 0;
+    std::uint64_t hook_bends_refused_ = 0;
     double hook_flight_seconds_ = 0.0;
     float hook_tension_n_ = 0.0F;
     std::uint64_t hook_fire_count_ = 0;

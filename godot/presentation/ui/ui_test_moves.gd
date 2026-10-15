@@ -566,6 +566,67 @@ func _touch_hook() -> bool:
 	_detail = "bite=%s risen_m=%.2f" % [str(bite), risen]
 	return true
 
+# Task #102, a real rope, where the hook is found: on the 220 ring, the hook
+# taken off its rack, bitten on a member over the well, and the rider walks
+# south off the ring's edge on the stick. The line must catch over the
+# deck's lip (a bend the native reports at the lip, drawn through it) and
+# hold the body hanging below it, alive; then the reel winds the body up
+# to the lip.
+func _touch_hook_rope() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var device := InputRouter.Device.TOUCH
+	if not await _walk_to(device, Vector2(-21.6, -127.6), 0.3, 14.0, true):
+		return _fail("never reached the hook's rack (at %s)" % str(_position()))
+	if _ctx()["action"]["id"] != &"hook_take":
+		return _fail("ACTION offered '%s' at the rack, expected TAKE HOOK" % str(_ctx()["action"]["id"]))
+	_tap(0, _center(&"action"))
+	var taken: bool = await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 0.5)
+	if not taken:
+		return _fail("TAKE HOOK did not take the hook")
+	var target := Vector3(-6.0, 226.0, -133.0)
+	var to: Vector3 = target - _main._camera.global_position
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = atan2(to.y, Vector2(to.x, to.z).length())
+	await _frames(2)
+	_tap(1, _center(&"hook"))
+	var bit: bool = await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 2, 1.0)
+	if not bit:
+		return _fail("HOOK fired over the well never bit")
+	var rope: float = _native().get_hook_state()["line_length"]
+	var deaths := int(_native().get_death_count())
+	# Off the ring's south edge.
+	_main._yaw = atan2(21.5 - 19.0, 127.6 - 125.0)
+	await _walk_to(device, Vector2(-19.0, -125.0), 0.3, 4.0)
+	var hanging: bool = await _wait_until(
+		func() -> bool: return _position().y < 219.5 and int(_native().get_hook_state()["bends"]) >= 1, 3.0)
+	if not hanging:
+		return _fail("off the edge, the line never caught over the lip (y %.2f, bends %d)" % [
+			_position().y, int(_native().get_hook_state()["bends"])])
+	await _seconds(1.0)
+	var hook: Dictionary = _native().get_hook_state()
+	var points: PackedVector3Array = hook["points"]
+	var lip: Vector3 = points[1]
+	if absf(lip.y - 220.25) > 0.3:
+		return _fail("the line bent at %s, not over the ring's lip" % str(lip))
+	if int(_native().get_death_count()) != deaths or int(hook["state"]) != 2:
+		return _fail("the rope did not hold the fall")
+	if not _main._hook_bend_lines[0].visible:
+		return _fail("the line past the lip is not drawn")
+	# Look up the line at the lip.
+	var up: Vector3 = lip - _main._camera.global_position
+	_main._yaw = atan2(-up.x, -up.z)
+	_main._pitch = atan2(up.y, Vector2(up.x, up.z).length())
+	await _frames(3)
+	await _pose("hook_rope")
+	var hung_y := _position().y
+	_touch(1, _center(&"hook"), true)
+	var wound: bool = await _wait_until(func() -> bool: return _position().y > hung_y + 1.0, 4.0)
+	_touch(1, _center(&"hook"), false)
+	if not wound:
+		return _fail("the reel did not wind the body up toward the lip")
+	_detail = "lip=%s hung_y=%.2f rope_m=%.2f" % [str(lip), hung_y, rope]
+	return true
+
 func _touch_monkey_bars() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))

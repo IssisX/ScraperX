@@ -46,6 +46,10 @@ var _kit_cables: Array = []
 var _kit_bin_dust: Array = []
 # The grappling hook's line, from the right hand to the hook, and its head.
 var _hook_line: MeshInstance3D
+# The line beyond its first bend round the structure (task #102): one
+# segment per bend, as many as the native allows (kHookBendsMax).
+const HOOK_BENDS_MAX := 8
+var _hook_bend_lines: Array[MeshInstance3D] = []
 var _hook_head: MeshInstance3D
 # The hook's gun, in the right fist once the hook is taken: a compact
 # launcher, drawn at HOOK_GUN_SCALE of its modelled size (a pistol-sized
@@ -390,6 +394,13 @@ func _build_hook_view() -> void:
 	_hook_line.mesh = line
 	_hook_line.visible = false
 	add_child(_hook_line)
+	for i in HOOK_BENDS_MAX:
+		var bent := MeshInstance3D.new()
+		bent.name = "HookLineBent%d" % i
+		bent.mesh = line
+		bent.visible = false
+		add_child(bent)
+		_hook_bend_lines.append(bent)
 	var head := BoxMesh.new()
 	head.size = Vector3(0.12, 0.12, 0.12)
 	head.material = _material(Color("303033"), 0.5, 0.8)
@@ -406,7 +417,11 @@ func _build_hook_view() -> void:
 # sheave; null when the hand holds no line.
 func _hand_line_end() -> Variant:
 	if int(_ctx.get("hook_state", 0)) != 0:
-		return _native.get_hook_state()["position"]
+		# The hand holds the line toward where it goes: its first bend round
+		# the structure, or the hook.
+		var hook: Dictionary = _native.get_hook_state()
+		var points: PackedVector3Array = hook.get("points", PackedVector3Array())
+		return points[1] if points.size() >= 3 else hook["position"]
 	if _hauling:
 		return _camera.global_position + Vector3(0.0, 9.0, 0.0) - _camera.global_transform.basis.z * 0.5
 	return null
@@ -425,6 +440,8 @@ func _render_hook() -> void:
 	if _hook_gun.visible:
 		_hook_gun.global_transform = _arms.right_hand_transform().scaled_local(Vector3.ONE * HOOK_GUN_SCALE)
 	var end: Variant = _hand_line_end()
+	for bent in _hook_bend_lines:
+		bent.visible = false
 	if end == null:
 		_hook_line.visible = false
 		return
@@ -436,8 +453,14 @@ func _render_hook() -> void:
 	var hand := wrist + (at - wrist).normalized() * FirstPersonArms.LINE_GRIP_REACH
 	if _hook_gun.visible:
 		hand = _hook_gun.global_transform * Vector3(0.0, 0.4, 0.085)
-	_hook_head.global_position = at
 	_lay_segment(_hook_line, hand, at)
+	# On from the first bend, bend to bend, to the hook (the native's points:
+	# chest, bends nearest first, hook).
+	var points: PackedVector3Array = hook.get("points", PackedVector3Array())
+	for i in range(1, points.size() - 1):
+		if i - 1 < _hook_bend_lines.size():
+			_lay_segment(_hook_bend_lines[i - 1], points[i], points[i + 1])
+	_hook_head.global_position = hook["position"] if out else at
 
 # Poses every moving kit body and lays every cable through its points, from
 # this frame's native state. A body the native has taken out of the world (a

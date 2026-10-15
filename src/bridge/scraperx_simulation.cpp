@@ -1067,6 +1067,13 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     out["position"] = to_godot(state.hook_position);
     out["line_length"] = state.hook_line_length;
     out["tension_n"] = state.hook_tension_n;
+    // The line as it lies: chest, each bend round the structure, the hook.
+    godot::PackedVector3Array points;
+    for (std::uint32_t i = 0; i < state.hook_line_point_count; ++i) {
+        points.push_back(to_godot(state.hook_line_points[i]));
+    }
+    out["points"] = points;
+    out["bends"] = static_cast<std::int64_t>(state.hook_bend_count);
     return out;
 }
 
