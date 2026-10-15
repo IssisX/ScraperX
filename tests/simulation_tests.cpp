@@ -5067,6 +5067,28 @@ void run_save() {
     require(!b.load_game(cut.data(), cut.size()) && !b.load_game(foreign.data(), foreign.size()) &&
                 b.snapshot().player_position.y == fresh.y,
             "save: bytes cut short or from another build are refused and change nothing");
+    // A save from a world whose bodies stand in another order (a body
+    // removed or moved since) is refused: its states would land on the wrong
+    // bodies. Here two bodies' entities are swapped in the saved list.
+    {
+        const std::uint64_t first = b.kit_body_entity(0);
+        const std::uint64_t second = b.kit_body_entity(1);
+        std::vector<std::uint8_t> moved = bytes;
+        bool swapped = false;
+        for (std::size_t at = 0; !swapped && at + 16 <= moved.size(); ++at) {
+            std::uint64_t one = 0, two = 0;
+            std::memcpy(&one, moved.data() + at, 8);
+            std::memcpy(&two, moved.data() + at + 8, 8);
+            if (one == first && two == second) {
+                std::memcpy(moved.data() + at, &second, 8);
+                std::memcpy(moved.data() + at + 8, &first, 8);
+                swapped = true;
+            }
+        }
+        require(swapped && first != second && !b.load_game(moved.data(), moved.size()) &&
+                    b.snapshot().player_position.y == fresh.y,
+                "save: a save whose bodies stand in another order is refused and changes nothing");
+    }
     require(b.load_game(bytes.data(), bytes.size()), "save: a fresh simulation loads the saved climb");
     const auto st = b.snapshot();
     require(std::abs(st.player_position.y - saved_at.y) < 0.3 &&

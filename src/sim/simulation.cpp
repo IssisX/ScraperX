@@ -1262,10 +1262,10 @@ private:
     std::size_t at_ = 0;
 };
 
-// "SXCLIMB1" and the sizes of every saved type: a build whose types differ
+// "SXCLIMB2" and the sizes of every saved type: a build whose types differ
 // writes a different key.
 std::uint64_t save_format_key() noexcept {
-    std::uint64_t key = 0x5358434C494D4231ULL;
+    std::uint64_t key = 0x5358434C494D4232ULL;
     const std::size_t sizes[] = {sizeof(kit::Kit::BodyState), sizeof(kit::AnchorIndex), sizeof(kit::Kit::Pile),
                                  sizeof(Slingshot::State), sizeof(Swing::State),
                                  sizeof(vertical::Command), sizeof(JPH::RVec3)};
@@ -5293,6 +5293,14 @@ private:
 public:
     bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
 
+    [[nodiscard]] std::vector<std::uint64_t> body_entities() const {
+        std::vector<std::uint64_t> out(kit_->body_count());
+        for (std::uint32_t index = 0; index < kit_->body_count(); ++index) {
+            out[index] = kit_->body_entity(kit::BodyIndex{index});
+        }
+        return out;
+    }
+
     // The committed checkpoint as bytes (see SaveWriter).
     void write_save(SaveWriter &w) const {
         w.pod(checkpoint_position_);
@@ -5300,6 +5308,9 @@ public:
         w.pod(checkpoint_commit_count_);
         w.pod(death_count_);
         w.pod(checkpoint_.carrying_entity);
+        // The world's bodies by entity, in order: a load takes the states
+        // only when this world begins with the same bodies.
+        w.list(body_entities());
         const auto &k = checkpoint_.kit;
         w.list(k.bodies);
         w.list(k.rope_anchor);
@@ -5337,8 +5348,16 @@ public:
         std::uint64_t commits = 0, deaths = 0;
         auto &k = loaded.kit;
         const auto &c = current.kit;
+        // The saved world's bodies, by entity, must be this world's first
+        // ones in the same order: then every saved state is its body's. A
+        // world grown since (bodies built last) starts the new ones as built;
+        // one with a body removed or moved is refused.
+        std::vector<std::uint64_t> entities;
+        const std::vector<std::uint64_t> here = body_entities();
         bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
-                  r.pod(loaded.carrying_entity) && r.list_up_to(k.bodies, c.bodies.size()) &&
+                  r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
+                  std::equal(entities.begin(), entities.end(), here.begin()) &&
+                  r.list_up_to(k.bodies, c.bodies.size()) && k.bodies.size() == entities.size() &&
                   r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
                   r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
                   r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
