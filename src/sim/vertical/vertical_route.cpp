@@ -317,10 +317,10 @@ void Route::build_wheel_reload() {
     const RVec3 weight = pivot + Vec3(-.5F, .3F, 0.0F);
     const RVec3 sheave_skip = weight + Vec3(0.0F, 1.8F, 0.0F);
     const RVec3 hang(exit_at.GetX() + 1.2, exit_floor + 3.4, exit_at.GetZ() + 1.0);
-    constexpr float kHandleHalfY = .22F;
+    constexpr float kHandleHalfY = .12F;   // a grip, held close to the face
     const Vec3 handle_top(0.0F, kHandleHalfY, 0.0F);
     const BodyIndex handle = kit_.add_body(
-        kWheelReloadHandleEntity, {box(Vec3(.22F, kHandleHalfY, .04F), Material::Yellow)},
+        kWheelReloadHandleEntity, {box(Vec3(.16F, kHandleHalfY, .03F), Material::Yellow)},
         RVec3(hang.GetX(), exit_floor + 1.35, hang.GetZ()), Quat::sIdentity(), 3.0F, .9F);
     kit_.set_carry(handle, kit::CarryKind::Handle, handle_top);
     kit_.set_damping(handle, 1.5F, 1.5F);

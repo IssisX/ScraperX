@@ -407,4 +407,7 @@ hopper's rim, its mouth under a gate like the hopper's own: hinged, shut by its 
   - Native `wheel`: untouched for 3 s, the skip keeps its stone. Taken and held 10 s, the hopper
     gains 2,583 kg and the skip loses the same, kilogram for kilogram. Let go, the pour stops.
   - `touch_wheel`: GRAB SKIP LINE at the top, a step back, at least 500 kg poured, LET GO.
-- **Not observed:** the skip and the line rendered, and the phone.
+- **Rendered (local, 540×464).** Holding the line, both fists are closed on the yellow grip and
+  the line runs up to the gantry. The first grip was a 0.44 m block that filled the lower view; it
+  is now 0.32 × 0.24 m.
+- **Not observed:** the skip pouring, seen from the receiver; the phone.
