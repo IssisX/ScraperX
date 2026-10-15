@@ -55,6 +55,8 @@ func build() -> void:
 	clips[&"groan_loop"] = [_loop(_groan(3.2), 0.5)]
 	clips[&"motor_loop"] = [_loop(_motor(1.8), 0.3)]
 	clips[&"pour_loop"] = [_loop(_pour(1.8), 0.3)]
+	# Last, so every clip above draws the same seeded noise it always has.
+	clips[&"drip"] = _variants(3, _drip)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -224,6 +226,33 @@ func _clang() -> PackedFloat32Array:
 			mode[3])
 	_add_tone(out, _rng.randf_range(45.0, 55.0), 0.0, 0.4, 0.6, 0.09)
 	_add_band_noise(out, 0.01, 0.4, 0.3, 0.12, 150.0, 900.0)
+	return out
+
+
+# A drop of water landing in a pool: the tick of the strike, then the
+# bubble it traps ringing as it shrinks, its pitch rising (1-2 kHz, where a
+# phone speaker carries it), and the same again, fainter and duller, off the
+# wet walls of a closed space.
+func _drip() -> PackedFloat32Array:
+	var out := _silence(0.45)
+	_add_band_noise(out, 0.0, 0.006, 0.5, 0.0015, 2000.0, 7000.0)
+	var f0 := _rng.randf_range(950.0, 1500.0)
+	var rise := _rng.randf_range(1.4, 1.8)
+	var tau := _rng.randf_range(0.018, 0.03)
+	var first := int(0.004 * MIX_RATE)
+	var phase := 0.0
+	var env := 0.9
+	var decay := _decay(tau)
+	for i in range(first, out.size()):
+		var t := float(i - first) / float(MIX_RATE)
+		phase += TAU * f0 * (1.0 + (rise - 1.0) * minf(t / 0.05, 1.0)) / float(MIX_RATE)
+		out[i] += sin(phase) * env
+		env *= decay
+	var echo := int(_rng.randf_range(0.07, 0.11) * MIX_RATE)
+	var dull := 0.0
+	for i in range(out.size() - 1, echo - 1, -1):
+		dull += (out[i - echo] - dull) * 0.35
+		out[i] += dull * 0.3
 	return out
 
 

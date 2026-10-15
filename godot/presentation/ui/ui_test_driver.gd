@@ -1533,6 +1533,8 @@ func _wet(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if not _heard_region(&"wet"):
+		return false
 	_detail = "plate_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
 		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
 	return true
@@ -1742,6 +1744,8 @@ func _shop(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if not _heard_region(&"shop"):
+		return false
 	_detail = "shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_g, at_h, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step,
 		float(body["lift"])]
@@ -1928,6 +1932,8 @@ func _crane(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if not _heard_region(&"crane"):
+		return false
 	_detail = "crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_j, at_k, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step,
 		float(body["lift"])]
@@ -3315,6 +3321,16 @@ func _c5_pipe(device: int, at: Vector2, facing: Vector2, top: float, what: Strin
 
 
 # AS-010's C4 alone, from the 662 deck start, on the device under test.
+# The band the climber passed through was heard as itself (audio_director
+# REGIONS): at least one of its one-shots played there.
+func _heard_region(region: StringName) -> bool:
+	var heard := int(_main._audio.region_sounds.get(region, 0))
+	if heard < 1:
+		return _fail("the %s band made no sound of its own (heard %s)" % [region,
+			str(_main._audio.region_sounds)])
+	return true
+
+
 func _c4(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var started := int(_native().get_tick_index())
@@ -3329,6 +3345,8 @@ func _c4(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if not _heard_region(&"machine"):
+		return false
 	_detail = "deck684_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true

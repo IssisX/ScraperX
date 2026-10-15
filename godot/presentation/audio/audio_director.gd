@@ -61,6 +61,18 @@ const VOICE_DUCK_DB := 8.0
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
+# Each band of the tower sounds of what it is, a one-shot now and then
+# somewhere around the listener: [name, floor m, clip, gap s, reach m,
+# rise m, volume dB, pitch]. Wet Isolation drips; the Plate Shop's plate
+# clanks far off; the Facade Crane Stack's cables creak; the machinery bands
+# above boom low through the frame. A band speaks soon after it is entered.
+const REGIONS := [
+	[&"wet", 220.0, &"drip", Vector2(0.9, 3.0), Vector2(4.0, 14.0), Vector2(1.0, 6.0), -9.0, Vector2(0.85, 1.2)],
+	[&"shop", 340.0, &"clang", Vector2(3.5, 9.0), Vector2(18.0, 55.0), Vector2(-10.0, 10.0), -14.0, Vector2(0.75, 1.0)],
+	[&"crane", 484.0, &"creak", Vector2(2.5, 7.0), Vector2(8.0, 30.0), Vector2(2.0, 14.0), -10.0, Vector2(0.65, 0.85)],
+	[&"machine", 640.0, &"clang", Vector2(5.0, 12.0), Vector2(25.0, 70.0), Vector2(-20.0, 5.0), -15.0, Vector2(0.5, 0.65)],
+]
+const REGION_ENTRY_SECONDS := Vector2(0.4, 1.5)
 
 # Counted whether or not the bank has finished building, so the scripted
 # UI runs can prove the cues fire.
@@ -126,6 +138,9 @@ var _last_chute := false
 var _last_deaths := -1
 var _last_crouched := false
 var _bird_clock := 3.0
+var region_sounds := {}   # region name -> one-shots played there
+var _region := &""
+var _region_clock := 0.0
 
 
 func _ready() -> void:
@@ -301,6 +316,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_last_crouched = crouched
 	_update_air(position, velocity, grounded, delta)
 	_update_birds(position, delta)
+	_update_region(position, delta)
 
 
 # Once per rendered frame, with every machine's motion as main.gd sampled it:
@@ -519,6 +535,37 @@ func _update_birds(position: Vector3, delta: float) -> void:
 	var reach := randf_range(18.0, 50.0)
 	_play_at(&"bird", position + Vector3(cos(angle) * reach, randf_range(4.0, 12.0),
 		sin(angle) * reach), -6.0, randf_range(0.9, 1.15), BUS_AMBIENCE)
+
+
+func _region_at(height: float) -> Array:
+	var found: Array = []
+	for region in REGIONS:
+		if height >= float(region[1]):
+			found = region
+	return found
+
+
+func _update_region(position: Vector3, delta: float) -> void:
+	var region := _region_at(position.y)
+	var name: StringName = region[0] if not region.is_empty() else &""
+	if name != _region:
+		_region = name
+		_region_clock = randf_range(REGION_ENTRY_SECONDS.x, REGION_ENTRY_SECONDS.y)
+	if region.is_empty():
+		return
+	_region_clock -= delta
+	if _region_clock > 0.0:
+		return
+	var gap: Vector2 = region[3]
+	var reach: Vector2 = region[4]
+	var rise: Vector2 = region[5]
+	var pitch: Vector2 = region[7]
+	_region_clock = randf_range(gap.x, gap.y)
+	region_sounds[name] = int(region_sounds.get(name, 0)) + 1
+	var angle := randf() * TAU
+	var away := randf_range(reach.x, reach.y)
+	_play_at(region[2], position + Vector3(cos(angle) * away, randf_range(rise.x, rise.y),
+		sin(angle) * away), float(region[6]), randf_range(pitch.x, pitch.y), BUS_AMBIENCE)
 
 
 # One of the yard crew's footsteps, heard from where it fell.
