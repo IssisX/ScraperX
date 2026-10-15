@@ -26,6 +26,9 @@ var _shade: PackedFloat32Array = PackedFloat32Array()
 
 
 func _ready() -> void:
+	# It drifts behind the title and the pause menu too (the tree is paused
+	# there): the sky does not stop.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 47011
 	for c in CLUSTERS:
@@ -61,9 +64,14 @@ func _ready() -> void:
 	add_child(instance)
 
 
-# Once per rendered frame: drift, wrap, and face the camera.
-func update(delta: float, camera: Camera3D) -> void:
-	var eye := camera.global_position
+func _process(delta: float) -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera != null:
+		_update(delta, camera.global_position)
+
+
+# Once per rendered frame: drift, wrap, and face the eye.
+func _update(delta: float, eye: Vector3) -> void:
 	for i in PUFFS:
 		var p := _at[i] + Vector3(WIND.x, 0.0, WIND.y) * delta
 		var flat := Vector2(p.x, p.z) - CENTER

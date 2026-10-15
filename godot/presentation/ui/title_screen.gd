@@ -18,8 +18,11 @@ const TITLE_TEXT := "SCRAPERX"
 const KICKER_TEXT := "KELLERWORKS TOWER"
 const NEW_CLIMB_TEXT := "NEW CLIMB"
 const NEW_CLIMB_CONFIRM_TEXT := "CONFIRM: START OVER"
-# The view's drift while the title is up: up the tower and slowly across it.
-const DRIFT_PITCH := 0.42
+# The view's drift while the title is up: slowly across the tower, and up it
+# from its foot (DRIFT_PITCH_LOW) to where it climbs into the cloud layer
+# (DRIFT_PITCH_HIGH) and back, so the first thing seen is how far it goes.
+const DRIFT_PITCH_LOW := 0.35
+const DRIFT_PITCH_HIGH := 0.85
 const DRIFT_YAW_SWING := 0.22
 const DRIFT_PERIOD_SECONDS := 38.0
 
@@ -71,7 +74,9 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	var phase := TAU * _clock / DRIFT_PERIOD_SECONDS
-	camera.rotation = Vector3(DRIFT_PITCH + 0.05 * sin(phase * 0.5), base_yaw + DRIFT_YAW_SWING * sin(phase), 0.0)
+	var rise := 0.5 - 0.5 * cos(phase * 0.5)
+	camera.rotation = Vector3(lerpf(DRIFT_PITCH_LOW, DRIFT_PITCH_HIGH, rise), base_yaw + DRIFT_YAW_SWING * sin(phase),
+		0.0)
 
 
 func _build(viewport_size: Vector2) -> void:

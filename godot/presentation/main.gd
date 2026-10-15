@@ -3528,8 +3528,6 @@ func _sample_machines(delta: float) -> void:
 	_audio.update_machines(delta, _machines)
 	if _works != null:
 		_works.update(delta, _camera.global_position, _machines)
-	if _clouds != null:
-		_clouds.update(delta, _camera)
 
 
 func _build_hook_gun() -> Node3D:

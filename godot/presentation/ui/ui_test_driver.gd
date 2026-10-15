@@ -3704,6 +3704,10 @@ func _title() -> bool:
 	if int(_native().get_tick_index()) != tick:
 		return _fail("title: the simulation ran behind the title (%d -> %d ticks)" % [tick, int(_native().get_tick_index())])
 	await _pose("title")
+	# The drift's other end: up the tower into the cloud layer.
+	title._clock = title.DRIFT_PERIOD_SECONDS
+	await _frames(2)
+	await _pose("title_high")
 	if title.button_text(&"new") != "NEW CLIMB":
 		return _fail("title: the first entry reads '%s'" % title.button_text(&"new"))
 	_click(title.button_center(&"new"))

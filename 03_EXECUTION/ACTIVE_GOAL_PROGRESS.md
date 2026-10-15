@@ -371,3 +371,14 @@ a climber out over it.
 - **A dead end on the way.** A first cut swelled once every 11 s; C7's whole gallery-two swing fell
   in its calm. Real wind is not still for six seconds.
 - **Not observed:** how it feels on a phone, and whether players read the gusts before they leap.
+
+**The first sight: the title (Godot, task 93).** The title's view drifted only between about 0.37
+and 0.47 rad up the tower's foot. It now sweeps slowly over 76 s from the foot up to where the
+tower climbs into the cloud layer, and back, so the first thing seen is how far it goes.
+- **A fix on the way.** The clouds were updated from the main loop, which the title pauses, so
+  they were never placed behind it. They now update themselves, and drift behind the title and the
+  pause menu.
+- **Proof.** `touch_title` passes and captures both ends of the sweep.
+- **Rendered locally (540×464).** At the top of the sweep the tower rises into broken cloud;
+  several near puffs stretch at that steep angle.
+- **Not observed:** the phone.
