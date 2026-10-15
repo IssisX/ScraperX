@@ -1,0 +1,12 @@
+Read-only followup against utility b459efaa7b7fa35ffdd29d7ba95ecf8d6701bcc764d2ca50a6584148ff9cfc61 and frozen baseline geometry.
+Actual headless inventory completed exit 0; no additional rendered run.
+
+Tower has 1528 active GeometryInstance3D nodes after batching: 885 meshes outside selected hierarchy, 320 batches, 312 eligible singletons, 10 other geometry nodes, 1 transparent waterfall.
+Dominant omission: 405 TreeCanopy + 155 ScrubLobe + 135 TreeTrunk = 695 skipped foliage meshes. Repeated Conifer/Scrub sibling names became Godot @Node3D@... names, so utility's parent-name prefix filter fails. Source alpine_world_builder.gd names every tree Conifer and every bush Scrub before adding; runtime evidence confirms only first names survive.
+All 696 remaining foliage meshes (including one eligible trunk singleton) have nontriplanar StandardMaterial3D, so ordinary transform baking remains applicable. Mesh geometry varies by size; 136 trunks share one material signature. Canopy material signatures repeat five times within a tree; scrub material repeats five lobes per bush.
+Explicit static ReceivingYard and WestApronParkour containers contribute another 118 + 64 excluded meshes. Their shader cloth must remain excluded by existing material rule.
+178 UpperColumn/UpperBrace/UpperDeck singletons are local-triplanar BoxMeshes with only 53 distinct geometries. The four tower corners land in different 44 m horizontal cells, preventing instancing across corner positions even when the geometry and finish match. Any larger/centered horizontal-cell decision belongs to root because it changes culling tradeoffs.
+122 YardStock/ParkourStructure meshes have 24 unique geometries across five finishes and local triplanar projection: suitable for existing exact-geometry MultiMesh path once their known static hierarchy is included.
+Kit has 518 active geometry: 332 outside selected static roots, 68 labels/other, 65 singleton, 50 batches, 3 existing MultiMeshes. Outside-static-root meshes include moving bodies and nested practical elements; this inventory is not authority to merge them.
+
+These are source/runtime inventory counts, not per-view submission attribution. Shadow passes mean active mesh counts cannot be substituted for actual draw counts. Existing rendered ground_up1634/top_down1922 numbers remain the authoritative per-view totals for this utility. No isolation render campaign was run because inventory identified concrete dominant omissions.

@@ -1,0 +1,35 @@
+{
+  "sources": {
+    "godot/presentation/static_world_batch.gd": "e38c33119a257790fb0eacba273fbbfb2f73b2ffdd667ad090c232de414322c8",
+    "godot/presentation/kit_view.gd": "9c05757a6b15c2a34ac767bac20fab95991a0e62ad379dce0c781ff22872edcc",
+    "godot/presentation/world_geometry.gd": "04150e73989e4f7d395751e7aad47121ebe23a51bdd33d0812d095ab56558700",
+    "godot/tests/static_world_batch_test.gd": "1bdc5804db44b3b8458732e590aaf36715e4db637d7fa30ffb2d4ecd9fd84c0a",
+    "godot/tests/kit_cable_batch_test.gd": "b01621a519beadd96279c0711153e71f47abb83f690dfa035b71934b83d4b094",
+    "godot/tests/tower_render_profile.gd": "ad903371261ce84ebfe5e1a8899aae2e2015bd537097e37bbe37b4d3b2cc4d99",
+    ".github/workflows/chatgpt-apk-candidate.yml": "64e3778e89ff1035d6821430f47481b7462cab58ea75ef423da04dba8c002e3f"
+  },
+  "selectively_staged_main_sha256": "ec323eba6f5393cd6a6bf14bab77c95297d7c6392ac1c43fb4de4c732496e271",
+  "static_batch_test": {
+    "result": "PASS",
+    "failures": 0,
+    "renderer": "Godot4.7 GLCompatibility Mesa softpipe",
+    "scope": "transformed triangles/UV/normals; identical collision export; all foliage vertices and authored tints; moving/translucent/shader exclusion; local triplanar poses"
+  },
+  "native_cable_test": {
+    "result": "PASS",
+    "failures": 0,
+    "checks": 420,
+    "native_steps": 4,
+    "scope": "actual native interpolated endpoints, nondegenerate visible count, current AABB, no presentation stepping or duplicate source submissions"
+  },
+  "staged_main_startup": {
+    "result": "PASS",
+    "frames": 3,
+    "exit": 0,
+    "private_arm64_extension_config": "host-only mapping restored; actual binary private b26e59bb; no exact-source native rebuild/device claim"
+  },
+  "review": "Sol/high independent source review found no blocking defect; global thin-cable frustum and per-cell culling tradeoffs retained",
+  "publication": "pending",
+  "device_force_close_fix": "unverified",
+  "strict_upward_sub1000": "not yet met:1036 in measured host view"
+}

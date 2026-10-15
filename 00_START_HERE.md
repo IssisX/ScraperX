@@ -2,6 +2,8 @@
 
 ## 1. Startup
 
+Recent owner requests, dependencies and honest statuses: [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md). Read at startup; memory is not the task register.
+
 Read [AGENTS](AGENTS.md) and the [single live checkpoint](CONTINUE_HERE_CHATGPT_CODEX.md). Verify checkout, `ChatGPT`, HEAD and changes before edits. Read task-relevant authoritative sections, not every historical document. The full [complete phased goal](03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md) remains the complete scope; [progress](03_EXECUTION/ACTIVE_GOAL_PROGRESS.json) is status only.
 
 This is native Android C++17/Jolt/Godot development, not a web scaffold. Native physics runs at 90 Hz. Preserve successful gameplay and all concurrent work.

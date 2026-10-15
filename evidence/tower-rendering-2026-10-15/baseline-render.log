@@ -1,0 +1,12 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+TOWER_PROFILE_SOURCE main_sha256=bb96ef34f24760731de73e3c112d4256836c3f000cca992789c0c9c2f7af0c0b batch=false engine=4.7-stable (official) renderer=softpipe size=(160, 120) shadow_atlas=project_default native_kit=true
+TOWER_PROFILE_BEFORE tower={"instances":0,"materials":359,"meshes":3102,"multimeshes":0} kit={"instances":591,"materials":68,"meshes":548,"multimeshes":3}
+TOWER_PROFILE_VIEW {"draw_calls":4311,"eye":"(8.0, 2.0, -60.0)","objects":4311,"primitives":156006,"target":"(-30.0, 800.0, -330.0)","total_draw_calls":4311.0,"view":"ground_up"}
+TOWER_PROFILE_VIEW {"draw_calls":3597,"eye":"(-30.0, 1598.0, -280.0)","objects":3597,"primitives":363573,"target":"(-30.0, 0.0, -250.0)","total_draw_calls":3597.0,"view":"top_down"}

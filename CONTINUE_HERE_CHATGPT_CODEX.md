@@ -1,3 +1,7 @@
+# Current owner task register and live checkpoint
+
+Read [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) and [live checkpoint](03_EXECUTION/LIVE_RESUME_20261015.md). These record the current parkour/rendering/forklift/crane work and supersede historical no-push/stopping boundaries below. Preserve pending canonical scope and dirty WIP.
+
 # Live checkpoint — actual full Actions repair, 2026-10-15
 
 Active owner goal: fix the issues preventing GitHub Actions APK build from being green; actually get a GREEN APK built. Candidate export alone does not satisfy the full gameplay delivery gate. Preserve breadth through depth, all mechanics, dirty/untracked work and deferred canonical scope. No repeated settings/permission audits or passing-check campaigns.

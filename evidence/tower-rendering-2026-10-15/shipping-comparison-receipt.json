@@ -1,0 +1,30 @@
+{
+  "far_m": 2000,
+  "decorative_detail_m": 800,
+  "other_render_settings": "same160x120softpipe,project4096shadows as prior runs; this is shipping view/detail distances, not phone GPU evidence",
+  "probe_sha256": "ad903371261ce84ebfe5e1a8899aae2e2015bd537097e37bbe37b4d3b2cc4d99",
+  "baseline": {
+    "ground_up": {
+      "draw_calls": 4311,
+      "primitives": 156006
+    },
+    "top_down": {
+      "draw_calls": 2893,
+      "primitives": 281197
+    }
+  },
+  "final": {
+    "ground_up": {
+      "draw_calls": 1036,
+      "primitives": 150006
+    },
+    "top_down": {
+      "draw_calls": 766,
+      "primitives": 272421
+    }
+  },
+  "exit_codes": {
+    "baseline": 0,
+    "final": 0
+  }
+}

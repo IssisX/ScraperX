@@ -26,6 +26,7 @@ const CARGO_NET_HALF_DEPTH := 0.035
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
+var _cable_instances: MultiMeshInstance3D
 var _cart_paint_material: StandardMaterial3D
 var _cart_materials: Dictionary = {}
 var _inspection_materials: Dictionary = {}
@@ -44,6 +45,34 @@ func setup(native: Object, palette: Array[Material], cable_material: Material,
 
 
 func render_view() -> void:
+	_render_kit()
+
+
+func static_render_roots() -> Array[Node3D]:
+	var roots: Array[Node3D] = []
+	for body in _kit_bodies.size():
+		if not _kit_dynamic[body]:
+			roots.append(_kit_bodies[body])
+	return roots
+
+
+func batch_cables() -> void:
+	if _cable_instances != null or _kit_cables.is_empty():
+		return
+	var instances := MultiMesh.new()
+	instances.transform_format = MultiMesh.TRANSFORM_3D
+	instances.mesh = (_kit_cables[0][0] as MeshInstance3D).mesh
+	instances.instance_count = _kit_cables.size() * KIT_CABLE_SEGMENTS
+	instances.visible_instance_count = 0
+	_cable_instances = MultiMeshInstance3D.new()
+	_cable_instances.name = "NativeCableBatch"
+	_cable_instances.multimesh = instances
+	add_child(_cable_instances)
+	for segments in _kit_cables:
+		for source in segments:
+			# Preserve named endpoint inspection nodes; submit their native
+			# transforms once through the shared thin-cable primitive instead.
+			source.layers = 0
 	_render_kit()
 
 
@@ -1061,6 +1090,8 @@ func _render_kit() -> void:
 			var water_mesh := _water_lift_bucket_water.mesh as BoxMesh
 			water_mesh.size = Vector3(1.54, depth, 1.54)
 			_water_lift_bucket_water.position = Vector3(0.0, -0.29 + depth * 0.5, 0.0)
+	var visible_cables := 0
+	var cable_bounds := AABB()
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_render_points(index)
 		var segments: Array = _kit_cables[index]
@@ -1070,6 +1101,15 @@ func _render_kit() -> void:
 				_lay_segment(instance, points[segment], points[segment + 1])
 			else:
 				instance.visible = false
+			if _cable_instances != null and instance.visible:
+				_cable_instances.multimesh.set_instance_transform(visible_cables, instance.transform)
+				var bounds: AABB = instance.transform * instance.mesh.get_aabb()
+				cable_bounds = bounds if visible_cables == 0 else cable_bounds.merge(bounds)
+				visible_cables += 1
+	if _cable_instances != null:
+		_cable_instances.multimesh.visible_instance_count = visible_cables
+		_cable_instances.multimesh.custom_aabb = cable_bounds
+		_cable_instances.visible = visible_cables > 0
 
 
 func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:

@@ -1,0 +1,37 @@
+{
+  "active_phase": 1,
+  "active_goal": "Make run-to-jump and early/late input flow through real foot contact",
+  "phase0": "complete",
+  "phases": {
+    "0": "complete",
+    "1": "active",
+    "2": "pending",
+    "3": "pending",
+    "4": "pending",
+    "5": "pending",
+    "6": "pending",
+    "7": "pending",
+    "8": "pending"
+  },
+  "all_requested_scope_preserved": true,
+  "branch": "ChatGPT",
+  "spec": "PARKOUR_MOVEMENT_SPEC_20261015.md",
+  "plan": "PARKOUR_PHASED_PLAN_20261015.md",
+  "acceptance": {},
+  "playground_scope": "Ground, service-deck and rooftop route network; Mirror Edge principles researched; independent west-yard blockout assigned Sol/medium",
+  "rendering_priority": {
+    "status": "active",
+    "target_draw_calls": 1000,
+    "first_candidate_up": 1036,
+    "first_candidate_down": 766,
+    "device_fix": "unverified",
+    "upward_sub1000": "pending by36",
+    "delivery": "commit/push/APK pending"
+  },
+  "master_backlog": "OWNER_DELIVERY_BACKLOG_20261015.md",
+  "forklift_and_crane": {
+    "status": "authorized design, implementation pending",
+    "scope": "Same truck ground and higher bays; driving/lift/tilt/modular forks/claw/clamp plus actual crane transfer",
+    "design": "FORKLIFT_AND_CRANE_ROUTE_SYSTEM_20261015.md"
+  }
+}

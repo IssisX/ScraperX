@@ -99,6 +99,18 @@ jobs:
         if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/godot-candidate-import.log; then
           exit 1
         fi
+    - name: Check static batching and native cable rendering
+      shell: bash
+      run: |
+        set -euo pipefail
+        for check in static_world_batch kit_cable_batch; do
+          timeout 120s xvfb-run -a -s '-screen 0 160x120x24' \
+            tools/godot/godot --path godot --audio-driver Dummy \
+            --rendering-method gl_compatibility --resolution 160x120 \
+            --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
+          grep -F 'failures=0' "artifacts/${check}.log"
+          if grep -E 'SCRIPT ERROR:|Parse Error:' "artifacts/${check}.log"; then exit 1; fi
+        done
     - name: Export ChatGPT Android arm64 APK
       shell: bash
       run: |

@@ -1,0 +1,50 @@
+# West apron practice layout — 2026-10-15
+
+Status: authored builder, **unintegrated and native gameplay unproven**. Source baseline `ChatGPT` / `0db3c5dcfe4df28e0f2504bd6052b49fc740e97a`, preserving concurrent movement work. Owned implementation: `godot/presentation/parkour_yard.gd`. This is an optional ground playground; it supplies no connection to elevated canonical ascent machinery.
+
+Integration owner must instantiate `ParkourYard.new(geometry).build()` once after yard construction and before exporting world solids. `ParkourStructure` and `ScrambleRung` are solid box/strut parts; `ParkourPaint` is flush presentation only. No Godot collider, physics body, animation, update callback, route force, or scripted elevation is added. The existing ground remains the recovery floor. Export registration and native generated geometry belong to the integration owner.
+
+## Metrics and footprint
+
+Design inputs: 85 kg player, capsule radius 0.35 m, standing height 1.8 m, crouch height 1.2 m, nominal vertical jump velocity 5.5 m/s (approximately 1.54 m free-flight rise at gravity 9.81), run 5.5 m/s and sprint 8 m/s. These are layout assumptions, not measured acceptance. Required jump landings are at least 2 m wide; precision gaps are 1.6 m, dock and gallery gaps 2 m. Gallery steps rise 0.6 m; the largest intended basic jump onto a plinth is 1.2 m. Ground recovery and walking alternatives exist throughout. Wall lane mechanics are optional and pending integration acceptance.
+
+Actual built bounds including paint: **x [-77.5, -47.94], z [-100.5, -52.5], y [0, 2.6] m**. Physical east edge is x -50.5. Solid allocation: **53 ParkourStructure + 6 ScrambleRung = 59 primitives**, plus five ParkourPaint meshes, 64 total meshes and three shared materials. All are static authored boxes, including four rotated diagonal braces per duct gallery and eight return-gallery braces. No wheels or moving platforms.
+
+Existing stock, shed and road remain clear by inspected source bounds: west timber x [-44.45,-40.95], z [-52,-46]; west trays x [-41.25,-34.75] at z -72/-85/-98; shed around x [-44,-28], z [-38,-22]; central road x [-8,8]; water lift around x [-18,-12], z -108.2. The new physical east edge is at least 6.05 m west of that timber. This source comparison does not establish clearance against every existing native body.
+
+The walking spine is the open strip x [-50,-46], z [-101,-50]. Five paint dashes at x -48, z -54/-66/-78/-90/-99 indicate a service aisle. Approach from the receiving yard by walking west through z -45 to x -48, then south. Cross west from the spine at z -55, -68, -84.5, or -98 to choose a zone. No prescribed route or interaction prompt is necessary.
+
+## Three connected places
+
+| Place | Exact geometry | Play purpose and alternate route |
+|---|---|---|
+| Concrete utility bay | Five 2.4 × 2.4 m ground-bearing plinths centered at (x,z) = (-56,-55), (-60,-55), (-64,-55), (-68,-55), (-72,-55); tops 0.45/0.63/0.81/0.99/1.17 m. Two 3.5 × 0.45 m concrete partitions centered (-58,-62), (-64,-62), top 0.8 m. | Travel west across 1.6 m precision gaps. Turn south for low vault/jump partitions, or go around either end. The floor around and between the equipment is the retry route. |
+| Duct gallery and retaining lane | Duct spans x [-65,-53], z [-75.5,-72.5], underside 1.4 m, top 1.65 m. Six 0.25 m square posts at x -64.5/-59/-53.5 and z -75.25/-72.75; four end braces. East plinth x [-52.5,-50.5], z [-75.5,-72.5], top 0.8 m, leaves 0.5 m gap to duct end. Retaining walls x [-71.2,-70.8] and [-67.2,-66.8], z [-82,-74], top 2.6 m. | Crouch along x through the 2.25 m clear center aisle, or walk around the duct at z -71 or -77. From east plinth jump onto duct roof; reverse to descend. The 3.6 m clear retaining lane supports optional wall-run/tic-tac/cat-catch experiments. Its wall caps are 0.4 m thick and **are not required landing platforms**. Ground exits are open at z -73 and -83. |
+| Loading apron | Three solid 5 × 6 m dock foundations centered (-70,-90), (-63,-90), (-56,-90); tops 1.2/1.5/1.2 m. Entry step x [-53.5,-51.5], z [-91.5,-88.5], top 0.6 m. | Approach west from spine via step onto eastern dock, then jump west across two 2 m gaps. Broad docks allow turnarounds and diagonal line choice. Walk around at z -85 or -95 to retry; no special move is required. |
+
+All plinths, partitions, walls, dock foundations and access steps bear continuously on ground. Duct posts reach its underside; diagonal braces connect its supported edge joints. Geometry has no empty painted support volume.
+
+## Optional upper return loop
+
+Four steel decks centered x -76 at z -62/-73/-84/-95 are 3 m wide, 9 m long, top 2.4 m, underside 2.2 m. Their z intervals are [-66.5,-57.5], [-77.5,-68.5], [-88.5,-79.5], [-99.5,-90.5], leaving three 2 m gaps. Each deck has four 0.22 × 0.22 m ground-bearing posts at x -77.2/-74.8 and z center ±4 m, plus a diagonal brace on each longitudinal side. The outer side braces make these structural bays; they are not a required under-deck corridor.
+
+At both z -62 and -98, three 2 × 2.4 m ground-bearing maintenance steps are centered x -70/-72/-74 with tops 0.6/1.2/1.8 m. Jump west up the steps and onto the 2.4 m deck. Traverse north or south over the three gaps and descend the other set. A missed gap returns to the existing floor; walk east around the posts to the spine and retry. These are intentional jump steps, with no claim of automatic 0.6 m stair climbing. The northern stair is west of the low partitions; the southern stair stays clear of the docks.
+
+Ground loop: utility bay → open z -68 cross-aisle → duct or wall lane → open z -84.5 cross-aisle → loading apron → spine → utility bay. Upper variant: loading apron → southern steps via z -98 → return gallery north → northern steps → utility bay. Duct roof and retaining lane branch from the ground loop; neither is necessary to finish it. Heights are limited to 2.6 m and all content stays far west of the ascent route; no progression or checkpoint state changes.
+
+## Acceptance inputs and evidence limits
+
+Integration must export these parts into the normal native world, with no hidden test floor. Exercise the actual player capsule and ordinary movement inputs, starting from a reachable receiving-yard position:
+
+1. Walk west at z -45 to x -48 and south along the spine. Walk the full ground loop in both directions, including around every failed optional branch. Reject obstruction of the existing receiving yard or canonical route.
+2. Run and press jump before each utility gap, retaining normal camera/look controls. Traverse both ways; fall to ground deliberately, walk back and retry. Confirm landings have real native contact and no fabricated grounded state.
+3. Approach each 0.8 m partition, exercise current vault input and its ordinary jump alternative; walk around both ends. Hold crouch and move along x beneath the duct. Standing should be physically blocked by its real underside; crouched passage should work without clipping into posts/braces. Walk the bypass, then jump via the eastern plinth onto the roof and back.
+4. Use the east step to jump onto the first dock and traverse the two 2 m gaps at run speed in either direction. Turn around on every dock. Drop off, walk the perimeter and retry.
+5. Jump up 0.6 m gallery steps, traverse three upper gaps, descend the far steps and rejoin the utility bay. Miss one gap deliberately and recover through ground walking. Check overhead and brace contacts rather than disabling collision to pass.
+6. With wall movement integrated, run alongside either retaining face and apply its actual jump/contact input; approach a wall and test catch/mantle if reachable under the implemented contract. Record unsupported maneuvers as pending; do not tune the ordinary loop to depend on them. Confirm wall contacts do not create permanent footing or energy.
+
+Actual check run: Godot `4.7.stable.official.5b4e0cb0f` Linux ARM64 under `proot-distro login ubuntu`, headless, loading production WorldGeometry and the new builder through temporary script `/data/data/com.termux/files/usr/tmp/parkour_yard_smoke_20261015.gd`. **PASS**: construction, expected metadata/counts, box meshes, no created collision objects, and aggregate bounds within assigned apron/height. Output: `ParkourStructure: 53, ScrambleRung: 6, ParkourPaint: 5`, AABB position `(-77.5,0,-100.5)`, size `(29.56,2.6,48)`.
+
+The engine also emitted existing missing `linux.arm64` GDExtension library errors for `scraperx_native.gdextension`, plus proot file-descriptor and root-user warnings. The script completed successfully; **this does not prove native export, collision, movement, rendering quality, full-world body budget, Android performance, or device playability**. Those integration and route checks remain with the parent owner. No full suite, native build, device run, commit or publication was performed for this slice.
+
+Design inspiration supplied by parent: [DICE discussion of building Mirror's Edge Catalyst's open world](https://www.gamedeveloper.com/design/how-i-battlefield-i-devs-learned-to-build-an-open-world-for-i-mirror-s-edge-catalyst-i-). Applied here as consistent movement dimensions, multiple connected lines, and purposeful utility spaces. No copied assets or forced Runner Vision.

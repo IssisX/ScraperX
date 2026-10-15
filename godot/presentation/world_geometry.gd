@@ -143,6 +143,10 @@ func add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.position = at
 	label.rotation = Vector3(0.0, yaw, 0.0)
+	# Human-scale instructions are unreadable from distant rings. Large
+	# landmark lettering keeps its authored long-range visibility.
+	if height_meters <= 0.3:
+		label.visibility_range_end = 80.0
 	var host: Node3D = parent if parent != null else presentation_root
 	host.add_child(label)
 	return label

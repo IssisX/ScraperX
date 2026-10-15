@@ -7,6 +7,8 @@ extends Node3D
 # freezing that value freezes the effect.
 
 const WorldGeometry := preload("res://presentation/world_geometry.gd")
+const StaticWorldBatch := preload("res://presentation/static_world_batch.gd")
+var _static_world_batch: StaticWorldBatch
 const StackWorldBuilder := preload("res://presentation/stack_world_builder.gd")
 const AlpineWorldBuilder := preload("res://presentation/alpine_world_builder.gd")
 var _geometry: WorldGeometry
@@ -371,6 +373,11 @@ func _ready() -> void:
 	_reset_plank_feedback(landing, int(_native.get_tick_index()))
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
+	if not _regression_scene:
+		_static_world_batch = StaticWorldBatch.new()
+		_static_world_batch.build_tower($TowerPresentation)
+		_static_world_batch.build_kit(_kit_view, _kit_view.static_render_roots())
+		_kit_view.batch_cables()
 
 
 func _process(delta: float) -> void:
@@ -625,6 +632,8 @@ func _apply_settings() -> void:
 		else DisplayServer.VSYNC_DISABLED)
 	_camera.far = _settings.view_distance
 	_apply_visual_detail($TowerPresentation, SettingsStore.DETAIL_DISTANCES[_settings.detail_distance])
+	if _static_world_batch != null:
+		_static_world_batch.apply_detail_distance(SettingsStore.DETAIL_DISTANCES[_settings.detail_distance])
 	($Environment as WorldEnvironment).environment.glow_enabled = _settings.bloom
 	_sky_cycle.exposure_scale = _settings.brightness
 	_sky_cycle.set_shadow_level(_settings.shadow_quality)

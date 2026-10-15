@@ -1,0 +1,130 @@
+{
+  "repository": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "head": "0db3c5dcfe4df28e0f2504bd6052b49fc740e97a",
+  "branch": "ChatGPT",
+  "dirty_snapshot": true,
+  "snapshot": "baseline",
+  "files": {
+    "presentation/main.gd": "bb96ef34f24760731de73e3c112d4256836c3f000cca992789c0c9c2f7af0c0b",
+    "presentation/kit_view.gd": "c18900ef39a7e0ab46904e63fe5817926ee166ace73486ea3d3bfb8cdbd2ad55",
+    "presentation/world_geometry.gd": "6cdd2c0bb473dcba79daa62a4113afddee1aab95810a521f10f8cedc89882264",
+    "presentation/stack_world_builder.gd": "85778b414fed774727acc7582aec4cbfb9f35ce1938ab338ab0723ea007d9cf4",
+    "presentation/alpine_world_builder.gd": "62b938628a6007e72233a5d4436d6bde86e3cd0c8355f3d4da1a4e325266e6b0",
+    "presentation/ground_yard.gd": "41fb36123c0d07236afea69babccde5d3af8cc00afb66b9c3d5623bb8c522b9f",
+    "presentation/parkour_yard.gd": "be05c61875069077f198c8207437554e9d71e903b02a4b12c7bc8717829baeea",
+    "project.godot": "eed51bca0e249426bb4a0b7a9e195ebcd5cc5d2e1cc124c80866b8d6541c1dc3",
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "b26e59bbd814846911127ce1a7175ed5a88baa09b3a760a24b4dc5e24d24bdb6"
+  },
+  "scope": "render-only production world + initialized private native kit; no stepping, gameplay, Android GPU or phone proof",
+  "render": {
+    "engine": "Godot 4.7 stable official 5b4e0cb0f",
+    "renderer": "OpenGL 3.3 Compatibility, Mesa 26.0.8 softpipe",
+    "size": [
+      160,
+      120
+    ],
+    "directional_shadow_atlas": 4096,
+    "ground_up": {
+      "draw_calls": 4311,
+      "objects": 4311,
+      "primitives": 156006
+    },
+    "top_down": {
+      "draw_calls": 3597,
+      "objects": 3597,
+      "primitives": 363573
+    }
+  },
+  "after_utility_sha256": "b459efaa7b7fa35ffdd29d7ba95ecf8d6701bcc764d2ca50a6584148ff9cfc61",
+  "after": {
+    "ground_up": {
+      "draw_calls": 1634,
+      "objects": 1634,
+      "primitives": 157650
+    },
+    "top_down": {
+      "draw_calls": 1922,
+      "objects": 1922,
+      "primitives": 363573
+    }
+  },
+  "after_kit_selection": "baseline _kit_bodies selected where _kit_dynamic[index] == false; matches live static_render_roots implementation",
+  "acceptance": "Prior2600m/unlimiteddetail stressreceipt remainsafter4 ground1036/top933. Matchedshippingdistanceprofile2000m/800m actualbaseline4311/2893\u2192final1036/766,bothEXIT0. Groundstill36over1000 inbothprofiles;topmeets. No phone gameplay proof.",
+  "after2_utility_sha256": "7ad38e87aba1933b039bf0e3c63fc21b545ee4579926a78b95a37b921a498aea",
+  "after2": {
+    "ground_up": {
+      "draw_calls": 1187,
+      "objects": 1187,
+      "primitives": 158502
+    },
+    "top_down": {
+      "draw_calls": 1158,
+      "objects": 1158,
+      "primitives": 363573
+    }
+  },
+  "after3_utility_sha256": "e38c33119a257790fb0eacba273fbbfb2f73b2ffdd667ad090c232de414322c8",
+  "after3_world_geometry_sha256": "04150e73989e4f7d395751e7aad47121ebe23a51bdd33d0812d095ab56558700",
+  "after3": {
+    "ground_up": {
+      "draw_calls": 1075,
+      "objects": 1075,
+      "primitives": 149982
+    },
+    "top_down": {
+      "draw_calls": 955,
+      "objects": 955,
+      "primitives": 354797
+    }
+  },
+  "after4_sources": {
+    "presentation/static_world_batch.gd": "e38c33119a257790fb0eacba273fbbfb2f73b2ffdd667ad090c232de414322c8",
+    "presentation/world_geometry.gd": "04150e73989e4f7d395751e7aad47121ebe23a51bdd33d0812d095ab56558700",
+    "presentation/kit_view.gd": "9c05757a6b15c2a34ac767bac20fab95991a0e62ad379dce0c781ff22872edcc",
+    "tests/tower_render_profile.gd": "a35225c7291c6b267bb6139a0aa44184729c1c48808ba972c2e16e5fdf3e6d17",
+    "presentation/main.gd": "bb96ef34f24760731de73e3c112d4256836c3f000cca992789c0c9c2f7af0c0b"
+  },
+  "after4": {
+    "ground_up": {
+      "draw_calls": 1036,
+      "objects": 1036,
+      "primitives": 150006
+    },
+    "top_down": {
+      "draw_calls": 933,
+      "objects": 933,
+      "primitives": 354797
+    }
+  },
+  "shipping_distance_profile": {
+    "far_m": 2000,
+    "decorative_detail_m": 800,
+    "other_render_settings": "same160x120softpipe,project4096shadows as prior runs; this is shipping view/detail distances, not phone GPU evidence",
+    "probe_sha256": "ad903371261ce84ebfe5e1a8899aae2e2015bd537097e37bbe37b4d3b2cc4d99",
+    "baseline": {
+      "ground_up": {
+        "draw_calls": 4311,
+        "primitives": 156006
+      },
+      "top_down": {
+        "draw_calls": 2893,
+        "primitives": 281197
+      }
+    },
+    "final": {
+      "ground_up": {
+        "draw_calls": 1036,
+        "primitives": 150006
+      },
+      "top_down": {
+        "draw_calls": 766,
+        "primitives": 272421
+      }
+    },
+    "exit_codes": {
+      "baseline": 0,
+      "final": 0
+    }
+  }
+}

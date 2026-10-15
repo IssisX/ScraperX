@@ -14,11 +14,15 @@ The generic `git push` command matches a prompt rule; the scoped command already
 
 Work only in `IssisX/ScraperX`, exact write branch `ChatGPT`. Before edits verify the actual repository, worktree, branch, revision, applicable instructions, versions and existing changes. Preserve user/concurrent work and newer revisions; do not reset, clean, force checkout, force push or revive retired work.
 
-Read this compact contract, [START](00_START_HERE.md), and the sole [live checkpoint](CONTINUE_HERE_CHATGPT_CODEX.md). Then read the authoritative sections needed for the selected task. This owner-authorized maintenance migration **replaces the old requirement to read complete historical START/CONTINUE narratives**. History is consult-on-demand; do not recursively load it at startup.
+Read this compact contract, [START](00_START_HERE.md), and the sole [live checkpoint](CONTINUE_HERE_CHATGPT_CODEX.md). Read the current [owner delivery backlog](03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md) so recent requests survive context/model changes. Then read the authoritative sections needed for the selected task. This owner-authorized maintenance migration **replaces the old requirement to read complete historical START/CONTINUE narratives**. History is consult-on-demand; do not recursively load it at startup.
 
 Latest explicit owner instructions govern scope, subject to host instructions. Product intent follows [Laws](01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md) → [GDD](01_PRODUCT_AUTHORITY/01_SCRAPERX_GDD.md) → [Atlas](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) → [Execution Protocol](02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md) → [TDD](02_ENGINEERING_AUTHORITY/01_TECHNICAL_ARCHITECTURE_TDD.md). Live source/tests/runtime establish implementation facts. Reconcile stale claims; preserve code-linked names and evidence identifiers.
 
 The [complete phased scope](03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md) remains intact and binding until demonstrated or explicitly changed. A short checkpoint, passing subset, phase summary or percentage never replaces it. [Progress](03_EXECUTION/ACTIVE_GOAL_PROGRESS.json), [supplied-machine requirements](03_EXECUTION/ACTIVE_GOAL_SUPPLIED_MACHINES_AND_PARKOUR.md), and the [native directive](03_EXECUTION/ADVANCED_NATIVE_PHYSICS_ENGINEERING_DIRECTIVE.md) keep status and detailed contracts. Keep completed, partial, pending and deferred work explicit. Do not credit existing behavior as a new implementation.
+
+## Owner skill-selection instruction — 2026-10-15
+
+Select useful available skills for the current task and reassess their fit as implementation goals change. Read only applicable instructions/references and reuse guidance already read; do not reload entire packs or create repetitive approval/checking ceremonies. Use native mechanics, Godot input/camera/audio/presentation and diagnosis skills at their actual owners. Owner task/permission instructions take precedence over skill workflow defaults.
 
 ## Engineering and player experience
 
