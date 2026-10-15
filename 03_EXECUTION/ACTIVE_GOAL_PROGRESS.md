@@ -312,3 +312,15 @@ counted in `haptic_counts`, in CI too, though there nothing is sent. `touch_roll
 `touch_teeter`, `touch_pipe_gallery` and `touch_machines` fail if their pulse is missing.
 
 **Not observed:** any of it in a hand. No device has run it.
+
+**Phase 2, walking push-back: tried and taken out (2026-10-15).** Making the feet push a dynamic
+support back horizontally, the equal and opposite of the change they make to the body over it,
+was built and passed the S2 cage test (503 N·s pushed against 466 N·s gained). It broke the
+summit route, so it is not in:
+- The luffing derrick's cradle hangs free. Pushed by its rider's steps, it moved while iron was
+  thrown off it at the bottom, and swung away from the upper receiver as the rider stepped off.
+- `touch_stack`, `touch_high` and native `high` failed.
+
+The fix belongs to the derrick. Its cradle must seat against a stop at each receiver, as real
+cradles do, so a step pushes the frame rather than swinging the cradle. Then the push-back can
+return. (S1's balance check also moved by about 1 kg with it; see that test when it does.)
