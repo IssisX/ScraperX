@@ -1,3 +1,13 @@
+## ChatGPT publication on this Termux host
+
+When the owner has authorized publication, use the existing approved repository-scoped command:
+
+```sh
+git -C /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo push origin ChatGPT
+```
+
+The generic `git push` command matches a prompt rule; the scoped command already has an explicit allow rule. If publication is rejected, inspect the applicable existing rules before returning routine work to the owner. Keep safeguards intact and do not alter rules or substitute credentials to evade a rejection. After a successful push, follow the actual APK candidate run to its artifact; a push alone is not delivery. Use a background process for routine build monitoring instead of an AI agent.
+
 # ScraperX execution contract
 
 ## Authority and startup

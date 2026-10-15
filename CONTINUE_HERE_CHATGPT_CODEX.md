@@ -2,6 +2,11 @@
 
 Owner explicitly requested recent downloadable APK builds on the ChatGPT branch. Current task supersedes the completed window's historical no-push/no-CI restriction: publish preserved current source and the candidate delivery workflow, then deliver the actual GitHub artifact. No reset/clean/force or other-branch edits. Full gameplay proof remains separate and unchanged; no deferred catch-net debugging or fake GREEN. Current source matches the accepted APK857 source freeze; candidate uses official GitHub compilation/signing and gets its own identity. See `ci/APK_DELIVERY.md`. Publication/run/artifact status must come from actual execution.
 
+**Actual publication result (owner follow-up):** `f6ac5c4` successfully pushed to origin/ChatGPT. The earlier block was command matching: `cory-cockpit.rules` prompts for generic `git push`, while `default.rules` already allows the exact scoped command `git -C /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo push origin ChatGPT`. Use that existing approved command for authorized ChatGPT publication; no rule changes or safety bypass are required. Root missed the existing exception earlier. Follow actual candidate Actions execution to a downloadable artifact.
+
+
+**GitHub APK delivery COMPLETE:** candidate run `38733308732` succeeded in4m26s. Actual artifact11970774522: https://github.com/IssisX/ScraperX/actions/runs/38733308732/artifacts/11970774522. Downloaded APKsha256 `9772f5b905958b05c580726d7f1cc63d1919b07712e5cbd45d088f5cdda9efcd` matches included provenance. Version214230007, sourcef6ac5c4, rotated signer91184379..., actualnative2af3ac2d..., all3LOAD alignments16384. Host/Android compilation, project import, signed export and16KZIP/native checks PASS. Full gameplay proof38733308608 remains separate; candidate is not installed-device evidence and does not promote testedrelease. Background CLI process watched build; no AI agent used. README exposes direct artifact and future candidate runs. Documentation-only followup uses `[skip ci]` to avoid duplicate native builds.
+
 <!-- LIVE_THREE_HOUR_WINDOW_START -->
 # Live delivery checkpoint — 2026-10-15, window complete; handoff finalized03:07:02UTC
 

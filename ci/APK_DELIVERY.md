@@ -7,3 +7,5 @@ A successful candidate proves host/native compilation, Godot project import, And
 Both workflows use the vendored stable signer from `.github/actions/stable-apk/UPSTREAM.json`, with 16 KB ZIP alignment before signing. Existing signing secrets and the already public legacy debug certificate retain upgrade lineage. Provenance verifies the rotated certificate at SDK 28 and newer, matching the signing rotation policy.
 
 Local APKs do not appear on GitHub until their source is committed, pushed and the candidate workflow succeeds. Keep build/download evidence separate from gameplay and installed-device evidence.
+
+For this Termux workspace, use the existing repository-scoped approved push command: `git -C /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo push origin ChatGPT`. The generic `git push` spelling triggers a separate prompt rule. Inspect applicable existing allow rules when a routine authorized command is rejected; do not disable safeguards or send the task back to the owner before checking the supported scoped command.

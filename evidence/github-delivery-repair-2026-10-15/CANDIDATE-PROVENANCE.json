@@ -1,0 +1,29 @@
+{
+  "quality_status": "build-candidate-only",
+  "source_commit": "f6ac5c4f51159a6689d18be16b5c8f78e4ee2d9b",
+  "source_branch": "ChatGPT",
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/38733308732",
+  "package": "com.cory.scraperx.chatgpt",
+  "version_code": 214230007,
+  "version_name": "0.1.0-dev.20261014.10",
+  "signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+  "signer_verification_min_sdk": 28,
+  "apk_sha256": "9772f5b905958b05c580726d7f1cc63d1919b07712e5cbd45d088f5cdda9efcd",
+  "native_sha256": "2af3ac2d4d04566d7111c6edec72e15a5192f860ff99d050b3d43d8ab2ab9c6a",
+  "native_matches_build": true,
+  "native_abi": "AArch64",
+  "native_load_alignments": [
+    16384,
+    16384,
+    16384
+  ],
+  "validation": [
+    "host/Android native build",
+    "Godot resource import",
+    "signed export/package identity",
+    "16K ELF/ZIP alignment"
+  ],
+  "full_gameplay_proof": "separate required wo000-delivery-spine.yml workflow; not certified by this artifact",
+  "installed_android_play": "not run",
+  "release_promotion": "none; candidate artifact prefix is excluded from apk-dashboard"
+}

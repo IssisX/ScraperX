@@ -290,10 +290,22 @@
     "test_limits": "Originalframepertickrender budget stop143; rootfixturewrongbuttonIDfailed1correctedtoactualgrapple. Preserveboth; neverclaimthemPASS."
   },
   "github_apk_delivery_20261015": {
-    "status": "publishing preserved source and independent APK candidate workflow",
+    "status": "complete: source published and actual downloadable GitHub APK candidate delivered",
     "objective": "Recent downloadable ChatGPT-branch APK with exact-source provenance; retain separate full gameplay release gates",
     "cause": "Recent APK850\u2013857 remained local; last full GitHub proof failed deferred catch-net and skipped export",
     "delivery_guide": "ci/APK_DELIVERY.md",
-    "scope_unchanged": true
+    "scope_unchanged": true,
+    "local_commit": "f6ac5c4",
+    "push_error": null,
+    "github_artifact_created": true,
+    "publication_control": "Existing exact repository/branch allow rule; scoped git -C push succeeded",
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/38733308732/artifacts/11970774522",
+    "run_id": 38733308732,
+    "run_conclusion": "success",
+    "version_code": 214230007,
+    "apk_sha256": "9772f5b905958b05c580726d7f1cc63d1919b07712e5cbd45d088f5cdda9efcd",
+    "full_gameplay_proof": "separate run38733308608; not certified by candidate",
+    "installed_device_play": "not run",
+    "prevention": "README direct download/current workflow links; scoped approved push documented in AGENTS.md and delivery guide; background process monitors build"
   }
 }

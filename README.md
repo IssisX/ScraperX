@@ -5,6 +5,14 @@
 
 Godot 4.7 / C++17 / Jolt industrial ascent. Read [`00_START_HERE.md`](00_START_HERE.md) before changes. Writes go to `ChatGPT` only.
 
+## Download the ChatGPT Android APK
+
+**2026-10-15 build:** [Download APK candidate 214230007](https://github.com/IssisX/ScraperX/actions/runs/38733308732/artifacts/11970774522) — source `f6ac5c4`; build/export/package checks passed.
+
+[**Latest downloadable APK candidate builds**](https://github.com/IssisX/ScraperX/actions/workflows/chatgpt-apk-candidate.yml?query=branch%3AChatGPT) — open the newest successful run and download `ScraperX-ChatGPT-candidate-<commit>` under **Artifacts**. Extract `ScraperX-ChatGPT.apk` from the ZIP. GitHub sign-in is required to download Actions artifacts.
+
+Every push to `ChatGPT` builds an APK candidate independently of the full gameplay proof. Candidates include exact-source provenance and package/signature/native checks; full regression and installed-device play remain separate. The [tested release](https://github.com/IssisX/ScraperX/releases/tag/apk-latest) may be older while gameplay proof is blocked. See [delivery details](ci/APK_DELIVERY.md).
+
 ## Current game state — 2026-09-27
 
 Current status is maintained in [`00_START_HERE.md` §2](00_START_HERE.md); this dated heading is retained for reference compatibility.
@@ -35,7 +43,7 @@ ctest --test-dir build/host --output-on-failure
 
 Normal Godot launch loads the current game world, including the pipe bridge and the AS-017 façade route. The explicit `--uitest=ground_foundation` scenario exercises the cleared-foundation regression case; it is not the normal game. Legacy UI scenarios explicitly load regression fixtures. To regenerate collision tables, use normal `--export-solids=<path>` for `src/sim/world_solids.inc`, and add `--regression-fixtures` for `tests/fixtures/world_solids.inc`.
 
-Every APK build uses GitHub Actions. CI runs the default-world proof and rendered capture, retained physics/controller regressions, both collision drift checks, Android arm64 build and APK export. Its artifact contains exact-commit checksums and evidence boundaries.
+GitHub Actions produces downloadable APK candidates and runs the separate full gameplay delivery proof. The full proof includes the default-world proof and rendered capture, retained physics/controller regressions, both collision drift checks, Android arm64 build and APK export. Local development APKs are also possible; they are not published automatically. Published candidate artifacts contain exact-commit checksums and evidence boundaries.
 
 ## Claim boundary
 
