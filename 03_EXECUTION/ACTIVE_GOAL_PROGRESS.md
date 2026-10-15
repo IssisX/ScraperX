@@ -630,8 +630,11 @@ say why. Both archive designs are in the source (`src/sim/vertical/`) and unplac
 - **Proof.** `touch_lethal_feedback` turns captions on for its fall. Every line printed must be one
   of the voice's own lines, and nothing may be left printed once the impact cuts the voice. It
   printed "Fuck, fuck!" (rendered locally, 540×464).
-- **Still open (item 13):** in-world cues for the first moves, and danger shown by more than
-  colour.
+- **Danger shown by more than colour.** The fall gauge was white, amber, then pulsing red. Its
+  label now also names what the landing would be, at the same thresholds: M/S FALL, then HARD
+  LANDING from 0.55 of the native lethal speed, then LETHAL from 0.8. At LETHAL the arc thickens.
+  `touch_lethal_feedback` requires LETHAL at 0.8.
+- **Still open (item 13):** in-world cues for the first moves.
 
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.

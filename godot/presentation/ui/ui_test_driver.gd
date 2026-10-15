@@ -1061,6 +1061,9 @@ func _touch_lethal_feedback() -> bool:
 		return float(_ctx()["danger"]) >= 0.8, 5.0)
 	if not reached:
 		return _fail("fall danger never reached 0.8 of the native lethal speed")
+	# Danger is named, not only coloured.
+	if _main._hud.gauge_word() != "LETHAL":
+		return _fail("at 0.8 of the lethal speed the fall gauge reads '%s', not LETHAL" % _main._hud.gauge_word())
 	await _pose("fall_danger")
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_death_count()) >= 1, 6.0)
 	if not reached_2:

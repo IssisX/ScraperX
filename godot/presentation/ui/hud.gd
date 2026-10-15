@@ -216,9 +216,12 @@ func _draw_gauge(c: Vector2) -> void:
 		color = UiStyle.AMBER
 	draw_arc(c, radius, start, start + sweep, 48, UiStyle.with_alpha(UiStyle.PAPER, 0.16 * alpha),
 		5.0 * u, true)
+	# Danger in words and weight as well as colour: the arc thickens and the
+	# label names what the landing would be.
+	var word := gauge_word()
 	if fraction > 0.002:
 		draw_arc(c, radius, start, start + sweep * fraction, 48, UiStyle.with_alpha(color, alpha),
-			7.0 * u, true)
+			(12.0 if word == "LETHAL" else 7.0) * u, true)
 	# The native lethal landing speed sits at the end of the arc.
 	var end_dir := Vector2.from_angle(start + sweep)
 	draw_line(c + end_dir * (radius - 12.0 * u), c + end_dir * (radius + 12.0 * u),
@@ -229,9 +232,24 @@ func _draw_gauge(c: Vector2) -> void:
 	UiStyle.text(self, UiStyle.font_digits(), "%4.1f" % speed, Vector2(x, c.y + 12.0 * u),
 		int(roundf(36.0 * u)), UiStyle.with_alpha(color, alpha), HORIZONTAL_ALIGNMENT_LEFT,
 		int(roundf(6.0 * u)))
-	UiStyle.text(self, UiStyle.font_label(), "CANOPY" if chute else "M/S FALL",
-		Vector2(x, c.y + 40.0 * u), int(roundf(18.0 * u)),
-		UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha), HORIZONTAL_ALIGNMENT_LEFT, int(roundf(5.0 * u)))
+	UiStyle.text(self, UiStyle.font_label(), word, Vector2(x, c.y + 40.0 * u), int(roundf(18.0 * u)),
+		UiStyle.with_alpha(UiStyle.PAPER_DIM if word == "M/S FALL" else color, alpha), HORIZONTAL_ALIGNMENT_LEFT,
+		int(roundf(5.0 * u)))
+
+
+# The fall gauge's label: what landing now would be, at the same thresholds
+# as its colours (0.55 and 0.8 of the native lethal speed).
+func gauge_word() -> String:
+	if _ctx.is_empty():
+		return "M/S FALL"
+	if bool(_ctx["chute"]):
+		return "CANOPY"
+	var fraction := maxf(0.0, -(_ctx["velocity"] as Vector3).y) / maxf(float(_ctx["lethal"]), 0.001)
+	if fraction >= 0.8:
+		return "LETHAL"
+	if fraction >= 0.55:
+		return "HARD LANDING"
+	return "M/S FALL"
 
 
 func _draw_prompts(c: Vector2) -> void:
