@@ -47,6 +47,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_input", "drive", "steer", "lift", "tilt", "brake"), &ScraperXSimulation::set_forklift_input);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_render_state"), &ScraperXSimulation::get_forklift_render_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_yard_crane_input", "slew", "trolley", "hoist"), &ScraperXSimulation::set_yard_crane_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_attach"), &ScraperXSimulation::request_yard_crane_attach);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_detach"), &ScraperXSimulation::request_yard_crane_detach);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_yard_crane_state"), &ScraperXSimulation::get_yard_crane_state);
     godot::ClassDB::bind_method(godot::D_METHOD("restart_service_lift_attempt"), &ScraperXSimulation::restart_service_lift_attempt);
     godot::ClassDB::bind_method(godot::D_METHOD("set_slingshot_input", "draw", "yaw", "elevation"), &ScraperXSimulation::set_slingshot_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);

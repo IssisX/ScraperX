@@ -1,0 +1,69 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2371.23 source=0 rest=30.86 actual=30.86 truck_lift=7.75624e-06 truck_tilt=8.15605e-05
+ SUPPORT speed=0.000275918 angular_speed=0.000134002
+ FORK min_plane_clearance=0.0928823
+ WHEEL 0 contact=1 normal_y=1 force=4643.47
+ WHEEL 1 contact=1 normal_y=1 force=4651.29
+ WHEEL 2 contact=1 normal_y=1 force=23789.3
+ EYE 0 delta=-0.00666046,0.01085,-3.05176e-05 tension=0 relative_speed=0.000298014 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00666809,0.010838,-1.52588e-05 tension=0 relative_speed=0.000293503 length=3.34517 stock=3.356
+ EYE 2 delta=-0.0086441,-0.00136566,-1.52588e-05 tension=0 relative_speed=0.000264472 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137758,0 tension=0 relative_speed=0.000259665 length=3.10739 stock=3.106
+STOWED truck=-80.0041,0.608764,-150 failure=0 rig=0 hoist=1 force=2371.23 source=0 rest=30.86 actual=30.86 truck_lift=0.352143 truck_tilt=-0.138481
+ SUPPORT speed=0.00146382 angular_speed=0.00195353
+ FORK min_plane_clearance=0.152176
+ WHEEL 0 contact=1 normal_y=1 force=4695.15
+ WHEEL 1 contact=1 normal_y=1 force=4859.69
+ WHEEL 2 contact=1 normal_y=1 force=23550.3
+ EYE 0 delta=-0.00662994,0.0107086,-1.52588e-05 tension=0 relative_speed=0.00210305 length=3.3453 stock=3.356
+ EYE 1 delta=-0.00663757,0.0107033,0 tension=0 relative_speed=0.00216041 length=3.3453 stock=3.356
+ EYE 2 delta=-0.00856781,-0.00120378,0 tension=0 relative_speed=0.00254196 length=3.10722 stock=3.106
+ EYE 3 delta=-0.00857544,-0.00120902,0 tension=0 relative_speed=0.00257108 length=3.10722 stock=3.106
+ALIGNED truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2371.23 source=0 rest=30.8611 actual=30.8611 truck_lift=0.352146 truck_tilt=-0.138481
+ SUPPORT speed=0.00025845 angular_speed=0.000131528
+ FORK min_plane_clearance=0.152178
+ WHEEL 0 contact=1 normal_y=1 force=4768.57
+ WHEEL 1 contact=1 normal_y=1 force=4776.38
+ WHEEL 2 contact=1 normal_y=1 force=23539.2
+ EYE 0 delta=-0.00653839,0.0117835,-1.52588e-05 tension=0 relative_speed=0.000351217 length=3.34422 stock=3.356
+ EYE 1 delta=-0.00654602,0.0118108,0 tension=0 relative_speed=0.000352725 length=3.3442 stock=3.356
+ EYE 2 delta=-0.00847626,-8.44002e-05,0 tension=0 relative_speed=0.000322902 length=3.1061 stock=3.106
+ EYE 3 delta=-0.00848389,-5.6982e-05,1.52588e-05 tension=0 relative_speed=0.000316854 length=3.10607 stock=3.106
+LIFTED truck=-79.982,1.98731,-150 failure=0 rig=15 hoist=1 force=35517.9 source=87375.6 rest=29.4631 actual=29.4721 truck_lift=0.346619 truck_tilt=-0.137907
+ SUPPORT speed=0.345678 angular_speed=0.0147334
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.00648499,-0.00266409,-4.57764e-05 tension=5306.65 relative_speed=0.0901885 length=3.35867 stock=3.356
+ EYE 1 delta=0.00630188,-0.0030272,-4.57764e-05 tension=2056.43 relative_speed=0.0936944 length=3.35903 stock=3.356
+ EYE 2 delta=0.00875092,-6.27041e-05,0.00012207 tension=11263.8 relative_speed=0.0902044 length=3.10607 stock=3.106
+ EYE 3 delta=0.00856781,-0.000426054,0.000106812 tension=14515.7 relative_speed=0.0937119 length=3.10644 stock=3.106
+HELD truck=-79.9996,1.99389,-150 failure=0 rig=15 hoist=1 force=35455 source=87375.6 rest=29.4631 actual=29.4671 truck_lift=0.34408 truck_tilt=-0.137603
+ SUPPORT speed=0.014622 angular_speed=0.0190482
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=-0.00611877,-0.00258636,-0.000656128 tension=5276.9 relative_speed=0.029355 length=3.35859 stock=3.356
+ EYE 1 delta=-0.00686646,-0.00294733,-0.000656128 tension=2031.63 relative_speed=0.0277254 length=3.35895 stock=3.356
+ EYE 2 delta=-0.00479889,-0.000108719,0.000335693 tension=11264.3 relative_speed=0.0291661 length=3.10611 stock=3.106
+ EYE 3 delta=-0.0055542,-0.000469685,0.000320435 tension=14511 relative_speed=0.027523 length=3.10647 stock=3.106
+LANDED truck=-80.0215,0.608743,-149.999 failure=0 rig=0 hoist=1 force=2367.02 source=87375.6 rest=30.8766 actual=30.8849 truck_lift=0.340279 truck_tilt=-0.137802
+ SUPPORT speed=0.0527273 angular_speed=0.0415096
+ FORK min_plane_clearance=0.143397
+ WHEEL 0 contact=1 normal_y=1 force=3517.83
+ WHEEL 1 contact=1 normal_y=1 force=3513.82
+ WHEEL 2 contact=1 normal_y=1 force=28528.9
+ EYE 0 delta=0.0010376,0.032347,0.000930786 tension=0 relative_speed=0.361374 length=3.32365 stock=3.356
+ EYE 1 delta=0.0016098,0.0322007,0.000930786 tension=0 relative_speed=0.358484 length=3.3238 stock=3.356
+ EYE 2 delta=-0.0010376,0.0242993,9.15527e-05 tension=0 relative_speed=0.306121 length=3.0817 stock=3.106
+ EYE 3 delta=-0.000465393,0.024153,0.000106812 tension=0 relative_speed=0.303134 length=3.08185 stock=3.106
+RETRY truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2371.23 source=0 rest=30.8611 actual=30.8612 truck_lift=0.352144 truck_tilt=-0.138481
+ SUPPORT speed=0.000163055 angular_speed=0.000120916
+ FORK min_plane_clearance=0.15218
+ WHEEL 0 contact=1 normal_y=1 force=4768.56
+ WHEEL 1 contact=1 normal_y=1 force=4776.46
+ WHEEL 2 contact=1 normal_y=1 force=23539.1
+ EYE 0 delta=-0.00653839,0.0118621,1.52588e-05 tension=0 relative_speed=0.000174398 length=3.34414 stock=3.356
+ EYE 1 delta=-0.00654602,0.0118797,1.52588e-05 tension=0 relative_speed=0.000180678 length=3.34413 stock=3.356
+ EYE 2 delta=-0.00847626,-2.26498e-06,1.52588e-05 tension=0 relative_speed=0.000204856 length=3.10601 stock=3.106
+ EYE 3 delta=-0.00848389,1.52588e-05,1.52588e-05 tension=0 relative_speed=0.00019648 length=3.106 stock=3.106

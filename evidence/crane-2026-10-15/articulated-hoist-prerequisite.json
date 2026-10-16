@@ -1,0 +1,12 @@
+{
+  "exit": 0,
+  "sources": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "3b69f4ecd6989e1eeb1b2b74a7a865bdab8d62aad730c1a2aee024ecf7e3b977",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "4dab9ae60a5460dbd6280fc2f0219bb766ec5c2ffc62ca9e9205ee3fa4c96bc3",
+    "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "8f1931c179080ac179cde8fd98c4fdb61e677ba8612546c6d2cbae8281b6089f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+  },
+  "stage": "articulated-spreader-cable",
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/hoist-window.trial-4.log"
+}

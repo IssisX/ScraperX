@@ -399,7 +399,13 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	# A carried gun is not the crane's handheld radio. Native equipment
 	# acknowledgement selects its pose; the presented tool supplies wrists.
 	var operating: StringName = &"" if grapple else state["operating"]
-	var forklift := operating == &"forklift" and bool(state.get("forklift_active", false))
+	var crane := operating == &"yard_crane" and bool(state.get("yard_crane_active", false))
+	var forklift := (operating == &"forklift" and bool(state.get("forklift_active", false))) or crane
+	if crane:
+		state = state.duplicate()
+		state["forklift_frame"] = state["yard_crane_frame"]
+		state["forklift_left_hand_world"] = state["yard_crane_left_hand_world"]
+		state["forklift_right_hand_world"] = state["yard_crane_right_hand_world"]
 	var chute: bool = state["chute"]
 	var landing: Dictionary = state.get("landing", {})
 	var recovering := bool(landing.get("landing_recovering", false))
@@ -408,7 +414,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	var remote_frame := Transform3D()
 	if operating != &"":
 		remote_frame = _remote_transform(camera)
-	_remote.visible = operating != &"" and operating != &"forklift"
+	_remote.visible = operating != &"" and operating not in [&"forklift", &"yard_crane"]
 	if _remote.visible:
 		_remote.global_transform = remote_frame
 		_update_remote_buttons(state["pendant"])

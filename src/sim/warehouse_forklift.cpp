@@ -169,6 +169,10 @@ WarehouseForklift::WarehouseForklift(PhysicsSystem&w,kit::Kit&k,const Config&c):
     m.tilt=static_cast<HingeConstraint*>(hs.Create(m.body(c.chassis),m.body(c.mast)));w.AddConstraint(m.tilt);k.disable_collision(c.chassis,c.mast);
     SliderConstraintSettings ss;ss.mAutoDetectPoint=true;ss.SetSliderAxis(c.lift_axis);ss.mLimitsMin=0;ss.mLimitsMax=c.lift_stroke_m;ss.mMaxFrictionForce=c.lift_brake_force_n;ss.mNumVelocityStepsOverride=40;ss.mNumPositionStepsOverride=8;
     m.lift=static_cast<SliderConstraint*>(ss.Create(m.body(c.mast),m.body(c.carriage)));w.AddConstraint(m.lift);k.disable_collision(c.mast,c.carriage);
+    // Preserve actual integrated lift travel while preventing other joints'
+    // split position corrections from bypassing the finite neutral brake.
+    // The opt-in row spends only this substep's unused brake impulse margin.
+    m.lift->SetUseFiniteFrictionPositionCorrection(true);
     if(c.initially_coupled){m.create_coupling(true);m.state.coupling_generation=1;}
     m.state.battery_j=c.battery_capacity_j;m.refresh_wheel_filter();
 }

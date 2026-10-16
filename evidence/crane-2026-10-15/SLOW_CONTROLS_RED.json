@@ -1,0 +1,34 @@
+{
+  "compile": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++17",
+    "-pthread",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v7/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-src",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/yard_crane_tests.cpp",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v7/libscraperx_sim.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/red"
+  ],
+  "run": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/red",
+    "--slow-controls"
+  ],
+  "exit": 1
+}

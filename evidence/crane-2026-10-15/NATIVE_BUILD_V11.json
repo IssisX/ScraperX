@@ -1,0 +1,148 @@
+{
+  "started": 1792113874.4057481,
+  "source": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11",
+  "header_identical_to_v10": true,
+  "changed_native": "yard_crane.cpp only; pickup gates unchanged, actual-connected release path replaces loose-end pickup capture on detachment.",
+  "steps": [
+    {
+      "name": "src/sim/yard_crane.cpp",
+      "command": [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-fno-rtti",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/new_yard_crane.cpp.o",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src/sim/yard_crane.cpp"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/src_sim_yard_crane.cpp.log"
+    },
+    {
+      "name": "archive-replace",
+      "command": [
+        "/usr/bin/ar",
+        "r",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/new_yard_crane.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/archive-replace.log"
+    },
+    {
+      "name": "ranlib",
+      "command": [
+        "/usr/bin/ranlib",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/ranlib.log"
+    },
+    {
+      "name": "bridge-link",
+      "command": [
+        "/usr/bin/c++",
+        "-fPIC",
+        "-O3",
+        "-DNDEBUG",
+        "-shared",
+        "-pthread",
+        "-static-libgcc",
+        "-static-libstdc++",
+        "-s",
+        "-Wl,--no-undefined",
+        "-Wl,-soname,libscraperx_native.so",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_native.so",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/register_types.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/scraperx_simulation.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_bridge.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/bridge-link.log"
+    },
+    {
+      "name": "yard_crane_route_tests",
+      "command": [
+        "/usr/bin/c++",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/tests/yard_crane_route_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_route_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_route_tests.log"
+    },
+    {
+      "name": "yard_crane_tests",
+      "command": [
+        "/usr/bin/c++",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/tests/yard_crane_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_tests.log"
+    }
+  ],
+  "finished": 1792113914.731571,
+  "outputs": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_native.so": "3852c8685909ccbf1c0c87116f02b77a718ae70d74968cb508e2ee420af34165",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_route_tests": "c72b1e1edd46b57b2a6bf317378a4f688e7404269ca68745244ac559601be048",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/yard_crane_tests": "36c0558021d9c212c358ad727695160429a3ff3bdcf5519451fd80b3d4a4d894"
+  }
+}

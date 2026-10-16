@@ -1,0 +1,50 @@
+{
+  "recorded_at": "2026-10-16T01:44:25.250152+00:00",
+  "status": "native public route PASS; exact new GitHub/APK pending",
+  "trial": {
+    "stage": "public-freight-actual-attached-slack-release",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests.cpp": "d589c1d630494726d2b226e7e145361b8d716335204cfd5d10e0a5a2db082fbd",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/forklift_public_driver.hpp": "0da2220c17ac7d82ffc467f2589b9d0782434eb28c8b718de3444140211f66b0",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src/sim/yard_crane.cpp": "e197648ad6f30447f01dd4c105a3511437f18a8ff1e421e40d1b7b15c7e9587f",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests": "c72b1e1edd46b57b2a6bf317378a4f688e7404269ca68745244ac559601be048"
+    },
+    "started": 1792114309.6390967,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-9.log",
+    "exit": 0,
+    "finished": 1792114948.130416
+  },
+  "elapsed_seconds": 638.4913191795349,
+  "initial_stage": "one original accepted player-only grade stage for ordinary truck boarding; no subsequent resets/pose writes",
+  "driver_source_unchanged_from_trial8": true,
+  "acceptance": [
+    "original2440 truck driven from yard to pickup",
+    "actual finite hydraulic stow and platform/cab support",
+    "four actual individually reached eye attachments",
+    "native rigged-truck drive/lift/tilt interlock",
+    "finite hoist work and whole-truck rail clearance",
+    "loaded slew/trolley and actual three-tire11m dock support",
+    "ordinary grade bypass and existing material net1953 two-hand ascent/receiver2952 transfer",
+    "actual first-ring footing and walk to dock",
+    "four individually reached safely slack releases",
+    "ordinary transferred truck boarding and all tires onto existing ring",
+    "released-hand ordinary onward ring footing",
+    "same intact truck reversed to dock without reset for retry"
+  ],
+  "limits": [
+    "22m/higher freight not completed",
+    "public fork exchange/claw/clamp not implemented",
+    "device play unobserved",
+    "full5acc native102/105 only3oldladder/catch failures; no fullGREEN claim",
+    "finite slider split-position potential-energy residual unmeasured"
+  ]
+}

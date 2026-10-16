@@ -726,6 +726,8 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
         // push as other machinery, never the legacy static-riser pose write.
         support_entity_id_ == WarehouseForkliftYard::kChassisEntity ||
         obstacle_entity == WarehouseForkliftYard::kChassisEntity ||
+        (support_entity_id_ >= 1450 && support_entity_id_ <= 1452) ||
+        (obstacle_entity >= 1450 && obstacle_entity <= 1452) ||
         support_entity_id_ == SwingStair::kStairEntity ||
         bodies.GetUserData(obstacle) == SwingStair::kStairEntity;
     const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);

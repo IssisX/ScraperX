@@ -1,0 +1,14 @@
+Internal ctest changing into directory: /home/runner/work/ScraperX/ScraperX/build/native-repair
+Test project /home/runner/work/ScraperX/ScraperX/build/native-repair
+    Start 33: scraperx_sim.physical_step_intent
+    Start 34: scraperx_sim.forklift_boarding_diagnostic
+1/4 Test #33: scraperx_sim.physical_step_intent ...........   Passed    3.07 sec
+    Start 35: scraperx_sim.forklift_boarding
+2/4 Test #34: scraperx_sim.forklift_boarding_diagnostic ...   Passed    4.81 sec
+    Start 37: scraperx_sim.warehouse_forklift_route
+3/4 Test #35: scraperx_sim.forklift_boarding ..............   Passed   19.76 sec
+4/4 Test #37: scraperx_sim.warehouse_forklift_route .......   Passed  181.30 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) = 186.19 sec

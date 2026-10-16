@@ -1,0 +1,3 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+SLOW_CONTROLS angle=0 trolley=0 target_omega=0.00025 target_speed=0.0005 energy=1.9994e+06
+FAIL yard crane: small finite slew integrates actual boom rotation without a numerical input floor

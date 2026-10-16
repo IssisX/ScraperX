@@ -1,0 +1,16 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v8/yard_crane_tests",
+    "--slow-controls"
+  ],
+  "source": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v8/tests/yard_crane_tests.cpp",
+  "source_sha256": "6a0836365f54e54e4aeb3e52742ea90cebbfd16445c95d5586a65df4704cd89d",
+  "archive_sha256": "145dd383b0ad3b75ee9b3381fb87afbb594d97aa8f53ad601a3ef6f082a7a6f6",
+  "observed_tool_session": 85726,
+  "exit": 0,
+  "observed_stdout": "SLOW_CONTROLS angle=0.00242591 trolley=0.00499535 target_omega=0.00025 target_speed=0.0005 energy=1.9994e+06\nPASS slow real crane controls integrate below ordinary rigid rounding thresholds\n"
+}

@@ -1,0 +1,16 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=7.75624e-06 truck_tilt=8.15605e-05
+ EYE 0 delta=-0.00666046,-0.0691566,-1.52588e-05 tension=0 length=3.34516 stock=3.276
+ EYE 1 delta=-0.00666809,-0.0691553,0 tension=0 length=3.34516 stock=3.276
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0 length=3.10738 stock=3.106
+STOWED truck=-80.0314,0.64503,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=-2.76841e-06 truck_tilt=-0.137695
+ EYE 0 delta=-0.0494995,0.00105643,6.10352e-05 tension=0 length=3.27532 stock=3.276
+ EYE 1 delta=-0.0494843,0.00105596,7.62939e-05 tension=0 length=3.27532 stock=3.276
+ EYE 2 delta=-0.0608063,-0.000279427,4.57764e-05 tension=0 length=3.10687 stock=3.106
+ EYE 3 delta=-0.060791,-0.000279903,6.10352e-05 tension=0 length=3.10687 stock=3.106
+ALIGNMENT_FAILURE truck=-80.0314,0.645015,-150 failure=0 rig=0 hoist=1 force=2242.69 source=0 rest=30.862 actual=30.862 truck_lift=-2.78045e-06 truck_tilt=-0.13768
+ EYE 0 delta=0.0209961,0.0037992,0.000198364 tension=0 length=3.27227 stock=3.276
+ EYE 1 delta=0.0211029,0.00379586,0.000198364 tension=0 length=3.27227 stock=3.276
+ EYE 2 delta=0.00968933,0.00142384,3.05176e-05 tension=0 length=3.10459 stock=3.106
+ EYE 3 delta=0.00979614,0.00142074,4.57764e-05 tension=0 length=3.10459 stock=3.106
+FAIL yard crane: finite trolley and hoist align supported truck with real fixed-stock rig

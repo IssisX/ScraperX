@@ -67,6 +67,29 @@ struct ForkliftSnapshot final {
     std::array<Wheel, 3> wheels{};
 };
 
+struct YardCraneSnapshot final {
+    struct Line final {
+        Vector3 from{}, to{};
+        double force_n = 0, rest_length_m = 0;
+        bool attached = false;
+    };
+    bool available = false, controls_reachable = false, rigging_reachable = false;
+    int rigging_leg = -1;
+    std::uint64_t foundation_entity = 1450, boom_entity = 2451;
+    std::uint64_t trolley_entity = 2452, spreader_entity = 2453;
+    Vector3 station_position{}, operator_position{}, operator_forward{1, 0, 0};
+    Vector3 operator_left_hand{}, operator_right_hand{};
+    Quaternion operator_rotation{0, .7071067811865476, 0, .7071067811865476};
+    std::uint8_t attached_mask = 0, failure = 0;
+    bool hoist_connected = false;
+    double hoist_length_m = 0, hoist_actual_length_m = 0, hoist_force_n = 0;
+    double hoist_target_mps = 0, hoist_work_j = 0, hoist_source_used_j = 0;
+    double hoist_source_capacity_j = 0, slew_angle_rad = 0, slew_target_rad_s = 0;
+    double slew_torque_nm = 0, trolley_position_m = 0, trolley_target_mps = 0;
+    double trolley_force_n = 0, transport_energy_j = 0, transport_work_j = 0;
+    std::array<Line, 5> lines{};
+};
+
 struct GrappleGunSnapshot final {
     struct Hook final {
         bool present = false;
@@ -767,6 +790,11 @@ public:
                                         double tilt, double brake) noexcept;
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
     [[nodiscard]] ForkliftSnapshot render_forklift_state() const noexcept;
+    [[nodiscard]] bool set_yard_crane_input(double slew, double trolley, double hoist) noexcept;
+    [[nodiscard]] bool request_yard_crane_attach() noexcept;
+    [[nodiscard]] bool request_yard_crane_detach() noexcept;
+    [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
+
 
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
     // not a one-shot: while true and the body is on the ground outside a
@@ -952,6 +980,8 @@ private:
     double service_lift_input_ = 0.0;
     double supplied_machine_input_ = 0.0;
     std::array<double, 5> forklift_input_{0, 0, 0, 0, 1};
+    std::array<double, 3> yard_crane_input_{};
+    bool yard_crane_attach_requested_ = false, yard_crane_detach_requested_ = false;
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;

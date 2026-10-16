@@ -79,7 +79,10 @@ void Simulation::PhysicsWorld::prepare_forklift(
         const StepCommands &commands, const JPH::BodyInterface &bodies) {
     if (!warehouse_forklift_) return;
     WarehouseForklift::Command demand;
-    if (!commands.jump_requested && !commands.release_requested &&
+    // Any fitted transport leg belongs to the crane. Keep the truck parked
+    // while rigged, including partial rigging on the ground.
+    const bool rigged = yard_crane_ && yard_crane_->state().attached_mask != 0;
+    if (!rigged && !commands.jump_requested && !commands.release_requested &&
         forklift_controls_reachable(bodies)) {
         demand.drive = float(commands.forklift_input[0]);
         demand.steer = float(commands.forklift_input[1]);

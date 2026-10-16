@@ -1,0 +1,105 @@
+{
+  "objective": "Finite reciprocal powered cable lifts3217kg with bounded source, passive hold/lower, moving-eye reaction and release",
+  "budget_seconds": 600.0,
+  "started": 1792100986.540724,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "rigid-cable-load",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "b003f7bb23faa99d13f1fc92e46f15d0c3d7ac53e87064a1419de22fadd3ef45",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "b46e74b2d00955ee175c63338d080f6e0f406bdd59b8f5d6cc83e89840a12bce",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "b486e2af8781f64ba9cf3042547db41fe0478f80a9c1afec06c52d65d7b983d4",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "started": 1792100591.949728,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/hoist-window.trial-1.log",
+      "exit": 1,
+      "finished": 1792100592.8248694
+    },
+    {
+      "stage": "rigid-cable-load",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "b003f7bb23faa99d13f1fc92e46f15d0c3d7ac53e87064a1419de22fadd3ef45",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "53a5f7eb847de6e0510fdbc87a85c79cde1fa893156fe0564399c2206ae3ff19",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "0fed7cbad92a99b76e80ed6cab3abd2f0424856a14c4fba629d58384ab661528",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "started": 1792100694.176726,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/hoist-window.trial-2.log",
+      "exit": 0,
+      "finished": 1792100695.1038995
+    },
+    {
+      "stage": "articulated-spreader-cable",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "d222c00da3a471bbebb0a7987e256ef9787989be8702235a67a018290da37fd8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "3fbce7d5a5a3f5141b20f6347990639d2d80ef79fb3331bd349abdf396f1064b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "05d0bd05dda373e5218036fd4c105b572d2307618197da4ea39506b5695f56a9",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "started": 1792100892.9551682,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/hoist-window.trial-3.log",
+      "exit": 1,
+      "finished": 1792100896.0065703
+    },
+    {
+      "stage": "articulated-spreader-cable",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "3b69f4ecd6989e1eeb1b2b74a7a865bdab8d62aad730c1a2aee024ecf7e3b977",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "4dab9ae60a5460dbd6280fc2f0219bb766ec5c2ffc62ca9e9205ee3fa4c96bc3",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "8f1931c179080ac179cde8fd98c4fdb61e677ba8612546c6d2cbae8281b6089f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "started": 1792101024.0427067,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/hoist-window.trial-4.log",
+      "exit": 0,
+      "finished": 1792101024.7731543
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792100986.5404377,
+      "cause": "Trial3 cold-start articulated PGS at default10 iterations retains(3217/3417)^10 error; predicted0.033m/s creep matches measured0.03183m/s lift deficit and neutral hold failure",
+      "change": "Derive bounded native velocity iteration override from dynamic pair mass ratio to1e-4 contraction; retain finite event budgets and unchanged30mmhold, add exact holdtrace",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/HOIST_IMPLEMENTATION.md",
+      "evidence_sha256": "b7be8d5e35b741328fbd00c09aab4327eb9561801fc346bfd44fa66e6b3eb883",
+      "previous_failures": 2,
+      "previous_started": 1792100591.720799,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}

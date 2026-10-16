@@ -1,0 +1,2 @@
+HOIST_LIFT mass_kg=3217 height_m=1.739039302 source_j=109326.839447021 actual_positive_work_j=52899.583914667 mgh_j=54881.941348747 force_n=31558.759765625 peak_force_n=49999.996093750
+FAIL POWERED_CABLE source and actual work cover lift

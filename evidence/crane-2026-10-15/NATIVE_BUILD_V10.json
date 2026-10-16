@@ -1,0 +1,174 @@
+{
+  "started": 1792113483.449961,
+  "source": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v10",
+  "native_reuse": "All71 native+3bridgeobjects/source bytes equal acceptedv9; only Jolt Slider.cpp precision barrier changes, no headers/layout/API changes.",
+  "steps": [
+    {
+      "name": "jolt-SliderConstraint.cpp",
+      "command": [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-fno-rtti",
+        "-fno-exceptions",
+        "-Wno-stringop-overflow",
+        "-Wno-psabi",
+        "-ffp-contract=on",
+        "-O3",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean/Jolt/Physics/Constraints/SliderConstraint.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/SliderConstraint.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/jolt-SliderConstraint.cpp.log"
+    },
+    {
+      "name": "jolt-archive",
+      "command": [
+        "/usr/bin/ar",
+        "r",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libJolt-finite-clean.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/SliderConstraint.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/jolt-archive.log"
+    },
+    {
+      "name": "bridge-link",
+      "command": [
+        "/usr/bin/c++",
+        "-fPIC",
+        "-O3",
+        "-DNDEBUG",
+        "-shared",
+        "-pthread",
+        "-static-libgcc",
+        "-static-libstdc++",
+        "-s",
+        "-Wl,--no-undefined",
+        "-Wl,-soname,libscraperx_native.so",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_native.so",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/register_types.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/scraperx_simulation.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/yard_crane_bridge.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libJolt-finite-clean.a"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/bridge-link.log"
+    },
+    {
+      "name": "yard_crane_route_tests",
+      "command": [
+        "/usr/bin/c++",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v10/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v10/tests/yard_crane_route_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/yard_crane_route_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/yard_crane_route_tests.log"
+    },
+    {
+      "name": "forklift_slider_projection_tests",
+      "command": [
+        "/usr/bin/c++",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v10/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v10/tests/forklift_slider_projection_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/forklift_slider_projection_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/forklift_slider_projection_tests.log"
+    }
+  ],
+  "failed_attempts": [
+    {
+      "name": "jolt-SliderConstraint.cpp",
+      "command": [
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-fno-rtti",
+        "-fno-exceptions",
+        "-Wno-stringop-overflow",
+        "-Wno-psabi",
+        "-ffp-contract=on",
+        "-O3",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-round-clean/Jolt/Physics/Constraints/SliderConstraint.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/SliderConstraint.cpp.o"
+      ],
+      "exit": 1,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/jolt-SliderConstraint.cpp.log"
+    }
+  ],
+  "tooling_recovery": "Initial compiler launch ran from Termux host; correct invocation uses pinnedUbuntu toolchain via proot. No source/compiler result from hostmissingfloat.h.",
+  "finished": 1792113500.236219,
+  "source_stable": true,
+  "outputs": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_sim.a": "e271ee70187591cb91c8b5dac5f2fd8842dc03b690f49dcb4b56bc7beb447b51",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/libscraperx_native.so": "3eb7c75993a65e52167fd9ae030aa5a1a47ed4f33c67388881ea9a8c9c780d4c",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/forklift_slider_projection_tests": "44a77a926f8a72bb71a9d934088429e25018cd7c07029bf9132192ef7ac3e0b7",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v10/yard_crane_route_tests": "a3badd5b5d3a87466582c241b35b12cc9ea088f1928a2e59ec465b15286cc4a6"
+  },
+  "jolt_patch": {
+    "Jolt/Physics/PhysicsSystem.cpp": "a794ce29a217bc828345b1c5b284497b8856339706f6892c316017496047730d",
+    "Jolt/Physics/Constraints/SliderConstraint.h": "0b5afb39325aef7a04ee9e18b025a22e4007d4c8ea6ffda40278f1b86bd2791f",
+    "Jolt/Physics/Constraints/SliderConstraint.cpp": "0d536011830c82230ba12f31f9052edef78c0ae7003e9565deb7cf05d7fa8571",
+    "Jolt/Physics/Constraints/ConstraintPart/AxisConstraintPart.h": "73ea1688c73f61c441ad0d5239357192eaac18109352ab82ddcda8c6571dce29"
+  }
+}

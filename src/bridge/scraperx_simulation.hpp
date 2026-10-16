@@ -49,6 +49,10 @@ public:
     [[nodiscard]] bool set_forklift_input(double drive, double steer, double lift, double tilt, double brake);
     [[nodiscard]] godot::Dictionary get_forklift_state() const;
     [[nodiscard]] godot::Dictionary get_forklift_render_state() const;
+    [[nodiscard]] bool set_yard_crane_input(double slew, double trolley, double hoist);
+    [[nodiscard]] bool request_yard_crane_attach();
+    [[nodiscard]] bool request_yard_crane_detach();
+    [[nodiscard]] godot::Dictionary get_yard_crane_state() const;
     [[nodiscard]] bool request_slingshot_action();
     [[nodiscard]] bool request_slingshot_drop();
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;

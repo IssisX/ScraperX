@@ -1,0 +1,6 @@
+SETTLED truck=-80.0047,0.604623,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86
+ EYE 0 delta=-0.00733185,0.0066452,1.52588e-05 tension=0
+ EYE 1 delta=-0.00726318,0.00664556,1.52588e-05 tension=0
+ EYE 2 delta=-0.0092926,-0.00542808,-7.62939e-05 tension=0
+ EYE 3 delta=-0.00922394,-0.00542784,-7.62939e-05 tension=0
+FAIL yard crane: real four-leg hardware aligns at pickup

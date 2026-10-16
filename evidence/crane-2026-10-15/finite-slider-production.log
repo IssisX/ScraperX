@@ -1,0 +1,5 @@
+NEUTRAL100 dq=-0.00510349869728 integrated=-0.00446068113764 joint_anchor=0.000121373792354 fixed_angle=0.000243751055677
+LOWERING q0=0.351614207029 lowered=0.293342500925
+LOWER_NEUTRAL q0=0.351614207029 lowered=0.293342500925 hold_start=0.293343484402 held=0.293322086334 battery_delta=0 positive_work_delta=0 max_joint_anchor=0.000121373792354 fixed_all_axes=0.000243751055677 hinge_axis=6.09620801697e-05 external_contacts=0
+OVERLOAD before=0.293322086334 after=0.150825068355 saturated=11 zero_budget=11 combined_ratio=1
+RELEASE before=0.0234854575247 after=-1.04609616756e-05 budget=0 lambda=0

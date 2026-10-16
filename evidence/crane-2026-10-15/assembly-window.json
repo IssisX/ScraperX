@@ -1,0 +1,474 @@
+{
+  "objective": "Actual full native yard crane lifts real production forklift through four slings, holds, lands, releases and restores for retry",
+  "budget_seconds": 600.0,
+  "started": 1792114246.3822558,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "articulated-hoist",
+      "exit": 0,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.hpp": "566226c6b5b16df19e967fd336150cbc2964a41c4f971fec87fc782329b9f5cb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/powered_cable.cpp": "3b69f4ecd6989e1eeb1b2b74a7a865bdab8d62aad730c1a2aee024ecf7e3b977",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/powered_cable_tests.cpp": "4dab9ae60a5460dbd6280fc2f0219bb766ec5c2ffc62ca9e9205ee3fa4c96bc3",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-hoist-20261015/powered_cable_tests": "8f1931c179080ac179cde8fd98c4fdb61e677ba8612546c6d2cbae8281b6089f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-soft-velocity-20261015/jolt-build/libJolt.a": "8711a784f394fdf91af3366ab0b6695e80322cb73b46a8d1659e775b20aced1b"
+      },
+      "reused_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/articulated-hoist-prerequisite.json",
+      "receipt_sha256": "de576fae2000f9761970482c93ddac8dbd82e1524ae56c179a001098143730e6"
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "3a1b6b6f56f977547ff4a71eac600a3a432e52330989f4217c16964b09453649",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "7937ab78e4545a53b06a52fc8537f4103068f5715508a664f222147fab872eb2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "72e5be6ecf7ce90626ec486a678b34a14ede8d185944844eeb8ffa92f2a409f0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "e9762a49537a6dce9919567ceb9a3bd37a3c077d18f28e8954dd7b818e6a08b4",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "4deab3cb62765b9081abc654de8e52759e51f07aa78e019407228f40127b62a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "bae219751125f5be71591e421d7e096034f65b1f44c4f42a87ae14046655ea41",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-publication-prep-20261015/cmake-build/libscraperx_sim.a": "ca8ce5fb26f35f16cb38f523ff115357396488646c3e22cff04bb0db3e176189"
+      },
+      "started": 1792101974.5241919,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-2.log",
+      "exit": 1,
+      "finished": 1792101974.8416204
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "3a1b6b6f56f977547ff4a71eac600a3a432e52330989f4217c16964b09453649",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "7937ab78e4545a53b06a52fc8537f4103068f5715508a664f222147fab872eb2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "72e5be6ecf7ce90626ec486a678b34a14ede8d185944844eeb8ffa92f2a409f0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "d0376270ab690f7148c63fd9508a36bbe0c51bd9d8e825b395226209930aa7a4",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "933ea8dcfa73fed4d2ddc4b7519f4b7effeff94334e1f30aea41a845bf3df191",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105207.455139,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-3.log",
+      "exit": 1,
+      "finished": 1792105208.9406848
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "3a1b6b6f56f977547ff4a71eac600a3a432e52330989f4217c16964b09453649",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "7937ab78e4545a53b06a52fc8537f4103068f5715508a664f222147fab872eb2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "72e5be6ecf7ce90626ec486a678b34a14ede8d185944844eeb8ffa92f2a409f0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "301c5ed509626bb2854f4dbba919b0f5cbcb8b37118e4da8b138ad3f9708ec04",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "9e337fad032d73d9bfb9ac0fc3ab1336090be18bec0d06773dad43287b7ecca6",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105268.1295826,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-4.log",
+      "exit": 1,
+      "finished": 1792105268.862241
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "01def43a49a6cafe185c4c45a732fe8365d36b6afd253962b2beed37fd1e4bd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "830be8dab6de1deaa452f8665df75e976031fc1ba142e2c9315786c4b8cb2269",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "72e5be6ecf7ce90626ec486a678b34a14ede8d185944844eeb8ffa92f2a409f0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "52d6611f61d3258434262c12d96678e7181bdfa79c68a298d4e425d07a6b1dd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "2396d1e6ddb6d6771c7103f555ed07832cee4f35e45dea0478b87c863d012e5a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105501.3896024,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-5.log",
+      "exit": 1,
+      "finished": 1792105502.5661964
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "01def43a49a6cafe185c4c45a732fe8365d36b6afd253962b2beed37fd1e4bd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "830be8dab6de1deaa452f8665df75e976031fc1ba142e2c9315786c4b8cb2269",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "a9950002e746e163a39a3bbccfdaa797faa04eaa6a95a97056859b7c378cbdc1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "3476f313f2097bfc474512cf8787654f042aa95075e77a4616224e795936a12e",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "a8e2aa35ad2d9070d0932b3b213a5c0fb9d7b300df0193c4ffad32b50bf239a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105854.2036293,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-6.log",
+      "exit": 1,
+      "finished": 1792105855.1328402
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "01def43a49a6cafe185c4c45a732fe8365d36b6afd253962b2beed37fd1e4bd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "830be8dab6de1deaa452f8665df75e976031fc1ba142e2c9315786c4b8cb2269",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "a9950002e746e163a39a3bbccfdaa797faa04eaa6a95a97056859b7c378cbdc1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "90e31e7a459bf66ef5b0e95ba75ae6ea70b7c6cfbc9f532a3929e42dd58ef753",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "47df643bb5070929100548d40a46b90907a0fde8bf5cffeddd1abf1b98d24a92",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105912.054242,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-7.log",
+      "exit": 1,
+      "finished": 1792105914.6435416
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "01def43a49a6cafe185c4c45a732fe8365d36b6afd253962b2beed37fd1e4bd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "830be8dab6de1deaa452f8665df75e976031fc1ba142e2c9315786c4b8cb2269",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "a9950002e746e163a39a3bbccfdaa797faa04eaa6a95a97056859b7c378cbdc1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "46645d4423045f37b78782b83dfb7ecd9c15e3e0168be70e2c25a8d59d56f0f9",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "1d613bbbd5a5576798b1dcbc738f49368578e75e563fc358f7fe50da6d3e8056",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105960.0614462,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-8.log",
+      "exit": 1,
+      "finished": 1792105962.514939
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "01def43a49a6cafe185c4c45a732fe8365d36b6afd253962b2beed37fd1e4bd5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "830be8dab6de1deaa452f8665df75e976031fc1ba142e2c9315786c4b8cb2269",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "a9950002e746e163a39a3bbccfdaa797faa04eaa6a95a97056859b7c378cbdc1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "31e46e802fb201b365d90dd81ae553b1ede4fc7e90c043ce6df495c6f107864d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "970a4d1fe45e94b12765c5794cffd66c7bc2dccb1254b44b0f20414347e19353",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792105997.4796867,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-9.log",
+      "exit": 1,
+      "finished": 1792105998.405815
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "61987e61019b8d9d251b056f757944f8ff821785edeca53833d2278d2619e5b5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "ca77f35bb0c154a5f822110b24e8ab1240227a88c723025f87902919006885f7",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "0bf0d9656bd2a4859d02a9129a048d3de25a65861f5c15ea5b780a5d63be46be",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "70ec6768853f38d9b0b8990757821c4ba2e19b9cd0fdd4672553d0db061494f4",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "70ff1090fbdf1bd98556be8b4d37040e98bf29407ecb601f440ddd1816396823",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792106254.3292363,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-10.log",
+      "exit": 1,
+      "finished": 1792106255.619452
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "ce69cc46091cc53724a92f221d0025f792e1297907fef0c2d3f0babe7cc7975a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "ca77f35bb0c154a5f822110b24e8ab1240227a88c723025f87902919006885f7",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "9a79399f62b9286b291a196ec4c3d5673083292577e657f1faa8312bac7a4834",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "a015b7fd3892fcc6dcdb8541a821e5f0d239fa1c4624ced24f90eff11c2b977b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "d1ae9491fb596238faf1bdc7c024c7fb9907407cad653f66183143b8bbb1a93f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792106546.7580364,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-11.log",
+      "exit": 1,
+      "finished": 1792106548.0358183
+    },
+    {
+      "stage": "full-native-crane-loaded-cycle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "61987e61019b8d9d251b056f757944f8ff821785edeca53833d2278d2619e5b5",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "ca77f35bb0c154a5f822110b24e8ab1240227a88c723025f87902919006885f7",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "71194bbd625df8e1b09666fc0699d1b823037e844c539a4f73f969692da65a29",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "a015b7fd3892fcc6dcdb8541a821e5f0d239fa1c4624ced24f90eff11c2b977b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "0dda3d904753897d70926fcea675ef4fc0c43d07e6390ab303cfa62ccab940db",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792106867.2289977,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-12.log",
+      "exit": 0,
+      "finished": 1792106869.2678373
+    },
+    {
+      "stage": "individual-native-rig-transactions",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests",
+        "--individual-legs"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.cpp": "dfdf8af443565e5f13455103762a70a5eb8d2ab929fd59a469bc270cdc872a87",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane.hpp": "fa8e5c0734fca079dd12a8666fdfe8da424dd00080330db0a7d72627ca95513e",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.cpp": "71194bbd625df8e1b09666fc0699d1b823037e844c539a4f73f969692da65a29",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/yard_crane_geometry.hpp": "a9156b9b6bdcbc687f960252f22e192bc42a6db8040eeece0bcda36b48450825",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "733248d2501d2fb655055f33b83c4120b88a613aad19d42c807f1ce677bfe6d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "04112baffddc25c4b982ff751d4a06aa4e1252006325f6cae4ee4268c2d29d4a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.cpp": "3e2b07016a1548b63814197795e155a12a12b8aa01065401886ed72af63386bf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift.hpp": "c76588d2ee8a51b1b62cccf85fffab66d7e4467fa1c53bf1b83400d5d4442ea2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/yard_crane_tests.cpp": "b46c28e08d11fbffa7266c5a88fc1c72f32ea2416c1ec6518fd9f4db97e8997a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-mechanics-20261015/yard_crane_tests": "33964e59d345bd6ffb07fc0e5b5856d8c02b2eedbbb5a0ae3518d3988b54d70c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
+      },
+      "started": 1792106971.1444423,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-13.log",
+      "exit": 0,
+      "finished": 1792106972.5282657
+    },
+    {
+      "stage": "loaded-crane-accurate-integration",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/cycle-v8",
+        "--loaded-cycle"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/cycle-yard-crane-tests.cpp": "7c4eb81345fd9410ea2a7d976224357107bdef9608a208c903b2b2d558f4246a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v8/libscraperx_sim.a": "145dd383b0ad3b75ee9b3381fb87afbb594d97aa8f53ad601a3ef6f082a7a6f6",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slow-crane-controls/cycle-v8": "f25b7c88f1c94ff586c6ba28858399ca26538c3ef3560863a1d59b27cf1b2be9"
+      },
+      "started": 1792111842.2645485,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-14.log",
+      "exit": 0,
+      "finished": 1792111843.3391993
+    },
+    {
+      "stage": "actual-slack-local-release-and-suspended-refusal",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slack-leg-release/run_final.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slack-leg-release/final-tests.cpp": "f44557bf8bc36c6eace48b7e5556989cc0c748f04c5d06ae1489d263918b9b0c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slack-leg-release/run_final.py": "7a22add60e6ece37e6fc8fbbda159ab63e8c0f40fc657b48f9d3da49366431a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slack-leg-release/final-tests": "201a680be49180e94795bb3175442e16d7ae0e33bd8adeeb2850dbb1d43c8a6e",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src/sim/yard_crane.cpp": "e197648ad6f30447f01dd4c105a3511437f18a8ff1e421e40d1b7b15c7e9587f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792114246.5929668,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-15.log",
+      "exit": 0,
+      "finished": 1792114252.542984
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792105122.6512642,
+      "cause": "Settled rear truck eyes are5.4mm below fixed stock free ends; attachment correctly rejects excess distance.",
+      "change": "Physically lower empty hoist at10percent payout until all four actual eye distances fit fixed stock, then neutral; use real cab truck and accepted gate-free v2 archive.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-2.log",
+      "evidence_sha256": "9c5ec38919688e88f41823f7e61ea1c5acce7648b83b9c1bf875ae51aa6cd717",
+      "previous_failures": 1,
+      "previous_started": 1792101974.398559,
+      "previous_pending": false
+    },
+    {
+      "at": 1792105476.0345256,
+      "cause": "Front sling hits actual forklift mast at first loaded pitch transition tick51; length below stock failure threshold. Wider fixed spreader rejected because hanging free ends would violate existing6cm eye alignment.",
+      "change": "Use existing finite hydraulic transport stow: forks fully lowered and mast at existing negative8degree forward stop, predicted mast-top advance0.42m away from front slings; enforce real lift<0.10m and tilt within0.02rad at attachment; preserve all geometry, cable stock, power, force and clearance guards.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-4.log",
+      "evidence_sha256": "14f70c17a00b7defd825786ba800a0a5fad6535a809e4cfca05601a97d78f015",
+      "previous_failures": 2,
+      "previous_started": 1792105122.6514637,
+      "previous_pending": false
+    },
+    {
+      "at": 1792105823.1106474,
+      "cause": "Finite forward stow changes chassis pitch: front actual eyes82mm above old fixed-stock free ends, rear1mm. Wider spreader violates6cm alignment.",
+      "change": "Root shortened actual front stock by four20mm links to3.276m, rear3.106m unchanged. Use finite actual trolley/hoist feedback from measured eye/free-end errors and real boom axis; require unchanged distance, stock, speed and supported-stationary owner checks after neutral settle.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-5.log",
+      "evidence_sha256": "d8c6c77235893884a00bfdaed279a509d70d5d5a496a7c9f431fe091c8d0704b",
+      "previous_failures": 1,
+      "previous_started": 1792105476.035373,
+      "previous_pending": false
+    },
+    {
+      "at": 1792105938.3009722,
+      "cause": "Measured final actual endpoints fit unchanged hardware/stock envelope; fixture unnecessarily required mean centering<6mm plus relative axis speed<15mm/s, excluding the predicted31mm/s pendulum crossing despite native150mm/s speed limit.",
+      "change": "Remove only artificial helper centering/axis-speed preconditions. Preserve exact native per-leg60mm hardware reach, stock+.1mm, relativepoint speed150mm/s, real wheel/linear/angular support checks, neutral settle and authoritative try_attach obstruction/stow transaction.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-7.log",
+      "evidence_sha256": "798b7ac4ef37ec9acc233a822c1e905d7938d95bd59acde405ad9e201986ac68",
+      "previous_failures": 2,
+      "previous_started": 1792105823.1111069,
+      "previous_pending": false
+    },
+    {
+      "at": 1792106229.2005658,
+      "cause": "Fully lowered forks at full forward tilt ground the long tips and lift both front tires; contacts/forces0 while rear carries29.7kN. Prior shortfrontstock fitted physically invalid posture.",
+      "change": "Root restored original fixedstock3.356/3.106m. Finite carriage raise first to0.35m then forward tilt. Native gate requires coupled forks and all actual box vertices>=80mm above upward real3wheelcontactplane, allwheel support, no actual external fork contacts; preserve all alignment/speed/stock/obstruction/force limits.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-9.log",
+      "evidence_sha256": "5b1a2498f4d001a34a54ec68f4baa6d2b0906c16c5259cf248d82b3fba9d5901",
+      "previous_failures": 2,
+      "previous_started": 1792105938.3012207,
+      "previous_pending": false
+    },
+    {
+      "at": 1792106517.4632263,
+      "cause": "Trial10 establishes supported pickup and actual mastBody8388610 firstloss at tick93, below overlength; remaining cause is query frame versus real loaded mast clearance, unsupported by BodyID alone",
+      "change": "One observer-only firstloss capture: all rig body COM/origin/rotation, actual endpoints in mast local, cast fraction/subshape/contact with top and zero output bases, failed row actual impulse/force; unchanged mechanics and guards",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-10.log",
+      "evidence_sha256": "8c4bcfc3521aa8d0caf1a8caf20bf4ff7fce670776582c78fdc1852a361f11dc",
+      "previous_failures": 1,
+      "previous_started": 1792106229.200818,
+      "previous_pending": false
+    },
+    {
+      "at": 1792106822.4419448,
+      "cause": "Trial11 real25mm sling envelope contacts actual mast top crossbar under common19degree loaded trim. Truck loadcenterz-.419814 lies144mm aft of old spreaderCOM/hook, producing4.77kNm pitch moment; worldcast base and endpoints validated.",
+      "change": "Root extended physical rear rails/crossmember and solved actual85.952kg ballastplate/block position from all realfixedpartmasses so derived emptyspreaderCOM and connected hook match actual stowedtruck loadcenterz-.419814. Preserve truck, eyes, stock, probe radius, forces and allnativeguards.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/LOADED_CLEARANCE_CAUSE.md",
+      "evidence_sha256": "54aaed856f4113ed3412d5f4d8fcb4b1abf50ea33faff799bf8bcfe3733e7f28",
+      "previous_failures": 1,
+      "previous_started": 1792106517.46394,
+      "previous_pending": false
+    },
+    {
+      "at": 1792111842.1504674,
+      "cause": "Real crane fine motor motion discarded by ordinary rigid arithmetic, actual focused RED/GREEN established. New opt-in four-crane-body integration changes actual articulated motion.",
+      "change": "One necessary loaded assembly lift/neutral/supportrelease/drive/retry regression on v8 actual owner after integration arithmetic change. Existing force/work/stock/geometry laws unchanged; no repeat of accepted slow-control fixture.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/SLOW_CONTROLS_GREEN.json",
+      "evidence_sha256": "3ccb75efd39441b6de609ce2b5db85eb0e1f9a83df9d7e9a27bc44eedbb7bff8",
+      "previous_failures": 0,
+      "previous_started": 1792106822.442213,
+      "previous_pending": false
+    },
+    {
+      "at": 1792114246.381227,
+      "cause": "Actual full public trial8 reaches dock on three tires and player reaches eye, but release uses pickup loose-end capture and rejects155mm of safe slack. Focused original-owner RED rejects350mm safely slack selected-leg release.",
+      "change": "Release checks actual attached cable endpoints, retained150N/20mm slack, real supported-stowed stationary truck, actual relative speed and obstruction. Pickup capture unchanged. New positive checks unchanged body pose/velocity and selected mask only; loaded cycle adds suspended per-leg refusal.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/slack-leg-release/red.log",
+      "evidence_sha256": "695bc0713b1cb895756b4bb2a9ba03cd3221872aa3e0d7b3c01f936745e389b6",
+      "previous_failures": 0,
+      "previous_started": 1792111842.150599,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}

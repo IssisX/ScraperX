@@ -1,0 +1,16 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=7.75624e-06 truck_tilt=8.15605e-05
+ EYE 0 delta=-0.00666046,0.0108433,-1.52588e-05 tension=0 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00666809,0.0108446,0 tension=0 length=3.34516 stock=3.356
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0 length=3.10738 stock=3.106
+STOWED truck=-80.0313,0.645029,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8613 truck_lift=-2.59247e-06 truck_tilt=-0.137688
+ EYE 0 delta=-0.0493774,0.0823613,-4.57764e-05 tension=0 length=3.27401 stock=3.356
+ EYE 1 delta=-0.0493774,0.0823699,-3.05176e-05 tension=0 length=3.274 stock=3.356
+ EYE 2 delta=-0.0606842,0.00102639,-4.57764e-05 tension=0 length=3.10557 stock=3.106
+ EYE 3 delta=-0.0606842,0.00103498,-4.57764e-05 tension=0 length=3.10556 stock=3.106
+ALIGNED truck=-80.0313,0.645028,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8613 truck_lift=-2.35806e-06 truck_tilt=-0.137687
+ EYE 0 delta=-0.0493927,0.0823603,-1.52588e-05 tension=0 length=3.27401 stock=3.356
+ EYE 1 delta=-0.0493622,0.0823672,0 tension=0 length=3.274 stock=3.356
+ EYE 2 delta=-0.0606995,0.00102723,-6.10352e-05 tension=0 length=3.10557 stock=3.106
+ EYE 3 delta=-0.0606689,0.00103402,-4.57764e-05 tension=0 length=3.10556 stock=3.106
+FAIL yard crane: real four-leg hardware aligns at pickup

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-crane-lever-feedback-20261016/godot",
+    "--script",
+    "res://tests/yard_crane_operator_inputs_test.gd"
+  ],
+  "exit": 0,
+  "started": 1792110886.8505971,
+  "finished": 1792110889.1406677,
+  "test_sha256": "6f10abd0ca6034c1da6193295a4f6ba503edc93245bbd5c5a124aca9fa075f0a"
+}

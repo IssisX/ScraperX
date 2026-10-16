@@ -1,0 +1,27 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/usr/bin/env",
+    "LIBGL_ALWAYS_SOFTWARE=1",
+    "GALLIUM_DRIVER=softpipe",
+    "/usr/bin/xvfb-run",
+    "-a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-crane-lever-feedback-20261016/godot",
+    "--rendering-method",
+    "gl_compatibility",
+    "--audio-driver",
+    "Dummy",
+    "--script",
+    "res://tests/yard_crane_operator_inputs_test.gd"
+  ],
+  "exit": 0,
+  "started": 1792110501.996095,
+  "finished": 1792110514.8306694,
+  "private_observer_only": "prints actualMultiMesh transform/hand target to discriminate Dummy renderer data"
+}

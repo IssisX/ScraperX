@@ -1,0 +1,254 @@
+{
+  "objective": "Public same-original-truck ground drive, four actual local rig legs, finite powered11m dock transport, personnel ascent, local release, existing ring drive/onward/retry",
+  "budget_seconds": 1200.0,
+  "started": 1792114309.4431899,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "native-loaded-assembly",
+      "exit": 0,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-12.log": "7dc8cf756240e1796c99c9ea6a05fed1e459bc73af0188380eb6fb25a0533266",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-13.log": "854326d511405970e9f8e2753f4d06c42190a4ac202ce9bad40c2b6b78ef2648"
+      },
+      "reused_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/world-prerequisite-v5.json",
+      "receipt_sha256": "fb779090b55f09e8bbeb36f31a11c144511810e3e965cebb33b439ac91fd28de"
+    },
+    {
+      "stage": "public-freight-v5",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v5/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/native-manifest-v5.json": "2c750f4730457d5e93b6be7a05581915301e1e934c766ae87576a5329fdaadbd",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v5/libscraperx_sim.a": "89da7c548eec6cf7630ada45fb460a9f9120463d28e82e05c84bc756debef18b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v5/yard_crane_route_tests": "f5f62c4971522371e4faf29d91f68665a5c0e4b170743434471478b1982ffc1f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v5/tests/yard_crane_route_tests.cpp": "a032e5dd3212444eeec017b1f378bfa569abce2a5e496a33b6563f032287731f"
+      },
+      "started": 1792108219.7917366,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-2.log",
+      "exit": 1,
+      "finished": 1792108667.1073897
+    },
+    {
+      "stage": "public-freight-native-capture-radius",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial3/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial3/yard_crane_route_tests.cpp": "f1c2e16aa1cb8989175c8eff31508a72c665d245e6148fea50a86be44f5d88c9",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial3/forklift_public_driver.hpp": "f629a288115363f54882253e29f94ae65e7ce54a6ab88d3cd4689e375f4172a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v5/libscraperx_sim.a": "89da7c548eec6cf7630ada45fb460a9f9120463d28e82e05c84bc756debef18b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial3/yard_crane_route_tests": "53496d2fdf0ab6b8d1b8c91fb4bb1164d5c17820431223c1a44b9d927b6f3ee6"
+      },
+      "started": 1792108791.9749599,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-3.log",
+      "exit": 1,
+      "finished": 1792109044.5351784
+    },
+    {
+      "stage": "public-freight-clear-truck-perimeter",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial4/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial4/yard_crane_route_tests.cpp": "e3415b30a6e8e989501b310bf8a3838f6cfe9e7a9d4f3cf5fb84e4713427ce50",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial4/forklift_public_driver.hpp": "f629a288115363f54882253e29f94ae65e7ce54a6ab88d3cd4689e375f4172a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v6/libscraperx_sim.a": "dde1e3e70704a32dd1b68de62430b918681734cc79cbaa219358362cfffb0c81",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial4/yard_crane_route_tests": "bbbf5d995249c31140b9d760b2ea68e42c538e842dcabef595f6ed0dafe770a7"
+      },
+      "started": 1792109435.881999,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-4.log",
+      "exit": 1,
+      "finished": 1792109618.2714775
+    },
+    {
+      "stage": "public-freight-real-eye-identity",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial5/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial5/yard_crane_route_tests.cpp": "b13440d5bdedd003517bc34a0891369ae7f9a4cb304b993208fec6d2dfd9e53c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial5/forklift_public_driver.hpp": "f629a288115363f54882253e29f94ae65e7ce54a6ab88d3cd4689e375f4172a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v7/libscraperx_sim.a": "29e2c8ad94ce24dc7b977ab26b94dbb9fc63a3b03ac52def7ae082417cdb6eeb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial5/yard_crane_route_tests": "1d1d9afa5d3f198cb55df8ab6c1473b2abce260f03ed05aed69adc0d52dcbc2a"
+      },
+      "started": 1792110142.7310731,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-5.log",
+      "exit": 1,
+      "finished": 1792110603.4876227
+    },
+    {
+      "stage": "public-freight-real-rail-clearance",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial6/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial6/yard_crane_route_tests.cpp": "a9658c4065affb068ac50c1b512673d20faed0b2f11ad924daa363d7bf904e1b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial6/forklift_public_driver.hpp": "f629a288115363f54882253e29f94ae65e7ce54a6ab88d3cd4689e375f4172a8",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v7/libscraperx_sim.a": "29e2c8ad94ce24dc7b977ab26b94dbb9fc63a3b03ac52def7ae082417cdb6eeb",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial6/yard_crane_route_tests": "dec0cc7cfa83f987ee8274b353c150465d7ba55f92fcc409ec3f4051d6a72d0e"
+      },
+      "started": 1792110883.8741567,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-6.log",
+      "exit": 1,
+      "finished": 1792111405.8927348
+    },
+    {
+      "stage": "public-freight-integrated-fine-controls",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial7/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial7/yard_crane_route_tests.cpp": "40ab843001441d1d3791645848270b7c650b69d3975988276d96cc5c3c6a319d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial7/forklift_public_driver.hpp": "0da2220c17ac7d82ffc467f2589b9d0782434eb28c8b718de3444140211f66b0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v8/libscraperx_sim.a": "145dd383b0ad3b75ee9b3381fb87afbb594d97aa8f53ad601a3ef6f082a7a6f6",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial7/yard_crane_route_tests": "952fcf97de6842cffc4d35b2dac5d413c53770286cfe76da782b8496fe59f0df"
+      },
+      "started": 1792111803.6050832,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-7.log",
+      "exit": 1,
+      "finished": 1792112304.1793156
+    },
+    {
+      "stage": "public-freight-finite-brake-buttress-route",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial8/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial8/yard_crane_route_tests.cpp": "d589c1d630494726d2b226e7e145361b8d716335204cfd5d10e0a5a2db082fbd",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial8/forklift_public_driver.hpp": "0da2220c17ac7d82ffc467f2589b9d0782434eb28c8b718de3444140211f66b0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v9/libscraperx_sim.a": "e271ee70187591cb91c8b5dac5f2fd8842dc03b690f49dcb4b56bc7beb447b51",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v9/libJolt-finite-clean.a": "3ce39d702ca6bcbd1572cdd72029c031327087dbdac1b1eb2dd831a73582eb0f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial8/yard_crane_route_tests": "a5840f3735fa3baa96274da0e97c76df5a6d554676d2d49a52513f7a36d0843f"
+      },
+      "started": 1792113067.6758902,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-8.log",
+      "exit": 1,
+      "finished": 1792113684.6250336
+    },
+    {
+      "stage": "public-freight-actual-attached-slack-release",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests.cpp": "d589c1d630494726d2b226e7e145361b8d716335204cfd5d10e0a5a2db082fbd",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/forklift_public_driver.hpp": "0da2220c17ac7d82ffc467f2589b9d0782434eb28c8b718de3444140211f66b0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v11/src/sim/yard_crane.cpp": "e197648ad6f30447f01dd4c105a3511437f18a8ff1e421e40d1b7b15c7e9587f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libscraperx_sim.a": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v11/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/freight-trial9/yard_crane_route_tests": "c72b1e1edd46b57b2a6bf317378a4f688e7404269ca68745244ac559601be048"
+      },
+      "started": 1792114309.6390967,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-9.log",
+      "exit": 0,
+      "finished": 1792114948.130416
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792108791.8634298,
+      "cause": "Public driver reached real parked truck/cab and legal stock alignment, but its artificial45mm centering gate rejected measured48..53mm inside native60mm hardware capture. No owner failure occurred.",
+      "change": "Only align-empty driver uses native60mm approach radius; unchanged actual per-eye owner transaction still rejects stock, speed, obstruction, stow or unsupported truck. Native/geometry and all subsequent route assertions unchanged.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-2.log",
+      "evidence_sha256": "780c529d6a5f2329dd3559d78897a9ed978b162021480d45d9995776ec1b87d7",
+      "previous_failures": 1,
+      "previous_started": 1792108219.3110843,
+      "previous_pending": false
+    },
+    {
+      "at": 1792109435.6911657,
+      "cause": "Native capture-radius approach passes; first local rigging walk stalls at the relocated truck. Original diagonal path cuts the rear counterweight/capsule and side-tread envelope. Filtered capsule query at the same grade point finds no static obstacle when the truck remains in original yard.",
+      "change": "Use explicit perimeter waypoints beyond actual rear hull plus capsule radius, approach eyes from the clear side rather than via boarding treads; print target/velocity/foot/rotation on any walking failure. Includes independently accepted physical-step intent repair in nativev6, unchanged crane laws/guards.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-3.log",
+      "evidence_sha256": "e587d33a2a881fe780017cf89c2ac85e758d5d4909796ea43390e52261b2bedc",
+      "previous_failures": 1,
+      "previous_started": 1792108791.8640752,
+      "previous_pending": false
+    },
+    {
+      "at": 1792110142.541196,
+      "cause": "Fullworld perimeter path reaches rear eye but percentage ray cutoff rejects actual eye topbar. Focused same-source v6 RED rearleg2 and repaired v7 GREEN all4eyes plus real steel occluder negative.",
+      "change": "Native first hit must be the intended actual eye LeafBox, identified by authored centre within float roundoff. Othersteel and bodies block. All native reach, stock, stow, speed, force and contact gates unchanged; fullroute records real per-leg failure geometry if any.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-4.log",
+      "evidence_sha256": "5474832b57d16a45c334f0d6e07a5aa581f6f3f7cc9958129e6fcb7332759453",
+      "previous_failures": 1,
+      "previous_started": 1792109435.691958,
+      "previous_pending": false
+    },
+    {
+      "at": 1792110883.6136858,
+      "cause": "Actual loaded transfer reaches dock side rail at chassis12.13m; real tire envelope remains below authored rail top12.13m and stalls at z-135.578, .67m outside rail z-136.25. Native rig remains intact.",
+      "change": "Public operator uses actual dock part maximum Y and actual four-body/tire minimum Y plus .35m operating clearance to derive finite hoist height before slew. Explicit pre-slew whole-truck rail clearance assertion; no collision, actuator or support laws changed.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-5.log",
+      "evidence_sha256": "b052f98d76e0cd5787a2cf362e31daaff9e1b0ca6de5318c4a0c3511b6b69712",
+      "previous_failures": 1,
+      "previous_started": 1792110142.5431027,
+      "previous_pending": false
+    },
+    {
+      "at": 1792111803.357877,
+      "cause": "Truck clears real side rail and reaches(-31,-140), then fine slew stalls at1.23598 versus1.23874target. Actual focused old-owner RED has angle0/trolley0 despite targets.00025radps/.0005mps and1.9994MJenergy. Tiny native rigid steps are discarded.",
+      "change": "Existing opt-in accurate rigid integration enabled only four real crane bodies. Focused GREEN angle.00242591rad/trolley.00499535m over10s with unchanged targets/source/force. Driver retains all dock/rig/support checks and now logs rates/energy and actual fork/tire geometry on any landing failure. No hydraulic drift fix is claimed.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/freight-world-window.trial-6.log",
+      "evidence_sha256": "d71f40634df9905cb61754137ebbd01464b4a2b02aebfa4224fcc82fb6bc2135",
+      "previous_failures": 1,
+      "previous_started": 1792110883.6146772,
+      "previous_pending": false
+    },
+    {
+      "at": 1792113067.4223762,
+      "cause": "Trial7 reaches actual three-tire11m dock landing and slack slings. Personnel grade traversal hits real ButtressFootentity51 withwestfacex-42, capsulehaltsx-42.35. Actual fullcapsulesweeps show proposednorthbypass nohit. Independent suspended hydraulic projection defect is additionally repaired at solverowner and canonicalproduction/1700kgnearfar tests pass.",
+      "change": "Publicdriver walks actualclear northpassage z-106.5 to existingcargo-net1953, retains all realpersonnel/detach/ring/retry gates. Exactcleanv9 finitecurrent-substep hydrauliccorrection with unchanged ratings/source, sourceboundcanonicalPASS andrealnear/fartipPASS. No route pose/support/velocity grants.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/PERSONNEL_BUTTRESS_ROUTE.md",
+      "evidence_sha256": "1e1df9ed9f375e8a591b52f81931dfa58f3d4f3d12385f3690910fe4f756632f",
+      "previous_failures": 1,
+      "previous_started": 1792111803.35876,
+      "previous_pending": false
+    },
+    {
+      "at": 1792114309.4427333,
+      "cause": "Public trial8 reaches actual dock, personnel ascent and local eye but release incorrectly reused pickup loose-end capture, rejecting155mm safely slack attached line. Focused old RED350mm safe slack and fixed owner GREEN plus loaded suspended refusal and individual-leg guards pass.",
+      "change": "Only detachment uses actual attached endpoints for retained speed/obstruction checks. Original pickup capture, all actual support/stow/slack/local reach gates unchanged. Clean final Jolt finite precision source retained, canonical v10 PASS; route driver unchanged after actual buttress bypass.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/assembly-window.trial-15.log",
+      "evidence_sha256": "0765013ca4c75a8c1fd185fa4ef05537ab535a2549945de3c9ad8f3b79102c73",
+      "previous_failures": 1,
+      "previous_started": 1792113067.4228237,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}

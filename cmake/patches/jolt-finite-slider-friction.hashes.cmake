@@ -1,0 +1,19 @@
+# Pinned Jolt e77f175595e64cb44218cc9d9d56fc365ad0e36a. Default-off finite current-substep slider friction correction.
+set(SCRAPERX_JOLT_ATTACHMENT_FILES
+    "Jolt/Physics/PhysicsSystem.cpp"
+    "Jolt/Physics/Constraints/SliderConstraint.h"
+    "Jolt/Physics/Constraints/SliderConstraint.cpp"
+    "Jolt/Physics/Constraints/ConstraintPart/AxisConstraintPart.h"
+)
+set(SCRAPERX_JOLT_ATTACHMENT_ORIGINAL_SHA256
+    "e089e82903456527c28f1550744e851dd44039e60246bb76b802813e5d67b53e"
+    "3785dcb0e353e8c98d0cd04616ad69d851c773ac578074aeccf1625b10ddfcf8"
+    "5da674a5b91b09b932cc8e01f747124a7bdf777079171b10b9f2a262f5810aa7"
+    "b6d8632e97a24bad4c7c824dcc410c93c3c23ee99a82147b128e286eb21f2c74"
+)
+set(SCRAPERX_JOLT_ATTACHMENT_PATCHED_SHA256
+    "a794ce29a217bc828345b1c5b284497b8856339706f6892c316017496047730d"
+    "0b5afb39325aef7a04ee9e18b025a22e4007d4c8ea6ffda40278f1b86bd2791f"
+    "0d536011830c82230ba12f31f9052edef78c0ae7003e9565deb7cf05d7fa8571"
+    "73ea1688c73f61c441ad0d5239357192eaac18109352ab82ddcda8c6571dce29"
+)

@@ -73,6 +73,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
 
     auto &bodies = physics_system_.GetBodyInterface();
     prepare_forklift(commands, bodies);
+    prepare_yard_crane(commands, bodies);
     air_control_force_ = JPH::Vec3::sZero();
     const auto rider_velocity_before = bodies.GetLinearVelocity(player_id_);
     if (regression_fixtures_) {
@@ -330,6 +331,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     }
     if (service_lift_) service_lift_->post_step();
     if (warehouse_forklift_) warehouse_forklift_->post_step();
+    if (yard_crane_) yard_crane_->post_step();
     if (supplied_ascent_) supplied_ascent_->post_step();
     kit_->post_step(delta_seconds);
     if (slingshot_) slingshot_->post_step(delta_seconds);

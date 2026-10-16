@@ -7,6 +7,13 @@ import subprocess
 
 
 OWNERS = {
+    "forklift_slider_projection": "scraperx_forklift_slider_projection_tests",
+    "warehouse_forklift_load": "scraperx_warehouse_forklift_load_tests",
+    'powered_cable': 'scraperx_powered_cable_tests',
+    'yard_crane': 'scraperx_yard_crane_tests',
+    'yard_crane_world': 'scraperx_yard_crane_world_tests',
+    'yard_crane_route': 'scraperx_yard_crane_route_tests',
+    'yard_crane_rigging_reach': 'scraperx_yard_crane_rigging_reach_tests',
     "forklift_boarding": "scraperx_forklift_boarding_tests",
     "physical_step_intent": "scraperx_physical_step_intent_tests",
     "warehouse_forklift_route": "scraperx_warehouse_forklift_route_tests",

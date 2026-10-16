@@ -1,0 +1,3 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+SLACK_RELEASE free_end_gap=0.350638 force=0 slack=0.350534
+FAIL yard crane: supported actual slack leg releases without loose-end pickup alignment

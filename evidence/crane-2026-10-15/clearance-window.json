@@ -1,0 +1,31 @@
+{
+  "objective": "Resolve real forklift plus operator swept entry clearance into proposed11m/22m outboard receiving bays against actual complete native world shapes",
+  "budget_seconds": 600.0,
+  "started": 1792101044.6148477,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "actual-truck-and-operator-bay-entry",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-clearance-20261015/probe"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-clearance-20261015/probe.cpp": "5039f027600b99a1724cc804e6c6e29706b468d9a3e7fe2ad811f45d05a86b77",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-clearance-20261015/probe": "f32976e82bd1fcfbed9090b7bfc07c0202ae5f55f61b49ae77936a7195208041",
+        "/data/data/com.termux/files/usr/tmp/scraperx-crane-clearance-20261015/libscraperx_sim.a": "c980c45e9c63b086d3f1f4e3681483d797c8a8f4ae58838d8de10feb156073f0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.cpp": "cddcd019a83e00a002367ec0b98fb13e9f05dcfef5ddade935406c6e73a9b00b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/warehouse_forklift_yard.hpp": "0246ce03c21b18012ca8c0a2d9222b137c890ef3257ddd7dded1d160840eee4c"
+      },
+      "started": 1792101044.8710709,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/crane-2026-10-15/clearance-window.trial-1.log",
+      "exit": 0,
+      "finished": 1792101045.6984255
+    }
+  ],
+  "reassessments": [],
+  "pending": false
+}

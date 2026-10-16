@@ -1,0 +1,22 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86
+ EYE 0 delta=-0.00666046,0.0108433,-1.52588e-05 tension=0 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00666809,0.0108446,0 tension=0 length=3.34516 stock=3.356
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0 length=3.10738 stock=3.106
+ALIGNED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8613
+ EYE 0 delta=-0.00666046,0.0121536,-1.52588e-05 tension=0 length=3.34385 stock=3.356
+ EYE 1 delta=-0.00666809,0.012155,0 tension=0 length=3.34385 stock=3.356
+ EYE 2 delta=-0.0086441,-6.19888e-05,0 tension=0 length=3.10607 stock=3.106
+ EYE 3 delta=-0.00865173,-6.05583e-05,1.52588e-05 tension=0 length=3.10607 stock=3.106
+FIRST_FAILURE lift_tick=51
+FIRST_FAILURE truck=-79.9767,0.851362,-150 failure=3 rig=14 hoist=1 force=35949.9 source=12378.2 rest=30.6631 actual=30.6709
+ EYE 0 delta=0.0146027,-0.00121284,0.00221252 tension=0 length=3.35725 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.016861,-0.0010916,0.00221252 tension=3396.06 length=3.35713 stock=3.356
+ EYE 2 delta=-0.0281677,-0.00019455,-0.00108337 tension=11126.4 length=3.10632 stock=3.106
+ EYE 3 delta=-0.0259094,-7.34329e-05,-0.00106812 tension=13451.8 length=3.10618 stock=3.106
+LIFTED truck=-79.9767,0.851362,-150 failure=3 rig=14 hoist=1 force=35949.9 source=12378.2 rest=30.6631 actual=30.6709
+ EYE 0 delta=0.0146027,-0.00121284,0.00221252 tension=0 length=3.35725 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.016861,-0.0010916,0.00221252 tension=3396.06 length=3.35713 stock=3.356
+ EYE 2 delta=-0.0281677,-0.00019455,-0.00108337 tension=11126.4 length=3.10632 stock=3.106
+ EYE 3 delta=-0.0259094,-7.34329e-05,-0.00106812 tension=13451.8 length=3.10618 stock=3.106
+FAIL yard crane: full real rig remains connected during loaded lift

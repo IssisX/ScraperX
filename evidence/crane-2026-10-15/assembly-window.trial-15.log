@@ -1,0 +1,74 @@
+--slack-leg-release
+SLACK_RELEASE free_end_gap=0.350638 force=0 slack=0.350534
+PASS supported slack actual leg releases beyond pickup capture
+--loaded-cycle
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2371.23 source=0 rest=30.86 actual=30.86 truck_lift=5.50609e-06 truck_tilt=7.24401e-05
+ SUPPORT speed=0.000278427 angular_speed=0.000125628
+ FORK min_plane_clearance=0.0928816
+ WHEEL 0 contact=1 normal_y=1 force=4643.74
+ WHEEL 1 contact=1 normal_y=1 force=4650.97
+ WHEEL 2 contact=1 normal_y=1 force=23789.4
+ EYE 0 delta=-0.00669098,0.01085,-3.05176e-05 tension=0 relative_speed=0.000300782 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00669861,0.010838,-1.52588e-05 tension=0 relative_speed=0.000296287 length=3.34517 stock=3.356
+ EYE 2 delta=-0.00867462,-0.00136578,-1.52588e-05 tension=0 relative_speed=0.00026931 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00868225,-0.00137782,0 tension=0 relative_speed=0.000263941 length=3.10739 stock=3.106
+STOWED truck=-80.0041,0.608764,-150 failure=0 rig=0 hoist=1 force=2371.23 source=0 rest=30.86 actual=30.86 truck_lift=0.351864 truck_tilt=-0.138464
+ SUPPORT speed=0.00106293 angular_speed=0.00358082
+ FORK min_plane_clearance=0.151974
+ WHEEL 0 contact=1 normal_y=1 force=4617.47
+ WHEEL 1 contact=1 normal_y=1 force=4894.22
+ WHEEL 2 contact=1 normal_y=1 force=23515
+ EYE 0 delta=-0.00666046,0.010704,0 tension=0 relative_speed=0.0019436 length=3.3453 stock=3.356
+ EYE 1 delta=-0.00666046,0.010708,0 tension=0 relative_speed=0.0020335 length=3.3453 stock=3.356
+ EYE 2 delta=-0.0085907,-0.00120807,0 tension=0 relative_speed=0.00187966 length=3.10722 stock=3.106
+ EYE 3 delta=-0.00859833,-0.00120401,0 tension=0 relative_speed=0.0019694 length=3.10722 stock=3.106
+ALIGNED truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2371.23 source=0 rest=30.8611 actual=30.8611 truck_lift=0.351869 truck_tilt=-0.138462
+ SUPPORT speed=0.000196045 angular_speed=0.000120849
+ FORK min_plane_clearance=0.151987
+ WHEEL 0 contact=1 normal_y=1 force=4768.61
+ WHEEL 1 contact=1 normal_y=1 force=4776.42
+ WHEEL 2 contact=1 normal_y=1 force=23539.1
+ EYE 0 delta=-0.00656891,0.0117842,0 tension=0 relative_speed=0.000196743 length=3.34422 stock=3.356
+ EYE 1 delta=-0.00656128,0.0118109,0 tension=0 relative_speed=0.000203674 length=3.3442 stock=3.356
+ EYE 2 delta=-0.00850677,-8.38041e-05,0 tension=0 relative_speed=0.000229822 length=3.1061 stock=3.106
+ EYE 3 delta=-0.00849915,-5.71012e-05,0 tension=0 relative_speed=0.000223582 length=3.10607 stock=3.106
+LIFTED truck=-79.9821,1.98719,-150 failure=0 rig=15 hoist=1 force=35517.2 source=87375.6 rest=29.4631 actual=29.4722 truck_lift=0.351663 truck_tilt=-0.137836
+ SUPPORT speed=0.345678 angular_speed=0.0147302
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.00642395,-0.00252151,0.00012207 tension=5308.83 relative_speed=0.0904367 length=3.35853 stock=3.356
+ EYE 1 delta=0.00640869,-0.00316691,0.000106812 tension=2055.08 relative_speed=0.0934403 length=3.35917 stock=3.356
+ EYE 2 delta=0.00870514,-1.78814e-05,1.52588e-05 tension=11264.1 relative_speed=0.0904798 length=3.10603 stock=3.106
+ EYE 3 delta=0.00868988,-0.000663519,1.52588e-05 tension=14513.8 relative_speed=0.093484 length=3.10668 stock=3.106
+HELD truck=-79.9997,1.99379,-150 failure=0 rig=15 hoist=1 force=35455.3 source=87375.6 rest=29.4631 actual=29.4671 truck_lift=0.351571 truck_tilt=-0.137503
+ SUPPORT speed=0.014635 angular_speed=0.0191665
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=-0.00618744,-0.00247169,-0.000488281 tension=5278.55 relative_speed=0.0299154 length=3.35848 stock=3.356
+ EYE 1 delta=-0.00681305,-0.00317717,-0.000473022 tension=2030.31 relative_speed=0.0277041 length=3.35918 stock=3.356
+ EYE 2 delta=-0.00486755,-2.24113e-05,0.000289917 tension=11265.6 relative_speed=0.02961 length=3.10603 stock=3.106
+ EYE 3 delta=-0.00550079,-0.000727654,0.000274658 tension=14509.7 relative_speed=0.0273709 length=3.10673 stock=3.106
+LANDED truck=-80.0216,0.608732,-149.999 failure=0 rig=0 hoist=1 force=2367.02 source=87375.6 rest=30.8766 actual=30.8849 truck_lift=0.351427 truck_tilt=-0.137652
+ SUPPORT speed=0.0537033 angular_speed=0.0433623
+ FORK min_plane_clearance=0.15462
+ WHEEL 0 contact=1 normal_y=1 force=3793.19
+ WHEEL 1 contact=1 normal_y=1 force=3109.69
+ WHEEL 2 contact=1 normal_y=1 force=28477
+ EYE 0 delta=0.00100708,0.0325272,0.000869751 tension=0 relative_speed=0.356154 length=3.32347 stock=3.356
+ EYE 1 delta=0.00141907,0.032138,0.00088501 tension=0 relative_speed=0.365178 length=3.32386 stock=3.356
+ EYE 2 delta=-0.00106049,0.0244242,0.000259399 tension=0 relative_speed=0.300476 length=3.08158 stock=3.106
+ EYE 3 delta=-0.000656128,0.0240355,0.000244141 tension=0 relative_speed=0.309404 length=3.08196 stock=3.106
+RETRY truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2371.23 source=0 rest=30.8611 actual=30.8612 truck_lift=0.351869 truck_tilt=-0.138462
+ SUPPORT speed=0.000192557 angular_speed=0.00012085
+ FORK min_plane_clearance=0.151987
+ WHEEL 0 contact=1 normal_y=1 force=4768.61
+ WHEEL 1 contact=1 normal_y=1 force=4776.42
+ WHEEL 2 contact=1 normal_y=1 force=23539.1
+ EYE 0 delta=-0.00656891,0.0118624,1.52588e-05 tension=0 relative_speed=0.000191948 length=3.34414 stock=3.356
+ EYE 1 delta=-0.00656128,0.01188,1.52588e-05 tension=0 relative_speed=0.000201366 length=3.34413 stock=3.356
+ EYE 2 delta=-0.00850677,-2.26498e-06,1.52588e-05 tension=0 relative_speed=0.000226186 length=3.10601 stock=3.106
+ EYE 3 delta=-0.00849915,1.5378e-05,1.52588e-05 tension=0 relative_speed=0.000219199 length=3.106 stock=3.106
+--individual-legs
+PASS actual individual four-leg assembly slack release and atomic compatibility

@@ -1,0 +1,16 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86
+ EYE 0 delta=-0.00666046,0.0108433,-1.52588e-05 tension=0
+ EYE 1 delta=-0.00666809,0.0108446,0 tension=0
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0
+ALIGNED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8613
+ EYE 0 delta=-0.00666046,0.0121536,-1.52588e-05 tension=0
+ EYE 1 delta=-0.00666809,0.012155,0 tension=0
+ EYE 2 delta=-0.0086441,-6.19888e-05,0 tension=0
+ EYE 3 delta=-0.00865173,-6.05583e-05,1.52588e-05 tension=0
+LIFTED truck=-79.7759,0.609308,-150 failure=3 rig=12 hoist=1 force=3797.38 source=12378.2 rest=30.6631 actual=30.6668
+ EYE 0 delta=0.180656,-0.766518,-0.00457764 tension=0
+ EYE 1 delta=0.177048,-0.765344,-0.0045929 tension=0
+ EYE 2 delta=-0.0378036,-0.00119519,-0.000946045 tension=816.803
+ EYE 3 delta=-0.0414124,-2.12193e-05,-0.000961304 tension=725.372
+FAIL yard crane: full real rig remains connected during loaded lift

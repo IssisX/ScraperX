@@ -1,0 +1,50 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=7.75624e-06 truck_tilt=8.15605e-05
+ SUPPORT speed=0.000275918 angular_speed=0.000134002
+ FORK min_plane_clearance=0.0928823
+ WHEEL 0 contact=1 normal_y=1 force=4643.47
+ WHEEL 1 contact=1 normal_y=1 force=4651.29
+ WHEEL 2 contact=1 normal_y=1 force=23789.3
+ EYE 0 delta=-0.00666046,0.0108433,-1.52588e-05 tension=0 relative_speed=0.000263615 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00666809,0.0108446,0 tension=0 relative_speed=0.000258928 length=3.34516 stock=3.356
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0 relative_speed=0.000233224 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0 relative_speed=0.000228213 length=3.10738 stock=3.106
+STOWED truck=-80.0041,0.608764,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=0.352143 truck_tilt=-0.138481
+ SUPPORT speed=0.00146382 angular_speed=0.00195353
+ FORK min_plane_clearance=0.152176
+ WHEEL 0 contact=1 normal_y=1 force=4695.15
+ WHEEL 1 contact=1 normal_y=1 force=4859.69
+ WHEEL 2 contact=1 normal_y=1 force=23550.3
+ EYE 0 delta=-0.00662994,0.0107133,0 tension=0 relative_speed=0.00204035 length=3.34529 stock=3.356
+ EYE 1 delta=-0.00663757,0.0106986,1.52588e-05 tension=0 relative_speed=0.00210013 length=3.34531 stock=3.356
+ EYE 2 delta=-0.00856781,-0.00119901,1.52588e-05 tension=0 relative_speed=0.00248155 length=3.10721 stock=3.106
+ EYE 3 delta=-0.00857544,-0.00121379,1.52588e-05 tension=0 relative_speed=0.00251173 length=3.10723 stock=3.106
+ALIGNED truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8612 truck_lift=0.352146 truck_tilt=-0.138481
+ SUPPORT speed=0.000258312 angular_speed=0.000131528
+ FORK min_plane_clearance=0.152178
+ WHEEL 0 contact=1 normal_y=1 force=4768.57
+ WHEEL 1 contact=1 normal_y=1 force=4776.38
+ WHEEL 2 contact=1 normal_y=1 force=23539.2
+ EYE 0 delta=-0.00662994,0.0119075,0 tension=0 relative_speed=0.000322549 length=3.3441 stock=3.356
+ EYE 1 delta=-0.00663757,0.0119086,1.52588e-05 tension=0 relative_speed=0.000363683 length=3.3441 stock=3.356
+ EYE 2 delta=-0.00856781,-4.76837e-06,1.52588e-05 tension=0 relative_speed=0.000307482 length=3.10602 stock=3.106
+ EYE 3 delta=-0.00857544,-3.57628e-06,3.05176e-05 tension=0 relative_speed=0.000279286 length=3.10602 stock=3.106
+FIRST_FAILURE lift_tick=93
+FIRST_FAILURE truck=-79.9573,1.09173,-149.999 failure=3 rig=14 hoist=1 force=35259.7 source=22572 rest=30.5 actual=30.508 truck_lift=0.351672 truck_tilt=-0.138673
+ SUPPORT speed=0.329452 angular_speed=0.184512
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.0500259,-0.00107765,0.00584412 tension=0 relative_speed=0.60089 length=3.35746 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.0549088,-0.000768661,0.00584412 tension=2733.4 relative_speed=0.597575 length=3.35722 stock=3.356
+ EYE 2 delta=-0.0354156,-0.000268221,-0.00088501 tension=11819.7 relative_speed=0.603513 length=3.10647 stock=3.106
+ EYE 3 delta=-0.0305405,4.04119e-05,-0.00088501 tension=13781.3 relative_speed=0.600198 length=3.10611 stock=3.106
+LIFTED truck=-79.9573,1.09173,-149.999 failure=3 rig=14 hoist=1 force=35259.7 source=22572 rest=30.5 actual=30.508 truck_lift=0.351672 truck_tilt=-0.138673
+ SUPPORT speed=0.329452 angular_speed=0.184512
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.0500259,-0.00107765,0.00584412 tension=0 relative_speed=0.60089 length=3.35746 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.0549088,-0.000768661,0.00584412 tension=2733.4 relative_speed=0.597575 length=3.35722 stock=3.356
+ EYE 2 delta=-0.0354156,-0.000268221,-0.00088501 tension=11819.7 relative_speed=0.603513 length=3.10647 stock=3.106
+ EYE 3 delta=-0.0305405,4.04119e-05,-0.00088501 tension=13781.3 relative_speed=0.600198 length=3.10611 stock=3.106
+FAIL yard crane: full real rig remains connected during loaded lift

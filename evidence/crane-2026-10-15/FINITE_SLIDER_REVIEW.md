@@ -1,0 +1,7 @@
+# Finite neutral slider correction source review
+
+Independent Sol/high read-only review approved four clean Jolt candidate files: rounded-cap subtraction, default-off mode, nonvirtual subtype dispatch, appended Slider fields, unchanged Settings/basevtable, actual post-integration/CCD capture before position jobs, ordinary+split finalization before bounds/sleep, one signed accumulated finite budget and fresh native reciprocal rows. Physical velocity and motor lambda remain owned by existing solver.
+
+The reviewer found one test oracle defect: fixed-frame X alignment alone misses twist about X, despite an all-axes label. Implementer withdrew that claim and corrected actual controls/test to maxX/Y/Z misalignment. Focused corrected controls trial13 then passed with fullfixedmax0.182876mrad, hingeaxis0.051518mrad, anchors0.095110mm, externaltool/mastcontacts0. Source review does not itself prove execution or production integration. Root owns matching native closure/canonical test/public freight/APK.
+
+ABI private compile: Slider848→864bytes (appended opt-in/transient fields), Settings208unchanged, alignment16unchanged, every existing Slider field offset preserved; directconstruction/sizeofsearch found allocation only in SliderConstraintSettings::Create in the recompiled SliderConstraint.cpp. Generic Constraint vtables remain unchanged. Production root rebuilds all native/bridge units and two changed Jolt units against matching headers; no instrumented archive enters the product.

@@ -104,6 +104,8 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     forklift_input_ = {0, 0, 0, 0, 1};
+    yard_crane_input_ = {};
+    yard_crane_attach_requested_ = yard_crane_detach_requested_ = false;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -141,6 +143,8 @@ bool Simulation::restart_checkpoint() noexcept {
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     forklift_input_ = {0, 0, 0, 0, 1};
+    yard_crane_input_ = {};
+    yard_crane_attach_requested_ = yard_crane_detach_requested_ = false;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -597,6 +601,9 @@ void Simulation::step_fixed() noexcept {
     commands.service_lift_input = service_lift_input_;
     commands.supplied_machine_input = supplied_machine_input_;
     commands.forklift_input = forklift_input_;
+    commands.yard_crane_input = yard_crane_input_;
+    commands.yard_crane_attach = yard_crane_attach_requested_;
+    commands.yard_crane_detach = yard_crane_detach_requested_;
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.water_screw_toggle_requested = water_screw_toggle_requested_;
     commands.water_lift_valve_toggle_requested = water_lift_valve_toggle_requested_;
@@ -638,6 +645,7 @@ void Simulation::step_fixed() noexcept {
     water_lift_reset_requested_ = false;
     intake_sling_release_requested_ = false;
     intake_sling_attach_requested_ = false;
+    yard_crane_attach_requested_ = yard_crane_detach_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

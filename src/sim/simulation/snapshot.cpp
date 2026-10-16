@@ -416,6 +416,7 @@ void Simulation::PhysicsWorld::read_machine_state(const JPH::BodyInterface &bodi
 
 void Simulation::PhysicsWorld::read_state() noexcept {
     refresh_forklift_snapshot(physics_system_.GetBodyInterfaceNoLock());
+    refresh_yard_crane_snapshot(physics_system_.GetBodyInterfaceNoLock());
     const auto &bodies = physics_system_.GetBodyInterface();
 
     const JPH::RVec3 player_position = bodies.GetPosition(player_id_);

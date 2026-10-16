@@ -232,6 +232,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         forklift_yard_ = build_warehouse_forklift_yard(*kit_);
         forklift_yard_.truck.wheel_layer = object_layers::kMoving;
         warehouse_forklift_ = std::make_unique<WarehouseForklift>(physics_system_, *kit_, forklift_yard_.truck);
+        yard_crane_ = std::make_unique<YardCrane>(physics_system_, *kit_, forklift_yard_.truck);
     }
     soft_contact_listener_.set_player(player_id_);
     physics_system_.SetSoftBodyContactListener(&soft_contact_listener_);
@@ -287,6 +288,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     supplied_ascent_.reset();
     contact_listener_.set_reclaim_fragments({0,0});
     service_lift_.reset();
+    yard_crane_.reset();
     warehouse_forklift_.reset();
     deformable_plank_.reset();
     kit_.reset();

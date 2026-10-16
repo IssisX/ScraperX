@@ -1,0 +1,7 @@
+# Native-command control and hand feedback
+
+The two cab controls now deflect with the accepted native slew/trolley/hoist target rates. The left hand follows both transport axes, the right hand pulls back for hoist-up, and the visible knob and glove share the same bounded target. Maximum visual travel is2cm on a10cm pivot radius; releasing native rates returns exactly to the original anchors. This adds no input, physics, interpolation clock or draw group. The existing two MultiMesh groups remain.
+
+Actual Godot4.7 software OpenGL run passed the focused keyboard/pad/touch/isolation/target checks and the rendered MultiMesh origin-to-hand equality check. Observer readback was exactly(1.980388,0.998058,2.0) for both knob and hand. The private observer only prints the values. Headless Dummy initially failed that renderer readback because it does not retain MultiMesh transforms. The final test guards only that geometry assertion under headless; all input, motion, bounds and neutral assertions remain active. The final headless test passed once. Logs and command receipts are adjacent.
+
+Previous real Main/native40check acceptance still proves actual cab entry, eye, hands, free head, high sightline, touch, native command/work, pause and exit. Those neutral captures predate this small dynamic lever feedback. No repeated full Main session or phone feel claim is made for this incremental change.

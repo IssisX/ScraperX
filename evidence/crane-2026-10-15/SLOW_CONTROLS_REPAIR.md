@@ -1,0 +1,9 @@
+# Crane fine control integration
+
+Actual public freight trial6 cleared the12.13m rail and carried the same truck into the dock footprint(-31,-140). The actuator then stopped progressing at yaw1.23598 while the driver requested1.23874. A focused real-crane fixture discriminated integration from motor power: ten seconds at native normalized slew.005/trolley.002 produced actualangle0 and travel0, despite accepted targets.00025rad/s/.0005m/s and1.9994MJremaining. The pinned ordinary body integrator drops angular steps≤1e−6; worldfloat translation also rounds these trolley steps away.
+
+Only the four actual crane bodies now opt into the already-pinned accurate integration extension. This retains tiny real rotations and rounded displacement through existing native physics. No minimum command, position-target motor, source capacity, force/torque, gravity, pose or velocity override is added. Focused same fixture GREEN: angle.00242591rad, trolley.00499535m over10s, unchangedtargetrates/source. Real geometry/cables remain intact. REDlog/commands and observed GREENtool output/source/archive receipts are adjacent.
+
+Frozen source-v8 changes onlyyard_crane.cpp plus testfixtures, preserves v7headers, and strictly compiles/relinks the affected owner/native/bridge. Archive145dd383b0ad3b75ee9b3381fb87afbb594d97aa8f53ad601a3ef6f082a7a6f6; SOfdc6e56717bd3b12fbbca8596efbeb5ce019ff08b1185d693311b99d356f4428. Actual full route and loaded assembly affected motion check run separately; no unobserved PASS or suspended hydraulic drift repair is claimed.
+
+Affected loaded assembly on exactv8 passed once: assembly-window trial14 actual rise/neutral/no-extra-work/supportedslackrelease/samebodydrive/restoreandretry. This source change invalidated its earlier motion arithmetic evidence; the focused slow-control check was reused.

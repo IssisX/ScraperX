@@ -111,6 +111,7 @@ void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterfa
         if (catch_net_) checkpoint.catch_net = catch_net_->capture();
         if (service_lift_) checkpoint.service_lift = service_lift_->state();
         if (warehouse_forklift_) warehouse_forklift_->capture(checkpoint.forklift);
+        if (yard_crane_) checkpoint.yard_crane = yard_crane_->state();
         if (supplied_ascent_) checkpoint.supplied_ascent = supplied_ascent_->capture();
         return;
     }
@@ -224,6 +225,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     clear_catch_history();
     if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
     if (warehouse_forklift_) warehouse_forklift_->restore(checkpoint_.forklift);
+    if (yard_crane_) yard_crane_->restore(checkpoint_.yard_crane);
     if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
     JPH::Vec3 restored_transport = JPH::Vec3::sZero();
     const auto saved_support = kit_->body_for_entity(checkpoint_.support_entity);

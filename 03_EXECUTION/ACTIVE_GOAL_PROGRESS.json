@@ -135,57 +135,14 @@
     }
   ],
   "execution_state": {
-    "live_checkpoint": "03_EXECUTION/LIVE_RESUME_20261015.md",
-    "owner_backlog": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md",
-    "branch": "ChatGPT",
-    "published_head": "8569c721432e4139df6286b8e8d1cce94b2db9ca",
-    "active": "Finish and deliver first-person stand-on forklift, intuitive independent controls and real loaded cargo handling; then same-truck crane11m transfer",
-    "blocker": null,
-    "native_forklift": "Finalsource-v2 fullpubliccargo route trial14PASS including actualwalkboarding, both600kg loads, stack/withdrawal, actualgallery footing/onwardwalk/grade retry",
-    "movement_plan": "03_EXECUTION/PARKOUR_PHASED_PLAN_20261015.md",
-    "rendering": "Published0658f69; matched shipping4311\u21921036up/2893\u2192766down; strict up<1000 pending36; device fix unverified",
-    "apk_candidate": {
-      "run": 38809891195,
-      "artifact": 12008850176,
-      "status": "GREEN build candidate, downloaded APK/native hashes matched",
-      "source": "8569c721432e4139df6286b8e8d1cce94b2db9ca",
-      "version_code": 214263105,
-      "apk_sha256": "5fff4d7a88447678253cf4c604d53b02325d29413de8cc8a3e2cff9124a52ced",
-      "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/38809891195/artifacts/12008850176"
-    },
-    "full_proof": {
-      "run": 38809891198,
-      "status": "FAIL native92/101, buildpassed; ninefailedchecks classified in evidence/forklift-2026-10-15/FULL_PROOF_FAILURES.md",
-      "previous_failures": [
-        38791786804,
-        38780294851
-      ]
-    },
-    "takeoff": "Native implementation goal complete; late1.22795m/s/414.746J, sprint carry, early/negative/cancel/reset and60/90/360/grouped equivalence PASS; unpublished/matching APK pending",
-    "crane": "Parkedforownerforklift-first; realYardCrane/PoweredCable/geometry authored, primitivehoistPASS. IsolatedassembledrigAttachFAIL5.4mmlengthshortage captured; actualemptyhoistloweringtestauthoredunrun. Currenttruck3372.956kg aftercab/steps, no completedcraneclaim.",
-    "all_dirty_work_preserved": true,
-    "canonical_deferred_scope_preserved": true,
-    "takeoff_evidence": "evidence/parkour-2026-10-15/TAKEOFF_NATIVE_ACCEPTANCE.md",
-    "next_actions": [
-      "Publish acceptedstand-onforkliftcab/controls/load source and obtain actualGitHubAPK",
-      "Resolve remainingtaper recovery at supportedowner without rerunning acceptedroutes",
-      "Integrate same-truck finitecrane11m actualsupport/release/drive-in/recovery",
-      "Retain22m/higherfreight and allcanonicalmovement/environment/performance scope"
-    ],
-    "running_workers": [
-      "taper_recovery_cause Sol/high: onefirsttransitionmatchedmiddleobserver, no productionwrites",
-      "crane_loaded_cycle Sol/medium: realmast-forward/forksdownstow and actualloadedcrane cycle",
-      "root: selectedcommit/GitHubpush/matchingAPK"
-    ],
-    "native_archive": {
-      "path": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v2/libscraperx_sim.a",
-      "sha256": "18af7c94f9048807d90036ce33a1b9d48c4ff38dcb38868c06171c170eaddf9b"
-    },
-    "current_experiment": "Completefirst-personforklift cargo/native/render/finalinputs accepted; correctedcompat3PASS. OriginalNorthprimary/retry/intent/buffer/taperprimaryPASS; tapermiddle unresolved separatelydiagnosed. Preparing actualacceptedselectedsourcepublication.",
-    "godot_forklift": "ActualMain/native rendered36PASS,5rootinspectedcaptures; finalQexit/pad-inch focusedevent/dispatchchecks bothPASS",
-    "publication_prep": "Accepted source8569c72 actually pushed; matching APK candidate38809891195/artifact12008850176 obtained. Current checkpoint/topology updates intentionally local until next meaningful source push; preserve all excluded WIP.",
-    "scope_register": "03_EXECUTION/OWNER_DELIVERY_BACKLOG_20261015.md (R01\u2013R15 plus full canonical scope)",
-    "cargo_route_evidence": "evidence/forklift-2026-10-15/CARGO_ROUTE_ACCEPTANCE.md"
+    "as_of": "2026-10-16T01:44:25.250152+00:00",
+    "published_head": "5acc89afff30352056f747c64ae302d2dfa9df34",
+    "active_behavior": "Publish completed11m freight source to actual GitHub ChatGPT and deliver matching APK",
+    "frontier": "Complete same-original-truck public freight trial9 PASS638.49s, including personnel ascent, all4local releases, ring drive/onward and no-reset reverse retry. Behavior host goal completed/reset to actual GitHub/APK delivery. Newsource build/APK pending; prior5acc APK remains latest published usable build.",
+    "private_build_base": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015",
+    "native_archive_sha256": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
+    "jolt_archive_sha256": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+    "fixed_deadline_utc": "2026-10-16T03:06:52.637362Z"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

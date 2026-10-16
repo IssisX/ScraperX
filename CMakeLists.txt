@@ -26,6 +26,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/geometry.cpp
     src/sim/simulation/grapple.cpp
     src/sim/simulation/forklift.cpp
+    src/sim/simulation/yard_crane_control.cpp
     src/sim/simulation/hand_transfer.cpp
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
@@ -64,6 +65,9 @@ add_library(scraperx_sim STATIC
     src/sim/service_lift.cpp
     src/sim/warehouse_forklift.cpp
     src/sim/warehouse_forklift_yard.cpp
+    src/sim/powered_cable.cpp
+    src/sim/yard_crane_geometry.cpp
+    src/sim/yard_crane.cpp
     src/sim/gravity_wheel_geometry.cpp
     src/sim/gravity_cart_geometry.cpp
     src/sim/supplied_ascent.cpp
@@ -86,7 +90,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -151,6 +155,18 @@ if(SCRAPERX_WITH_JOLT)
         RESULT_VARIABLE scraperx_jolt_rigid_patch_result)
     if(NOT scraperx_jolt_rigid_patch_result EQUAL 0)
         message(FATAL_ERROR "Pinned Jolt accurate rigid integration patch failed")
+    endif()
+    # Default-off finite slider friction stabilization. The current-substep
+    # target is captured after integration/CCD; only the forklift lift opts in.
+    execute_process(COMMAND ${CMAKE_COMMAND}
+        "-DJOLT_SOURCE=${jolt_SOURCE_DIR}"
+        "-DJOLT_PATCH=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-finite-slider-friction.patch"
+        "-DJOLT_PATCH_MANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-finite-slider-friction.hashes.cmake"
+        "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ApplyJoltPatch.cmake"
+        RESULT_VARIABLE scraperx_jolt_slider_patch_result)
+    if(NOT scraperx_jolt_slider_patch_result EQUAL 0)
+        message(FATAL_ERROR "Pinned Jolt finite slider friction patch failed")
     endif()
     set_target_properties(Jolt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
@@ -269,6 +285,24 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_warehouse_forklift_route_tests tests/warehouse_forklift_route_tests.cpp)
         target_link_libraries(scraperx_warehouse_forklift_route_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.warehouse_forklift_route COMMAND scraperx_warehouse_forklift_route_tests)
+        add_executable(scraperx_forklift_slider_projection_tests tests/forklift_slider_projection_tests.cpp)
+        target_link_libraries(scraperx_forklift_slider_projection_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.forklift_slider_projection COMMAND scraperx_forklift_slider_projection_tests)
+        add_executable(scraperx_powered_cable_tests tests/powered_cable_tests.cpp)
+        target_link_libraries(scraperx_powered_cable_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.powered_cable COMMAND scraperx_powered_cable_tests)
+        add_executable(scraperx_yard_crane_route_tests tests/yard_crane_route_tests.cpp)
+        target_link_libraries(scraperx_yard_crane_route_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.yard_crane_route COMMAND scraperx_yard_crane_route_tests)
+        add_executable(scraperx_yard_crane_rigging_reach_tests tests/yard_crane_rigging_reach_tests.cpp)
+        target_link_libraries(scraperx_yard_crane_rigging_reach_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.yard_crane_rigging_reach COMMAND scraperx_yard_crane_rigging_reach_tests)
+        add_executable(scraperx_yard_crane_world_tests tests/yard_crane_world_tests.cpp)
+        target_link_libraries(scraperx_yard_crane_world_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.yard_crane_world COMMAND scraperx_yard_crane_world_tests)
+        add_executable(scraperx_yard_crane_tests tests/yard_crane_tests.cpp)
+        target_link_libraries(scraperx_yard_crane_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.yard_crane COMMAND scraperx_yard_crane_tests)
         add_executable(scraperx_wood_foot_push_player_tests tests/wood_foot_push_player_tests.cpp)
         target_link_libraries(scraperx_wood_foot_push_player_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.wood_foot_push_player COMMAND scraperx_wood_foot_push_player_tests)
@@ -440,6 +474,7 @@ if(SCRAPERX_BUILD_BRIDGE)
     add_library(scraperx_native SHARED
         src/bridge/register_types.cpp
         src/bridge/scraperx_simulation.cpp
+        src/bridge/yard_crane_bridge.cpp
     )
     target_link_libraries(scraperx_native PRIVATE scraperx_sim godot::cpp)
     target_include_directories(scraperx_native PRIVATE src)

@@ -1,0 +1,73 @@
+SETTLED truck=-80.0041,0.608751,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=7.75624e-06 truck_tilt=8.15605e-05
+ SUPPORT speed=0.000275918 angular_speed=0.000134002
+ FORK min_plane_clearance=0.0928823
+ WHEEL 0 contact=1 normal_y=1 force=4643.47
+ WHEEL 1 contact=1 normal_y=1 force=4651.29
+ WHEEL 2 contact=1 normal_y=1 force=23789.3
+ EYE 0 delta=-0.00666046,0.0108433,-1.52588e-05 tension=0 relative_speed=0.000263615 length=3.34516 stock=3.356
+ EYE 1 delta=-0.00666809,0.0108446,0 tension=0 relative_speed=0.000258928 length=3.34516 stock=3.356
+ EYE 2 delta=-0.0086441,-0.00137234,0 tension=0 relative_speed=0.000233224 length=3.10738 stock=3.106
+ EYE 3 delta=-0.00865173,-0.00137091,1.52588e-05 tension=0 relative_speed=0.000228213 length=3.10738 stock=3.106
+STOWED truck=-80.0041,0.608764,-150 failure=0 rig=0 hoist=1 force=2242.7 source=0 rest=30.86 actual=30.86 truck_lift=0.352143 truck_tilt=-0.138481
+ SUPPORT speed=0.00146382 angular_speed=0.00195353
+ FORK min_plane_clearance=0.152176
+ WHEEL 0 contact=1 normal_y=1 force=4695.15
+ WHEEL 1 contact=1 normal_y=1 force=4859.69
+ WHEEL 2 contact=1 normal_y=1 force=23550.3
+ EYE 0 delta=-0.00662994,0.0107133,0 tension=0 relative_speed=0.00204035 length=3.34529 stock=3.356
+ EYE 1 delta=-0.00663757,0.0106986,1.52588e-05 tension=0 relative_speed=0.00210013 length=3.34531 stock=3.356
+ EYE 2 delta=-0.00856781,-0.00119901,1.52588e-05 tension=0 relative_speed=0.00248155 length=3.10721 stock=3.106
+ EYE 3 delta=-0.00857544,-0.00121379,1.52588e-05 tension=0 relative_speed=0.00251173 length=3.10723 stock=3.106
+ALIGNED truck=-80.0041,0.608765,-150 failure=0 rig=15 hoist=1 force=2242.7 source=0 rest=30.8611 actual=30.8612 truck_lift=0.352146 truck_tilt=-0.138481
+ SUPPORT speed=0.000258312 angular_speed=0.000131528
+ FORK min_plane_clearance=0.152178
+ WHEEL 0 contact=1 normal_y=1 force=4768.57
+ WHEEL 1 contact=1 normal_y=1 force=4776.38
+ WHEEL 2 contact=1 normal_y=1 force=23539.2
+ EYE 0 delta=-0.00662994,0.0119075,0 tension=0 relative_speed=0.000322549 length=3.3441 stock=3.356
+ EYE 1 delta=-0.00663757,0.0119086,1.52588e-05 tension=0 relative_speed=0.000363683 length=3.3441 stock=3.356
+ EYE 2 delta=-0.00856781,-4.76837e-06,1.52588e-05 tension=0 relative_speed=0.000307482 length=3.10602 stock=3.106
+ EYE 3 delta=-0.00857544,-3.57628e-06,3.05176e-05 tension=0 relative_speed=0.000279286 length=3.10602 stock=3.106
+FIRST_FAILURE lift_tick=93
+FIRST_FAILURE truck=-79.9573,1.09173,-149.999 failure=3 rig=14 hoist=1 force=35259.7 source=22572 rest=30.5 actual=30.508 truck_lift=0.351672 truck_tilt=-0.138673
+ SUPPORT speed=0.329452 angular_speed=0.184512
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.0500259,-0.00107765,0.00584412 tension=0 relative_speed=0.60089 length=3.35746 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.0549088,-0.000768661,0.00584412 tension=2733.4 relative_speed=0.597575 length=3.35722 stock=3.356
+ EYE 2 delta=-0.0354156,-0.000268221,-0.00088501 tension=11819.7 relative_speed=0.603513 length=3.10647 stock=3.106
+ EYE 3 delta=-0.0305405,4.04119e-05,-0.00088501 tension=13781.3 relative_speed=0.600198 length=3.10611 stock=3.106
+FIRSTLOSS_BODY id=8388609 origin=-79.9573,1.09173,-149.999 com=-80.6172,1.0217,-150 shape_com=0.000180062,0.146311,-0.647282 rotation=-0.115306,0.69723,0.115609,0.698004 mass=3040.96 velocity=-0.00199118,0.329446,0.000532743 omega=0.00169906,-0.00594434,0.184409
+FIRSTLOSS_BODY id=8388610 origin=-78.7226,1.51163,-149.998 com=-78.9696,2.8,-149.997 shape_com=0,1.31182,0 rotation=-0.0666702,0.70357,0.0670262,0.704309 mass=220 velocity=-0.329802,0.63343,0.0133529 omega=0.00169911,-0.0059446,0.184409
+FIRSTLOSS_BODY id=8388611 origin=-78.4529,1.43267,-149.998 com=-78.5203,1.78427,-149.997 shape_com=0,0.358,0 rotation=-0.066693,0.703623,0.0670492,0.704252 mass=40 velocity=-0.142591,0.716104,0.0142944 omega=0.00169956,-0.00594531,0.183877
+FIRSTLOSS_BODY id=8388612 origin=-78.2761,1.46657,-149.997 com=-77.7882,1.71029,-149.997 shape_com=0,0.1475,0.525 rotation=-0.0666944,0.703662,0.0670518,0.704213 mass=72 velocity=-0.128922,0.850736,0.0185199 omega=0.00169958,-0.0059453,0.183938
+FIRSTLOSS_BODY id=8388622 origin=-80.1503,4.85772,-150.001 com=-80.4055,4.75274,-150.001 shape_com=-6.51716e-11,-0.0143999,-0.275599 rotation=-0.11861,0.698297,0.11926,0.695766 mass=228.645 velocity=-0.123386,0.366805,0.00152251 omega=0.00262445,-0.00270396,0.194856
+FIRSTLOSS_BODY id=8388623 origin=-80.2761,35.65,-150 com=-80.2452,35.6845,-150 shape_com=0,0.0345446,-0.0308617 rotation=3.05339e-07,-0.707108,-3.05251e-07,0.707105 mass=433.601 velocity=-2.7317e-07,-0.000149239,-4.00653e-09 omega=-5.60585e-10,-1.88469e-10,1.86658e-05
+FIRSTLOSS_BODY id=8388621 origin=-60,36,-150 com=-62.3951,38.2123,-150 shape_com=2.19564e-08,2.21232,2.3951 rotation=-0,-0.707107,-0,0.707107 mass=28232.7 velocity=-7.50797e-07,-3.18061e-06,-2.83569e-09 omega=-8.07784e-10,-1.39966e-10,2.87737e-07
+FIRSTLOSS_MAST_PART index=0 center=-0.55,1.5,0 half=0.065,1.5,0.075
+FIRSTLOSS_MAST_PART index=1 center=0.55,1.5,0 half=0.065,1.5,0.075
+FIRSTLOSS_MAST_PART index=2 center=0,2.92,0 half=0.55,0.08,0.08
+FIRSTLOSS_MAST_PART index=3 center=0,0.1,0 half=0.57,0.1,0.1
+FIRSTLOSS_SEGMENT leg=0 top_world=-79.3994,4.98834,-149.484 bottom_world=-79.3493,1.63126,-149.478 top_mast_local=-0.512161,3.54215,-0.00967407 bottom_mast_local=-0.519974,0.235666,-0.59243
+FIRSTLOSS_CAST leg=0 base=-79.3994,4.98834,-149.484 hit=1 body=8388610 subshape=4294967294 fraction=0.161703 contact_world=-79.3664,4.44264,-149.483 contact_mast_local=-0.513428,3,-0.0800018 sphere_center_mast_local=-0.513428,3.00748,-0.103912
+FIRSTLOSS_CAST leg=0 base=0,0,0 hit=1 body=8388610 subshape=4294967294 fraction=0.161698 contact_world=-79.3664,4.44264,-149.483 contact_mast_local=-0.513412,3,-0.0800018 sphere_center_mast_local=-0.513428,3.0075,-0.103912
+FIRSTLOSS_SEGMENT leg=1 top_world=-79.4032,4.98865,-150.524 bottom_world=-79.3483,1.63189,-150.518 top_mast_local=0.527817,3.54276,-0.0145111 bottom_mast_local=0.52002,0.235662,-0.592415
+FIRSTLOSS_CAST leg=1 base=-79.4032,4.98865,-150.524 hit=0
+FIRSTLOSS_CAST leg=1 base=0,0,0 hit=0
+FIRSTLOSS_SEGMENT leg=2 top_world=-80.8145,4.49093,-149.479 bottom_world=-80.8499,1.38466,-149.48 top_mast_local=-0.518936,3.32,-1.49312 bottom_mast_local=-0.519943,0.275921,-2.11259
+FIRSTLOSS_CAST leg=2 base=-80.8145,4.49093,-149.479 hit=0
+FIRSTLOSS_CAST leg=2 base=0,0,0 hit=0
+FIRSTLOSS_SEGMENT leg=3 top_world=-80.8183,4.49125,-150.519 bottom_world=-80.8489,1.38529,-150.52 top_mast_local=0.521057,3.32061,-1.49795 bottom_mast_local=0.52005,0.275919,-2.11257
+FIRSTLOSS_CAST leg=3 base=-80.8183,4.49125,-150.519 hit=0
+FIRSTLOSS_CAST leg=3 base=0,0,0 hit=0
+LIFTED truck=-79.9573,1.09173,-149.999 failure=3 rig=14 hoist=1 force=35259.7 source=22572 rest=30.5 actual=30.508 truck_lift=0.351672 truck_tilt=-0.138673
+ SUPPORT speed=0.329452 angular_speed=0.184512
+ WHEEL 0 contact=0 normal_y=0 force=0
+ WHEEL 1 contact=0 normal_y=0 force=0
+ WHEEL 2 contact=0 normal_y=0 force=0
+ EYE 0 delta=0.0500259,-0.00107765,0.00584412 tension=0 relative_speed=0.60089 length=3.35746 stock=3.356 obstruction_body=8388610
+ EYE 1 delta=0.0549088,-0.000768661,0.00584412 tension=2733.4 relative_speed=0.597575 length=3.35722 stock=3.356
+ EYE 2 delta=-0.0354156,-0.000268221,-0.00088501 tension=11819.7 relative_speed=0.603513 length=3.10647 stock=3.106
+ EYE 3 delta=-0.0305405,4.04119e-05,-0.00088501 tension=13781.3 relative_speed=0.600198 length=3.10611 stock=3.106
+FAIL yard crane: full real rig remains connected during loaded lift

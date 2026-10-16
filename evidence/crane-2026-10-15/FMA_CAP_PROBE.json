@@ -1,0 +1,25 @@
+{
+  "compile": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/usr/bin/c++",
+    "-O3",
+    "-std=c++17",
+    "-ffp-contract=fast",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fma-cap-probe.cpp",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fma-cap-probe"
+  ],
+  "run": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fma-cap-probe"
+  ],
+  "exit": 0,
+  "observed_tool_stdout": "cap=61.1111106873 current=5.28784260823e-09 explicit_round=0",
+  "source_sha256": "ba803601781beffcb1d05ec16ff7365f010eeb958efac8c532ef6ba5921d45d9"
+}

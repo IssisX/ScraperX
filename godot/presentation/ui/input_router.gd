@@ -52,6 +52,7 @@ var device := Device.KEYBOARD_MOUSE
 var pad_family := UiStyle.Family.XBOX
 var active_pad := -1
 var forklift_mode := false
+var yard_crane_mode := false
 var enabled := true
 var gameplay_active := true
 # Desktop touch-emulation mode (--touch): the mouse is the finger, so mouse
@@ -108,8 +109,17 @@ func set_forklift_mode(value: bool) -> void:
 	_verbs.clear()
 
 
+func set_yard_crane_mode(value: bool) -> void:
+	if yard_crane_mode == value:
+		return
+	yard_crane_mode = value
+	if touch != null:
+		touch.set_yard_crane_mode(value)
+	clear_held()
+
+
 func push_verb(verb: StringName) -> void:
-	if forklift_mode and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel"]:
+	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel"]:
 		return
 	if gameplay_active:
 		_verbs.append(verb)
@@ -183,6 +193,15 @@ func _handle_key(key: InputEventKey) -> void:
 	set_device(Device.KEYBOARD_MOUSE)
 	if not gameplay_active:
 		return
+	if yard_crane_mode:
+		match code:
+			KEY_G: _verbs.append(&"yard_crane_attach")
+			KEY_R: _verbs.append(&"yard_crane_detach")
+			KEY_E: _verbs.append(&"action")
+			KEY_Q: _verbs.append(&"back")
+			KEY_ESCAPE: _verbs.append(&"pause")
+			KEY_F3: _verbs.append(&"telemetry")
+		return
 	if forklift_mode:
 		match code:
 			KEY_F: _verbs.append(&"forklift_forward")
@@ -230,6 +249,15 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 	set_device(Device.GAMEPAD)
 	_buttons[button.button_index] = true
 	if not gameplay_active:
+		return
+	if yard_crane_mode:
+		match button.button_index:
+			JOY_BUTTON_A: _verbs.append(&"yard_crane_attach")
+			JOY_BUTTON_Y: _verbs.append(&"yard_crane_detach")
+			JOY_BUTTON_X: _verbs.append(&"action")
+			JOY_BUTTON_B: _verbs.append(&"back")
+			JOY_BUTTON_START: _verbs.append(&"pause")
+			JOY_BUTTON_BACK: _verbs.append(&"telemetry")
 		return
 	if forklift_mode:
 		match button.button_index:
@@ -379,6 +407,7 @@ func frame(delta: float) -> Dictionary:
 	var sprint_held := false
 	var reel := 0.0
 	var forklift := {}
+	var yard_crane := Vector3.ZERO
 	if enabled and gameplay_active:
 		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
@@ -425,8 +454,20 @@ func frame(delta: float) -> Dictionary:
 			sprint_held = false
 			crouch_held = false
 			reel = 0.0
+		if yard_crane_mode:
+			var touch_move: Vector2 = touch.move_vector if touch != null else Vector2.ZERO
+			var touch_axes: Vector2 = touch.pendant_axes if touch != null else Vector2.ZERO
+			yard_crane = Vector3(
+				clampf(_held(KEY_D) - _held(KEY_A) + left.x + touch_move.x, -1.0, 1.0),
+				clampf(_held(KEY_W) - _held(KEY_S) - left.y + touch_move.y, -1.0, 1.0),
+				clampf(_held(KEY_UP) - _held(KEY_DOWN) + _trigger(JOY_AXIS_TRIGGER_RIGHT) - _trigger(JOY_AXIS_TRIGGER_LEFT) + touch_axes.y, -1.0, 1.0))
+			move = Vector2.ZERO
+			pendant = Vector2.ZERO
+			sprint_held = false
+			crouch_held = false
+			reel = 0.0
 	_mouse_look = Vector2.ZERO
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
 	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held, "reel": reel, "forklift": forklift}
+		"crouch_held": crouch_held, "sprint_held": sprint_held, "reel": reel, "forklift": forklift, "yard_crane": yard_crane}

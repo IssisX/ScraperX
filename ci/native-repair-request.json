@@ -1,9 +1,13 @@
 {
-  "reason": "Repair the captured x86 transient-edge step/catch handoff without changing finite leg laws. Exercise original both-side boarding/hold/exit, read-only first-transition capture, explicit/invalid Action negatives and the complete original cargo route through the affected owner.",
+  "reason": "First exact-published native crane: finite cable, actual loaded assembly/release/restore, public cab lifecycle, four real local-eye reach and occluder negative, complete same-truck freight route; original warehouse cargo path retained after byte-identical shared driver extraction. The finite current-substep neutral-slider correction additionally exercises actual suspended hold, finite overload slip/lowering/release and original near/far heavy-load tipping.",
   "checks": [
-    "forklift_boarding_diagnostic",
-    "forklift_boarding",
-    "physical_step_intent",
-    "warehouse_forklift_route"
+    "powered_cable",
+    "yard_crane",
+    "yard_crane_world",
+    "yard_crane_rigging_reach",
+    "yard_crane_route",
+    "warehouse_forklift_route",
+    "forklift_slider_projection",
+    "warehouse_forklift_load"
   ]
 }

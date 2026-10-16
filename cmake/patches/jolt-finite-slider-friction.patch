@@ -1,0 +1,211 @@
+--- a/Jolt/Physics/PhysicsSystem.cpp
++++ b/Jolt/Physics/PhysicsSystem.cpp
+@@ -5,6 +5,7 @@
+ #include <Jolt/Jolt.h>
+ 
+ #include <Jolt/Physics/PhysicsSystem.h>
++#include <Jolt/Physics/Constraints/SliderConstraint.h>
+ #include <Jolt/Physics/PhysicsSettings.h>
+ #include <Jolt/Physics/PhysicsUpdateContext.h>
+ #include <Jolt/Physics/PhysicsStepListener.h>
+@@ -2444,6 +2445,14 @@
+ 	temp_allocator->Free(ioStep->mCCDBodies, ioStep->mCCDBodiesCapacity * sizeof(CCDBody));
+ 	ioStep->mCCDBodies = nullptr;
+ 	ioStep->mCCDBodiesCapacity = 0;
++	// All integration and CCD have completed; no position job can run yet.
++	for (uint i = 0; i < ioStep->mNumActiveConstraints; ++i)
++	{
++		Constraint *c = ioContext->mActiveConstraints[i];
++		if (c->GetType() == EConstraintType::TwoBodyConstraint && c->GetSubType() == EConstraintSubType::Slider)
++			static_cast<SliderConstraint *>(c)->SetupFiniteFrictionPositionCorrection(ioContext->mStepDeltaTime);
++	}
++
+ }
+ 
+ void PhysicsSystem::JobContactRemovedCallbacks(const PhysicsUpdateContext::Step *ioStep)
+@@ -2510,6 +2519,20 @@
+ 
+ void PhysicsSystem::CheckSleepAndUpdateBounds(uint32 inIslandIndex, const PhysicsUpdateContext *ioContext, const PhysicsUpdateContext::Step *ioStep, BodiesToSleep &ioBodiesToSleep)
+ {
++	uint32 *friction_begin, *friction_end;
++	mIslandBuilder.GetConstraintsInIsland(inIslandIndex, friction_begin, friction_end);
++	for (uint32 *i = friction_begin; i != friction_end; ++i)
++	{
++		Constraint *c = ioContext->mActiveConstraints[*i];
++		if (c->GetType() == EConstraintType::TwoBodyConstraint && c->GetSubType() == EConstraintSubType::Slider)
++		{
++			auto *slider = static_cast<SliderConstraint *>(c);
++			for (uint pass = 0; pass < 3; ++pass)
++				if (!slider->SolveFiniteFrictionPositionCorrection(1.0f))
++					break;
++		}
++	}
++
+ 	// Get the bodies that belong to this island
+ 	BodyID *bodies_begin, *bodies_end;
+ 	mIslandBuilder.GetBodiesInIsland(inIslandIndex, bodies_begin, bodies_end);
+--- a/Jolt/Physics/Constraints/SliderConstraint.h
++++ b/Jolt/Physics/Constraints/SliderConstraint.h
+@@ -99,6 +99,15 @@
+ 	void						SetMaxFrictionForce(float inFrictionForce)				{ mMaxFrictionForce = inFrictionForce; }
+ 	float						GetMaxFrictionForce() const								{ return mMaxFrictionForce; }
+ 
++	/// Private pinned-Jolt extension: finite neutral-friction split-position correction.
++	void SetUseFiniteFrictionPositionCorrection(bool inUse) { mUseFiniteFrictionPositionCorrection = inUse; mFrictionPositionValid = false; mFrictionPositionLambda = 0.0f; }
++	bool GetUseFiniteFrictionPositionCorrection() const { return mUseFiniteFrictionPositionCorrection; }
++	void SetupFiniteFrictionPositionCorrection(float inDeltaTime);
++	bool SolveFiniteFrictionPositionCorrection(float inBaumgarte);
++	float GetFrictionPositionBudget() const { return mFrictionPositionBudget; }
++	float GetFrictionPositionLambda() const { return mFrictionPositionLambda; }
++	float GetFrictionPositionTarget() const { return mFrictionPositionTarget; }
++
+ 	/// Motor settings
+ 	MotorSettings &				GetMotorSettings()										{ return mMotorSettings; }
+ 	const MotorSettings &		GetMotorSettings() const								{ return mMotorSettings; }
+@@ -193,6 +202,13 @@
+ 	RotationEulerConstraintPart	mRotationConstraintPart;
+ 	AxisConstraintPart			mPositionLimitsConstraintPart;
+ 	AxisConstraintPart			mMotorConstraintPart;
++
++	// Appended only: preserve existing fields, settings layout and all virtual slots.
++	bool mUseFiniteFrictionPositionCorrection = false;
++	bool mFrictionPositionValid = false;
++	float mFrictionPositionTarget = 0.0f;
++	float mFrictionPositionBudget = 0.0f;
++	float mFrictionPositionLambda = 0.0f;
+ };
+ 
+ JPH_NAMESPACE_END
+--- a/Jolt/Physics/Constraints/SliderConstraint.cpp
++++ b/Jolt/Physics/Constraints/SliderConstraint.cpp
+@@ -263,6 +263,9 @@
+ 
+ void SliderConstraint::SetupVelocityConstraint(float inDeltaTime)
+ {
++	mFrictionPositionValid = false;
++	mFrictionPositionBudget = 0.0f;
++	mFrictionPositionLambda = 0.0f;
+ 	// Calculate constraint properties that are constant while bodies don't move
+ 	Mat44 rotation1 = Mat44::sRotation(mBody1->GetRotation());
+ 	Mat44 rotation2 = Mat44::sRotation(mBody2->GetRotation());
+@@ -276,6 +279,9 @@
+ 
+ void SliderConstraint::ResetWarmStart()
+ {
++	mFrictionPositionValid = false;
++	mFrictionPositionBudget = 0.0f;
++	mFrictionPositionLambda = 0.0f;
+ 	mMotorConstraintPart.Deactivate();
+ 	mPositionConstraintPart.Deactivate();
+ 	mRotationConstraintPart.Deactivate();
+@@ -382,7 +388,42 @@
+ 		}
+ 	}
+ 
+-	return pos || rot || limit;
++	bool friction = SolveFiniteFrictionPositionCorrection(inBaumgarte);
++	return pos || rot || limit || friction;
++}
++
++void SliderConstraint::SetupFiniteFrictionPositionCorrection(float inDeltaTime)
++{
++	mFrictionPositionValid = false;
++	mFrictionPositionBudget = 0.0f;
++	mFrictionPositionLambda = 0.0f;
++	if (!mUseFiniteFrictionPositionCorrection || mMotorState != EMotorState::Off || mMaxFrictionForce <= 0.0f || !mMotorConstraintPart.IsActive())
++		return;
++	// Consume the unused physical impulse budget once, never once per iteration.
++	// Match the rounded physical-row cap; keep subtraction in a separate full expression to avoid FMA granting budget at saturation.
++	// Force a float round-trip even under the x86 -ffp-contract=fast policy.
++	// This controls precision, not synchronization: match the physical clamp.
++	const volatile float max_lambda = mMaxFrictionForce * inDeltaTime;
++	mFrictionPositionBudget = max(0.0f, max_lambda - abs(mMotorConstraintPart.GetTotalLambda())) * inDeltaTime;
++	mFrictionPositionTarget = GetCurrentPosition();
++	if (mHasLimits && !mLimitsSpringSettings.HasStiffness())
++		mFrictionPositionTarget = Clamp(mFrictionPositionTarget, mLimitsMin, mLimitsMax);
++	mFrictionPositionValid = mFrictionPositionBudget > 0.0f;
++}
++
++bool SliderConstraint::SolveFiniteFrictionPositionCorrection(float inBaumgarte)
++{
++	if (!mFrictionPositionValid)
++		return false;
++	Mat44 rotation1 = Mat44::sRotation(mBody1->GetRotation());
++	Mat44 rotation2 = Mat44::sRotation(mBody2->GetRotation());
++	CalculateR1R2U(rotation1, rotation2);
++	CalculateSlidingAxisAndPosition(rotation1);
++	// Use a fresh native row without touching the velocity motor's warm-start cache.
++	AxisConstraintPart row;
++	row.CalculateConstraintProperties(*mBody1, mR1 + mU, *mBody2, mR2, mWorldSpaceSliderAxis);
++	return row.SolvePositionConstraintWithLimits(*mBody1, *mBody2, mWorldSpaceSliderAxis,
++		mD - mFrictionPositionTarget, inBaumgarte, -mFrictionPositionBudget, mFrictionPositionBudget, mFrictionPositionLambda);
+ }
+ 
+ #ifdef JPH_DEBUG_RENDERER
+@@ -454,6 +495,9 @@
+ 
+ void SliderConstraint::RestoreState(StateRecorder &inStream)
+ {
++	mFrictionPositionValid = false;
++	mFrictionPositionBudget = 0.0f;
++	mFrictionPositionLambda = 0.0f;
+ 	TwoBodyConstraint::RestoreState(inStream);
+ 
+ 	mMotorConstraintPart.RestoreState(inStream);
+--- a/Jolt/Physics/Constraints/ConstraintPart/AxisConstraintPart.h
++++ b/Jolt/Physics/Constraints/ConstraintPart/AxisConstraintPart.h
+@@ -361,6 +361,54 @@
+ 		return false;
+ 	}
+ 
++	/// Bounded split-position multiplier, accumulated for the entire substep (kg m).
++	inline bool					SolvePositionConstraintWithLimits(Body &ioBody1, Body &ioBody2, Vec3Arg inWorldSpaceAxis, float inC, float inBaumgarte, float inMinLambda, float inMaxLambda, float &ioTotalLambda) const
++	{
++		// Only apply position constraint when the constraint is hard, otherwise the velocity bias will fix the constraint
++		if (inC != 0.0f && !mSpringPart.IsActive())
++		{
++			// Calculate lagrange multiplier (lambda) for Baumgarte stabilization:
++			//
++			// lambda = -K^-1 * beta / dt * C
++			//
++			// We should divide by inDeltaTime, but we should multiply by inDeltaTime in the Euler step below so they're cancelled out
++			float old_lambda = ioTotalLambda;
++			ioTotalLambda = Clamp(old_lambda - mEffectiveMass * inBaumgarte * inC, inMinLambda, inMaxLambda);
++			float lambda = ioTotalLambda - old_lambda;
++			if (lambda == 0.0f)
++				return false;
++
++			// Directly integrate velocity change for one time step
++			//
++			// Euler velocity integration:
++			// dv = M^-1 P
++			//
++			// Impulse:
++			// P = J^T lambda
++			//
++			// Euler position integration:
++			// x' = x + dv * dt
++			//
++			// Note we don't accumulate velocities for the stabilization. This is using the approach described in 'Modeling and
++			// Solving Constraints' by Erin Catto presented at GDC 2007. On slide 78 it is suggested to split up the Baumgarte
++			// stabilization for positional drift so that it does not actually add to the momentum. We combine an Euler velocity
++			// integrate + a position integrate and then discard the velocity change.
++			if (ioBody1.IsDynamic())
++			{
++				ioBody1.SubPositionStep((lambda * ioBody1.GetMotionProperties()->GetInverseMass()) * inWorldSpaceAxis);
++				ioBody1.SubRotationStep(lambda * Vec3::sLoadFloat3Unsafe(mInvI1_R1PlusUxAxis));
++			}
++			if (ioBody2.IsDynamic())
++			{
++				ioBody2.AddPositionStep((lambda * ioBody2.GetMotionProperties()->GetInverseMass()) * inWorldSpaceAxis);
++				ioBody2.AddRotationStep(lambda * Vec3::sLoadFloat3Unsafe(mInvI2_R2xAxis));
++			}
++			return true;
++		}
++
++		return false;
++	}
++
+ 	/// Save state of this constraint part
+ 	void						SaveState(StateRecorder &inStream) const
+ 	{

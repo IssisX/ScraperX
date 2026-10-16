@@ -1,0 +1,15 @@
+{
+  "source_commit": "5acc89afff30352056f747c64ae302d2dfa9df34",
+  "run": 38827747237,
+  "url": "https://github.com/IssisX/ScraperX/actions/runs/38827747237",
+  "conclusion": "success",
+  "checks": [
+    "physical_step_intent",
+    "forklift_boarding_diagnostic",
+    "forklift_boarding",
+    "warehouse_forklift_route"
+  ],
+  "result": "4/4PASS; originalcargo181.30s; originalbothsideboarding19.76s",
+  "source_runtime": "actualGitHubx86_64; localv6AArch64supersetpassesseparate",
+  "limits": "ExactAPK/fullsuite/deviceplay separate; oldcatch/ladderdeferred"
+}

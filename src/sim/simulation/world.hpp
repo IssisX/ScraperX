@@ -24,6 +24,7 @@
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
 #include "sim/warehouse_forklift_yard.hpp"
+#include "sim/yard_crane.hpp"
 #include "sim/supplied_ascent.hpp"
 #include "sim/parkour_route.hpp"
 #include "sim/deformable_plank.hpp"
@@ -120,6 +121,8 @@ public:
         double service_lift_input = 0.0;
         double supplied_machine_input = 0.0;
         std::array<double, 5> forklift_input{0, 0, 0, 0, 1};
+        std::array<double, 3> yard_crane_input{};
+        bool yard_crane_attach = false, yard_crane_detach = false;
         bool valve_toggle_requested = false;
         bool water_screw_toggle_requested = false;
         bool water_lift_valve_toggle_requested = false;
@@ -144,6 +147,11 @@ public:
     [[nodiscard]] bool forklift_controls_reachable(const JPH::BodyInterface &bodies) const noexcept;
     void prepare_forklift(const StepCommands &commands, const JPH::BodyInterface &bodies);
     void refresh_forklift_snapshot(const JPH::BodyInterface &bodies);
+    [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
+    [[nodiscard]] bool yard_crane_controls_reachable(const JPH::BodyInterface &) const noexcept;
+    [[nodiscard]] int nearby_yard_crane_leg(const JPH::BodyInterface &) const noexcept;
+    void prepare_yard_crane(const StepCommands &, const JPH::BodyInterface &);
+    void refresh_yard_crane_snapshot(const JPH::BodyInterface &);
 
     void apply_grapple_commands(const StepCommands &commands);
 
@@ -1056,6 +1064,8 @@ private:
     WarehouseForkliftYard forklift_yard_{};
     std::unique_ptr<WarehouseForklift> warehouse_forklift_;
     ForkliftSnapshot forklift_snapshot_{};
+    std::unique_ptr<YardCrane> yard_crane_;
+    YardCraneSnapshot yard_crane_snapshot_{};
     std::unique_ptr<SuppliedAscent> supplied_ascent_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<Slingshot> slingshot_;
@@ -1265,6 +1275,7 @@ private:
         std::string catch_net;
         ServiceLift::State service_lift{};
         WarehouseForklift::Checkpoint forklift{};
+        YardCrane::State yard_crane{};
         SuppliedAscent::Checkpoint supplied_ascent{};
         DeformablePlank::State deformable_plank{};
     };
