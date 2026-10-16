@@ -70,7 +70,8 @@ func _run() -> void:
 
 	var host := Node3D.new()
 	root.add_child(host)
-	Builder.new(Geometry.new(host)).build_backdrop()
+	var builder := Builder.new(Geometry.new(host))
+	builder.build_backdrop()
 	var before := Export.collect(host)
 	_check(before.unknown.is_empty(), "all original parts retain export classification")
 	var batches := 0
@@ -99,7 +100,10 @@ func _run() -> void:
 			if child.get_meta(&"part") == "MountainRidgeFar":
 				far_sources += 1
 				_check(child.mesh.bottom_radius == 630.0 and child.mesh.height == 900.0, "far source aspect .70 retained")
-	_check(instances == 54 and batches == 4 and far_sources == 4, "54 original peaks use exactly four shared draws")
+	_check(instances == 54 and batches > Peak.VARIANTS and batches <= instances and far_sources == 4,
+		"54 original peaks use bounded spatial batches with four shared mesh variants")
+	_check_spatial_batches(host, builder._peak_specs)
+	_check_grid_boundaries()
 	_check(native_caps == sources - instances, "every protruding native snow cap has a near-contact proxy")
 	_check(sources > 64, "original main peaks and snow cap solid sources remain")
 	Batch.new().build_tower(host)
@@ -116,3 +120,79 @@ func _run() -> void:
 	host.free()
 	print("ALPINE_PEAK_MESH_TEST failures=%d" % _failures)
 	quit(1 if _failures > 0 else 0)
+
+
+# Compare the production submission against the exact authored inputs. Unique
+# matching rejects lost/duplicated instances, variant swaps and tint changes.
+func _check_spatial_batches(host: Node3D, specs: Array) -> void:
+	var matched := PackedByteArray()
+	matched.resize(specs.size())
+	var batch_keys := {}
+	for child in host.get_children():
+		if not child is MultiMeshInstance3D or not child.has_meta(&"alpine_peak_instances"):
+			continue
+		var mm: MultiMesh = child.multimesh
+		_check(mm.use_custom_data and mm.instance_count > 0, "spatial batches retain instance custom data")
+		_check(child.get_meta(&"alpine_peak_instances") == mm.instance_count, "batch metadata counts actual instances")
+		var cell_variant := Vector3i()
+		var max_radius := 0.0
+		var expected_bounds := AABB()
+		for index in mm.instance_count:
+			var transform := mm.get_instance_transform(index)
+			var custom := mm.get_instance_custom_data(index)
+			var found := -1
+			for candidate in specs.size():
+				var spec: Dictionary = specs[candidate]
+				var expected := Transform3D(Basis.from_scale(Vector3(spec.radius, spec.height, spec.radius)), spec.foot)
+				var rock: Color = spec.rock
+				if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+					rock = rock.srgb_to_linear()
+				if matched[candidate] == 0 and transform.is_equal_approx(expected) \
+						and custom.is_equal_approx(Color(rock.r, rock.g, rock.b, spec.snowline)) \
+						and mm.mesh == Peak.peak(spec.variant):
+					found = candidate
+					break
+			_check(found >= 0, "each submitted peak retains one exact authored transform, tint, snowline and variant")
+			if found < 0:
+				continue
+			matched[found] = 1
+			var spec: Dictionary = specs[found]
+			var foot: Vector3 = spec.foot
+			var key := Vector3i(floori(foot.x / Peak.BATCH_CELL_SIZE), posmod(spec.variant, Peak.VARIANTS),
+				floori(foot.z / Peak.BATCH_CELL_SIZE))
+			if index == 0:
+				cell_variant = key
+			_check(key == cell_variant, "every spatial batch contains only one cell and variant")
+			max_radius = maxf(max_radius, spec.radius)
+			var envelope := AABB(foot - Vector3(spec.radius, 0.0, spec.radius), Vector3(spec.radius * 2.0, spec.height, spec.radius * 2.0))
+			expected_bounds = envelope if index == 0 else expected_bounds.merge(envelope)
+			for corner in 8:
+				_check(child.custom_aabb.grow(0.001).has_point(envelope.get_endpoint(corner)),
+					"spatial culling bounds cover every corner of the carved/native-restored envelope")
+		_check(not batch_keys.has(cell_variant), "one draw per occupied cell and variant")
+		batch_keys[cell_variant] = true
+		_check(child.custom_aabb.is_equal_approx(expected_bounds), "batch bounds are the local native envelope union")
+		_check(child.custom_aabb.size.x <= Peak.BATCH_CELL_SIZE + 2.0 * max_radius + 0.001 \
+			and child.custom_aabb.size.z <= Peak.BATCH_CELL_SIZE + 2.0 * max_radius + 0.001,
+			"batch bounds cannot span opposite basin sides")
+	for count in matched:
+		_check(count == 1, "every input peak appears exactly once")
+
+
+func _check_grid_boundaries() -> void:
+	var host := Node3D.new()
+	root.add_child(host)
+	Peak.draw(host, [])
+	_check(host.get_child_count() == 0, "empty peak input creates no draws")
+	var specs: Array = []
+	for x in [-Peak.BATCH_CELL_SIZE - 0.25, -Peak.BATCH_CELL_SIZE, -0.25, 0.0, 0.25, Peak.BATCH_CELL_SIZE]:
+		specs.append({"foot": Vector3(x, 3.0, -0.25), "radius": 20.0, "height": 40.0,
+			"variant": -1, "rock": Color(0.3, 0.4, 0.5), "snowline": 0.62})
+	# A second variant in the same cell must get its own shared mesh draw.
+	var other: Dictionary = specs[3].duplicate()
+	other.variant = 0
+	specs.append(other)
+	Peak.draw(host, specs)
+	_check(host.get_child_count() == 5, "grid floors negative positions and splits exact positive boundaries")
+	_check_spatial_batches(host, specs)
+	host.free()

@@ -9,6 +9,8 @@ extends RefCounted
 # Explicit inverse-transpose normals keep the .62/.70 aspect ratios correct.
 
 const VARIANTS := 4
+# Static XZ cells keep opposite basin slopes independently frustum-cullable.
+const BATCH_CELL_SIZE := 512.0
 const RADIAL := 48
 const RINGS := 24
 const SolidExport := preload("res://presentation/solid_export.gd")
@@ -32,14 +34,17 @@ static func peak(variant: int) -> ArrayMesh:
 # specs: foot, radius, height, variant, rock and normalized snowline.
 # No yaw: solid_export's polygon footprint fixes the lower face orientation.
 static func draw(parent: Node3D, peaks: Array) -> void:
-	var by_variant := {}
+	var by_cell_variant := {}
 	for peak_spec in peaks:
 		var v := posmod(int(peak_spec["variant"]), VARIANTS)
-		if not by_variant.has(v):
-			by_variant[v] = []
-		by_variant[v].append(peak_spec)
-	for v in by_variant:
-		var list: Array = by_variant[v]
+		var foot: Vector3 = peak_spec["foot"]
+		var key := Vector3i(floori(foot.x / BATCH_CELL_SIZE), v, floori(foot.z / BATCH_CELL_SIZE))
+		if not by_cell_variant.has(key):
+			by_cell_variant[key] = []
+		by_cell_variant[key].append(peak_spec)
+	for key in by_cell_variant:
+		var v: int = key.y
+		var list: Array = by_cell_variant[key]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_custom_data = true
@@ -58,7 +63,7 @@ static func draw(parent: Node3D, peaks: Array) -> void:
 				rock = rock.srgb_to_linear()
 			mm.set_instance_custom_data(i, Color(rock.r, rock.g, rock.b, float(spec["snowline"])))
 		var drawn := MultiMeshInstance3D.new()
-		drawn.name = "AlpineCarvedPeaks%d" % v
+		drawn.name = "AlpineCarvedPeaks%dCell%d_%d" % [v, key.x, key.z]
 		drawn.set_meta(&"alpine_peak_instances", list.size())
 		drawn.multimesh = mm
 		# Vertex LOD can rise beyond the distant carved mesh bounds.
