@@ -215,6 +215,8 @@ enum class InitialSpawn : std::uint8_t {
     BracedBayEntry = 31,
     // Focused normal-world entry on the existing +88 m north tower ring.
     NorthFrameEntry = 32,
+    // Shipping arrival at the real receiving yard; prior explicit spawns retain their contracts.
+    FreightYardArrival = 33,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation

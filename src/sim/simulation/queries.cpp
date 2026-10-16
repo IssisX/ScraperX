@@ -94,6 +94,10 @@ namespace scraperx::sim::detail {
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
         return {16.4, 2.0, -100.0};
+    case scraperx::sim::InitialSpawn::FreightYardArrival:
+        // Clear apron outside the open receiving canopy. Truck and crane are
+        // both in the initial -Z view; the truck rear platform is directly reachable.
+        return {-94.0, 1.2, -44.0};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower

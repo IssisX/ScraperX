@@ -1,15 +1,10 @@
 {
-  "reason": "Public supported fork exchange adds real parking cradle and ordered native cab action, with actual detach/independent rest/return/recouple/lift/transport, unchanged original owner guards, native cancellation and appended-body crane checkpoint. Preserve existing freight/cargo/finite-slider/heavyload acceptance at exact new source.",
+  "reason": "New normal freight arrival and real exported canopy/stock must preserve ordinary cab boarding and established truck/exchange/crane corridors. Physics actuator laws and scheduler unchanged.",
   "checks": [
+    "freight_yard_arrival",
+    "forklift_boarding",
     "forklift_tool_exchange",
-    "warehouse_forklift",
-    "powered_cable",
-    "yard_crane",
-    "yard_crane_world",
-    "yard_crane_rigging_reach",
-    "yard_crane_route",
     "warehouse_forklift_route",
-    "forklift_slider_projection",
-    "warehouse_forklift_load"
+    "yard_crane_route"
   ]
 }

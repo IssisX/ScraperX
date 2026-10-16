@@ -2331,7 +2331,8 @@ func _build_world() -> void:
 	# lamplight are the warm accents -- and now verdigris copper, painted
 	# machinery blue, and lichen staining break the rust/iron monochrome, the
 	# way a real decades-old industrial site actually weathers.
-	var asphalt := _geometry.material(Color("17150f"), 0.06, 0.4)
+	var asphalt := ShaderMaterial.new()
+	asphalt.shader = preload("res://presentation/yard_asphalt.gdshader")
 	var concrete := _geometry.material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _geometry.bump_concrete)
 	# A real value ladder: near-black iron in shadow, mid rust for the frame,
 	# brighter oxide only where light catches an edge. Bump-mapped: these

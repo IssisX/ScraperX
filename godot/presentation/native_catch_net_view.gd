@@ -392,6 +392,29 @@ func _net_instances(node_name: String, mesh: Mesh, count: int) -> MultiMesh:
 	return instances
 
 
+func _canvas_in_camera(vertices: PackedVector3Array) -> bool:
+	# Test the fresh native snapshot, never the last uploaded mesh: an offscreen
+	# membrane can deform into view. Planes reject only an entire world AABB,
+	# so a surface crossing the frustum stays eligible even with all corners out.
+	if not is_inside_tree():
+		return true
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return true # Headless consumers without a camera retain normal uploads.
+	var bounds := AABB(vertices[0], Vector3.ZERO)
+	for point in vertices:
+		bounds = bounds.expand(point)
+	# More than display thickness; keep edge/near-plane roundoff conservative.
+	bounds = global_transform * bounds.grow(0.05)
+	var centre := bounds.get_center()
+	var half_size := bounds.size * 0.5
+	for plane in camera.get_frustum():
+		var radius: float = plane.normal.abs().dot(half_size)
+		if plane.distance_to(centre) > radius:
+			return false
+	return true
+
+
 func render_view() -> void:
 	if _native == null or not _native.has_method("get_catch_net_vertices"):
 		visible = false
@@ -409,13 +432,19 @@ func render_view() -> void:
 			return
 	visible = true
 	_render_reinforcement()
-	# Immutable interpolated snapshots require no uploads while unchanged.
-	if vertices == _last_vertices:
-		return
 	for point in vertices:
 		if not point.is_finite():
 			visible = false
 			return
+	if _canvas != null:
+		# Reinforcement above can extend beyond the membrane; only skip canvas
+		# presentation work. Native physics and snapshots remain unconditional.
+		_canvas.visible = _canvas_in_camera(vertices)
+		if not _canvas.visible:
+			return
+	# Immutable interpolated snapshots require no uploads while unchanged.
+	if vertices == _last_vertices:
+		return
 	if _canvas != null:
 		_render_canvas(vertices)
 		return

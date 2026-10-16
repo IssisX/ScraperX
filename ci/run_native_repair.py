@@ -7,6 +7,7 @@ import subprocess
 
 
 OWNERS = {
+    "freight_yard_arrival": "scraperx_freight_yard_arrival_tests",
     "forklift_tool_exchange": "scraperx_forklift_tool_exchange_tests",
     "warehouse_forklift": "scraperx_warehouse_forklift_tests",
     "forklift_slider_projection": "scraperx_forklift_slider_projection_tests",

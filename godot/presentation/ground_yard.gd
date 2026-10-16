@@ -1,6 +1,7 @@
 extends RefCounted
 ## Production receiving yard. Tangible steel/timber is exported through
 ## SolidExport into native Jolt; paint, flexible pennants and dust are visual.
+const FreightArrival := preload("res://presentation/freight_yard_arrival.gd")
 const WorldGeometry := preload("res://presentation/world_geometry.gd")
 var _g: WorldGeometry
 var _root: Node3D
@@ -39,6 +40,8 @@ func build() -> void:
 	_label("KEEP ACCESS CLEAR", Vector3(36.0, 0.01, -40.0), 0.011, chalk.albedo_color, true)
 	_build_pennants()
 	_build_dust()
+	var arrival := FreightArrival.new(_g, _cloth)
+	_lights.append_array(arrival.build())
 
 func _build_shed(steel: Material, oxide: Material, blue: Material, timber: Material) -> void:
 	# Open-front workshop: a usable sheltered volume, not a solid box with

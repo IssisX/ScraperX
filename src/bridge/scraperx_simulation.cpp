@@ -23,7 +23,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::NorthFrameEntry) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::FreightYardArrival) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -35,7 +35,7 @@ constexpr std::int64_t kInitialSpawnCount =
 } // namespace
 
 ScraperXSimulation::ScraperXSimulation()
-    : simulation_(std::make_unique<sim::Simulation>()) {}
+    : simulation_(std::make_unique<sim::Simulation>(sim::InitialSpawn::FreightYardArrival)) {}
 
 void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_supplied_machine_input", "value"), &ScraperXSimulation::set_supplied_machine_input);

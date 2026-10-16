@@ -11,6 +11,8 @@ import zipfile
 VERSION_CODE_ID = 0x0101021B
 EPOCH = 1577836800  # 2020-01-01; leaves decades of headroom in Android's integer.
 LIMIT = 2100000000
+BUILD_INFO = "assets/build_info.json"
+SIGNATURE = r"META-INF/(?:[^/]+\.(?:RSA|DSA|EC|SF)|MANIFEST\.MF)"
 
 
 def version_location(data):
@@ -43,7 +45,9 @@ def version_location(data):
     return found[0]
 
 
-def prepare(source, target, previous=0, now=None):
+def prepare(source, target, previous=0, now=None, source_sha=None):
+    if source_sha is not None and not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+        raise ValueError("Build source must be the full Git commit SHA")
     if source.resolve() == target.resolve():
         raise ValueError('Input and output must be different files')
     if previous < 0 or previous >= LIMIT:
@@ -60,11 +64,37 @@ def prepare(source, target, previous=0, now=None):
         struct.pack_into('<HBBI', manifest, attr+12, 8, 0, 0x10, code)
         with zipfile.ZipFile(target, 'w') as output:
             for entry in archive.infolist():
-                if re.fullmatch(r'META-INF/(?:[^/]+\.(?:RSA|DSA|EC|SF)|MANIFEST\.MF)', entry.filename, re.I):
+                if re.fullmatch(SIGNATURE, entry.filename, re.I) or (source_sha is not None and entry.filename == BUILD_INFO):
                     continue
                 payload = bytes(manifest) if entry.filename == 'AndroidManifest.xml' else archive.read(entry)
                 output.writestr(entry, payload)
+            if source_sha is not None:
+                output.writestr(BUILD_INFO, json.dumps({'version_code': code, 'source_sha': source_sha}) + '\n')
     return {'source_version_code': original, 'version_code': code, 'version_policy': 'monotonic-v1'}
+
+
+def verify_prepared(source, target, code, source_sha=None):
+    """Verify final signed bytes against source payload and final manifest identity."""
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(target) as final:
+        names = final.namelist()
+        if len(names) != len(set(names)):
+            raise ValueError('Duplicate final APK entries')
+        if version_location(final.read('AndroidManifest.xml'))[1] != code:
+            raise ValueError('Final manifest version differs from prepared version')
+        if source_sha is not None:
+            identity = json.loads(final.read(BUILD_INFO))
+            if identity != {'version_code': code, 'source_sha': source_sha}:
+                raise ValueError('Embedded build identity differs from final APK provenance')
+        def payload_names(archive):
+            return {name for name in archive.namelist()
+                    if name != 'AndroidManifest.xml'
+                    and not re.fullmatch(SIGNATURE, name, re.I)
+                    and not (source_sha is not None and name == BUILD_INFO)}
+        if payload_names(original) != payload_names(final):
+            raise ValueError('APK game payload entries changed')
+        for name in payload_names(original):
+            if original.read(name) != final.read(name):
+                raise ValueError('APK game payload changed: ' + name)
 
 
 if __name__ == '__main__':
@@ -72,5 +102,6 @@ if __name__ == '__main__':
     parser.add_argument('source', type=Path)
     parser.add_argument('target', type=Path)
     parser.add_argument('--previous-code', type=int, default=0)
+    parser.add_argument('--source-sha', help='Opt in to final build identity metadata')
     args = parser.parse_args()
-    print(json.dumps(prepare(args.source, args.target, args.previous_code)))
+    print(json.dumps(prepare(args.source, args.target, args.previous_code, source_sha=args.source_sha)))

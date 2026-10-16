@@ -15,6 +15,7 @@ signal reclaim_attempt_restart_requested
 signal restart_requested(position: Vector3)
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
+const BuildInfo := preload("res://presentation/ui/build_info.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 
 const PAGE_NONE := &""
@@ -272,6 +273,10 @@ func _build(viewport_size: Vector2) -> void:
 	var brand := _label("SCRAPERX  /  KELLERWORKS TOWER", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
 	brand.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(brand)
+	var build_info := _label(BuildInfo.label(), 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	build_info.name = "BuildInfo"
+	build_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(build_info)
 	column.add_child(_label("PAUSED", 88.0, UiStyle.PAPER, UiStyle.font_heavy()))
 	_summary_label = _label(summary, 22.0, UiStyle.SAFE, UiStyle.font_label())
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

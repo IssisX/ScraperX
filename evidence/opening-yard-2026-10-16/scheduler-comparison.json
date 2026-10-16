@@ -1,0 +1,27 @@
+{
+  "started": 1792156130.479415,
+  "scope": "same production physics; worker count only; proot walltime not deviceFPS",
+  "runs": [
+    {
+      "worker_count": 1,
+      "exit": 0,
+      "stdout": "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWORKER_BENCH ms_per_tick=22.505 ticks=270 deaths=0 truck=-100.00022125,0.60873550,-56.00416565\n",
+      "archive_sha256": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+      "seconds": 6.4194865226745605
+    },
+    {
+      "worker_count": 2,
+      "exit": 0,
+      "stdout": "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWORKER_BENCH ms_per_tick=27.933 ticks=270 deaths=0 truck=-100.00022125,0.60873550,-56.00416565\n",
+      "archive_sha256": "99d883f52abc0fcedad061c7a59d63eedcbdc49cca15813bb7458b687424cd5b",
+      "seconds": 8.013329029083252
+    },
+    {
+      "worker_count": 0,
+      "exit": 0,
+      "stdout": "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWORKER_BENCH ms_per_tick=32.324 ticks=270 deaths=0 truck=-100.00022125,0.60873550,-56.00416565\n",
+      "archive_sha256": "c5ec2bbf02781f370070b145e3b9c0aaa24d55cfd84763733bc1caccd7af5a2f",
+      "seconds": 9.126816034317017
+    }
+  ]
+}

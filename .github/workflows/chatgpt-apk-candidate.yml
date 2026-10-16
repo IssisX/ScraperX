@@ -91,6 +91,9 @@ jobs:
         cmake --build build/android-arm64 --target scraperx_native --parallel 2
         test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
         file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+    - name: Prepare visible source and Android build identity
+      shell: bash
+      run: python3 ci/prepare_chatgpt_build_info.py
     - name: Import shipping Godot project with matching host bridge
       shell: bash
       run: |
@@ -110,6 +113,17 @@ jobs:
             --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
           grep -F 'failures=0' "artifacts/${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:' "artifacts/${check}.log"; then exit 1; fi
+        done
+    - name: Check visible build identity and normal freight arrival
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -m unittest discover -s ci -p test_build_info.py
+        for check in build_info freight_yard_arrival catch_net_visibility; do
+          timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
+            --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
+          if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi
+          grep -F 'failures=0' "artifacts/${check}.log"
         done
     - name: Check crane operator controls and native audio receipts
       shell: bash
@@ -132,6 +146,27 @@ jobs:
           2>&1 | tee artifacts/yard_crane_operator_main_native.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/yard_crane_operator_main_native.log; then exit 1; fi
         grep -F 'SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS' artifacts/yard_crane_operator_main_native.log
+    - name: Render ordinary freight arrival
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 180s xvfb-run -a -s '-screen 0 640x360x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 640x360 \
+          --script res://tests/freight_yard_arrival_test.gd \
+          -- --capture="${GITHUB_WORKSPACE}/artifacts/freight-arrival.png" \
+          2>&1 | tee artifacts/freight-arrival-render.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/freight-arrival-render.log; then exit 1; fi
+        grep -F 'FREIGHT_ARRIVAL failures=0' artifacts/freight-arrival-render.log
+    - name: Preserve opening render evidence
+      uses: actions/upload-artifact@v4
+      with:
+        name: ScraperX-opening-${{ github.sha }}
+        path: |
+          artifacts/freight-arrival.png
+          artifacts/freight-arrival-render.log
+        if-no-files-found: error
+        retention-days: 30
     - name: Export ChatGPT Android arm64 APK
       shell: bash
       run: |
