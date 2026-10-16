@@ -1,0 +1,43 @@
+{
+  "metric": "CPU wall ms per render_view, physics excluded",
+  "model_worker": "net_upload_cost_comparison, GPT-6.1 Sol medium",
+  "source_commit": "cf87c803971afe453011fef002105385b656f0d6",
+  "baseline_commit": "a7fbce49878830a4991d1c14498f66b45db4d045",
+  "old_script_sha256": "d57e9b94ca54eb525a825be8d5dd353a06fcbc1a4b4f11948677c349556f232b",
+  "harness_sha256": "93896cca07d0183f4b6797b52f4ce5baf41695e71ef9d79193cec87710b4e8ed",
+  "sample_pairs_each": 90,
+  "native_points": 1681,
+  "conditions": [
+    {
+      "visible": true,
+      "changing": true,
+      "changed_snapshots": 90,
+      "old_ms": 4.155422,
+      "new_ms": 4.233867
+    },
+    {
+      "visible": true,
+      "changing": false,
+      "changed_snapshots": 0,
+      "old_ms": 0.107367,
+      "new_ms": 0.230911
+    },
+    {
+      "visible": false,
+      "changing": true,
+      "changed_snapshots": 90,
+      "old_ms": 4.058911,
+      "new_ms": 0.366333
+    },
+    {
+      "visible": false,
+      "changing": false,
+      "changed_snapshots": 0,
+      "old_ms": 0.104256,
+      "new_ms": 0.227967
+    }
+  ],
+  "environment": "Godot4.7 arm64 headless Ubuntu/proot; alternating order, same native snapshot per pair; physics excluded; not deviceFPS",
+  "execution_limit": "All four measurement rows printed; cleanup then failed native.free() on RefCounted, worker terminated only own probe. Not an overall clean testPASS. No rerun to manufacture status.",
+  "scope": "Culling condition saves3.692578ms/call; unchanged snapshots add~.124ms overhead; single-run means, visible output correctness comes from separate earlier meaningful regression."
+}

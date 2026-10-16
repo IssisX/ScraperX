@@ -1,0 +1,63 @@
+{
+  "source_commit": "cf87c803971afe453011fef002105385b656f0d6",
+  "scope": "selected native diagnosis only; no APK/full proof",
+  "request": {
+    "reason": "New normal freight arrival and real exported canopy/stock must preserve ordinary cab boarding and established truck/exchange/crane corridors. Physics actuator laws and scheduler unchanged.",
+    "checks": [
+      "freight_yard_arrival",
+      "forklift_boarding",
+      "forklift_tool_exchange",
+      "warehouse_forklift_route",
+      "yard_crane_route"
+    ]
+  },
+  "commands": [
+    {
+      "argv": [
+        "cmake",
+        "-S",
+        "/home/runner/work/ScraperX/ScraperX",
+        "-B",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DSCRAPERX_BUILD_BRIDGE=OFF",
+        "-DSCRAPERX_WITH_JOLT=ON"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "cmake",
+        "--build",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--target",
+        "scraperx_forklift_boarding_tests",
+        "scraperx_forklift_tool_exchange_tests",
+        "scraperx_freight_yard_arrival_tests",
+        "scraperx_warehouse_forklift_route_tests",
+        "scraperx_yard_crane_route_tests"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "ctest",
+        "--test-dir",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--output-on-failure",
+        "--no-tests=error",
+        "--output-junit",
+        "/home/runner/work/ScraperX/ScraperX/artifacts/native-repair/native-tests.xml",
+        "-R",
+        "^scraperx_sim\\.(freight_yard_arrival|forklift_boarding|forklift_tool_exchange|warehouse_forklift_route|yard_crane_route)$"
+      ],
+      "exit": 0
+    }
+  ]
+}

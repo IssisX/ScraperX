@@ -7,8 +7,10 @@ const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const RefractoryMaterial := preload("res://presentation/materials/refractory_material.gd")
 const NativeCatchNetView := preload("res://presentation/native_catch_net_view.gd")
+const FreightMaterials := preload("res://presentation/materials/freight_materials.gd")
 const PlankWoodShader := preload("res://presentation/plank_wood.gdshader")
 
+var _freight_materials := FreightMaterials.new()
 var _native: Object
 var _create_sign: Callable
 var _catch_net_view: Node3D
@@ -668,6 +670,7 @@ func _catch_net_practicals(frame: Node3D, parts: PackedFloat32Array, paint: Mate
 func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	for body in int(_native.get_kit_body_count()):
 		var entity := int(_native.get_kit_body_entity_id(body))
+		var dynamic := bool(_native.is_kit_body_dynamic(body))
 		if entity == 1954 and _cart_materials.is_empty():
 			_build_cart_materials(palette)
 		if (entity == 1932 or entity == 1933 or entity == 1935 or entity == 1936) and _inspection_materials.is_empty():
@@ -713,6 +716,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
 			material = _junction_part_material(entity, material_index,
 				Vector3(parts[p], parts[p + 1], parts[p + 2]), local, material)
+			material = _freight_materials.for_part(entity, material_index, material, dynamic)
 			# Rails and structural steel can share a native material class while
 			# needing different finishes. Keep each finish in its own rigid batch.
 			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
@@ -890,7 +894,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			node.add_child(_water_lift_bucket_water)
 		add_child(node)
 		_kit_bodies.append(node)
-		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+		_kit_dynamic.append(dynamic)
 	_cargo_net_indices = _native.get_cargo_net_indices()
 	if not _cargo_net_indices.is_empty():
 		_build_cargo_net()

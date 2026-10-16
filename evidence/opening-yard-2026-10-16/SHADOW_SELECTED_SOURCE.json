@@ -1,0 +1,22 @@
+{
+  "parent": "cf87c803971afe453011fef002105385b656f0d6",
+  "files": {
+    ".github/workflows/chatgpt-apk-candidate.yml": "45fc4893b23c7b787fe6075a743617d0aeed0d349c6cc5f6b8d7a3fea9231758",
+    "godot/presentation/kit_view.gd": "0b5f0b981758951a3afecfd7b2a6df395894b3ba6b2387dad2070405b0101d35",
+    "godot/presentation/static_world_batch.gd": "1f61b75e5c383404a6d3da9b5c1b3eccbad6f1d0f06a4ba13142c7ea667f1fb3",
+    "godot/presentation/static_shadow_batch.gd": "c7c59baa93f70eeb32d00abcaf97446d6cd96f48e2814e3cfbad0e09703a9c43",
+    "godot/presentation/materials/freight_materials.gd": "88ce289a2f3c190718dd48480da21734dde3f4e82c92476267c1e9c64a23289c",
+    "godot/presentation/materials/freight_surface.gdshader": "497d24b92330423d486946e6379a7c6c556149909e54518495142b19899757a0",
+    "godot/tests/static_shadow_batch_test.gd": "b15663d949542489071e5c78bcee7f5b60391c9d4b17c61f37b383f62a144b16",
+    "godot/tests/static_shadow_render_test.gd": "baf6a778db0a13b6663ab36b49d81190214671c1212479158d5807d398e4c035",
+    "godot/tests/opening_render_budget_test.gd": "d8d01dd0532429bb88dc3696620fcd6f5b863e240033cae8511b81e326ec3893",
+    "godot/tests/freight_materials_test.gd": "3baeeadc6960bf38e177f45d6751ec5a86726ae6237cc2255b9672ce851d2005"
+  },
+  "native_source_unchanged_and_reused": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-opening-20261016/build2/libscraperx_sim.a": "9037edb8c4499c8682347f9dbc13c4b7ae049269e9777bcb0f331dda5fa071b8",
+    "/data/data/com.termux/files/usr/tmp/scraperx-opening-20261016/build2/libscraperx_native.so": "c1c6348c17a6c80760bb55ab1d2380cedbe6ea91dc188eb91dd664ffe8f5f935",
+    "/data/data/com.termux/files/usr/tmp/scraperx-opening-20261016/build2/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+  },
+  "normal_review": "reviewer identified SurfaceTool normal limitation; root added inverse-transpose rare nonuniform bake and curved normal/encoding-bound regression; finalPASS",
+  "private_source": "/data/data/com.termux/files/usr/tmp/scraperx-opening-optimization-20261016/source"
+}

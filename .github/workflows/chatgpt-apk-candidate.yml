@@ -106,7 +106,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for check in static_world_batch kit_cable_batch; do
+        for check in static_world_batch kit_cable_batch static_shadow_render opening_render_budget; do
           timeout 120s xvfb-run -a -s '-screen 0 160x120x24' \
             tools/godot/godot --path godot --audio-driver Dummy \
             --rendering-method gl_compatibility --resolution 160x120 \
@@ -119,7 +119,7 @@ jobs:
       run: |
         set -euo pipefail
         python3 -m unittest discover -s ci -p test_build_info.py
-        for check in build_info freight_yard_arrival catch_net_visibility; do
+        for check in build_info freight_yard_arrival catch_net_visibility static_shadow_batch freight_materials; do
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
             --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi

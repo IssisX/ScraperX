@@ -11,6 +11,7 @@ const GRID_ORIGIN := Vector3(-44.0, 0.0, -194.0)
 const DETAIL_PARTS := ["FaceBand", "FaceDuct", "FloorLight", "FloorLightHigh",
 	"TimberCladding", "LaneStripe", "TreeTrunk", "TreeCanopy", "ScrubLobe"]
 const SolidExport := preload("res://presentation/solid_export.gd")
+const ShadowBatch := preload("res://presentation/static_shadow_batch.gd")
 var _detail_batches: Array[GeometryInstance3D] = []
 
 
@@ -68,6 +69,7 @@ func _build(host: Node3D, sources: Array[MeshInstance3D]) -> Dictionary:
 	var signatures: Dictionary = {}
 	var foliage_finishes: Dictionary = {}
 	var considered := 0
+	var eligible: Array[MeshInstance3D] = []
 	for source in sources:
 		var mesh := source.mesh
 		if mesh == null or mesh.get_surface_count() != 1 or source.layers == 0 \
@@ -137,6 +139,9 @@ func _build(host: Node3D, sources: Array[MeshInstance3D]) -> Dictionary:
 			groups[key] = []
 		groups[key].append([source, local, mesh, material, tint])
 		considered += 1
+		eligible.append(source)
+	var shadows := ShadowBatch.new().build(host, eligible, CELL_SIZE, GRID_ORIGIN, DETAIL_PARTS)
+	_detail_batches.append_array(shadows.detail_batches)
 	var replaced := 0
 	var created := 0
 	for key in groups:
@@ -182,6 +187,11 @@ func _build(host: Node3D, sources: Array[MeshInstance3D]) -> Dictionary:
 		batch.position = origin
 		batch.layers = first.layers
 		batch.cast_shadow = first.cast_shadow
+		var shared_shadow := true
+		for entry in entries:
+			shared_shadow = shared_shadow and shadows.handled.has((entry[0] as MeshInstance3D).get_instance_id())
+		if shared_shadow:
+			batch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		batch.gi_mode = first.gi_mode
 		batch.ignore_occlusion_culling = first.ignore_occlusion_culling
 		batch.visibility_range_begin = first.visibility_range_begin
@@ -198,8 +208,12 @@ func _build(host: Node3D, sources: Array[MeshInstance3D]) -> Dictionary:
 			(entry[0] as MeshInstance3D).layers = 0
 		replaced += entries.size()
 		created += 1
+	for source in eligible:
+		if shadows.handled.has(source.get_instance_id()):
+			source.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return {"eligible_sources": considered, "replaced_sources": replaced,
-		"batches": created, "saved_submissions": replaced - created}
+		"batches": created, "saved_submissions": replaced - created,
+		"shadow_batches": shadows.batches, "shadow_sources": shadows.handled.size()}
 
 
 func _foliage_primitive(source: MeshInstance3D, material: StandardMaterial3D) -> Dictionary:

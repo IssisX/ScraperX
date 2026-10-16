@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Linux-c++"
+	tests="5"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="runnervm8k3b6"
+	time="599"
+	timestamp="2026-10-16T13:27:03"
+	>
+	<testcase name="scraperx_sim.freight_yard_arrival" classname="scraperx_sim.freight_yard_arrival" time="23.7617" status="run">
+		<properties/>
+		<system-out>PASS ARRIVAL normal spawn -&gt; grade walk -&gt; real cab -&gt; finite lift -&gt; grade exit ticks=1019
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.forklift_boarding" classname="scraperx_sim.forklift_boarding" time="22.2906" status="run">
+		<properties/>
+		<system-out>WALK side=-1 p=-101.999,0.9,-57.65 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=-1 p=-100.917,1.15644,-57.6486 grounded=1 support=2440 traversal=0 reachable=0 pose_steps=0
+WALK side=-1 p=-100.799,1.24507,-57.6556 grounded=1 support=2440 traversal=0 reachable=0 pose_steps=0
+BOARD_RESULT side=-1 p=-100.562,1.25349,-57.6552 grounded=1 support=2440 traversal=0 reachable=1 pose_steps=0
+LEFT side=-1 p=-101.715,0.9,-57.6563 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=1 p=-98.0006,0.9,-57.65 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=1 p=-99.096,1.16881,-57.6463 grounded=1 support=2440 traversal=0 reachable=0 pose_steps=0
+BOARD_RESULT side=1 p=-99.4249,1.25353,-57.6524 grounded=1 support=2440 traversal=0 reachable=1 pose_steps=0
+LEFT side=1 p=-98.2933,0.9,-57.6533 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+PASS BOARDING ordinary walk both sides, real floor, grade exit, no pose steps
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.warehouse_forklift_route" classname="scraperx_sim.warehouse_forklift_route" time="226.214" status="run">
+		<properties/>
+		<system-out>BOARDED truck=-99.9996,0.608421,-56.0046 crate=-100,0,-48 forks=-100,0.143686,-54.2703 player=-100.475,1.25311,-57.6554 support=2440 reachable=1 lift=6.28652e-06 tilt=-0.000155779 force=1101.12 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0
+PICKUP_APPROACH truck=-99.9995,0.608421,-56.0046 crate=-100,0,-48 forks=-100,0.143689,-54.2703 player=-100.475,1.25312,-57.6554 support=2440 reachable=1 lift=6.07532e-06 tilt=-0.000151472 force=1116.02 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0
+PICKUP_APPROACH truck=-100,0.608418,-54.2248 crate=-100,0,-48 forks=-100.001,0.143792,-52.4906 player=-100.475,1.25294,-55.884 support=2440 reachable=1 lift=3.82083e-06 tilt=-0.000176562 force=1092.55 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0
+PICKUP_APPROACH truck=-100,0.608422,-51.8977 crate=-100,0,-48 forks=-100.001,0.143773,-50.1635 player=-100.476,1.253,-53.5571 support=2440 reachable=1 lift=2.14213e-06 tilt=-0.0001486 force=1098.39 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0
+FORKS...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.forklift_tool_exchange" classname="scraperx_sim.forklift_tool_exchange" time="141.057" status="run">
+		<properties/>
+		<system-out>BOARDED chassis=-99.9992,0.608421,-56.0045 tool=-99.9998,0.143662,-54.2703 tool_velocity=-0.00233733,-0.000232685,4.40395e-05 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=10 lift_force=1099.26 lift=3.26106e-06 tilt=-0.000188567 speed=9.87869e-05
+MANEUVER chassis=-99.9985,0.60842,-56.0045 tool=-100,0,-48 tool_velocity=9.60628e-11,6.8297e-11,-8.35928e-11 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift_force=1123.42 lift=0.348061 tilt=-0.000174621 speed=0.000927313
+PATH segment=0 forward=-0.000360952,1 steer=-0.301892 target=-99.7265,-54.228
+MANEUVER chassis=-96.3352,0.608551,-50.2314 tool=-100,0,-48 tool_velocity=-1.83915e-10,-6.8297e-11,1.55006e-10 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift_force=1099.12 lift=0.348027 tilt=-0.000299375 speed=0.831523
+PATH segment=14 forward=0.966041,0.258391 steer=-0.266632 target=-94.2935,-50.0128
+MANEUVER chassis=-88.9805,0.60856,-52.2991 tool=-100,0,-48 tool_velocity=-1.83...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.yard_crane_route" classname="scraperx_sim.yard_crane_route" time="434.787" status="run">
+		<properties/>
+		<system-out>PHASE phase=SINGLE_INITIAL_GRADE_STAGE_AND_BOARD truck=-100,0.65,-56 player=6,1.2,-25 support=0 grounded=0 truck_controls=0 cab=0 leg=-1 mask=0 failure=0 hoist=30.86 yaw=-1.5708 trolley=20.4198 slew_rate=0 trolley_rate=0 transport_energy=2e+06 lift=0 tilt=0
+BOARDED phase=SINGLE_INITIAL_GRADE_STAGE_AND_BOARD truck=-99.9996,0.608421,-56.0046 player=-100.475,1.25311,-57.6554 support=2440 grounded=1 truck_controls=1 cab=0 leg=-1 mask=0 failure=0 hoist=30.86 yaw=-1.5708 trolley=20.4198 slew_rate=0 trolley_rate=0 transport_energy=2e+06 lift=6.28652e-06 tilt=-0.000155779
+PHASE phase=ORIGINAL_TRUCK_DRIVE_TO_PICKUP truck=-99.9996,0.608421,-56.0046 player=-100.475,1.25311,-57.6554 support=2440 grounded=1 truck_controls=1 cab=0 leg=-1 mask=0 failure=0 hoist=30.86 yaw=-1.5708 trolley=20.4198 slew_rate=0 trolley_rate=0 transport_energy=2e+06 lift=6.28652e-06 tilt=-0.000155779
+TRANSPORT phase=ORIGINAL_TRUCK_DRIVE_TO_PICKUP truck=-99.9995,0.608419,-56.0046 player=-100.475,1.25313,-57.6554 support=2440 grounded=1 truck_contr...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+</testsuite>
