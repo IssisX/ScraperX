@@ -1074,4 +1074,10 @@ func _look_summit(from_ground: bool) -> bool:
 	await _go(device, Vector2(-11.0, -187.5), 0.2, 4.0)
 	await _look_at_point(Vector3(-50.0, 803.0, -187.5))
 	await _pose("summit_runway_arm")
+	# By day, the derrick's concrete mast close up: the weathering on a big face.
+	_main._sky_cycle.set_hour(13.0)
+	await _go(device, Vector2(8.0, -184.6), 0.3, 14.0)
+	await _look_at_point(Vector3(16.0, 800.0, -193.0))
+	await _seconds(1.0)
+	await _pose("summit_mast_day")
 	return true

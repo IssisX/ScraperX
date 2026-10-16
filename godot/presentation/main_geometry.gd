@@ -221,11 +221,72 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 var _bump_steel: NoiseTexture2D
 var _bump_timber: NoiseTexture2D
 var _bump_concrete: NoiseTexture2D
+# Weathering (task 93, the look pass): every bumped surface also takes a shared
+# grime map, blotches a metre or so across that darken the base colour by up
+# to a third, and steel and concrete take rust and water streaks running down
+# their faces (a detail layer, triplanar like the bumps: on a wall the streaks
+# hang straight down). Three shared textures for the whole world.
+var _weathering: NoiseTexture2D
+var _streaks: ImageTexture
+var _detail_mask: ImageTexture
 
 func _build_bump_textures() -> void:
 	_bump_steel = _make_bump_texture(1, 0.5, 1.8, false)
 	_bump_timber = _make_bump_texture(2, 0.7, 2.6, true)
 	_bump_concrete = _make_bump_texture(3, 0.7, 1.3, false)
+	_weathering = _make_weathering_texture()
+	_streaks = _make_streak_texture()
+	var white := Image.create(4, 4, false, Image.FORMAT_L8)
+	white.fill(Color.WHITE)
+	_detail_mask = ImageTexture.create_from_image(white)
+
+func _make_weathering_texture() -> NoiseTexture2D:
+	var noise := FastNoiseLite.new()
+	noise.seed = 41
+	noise.frequency = 0.018
+	noise.fractal_octaves = 5
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(0.64, 0.61, 0.58))
+	ramp.set_color(1, Color(1.0, 1.0, 1.0))
+	ramp.add_point(0.42, Color(0.86, 0.84, 0.81))
+	var tex := NoiseTexture2D.new()
+	tex.width = 256
+	tex.height = 256
+	tex.seamless = true
+	tex.generate_mipmaps = true
+	tex.color_ramp = ramp
+	tex.noise = noise
+	return tex
+
+# Streaks that start somewhere and fade as they run down (texture v is down
+# the face under triplanar mapping), tiling in both directions. Seeded: the
+# same streaks every run.
+func _make_streak_texture() -> ImageTexture:
+	const SIZE := 256
+	var alpha := PackedFloat32Array()
+	alpha.resize(SIZE * SIZE)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9137
+	for streak in 110:
+		var x0 := rng.randi_range(0, SIZE - 1)
+		var width := rng.randi_range(1, 4)
+		var y0 := rng.randi_range(0, SIZE - 1)
+		var length := rng.randi_range(24, 210)
+		var strength := rng.randf_range(0.18, 0.62)
+		for dy in length:
+			var t := float(dy) / float(length)
+			var a := strength * (1.0 - t) * (1.0 - t)
+			for dx in width:
+				# Soft at the streak's sides.
+				var side := 1.0 if width <= 2 else (0.6 if dx == 0 or dx == width - 1 else 1.0)
+				var index := ((y0 + dy) % SIZE) * SIZE + (x0 + dx) % SIZE
+				alpha[index] = maxf(alpha[index], a * side)
+	var image := Image.create(SIZE, SIZE, true, Image.FORMAT_RGBA8)
+	for y in SIZE:
+		for x in SIZE:
+			image.set_pixel(x, y, Color(0.30, 0.15, 0.07, alpha[y * SIZE + x]))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
 
 func _make_bump_texture(seed_value: int, frequency: float, strength: float,
 		directional: bool) -> NoiseTexture2D:
@@ -262,6 +323,14 @@ func _material(color: Color, metallic: float, roughness: float,
 	if bump != null:
 		material.normal_enabled = true
 		material.normal_texture = bump
+		if _weathering != null:
+			material.albedo_texture = _weathering
+		if _streaks != null and (bump == _bump_steel or bump == _bump_concrete):
+			material.detail_enabled = true
+			material.detail_albedo = _streaks
+			material.detail_mask = _detail_mask
+			material.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+			material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
 		material.uv1_triplanar = true
 		material.uv1_triplanar_sharpness = 1.0
 		material.uv1_scale = Vector3(0.22, 0.22, 0.22)
