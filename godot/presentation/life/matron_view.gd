@@ -395,104 +395,236 @@ func _update_planks(data: Dictionary) -> void:
 # --- her ---------------------------------------------------------------------
 
 
+const Body := preload("res://presentation/life/matron_body.gd")
+
+
+# A cloth, skin or wool: a noise-mottled colour and a noise normal map, laid on
+# in object space (no UVs needed), so every sculpted piece takes it alike.
+func _textured(color: Color, rough: float, noise_seed: int, freq: float, scale_per_m: float, bump: float, cull := true) -> StandardMaterial3D:
+	var noise := FastNoiseLite.new()
+	noise.seed = noise_seed
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = freq
+	noise.fractal_octaves = 4
+	var tex := NoiseTexture2D.new()
+	tex.noise = noise
+	tex.width = 256
+	tex.height = 256
+	tex.seamless = true
+	var ramp := Gradient.new()
+	ramp.colors = PackedColorArray([color.darkened(0.3), color, color.lightened(0.14)])
+	ramp.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	tex.color_ramp = ramp
+	var nrm := NoiseTexture2D.new()
+	nrm.noise = noise
+	nrm.width = 256
+	nrm.height = 256
+	nrm.seamless = true
+	nrm.as_normal_map = true
+	nrm.bump_strength = bump
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.normal_enabled = true
+	m.normal_texture = nrm
+	m.roughness = rough
+	m.uv1_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale_per_m
+	if not cull:
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return m
+
+
+func _mesh(mesh: Mesh, material: Material, parent: Node3D, at := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	node.material_override = material
+	node.position = at
+	node.rotation = rot
+	parent.add_child(node)
+	return node
+
+
+# Many small meshes folded into one (hair, rags).
+func _merge(parts: Array) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for part in parts:
+		st.append_from(part[0], 0, part[1])
+	return st.commit()
+
+
 func _build_figure() -> void:
-	var skin := _material(Color("bdb6a2"), 0.8)
-	var dress := _material(Color("5f5444"), 0.95)
-	var shawl := _material(Color("2c2722"), 0.98)
-	var hair := _material(Color("cfccc2"), 0.9)
-	var sock := _material(Color("8b857a"), 0.9)
-	var slipper := _material(Color("2a1f24"), 0.9)
-	var eye_glass := _material(Color("120d0a"), 0.3, 0.0, Color("ffc04a"), 1.6)
-	var gum := _material(Color("2c0a0c"), 0.7)
-	var tooth := _material(Color("b8aa7e"), 0.7)
+	var skin := _textured(Color("8f8a7a"), 0.85, 11, 0.012, 12.0, 2.5)
+	var dress := _textured(Color("5a4e3e"), 0.96, 23, 0.03, 14.0, 3.0)
+	var shawl := _textured(Color("2e2822"), 0.98, 37, 0.05, 16.0, 3.0)
+	var rag := _textured(Color("5a4e3e"), 0.97, 29, 0.05, 14.0, 2.5, false)
+	var sock := _textured(Color("8a847a"), 0.9, 41, 0.03, 8.0, 3.0)
+	var hair_material := _material(Color("a8a59a"), 1.0)
+	hair_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var slipper := _material(Color("2a1f24"), 0.85)
+	var eye_ball := _material(Color("8f8767"), 0.3)
+	var eye_glow := _material(Color("120d0a"), 0.3, 0.0, Color("ffc04a"), 2.2)
+	var dark_skin := _material(Color("48403a"), 0.9)
+	var mouth_dark := _material(Color("080303"), 1.0)
+	var tooth := _material(Color("b8aa7e"), 0.6)
+	var wood := _material(Color("6a4a2a"), 0.7)
+	var brass := _material(Color("a79a62"), 0.5, 0.8)
 	_figure = _pivot(self)
 	_figure.visible = false
 	var body := _pivot(_figure, Vector3(0.0, 1.0, 0.0))
 	_p["body"] = body
-	_box(Vector3(0.3, 0.2, 0.2), dress, body, Vector3(0.0, -0.02, 0.0))
+	_mesh(Body.blob(0.15, 0.1, 0.1), dress, body, Vector3(0.0, -0.04, 0.0))
+	# The skirt, with ragged strips hanging from its hem.
+	var skirt := _mesh(Body.skirt(), dress, body, Vector3(0.0, 0.0, 0.0))
+	_p["skirt"] = skirt
+	var rags := _pivot(skirt, Vector3(0.0, -0.58, 0.0))
+	_p["rags"] = rags
+	var rag_parts := []
+	for k in 17:
+		var a := TAU * float(k) / 17.0
+		var length := 0.12 + 0.2 * _hash(k * 5 + 1)
+		var strip := Body.ribbon(length, 0.085 + 0.05 * _hash(k * 5 + 2), 0.02, 0.15 + 0.3 * _hash(k * 5 + 3))
+		var xf := Transform3D(Basis(Vector3.UP, -a + PI * 0.5), Vector3(cos(a) * 0.255, 0.02, sin(a) * 0.22))
+		rag_parts.append([strip, xf])
+	_mesh(_merge(rag_parts), rag, rags)
+	# The torso, its dress and the shawl; a hump and a ridge of spine under the cloth.
 	var torso := _pivot(body, Vector3(0.0, 0.08, 0.0))
 	_p["torso"] = torso
-	var trunk := _cyl(0.12, 0.17, TORSO, dress, torso, Vector3(0.0, TORSO * 0.5, 0.0), 10)
-	trunk.scale = Vector3(1.0, 1.0, 0.8)
-	# The shawl over the shoulders and the hump under it.
-	var cape := _cyl(0.1, 0.27, 0.3, shawl, torso, Vector3(0.0, TORSO - 0.1, -0.02), 10)
-	cape.scale = Vector3(1.0, 1.0, 0.85)
-	_ball(0.15, shawl, torso, Vector3(0.0, TORSO - 0.08, -0.14), Vector3(1.0, 0.85, 0.9))
-	var skirt := _cyl(0.17, 0.3, 0.55, dress, body, Vector3(0.0, -0.3, 0.0), 12)
-	skirt.scale = Vector3(1.0, 1.0, 0.85)
-	_p["skirt"] = skirt
-	# Neck and head.
-	var neck := _pivot(torso, Vector3(0.0, TORSO + 0.02, 0.03))
+	_mesh(Body.torso(), skin, torso)
+	_mesh(Body.bodice(), dress, torso)
+	var cape := _pivot(torso, Vector3(0.0, 0.6, -0.05))
+	_p["cape"] = cape
+	_mesh(Body.shawl(), shawl, cape)
+	var hump := _mesh(Body.blob(0.105, 0.11, 0.075), shawl, torso, Vector3(0.0, 0.52, -0.15))
+	_p["hump"] = hump
+	var bumps := []
+	var bump_at := [[0.22, -0.118], [0.3, -0.135], [0.38, -0.152], [0.46, -0.172], [0.53, -0.186], [0.59, -0.19]]
+	for entry in bump_at:
+		var knob := _mesh(Body.blob(0.02, 0.022, 0.02), skin, torso, Vector3(0.0, entry[0], entry[1]))
+		knob.scale = Vector3.ZERO
+		bumps.append(knob)
+	_p["vertebrae"] = bumps
+	# Neck and the sculpted head.
+	var neck := _pivot(torso, Vector3(0.0, 0.62, -0.075))
 	_p["neck"] = neck
-	_cyl(0.035, 0.045, NECK, skin, neck, Vector3(0.0, NECK * 0.5, 0.0), 8)
-	var head := _pivot(neck, Vector3(0.0, NECK, 0.0))
+	_mesh(Body.tube([[0.0, 0.04, 0.036, 0.0, 0.0, 0.0], [0.07, 0.03, 0.028, 0.0, 0.01, 0.0], [0.16, 0.03, 0.03, 0.0, 0.03, 0.0],
+		[0.175, 0.012, 0.012, 0.0, 0.03, 0.0]], 10), skin, neck)
+	var head := _pivot(neck, Vector3(0.0, NECK, 0.03))
 	_p["head"] = head
-	_ball(0.095, skin, head, Vector3(0.0, 0.09, 0.0), Vector3(0.9, 1.25, 1.0))
-	# A headscarf pulled low, and the stringy hair under it.
-	var scarf := _ball(0.105, shawl, head, Vector3(0.0, 0.12, -0.02), Vector3(0.95, 1.05, 1.05))
-	scarf.rotation.x = -0.2
-	for k in 9:
-		var a := lerpf(-0.9, 0.9, float(k) / 8.0)
-		var strand := _cyl(0.004, 0.002, 0.55, hair, head, Vector3(sin(a) * 0.1, -0.1, -0.08 - 0.02 * cos(a)), 4)
-		strand.rotation.x = 0.1
-		strand.rotation.z = a * 0.15
-	for side in [-1.0, 1.0]:
-		var socket := _ball(0.032, _material(Color("090605"), 1.0), head, Vector3(side * 0.04, 0.1, 0.08), Vector3(1.0, 1.15, 0.6))
-		var eye := _ball(0.011, eye_glass, head, Vector3(side * 0.04, 0.1, 0.1), Vector3.ONE)
-		_p["eye%d" % int(side)] = eye
-		socket.rotation.z = side * 0.25
-	var nose := _cyl(0.001, 0.017, 0.06, skin, head, Vector3(0.0, 0.065, 0.1), 6)
-	nose.rotation.x = -0.9
-	# The jaw: hangs from a hinge under the ear line, with a grin of teeth.
-	var jaw := _pivot(head, Vector3(0.0, 0.03, 0.01))
+	var centre := _pivot(head, Vector3(0.0, 0.1, 0.0))
+	var parts := Body.head()
+	_mesh(parts["skull"], skin, centre)
+	_mesh(Body.blob(0.062, 0.095, 0.078), mouth_dark, centre, Vector3(0.0, -0.002, -0.004))
+	var hinge := Vector3(0.0, -0.03, -0.02)
+	var jaw := _pivot(centre, hinge)
 	_p["jaw"] = jaw
-	_box(Vector3(0.1, 0.035, 0.11), skin, jaw, Vector3(0.0, -0.02, 0.05))
-	_box(Vector3(0.07, 0.02, 0.05), gum, jaw, Vector3(0.0, 0.0, 0.07))
-	for k in 7:
-		_box(Vector3(0.008, 0.026, 0.006), tooth, jaw, Vector3(-0.036 + 0.012 * float(k), 0.006, 0.098))
-	_box(Vector3(0.1, 0.012, 0.04), gum, head, Vector3(0.0, 0.034, 0.075))
-	# Arms to her knees, and long, hooked hands.
+	_mesh(parts["jaw"], skin, jaw, -hinge)
+	# Teeth, uneven, on both jaws.
+	for k in 9:
+		var x := -0.028 + 0.007 * float(k)
+		var z := 0.083 - 0.0008 * pow(x * 100.0, 2.0) * 0.1
+		var upper := _mesh(Body.blob(0.0034, 0.0105, 0.0034, 6), tooth, centre,
+			Vector3(x, -0.046 - 0.002 * _hash(k + 60), z), Vector3(0.0, 0.0, (_hash(k + 70) - 0.5) * 0.4))
+		upper.scale = Vector3(1.0, 1.0 + 0.5 * _hash(k + 80), 1.0)
+		_mesh(Body.blob(0.003, 0.009, 0.003, 6), tooth, jaw,
+			Vector3(x, -0.052 + 0.012 + 0.003 * _hash(k + 90), z - 0.002) - hinge, Vector3((_hash(k + 100) - 0.5) * 0.3, 0.0, (_hash(k + 110) - 0.5) * 0.4))
+	# Eyes sunk in their sockets, dark rings under them, ears.
+	for side in [-1.0, 1.0]:
+		_mesh(Body.blob(0.0115, 0.0115, 0.0115), eye_ball, centre, Vector3(side * 0.032, 0.022, 0.064))
+		var iris := _mesh(Body.blob(0.0075, 0.0075, 0.004, 8), eye_glow, centre, Vector3(side * 0.032, 0.022, 0.0765))
+		_p["eye%d" % int(side)] = iris
+		var bag := _mesh(Body.blob(0.024, 0.012, 0.006, 8), dark_skin, centre, Vector3(side * 0.032, 0.004, 0.079))
+		bag.rotation.z = side * 0.25
+		_mesh(Body.blob(0.007, 0.022, 0.016, 8), skin, centre, Vector3(side * 0.07, -0.002, -0.006))
+	# Stringy hair from under a headscarf, hanging long; a few strands across the face.
+	var hair := _pivot(centre)
+	_p["hair"] = hair
+	var strands := []
+	for k in 40:
+		var theta := PI + TAU * (float(k) + 0.4 * _hash(k + 3)) / 40.0 + PI * 0.0
+		var phi := 0.55 + 0.7 * _hash(k + 7)
+		var dir := Vector3(sin(phi) * sin(theta), cos(phi), sin(phi) * cos(theta))
+		if dir.z > 0.1:
+			continue
+		var root := Vector3(dir.x * 0.073, dir.y * 0.104, dir.z * 0.09)
+		var lock := Body.ribbon(0.4 + 0.4 * _hash(k + 11), 0.02, 0.004, 0.0, 6)
+		strands.append([lock, Transform3D(Basis(Vector3.UP, theta + PI) * Basis(Vector3.RIGHT, -0.15), root)])
+	# A few lank strands fallen across the face.
+	for k in 5:
+		var x := -0.045 + 0.022 * float(k)
+		var lock := Body.ribbon(0.26 + 0.1 * _hash(k + 21), 0.005, 0.0015, 0.2, 5)
+		strands.append([lock, Transform3D(Basis(Vector3.UP, PI), Vector3(x, 0.098, 0.082))])
+	_mesh(_merge(strands), hair_material, hair)
+	var scarf := _mesh(Body.blob(0.076, 0.07, 0.09), dress, centre, Vector3(0.0, 0.052, -0.02))
+	scarf.rotation.x = -0.25
+	var knot := _mesh(Body.blob(0.03, 0.026, 0.03), shawl, centre, Vector3(0.0, 0.05, -0.098))
+	# Arms to her knees, with long hooked hands.
+	_p["fingers_l"] = []
+	_p["fingers_r"] = []
 	for side in [-1.0, 1.0]:
 		var key := "l" if side < 0.0 else "r"
-		var shoulder := _pivot(torso, Vector3(side * 0.19, TORSO - 0.05, 0.0))
+		var shoulder := _pivot(torso, Vector3(side * 0.19, 0.55, -0.06))
 		_p["sh_" + key] = shoulder
-		var upper := _cyl(0.034, 0.038, UPPER_ARM, shawl, shoulder, Vector3(0.0, -UPPER_ARM * 0.5, 0.0), 8)
+		_mesh(Body.blob(0.04, 0.042, 0.04), skin, shoulder)
+		_mesh(Body.limb(UPPER_ARM, 0.042, 0.03, 0.004, 0.3), skin, shoulder)
 		var elbow := _pivot(shoulder, Vector3(0.0, -UPPER_ARM, 0.0))
 		_p["el_" + key] = elbow
-		_cyl(0.026, 0.032, FOREARM, skin, elbow, Vector3(0.0, -FOREARM * 0.5, 0.0), 8)
+		_mesh(Body.blob(0.032, 0.03, 0.032), skin, elbow)
+		_mesh(Body.limb(FOREARM, 0.03, 0.019, 0.006, 0.25), skin, elbow)
 		var wrist := _pivot(elbow, Vector3(0.0, -FOREARM, 0.0))
 		_p["wr_" + key] = wrist
-		_box(Vector3(0.07, 0.1, 0.025), skin, wrist, Vector3(0.0, -0.05, 0.0))
+		_mesh(Body.blob(0.03, 0.05, 0.011), skin, wrist, Vector3(0.0, -0.05, 0.0))
+		var curls := []
+		var lengths := [[0.05, 0.035, 0.03], [0.057, 0.04, 0.032], [0.054, 0.038, 0.03], [0.046, 0.032, 0.026]]
 		for f in 4:
-			var finger := _pivot(wrist, Vector3(-0.027 + 0.018 * float(f), -0.1, 0.0))
-			_cyl(0.005, 0.007, 0.12 - 0.012 * absf(float(f) - 1.5), skin, finger, Vector3(0.0, -0.06, 0.0), 5)
-			finger.rotation.x = -0.35
-		upper.rotation.z = 0.0
-		_box(Vector3(0.012, 0.012, 0.03), skin, wrist, Vector3(side * 0.03, -0.04, 0.02))
+			var base := _pivot(wrist, Vector3(-0.0225 + 0.015 * float(f), -0.092, 0.0))
+			var chain := []
+			var parent: Node3D = base
+			for seg in 3:
+				_mesh(Body.finger(float(lengths[f][seg]), 0.0075 - 0.0012 * float(seg), 0.0062 - 0.0013 * float(seg)), skin, parent)
+				chain.append(parent)
+				var next := _pivot(parent, Vector3(0.0, -float(lengths[f][seg]), 0.0))
+				parent = next
+			curls.append(chain)
+		var thumb_base := _pivot(wrist, Vector3(side * 0.03, -0.045, 0.0))
+		thumb_base.rotation.z = side * 0.6
+		var thumb_chain := []
+		var tparent: Node3D = thumb_base
+		for seg in 2:
+			var tl := 0.04 - 0.008 * float(seg)
+			_mesh(Body.finger(tl, 0.0082 - 0.0014 * float(seg), 0.0068 - 0.0014 * float(seg)), skin, tparent)
+			thumb_chain.append(tparent)
+			var tnext := _pivot(tparent, Vector3(0.0, -tl, 0.0))
+			tparent = tnext
+		curls.append(thumb_chain)
+		_p["fingers_" + key] = curls
 	# Legs: thin, grey-stockinged, in old slippers.
 	for side in [-1.0, 1.0]:
 		var key := "l" if side < 0.0 else "r"
-		var hip := _pivot(body, Vector3(side * 0.08, -0.08, 0.0))
+		var hip := _pivot(body, Vector3(side * 0.085, -0.08, 0.0))
 		_p["hp_" + key] = hip
-		_cyl(0.045, 0.04, THIGH, sock, hip, Vector3(0.0, -THIGH * 0.5, 0.0), 8)
+		_mesh(Body.limb(THIGH, 0.062, 0.042), sock, hip)
 		var knee := _pivot(hip, Vector3(0.0, -THIGH, 0.0))
 		_p["kn_" + key] = knee
-		_cyl(0.034, 0.028, SHIN, sock, knee, Vector3(0.0, -SHIN * 0.5, 0.0), 8)
+		_mesh(Body.blob(0.043, 0.04, 0.045), sock, knee)
+		_mesh(Body.limb(SHIN, 0.042, 0.026, 0.012, 0.22), sock, knee)
 		var ankle := _pivot(knee, Vector3(0.0, -SHIN, 0.0))
 		_p["an_" + key] = ankle
-		_box(Vector3(0.09, 0.05, 0.24), slipper, ankle, Vector3(0.0, -0.025, 0.07))
+		_mesh(Body.tube([[-0.04, 0.012, 0.012, 0.0, 0.0, 0.0], [-0.02, 0.034, 0.03, 0.0, 0.0, 0.0], [0.04, 0.046, 0.03, 0.0, 0.0, 0.0],
+			[0.14, 0.048, 0.027, 0.0, 0.0, 0.0], [0.22, 0.036, 0.02, 0.0, 0.0, 0.0], [0.255, 0.012, 0.01, 0.0, 0.0, 0.0]], 10),
+			slipper, ankle, Vector3(0.0, -0.03, -0.075), Vector3(PI * 0.5, 0.0, 0.0))
 	# The music box on its cord at her hip.
 	var cord := _pivot(body, Vector3(-0.2, -0.05, 0.0))
 	_p["box_cord"] = cord
-	_cyl(0.004, 0.004, 0.3, _material(Color("3a2f26"), 0.9), cord, Vector3(0.0, -0.15, 0.0), 4)
-	_box(Vector3(0.13, 0.1, 0.1), _material(Color("6a4a2a"), 0.7), cord, Vector3(0.0, -0.33, 0.0))
-	_box(Vector3(0.1, 0.008, 0.075), _material(Color("a79a62"), 0.5, 0.8), cord, Vector3(0.0, -0.28, 0.0))
+	_mesh(Body.limb(0.3, 0.004, 0.004), _material(Color("3a2f26"), 0.9), cord)
+	_mesh(Body.blob(0.065, 0.05, 0.05, 8), wood, cord, Vector3(0.0, -0.33, 0.0))
+	_mesh(Body.blob(0.05, 0.006, 0.04, 8), brass, cord, Vector3(0.0, -0.285, 0.0))
 	# A cold glimmer to be seen by in the dark.
 	_eye_light = OmniLight3D.new()
 	_eye_light.light_color = Color("d4e4c4")
 	_eye_light.light_energy = 0.0
 	_eye_light.omni_range = 5.0
-	_eye_light.position = Vector3(0.0, 1.3, 0.9)
+	_eye_light.position = Vector3(0.0, 1.5, 1.4)
 	_figure.add_child(_eye_light)
 
 
@@ -690,9 +822,45 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		# The right hand cupped to the ear.
 		_limb(_p["sh_r"], _p["el_r"], 1.6, -2.0, 0.5)
 	_p["box_cord"].rotation = Vector3(sin(stride * 3.0) * 0.4 + 0.2 * (pitch - 0.7), 0.0, sin(stride * 2.2) * 0.3)
-	_p["skirt"].visible = hip_y > 0.9 or state == STATE_SEARCHING
+	# Fingers: relaxed hooks that curl into claws on the hunt, twitching in the Turn.
+	var curl := 0.35
+	if state == STATE_HUNTING:
+		curl = 1.0
+	elif state == STATE_SEARCHING:
+		curl = 0.7
+	elif state == STATE_EMERGING:
+		curl = 1.3
+	if falling:
+		curl = 0.05
+	var beat_f := int(floorf(_clock * 9.0))
+	for hand in ["l", "r"]:
+		var fingers: Array = _p["fingers_" + hand]
+		for f in fingers.size():
+			var c := curl
+			if turn > 0:
+				c = 0.1 + 1.5 * _hash(beat_f * 7 + f * 3 + (0 if hand == "l" else 11))
+			elif state == STATE_HUNTING and speed > 1.0:
+				# The planted hand spreads, the lifted one claws.
+				var phase := sin(stride / 0.42 * PI + (PI if hand == "l" else 0.0))
+				c = lerpf(0.5, 1.4, 0.5 + 0.5 * phase)
+			var chain: Array = fingers[f]
+			for seg in chain.size():
+				(chain[seg] as Node3D).rotation.x = -c * (1.0 + 0.15 * float(seg)) * (0.8 if f == fingers.size() - 1 else 1.0)
+	# What swells under the cloth in the Turn: the hump and a ridge of spine.
+	var swell := 1.0 if turn > 0 else 0.0
+	(_p["hump"] as Node3D).scale = (_p["hump"] as Node3D).scale.lerp(Vector3.ONE * (1.0 + 0.5 * swell), 1.0 - exp(-18.0 * delta))
+	var knobs: Array = _p["vertebrae"]
+	for k in knobs.size():
+		var target := Vector3.ONE * swell * (0.8 + 0.4 * _hash(k + beat_f))
+		(knobs[k] as Node3D).scale = (knobs[k] as Node3D).scale.lerp(target, 1.0 - exp(-20.0 * delta))
+	# Rags and hair stream out behind her at a run and hang when she is still.
+	var drag := clampf(speed / 7.0, 0.0, 1.0)
+	(_p["rags"] as Node3D).rotation = Vector3(-0.5 * drag + 0.06 * sin(_clock * 4.0), 0.0, 0.08 * sin(_clock * 3.1 + 1.0))
+	# Hair hangs from the head under gravity, not along her bending neck.
+	(_p["hair"] as Node3D).global_basis = Basis(Vector3.UP, _figure.rotation.y) * Basis(Vector3.RIGHT, -0.5 * drag + 0.05 * sin(_clock * 2.3)) * Basis(Vector3.FORWARD, 0.06 * sin(_clock * 1.9))
+	(_p["cape"] as Node3D).rotation = Vector3(-0.15 * drag, 0.0, 0.0)
 	var eyes_on := 1.0 if state != STATE_DEAD else 0.0
-	_eye_light.light_energy = (1.1 if turn > 0 else 0.7) * eyes_on
+	_eye_light.light_energy = (0.5 if turn > 0 else 0.3) * eyes_on
 
 
 func _hip_world() -> Vector3:

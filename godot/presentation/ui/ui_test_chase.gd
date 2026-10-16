@@ -179,5 +179,14 @@ func _look_matron_gallery() -> bool:
 			await _frames(1)
 		await _look_at_point(view.head_world_position() - Vector3(0.0, 0.5, 0.0))
 		await _pose("matron_pose_%s" % entry[0])
+		if entry[0] in ["shuffle", "hunt_a", "turn_windup", "turn_lunge_a"]:
+			# Close on the face: she stands 1.3 m from the player's eyes.
+			var near := here + forward * 1.3
+			data["position"] = Vector3(near.x, here.y - 0.9 + 1.05, near.z)
+			for k in 4:
+				view.preview(data, 0.04, _main._camera.global_position, here)
+				await _frames(1)
+			await _look_at_point(view.head_world_position())
+			await _pose("matron_face_%s" % entry[0])
 	view.previewing = false
 	return true
