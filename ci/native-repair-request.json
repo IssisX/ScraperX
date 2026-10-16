@@ -1,6 +1,9 @@
 {
-  "reason": "Capture the first x86 forklift tread/second-riser transition that diverges from the accepted AArch64 control. Read-only native contact/sweep/pending-step observations, ordinary public walk, stops at first unintended traversal or real operator footing. No gameplay repair inferred from roof hang alone.",
+  "reason": "Repair the captured x86 transient-edge step/catch handoff without changing finite leg laws. Exercise original both-side boarding/hold/exit, read-only first-transition capture, explicit/invalid Action negatives and the complete original cargo route through the affected owner.",
   "checks": [
-    "forklift_boarding_diagnostic"
+    "forklift_boarding_diagnostic",
+    "forklift_boarding",
+    "physical_step_intent",
+    "warehouse_forklift_route"
   ]
 }

@@ -763,7 +763,8 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
             JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
                       support_sample_.contact_point.z);
         const auto support=support_sample_.body_id;
-        const auto relative=bodies.GetLinearVelocity(player_id_)-support_point_velocity(bodies,support,contact);
+        const auto support_velocity = support_point_velocity(bodies, support, contact);
+        const auto relative=bodies.GetLinearVelocity(player_id_)-support_velocity;
         const float takeoff=std::sqrt(2.0F*-physics_system_.GetGravity().GetY()*(rise+0.08F));
         auto impulse=JPH::Vec3(0,kPlayerMassKg*std::max(0.0F,takeoff-relative.GetY()),0);
         float inverse=1.0F/kPlayerMassKg;
@@ -780,6 +781,7 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
         if(dynamic) bodies.AddImpulse(support,-impulse,contact);
         landing_jump_work_j_+=std::max(0.0F,impulse.Dot(relative)+.5F*impulse.LengthSq()*inverse);
         causal_airborne_=true;
+        airborne_inherited_velocity_ = support_velocity;
         physical_step_pending_=true;
         physical_step_start_feet_y_=at.GetY()-kPlayerHalfHeight;
         return true;

@@ -7,6 +7,9 @@ import subprocess
 
 
 OWNERS = {
+    "forklift_boarding": "scraperx_forklift_boarding_tests",
+    "physical_step_intent": "scraperx_physical_step_intent_tests",
+    "warehouse_forklift_route": "scraperx_warehouse_forklift_route_tests",
     "forklift_boarding_diagnostic": "scraperx_forklift_boarding_diagnostic_tests",
     "suspended_ladder_route": "scraperx_suspended_ladder_tests",
     "swing_stair_route_2": "scraperx_swing_stair_route_tests",

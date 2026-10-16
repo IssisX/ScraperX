@@ -1,0 +1,9 @@
+WALK side=-1 p=-101.999,0.9,-57.65 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=-1 p=-100.902,1.16957,-57.6618 grounded=1 support=2440 traversal=0 reachable=0 pose_steps=0
+BOARD_RESULT side=-1 p=-100.568,1.25347,-57.658 grounded=1 support=2440 traversal=0 reachable=1 pose_steps=0
+LEFT side=-1 p=-101.728,0.9,-57.6587 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=1 p=-98.0006,0.9,-57.65 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+WALK side=1 p=-99.0914,1.16407,-57.659 grounded=1 support=2440 traversal=0 reachable=0 pose_steps=0
+BOARD_RESULT side=1 p=-99.4311,1.25339,-57.6569 grounded=1 support=2440 traversal=0 reachable=1 pose_steps=0
+LEFT side=1 p=-98.2924,0.9,-57.6576 grounded=1 support=1 traversal=0 reachable=0 pose_steps=0
+PASS BOARDING ordinary walk both sides, real floor, grade exit, no pose steps

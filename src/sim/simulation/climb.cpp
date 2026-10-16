@@ -151,6 +151,12 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
     if (grounded_ || crouched_ || carry_constraint_ != nullptr) {
         return;
     }
+    // A finite walking step may briefly leave its tread. Keep that rising
+    // intent until real footing; Action can still deliberately take a handhold,
+    // and a descending failed step can still catch to recover.
+    if (physical_step_pending_ && !commands.traversal_requested &&
+        bodies.GetLinearVelocity(player_id_).GetY() - airborne_inherited_velocity_.GetY() > 0)
+        return;
     if (facing_.IsNearZero()) {
         return;
     }

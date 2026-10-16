@@ -161,13 +161,17 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 slingshot_->note_external_influence();
         } else {
             jump_started = try_begin_coyote_push(bodies);
+            if (jump_started) physical_step_pending_ = false;
             auto locomotion_commands = commands;
             locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
                 grounded_ && !support_sample_.body_id.IsInvalid() && !crouched_ &&
                 !physical_foot_push_->active();
             const bool ordinary_jump_requested = locomotion_commands.jump_requested;
             jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds) || jump_started;
-            if (ordinary_jump_requested && jump_started) ordinary_jump_ticks_left_ = 0;
+            if (ordinary_jump_requested && jump_started) {
+                ordinary_jump_ticks_left_ = 0;
+                physical_step_pending_ = false;
+            }
         }
         if (!jump_started) {
             try_begin_hang(bodies, commands);
@@ -186,7 +190,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         }
     }
 
-    if (traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
+    if (traversal_state_ != TraversalState::None) {
+        ordinary_jump_ticks_left_ = 0;
+        physical_step_pending_ = false;
+    }
     // A fresh onward Jump can wait for the already finite transfer row. It
     // cannot stack a second push, restart that row or extend its lifetime.
     else if (ordinary_jump_ticks_left_ > 0 && !finishing_transfer_foot) --ordinary_jump_ticks_left_;
@@ -353,9 +360,18 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     grounded_ = support.grounded;
     support_entity_id_ = support.entity_id;
     if(grounded_ && physical_step_pending_) {
-        if(bodies.GetPosition(player_id_).GetY()-kPlayerHalfHeight-
-           physical_step_start_feet_y_>=kStepMinimumHeight) ++step_up_count_;
-        physical_step_pending_=false;
+        const auto point = JPH::RVec3(support.contact_point.x,
+            support.contact_point.y, support.contact_point.z);
+        const auto relative = bodies.GetLinearVelocity(player_id_) -
+            support_point_velocity(bodies, support.body_id, point);
+        // A capsule brushing a riser while still rising is not the end of
+        // its step. Firm footing or actual non-rising contact completes it;
+        // narrow supports can therefore finish without a broad footprint.
+        if (relative.GetY() <= 0 || footing_is_firm(bodies)) {
+            if(bodies.GetPosition(player_id_).GetY()-kPlayerHalfHeight-
+               physical_step_start_feet_y_>=kStepMinimumHeight) ++step_up_count_;
+            physical_step_pending_=false;
+        }
     }
 
     // WO-008: a genuine (non-traversal, non-jump) landing is the one
