@@ -214,7 +214,7 @@ std::vector<Part> striker_parts() {
 // The lamp: a turntable, its yoke, the drum on it pointing out along local +x
 // and tilted up, a lens, and a weight behind. A drum 6.4 m across.
 std::vector<Part> lamp_parts() {
-    constexpr float kTilt = 0.3F;
+    constexpr float kTilt = 0.6F;   // the beam points 34 degrees up: it climbs over the tower
     constexpr float kRadius = 3.2F;
     constexpr float kHalfLength = 4.6F;
     const Vec3 centre(1.0F, 7.0F, 0.0F);

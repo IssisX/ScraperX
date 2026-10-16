@@ -748,18 +748,56 @@ steel and sat out any tick it began a hair slack. Now:
   impact (16 kN). DROP lets go.
 - **Not observed:** on the phone.
 
+**The top of the route (task #92, the owner chose A + B on 2026-10-16).** West of the derrick's
+upper landing (802.64 m) there is now a summit deck, `src/sim/summit.{hpp,cpp}`:
+- **A dead searchlight** on a 30 m lattice mast at the deck's north edge: a drum 6.4 m across on a
+  turntable. Dark as found, with a faint amber ember now and then. It is drawn at any distance.
+- **Lit with your body.** A steel striker plate stands a metre proud of the deck on four guides, held
+  up by gas struts (5 kN over its own weight). Up two concrete blocks (a pull-up onto the first, a
+  jump-and-hang onto the second) is a gantry 6.4 m over the plate. Step off its edge onto the plate:
+  the landing drives the plate 0.27 m down, past the 0.20 m that lights the lamp. Standing on the
+  plate does nothing, three hops on it reach 0.14 m, and a step down from the first block nothing:
+  only a real drop lights it. Once lit it stays lit (past a death too), and its own motor turns the
+  turntable at 0.35 rad/s, so the beam sweeps the sky.
+- **Seen from the ground.** The beam points 34 degrees up and runs 2.4 km, so from the game's start
+  at night it rises out of the top of the tower (rendered: `summit_from_ground_night`). The first
+  time it is lit the game remembers it (`user://summit.lit`, not in tests): every later climb
+  starts under the lit beam.
+- **A runway arm** 38 m out of the deck's west end, a windsock on a pole at its end. Out along it the
+  wind off the tower takes hold (the same gusts as C7's, outward). Run off the end and open the
+  parachute: down alive in about 80 s (native: landed at x -61.7, on the ground). Without the
+  parachute the fall kills.
+- **Proof.** Native `summit` (spawn, dark and still for 10 s, the walk to the arm's end, the plate's
+  falsifiers, the strike, the turning beam, the plate's return) and `summit_arm` (with and without
+  the parachute; the wind's push). Touch `touch_summit` (new, 75th, in CI): from the summit spawn,
+  up the blocks, off the gantry, lamp lit, out the arm, CHUTE, landed alive (8.9 m/s).
+- **Closest thing already in the game:** the slab ramp's trip plate, which you stand on. This one
+  you have to land on hard from a height; standing on it does nothing.
+
+**The grappling hook can tear loose (task #102, the last missing part).** The bite was a weld. Now
+the hook's claws hold up to 6 kN on the line (about 7.6 body weights: hanging, swinging and reeling
+never reach it). Past that for 0.15 s they slide off, and a jolt that adds up past it rips them out.
+A torn hook springs back along the rope toward you and flies again: it can catch something else or
+be reeled in. Native `hook`: a 12.6 m slack fall caught on the line (46.5 kN) tears it; the same bite
+on a tight line, walked off the 220 ring's south edge, holds.
+
+**Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
+1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
+   gust pushes jumps, tugs hanging hands, bows the hook's rope and the parachute; crouch or duck
+   behind steel. Builds on the wind (`apply_wind`).
+2. The falling walkway: planks drop away one by one just behind you, each one's fall pulling the
+   next one's pin; walk and you fall, sprint and leap and you make it.
+3. The drum run: a steep walkway where heavy drums roll down on a rhythm set by a filling bucket;
+   dodge, slide under, vault.
+4. Wreckage slides (a reason to go down): slide down the fallen slabs to a lower ring.
+5. Rope down with the hook, walking down a wall.
+Turned down: a swinging ferry (too like the swing), a stomp pump (too like the summit's plate),
+breath at altitude (not real at 800 m), draining meters (annoying), rising water (no swimming).
+
 **Decisions waiting on the owner (written in plain words, 2026-10-16).** Each one holds up work
 that is otherwise ready. A letter is enough to answer.
 
-1. **What's at the top that makes you want to climb (and that you can see from the ground).**
-   - A (recommended, with B): a huge dead searchlight on the top. From the ground you see it, and at
-     dusk a faint flicker on the clouds. At the top you switch it on with your own body; its beam
-     sweeps the sky and mountains and stays on, so every new climb starts under the light you lit.
-   - B: a long arm sticking out from the top with a windsock. At the top you run off its end and
-     parachute all the way down, past everything you climbed.
-   - C: a giant weight at the top; let it go and every machine you used moves again, one after
-     another, all the way down, like a giant domino chain. Spectacular, but a lot of work.
-   - D: sunrise above the clouds. Only a view, nothing to do. Comes free with A.
+1. **What's at the top:** decided 2026-10-16, A + B, built (above).
 2. **How fast you pull yourself up over a ledge.** Today it takes under half a second: snappy and
    athletic, faster than a real person. Realistic would be about twice as slow, on every ledge in
    the game. A (recommended): keep it fast. B: make it realistic.
@@ -776,5 +814,8 @@ that is otherwise ready. A letter is enough to answer.
 6. **The store-ready version of the app.** Today's download is a test build. A store build needs
    your release key added to GitHub's secret settings, which only you can do. Can wait until
    you're ready to publish.
-7. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
+7. **Which pressure to build first** (see "Ideas for pressure" above). A (recommended): gust fronts
+   first, then the falling walkway as the first new pressure stage. B: the falling walkway first.
+   C: the drum run first.
+8. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
    the credits, and whether you have the rights to the fall-scream voice clip.

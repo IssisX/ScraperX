@@ -9,14 +9,16 @@ signal ignited
 
 const LAMP_ENTITY := 2981
 # The lamp's drum, in the lamp body's own frame (summit.cpp lamp_parts).
-const TILT := 0.3
+const TILT := 0.6
 const DRUM_CENTRE := Vector3(1.0, 7.0, 0.0)
 const DRUM_HALF_LENGTH := 4.6
 const LENS_RADIUS := 3.05
 # The beam: a cone from the lens, far enough to cross the sky and reach the
 # mountains and the clouds.
-const BEAM_LENGTH := 1800.0
-const BEAM_FAR_RADIUS := 110.0
+const BEAM_LENGTH := 2400.0
+const BEAM_FAR_RADIUS := 190.0
+# The glare at the lens: what reads as a star at the top from far below.
+const GLARE_SIZE := 36.0
 const IGNITE_SECONDS := 4.0
 # The windsock, on the pole at the runway arm's end (summit.cpp): the pole's
 # top, and the wind's own swells (physics_world_movement.cpp apply_wind).
@@ -34,6 +36,8 @@ var _lens: MeshInstance3D
 var _lens_material: StandardMaterial3D
 var _spot: SpotLight3D
 var _ember: OmniLight3D
+var _glare: MeshInstance3D
+var _glare_material: StandardMaterial3D
 var _sock: MeshInstance3D
 var _lit := false
 var _lit_age := 0.0
@@ -110,10 +114,10 @@ void vertex() {
 }
 void fragment() {
 	float facing = abs(dot(normalize(NORMAL), normalize(VIEW)));
-	float core = pow(facing, 1.6);
-	float fade = pow(1.0 - along, 1.15);
+	float core = pow(facing, 2.2);
+	float fade = pow(1.0 - along, 1.4);
 	ALBEDO = tint;
-	ALPHA = clamp(core * fade * strength * 0.55, 0.0, 1.0);
+	ALPHA = clamp(core * fade * strength * 0.8, 0.0, 1.0);
 }
 """
 	_beam_material = ShaderMaterial.new()
@@ -140,6 +144,33 @@ void fragment() {
 	_spot.shadow_enabled = false
 	_spot.visible = false
 	_lamp.add_child(_spot)
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1.0, 0.96, 0.85, 1.0))
+	gradient.set_color(1, Color(1.0, 0.75, 0.4, 0.0))
+	var falloff := GradientTexture2D.new()
+	falloff.gradient = gradient
+	falloff.fill = GradientTexture2D.FILL_RADIAL
+	falloff.fill_from = Vector2(0.5, 0.5)
+	falloff.fill_to = Vector2(0.5, 0.0)
+	falloff.width = 128
+	falloff.height = 128
+	_glare_material = StandardMaterial3D.new()
+	_glare_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_glare_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_glare_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_glare_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	_glare_material.albedo_texture = falloff
+	_glare_material.disable_fog = true
+	var quad := QuadMesh.new()
+	quad.size = Vector2(GLARE_SIZE, GLARE_SIZE)
+	_glare = MeshInstance3D.new()
+	_glare.name = "Glare"
+	_glare.mesh = quad
+	_glare.material_override = _glare_material
+	_glare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_glare.visibility_range_end = 0.0
+	_glare.position = lens_at + direction * 1.5
+	_lamp.add_child(_glare)
 	_ember = OmniLight3D.new()
 	_ember.name = "Ember"
 	_ember.transform = Transform3D(Basis.IDENTITY, lens_at + direction * 1.0)
@@ -220,9 +251,32 @@ func update_view(state: Dictionary, delta: float, clock: float) -> void:
 			glow = lerpf(glow, 9.0, ignition)
 		_lens_material.emission_energy_multiplier = glow
 		_ember.light_energy = glow * 0.5
+		# The glare: a faint amber ember while dead, a white star once lit.
+		var glare := 0.06 + 0.25 * flicker
+		var tint := Color(1.0, 0.6, 0.25)
+		var size := 0.3
+		if _lit:
+			glare = lerpf(glare, 1.0, ignition)
+			tint = tint.lerp(Color(1.0, 0.97, 0.9), ignition)
+			size = lerpf(size, 1.0, ignition)
+		_glare_material.albedo_color = Color(tint.r, tint.g, tint.b, glare)
+		_glare.scale = Vector3.ONE * size
 	# The sock streams west with the wind, hanging straighter in a lull.
 	var wind := wind_at(clock)
 	var lean := lerpf(0.2, 1.5, clampf(wind / 12.0, 0.0, 1.0))
 	var flutter := 0.1 * sin(clock * 6.0) + 0.05 * sin(clock * 9.7)
 	var direction := Vector3(-sin(lean), -cos(lean), flutter).normalized()
 	_sock.transform = Transform3D(Basis(Quaternion(Vector3.DOWN, direction)), POLE_TOP)
+
+
+# Where the beam points now, in the world (for a look along it).
+func beam_world_direction() -> Vector3:
+	if _lamp == null:
+		return Vector3.UP
+	return (_lamp.global_transform.basis * _beam_direction()).normalized()
+
+
+func lamp_world_position() -> Vector3:
+	if _lamp == null:
+		return Vector3.ZERO
+	return _lamp.global_transform * (DRUM_CENTRE + _beam_direction() * DRUM_HALF_LENGTH)

@@ -1037,3 +1037,41 @@ func _summit(device: int) -> bool:
 	_detail = "landed_y=%.2f landed_x=%.1f impact_mps=%.2f" % [_position().y, _position().x,
 		float(_native().get_last_impact_speed_mps())]
 	return true
+
+# Renders only: the summit's searchlight, lit straight away (as a world opened
+# after a climb that lit it is), at dusk; from its deck, along the runway arm,
+# and from the game's start on the ground looking up at it.
+func _look_at_point(target: Vector3) -> void:
+	var to: Vector3 = target - _main._camera.global_position
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = atan2(to.y, Vector2(to.x, to.z).length())
+	await _frames(4)
+
+func _look_summit(from_ground: bool) -> bool:
+	_native().light_summit()
+	_main._sky_cycle.set_hour(20.2)
+	await _seconds(1.0)
+	if not bool(_native().get_summit_state()["lit"]):
+		return _fail("the summit did not light")
+	var view: Node3D = _main._summit_view
+	if from_ground:
+		await _seconds(2.0)
+		await _look_at_point(view.lamp_world_position() + view.beam_world_direction() * 900.0)
+		await _pose("summit_from_ground_dusk")
+		_main._sky_cycle.set_hour(22.0)
+		await _seconds(4.0)
+		await _look_at_point(view.lamp_world_position() + view.beam_world_direction() * 900.0)
+		await _pose("summit_from_ground_night")
+		return true
+	var device := InputRouter.Device.TOUCH
+	await _go(device, Vector2(8.0, -184.6), 0.3, 6.0)
+	await _go(device, Vector2(-9.5, -184.6), 0.3, 12.0)
+	await _look_at_point(view.lamp_world_position())
+	await _pose("summit_lamp_lit_dusk")
+	await _seconds(2.0)
+	await _look_at_point(view.lamp_world_position() + view.beam_world_direction() * 500.0)
+	await _pose("summit_beam_sweep")
+	await _go(device, Vector2(-11.0, -187.5), 0.2, 4.0)
+	await _look_at_point(Vector3(-50.0, 803.0, -187.5))
+	await _pose("summit_runway_arm")
+	return true
