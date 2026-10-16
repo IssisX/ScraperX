@@ -37,6 +37,7 @@ const B_REVERSE := &"forklift_reverse"
 const B_PARK := &"forklift_park"
 const B_INCH := &"forklift_inch"
 const B_HORN := &"forklift_horn"
+const B_TOOL := &"forklift_tool"
 const B_RIG := &"yard_crane_attach"
 const B_UNRIG := &"yard_crane_detach"
 
@@ -92,7 +93,7 @@ var _u := 1.0
 var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
 	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE,
-	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_RIG, B_UNRIG]
+	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL, B_RIG, B_UNRIG]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -239,6 +240,7 @@ func _layout_forklift() -> void:
 	_place(B_DOWN, _safe.position + _safe.size * Vector2(0.47, 0.87), 84.0)
 	_place(B_LEFT, _safe.position + _safe.size * Vector2(0.63, 0.69), 84.0)
 	_place(B_RIGHT, _safe.position + _safe.size * Vector2(0.63, 0.87), 84.0)
+	_place(B_TOOL, _safe.position + _safe.size * Vector2(0.78, 0.69), 84.0)
 	_place(B_HORN, _safe.position + _safe.size * Vector2(0.78, 0.87), 84.0)
 	_place(B_ACTION, _safe.position + _safe.size * Vector2(0.92, 0.87), 84.0)
 	_pendant_center = _safe.position + _safe.size * Vector2(0.55, 0.58)
@@ -251,7 +253,7 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 
 
 func _verb_for(id: StringName) -> StringName:
-	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_RIG, B_UNRIG]:
+	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG]:
 		return id
 	match id:
 		B_JUMP:
@@ -516,7 +518,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 			_axis_names = ["", ""]
 	for id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN]:
 		_buttons[id].shown = forklift_mode
+	_buttons[B_TOOL].shown = forklift_mode
 	if forklift_mode:
+		_buttons[B_TOOL].label = "UNCOUPLE" if bool(ctx.get("forklift_tool_coupled", true)) else "COUPLE"
+		_buttons[B_TOOL].tone = TONE_SAFE if bool(ctx.get("forklift_tool_ready", false)) else TONE_NORMAL
 		for id in [B_JUMP, B_CROUCH, B_DROP, B_CHUTE, B_GRAPPLE, B_AUTO_REEL, B_REEL]:
 			_buttons[id].shown = false
 		_buttons[B_UP].label = "LIFT +"

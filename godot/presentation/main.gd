@@ -739,6 +739,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_native.cancel_forklift_tool_request()
 	_zero_yard_crane_input()
 	_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
 	if _operating == &"forklift":
@@ -869,6 +870,13 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 			continue
 		if _operating == &"forklift" and verb in [&"drop", &"back"]:
 			_end_operation()
+			continue
+		if _operating == &"forklift" and verb == &"forklift_tool":
+			var tool: Dictionary = _native.get_forklift_state()
+			if bool(tool.get("coupled", false)):
+				_native.request_forklift_detach()
+			else:
+				_native.request_forklift_couple()
 			continue
 		if _operating == &"forklift" and String(verb).begins_with("forklift_"):
 			_forklift_controls.handle_verb(verb)
@@ -1080,6 +1088,7 @@ func _update_forklift_view_heading() -> void:
 
 
 func _end_operation() -> void:
+	_native.cancel_forklift_tool_request()
 	if _operating == &"yard_crane":
 		_zero_yard_crane_input()
 		_router.set_yard_crane_mode(false)
@@ -1318,6 +1327,8 @@ func _read_context() -> Dictionary:
 		"station": station,
 		"operating": _operating,
 		"forklift_operator": _forklift_controls.ui_state(),
+		"forklift_tool_coupled": bool(forklift.get("coupled", false)),
+		"forklift_tool_ready": bool(forklift.get("can_detach", false)) if bool(forklift.get("coupled", false)) else bool(forklift.get("can_couple", false)),
 		"yard_crane_rigging_reachable": bool(crane.get("rigging_reachable", false)),
 		"slung": bool(_native.is_legal_forty_pack_slung()),
 		"carrying": carrying,

@@ -3,6 +3,7 @@ extends RefCounted
 # Operator intent only. Native owns traction, steering geometry and hydraulic ratings.
 const RELEASED_THROTTLE := 0.02
 const REVERSAL_SPEED_MPS := 0.25
+const FINE_HYDRAULIC_SCALE := 0.1
 var active := false
 var gear := 0
 var pending_direction := 0
@@ -76,9 +77,11 @@ func sample(input: Dictionary, actual_forward_speed_mps := 0.0) -> Array:
 	horn = bool(input.get("horn", false))
 	inch = _axis(input, "inch", 0.0, 1.0)
 	var demand := _throttle * lerpf(1.0, 0.25, inch)
+	# Fine operator demand only; native speed/force/work limits remain authoritative.
+	var hydraulic_scale := lerpf(1.0, FINE_HYDRAULIC_SCALE, inch)
 	var brake := maxf(_axis(input, "brake", 0.0, 1.0), inch * (1.0 - _throttle) * 0.65)
 	return [0.0 if parking else demand * gear, _axis(input, "steer", -1.0, 1.0),
-		_axis(input, "lift", -1.0, 1.0), _axis(input, "tilt", -1.0, 1.0),
+		_axis(input, "lift", -1.0, 1.0) * hydraulic_scale, _axis(input, "tilt", -1.0, 1.0) * hydraulic_scale,
 		1.0 if parking else brake]
 
 func ui_state() -> Dictionary:

@@ -14,7 +14,9 @@ struct WarehouseForkliftYard final {
     static constexpr std::uint64_t kFirstCrateEntity = 2444;
     static constexpr std::uint64_t kSecondCrateEntity = 2445;
     static constexpr std::uint64_t kBeamEntity = 2446;
+    static constexpr std::uint64_t kParkingCradleEntity = 2447;
     static constexpr std::uint64_t kFrameEntity = 1440;
+    static constexpr float kParkingCradleTop = .20F;
 
     // Welded lifting-eye top bars, in the chassis shape-origin frame.
     // Crane slings attach to these actual steel parts, not empty offsets.
@@ -31,12 +33,14 @@ struct WarehouseForkliftYard final {
     WarehouseForklift::Config truck;
     std::array<kit::BodyIndex, 2> crates;
     kit::BodyIndex beam, receiving_frame;
+    kit::BodyIndex parking_cradle;
     // Shape-origin local points on the actual chassis. Control authorization
     // additionally needs current platform support and reach, not this point alone.
     JPH::Vec3 operator_floor{0, -.24F, -1.65F};
     JPH::Vec3 control_station{0, .58F, -.88F};
     JPH::RVec3 stack_center = JPH::RVec3::sZero();
     JPH::RVec3 receiver_top = JPH::RVec3::sZero();
+    JPH::RVec3 parking_center = JPH::RVec3::sZero();
 };
 
 [[nodiscard]] WarehouseForkliftYard build_warehouse_forklift_yard(

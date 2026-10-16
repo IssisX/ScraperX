@@ -121,6 +121,7 @@ public:
         double service_lift_input = 0.0;
         double supplied_machine_input = 0.0;
         std::array<double, 5> forklift_input{0, 0, 0, 0, 1};
+        ForkliftToolRequest forklift_tool_request = ForkliftToolRequest::None;
         std::array<double, 3> yard_crane_input{};
         bool yard_crane_attach = false, yard_crane_detach = false;
         bool valve_toggle_requested = false;
@@ -146,6 +147,8 @@ public:
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
     [[nodiscard]] bool forklift_controls_reachable(const JPH::BodyInterface &bodies) const noexcept;
     void prepare_forklift(const StepCommands &commands, const JPH::BodyInterface &bodies);
+    void clear_forklift_commands() noexcept;
+    [[nodiscard]] std::uint8_t forklift_exchange_refusal(const JPH::BodyInterface &bodies) const noexcept;
     void refresh_forklift_snapshot(const JPH::BodyInterface &bodies);
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
     [[nodiscard]] bool yard_crane_controls_reachable(const JPH::BodyInterface &) const noexcept;
@@ -1064,6 +1067,9 @@ private:
     WarehouseForkliftYard forklift_yard_{};
     std::unique_ptr<WarehouseForklift> warehouse_forklift_;
     ForkliftSnapshot forklift_snapshot_{};
+    // Last external demands only; physical eligibility is always queried live.
+    std::array<double, 5> forklift_exchange_input_{0, 0, 0, 0, 1};
+    bool forklift_exchange_cancelled_ = false;
     std::unique_ptr<YardCrane> yard_crane_;
     YardCraneSnapshot yard_crane_snapshot_{};
     std::unique_ptr<SuppliedAscent> supplied_ascent_;

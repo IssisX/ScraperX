@@ -35,7 +35,8 @@ void board(Simulation &s) {
     require(false, "ordinary walking and physical steps reach rear operator platform");
 }
 
-void drive_straight_to(Simulation &s, double z, double speed_limit = 1.5,
+// Some routes need only steering/boarding from this shared fixture header.
+[[maybe_unused]] void drive_straight_to(Simulation &s, double z, double speed_limit = 1.5,
                        std::uint64_t carried_entity = 0, bool align_over_receiver = false) {
     const auto chassis = s.kit_body_index(2440);
     for (unsigned i = 0; i < 6000; ++i) {

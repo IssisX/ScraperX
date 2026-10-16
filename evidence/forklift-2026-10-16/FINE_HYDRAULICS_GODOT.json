@@ -1,0 +1,102 @@
+{
+  "started": 1792118621.7326987,
+  "source_hashes": {
+    "godot/presentation/ui/forklift_controls.gd": "c07dfc2cd1488609d61c6239398a04992eb0a9f54bb8c1480dafed9cf7fe06ea",
+    "godot/presentation/ui/forklift_panel.gd": "87d99d9af6fef3bff02e17f44f6e90460f50f7f090a5c006b2cecc0198291dac",
+    "godot/tests/forklift_tool_inputs_test.gd": "28351188c44f546e8d0e9d3028de42c0ce504ae831d56462c2469dd3d9f15693",
+    "godot/tests/forklift_controls_test.gd": "38a942ef159342763cd73bb40d1fc4e03cc37a0075eabb8d9c1caef6d542b728"
+  },
+  "steps": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_tool_inputs_test.gd"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/forklift_tool_inputs-fine-hydraulics.log",
+      "errors": [],
+      "markers": [
+        "FORKLIFT_TOOL_INPUTS PASS physical_exchange_test=separate"
+      ]
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_operator_inputs_test.gd"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/forklift_operator_inputs-fine-hydraulics.log",
+      "errors": [],
+      "markers": [
+        "SCRAPERX_FORKLIFT_OPERATOR_INPUTS PASS"
+      ]
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_controls_test.gd"
+      ],
+      "exit": 1,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/forklift_controls-fine-hydraulics.log",
+      "errors": [
+        "SCRIPT ERROR: Invalid call. Nonexistent function 'cancel_forklift_tool_request' in base 'RefCounted (ReceiptBridge)'.",
+        "SCRAPERX_FORKLIFT_CONTROLS FAIL"
+      ],
+      "markers": []
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_controls_test.gd"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/forklift-controls-cancellation-contract-repair.log",
+      "repair": "ReceiptBridge must implement actual Main cancellation API; assert one actual call on leave",
+      "errors": [],
+      "markers": [
+        "SCRAPERX_FORKLIFT_CONTROLS PASS"
+      ]
+    }
+  ],
+  "finished": 1792118711.3801355
+}

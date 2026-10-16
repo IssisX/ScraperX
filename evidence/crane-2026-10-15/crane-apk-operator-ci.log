@@ -1,0 +1,7 @@
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T02:07:42.4804694Z YARD_CRANE_OPERATOR_INPUTS_PASS
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T02:07:42.5362797Z YARD_CRANE_OPERATOR_INPUTS_PASS
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T02:07:42.6458955Z CRANE_AUDIO failures=0 driver=Dummy receipt_fixture_only=1 heard_device_audio=0
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T02:07:42.6946695Z CRANE_AUDIO failures=0 driver=Dummy receipt_fixture_only=1 heard_device_audio=0
+android-apk-candidate	Check real crane camera and controls in a captured-mouse window	2026-10-16T02:08:03.8092797Z YARD_CRANE_OPERATOR_RECEIPT {"captured":false,"entry_position":"(-66.5, 1.08, -150.0)","hoist_after_m":30.510498046875,"hoist_before_m":30.8600006103516,"paused_tick":863,"reachable":true,"rigging_mask":0,"slew_rad":-1.56166100502014,"source_after_j":21843.9102172852,"source_before_j":0.0,"source_capacity_j":5000000.0,"support":1450,"trolley_m":20.469970703125,"work_after_j":819.038938829472,"work_before_j":0.0}
+android-apk-candidate	Check real crane camera and controls in a captured-mouse window	2026-10-16T02:08:03.8707219Z SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS checks=37
+android-apk-candidate	Check real crane camera and controls in a captured-mouse window	2026-10-16T02:08:04.1313731Z SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS checks=37

@@ -1,0 +1,55 @@
+{
+  "as_of": "2026-10-16T02:52:17.749150+00:00",
+  "published_parent": "83b84b74b3dfc90c79a473f3160ae7952507f5ad",
+  "scope": "Complete native public original-tool exchange; Godot controls and actual Main/native cancellation; Android/device evidence separate",
+  "public_trial": {
+    "stage": "public-exchange-world-level-before-contact",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests.cpp": "17cc9c72c70b89259562354a0a47aa0b9d63d8052ccca52cbcce4666518d750d",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_public_driver.hpp": "8331a9a97e3dad39bf363a63dbb5557415517f5ed8a296d137c758b4462a205d",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests": "8337c9108b2ad29c5eb0631bb2aea9404a7debaf1c476ed6172a2933f91dae46",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+    },
+    "started": 1792118505.9881804,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-5.log",
+    "exit": 0,
+    "finished": 1792119022.3196962
+  },
+  "elapsed_seconds": 516.331515789032,
+  "native_sha256": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+  "jolt_sha256": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+  "final_bridge_sha256": "46ebf7c19f0f787dec29d7608ce551705240ff8fe3dfb601a4d9c2bf0b6da595",
+  "proved": [
+    "ordinary original-truck public drive to actual static cradle2447",
+    "fresh actual support/neutral/full-brake readiness",
+    "unsupported/remote/partial-brake intent refusal and no delayed replay",
+    "ready-but-cancelled intent leaves actual coupling unchanged",
+    "detach generation1 to2 without capture/release pose or velocity snap",
+    "same original loose72kg tool2443 independently stable through >2m withdrawal",
+    "distant rejected couple does not replay on later valid return",
+    "actual finite return and capture under unchanged pose/relative-speed gates",
+    "recouple generation2 to3 with same body identity/count",
+    "real hydraulic lift and >2m raised reverse transport; all3loaded tires and real driver footing"
+  ],
+  "unchanged": [
+    "native capture/support/contact/load/force/stroke/work/energy laws",
+    "Jolt ownership and actual pose/momentum",
+    "all prior uncommitted gate/grapple/ParkourYard work preserved"
+  ],
+  "godot_evidence": "FINE_HYDRAULICS_GODOT.json",
+  "native_build_evidence": "NATIVE_BUILD_V13.json",
+  "limits": [
+    "No matching exchange APK yet; prior83b crane APK delivered",
+    "No phone-play evidence",
+    "No claw/clamp or22m/higher freight acceptance",
+    "No full-suite GREEN claim"
+  ]
+}

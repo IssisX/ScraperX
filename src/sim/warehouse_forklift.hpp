@@ -95,6 +95,15 @@ public:
     // Restore Kit first, then this owner. Restores native replay state and
     // neutralizes demand; rebuilding joints preserves their captured frames.
     void restore(const Checkpoint &checkpoint);
+    // Shared eligibility queries are also used by the mutations. These inspect
+    // live Jolt contacts/joints and never cache support or coupling authority.
+    enum class ToolRefusal : std::uint8_t {
+        None = 0, StepPending = 6, AlreadyCoupled = 7, AlreadyDetached = 8,
+        HardwareAlignment = 9, Unsupported = 10, MatingObstructed = 11,
+        JointLoaded = 12
+    };
+    [[nodiscard]] ToolRefusal couple_refusal() const;
+    [[nodiscard]] ToolRefusal detach_refusal() const;
     // Current-pose joint, never pose snapping. Capture requires aligned slow
     // hardware, unobstructed mating line and real support under the loose tool.
     bool try_couple();

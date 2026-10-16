@@ -1,0 +1,74 @@
+{
+  "started": 1792117084.4701893,
+  "native_sha256": "46ebf7c19f0f787dec29d7608ce551705240ff8fe3dfb601a4d9c2bf0b6da595",
+  "input_test_sha256": "f938d0159bf09d1262bf62235b4a4779a624c177e50a62742eb38e533ffcc911",
+  "steps": [
+    {
+      "name": "import",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--editor",
+        "--import",
+        "--quit"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/import.log",
+      "errors": [],
+      "markers": []
+    },
+    {
+      "name": "tool-input-and-real-Main-cancellation",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_tool_inputs_test.gd"
+      ],
+      "exit": 1,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/tool-input-and-real-Main-cancellation.log",
+      "errors": [
+        "SCRIPT ERROR: Parse Error: The member \"Panel\" shadows a native class."
+      ],
+      "markers": []
+    },
+    {
+      "name": "tool-input-native-class-name-repair",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/godot",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/forklift_tool_inputs_test.gd"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/godot-fork-exchange-v13/tool-input-fixed-name.log",
+      "errors": [],
+      "markers": [
+        "FORKLIFT_TOOL_INPUTS PASS physical_exchange_test=separate"
+      ]
+    }
+  ],
+  "finished": 1792117218.8651469
+}

@@ -1,0 +1,15 @@
+BOARDED chassis=-99.9993,0.608418,-56.0046 tool=-99.9998,0.143736,-54.2703 tool_velocity=-0.000806604,-0.000104987,2.46316e-05 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=10 lift=1.99859e-05 tilt=-8.78381e-05 speed=6.36345e-05
+MANEUVER chassis=-99.9985,0.608418,-56.0046 tool=-100,-5.96046e-08,-48 tool_velocity=-1.04542e-10,2.6077e-10,-2.79288e-10 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348045 tilt=-8.4864e-05 speed=0.0013446
+PATH segment=0 forward=-0.000272969,1 steer=-0.301661 target=-99.7265,-54.228
+MANEUVER chassis=-96.3404,0.608551,-50.2334 tool=-100,-5.96046e-08,-48 tool_velocity=-1.8653e-10,6.8297e-11,-6.88777e-11 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348031 tilt=-0.000276181 speed=0.831536
+PATH segment=14 forward=0.965777,0.259372 steer=-0.266473 target=-94.2935,-50.0128
+MANEUVER chassis=-88.9838,0.608559,-52.2946 tool=-100,-5.96046e-08,-48 tool_velocity=-2.30961e-10,0,-4.02191e-10 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348028 tilt=-7.76093e-05 speed=0.830626
+PATH segment=29 forward=0.493494,-0.869749 steer=-0.287055 target=-88.2928,-54.1669
+MANEUVER chassis=-88.0541,0.608448,-60.3168 tool=-100,-5.96046e-08,-48 tool_velocity=-1.04542e-10,2.6077e-10,-2.79288e-10 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348032 tilt=-0.000458736 speed=0.833297
+PATH segment=36 forward=0.00997481,-0.99995 steer=0.047428 target=-88,-62
+MANEUVER_FINISHED chassis=-88.0802,0.60842,-61.6242 tool=-100,-5.96046e-08,-48 tool_velocity=1.82734e-10,0,2.37084e-10 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=10 lift=0.348028 tilt=-0.000691423 speed=3.1042e-05
+PARKING_LINE chassis=-88.0802,0.608431,-61.6242 tool=-87.8868,0.491529,-63.3444 tool_velocity=0.000944431,0.0116368,-0.00901171 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348028 tilt=-0.000691442 speed=0.00888064
+PARKING_LINE chassis=-88.0406,0.608435,-66.033 tool=-87.989,0.491643,-67.7634 tool_velocity=0.0203237,-0.000716738,-0.47169 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.348028 tilt=-0.000798187 speed=0.472089
+PARKING_LINE_FINISHED chassis=-87.9946,0.608418,-67.3579 tool=-87.976,0.491505,-69.089 tool_velocity=0.00106724,4.08453e-05,5.7904e-05 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=10 lift=0.34806 tilt=-0.000698868 speed=-1.66565e-05
+ON_REAL_PARKING_STEEL chassis=-87.9926,0.609201,-67.3563 tool=-87.9734,0.246625,-69.09 tool_velocity=2.31981e-05,0.00236807,0.00190917 coupled=1 generation=1 identity=2443 reachable=1 detach=0 couple=0 refusal=5 lift=0.0977065 tilt=-0.000657288 speed=-0.00560275
+FAIL public fork exchange: actual parked fork support grants derived detach readiness

@@ -242,6 +242,37 @@ void WarehouseForklift::restore(const Checkpoint&cp){
     m.state.applied_drive=0;m.state.applied_brake=1;
     m.vehicle->GetWheel(0)->SetSteerAngle(0);m.vehicle->GetWheel(1)->SetSteerAngle(0);m.vehicle->GetWheel(2)->SetSteerAngle(m.state.steering_rad);
 }
-bool WarehouseForklift::try_couple(){auto&m=*impl_;if(m.pending||m.coupling||!m.aligned()||!m.supported_tool()||!m.mating_clear())return false;m.create_coupling(true);++m.state.coupling_generation;return true;}
-bool WarehouseForklift::try_detach(){auto&m=*impl_;if(m.pending||!m.coupling||!m.supported_tool())return false;const double own_weight=m.kit.body_mass(m.config.fork_frame)*m.world.GetGravity().Length();if(m.wheel_dt>0&&m.coupling->GetTotalLambdaPosition().Length()/m.wheel_dt>own_weight*1.15+100)return false;m.remove_coupling();++m.state.coupling_generation;return true;}
+WarehouseForklift::ToolRefusal WarehouseForklift::couple_refusal() const {
+    const auto &m = *impl_;
+    if (m.pending) return ToolRefusal::StepPending;
+    if (m.coupling) return ToolRefusal::AlreadyCoupled;
+    if (!m.aligned()) return ToolRefusal::HardwareAlignment;
+    if (!m.supported_tool()) return ToolRefusal::Unsupported;
+    if (!m.mating_clear()) return ToolRefusal::MatingObstructed;
+    return ToolRefusal::None;
+}
+WarehouseForklift::ToolRefusal WarehouseForklift::detach_refusal() const {
+    const auto &m = *impl_;
+    if (m.pending) return ToolRefusal::StepPending;
+    if (!m.coupling) return ToolRefusal::AlreadyDetached;
+    if (!m.supported_tool()) return ToolRefusal::Unsupported;
+    const double own_weight = m.kit.body_mass(m.config.fork_frame) * m.world.GetGravity().Length();
+    if (m.wheel_dt > 0 && m.coupling->GetTotalLambdaPosition().Length() / m.wheel_dt > own_weight * 1.15 + 100)
+        return ToolRefusal::JointLoaded;
+    return ToolRefusal::None;
+}
+bool WarehouseForklift::try_couple() {
+    if (couple_refusal() != ToolRefusal::None) return false;
+    auto &m = *impl_;
+    m.create_coupling(true);
+    ++m.state.coupling_generation;
+    return true;
+}
+bool WarehouseForklift::try_detach() {
+    if (detach_refusal() != ToolRefusal::None) return false;
+    auto &m = *impl_;
+    m.remove_coupling();
+    ++m.state.coupling_generation;
+    return true;
+}
 } // namespace scraperx::sim

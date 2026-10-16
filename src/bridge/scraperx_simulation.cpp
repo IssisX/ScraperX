@@ -46,6 +46,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_service_lift_state"), &ScraperXSimulation::get_service_lift_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_input", "drive", "steer", "lift", "tilt", "brake"), &ScraperXSimulation::set_forklift_input);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_forklift_couple"), &ScraperXSimulation::request_forklift_couple);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_forklift_detach"), &ScraperXSimulation::request_forklift_detach);
+    godot::ClassDB::bind_method(godot::D_METHOD("cancel_forklift_tool_request"), &ScraperXSimulation::cancel_forklift_tool_request);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_render_state"), &ScraperXSimulation::get_forklift_render_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_yard_crane_input", "slew", "trolley", "hoist"), &ScraperXSimulation::set_yard_crane_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_attach"), &ScraperXSimulation::request_yard_crane_attach);
@@ -599,6 +602,11 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     out["tilt_torque_nm"] = state.tilt_torque_nm;
     out["energy_cutoff"] = state.energy_cutoff;
     out["coupled"] = state.coupled;
+    out["tool_entity"] = static_cast<std::int64_t>(state.tool_entity);
+    out["coupling_generation"] = static_cast<std::int64_t>(state.coupling_generation);
+    out["can_couple"] = state.can_couple;
+    out["can_detach"] = state.can_detach;
+    out["tool_refusal"] = state.tool_refusal;
     out["applied_drive"] = state.applied_drive;
     out["applied_brake"] = state.applied_brake;
     out["forward_speed_mps"] = state.forward_speed_mps;
@@ -629,6 +637,15 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
 
 bool ScraperXSimulation::set_forklift_input(double drive, double steer, double lift, double tilt, double brake) {
     return simulation_->set_forklift_input(drive, steer, lift, tilt, brake);
+}
+bool ScraperXSimulation::request_forklift_couple() {
+    return simulation_->request_forklift_couple();
+}
+bool ScraperXSimulation::request_forklift_detach() {
+    return simulation_->request_forklift_detach();
+}
+void ScraperXSimulation::cancel_forklift_tool_request() {
+    simulation_->cancel_forklift_tool_request();
 }
 godot::Dictionary ScraperXSimulation::get_forklift_state() const {
     return forklift_dictionary(simulation_->forklift_state());

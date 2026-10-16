@@ -115,11 +115,11 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for check in yard_crane_operator_inputs yard_crane_audio; do
+        for check in yard_crane_operator_inputs yard_crane_audio forklift_tool_inputs; do
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
             --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi
-          grep -E 'YARD_CRANE_OPERATOR_INPUTS_PASS|CRANE_AUDIO failures=0|SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS' "artifacts/${check}.log"
+          grep -E 'YARD_CRANE_OPERATOR_INPUTS_PASS|CRANE_AUDIO failures=0|FORKLIFT_TOOL_INPUTS PASS' "artifacts/${check}.log"
         done
     - name: Check real crane camera and controls in a captured-mouse window
       shell: bash

@@ -135,14 +135,17 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-16T01:44:25.250152+00:00",
-    "published_head": "5acc89afff30352056f747c64ae302d2dfa9df34",
-    "active_behavior": "Publish completed11m freight source to actual GitHub ChatGPT and deliver matching APK",
-    "frontier": "Complete same-original-truck public freight trial9 PASS638.49s, including personnel ascent, all4local releases, ring drive/onward and no-reset reverse retry. Behavior host goal completed/reset to actual GitHub/APK delivery. Newsource build/APK pending; prior5acc APK remains latest published usable build.",
-    "private_build_base": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015",
-    "native_archive_sha256": "4fd56ee22952d1e5299c96d50d6db6c0c1f9eb6d2abca96a3863c411f2bb7630",
-    "jolt_archive_sha256": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
-    "fixed_deadline_utc": "2026-10-16T03:06:52.637362Z"
+    "as_of": "2026-10-16T02:52:17.749150+00:00",
+    "published_head": "83b84b74b3dfc90c79a473f3160ae7952507f5ad",
+    "active_behavior": "Publish accepted public fork exchange and deliver matching Android APK",
+    "completed_goals": [
+      "connected original-truck11m crane freight trial9PASS638.49s",
+      "actual GitHub publication and matching83bAPK214279695 candidate38838367126 artifact12020128011 delivered",
+      "complete real public fork exchange trial5PASS516.33s"
+    ],
+    "frontier": "Complete public native exchange trial5PASS516.33s, original tool generation1\u21922\u21923, actual independent rest/return/raised transport. Godot fine/all-device/Main cancellation and original operator/controlled bridge PASS. Selective commit/push and matching APK active;83b crane APK already delivered.",
+    "fixed_deadline_utc": "2026-10-16T03:06:52.637362Z",
+    "wider_scope_preserved": true
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

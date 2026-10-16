@@ -1,6 +1,6 @@
 # Forklift and crane route system — authorized implementation design
 
-Status: this change implements the COMPLETE original-truck pickup→11m dock→personnel climb→local four-leg release→ring drive/onward/retry route. Public native trial9 PASS638.49s; exact source/archives/trace in evidence/crane-2026-10-15/FREIGHT_ROUTE_ACCEPTANCE.json. Current goal is actual GitHub publication and matching crane APK delivery. Prior published source5acc89a/APK214272837 remains the latest available build until new Actions receipts arrive; it has no crane. Prior affected x864/4 PASS; full native102/105 has only the three preserved ladder/catch failures. Device play unobserved. LIVE_RESUME_20261015.md owns current delivery state. Fixed deadline2026-10-16T03:06:52.637362Z.22m/higher freight, public exchange/claw/clamp and broader backlog remain open.
+Status: COMPLETE original-truck11m freight route, publictrial9PASS638.49s, matching source83b84b7 APK214279695 delivered from candidate38838367126 GREEN/artifact12020128011. Actual camera/input/audio CI PASS, source/native/signer/16K matched; broad native proof and phone play remain separate. Public original-fork exchange is also COMPLETE native trial5PASS516.33s with actual independent rest/return/recouple/raised transport; controls and cancellation PASS. Current goal is matching exchange GitHub/APK delivery.22m/higher, claw/clamp and broader backlog remain open. Fixeddeadline2026-10-16T03:06:52.637362Z. LIVE_RESUME owns current source/process/frontier.
 
 ## First complete player interaction
 

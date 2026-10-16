@@ -42,6 +42,9 @@ struct Quaternion final {
     double w = 1.0;
 };
 
+// One ordered, consumed action; queue acceptance is not mechanical success.
+enum class ForkliftToolRequest : std::uint8_t { None, Couple, Detach };
+
 struct ForkliftSnapshot final {
     struct Wheel final {
         Vector3 position{};
@@ -55,6 +58,13 @@ struct ForkliftSnapshot final {
     bool available = false, controls_reachable = false;
     bool coupled = false, energy_cutoff = false;
     std::uint64_t chassis_entity = 0;
+    std::uint64_t tool_entity = 0, coupling_generation = 0;
+    bool can_couple = false, can_detach = false;
+    // Relevant action: detach while coupled, couple while loose. 0 ready;
+    // 1 unavailable, 2 station, 3 rigged, 4 cancelled, 5 park commands;
+    // 6 pending solve, 7 coupled, 8 loose, 9 alignment/speed, 10 support/speed,
+    // 11 mating obstruction, 12 loaded joint.
+    std::uint8_t tool_refusal = 1;
     Vector3 station_position{};
     Vector3 steering_mount{}, lift_lever_mount{}, tilt_lever_mount{};
     double battery_j = 0, capacity_j = 0;
@@ -788,6 +798,9 @@ public:
     [[nodiscard]] GrappleGunSnapshot render_grapple_gun_state() const noexcept;
     [[nodiscard]] bool set_forklift_input(double drive, double steer, double lift,
                                         double tilt, double brake) noexcept;
+    [[nodiscard]] bool request_forklift_couple() noexcept;
+    [[nodiscard]] bool request_forklift_detach() noexcept;
+    void cancel_forklift_tool_request() noexcept;
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
     [[nodiscard]] ForkliftSnapshot render_forklift_state() const noexcept;
     [[nodiscard]] bool set_yard_crane_input(double slew, double trolley, double hoist) noexcept;
@@ -980,6 +993,7 @@ private:
     double service_lift_input_ = 0.0;
     double supplied_machine_input_ = 0.0;
     std::array<double, 5> forklift_input_{0, 0, 0, 0, 1};
+    ForkliftToolRequest forklift_tool_request_ = ForkliftToolRequest::None;
     std::array<double, 3> yard_crane_input_{};
     bool yard_crane_attach_requested_ = false, yard_crane_detach_requested_ = false;
     double intake_slew_input_ = 0.0;

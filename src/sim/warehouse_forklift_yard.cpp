@@ -49,6 +49,7 @@ WarehouseForkliftYard build_warehouse_forklift_yard(kit::Kit &kit, JPH::RVec3 or
                        WarehouseForkliftYard::kFirstCrateEntity,
                        WarehouseForkliftYard::kSecondCrateEntity,
                        WarehouseForkliftYard::kBeamEntity,
+                       WarehouseForkliftYard::kParkingCradleEntity,
                        WarehouseForkliftYard::kFrameEntity})
         if (kit.body_for_entity(entity).valid())
             throw std::invalid_argument("WarehouseForkliftYard entity already owned");
@@ -217,6 +218,22 @@ WarehouseForkliftYard build_warehouse_forklift_yard(kit::Kit &kit, JPH::RVec3 or
         receiving, origin, identity, 0, .85F);
     yard.stack_center = origin + orientation * JPH::Vec3(0, 0, -17);
     yard.receiver_top = origin + orientation * JPH::Vec3(0, 5.9F, -22);
+    // Two grade-bearing solid steel dunnage rails form a real fork parking
+    // cradle, 12m east of the retained warehouse lane. Top faces support both
+    // blade bottom centers; the tool's COM lies inside their support polygon.
+    // The truck approaches facing bay-local -Z. Relative to the parked tool,
+    // steel occupies X +/- .65m and Z .30..1.50m, ahead of its rear frame and
+    // the carriage. No rear stop obstructs withdrawal or return coupling.
+    yard.parking_center = origin + orientation * JPH::Vec3(12, 0, 0);
+    std::vector<Part> parking_parts;
+    for (const float x : {-.48F, .48F}) {
+        const JPH::Vec3 half(.17F, WarehouseForkliftYard::kParkingCradleTop * .5F, .60F);
+        const float mass = 8 * half.GetX() * half.GetY() * half.GetZ() * steel_density;
+        parking_parts.push_back(box(half,
+            {x, WarehouseForkliftYard::kParkingCradleTop * .5F, 0}, Material::Steel, mass));
+    }
+    yard.parking_cradle = kit.add_body(WarehouseForkliftYard::kParkingCradleEntity,
+        parking_parts, yard.parking_center, identity, 0, .85F);
     return yard;
 }
 std::array<JPH::Vec3, 4> WarehouseForkliftYard::lifting_points() noexcept {

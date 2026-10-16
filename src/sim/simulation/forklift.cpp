@@ -17,6 +17,24 @@ bool Simulation::set_forklift_input(double drive, double steer, double lift,
     return true;
 }
 
+bool Simulation::request_forklift_couple() noexcept {
+    if (!forklift_state().available || forklift_tool_request_ != ForkliftToolRequest::None)
+        return false;
+    forklift_tool_request_ = ForkliftToolRequest::Couple;
+    return true;
+}
+
+bool Simulation::request_forklift_detach() noexcept {
+    if (!forklift_state().available || forklift_tool_request_ != ForkliftToolRequest::None)
+        return false;
+    forklift_tool_request_ = ForkliftToolRequest::Detach;
+    return true;
+}
+
+void Simulation::cancel_forklift_tool_request() noexcept {
+    forklift_tool_request_ = ForkliftToolRequest::None;
+}
+
 ForkliftSnapshot Simulation::forklift_state() const noexcept {
     return physics_world_->forklift_state();
 }
@@ -75,9 +93,38 @@ bool Simulation::PhysicsWorld::forklift_controls_reachable(
         JPH::RRayCast(eye, JPH::Vec3(station - eye)), hit, {}, {}, ignored);
 }
 
+void Simulation::PhysicsWorld::clear_forklift_commands() noexcept {
+    forklift_exchange_input_ = {0, 0, 0, 0, 1};
+    forklift_exchange_cancelled_ = false;
+}
+
+std::uint8_t Simulation::PhysicsWorld::forklift_exchange_refusal(
+        const JPH::BodyInterface &bodies) const noexcept {
+    if (!warehouse_forklift_) return 1;
+    if (!forklift_controls_reachable(bodies)) return 2;
+    if (yard_crane_ && yard_crane_->state().attached_mask != 0) return 3;
+    if (forklift_exchange_cancelled_) return 4;
+    if (forklift_exchange_input_[0] != 0 || forklift_exchange_input_[2] != 0 ||
+        forklift_exchange_input_[3] != 0 || forklift_exchange_input_[4] != 1) return 5;
+    return 0;
+}
+
 void Simulation::PhysicsWorld::prepare_forklift(
         const StepCommands &commands, const JPH::BodyInterface &bodies) {
+    forklift_exchange_input_ = commands.forklift_input;
+    forklift_exchange_cancelled_ = commands.jump_requested || commands.release_requested ||
+        commands.cancel_jump_requested || commands.set_down_requested || commands.sling_drop ||
+        ordinary_jump_ticks_left_ != 0;
     if (!warehouse_forklift_) return;
+    // Consume at the serial native boundary before pre_step marks a pending
+    // solve. A rejected request expires this tick and can never retry itself.
+    if (commands.forklift_tool_request != ForkliftToolRequest::None &&
+        forklift_exchange_refusal(bodies) == 0) {
+        if (commands.forklift_tool_request == ForkliftToolRequest::Couple)
+            warehouse_forklift_->try_couple();
+        else if (commands.forklift_tool_request == ForkliftToolRequest::Detach)
+            warehouse_forklift_->try_detach();
+    }
     WarehouseForklift::Command demand;
     // Any fitted transport leg belongs to the crane. Keep the truck parked
     // while rigged, including partial rigging on the ground.
@@ -112,6 +159,17 @@ void Simulation::PhysicsWorld::refresh_forklift_snapshot(const JPH::BodyInterfac
     result.battery_j = state.battery_j;
     result.capacity_j = warehouse_forklift_->config().battery_capacity_j;
     result.coupled = state.coupled;
+    result.tool_entity = WarehouseForkliftYard::kForkEntity;
+    result.coupling_generation = state.coupling_generation;
+    result.tool_refusal = forklift_exchange_refusal(bodies);
+    if (result.tool_refusal == 0) {
+        // Both readiness and operations ask the same native predicates.
+        const auto refusal = state.coupled ? warehouse_forklift_->detach_refusal()
+                                           : warehouse_forklift_->couple_refusal();
+        result.tool_refusal = static_cast<std::uint8_t>(refusal);
+        result.can_couple = !state.coupled && result.tool_refusal == 0;
+        result.can_detach = state.coupled && result.tool_refusal == 0;
+    }
     result.energy_cutoff = state.energy_cutoff;
     result.lift_position_m = state.lift_position_m;
     result.tilt_angle_rad = state.tilt_angle_rad;

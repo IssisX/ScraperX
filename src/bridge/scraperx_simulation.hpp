@@ -47,6 +47,9 @@ public:
     [[nodiscard]] bool restart_service_lift_attempt();
     [[nodiscard]] godot::Dictionary get_service_lift_state() const;
     [[nodiscard]] bool set_forklift_input(double drive, double steer, double lift, double tilt, double brake);
+    [[nodiscard]] bool request_forklift_couple();
+    [[nodiscard]] bool request_forklift_detach();
+    void cancel_forklift_tool_request();
     [[nodiscard]] godot::Dictionary get_forklift_state() const;
     [[nodiscard]] godot::Dictionary get_forklift_render_state() const;
     [[nodiscard]] bool set_yard_crane_input(double slew, double trolley, double hoist);

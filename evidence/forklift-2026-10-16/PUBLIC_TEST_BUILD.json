@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++17",
+    "-pthread",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests.cpp",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests"
+  ],
+  "exit": 0,
+  "test_sha256": "17cc9c72c70b89259562354a0a47aa0b9d63d8052ccca52cbcce4666518d750d"
+}

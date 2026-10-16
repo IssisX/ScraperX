@@ -28,6 +28,7 @@ bool Simulation::request_slingshot_action() noexcept {
 
 bool Simulation::request_slingshot_drop() noexcept {
     jump_cancel_requested_ = true;
+    forklift_tool_request_ = ForkliftToolRequest::None;
     if (!slingshot_state().seated && !slingshot_state().recovering) return false;
     sling_drop_ = true;
     return true;
@@ -98,12 +99,14 @@ std::vector<Vector3> Simulation::slingshot_prediction() const {
 
 bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     if (!physics_world_->debug_restart_at(centre)) return false;
+    physics_world_->clear_forklift_commands();
     move_input_x_ = move_input_z_ = 0.0;
     jump_requested_ = jump_cancel_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     forklift_input_ = {0, 0, 0, 0, 1};
+    forklift_tool_request_ = ForkliftToolRequest::None;
     yard_crane_input_ = {};
     yard_crane_attach_requested_ = yard_crane_detach_requested_ = false;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
@@ -143,6 +146,7 @@ bool Simulation::restart_checkpoint() noexcept {
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     forklift_input_ = {0, 0, 0, 0, 1};
+    forklift_tool_request_ = ForkliftToolRequest::None;
     yard_crane_input_ = {};
     yard_crane_attach_requested_ = yard_crane_detach_requested_ = false;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
@@ -196,6 +200,7 @@ bool Simulation::set_facing(const double world_x, const double world_z) noexcept
 }
 
 bool Simulation::request_jump() noexcept {
+    forklift_tool_request_ = ForkliftToolRequest::None;
     jump_requested_ = true;
     return true;
 }
@@ -215,6 +220,7 @@ void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
 
 bool Simulation::request_release() noexcept {
     jump_cancel_requested_ = true;
+    forklift_tool_request_ = ForkliftToolRequest::None;
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
                          snapshot_.traversal_state == TraversalState::Climbing ||
                          snapshot_.traversal_state == TraversalState::Lowering;
@@ -249,6 +255,7 @@ bool Simulation::request_pick_up() noexcept {
 
 bool Simulation::request_set_down() noexcept {
     jump_cancel_requested_ = true;
+    forklift_tool_request_ = ForkliftToolRequest::None;
     set_down_requested_ = true;
     return true;
 }
@@ -601,6 +608,8 @@ void Simulation::step_fixed() noexcept {
     commands.service_lift_input = service_lift_input_;
     commands.supplied_machine_input = supplied_machine_input_;
     commands.forklift_input = forklift_input_;
+    commands.forklift_tool_request = forklift_tool_request_;
+    forklift_tool_request_ = ForkliftToolRequest::None;
     commands.yard_crane_input = yard_crane_input_;
     commands.yard_crane_attach = yard_crane_attach_requested_;
     commands.yard_crane_detach = yard_crane_detach_requested_;
@@ -650,6 +659,8 @@ void Simulation::step_fixed() noexcept {
 
     snapshot_ = physics_world_->state();
     if (snapshot_.death_count != previous_death_count) {
+        forklift_tool_request_ = ForkliftToolRequest::None;
+        forklift_input_ = {0, 0, 0, 0, 1};
         capture_render_history();
     } else if (snapshot_.player_crouched != previous_crouched) {
         // Capsule resizing shifts its centre while preserving the soles. Rebase

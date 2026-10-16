@@ -160,6 +160,7 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 }
 
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+    clear_forklift_commands();
     if (grappling_gun_) grappling_gun_->clear_transients();
     grapple_equipped_ = false;
     clear_traversal();

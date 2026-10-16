@@ -1,0 +1,101 @@
+{
+  "parent": "83b84b74b3dfc90c79a473f3160ae7952507f5ad",
+  "files": {
+    ".github/workflows/chatgpt-apk-candidate.yml": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/.github/workflows/chatgpt-apk-candidate.yml",
+      "sha256": "9e2e3fcd96bafcf0f14f2149ff38039d9a892ea8848f5c259c8b9bbea8887683"
+    },
+    "CMakeLists.txt": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/CMakeLists.txt",
+      "sha256": "16b52480d244cf52cf0206f6adcb224327dbd085612d71313f0aca54ca0ae6a6"
+    },
+    "ci/native-repair-request.json": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/native-repair-request.json",
+      "sha256": "a09311cb3d5c1f354677535bf5a2b0964db6e825b03b1b08d4db87e5fafe41ef"
+    },
+    "ci/run_native_repair.py": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/run_native_repair.py",
+      "sha256": "7489b80a2875f3c788a4fc7826ce82ca2d8749912478710c79864602d911204a"
+    },
+    "godot/presentation/main.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/godot/presentation/main.gd",
+      "sha256": "7d9e0d7a65d121a9267e96aa839276de8600ab995dd241853a36fd099003dfa4"
+    },
+    "godot/presentation/ui/forklift_controls.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/ui/forklift_controls.gd",
+      "sha256": "c07dfc2cd1488609d61c6239398a04992eb0a9f54bb8c1480dafed9cf7fe06ea"
+    },
+    "godot/presentation/ui/forklift_panel.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/ui/forklift_panel.gd",
+      "sha256": "87d99d9af6fef3bff02e17f44f6e90460f50f7f090a5c006b2cecc0198291dac"
+    },
+    "godot/presentation/ui/input_router.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/godot/presentation/ui/input_router.gd",
+      "sha256": "a96cf33f6c33b52cb46c7e1fdc5fa1e1fee0099ddffe78990cbbd06d6b499002"
+    },
+    "godot/presentation/ui/touch_controls.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/godot/presentation/ui/touch_controls.gd",
+      "sha256": "bf769a504c7d4eae287286755396b3502e32e96a5d6eeb09992b383609abe1b2"
+    },
+    "godot/tests/forklift_tool_inputs_test.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/tests/forklift_tool_inputs_test.gd",
+      "sha256": "28351188c44f546e8d0e9d3028de42c0ce504ae831d56462c2469dd3d9f15693"
+    },
+    "src/bridge/scraperx_simulation.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/bridge/scraperx_simulation.cpp",
+      "sha256": "3071f6686536bd768e9f5f26f949b2eaa17a15f250e7a3decc8c686f558fffd5"
+    },
+    "src/bridge/scraperx_simulation.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/bridge/scraperx_simulation.hpp",
+      "sha256": "64be3322020154cbc4218ac38ae4c09c5b9c1d0051ee1b4c50ab711f1a8edf3d"
+    },
+    "src/sim/simulation.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation.cpp",
+      "sha256": "ec15707124973ec22ea63694728bd168251fa88b32a4d3ac9be2e19825f753a4"
+    },
+    "src/sim/simulation.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation.hpp",
+      "sha256": "351fd89ce28624118973f5a1349bee33a2ecbdecce39738f32ab76181cdc6258"
+    },
+    "src/sim/simulation/checkpoint.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation/checkpoint.cpp",
+      "sha256": "c0d6999d07cd241d442022ef0e5f60ddffad16849f21fda3e316a9c75a13313b"
+    },
+    "src/sim/simulation/forklift.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation/forklift.cpp",
+      "sha256": "6550eb52ad001eb3aba49b0441d58bf81d307188120cf2a395172db0000afd5c"
+    },
+    "src/sim/simulation/world.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation/world.hpp",
+      "sha256": "832ca59ffe32761a399e3a537f2ac45a1143ab40431bfc05a5f2697c9de95d58"
+    },
+    "src/sim/warehouse_forklift.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift.cpp",
+      "sha256": "bd812d6fa3892b4edd45bce9df24be9749abcf908f4df0794764f02ec0a9026f"
+    },
+    "src/sim/warehouse_forklift.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift.hpp",
+      "sha256": "16a7e62d838aca99f72c25ef87feb58cce9e5cf646ab509d63331a0fc0ccb27b"
+    },
+    "src/sim/warehouse_forklift_yard.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift_yard.cpp",
+      "sha256": "49a790323e5f13f3ebd155aa9001353a8606cd76025371ae0279dc27e88c4374"
+    },
+    "src/sim/warehouse_forklift_yard.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift_yard.hpp",
+      "sha256": "87461af9496a1b47670528cc1983eb895dc82f7b113ae89dfd7da82e3dd45b0e"
+    },
+    "tests/forklift_public_driver.hpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/tests/forklift_public_driver.hpp",
+      "sha256": "8331a9a97e3dad39bf363a63dbb5557415517f5ed8a296d137c758b4462a205d"
+    },
+    "tests/forklift_tool_exchange_tests.cpp": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/forklift_tool_exchange_tests.cpp",
+      "sha256": "17cc9c72c70b89259562354a0a47aa0b9d63d8052ccca52cbcce4666518d750d"
+    },
+    "godot/tests/forklift_controls_test.gd": {
+      "selected_from": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/tests/forklift_controls_test.gd",
+      "sha256": "38a942ef159342763cd73bb40d1fc4e03cc37a0075eabb8d9c1caef6d542b728"
+    }
+  }
+}

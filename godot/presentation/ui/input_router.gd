@@ -208,6 +208,7 @@ func _handle_key(key: InputEventKey) -> void:
 			KEY_N: _verbs.append(&"forklift_neutral")
 			KEY_R: _verbs.append(&"forklift_reverse")
 			KEY_P: _verbs.append(&"forklift_park")
+			KEY_G: _verbs.append(&"forklift_tool")
 			KEY_E: _verbs.append(&"action")
 			KEY_Q: _verbs.append(&"drop")
 			KEY_ESCAPE: _verbs.append(&"pause")
@@ -268,7 +269,7 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			JOY_BUTTON_X: _verbs.append(&"action")
 			JOY_BUTTON_B: _verbs.append(&"back")
 			JOY_BUTTON_START: _verbs.append(&"pause")
-			JOY_BUTTON_BACK: _verbs.append(&"telemetry")
+			JOY_BUTTON_BACK: _verbs.append(&"forklift_tool")
 		return
 	match button.button_index:
 		JOY_BUTTON_A:

@@ -12,6 +12,9 @@ class ReceiptBridge extends RefCounted:
 	var reachable := true
 	var input: Array = []
 	var release_calls := 0
+	var tool_cancel_calls := 0
+	func cancel_forklift_tool_request() -> void:
+		tool_cancel_calls += 1
 	func get_forklift_state() -> Dictionary:
 		return {"available": true, "controls_reachable": reachable}
 	func set_forklift_input(drive: float, steer: float, lift: float, tilt: float, brake: float) -> bool:
@@ -58,6 +61,7 @@ func _run() -> void:
 	bridge.reachable = true
 	main._dispatch([&"drop"], 1.0 / 90.0)
 	check(main._operating == &"" and bridge.input == [0.0, 0.0, 0.0, 0.0, 1.0], "leaving operation brakes immediately")
+	check(bridge.tool_cancel_calls == 1, "leaving operation cancels one queued tool intent")
 	check(bridge.release_calls == 0, "forklift Q leaves controls without requesting a ledge drop")
 	main.free()
 	main_router.queue_free()

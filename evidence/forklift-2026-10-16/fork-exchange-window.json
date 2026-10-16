@@ -1,0 +1,130 @@
+{
+  "objective": "Real same-tool public parking support, local detach, independent withdrawal/rest, slow return, recouple and lift/transport with refusal and cancellation",
+  "budget_seconds": 1200.0,
+  "started": 1792118505.6074774,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "owner-coupler-guards",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/warehouse_forklift_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift.hpp": "16a7e62d838aca99f72c25ef87feb58cce9e5cf646ab509d63331a0fc0ccb27b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift.cpp": "bd812d6fa3892b4edd45bce9df24be9749abcf908f4df0794764f02ec0a9026f",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/tests/warehouse_forklift_tests.cpp": "50bb257353b3d2fcbb32dccfd270933fcc10edf4959cdfe13233475d58376551",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/warehouse_forklift_tests": "c7eb2987b178feba7e7e4b63d6d6524b2469ad36c18c079da488248bd51b0426"
+      },
+      "started": 1792117054.1224706,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-1.log",
+      "exit": 0,
+      "finished": 1792117057.0084102
+    },
+    {
+      "stage": "crane-world-appended-body-checkpoint",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/yard_crane_world_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift_yard.cpp": "49a790323e5f13f3ebd155aa9001353a8606cd76025371ae0279dc27e88c4374",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation/checkpoint.cpp": "c0d6999d07cd241d442022ef0e5f60ddffad16849f21fda3e316a9c75a13313b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/tests/yard_crane_world_tests.cpp": "43428532ffd2fa3b5ee0738b641b9a60acb99353345aff64b267a7c8c076c275",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/yard_crane_world_tests": "fafe1097f5103c2dd408129ca5399397832b254882e2a02cadb263b19d95a56c"
+      },
+      "started": 1792117057.240739,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-2.log",
+      "exit": 0,
+      "finished": 1792117102.7091787
+    },
+    {
+      "stage": "public-original-fork-exchange",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/forklift_tool_exchange_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/tests/forklift_tool_exchange_tests.cpp": "6d797e091a2a8e58fbffed235a61c692b14603ebd33c5b429d7d456874782185",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/tests/forklift_public_driver.hpp": "8331a9a97e3dad39bf363a63dbb5557415517f5ed8a296d137c758b4462a205d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/simulation/forklift.cpp": "6550eb52ad001eb3aba49b0441d58bf81d307188120cf2a395172db0000afd5c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/source-v13/src/sim/warehouse_forklift_yard.cpp": "49a790323e5f13f3ebd155aa9001353a8606cd76025371ae0279dc27e88c4374",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/forklift_tool_exchange_tests": "53f116ee080bf4b39e920aab99dc5c6fe99fb918c02eb361fd6057ac998e88e5"
+      },
+      "started": 1792117102.8733683,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-3.log",
+      "exit": 1,
+      "finished": 1792117334.3756976
+    },
+    {
+      "stage": "public-exchange-contact-and-load-feedback",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-contact-feedback/forklift_tool_exchange_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-contact-feedback/forklift_tool_exchange_tests.cpp": "2e28a42abcea175cc1f4f776ad6c64eb4f6fa1268cd2630f3bf5002f601da2b2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-contact-feedback/forklift_public_driver.hpp": "8331a9a97e3dad39bf363a63dbb5557415517f5ed8a296d137c758b4462a205d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-contact-feedback/forklift_tool_exchange_tests": "ff8c80f70e5a4a0c4b9eb2723d9255a0128dfed7e9684b6bd2d4f8c233de8e8a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792117585.7837539,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-4.log",
+      "exit": 1,
+      "finished": 1792117851.8076136
+    },
+    {
+      "stage": "public-exchange-world-level-before-contact",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests.cpp": "17cc9c72c70b89259562354a0a47aa0b9d63d8052ccca52cbcce4666518d750d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_public_driver.hpp": "8331a9a97e3dad39bf363a63dbb5557415517f5ed8a296d137c758b4462a205d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/fork-exchange-world-level/forklift_tool_exchange_tests": "8337c9108b2ad29c5eb0631bb2aea9404a7debaf1c476ed6172a2933f91dae46",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libscraperx_sim.a": "3069fcae9ac93c2addde06e1d1e20c366c0891fcbd9b60713e9e9083f00bfd69",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/build-v13/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792118505.9881804,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/fork-exchange-window.trial-5.log",
+      "exit": 0,
+      "finished": 1792119022.3196962
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792118505.6071548,
+      "cause": "Actual chassis pitch leaves mast-relative-zero blades tilted: actual static edge contact does not pass material-point support; production-owner fixture demonstrated real detach after finite world leveling before lowering.",
+      "change": "Public test driver levels real blades using finite tilt before contact, uses fine native lift with world-axis tilt feedback and neutral readiness, retains all unchanged actual support/capture/load gates.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/forklift-2026-10-16/BLADE_CONTACT_DIAGNOSIS.md",
+      "evidence_sha256": "a8e2cd86fbd15a13c6a63786a9dcc787ad734f36a350a9903a216f4c142a248e",
+      "previous_failures": 2,
+      "previous_started": 1792117053.872846,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}
