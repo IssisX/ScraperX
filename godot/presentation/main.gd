@@ -49,6 +49,8 @@ const LandingCameraResponse := preload("res://presentation/landing_camera_respon
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
+const PerformanceReport := preload("res://presentation/ui/performance_report.gd")
+const BuildInfo := preload("res://presentation/ui/build_info.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const KitView := preload("res://presentation/kit_view.gd")
@@ -217,6 +219,7 @@ var _force_touch := false
 var _uitest_scenario := ""
 var _regression_scene := false
 var _paused := false
+var _performance_report := PerformanceReport.new()
 var _telemetry_on := false
 var _ctx := {}
 # Pendant "operate" mode is presentation state only: which controls are on
@@ -499,11 +502,17 @@ func _process(delta: float) -> void:
 		and int(balance["station"]) != 0 else 0.0)
 
 	var time_scale := float(_slingshot_view.get_simulation_scale()) if _slingshot_view != null else 1.0
+	var native_started_usec := Time.get_ticks_usec()
 	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA) * time_scale))
+	var native_wall_usec := Time.get_ticks_usec() - native_started_usec
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
 
+	_performance_report.record_frame(delta, native_wall_usec, steps_advanced,
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+		float(_native.get_player_position().y), rad_to_deg(_pitch))
 	_render_snapshot(delta)
 	_ctx = _read_context()
 	# Attachment ownership can end natively without a presentation release verb.
@@ -739,6 +748,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_performance_report.set_paused(true)
 	_native.cancel_forklift_tool_request()
 	_zero_yard_crane_input()
 	_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
@@ -763,6 +773,8 @@ func _open_pause(from_system: bool = false) -> void:
 		and Vector2(position.x + 38.0, position.z + 158.0).length() < 25.0
 	_pause_menu.set_restart_context(position, bool(_native.get_service_lift_state()["retry_available"]),
 		in_reclaim_bay and bool(_native.can_restart_gravity_reclaim_attempt()))
+	_pause_menu.performance_report = _performance_report.summary()
+	_pause_menu.performance_report_text = _performance_report.copy_text(BuildInfo.read_identity())
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
@@ -837,6 +849,7 @@ func _resume() -> void:
 	_settings.save_to_disk()
 	get_tree().paused = false
 	_paused = false
+	_performance_report.set_paused(false)
 	_router.clear_held()
 	_router.gameplay_active = true
 	if _router.device == InputRouter.Device.KEYBOARD_MOUSE and _router.capture_mouse \

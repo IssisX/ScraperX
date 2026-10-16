@@ -30,6 +30,10 @@ const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO, 
 var settings: SettingsStore
 var family := UiStyle.Family.KEYBOARD
 var summary := ""
+var performance_report: Dictionary = {}
+var performance_report_text := ""
+var _performance_label: Label
+var _copy_performance_button: Button
 
 var _u := 1.0
 var _built_for := Vector2.ZERO
@@ -83,6 +87,7 @@ func _resize_open_menu() -> void:
 	var selected := _page
 	_build(get_viewport_rect().size)
 	_summary_label.text = summary
+	_refresh_performance_report()
 	_show_page(selected)
 
 
@@ -93,6 +98,7 @@ func open(_current_family: int, current_summary: String) -> void:
 	if viewport_size != _built_for:
 		_build(viewport_size)
 	_summary_label.text = summary
+	_refresh_performance_report()
 	_controls_family = _canonical(family)
 	_show_page(PAGE_NONE)
 	visible = true
@@ -277,6 +283,10 @@ func _build(viewport_size: Vector2) -> void:
 	build_info.name = "BuildInfo"
 	build_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(build_info)
+	_performance_label = _label("", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	_performance_label.name = "PerformanceSummary"
+	_performance_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_performance_label)
 	column.add_child(_label("PAUSED", 88.0, UiStyle.PAPER, UiStyle.font_heavy()))
 	_summary_label = _label(summary, 22.0, UiStyle.SAFE, UiStyle.font_label())
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -623,6 +633,11 @@ func _build_graphics_page() -> void:
 	_choice_row("VSYNC", &"vsync", SettingsStore.VSYNC_NAMES)
 	_choice_row("FRAME RATE CAP", &"fps_cap", SettingsStore.FPS_CAP_NAMES)
 	_toggle_row("SHOW FPS", &"show_fps")
+	_copy_performance_button = _side_button("Copy performance report")
+	_copy_performance_button.name = "CopyPerformanceReport"
+	_copy_performance_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_copy_performance_button.pressed.connect(_copy_performance_report)
+	_building.add_child(_copy_performance_button)
 	_end_page(PAGE_GRAPHICS, first,
 		"Lower render scale, shadows and detail first if the device runs hot. Detail / LOD reduces distant decoration; physics stays active. Draw distance controls the rendered horizon.")
 
@@ -895,3 +910,21 @@ func _draw_footer() -> void:
 		x += 12.0 * _u
 		UiStyle.text(_footer, font, pair[1], Vector2(x, baseline), size, UiStyle.PAPER_DIM)
 		x += UiStyle.text_width(font, pair[1], size) + 34.0 * _u
+
+
+func _refresh_performance_report() -> void:
+	if is_instance_valid(_performance_label):
+		var count := int(performance_report.get("sample_count", 0))
+		_performance_label.text = ("%.1f FPS  /  Frame p95 %.1f ms\nNative wall p95 %.1f ms  /  Draws %d" % [
+			float(performance_report.get("fps", 0.0)),
+			float(performance_report.get("frame_ms_p95", 0.0)),
+			float(performance_report.get("native_wall_ms_p95", 0.0)),
+			int(performance_report.get("draw_calls_last", 0))]
+			if count > 0 else "Performance: waiting for foreground frames")
+	if is_instance_valid(_copy_performance_button):
+		_copy_performance_button.disabled = performance_report_text.is_empty()
+
+
+func _copy_performance_report() -> void:
+	if not performance_report_text.is_empty():
+		DisplayServer.clipboard_set(performance_report_text)

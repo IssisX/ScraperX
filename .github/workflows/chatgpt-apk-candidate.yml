@@ -119,7 +119,7 @@ jobs:
       run: |
         set -euo pipefail
         python3 -m unittest discover -s ci -p test_build_info.py
-        for check in build_info freight_yard_arrival catch_net_visibility static_shadow_batch freight_materials; do
+        for check in build_info performance_report performance_report_main freight_yard_arrival catch_net_visibility static_shadow_batch freight_materials; do
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
             --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi
