@@ -2,6 +2,9 @@ extends RefCounted
 
 # Alpine backdrop and vegetation, built into the existing presentation hierarchy.
 const WorldGeometry := preload("res://presentation/world_geometry.gd")
+const AlpinePeakMesh := preload("res://presentation/alpine_peak_mesh.gd")
+var _peak_specs: Array = []
+var _native_snow_caps: Array = []
 # The yard sits in an alpine basin, not on a slab in a void. The valley floor
 # runs out under the rim, 0.3 m below grade (a step the feet walk, down and
 # back up). The rim is a closed ring of steep ridges: 44 cones on an 1100 m
@@ -22,12 +25,8 @@ func _init(geometry: WorldGeometry) -> void:
 
 
 func build_backdrop() -> void:
-	# Non-collidable alpine backdrop (identity doc item 2). Peaks are cheap
-	# cones -- a CylinderMesh with top_radius 0 -- with a lighter snow-cap cone
-	# nested at the tip. Distance fade comes from the environment's aerial
-	# perspective fog, not from manual colour tuning per peak.
-	# Kept dark and desaturated: these are distant backdrop mass, and at the
-	# old values they read as bright white blobs competing with the tower.
+	# Original cone nodes keep exact collision/export identity. Shared carved
+	# MultiMeshes replace only their rendering, including slope-based snow.
 	var rock := _geometry.material(Color("2f353d"), 0.04, 0.92)
 	var rock_far := _geometry.material(Color("414a55"), 0.02, 0.95)
 	var snow := _geometry.material(Color("b9c2cc"), 0.0, 0.78)
@@ -42,8 +41,8 @@ func build_backdrop() -> void:
 		var base: Vector3 = near_peaks[index]
 		var peak_height: float = near_sizes[index]
 		var radius := peak_height * 0.62
-		_geometry.add_cone("MountainPeak", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock)
-		_geometry.add_cone("MountainSnowCap", radius * 0.34, peak_height * 0.3,
+		_add_peak("MountainPeak", radius, peak_height, base, rock, index, 0.59)
+		_export_only_cone("MountainSnowCap", radius * 0.34, peak_height * 0.3,
 			base + Vector3(0.0, peak_height * 0.92, 0.0), snow)
 
 	var far_peaks := [
@@ -53,13 +52,33 @@ func build_backdrop() -> void:
 	for base in far_peaks:
 		var peak_height := 900.0
 		var radius := peak_height * 0.7
-		_geometry.add_cone("MountainRidgeFar", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock_far)
-		_geometry.add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
+		_add_peak("MountainRidgeFar", radius, peak_height, base, rock_far, _peak_specs.size(), 0.53)
+		_export_only_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
 			base + Vector3(0.0, peak_height * 0.9, 0.0), snow)
 
 	_build_waterfall(Vector3(200.0, 0.0, -560.0))
 	_build_foothill_forest()
 	_build_basin()
+	AlpinePeakMesh.draw(_geometry.presentation_root, _peak_specs)
+	AlpinePeakMesh.draw_near_snow(_geometry.presentation_root, _native_snow_caps)
+
+
+func _export_only_cone(part: String, radius: float, height: float, at: Vector3,
+		finish: Material) -> MeshInstance3D:
+	var source := _geometry.add_cone(part, radius, height, at, finish)
+	# Same representation policy as StaticWorldBatch. Export ignores layers.
+	if part in ["MountainSnowCap", "MountainRidgeFarSnow", "RimRidgeSnow"]:
+		_native_snow_caps.append({"radius": radius, "height": height, "centre": at})
+	source.layers = 0
+	source.set_meta(&"alpine_render_replaced", true)
+	return source
+
+
+func _add_peak(part: String, radius: float, height: float, foot: Vector3,
+		finish: StandardMaterial3D, variant: int, snowline: float) -> void:
+	_export_only_cone(part, radius, height, foot + Vector3(0.0, height * 0.5, 0.0), finish)
+	_peak_specs.append({"radius": radius, "height": height, "foot": foot,
+		"rock": finish.albedo_color, "variant": variant, "snowline": snowline})
 
 
 func _build_basin() -> void:
@@ -85,10 +104,10 @@ func _build_basin() -> void:
 		var height := rng.randf_range(280.0, 470.0)
 		var radius := height * 0.62
 		var base := BASIN_CENTER + Vector3(sin(angle) * reach, 0.0, cos(angle) * reach)
-		_geometry.add_cone("RimRidge", radius, height, base + Vector3(0.0, height * 0.5, 0.0),
-			rock if index % 3 != 0 else rock_warm)
+		_add_peak("RimRidge", radius, height, base,
+			rock if index % 3 != 0 else rock_warm, index + 10, 0.62 if height > 400.0 else 0.79)
 		if height > 400.0:
-			_geometry.add_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
+			_export_only_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
 				base + Vector3(0.0, height * 0.93, 0.0), snow)
 
 	# Conifers scattered over the meadow, clear of the yard and the tower.

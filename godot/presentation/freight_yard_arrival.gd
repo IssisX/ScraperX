@@ -54,6 +54,27 @@ func build() -> Array[SpotLight3D]:
 			_box("YardStock", Vector3(1.7, 0.20, 4.4), Vector3(x, 0.34 + layer * 0.23, -48), oxide)
 		for dz in [-2.5, 2.5]:
 			_box("YardStructure", Vector3(0.22, 1.1, 0.22), Vector3(x + 1.3, 0.55, -48 + dz), yellow)
+	# Stock streets frame the opening at human scale while the working middle
+	# remains open. The west stack is outside the truck/cargo lane; the east
+	# stores stop north of the crane's 35m operating radius (pivot Z=-150).
+	_container(Vector3(-112, 0, -72), 12.2, oxide, steel)
+	_container(Vector3(-112, 2.6, -72), 12.2, blue, steel)
+	_container(Vector3(-75, 0, -69), 12.2, blue, steel)
+	_container(Vector3(-75, 0, -94), 6.1, oxide, steel)
+	_beam_stock(Vector3(-111, 0, -94), steel, oxide, timber)
+	_plate_stock(Vector3(-75, 0, -108), steel, oxide, timber)
+	_sign("02 / STEEL STORE", Vector3(-112, 3.95, -65.78), 0.003, Color("e0d6b5"))
+	_sign("RECEIVING / 03", Vector3(-75, 1.95, -62.78), 0.0025, Color("e0d6b5"))
+	_sign("RIGGING STORE", Vector3(-75, 1.95, -90.83), 0.0022, Color("e0d6b5"))
+	# Flush paint reserves a 4m walking/service strip on the east side of
+	# the open truck aisle, then ends at the existing crane approach pad.
+	# Paint does not pretend to supply collision or native route authority.
+	for z in range(-58, -138, -4):
+		for x in [-85.0, -81.0]:
+			_box("YardPaint", Vector3(0.10, 0.003, 2.4), Vector3(x, 0.005, z), yellow)
+	for z in [-80.0, -104.0, -128.0]:
+		for side in [-1.0, 1.0]:
+			_box("YardPaint", Vector3(0.12, 0.003, 1.0), Vector3(-83 + side * 0.26, 0.008, z), white, side * 0.55)
 	# Raised hoses/handrails are real steel; no decorative invisible obstacles.
 	_box("YardStructure", Vector3(0.16, 1.1, 4.6), Vector3(-77.8, 0.55, -35), steel)
 	for z in [-37.1, -32.9]:
@@ -115,3 +136,51 @@ func _sign(text: String, at: Vector3, pixel: float, color: Color, floor_text := 
 	if floor_text:
 		sign.rotation.x = -PI / 2
 	_root.add_child(sign)
+
+# Closed freight containers, built from actual skin, corner posts, edge
+# rails, corrugation and locking bars. Every visible rib exports as stock;
+# roofs have bearing along the rails and the stacked unit bears at corners.
+func _container(at: Vector3, length: float, paint: Material, steel: Material) -> void:
+	for y in [0.06, 2.54]:
+		_box("YardStock", Vector3(2.44, 0.12, length), at + Vector3(0, y, 0), paint)
+	for side in [-1.0, 1.0]:
+		_box("YardStock", Vector3(0.08, 2.36, length), at + Vector3(side * 1.18, 1.3, 0), paint)
+		for y in [0.10, 2.50]:
+			_box("YardStructure", Vector3(0.14, 0.20, length), at + Vector3(side * 1.22, y, 0), steel)
+		for end in [-1.0, 1.0]:
+			_box("YardStructure", Vector3(0.14, 2.6, 0.14), at + Vector3(side * 1.22, 1.3, end * (length * 0.5 - 0.07)), steel)
+		# Widely spaced real pressed ribs provide depth without new textures.
+		var ribs := int(length / 0.75)
+		for rib in ribs:
+			var z := -length * 0.5 + 0.45 + rib * 0.75
+			_box("YardStock", Vector3(0.06, 2.16, 0.08), at + Vector3(side * 1.25, 1.3, z), paint)
+	for end in [-1.0, 1.0]:
+		_box("YardStock", Vector3(2.30, 2.36, 0.08), at + Vector3(0, 1.3, end * (length * 0.5 - 0.04)), paint)
+		for y in [0.10, 2.50]:
+			_box("YardStructure", Vector3(2.44, 0.20, 0.14), at + Vector3(0, y, end * (length * 0.5 - 0.07)), steel)
+	# Twin door seam and four locking bars face the arrival. Handles are
+	# actual short bars joined to their rods, with no hovering sign backing.
+	_box("YardStructure", Vector3(0.035, 2.25, 0.035), at + Vector3(0, 1.3, length * 0.5 + 0.015), steel)
+	for x in [-0.88, -0.34, 0.34, 0.88]:
+		_box("YardStructure", Vector3(0.045, 2.2, 0.045), at + Vector3(x, 1.3, length * 0.5 + 0.02), steel)
+		_box("YardStructure", Vector3(0.18, 0.05, 0.05), at + Vector3(x + 0.065, 0.9, length * 0.5 + 0.04), steel)
+
+# Nine recognizable I beams on three tiers of cross-sleepers. Each next
+# tier bears on the preceding top flange; no floating decorative bundles.
+func _beam_stock(at: Vector3, steel: Material, oxide: Material, timber: Material) -> void:
+	for layer in 3:
+		var base := layer * 0.46
+		for z in [-2.9, 2.9]:
+			_box("YardStock", Vector3(2.8, 0.14, 0.24), at + Vector3(0, base + 0.07, z), timber)
+		for column in 3:
+			var x := (column - 1) * 0.8
+			var surface := oxide if column == 1 else steel
+			for y in [0.17, 0.43]:
+				_box("YardStock", Vector3(0.38, 0.06, 8.0), at + Vector3(x, base + y, 0), surface)
+			_box("YardStock", Vector3(0.06, 0.20, 8.0), at + Vector3(x, base + 0.30, 0), surface)
+
+func _plate_stock(at: Vector3, steel: Material, oxide: Material, timber: Material) -> void:
+	for z in [-2.1, 2.1]:
+		_box("YardStock", Vector3(3.4, 0.24, 0.32), at + Vector3(0, 0.12, z), timber)
+	for layer in 5:
+		_box("YardStock", Vector3(3.0, 0.16, 6.4), at + Vector3(0, 0.32 + layer * 0.16, 0), oxide if layer % 2 == 0 else steel)

@@ -16,6 +16,8 @@ var _stack_world: StackWorldBuilder
 var _alpine_world: AlpineWorldBuilder
 const GroundYard := preload("res://presentation/ground_yard.gd")
 var _ground_yard: GroundYard
+const FreightActivity := preload("res://presentation/freight_activity.gd")
+var _freight_activity: Node3D
 const YardAmbience := preload("res://presentation/audio/yard_ambience.gd")
 var _yard_ambience: Node3D
 
@@ -335,6 +337,7 @@ func _ready() -> void:
 	if not _regression_scene:
 		_yard_ambience = YardAmbience.new()
 		_yard_ambience.name = "ReceivingYardAmbience"
+		_yard_ambience.configure(Vector3(-92, 2.4, -34.5), Vector3(-80, 1.6, -92))
 		add_child(_yard_ambience)
 	_build_arms()
 	_build_interface()
@@ -366,6 +369,11 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_setup_kit_view()
+	if not _regression_scene:
+		_freight_activity = FreightActivity.new()
+		_freight_activity.name = "FreightActivity"
+		add_child(_freight_activity)
+		_freight_activity.setup(_native)
 	_yard_crane_view = YardCraneView.new()
 	_yard_crane_view.name = "YardCraneCables"
 	add_child(_yard_crane_view)
@@ -749,6 +757,8 @@ func _open_pause(from_system: bool = false) -> void:
 		return
 	_paused = true
 	_performance_report.set_paused(true)
+	if _freight_activity != null:
+		_freight_activity.reset()
 	_native.cancel_forklift_tool_request()
 	_zero_yard_crane_input()
 	_native.set_forklift_input(0.0, 0.0, 0.0, 0.0, 1.0)
@@ -808,6 +818,8 @@ func _restart_reclaim_attempt() -> void:
 
 
 func _after_restart() -> void:
+	if _freight_activity != null:
+		_freight_activity.reset()
 	_reset_grapple_feedback()
 	_landing_camera.reset()
 	if _reclaim_dust != null:
@@ -2118,6 +2130,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			float(_native.get_orifice_mass_flow_kg_per_s()))
 		_machine_view.mirror_water_screw(_native)
 	_kit_view.render_view()
+	if _freight_activity != null:
+		_freight_activity.update_from_native(delta, position, not _settings.launch_cinematics)
 	var crane_state := _yard_crane_state()
 	_yard_crane_view.render_state(crane_state)
 	_yard_crane_audio.update_from_native(crane_state, delta)

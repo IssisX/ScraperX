@@ -1,0 +1,62 @@
+{
+  "recorded_at": "2026-10-16T17:09:38.775356+00:00",
+  "base_source": "658c8d2f3fb51367e709906d640a72180578e459",
+  "scope": "physical receiving-yard framing, native-motion warning fittings, actual-arrival ambience, shared carved backdrop with native near-contact restoration",
+  "native_route": {
+    "result": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS ARRIVAL normal spawn -> grade walk -> real cab -> finite lift -> grade exit ticks=991",
+    "exit": 0,
+    "ticks": 991,
+    "archive_sha256": "111e68919847fac81a4908b8b0d83754050c6dc096bec59d15365a788e35bf5e",
+    "native_library_sha256": "9f33aad69980bbc7649039fac9a2e7dc3be43def2c88cd475e05b067392ac0e8"
+  },
+  "render": {
+    "opening": 872,
+    "ground_to_crown": 799,
+    "crown_to_ground": 877,
+    "renderer": "Godot4.7/softpipe host",
+    "high_shadows": true,
+    "view_distance_m": 2000,
+    "opening_primitives": 880344,
+    "buffer_bytes": 27377708,
+    "limits": "Draw counts are not Android FPS or GPU-time proof. Shared carved geometry adds triangles while reducing submissions."
+  },
+  "geometry": {
+    "new_boxes": 260,
+    "existing_entries": "preserved exactly",
+    "total_boxes": 1712,
+    "hulls": 666,
+    "native_export": "final regenerated output byte-identical to compiled source",
+    "clearance": "GEOMETRY_CLEARANCE.json: all new boxes outside29m-wide shared work corridor"
+  },
+  "focused": {
+    "activity": "displayed FREIGHT_ACTIVITY failures=0; unchanged source reused",
+    "backdrop": "final displayed ALPINE_PEAK_MESH_TEST failures=0, includes triangle restoration/culling/native snow proxies",
+    "actual_main": "final full-resolution FREIGHT_ARRIVAL failures=0; root image inspected"
+  },
+  "visual": {
+    "capture": "/data/data/com.termux/files/usr/tmp/scraperx-living-yard-20261016/arrival-final.png",
+    "root_review": "clear forklift/crane approach, readable tangible stock and stronger mountain relief",
+    "quality": "coherent improvement; not console-quality/device-acceptance claim"
+  },
+  "environmental_failures": [
+    "Dummy RenderingServer does not retain MultiMesh readbacks; identical activity source passes with real softpipe renderer",
+    "first isolated archive lacked imported audio and ARM64 extension mapping; local import/mapping repaired; final runs clean"
+  ],
+  "source_manifest": {
+    ".github/workflows/chatgpt-apk-candidate.yml": "fbf9eb8a645d3e5d64b803ad52a08f465c51da482c943f7bd637663664b71402",
+    "AGENTS.md": "ff73176b59072f3bde1e6a89ada239ec35d773009977d689229141d593274413",
+    "godot/presentation/freight_yard_arrival.gd": "607b19016d7a905d391d601250c626db05eba4d3f3113c531a37301dfbd1be33",
+    "godot/presentation/alpine_world_builder.gd": "e9b3fa1662272790dbc95f878196b399cdf04174097f79db731738c8ccf6dd08",
+    "godot/presentation/alpine_peak_mesh.gd": "0189f7fae15119e90cc996e5c7c36e10bb8781177849525b8228533c7c979d5f",
+    "godot/presentation/freight_activity.gd": "2f1be93e7d688d61f0593b7a40758abb2818837259db6fcf102424d79bdb0e4f",
+    "godot/presentation/materials/freight_beacon.gdshader": "ed23d3a38b17001832347e88eac758ce39e1be72e5de1c139e001ff47243f498",
+    "godot/tests/alpine_peak_mesh_test.gd": "05538498ef092d3dcd1ef2f8743c9b58446a5a5fb10fccd50498b4d30079efb1",
+    "godot/tests/freight_activity_test.gd": "d13a536b8ebbb7d64841f74effa1b160aa41ab6e13a0762489c84517aef2d226",
+    "godot/tests/freight_yard_arrival_test.gd": "c5b66ebbbe1351848f4f78595fe1104036b38e716278ca7e0ac95b03d29b90f9",
+    "src/sim/world_solids.inc": "9f94fe2a5cdfa604dc0468ec143a7d17e54e4d66e92e4c26625abeb383aa7834",
+    "03_EXECUTION/ALPINE_BACKDROP_20261016.md": "4da1130b819f230bde3288a7e58e6d0137e2e6cf17d97ef6ce44c36d344c396b",
+    "03_EXECUTION/RECEIVING_YARD_FRAMING_20261016.md": "2430a6dad8455a286e21c42b93cbf1d2a35c01a161f8eb8743d079aeda21f08f",
+    "03_EXECUTION/CLAUDE_COMPARISON_AND_LIVING_YARD_20261016.md": "3761b7a020f9051ac9401e6573a1970744b5f451fabc746e47c6cbb18f47c70c",
+    "godot/presentation/main.gd": "a69584b22c4b042c70745a57cfb4899591bc52714100091bf3b39dc4d06d29bc"
+  }
+}

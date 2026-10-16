@@ -106,7 +106,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for check in static_world_batch kit_cable_batch static_shadow_render opening_render_budget; do
+        for check in freight_activity alpine_peak_mesh static_world_batch kit_cable_batch static_shadow_render opening_render_budget; do
           timeout 120s xvfb-run -a -s '-screen 0 160x120x24' \
             tools/godot/godot --path godot --audio-driver Dummy \
             --rendering-method gl_compatibility --resolution 160x120 \
@@ -154,7 +154,7 @@ jobs:
           tools/godot/godot --path godot --audio-driver Dummy \
           --rendering-method gl_compatibility --resolution 640x360 \
           --script res://tests/freight_yard_arrival_test.gd \
-          -- --capture="${GITHUB_WORKSPACE}/artifacts/freight-arrival.png" \
+          -- --full-resolution --capture="${GITHUB_WORKSPACE}/artifacts/freight-arrival.png" \
           2>&1 | tee artifacts/freight-arrival-render.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/freight-arrival-render.log; then exit 1; fi
         grep -F 'FREIGHT_ARRIVAL failures=0' artifacts/freight-arrival-render.log

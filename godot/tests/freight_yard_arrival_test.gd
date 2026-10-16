@@ -10,12 +10,13 @@ func _initialize() -> void:
 	_run.call_deferred()
 func _run() -> void:
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
-	root.size = Vector2i(640, 360)
+	var full_resolution := "--full-resolution" in OS.get_cmdline_user_args()
+	root.size = Vector2i(1280, 720) if full_resolution else Vector2i(640, 360)
 	var app = load("res://main.tscn").instantiate()
 	app._settings_persistent = false
 	root.add_child(app)
 	app.set_process(false)
-	app._settings.render_scale = 0.5
+	app._settings.render_scale = 1.0 if full_resolution else 0.5
 	app._settings.msaa = 0
 	app._apply_settings()
 	check(app._native != null, "real native bridge")
@@ -30,6 +31,8 @@ func _run() -> void:
 	check(camera.is_position_in_frustum(Vector3(-100, 1.0, -56)), "real truck in initial camera")
 	check(camera.is_position_in_frustum(Vector3(-66.5, 18, -150)), "real crane in initial camera")
 	check(app.find_child("FreightArrival", true, false) != null, "receiving canopy built")
+	check(app._yard_ambience._positions[0].distance_to(spawn) < 15.0, "sheltered ambience belongs to the actual arrival")
+	check(app.find_child("FreightActivity", true, false) != null, "actual native machinery activity layer is present")
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			await RenderingServer.frame_post_draw
