@@ -58,6 +58,15 @@ func build() -> void:
 	# Last, so every clip above draws the same seeded noise it always has.
 	clips[&"drip"] = _variants(3, _drip)
 	clips[&"arc_loop"] = [_loop(_arc(1.6), 0.3)]
+	# The Matron's (sim/matron.hpp), after everything else for the same reason.
+	clips[&"locker_knock"] = _variants(3, _locker_knock)
+	clips[&"bolt_pop"] = _variants(2, _bolt_pop)
+	clips[&"locker_burst"] = [_wav(_locker_burst())]
+	clips[&"matron_lullaby_loop"] = [_loop(_lullaby(9.6), 0.4)]
+	clips[&"matron_breath"] = _variants(3, _matron_breath)
+	clips[&"matron_step"] = _variants(3, _matron_step)
+	clips[&"matron_shriek"] = _variants(2, _matron_shriek)
+	clips[&"plank_crack"] = _variants(2, _plank_crack)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -440,6 +449,132 @@ func _motor(length: float) -> PackedFloat32Array:
 	var grind := _band_noise_buffer(out.size(), 400.0, 1600.0)
 	for i in out.size():
 		out[i] += grind[i] * 0.5
+	return out
+
+
+# --- the Matron --------------------------------------------------------------
+
+
+# Something inside a steel cabinet throwing itself at the door: a dull,
+# boxy knock through thin sheet, and the door rattling on its latch.
+func _locker_knock() -> PackedFloat32Array:
+	var out := _silence(0.55)
+	_add_band_noise(out, 0.0, 0.03, 1.0, 0.006, 300.0, 3500.0)
+	var base := _rng.randf_range(150.0, 210.0)
+	for mode in [[1.0, 0.9, 0.09, 5.0], [2.7, 0.6, 0.06, 4.0], [4.6, 0.4, 0.04, 3.5]]:
+		_add_mode(out, base * mode[0], 0.0, 0.5, mode[1], mode[2], mode[3])
+	for k in 4:
+		_add_band_noise(out, 0.08 + 0.07 * float(k) + _rng.randf_range(0.0, 0.03), 0.04, 0.35 - 0.06 * float(k), 0.01,
+			900.0, 3800.0)
+	return out
+
+
+# A rivet letting go: a hard crack and a thin ring, then the shard
+# skittering over the deck.
+func _bolt_pop() -> PackedFloat32Array:
+	var out := _silence(0.5)
+	_add_band_noise(out, 0.0, 0.012, 1.0, 0.0025, 1500.0, 8000.0)
+	_add_mode(out, _rng.randf_range(1600.0, 2300.0), 0.0, 0.2, 0.7, 0.05, 9.0)
+	_add_band_noise(out, 0.04, 0.3, 0.3, 0.08, 800.0, 3000.0)
+	for k in 3:
+		_add_band_noise(out, 0.12 + 0.07 * float(k), 0.02, 0.3, 0.004, 2000.0, 6500.0)
+	return out
+
+
+# The door torn off its hinges: a huge bang, the tearing of sheet steel and
+# the slab skidding away over the deck.
+func _locker_burst() -> PackedFloat32Array:
+	var out := _silence(1.8)
+	_add_band_noise(out, 0.0, 0.05, 1.0, 0.012, 200.0, 6000.0)
+	_add_tone(out, 62.0, 0.0, 0.6, 0.7, 0.14)
+	for mode in [[1.0, 1.0, 0.25, 5.0], [2.4, 0.8, 0.18, 4.0], [4.1, 0.6, 0.1, 3.0], [7.0, 0.4, 0.06, 2.5]]:
+		_add_mode(out, 130.0 * mode[0], 0.0, 1.2, mode[1], mode[2], mode[3])
+	_add_band_noise(out, 0.05, 1.0, 0.55, 0.35, 500.0, 3200.0)
+	for k in 6:
+		_add_mode(out, _rng.randf_range(200.0, 500.0), 0.3 + 0.17 * float(k), 0.3, 0.3, 0.07, 3.0)
+	return out
+
+
+# A music box that has run down: a plain minor phrase in tinkling bells, the
+# pitch wobbling as the spring tires, a few notes late and a few flat. This is
+# hers; she carries it, and it is how she is heard before she is seen.
+func _lullaby(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	# Scale degrees (semitones above the tonic), each in beats.
+	var tune := [[0, 1.0], [3, 1.0], [7, 2.0], [5, 1.0], [3, 1.0], [2, 2.0],
+		[0, 1.0], [2, 1.0], [3, 1.5], [-2, 0.5], [0, 3.0]]
+	var tonic := 523.25
+	var beat := 0.52
+	var at := 0.2
+	for note in tune:
+		var detune := 1.0 + _rng.randf_range(-0.012, 0.012)
+		var freq: float = tonic * pow(2.0, float(note[0]) / 12.0) * detune
+		var late := _rng.randf_range(0.0, 0.05)
+		var tau := 0.55 * float(note[1]) ** 0.5
+		_add_tone(out, freq, at + late, 1.6, 0.30, tau)
+		_add_tone(out, freq * 2.76, at + late, 0.5, 0.08, 0.1)
+		_add_tone(out, freq * 5.4, at + late, 0.2, 0.04, 0.04)
+		_add_band_noise(out, at + late, 0.012, 0.12, 0.003, 2500.0, 7000.0)
+		at += beat * float(note[1])
+	# The comb's drag: a faint rasp under it all.
+	var rasp := _band_noise_buffer(out.size(), 1200.0, 4200.0)
+	for i in out.size():
+		var t := float(i) / float(MIX_RATE)
+		out[i] += rasp[i] * 0.025 * (0.6 + 0.4 * sin(TAU * 9.0 * t))
+	return out
+
+
+# Her breath: a dry wheeze in, a rattle out, thin and close.
+func _matron_breath() -> PackedFloat32Array:
+	var out := _silence(1.7)
+	var n := out.size()
+	var air := _band_noise_buffer(n, 700.0, 3800.0)
+	var wheeze := _band_noise_buffer(n, 1700.0, 2600.0)
+	for i in n:
+		var t := float(i) / float(MIX_RATE)
+		var inhale := sin(PI * clampf(t / 0.7, 0.0, 1.0)) if t < 0.7 else 0.0
+		var exhale := sin(PI * clampf((t - 0.85) / 0.8, 0.0, 1.0)) if t > 0.85 else 0.0
+		var rattle := 0.5 + 0.5 * sin(TAU * 31.0 * t)
+		out[i] = air[i] * (0.9 * inhale + 0.7 * exhale * rattle) + wheeze[i] * 0.8 * inhale
+	return out
+
+
+# A slipper dragged and a bare knuckle on the deck: a scuff and a dry tap.
+func _matron_step() -> PackedFloat32Array:
+	var out := _silence(0.22)
+	_add_band_noise(out, 0.0, 0.16, 0.8, 0.05, 900.0, 3800.0)
+	_add_band_noise(out, 0.0, 0.01, 0.7, 0.003, 2000.0, 6500.0)
+	_add_tone(out, _rng.randf_range(160.0, 230.0), 0.0, 0.06, 0.25, 0.012)
+	return out
+
+
+# A thin old throat tearing: a harsh rising shriek, cracking up and down,
+# with the grit of a voice that has not been used in years.
+func _matron_shriek() -> PackedFloat32Array:
+	var out := _silence(1.5)
+	var n := out.size()
+	var phase := 0.0
+	var grit := _band_noise_buffer(n, 1500.0, 5200.0)
+	for i in n:
+		var t := float(i) / float(MIX_RATE)
+		var u := t / 1.5
+		var freq := lerpf(520.0, 1350.0, minf(1.0, u * 1.6)) * (1.0 + 0.05 * sin(TAU * 7.5 * t)) \
+			* (1.0 + (0.18 if fmod(t * 11.0, 1.0) > 0.88 else 0.0))
+		phase += TAU * freq / float(MIX_RATE)
+		var env := sin(PI * clampf(u, 0.0, 1.0)) ** 0.6
+		var voice := sin(phase) + 0.5 * sin(2.0 * phase) + 0.3 * sin(3.0 * phase + 1.0)
+		out[i] = (voice * 0.35 + grit[i] * 0.9) * env
+	return out
+
+
+# A plate giving way: the bolt's crack, the groan of the tearing, the clang
+# of the first strike on the frame.
+func _plank_crack() -> PackedFloat32Array:
+	var out := _silence(1.0)
+	_add_band_noise(out, 0.0, 0.02, 1.0, 0.004, 500.0, 6500.0)
+	_add_mode(out, _rng.randf_range(900.0, 1300.0), 0.0, 0.25, 0.6, 0.06, 7.0)
+	_add_band_noise(out, 0.02, 0.6, 0.4, 0.25, 200.0, 1400.0)
+	_add_mode(out, _rng.randf_range(110.0, 160.0), 0.35, 0.5, 0.7, 0.12, 4.0)
 	return out
 
 

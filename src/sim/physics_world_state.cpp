@@ -98,6 +98,7 @@ void Simulation::PhysicsWorld::commit_machine_checkpoint() noexcept {
     checkpoint_.slingshot = slingshot_->state();
     checkpoint_.swing = swing_->state();
     checkpoint_.vertical = vertical_->state();
+    checkpoint_.matron = matron_->save();
 }
 
 // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -143,6 +144,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     swing_->restore(checkpoint_.swing);
     trapeze_->restore();
     vertical_->restore(checkpoint_.vertical);
+    matron_->restore(checkpoint_.matron);
     restore_carry_topology(checkpoint_.carrying_entity);
     // The body comes back at rest, so what it holds does too. Restored
     // with the walking speed it was committed at, the load swung out of

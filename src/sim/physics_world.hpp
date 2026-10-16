@@ -79,6 +79,7 @@ public:
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
     [[nodiscard]] bool surface_below(const JPH::RVec3 from, const float reach, JPH::RVec3 &point) const noexcept;
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
+    [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -575,6 +576,10 @@ public:
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
+    std::unique_ptr<Matron> matron_;
+    std::uint64_t matron_landing_seen_ = 0;
+    bool matron_checkpoint_pending_ = false;
+    [[nodiscard]] float matron_loudness(JPH::BodyInterface &bodies) noexcept;
     std::unique_ptr<Crew> crew_;
     std::unique_ptr<scraperx::sim::vertical::Route> vertical_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by
@@ -701,6 +706,7 @@ public:
         scraperx::sim::kit::Kit::Checkpoint kit{};
         Slingshot::State slingshot{};
         Swing::State swing{};
+        Matron::Saved matron{};
         scraperx::sim::vertical::Route::State vertical{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};

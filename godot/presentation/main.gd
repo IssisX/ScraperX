@@ -25,6 +25,7 @@ const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const SwingView := preload("res://presentation/swing_view.gd")
 const SummitView := preload("res://presentation/summit_view.gd")
+const MatronView := preload("res://presentation/life/matron_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -193,6 +194,9 @@ func _ready() -> void:
 	add_child(_summit_view)
 	_summit_view.setup(_kit_root)
 	_summit_view.ignited.connect(_on_summit_lit)
+	_matron_view = MatronView.new()
+	add_child(_matron_view)
+	_matron_view.setup(_native, _audio)
 	# Both views are a few metres of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]

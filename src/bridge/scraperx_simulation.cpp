@@ -285,6 +285,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
@@ -1163,6 +1164,32 @@ godot::Dictionary ScraperXSimulation::get_trapeze_state() const {
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["slips"] = static_cast<std::int64_t>(state.slips);
     out["bar"] = to_godot(state.bar);
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_matron_state() const {
+    const sim::MatronSnapshot state = simulation_->matron_state();
+    godot::Dictionary out;
+    out["state"] = static_cast<std::int64_t>(state.state);
+    out["alive"] = state.alive;
+    out["released"] = state.released;
+    out["sees_player"] = state.sees_player;
+    out["position"] = godot::Vector3(static_cast<real_t>(state.position.x), static_cast<real_t>(state.position.y),
+                                     static_cast<real_t>(state.position.z));
+    out["yaw"] = state.yaw;
+    out["speed"] = state.speed;
+    out["stride"] = state.stride;
+    out["strain"] = state.strain;
+    out["bolts"] = state.bolts_popped;
+    out["noise"] = state.noise_heard;
+    out["catches"] = static_cast<std::int64_t>(state.catches);
+    out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
+    godot::PackedFloat32Array planks;
+    planks.resize(static_cast<std::int64_t>(state.planks.size()));
+    for (std::size_t i = 0; i < state.planks.size(); ++i) {
+        planks[static_cast<std::int64_t>(i)] = static_cast<float>(state.planks[i]);
+    }
+    out["planks"] = planks;
     return out;
 }
 

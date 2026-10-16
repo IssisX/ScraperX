@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_stack.gd"
+extends "res://presentation/ui/ui_test_chase.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -96,6 +96,12 @@ const SCENARIOS := {
 	# swung out over the drop, four hang-ups and the block.
 	"touch_c7": 36,
 	"touch_summit": 42,
+	# The Matron on the 154 m deck: wake her, creep away while she strains,
+	# run her over the rotten catwalk (look_matron_*: renders only, not in CI).
+	"touch_matron": 11,
+	"look_matron_locker": 11,
+	"look_matron_hunt": 11,
+	"look_matron_catwalk": 11,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
 	"look_summit_ground": 8,
@@ -312,6 +318,14 @@ func _run() -> void:
 			ok = await _c7(InputRouter.Device.TOUCH)
 		"touch_summit":
 			ok = await _summit(InputRouter.Device.TOUCH)
+		"touch_matron":
+			ok = await _matron_touch(InputRouter.Device.TOUCH)
+		"look_matron_locker":
+			ok = await _look_matron("locker")
+		"look_matron_hunt":
+			ok = await _look_matron("hunt")
+		"look_matron_catwalk":
+			ok = await _look_matron("catwalk")
 		"look_summit":
 			ok = await _look_summit(false)
 		"look_summit_ground":

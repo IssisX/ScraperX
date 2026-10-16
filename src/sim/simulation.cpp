@@ -741,6 +741,44 @@ TrapezeSnapshot Simulation::trapeze_state() const noexcept {
     return result;
 }
 
+MatronSnapshot Simulation::matron_state() const noexcept {
+    const Matron &matron = physics_world_->matron();
+    const auto &view = matron.view();
+    MatronSnapshot result;
+    result.state = static_cast<std::uint8_t>(view.state);
+    result.alive = view.alive;
+    result.released = view.released;
+    result.sees_player = view.sees_player;
+    result.position = Vector3{view.x, view.y, view.z};
+    result.yaw = view.yaw;
+    result.speed = view.speed;
+    result.stride = view.stride;
+    result.strain = view.strain;
+    result.bolts_popped = view.bolts_popped;
+    result.noise_heard = view.noise_heard;
+    result.target_x = view.target_x;
+    result.target_z = view.target_z;
+    result.catwalk_allowed = view.catwalk_allowed;
+    result.catches = matron.catches();
+    result.planks_fallen = matron.planks_fallen();
+    result.plank_load_peak_n = matron.strain_force_peak_n();
+    const auto &planks = matron.planks();
+    for (std::size_t i = 0; i < planks.size(); ++i) {
+        const auto &p = planks[i];
+        const std::size_t o = i * 9;
+        result.planks[o + 0] = p.x;
+        result.planks[o + 1] = p.y;
+        result.planks[o + 2] = p.z;
+        result.planks[o + 3] = p.qx;
+        result.planks[o + 4] = p.qy;
+        result.planks[o + 5] = p.qz;
+        result.planks[o + 6] = p.qw;
+        result.planks[o + 7] = p.bolted ? 1.0 : 0.0;
+        result.planks[o + 8] = p.gone ? 1.0 : 0.0;
+    }
+    return result;
+}
+
 SummitSnapshot Simulation::summit_state() const noexcept {
     const auto &state = physics_world_->summit().state();
     SummitSnapshot result;

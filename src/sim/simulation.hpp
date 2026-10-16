@@ -176,6 +176,30 @@ struct SummitSnapshot final {
     double lamp_speed_rad_s = 0.0;
 };
 
+// The Matron (the owner's chase): her state, where she is, the gauge on her
+// locker, and the catwalk's plates.
+struct MatronSnapshot final {
+    std::uint8_t state = 0;           // Matron::State
+    bool alive = true;
+    bool released = false;
+    bool sees_player = false;
+    Vector3 position{};
+    double yaw = 0.0;
+    double speed = 0.0;
+    double stride = 0.0;              // metres walked: the gait's phase
+    double strain = 0.0;              // 0..1, the gauge
+    double bolts_popped = 0.0;        // of the locker's four
+    double noise_heard = 0.0;
+    std::uint64_t catches = 0;
+    int planks_fallen = 0;
+    double plank_load_peak_n = 0.0;
+    double target_x = 0.0, target_z = 0.0;
+    bool catwalk_allowed = false;
+    static constexpr int kPlanks = 11;
+    // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
+    std::array<double, kPlanks * 9> planks{};
+};
+
 // AS-012, the swing off the 220 ring: the rider's seat and the ram on their
 // arms, the buffer between them, the trip and the rack.
 struct SwingSnapshot final {
@@ -984,6 +1008,7 @@ public:
     [[nodiscard]] bool request_swing_drop() noexcept;
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
     [[nodiscard]] SummitSnapshot summit_state() const noexcept;
+    [[nodiscard]] MatronSnapshot matron_state() const noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

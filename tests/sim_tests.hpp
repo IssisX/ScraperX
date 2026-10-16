@@ -826,6 +826,7 @@ void run_workers();
 void run_c7();
 void run_summit();
 void run_summit_arm();
+void run_matron();
 void run_jump_buffer();
 void run_parkour_seams();
 

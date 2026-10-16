@@ -245,6 +245,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     summit_ = std::make_unique<Summit>(physics_system_, *kit_);
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
+    // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
+    matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving, player_id_);
 
     physics_system_.OptimizeBroadPhase();
 
@@ -262,6 +264,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     }
     drop_hang_arms();
     stow_hook(physics_system_.GetBodyInterface());
+    matron_.reset();
     summit_.reset();
     vertical_.reset();
     trapeze_.reset();
@@ -405,6 +408,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
     summit_->pre_step();
+    matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
     kit_->pre_step(delta_seconds);
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
                     grounded_);
@@ -412,6 +416,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     summit_->post_step();
+    matron_->post_step(delta_seconds);
+    if (matron_->take_released_edge()) {
+        matron_checkpoint_pending_ = true;
+    }
     slingshot_->post_step(delta_seconds);
     swing_->post_step(delta_seconds);
     trapeze_->post_step(delta_seconds);
@@ -454,12 +462,24 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         }
         precision_target_valid_ = false;
     }
+    // Her hands on the player: a death like a lethal fall.
+    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
+        matron_->count_catch();
+        restore_from_checkpoint(bodies);
+        died_this_tick = true;
+    }
     if (!died_this_tick) {
         advance_recovery(bodies, delta_seconds);
     }
     if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
         footing_is_firm(bodies)) {
-        commit_checkpoint(bodies);
+        // Once she is out the checkpoint is not renewed (it would lie just
+        // ahead of her): the one at her release stays, committed the first
+        // firm tick after she bursts out.
+        if (!matron_->freezes_checkpoint() || matron_checkpoint_pending_) {
+            commit_checkpoint(bodies);
+            matron_checkpoint_pending_ = false;
+        }
         static_assert(Simulation::kRouteTopEntityId == scraperx::sim::vertical::Route::kDerrickStaticFirst + 2,
                       "the route's top is the derrick's upper receiver");
         if (!summit_reached_ && support_entity_id_ == Simulation::kRouteTopEntityId) {

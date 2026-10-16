@@ -125,6 +125,10 @@ const WELD_LOOPS := 2
 var _weld_loops: Array[AudioStreamPlayer3D] = []
 var _weld_owner: Array[int] = []
 var welds_heard := 0
+# The Matron's music box, a loop that follows her; her one-shots, counted by
+# name for the scripted runs.
+var _matron_loop: AudioStreamPlayer3D
+var matron_cues := {}
 var pours_heard := 0
 var _voice: AudioStreamPlayer
 var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
@@ -193,6 +197,7 @@ func _ready() -> void:
 	for i in WELD_LOOPS:
 		_weld_loops.append(_positional_player(BUS_AMBIENCE, Vector3.ZERO, 4.0, 70.0))
 		_weld_owner.append(-1)
+	_matron_loop = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -252,6 +257,9 @@ func _on_bank_ready() -> void:
 		player.stream = _bank.pick(&"arc_loop")
 		player.volume_db = -80.0
 		player.play()
+	_matron_loop.stream = _bank.pick(&"matron_lullaby_loop")
+	_matron_loop.volume_db = -80.0
+	_matron_loop.play()
 
 
 func set_volumes(master: float, effects: float, ambience: float, interface: float, voice: float = 1.0) -> void:
@@ -641,6 +649,23 @@ func worker_weld(w: int, at: Vector3, on: bool) -> void:
 		return
 	_weld_loops[slot].position = at
 	_weld_loops[slot].volume_db = -7.0
+
+
+# The Matron's music box, heard from `at` at `volume_db` (below -60: off), its
+# pitch dragging as she nears (`pitch`, 1.0 true).
+func matron_music(at: Vector3, volume_db: float, pitch: float) -> void:
+	if not _bank_ready or _silent:
+		return
+	_matron_loop.position = at
+	_matron_loop.volume_db = volume_db
+	_matron_loop.pitch_scale = pitch
+
+
+# One of her sounds (locker_knock, bolt_pop, locker_burst, matron_breath,
+# matron_step, matron_shriek, plank_crack), from `at`.
+func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> void:
+	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
+	_play_at(name, at, volume_db, pitch)
 
 
 # A flock flushed at `at`: its wings, heard from where it rose.

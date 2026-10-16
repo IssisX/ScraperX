@@ -74,6 +74,9 @@ func _build_world() -> void:
 # dressing hung on that frame. There is no stair: a level is gained by a
 # machine or a climb. The player is inside this structure, so it is built to
 # be seen from within as well as from the yard.
+const MATRON_DECK_LEVEL := 14
+const MATRON_GATE_WIDTH := 3.0
+
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
 	var band_center := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH * 0.5
@@ -111,6 +114,15 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 			_add_box("ShaftRail", Vector3(inner_half * 2.0, 0.08, 0.08),
 				Vector3(cx, deck_y + 1.05, cz + sz * inner_half), galvanised)
 		for sx in [1.0, -1.0]:
+			if level == MATRON_DECK_LEVEL:
+				# The 154 m deck's catwalk crosses the shaft here (src/sim/matron.hpp):
+				# the rail on each side is open for MATRON_GATE_WIDTH of it.
+				var run := inner_half - MATRON_GATE_WIDTH * 0.5
+				for end in [1.0, -1.0]:
+					_add_box("ShaftRail", Vector3(0.08, 0.08, run),
+						Vector3(cx + sx * inner_half, deck_y + 1.05, cz + end * (MATRON_GATE_WIDTH * 0.5 + run * 0.5)),
+						galvanised)
+				continue
 			_add_box("ShaftRail", Vector3(0.08, 0.08, inner_half * 2.0),
 				Vector3(cx + sx * inner_half, deck_y + 1.05, cz), galvanised)
 		for post_x in [-inner_half, -inner_half * 0.5, 0.0, inner_half * 0.5, inner_half]:

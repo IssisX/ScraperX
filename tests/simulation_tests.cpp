@@ -27,6 +27,10 @@ int main() {
         run_c7();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
+        run_matron();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
         run_summit();
         run_summit_arm();
@@ -273,6 +277,7 @@ int main() {
     run_c7();
     run_summit();
     run_summit_arm();
+    run_matron();
     run_ascent();
 
     return EXIT_SUCCESS;
