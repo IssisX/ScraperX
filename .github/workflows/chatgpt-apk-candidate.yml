@@ -119,12 +119,24 @@ jobs:
       run: |
         set -euo pipefail
         python3 -m unittest discover -s ci -p test_build_info.py
-        for check in build_info performance_report performance_report_main freight_yard_arrival catch_net_visibility static_shadow_batch freight_materials; do
+        for check in startup_preparation build_info performance_report performance_report_main freight_yard_arrival catch_net_visibility static_shadow_batch freight_materials; do
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
             --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi
           grep -F 'failures=0' "artifacts/${check}.log"
         done
+    - name: Prepare native world before player control
+      shell: bash
+      run: |
+        set -euo pipefail
+        SCRAPERX_STARTUP_CAPTURE_PATH="${GITHUB_WORKSPACE}/artifacts/startup-loading.png" \
+          timeout 180s xvfb-run -a -s '-screen 0 1080x928x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1080x928 \
+          --script res://tests/startup_main_native_test.gd \
+          2>&1 | tee artifacts/startup_main_native.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/startup_main_native.log; then exit 1; fi
+        grep -E 'STARTUP_MAIN .*failures=0' artifacts/startup_main_native.log
     - name: Check crane operator controls and native audio receipts
       shell: bash
       run: |

@@ -932,6 +932,9 @@ public:
     [[nodiscard]] std::vector<Vector3> render_catch_net_tether_vertices() const;
     [[nodiscard]] std::vector<Vector3> render_catch_net_patch_vertices() const;
     [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept;
+    // Initialization observation only; call exclusively between native ticks.
+    // Preparation uses the normal90Hz advance path and earns ordinary footing.
+    [[nodiscard]] bool is_initial_world_settled() const noexcept;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] double pipe_bridge_tip_height() const noexcept;
     [[nodiscard]] std::uint32_t pipe_bridge_retained_pipes() const noexcept;

@@ -452,6 +452,10 @@ bool CargoNet::sleeping_assembly_changed() const {
     }
     return false;
 }
+bool CargoNet::settled() const {
+    return config_.paired_sleep && sleeping_assembly_valid_ &&
+        assembly_asleep() && !sleeping_assembly_changed();
+}
 void CargoNet::post_step(float dt,bool externally_touched) {
     if(!config_.paired_sleep) return;
     auto &bodies=system_.GetBodyInterfaceNoLock();

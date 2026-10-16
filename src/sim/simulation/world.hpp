@@ -171,6 +171,9 @@ public:
     [[nodiscard]] const CargoNet *cargo_net() const noexcept;
     [[nodiscard]] const CargoNet *catch_net() const noexcept;
     [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept;
+    [[nodiscard]] bool initial_world_settled() const noexcept {
+        return state_.checkpoint_footing_valid && (!catch_net_ || catch_net_->settled());
+    }
 
     [[nodiscard]] RenderHandAnchor render_hand_anchor(const std::uint32_t hand) const noexcept;
 

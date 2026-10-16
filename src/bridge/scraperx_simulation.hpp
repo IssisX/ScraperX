@@ -78,6 +78,7 @@ public:
     [[nodiscard]] std::int64_t get_tick_index() const;
     [[nodiscard]] double get_simulation_time_seconds() const;
     [[nodiscard]] double get_fixed_step_seconds() const;
+    [[nodiscard]] bool is_initial_world_settled() const;
     [[nodiscard]] double get_interpolation_alpha() const;
     [[nodiscard]] godot::Vector3 get_player_position() const;
     [[nodiscard]] godot::Vector3 get_player_render_position() const;

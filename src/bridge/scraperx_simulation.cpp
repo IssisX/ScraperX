@@ -127,6 +127,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_simulation_time_seconds);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fixed_step_seconds"),
                                 &ScraperXSimulation::get_fixed_step_seconds);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_initial_world_settled"),
+                                &ScraperXSimulation::is_initial_world_settled);
     godot::ClassDB::bind_method(godot::D_METHOD("get_interpolation_alpha"),
                                 &ScraperXSimulation::get_interpolation_alpha);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_position"),
@@ -948,6 +950,10 @@ std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds)
         return -1;
     }
     return static_cast<std::int64_t>(result.steps_advanced);
+}
+
+bool ScraperXSimulation::is_initial_world_settled() const {
+    return simulation_->is_initial_world_settled();
 }
 
 std::int64_t ScraperXSimulation::get_tick_index() const {

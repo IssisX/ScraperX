@@ -1,0 +1,32 @@
+{
+  "base": "079b6b5867d2e66bc6260ef7b2f2a014f682177c",
+  "behavior": "Prepare the actual mobile native world on one exclusive worker using ordinary neutral 90 Hz steps; join before native access, render the yard under the loading panel, then enable controls with fresh frame timing.",
+  "native_build": "PASS C++17 Release including bridge",
+  "module_lifecycle": "PASS Godot 4.7 STARTUP_PREPARATION failures=0",
+  "actual_main": {
+    "exit": 0,
+    "native_ticks": 386,
+    "responsive_ui_frames": 63,
+    "failures": 0,
+    "viewport": "2160x1856",
+    "driver": "host software softpipe"
+  },
+  "native_restart_and_arrival": {
+    "exit": 0,
+    "catch_max_motion_m": 0,
+    "restart_settle_ticks": 161,
+    "normal_arrival_cab_lift_exit": "PASS"
+  },
+  "limits": "Host execution demonstrates lifecycle, native handoff and controls. Phone loading duration and sustained FPS remain unmeasured. Native forces, contacts, solver, time step and scene content are preserved.",
+  "files_sha256": {
+    "godot/presentation/main.gd": "b7979fd3f144d18745f1b0c10f377bedbe4afc7278c8113f675889bf5fb83e28",
+    "src/bridge/scraperx_simulation.cpp": "43e6574e11276b59a7b9af491fb7a42e3ddf0d1107b6d063d890a6aca15ae4af",
+    "src/bridge/scraperx_simulation.hpp": "6ff5f6453d26bb177143f825411c247fa4a9dd69a43ee83f81c01ccb81e8505c",
+    "src/sim/cargo_net.cpp": "f7e32bde0c77d60df6c8d3547f75d573f92ffb33c97446bae7279cb7a97bfe5f",
+    "src/sim/cargo_net.hpp": "6b37bf5274a03124bc1367be26a9a0d4e7b76a7a0cc0ef6fc6f57a93e86be43d",
+    "src/sim/simulation/world.hpp": "595c588f055bb4aa6e359590e0a495b467c4e65bb26c6129f25f2d19bec33726",
+    "src/sim/simulation.cpp": "f131db4146738a031c1087bf76e8b557e1ffb20d02c87a6ecfecba1cbbd0e091",
+    "src/sim/simulation.hpp": "0965fe8de8ab89c11954686a122e8e0529cfd31974070af79a0cf206727fd521",
+    "tests/freight_yard_arrival_tests.cpp": "9637224830b347e0749ac6f8eee1fc51cdf541d1a13e70a58a26d9d88f70091c"
+  }
+}

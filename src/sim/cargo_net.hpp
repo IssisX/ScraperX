@@ -107,6 +107,9 @@ public:
     [[nodiscard]] const std::vector<std::uint32_t> &indices() const noexcept { return indices_; }
     // Same immutable native face indices used to add the reinforcement mass.
     [[nodiscard]] const std::vector<std::uint32_t> &reinforcement_indices() const noexcept { return reinforcement_indices_; }
+    // Owner-thread readback outside Update: the whole paired native assembly
+    // is genuinely asleep and its saved support poses are still unchanged.
+    [[nodiscard]] bool settled() const;
     [[nodiscard]] std::string capture() const;
     void restore(const std::string &state);
 private:

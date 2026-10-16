@@ -29,7 +29,9 @@ bool walk(Simulation &s, double x, double z, unsigned limit, double cap) {
 }
 void settled_idle() {
     Simulation s(InitialSpawn::FreightYardArrival);
+    require(!s.is_initial_world_settled(),"fresh authored world cannot claim settled before solving");
     tick(s,720);
+    require(s.is_initial_world_settled(),"prepared readiness requires native assembly sleep and actual firm footing");
     const auto resting=s.catch_net_vertices();
     require(resting.size()==1681,"real catch membrane remains installed");
     double maximum_motion=0;
@@ -46,7 +48,17 @@ void settled_idle() {
     require(maximum_motion<1e-6,"unloaded full-world catch reaches sustained native rest beside crane docks");
     require(s.snapshot().player_grounded && s.forklift_state().available && s.yard_crane_state().available,
             "normal opening and both real machines remain live");
-    std::cout<<"PASS ARRIVAL_IDLE catch_max_motion_m="<<maximum_motion<<" ticks="<<s.snapshot().tick_index<<'\n';
+    const auto prepared_position=s.snapshot().player_position;
+    require(s.restart_checkpoint(),"ordinary checkpoint restart remains available after preparation");
+    require(!s.is_initial_world_settled(),"checkpoint activation cannot masquerade as native sleep");
+    unsigned recovery=0;
+    while(!s.is_initial_world_settled() && recovery<180) {tick(s);++recovery;}
+    require(s.is_initial_world_settled(),"restored prepared assembly genuinely settles again within2s");
+    const auto position=s.snapshot().player_position;
+    require(std::abs(position.x-prepared_position.x)<.02 && std::abs(position.z-prepared_position.z)<.02,
+            "prepared checkpoint retains its actual solved opening footing");
+    std::cout<<"PASS ARRIVAL_IDLE catch_max_motion_m="<<maximum_motion<<" restart_settle_ticks="<<recovery
+             <<" ticks="<<s.snapshot().tick_index<<'\n';
 }
 }
 int main(int argc,char **argv) {

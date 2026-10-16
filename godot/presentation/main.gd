@@ -1,5 +1,16 @@
 extends Node3D
 
+signal play_ready
+
+# Mobile starts control only after real neutral90Hz physics reaches rest.
+# Exported so the same production handoff can be exercised on a desktop host.
+@export var prepare_initial_world := OS.has_feature("mobile")
+const StartupPreparation := preload("res://presentation/ui/startup_preparation.gd")
+var _startup_preparation: CanvasLayer
+var _startup_previous_disable_3d := false
+var _discard_startup_delta := false
+var _play_ready := false
+
 # Presentation and input only. Every consequential fact below is read from the
 # native ScraperX simulation; nothing here decides pose, support, traversal, or
 # machine state. Where this file draws something that looks simulated -- the
@@ -348,10 +359,77 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_LOAD_FAILED", 20)
 		return
 
+	if prepare_initial_world and not _regression_scene and _uitest_scenario.is_empty():
+		_start_initial_preparation()
+		return
 	_native = ClassDB.instantiate("ScraperXSimulation")
 	if _native == null:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
+	_finish_native_setup()
+
+
+func _start_initial_preparation() -> void:
+	# _native stays null while the worker exclusively owns the simulation.
+	# All ordinary input, presentation and pause getters therefore remain gated.
+	_router.gameplay_active = false
+	_router.clear_held()
+	_hud.hide()
+	_touch.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if _startup_preparation == null:
+		_startup_previous_disable_3d = get_viewport().disable_3d
+	else:
+		_startup_preparation.queue_free()
+	get_viewport().disable_3d = true
+	_startup_preparation = StartupPreparation.new()
+	_startup_preparation.name = "StartupPreparation"
+	_startup_preparation.prepared.connect(_on_initial_prepared)
+	_startup_preparation.retry_requested.connect(_start_initial_preparation)
+	_startup_preparation.cancel_requested.connect(func() -> void: get_tree().quit())
+	add_child(_startup_preparation)
+	# Draw the preparation panel before constructing the native world.
+	_begin_initial_preparation.call_deferred(_startup_preparation)
+
+
+func _begin_initial_preparation(panel: CanvasLayer) -> void:
+	await RenderingServer.frame_post_draw
+	if not is_inside_tree() or not is_instance_valid(panel) or panel != _startup_preparation:
+		return
+	var preparing_native: Object = ClassDB.instantiate("ScraperXSimulation")
+	if preparing_native == null:
+		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
+		return
+	panel.start(preparing_native)
+
+
+func _on_initial_prepared(prepared_native: Object, _steps: int) -> void:
+	# The panel joins its worker BEFORE this signal. This is the single
+	# owner handoff; no bridge getter or command overlaps the worker.
+	_native = prepared_native
+	get_viewport().disable_3d = _startup_previous_disable_3d
+	_finish_native_setup()
+
+
+func _finish_initial_handoff() -> void:
+	# Warm the first real3D frame under the loading panel as well. Controls
+	# open after resource upload/shader preparation, with a fresh frame clock.
+	await RenderingServer.frame_post_draw
+	if not is_inside_tree() or _startup_preparation == null:
+		return
+	_startup_preparation.queue_free()
+	_startup_preparation = null
+	_router.clear_held()
+	_router.gameplay_active = true
+	_hud.show()
+	_on_device_changed(_router.device)
+	_discard_startup_delta = true
+	_performance_report.skip_next_frame()
+	_play_ready = true
+	play_ready.emit()
+
+
+func _finish_native_setup() -> void:
 	if _regression_scene and _uitest_scenario.is_empty():
 		_native.configure_regression_spawn(8)
 
@@ -416,11 +494,21 @@ func _ready() -> void:
 		_static_world_batch.build_tower($TowerPresentation)
 		_static_world_batch.build_kit(_kit_view, _kit_view.static_render_roots())
 		_kit_view.batch_cables()
+	if _startup_preparation != null:
+		_finish_initial_handoff.call_deferred()
+	else:
+		_play_ready = true
+		play_ready.emit()
 
 
 func _process(delta: float) -> void:
-	if _native == null:
+	if _native == null or not _play_ready:
 		return
+	if _discard_startup_delta:
+		# Preparation and view construction precede player control. They
+		# must not become a catch-up burst on the first controllable frame.
+		delta = 0.0
+		_discard_startup_delta = false
 	if _fps_label.visible:
 		_fps_clock -= delta
 		if _fps_clock <= 0.0:
@@ -736,12 +824,19 @@ func _set_telemetry_visible(on: bool) -> void:
 		_render_snapshot()
 
 
+func _exit_tree() -> void:
+	if _startup_preparation != null:
+		get_viewport().disable_3d = _startup_previous_disable_3d
+
+
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 			_open_pause(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
-			if _paused:
+			if _startup_preparation != null:
+				get_tree().quit()
+			elif _paused:
 				_pause_menu.back()
 			else:
 				_open_pause(true)

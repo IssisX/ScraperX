@@ -323,6 +323,7 @@ std::vector<Vector3> Simulation::render_catch_net_patch_vertices() const {
     return out;
 }
 CatchNetSnapshot Simulation::catch_net_state() const noexcept { return physics_world_->catch_net_state(); }
+bool Simulation::is_initial_world_settled() const noexcept { return physics_world_->initial_world_settled(); }
 
 std::uint32_t Simulation::kit_body_count() const noexcept {
     return physics_world_->kit().body_count();
