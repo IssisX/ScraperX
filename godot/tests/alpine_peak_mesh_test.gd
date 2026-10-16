@@ -127,6 +127,21 @@ func _run() -> void:
 func _check_spatial_batches(host: Node3D, specs: Array) -> void:
 	var matched := PackedByteArray()
 	matched.resize(specs.size())
+	# Compatibility stores custom channels as half floats. Encode the authored
+	# expectations through a separate renderer buffer, rather than comparing
+	# quantized readback to full-precision input or widening every assertion.
+	# https://docs.godotengine.org/en/stable/classes/class_multimesh.html#class-multimesh-method-set-instance-custom-data
+	var reference := MultiMesh.new()
+	reference.transform_format = MultiMesh.TRANSFORM_3D
+	reference.use_custom_data = true
+	reference.mesh = Peak.peak(0)
+	reference.instance_count = specs.size()
+	for index in specs.size():
+		var spec: Dictionary = specs[index]
+		var rock: Color = spec.rock
+		if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+			rock = rock.srgb_to_linear()
+		reference.set_instance_custom_data(index, Color(rock.r, rock.g, rock.b, spec.snowline))
 	var batch_keys := {}
 	for child in host.get_children():
 		if not child is MultiMeshInstance3D or not child.has_meta(&"alpine_peak_instances"):
@@ -144,11 +159,8 @@ func _check_spatial_batches(host: Node3D, specs: Array) -> void:
 			for candidate in specs.size():
 				var spec: Dictionary = specs[candidate]
 				var expected := Transform3D(Basis.from_scale(Vector3(spec.radius, spec.height, spec.radius)), spec.foot)
-				var rock: Color = spec.rock
-				if RenderingServer.get_current_rendering_method() != "gl_compatibility":
-					rock = rock.srgb_to_linear()
 				if matched[candidate] == 0 and transform.is_equal_approx(expected) \
-						and custom.is_equal_approx(Color(rock.r, rock.g, rock.b, spec.snowline)) \
+						and custom.is_equal_approx(reference.get_instance_custom_data(candidate)) \
 						and mm.mesh == Peak.peak(spec.variant):
 					found = candidate
 					break

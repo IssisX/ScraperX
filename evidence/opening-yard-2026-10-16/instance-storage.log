@@ -1,0 +1,11 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+STORAGE immediate transform=[X: (20.0, 0.0, 0.0), Y: (0.0, 40.0, 0.0), Z: (0.0, 0.0, 20.0), O: (-512.25, 3.0, -0.25)] expected=[X: (20.0, 0.0, 0.0), Y: (0.0, 40.0, 0.0), Z: (0.0, 0.0, 20.0), O: (-512.25, 3.0, -0.25)] custom=(0.2998, 0.3999, 0.5, 0.6196) expected_color=(0.3, 0.4, 0.5, 0.62)
+STORAGE rendered transform=[X: (20.0, 0.0, 0.0), Y: (0.0, 40.0, 0.0), Z: (0.0, 0.0, 20.0), O: (-512.25, 3.0, -0.25)] custom=(0.2998, 0.3999, 0.5, 0.6196)

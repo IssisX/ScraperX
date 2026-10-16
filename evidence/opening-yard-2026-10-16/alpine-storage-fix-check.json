@@ -1,0 +1,31 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/work",
+    "--",
+    "/usr/bin/env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "XDG_DATA_HOME=/work/scraperx-shaft-finish-20261016/userdata",
+    "LIBGL_ALWAYS_SOFTWARE=1",
+    "GALLIUM_DRIVER=softpipe",
+    "/usr/bin/xvfb-run",
+    "--error-file=/dev/stderr",
+    "-a",
+    "-s",
+    "-screen 0 32x32x24",
+    "/work/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--path",
+    "/work/scraperx-shaft-finish-20261016/source/godot",
+    "--audio-driver",
+    "Dummy",
+    "--resolution",
+    "32x32",
+    "--script",
+    "res://tests/alpine_peak_mesh_test.gd"
+  ],
+  "exit": 0,
+  "scope": "standalone geometry/buffer check at32x32; no Main/native gameplay/large rendered scene"
+}
