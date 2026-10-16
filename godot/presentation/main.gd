@@ -24,6 +24,7 @@ const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const SwingView := preload("res://presentation/swing_view.gd")
+const SummitView := preload("res://presentation/summit_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -185,6 +186,13 @@ func _ready() -> void:
 	_swing_view = SwingView.new()
 	add_child(_swing_view)
 	_swing_view.setup()
+	# The summit's lamp: lit before (the profile keeps it) opens the world lit.
+	if _save_enabled and FileAccess.file_exists(SUMMIT_PROFILE_PATH):
+		_native.light_summit()
+	_summit_view = SummitView.new()
+	add_child(_summit_view)
+	_summit_view.setup(_kit_root)
+	_summit_view.ignited.connect(_on_summit_lit)
 	# Both views are a few metres of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]
@@ -699,6 +707,20 @@ func _perform_action() -> void:
 			# did. The native decides there is no ledge (and counts it).
 			_native.request_traversal()
 const LAMP_REACH := 100.0
+# The searchlight has just been lit by the climber: the first time, ever, is
+# kept in the profile so every later climb starts under its beam.
+const SUMMIT_PROFILE_PATH := "user://summit.lit"
+
+func _on_summit_lit() -> void:
+	_hud.toast("THE LIGHT IS ON", "SEEN FROM THE GROUND. NOW GET DOWN.", UiStyle.AMBER, 7.0)
+	_hud.flash(UiStyle.AMBER)
+	_haptic(&"press", 1.0)
+	if _save_enabled:
+		var file := FileAccess.open(SUMMIT_PROFILE_PATH, FileAccess.WRITE)
+		if file != null:
+			file.store_string("lit\n")
+	print("SCRAPERX_SUMMIT_LIT")
+
 const VIEW_PROP_RANGE := 250.0
 
 # Tool mode: write the world's solid dressing for the native build and quit.

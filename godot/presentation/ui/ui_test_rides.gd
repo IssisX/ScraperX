@@ -25,6 +25,14 @@ const C7_RING_286_EDGE := -20.55
 const C7_RING_286_TOP := 286.25
 const C7_BLOCK_TOP := 287.85
 const C7_WALKWAY_TOP := 291.25
+# The summit (src/sim/summit.hpp).
+const SUMMIT_FRAME_ENTITY := 1900
+const SUMMIT_STRIKER_ENTITY := 2980
+const SUMMIT_DECK_TOP := 802.64
+const SUMMIT_BLOCK_ONE_TOP := SUMMIT_DECK_TOP + 1.6
+const SUMMIT_BLOCK_TWO_TOP := SUMMIT_DECK_TOP + 4.4
+const SUMMIT_GANTRY_TOP := SUMMIT_DECK_TOP + 7.4
+const SUMMIT_ARM_END_X := -50.0
 
 # The ground slingshot, played as its native test plays it: round the
 # pouch's east block to its low front lip and step in; ENTER POUCH; the stick
@@ -940,4 +948,92 @@ func _c4_hang_up(device: int, facing: Vector2, top: float, what: String) -> bool
 		return _fail("CLIMB UP not offered hanging from %s" % what)
 	if not await _wait_until(func() -> bool: return _standing_above(top), 2.5):
 		return _fail("the climb up onto %s did not land (at %s)" % [what, str(_position())])
+	return true
+
+# The summit, on touch, from the derrick's upper receiver's side: the dead
+# lamp as found; up the blocks to the gantry (a mantle and two hang-ups); a
+# walk off its edge onto the striker plate, which lights the lamp and turns
+# its beam; down off the plate and out along the runway arm; a run off its end
+# and the canopy all the way down.
+func _summit(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var summit: Dictionary = _native().get_summit_state()
+	if bool(summit["lit"]) or absf(float(summit["lamp_speed"])) > 0.001:
+		return _fail("the searchlight was not dark and still as found")
+	await _tilt(0.9)
+	await _face(Vector2(-1.0, 0.0))
+	await _pose("summit_dead_lamp")
+	await _tilt(0.0)
+	if not (await _go(device, Vector2(8.0, -184.6), 0.2, 6.0) and \
+			await _go(device, Vector2(-3.2, -184.6), 0.2, 14.0) and \
+			await _go(device, Vector2(-3.2, -185.65), 0.08, 4.0)):
+		return _fail("summit: the walk to the first block stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), SUMMIT_BLOCK_ONE_TOP + 0.45, "block one"):
+		return false
+	if not await _go(device, Vector2(-2.95, -187.5), 0.06, 3.0):
+		return _fail("summit: the walk across block one stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), SUMMIT_BLOCK_TWO_TOP + 0.4, "block two"):
+		return false
+	if not await _go(device, Vector2(-1.25, -187.5), 0.06, 3.0):
+		return _fail("summit: the walk across block two stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), SUMMIT_GANTRY_TOP + 0.4, "the gantry"):
+		return false
+	if not await _go(device, Vector2(1.9, -187.5), 0.08, 5.0):
+		return _fail("summit: the walk to the gantry's edge stalled at %s" % str(_position()))
+	if bool(_native().get_summit_state()["lit"]):
+		return _fail("summit: the lamp lit before the strike")
+	await _face(Vector2(1.0, 0.0))
+	await _tilt(-0.35)
+	await _pose("summit_gantry_edge")
+	await _tilt(0.0)
+	_move(device, 0.5)
+	var down: bool = await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and _position().y < SUMMIT_GANTRY_TOP - 2.0, 6.0)
+	_move(device, 0.0)
+	if not down:
+		return _fail("summit: the walk off the gantry never landed (at %s)" % str(_position()))
+	if not await _wait_until(func() -> bool: return bool(_native().get_summit_state()["lit"]), 3.0):
+		return _fail("summit: the landing from the gantry did not light the lamp (peak %.3f m)" % [
+			float(_native().get_summit_state()["striker_peak"])])
+	await _seconds(0.4)
+	await _pose("summit_strike")
+	await _seconds(5.0)
+	await _tilt(0.45)
+	await _face(Vector2(-1.0, 0.0))
+	await _pose("summit_lit_beam")
+	await _tilt(0.0)
+	var yaw_then := float(_native().get_summit_state()["lamp_yaw"])
+	await _seconds(3.0)
+	if absf(float(_native().get_summit_state()["lamp_yaw"]) - yaw_then) < 0.5:
+		return _fail("summit: the lit lamp's turntable did not turn")
+	# Down off the plate's south edge and out along the arm.
+	if not (await _go(device, Vector2(5.0, -185.0), 0.3, 6.0) and \
+			await _go(device, Vector2(-10.5, -185.0), 0.2, 14.0) and \
+			await _go(device, Vector2(-11.0, -187.5), 0.15, 4.0) and \
+			await _go(device, Vector2(SUMMIT_ARM_END_X + 6.0, -187.5), 0.2, 14.0)):
+		return _fail("summit: the walk out along the arm stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	await _pose("summit_arm")
+	_move(device, 1.0)
+	var off: bool = await _wait_until(func() -> bool:
+		return not bool(_ctx()["grounded"]) and _position().x < SUMMIT_ARM_END_X - 0.5, 4.0)
+	_move(device, 0.0)
+	if not off:
+		return _fail("summit: the run off the arm's end never left it (at %s)" % str(_position()))
+	var offered: bool = await _wait_until(func() -> bool: return _main._touch.is_button_shown(&"chute"), 3.0)
+	if not offered:
+		return _fail("summit: CHUTE never offered in the fall from the arm")
+	await _wait_until(func() -> bool: return -_velocity().y > 12.0, 3.0)
+	_tap(0, _center(&"chute"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_parachute_deployed()), 0.5):
+		return _fail("summit: CHUTE did not open the canopy")
+	await _seconds(1.5)
+	await _pose("summit_canopy")
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 160.0):
+		return _fail("summit: the canopy never brought the climber down (at %s)" % str(_position()))
+	await _frames(2)
+	if int(_native().get_death_count()) != 0:
+		return _fail("summit: landed dead at %.1f m/s" % float(_native().get_last_impact_speed_mps()))
+	_detail = "landed_y=%.2f landed_x=%.1f impact_mps=%.2f" % [_position().y, _position().x,
+		float(_native().get_last_impact_speed_mps())]
 	return true

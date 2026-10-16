@@ -79,6 +79,8 @@ public:
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
     [[nodiscard]] bool surface_below(const JPH::RVec3 from, const float reach, JPH::RVec3 &point) const noexcept;
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
+    [[nodiscard]] Summit &summit() noexcept { return *summit_; }
+    [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
     [[nodiscard]] std::uint64_t standing_entity() const noexcept { return grounded_ ? support_entity_id_ : 0; }
@@ -570,6 +572,7 @@ public:
     std::unique_ptr<Slingshot> slingshot_;
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;
+    std::unique_ptr<Summit> summit_;
     std::unique_ptr<Crew> crew_;
     std::unique_ptr<scraperx::sim::vertical::Route> vertical_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by

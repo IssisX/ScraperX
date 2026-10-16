@@ -284,6 +284,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_action"), &ScraperXSimulation::request_swing_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -1162,6 +1164,20 @@ godot::Dictionary ScraperXSimulation::get_trapeze_state() const {
     out["bar"] = to_godot(state.bar);
     return out;
 }
+
+godot::Dictionary ScraperXSimulation::get_summit_state() const {
+    const sim::SummitSnapshot state = simulation_->summit_state();
+    godot::Dictionary out;
+    out["lit"] = state.lit;
+    out["striker_travel"] = state.striker_travel_m;
+    out["striker_peak"] = state.striker_peak_m;
+    out["trip_travel"] = state.trip_travel_m;
+    out["lamp_yaw"] = state.lamp_yaw_rad;
+    out["lamp_speed"] = state.lamp_speed_rad_s;
+    return out;
+}
+
+void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
     const sim::SwingSnapshot state = simulation_->swing_state();

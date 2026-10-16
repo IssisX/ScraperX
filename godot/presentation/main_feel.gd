@@ -116,6 +116,7 @@ var _slingshot_view: Node3D
 # The slingshot's launch shot: slow time and a look back, after the push.
 var _launch_shot := LaunchShot.new()
 var _swing_view: Node3D
+var _summit_view: Node3D
 var _sling_prediction := PackedVector3Array()
 var _sling_preview_clock := 0.0
 # Pigeons on the structure near the player; gulls at height.
@@ -708,6 +709,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_render_slingshot(delta)
 	if _swing_view != null:
 		_swing_view.update_view(_native.get_swing_state())
+	if _summit_view != null:
+		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	_sample_machines(delta)
 
 # The slingshot as the native has it now; the predicted shot is re-asked a

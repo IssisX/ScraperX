@@ -27,6 +27,11 @@ int main() {
         run_c7();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
+        run_summit();
+        run_summit_arm();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
@@ -266,6 +271,8 @@ int main() {
     run_hook();
     run_workers();
     run_c7();
+    run_summit();
+    run_summit_arm();
     run_ascent();
 
     return EXIT_SUCCESS;

@@ -261,6 +261,11 @@ jobs:
           # 242 ring C6's climb, no ladder, to the 264 ring (touch_c6); from
           # the 264 ring C7's exposed climb, no mast, to the walkway at 291.25 m
           # (touch_c7).
+          # The summit, west of the derrick's upper receiver: the dark
+          # searchlight, the blocks up to the gantry, the walk off its edge
+          # onto the striker plate that lights the lamp, and the runway arm,
+          # a run off its end and the canopy all the way to the ground
+          # (touch_summit).
           # From the 264 ring the owner's vertical machines on their motors,
           # the cascade mast, the pitman lift and the barrel helix, and a
           # mantle onto TP-340 (touch_machines); and from the 750 deck the
@@ -276,7 +281,7 @@ jobs:
               touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
-              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
+              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

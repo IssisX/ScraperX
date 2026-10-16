@@ -222,6 +222,14 @@ constexpr float kWindZoneLowY = 262.0F;
 constexpr float kWindZoneHighY = 300.0F;
 constexpr float kWindZoneNorthZ = -166.0F;
 constexpr float kWindZoneSouthZ = -128.0F;
+// The summit (task 92): the same wind over the runway arm, west of the deck's
+// end (Summit::kDeckWestX), from the arm's root out and 20 m above and below it.
+constexpr float kSummitWindX = -12.0F;
+constexpr float kSummitWindRampM = 3.0F;
+constexpr float kSummitWindLowY = 788.0F;
+constexpr float kSummitWindHighY = 830.0F;
+constexpr float kSummitWindNorthZ = -197.0F;
+constexpr float kSummitWindSouthZ = -178.0F;
 constexpr float kWindBaseMps = 4.0F;
 constexpr float kWindGustMps = 16.0F;
 constexpr float kWindDragHalfRhoCdA = 0.5F * 1.2F * 0.7F;

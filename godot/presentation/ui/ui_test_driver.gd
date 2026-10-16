@@ -95,6 +95,7 @@ const SCENARIOS := {
 	# the walkway at 291.25 m without the cascade mast -- two pipe galleries
 	# swung out over the drop, four hang-ups and the block.
 	"touch_c7": 36,
+	"touch_summit": 42,
 	# The owner's vertical machines, from the 264 ring's west band where C6
 	# tops out, on their own motors: the cascade mast 27 m up, the walkway out
 	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
@@ -306,6 +307,8 @@ func _run() -> void:
 			ok = await _c6(InputRouter.Device.TOUCH)
 		"touch_c7":
 			ok = await _c7(InputRouter.Device.TOUCH)
+		"touch_summit":
+			ok = await _summit(InputRouter.Device.TOUCH)
 		"touch_machines":
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":

@@ -104,6 +104,8 @@ enum class InitialSpawn : std::uint8_t {
     PipeGallery = 40,
     // On the deck west of the run wall, beside its line, facing along it.
     WallRunApproach = 41,
+    // On the summit deck, off the derrick's upper receiver (task 92).
+    Summit = 42,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -161,6 +163,17 @@ struct SlingshotSnapshot final {
     Vector3 launch_track_start{};
     Vector3 launch_track_end{};
     std::uint32_t launch_count = 0;
+};
+
+// The summit (task 92): the searchlight's state, and the striker plate that
+// lights it.
+struct SummitSnapshot final {
+    bool lit = false;                 // the lamp is lit for good
+    double striker_travel_m = 0.0;    // the plate's way down from its rest
+    double striker_peak_m = 0.0;      // the deepest it has gone
+    double trip_travel_m = 0.0;       // where it lights the lamp
+    double lamp_yaw_rad = 0.0;
+    double lamp_speed_rad_s = 0.0;
 };
 
 // AS-012, the swing off the 220 ring: the rider's seat and the ram on their
@@ -968,6 +981,9 @@ public:
     [[nodiscard]] bool request_swing_action() noexcept;
     [[nodiscard]] bool request_swing_drop() noexcept;
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
+    [[nodiscard]] SummitSnapshot summit_state() const noexcept;
+    // A world started after the beacon was lit before (the profile keeps it).
+    void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;
     // Drop lets go; Crouch held pulls up on it.
     [[nodiscard]] bool request_trapeze_action() noexcept;

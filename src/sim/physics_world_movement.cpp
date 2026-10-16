@@ -467,8 +467,17 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
     const float z = static_cast<float>(at.GetZ());
     wind_mps_ = 0.0F;
     wind_force_n_ = 0.0F;
-    if (x > kWindZoneX || y < kWindZoneLowY || y > kWindZoneHighY || z < kWindZoneNorthZ ||
-        z > kWindZoneSouthZ) {
+    // The west face's zone, and the summit's: out along the runway arm, west
+    // of the deck's end, the same wind takes hold (outward, -x).
+    float exposure = 0.0F;
+    if (x <= kWindZoneX && y >= kWindZoneLowY && y <= kWindZoneHighY && z >= kWindZoneNorthZ &&
+        z <= kWindZoneSouthZ) {
+        exposure = std::clamp((kWindZoneX - x) / kWindZoneRampM, 0.0F, 1.0F);
+    } else if (x <= kSummitWindX && y >= kSummitWindLowY && y <= kSummitWindHighY && z >= kSummitWindNorthZ &&
+               z <= kSummitWindSouthZ) {
+        exposure = std::clamp((kSummitWindX - x) / kSummitWindRampM, 0.0F, 1.0F);
+    }
+    if (exposure <= 0.0F) {
         return;
     }
     // Two swells of incommensurate periods: never long calm, now and
@@ -476,7 +485,6 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
     constexpr double kTau = 2.0 * 3.141592653589793;
     const float gust = static_cast<float>(std::clamp(
         0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
-    const float exposure = std::clamp((kWindZoneX - x) / kWindZoneRampM, 0.0F, 1.0F);
     wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
     if (grounded_) {
         return;   // standing, the soles' traction takes it

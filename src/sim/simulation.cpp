@@ -741,6 +741,20 @@ TrapezeSnapshot Simulation::trapeze_state() const noexcept {
     return result;
 }
 
+SummitSnapshot Simulation::summit_state() const noexcept {
+    const auto &state = physics_world_->summit().state();
+    SummitSnapshot result;
+    result.lit = state.lit;
+    result.striker_travel_m = state.striker_travel_m;
+    result.striker_peak_m = state.striker_peak_m;
+    result.trip_travel_m = Summit::kTripTravel;
+    result.lamp_yaw_rad = state.lamp_yaw_rad;
+    result.lamp_speed_rad_s = state.lamp_speed_rad_s;
+    return result;
+}
+
+void Simulation::light_summit() noexcept { physics_world_->summit().light(); }
+
 SwingSnapshot Simulation::swing_state() const noexcept {
     const auto to_vector = [](const JPH::RVec3 p) {
         return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()),

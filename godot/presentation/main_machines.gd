@@ -85,6 +85,8 @@ const KIT_CABLE_RANGE := 200.0
 # declaration, so what the player sees is exactly what collides; nothing is
 # authored twice. Kit bodies live outside $TowerPresentation: they are native
 # collision already, never part of the exported solid dressing.
+const SUMMIT_FRAME_ENTITY := 1900
+
 func _build_kit() -> void:
 	_kit_root = Node3D.new()
 	_kit_root.name = "KitPresentation"
@@ -111,6 +113,10 @@ func _build_kit() -> void:
 		node.transform = _native.get_kit_body_transform(body)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		var dynamic := bool(_native.is_kit_body_dynamic(body))
+		# The summit's frame (pylon, deck, arm) is the thing to see from the
+		# ground: drawn like a moving body's parts, one mesh per material, and at
+		# any distance, not batched into the statics' near-only batches.
+		var far_visible := int(_native.get_kit_body_entity_id(body)) == SUMMIT_FRAME_ENTITY
 		var body_groups := {}
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 			var mesh: PrimitiveMesh
@@ -137,7 +143,7 @@ func _build_kit() -> void:
 			var material: Material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
 			var part := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
-			if dynamic:
+			if dynamic or far_visible:
 				var key := str(material.get_instance_id())
 				Batcher.append(body_groups, key, mesh, 0, part, "", false)
 				body_groups[key][1] = material
@@ -151,7 +157,8 @@ func _build_kit() -> void:
 			# A moving part is drawn as far as its size carries: a 1 m part to
 			# about 120 m, the 26 m wheel across the whole tower.
 			var extent := piece.get_aabb().size
-			piece.visibility_range_end = clampf(40.0 * maxf(extent.x, maxf(extent.y, extent.z)), 120.0, 1200.0)
+			piece.visibility_range_end = 0.0 if far_visible else \
+				clampf(40.0 * maxf(extent.x, maxf(extent.y, extent.z)), 120.0, 1200.0)
 			piece.visibility_range_end_margin = BATCH_FADE
 			piece.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			node.add_child(piece)

@@ -18,6 +18,7 @@
 #include "sim/trapeze.hpp"
 #include "sim/crew.hpp"
 #include "sim/climb_c7.hpp"
+#include "sim/summit.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
@@ -440,6 +441,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck750:
         // On the 750 deck, east of stage O's cab.
         return {8.0, 751.0, -145.0};
+    case scraperx::sim::InitialSpawn::Summit:
+        // On the summit deck, a few steps west of the derrick's upper receiver.
+        return {9.0, 803.65, -187.5};
     case scraperx::sim::InitialSpawn::Deck728:
         // On the 728 deck by C5's last mantle, north-east of stage O's cab.
         return {9.0, 729.05, -144.0};
