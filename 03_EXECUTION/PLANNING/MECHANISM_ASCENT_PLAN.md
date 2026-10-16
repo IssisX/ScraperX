@@ -172,7 +172,10 @@ own gate.
     (the owner, 2026-10-08): shortcuts that reward breaking the intended route, because the
     physics allows them; the height felt (wind that grows and pushes, the body bracing, the city
     dropping away, the structure creaking under load); pressure from the world on one or two
-    bands (scaffolding collapsing below, water rising, fire spreading), not a chaser; a reason to
+    bands (scaffolding collapsing below, water rising, fire spreading); and, owner 2026-10-16,
+    something RELEASED after a scary build-up (a countdown, a straining cage, a gauge climbing) that
+    then CHASES the player and looks, moves and sounds frightening (this replaces the old "not a
+    chaser"; still no ghost racer, and still deterministic: a real body steered by a fixed rule); a reason to
     reach the top, visible from the ground once the owner decides what stands there; and a care
     pass on the look, feel and first minutes, then every stage. No ghost racer.
 
