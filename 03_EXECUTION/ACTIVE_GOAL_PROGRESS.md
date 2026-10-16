@@ -748,32 +748,33 @@ steel and sat out any tick it began a hair slack. Now:
   impact (16 kN). DROP lets go.
 - **Not observed:** on the phone.
 
-**Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
-blocks work that is otherwise ready.
+**Decisions waiting on the owner (written in plain words, 2026-10-16).** Each one holds up work
+that is otherwise ready. A letter is enough to answer.
 
-1. **The cascade mast, barrel helix and crown gondola.** Rework them like the pitman (no motor; each
-   worked by a different decision of the player's), or keep their motors as designed (plan §2.6
-   rule 12 says "as designed, motors included"). Recommended: rework. C7 already makes the mast the
-   sheltered way and C7 the exposed one.
-2. **Physical mantles** (the last item of the parkour overhaul the owner ordered). Today a mantle
-   rises about 1.4 m in 0.42 s, a peak of about 4.8 g (DERIVED, 6h/T^2). Arms and legs limited to an
-   honest force (about 2.5 body weights) take about 0.8 s. That is truer, but slower, on every climb
-   in the game. Which does the owner want: the faster, acrobatic feel, or the slower, honest one?
-3. **Walking pushes back on a moving support** (Phase 2; built and taken out, see above). It needs
-   the luffing derrick's cradle held at its upper receiver by a hinged latch it passes and drops
-   behind. A fixed stop cannot work there: the cradle arrives from that side, and it is light and
-   presses up against the boom's stop. Worth building only if the owner wants this physics.
-4. **A release-signed APK in CI.** CI exports debug and re-signs with the owner's key. A release
-   export needs the release keystore at export time, and it cannot be tested here.
-5. **The spent trigger from 220 m to 750 m** (plan §2.6 rules 9 and 11). Eleven stages (D, E,
-   F, G, H, I, J, K, L, M and O) start on the same hanging handle, grabbed and stepped back
-   from. So does the wheel's new skip line. Retiring it needs body verbs the game lacks first:
-   pushing a body by walking into it, a stomp, a lever thrown by hanging on it. Each stage then
-   needs its own design: D's float lifts within about 0.2 s of its water running, so its trigger
-   must be worked from the deck. Options:
-   - **A (recommended):** rework all of them, one stage at a time, each with an action no other
-     stage has. The machines stay; only the triggers change. Roughly two to four days.
-   - **B:** rework the three most alike first (G, H and J, all LANYARD), then decide.
-   - **C:** keep them, and spend the time on new places.
-6. **Still open from before:** what stands at the summit; the store name; the price; whether the
-   repository stays public; credits; and clearance for the fall voice.
+1. **What's at the top that makes you want to climb (and that you can see from the ground).**
+   - A (recommended, with B): a huge dead searchlight on the top. From the ground you see it, and at
+     dusk a faint flicker on the clouds. At the top you switch it on with your own body; its beam
+     sweeps the sky and mountains and stays on, so every new climb starts under the light you lit.
+   - B: a long arm sticking out from the top with a windsock. At the top you run off its end and
+     parachute all the way down, past everything you climbed.
+   - C: a giant weight at the top; let it go and every machine you used moves again, one after
+     another, all the way down, like a giant domino chain. Spectacular, but a lot of work.
+   - D: sunrise above the clouds. Only a view, nothing to do. Comes free with A.
+2. **How fast you pull yourself up over a ledge.** Today it takes under half a second: snappy and
+   athletic, faster than a real person. Realistic would be about twice as slow, on every ledge in
+   the game. A (recommended): keep it fast. B: make it realistic.
+3. **Eleven machines start the same way** (between 220 m and 750 m): grab a hanging handle and
+   step back. You said nothing should repeat. A (recommended): give each its own way to start
+   (about 2 to 4 days; the machines stay, only how you set them off changes; the game first needs
+   a few new moves, like shoving something by walking into it, stomping, or hanging your weight
+   on a lever). B: redo the three most alike first, then decide. C: leave them; build new places.
+4. **Three machines run on motors** (the tall mast, the spiral barrel, the gondola near the top);
+   everything else moves by weight, gravity or your own effort. A (recommended): rework them so
+   you power them, like the hand-crank lift. B: keep the motors.
+5. **Platforms that dip when you walk on them.** Built, but it broke the crane-arm ride, which needs
+   a latch first. A (recommended): leave it out for now. B: add the latch and bring it back.
+6. **The store-ready version of the app.** Today's download is a test build. A store build needs
+   your release key added to GitHub's secret settings, which only you can do. Can wait until
+   you're ready to publish.
+7. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
+   the credits, and whether you have the rights to the fall-scream voice clip.
