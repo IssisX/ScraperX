@@ -2382,7 +2382,9 @@ func _build_world() -> void:
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_geometry.add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
 	# The neighbouring shaft stands on the ground: 1.6 km from grade up.
-	_geometry.add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), Vector3(-30.0, 800.0, -330.0), concrete)
+	var shaft_concrete := ShaderMaterial.new()
+	shaft_concrete.shader = preload("res://presentation/materials/shaft_concrete.gdshader")
+	_geometry.add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), Vector3(-30.0, 800.0, -330.0), shaft_concrete)
 
 	_stack_world.build(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	if _regression_scene:

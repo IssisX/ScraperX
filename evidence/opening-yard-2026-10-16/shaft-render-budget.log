@@ -1,0 +1,16 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=160x90 aspect=1.778 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=33 msec=392 driver=Dummy
+OPENING_RENDER_BUDGET {"buffer_bytes":27377708.0,"draws":872.0,"mode":"opening","primitives":880344.0,"renderer":"softpipe","scope":"render stress view; not AndroidFPS or route completion","video_bytes":44911371.0}
+OPENING_RENDER_BUDGET {"buffer_bytes":27377708.0,"draws":799.0,"mode":"ground_to_crown","primitives":347900.0,"renderer":"softpipe","scope":"render stress view; not AndroidFPS or route completion","video_bytes":44911371.0}
+OPENING_RENDER_BUDGET {"buffer_bytes":27377708.0,"draws":877.0,"mode":"crown_to_ground","primitives":447286.0,"renderer":"softpipe","scope":"render stress view; not AndroidFPS or route completion","video_bytes":44911371.0}
+OPENING_RENDER_BUDGET failures=0

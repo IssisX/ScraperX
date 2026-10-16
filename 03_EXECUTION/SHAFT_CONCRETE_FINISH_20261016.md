@@ -1,0 +1,9 @@
+# Neighboring shaft concrete finish
+
+The normal receiving-yard view previously showed the neighboring1600m shaft as an almost uniform pale box; the older detailed facade is restricted to regression scenes. The shipping TowerMass now has one opaque concrete shader with meter-scaled pour variation, rain staining and derivative-filtered flush construction joints. The existing92×1600×80m box, native geometry, contact behavior and all machine/player owners are unchanged. The finish creates no windows or climbable relief.
+
+Root implemented the shader and Main integration directly, tested an isolated copy of published37f8a47 with only this presentation change, and inspected its1280×720 normal arrival. FREIGHT_ARRIVAL and OPENING_RENDER_BUDGET passed. Default high-shadow,2000m views retain872 opening /799 upward /877 downward submissions,880344 opening primitives and27377708 buffer bytes. This is a limited material/readability improvement; it does not establish phone frame time, fix a force-close or achieve console-grade art.
+
+`evidence/opening-yard-2026-10-16/SHAFT_FINISH_ACCEPTANCE.json` and `shaft-*` logs/command receipts bind the selected Main/shader source. Native/public normal arrival/cab/lift/exit991PASS is reused because those owners and geometry did not change. Working Main's unrelated ParkourYard/grapple integration remains excluded from the selected delivery and preserved in the worktree. Matching GitHub APK is pending at this acceptance boundary.
+
+The owner's smallest-team workflow revision is also persisted in AGENTS: solo for tightly coupled work, normally one useful local implementer, further local/MCP staffing only for clear delivery benefit. No model agents were launched for this slice. Ordinary Python workers own build watching and collection; runtime/model/permission settings are unchanged.

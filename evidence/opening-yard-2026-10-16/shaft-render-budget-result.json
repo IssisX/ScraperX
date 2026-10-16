@@ -1,0 +1,30 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/work",
+    "--",
+    "/usr/bin/env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "XDG_DATA_HOME=/work/scraperx-shaft-finish-20261016/userdata",
+    "LIBGL_ALWAYS_SOFTWARE=1",
+    "GALLIUM_DRIVER=softpipe",
+    "/usr/bin/xvfb-run",
+    "--error-file=/dev/stderr",
+    "-a",
+    "-s",
+    "-screen 0 1280x720x24",
+    "/work/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--path",
+    "/work/scraperx-shaft-finish-20261016/source/godot",
+    "--audio-driver",
+    "Dummy",
+    "--resolution",
+    "1280x720",
+    "--script",
+    "res://tests/opening_render_budget_test.gd"
+  ],
+  "exit": 0
+}
