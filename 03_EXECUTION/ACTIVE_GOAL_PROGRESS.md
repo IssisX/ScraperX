@@ -814,8 +814,15 @@ that is otherwise ready. A letter is enough to answer.
 6. **The store-ready version of the app.** Today's download is a test build. A store build needs
    your release key added to GitHub's secret settings, which only you can do. Can wait until
    you're ready to publish.
-7. **Which pressure to build first** (see "Ideas for pressure" above). A (recommended): gust fronts
-   first, then the falling walkway as the first new pressure stage. B: the falling walkway first.
-   C: the drum run first.
+7. **Which pressure to build first.** You meant pressure to run and escape (2026-10-16): something
+   advancing that you have to outrun, not a push from the wind. The docs' "no chaser" means no
+   creature or ghost chasing you; a collapse, a blast or a flood that advances is what you asked for
+   on 2026-10-08. Best first (recommended), each a new action and none like an existing machine:
+   A: the falling walkway (planks drop away right behind your heels, each one's fall pulling the
+   next one's pin: walk and you fall, sprint and leap and you make it). B: the surge (a blast of
+   steam bursts up a shaft behind you and rises faster than a walk; climb ahead of it or duck into
+   a side niche as it passes). C: the drum run (heavy drums roll down a steep walkway on a rhythm
+   set by a filling bucket; dash up between them, slide under, vault). Gust fronts moved down
+   (wind pressure, not escape).
 8. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
    the credits, and whether you have the rights to the fall-scream voice clip.
