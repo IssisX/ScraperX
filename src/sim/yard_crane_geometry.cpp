@@ -65,13 +65,20 @@ void eye(std::vector<Part> &parts, Vec3 point, float half_width, float half_heig
     }
 }
 
-std::vector<Part> dock_parts(float top) {
+std::vector<Part> dock_parts(float top, bool catch_on_negative_z) {
     // Dock origin is its western edge and centerline. East end overlaps the
     // existing ring by .5m. Every support/brace remains below the deck or in
     // the two side planes, outside the accepted center driving corridor.
     std::vector<Part> parts;
     parts.push_back(solid({5.25F,.06F,4}, {5.25F,top-.06F,0}, Material::Galvanised));
-    for (float z : {-3.75F,3.75F}) {
+    // The catch assembly occupies z[-156.48,-143.52] below4.1m.
+    // Set back only its neighbouring support plane by1m: the footings and
+    // diagonals must not intersect its moving rim or strain the membrane.
+    // Full-width crossmembers carry the deck overhang; deck, guardrails and
+    // both driving mouths retain their original geometry and ring overlap.
+    const float negative_support = catch_on_negative_z ? -2.75F : -3.75F;
+    const float positive_support = catch_on_negative_z ? 3.75F : 2.75F;
+    for (float z : {negative_support,positive_support}) {
         rhs(parts, {0,top-.30F,z}, {10.5F,top-.30F,z}, .30F,.45F,.012F);
         for (float x : {.35F,9.75F}) {
             rhs(parts, {x,.10F,z}, {x,top-.525F,z}, .35F,.35F,.012F);
@@ -79,6 +86,8 @@ std::vector<Part> dock_parts(float top) {
         }
         rhs(parts, {.35F,.4F,z}, {9.75F,top-.525F,z}, .20F,.20F,.008F);
         rhs(parts, {9.75F,.4F,z}, {.35F,top-.525F,z}, .20F,.20F,.008F);
+    }
+    for (float z : {-3.75F,3.75F}) {
         // Side guardrails; neither west crane receiving face nor east
         // driving mouth gets a rail or post across its open span.
         rhs(parts, {.25F,top+1.10F,z}, {10.25F,top+1.10F,z}, .06F,.06F,.004F,Material::Yellow);
@@ -131,7 +140,7 @@ YardCraneGeometry build_yard_crane_geometry(kit::Kit &kit) {
     rhs(foundation,{-5.95F,1.0F,-.45F},{-5.95F,1.0F,.45F},.06F,.06F,.004F);
     g.foundation = kit.add_body(1450,foundation,base,identity,0,.85F);
     for (std::size_t i=0;i<g.docks.size();++i)
-        g.docks[i] = kit.add_body(1451+i,dock_parts(i==0?11.F:22.F),
+        g.docks[i] = kit.add_body(1451+i,dock_parts(i==0?11.F:22.F,i==0),
             RVec3(-36,0,i==0?-140:-160),identity,0,.9F);
 
     std::vector<Part> mast;

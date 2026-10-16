@@ -13,6 +13,7 @@ var _count := 0
 var _next := 0
 var _paused := false
 var _skip_next := false
+var _last_record_usec := -1
 var _steps := 0
 var _height := 0.0
 var _pitch := 0.0
@@ -25,22 +26,37 @@ func _init() -> void:
 
 func skip_next_frame() -> void:
 	_skip_next = true
+	_last_record_usec = -1
 
 func set_paused(paused: bool) -> void:
 	if _paused and not paused:
 		skip_next_frame()
 	_paused = paused
+	if paused:
+		_last_record_usec = -1
 
+# delta_seconds remains caller-compatible simulation context, never wall timing.
+# Tests may supply a monotonic timestamp; production always reads the real clock.
 func record_frame(delta_seconds: float, native_usec: int, steps: int,
-		draw_calls: int, primitives: int, height: float, pitch_degrees: float) -> void:
+		draw_calls: int, primitives: int, height: float, pitch_degrees: float,
+		timestamp_usec: int = -1) -> void:
 	if _paused:
 		return
+	var now_usec := Time.get_ticks_usec() if timestamp_usec == -1 else timestamp_usec
+	var previous_usec := _last_record_usec
+	_last_record_usec = now_usec if now_usec >= 0 else -1
 	if _skip_next:
 		_skip_next = false
 		return
-	if not is_finite(delta_seconds) or delta_seconds < 0.0 or native_usec < 0 			or steps < 0 or draw_calls < 0 or primitives < 0 			or not is_finite(height) or not is_finite(pitch_degrees):
+	# The first call establishes the interval boundary. A bad/reversed clock
+	# rebases without admitting a fabricated interval or poisoning later samples.
+	if previous_usec < 0 or now_usec <= previous_usec:
 		return
-	_frame_ms[_next] = delta_seconds * 1000.0
+	if not is_finite(delta_seconds) or delta_seconds < 0.0 or native_usec < 0 \
+			or steps < 0 or draw_calls < 0 or primitives < 0 \
+			or not is_finite(height) or not is_finite(pitch_degrees):
+		return
+	_frame_ms[_next] = float(now_usec - previous_usec) / 1000.0
 	_native_ms[_next] = float(native_usec) / 1000.0
 	_draw_calls[_next] = draw_calls
 	_primitives[_next] = primitives
@@ -90,7 +106,7 @@ func copy_text(build_identity: Dictionary) -> String:
 	var version := str(build_identity.get("version_code", "development")).left(40).replace("\n", " ")
 	return ("ScraperX performance report\nBuild %s / source %s\n" % [version, source]
 		+ "Recent window: %d frames / %.3f s / %.1f FPS\n" % [s.sample_count, s.elapsed_seconds, s.fps]
-		+ "Frame ms p50 / p95 / max: %.3f / %.3f / %.3f\n" % [s.frame_ms_p50, s.frame_ms_p95, s.frame_ms_max]
+		+ "Frame WALL ms p50 / p95 / max: %.3f / %.3f / %.3f\n" % [s.frame_ms_p50, s.frame_ms_p95, s.frame_ms_max]
 		+ "Native advance WALL ms p50 / p95 / max: %.3f / %.3f / %.3f\n" % [s.native_wall_ms_p50, s.native_wall_ms_p95, s.native_wall_ms_max]
 		+ "Draw calls last / max: %d / %d; primitives last / max: %d / %d\n" % [s.draw_calls_last, s.draw_calls_max, s.primitives_last, s.primitives_max]
 		+ "Render counters: previous completed render frame.\n"

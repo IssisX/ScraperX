@@ -27,8 +27,31 @@ bool walk(Simulation &s, double x, double z, unsigned limit, double cap) {
     std::cerr << "WALK_END p=" << p.x << ',' << p.y << ',' << p.z << std::endl;
     return false;
 }
+void settled_idle() {
+    Simulation s(InitialSpawn::FreightYardArrival);
+    tick(s,720);
+    const auto resting=s.catch_net_vertices();
+    require(resting.size()==1681,"real catch membrane remains installed");
+    double maximum_motion=0;
+    for(unsigned n=0;n<90;++n) {
+        tick(s);
+        const auto current=s.catch_net_vertices();
+        require(current.size()==resting.size(),"idle does not discard cloth topology");
+        for(std::size_t i=0;i<resting.size();++i) {
+            const auto &a=resting[i],&b=current[i];
+            maximum_motion=std::max(maximum_motion,std::sqrt((a.x-b.x)*(a.x-b.x)+
+                (a.y-b.y)*(a.y-b.y)+(a.z-b.z)*(a.z-b.z)));
+        }
+    }
+    require(maximum_motion<1e-6,"unloaded full-world catch reaches sustained native rest beside crane docks");
+    require(s.snapshot().player_grounded && s.forklift_state().available && s.yard_crane_state().available,
+            "normal opening and both real machines remain live");
+    std::cout<<"PASS ARRIVAL_IDLE catch_max_motion_m="<<maximum_motion<<" ticks="<<s.snapshot().tick_index<<'\n';
 }
-int main() {
+}
+int main(int argc,char **argv) {
+    settled_idle();
+    if(argc>1 && std::string(argv[1])=="--settled-idle") return 0;
     // Same enum selected by the shipping bridge constructor. No debug placement.
     Simulation s(InitialSpawn::FreightYardArrival);
     const auto start = s.snapshot().player_position;

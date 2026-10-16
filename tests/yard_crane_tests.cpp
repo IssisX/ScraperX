@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 using namespace scraperx::sim;
 using namespace JPH;
@@ -423,16 +424,81 @@ void loaded_cycle() {
             "explicit retry restores owner inventory without duplicated joints");
     f.trace("RETRY");
 }
+
+void catch_clearance() {
+    Fixture f;
+    struct Bounds {
+        Vec3 low = Vec3::sReplicate(std::numeric_limits<float>::max());
+        Vec3 high = -Vec3::sReplicate(std::numeric_limits<float>::max());
+    };
+    const auto bounds = [&](kit::BodyIndex body, const kit::Part &part) {
+        Bounds result;
+        const auto frame = f.world.GetBodyInterface().GetWorldTransform(f.kit->body_id(body));
+        // Body origins differ from their COM; use the actual world transform,
+        // and rotate every plate corner before deriving its world bounds.
+        for (float x : {-1.F, 1.F}) for (float y : {-1.F, 1.F}) for (float z : {-1.F, 1.F}) {
+            const Vec3 corner(frame * (part.offset + part.rotation *
+                Vec3(x * part.half.GetX(), y * part.half.GetY(), z * part.half.GetZ())));
+            result.low = Vec3::sMin(result.low, corner);
+            result.high = Vec3::sMax(result.high, corner);
+        }
+        return result;
+    };
+    const auto overlaps = [](const Bounds &a, const Bounds &b) {
+        return a.low.GetX() < b.high.GetX() && a.high.GetX() > b.low.GetX() &&
+               a.low.GetY() < b.high.GetY() && a.high.GetY() > b.low.GetY() &&
+               a.low.GetZ() < b.high.GetZ() && a.high.GetZ() > b.low.GetZ();
+    };
+    const Bounds catch_envelope{Vec3(-40.5F, -.5F, -156.5F), Vec3(-27.5F, 4.1F, -143.5F)};
+    for (unsigned dock = 0; dock < f.crane->geometry().docks.size(); ++dock) {
+        const auto body = f.crane->geometry().docks[dock];
+        const auto &parts = f.kit->body_parts(body);
+        require(!parts.empty(), "production dock has actual collision parts");
+        const float top = dock == 0 ? 11.F : 22.F;
+        const float center_z = dock == 0 ? -140.F : -160.F;
+        const auto deck = bounds(body, parts.front());
+        const auto near = [](float a, float b) { return std::abs(a - b) < .001F; };
+        require(near(deck.low.GetX(), -36.F) && near(deck.high.GetX(), -25.5F) &&
+                near(deck.low.GetY(), top - .12F) && near(deck.high.GetY(), top) &&
+                near(deck.low.GetZ(), center_z - 4.F) && near(deck.high.GetZ(), center_z + 4.F),
+                "11m/22m full-width decks retain height, thickness and ring overlap");
+        // Check actual open driving mouths above the deck at both ends. These
+        // corridors must remain open instead of trading catch clearance for a
+        // narrower truck/player approach or a newly blocked receiving face.
+        const Bounds west_mouth{Vec3(-36.15F, top + .05F, center_z - 1.3F),
+                                Vec3(-35.85F, top + 1.F, center_z + 1.3F)};
+        const Bounds east_mouth{Vec3(-25.8F, top + .05F, center_z - 1.3F),
+                                Vec3(-25.5F, top + 1.F, center_z + 1.3F)};
+        unsigned index = 0;
+        for (const auto &part : parts) {
+            const auto actual = bounds(body, part);
+            if (overlaps(actual, catch_envelope)) {
+                std::cerr << "CATCH_DOCK_OVERLAP dock=" << dock << " part=" << index
+                          << " min=" << actual.low.GetX() << ',' << actual.low.GetY() << ',' << actual.low.GetZ()
+                          << " max=" << actual.high.GetX() << ',' << actual.high.GetY() << ',' << actual.high.GetZ()
+                          << std::endl;
+                require(false, "production dock collision part intrudes into catch working envelope below4.1m");
+            }
+            require(!overlaps(actual, west_mouth) && !overlaps(actual, east_mouth),
+                    "production dock retains both full-height central driving mouths");
+            ++index;
+        }
+    }
+    std::cout << "PASS yard crane production dock/catch clearance and unchanged11m/22m decks and mouths\n";
+}
+
 }
 int main(int argc, char **argv) {
     std::cout << std::unitbuf;
     RegisterDefaultAllocator(); Factory::sInstance = new Factory; RegisterTypes();
-    if (argc > 1 && std::string(argv[1]) == "--individual-legs") individual_legs();
+    if (argc > 1 && std::string(argv[1]) == "--catch-clearance") catch_clearance();
+    else if (argc > 1 && std::string(argv[1]) == "--individual-legs") individual_legs();
     else if (argc > 1 && std::string(argv[1]) == "--restore-slack") restore_slack_hoist();
     else if (argc > 1 && std::string(argv[1]) == "--slow-controls") slow_controls();
     else if (argc > 1 && std::string(argv[1]) == "--loaded-cycle") loaded_cycle();
     else if (argc > 1 && std::string(argv[1]) == "--slack-leg-release") supported_slack_leg_release();
     else {
+        catch_clearance();
         supported_slack_leg_release();
         slow_controls();
         restore_slack_hoist();

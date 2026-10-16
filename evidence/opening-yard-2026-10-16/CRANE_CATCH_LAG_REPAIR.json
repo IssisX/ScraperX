@@ -1,0 +1,143 @@
+{
+  "baseline_source": "67b92b135c4476f5141548b2c70db9a4771c4930",
+  "baseline_android_native_sha256": "4bcb34bdc0bc0777abff7f53163c87dfd426b8493677863fe2ee7d7acb48def1",
+  "component_candidate": "same shipped Android library plus rebuilt yard_crane_geometry.cpp ELF interposition; production solver/material/timing unchanged",
+  "reported_native_wall_ms_p50": 251.877,
+  "reported_steps": 9,
+  "cause": "Actual static crane dock1451 support collision with catch membrane near(-35.6288,3.77413,-143.945); unloaded assembly never settles in1080ticks",
+  "baseline_idle_trace": "SETTLING tick=90 wall_ms_per_tick=34.595862 cpu_ms_per_tick=53.336759\nSETTLING tick=180 wall_ms_per_tick=34.162031 cpu_ms_per_tick=53.876770\nSETTLING tick=270 wall_ms_per_tick=31.687126 cpu_ms_per_tick=54.625334\nSETTLING tick=360 wall_ms_per_tick=35.417399 cpu_ms_per_tick=53.458024\nSETTLING tick=450 wall_ms_per_tick=32.427059 cpu_ms_per_tick=54.728739\nSETTLING tick=540 wall_ms_per_tick=31.469435 cpu_ms_per_tick=54.292889\nSETTLING tick=630 wall_ms_per_tick=35.114774 cpu_ms_per_tick=53.431691\nSETTLING tick=720 wall_ms_per_tick=31.971917 cpu_ms_per_tick=53.843084\nSETTLING tick=810 wall_ms_per_tick=32.986212 cpu_ms_per_tick=48.099350\nSETTLING tick=900 wall_ms_per_tick=39.162391 cpu_ms_per_tick=64.180313\nSETTLING tick=990 wall_ms_per_tick=41.065583 cpu_ms_per_tick=57.813757\nSETTLING tick=1080 wall_ms_per_tick=32.352636 cpu_ms_per_tick=54.035296\n",
+  "candidate_idle_trace": "SLEEP_SPEED vertex_sq=2.21626091 rigid_speed=0.0585207194 equilibrium=0 tick=90\nSETTLING tick=90 wall_ms_per_tick=53.914558 cpu_ms_per_tick=87.973362\nSLEEP_SPEED vertex_sq=0.28620556 rigid_speed=0.00134393014 equilibrium=0 tick=180\nSETTLING tick=180 wall_ms_per_tick=62.728625 cpu_ms_per_tick=106.031818\nSLEEP_SPEED vertex_sq=0.0491776317 rigid_speed=0.00123092916 equilibrium=0 tick=270\nSETTLING tick=270 wall_ms_per_tick=60.519402 cpu_ms_per_tick=105.729750\nSLEEP_SPEED vertex_sq=0.0168723464 rigid_speed=0.00108626997 equilibrium=0.166666672 tick=360\nSETTLING tick=360 wall_ms_per_tick=43.049884 cpu_ms_per_tick=68.362516\nSETTLING tick=450 wall_ms_per_tick=12.839692 cpu_ms_per_tick=22.014012\nSETTLING tick=540 wall_ms_per_tick=7.730108 cpu_ms_per_tick=11.929974\nSETTLING tick=630 wall_ms_per_tick=7.731928 cpu_ms_per_tick=11.635225\nSETTLING tick=720 wall_ms_per_tick=7.761252 cpu_ms_per_tick=11.648782\nSETTLING tick=810 wall_ms_per_tick=10.000756 cpu_ms_per_tick=11.607669\nSETTLING tick=900 wall_ms_per_tick=9.258233 cpu_ms_per_tick=11.765551\nSETTLING tick=990 wall_ms_per_tick=9.066785 cpu_ms_per_tick=11.393730\nSETTLING tick=1080 wall_ms_per_tick=7.792746 cpu_ms_per_tick=11.652411\n",
+  "clearance_regression": [
+    {
+      "label": "old",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "CATCH_DOCK_OVERLAP dock=0 part=5 min=-35.487,0.1,-143.925 max=-35.475,10.475,-143.575\nFAIL yard crane: production dock collision part intrudes into catch working envelope below4.1m\n"
+    },
+    {
+      "label": "fixed",
+      "exit": 0,
+      "stdout": "PASS yard crane production dock/catch clearance and unchanged11m/22m decks and mouths\n",
+      "stderr": ""
+    }
+  ],
+  "rejected_parallel_callback": {
+    "scope": "Component prototype/current native4bcb34bd; Termux allowedcores5/6; no foreground FPS claim",
+    "state_equal": true,
+    "results": [
+      {
+        "label": "serial",
+        "kind": "fixture",
+        "exit": 0,
+        "stdout": "PASS native damping fixture:100 real solved ticks, impulse,64 live mass edits,3 step sizes,restore,frame/piston state\n",
+        "stderr": "",
+        "sha256": "ddccfd61a215b51736b892ad1fff51d95e869585839c7c41e4ea2e9d9ee723b9"
+      },
+      {
+        "label": "parallel",
+        "kind": "fixture",
+        "exit": 0,
+        "stdout": "PASS native damping fixture:100 real solved ticks, impulse,64 live mass edits,3 step sizes,restore,frame/piston state\n",
+        "stderr": "",
+        "sha256": "ddccfd61a215b51736b892ad1fff51d95e869585839c7c41e4ea2e9d9ee723b9"
+      },
+      {
+        "label": "serial",
+        "kind": "benchmark",
+        "exit": 0,
+        "stdout": "CPU_ACCOUNT wall_total_ms=6576.278184 process_total_ms=11933.362074 main_thread_total_ms=6030.351026 cpu_wall_ratio=1.814607 process_ms_per_tick=44.197637\nANDROID_NATIVE_BENCH samples=270 warmup=45 mean_ms=24.356586 median_ms=24.169219 p95_ms=25.797136 p99_ms=26.859636 max_ms=28.820208 ticks=315 deaths=0 player=-93.995605,1.859999,-43.721378 grounded=1 scope=exact_APK_simulation_no_Godot_render\n",
+        "stderr": "",
+        "process_ms_per_tick": 44.197637,
+        "mean_ms": 24.356586,
+        "median_ms": 24.169219,
+        "p95_ms": 25.797136
+      },
+      {
+        "label": "parallel",
+        "kind": "benchmark",
+        "exit": 0,
+        "stdout": "CPU_ACCOUNT wall_total_ms=7434.792976 process_total_ms=10524.302525 main_thread_total_ms=5358.055408 cpu_wall_ratio=1.415547 process_ms_per_tick=38.978898\nANDROID_NATIVE_BENCH samples=270 warmup=45 mean_ms=27.536270 median_ms=24.517396 p95_ms=44.843854 p99_ms=60.866719 max_ms=78.744688 ticks=315 deaths=0 player=-93.995605,1.859999,-43.721378 grounded=1 scope=exact_APK_simulation_no_Godot_render\n",
+        "stderr": "",
+        "process_ms_per_tick": 38.978898,
+        "mean_ms": 27.53627,
+        "median_ms": 24.517396,
+        "p95_ms": 44.843854
+      },
+      {
+        "label": "parallel",
+        "kind": "benchmark",
+        "exit": 0,
+        "stdout": "CPU_ACCOUNT wall_total_ms=5857.633375 process_total_ms=10230.156852 main_thread_total_ms=5181.743238 cpu_wall_ratio=1.746466 process_ms_per_tick=37.889470\nANDROID_NATIVE_BENCH samples=270 warmup=45 mean_ms=21.694938 median_ms=20.911250 p95_ms=25.012865 p99_ms=27.500521 max_ms=29.754531 ticks=315 deaths=0 player=-93.995605,1.859999,-43.721378 grounded=1 scope=exact_APK_simulation_no_Godot_render\n",
+        "stderr": "",
+        "process_ms_per_tick": 37.88947,
+        "mean_ms": 21.694938,
+        "median_ms": 20.91125,
+        "p95_ms": 25.012865
+      },
+      {
+        "label": "serial",
+        "kind": "benchmark",
+        "exit": 0,
+        "stdout": "CPU_ACCOUNT wall_total_ms=6618.981454 process_total_ms=11921.298671 main_thread_total_ms=6011.094551 cpu_wall_ratio=1.801078 process_ms_per_tick=44.152958\nANDROID_NATIVE_BENCH samples=270 warmup=45 mean_ms=24.514746 median_ms=24.171667 p95_ms=26.398438 p99_ms=30.958906 max_ms=42.254166 ticks=315 deaths=0 player=-93.995605,1.859999,-43.721378 grounded=1 scope=exact_APK_simulation_no_Godot_render\n",
+        "stderr": "",
+        "process_ms_per_tick": 44.152958,
+        "mean_ms": 24.514746,
+        "median_ms": 24.171667,
+        "p95_ms": 26.398438
+      }
+    ],
+    "summary": {
+      "serial": {
+        "process_ms_per_tick": 44.1752975,
+        "mean_ms": 24.435665999999998,
+        "median_ms": 24.170443,
+        "p95_ms": 26.097786999999997
+      },
+      "parallel": {
+        "process_ms_per_tick": 38.434184,
+        "mean_ms": 24.615603999999998,
+        "median_ms": 22.714323,
+        "p95_ms": 34.9283595
+      }
+    },
+    "ratios": {
+      "process_ms_per_tick": 0.8700379210802146,
+      "mean_ms": 1.0073637444545198,
+      "median_ms": 0.9397561724458258,
+      "p95_ms": 1.3383648008162532
+    },
+    "accepted": false
+  },
+  "resource_trial": "Not run: child admission had only2 eligible performance cores; no guessing/affinity/governor change",
+  "limitations": [
+    "Component-level Android native evidence, not a rebuilt APK or foreground Godot FPS proof",
+    "Natural initial catch settling remains; sustained idle improvement is the measured result"
+  ],
+  "public_arrival_regression": [
+    {
+      "label": "old",
+      "exit": 1,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-native-frame-repair-20261016/old-arrival.log",
+      "output": "FAIL ARRIVAL unloaded full-world catch reaches sustained native rest beside crane docks\n"
+    },
+    {
+      "label": "fixed",
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-native-frame-repair-20261016/fixed-arrival.log",
+      "output": "PASS ARRIVAL_IDLE catch_max_motion_m=0 ticks=810\nPASS ARRIVAL normal spawn -> grade walk -> real cab -> finite lift -> grade exit ticks=1031\n"
+    }
+  ],
+  "reporter_tests": [
+    {
+      "test": "performance_report",
+      "exit_code": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-shaft-finish-20261016/performance_report-wall-test.log"
+    },
+    {
+      "test": "performance_report_main",
+      "exit_code": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-shaft-finish-20261016/performance_report_main-wall-test.log"
+    }
+  ],
+  "harness_header_scope": "Arrival harness used working public Simulation header: its sole unpublished change adds fields to the standalone, unused GrappleGunSnapshot::Hook type. Used Simulation/Snapshot/Forklift/YardCrane interfaces/layouts unchanged; exact-source CI compilation remains independent."
+}
