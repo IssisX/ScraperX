@@ -1,0 +1,44 @@
+android-apk-candidate	Check crane operator controls and native audio receipts	﻿2026-10-16T01:53:47.6171839Z ##[group]Run set -euo pipefail
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6172173Z ^[[36;1mset -euo pipefail^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6172615Z ^[[36;1mfor check in yard_crane_operator_inputs yard_crane_audio yard_crane_operator_main_native; do^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6173223Z ^[[36;1m  timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6173773Z ^[[36;1m    --script "res://tests/${check}_test.gd" 2>&1 | tee "artifacts/${check}.log"^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6174336Z ^[[36;1m  if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/${check}.log"; then exit 1; fi^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6175088Z ^[[36;1m  grep -E 'YARD_CRANE_OPERATOR_INPUTS_PASS|CRANE_AUDIO failures=0|SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS' "artifacts/${check}.log"^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6175644Z ^[[36;1mdone^[[0m
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6243268Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6243616Z env:
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6243823Z   GODOT_VERSION: 4.7-stable
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6244233Z   GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6244878Z   GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6245335Z   ANDROID_HOME: /usr/local/lib/android/sdk
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6245644Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6245938Z   ANDROID_NDK_VERSION: 29.0.14206865
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6246669Z   GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/work/ScraperX/ScraperX/ci/android/ScraperX-ChatGPT-debug.keystore
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6247271Z   GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6247613Z   GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6248061Z   CHATGPT_SIGNER_SHA256: 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6248586Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6249065Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6249446Z ##[endgroup]
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6580049Z Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.6875221Z 
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.8592609Z YARD_CRANE_OPERATOR_INPUTS_PASS
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.8974749Z YARD_CRANE_OPERATOR_INPUTS_PASS
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.9230931Z Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:47.9528571Z 
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:48.0417478Z CRANE_AUDIO failures=0 driver=Dummy receipt_fixture_only=1 heard_device_audio=0
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:48.0688853Z CRANE_AUDIO failures=0 driver=Dummy receipt_fixture_only=1 heard_device_audio=0
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:48.0934889Z Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:48.1230232Z 
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:49.1361076Z SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:53:49.1362297Z SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:10.4799207Z ERROR: YARD_CRANE_OPERATOR_MAIN FAIL real mouse freelook survives crane mode
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:10.4799983Z    at: push_error (core/variant/variant_utility.cpp:1023)
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:10.4800497Z    GDScript backtrace (most recent call first):
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:10.4801053Z        [0] check (res://tests/yard_crane_operator_main_native_test.gd:14)
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:10.4801524Z        [1] _run (res://tests/yard_crane_operator_main_native_test.gd:121)
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:12.0675109Z SCRAPERX_AUDIO_BANK clips=33 msec=454 driver=Dummy
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:12.1760484Z YARD_CRANE_OPERATOR_RECEIPT {"captured":false,"entry_position":"(-66.5, 1.08, -150.0)","hoist_after_m":30.510498046875,"hoist_before_m":30.8600006103516,"paused_tick":863,"reachable":true,"rigging_mask":0,"slew_rad":-1.56166100502014,"source_after_j":21843.9102172852,"source_before_j":0.0,"source_capacity_j":5000000.0,"support":1450,"trolley_m":20.469970703125,"work_after_j":819.038938829472,"work_before_j":0.0}
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:12.2141794Z SCRAPERX_YARD_CRANE_OPERATOR_MAIN FAIL checks=37
+android-apk-candidate	Check crane operator controls and native audio receipts	2026-10-16T01:54:12.3267271Z ##[error]Process completed with exit code 1.
