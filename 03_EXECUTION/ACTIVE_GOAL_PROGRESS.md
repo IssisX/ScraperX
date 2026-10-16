@@ -781,6 +781,40 @@ A torn hook springs back along the rope toward you and flies again: it can catch
 be reeled in. Native `hook`: a 12.6 m slack fall caught on the line (46.5 kN) tears it; the same bite
 on a tight line, walked off the 220 ring's south edge, holds.
 
+**The Matron: a released thing that hunts you (native + Godot + touch; the owner's idea, 2026-10-16).**
+On the 154 m deck, on the north side east of where you arrive, stands a steel locker with a gauge on
+its side. A loud noise near it (a sprint, a hard landing) wakes her: the locker shakes, the gauge
+climbs for about sixteen seconds, the four big bolts on its door pop one by one and a red lamp
+flashes faster and faster; then the door tears off and flies out over the drop and she steps out.
+She hunts by sound (a sprint carries about 44 m, a walk 16 m, a crouched creep a couple of metres)
+and by sight at close range, runs faster than you walk and slower than you sprint, and catches
+you by touch, which is a death like a fall: you go back to where you were when she burst out (the
+last save point is not renewed while she hunts and you are on her deck; leave the deck by a
+machine and save points work as ever). She is a real body that really walks, nothing teleports her,
+and the same start and the same moves give the same chase.
+*The one thing that kills her* is the rotten catwalk across the middle of the deck: eleven steel
+plates hung on bolts that give way under about 2 tonnes-force. You (80 kg) cross it; she
+(220 kg, and she stamps) brings the plate she steps on down and falls the height of the tower.
+It is hard to get: she only steps onto it when she can plainly see you on it, close ahead of her,
+so you have to know it is there, lead her to its end and run across with her right behind you.
+Otherwise she takes the long way round the deck. Nothing else hurts her.
+*The Turn* (the owner's "ghoul mode", 2026-10-16): now and then, on the hunt, something in her
+breaks. She stops dead for just under a second (the warning: a crack of bones, her music box
+warps), then comes in jerks, bursts faster than a sprint and stumbling pauses, her spine bent,
+neck turned the wrong way, elbows and a knee folded backwards. It starts when she has a clear
+line to you within 13 m, or you land hard within 20 m, never in her first nine seconds out and
+never twice within eighteen. It is no faster on the whole than her usual run, only harder to read.
+*Kept simple:* she is not saved across a quit and reload (the world starts her asleep); the
+locker and its gauge are solid; every sound is made in the game (a music-box tune she carries,
+breath, scuffs, bolts, the bone cracks, the shriek). Native tests (`SCRAPERX_ONLY=matron`) cover:
+asleep when quiet; the wake and sixteen-second build-up; the hunt and the catch; the frozen save
+point; the catwalk holding you; the catwalk dropping her; the Turn; two identical chases ending
+identically. `touch_matron` plays it on touch from the deck's start; `look_matron_*` scenes
+render her. Judged and left for later: the owner's idea of boxes, beams and containers to move
+about on that deck to use against her. Taking only what the physics already gives (a heavy crate
+dropped on a plate would bring it down; a crate crashing over the edge would be heard and could
+draw her off) so no new rules are needed; to be built after the owner has played her.
+
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
    gust pushes jumps, tugs hanging hands, bows the hook's rope and the parachute; crouch or duck
@@ -814,12 +848,10 @@ that is otherwise ready. A letter is enough to answer.
 6. **The store-ready version of the app.** Today's download is a test build. A store build needs
    your release key added to GitHub's secret settings, which only you can do. Can wait until
    you're ready to publish.
-7. **The escape pressure (owner, 2026-10-16): something is RELEASED and chases you.** Not a wind or
-   a falling walkway: a dramatic build-up (a countdown, a cage straining, a gauge climbing), then it
-   bursts out and hunts the player: scary to look at, to move, to hear. This replaces the old "no
-   chaser" line. Open: what it is (A the Scrapper: a many-legged crawler of scrap with one floodlight
-   eye, B the Foreman: a towering slow rusted machine-man dragging a chain, C the Claw: a crane on a
-   rail overhead that reaches down) and where in the tower. The falling walkway and the drum run
-   stay as smaller escape beats for later.
+7. **The escape pressure (owner, 2026-10-16): something is RELEASED and chases you.** Decided and
+   built: the Matron (above), a frail old woman in a steel locker who hunts by sound, with one
+   way to kill her. The owner asked for the Turn (her ghoul mode, built) and for movable crates on
+   the deck (judged, kept small, not yet built). The falling walkway and the drum run stay as
+   smaller escape beats for later.
 8. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
    the credits, and whether you have the rights to the fall-scream voice clip.

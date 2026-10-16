@@ -67,6 +67,7 @@ func build() -> void:
 	clips[&"matron_step"] = _variants(3, _matron_step)
 	clips[&"matron_shriek"] = _variants(2, _matron_shriek)
 	clips[&"plank_crack"] = _variants(2, _plank_crack)
+	clips[&"bone_crack"] = _variants(3, _bone_crack)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -575,6 +576,21 @@ func _plank_crack() -> PackedFloat32Array:
 	_add_mode(out, _rng.randf_range(900.0, 1300.0), 0.0, 0.25, 0.6, 0.06, 7.0)
 	_add_band_noise(out, 0.02, 0.6, 0.4, 0.25, 200.0, 1400.0)
 	_add_mode(out, _rng.randf_range(110.0, 160.0), 0.35, 0.5, 0.7, 0.12, 4.0)
+	return out
+
+
+# Joints giving way, one after another: a run of wet, hollow cracks, each a
+# knuckle-pop and a short dull knock, and a creak of something bending that
+# should not.
+func _bone_crack() -> PackedFloat32Array:
+	var out := _silence(0.9)
+	var at := 0.0
+	for k in 6:
+		_add_band_noise(out, at, 0.012, 1.0 - 0.08 * float(k), 0.003, 1200.0, 6000.0)
+		_add_mode(out, _rng.randf_range(260.0, 420.0), at, 0.12, 0.7, 0.025, 5.0)
+		_add_tone(out, _rng.randf_range(90.0, 140.0), at, 0.08, 0.3, 0.02)
+		at += _rng.randf_range(0.05, 0.16)
+	_add_band_noise(out, 0.0, 0.8, 0.12, 0.35, 300.0, 1400.0)
 	return out
 
 

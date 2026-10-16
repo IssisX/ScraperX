@@ -195,6 +195,8 @@ struct MatronSnapshot final {
     double plank_load_peak_n = 0.0;
     double target_x = 0.0, target_z = 0.0;
     bool catwalk_allowed = false;
+    std::uint8_t turn = 0;            // Matron::Turn: 1 the wind-up, 2 the lunges
+    double turn_s = 0.0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

@@ -262,7 +262,7 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
     }
 }
 
-void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed) {
+void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed, const float foot_accel) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     target_x_ = wx;
@@ -282,16 +282,56 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
         yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
     }
     if (floor) {
-        Vec3 delta = want - Vec3(velocity.GetX(), 0.0F, velocity.GetZ());
-        const float limit = kFootAccel * dt;
-        if (delta.Length() > limit) {
-            delta = delta.Normalized() * limit;
+        // Speeding up along her heading is slow (foot_accel); planting a foot to
+        // brake or cut sideways is quick (kCutAccel): without that she cannot
+        // turn inside a five-metre circle at a run and orbits a corner she is
+        // heading for.
+        const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+        Vec3 delta = want - flat;
+        const float cut_limit = std::max(foot_accel, kCutAccel) * dt;
+        const float speed_now = flat.Length();
+        if (speed_now > 0.2F) {
+            const Vec3 heading = flat / speed_now;
+            float along = delta.Dot(heading);
+            Vec3 lateral = delta - heading * along;
+            along = along > 0.0F ? std::min(along, foot_accel * dt) : std::max(along, -cut_limit);
+            if (lateral.Length() > cut_limit) {
+                lateral = lateral.Normalized() * cut_limit;
+            }
+            delta = heading * along + lateral;
+        } else if (delta.Length() > foot_accel * dt) {
+            delta = delta.Normalized() * (foot_accel * dt);
         }
         velocity = Vec3(velocity.GetX() + delta.GetX(), velocity.GetY(), velocity.GetZ() + delta.GetZ());
         bodies.SetLinearVelocity(body_, velocity);
     }
     speed_ = std::hypot(velocity.GetX(), velocity.GetZ());
     stride_ += speed_ * dt;
+}
+
+// The Turn's clock and its two triggers (see matron.hpp). Only simulation
+// state decides: her distance, the line, the player's landing, the cooldown.
+void Matron::step_turn(const float dt, const float distance_to_player, const float loudness) {
+    sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
+    if (turn_ == Turn::None) {
+        turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
+        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM;
+        const bool hard_landing = loudness >= kTurnNoiseLoudness && distance_to_player <= kTurnNoiseM;
+        if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
+            turn_ = Turn::Windup;
+            turn_s_ = 0.0F;
+        }
+        return;
+    }
+    turn_s_ += dt;
+    if (turn_ == Turn::Windup && turn_s_ >= kTurnWindupSeconds) {
+        turn_ = Turn::Lunge;
+    }
+    if (turn_s_ >= kTurnWindupSeconds + kTurnLungeSeconds) {
+        turn_ = Turn::None;
+        turn_s_ = 0.0F;
+        turn_cooldown_s_ = kTurnCooldownSeconds;
+    }
 }
 
 void Matron::step_planks(const float dt) {
@@ -435,7 +475,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             on_catwalk_line(px, pz, 0.0F) ||
             distance_xz(px, pz, -kBandX, kMidZ) < kEndM || distance_xz(px, pz, kBandX, kMidZ) < kEndM;
         // Once she has decided for the catwalk she keeps to it a moment.
-        if (sees_far_ && prey_at_catwalk) {
+        // At the catwalk's end she is off its axis as often as on it, and a rail
+        // post can hide the prey on the plates: a sound a moment ago counts as sight there.
+        const bool at_end = distance_xz(ax, az, -kBandX, kMidZ) < kEndM + 3.0F ||
+                            distance_xz(ax, az, kBandX, kMidZ) < kEndM + 3.0F;
+        if ((sees_far_ || (at_end && since_heard_s_ < 1.0F)) && prey_at_catwalk) {
             commit_s_ = kCommitHoldSeconds;
         } else {
             commit_s_ = std::max(0.0F, commit_s_ - dt);
@@ -446,11 +490,21 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         float wz = az;
         if (state_ == State::Hunting) {
             if (since_heard_s_ > kLoseTrackSeconds) {
+                turn_ = Turn::None;
+                turn_s_ = 0.0F;
                 state_ = State::Searching;
                 search_s_ = 0.0F;
             } else {
                 route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz);
-                walk_toward(dt, wx, wz, kHuntMps);
+                step_turn(dt, d, loudness);
+                if (turn_ == Turn::Windup) {
+                    walk_toward(dt, wx, wz, 0.0F, kTurnFootAccel);
+                } else if (turn_ == Turn::Lunge) {
+                    const bool burst = std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
+                    walk_toward(dt, wx, wz, burst ? kTurnBurstMps : kTurnPauseMps, kTurnFootAccel);
+                } else {
+                    walk_toward(dt, wx, wz, kHuntMps);
+                }
                 break;
             }
         }
@@ -511,6 +565,10 @@ void Matron::restore(const Saved &saved) {
         strain_s_ = saved.strain_s;
         speed_ = 0.0F;
         since_heard_s_ = 0.0F;
+        turn_ = Turn::None;
+        turn_s_ = 0.0F;
+        turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
+        sight_far_s_ = 0.0F;
         if (state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
             state_ == State::Shuffling) {
             // Back at her locker, as she burst out of it.
@@ -541,6 +599,8 @@ void Matron::refresh_view() {
     view_.target_x = target_x_;
     view_.target_z = target_z_;
     view_.catwalk_allowed = allow_catwalk_;
+    view_.turn = turn_;
+    view_.turn_s = turn_s_;
     if (body_in_world_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         view_.x = float(at.GetX());

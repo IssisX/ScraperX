@@ -91,6 +91,7 @@ public:
     static constexpr float kSearchMps = 2.4F;
     static constexpr float kHuntMps = 6.8F;
     static constexpr float kFootAccel = 9.0F;
+    static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
     static constexpr float kSightM = 9.0F;
     static constexpr float kLoseTrackSeconds = 9.0F;
@@ -117,6 +118,31 @@ public:
     // Below this she is gone (fell): a fall of 12 m from the deck.
     static constexpr float kFallenBelowM = 12.0F;
 
+    // The Turn: now and then, on the hunt, something in her breaks. She stops
+    // dead (the wind-up: a spine cracking, a head turning the wrong way, the
+    // one warning), then lunges in jerks, bursts faster than a sprint and
+    // stumbling pauses, with feet that snap rather than step. It starts when
+    // she has a clear line to the player within kTurnTriggerM, or the player
+    // lands hard within kTurnNoiseM of her; then not again for a while. It
+    // is no faster on the whole than her usual hunt, only harder to read.
+    enum class Turn : std::uint8_t {
+        None = 0,
+        Windup = 1,
+        Lunge = 2,
+    };
+    static constexpr float kTurnTriggerM = 13.0F;
+    static constexpr float kTurnSightSeconds = 0.5F;
+    static constexpr float kTurnNoiseM = 20.0F;
+    static constexpr float kTurnNoiseLoudness = 0.95F;   // a landing of 8 m/s or more
+    static constexpr float kTurnWindupSeconds = 0.9F;
+    static constexpr float kTurnLungeSeconds = 3.2F;
+    static constexpr float kTurnCooldownSeconds = 18.0F;
+    static constexpr float kTurnCycleSeconds = 0.5F;
+    static constexpr float kTurnBurstSeconds = 0.2F;
+    static constexpr float kTurnBurstMps = 9.0F;
+    static constexpr float kTurnPauseMps = 3.5F;
+    static constexpr float kTurnFootAccel = 70.0F;
+
     struct PlankView {
         float x = 0.0F, y = 0.0F, z = 0.0F;
         float qx = 0.0F, qy = 0.0F, qz = 0.0F, qw = 1.0F;
@@ -138,6 +164,8 @@ public:
         bool sees_player = false;
         float target_x = 0.0F, target_z = 0.0F;   // where her feet are headed
         bool catwalk_allowed = false;
+        Turn turn = Turn::None;
+        float turn_s = 0.0F;        // seconds into the Turn
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -207,7 +235,8 @@ private:
     // The next point to walk to, along the cheapest path to (tx, tz), with
     // the catwalk allowed or not.
     void route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz) const;
-    void walk_toward(float dt, float wx, float wz, float speed);
+    void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel);
+    void step_turn(float dt, float distance_to_player, float loudness);
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();
@@ -233,7 +262,6 @@ private:
     float stride_ = 0.0F;
     float speed_ = 0.0F;
     float yaw_ = 0.0F;
-    float patrol_t_ = 0.0F;
     int patrol_node_ = 0;
     float noise_heard_ = 0.0F;
     bool sees_player_ = false;
@@ -241,6 +269,10 @@ private:
     float target_x_ = 0.0F, target_z_ = 0.0F;
     bool allow_catwalk_ = false;
     float commit_s_ = 0.0F;
+    Turn turn_ = Turn::None;
+    float turn_s_ = 0.0F;
+    float turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
+    float sight_far_s_ = 0.0F;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
     bool dead_ = false;

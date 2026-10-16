@@ -234,6 +234,57 @@ void run_matron() {
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
+    // ---- the Turn: she stops dead, then lunges in jerks, and not again for a while ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        wake_and_wait_east(s);
+        require(wait_for_her(s, 14.0, 40.0), "matron: she comes");
+        (void)s.set_crouch_input(false);
+        // A long run ahead of her, round the east and south bands, so her
+        // first quiet spell is over; then stand still and let her come.
+        require(go(s, Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, 0.0, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0),
+                "matron: a run round the south band");
+        (void)s.set_move_input(0.0, 0.0);
+        const auto deaths_before = s.snapshot().death_count;
+        double windup_still_s = 0.0;
+        double lunge_peak = 0.0;
+        double windup_at = -1.0;
+        double lunge_at = -1.0;
+        int turns_started = 0;
+        std::uint8_t last_turn = 0;
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            const double now = i / static_cast<double>(Simulation::kTickRateHz);
+            if (m.turn == static_cast<std::uint8_t>(Matron::Turn::Windup)) {
+                if (last_turn == 0) {
+                    ++turns_started;
+                    windup_at = now;
+                }
+                if (m.speed < 1.0) {
+                    windup_still_s += 1.0 / static_cast<double>(Simulation::kTickRateHz);
+                }
+            }
+            if (m.turn == static_cast<std::uint8_t>(Matron::Turn::Lunge)) {
+                if (last_turn == static_cast<std::uint8_t>(Matron::Turn::Windup)) {
+                    lunge_at = now;
+                }
+                lunge_peak = std::max(lunge_peak, m.speed);
+            }
+            last_turn = m.turn;
+            if (s.snapshot().death_count > deaths_before) {
+                break;
+            }
+        }
+        std::cout << "  matron: the Turn: wind-up at " << windup_at << " s (still " << windup_still_s << " s), lunges from "
+                  << lunge_at << " s, peak " << lunge_peak << " m/s, turns started " << turns_started << "\n";
+        require(turns_started >= 1 && lunge_at > windup_at, "matron: with a clear line close up she snaps, wind-up then lunges");
+        require(windup_still_s > 0.5, "matron: the wind-up stops her: the player's one warning");
+        require(lunge_peak > 8.2, "matron: the lunges burst faster than a sprint");
+        require(turns_started == 1, "matron: one Turn, then a long quiet spell");
+    }
     // ---- the same start and inputs give the same chase ------------------------------
     {
         const auto run = [] {

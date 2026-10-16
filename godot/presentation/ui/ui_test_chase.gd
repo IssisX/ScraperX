@@ -75,16 +75,21 @@ func _matron_touch(device: int) -> bool:
 	await _face(Vector2(-1.0, 0.0))
 	if not _stick_sprint():
 		return _fail("the stick pushed past its ring did not latch sprint")
-	var dead: bool = await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_DEAD, 14.0)
+	# Across and off the catwalk onto the west band, then still: she is on the
+	# catwalk behind, or she is not.
+	var across: bool = await _wait_until(func() -> bool: return _position().x < -19.5, 8.0)
 	_move(device, 0.0)
+	if not across:
+		return _fail("the sprint over the catwalk never reached the west band (at %s)" % str(_position()))
+	var dead: bool = await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_DEAD, 14.0)
+	var m := _matron_state()
 	if not dead:
-		return _fail("she did not follow over the catwalk and fall (state %d, plates down %d, at %s)" % [
-			int(_matron_state()["state"]), int(_matron_state()["planks_fallen"]), str(_position())])
+		return _fail("she did not follow over the catwalk and fall (state %d, plates down %d, she at %s, at %s)" % [
+			int(m["state"]), int(m["planks_fallen"]), str(m["position"]), str(_position())])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died in the chase")
-	if int(_matron_state()["planks_fallen"]) < 1 or _position().x > -16.0:
-		return _fail("the catwalk crossing ended oddly (plates down %d, at %s)" % [
-			int(_matron_state()["planks_fallen"]), str(_position())])
+	if int(m["planks_fallen"]) < 1:
+		return _fail("she died without a plate giving way (she was last at %s, at %s)" % [str(m["position"]), str(_position())])
 	_detail = "plates_down=%d deaths=%d steps_heard=%d" % [int(_matron_state()["planks_fallen"]),
 		int(_native().get_death_count()), int(_main._audio.matron_cues.get(&"matron_step", 0))]
 	return true
@@ -133,4 +138,46 @@ func _look_matron(stage: String) -> bool:
 	await _seconds(0.5)
 	await _look_at_point(_main._matron_view.head_world_position())
 	await _pose("matron_hunt_b")
+	return true
+
+
+# Renders only: her figure in each of its poses, a few metres in front of the
+# player, from made-up data (the native's frames are ignored meanwhile).
+func _look_matron_gallery() -> bool:
+	_main._sky_cycle.set_hour(20.2)
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var view: Node3D = _main._matron_view
+	view.previewing = true
+	var here := _position()
+	var forward := Vector3(-sin(float(_main._yaw)), 0.0, -cos(float(_main._yaw)))
+	var spot := here + forward * 3.6
+	var base: Dictionary = _native().get_matron_state()
+	var yaw := atan2(-forward.x, -forward.z)
+	var poses := [
+		["shuffle", {"state": 5, "speed": 1.0, "stride": 0.6, "turn": 0}],
+		["search", {"state": 4, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		["hunt_a", {"state": 3, "speed": 6.8, "stride": 0.5, "turn": 0, "sees_player": true}],
+		["hunt_b", {"state": 3, "speed": 6.8, "stride": 1.2, "turn": 0, "sees_player": false}],
+		["turn_windup", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 1}],
+		["turn_lunge_a", {"state": 3, "speed": 9.0, "stride": 0.3, "turn": 2}],
+		["turn_lunge_b", {"state": 3, "speed": 9.0, "stride": 0.9, "turn": 2}],
+		["emerge", {"state": 2, "speed": 0.0, "stride": 0.0, "turn": 0}],
+	]
+	var t := 0.0
+	for entry in poses:
+		var data: Dictionary = base.duplicate()
+		data["alive"] = true
+		data["released"] = true
+		data["position"] = Vector3(spot.x, here.y - 0.9 + 1.05, spot.z)
+		data["yaw"] = yaw
+		for key in entry[1]:
+			data[key] = entry[1][key]
+		# Settle the pose a few frames (the state's own clock runs).
+		for k in 6:
+			t += 0.04 + 0.013 * float(k)
+			view.preview(data, 0.04 + 0.013 * float(k), _main._camera.global_position, here)
+			await _frames(1)
+		await _look_at_point(view.head_world_position() - Vector3(0.0, 0.5, 0.0))
+		await _pose("matron_pose_%s" % entry[0])
+	view.previewing = false
 	return true

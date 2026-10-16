@@ -51,6 +51,7 @@ var _last_step := 0
 var _last_pos := Vector3.ZERO
 var _fall_speed := 0.0
 var _was_seen := false
+var _last_turn := 0
 var _cry_fall := false
 var _planks: Array[MeshInstance3D] = []
 var _plank_bolted: Array[bool] = []
@@ -395,9 +396,9 @@ func _update_planks(data: Dictionary) -> void:
 
 
 func _build_figure() -> void:
-	var skin := _material(Color("b9b2a2"), 0.85)
-	var dress := _material(Color("4a4034"), 0.95)
-	var shawl := _material(Color("1f1c19"), 0.98)
+	var skin := _material(Color("bdb6a2"), 0.8)
+	var dress := _material(Color("5f5444"), 0.95)
+	var shawl := _material(Color("2c2722"), 0.98)
 	var hair := _material(Color("cfccc2"), 0.9)
 	var sock := _material(Color("8b857a"), 0.9)
 	var slipper := _material(Color("2a1f24"), 0.9)
@@ -488,10 +489,10 @@ func _build_figure() -> void:
 	_box(Vector3(0.1, 0.008, 0.075), _material(Color("a79a62"), 0.5, 0.8), cord, Vector3(0.0, -0.28, 0.0))
 	# A cold glimmer to be seen by in the dark.
 	_eye_light = OmniLight3D.new()
-	_eye_light.light_color = Color("c8d8b0")
+	_eye_light.light_color = Color("d4e4c4")
 	_eye_light.light_energy = 0.0
 	_eye_light.omni_range = 5.0
-	_eye_light.position = Vector3(0.0, 1.0, 0.4)
+	_eye_light.position = Vector3(0.0, 1.3, 0.9)
 	_figure.add_child(_eye_light)
 
 
@@ -537,6 +538,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var knees := 0.0
 	var wide := 0.0
 	var tick := int(floorf(_clock * 14.0))
+	var turn := int(data.get("turn", 0))
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -624,24 +626,73 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = 0.3
 		head_roll = sin(_clock * 0.8) * 0.3 + (0.35 if _hash(int(floorf(_clock * 2.8))) > 0.93 else 0.0)
 		jaw_open = 0.1 + 0.05 * sin(_clock * 3.0)
+	# The Turn: something in her breaks. The spine bends where it should not
+	# (a hunch that throws the shoulders to one side and folds the chest the
+	# other way), the neck cracks round till the head looks back over her
+	# shoulder, the elbows fold backwards, one knee goes the wrong way, the
+	# jaw drops off its hinge. Poses snap at ten a second, no easing.
+	var twist := 0.0
+	var side_bend := 0.0
+	var elbow_flip := 1.0
+	var knee_flip := 1.0
+	var head_back := 0.0
+	var limb_scale := 1.0
+	var jolt := Vector3.ZERO
+	if turn > 0 and not falling:
+		var beat := int(floorf(_clock * 10.0))
+		var r1 := _hash(beat * 3 + 1) - 0.5
+		var r2 := _hash(beat * 3 + 2) - 0.5
+		var r3 := _hash(beat * 3 + 3) - 0.5
+		twist = 0.9 * r1
+		side_bend = 0.55 + 0.4 * r2
+		elbow_flip = -1.0
+		knee_flip = -1.0 if (beat % 3) != 0 else 1.0
+		head_back = 2.6 if turn == 1 else 1.5 + 1.2 * r3
+		limb_scale = 1.3
+		jaw_open = 1.35
+		jolt = Vector3(r1, r2 * 0.5, r3) * 0.05
+		if turn == 1:
+			# The wind-up: still, folded forward at the waist, and shaking.
+			pitch = 0.55 + 0.9 * (0.5 + 0.5 * sin(_clock * 3.0))
+			hip_y = 0.95
+			arms_fwd = 0.3
+			arms_bend = 0.8
+			knees = 0.35
+			legs_fwd = 0.0
+			legs_back = 0.0
+			jolt *= 2.0
+		else:
+			# Lunging: on all fours as on the hunt, but the stutter is coarser
+			# and every few frames a joint is somewhere else.
+			pitch = 1.38 + 0.25 * r2
+			arms_fwd = 1.1 + r1
+			arms_splay = 1.0
+			knees = 1.6 + r3
 	body.position.y = hip_y
+	body.position += jolt
+	(_p["torso"] as Node3D).rotation.y = twist
+	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 if turn > 0 else 0.0
+	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
+	(_p["sh_r"] as Node3D).scale = Vector3.ONE * limb_scale
+	(_p["hp_l"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
+	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	torso.rotation.x = pitch
-	neck.rotation = Vector3(head_pitch * 0.4, 0.0, head_roll * 0.3)
+	neck.rotation = Vector3(head_pitch * 0.4, head_back, head_roll * 0.3)
 	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING else yaw_to_player * (0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
 	jaw.rotation.x = jaw_open
-	_limb(_p["hp_l"], _p["kn_l"], legs_fwd, knees)
+	_limb(_p["hp_l"], _p["kn_l"], legs_fwd, knees * knee_flip)
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
 	_p["an_l"].rotation.x = -0.2
 	_p["an_r"].rotation.x = -0.2
-	_limb(_p["sh_l"], _p["el_l"], arms_fwd + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -arms_bend, -arms_splay)
-	_limb(_p["sh_r"], _p["el_r"], arms_fwd, -arms_bend, arms_splay)
-	if state == STATE_SEARCHING:
+	_limb(_p["sh_l"], _p["el_l"], arms_fwd + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -arms_bend * elbow_flip, -arms_splay)
+	_limb(_p["sh_r"], _p["el_r"], arms_fwd, -arms_bend * elbow_flip, arms_splay)
+	if state == STATE_SEARCHING and turn == 0:
 		# The right hand cupped to the ear.
 		_limb(_p["sh_r"], _p["el_r"], 1.6, -2.0, 0.5)
 	_p["box_cord"].rotation = Vector3(sin(stride * 3.0) * 0.4 + 0.2 * (pitch - 0.7), 0.0, sin(stride * 2.2) * 0.3)
 	_p["skirt"].visible = hip_y > 0.9 or state == STATE_SEARCHING
 	var eyes_on := 1.0 if state != STATE_DEAD else 0.0
-	_eye_light.light_energy = 0.35 * eyes_on
+	_eye_light.light_energy = (1.1 if turn > 0 else 0.7) * eyes_on
 
 
 func _hip_world() -> Vector3:
@@ -671,7 +722,19 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	# Her music box: heard from far off, slowing as she nears.
 	if _audio != null:
 		var volume := lerpf(-4.0, -42.0, clampf(d / HEARD_MUSIC_M, 0.0, 1.0))
-		_audio.matron_music(_hip_world(), volume, lerpf(0.84, 1.0, clampf(d / 30.0, 0.0, 1.0)))
+		var pitch := lerpf(0.84, 1.0, clampf(d / 30.0, 0.0, 1.0))
+		var turn := int(data.get("turn", 0))
+		if turn > 0:
+			# The music box warps and stutters while she is broken.
+			pitch = 0.55 + 0.25 * _hash(int(floorf(_clock * 12.0)))
+		_audio.matron_music(_hip_world(), volume, pitch)
+		if turn != _last_turn:
+			if turn == 1:
+				_audio.matron_cue(&"bone_crack", _hip_world(), 1.0, randf_range(0.9, 1.1))
+			elif turn == 2:
+				_audio.matron_cue(&"matron_shriek", _hip_world(), 2.0, randf_range(0.7, 0.85))
+				_audio.matron_cue(&"bone_crack", _hip_world(), -2.0, randf_range(1.0, 1.2))
+			_last_turn = turn
 		# Her breath, closer and quicker the nearer she is.
 		_breath_in -= delta
 		if _breath_in <= 0.0 and d < 24.0:
@@ -711,7 +774,22 @@ func figure_shown() -> bool:
 	return _figure != null and _figure.visible
 
 
+# For the look scenes: the figure posed from made-up data, the native's own
+# frames ignored while this is on.
+var previewing := false
+
+
+func preview(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
+	_apply(data, delta, camera_position, player_position)
+
+
 func update_view(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
+	if previewing:
+		return
+	_apply(data, delta, camera_position, player_position)
+
+
+func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
 	if _native == null:
 		return
 	_clock += delta
