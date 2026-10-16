@@ -303,6 +303,8 @@ private:
     [[nodiscard]] bool hook_line_blocked(JPH::RVec3 from, JPH::RVec3 to, JPH::RayCastResult &hit) const noexcept;
 
     void bend_hook_line(JPH::BodyInterface &bodies) noexcept;
+    // The bite gives (kHookHoldForceN): the hook comes loose and flies again.
+    void tear_hook(JPH::BodyInterface &bodies) noexcept;
 
     [[nodiscard]] bool wall_running() const noexcept { return wall_run_seconds_left_ > 0.0; }
 
@@ -764,6 +766,9 @@ public:
     std::uint64_t hook_wrap_count_ = 0;
     std::uint64_t hook_unwrap_count_ = 0;
     std::uint64_t hook_bends_refused_ = 0;
+    int hook_over_ticks_ = 0;
+    float hook_over_impulse_ = 0.0F;
+    std::uint64_t hook_tear_count_ = 0;
     double hook_flight_seconds_ = 0.0;
     float hook_tension_n_ = 0.0F;
     std::uint64_t hook_fire_count_ = 0;

@@ -1076,6 +1076,7 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     }
     out["points"] = points;
     out["bends"] = static_cast<std::int64_t>(state.hook_bend_count);
+    out["tears"] = static_cast<std::int64_t>(state.hook_tear_count);
     return out;
 }
 

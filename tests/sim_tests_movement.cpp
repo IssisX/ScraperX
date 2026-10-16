@@ -518,6 +518,47 @@ void run_hook() {
                   << " unwraps=" << back.hook_unwrap_count << " crossings=" << crossings
                   << " worst_over_m=" << worst_over << "\n";
     }
+    // The bite is not a weld (kHookHoldForceN). From the 220 ring's rack, bite
+    // a member over the well, then walk in under it (the rope stays as long as
+    // it was) and step off the ring's inner edge: the long fall caught on the
+    // line tears the tines off the member. The same bite with the rope taut,
+    // walked off the ring's south edge (a short drop over the lip), holds.
+    for (const bool slack : {true, false}) {
+        Simulation r(InitialSpawn::Ring220North);
+        require(r.advance_frame(0.4).accepted && walk_to(r, -21.6, -127.6, 14.0, 0.3) &&
+                    r.request_hook_take() && r.advance_frame(dt).accepted && r.snapshot().has_hook,
+                "hook hold: the hook taken from its rack");
+        const auto at = r.snapshot().player_position;
+        require(r.set_hook_aim(-6.0 - at.x, 226.0 - (at.y + 0.6), -133.0 - at.z) && r.request_hook_fire(),
+                "hook hold: fired over the well");
+        require(advance_until(r, [](const Snapshot &n) { return n.hook_state == 2; }, 1.0),
+                "hook hold: the hook bites the member over the well");
+        const double rope = r.snapshot().hook_line_length;
+        if (slack) {
+            require(walk_to(r, -6.0, -129.5, 10.0, 0.2), "hook hold: in under the bite, the rope gone slack");
+            (void)hold_stick(r, 0.0, -1.0, 0.0, -1.0, 3.0, [](const Snapshot &n) { return !n.player_grounded; });
+            double worst = 0.0;
+            bool torn = false;
+            for (int tick = 0; tick < 90 * 4 && !torn; ++tick) {
+                require(r.advance_frame(dt).accepted, "hook hold: fall tick");
+                worst = std::max(worst, r.snapshot().hook_tension_n);
+                torn = r.snapshot().hook_tear_count > 0;
+            }
+            std::cout << "  hook hold: slack fall of " << rope << " m of rope, peak pull " << worst << " N, torn="
+                      << torn << "\n";
+            require(torn, "hook hold: a long fall caught on the line must tear the hook off its member");
+            require(r.snapshot().hook_state != 2 || r.snapshot().hook_bite_count > 1,
+                    "hook hold: torn off, the hook is loose (in flight, or caught again somewhere new)");
+        } else {
+            (void)walk_to(r, -19.0, -125.0, 4.0, 0.3);
+            (void)r.advance_frame(3.0);
+            const Snapshot n = r.snapshot();
+            std::cout << "  hook hold: off the south edge, hung at y=" << n.player_position.y << " bends="
+                      << n.hook_bend_count << " tears=" << n.hook_tear_count << "\n";
+            require(n.hook_state == 2 && n.hook_tear_count == 0 && n.death_count == 0,
+                    "hook hold: a short drop over the lip on a taut line must hold");
+        }
+    }
     std::cout << "PASS scraperx_sim hook: lifted_m=" << peak_y - y0 << " worst_reel_mps=" << worst_reel
               << " worst_tension_n=" << worst_tension << "\n";
 }

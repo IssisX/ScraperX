@@ -726,6 +726,18 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
                           ? std::abs(hook_line_->GetTotalLambdaPosition() + hook_line_->GetMotorLambda()) / dt
                           : 0.0F;
     if (hook_state_ == HookState::Bitten) {
+        // The tines' hold on the member (kHookHoldForceN).
+        if (hook_tension_n_ > kHookHoldForceN) {
+            ++hook_over_ticks_;
+            hook_over_impulse_ += (hook_tension_n_ - kHookHoldForceN) * dt;
+        } else {
+            hook_over_ticks_ = 0;
+            hook_over_impulse_ = 0.0F;
+        }
+        if (hook_over_ticks_ >= kHookSlipTicks || hook_over_impulse_ > kHookTearImpulseNs) {
+            tear_hook(bodies);
+            return;
+        }
         bend_hook_line(bodies);
         return;
     }
@@ -771,12 +783,45 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
         hook_last_chest_ = hook_chest(bodies);
         attach_hook_line(bodies, held, bite, length);
         hook_state_ = HookState::Bitten;
+        hook_over_ticks_ = 0;
+        hook_over_impulse_ = 0.0F;
         ++hook_bite_count_;
         return;
     }
     if (hook_flight_seconds_ > kHookMissSeconds) {
         stow_hook(bodies);   // no bite: reeled back in
     }
+}
+
+// The tines come off the member: the hook springs back along the line, the
+// way it was pulled, clear of the member, moving with it plus
+// kHookSpringBackMps, on the whole rope that was out (what lay wrapped round
+// the structure pays off). It flies as a fired hook does from there.
+void Simulation::PhysicsWorld::tear_hook(JPH::BodyInterface &bodies) noexcept {
+    const JPH::RVec3 bite = hook_end(bodies);
+    const JPH::RVec3 toward = hook_bend_count_ > 0 ? hook_bend_point(bodies, 0) : hook_chest(bodies);
+    JPH::Vec3 back(toward - bite);
+    back = back.IsNearZero() ? JPH::Vec3::sAxisY() : back.Normalized();
+    float rope = hook_line_ != nullptr ? hook_line_->GetMaxLength() : kHookLineMaxM;
+    for (std::uint32_t bend = 0; bend < hook_bend_count_; ++bend) {
+        rope += hook_bends_[bend].laid_m;
+    }
+    const JPH::Vec3 carried = bodies.GetPointVelocity(hook_bite_target_, bite);
+    const JPH::RVec3 start = bite + back * kHookSpringBackClearM;
+    hook_body_ = add_shape_body(bodies, new JPH::SphereShape(kHookRadius), start, JPH::Quat::sIdentity(),
+                                JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+                                Simulation::kHookEntityId, kHookMassKg)
+                     ->GetID();
+    bodies.SetMotionQuality(hook_body_, JPH::EMotionQuality::LinearCast);
+    bodies.SetLinearVelocity(hook_body_, carried + back * kHookSpringBackMps);
+    hook_bend_count_ = 0;
+    attach_hook_line(bodies, hook_body_, start, std::min(kHookLineMaxM, std::max(rope, kHookLineShortestM)));
+    hook_state_ = HookState::Flying;
+    hook_flight_seconds_ = 0.0;
+    hook_over_ticks_ = 0;
+    hook_over_impulse_ = 0.0F;
+    hook_bite_target_ = {};
+    ++hook_tear_count_;
 }
 
 // The line from the chest to `at` on `anchor`, at most `max_length` long:

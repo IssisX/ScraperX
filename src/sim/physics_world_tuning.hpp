@@ -187,6 +187,19 @@ constexpr float kHookRackReach = 1.6F;
 // member it is fast to, not an edge. At most kHookBendsMax bends: past that a
 // line runs straight (bounded state; counted in hook_bends_refused).
 constexpr std::uint32_t kHookBendsMax = 8;
+// The bite is not a weld (task #102: the hook "can slip under load"). The
+// tines hold round a member up to kHookHoldForceN (CHOSEN, about 7.6 body
+// weights: a swing, a hang, a hard reel never come near it). Past it for
+// kHookSlipTicks on end the tines walk off the member; and a jolt whose pull
+// past it adds up to kHookTearImpulseNs in one run (CHOSEN: a free fall of
+// about 2.5 m caught on a taut line) tears them out. Either way the hook comes
+// loose, springs back along the line toward the climber and is a hook in
+// flight again: it can catch another member, or it is reeled in.
+constexpr float kHookHoldForceN = 6000.0F;
+constexpr float kHookTearImpulseNs = 500.0F;
+constexpr int kHookSlipTicks = 14;
+constexpr float kHookSpringBackMps = 6.0F;
+constexpr float kHookSpringBackClearM = 0.35F;
 constexpr float kHookWrapStandoffM = 0.03F;
 constexpr float kHookWrapEndM = 0.15F;
 constexpr int kHookWrapSearchSteps = 12;

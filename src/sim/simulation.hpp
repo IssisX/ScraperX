@@ -502,6 +502,8 @@ struct Snapshot final {
     std::uint64_t hook_wrap_count = 0;
     std::uint64_t hook_unwrap_count = 0;
     std::uint64_t hook_bends_refused = 0;
+    // Bites torn or slipped off their member by a load past the tines' hold.
+    std::uint64_t hook_tear_count = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
     std::array<WorkerView, 14> workers{};
