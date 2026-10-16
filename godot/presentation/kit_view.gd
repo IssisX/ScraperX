@@ -6,6 +6,7 @@ extends Node3D
 const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const RefractoryMaterial := preload("res://presentation/materials/refractory_material.gd")
+const ShadowBatch := preload("res://presentation/static_shadow_batch.gd")
 const NativeCatchNetView := preload("res://presentation/native_catch_net_view.gd")
 const FreightMaterials := preload("res://presentation/materials/freight_materials.gd")
 const PlankWoodShader := preload("res://presentation/plank_wood.gdshader")
@@ -893,6 +894,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_water_lift_bucket_water.visible = false
 			node.add_child(_water_lift_bucket_water)
 		add_child(node)
+		if dynamic:
+			_batch_rigid_shadows(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(dynamic)
 	_cargo_net_indices = _native.get_cargo_net_indices()
@@ -916,6 +919,40 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			segments.append(instance)
 		_kit_cables.append(segments)
 	_render_kit()
+
+
+# Keep every shadow proxy under its one native rigid owner. Visible material
+# batches retain their finishes; the depth-only pass can share their triangles.
+# Static roots already enter Main's spatial shadow batching. Animated shaders,
+# water, signs and special cast modes retain their original rendering owners.
+func _batch_rigid_shadows(body: Node3D) -> void:
+	var sources: Array[MeshInstance3D] = []
+	var bounds := AABB()
+	for child in body.get_children():
+		if child is MeshInstance3D and child.mesh != null \
+				and child.mesh.get_surface_count() == 1 and child.material_overlay == null \
+				and child.visible and child.layers != 0 and child.transparency == 0.0:
+			var finish := child.get_active_material(0) as StandardMaterial3D
+			if finish == null or finish.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED \
+					or finish.billboard_mode != BaseMaterial3D.BILLBOARD_DISABLED \
+					or finish.next_pass != null or finish.grow \
+					or finish.proximity_fade_enabled or finish.distance_fade_mode != 0 \
+					or child.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_ON \
+					or not child.visibility_parent.is_empty() or child.skin != null \
+					or child.get_blend_shape_count() != 0:
+				continue
+			var local_bounds: AABB = child.transform * child.mesh.get_aabb()
+			bounds = local_bounds if sources.is_empty() else bounds.merge(local_bounds)
+			sources.append(child)
+	if sources.size() < 2:
+		return
+	# One finite body-local cell contains the whole rigid owner. The padding
+	# keeps its boundary out of source centres despite floating-point roundoff.
+	var grouped := ShadowBatch.new().build(body, sources,
+		bounds.size + Vector3.ONE * 2.0, bounds.position - Vector3.ONE, [])
+	for source in sources:
+		if grouped.handled.has(source.get_instance_id()):
+			source.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _cart_paint(parent: Node3D, size: Vector3, at: Vector3,

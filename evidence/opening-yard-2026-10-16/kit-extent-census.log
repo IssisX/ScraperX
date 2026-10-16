@@ -1,0 +1,36 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+KIT_CENSUS bodies=267 cable_count=8 visible_meshes=388
+KIT_CENSUS {"owner":"KitBody2982","shadow":1,"size":"(33.44946, 33.44946, 0.700012)","span":47.3098564147949,"triangles":768}
+KIT_CENSUS {"owner":"KitBody2982","shadow":1,"size":"(33.0, 33.0, 0.559998)","span":46.6724052429199,"triangles":24}
+KIT_CENSUS {"owner":"KitBody2920","shadow":1,"size":"(32.18079, 32.18079, 0.700012)","span":45.5158882141113,"triangles":672}
+KIT_CENSUS {"owner":"KitBody2920","shadow":1,"size":"(31.85143, 32.1875, 4.0)","span":45.4593086242676,"triangles":1560}
+KIT_CENSUS {"owner":"KitBody2451","shadow":1,"size":"(45.12, 2.369228, 3.200012)","span":45.295337677002,"triangles":4560}
+KIT_CENSUS {"owner":"KitBody2451","shadow":1,"size":"(45.0, 2.199997, 1.799988)","span":45.0896873474121,"triangles":192}
+KIT_CENSUS {"owner":"KitBody1994","shadow":0,"size":"(11.3, 43.00002, 0.899994)","span":44.4691047668457,"triangles":24}
+KIT_CENSUS {"owner":"KitBody1983","shadow":0,"size":"(1.0, 43.0, 1.0)","span":43.023250579834,"triangles":12}
+KIT_CENSUS {"owner":"KitBody1920","shadow":0,"size":"(29.1, 27.0, 1.100006)","span":39.7117080688477,"triangles":24}
+KIT_CENSUS {"owner":"KitBody1980","shadow":0,"size":"(11.6, 36.0, 0.600006)","span":37.8275032043457,"triangles":24}
+KIT_CENSUS {"owner":"KitBody1978","shadow":1,"size":"(33.74709, 17.0062, 1.599991)","span":37.8237571716309,"triangles":684}
+KIT_CENSUS {"owner":"KitBody2450","shadow":1,"size":"(3.0, 35.84, 3.0)","span":36.0902442932129,"triangles":3660}
+KIT_CENSUS {"owner":"KitBody2200","shadow":1,"size":"(25.02487, 25.02484, 6.789993)","span":36.0359649658203,"triangles":8208}
+KIT_CENSUS {"owner":"KitBody2200","shadow":1,"size":"(25.22047, 25.22046, 0.320007)","span":35.6685562133789,"triangles":1152}
+KIT_CENSUS {"owner":"KitBody1980","shadow":0,"size":"(15.5, 32.04999, 2.050003)","span":35.6602592468262,"triangles":48}
+KIT_CENSUS {"owner":"KitBody1991","shadow":0,"size":"(0.799999, 34.00002, 0.800003)","span":34.0188331604004,"triangles":12}
+KIT_CENSUS {"owner":"KitBody1991","shadow":0,"size":"(17.5, 27.45001, 3.949997)","span":32.7926139831543,"triangles":96}
+KIT_CENSUS {"owner":"KitBody2920","shadow":1,"size":"(22.67376, 22.67371, 0.559998)","span":32.0703887939453,"triangles":24}
+KIT_CENSUS {"owner":"KitBody2987","shadow":1,"size":"(0.900002, 32.00002, 0.899994)","span":32.025318145752,"triangles":768}
+KIT_CENSUS {"owner":"KitBody2987","shadow":1,"size":"(14.00995, 24.33331, 14.00739)","span":31.378267288208,"triangles":1344}
+ERROR: Texture with GL ID of 25: leaked 21844 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:82)
+ERROR: Texture with GL ID of 26: leaked 21844 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:82)

@@ -1,0 +1,17 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=64x64 aspect=1.000 fov=82.0 far=2000
+TOWER_COST_SCOPE render-only attribution;64x54host;shippingMain;not AndroidFPS;native frozen;MSAA=1
+SCRAPERX_AUDIO_BANK clips=33 msec=571 driver=Dummy
+TOWER_COST {"draws":1179.0,"host_three_frame_wall_usec":6892885,"mode":"high","primitives":447930.0,"view":"tower_in_frame","visible_draws":1179,"visible_primitives":193246}
+TOWER_COST {"draws":673.0,"host_three_frame_wall_usec":2932462,"mode":"no_shadows","primitives":193246.0,"view":"tower_in_frame","visible_draws":673,"visible_primitives":193246}
+TOWER_COST {"draws":316.0,"host_three_frame_wall_usec":4093848,"mode":"no_kit","primitives":188450.0,"view":"tower_in_frame","visible_draws":316,"visible_primitives":90602}
+TOWER_COST failures=0

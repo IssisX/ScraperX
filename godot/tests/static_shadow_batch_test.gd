@@ -1,4 +1,5 @@
 extends SceneTree
+const KitView := preload("res://presentation/kit_view.gd")
 const Batch := preload("res://presentation/static_world_batch.gd")
 const Geometry := preload("res://presentation/world_geometry.gd")
 const Export := preload("res://presentation/solid_export.gd")
@@ -95,5 +96,50 @@ func _run() -> void:
 	batch.build_tower(host)
 	check(host.get_child_count() == count, "repeated batching is idempotent")
 	host.free()
+	_check_rigid_shadows()
 	print("STATIC_SHADOW failures=", failures)
 	quit(1 if failures else 0)
+
+
+func _check_rigid_shadows() -> void:
+	var body := Node3D.new()
+	root.add_child(body)
+	body.transform = Transform3D(Basis(Vector3.UP, 0.3), Vector3(15, 12, -40))
+	var geometry := Geometry.new(body)
+	var red := geometry.material(Color("a53a27"), .4, .3)
+	var blue := geometry.material(Color("254b6b"), .2, .85)
+	var first := geometry.add_box("LiftPlatform", Vector3(2, 3, 4), Vector3(-2, 0, 0), red)
+	var second := geometry.add_box("LiftPlatform", Vector3.ONE, Vector3(2, 0, 0), blue)
+	var glass_finish := red.duplicate() as StandardMaterial3D
+	glass_finish.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var glass := geometry.add_box("YardLens", Vector3.ONE, Vector3(0, 2, 0), glass_finish)
+	var special := geometry.add_box("LiftPlatform", Vector3.ONE, Vector3(0, -2, 0), red)
+	special.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
+	var local_points: Array = []
+	var inverse := body.global_transform.affine_inverse()
+	for point in points(first) + points(second): local_points.append(inverse * point)
+	var before := Export.collect(body)
+	var kit := KitView.new()
+	kit._batch_rigid_shadows(body)
+	var shadow := body.get_node_or_null("StaticShadowBatch0") as MeshInstance3D
+	check(shadow != null, "moving native body shares compatible material shadow submissions")
+	check(first.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF and second.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "rigid visible finishes stop duplicate shadow submissions")
+	check(first.layers != 0 and second.layers != 0 and first.get_active_material(0) == red and second.get_active_material(0) == blue, "rigid visible geometry and finishes retained")
+	check(glass.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON and special.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED, "translucent and special rigid cast owners retained")
+	check(Export.collect(body) == before, "rigid shadow grouping leaves native collision export unchanged")
+	if shadow != null:
+		body.transform = Transform3D(Basis(Vector3(1, 2, 3).normalized(), 0.7), Vector3(24, 40, -80))
+		var moved := points(shadow)
+		check(moved.size() == local_points.size(), "moving shadow retains every source triangle")
+		if moved.size() == local_points.size():
+			for i in moved.size():
+				check(moved[i].distance_to(body.global_transform * local_points[i]) < .0001, "shadow follows native owner translation and rotation")
+		body.hide()
+		check(not shadow.is_visible_in_tree(), "disabled native owner hides its shadow")
+		body.show()
+		check(shadow.is_visible_in_tree(), "reenabled native owner restores its shadow")
+	var children := body.get_child_count()
+	kit._batch_rigid_shadows(body)
+	check(body.get_child_count() == children, "rigid shadow grouping does not duplicate proxies")
+	kit.free()
+	body.free()
