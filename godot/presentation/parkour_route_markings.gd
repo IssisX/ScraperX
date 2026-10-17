@@ -5,6 +5,21 @@ const PAINT_HEIGHT := 0.003
 const SURFACE_OFFSET := 0.004
 
 static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# These local points put the branch cue directly ahead of freight spawn
+	# after the yard's 4 m translation; it reads before the distant obstacles.
+	_arrow(geometry, root, paint, Vector3(-97.0, 0.0, -46.0), Vector2.RIGHT)
+	var entrance := Label3D.new()
+	entrance.text = "WEST APRON\nFOOT ACCESS"
+	entrance.font_size = 64
+	entrance.pixel_size = 0.006
+	entrance.modulate = (paint as StandardMaterial3D).albedo_color
+	entrance.outline_size = 0
+	entrance.no_depth_test = false
+	entrance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	entrance.position = Vector3(-98.0, 0.009, -48.0)
+	entrance.rotation.x = -PI / 2.0
+	entrance.visibility_range_end = 45.0
+	root.add_child(entrance)
 	# The north approach passes above the stock at x=-82,z=-48, then turns
 	# toward the utility bay. Short breaks leave the ground visible.
 	for x in [-88.0, -80.0, -72.0, -64.0, -56.0]:

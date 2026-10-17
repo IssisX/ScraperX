@@ -24,8 +24,10 @@ endpoint checks with a translated/rotated parent. Its default complete check is
 retained; the focused argument exercises this geometry-only path on headless hosts.
 
 `ParkourStructure`/`ScrambleRung` export into native collision. `ParkourPaint` is
-flush presentation only. Fifty shared-material edge/approach marking meshes and
-five service-aisle marks enter existing spatial batches; no additional lights,
+flush presentation only. Fifty-three shared-material edge/approach marking meshes and
+five service-aisle marks enter existing spatial batches. A depth-tested floor
+label and east-pointing paint cue directly ahead of spawn identify WEST APRON /
+FOOT ACCESS; no additional lights,
 shaders, frame callbacks, Godot colliders or gameplay authority were introduced.
 The helper remains separate from the physical layout.
 
@@ -75,3 +77,8 @@ No graphics setting or test expectation was changed to hide these failures.
 Signed matching APK, actual rendered/mobile appearance, touch feel/FPS and full
 required release proof remain distinct gates. A successful native route or APK
 export does not establish console-quality feel or a fully green release.
+
+Entrance-cue follow-up: actual Main export instantiates the new label/arrow without
+script errors; the generated native include is byte-identical to the accepted
+route source. Reuse that physical route result; no repeat physics campaign is
+required for this presentation-only cue. Q/entrance-export.log retains output.
