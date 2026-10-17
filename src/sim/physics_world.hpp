@@ -88,6 +88,7 @@ public:
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const Forklift &forklift() const noexcept { return *forklift_; }
+    [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     // On the forklift's floor within reach of its wheel.
     [[nodiscard]] bool at_forklift_controls() const noexcept;
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }

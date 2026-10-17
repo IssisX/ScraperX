@@ -13,6 +13,16 @@
 // left alone; anything that touches one wakes it. They are saved and
 // restored with the machines like every kit body.
 //
+// Up the tower (the owner, 2026-10-17: little lived-in spots all over the
+// structure, not only the yard): dress_tower() finds, on every deck ring of
+// the stack and the upper rings, places against the shaft's railed edge with
+// room to stand the work there and a walkway past it (back from the edge
+// where it has no rail), and leaves a little
+// spot of stock in each -- a step of crates, gas bottles and a toolbox, a
+// cable reel and planks, a pallet of drums. A place is taken only where the
+// world says it fits: a flat, level floor under every corner, nothing in the
+// way above it, no machine near it and the next spot well along the ring.
+//
 // A sudden blow to a piece (a change of velocity of kImpactMps or more in one
 // tick) is a crash, reported with its loudness for whoever listens (the
 // Matron hears crashes on her deck).
@@ -48,8 +58,12 @@ public:
         Pipe = 11,          // an 8 m steel pipe, 0.6 m across, 700 kg
         BilletStillage = 12,  // a stillage of steel billets on runners, 5 t: more than a forklift's load
         CoilSkid = 13,        // a coil of steel strip cradled on a skid, 2.8 t: a forklift's hard lift
+        GasBottle = 14,       // a welding gas bottle stood on end, 60 kg: carried
+        CableReel = 15,       // a wooden reel of cable on its rims, 180 kg: rolls
+        Toolbox = 16,         // a steel toolbox, 18 kg: carried
+        PlankBundle = 17,     // 1.8 m planks strapped in a bundle, 60 kg
     };
-    static constexpr int kKinds = 14;
+    static constexpr int kKinds = 18;
 
     struct Placement {
         Kind kind;
@@ -84,7 +98,16 @@ public:
     // now are, so the jump is not heard as a blow.
     void resync();
 
+    // Finds the tower's spots and leaves the stock in them (see above): after
+    // every other body of the world is built, so the places it takes are
+    // tested against all of them. Its pieces follow the table's.
+    // Nothing is set within keep_clear_radius of a point of keep_clear (the
+    // places the player is put down).
+    void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
+
     [[nodiscard]] int count() const noexcept { return static_cast<int>(pieces_.size()); }
+    // Every piece as placed, the table's and then the tower's.
+    [[nodiscard]] const std::vector<Placement> &placed() const noexcept { return placed_; }
     [[nodiscard]] kit::BodyIndex body(int index) const noexcept {
         return pieces_[static_cast<std::size_t>(index)];
     }
@@ -102,7 +125,10 @@ private:
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
     std::vector<kit::BodyIndex> pieces_;
+    std::vector<Placement> placed_;
     std::vector<JPH::Vec3> last_velocity_;
+    // Puts one piece in the world, as placed.
+    void add_piece(const Placement &placement);
     Crash crash_{};
 };
 

@@ -38,12 +38,15 @@ int first_of(const LooseStock::Kind kind) {
 } // namespace
 
 void run_loose_stock() {
-    const int pieces = static_cast<int>(LooseStock::placements().size());
-
     // Left alone, every piece settles where it was put (nothing stacked
-    // slides off or rolls away, nothing starts inside anything) and sleeps.
+    // slides off or rolls away, nothing starts inside anything) and sleeps:
+    // the table's, and the tower's spots (LooseStock::dress_tower), wherever
+    // the world let them be put.
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
-    require(static_cast<int>(Simulation::loose_stock_count()) == pieces, "stock: the presentation sees every piece");
+    const int pieces = static_cast<int>(s.loose_stock_count());
+    const int tabled = static_cast<int>(LooseStock::placements().size());
+    std::cout << "  stock: " << tabled << " pieces in the table, " << pieces - tabled << " in the tower's spots\n";
+    require(pieces > tabled + 60, "stock: the tower's rings are dressed");
     std::vector<scraperx::sim::Vector3> placed;
     for (int i = 0; i < pieces; ++i) {
         require(s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i)) != Simulation::kKitNone,

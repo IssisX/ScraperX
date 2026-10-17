@@ -196,16 +196,16 @@ std::uint32_t Simulation::kit_body_index(const std::uint64_t entity) const noexc
 
 static_assert(Simulation::kLooseStockFirstEntity == LooseStock::kFirstEntity);
 
-std::uint32_t Simulation::loose_stock_count() noexcept {
-    return static_cast<std::uint32_t>(LooseStock::placements().size());
+std::uint32_t Simulation::loose_stock_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().placed().size());
 }
 
-Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) noexcept {
-    const std::vector<LooseStock::Placement> &table = LooseStock::placements();
-    if (index >= table.size()) {
+Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) const noexcept {
+    const std::vector<LooseStock::Placement> &placed = physics_world_->loose_stock().placed();
+    if (index >= placed.size()) {
         return {};
     }
-    return {static_cast<std::uint8_t>(table[index].kind), table[index].variant};
+    return {static_cast<std::uint8_t>(placed[index].kind), placed[index].variant};
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {

@@ -2,9 +2,17 @@
 #include "sim/loose_stock.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace scraperx::sim {
 namespace {
@@ -144,6 +152,47 @@ Spec make_spec(const K kind) {
         s.half_height = 0.3F;
         s.friction = 0.5F;
         break;
+    case K::GasBottle:
+        // A welding gas bottle on end: its shoulder, its valve under a cap,
+        // a collar round its neck. Lifted by the cap.
+        s.parts = {cylinder(0.115F, 0.55F, Vec3::sZero(), Quat::sIdentity(), Material::Galvanised, 56.0F),
+                   cylinder(0.085F, 0.04F, Vec3(0.0F, 0.59F, 0.0F), Quat::sIdentity(), Material::Galvanised, 2.0F),
+                   cylinder(0.05F, 0.06F, Vec3(0.0F, 0.69F, 0.0F), Quat::sIdentity(), Material::Steel, 2.0F)};
+        s.half_height = 0.55F;
+        s.friction = 0.5F;
+        s.carried = true;
+        s.handle = Vec3(0.0F, 0.75F, 0.0F);
+        break;
+    case K::CableReel:
+        // A wooden reel on its rims, its axle along x: two 1.1 m flanges and
+        // the black cable wound between them. It rolls.
+        for (const float x : {-0.28F, 0.28F}) {
+            s.parts.push_back(cylinder(0.55F, 0.03F, Vec3(x, 0.0F, 0.0F), kAlongX, Material::Timber, 35.0F));
+        }
+        s.parts.push_back(cylinder(0.36F, 0.25F, Vec3::sZero(), kAlongX, Material::Rubble, 110.0F));
+        s.half_height = 0.55F;
+        s.friction = 0.7F;
+        break;
+    case K::Toolbox:
+        // A steel box with a lid and a handle over it.
+        s.parts = {box(Vec3(0.3F, 0.12F, 0.13F), Vec3::sZero(), Material::Hazard, 16.0F),
+                   box(Vec3(0.18F, 0.015F, 0.015F), Vec3(0.0F, 0.17F, 0.0F), Material::Steel, 1.0F),
+                   box(Vec3(0.015F, 0.025F, 0.015F), Vec3(-0.17F, 0.145F, 0.0F), Material::Steel, 0.5F),
+                   box(Vec3(0.015F, 0.025F, 0.015F), Vec3(0.17F, 0.145F, 0.0F), Material::Steel, 0.5F)};
+        s.half_height = 0.12F;
+        s.friction = 0.6F;
+        s.carried = true;
+        s.handle = Vec3(0.0F, 0.17F, 0.0F);
+        break;
+    case K::PlankBundle:
+        // Planks 1.8 m long stacked in a bundle under two steel straps.
+        s.parts = {box(Vec3(0.9F, 0.12F, 0.25F), Vec3::sZero(), Material::Timber, 58.0F)};
+        for (const float x : {-0.55F, 0.55F}) {
+            s.parts.push_back(box(Vec3(0.02F, 0.125F, 0.255F), Vec3(x, 0.0F, 0.0F), Material::Rust, 1.0F));
+        }
+        s.half_height = 0.12F;
+        s.friction = 0.8F;
+        break;
     case K::BilletStillage:
     case K::CoilSkid: {
         // On two runners 0.55 m either side of its middle, its deck 12 cm up:
@@ -277,27 +326,256 @@ const std::vector<LooseStock::Placement> &LooseStock::placements() {
 }
 
 LooseStock::LooseStock(PhysicsSystem &physics, kit::Kit &kit) : physics_(physics), kit_(kit) {
-    std::array<Spec, kKinds> specs;
-    for (int k = 0; k < kKinds; ++k) {
-        specs[static_cast<std::size_t>(k)] = make_spec(static_cast<Kind>(k));
+    for (const Placement &placement : placements()) {
+        add_piece(placement);
     }
-    const std::vector<Placement> &table = placements();
-    pieces_.reserve(table.size());
-    last_velocity_.reserve(table.size());
-    const BodyInterface &bodies = physics_.GetBodyInterface();
-    for (std::size_t i = 0; i < table.size(); ++i) {
-        const Placement &p = table[i];
-        const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
-        // 4 mm clear of what it lies on, so nothing starts in contact.
-        const kit::BodyIndex body =
-            kit_.add_body(kFirstEntity + i, spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
-                          Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg, spec.friction);
-        if (spec.carried) {
-            kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
+}
+
+void LooseStock::add_piece(const Placement &p) {
+    static const std::array<Spec, kKinds> specs = [] {
+        std::array<Spec, kKinds> all;
+        for (int k = 0; k < kKinds; ++k) {
+            all[static_cast<std::size_t>(k)] = make_spec(static_cast<Kind>(k));
         }
-        kit_.allow_sleeping(body);
-        pieces_.push_back(body);
-        last_velocity_.push_back(bodies.GetLinearVelocity(kit_.body_id(body)));
+        return all;
+    }();
+    const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
+    // 4 mm clear of what it lies on, so nothing starts in contact.
+    const kit::BodyIndex body =
+        kit_.add_body(kFirstEntity + pieces_.size(), spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
+                      Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg, spec.friction);
+    if (spec.carried) {
+        kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
+    }
+    kit_.allow_sleeping(body);
+    pieces_.push_back(body);
+    placed_.push_back(p);
+    last_velocity_.push_back(physics_.GetBodyInterface().GetLinearVelocity(kit_.body_id(body)));
+}
+
+namespace {
+
+// A spot's pieces in its own frame: `along` the edge it is set against,
+// `out` from that edge across the deck, `up` from the floor to the piece's
+// underside, and turned `yaw` from lying along the edge.
+struct SpotPiece {
+    K kind;
+    std::uint8_t variant;
+    float along, out, up, yaw;
+};
+struct SpotTemplate {
+    float width;   // along the edge
+    float depth;   // out from it
+    std::vector<SpotPiece> pieces;
+};
+
+const std::vector<SpotTemplate> &spot_templates() {
+    static const std::vector<SpotTemplate> templates = {
+        // A step of crates: two side by side, the right-hand one with a
+        // third square on it (turned on it, its battens never settled).
+        {2.3F, 1.2F,
+         {{K::Crate, 0, -0.52F, 0.6F, 0.0F, 0.02F},
+          {K::Crate, 0, 0.5F, 0.6F, 0.0F, -0.03F},
+          {K::Crate, 0, 0.5F, 0.6F, 0.884F, -0.03F}}},
+        // Welding gas bottles stood against the rail, a toolbox by them.
+        {2.0F, 0.9F,
+         {{K::GasBottle, 0, -0.75F, 0.25F, 0.0F, 0.0F},
+          {K::GasBottle, 1, -0.45F, 0.3F, 0.0F, 0.0F},
+          {K::GasBottle, 0, -0.15F, 0.25F, 0.0F, 0.0F},
+          {K::Toolbox, 0, 0.55F, 0.45F, 0.0F, 0.3F}}},
+        // A reel of cable on its rims, and a bundle of planks.
+        {3.4F, 1.3F,
+         {{K::CableReel, 0, -1.0F, 0.65F, 0.0F, 0.0F},
+          {K::PlankBundle, 0, 0.65F, 0.45F, 0.0F, 0.0F}}},
+        // A pallet of three drums, a fourth stood beside it.
+        {2.4F, 1.3F,
+         {{K::Pallet, 0, -0.3F, 0.65F, 0.0F, 0.0F},
+          {K::Drum, 0, -0.6F, 0.4F, 0.14F, 0.0F},
+          {K::Drum, 1, 0.0F, 0.4F, 0.14F, 0.0F},
+          {K::Drum, 2, -0.3F, 0.9F, 0.14F, 0.0F},
+          {K::Drum, 0, 0.8F, 0.5F, 0.0F, 0.0F}}},
+    };
+    return templates;
+}
+
+// Only the bodies a spot must keep clear of: the machines (every kit body)
+// and whatever moves. The tower's own frame and dressing are not felt, which
+// is also what keeps the test cheap.
+class MachineFilter final : public BodyFilter {
+public:
+    [[nodiscard]] bool ShouldCollideLocked(const Body &body) const override {
+        return kit::is_kit_entity(body.GetUserData()) || !body.IsStatic();
+    }
+};
+
+// Where the spots may be: the stack's deck rings (11 m to 143 m: the 154 m
+// deck has its own seven, set for the Matron) and the upper rings (176 m to
+// 396 m), each a square ring round the shaft centred on (0, -150).
+constexpr float kRingCentreX = 0.0F;
+constexpr float kRingCentreZ = -150.0F;
+// Every spot this far along its ring from the last, at most this many a ring.
+constexpr float kSpotSpacing = 9.0F;
+constexpr int kSpotsPerStackRing = 3;
+constexpr int kSpotsPerUpperRing = 2;
+// Clear of every machine and every other spot by this much, and of every place
+// the player is put down by kKeepClear; the walkway left past a spot.
+constexpr float kMachineClear = 3.0F;
+constexpr float kWalkway = 1.5F;
+
+} // namespace
+
+void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const float keep_clear_radius) {
+    const NarrowPhaseQuery &query = physics_.GetNarrowPhaseQuery();
+    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+    const BodyLockInterfaceNoLock &locks = physics_.GetBodyLockInterfaceNoLock();
+    const MachineFilter machines;
+    // The floor at (x, z) near height `top`: a level, static top within 5 cm
+    // of it (its height in `at`).
+    const auto floor_at = [&](const float x, const float z, const float top, float &at) {
+        const RRayCast ray(RVec3(x, top + 0.6F, z), Vec3(0.0F, -1.2F, 0.0F));
+        RayCastResult hit;
+        if (!query.CastRay(ray, hit) || bodies.GetMotionType(hit.mBodyID) != EMotionType::Static) {
+            return false;
+        }
+        const RVec3 point = ray.GetPointOnRay(hit.mFraction);
+        at = static_cast<float>(point.GetY());
+        if (std::abs(at - top) > 0.05F) {
+            return false;
+        }
+        const BodyLockRead lock(locks, hit.mBodyID);
+        return lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY() > 0.98F;
+    };
+    std::vector<float> tops;
+    for (int level = 1; level <= 13; ++level) {
+        tops.push_back(11.0F * static_cast<float>(level));
+    }
+    const std::size_t stack_rings = tops.size();
+    for (int k = 0; k <= 10; ++k) {
+        tops.push_back(176.25F + 22.0F * static_cast<float>(k));
+    }
+    // The four sides, each by the direction out from the shaft across it.
+    const std::array<Vec3, 4> sides = {Vec3(0.0F, 0.0F, 1.0F), Vec3(1.0F, 0.0F, 0.0F), Vec3(0.0F, 0.0F, -1.0F),
+                                       Vec3(-1.0F, 0.0F, 0.0F)};
+    int taken = 0;
+    for (std::size_t ring = 0; ring < tops.size(); ++ring) {
+        const float top = tops[ring];
+        const int most = ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
+        std::vector<RVec3> spots;
+        // Each ring starts on another side and at another place along it, so
+        // no two rings are dressed alike.
+        for (std::size_t s = 0; s < sides.size(); ++s) {
+            const Vec3 out = sides[(s + ring) % sides.size()];
+            if (static_cast<int>(spots.size()) >= most) {
+                break;
+            }
+            const Vec3 along(out.GetZ(), 0.0F, -out.GetX());
+            // The shaft's edge on this side: the first floor out from the
+            // middle of the ring, felt for every 0.5 m and then to 5 cm.
+            float edge = -1.0F;
+            float ignored = 0.0F;
+            const auto floor_out = [&](const float d) {
+                return floor_at(kRingCentreX + out.GetX() * d, kRingCentreZ + out.GetZ() * d, top, ignored);
+            };
+            for (float d = 10.0F; d < 30.0F; d += 0.5F) {
+                if (floor_out(d)) {
+                    edge = d;
+                    for (float back = d - 0.05F; back > d - 0.5F && floor_out(back); back -= 0.05F) {
+                        edge = back;
+                    }
+                    break;
+                }
+            }
+            if (edge < 0.0F) {
+                continue;
+            }
+            const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
+            for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
+                const SpotTemplate &spot =
+                    spot_templates()[static_cast<std::size_t>(taken + static_cast<int>(ring)) % spot_templates().size()];
+                const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
+                                   kRingCentreZ + out.GetZ() * edge + along.GetZ() * a);
+                const auto at = [&](const float u, const float v) {
+                    return origin + along * u + out * v;
+                };
+                // Spaced along the ring, and clear of where the player is put down.
+                bool apart = true;
+                for (const RVec3 &other : spots) {
+                    apart = apart && Vec3(other - origin).Length() >= kSpotSpacing;
+                }
+                for (const RVec3 &point : keep_clear) {
+                    apart = apart && Vec3(point - origin).Length() >= keep_clear_radius;
+                }
+                if (!apart) {
+                    continue;
+                }
+                // Set against the rail where there is one (felt for at hand
+                // height over the edge); where the edge is open, back from it.
+                RayCastResult rail;
+                const bool railed =
+                    query.CastRay(RRayCast(at(0.0F, 0.4F) + Vec3(0.0F, 1.05F, 0.0F), out * -0.6F), rail);
+                const float near = railed ? 0.15F : 0.6F;
+                const float far = near + spot.depth + kWalkway;
+                const RVec3 middle = at(0.0F, near + 0.5F * spot.depth) + Vec3(0.0F, 1.3F, 0.0F);
+                // No machine, nor any body that moves, within kMachineClear of
+                // it.
+                const RefConst<Shape> around =
+                    new BoxShape(Vec3(0.5F * spot.width + kMachineClear, 2.5F, 0.5F * spot.width + kMachineClear));
+                AnyHitCollisionCollector<CollideShapeCollector> near_it;
+                query.CollideShape(around, Vec3::sReplicate(1.0F), RMat44::sRotationTranslation(Quat::sIdentity(), middle),
+                                   CollideShapeSettings(), middle, near_it, {}, {}, machines);
+                if (near_it.HadHit()) {
+                    continue;
+                }
+                // A level floor under all of it, and a walkway past it, felt
+                // for every metre.
+                bool level = true;
+                float floor = top;
+                for (float u = -0.5F * spot.width; u <= 0.5F * spot.width + 0.5F && level; u += 1.0F) {
+                    for (float v = near; v <= far + 0.5F && level; v += 1.0F) {
+                        const RVec3 p = at(std::min(u, 0.5F * spot.width), std::min(v, far));
+                        level = floor_at(static_cast<float>(p.GetX()), static_cast<float>(p.GetZ()), top, floor);
+                    }
+                }
+                if (!level) {
+                    continue;
+                }
+                // Nothing at all in the way above it, from 2 cm over the floor
+                // (a toe plate or a bolted plate lower than a hand's width is
+                // in the way too).
+                const RefConst<Shape> room = new BoxShape(Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
+                const RVec3 room_middle = middle - Vec3(0.0F, 1.3F - 1.26F, 0.0F);
+                AnyHitCollisionCollector<CollideShapeCollector> in_the_way;
+                query.CollideShape(room, Vec3::sReplicate(1.0F),
+                                   RMat44::sRotationTranslation(Quat::sIdentity(), room_middle), CollideShapeSettings(),
+                                   room_middle, in_the_way);
+                if (in_the_way.HadHit()) {
+                    continue;
+                }
+                // And under the pieces themselves, felt for every 0.4 m: a
+                // seam or a gap the metre's grid stepped over would leave a
+                // piece on an edge, never at rest.
+                for (float u = -0.5F * spot.width; u <= 0.5F * spot.width + 0.2F && level; u += 0.4F) {
+                    for (float v = near; v <= near + spot.depth + 0.2F && level; v += 0.4F) {
+                        const RVec3 p = at(std::min(u, 0.5F * spot.width), std::min(v, near + spot.depth));
+                        level = floor_at(static_cast<float>(p.GetX()), static_cast<float>(p.GetZ()), top, floor);
+                    }
+                }
+                if (!level) {
+                    continue;
+                }
+                const float yaw = std::atan2(-along.GetZ(), along.GetX());
+                for (std::size_t n = 0; n < spot.pieces.size(); ++n) {
+                    const SpotPiece &piece = spot.pieces[n];
+                    const RVec3 p = at(piece.along, near + piece.out);
+                    const auto variant =
+                        static_cast<std::uint8_t>((piece.variant + static_cast<std::size_t>(taken) + n) % 3U);
+                    add_piece({piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
+                               static_cast<float>(p.GetZ()), yaw + piece.yaw});
+                }
+                spots.push_back(origin);
+                ++taken;
+            }
+        }
     }
 }
 

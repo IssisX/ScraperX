@@ -1017,8 +1017,8 @@ public:
         std::uint8_t kind = 0;
         std::uint8_t variant = 0;
     };
-    [[nodiscard]] static std::uint32_t loose_stock_count() noexcept;
-    [[nodiscard]] static LooseStockPiece loose_stock_piece(std::uint32_t index) noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_count() const noexcept;
+    [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,

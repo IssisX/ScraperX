@@ -98,6 +98,9 @@ public:
     [[nodiscard]] std::uint32_t stumbles() const noexcept { return stumbles_; }
     [[nodiscard]] std::uint32_t steps() const noexcept { return steps_; }
     [[nodiscard]] bool is_worker(JPH::BodyID body) const noexcept;
+    // Where the crew walk: points every `step` metres along each worker's
+    // route, on its floor (kept clear of the tower's loose stock).
+    [[nodiscard]] std::vector<JPH::RVec3> walked(float step) const;
 
 private:
     struct Station {
@@ -111,6 +114,7 @@ private:
         std::size_t next = 0;
         float timer = 0.0F;
         float walk_mps = kWalkMps;
+        float floor_y = 0.0F;
         JPH::Vec3 drive = JPH::Vec3::sZero();   // horizontal velocity the feet asked for
         JPH::Vec3 aside = JPH::Vec3::sZero();   // where a yield steps to
         State resume = State::Walking;

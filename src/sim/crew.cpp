@@ -96,6 +96,7 @@ void Crew::add(std::vector<Station> route, const float walk_mps, const float flo
     Worker worker;
     worker.route = std::move(route);
     worker.walk_mps = walk_mps;
+    worker.floor_y = floor_y;
     const Station &home = worker.route.front();
     BodyCreationSettings settings(shape_, RVec3(home.x, floor_y + kStandCentre, home.z), Quat::sIdentity(),
                                   EMotionType::Dynamic, static_cast<ObjectLayer>(moving_layer_));
@@ -120,6 +121,23 @@ void Crew::add(std::vector<Station> route, const float walk_mps, const float flo
         worker.next = worker.route.size() > 1 ? 1 : 0;
     }
     workers_.push_back(std::move(worker));
+}
+
+std::vector<RVec3> Crew::walked(const float step) const {
+    std::vector<RVec3> points;
+    for (const Worker &worker : workers_) {
+        for (std::size_t i = 0; i < worker.route.size(); ++i) {
+            const Station &from = worker.route[i];
+            const Station &to = worker.route[(i + 1) % worker.route.size()];
+            const float length = std::hypot(to.x - from.x, to.z - from.z);
+            const int steps = std::max(1, static_cast<int>(std::ceil(length / step)));
+            for (int k = 0; k <= steps; ++k) {
+                const float t = static_cast<float>(k) / static_cast<float>(steps);
+                points.emplace_back(from.x + (to.x - from.x) * t, worker.floor_y, from.z + (to.z - from.z) * t);
+            }
+        }
+    }
+    return points;
 }
 
 bool Crew::is_worker(const BodyID body) const noexcept {

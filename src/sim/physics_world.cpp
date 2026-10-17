@@ -253,6 +253,15 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving, player_id_);
+    // The tower's lived-in spots of loose stock: after every other body, so
+    // each place is tested against all of them, and clear by 4 m of every
+    // place the player is put down and of every lane the crew walk. Their
+    // kit bodies come last, so older saves' lists line up.
+    std::vector<JPH::RVec3> keep_clear = crew_->walked(1.0F);
+    for (int spawn = 0; spawn < static_cast<int>(InitialSpawn::Count); ++spawn) {
+        keep_clear.push_back(spawn_position(static_cast<InitialSpawn>(spawn)));
+    }
+    loose_stock_->dress_tower(keep_clear, 4.0F);
 
     physics_system_.OptimizeBroadPhase();
 

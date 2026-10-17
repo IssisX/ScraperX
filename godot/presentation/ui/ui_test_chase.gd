@@ -283,6 +283,31 @@ func _look_stock_yard() -> bool:
 	return true
 
 
+# look_tower_stock: renders only (not in CI): the lived-in spots of stock up
+# the tower (LooseStock::dress_tower), from deck 2's south band and from the
+# 176 ring: to the nearest spot on the same deck, and looked at.
+func _look_tower_stock(pose: String) -> bool:
+	_main._sky_cycle.set_hour(15.5)
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 3.0)
+	var at := _position()
+	var nearest := Vector3.INF
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	for i in range(0, stock.size() - 2, 3):
+		var p: Vector3 = (_native().get_kit_body_transform(stock[i]) as Transform3D).origin
+		if absf(p.y - at.y) < 2.0 and Vector2(p.x - at.x, p.z - at.z).length() < Vector2(nearest.x - at.x, nearest.z - at.z).length():
+			nearest = p
+	if nearest == Vector3.INF:
+		return _fail("no stock on this deck")
+	var toward := Vector2(nearest.x - at.x, nearest.z - at.z)
+	var stand := Vector2(nearest.x, nearest.z) - toward.normalized() * minf(5.0, toward.length())
+	await _go(InputRouter.Device.TOUCH, stand, 0.5, 20.0)
+	await _look_at_point(nearest + Vector3(0.0, 0.3, 0.0))
+	await _seconds(1.0)
+	await _pose(pose)
+	_detail = "spot=%s" % str(nearest)
+	return true
+
+
 # The drums' first pallet: [entity, kit body].
 func _first_pallet() -> Array:
 	var stock: PackedInt32Array = _native().get_loose_stock()

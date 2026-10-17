@@ -957,6 +957,27 @@ in the air and on a wall; not with the hands on something, in a seat or at the f
 Proof: `touch_quickturn` (half round, 1.43 rad of it at 0.1 s; a run east at 5.5 m/s turned
 about to 5.5 m/s west within 0.9 s).
 
+**Loose stock up the tower (2026-10-17; the owner: little lived-in spots all over the structure,
+never confined to a few places).** When the world is built, a spot finder walks every deck ring of
+the stack (11 m to 143 m; the 154 m deck keeps the seven set for the Matron) and every upper ring
+(176 m to 396 m), and leaves little spots of real, loose stock against the shaft's railed edge:
+a step of crates; welding gas bottles (oxygen black, acetylene maroon, argon blue) and a toolbox;
+a reel of cable on its rims and a bundle of planks; a pallet of drums. Four new kinds: the gas
+bottle (60 kg, carried), the cable reel (180 kg, it rolls), the toolbox (18 kg, carried), the
+plank bundle. A place is taken only where the world says it fits: a level floor under every
+metre of it and a 1.5 m walkway past it; nothing at all in the way above it; no machine, nor
+anything that moves, within 3 m; the last spot 9 m back along the ring; 4 m clear of every place
+the player is put down and of every lane the yard crew walk (a crate step first set across a
+worker's lane on the 264 ring was walked into all day and never slept; the settle test found
+it). Against the rail where the edge has one, 0.6 m back from an open edge; each ring dressed
+from another side and place, so no two rings look alike. Up to three spots a stack ring and two
+an upper ring: 195 pieces on all 24 rings, and none on a machine's route (the full native
+suite's routes all still pass). The
+finder costs about 80 ms when the world is built (first written, 540 ms: it now feels for
+machines only among machines and moving bodies, and samples a metre apart). Every piece, the
+yard's and the tower's, settles where it was put and sleeps: native `stock` (276 pieces settled
+within 1.5 cm, all asleep after 12 s).
+
 **Mirror's Edge research (2026-10-17; the owner: the movement alone should be a reason to play).**
 What its running is made of, against what ScraperX has. Already here: run and sprint, the
 wall-run, the kick off a wall, the wall climb, the tuck (its coil), the slide, vaults and the

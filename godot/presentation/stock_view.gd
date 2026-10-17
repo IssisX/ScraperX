@@ -10,6 +10,9 @@ extends Node3D
 const KIND_DRUM := 3
 const KIND_CONTAINER := 5
 const KIND_STEEL_BEAM := 6
+const KIND_GAS_BOTTLE := 14
+const KIND_CABLE_REEL := 15
+const KIND_TOOLBOX := 16
 # A container's half size along its own x, y, z, its doors at +x.
 const CONTAINER_HALF := Vector3(6.095, 1.295, 1.22)
 
@@ -37,6 +40,16 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	var beam_paint: Array[Material] = [
 		main._material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, main._bump_steel),
 		main._material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, main._bump_steel)]
+	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
+	# argon blue), their caps left steel; the reels' wound cable black
+	# rubber; the toolboxes red, blue or yellow enamel.
+	var bottle_paint: Array[Material] = []
+	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
+		bottle_paint.append(main._material(colour, 0.3, 0.55, Color.BLACK, 1.0, main._bump_steel))
+	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
+	var toolbox_paint: Array[Material] = []
+	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
+		toolbox_paint.append(main._material(colour, 0.45, 0.45, Color.BLACK, 1.0, main._bump_steel))
 	var stock: PackedInt32Array = native.get_loose_stock()
 	for i in range(0, stock.size() - 2, 3):
 		var entity := int(native.get_kit_body_entity_id(stock[i]))
@@ -60,6 +73,23 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 				_paint(body, drum_paint[variant % drum_paint.size()])
 			KIND_STEEL_BEAM:
 				_paint(body, beam_paint[variant % beam_paint.size()])
+			# A moving body is drawn one mesh per material, in the order its
+			# parts first use them (main_machines.gd): the bottle's body, then
+			# its steel cap; the reel's timber flanges, then its cable; the
+			# toolbox's box, then its steel handle.
+			KIND_GAS_BOTTLE:
+				_paint_mesh(body, 0, bottle_paint[variant % bottle_paint.size()])
+			KIND_CABLE_REEL:
+				_paint_mesh(body, 1, cable_paint)
+			KIND_TOOLBOX:
+				_paint_mesh(body, 0, toolbox_paint[variant % toolbox_paint.size()])
+
+
+# The index-th mesh of the body (see above) only.
+func _paint_mesh(body: Node3D, index: int, material: Material) -> void:
+	var meshes := body.get_children().filter(func(child: Node) -> bool: return child is MeshInstance3D)
+	if index < meshes.size():
+		(meshes[index] as MeshInstance3D).material_override = material
 
 
 func _paint(body: Node3D, material: Material) -> void:

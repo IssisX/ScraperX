@@ -758,8 +758,8 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_bins() const {
 // Per piece of loose stock: its kit body index, its kind and its paint.
 godot::PackedInt32Array ScraperXSimulation::get_loose_stock() const {
     godot::PackedInt32Array out;
-    for (std::uint32_t index = 0; index < sim::Simulation::loose_stock_count(); ++index) {
-        const sim::Simulation::LooseStockPiece piece = sim::Simulation::loose_stock_piece(index);
+    for (std::uint32_t index = 0; index < simulation_->loose_stock_count(); ++index) {
+        const sim::Simulation::LooseStockPiece piece = simulation_->loose_stock_piece(index);
         out.push_back(static_cast<std::int32_t>(
             simulation_->kit_body_index(sim::Simulation::kLooseStockFirstEntity + index)));
         out.push_back(piece.kind);
