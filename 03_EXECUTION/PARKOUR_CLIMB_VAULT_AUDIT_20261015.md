@@ -11,3 +11,23 @@ Actual gaps: top-out finish requires receiver-relative horizontal speed<0.20m/s,
 Existing targeted tests: alternating_shimmy_tests, physical_topout_tests (shared loads, no-contact/blocked/release/restart/frame/onwardJump), second_hand_recovery_tests. Some stage once with debug_restart_at: local production-path proof, not ascent from grade. parkour_flow vault speed test uses RegressionFixtures, not physical production vault. Reuse matching accepted evidence; do not rerun merely for this audit.
 
 Phase2 should extend existing candidate/per-hand acquisition and actual receiving-foot flow. Phase3 adds compression-only palm actuation, prospective far-side clearance and fresh receiving contact in the existing planner; tensile hanging hands cannot serve as palm props. All releases retain solved momentum.
+
+## Physical onward top-out — 2026-10-17
+
+The original low-speed gate was unnecessary, but its deletion alone did not
+improve the production case: both versions released at0.0404817m/s. The hand
+target stopped at the landing before the body descended into actual contact.
+Held inward input now advances only the hand-command goal by at most the
+existing player radius, onto clear standing geometry and the exact accepted
+receiver surface. Lowering remains tied to the original receiving plane. The
+original receiver target, actual foot-acquisition footprint, finite actuator
+limits and firm-footing predicate remain unchanged. Releasing hands requires
+fresh matching contact and a completed shared hand/foot solve; no velocity,
+position or gravity is assigned during this change.
+
+The production-ledge case retains1.52015m/s inward at release and continues
+0.551256m over20native ticks on actual receiving support. This is a staged
+production-path case, not a from-grade ascent or rotating-support claim.
+[Exact commands, results and limits](../evidence/parkour-2026-10-17/TOPOUT_FLOW.md).
+The rest of the predictive catch, cross-body/material transfer and physical
+palm-vault scope remains pending.

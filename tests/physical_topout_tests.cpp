@@ -186,6 +186,42 @@ void jump_after_transfer() {
     require(jumped,"fresh Jump survives the bounded previous transfer-foot lifetime",s);
     std::cout<<"PASS PHYSICAL_TOPOUT onward_jump_buffer real_receiving_contact=1 no_foot_restart=1\n";
 }
+
+void onward_run() {
+    Simulation s; stage(s);
+    const auto before=s.snapshot();
+    require(s.set_move_input(-1,0)&&s.set_sprint_input(true)&&s.request_traversal(),
+            "held inward sprint and ordered Action",s);
+    bool received=false;
+    for(int i=0;i<153;++i) {
+        tick(s);
+        const auto v=s.snapshot();
+        if(v.accepted_traversal_count>before.accepted_traversal_count&&
+           v.traversal_hand_constraint_count==0) {received=true;break;}
+    }
+    const auto release=s.snapshot();
+    const double inward_speed=release.support_point_linear_velocity.x-release.player_linear_velocity.x;
+    std::cout<<"FLOW release_tick="<<release.tick_index<<" inward_m_s="<<inward_speed
+        <<" x="<<release.player_position.x<<" foot="<<release.foot_push_active<<'\n';
+    require(received&&release.player_grounded&&release.checkpoint_footing_valid&&
+            release.support_entity_id==Simulation::kTowerEntityId&&release.foot_push_active&&
+            release.foot_push_source_contact_tick>before.foot_contact_tick&&
+            release.hand_foot_overlap_solved_ticks>before.hand_foot_overlap_solved_ticks&&
+            release.hand_foot_last_hand_load_n>0&&release.hand_foot_last_foot_load_n>0,
+            "flow releases only after fresh real receiver footing and a loaded shared solve",s);
+    require(inward_speed>.20,"receiving footing releases without the old forced stop",s);
+    for(int i=0;i<20;++i) {
+        tick(s);
+        require(s.snapshot().traversal_hand_constraint_count==0&&s.snapshot().player_grounded&&
+                s.snapshot().support_entity_id==Simulation::kTowerEntityId,
+                "held onward movement stays on actual receiving support",s);
+    }
+    require(s.snapshot().player_position.x<release.player_position.x-.25&&
+            s.snapshot().foot_push_start_count==release.foot_push_start_count,
+            "ordinary sprint continues inward without restarting the transfer foot",s);
+    std::cout<<"PASS PHYSICAL_TOPOUT onward_run real_receiver=1 forced_stop=0 inward_m_s="
+        <<inward_speed<<" onward_m="<<release.player_position.x-s.snapshot().player_position.x<<'\n';
+}
 }
 
 int main(int argc,char**argv) {
@@ -196,6 +232,7 @@ int main(int argc,char**argv) {
     else if(mode=="restart")restart();
     else if(mode=="frames")frame_equivalence();
     else if(mode=="jump-buffer")jump_after_transfer();
+    else if(mode=="onward-run")onward_run();
     else if(mode=="single-step") (void)topout(WorldContent::PipeBridge);
     else (void)topout();
 }

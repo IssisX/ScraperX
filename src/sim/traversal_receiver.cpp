@@ -1,4 +1,5 @@
 #include "sim/traversal_receiver.hpp"
+#include "sim/traversal_plan.hpp"
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
@@ -88,5 +89,22 @@ bool collect_receiver_surface_patch(const JPH::PhysicsSystem &system,
     if (collector.patch.overflow || !collector.patch.contains(canonical.mSubShapeID2)) return false;
     patch = collector.patch;
     return true;
+}
+
+bool receiver_supports_continuation(const JPH::PhysicsSystem &system,
+    const JPH::RRayCast &ray, const TraversalPlanState &plan,
+    JPH::BodyID ignored_body, float minimum_normal_y) noexcept {
+    if (!finite(ray.mOrigin) || !finite(ray.mDirection) || ray.mDirection.IsNearZero() ||
+        plan.receiver.IsInvalid() || !plan.receiver_shape) return false;
+    JPH::RayCastResult hit;
+    const JPH::IgnoreSingleBodyFilter filter(ignored_body);
+    if (!system.GetNarrowPhaseQuery().CastRay(ray,hit,{},{},filter) ||
+        hit.mBodyID!=plan.receiver || !plan.receiver_patch.contains(hit.mSubShapeID2)) return false;
+    const JPH::BodyLockRead lock(system.GetBodyLockInterface(),hit.mBodyID);
+    if (!lock.Succeeded()) return false;
+    const auto &body=lock.GetBody();
+    return body.IsRigidBody() && body.IsInBroadPhase() && !body.IsSensor() &&
+        body.GetShape()==plan.receiver_shape && body.GetUserData()==plan.receiver_entity &&
+        body.GetWorldSpaceSurfaceNormal(hit.mSubShapeID2,ray.GetPointOnRay(hit.mFraction)).GetY()>=minimum_normal_y;
 }
 }

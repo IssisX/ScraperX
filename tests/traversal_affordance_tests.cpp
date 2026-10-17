@@ -249,11 +249,46 @@ void receiver_surface_patch() {
     SubShapeID extra; extra.SetValue(8);
     check(!capacity.add(extra) && !capacity.contains(extra) && capacity.overflow, "ninth identity invalidates patch");
 }
+void continuation_cannot_supply_contact() {
+    World w;
+    auto a=w.sample();
+    TraversalPlanState plan;
+    plan.latch(a,Vec3::sZero(),a.receiver_shape_identity,10);
+    const auto centre=w.system.GetBodyInterface().GetPosition(w.receiver);
+    const RRayCast ray(centre+RVec3(0,2,0),Vec3(0,-4,0));
+    const auto accepted=[&](const RRayCast &probe) {
+        return receiver_supports_continuation(w.system,probe,plan,BodyID(),.7F);
+    };
+    check(accepted(ray),"clear continuation on exact receiver is prospective geometry");
+    FootContactSample absent;
+    check(!plan.accepts(absent,11)&&!plan.foot_started&&plan.shared_solved_ticks==0,
+          "continuation cannot fabricate contact, a foot row or shared solve");
+    check(!accepted(RRayCast(ray.mOrigin+RVec3(3,0,0),ray.mDirection)),
+          "unsupported continuation rejected while original receiver remains");
+    const auto other=w.system.GetBodyInterface().GetPosition(w.support);
+    check(!accepted(RRayCast(other+RVec3(0,2,0),ray.mDirection)),
+          "another body cannot extend the accepted receiver");
+    const auto patch=plan.receiver_patch;
+    plan.receiver_patch={};
+    check(!accepted(ray),"unaccepted receiver leaf cannot extend the target");
+    plan.receiver_patch=patch;
+    auto &b=w.system.GetBodyInterface();
+    b.SetUserData(w.receiver,99);
+    check(!accepted(ray),"changed entity invalidates prospective continuation");
+    b.SetUserData(w.receiver,42);
+    { BodyLockWrite lock(w.system.GetBodyLockInterface(),w.receiver); lock.GetBody().SetIsSensor(true); }
+    check(!accepted(ray),"sensor cannot extend the receiving surface");
+    { BodyLockWrite lock(w.system.GetBodyLockInterface(),w.receiver); lock.GetBody().SetIsSensor(false); }
+    check(accepted(ray),"original receiver can be revalidated without renewing contact");
+    b.SetShape(w.receiver,new BoxShape(Vec3(1,1,1)),true,EActivation::Activate);
+    check(!accepted(ray),"replaced receiver shape invalidates continuation");
+}
 } // namespace
 
 int main() {
     RegisterDefaultAllocator(); Factory::sInstance = new Factory; RegisterTypes();
     rigid_motion_and_age(); identities(); rejection_and_capacity(); receiver_surface_patch();
+    continuation_cannot_supply_contact();
     UnregisterTypes(); delete Factory::sInstance; Factory::sInstance = nullptr;
     std::cout << "traversal affordance: PASS " << checks << " checks (Release-safe)\n";
 }

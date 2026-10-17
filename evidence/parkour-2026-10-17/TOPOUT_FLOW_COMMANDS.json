@@ -1,0 +1,387 @@
+{
+  "source_base": "fafc416",
+  "source_hashes": {
+    "src/sim/traversal_receiver.hpp": "e416855e12b70797cbdc536a487d3e952a892991478558dae6c8ab6ec4b5ea13",
+    "src/sim/traversal_receiver.cpp": "3f8188338b5abdbfc07baeb5f931bf43738458785d86840aaf64194cf6c60886",
+    "src/sim/simulation/hand_transfer.cpp": "85d67bcaa81b2d230c57a7a68fb435a19d7441ded6b8480686750f4297b38590",
+    "tests/physical_topout_tests.cpp": "e5ffff293b9515540e2d8c9a59b0c11fb72e7b7f83dbe46e566e4bac907c1b30",
+    "tests/traversal_affordance_tests.cpp": "84b56517f90c786b0251cfeeb3c3a88885737f3a5408b29b6a50f181fa19adf8"
+  },
+  "native_archive_sha256": "050ea1e41353fd23952f33ac4c7873f9b146ceb87b3931e50980cf52c3345855",
+  "accepted_yard_archive": "/data/data/com.termux/files/usr/tmp/scraperx-west-apron-20261017/build/libscraperx_sim.a",
+  "native_source_closure": [
+    "src/sim/traversal_receiver.cpp",
+    "src/sim/traversal_receiver.hpp",
+    "src/sim/simulation/hand_transfer.cpp"
+  ],
+  "commands": [
+    {
+      "name": "traversal_receiver-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/objects/src_sim_traversal_receiver.cpp.o",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src/sim/traversal_receiver.cpp"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/traversal_receiver-build.log"
+    },
+    {
+      "name": "hand_transfer-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/objects/src_sim_simulation_hand_transfer.cpp.o",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src/sim/simulation/hand_transfer.cpp"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/hand_transfer-build.log"
+    },
+    {
+      "name": "final-archive",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/ar",
+        "rcs",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/objects/src_sim_traversal_receiver.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/objects/src_sim_simulation_hand_transfer.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-archive.log"
+    },
+    {
+      "name": "physical_topout_tests-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/tests/physical_topout_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/physical_topout_tests-build.log"
+    },
+    {
+      "name": "traversal_affordance_tests-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/tests/traversal_affordance_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/traversal_affordance_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/traversal_affordance_tests-build.log"
+    },
+    {
+      "name": "continuation-negative",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/traversal_affordance_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/continuation-negative.log"
+    },
+    {
+      "name": "final-onward-run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "onward-run"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-onward-run.log"
+    },
+    {
+      "name": "final-topout",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "topout"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-topout.log"
+    },
+    {
+      "name": "final-single-step",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "single-step"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-single-step.log"
+    },
+    {
+      "name": "final-jump-buffer",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "jump-buffer"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-jump-buffer.log"
+    },
+    {
+      "name": "final-release",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "release"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-release.log"
+    },
+    {
+      "name": "final-no-candidate",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "no-candidate"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-no-candidate.log"
+    },
+    {
+      "name": "final-blocked",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "blocked"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-blocked.log"
+    },
+    {
+      "name": "final-restart",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "restart"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-restart.log"
+    },
+    {
+      "name": "final-frames",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+        "frames"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/final-frames.log"
+    }
+  ],
+  "result": "PASS",
+  "baseline": {
+    "source": "fafc416",
+    "build_command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source/tests/physical_topout_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests"
+    ],
+    "build_exit": 0,
+    "run_command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/physical_topout_tests",
+      "onward-run"
+    ],
+    "exit": 1
+  },
+  "logs": {
+    "final-archive": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n",
+    "continuation-negative": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\ntraversal affordance: PASS 79 checks (Release-safe)\n",
+    "final-onward-run": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nFLOW release_tick=194 inward_m_s=1.52015 x=25.2705 foot=1\nPASS PHYSICAL_TOPOUT onward_run real_receiver=1 forced_stop=0 inward_m_s=1.52015 onward_m=0.551256\n",
+    "final-topout": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSHARED tick=179 contact=178 hand_n=938.026 foot_n=733.746\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=133 final_tick=269\n",
+    "final-single-step": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSHARED tick=181 contact=180 hand_n=937.469 foot_n=661.109\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=135 final_tick=271\n",
+    "final-jump-buffer": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT onward_jump_buffer real_receiving_contact=1 no_foot_restart=1\n",
+    "final-release": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT release\n",
+    "final-no-candidate": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT no_candidate\n",
+    "final-blocked": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT blocked_receiver no_legacy_action_started=1\n",
+    "final-restart": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT restart\n",
+    "final-frames": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nPASS PHYSICAL_TOPOUT frame_equivalence fixed90_caller60_360_grouped4=1 tolerance_m=0.0001\n"
+  },
+  "baseline_output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nFLOW release_tick=179 inward_m_s=0.0404817 x=25.502 foot=1\nFAIL PHYSICAL_TOPOUT receiving footing releases without the old forced stop tick=179 position=25.502,88.9088,-132 hands=0 foot=1 phase=0 shared=1 contact=179 source_contact=178 hand_n=0 foot_n=733.746\n",
+  "host": "Termux aarch64; GNU C++17 Release under Ubuntu proot; pinned native Jolt; isolated published source plus owned edits",
+  "limits": [
+    "Single staged production ledge, not route from grade",
+    "No new rotating/moving-receiver flow proof",
+    "Phone feel, matching APK and exact-source full release proof pending"
+  ]
+}

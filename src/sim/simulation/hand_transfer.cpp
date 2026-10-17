@@ -203,15 +203,11 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
     if (!cargo_transfer_active_ || traversal_plan_.shared_solved_ticks == 0 ||
         !traversal_plan_.accepts(foot_contact_,contact_solve_serial_)) return false;
     const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
-    const auto actual=bodies.GetPosition(player_id_);
     if (!grounded_ || !footing_is_firm(bodies) ||
         support_sample_.body_id != traversal_target_body_ ||
-        !shape_pose_is_clear(player_shape_.GetPtr(),landing) ||
-        std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ()) >= .10) return false;
-    const auto contact=from_support_local(bodies,foot_contact_.body,foot_contact_.local_point);
-    const auto relative=bodies.GetLinearVelocity(player_id_)-
-        support_point_velocity(bodies,foot_contact_.body,contact);
-    if (std::hypot(relative.GetX(),relative.GetZ()) >= .20) return false;
+        !shape_pose_is_clear(player_shape_.GetPtr(),landing)) return false;
+    // Fresh receiver contact and firm actual footing complete the handoff.
+    // Onward movement need not settle at the planned aim point first.
     cargo_transfer_peak_hand_load_n_=std::max(cargo_transfer_peak_hand_load_n_,
         double((physical_hands_->hand_force(0)+physical_hands_->hand_force(1)).Length()));
     ++accepted_traversal_count_;
@@ -256,13 +252,35 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
     // Releasing the stick does not cancel that input transaction; pushing
     // away pauses it while the real hand constraints keep taking load.
     if (up_input < -kClimbInputDeadzone) return;
-    JPH::RVec3 goal=landing+JPH::Vec3(0,0.15F,0);
+    JPH::RVec3 hand_goal=landing;
+    double remaining_inward=horizontal;
+    if (up_input > kClimbInputDeadzone) {
+        // Reconstruct inward from the refreshed material points, rather than
+        // reusing a world direction latched before the receiver rotated.
+        auto inward=JPH::Vec3(landing-ledge);
+        inward.SetY(0);
+        if (!inward.IsNearZero()) {
+            inward=inward.Normalized();
+            const auto onward=landing+inward*(kPlayerRadius*float(std::min(up_input,1.0)));
+            const auto origin=onward-JPH::Vec3(0,kPlayerHalfHeight-kLandingSupportProbeUp,0);
+            const JPH::Vec3 down(0,-(kLandingSupportProbeUp+kLandingSupportTolerance),0);
+            if (shape_pose_is_clear(player_shape_.GetPtr(),onward) &&
+                receiver_supports_continuation(physics_system_,JPH::RRayCast(origin,down),
+                    traversal_plan_,player_id_,kSupportNormalThreshold)) {
+                hand_goal=onward;
+                remaining_inward=JPH::Vec3(landing-actual).Dot(inward);
+            }
+        }
+    }
+    JPH::RVec3 goal=hand_goal+JPH::Vec3(0,0.15F,0);
     // Geometric clearance opens the forward move; actual supported contact
     // closes the transfer. Neither a timer nor a prescribed capsule path
     // decides arrival. Limit spring-target lead to prevent blocked wind-up.
     if (actual.GetY()-kPlayerHalfHeight<ledge.GetY()+0.04 && horizontal>0.10)
         goal=JPH::RVec3(actual.GetX(),goal.GetY(),actual.GetZ());
-    if (horizontal<=0.10) goal=landing+JPH::Vec3(0,0.02F,0);
+    // Lower at the original receiving plane even while continuing inward.
+    // The accepted foot footprint and its actual-contact gate stay unchanged.
+    if (remaining_inward<=0.10) goal=hand_goal+JPH::Vec3(0,0.02F,0);
     auto lead=JPH::Vec3(goal-actual);
     if (lead.Length()>0.45F) lead*=0.45F/lead.Length();
     auto command=JPH::Vec3(actual+lead-physical_hands_->commanded_position());
