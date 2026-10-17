@@ -58,3 +58,36 @@ Emulator success cannot establish physical-phone frame rate or a hardware floor.
 - [Godot 4.7 AndroidRuntime](https://docs.godotengine.org/en/4.7/tutorials/platform/android/javaclasswrapper_and_androidruntimeplugin.html): `getActivity()` exposes the current activity.
 - [Android 16 Activity.java](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/core/java/android/app/Activity.java#L4264): `hasWindowFocus()` reads the main decor view's window focus, distinct from activity resume state.
 - [Android configuration changes](https://developer.android.com/guide/topics/resources/runtime-changes): a declared handled configuration change avoids activity replacement and leaves resource handling with the app. Current game UI is viewport based; future native text widgets need their own font-resource handling.
+
+## First edited-source Android results and harness correction
+
+Run `39059867482`, game source `0d6e4cbcd3bb4eb8e9da5654b3a42fec7ff872da`:
+compact API24 passed 27 original checks. Foldable API35 reached real native
+Main after font scale 1.0 to 1.25 (recorded readback 1.25), then the new focus
+harness failed before controls. Its `window-frames.txt` contains the game
+window and `mTopFocusedDisplayId=0` but no `mCurrentFocus` field. Logcat contains
+no script error; the lifecycle capture contains no game activity relaunch.
+Tall API36 reported the same missing-field harness failure. These runs do
+not establish the remaining Android controls or shade acceptance.
+
+This failure was introduced by querying `dumpsys window -a windows` for a
+field modern Android prints under display content. The query now requests
+the full `dumpsys window -a` dump. Focus parsing selects the actual top display,
+supports the older global field and refuses absent/ambiguous focus. A visible
+game window alone still cannot establish input focus. Timeout captures the
+last complete dump. Existing dialog recovery and deadlines remain intact.
+
+Executed after this correction:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s ci -p test_android_compatibility.py -v
+```
+
+Observed: `Ran 16 tests ... OK`. Added cases cover different focus on two
+displays, missing top display/field, ambiguous focus and legacy/single-display
+formats. The command expectation changed because the inspected Android dump
+scope was wrong, not to bypass input focus. Full corrected-source Android
+execution remains required.
+
+Primary format owner:
+[Android 15 DisplayContent.dump](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-15.0.0_r1/services/core/java/com/android/server/wm/DisplayContent.java#L3355).

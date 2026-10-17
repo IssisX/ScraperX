@@ -128,6 +128,10 @@ movement checks. Startup focus is observed before touch: only the captured
 bundled Messenger crash dialog can be dismissed once in a disposable emulator;
 game crashes, unknown dialogs and missing focus return still fail. Existing
 Resume controls handle any resulting pause.
+Focus comes from the full window-manager dump: modern Android reports it per
+display, outside the windows-only subsection. The parser selects the actual
+top display and rejects missing/ambiguous focus rather than inferring it from
+the mere presence of the game window.
 
 Main also reads the Android activity's actual window focus before consuming
 input or advancing physics. The notification shade can take focus while the

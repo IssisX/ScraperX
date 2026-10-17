@@ -9,12 +9,36 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from prepare_android_emulator_export import prepare
-from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, read_observations, runtime_errors, screen_observation
+from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, current_window_focus, read_observations, runtime_errors, screen_observation
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidObservationTests(unittest.TestCase):
+    def test_modern_focus_comes_from_the_top_display(self):
+        game = 'Window{abc u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}'
+        shade = 'Window{def u0 NotificationShade}'
+        text = ('Display: mDisplayId=0\n  mCurrentFocus=' + game + '\n'
+                'Display: mDisplayId=2 (organized)\n  mCurrentFocus=' + shade + '\n'
+                '  mTopFocusedDisplayId=2\n')
+        self.assertEqual(current_window_focus(text), shade)
+        self.assertEqual(current_window_focus(text.replace('mTopFocusedDisplayId=2',
+                                                           'mTopFocusedDisplayId=0')), game)
+
+    def test_missing_or_ambiguous_focus_is_not_inferred_from_visible_game(self):
+        for text in (
+                'Window #8 Window{abc u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}:\n  mTopFocusedDisplayId=0\n',
+                'Display: mDisplayId=0\n  mCurrentFocus=game\nDisplay: mDisplayId=2\n  mCurrentFocus=shade\n',
+                'Display: mDisplayId=0\n  mCurrentFocus=game\n  mTopFocusedDisplayId=3\n',
+                'mCurrentFocus=first\nmCurrentFocus=second\n'):
+            with self.subTest(text=text):
+                self.assertEqual(current_window_focus(text), '')
+
+    def test_one_display_without_global_id_and_legacy_focus_remain_readable(self):
+        for text in ('mCurrentFocus=Window{abc u0 package/activity}\n',
+                     'Display: mDisplayId=0\n  mCurrentFocus=Window{abc u0 package/activity}\n'):
+            self.assertEqual(current_window_focus(text), 'Window{abc u0 package/activity}')
+
     def test_focused_game_requires_no_emulator_recovery(self):
         focused = 'mCurrentFocus=Window{3940b90 u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}\n'
         with tempfile.TemporaryDirectory() as directory:
@@ -22,7 +46,7 @@ class AndroidObservationTests(unittest.TestCase):
             session.capture = MagicMock()
             session.adb = MagicMock(return_value=focused.encode())
             self.assertFalse(session.prepare_input_focus())
-            session.adb.assert_called_once_with('shell', 'dumpsys', 'window', '-a', 'windows')
+            session.adb.assert_called_once_with('shell', 'dumpsys', 'window', '-a')
             session.capture.assert_not_called()
             self.assertNotIn('startup_external_crash', session.receipt)
 

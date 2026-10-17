@@ -17,6 +17,21 @@ PART_PREFIX = 'SCRAPERX_ANDROID_COMPAT_PART '
 PACKAGE = 'com.cory.scraperx.chatgpt'
 
 
+def current_window_focus(text):
+    """Read actual focus on the top display, including modern per-display dumps."""
+    displays = list(re.finditer(r'(?m)^\s*Display: mDisplayId=(\d+)\b', text))
+    if displays:
+        top = re.search(r'(?m)^\s*mTopFocusedDisplayId=(\d+)\b', text)
+        wanted = top[1] if top else displays[0][1] if len(displays) == 1 else None
+        selected = [i for i, display in enumerate(displays) if display[1] == wanted]
+        if len(selected) != 1:
+            return ''
+        index = selected[0]
+        text = text[displays[index].start():displays[index + 1].start() if index + 1 < len(displays) else len(text)]
+    values = re.findall(r'(?m)^\s*mCurrentFocus=(.*)$', text)
+    return values[0].strip() if len(values) == 1 else ''
+
+
 def app_window_frame(text, size):
     """Read actual activity bounds; never infer letterboxing or input scaling."""
     frames = set()
@@ -172,10 +187,12 @@ class Session:
         deadline = time.monotonic() + 20
         recovered = False
         focus = ''
+        windows = ''
         while time.monotonic() < deadline:
-            windows = self.adb('shell', 'dumpsys', 'window', '-a', 'windows').decode()
-            match = re.search(r'(?m)^\s*mCurrentFocus=(.*)$', windows)
-            focus = match[1].strip() if match else ''
+            # Modern Android puts mCurrentFocus in DisplayContent, omitted
+            # by the windows-only subcommand. Retain the full display state.
+            windows = self.adb('shell', 'dumpsys', 'window', '-a').decode()
+            focus = current_window_focus(windows)
             crash = re.search(r'\bApplication Error: ([\w.]+)\}', focus)
             if crash:
                 package = crash[1]
@@ -192,6 +209,7 @@ class Session:
                 self.receipt['startup_input_focus'] = focus
                 return recovered
             time.sleep(0.2)  # Require the OS focus result, not elapsed time.
+        (self.output / 'startup-input-focus-last.txt').write_text(windows)
         raise RuntimeError(f'Android startup has no game input focus; actual focus={focus!r}')
 
     def swipe(self, start, end, duration_ms, *, until=None):
