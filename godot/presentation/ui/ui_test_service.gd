@@ -395,24 +395,23 @@ func _stack_s2(device: int) -> bool:
 	if not await _go(device, Vector2(10.0, -130.5), 0.15, 15.0) or \
 			not await _walk_to(device, Vector2(10.0, -137.6), 0.10, 15.0):
 		return _fail("walk across crossover gangway into S2 cage stalled at %s" % str(_position()))
-	await _face(Vector2(0.0, -1.0))
-	if not await _offered(&"pick_up", "GRAB"):
-		return _fail("Action read '%s' facing S2 handle, not GRAB" % _action_label())
-	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2214, 0.5):
-		return _fail("GRAB did not take S2 handle")
-	_move(device, 0.4)
-	var s2_tripped: bool = await _wait_until(
-		func() -> bool: return not bool(_native().is_stack_s2_chock_latched()), 2.0)
+	# Round to the shoot bolt's push plate and walk into it: the body shoves
+	# the bolt out along its slide, and the cage is free.
+	if not await _walk_to(device, Vector2(9.1, -138.3), 0.08, 6.0):
+		return _fail("the walk to S2's bolt plate stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not bool(_native().is_stack_s2_bolt_shot()):
+		return _fail("S2's bolt was out before it was shoved")
+	_move(device, 0.6)
+	var s2_free: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_stack_s2_bolt_shot()), 6.0)
 	_move(device, 0.0)
-	if not s2_tripped:
-		return _fail("pulling S2 handle did not trip chock")
+	if not s2_free:
+		return _fail("walking into S2's bolt did not shove it out (at %s)" % str(_position()))
 	var s2_arrived: bool = await _wait_until(
 		func() -> bool: return float(_native().get_stack_s2_cage_travel()) >= 21.8, 15.0)
 	if not s2_arrived:
 		return _fail("S2 cage never reached Deck 6 (travel %.2f m)" % float(_native().get_stack_s2_cage_travel()))
-	if not await _let_go_if_held(device):
-		return _fail("LET GO did not release S2 handle")
 	await _face(Vector2(0.0, 1.0))
 	if not (await _walk_to(device, Vector2(10.0, -133.0), 0.15, 6.0) and \
 			await _walk_to(device, Vector2(10.0, -126.0), 0.15, 6.0)):

@@ -854,7 +854,7 @@ void build_c1(std::vector<Part> &route) {
 // height, its push plate standing inside the cage. Nothing to pull (plan rule
 // 11) and nothing the route has asked of the body before: the rider walks
 // into the plate and shoves the bolt out along its slide (its shoes hold it
-// with 420 N), and once its nose is clear of the cage the beam and the cage
+// with 900 N, so it goes only while shoved), and once its nose is clear of the cage the beam and the cage
 // are free: the 1500 kg ballast cart drives the walking beam down, tilting the
 // massive girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
 // the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
@@ -896,7 +896,7 @@ constexpr float kS2BoltCentreZ = kS2BoltNoseZ + kS2BoltHalfLength;
 constexpr float kS2BoltMassKg = 140.0F;
 constexpr float kS2BoltClear = 0.86F;
 constexpr float kS2BoltTravel = 0.95F;
-constexpr float kS2BoltShoeN = 420.0F;
+constexpr float kS2BoltShoeN = 900.0F;
 
 // Head sheaves:
 const JPH::RVec3 kS2SheaveWest(-10.0F, kDeck6Top + 3.00, -141.0);
