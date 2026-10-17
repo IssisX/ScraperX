@@ -345,6 +345,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		_play(&"chute", -1.0, 1.0)
 	if _last_deaths >= 0 and deaths > _last_deaths:
 		_play(&"impact_lethal", 0.0, 1.0)
+	_sound_cracks(delta)
 	_update_voice(delta, position, velocity, grounded, traversal, chute, deaths)
 
 	_was_grounded = grounded
@@ -475,7 +476,9 @@ func _update_voice(delta: float, position: Vector3, velocity: Vector3, grounded:
 		_fall_reset(position)
 		return
 	if grounded and not _was_grounded and voiced:
-		if -_last_vy >= LAND_HARD_IMPACT:
+		if _voice_tier == &"pain":
+			pass   # a break on this landing has already cried out
+		elif -_last_vy >= LAND_HARD_IMPACT:
 			_voice_say(&"pain")
 		elif _fall_worst == &"terror":
 			_voice_say(&"relief")
@@ -778,6 +781,34 @@ func _surface(entity: int, height: float) -> StringName:
 	if entity in [1, 35, 43, 45, 51]:
 		return &"step_concrete"   # grade, apron, bay, handoff deck, dressing
 	return &"step_metal"
+
+
+# A death's bones: the run of cracks at the body, and over it a second,
+# lower run the harder it hit.
+var _cracks_due: Array = []   # [seconds until, place, loudness, pitch]
+
+func bone_cracks(at: Vector3, speed_mps: float, lethal_mps: float) -> void:
+	var hard := clampf(speed_mps / maxf(lethal_mps, 1.0), 1.0, 3.0)
+	_cracks_due.append([0.0, at, 1.0, randf_range(0.95, 1.1)])
+	if hard >= 1.5:
+		_cracks_due.append([0.11, at, clampf(0.4 * hard, 0.6, 1.0), randf_range(0.75, 0.85)])
+
+# An ankle broken on landing: the crack at the feet, and the cry (one, if
+# the landing's own pain line has not already said it).
+func ankle_break(body: Vector3) -> void:
+	_cracks_due.append([0.0, body - Vector3(0.0, 0.85, 0.0), 1.0, randf_range(1.05, 1.2)])
+	if _voice_tier != &"pain":
+		_voice_say(&"pain")
+
+func _sound_cracks(delta: float) -> void:
+	var keep: Array = []
+	for crack in _cracks_due:
+		crack[0] -= delta
+		if crack[0] <= 0.0:
+			_play_at(&"bone_crack", crack[1], linear_to_db(float(crack[2])), float(crack[3]))
+		else:
+			keep.append(crack)
+	_cracks_due = keep
 
 
 func _play(name: StringName, volume_db: float, pitch: float) -> void:

@@ -202,7 +202,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
                                               spawn_position(initial_spawn),
                                               JPH::Quat::sIdentity(),
                                               JPH::EMotionType::Dynamic,
-                                              object_layers::kMoving);
+                                              object_layers::kPlayer);
     player_settings.mAllowedDOFs = JPH::EAllowedDOFs::TranslationX |
                                    JPH::EAllowedDOFs::TranslationY |
                                    JPH::EAllowedDOFs::TranslationZ;
@@ -287,6 +287,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     }
     reserved.push_back(hook_practice_ground());
     zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_, std::move(reserved));
+    corpses_ = std::make_unique<Corpses>(physics_system_, object_layers::kCorpse);
     (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
     // Across the well, from the band's inner edge (the top post 1.4 m in from
     // it, its stand toward the well hugging the edge, the rest of the band
@@ -584,6 +585,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         !jump_started) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
+            // The body stays where it hit, as it was moving into the hit.
+            leave_corpse(bodies, pre_contact_velocity_);
             restore_from_checkpoint(bodies);
             died_this_tick = true;
         } else {
@@ -604,6 +607,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // Her hands on the player: a death like a lethal fall.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
         matron_->count_catch();
+        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_));
         restore_from_checkpoint(bodies);
         died_this_tick = true;
     }
@@ -1008,6 +1012,20 @@ void Simulation::PhysicsWorld::update_support_motion(JPH::BodyInterface &bodies,
                          JPH::Quat::sIdentity(),
                          delta_seconds);
 
+}
+
+// A death leaves the body where it died: its corpse at the body's place,
+// moving at `velocity`, and the place and speed of the death for the
+// presentation (the view rides the corpse; the blood goes where it hit).
+void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JPH::Vec3 velocity) noexcept {
+    const JPH::RVec3 at = bodies.GetPosition(player_id_);
+    const JPH::RVec3 soles = at - JPH::Vec3(0.0F, active_half_height(), 0.0F);
+    corpses_->spawn(soles, facing_, velocity);
+    death_point_ = support_sample_.grounded
+                       ? JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y,
+                                    support_sample_.contact_point.z)
+                       : soles;
+    death_speed_mps_ = velocity.Length();
 }
 
 } // namespace scraperx::sim

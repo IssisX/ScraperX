@@ -622,6 +622,8 @@ void run_landing() {
     const double recovering = speed_after(heavy, 22);
     require(advance_until(heavy, [](const Snapshot &s) { return s.recovery_balance >= 1.0; }, 3.0),
             "balance must come back");
+    // Recovered is whole: the 12 m drop also broke an ankle (kAnkleBreakSpeed).
+    require(advance_until(heavy, [](const Snapshot &s) { return !s.limping; }, 31.0), "the limp must pass");
     for (int i = 0; i < 90; ++i) {
         require(heavy.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
     }
@@ -655,6 +657,35 @@ void run_landing() {
         require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 2; }, 3.0), "the hop must land");
         require(sim.snapshot().landing_response == 1 && sim.snapshot().recovery_balance < owed + 0.1,
                 "a light landing must not wipe the debt a heavy one left");
+    }
+
+    // The bones (kAnkleBreakSpeed): the 12 m drop landed planted breaks an
+    // ankle, rolled out it does not. On the break the stride is a hobble and
+    // the jump a weak push, until the limp passes (kLimpSeconds).
+    require(straight.at.limping && straight.at.ankle_break_count == 1,
+            "an unprepared 12 m drop must break an ankle");
+    require(plain.at.limping, "the same drop landed planted at a run must break an ankle");
+    require(!roll.later.limping && roll.later.ankle_break_count == 0, "the same drop rolled out must not");
+    {
+        Simulation sim(InitialSpawn::SurvivableDrop);
+        require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
+        require(advance_until(sim, [](const Snapshot &s) { return s.recovery_balance >= 1.0; }, 3.0),
+                "balance must come back on a broken ankle");
+        const double hobble = speed_after(sim, 90);
+        require(advance_until(sim, [](const Snapshot &s) { return s.player_grounded; }, 1.0), "must stand");
+        require(sim.request_jump() && sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "jump on it");
+        const double weak_push = sim.snapshot().player_linear_velocity.y;
+        require(advance_until(sim, [](const Snapshot &s) { return !s.limping; }, 31.0), "the limp must pass");
+        require(advance_until(sim, [](const Snapshot &s) { return s.player_grounded; }, 2.0), "must stand healed");
+        for (int i = 0; i < 90; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        }
+        const double healed = speed_after(sim, 90);
+        std::cout << "  broken ankle: hobble_mps=" << hobble << " weak_jump_mps=" << weak_push
+                  << " healed_mps=" << healed << " breaks=" << sim.snapshot().ankle_break_count << "\n";
+        require(hobble < 0.5 * healed && hobble > 1.5, "a broken ankle must hobble, not stop");
+        require(weak_push > 2.0 && weak_push < 4.0, "a broken ankle must push off weakly");
+        require(sim.snapshot().ankle_break_count == 1, "the limp passing is no new break");
     }
 
     // Phase 2: neutral air input keeps momentum. A running jump on the open

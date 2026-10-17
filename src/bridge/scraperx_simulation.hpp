@@ -203,6 +203,9 @@ public:
     [[nodiscard]] godot::Array get_zipline_lines() const;
     [[nodiscard]] godot::PackedFloat32Array get_zipline_trolleys() const;
     [[nodiscard]] godot::Dictionary get_zipline_state() const;
+    [[nodiscard]] godot::Array get_corpses() const;
+    [[nodiscard]] godot::Array get_corpse_plan() const;
+    [[nodiscard]] godot::Dictionary get_death_state() const;
     [[nodiscard]] godot::Dictionary get_hook_state() const;
     // The yard crew: kWorkerFloats per worker (x, y, z, yaw, state, speed,
     // stride, grounded), and what the player has made them do.

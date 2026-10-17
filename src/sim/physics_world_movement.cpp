@@ -482,6 +482,10 @@ void Simulation::PhysicsWorld::record_landing(JPH::BodyInterface &bodies, const 
             ++roll_refused_count_;
         }
     }
+    // The bones: a landing past what they take breaks an ankle.
+    break_ankle_if(normal_speed, landing_response_ == LandingResponse::Roll ? kAnkleBreakRolledSpeed
+                                 : prepared                                  ? kAnkleBreakPreparedSpeed
+                                                                             : kAnkleBreakSpeed);
     if (landing_response_ == LandingResponse::Stumble) {
         ++stumble_count_;
     }
@@ -512,6 +516,11 @@ void Simulation::PhysicsWorld::roll_locomotion(JPH::Vec3 &velocity, const JPH::V
         ++roll_blocked_count_;
         landing_response_ = LandingResponse::Heavy;
         landing_loss_ = roll_blocked_loss_;
+        // Planted after all: the bones take it as a crouched landing (a
+        // break the roll's speed already made is not made twice).
+        if (landing_normal_speed_mps_ < kAnkleBreakRolledSpeed) {
+            break_ankle_if(static_cast<float>(landing_normal_speed_mps_), kAnkleBreakPreparedSpeed);
+        }
         recovery_seconds_left_ = recovery_duration_;
         roll_seconds_left_ = 0.0;
     }
@@ -655,6 +664,17 @@ void Simulation::PhysicsWorld::advance_recovery(JPH::BodyInterface &bodies, cons
     if (recovery_seconds_left_ > 0.0 && grounded_) {
         recovery_seconds_left_ = std::max(0.0, recovery_seconds_left_ - dt);
     }
+    if (limp_seconds_left_ > 0.0) {
+        limp_seconds_left_ = std::max(0.0, limp_seconds_left_ - dt);
+    }
+}
+
+void Simulation::PhysicsWorld::break_ankle_if(const float normal_speed, const float break_speed) noexcept {
+    if (normal_speed < break_speed) {
+        return;
+    }
+    ++ankle_break_count_;
+    limp_seconds_left_ = kLimpSeconds;
 }
 
 bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
@@ -755,7 +775,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
             }
         }
         const double balance = recovery_balance();
-        if (balance < 0.8) {
+        if (balance < 0.8 || limping()) {
             sprinting_ = false;
         }
         float stride_speed = kPlayerMaximumRelativeSpeed * carry_speed_scale();
@@ -766,6 +786,9 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
             const float carried = JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length();
             const float sprint = static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale);
             stride_speed = std::clamp(carried + kFlowGatherMps2 * delta_seconds, sprint, kFlowSpeedMps);
+        }
+        if (limping()) {
+            stride_speed *= kLimpSpeedScale;
         }
         const float full_speed = stride_speed * static_cast<float>(0.45 + 0.55 * balance);
         if (sliding_ && !crouched_) {
@@ -931,6 +954,8 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
     if (jump_started) {
         flight_from_jump_ = true;
         precision_target_valid_ = false;
+        // A broken ankle pushes off weakly (kLimpJumpScale).
+        const float jump_speed = kJumpSpeed * (limping() ? kLimpJumpScale : 1.0F);
         if (precision_sighted_) {
             // The sighted landing: the horizontal speed that lands the
             // feet there under the jump's own arc, within the legs' push.
@@ -938,9 +963,9 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
             const float feet_y = static_cast<float>(centre.GetY()) - kPlayerHalfHeight;
             const float rise = static_cast<float>(precision_point_.GetY()) - feet_y;
             const float gravity = -physics_system_.GetGravity().GetY();
-            const float disc = kJumpSpeed * kJumpSpeed - 2.0F * gravity * rise;
+            const float disc = jump_speed * jump_speed - 2.0F * gravity * rise;
             if (disc > 0.0F) {
-                const float flight = (kJumpSpeed + std::sqrt(disc)) / gravity;   // the later root: landing
+                const float flight = (jump_speed + std::sqrt(disc)) / gravity;   // the later root: landing
                 const JPH::Vec3 to(static_cast<float>(precision_point_.GetX() - centre.GetX()), 0.0F,
                                    static_cast<float>(precision_point_.GetZ() - centre.GetZ()));
                 const float ahead = to.Length();
@@ -963,8 +988,8 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                 }
             }
         }
-        const float push = reference_velocity.GetY() + kJumpSpeed - player_velocity.GetY();
-        player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
+        const float push = reference_velocity.GetY() + jump_speed - player_velocity.GetY();
+        player_velocity.SetY(reference_velocity.GetY() + jump_speed);
         // The legs push off what they stand on: a dynamic support takes the
         // equal and opposite impulse at the contact (a cage dips, a beam
         // rocks), so the jump's work is shared with what it left.

@@ -12,6 +12,7 @@ const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
 # anything -- a verb becomes a native request_*, and the native says yes or no.
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const InputRouter := preload("res://presentation/ui/input_router.gd")
+const CorpseView := preload("res://presentation/corpse_view.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
@@ -123,6 +124,7 @@ var _slingshot_view: Node3D
 var _launch_shot := LaunchShot.new()
 var _swing_view: Node3D
 var _zipline_view: Node3D
+var _corpse_view: Node3D
 var _summit_view: Node3D
 var _matron_view: Node3D
 var _forklift_view: Node3D
@@ -187,6 +189,21 @@ const LETHAL_RESTORE_QUIPS := [
 	"My ancestors felt that impact."
 ]
 
+# The broken ankle's toast: what the climber thinks of it.
+const BREAK_QUIPS := [
+	"That crunch was load-bearing.",
+	"Ankle's more of a suggestion now.",
+	"Shit. Feet don't bend that way.",
+	"Hobble on, legend. Hobble on.",
+	"Bone says no. The tower says keep climbing."
+]
+# The limp (the native's broken ankle): the bad leg's steps drop the head
+# LIMP_DIP_M and tip it LIMP_ROLL_RAD to that side.
+const LIMP_DIP_M := 0.07
+const LIMP_ROLL_RAD := 0.05
+var _fb_breaks := -1
+var _limping := false
+
 const HAPTICS := {
 	&"press": [12, 0.3],
 	&"tick": [16, 0.35],
@@ -205,11 +222,12 @@ const HAPTICS := {
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
+	&"break": [55, 1.0],
 }
 
 # Kinds that always get through the throttle: they mark a moment that
 # matters more than whatever buzzed a few milliseconds before.
-const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"warn", &"slip"]
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip"]
 const HAPTIC_GAP_MS := 50
 var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
 var _haptic_next_ms := 0
@@ -263,6 +281,20 @@ var _fb_haul_n := 0.0   # the pull in the hands on the pitman's line, N
 
 func _update_body_feedback(delta: float) -> void:
 	var landing: Dictionary = _native.get_landing_state()
+	# A landing that broke an ankle: the crack at the feet, the cry, the view
+	# buckling down with the leg, felt twice in the hand, and named.
+	var breaks := int(landing["ankle_breaks"])
+	if _fb_breaks >= 0 and breaks > _fb_breaks:
+		var quip: String = BREAK_QUIPS[randi() % BREAK_QUIPS.size()]
+		_hud.toast("BROKEN ANKLE", "LANDED AT %.1f M/S  /  %s  /  LIMPING %d S" % [
+			float(landing["normal_speed"]), quip, ceili(float(landing["limp_left"]))], UiStyle.HAZARD, 3.5)
+		_hud.flash(UiStyle.HAZARD)
+		_haptic(&"break")
+		_break_pulses.append(BREAK_PULSE_GAP_S * 1.5)
+		_audio.ankle_break(_native.get_player_position())
+		_slip_jolt = SLIP_JOLT_SECONDS
+	_fb_breaks = breaks
+	_limping = bool(landing["limping"])
 	var stumbles := int(landing["stumbles"])
 	if stumbles > _fb_stumbles:
 		_haptic(&"stumble", clampf(float(landing["loss"]) * 2.0, 0.4, 1.0))
@@ -585,6 +617,14 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		if absf(_cam_bank - bank_target) < 0.0001:
 			_cam_bank = bank_target
 
+	# A broken ankle: on the bad leg's steps (every other one) the head drops
+	# and tips to that side, the good leg's as before.
+	if _limping and grounded:
+		var hobbling := smoothstep(0.3, 1.5, horizontal_speed)
+		var bad_step := maxf(0.0, sin(_cam_bob_phase * 0.5))
+		dip += -LIMP_DIP_M * bad_step * bad_step * hobbling
+		_cam_bank += LIMP_ROLL_RAD * bad_step * hobbling
+
 	# Parkour movement dynamics and tactile camera feel:
 	var traversal: int = int(_ctx.get("traversal", TRAVERSAL_NONE))
 	var traversal_prog: float = float(_native.get_traversal_progress()) if _native else 0.0
@@ -692,6 +732,8 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			_camera.basis = Basis(axis.normalized(), Vector3.UP.angle_to(floor_up)) * _camera.basis
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
+	if _death_cam_left > 0.0:
+		_ride_death()
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + \
 		FOV_FLOW_DEGREES * smoothstep(FLOW_FROM_MPS, FLOW_FULL_MPS, horizontal_speed) + parkour_fov
@@ -715,6 +757,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var grounded := bool(_native.is_player_grounded())
 	var crouched := bool(_native.is_player_crouched())
 
+	if _corpse_view != null:
+		_feel_death(delta)
 	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
@@ -742,6 +786,100 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _forklift_view != null:
 		_feel_forklift(delta)
 	_sample_machines(delta)
+
+
+# Deaths (sim/corpse.hpp): the body a death leaves is drawn where it lies.
+# The view rides the newest one's head through the hit (DEATH_CAM_HEAD_S,
+# shaken), then pulls up and back over the body, looking down at it and the
+# blood, until it lies still (DEATH_CAM_MIN_S at least, DEATH_CAM_MAX_S at
+# most), the restored body waiting. The blood goes up off where it hit and
+# lies there; the bones are heard and felt breaking, as many as it hit hard.
+const DEATH_CAM_MIN_S := 1.8
+const DEATH_CAM_MAX_S := 2.8
+const DEATH_CAM_HEAD_S := 0.35
+const DEATH_CAM_PULL_S := 0.6
+const DEATH_CAM_OVER_M := 2.6
+const DEATH_CAM_BACK_M := 1.6
+const DEATH_SHAKE_RAD := 0.06
+const BREAK_PULSE_GAP_S := 0.09
+var _death_cam_left := 0.0
+var _death_cam_shown := 0.0
+var _death_seen := -1
+var _death_look := Vector3.FORWARD   # the facing at the death, in the head's frame
+var _death_shake := 0.0
+var _death_point := Vector3.ZERO
+var _death_back := Vector3.BACK      # behind the facing at the death
+var _corpses: Array = []
+var _break_pulses: Array = []   # seconds until each break is felt
+var deaths_ridden := 0          # counted for the touch proof
+
+func _feel_death(delta: float) -> void:
+	_corpses = _native.get_corpses()
+	var death: Dictionary = _native.get_death_state()
+	var spawned := int(death["corpses_spawned"])
+	if _death_seen < 0:
+		_death_seen = spawned
+	if spawned > _death_seen and not _corpses.is_empty():
+		_death_seen = spawned
+		deaths_ridden += 1
+		var speed := float(death["speed_mps"])
+		var lethal := float(_native.get_lethal_impact_speed_mps())
+		var hard := clampf(speed / maxf(lethal, 1.0), 1.0, 3.0)
+		_death_point = death["point"]
+		_death_back = Vector3(sin(_yaw), 0.0, cos(_yaw))
+		_corpse_view.splash(death["point"], speed, lethal)
+		_audio.bone_cracks(death["point"], speed, lethal)
+		_break_pulses.clear()
+		for i in clampi(roundi(1.0 + 2.0 * (hard - 1.0)), 1, 5):
+			_break_pulses.append(BREAK_PULSE_GAP_S * float(i + 1))
+		var head: Transform3D = CorpseView.head_of(_corpses)
+		_death_look = head.basis.inverse() * Vector3(-sin(_yaw), 0.0, -cos(_yaw))
+		_death_cam_left = DEATH_CAM_MAX_S
+		_death_cam_shown = 0.0
+		_death_shake = clampf(0.4 + 0.3 * (hard - 1.0), 0.4, 1.0)
+	_corpse_view.update_view(_corpses, _death_cam_left > 0.0 and _death_cam_shown < DEATH_CAM_HEAD_S + 0.1)
+	if delta <= 0.0:
+		return
+	var due: Array = []
+	for left in _break_pulses:
+		if float(left) - delta <= 0.0:
+			_haptic(&"break")
+		else:
+			due.append(float(left) - delta)
+	_break_pulses = due
+	if _death_cam_left > 0.0:
+		_death_cam_left -= delta
+		_death_cam_shown += delta
+		_death_shake = maxf(0.0, _death_shake - 2.0 * delta)
+		if _death_cam_shown >= DEATH_CAM_MIN_S and not _corpses.is_empty() and bool(_corpses[-1]["resting"]):
+			_death_cam_left = 0.0
+
+# The view in the newest corpse's head (its eyes where the face is, looking
+# the way the head now faces, shaken by the hit), then pulled up and back
+# over the body, looking down at it and where it hit.
+func _ride_death() -> void:
+	if _corpses.is_empty():
+		return
+	var head: Transform3D = CorpseView.head_of(_corpses)
+	var up := head.basis.y.normalized()
+	var look := (head.basis * _death_look).normalized()
+	if absf(look.dot(up)) > 0.98:
+		up = head.basis.z.normalized()
+	var basis := Basis.looking_at(look, up)
+	if _death_shake > 0.0 and not _reduced_motion:
+		var t := _death_cam_shown * 37.0
+		basis = basis.rotated(basis.x.normalized(), sin(t) * DEATH_SHAKE_RAD * _death_shake)
+		basis = basis.rotated(basis.y.normalized(), cos(t * 1.3) * DEATH_SHAKE_RAD * _death_shake)
+	var eyes := head.origin + up * 0.03 + look * 0.1
+	var out := smoothstep(DEATH_CAM_HEAD_S, DEATH_CAM_HEAD_S + DEATH_CAM_PULL_S, _death_cam_shown)
+	if out > 0.0:
+		var pelvis: Transform3D = (_corpses[-1]["parts"] as Array)[0]
+		var target := pelvis.origin.lerp(_death_point, 0.35)
+		var over := pelvis.origin + Vector3.UP * DEATH_CAM_OVER_M + _death_back * DEATH_CAM_BACK_M
+		var over_basis := Basis.looking_at(target - over, Vector3.UP)
+		basis = Basis(basis.get_rotation_quaternion().slerp(over_basis.get_rotation_quaternion(), out))
+		eyes = eyes.lerp(over, out)
+	_camera.global_transform = Transform3D(basis, eyes)
 
 
 # The ziplines (sim/zipline.hpp): every trolley and brake block drawn where

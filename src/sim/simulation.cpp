@@ -794,6 +794,16 @@ Vector3 Simulation::zipline_bar() const noexcept {
     return to_sim_vector(physics_world_->zipline().bar());
 }
 
+Simulation::CorpsePart Simulation::corpse_part(const std::uint32_t corpse, const std::uint32_t part) const noexcept {
+    const Corpses::PartPose pose =
+        physics_world_->corpses().part(static_cast<int>(corpse), static_cast<int>(part));
+    return {to_sim_vector(pose.position), to_sim_quaternion(pose.rotation)};
+}
+
+bool Simulation::corpse_resting(const std::uint32_t corpse) const noexcept {
+    return physics_world_->corpses().resting(static_cast<int>(corpse));
+}
+
 TrapezeSnapshot Simulation::trapeze_state() const noexcept {
     const auto &state = physics_world_->trapeze().state();
     TrapezeSnapshot result;

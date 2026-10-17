@@ -171,6 +171,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     sync_hook_from_rack();
     clear_recovery();
     clear_support_jolt();
+    limp_seconds_left_ = 0.0;   // a whole body: no break carried over
     teetering_ = false;
     flight_from_jump_ = false;
     jump_vault_ticks_left_ = 0;
@@ -288,6 +289,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     checkpoint_crouched_ = crouched == 1;
     checkpoint_ = std::move(loaded);
     has_hook_ = false;   // had in the save only if its gun is off the rack there
+    corpses_->clear();   // corpses are not saved: a loaded world has none
     restore_from_checkpoint(bodies);
     checkpoint_commit_count_ = commits;
     death_count_ = deaths;
@@ -358,6 +360,10 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wall_step_count = wall_step_count_;
     state_.wall_kick_count = wall_kick_count_;
     state_.wall_climb_count = wall_climb_count_;
+    state_.corpse_count = static_cast<std::uint32_t>(corpses_->count());
+    state_.corpses_spawned = corpses_->spawned();
+    state_.death_point = to_vector3(death_point_);
+    state_.death_speed_mps = death_speed_mps_;
     state_.zipline_riding = zip_riding_;
     state_.zipline_line = zipline_->state().line;
     state_.zipline_ride_count = zipline_->state().rides;
@@ -537,6 +543,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.roll_refused_count = roll_refused_count_;
     state_.roll_blocked_count = roll_blocked_count_;
     state_.stumble_count = stumble_count_;
+    state_.limping = limping();
+    state_.limp_seconds_left = limp_seconds_left_;
+    state_.ankle_break_count = ankle_break_count_;
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;
     state_.summit_seconds = summit_seconds_;

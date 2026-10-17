@@ -537,6 +537,13 @@ struct Snapshot final {
     // Mirror's Edge's wall climb: a run jumped up a tall wall (see
     // kWallClimbMinimumSpeed).
     std::uint64_t wall_climb_count = 0;
+    // The bodies deaths left (sim/corpse.hpp): how many lie in the world,
+    // how many deaths have left one, and the latest death's place (where
+    // the body met what killed it) and speed.
+    std::uint32_t corpse_count = 0;
+    std::uint64_t corpses_spawned = 0;
+    Vector3 death_point{};
+    double death_speed_mps = 0.0;
     // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
     // its bar.
     bool zipline_riding = false;
@@ -674,6 +681,11 @@ struct Snapshot final {
     // Rolls ended by something in the lane.
     std::uint64_t roll_blocked_count = 0;
     std::uint64_t stumble_count = 0;
+    // Injuries (see kAnkleBreakSpeed): a broken ankle's limp, the time left
+    // on it, and every break so far.
+    bool limping = false;
+    double limp_seconds_left = 0.0;
+    std::uint64_t ankle_break_count = 0;
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
@@ -1099,6 +1111,14 @@ public:
     [[nodiscard]] std::uint32_t zipline_count() const noexcept;
     [[nodiscard]] ZiplineLine zipline_line(std::uint32_t index) const noexcept;
     [[nodiscard]] Vector3 zipline_bar() const noexcept;
+    // The corpses (sim/corpse.hpp), oldest first: each part's place and turn,
+    // and whether the corpse has come to rest. Parts: Corpses::Part.
+    struct CorpsePart {
+        Vector3 position{};
+        Quaternion rotation{};
+    };
+    [[nodiscard]] CorpsePart corpse_part(std::uint32_t corpse, std::uint32_t part) const noexcept;
+    [[nodiscard]] bool corpse_resting(std::uint32_t corpse) const noexcept;
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;

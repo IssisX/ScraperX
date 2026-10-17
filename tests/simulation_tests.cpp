@@ -60,6 +60,10 @@ int main() {
         run_zipline();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "corpse") {
+        run_corpse();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "well") {
         run_well_stage_a();
         run_well_stage_b();
@@ -326,6 +330,7 @@ int main() {
     run_climb_moves();
     run_wall_chain();
     run_zipline();
+    run_corpse();
     run_hook();
     run_workers();
     run_c7();

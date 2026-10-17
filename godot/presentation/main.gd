@@ -207,6 +207,9 @@ func _ready() -> void:
 	_zipline_view = ZiplineView.new()
 	add_child(_zipline_view)
 	_zipline_view.setup(_native)
+	_corpse_view = CorpseView.new()
+	add_child(_corpse_view)
+	_corpse_view.setup(_native)
 	# The summit's lamp: lit before (the profile keeps it) opens the world lit.
 	if _save_enabled and FileAccess.file_exists(SUMMIT_PROFILE_PATH):
 		_native.light_summit()
@@ -300,6 +303,9 @@ func _process(delta: float) -> void:
 		facing = _ci_facing
 		_yaw = atan2(-facing.x, -facing.y)
 
+	# While the view rides a death (on the corpse), the restored body waits.
+	if _death_cam_left > 0.0:
+		desired = Vector2.ZERO
 	var forward := Vector2(-sin(_yaw), -cos(_yaw))
 	var right := Vector2(cos(_yaw), -sin(_yaw))
 	var world_move := right * desired.x + forward * desired.y
@@ -338,6 +344,7 @@ func _process(delta: float) -> void:
 	_render_snapshot(delta)
 	_ctx = _read_context()
 	_save_climb()
+	_arms.visible = _death_cam_left <= 0.0
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
 	if _canopy == null:
 		_canopy = CanopyView.new()

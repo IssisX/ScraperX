@@ -89,6 +89,7 @@ public:
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const Forklift &forklift() const noexcept { return *forklift_; }
     [[nodiscard]] const Zipline &zipline() const noexcept { return *zipline_; }
+    [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     // On the forklift's floor within reach of its wheel.
     [[nodiscard]] bool at_forklift_controls() const noexcept;
@@ -404,6 +405,8 @@ private:
     // (Zipline::kCatchReachM): its bar taken and the body hung from it. True
     // when caught.
     bool try_catch_zipline(JPH::BodyInterface &bodies, JPH::RVec3 origin) noexcept;
+    // A death: the body left where it died (Corpses), moving at velocity.
+    void leave_corpse(JPH::BodyInterface &bodies, JPH::Vec3 velocity) noexcept;
     // Hung from a zipline's trolley: a swing whose hold is the slide along
     // the cable (Zipline::clip), not the arms' constraint.
     void begin_zip_ride(JPH::BodyInterface &bodies, int line) noexcept;
@@ -615,6 +618,10 @@ public:
     std::unique_ptr<LooseStock> loose_stock_;
     std::unique_ptr<Forklift> forklift_;
     std::unique_ptr<Zipline> zipline_;
+    // The bodies deaths left (Corpses); the latest death's place and speed.
+    std::unique_ptr<Corpses> corpses_;
+    JPH::RVec3 death_point_ = JPH::RVec3::sZero();
+    float death_speed_mps_ = 0.0F;
     // The swing under way hangs from a zipline's trolley (Zipline), riding it.
     bool zip_riding_ = false;
     // Rides ended by the stop's jolt tearing the hands off the bar.
@@ -781,6 +788,13 @@ public:
     double recovery_duration_ = 0.0;
     double recovery_seconds_left_ = 0.0;
     double roll_seconds_left_ = 0.0;
+    // Injuries (see kAnkleBreakSpeed): the limp's time left, every break.
+    double limp_seconds_left_ = 0.0;
+    std::uint64_t ankle_break_count_ = 0;
+    [[nodiscard]] bool limping() const noexcept { return limp_seconds_left_ > 0.0; }
+    // A landing at `normal_speed` into the ground breaks an ankle at
+    // `break_speed` or more: the limp starts (again) from kLimpSeconds.
+    void break_ankle_if(float normal_speed, float break_speed) noexcept;
     bool sliding_ = false;
     JPH::Vec3 slide_direction_ = JPH::Vec3::sZero();
     std::uint64_t slide_count_ = 0;

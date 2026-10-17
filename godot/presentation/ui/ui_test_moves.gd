@@ -1080,8 +1080,33 @@ func _touch_lethal_feedback() -> bool:
 	var toasts: Array = _main._hud._toasts
 	if toasts.is_empty() or String(toasts[-1]["title"]) != "LETHAL IMPACT":
 		return _fail("restore was not announced")
+	# The death is seen from inside it: the view rides the head of the body it
+	# left, the blood lies where it hit, and the breaks are felt.
+	var corpses: Array = _native().get_corpses()
+	if corpses.is_empty():
+		return _fail("the lethal impact left no body")
+	if int(_main.deaths_ridden) < 1 or float(_main._death_cam_left) <= 0.0:
+		return _fail("the view did not ride the body the death left")
+	var head: Transform3D = (corpses[-1]["parts"] as Array)[2]
+	var from_head: float = _main._camera.global_position.distance_to(head.origin)
+	if from_head > 1.0:
+		return _fail("riding the death, the view is %.2f m from the body's head" % from_head)
+	if int(_main._corpse_view.splashes_shown()) < 1:
+		return _fail("no blood where the body hit")
 	await _seconds(0.3)
 	await _pose("lethal_toast")
+	if _felt(&"break") < 1:
+		return _fail("the breaks were not felt")
+	# Pulled up over the body: it and the blood in view.
+	await _seconds(0.8)
+	await _pose("death_over")
+	var cam_done: bool = await _wait_until(func() -> bool: return float(_main._death_cam_left) <= 0.0, 3.0)
+	if not cam_done:
+		return _fail("the view never came back from the body")
+	await _frames(2)
+	var eye_gap: float = _main._camera.global_position.distance_to(_position())
+	if eye_gap > 2.0:
+		return _fail("back from the death, the view is %.2f m from the restored body" % eye_gap)
 	var sub := String(toasts[-1]["sub"])
 	var fell_at := sub.get_slice(" ", 2).to_float()
 	var lethal := float(_native().get_lethal_impact_speed_mps())
@@ -1103,7 +1128,7 @@ func _touch_lethal_feedback() -> bool:
 	if not String(_main._hud.caption).is_empty():
 		return _fail("the caption '%s' stays after the voice was cut" % _main._hud.caption)
 	_main._settings.captions = false
-	_detail = "toast='%s' lethal_mps=%.1f voice=%s cut=%d captions=%s" % [sub, lethal, str(said),
+	_detail = "breaks_felt=%d toast='%s' lethal_mps=%.1f voice=%s cut=%d captions=%s" % [_felt(&"break"), sub, lethal, str(said),
 		int(_main._audio.voice_cut), str(captioned)]
 	# The announced speed must be the lethal fall it reports, not a settle.
 	return fell_at > lethal
@@ -1124,6 +1149,28 @@ func _fall_voice() -> bool:
 		return _fail("no yelp on a %.1f m/s drop" % impact)
 	if int(said.get(&"pain", 0)) < 1:
 		return _fail("a %.1f m/s landing lived through said nothing" % impact)
+	# Twelve metres onto steel, planted: an ankle broken (sim kAnkleBreakSpeed),
+	# said once, named, felt, and walked on as a hobble.
+	if int(said.get(&"pain", 0)) != 1:
+		return _fail("the break cried out %d times, not once" % int(said.get(&"pain", 0)))
+	var landing: Dictionary = _native().get_landing_state()
+	if not bool(landing["limping"]) or int(landing["ankle_breaks"]) != 1:
+		return _fail("a %.1f m/s planted landing broke nothing (breaks %d)" % [impact, int(landing["ankle_breaks"])])
+	var toasts: Array = _main._hud._toasts
+	if toasts.is_empty() or String(toasts[-1]["title"]) != "BROKEN ANKLE":
+		return _fail("the break was not named")
+	# Felt twice, the second a beat after the first.
+	if not await _wait_until(func() -> bool: return _felt(&"break") >= 2, 0.5):
+		return _fail("the break was felt %d times, not twice" % _felt(&"break"))
+	await _pose("broken_ankle")
+	_stick_push(Vector2(0.0, -1.0))
+	await _seconds(1.5)
+	var hobble := _walk_speed().length()
+	_touch(0, _main._touch.stick_home(), false)
+	if hobble < 1.0 or hobble > 2.7:
+		return _fail("on a broken ankle the full stick walks %.2f m/s, not a hobble" % hobble)
+	_detail = "impact_mps=%.2f hobble_mps=%.2f limp_left=%.1f voice=%s" % [impact, hobble,
+		float(_native().get_landing_state()["limp_left"]), str(said)]
 	return true
 
 func _touch_pause() -> bool:

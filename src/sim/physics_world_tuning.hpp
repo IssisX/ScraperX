@@ -22,7 +22,12 @@ namespace scraperx::sim::detail {
 namespace object_layers {
 constexpr JPH::ObjectLayer kStatic = 0;
 constexpr JPH::ObjectLayer kMoving = 1;
-constexpr JPH::ObjectLayer kCount = 2;
+// The climber's own body: it meets everything.
+constexpr JPH::ObjectLayer kPlayer = 2;
+// Corpses (sim/corpse.hpp): they meet the static world, the climber and
+// each other, never the machines' moving bodies.
+constexpr JPH::ObjectLayer kCorpse = 3;
+constexpr JPH::ObjectLayer kCount = 4;
 } // namespace object_layers
 
 namespace broadphase_layers {
@@ -98,6 +103,21 @@ constexpr float kRollDeceleration = 3.0F;
 constexpr float kRollSteerAcceleration = 4.0F;
 constexpr double kRollSeconds = 0.6;
 constexpr float kStumbleMinimumSpeed = 3.0F;
+// Injuries: the broken ankle. A landing whose speed into the ground passes
+// what the leg's bones take breaks one; the speed alone decides (CHOSEN):
+// kAnkleBreakSpeed planted (a 7.3 m drop onto steel), more with the knees
+// bent for it (crouch held, kAnkleBreakPreparedSpeed: 10 m), more again
+// rolled out (kAnkleBreakRolledSpeed: 13 m; a roll that runs into something
+// was planted after all). The lethal rule is decided first. The break
+// leaves a limp for kLimpSeconds: the stride's reach scaled by
+// kLimpSpeedScale (no sprint), the legs' jump by kLimpJumpScale; the hands
+// climb, hang and swing as before. A death's restore is a whole body.
+constexpr float kAnkleBreakSpeed = 12.0F;
+constexpr float kAnkleBreakPreparedSpeed = 14.0F;
+constexpr float kAnkleBreakRolledSpeed = 16.0F;
+constexpr double kLimpSeconds = 30.0;
+constexpr float kLimpSpeedScale = 0.45F;
+constexpr float kLimpJumpScale = 0.6F;
 // Parkour step 3: the slide. Crouching at a run -- kSlideMinimumSpeed or more
 // over the ground, within 45 degrees of the facing -- drops the body onto its
 // hip in the 1.2 m capsule and lets it run on: the ground takes the speed off

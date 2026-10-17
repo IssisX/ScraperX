@@ -1,5 +1,7 @@
 #include "bridge/scraperx_simulation.hpp"
 
+#include "sim/corpse.hpp"
+
 #include <cstring>
 #include <limits>
 
@@ -307,6 +309,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_lines"), &ScraperXSimulation::get_zipline_lines);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_trolleys"), &ScraperXSimulation::get_zipline_trolleys);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_state"), &ScraperXSimulation::get_zipline_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_corpses"), &ScraperXSimulation::get_corpses);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_corpse_plan"), &ScraperXSimulation::get_corpse_plan);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_death_state"), &ScraperXSimulation::get_death_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("get_workers"), &ScraperXSimulation::get_workers);
@@ -915,6 +920,9 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["rolls"] = static_cast<std::int64_t>(s.roll_count);
     out["rolls_refused"] = static_cast<std::int64_t>(s.roll_refused_count);
     out["stumbles"] = static_cast<std::int64_t>(s.stumble_count);
+    out["limping"] = s.limping;
+    out["limp_left"] = s.limp_seconds_left;
+    out["ankle_breaks"] = static_cast<std::int64_t>(s.ankle_break_count);
     out["teetering"] = s.player_teetering;
     out["beam_xcom"] = s.beam_xcom;
     out["beam_lean"] = to_godot(s.beam_lean);
@@ -1310,6 +1318,53 @@ godot::Dictionary ScraperXSimulation::get_zipline_state() const {
     out["hands_load_n"] = state.zipline_hands_load_n;
     out["torn"] = static_cast<std::int64_t>(state.zipline_torn_count);
     out["bar"] = to_godot(simulation_->zipline_bar());
+    return out;
+}
+
+// The corpses, oldest first: each a Dictionary of its parts' transforms
+// (sim/corpse.hpp's order) and whether it has come to rest.
+godot::Array ScraperXSimulation::get_corpses() const {
+    godot::Array out;
+    const sim::Snapshot &state = simulation_->snapshot();
+    for (std::uint32_t corpse = 0; corpse < state.corpse_count; ++corpse) {
+        godot::Array parts;
+        for (std::uint32_t part = 0; part < static_cast<std::uint32_t>(sim::Corpses::kParts); ++part) {
+            const sim::Simulation::CorpsePart pose = simulation_->corpse_part(corpse, part);
+            const godot::Quaternion q(static_cast<float>(pose.rotation.x), static_cast<float>(pose.rotation.y),
+                                      static_cast<float>(pose.rotation.z), static_cast<float>(pose.rotation.w));
+            parts.push_back(godot::Transform3D(godot::Basis(q), to_godot(pose.position)));
+        }
+        godot::Dictionary entry;
+        entry["parts"] = parts;
+        entry["resting"] = simulation_->corpse_resting(corpse);
+        out.push_back(entry);
+    }
+    return out;
+}
+
+// The climber's proportions (sim/corpse.hpp): each part's capsule radius,
+// half-length and mass, in the parts' order.
+godot::Array ScraperXSimulation::get_corpse_plan() const {
+    godot::Array out;
+    for (const sim::Corpses::PartPlan &plan : sim::Corpses::kPlan) {
+        godot::Dictionary entry;
+        entry["radius"] = plan.radius;
+        entry["half_length"] = plan.half_length;
+        entry["mass_kg"] = plan.mass_kg;
+        out.push_back(entry);
+    }
+    return out;
+}
+
+// The latest death: how many deaths have left a body, where it met what
+// killed it, and how fast.
+godot::Dictionary ScraperXSimulation::get_death_state() const {
+    const sim::Snapshot &state = simulation_->snapshot();
+    godot::Dictionary out;
+    out["corpses_spawned"] = static_cast<std::int64_t>(state.corpses_spawned);
+    out["corpse_count"] = static_cast<std::int64_t>(state.corpse_count);
+    out["point"] = to_godot(state.death_point);
+    out["speed_mps"] = state.death_speed_mps;
     return out;
 }
 

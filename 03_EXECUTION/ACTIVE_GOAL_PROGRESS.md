@@ -1087,16 +1087,38 @@ the line starts from the far band. 22 lines; none on the 220 ring, whose bands a
 C, D, the spawn and the hook. The touch proof of the hook's rope now finds the lip among the
 line's bends (the body swings back in under the band and the line wraps its underside too).
 
+**Deaths you see, and the broken ankle (2026-10-17).** The owner: deaths looked like garbage;
+real physical consequences, bone breaks and blood, the camera shaking and the hands feeling it,
+the voice yelling. A lethal impact now leaves the body where it hit: a ragdoll of eleven parts
+in the climber's proportions (`sim/corpse.hpp`, Jolt's ragdoll; joints bending as a body's do),
+laid down with its knees a little bent and carrying at most 4 m/s of the hit downward (the rest
+spent crushing it), so it buckles and folds where it lands instead of standing on locked knees
+or bouncing a metre off the floor. Eight lie in the world at most; a loaded game has none. The
+view rides the dead head through the hit, shaken, then pulls up over the body to show it and
+the blood: a burst of drops thrown up off the hit and the splash left on the floor, both as big
+as the hit was hard (meshes, as the compatibility renderer the game ships on has no decals);
+the joints are heard cracking and felt as pulses, more the harder it hit. The restored climber
+waits until the body lies still (1.8 to 2.8 s). A landing harder than the leg's bones take now
+breaks an ankle: 12 m/s planted (a 7.3 m drop), 14 m/s with the knees bent for it, 16 m/s rolled
+out; the speed alone decides. For 30 s the stride is a hobble (2.5 m/s, no sprint), the jump a
+weak push (3.2 m/s), the hands as before, and the view dips and tips on the bad leg's steps; the
+break is cracked at the feet, cried out once, felt twice, and named. Proof: native `run_corpse`
+(a 29.7 m/s death rests lying 2.2 m from the hit), `run_landing` (the 12 m drop breaks an ankle
+planted, not rolled; hobble 2.475 m/s, jump 3.19 m/s, 5.5 m/s once healed); touch
+`touch_lethal_feedback` (the view on the body's head, the blood down, two breaks felt, back to the
+restored climber) and `fall_voice` (15.4 m/s: broken, one cry, a 2.47 m/s hobble on the stick).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
    (3 m) stops a rider who comes in at 5.4 m/s or under; faster, the sprung stop's jolt tears the
    hands off (as a ledge grip) and the body goes on into the bottom post. Flat out on the yard
    line that is 20.6 m/s into the post and a 2.4 m drop, survived until injuries exist.
-2. The whole first-person body, and injuries and deaths as physical consequences: the lethal
-   impact turns the body into a ragdoll the camera rides; bone breaks, blood, camera shake and
-   haptics scaled to the hit; hard landings that break an ankle (a limp for a while); humorous,
-   profane pain-yelling on breaks and hits, like the fall voice.
+2. The whole first-person body, and injuries and deaths as physical consequences. Done
+   2026-10-17: the corpse the view rides, the blood, the cracks felt and heard, the broken ankle
+   and its limp, the cry. Next: hits from machines and the zipline's post (bruises, a broken
+   arm), blood on the lens, new break lines for the voice, and the body itself, legs and torso
+   seen from inside.
 3. Route-building's reach: richer spots, heavy stock up the tower only where the crane or a
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up
    there.

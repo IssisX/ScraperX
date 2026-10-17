@@ -22,6 +22,7 @@
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/zipline.hpp"
+#include "sim/corpse.hpp"
 #include "sim/matron.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
@@ -78,6 +79,8 @@ public:
     BroadPhaseLayerInterface() {
         mapping_[object_layers::kStatic] = broadphase_layers::kStatic;
         mapping_[object_layers::kMoving] = broadphase_layers::kMoving;
+        mapping_[object_layers::kPlayer] = broadphase_layers::kMoving;
+        mapping_[object_layers::kCorpse] = broadphase_layers::kMoving;
     }
 
     [[nodiscard]] JPH::uint GetNumBroadPhaseLayers() const override {
@@ -113,7 +116,8 @@ public:
         if (object_layer == object_layers::kStatic) {
             return broadphase_layer == broadphase_layers::kMoving;
         }
-        if (object_layer == object_layers::kMoving) {
+        if (object_layer == object_layers::kMoving || object_layer == object_layers::kPlayer ||
+            object_layer == object_layers::kCorpse) {
             return true;
         }
         JPH_ASSERT(false);
@@ -126,10 +130,16 @@ public:
     [[nodiscard]] bool ShouldCollide(const JPH::ObjectLayer first,
                                      const JPH::ObjectLayer second) const override {
         if (first == object_layers::kStatic) {
-            return second == object_layers::kMoving;
+            return second != object_layers::kStatic;
         }
         if (first == object_layers::kMoving) {
+            return second != object_layers::kCorpse;
+        }
+        if (first == object_layers::kPlayer) {
             return true;
+        }
+        if (first == object_layers::kCorpse) {
+            return second != object_layers::kMoving;
         }
         JPH_ASSERT(false);
         return false;
