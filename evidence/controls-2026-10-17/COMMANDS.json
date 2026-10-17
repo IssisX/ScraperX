@@ -19,7 +19,7 @@
         "res://tests/android_responsive_controls_test.gd"
       ],
       "exit": 0,
-      "log": "/data/data/com.termux/files/usr/tmp/scraperx-controls-20261017/final-responsive.log"
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-controls-20261017/caption-layout.log"
     },
     {
       "name": "forklift_operator_inputs_test",
@@ -81,11 +81,11 @@
   ],
   "started": 1792273632.2575693,
   "result": "PASS",
-  "finished": 1792273857.1181862,
+  "finished": 1792274502.2541296,
   "source_hashes": {
-    "godot/presentation/ui/touch_controls.gd": "0717631aefa58254f62bf6508f1d24094c2715a0c79d6ec259e39286e25f3838",
+    "godot/presentation/ui/touch_controls.gd": "b95cbd9415da6692f0cf5bb8beaaddc533b945d3bf1e5f433ba6d4e251ef6fdd",
     "godot/presentation/ui/hud.gd": "4ebf806879064eeb49a79e7c1f55136af4e365013fd36e1951aa1ffdc8082f91",
-    "godot/tests/android_responsive_controls_test.gd": "79602e313f040b52f3a2f18b8ee22e7171f713973f9ed9eb2b1b8df588b23452"
+    "godot/tests/android_responsive_controls_test.gd": "203fc224ba34e09b16d620d09188e843010a5e562b54e1e66f1643bc0d3abf8e"
   },
   "outputs": {
     "android_responsive_controls_test": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nANDROID_RESPONSIVE layouts=576 failures=0\n",

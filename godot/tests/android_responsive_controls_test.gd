@@ -4,6 +4,7 @@ const Touch := preload("res://presentation/ui/touch_controls.gd")
 const Router := preload("res://presentation/ui/input_router.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const ForkliftPanel := preload("res://presentation/ui/forklift_panel.gd")
+const UiStyle := preload("res://presentation/ui/ui_style.gd")
 var failures := 0
 var layouts := 0
 
@@ -87,6 +88,11 @@ func _run() -> void:
 								check(router.frame(0.016).verbs == [controls._verb_for(button.id)], label + " verb " + str(button.id))
 						controls.reset_touches()
 						if station == &"forklift":
+							for caption in controls._forklift_stick_captions():
+								var font := UiStyle.font_label()
+								var pixels := int(roundf(30.0 * controls._u))
+								var text_size := Vector2(UiStyle.text_width(font, caption[0], pixels), font.get_height(pixels))
+								check(safe.encloses(Rect2(caption[1] - text_size * 0.5, text_size).grow(5.0 * controls._u)), label + " clipped stick caption " + caption[0])
 							hud._safe = safe
 							hud._panel = ForkliftPanel.describe({}, {}, 2)
 							check(safe.encloses(hud.compact_station_rect()) and not sightline.intersects(hud.compact_station_rect()), label + " instrument strip preserves sightline")

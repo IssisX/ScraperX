@@ -552,6 +552,13 @@ GravityWheelGeometry build_gravity_reclaim_wheel(PhysicsSystem &world, kit::Kit 
     machine.walkable("lower", lower, Vec3::sZero());
     machine.walkable("upper", upper, Vec3::sZero());
     machine.walkable("upper_recall", recovery, local(-40.5F, 319.0F, -158.25F));
+    // Resting material, doors and journals use ordinary Jolt sleep. Contacts
+    // and attachments wake them; SuppliedAscent explicitly activates every
+    // commanded drive and the wheel bearing before changing its brake.
+    for (const auto &entry : machine.bodies) {
+        auto &body = machine.native(entry.index);
+        if (body.IsDynamic()) body.SetAllowSleeping(true);
+    }
     return result;
 }
 

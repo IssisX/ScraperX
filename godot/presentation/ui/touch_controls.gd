@@ -648,6 +648,11 @@ func _draw_button(button: TouchButton) -> void:
 			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(6.0 * _u)))
 
 
+func _forklift_stick_captions() -> Array:
+	return [["ACCEL", _stick_home + Vector2(0.0, -205.0) * _u],
+		["BRAKE", _stick_home + Vector2(0.0, 190.0) * _u], ["STEER", _stick_home]]
+
+
 func _draw_stick() -> void:
 	var throw := STICK_THROW * _u
 	var knob := STICK_KNOB * _u
@@ -655,8 +660,8 @@ func _draw_stick() -> void:
 		UiStyle.text_centered(self, UiStyle.font_label(), "SLEW / TROLLEY", _stick_home + Vector2(0, -205.0) * _u,
 			int(roundf(30.0 * _u)), UiStyle.PAPER, int(roundf(5.0 * _u)))
 	if forklift_mode:
-		for caption in [["ACCEL", Vector2(0.0, -205.0)], ["BRAKE", Vector2(0.0, 225.0)], ["STEER", Vector2(0.0, 0.0)]]:
-			UiStyle.text_centered(self, UiStyle.font_label(), caption[0], _stick_home + caption[1] * _u,
+		for caption in _forklift_stick_captions():
+			UiStyle.text_centered(self, UiStyle.font_label(), caption[0], caption[1],
 				int(roundf(30.0 * _u)), UiStyle.PAPER, int(roundf(5.0 * _u)))
 	if _stick_index == -1:
 		UiStyle.ring(self, _stick_home, throw, UiStyle.with_alpha(UiStyle.PAPER, 0.16), 3.0 * _u)

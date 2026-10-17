@@ -337,10 +337,13 @@ void SuppliedAscent::account(Instance&m){
  double positive=0,negative=0;m.state.force_n=0;m.state.power_w=0;
  for(unsigned n=0;n<m.motors.size();++n){auto&d=m.machine->drives[n];auto&motor=m.motors[n];
   const double q=d.slider?d.slider->GetCurrentPosition():d.hinge->GetCurrentAngle();
+  const bool solved=d.slider?d.slider->IsActive():d.hinge->IsActive();
   const double force=(d.slider?d.slider->GetTotalLambdaMotor():d.hinge->GetTotalLambdaMotor())/m.step_dt;
   // Wheel angles wrap at +/-pi; work uses the physical substep rotation.
   const double delta=d.slider?q-motor.last_q:std::remainder(q-motor.last_q,2*JPH_PI);
-  const double work=force*delta;positive+=std::max(0.,work);negative+=std::max(0.,-work);m.state.force_n+=force;
+  // Retain the final moving step's work when an island falls asleep at its
+  // end. Subsequent sleeping steps have no travel and no fresh force receipt.
+  const double work=force*delta;positive+=std::max(0.,work);negative+=std::max(0.,-work);m.state.force_n+=solved?force:0;
  }
  if(m.energized){const double debit=positive/.85+80*m.step_dt;
   m.state.positive_work_j+=positive;m.state.heat_j+=negative+debit-positive;

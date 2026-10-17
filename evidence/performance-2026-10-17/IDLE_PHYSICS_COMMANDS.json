@@ -1,0 +1,360 @@
+{
+  "source_base": "cdab7cd/native944e0e1 plus scoped gravity assembly sleeping and fresh force readback",
+  "commands": [
+    {
+      "name": "supplied-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/source/src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/objects/src_sim_supplied_ascent.cpp.o",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/source/src/sim/supplied_ascent.cpp"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-supplied-build.log"
+    },
+    {
+      "name": "archive",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/ar",
+        "rcs",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/objects/src_sim_supplied_ascent.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-archive.log"
+    },
+    {
+      "name": "candidate-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/idle_cost.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/idle-candidate"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-candidate-build.log"
+    },
+    {
+      "name": "route-build",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/source/tests/gravity_reclaim_route_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/gravity_reclaim_route_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-route-build.log"
+    },
+    {
+      "name": "candidate",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/idle-candidate"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-candidate.log"
+    },
+    {
+      "name": "baseline",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/idle-baseline"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-baseline.log"
+    },
+    {
+      "name": "reclaim-route",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/gravity_reclaim_route_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/final-reclaim-route.log"
+    }
+  ],
+  "started": 1792274188.8935378,
+  "source_hashes": {
+    "src/sim/gravity_wheel_geometry.cpp": "dcd261447b199eec13845c476e169b1f2f1fd12a36bf140e34a6ad11854f76ab",
+    "src/sim/supplied_ascent.cpp": "b7151c02186bd5b03e8da96386e99dedf1448dc7b35e9e50168d0814f631ca34"
+  },
+  "precursor": "Initial paired source16.46%gain; obsolete telemetry dropped final moving work on sleep boundary. Only unfinished precursor route stopped; superseded-route.json. Final source retains original work calculation and reports inactive force0.",
+  "metrics": {
+    "candidate": {
+      "ready": "386",
+      "wall_mean_ms": "7.38421",
+      "p50_ms": "7.07182",
+      "p95_ms": "8.95307",
+      "cpu_ms": "9.25239",
+      "deaths": "0"
+    },
+    "baseline": {
+      "ready": "386",
+      "wall_mean_ms": "9.49294",
+      "p50_ms": "8.1375",
+      "p95_ms": "14.0801",
+      "cpu_ms": "12.8208",
+      "deaths": "0"
+    }
+  },
+  "improvement_fraction": 0.2221366615611181,
+  "result": "PASS",
+  "finished": 1792274437.7491984,
+  "outputs": {
+    "supplied-build": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n",
+    "archive": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n",
+    "candidate-build": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n",
+    "route-build": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n",
+    "candidate": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nIDLE ready=386 wall_mean_ms=7.38421 p50_ms=7.07182 p95_ms=8.95307 cpu_ms=9.25239 deaths=0\n",
+    "baseline": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nIDLE ready=386 wall_mean_ms=9.49294 p50_ms=8.1375 p95_ms=14.0801 cpu_ms=12.8208 deaths=0\n",
+    "reclaim-route": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nRECLAIM entry_fractures=0\nRECLAIM open_gate=-52.0348,338.627,-165.05\nMATERIAL 2219 -52.9102,337.842,-166.27\nMATERIAL 2227 -51.9724,330.288,-164.507\nMATERIAL 2235 -53.3134,330.104,-164.653\nMATERIAL 2243 -51.106,330.079,-164.623\nMATERIAL 2251 -53.3788,330.272,-165.008\nMATERIAL 2259 -51.9219,331.195,-164.344\nMATERIAL 2267 -52.8755,330.244,-165.157\nMATERIAL 2275 -52.084,329.961,-164.463\nMATERIAL 2283 -52.8993,337.697,-165.617\nMATERIAL 2291 -51.7704,329.987,-164.871\nRECLAIM feed before=2052.7 remaining=130.038 deck=308.001 contacts=345\nRECLAIM actual_fractures=4 last_load_n=17856.2 last_torque_nm=1718.15\nRECLAIM gate=-52.0348,337.88,-165.05\nRECLAIM service_tray physical_block=1 early_jump_miss=1 grounded_detour=1 ordinary_jump=1 gravity=1 peak_y=332.434 deaths=0\nRECLAIM return cabin_q=6.64241e-06,1.46754e-06,-0.0206198,0.999787 velocity=-1.98443,-1.07403,-1.08437e-06\nRECLAIM recovery soles_y=318.987 compact=1 impact_mps=15.6038\nPASS RECLAIM approach/finite-feed/loaded-gravity-ascent/brake/330exit/actual-discharge/empty-return/explicit-checkpoint-retry/second-loaded-ascent/late-miss319-recovery/Tower-exit initial_staging_only=1\n"
+  },
+  "benchmark_source_sha256": "691a30b51bf7301cb6853889acae7d6af71fe1c50161b4fba5aeed8c8264ad34",
+  "native_archive_sha256": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa",
+  "census_receipt": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/census"
+    ],
+    "source_commit": "944e0e1e91282092b20f1a9e6483cc7509502e91",
+    "source_root": "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/source",
+    "scope": "LinuxARM64 proot native neutral census, no Godot/render; profiling enabled before worker construction",
+    "started": 1792273576.821484,
+    "inputs": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/census": "87e92ff7d7618df2d4490464bcb488111a6a48e97dfed5f9724a6e3ee48aeb6a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-topout-flow-20261017/build/libscraperx_sim.a": "050ea1e41353fd23952f33ac4c7873f9b146ceb87b3931e50980cf52c3345855",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+    },
+    "exit": 0,
+    "finished": 1792273587.381654,
+    "stdout": "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/census.log",
+    "stderr": "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/census.stderr.log",
+    "artifacts": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/census.log": "5fa87ffd4ee09fb85c3f7905989c97654f9a2c73711019a8524886112be71c78",
+      "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/summary.json": "3e8714ae95e3ef503952228d525a26647dee8c9facb5216f8264f343571ea330",
+      "/data/data/com.termux/files/usr/tmp/scraperx-runtime-cost-census-20261017/profile_chart_prepared_census.html": "c977db1e5ccbb182ed188c99d74964443ce0a87af22092520d64950efd645b81"
+    }
+  },
+  "census_summary": {
+    "source_commit": "944e0e1e91282092b20f1a9e6483cc7509502e91",
+    "measurement": "prepared neutral active native bodies/constraints at90Hz; no production edits",
+    "censuses": [
+      {
+        "header": "tick=386 rigid_active=198 soft_active=1 constraints_total=134 constraints_active=127 other_active=2 island_groups=38 default_velocity=10 default_position=2",
+        "largest_islands": [
+          {
+            "id": "0",
+            "bodies": "85",
+            "joints": "5",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000017",
+            "angular_radps": "0.000000107",
+            "entities": "2202,2219,2220,2221,2222,2223,2224,2225,2226,2227,2228,2229,2230,2231,2232,2233,2234,2235,2236,2237,2238,2239,2240,2241,2242,2243,2244,2245,2246,2247,2248,2249,2250,2251,2252,2253,2254,2255,2256,2257,2258,2259,2260,2261,2262,2263,2264,2265,2266,2267,2268,2269,2270,2271,2272,2273,2274,2275,2276,2277,2278,2279,2280,2281,2282,2283,2284,2285,2286,2287,2288,2289,2290,2291,2292,2293,2294,2295,2296,2297,2298,2299,2300,2301,2302,",
+            "types": "0:4,3:1,"
+          },
+          {
+            "id": "1",
+            "bodies": "9",
+            "joints": "15",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000560",
+            "angular_radps": "0.000000016",
+            "entities": "2970,2971,2972,2973,2974,2975,2976,2977,2978,",
+            "types": "2:10,3:5,"
+          },
+          {
+            "id": "2",
+            "bodies": "18",
+            "joints": "18",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000000",
+            "angular_radps": "0.000000000",
+            "entities": "2200,2201,2203,2204,2205,2206,2207,2208,2209,2210,2211,2212,2213,2214,2215,2216,2217,2218,",
+            "types": "2:18,"
+          }
+        ]
+      },
+      {
+        "header": "tick=476 rigid_active=198 soft_active=1 constraints_total=134 constraints_active=127 other_active=2 island_groups=38 default_velocity=10 default_position=2",
+        "largest_islands": [
+          {
+            "id": "0",
+            "bodies": "85",
+            "joints": "5",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000031",
+            "angular_radps": "0.000000108",
+            "entities": "2202,2219,2220,2221,2222,2223,2224,2225,2226,2227,2228,2229,2230,2231,2232,2233,2234,2235,2236,2237,2238,2239,2240,2241,2242,2243,2244,2245,2246,2247,2248,2249,2250,2251,2252,2253,2254,2255,2256,2257,2258,2259,2260,2261,2262,2263,2264,2265,2266,2267,2268,2269,2270,2271,2272,2273,2274,2275,2276,2277,2278,2279,2280,2281,2282,2283,2284,2285,2286,2287,2288,2289,2290,2291,2292,2293,2294,2295,2296,2297,2298,2299,2300,2301,2302,",
+            "types": "0:4,3:1,"
+          },
+          {
+            "id": "1",
+            "bodies": "9",
+            "joints": "15",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000560",
+            "angular_radps": "0.000000016",
+            "entities": "2970,2971,2972,2973,2974,2975,2976,2977,2978,",
+            "types": "2:10,3:5,"
+          },
+          {
+            "id": "2",
+            "bodies": "18",
+            "joints": "18",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000000",
+            "angular_radps": "0.000000000",
+            "entities": "2200,2201,2203,2204,2205,2206,2207,2208,2209,2210,2211,2212,2213,2214,2215,2216,2217,2218,",
+            "types": "2:18,"
+          }
+        ]
+      },
+      {
+        "header": "tick=566 rigid_active=198 soft_active=1 constraints_total=134 constraints_active=127 other_active=2 island_groups=38 default_velocity=10 default_position=2",
+        "largest_islands": [
+          {
+            "id": "0",
+            "bodies": "85",
+            "joints": "5",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000032",
+            "angular_radps": "0.000000112",
+            "entities": "2202,2219,2220,2221,2222,2223,2224,2225,2226,2227,2228,2229,2230,2231,2232,2233,2234,2235,2236,2237,2238,2239,2240,2241,2242,2243,2244,2245,2246,2247,2248,2249,2250,2251,2252,2253,2254,2255,2256,2257,2258,2259,2260,2261,2262,2263,2264,2265,2266,2267,2268,2269,2270,2271,2272,2273,2274,2275,2276,2277,2278,2279,2280,2281,2282,2283,2284,2285,2286,2287,2288,2289,2290,2291,2292,2293,2294,2295,2296,2297,2298,2299,2300,2301,2302,",
+            "types": "0:4,3:1,"
+          },
+          {
+            "id": "1",
+            "bodies": "9",
+            "joints": "15",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000560",
+            "angular_radps": "0.000000016",
+            "entities": "2970,2971,2972,2973,2974,2975,2976,2977,2978,",
+            "types": "2:10,3:5,"
+          },
+          {
+            "id": "2",
+            "bodies": "18",
+            "joints": "18",
+            "max_vel_override": "40",
+            "max_pos_override": "8",
+            "speed_mps": "0.000000000",
+            "angular_radps": "0.000000000",
+            "entities": "2200,2201,2203,2204,2205,2206,2207,2208,2209,2210,2211,2212,2213,2214,2215,2216,2217,2218,",
+            "types": "2:18,"
+          }
+        ]
+      }
+    ]
+  },
+  "controlled_precursor_stop": {
+    "controlled_stop": [
+      7569
+    ],
+    "reason": "Superseded precursor route before completion: preserve final moving sleep-step work in telemetry correction. Paired initial timing retained; final source route will run once after recompilation.",
+    "time": 1792274162.8437295
+  }
+}
