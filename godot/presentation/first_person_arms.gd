@@ -129,6 +129,13 @@ var riser_tops: Array = [Vector3.ZERO, Vector3.ZERO]
 var _grip_forward := Vector3.FORWARD
 var _last_traversal := 0
 var _clock := 0.0
+# The eye's travel this frame: a hold moving with the body (a zipline's
+# bar) carries the hand with it; a hold that jumps relative to the body is
+# reached for.
+const ANCHOR_WITH_BODY_M := 0.04
+var _last_eye := Vector3.ZERO
+var _eye_known := false
+var _eye_motion := Vector3.ZERO
 
 
 func build(sleeve: Material, band: Material, glove: Material, glove_dark: Material,
@@ -347,6 +354,9 @@ static func _hand_basis(fingers: Vector3, dorsal: Vector3) -> Basis:
 # frame (after landing dip and head bob), so camera-held poses ride with it.
 func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	_clock += delta
+	_eye_motion = camera.origin - _last_eye if _eye_known else Vector3.ZERO
+	_last_eye = camera.origin
+	_eye_known = true
 	var traversal: int = state["traversal"]
 	var progress: float = state["progress"]
 	var position: Vector3 = state["position"]
@@ -460,11 +470,14 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			else INF
 		if anchored:
 			# The chase closes on the hold, measured from where the hold was
-			# last frame: a hold that moves (a zipline's bar at 16 m/s) carries
-			# the hand with it, and the hand lands on it rather than trailing
-			# it by a frame's travel for the whole ride. Only within one pose:
-			# a new pose's hold is a new place, reached for, not jumped to.
-			var from := previous_anchor if was_anchored and same_pose else world_wrist
+			# last frame, when the hold moved with the body (a zipline's bar at
+			# 16 m/s, the eye with it): the hand rides it rather than trailing
+			# it by a frame's travel for the whole ride. A hold that jumps
+			# relative to the body (a load handed over, a new pose's hold) is
+			# a new place, reached for, never jumped to.
+			var with_body := was_anchored and same_pose and \
+				((world_wrist - previous_anchor) - _eye_motion).length() < ANCHOR_WITH_BODY_M
+			var from := previous_anchor if with_body else world_wrist
 			hand.world_wrist = world_wrist + _close(hand.world_wrist - from, blend, reach_step)
 			hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
 			if hand.world_wrist.distance_to(world_wrist) < 0.012:

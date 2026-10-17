@@ -76,7 +76,13 @@ kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::
 
 // A platform about its deck's top centre, railed along its north and south
 // sides: in from the east or the west.
-std::vector<Part> cage_parts() {
+// A cage: its platform, corner posts and north and south top rails. With
+// lanyard_gap, the north rail leaves a gap kLanyardGapHalf either side of
+// the middle, where a trip line comes in over it: a handle let go inside
+// the cage is drawn back out through it by its line, not pinned against the
+// rail and carried up until the line stops the cage.
+constexpr float kLanyardGapHalf = 0.35F;
+std::vector<Part> cage_parts(const bool lanyard_gap = false) {
     std::vector<Part> parts{
         box(JPH::Vec3(kPlatformHalf, 0.1F, kPlatformHalf), JPH::Vec3(0.0F, -0.1F, 0.0F), Material::Galvanised)};
     const float edge = kPlatformHalf - 0.03F;
@@ -84,6 +90,14 @@ std::vector<Part> cage_parts() {
         for (const float end : {-1.0F, 1.0F}) {
             parts.push_back(box(JPH::Vec3(0.03F, 0.5F, 0.03F), JPH::Vec3(side * edge, 0.5F, end * edge),
                                 Material::Yellow));
+        }
+        if (lanyard_gap && side > 0.0F) {
+            const float half = 0.5F * (kPlatformHalf - kLanyardGapHalf);
+            for (const float end : {-1.0F, 1.0F}) {
+                parts.push_back(box(JPH::Vec3(half, 0.03F, 0.03F),
+                                    JPH::Vec3(end * (kLanyardGapHalf + half), 1.0F, side * edge), Material::Yellow));
+            }
+            continue;
         }
         parts.push_back(box(JPH::Vec3(kPlatformHalf, 0.03F, 0.03F), JPH::Vec3(0.0F, 1.0F, side * edge),
                             Material::Yellow));
@@ -93,7 +107,12 @@ std::vector<Part> cage_parts() {
 
 // A lever standing up from its pivot on a post, its weight a little west of
 // the pivot holding it on its stop until its lanyard draws the top east
-// (positive about -Z), as AS-009's chocks.
+// (positive about -Z), as AS-009's chocks. Drawn past its release it tips
+// over centre onto a stop kChockThrowStop out (CHOSEN: just past the
+// release, so the throw pays out only a few centimetres of its lanyard: the
+// handle let go swings back out on a taut line instead of dropping slack
+// into the cage under the rider's hands).
+constexpr float kChockThrowStop = 0.6F;
 kit::BodyIndex add_standing_lever(kit::Kit &kit, std::vector<Part> &frame, const std::uint64_t entity,
                                   const JPH::RVec3 pivot, const float post_foot, kit::LeverIndex &lever) {
     const kit::BodyIndex body = kit.add_body(
@@ -101,7 +120,7 @@ kit::BodyIndex add_standing_lever(kit::Kit &kit, std::vector<Part> &frame, const
         {box(JPH::Vec3(0.04F, 0.5F * kStandingArm, 0.04F), JPH::Vec3(-0.1F, 0.5F * kStandingArm, 0.0F),
              Material::Hazard)},
         pivot, JPH::Quat::sIdentity(), 12.0F, 0.6F);
-    lever = kit.add_lever(body, pivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisY(), 0.0F, 1.2F);
+    lever = kit.add_lever(body, pivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisY(), 0.0F, kChockThrowStop);
     const JPH::Vec3 p = vec(pivot);
     frame.push_back(span({p.GetX() - 0.06F, post_foot, p.GetZ() - 0.12F},
                          {p.GetX() + 0.06F, p.GetY() - 0.06F, p.GetZ() + 0.12F}, Material::Steel));
@@ -221,7 +240,7 @@ const JPH::RVec3 kLanyard1(kMX, 663.6, kMZ + 1.6);
 const JPH::RVec3 kLanyard2(kMX, kMDeck + 1.94, kMZ + 1.6);
 
 void build_stage_m(kit::Kit &kit, MidstackService &service, std::vector<Part> &frame) {
-    service.m_cage = kit.add_body(Sim::kServiceMCageEntityId, cage_parts(), JPH::RVec3(kMX, kMDeck, kMZ),
+    service.m_cage = kit.add_body(Sim::kServiceMCageEntityId, cage_parts(true), JPH::RVec3(kMX, kMDeck, kMZ),
                                   JPH::Quat::sIdentity(), kMMassKg, 0.8F);
     service.m_cage_guide = kit.add_guide(service.m_cage, JPH::Vec3::sAxisY(), 0.0F, kMStop, 0.0F, 0.0F, 0.0F);
     // No air drag worth the name at 3 m/s (some 15 N on the cage): the guide

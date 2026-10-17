@@ -267,8 +267,15 @@ void run_stack() {
     // 2. Deck 2 Overhead Crane Runway Balance Beam:
     Simulation d2_sim(InitialSpawn::Deck2South);
     require(d2_sim.advance_frame(0.5).accepted, "Deck 2 settle interval must be accepted");
+    // Up the stair, then along its top landing to the beam's line and onto
+    // its end, as a walker steps onto a 0.3 m beam: square to it, from a
+    // stand. (Cut across onto it at a run, 1.7 m/s sideways, its balance
+    // cannot hold the body; this proof once passed that way only because
+    // the body hopped off the top step and landed braked on the beam, a
+    // hop try_step_down now keeps the feet from.)
     const bool s1 = walk_to(d2_sim, 7.5, -125.8, 4.0);
-    const bool s2 = walk_to(d2_sim, 7.5, -128.8, 6.0);
+    const bool s2 = walk_to(d2_sim, 7.5, -128.8, 6.0) && d2_sim.advance_frame(0.3).accepted &&
+                    walk_to(d2_sim, 7.5, -129.5, 4.0) && d2_sim.advance_frame(0.3).accepted;
     const bool s3 = walk_to(d2_sim, 8.5, -129.5, 4.0);
     std::cout << "DEBUG d2 steps: s1=" << s1 << " s2=" << s2 << " s3=" << s3
               << " pos=(" << d2_sim.snapshot().player_position.x << ","

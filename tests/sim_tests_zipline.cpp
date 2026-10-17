@@ -25,6 +25,11 @@ namespace {
 bool catch_the_yard_line(Simulation &s) {
     require(s.advance_frame(1.0).accepted, "zipline: settle");
     require(walk_to(s, -2.0, -129.4, 20.0, 0.12), "zipline: to the ramp's foot");
+    // Stopped at the foot, then straight up it: walk_to hands over on
+    // arrival, still moving, and a run turned up the 1 m ramp with that
+    // sideways drift carries the body into the post beside the stand.
+    (void)s.set_move_input(0.0, 0.0);
+    require(s.advance_frame(0.4).accepted, "zipline: stopped at the ramp's foot");
     (void)s.set_facing(0.0, 1.0);
     (void)s.set_move_input(0.0, 1.0);
     require(advance_until(s, [](const Snapshot &n) { return n.player_position.z > -126.4; }, 3.0),

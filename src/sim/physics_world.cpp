@@ -272,7 +272,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // shaft (x -7.1 .. -3.9, z -118 .. -121; the slab comes down it on a
     // ride and a cable through the shaft stopped it) and west of the yard
     // derrick's column at x = 0.8.
-    zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, object_layers::kMoving, player_id_);
+    zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_);
     (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
     // Across the well, from the band's inner edge (the posts a metre and a
     // half in from it) to the far band of the deck below: south to north on

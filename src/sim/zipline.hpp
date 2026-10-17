@@ -102,7 +102,7 @@ public:
         std::uint64_t rides = 0;
     };
 
-    Zipline(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::ObjectLayer moving_layer, JPH::BodyID player);
+    Zipline(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::BodyID player);
     ~Zipline();
     Zipline(const Zipline &) = delete;
     Zipline &operator=(const Zipline &) = delete;
@@ -138,7 +138,6 @@ private:
 
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
-    JPH::ObjectLayer moving_layer_;
     JPH::BodyID player_;
     std::vector<Line> lines_;
     JPH::Ref<JPH::SliderConstraint> slider_;

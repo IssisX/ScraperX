@@ -870,8 +870,18 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         if (step_up_grace_ticks_ > 0) {
             --step_up_grace_ticks_;
         }
-        if (!grounded_ && coyote_ticks_ > 0 && step_up_grace_ticks_ == 0 && !commands.jump_requested &&
-            jump_buffer_ticks_ == 0 && try_step_down(bodies, player_velocity, reference_velocity)) {
+        // Only a body going somewhere over the ground (at least a step's
+        // walking speed) and not hauled by a line that takes its weight: a
+        // hook's reel lifting a body that stands still is not a crest, and
+        // the legs do not pull it back down.
+        const JPH::Vec3 over_ground = player_velocity - reference_velocity;
+        const bool walking_over =
+            JPH::Vec3(over_ground.GetX(), 0.0F, over_ground.GetZ()).Length() >= kStepMinimumSpeed;
+        const bool line_lifting = hook_state_ == HookState::Bitten && hook_tension_n_ > 0.0F;
+        const bool settling_on_step = step_up_grace_ticks_ > 0 && lift < kStepUpLaunchMps;
+        if (!grounded_ && coyote_ticks_ > 0 && !settling_on_step && walking_over && !line_lifting &&
+            !commands.jump_requested && jump_buffer_ticks_ == 0 &&
+            try_step_down(bodies, player_velocity, reference_velocity)) {
             ++step_down_count_;
         }
     }

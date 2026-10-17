@@ -48,8 +48,8 @@ private:
 
 } // namespace
 
-Zipline::Zipline(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer moving_layer, const BodyID player)
-    : physics_(physics), kit_(kit), moving_layer_(moving_layer), player_(player) {}
+Zipline::Zipline(PhysicsSystem &physics, kit::Kit &kit, const BodyID player)
+    : physics_(physics), kit_(kit), player_(player) {}
 
 Zipline::~Zipline() {
     unclip();

@@ -401,6 +401,10 @@ constexpr float kCoyoteMaxRiseMps = 4.5F;
 // shoved it sideways off a 0.3 m board).
 constexpr std::uint32_t kStepUpGraceTicks =
     static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+// The grace is for a body settling onto its step; one still rising faster
+// than this is a slope's launch carried over the step (a ramp's head onto
+// a flat top) and is put down at once.
+constexpr float kStepUpLaunchMps = 1.0F;
 constexpr float kCoyoteMaxFallMps = 1.5F;
 // PARKOUR_MOVE_SET.md M3, the precision jump: the sighted, committed jump
 // onto a lip or ledge the eyes have picked. Grounded, the look (facing and

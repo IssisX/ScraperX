@@ -436,7 +436,12 @@ void run_slingshot() {
                 "slingshot reuse: down alive, the pouch spent");
         (void)s.advance_frame(6.0);
         const auto post = s.slingshot_state().retrieval_control_position;
-        (void)walk_to(s, post.x, post.z, 40.0, 0.5);
+        // Round the slingshot's frame on its east side, as a walker does:
+        // where the chute comes down, the frame can stand between it and the
+        // post, and a straight walk only leans on it.
+        require(walk_to(s, 1.0, s.snapshot().player_position.z, 20.0, 0.3) && walk_to(s, 1.0, post.z - 0.6, 20.0, 0.3) &&
+                    walk_to(s, post.x, post.z, 20.0, 0.5),
+                "slingshot reuse: the walk round the frame to the post");
         (void)s.advance_frame(0.4);
         require(s.slingshot_state().can_retrieve, "slingshot reuse: at the post, RETRIEVE POUCH must be offered");
         (void)s.request_slingshot_action();
