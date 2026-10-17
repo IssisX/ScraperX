@@ -5,11 +5,25 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 import subprocess
 import time
 
 PREFIX = 'SCRAPERX_ANDROID_COMPAT '
 PACKAGE = 'com.cory.scraperx.chatgpt'
+
+
+def check_touch_bounds(state):
+    low, high = state['touch_safe_screen']
+    for name, button in state['controls'].items():
+        if not all(low[axis] - 1 <= button['min'][axis] <= button['max'][axis] <= high[axis] + 1
+                   for axis in (0, 1)):
+            raise RuntimeError(f'Android compatibility: {name} touch target outside safe bounds: {state!r}')
+
+
+def fold_states(text):
+    return [(int(identifier), name) for identifier, name in
+            re.findall(r"identifier=(\d+), name='([^']+)'", text)]
 
 
 class Session:
@@ -77,6 +91,40 @@ class Session:
     def save(self):
         (self.output / 'receipt.json').write_text(json.dumps(self.receipt, indent=2) + '\n')
 
+    def fold(self, state):
+        supported = self.adb('shell', 'cmd', 'device_state', 'print-states').decode()
+        (self.output / 'supported-fold-states.txt').write_text(supported)
+        states = fold_states(supported)
+        closed = [(number, name) for number, name in states if 'CLOSED' in name.upper()]
+        opened = [(number, name) for number, name in states if 'OPEN' in name.upper() and 'HALF' not in name.upper()]
+        if not closed or not opened:
+            raise RuntimeError(f'Android compatibility: foldable has no identifiable open/closed states: {supported}')
+        original = self.adb('shell', 'cmd', 'device_state', 'print-state').decode().strip()
+        targets = [closed[0], opened[0]] if original != str(closed[0][0]) else [opened[0], closed[0]]
+        try:
+            for number, name in targets:
+                before = state
+                self.adb('shell', 'cmd', 'device_state', 'state', number)
+                deadline = time.monotonic() + 10
+                actual = ''
+                while time.monotonic() < deadline:
+                    actual = self.adb('shell', 'cmd', 'device_state', 'print-state').decode().strip()
+                    if actual == str(number):
+                        break
+                    time.sleep(0.2)
+                if actual != str(number):
+                    raise RuntimeError(f'Android fold state requested {number}, observed {actual!r}')
+                state = self.wait(f'fold posture {name} retains native instance and updates display',
+                                  lambda s: s['instance'] == before['instance'] and s['window'] != before['window'],
+                                  after=before)
+                if state['paused']:
+                    state = self.resume(state)
+                check_touch_bounds(state)
+                self.capture('fold-' + str(number))
+        finally:
+            self.adb('shell', 'cmd', 'device_state', 'state', original)
+        return state
+
 
 def exercise(args, session):
     session.receipt.update({'source_sha': args.source, 'profile': args.profile,
@@ -97,6 +145,8 @@ def exercise(args, session):
     if state['source']['source_sha'] != args.source:
         raise RuntimeError(f'Android compatibility: unexpected APK source: {state["source"]!r}')
     session.capture('opening')
+    check_touch_bounds(state)
+    initial_window = state['window']
     before = state
     session.button(state, 'crouch')
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
@@ -115,6 +165,10 @@ def exercise(args, session):
                          lambda s: math.dist(s['position'][::2], before['position'][::2]) > 0.1,
                          after=before)
     session.capture('after-input')
+    before = state
+    look = state['look']
+    session.adb('shell', 'input', 'swipe', round(look[0]), round(look[1]), round(look[0] + 80), round(look[1]), 400)
+    state = session.wait('ordinary touch drag turns camera', lambda s: abs(s['yaw'] - before['yaw']) > 0.02, after=before)
     session.button(state, 'pause')
     state = session.wait('touch pause freezes native stepping', lambda s: s['paused'], after=state)
     frozen = state
@@ -142,6 +196,14 @@ def exercise(args, session):
     session.capture('resized')
     if state['paused']:
         state = session.resume(state)
+    check_touch_bounds(state)
+    session.adb('shell', 'wm', 'size', 'reset')
+    state = session.wait('reset Android display restores its original bounds',
+                         lambda s: s['window'] == initial_window, after=state)
+    if state['paused']:
+        state = session.resume(state)
+    if args.profile.startswith('foldable'):
+        state = session.fold(state)
     session.adb('shell', 'am', 'force-stop', PACKAGE)
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('process restart reloads persisted player settings',

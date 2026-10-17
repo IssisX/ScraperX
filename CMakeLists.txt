@@ -13,6 +13,11 @@ option(SCRAPERX_BUILD_BRIDGE "Build the Godot GDExtension bridge" ON)
 option(SCRAPERX_WITH_JOLT "Compile the pinned Jolt substrate into the native graph" ON)
 option(SCRAPERX_TESTS_ON_ANDROID "Build host-style native tests in Termux" OFF)
 
+if(ANDROID)
+    include(cmake/ScraperXAndroidAbi.cmake)
+    scraperx_configure_android_cpu("${ANDROID_ABI}")
+endif()
+
 set(SCRAPERX_GODOT_CPP_COMMIT "507ed9d840c01a3c5b2a39af8bb4000bfac30bf5" CACHE STRING "Pinned godot-cpp commit")
 set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING "Pinned Jolt commit")
 

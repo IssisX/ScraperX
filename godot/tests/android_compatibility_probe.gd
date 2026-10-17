@@ -46,7 +46,10 @@ func _process(delta: float) -> void:
 		for id in touch._order:
 			var button = touch._buttons[id]
 			if button.shown and button.enabled:
-				controls[String(id)] = {"point": _point(touch, button.center), "radius_canvas": button.radius}
+				var hit: float = button.radius * touch.HIT_SLOP
+				controls[String(id)] = {"point": _point(touch, button.center),
+					"min": _point(touch, button.center - Vector2.ONE * hit),
+					"max": _point(touch, button.center + Vector2.ONE * hit)}
 	var buttons: Array = []
 	var menu: Control = main.get("_pause_menu")
 	if menu != null and menu.is_visible_in_tree():
@@ -56,6 +59,9 @@ func _process(delta: float) -> void:
 	var landing: Dictionary = native.get_landing_state() if native != null else {}
 	var stick: Array = _point(touch, touch.stick_home()) if touch != null else []
 	var stick_up: Array = _point(touch, touch.stick_home() - Vector2(0, 100.0 * touch._u)) if touch != null else []
+	var safe_min: Array = _point(touch, touch._safe.position) if touch != null else []
+	var safe_max: Array = _point(touch, touch._safe.end) if touch != null else []
+	var look: Vector2 = touch._safe.position + touch._safe.size * Vector2(0.85, 0.30) if touch != null else Vector2.ZERO
 	var settings_path := "user://settings.cfg"
 	print(PREFIX + JSON.stringify({
 		"instance": _instance, "sequence": _sequence, "ready": bool(main.get("_play_ready")),
@@ -69,6 +75,8 @@ func _process(delta: float) -> void:
 		"window": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
 		"canvas": [view.get_visible_rect().size.x, view.get_visible_rect().size.y],
 		"safe_area": str(DisplayServer.get_display_safe_area()),
+		"touch_safe_screen": [safe_min, safe_max], "look": _point(touch, look) if touch != null else [],
+		"yaw": main.get("_yaw"), "pitch": main.get("_pitch"),
 		"controls": controls, "stick": stick, "stick_up": stick_up, "menu_buttons": buttons,
 		"settings_sha256": FileAccess.get_sha256(settings_path) if FileAccess.file_exists(settings_path) else "",
 		"settings_path": ProjectSettings.globalize_path(settings_path),

@@ -93,9 +93,26 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:' artifacts/android-compatibility-build/export.log; then exit 1; fi
           unzip -p artifacts/android-compatibility-build/ScraperX-emulator.apk lib/x86_64/libscraperx_native.so \
             | cmp - godot/addons/scraperx_native/bin/android/x86_64/libscraperx_native.so
-          sha256sum artifacts/android-compatibility-build/ScraperX-emulator.apk \
-            > artifacts/android-compatibility-build/SHA256SUMS.txt
           printf '%s\n' "${GITHUB_SHA}" > artifacts/android-compatibility-build/source-sha.txt
+      - name: Apply the same signing lineage and build identity as phone downloads
+        uses: ./.github/actions/stable-apk
+        with:
+          files: artifacts/android-compatibility-build/ScraperX-emulator.apk
+          keystore: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          password: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+      - name: Verify final emulator APK at the existing Android API floor
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=artifacts/android-compatibility-build/ScraperX-emulator.apk
+          APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          "${APKSIGNER}" verify --verbose --print-certs --min-sdk-version 24 "${APK}" \
+            > artifacts/android-compatibility-build/api24-signature.txt
+          "${AAPT}" dump badging "${APK}" > artifacts/android-compatibility-build/apk-badging.txt
+          unzip -p "${APK}" lib/x86_64/libscraperx_native.so \
+            | cmp - godot/addons/scraperx_native/bin/android/x86_64/libscraperx_native.so
+          sha256sum "${APK}" > artifacts/android-compatibility-build/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

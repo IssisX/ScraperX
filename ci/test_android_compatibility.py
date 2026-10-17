@@ -10,6 +10,21 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidExportTests(unittest.TestCase):
+    def test_android_x86_does_not_require_optional_desktop_cpu_features(self):
+        module = ROOT / 'cmake/ScraperXAndroidAbi.cmake'
+        with tempfile.TemporaryDirectory() as directory:
+            script = Path(directory) / 'cpu.cmake'
+            script.write_text(f'include("{module.as_posix()}")\n'
+                              'set(USE_AVX2 ON CACHE BOOL "test default")\n'
+                              'scraperx_configure_android_cpu("arm64-v8a")\n'
+                              'if(NOT USE_AVX2)\nmessage(FATAL_ERROR "ARM64 options changed")\nendif()\n'
+                              'scraperx_configure_android_cpu("x86_64")\n'
+                              'foreach(feature AVX AVX2 AVX512 LZCNT TZCNT F16C FMADD)\n'
+                              ' if(USE_${feature})\nmessage(FATAL_ERROR "Optional x86 feature enabled")\nendif()\n'
+                              'endforeach()\n')
+            result = subprocess.run(['cmake', '-P', str(script)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_real_abi_routing_preserves_shipping_library(self):
         module = ROOT / 'cmake/ScraperXAndroidAbi.cmake'
         with tempfile.TemporaryDirectory() as directory:

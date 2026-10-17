@@ -4,7 +4,9 @@ The `Android native compatibility` workflow exports the normal Main scene with
 the real native Jolt module compiled for Android x86_64. This emulator-only
 export adds `android_compatibility_probe.gd` as a read-only observer; it never
 advances physics, grants support, changes settings or generates input.
-The shipping ARM64 preset does not install that observer.
+The shipping ARM64 preset does not install that observer. The emulator export
+uses the same signing lineage and source/build identity as phone downloads;
+its final signature is checked at API24 before installation.
 
 `run_android_compatibility.py` installs the APK and sends ordinary Android touch
 events through adb. Observations must show real native control, a 90 Hz step,
@@ -25,8 +27,10 @@ Initial matrix:
 API 24 matches the existing native compilation floor. A green matrix would
 establish only these exercised configurations, not an advertised device floor.
 Host acceleration and available profiles are captured before emulator launch.
-Resize checks are not evidence of physical hinge/posture transitions. Those
-transitions, Android cutouts/system bars, orientation behavior, and the complete
+The foldable driver requests the device's reported open/closed states and
+requires Android state readback, changed display bounds and retained native
+identity. A green resize alone is not fold/posture evidence. Android
+cutouts/system bars, orientation behavior, and the complete
 normal forklift/crane/parkour loop remain part of R17 until actually exercised.
 
 The separate `android_responsive_controls_test.gd` checks 576 combinations of

@@ -44,7 +44,7 @@ func _run() -> void:
 	controls.router = router
 	router.touch = controls
 	router.capture_mouse = false
-	# Canvas sizes include compact/tall phones, tablet and both Fold panels.
+	# Window sizes include compact/tall phones, tablet and both Fold panels.
 	for portrait in [Vector2i(360, 640), Vector2i(390, 844), Vector2i(800, 1280),
 			Vector2i(1080, 2400), Vector2i(968, 2376), Vector2i(1856, 2160)]:
 		for viewport in [portrait, Vector2i(portrait.y, portrait.x)]:
@@ -55,10 +55,13 @@ func _run() -> void:
 				for inset in [0.0, 0.06]:
 					for station in [&"", &"grappling_gun", &"forklift", &"yard_crane", &"intake", &"jib", &"service_lift", &"recovery"]:
 						controls.update_context(context(station), 1.0)
-						var full := Rect2(Vector2.ZERO, Vector2(viewport))
+						# The shipping canvas expands from its design resolution; window
+						# pixels are not canvas coordinates. Match UiStyle.safe_rect's
+						# coordinate space before applying simulated display insets.
+						var full := controls.get_viewport_rect()
 						var safe := full.grow_individual(-full.size.x * inset, -full.size.y * inset, -full.size.x * inset, -full.size.y * inset)
 						controls._layout_in_safe_rect(safe)
-						var label := "%s scale=%s inset=%s station=%s" % [viewport, scale, inset, station]
+						var label := "window=%s canvas=%s scale=%s inset=%s station=%s" % [viewport, full.size, scale, inset, station]
 						var active: Array = controls._buttons.values().filter(func(b): return b.shown and b.enabled)
 						for i in range(active.size()):
 							var button = active[i]

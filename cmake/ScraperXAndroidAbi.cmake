@@ -9,3 +9,14 @@ function(scraperx_android_extension_directory abi output)
         message(FATAL_ERROR "Unsupported ScraperX Android ABI '${abi}'; expected arm64-v8a or x86_64")
     endif()
 endfunction()
+
+function(scraperx_configure_android_cpu abi)
+    if(abi STREQUAL "x86_64")
+        # Android's x86_64 ABI guarantees SSE4.2/POPCNT, not AVX, FMA or BMI.
+        # Jolt has compile-time dispatch; its desktop defaults would silently
+        # raise our Android CPU requirement above the advertised ABI.
+        foreach(feature AVX AVX2 AVX512 LZCNT TZCNT F16C FMADD)
+            set(USE_${feature} OFF CACHE BOOL "Android x86_64 ABI baseline" FORCE)
+        endforeach()
+    endif()
+endfunction()
