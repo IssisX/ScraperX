@@ -10,6 +10,8 @@ var _sequence := 0
 var _instance := ""
 var _peak_upward_speed := 0.0
 var _touch_events := 0
+var _last_pointer := {}
+var _menu_trace := {"down": 0, "up": 0, "pressed": 0, "last": {}}
 var _input_trace := {"events": 0, "drags": 0, "max_move": 0.0,
 	"nonzero_native_ticks": 0, "world_move": [0.0, 0.0], "history": []}
 
@@ -38,6 +40,17 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		_touch_events += 1
+	if event is InputEventScreenTouch or event is InputEventMouseButton:
+		_last_pointer = {"kind": "touch" if event is InputEventScreenTouch else "mouse",
+			"pressed": event.pressed, "at": [event.position.x, event.position.y],
+			"device": event.device, "frame": Engine.get_process_frames()}
+
+func _record_menu_event(text: String, phase: String) -> void:
+	_menu_trace[phase] += 1
+	var main := get_tree().current_scene
+	_menu_trace.last = {"text": text, "phase": phase,
+		"paused": bool(main.get("_paused")) if main != null else false,
+		"frame": Engine.get_process_frames()}
 
 func _point(control: Control, local: Vector2) -> Array:
 	var point := control.get_viewport().get_screen_transform() * control.get_global_transform_with_canvas() * local
@@ -60,6 +73,11 @@ func _publish(state: Dictionary) -> void:
 
 func _menu_buttons(node: Node, output: Array) -> void:
 	if node is Button and node.is_visible_in_tree() and not node.disabled:
+		for phase: String in ["down", "up", "pressed"]:
+			var signal_name := "pressed" if phase == "pressed" else "button_" + phase
+			var observer := _record_menu_event.bind(node.text, phase)
+			if not node.is_connected(signal_name, observer):
+				node.connect(signal_name, observer)
 		output.append({"text": node.text, "point": _point(node, node.size * 0.5)})
 	for child in node.get_children():
 		_menu_buttons(child, output)
@@ -107,6 +125,7 @@ func _process(delta: float) -> void:
 	var safe_max: Array = _point(touch, current_safe.end) if touch != null else []
 	var look: Vector2 = touch._safe.position + touch._safe.size * Vector2(0.85, 0.30) if touch != null else Vector2.ZERO
 	var settings_path := "user://settings.cfg"
+	var android_activity: Object = main.get("_android_activity")
 	_input_trace["owned"] = touch != null and (touch._stick_index != -1 or touch._look_index != -1)
 	if touch != null:
 		for button in touch._buttons.values():
@@ -118,6 +137,8 @@ func _process(delta: float) -> void:
 		"fixed_step_s": native.get_fixed_step_seconds() if native != null else 0,
 		"position": [position.x, position.y, position.z], "velocity": [velocity.x, velocity.y, velocity.z],
 		"peak_upward_speed": _peak_upward_speed, "touch_events": _touch_events,
+		"last_pointer": _last_pointer, "menu_trace": _menu_trace,
+		"android_window_focus": bool(android_activity.hasWindowFocus()) if android_activity != null else null,
 		"input_trace": _input_trace,
 		"jump_work_j": landing.get("landing_jump_work_j", 0.0),
 		"crouched": native.is_player_crouched() if native != null else false,

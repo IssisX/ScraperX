@@ -156,3 +156,25 @@ role in this recreation remains unverified until the OS event records it.
 
 Source owner for the observed application-info message:
 [Android 16 ActivityThread.handleApplicationInfoChanged](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/core/java/android/app/ActivityThread.java#L6966).
+
+## Resume failure: separate input delivery from button activation
+
+Tablet run39063290401/source3d031c4 reached Main and passed27 checks. Its
+notification shade paused native tick750 and kept it frozen; after collapse,
+Android recorded focus entering the game at19:47:36.990UTC. The driver observed
+the visible pause menu at19:47:38.661 and tapped its measured Resume center
+(138,144). Native stepping never resumed. Focus loss is not established as the
+cause, and no focus-policy change is justified by this capture.
+
+The same log has456 input-pool capacity warnings, all at observation sequence262.
+Those warnings clear before successful controls and earlier Resume checks at
+sequences296/301. The failing shade interaction starts at312 and still has no
+new game pointer event at320 onward. The warnings alone do not explain this
+later missing tap; gyro aim and its sensor remain intact.
+
+The emulator-only read-only observer now reports the last raw pointer event,
+pause-button down/up/pressed counters and the activity's actual window-focus
+readback. Button listeners only record signals; they never activate a button,
+resume the tree or change native state. This observation must distinguish a
+missing platform event, failed GUI activation or immediate re-pause before a
+repair is selected. Shipping phone exports do not install this observer.
