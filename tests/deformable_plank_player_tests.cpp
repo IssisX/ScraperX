@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include "passive_receiver_plant_observation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -64,10 +65,13 @@ void sample(const Simulation &s, const char *event) {
               << ",deaths=" << v.death_count << ",landings=" << v.landing_count
               << ",jump_work_j=" << v.landing_jump_work_j
               << ",foot_active=" << v.foot_push_active
+              << ",foot_starts=" << v.foot_push_start_count
+              << ",foot_contact_tick=" << v.foot_contact_tick
               << ",foot_support=" << v.foot_push_support_entity_id
               << ",foot_command_j=" << v.foot_push_command_work_bound_j
               << ",foot_stroke_m=" << v.foot_push_stroke_m
               << ",foot_peak_n=" << v.foot_push_peak_load_n
+              << ",foot_impulse_ns=" << v.foot_push_last_impulse_ns
               << ",peak_strength_ratio=" << v.plank_peak_strength_ratio
               << ",broken_mask=" << v.plank_broken_joint_mask << '\n';
     if (allow_physical_climb) std::cout << "PLANK_HANDS,grip=" << v.grip_available
@@ -440,6 +444,30 @@ void run_grip() {
         "native85kg_load=1 passive_release=1 actual_recovery_tray=1 unload_return=1\n";
 }
 
+void impact_tick(Simulation &s) {
+    const auto before = s.snapshot();
+    tick(s);
+    const auto now = s.snapshot();
+    require(now.foot_push_start_count == 0 && now.foot_push_command_work_bound_j == 0 &&
+                now.foot_push_stroke_m == 0 && now.foot_push_peak_load_n == 0 &&
+                now.foot_push_last_impulse_ns == 0 && now.foot_push_player_force.x == 0 &&
+                now.foot_push_player_force.y == 0 && now.foot_push_player_force.z == 0,
+            "gravity-loaded fracture and recovery supply no foot command, stroke or impulse", s);
+    if (now.foot_push_active) {
+        // Coyote intent may retain a passive row from real steel contact.
+        // This recovery must leave it unloaded, on the tray, without lift;
+        // an active flag alone does not mean a powered push was commanded.
+        require(scraperx::test::passive_receiver_plant(now, before, 1936) &&
+                    before.player_grounded && before.support_entity_id == 1936 &&
+                    before.foot_contact_tick == before.tick_index &&
+                    now.player_grounded && now.support_entity_id == 1936 &&
+                    now.foot_contact_tick == now.tick_index &&
+                    std::abs(now.player_position.y - 404.4) < .01 &&
+                    std::abs(now.player_position.y - before.player_position.y) < .001,
+                "unloaded passive plant retains fresh actual tray contact without extra elevation", s);
+    }
+}
+
 void run_impact() {
     body_indices.fill(Simulation::kKitNone);
     allow_physical_climb = false;
@@ -470,11 +498,8 @@ void run_impact() {
                     "bounded ordinary two-axis braking on actual recovery steel", s);
             }
         }
-        tick(s);
+        impact_tick(s);
         const auto now = s.snapshot();
-        require(!now.foot_push_active && now.foot_push_start_count == 0 &&
-                    now.foot_push_last_impulse_ns == 0,
-                "gravity-loaded fracture and fragment recovery do not create a phantom foot push", s);
         if (!broken && now.plank_broken_joint_mask != 0) {
             broken = true;
             require(now.plank_fracture_count > 0 && now.plank_peak_strength_ratio >= 1,
@@ -501,7 +526,7 @@ void run_impact() {
     }
     require(broken && recovered, "actual fracture permits fall and input-directed recovery on real tray", s);
     require(s.set_move_input(0, 0), "recovered player releases stick", s);
-    tick(s, 180);
+    for (int i = 0; i < 180; ++i) impact_tick(s);
     require(s.snapshot().player_grounded && s.snapshot().support_entity_id == 1936 &&
         s.snapshot().checkpoint_footing_valid && s.snapshot().plank_broken_joint_mask != 0,
         "real steel recovery is checkpointable and damage persists", s);

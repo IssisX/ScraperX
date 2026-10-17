@@ -7,6 +7,8 @@ import subprocess
 
 
 OWNERS = {
+    "deformable_plank_player": "scraperx_deformable_plank_player_tests",
+    "wood_foot_push_player": "scraperx_wood_foot_push_player_tests",
     "west_brace_bay_route": "scraperx_west_brace_bay_route_tests",
     "physical_topout_onward_run": "scraperx_physical_topout_tests",
     "freight_yard_arrival": "scraperx_freight_yard_arrival_tests",

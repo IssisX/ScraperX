@@ -1,0 +1,132 @@
+{
+  "base_revision": "0b1247ba1c17ae0296542c3e125d196ca8ca7a7f",
+  "native_source": "1338fb41ff99e6f1a686c33f0f6c289d05dab91b",
+  "scope": "Linux ARM64/proot native execution; published two-case x86 gate pending",
+  "build": {
+    "base_commit": "0b1247ba1c17ae0296542c3e125d196ca8ca7a7f",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/deformable_plank_player_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/plank-final"
+    ],
+    "started": 1792276755.990412,
+    "source_hashes": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/deformable_plank_player_tests.cpp": "2d6cbeb45af8d7926bbec82ea3324e167a6382c00c061d08cdbea09c5fd24bd0",
+      "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/passive_receiver_plant_observation.hpp": "6d56ba0c108b143f168f3c2263c42afb17940822db8ccde5ac9d8b52b9b2c4ad",
+      "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/src/sim/simulation.hpp": "bab4da700ecb25b8a8eb084f7026ca326f920918c28d9bbad9e144fc4269e1ed",
+      "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+    },
+    "exit": 0,
+    "finished": 1792276758.6887035,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/build-final.log",
+    "executable_sha256": "989d7fe1ec40c4ea459f95c5ecef90cc46ef3d6d26e659fad973415e121f6e68"
+  },
+  "runs": {
+    "objective": "Distinguish powered fracture-recovery foot push from valid fresh-contact passive plant; preserve real fracture and recovery",
+    "budget_seconds": 1200.0,
+    "started": 1792276681.2221742,
+    "failures": 1,
+    "trials": [
+      {
+        "stage": "baseline-impact",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/plank-baseline",
+          "impact"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/deformable_plank_player_tests.cpp": "399a907f4c4553fd1bdb62d0d93941b6bea90991c0cd09d955f83e79e3e482ef",
+          "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa"
+        },
+        "started": 1792276684.9133246,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/mechanics-window.trial-1.log",
+        "exit": 1,
+        "finished": 1792276688.9419818
+      },
+      {
+        "stage": "diagnostic-impact",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/plank-diagnostic",
+          "impact"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/plank-diagnostic.cpp": "b11cfcd3a6ff46a35bd56ef8cf17a46eee7bd5a11e723f7c5549a9e026300fa9",
+          "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa"
+        },
+        "started": 1792276708.3804977,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/mechanics-window.trial-2.log",
+        "exit": 0,
+        "finished": 1792276716.36675
+      },
+      {
+        "stage": "final-plank-all",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/plank-final"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/deformable_plank_player_tests.cpp": "2d6cbeb45af8d7926bbec82ea3324e167a6382c00c061d08cdbea09c5fd24bd0",
+          "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/source/tests/passive_receiver_plant_observation.hpp": "6d56ba0c108b143f168f3c2263c42afb17940822db8ccde5ac9d8b52b9b2c4ad",
+          "/data/data/com.termux/files/usr/tmp/scraperx-idle-lifecycle-20261017/build/libscraperx_sim.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa"
+        },
+        "started": 1792276769.5338955,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-plank-release-20261017/mechanics-window.trial-3.log",
+        "exit": 0,
+        "finished": 1792276813.8304186
+      }
+    ],
+    "reassessments": [],
+    "pending": false
+  },
+  "pass_output": [
+    "PASS DEFORMABLE_PLANK_PLAYER normal_world=1 seams=11 native85kg_load=1 ordinary_jump_landing=1 unload_return=1 onward_steel=1 initial_steel_staging_only=1 gravity=1 deaths=0 grip=unverified",
+    "PASS DEFORMABLE_PLANK_GRIP actual_two_hands=1 actual_segment_edges=1 finite_force=1 native85kg_load=1 passive_release=1 actual_recovery_tray=1 unload_return=1",
+    "PLANK_IMPACT_RECOVERY,firm=1,horizontal_speed_mps=0.098743237,target_x=-6.800000000,target_z=-127.2",
+    "PASS DEFORMABLE_PLANK_PLAYER_FRACTURE actual_gravity_loaded85kg=1 actual_rupture=1 ordinary_air_steering=1 actual_recovery_tray=1 persistent_damage=1 no_assisted_elevation=1"
+  ],
+  "expected_ci": [
+    "scraperx_sim.deformable_plank_player",
+    "scraperx_sim.wood_foot_push_player"
+  ]
+}

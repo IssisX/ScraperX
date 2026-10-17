@@ -1,0 +1,78 @@
+{
+  "source": "0b1247ba1c17ae0296542c3e125d196ca8ca7a7f",
+  "run": "39075654268",
+  "commands": [
+    {
+      "argv": [
+        "cmake",
+        "-S",
+        "/home/runner/work/ScraperX/ScraperX",
+        "-B",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DSCRAPERX_BUILD_BRIDGE=OFF",
+        "-DSCRAPERX_WITH_JOLT=ON"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "cmake",
+        "--build",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--target",
+        "scraperx_physical_topout_tests",
+        "scraperx_west_brace_bay_route_tests"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "ctest",
+        "--test-dir",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--output-on-failure",
+        "--no-tests=error",
+        "--output-junit",
+        "/home/runner/work/ScraperX/ScraperX/artifacts/native-repair/native-tests.xml",
+        "-R",
+        "^scraperx_sim\\.(west_brace_bay_route|physical_topout_onward_run)$"
+      ],
+      "exit": 0
+    }
+  ],
+  "junit": {
+    "name": "Linux-c++",
+    "tests": "2",
+    "failures": "0",
+    "disabled": "0",
+    "skipped": "0",
+    "hostname": "runnervm8k3b6",
+    "time": "24",
+    "timestamp": "2026-10-17T22:37:16"
+  },
+  "tests": [
+    {
+      "name": "scraperx_sim.physical_topout_onward_run",
+      "classname": "scraperx_sim.physical_topout_onward_run",
+      "time": "5.63869",
+      "status": "run"
+    },
+    {
+      "name": "scraperx_sim.west_brace_bay_route",
+      "classname": "scraperx_sim.west_brace_bay_route",
+      "time": "24.7629",
+      "status": "run"
+    }
+  ],
+  "goal": "complete",
+  "goal_elapsed_seconds": 544,
+  "full_release": "not established",
+  "phone_performance": "unverified"
+}
