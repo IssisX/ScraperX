@@ -10,6 +10,7 @@ var _startup_preparation: CanvasLayer
 var _startup_previous_disable_3d := false
 var _discard_startup_delta := false
 var _play_ready := false
+var _android_activity: Object
 
 # Presentation and input only. Every consequential fact below is read from the
 # native ScraperX simulation; nothing here decides pose, support, traversal, or
@@ -312,6 +313,8 @@ var _export_solids_path := ""
 
 
 func _ready() -> void:
+	if OS.has_feature("android") and Engine.has_singleton("AndroidRuntime"):
+		_android_activity = Engine.get_singleton("AndroidRuntime").getActivity()
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--ci":
 			_ci_mode = true
@@ -504,6 +507,12 @@ func _finish_native_setup() -> void:
 func _process(delta: float) -> void:
 	if _native == null or not _play_ready:
 		return
+	# Android's notification shade can take window focus without pausing the
+	# Activity. Check before consuming input or advancing the native world.
+	if _android_activity != null and not bool(_android_activity.hasWindowFocus()):
+		_open_pause(true)
+		if _paused:
+			return
 	if _discard_startup_delta:
 		# Preparation and view construction precede player control. They
 		# must not become a catch-up burst on the first controllable frame.
@@ -825,6 +834,7 @@ func _set_telemetry_visible(on: bool) -> void:
 
 
 func _exit_tree() -> void:
+	_android_activity = null
 	if _startup_preparation != null:
 		get_viewport().disable_3d = _startup_previous_disable_3d
 

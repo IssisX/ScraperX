@@ -85,6 +85,15 @@ class TouchDriverTests(unittest.TestCase):
         self.assertEqual(session.state['input_trace']['events'], 2)
         self.assertFalse(session.state['input_trace']['owned'])
 
+    def test_small_drag_cannot_pass_with_only_down_and_advancing_native_ticks(self):
+        # Captured tall API36 fifth pulse: Android withheld this 20.4px MOVE.
+        session = SessionFixture(drop_move=True)
+        with self.assertRaisesRegex(RuntimeError, 'held Android gesture reaches native stepping'):
+            TouchDriver(session, 36).swipe((65, 385), (61, 365), 100)
+        self.assertEqual([c[-3:] for c in session.commands],
+                         [('DOWN', 65, 385), ('MOVE', 61, 365), ('UP', 61, 365)])
+        self.assertFalse(session.state['input_trace']['owned'])
+
     def test_real_release_after_observed_native_duration(self):
         session = SessionFixture()
         state = TouchDriver(session, 36).swipe((10, 20), (10, 5), 650)

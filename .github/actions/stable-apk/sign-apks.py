@@ -59,7 +59,12 @@ def main():
         for index, path in enumerate(files):
             unsigned, aligned, signed = [root/(str(index)+suffix) for suffix in ('-unsigned.apk', '-aligned.apk', '-signed.apk')]
             source_sha = os.environ['GITHUB_SHA'] if label == 'ChatGPT' else None
-            version = apk.prepare(path, unsigned, now=now, source_sha=source_sha)
+            # The viewport-sized Godot UI handles font-size configuration in
+            # the existing activity; recreating it during startup tears down
+            # the process-wide engine. Other model packages keep their policy.
+            handle_font_scale = label == 'ChatGPT'
+            version = apk.prepare(path, unsigned, now=now, source_sha=source_sha,
+                                  handle_font_scale=handle_font_scale)
             run(str(tools/'zipalign'), '-P', '16', '-f', '4', str(unsigned), str(aligned))
             run(str(tools/'apksigner'), 'sign', *legacy_signer, '--ks', str(key), '--ks-key-alias', 'scraperx-dashboard',
                 '--ks-pass', 'env:SCRAPERX_APK_KEYSTORE_PASSWORD', '--key-pass', 'env:SCRAPERX_APK_KEYSTORE_PASSWORD',
@@ -74,7 +79,8 @@ def main():
                 raise RuntimeError('Wrong model package or application label')
             if "versionCode='"+str(version['version_code'])+"'" not in badging:
                 raise RuntimeError('Final APK version verification failed')
-            apk.verify_prepared(path, signed, version['version_code'], source_sha)
+            apk.verify_prepared(path, signed, version['version_code'], source_sha,
+                                handle_font_scale=handle_font_scale)
             path.write_bytes(signed.read_bytes())
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             (path.parent/'SHA256SUMS.txt').write_text(digest+'  '+path.name+'\n')

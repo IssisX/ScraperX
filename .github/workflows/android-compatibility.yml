@@ -102,6 +102,7 @@ jobs:
           python3 -m unittest discover -s ci -p test_android_compatibility.py
           python3 -m unittest discover -s ci -p test_android_touch_driver.py
           python3 -m unittest discover -s ci -p test_android_route_navigation.py
+          python3 -m unittest discover -s ci -p test_android_manifest_policy.py
           ccache --show-stats
       - name: Check controls and export observed ordinary game
         shell: bash
@@ -180,6 +181,8 @@ jobs:
             api: 35
             device: 7.6in Foldable
             resize: 1080x2092
+            driver: ci/android_startup_replay.py
+            route: --startup-font-scale 1.25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -207,7 +210,7 @@ jobs:
           emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim -camera-back none
           pre-emulator-launch-script: bash ci/android_emulator_host.sh "artifacts/android-${{ matrix.name }}" "${{ matrix.device }}"
           script: >-
-            python3 ci/run_android_compatibility.py
+            python3 ${{ matrix.driver || 'ci/run_android_compatibility.py' }}
             --apk artifacts/android-compatibility-build/ScraperX-emulator.apk
             --source "${{ github.sha }}" --profile "${{ matrix.name }}"
             --resize "${{ matrix.resize }}" --output "artifacts/android-${{ matrix.name }}"

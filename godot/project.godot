@@ -25,6 +25,8 @@ window/handheld/orientation=4
 
 [input_devices]
 
+; Deliver small analog stick/look drags before Android's scroll threshold.
+pointing/android/disable_scroll_deadzone=true
 pointing/emulate_touch_from_mouse=true
 ; Read once at startup on Android (Godot.kt onGodotMainLoopStarted); the
 ; in-game GYRO AIM setting decides whether the rate is used.

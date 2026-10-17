@@ -47,6 +47,86 @@ def version_location(data):
     return found[0]
 
 
+
+def main_activity_config_location(data):
+    """Locate only ChatGPT's stock Godot activity, rejecting template drift."""
+    version_location(data)  # Validate container and attribute ranges first.
+    strings, resources, stack, found = [], [], [], []
+    package = None
+    target_count = 0
+    offset = 8
+    while offset < len(data):
+        kind, header, size = struct.unpack_from('<HHI', data, offset)
+        end = offset + size
+        if kind == 1:
+            if strings or header < 28:
+                raise ValueError('Expected one Android manifest string pool')
+            count, _, flags, start, _ = struct.unpack_from('<IIIII', data, offset + 8)
+            if header + count * 4 > size or not header <= start <= size:
+                raise ValueError('Invalid manifest string pool offsets')
+            for index in range(count):
+                position = offset + start + struct.unpack_from('<I', data, offset + header + 4 * index)[0]
+                def length(unit):
+                    nonlocal position
+                    fmt, high, shift = ('<B', 0x80, 8) if unit == 1 else ('<H', 0x8000, 16)
+                    if position + unit > end:
+                        raise ValueError('Truncated manifest string length')
+                    value = struct.unpack_from(fmt, data, position)[0]
+                    position += unit
+                    if value & high:
+                        if position + unit > end:
+                            raise ValueError('Truncated manifest extended string length')
+                        value = ((value & (high - 1)) << shift) | struct.unpack_from(fmt, data, position)[0]
+                        position += unit
+                    return value
+                if flags & 0x100:
+                    length(1)  # UTF-16 units precede UTF-8 byte count.
+                    count_bytes, unit, encoding = length(1), 1, 'utf-8'
+                else:
+                    count_bytes, unit, encoding = 2 * length(2), 2, 'utf-16le'
+                if position + count_bytes + unit > end or any(data[position + count_bytes:position + count_bytes + unit]):
+                    raise ValueError('Invalid manifest string terminator')
+                strings.append(data[position:position + count_bytes].decode(encoding))
+        elif kind == 0x180:
+            resources = list(struct.unpack_from('<' + 'I' * ((size - header) // 4), data, offset + header))
+        elif kind == 0x102:
+            name = strings[struct.unpack_from('<I', data, offset + 20)[0]]
+            stack.append(name)
+            start, stride, count = struct.unpack_from('<HHH', data, offset + 24)
+            attrs = [offset + 16 + start + stride * i for i in range(count)]
+            def string_value(attr):
+                value_size, _, value_type, value = struct.unpack_from('<HBBI', data, attr + 12)
+                if value_size != 8 or value_type != 3:
+                    raise ValueError('Expected typed manifest identity string')
+                return strings[value]
+            if stack == ['manifest']:
+                values = [string_value(a) for a in attrs
+                          if strings[struct.unpack_from('<I', data, a + 4)[0]] == 'package']
+                if len(values) != 1:
+                    raise ValueError('Expected one manifest package')
+                package = values[0]
+            if stack == ['manifest', 'application', 'activity']:
+                identified = [(resources[n] if n < len(resources) else 0, a)
+                              for a in attrs for n in [struct.unpack_from('<I', data, a + 4)[0]]]
+                names = [string_value(a) for resource, a in identified if resource == 0x01010003]
+                if 'com.godot.game.GodotApp' in names:
+                    if len(names) != 1:
+                        raise ValueError('Duplicate GodotApp identity attributes')
+                    target_count += 1
+                    found.extend(a for resource, a in identified if resource == 0x0101001F)
+        elif kind == 0x103:
+            if not stack or stack.pop() != strings[struct.unpack_from('<I', data, offset + 20)[0]]:
+                raise ValueError('Unbalanced Android manifest elements')
+        offset = end
+    if package != 'com.cory.scraperx.chatgpt' or stack or target_count != 1 or len(found) != 1:
+        raise ValueError('Expected unique ChatGPT GodotApp configuration attribute')
+    attr = found[0]
+    value_size, _, value_type, mask = struct.unpack_from('<HBBI', data, attr + 12)
+    if value_size != 8 or value_type not in (0x10, 0x11) or mask not in (0x3FF4, 0x40003FF4):
+        raise ValueError('Unexpected GodotApp configChanges type or template mask')
+    return attr, mask
+
+
 def update_sparse_identity(data, payload):
     """Keep Godot 4.7's sparse resource length/hash in sync with signed JSON."""
     if len(data) < 104 or data[:4] != b'GDPC':
@@ -82,7 +162,7 @@ def update_sparse_identity(data, payload):
     return bytes(result)
 
 
-def prepare(source, target, previous=0, now=None, source_sha=None):
+def prepare(source, target, previous=0, now=None, source_sha=None, *, handle_font_scale=False):
     if source_sha is not None and not re.fullmatch(r"[0-9a-f]{40}", source_sha):
         raise ValueError("Build source must be the full Git commit SHA")
     if source.resolve() == target.resolve():
@@ -99,6 +179,10 @@ def prepare(source, target, previous=0, now=None, source_sha=None):
             raise ValueError('No valid increasing Android version available')
         struct.pack_into('<I', manifest, attr+8, 0xFFFFFFFF)  # use typed value
         struct.pack_into('<HBBI', manifest, attr+12, 8, 0, 0x10, code)
+        if handle_font_scale:
+            config_attr, mask = main_activity_config_location(manifest)
+            struct.pack_into('<I', manifest, config_attr + 8, 0xFFFFFFFF)
+            struct.pack_into('<I', manifest, config_attr + 16, mask | 0x40000000)
         identity = (json.dumps({'version_code': code, 'source_sha': source_sha}) + '\n').encode() if source_sha is not None else None
         with zipfile.ZipFile(target, 'w') as output:
             for entry in archive.infolist():
@@ -113,7 +197,7 @@ def prepare(source, target, previous=0, now=None, source_sha=None):
     return {'source_version_code': original, 'version_code': code, 'version_policy': 'monotonic-v1'}
 
 
-def verify_prepared(source, target, code, source_sha=None):
+def verify_prepared(source, target, code, source_sha=None, *, handle_font_scale=False):
     """Verify final signed bytes against source payload and final manifest identity."""
     with zipfile.ZipFile(source) as original, zipfile.ZipFile(target) as final:
         names = final.namelist()
@@ -121,6 +205,16 @@ def verify_prepared(source, target, code, source_sha=None):
             raise ValueError('Duplicate final APK entries')
         if version_location(final.read('AndroidManifest.xml'))[1] != code:
             raise ValueError('Final manifest version differs from prepared version')
+        expected_manifest = bytearray(original.read('AndroidManifest.xml'))
+        attr, _ = version_location(expected_manifest)
+        struct.pack_into('<I', expected_manifest, attr + 8, 0xFFFFFFFF)
+        struct.pack_into('<HBBI', expected_manifest, attr + 12, 8, 0, 0x10, code)
+        if handle_font_scale:
+            config_attr, mask = main_activity_config_location(expected_manifest)
+            struct.pack_into('<I', expected_manifest, config_attr + 8, 0xFFFFFFFF)
+            struct.pack_into('<I', expected_manifest, config_attr + 16, mask | 0x40000000)
+        if final.read('AndroidManifest.xml') != expected_manifest:
+            raise ValueError('Final manifest differs beyond authorized version/configuration changes')
         if source_sha is not None:
             identity = json.loads(final.read(BUILD_INFO))
             if identity != {'version_code': code, 'source_sha': source_sha}:
@@ -146,5 +240,6 @@ if __name__ == '__main__':
     parser.add_argument('target', type=Path)
     parser.add_argument('--previous-code', type=int, default=0)
     parser.add_argument('--source-sha', help='Opt in to final build identity metadata')
+    parser.add_argument('--handle-font-scale', action='store_true', help='Handle font size in the existing ChatGPT Godot activity')
     args = parser.parse_args()
-    print(json.dumps(prepare(args.source, args.target, args.previous_code, source_sha=args.source_sha)))
+    print(json.dumps(prepare(args.source, args.target, args.previous_code, source_sha=args.source_sha, handle_font_scale=args.handle_font_scale)))

@@ -167,6 +167,33 @@ class Session:
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
 
+    def prepare_input_focus(self):
+        """Recover only the observed bundled Messenger crash on disposable AVDs."""
+        deadline = time.monotonic() + 20
+        recovered = False
+        focus = ''
+        while time.monotonic() < deadline:
+            windows = self.adb('shell', 'dumpsys', 'window', '-a', 'windows').decode()
+            match = re.search(r'(?m)^\s*mCurrentFocus=(.*)$', windows)
+            focus = match[1].strip() if match else ''
+            crash = re.search(r'\bApplication Error: ([\w.]+)\}', focus)
+            if crash:
+                package = crash[1]
+                (self.output / 'startup-crash-window.txt').write_text(windows)
+                self.capture('startup-crash-dialog')
+                # Never conceal a game crash or suppress system error dialogs.
+                if package != 'com.google.android.apps.messaging' or recovered:
+                    raise RuntimeError(f'Android startup blocked by application crash: {focus}')
+                self.receipt['startup_external_crash'] = {'package': package, 'focus': focus}
+                self.adb('shell', 'am', 'force-stop', package)
+                recovered = True
+            elif re.search(r'\bu\d+ ' + re.escape(PACKAGE) + r'/', focus):
+                (self.output / 'startup-input-focus.txt').write_text(windows)
+                self.receipt['startup_input_focus'] = focus
+                return recovered
+            time.sleep(0.2)  # Require the OS focus result, not elapsed time.
+        raise RuntimeError(f'Android startup has no game input focus; actual focus={focus!r}')
+
     def swipe(self, start, end, duration_ms, *, until=None):
         if self.touch_driver is None:
             from android_touch_driver import TouchDriver
@@ -304,6 +331,10 @@ def exercise(args, session):
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('normal Main initializes with real native module',
                          lambda s: s['ready'] and s['native_loaded'], timeout=240)
+    if session.prepare_input_focus():
+        before = state
+        state = session.wait('external emulator dialog dismissal retains native instance',
+                             lambda s: s['ready'] and s['instance'] == before['instance'], after=before)
     state = session.first_controls(state)
     session.require_runtime_clean()
     if not math.isclose(state['fixed_step_s'], 1 / 90, abs_tol=1e-7):

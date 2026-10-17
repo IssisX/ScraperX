@@ -8,6 +8,15 @@ The shipping ARM64 preset does not install that observer. The emulator export
 uses the same signing lineage and source/build identity as phone downloads;
 its final signature is checked at API24 before installation.
 
+ChatGPT's final manifest adds only `fontScale` to the pinned Godot activity's
+existing configuration mask (`0x3ff4` to `0x40003ff4`). A controlled early font
+change reproduced engine teardown on activity recreation. The existing
+viewport-sized game UI handles the change without replacing the activity;
+this does not establish handling for future Android-native text widgets.
+Signing rejects an unexpected package, activity or baseline mask, and verifies
+that the final manifest differs only in the authorized version/configuration
+fields. Other model packages retain their existing configuration policy.
+
 `run_android_compatibility.py` installs the APK and sends ordinary Android touch
 events through adb. Observations must show real native control, a 90 Hz step,
 pause freezing ticks, background/return preserving the instance, resizing
@@ -113,6 +122,20 @@ exercises the real notification shade and emulator rotation, requiring OS
 rotation readback, retained native identity and usable touch afterward.
 These paths remain unverified until the corresponding Android jobs pass.
 
+Production disables Android's scroll deadzone so small joystick/look drags
+reach the existing input owner. CI retains its original gestures and native
+movement checks. Startup focus is observed before touch: only the captured
+bundled Messenger crash dialog can be dismissed once in a disposable emulator;
+game crashes, unknown dialogs and missing focus return still fail. Existing
+Resume controls handle any resulting pause.
+
+Main also reads the Android activity's actual window focus before consuming
+input or advancing physics. The notification shade can take focus while the
+activity stays resumed, so activity pause notifications alone are insufficient.
+Focus loss uses the existing pause/held-input cleanup owner; focus return never
+automatically resumes play. The tablet test still requires a frozen native
+clock under the real shade and an ordinary Resume afterward.
+
 The API24 server must answer a harmless `listvar` handshake before any touch;
 an accepted ADB-forwarded TCP connection alone does not prove device readiness.
 At full tablet resolution, the new held driver produced117 actual nonzero-input
@@ -158,3 +181,9 @@ A natural replay of the identified APK passed23 checks without reproducing the
 spontaneous startup teardown; that pass does not identify the original trigger.
 The controlled configuration input is diagnostic, not a game-state setter or a
 launch retry. No activity configuration mask is changed without supporting evidence.
+
+The foldable matrix now runs that same full compatibility driver through the
+startup replay, with the real early `font_scale=1.25` input. Its existing
+fold/unfold, control, persistence and same-instance requirements remain intact.
+The reproduced failure and proposed repair do not establish a repaired Android
+run until the edited-source matrix completes.

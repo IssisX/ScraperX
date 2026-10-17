@@ -6,14 +6,66 @@ import subprocess
 import shutil
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 from prepare_android_emulator_export import prepare
-from run_android_compatibility import PART_PREFIX, app_window_frame, read_observations, runtime_errors, screen_observation
+from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, read_observations, runtime_errors, screen_observation
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidObservationTests(unittest.TestCase):
+    def test_focused_game_requires_no_emulator_recovery(self):
+        focused = 'mCurrentFocus=Window{3940b90 u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}\n'
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            session.capture = MagicMock()
+            session.adb = MagicMock(return_value=focused.encode())
+            self.assertFalse(session.prepare_input_focus())
+            session.adb.assert_called_once_with('shell', 'dumpsys', 'window', '-a', 'windows')
+            session.capture.assert_not_called()
+            self.assertNotIn('startup_external_crash', session.receipt)
+
+    def test_bundled_messenger_crash_recovery_requires_observed_game_focus(self):
+        crash = 'mCurrentFocus=Window{9fa8e4 u0 Application Error: com.google.android.apps.messaging}\n'
+        focused = 'mCurrentFocus=Window{3940b90 u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}\n'
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            session.capture = MagicMock()
+            session.adb = MagicMock(side_effect=[crash.encode(), b'', focused.encode()])
+            with patch('run_android_compatibility.time.sleep'):
+                self.assertTrue(session.prepare_input_focus())
+            self.assertEqual(session.receipt['startup_external_crash']['package'], 'com.google.android.apps.messaging')
+            self.assertIn(PACKAGE + '/', session.receipt['startup_input_focus'])
+            session.adb.assert_any_call('shell', 'am', 'force-stop', 'com.google.android.apps.messaging')
+            self.assertEqual((Path(directory) / 'startup-crash-window.txt').read_text(), crash)
+            self.assertEqual((Path(directory) / 'startup-input-focus.txt').read_text(), focused)
+            session.capture.assert_called_once_with('startup-crash-dialog')
+
+    def test_game_or_unknown_crash_cannot_be_dismissed_as_emulator_noise(self):
+        for package in (PACKAGE, PACKAGE + '.other', 'com.android.systemui'):
+            with self.subTest(package=package), tempfile.TemporaryDirectory() as directory:
+                session = Session(Path(directory))
+                session.capture = MagicMock()
+                session.adb = MagicMock(return_value=(
+                    'mCurrentFocus=Window{abc u0 Application Error: ' + package + '}\n').encode())
+                with self.assertRaisesRegex(RuntimeError, 'blocked by application crash'):
+                    session.prepare_input_focus()
+                self.assertEqual(session.adb.call_count, 1)
+                self.assertNotIn('startup_input_focus', session.receipt)
+
+    def test_messenger_recovery_does_not_pass_without_focus_return(self):
+        crash = b'mCurrentFocus=Window{abc u0 Application Error: com.google.android.apps.messaging}\n'
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            session.capture = MagicMock()
+            session.adb = MagicMock(side_effect=[crash, b'', b'mCurrentFocus=null\n'])
+            with patch('run_android_compatibility.time.monotonic', side_effect=[0, 0, 1, 21]), \
+                 patch('run_android_compatibility.time.sleep'), \
+                 self.assertRaisesRegex(RuntimeError, 'no game input focus'):
+                session.prepare_input_focus()
+            self.assertNotIn('startup_input_focus', session.receipt)
+
     def test_shader_link_failure_cannot_count_as_compatible_rendering(self):
         error = 'E/godot (3964): ERROR: CanvasShaderGLES3: Program linking failed:'
         self.assertEqual(runtime_errors('I/godot: ordinary startup\n' + error), [error])
