@@ -1,0 +1,78 @@
+name: Android startup replay (diagnostic, not release)
+
+on:
+  push:
+    branches: [ChatGPT]
+    paths: [.github/workflows/android-startup-replay.yml]
+  workflow_dispatch:
+    inputs:
+      apk_run:
+        description: Existing Android compatibility APK build run
+        default: '39051032030'
+        required: true
+        type: string
+      apk_source:
+        description: Full source SHA embedded in that APK
+        default: fa8e3a40b0efb93134cb2be0449d5802a2c93f3e
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  startup-replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      APK_RUN: ${{ inputs.apk_run || '39051032030' }}
+      APK_SOURCE: ${{ inputs.apk_source || 'fa8e3a40b0efb93134cb2be0449d5802a2c93f3e' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch identified existing APK without rebuilding native code
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          if not re.fullmatch(r'[1-9][0-9]*', os.environ['APK_RUN']):
+              raise SystemExit('APK_RUN must be a positive GitHub run ID')
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['APK_SOURCE']):
+              raise SystemExit('APK_SOURCE must be a full source SHA')
+          PY
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${APK_RUN}" --jq .head_sha)" = "${APK_SOURCE}"
+          gh run download "${APK_RUN}" --repo "${GITHUB_REPOSITORY}" \
+            --name "android-emulator-apk-${APK_SOURCE}" --dir artifacts/existing-apk
+          test "$(cat artifacts/existing-apk/source-sha.txt)" = "${APK_SOURCE}"
+          mkdir -p artifacts/startup-replay
+          printf '%s\n' "${GITHUB_SHA}" > artifacts/startup-replay/diagnostic-harness-source.txt
+          printf '%s\n' "${APK_SOURCE}" > artifacts/startup-replay/game-apk-source.txt
+          sha256sum artifacts/existing-apk/ScraperX-emulator.apk > artifacts/startup-replay/APK-SHA256.txt
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Fresh foldable boot with continuous configuration event capture
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: 7.6in Foldable
+          cores: 2
+          ram-size: 3072M
+          emulator-boot-timeout: 300
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim -camera-back none
+          pre-emulator-launch-script: bash ci/android_emulator_host.sh artifacts/startup-replay '7.6in Foldable'
+          script: >-
+            python3 ci/android_startup_replay.py
+            --apk artifacts/existing-apk/ScraperX-emulator.apk
+            --source "${APK_SOURCE}" --profile foldable-api35
+            --resize 1080x2092 --output artifacts/startup-replay
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-startup-replay-${{ github.sha }}
+          path: artifacts/startup-replay/
+          if-no-files-found: warn

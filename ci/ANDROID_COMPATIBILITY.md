@@ -128,3 +128,13 @@ This controls emulator rendering cost; the app's quality, render scale, shadows,
 content, forces and solver are unchanged. It provides no phone-performance claim.
 Device jobs have a40-minute maximum for software-rendered functional checks;
 all position, support, force/work, cleanup and persistence conditions still apply.
+
+`Android startup replay (diagnostic, not release)` can reuse an already built,
+identified emulator APK while changing only diagnostic harness code. It records
+both source SHAs, the APK checksum, raw Android configuration before/after, and
+continuous events-buffer logs around the same complete compatibility driver.
+API35 `wm_relaunch_resume_activity`/`wm_relaunch_activity` events include the
+configuration-change mask; `wm_destroy_activity` records a reason. This is
+necessary when ordinary logcat shows stock Godot teardown before startup but
+does not identify why Android recreated the activity. No failed launch is
+retried, and a diagnostic run never replaces required release checks.
