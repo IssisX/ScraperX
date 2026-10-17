@@ -20,18 +20,28 @@ Initial matrix:
 | Profile | API | Hardware profile |
 | --- | --- | --- |
 | Compact phone | 24 | Nexus 5X |
-| Tall phone | 35 | Pixel 7 |
-| Tablet | 35 | Pixel C |
+| Tall phone | 36 | Pixel 7 |
+| Tablet | 36 | Pixel C |
 | Foldable | 35 | Pixel Fold |
 
-API 24 matches the existing native compilation floor. A green matrix would
+API 24 matches the existing native compilation floor. API36 also exercises the
+Android version currently targeted by the export toolchain. A green matrix would
 establish only these exercised configurations, not an advertised device floor.
 Host acceleration and available profiles are captured before emulator launch.
 The foldable driver requests the device's reported open/closed states and
 requires Android state readback, changed display bounds and retained native
-identity. A green resize alone is not fold/posture evidence. Android
-cutouts/system bars, orientation behavior, and the complete
+identity. A green resize alone is not fold/posture evidence. The tall-phone
+job enables a real Android notch overlay, checks reported insets and touch
+bounds, exercises input and then restores the original display. It also runs
+the ordinary forklift arrival/control/exit path. System bars, orientation
+behavior, and the complete
 normal forklift/crane/parkour loop remain part of R17 until actually exercised.
+
+Android x86_64 uses the NDK ABI CPU baseline; Jolt desktop AVX/FMA/BMI
+defaults are disabled for that ABI because they are optional on Android. See
+[the Android ABI contract](https://developer.android.com/ndk/guides/abis).
+Unchanged native compilation can be reused through ccache; CMake still
+configures the actual source and links each export.
 
 The separate `android_responsive_controls_test.gd` checks 576 combinations of
 canvas, orientation, player touch size, inset and interaction context through

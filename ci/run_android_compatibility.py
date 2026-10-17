@@ -91,6 +91,38 @@ class Session:
     def save(self):
         (self.output / 'receipt.json').write_text(json.dumps(self.receipt, indent=2) + '\n')
 
+    def cutout(self, state):
+        available = self.adb('shell', 'cmd', 'overlay', 'list', '--user', 0).decode()
+        (self.output / 'available-overlays.txt').write_text(available)
+        prefix = 'com.android.internal.display.cutout.emulation.'
+        disabled = re.findall(r'^\[ \] (' + re.escape(prefix) + r'\S+)$', available, re.MULTILINE)
+        candidates = [name for name in disabled if name.endswith(('.tall', '.double', '.corner'))]
+        if not candidates:
+            raise RuntimeError('Android cutout check: no disabled supported notch overlay found; see available-overlays.txt')
+        overlay = sorted(candidates, key=lambda name: not name.endswith('.tall'))[0]
+        before = state
+        self.adb('shell', 'cmd', 'overlay', 'enable', '--user', 0, overlay)
+        try:
+            state = self.wait('Android notch updates reported safe area and retains native instance',
+                              lambda s: s['instance'] == before['instance'] and s['safe_area'] != before['safe_area'],
+                              after=before)
+            if state['paused']:
+                state = self.resume(state)
+            check_touch_bounds(state)
+            self.capture('cutout')
+            self.button(state, 'crouch')
+            state = self.wait('ordinary touch remains usable with Android cutout',
+                              lambda s: s['crouched'], after=state)
+            self.button(state, 'crouch')
+            state = self.wait('cutout input can return to standing', lambda s: not s['crouched'], after=state)
+        finally:
+            self.adb('shell', 'cmd', 'overlay', 'disable', '--user', 0, overlay)
+        state = self.wait('removing Android notch restores reported safe area',
+                          lambda s: s['safe_area'] == before['safe_area'], after=state)
+        if state['paused']:
+            state = self.resume(state)
+        return state
+
     def fold(self, state):
         supported = self.adb('shell', 'cmd', 'device_state', 'print-states').decode()
         (self.output / 'supported-fold-states.txt').write_text(supported)
@@ -147,6 +179,9 @@ def exercise(args, session):
     session.capture('opening')
     check_touch_bounds(state)
     initial_window = state['window']
+    if args.freight_route:
+        from android_freight_route import exercise_forklift
+        state = exercise_forklift(session, state)
     before = state
     session.button(state, 'crouch')
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
@@ -204,6 +239,8 @@ def exercise(args, session):
         state = session.resume(state)
     if args.profile.startswith('foldable'):
         state = session.fold(state)
+    if args.profile.startswith('tall'):
+        state = session.cutout(state)
     session.adb('shell', 'am', 'force-stop', PACKAGE)
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('process restart reloads persisted player settings',
@@ -220,6 +257,7 @@ def main():
     parser.add_argument('--source', required=True)
     parser.add_argument('--profile', required=True)
     parser.add_argument('--resize', default='1280x800')
+    parser.add_argument('--freight-route', action='store_true')
     parser.add_argument('--output', type=Path, default=Path('artifacts/android-compatibility'))
     args = parser.parse_args()
     session = Session(args.output)
