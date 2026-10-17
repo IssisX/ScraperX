@@ -193,7 +193,7 @@ jobs:
           ram-size: 3072M
           emulator-boot-timeout: 300
           disable-linux-hw-accel: false
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim -camera-back none
           pre-emulator-launch-script: bash ci/android_emulator_host.sh "artifacts/android-${{ matrix.name }}" "${{ matrix.device }}"
           script: >-
             python3 ci/run_android_compatibility.py

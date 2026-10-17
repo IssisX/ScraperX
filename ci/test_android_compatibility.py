@@ -7,12 +7,23 @@ import tempfile
 import unittest
 
 from prepare_android_emulator_export import prepare
-from run_android_compatibility import PART_PREFIX, read_observations
+from run_android_compatibility import PART_PREFIX, fullscreen_confirmation, read_observations, runtime_errors
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidObservationTests(unittest.TestCase):
+    def test_shader_link_failure_cannot_count_as_compatible_rendering(self):
+        error = 'E/godot (3964): ERROR: CanvasShaderGLES3: Program linking failed:'
+        self.assertEqual(runtime_errors('I/godot: ordinary startup\n' + error), [error])
+        self.assertEqual(runtime_errors('I/godot: OpenGL ES 3.0\nANDROID_COMPAT PASS ready'), [])
+
+    def test_fullscreen_help_is_identified_from_system_ui_bounds_only(self):
+        node = '<hierarchy><node package="{package}" text="GOT IT" clickable="true" bounds="[1133,480][1346,576]"/></hierarchy>'
+        self.assertEqual(fullscreen_confirmation(node.format(package='com.android.systemui')), [1239, 528])
+        self.assertIsNone(fullscreen_confirmation(node.format(package='com.cory.scraperx.chatgpt')))
+        self.assertIsNone(fullscreen_confirmation('<hierarchy/>'))
+
     @staticmethod
     def packets(state):
         data = json.dumps(state, ensure_ascii=False).encode()

@@ -10,10 +10,31 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 PREFIX = 'SCRAPERX_ANDROID_COMPAT '
 PART_PREFIX = 'SCRAPERX_ANDROID_COMPAT_PART '
 PACKAGE = 'com.cory.scraperx.chatgpt'
+
+
+def fullscreen_confirmation(xml):
+    """Locate only Android's first-run fullscreen help button, never game UI."""
+    for node in ET.fromstring(xml).iter('node'):
+        if (node.get('package') in ('android', 'com.android.systemui') and
+                node.get('text', '').strip().upper() == 'GOT IT' and
+                node.get('clickable') == 'true'):
+            bounds = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
+            if bounds:
+                x0, y0, x1, y1 = map(int, bounds.groups())
+                if x1 > x0 and y1 > y0:
+                    return [(x0 + x1) // 2, (y0 + y1) // 2]
+    return None
+
+
+def runtime_errors(text):
+    return [line for line in text.splitlines() if re.search(
+        r'(?:SCRIPT ERROR:|(?:Scene|Canvas)ShaderGLES3: Program linking failed|'
+        r'Error loading script|Failed loading resource|Can.t open dynamic library)', line)]
 
 
 def read_observations(text):
@@ -99,8 +120,29 @@ class Session:
     def capture(self, name):
         (self.output / f'{name}.png').write_bytes(self.adb('exec-out', 'screencap', '-p'))
 
+    def require_runtime_clean(self):
+        self.snapshot()
+        errors = runtime_errors((self.output / 'logcat.txt').read_text())
+        if errors:
+            raise RuntimeError('Android game reported rendering/script/resource failures: ' + '\n'.join(errors))
+
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
+
+    def dismiss_fullscreen_help(self, state):
+        path = '/sdcard/scraperx-compatibility-ui.xml'
+        self.adb('shell', 'uiautomator', 'dump', '--compressed', path)
+        xml = self.adb('shell', 'cat', path).decode()
+        (self.output / 'opening-system-ui.xml').write_text(xml)
+        point = fullscreen_confirmation(xml)
+        if point is not None:
+            self.tap(point)
+            state = self.wait('ordinary touch dismisses Android fullscreen help',
+                              lambda s: s['instance'] == state['instance'], after=state)
+            self.adb('shell', 'uiautomator', 'dump', '--compressed', path)
+            if fullscreen_confirmation(self.adb('shell', 'cat', path).decode()) is not None:
+                raise RuntimeError('Android fullscreen help still intercepts game input after confirmation')
+        return self.resume(state) if state['paused'] else state
 
     def button(self, state, name):
         if name not in state['controls']:
@@ -197,8 +239,10 @@ def exercise(args, session):
         raise RuntimeError(f'Android compatibility: no launcher activity for {PACKAGE}: {activity!r}')
     session.adb('logcat', '-c')
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
-    state = session.wait('normal Main becomes playable with real native module',
-                         lambda s: s['ready'] and s['native_loaded'] and not s['paused'], timeout=240)
+    state = session.wait('normal Main initializes with real native module',
+                         lambda s: s['ready'] and s['native_loaded'], timeout=240)
+    state = session.dismiss_fullscreen_help(state)
+    session.require_runtime_clean()
     if not math.isclose(state['fixed_step_s'], 1 / 90, abs_tol=1e-7):
         raise RuntimeError(f'Android compatibility: native step changed: {state["fixed_step_s"]}')
     if state['source']['source_sha'] != args.source:
@@ -274,6 +318,7 @@ def exercise(args, session):
                          lambda s: s['instance'] != before['instance'] and s['ready'] and
                          s['settings_sha256'] == settings_hash, after=before, timeout=240)
     session.capture('restarted')
+    session.require_runtime_clean()
     session.adb('shell', 'wm', 'size', 'reset')
     session.receipt['status'] = 'passed'
 

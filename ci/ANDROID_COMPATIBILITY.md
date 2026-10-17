@@ -72,7 +72,13 @@ remain required before setting store exclusions or claiming broad support.
 Observer messages are split into base64 packets below Android's per-print
 limit. Only a complete observation from one instance and sequence is accepted;
 a truncated or missing packet cannot count as playable state.
-The CI renderer uses the supported `swiftshader` backend instead of deprecated
-`swiftshader_indirect`. The previous backend rejected built-in Godot scene and
+The CI renderer uses the supported `swangle` backend instead of deprecated
+`swiftshader_indirect`. Plain `swiftshader` also selects the old implementation
+on Linux; SwANGLE uses ANGLE over the newer SwiftShader Vulkan backend.
+The previous backend rejected built-in Godot scene and
 canvas shaders on all three booted profiles. Game lighting is unchanged;
 successful rendering still requires actual emulator observations.
+The driver rejects shader-link/script/resource failures even when the native
+simulation starts. It dismisses Android's first-run fullscreen help through
+the actual system button before driving the game; a system overlay is not
+evidence that a game control is broken.
