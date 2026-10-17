@@ -1,0 +1,188 @@
+{
+  "native_source": "1338fb41ff99e6f1a686c33f0f6c289d05dab91b",
+  "base_revision": "1b8737c12273776e028c0d5d1f167b12b83d428b",
+  "changed_path": "tests/west_brace_bay_route_tests.cpp",
+  "scope": "Linux ARM64/proot public native route; x86_64 focused CI pending; no phone-play claim",
+  "baseline_route": {
+    "argv": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/west-route"
+    ],
+    "exit": 1,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/baseline-route.log",
+    "result": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nFAIL WEST_BRACE_BAY actual airborne bar grip is exposed to touch Action tick=1124 pos=-23.1292,384.334,-137.568 velocity=0.0117429,0.0499996,0.0109653 grounded=0 support=0 traversal=0 traversal_support=0 grip=0:0 hands=0 hand_l=0,0,0 hand_r=0,0,0 gravity=1 landings=4 deaths=0"
+  },
+  "old_owner_comparison": {
+    "question": "Does changing only the transfer owner restore the old public bar approach?",
+    "steps": [
+      {
+        "name": "old-owner-build",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-DNDEBUG",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/src",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-pthread",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/src_sim_simulation_hand_transfer.cpp.o",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/src/sim/simulation/hand_transfer.cpp"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/old-owner-build.log"
+      },
+      {
+        "name": "old-owner-archive",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "ar",
+          "rcs",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/libscraperx_sim-old-transfer.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/src_sim_simulation_hand_transfer.cpp.o"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/old-owner-archive.log"
+      },
+      {
+        "name": "old-owner-link",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/tests/west_brace_bay_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/libscraperx_sim-old-transfer.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/west-route-old-transfer"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/old-owner-link.log"
+      },
+      {
+        "name": "old-owner-route",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/west-route-old-transfer"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/old-owner-route.log"
+      }
+    ]
+  },
+  "supported_approach": {
+    "question": "Does ordinary supported approach restore the original west route without reverting flowing top-out?",
+    "native_source": "1338fb4",
+    "steps": [
+      {
+        "name": "candidate-build",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/source/tests/west_brace_bay_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/west-route-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/candidate-build.log"
+      },
+      {
+        "name": "candidate-route",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/west-route-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/candidate-route.log"
+      }
+    ],
+    "test_sha256": "f0fcfefb771112affe98eedf74bd3a43473eef26e8939e2f6205d382b27621ad"
+  },
+  "supported_approach_output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nWEST_BAR_APPROACH from=-23.3847,-137.673 to=-23.7337,-137.602 tick=1003 firm=1\nWEST_BAR_APPROACH from=-23.9044,-137.586 to=-23.7676,-137.598 tick=1176 firm=1\nPASS WEST_BRACE_BAY lower374.25/diagonal-climb381.9/jump-Action-bar/lateral-miss-recovery-retry/reverse-ascent389.4/final-mantle396.25/onward ordinary_inputs_only=1",
+  "sha256": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-west-flow-repair-20261017/build/libscraperx_sim.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/west_brace_bay_route_tests.cpp": "f0fcfefb771112affe98eedf74bd3a43473eef26e8939e2f6205d382b27621ad"
+  },
+  "focused_ci_checks": [
+    "scraperx_sim.west_brace_bay_route",
+    "scraperx_sim.physical_topout_onward_run"
+  ]
+}

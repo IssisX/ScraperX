@@ -126,9 +126,48 @@ void climb_to_shelf(Simulation &s, double top_y, double side_input,
     require(on_support_top(s.snapshot(), top_y, expected_support), why, s);
 }
 
-// From a real shelf, face and jump toward the bar. Press Action once the
+void approach_bar_on_shelf(Simulation &s) {
+    // A flowing top-out can finish anywhere on the receiving shelf. Walk
+    // into actual hand reach before testing the deliberate jump/catch; the
+    // transfer no longer brakes the player onto the old takeoff position.
+    constexpr double target_x = -23.75;
+    constexpr double target_z = -137.60;
+    const auto entry = s.snapshot();
+    bool ready = false;
+    for (int i = 0; i < 180; ++i) {
+        const auto v = s.snapshot();
+        require(on_support_top(v, 381.9, kRouteEntity) &&
+                    v.player_position.x > -24.18 && v.player_position.x < -22.95 &&
+                    v.player_position.z > -138.34 && v.player_position.z < -137.06,
+                "bar approach stays on the actual first shelf without hand support", s);
+        const double dx = target_x - v.player_position.x;
+        const double dz = target_z - v.player_position.z;
+        if (std::hypot(dx, dz) < .04 &&
+            std::hypot(v.player_linear_velocity.x, v.player_linear_velocity.z) < .12 &&
+            v.checkpoint_footing_valid) {
+            ready = true;
+            break;
+        }
+        const double ix = 1.8 * dx - .28 * v.player_linear_velocity.x;
+        const double iz = 1.8 * dz - .28 * v.player_linear_velocity.z;
+        const double scale = std::max(1.0, std::hypot(ix, iz) / .4);
+        require(s.set_facing(-1, 0) && s.set_move_input(ix / scale, iz / scale),
+                "ordinary supported walking approaches the reachable bar", s);
+        tick(s);
+    }
+    require(ready, "bar approach reaches firm bounded takeoff footing within two seconds", s);
+    require(s.set_move_input(0, 0), "release the approach stick before Jump", s);
+    const auto at = s.snapshot();
+    std::cout << "WEST_BAR_APPROACH from=" << entry.player_position.x << ','
+              << entry.player_position.z << " to=" << at.player_position.x << ','
+              << at.player_position.z << " tick=" << at.tick_index
+              << " firm=" << at.checkpoint_footing_valid << '\n';
+}
+
+// From a real shelf, approach and jump toward the bar. Press Action once the
 // upward arc reaches its apex; it must acquire the actual horizontal member.
 void jump_and_catch_bar(Simulation &s, const char *why) {
+    approach_bar_on_shelf(s);
     const auto verify_bar_catch = [&]() {
         require_climbing(s, why);
         const auto v = s.snapshot();
@@ -216,6 +255,7 @@ void traverse_laterally(Simulation &s, double direction, int ticks, const char *
 }
 
 void miss_apex_and_recover(Simulation &s) {
+    approach_bar_on_shelf(s);
     const auto entry = s.snapshot();
     require(entry.player_grounded && entry.support_entity_id == kRouteEntity,
             "miss begins on the lower route shelf", s);

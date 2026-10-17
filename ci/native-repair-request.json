@@ -1,13 +1,7 @@
 {
-  "reason": "Combined source: owner-approved18m/s rigid-impact rule with unchanged catch mechanics, plus real open-backed ballast pocket retaining a falling/rotating block. Preserve original catch lethality/safety/energy/settling and split-route/recovery expectations.",
+  "reason": "Restore the complete west-brace route with an ordinary supported bar approach after flowing top-out. Preserve actual reach, failed-catch recovery, real hand anchors and onward top-out momentum. Both checks must pass on the same native archive.",
   "checks": [
-    "catch_net_model",
-    "catch_net_force_phase",
-    "catch_net_contact_friction",
-    "soft_velocity",
-    "catch_net_player",
-    "landing_response",
-    "split_inspection_route",
-    "split_inspection_recovery"
+    "west_brace_bay_route",
+    "physical_topout_onward_run"
   ]
 }

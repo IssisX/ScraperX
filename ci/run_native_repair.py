@@ -7,6 +7,8 @@ import subprocess
 
 
 OWNERS = {
+    "west_brace_bay_route": "scraperx_west_brace_bay_route_tests",
+    "physical_topout_onward_run": "scraperx_physical_topout_tests",
     "freight_yard_arrival": "scraperx_freight_yard_arrival_tests",
     "forklift_tool_exchange": "scraperx_forklift_tool_exchange_tests",
     "warehouse_forklift": "scraperx_warehouse_forklift_tests",
