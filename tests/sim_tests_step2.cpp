@@ -11,9 +11,10 @@ void run_step2_movement() {
 
     // ---- Step 2 movement (03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md §8) --
     //
-    // Sprint: held with the stick forward the body runs at 8 m/s, and a jump
-    // keeps that speed in the air and carries past where a walking jump
-    // lands. Crouched, or with the stick across the facing, it walks.
+    // Sprint: held with the stick forward the body runs at 8 m/s at once,
+    // gathering on toward flow's 9 (run_flow), and a jump keeps that speed in
+    // the air and carries past where a walking jump lands. Crouched, or with
+    // the stick across the facing, it walks.
     Simulation sprint(InitialSpawn::Deck154);
     require(sprint.advance_frame(1.0).accepted, "the sprint settle interval must be accepted");
     // Runs along the deck, east (+1) or west (-1).
@@ -65,8 +66,8 @@ void run_step2_movement() {
     double walk_jump = 0.0;
     double walk_air_slowest = 0.0;
     jump_east(walk_jump, walk_air_slowest, -1.0);
-    require(sprint_flag && sprint_peak >= 7.9 && sprint_peak <= 8.05,
-            "sprinting, the body must run at 8 m/s");
+    require(sprint_flag && sprint_peak >= 7.9 && sprint_peak <= 9.05,
+            "sprinting, the body must run at 8 m/s, gathering on to at most 9");
     require(sprint_air_slowest >= 7.9, "a sprinting jump must keep its speed in the air");
     require(sprint_jump >= walk_jump + 2.0,
             "a sprinting jump must carry at least 2 m past a walking one");

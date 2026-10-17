@@ -26,6 +26,7 @@ const SCENARIOS := {
 	"touch_wall_run": 41,
 	"touch_wall_climb": 0,
 	"touch_tuck": 0,
+	"touch_flow": 8,
 	"touch_crouch": 0,
 	"touch_slide": 0,
 	"touch_hang_drop": 5,
@@ -240,6 +241,8 @@ func _run() -> void:
 			ok = await _touch_wall_climb()
 		"touch_tuck":
 			ok = await _touch_tuck()
+		"touch_flow":
+			ok = await _touch_flow()
 		"touch_crouch":
 			ok = await _touch_crouch()
 		"touch_slide":

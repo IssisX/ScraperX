@@ -310,6 +310,51 @@ func _touch_tuck() -> bool:
 	_detail = "landed_z=%.2f" % _position().z
 	return true
 
+# Flow (sim kFlowSpeedMps): on the open ground east of the start, the stick
+# pushed past its ring and held: 8 m/s at once, gathering to 9 over a couple
+# of seconds of clean running, the view widening with it; JUMP carries all
+# of it through the air.
+func _touch_flow() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	await _face(Vector2(1.0, 0.0))
+	await _seconds(0.3)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	await _seconds(0.75)
+	var early := _run_speed()
+	var early_fov: float = _main._camera.fov
+	await _seconds(1.9)
+	var gathered := _run_speed()
+	var gathered_fov: float = _main._camera.fov
+	await _pose("flow")
+	_tap(2, _center(&"jump"))
+	var up: bool = await _wait_until(func() -> bool: return not bool(_native().is_player_grounded()), 0.4)
+	if not up:
+		_move(InputRouter.Device.TOUCH, 0.0)
+		return _fail("JUMP did not leave the ground")
+	var least := 99.0
+	var flown := 0.0
+	while not bool(_native().is_player_grounded()) and flown < 2.0:
+		least = minf(least, _run_speed())
+		await get_tree().process_frame
+		flown += get_process_delta_time()
+	_move(InputRouter.Device.TOUCH, 0.0)
+	_detail = "early_mps=%.2f gathered_mps=%.2f in_air_mps=%.2f fov=%.1f->%.1f" % [
+		early, gathered, least, early_fov, gathered_fov]
+	if early > 8.4:
+		return _fail("the sprint was at flow's speed at once (%.2f m/s)" % early)
+	if gathered < 8.9:
+		return _fail("a sprint kept up did not gather to flow's speed (%.2f m/s)" % gathered)
+	if least < 8.85:
+		return _fail("the jump did not keep the run's speed (%.2f m/s)" % least)
+	if bool(_main._speed_fov_on) and gathered_fov < early_fov + 1.5:
+		return _fail("the view did not widen with the run's flow (%.1f -> %.1f)" % [early_fov, gathered_fov])
+	return true
+
+func _run_speed() -> float:
+	var v: Vector3 = _native().get_player_linear_velocity()
+	return Vector2(v.x, v.z).length()
+
 # The same rail, vaulted with JUMP twice and ACTION never touched.
 func _touch_double_tap_vault() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)

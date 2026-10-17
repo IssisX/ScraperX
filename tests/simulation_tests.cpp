@@ -24,6 +24,7 @@ int main() {
         run_wall_run();
         run_wall_climb();
         run_tuck();
+        run_flow();
         run_hook();
         run_workers();
         run_c7();
@@ -40,6 +41,7 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "climb") {
         run_wall_climb();
         run_tuck();
+        run_flow();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
@@ -294,6 +296,7 @@ int main() {
     run_wall_run();
     run_wall_climb();
     run_tuck();
+    run_flow();
     run_hook();
     run_workers();
     run_c7();

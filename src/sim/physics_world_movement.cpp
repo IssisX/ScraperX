@@ -725,10 +725,16 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         if (balance < 0.8) {
             sprinting_ = false;
         }
-        const float full_speed = (sprinting_
-                                      ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
-                                      : kPlayerMaximumRelativeSpeed * carry_speed_scale()) *
-                                 static_cast<float>(0.45 + 0.55 * balance);
+        float stride_speed = kPlayerMaximumRelativeSpeed * carry_speed_scale();
+        if (sprinting_) {
+            // See kFlowSpeedMps: the sprint runs at what the body carries,
+            // gathering on, between the sprint's speed and flow's.
+            const JPH::Vec3 relative = player_velocity - reference_velocity;
+            const float carried = JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length();
+            const float sprint = static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale);
+            stride_speed = std::clamp(carried + kFlowGatherMps2 * delta_seconds, sprint, kFlowSpeedMps);
+        }
+        const float full_speed = stride_speed * static_cast<float>(0.45 + 0.55 * balance);
         if (sliding_ && !crouched_) {
             sliding_ = false;
         }

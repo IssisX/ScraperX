@@ -517,6 +517,15 @@ constexpr std::uint32_t kReleaseRegrabLockoutTicks = 27;
 // Sprint: 8.0 m/s against the 5.5 walk, with the stick at least 0.7 and
 // within 45 degrees of the facing.
 constexpr double kSprintSpeedScale = 8.0 / 5.5;
+// Flow (Mirror's Edge's speed, gathered and kept): past the sprint's 8 m/s a
+// run kept up gathers on toward kFlowSpeedMps at kFlowGatherMps2. The legs
+// run at what the body carries, so whatever a move brought in -- a vault, a
+// roll, a wall-run, a slide, a jump -- is kept, and whatever a collision, a
+// heavy landing or a stop took has to be gathered again from the sprint's
+// speed. CHOSEN: 9 m/s (a fast runner's flat-out; a sprinter's is 10-12),
+// 8 to 9 in about 1.7 s of clean running.
+constexpr float kFlowSpeedMps = 9.0F;
+constexpr float kFlowGatherMps2 = 0.6F;
 constexpr double kSprintMinimumInput = 0.7;
 constexpr double kSprintMaximumAngleCos = 0.7071;
 // A hold: a member a hand can close round -- its two thinner dimensions at

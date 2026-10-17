@@ -437,13 +437,17 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	_wind.pitch_scale = lerpf(1.0, 0.86, exposure) + 0.06 * (gust - 0.5)
 	_drone_db = lerpf(_drone_db, lerpf(-13.0, -24.0, altitude), 1.0 - exp(-1.5 * delta))
 	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
-	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
+	# A run gathered past the sprint into flow hears the air tear past too,
+	# softer than a fall's.
+	var flow := clampf((Vector2(velocity.x, velocity.z).length() - 7.5) / 1.5, 0.0, 1.0)
+	var rush := maxf(sqrt(fall), 0.45 * flow)
+	var rush_db := lerpf(-60.0, -2.0, rush) if rush > 0.0 else -60.0
 	_rush_db = lerpf(_rush_db, rush_db, 1.0 - exp(-6.0 * delta))
 	_duck_db = lerpf(_duck_db, VOICE_DUCK_DB if _voice_tier != &"" else 0.0, 1.0 - exp(-8.0 * delta))
 	_wind.volume_db = _wind_db - _duck_db
 	_drone.volume_db = _drone_db - _duck_db
 	_rush.volume_db = _rush_db - _duck_db
-	_rush.pitch_scale = lerpf(0.9, 1.35, fall)
+	_rush.pitch_scale = lerpf(0.9, 1.35, maxf(fall, 0.3 * flow))
 
 
 # The fear voice's state machine, once per frame. Between lines of one fall

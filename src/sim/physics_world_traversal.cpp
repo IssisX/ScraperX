@@ -268,7 +268,8 @@ void Simulation::PhysicsWorld::begin_vault(JPH::BodyInterface &bodies,
                        0.0F,
                        player_velocity.GetZ() - support_velocity.GetZ());
     const float relative_speed = relative.Length();
-    const float speed_cap = kPlayerMaximumRelativeSpeed * static_cast<float>(kSprintSpeedScale);
+    // A vault keeps the run's speed, flow's included (kFlowSpeedMps).
+    const float speed_cap = kFlowSpeedMps;
     if (relative_speed > speed_cap) {
         relative = relative * (speed_cap / relative_speed);
     }

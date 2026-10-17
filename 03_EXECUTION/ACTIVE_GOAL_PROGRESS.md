@@ -914,6 +914,18 @@ rear wheels off at 1.4 cm of rise, nose down 9.9 degrees, back on its wheels whe
 `touch_forklift`, `touch_forklift_strain` (the same through the touch controls: the strain felt
 in the hands, the lift-off and the mast heard, the slam heard and felt).
 
+**Flow: speed built and kept (2026-10-17; the research's first).** A sprint still reaches its 8
+m/s at once, so every route tuned to it stands; held on cleanly, it gathers on toward 9 m/s at
+0.6 m/s each second (8 to 9 in about 1.7 s). The legs run at what the body carries, so whatever a
+move brought in is kept -- a jump, a clean landing, a vault (a vault now carries up to 9 m/s, not
+8), a wall-run, a slide -- and whatever a collision, a heavy landing (its balance debt) or a stop
+took has to be gathered again from 8. No meter: the speed itself is the state. Felt: the view
+widens on as the run gathers (4 degrees more by 9 m/s), and the air tears past, softer than a
+fall's. Proof: native `flow` (8.2 m/s at 0.75 s, 9 at 2.5 s, 9 through a jump and run on after
+it, 8.1 after letting go and running again; the sprint test now allows the gather) and
+`touch_flow` (the same through the touch stick: 8.23 to 9.00 m/s, 9.00 in the jump, the view
+86 to 90 degrees).
+
 **Mirror's Edge research (2026-10-17; the owner: the movement alone should be a reason to play).**
 What its running is made of, against what ScraperX has. Already here: run and sprint, the
 wall-run, the kick off a wall, the wall climb, the tuck (its coil), the slide, vaults and the

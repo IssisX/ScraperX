@@ -1187,3 +1187,55 @@ void run_tuck() {
     require(straight.tucks == 0 && straight.end_z > -13.0, "tuck: the legs left down, the jump strikes the beam");
     std::cout << "PASS scraperx_sim tuck: clearance_m=" << tucked.lowest_over_beam - 1.85 << "\n";
 }
+
+// Flow (kFlowSpeedMps): on the open ground east of the start, a sprint held
+// reaches the sprint's 8 m/s at once and gathers on, not at once, to 9; a
+// jump carries all of it through the air and the legs run on at it after
+// a clean landing; let go, it is lost, and gathered again from the sprint's.
+void run_flow() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    const auto speed = [](const Simulation &s) {
+        const auto v = s.snapshot().player_linear_velocity;
+        return std::hypot(v.x, v.z);
+    };
+    const auto run = [](Simulation &s, const double seconds, const bool held) {
+        for (int tick = 0; tick < static_cast<int>(seconds * Simulation::kTickRateHz); ++tick) {
+            (void)s.set_facing(1.0, 0.0);
+            (void)s.set_move_input(held ? 1.0 : 0.0, 0.0);
+            (void)s.set_sprint_input(held);
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "flow tick");
+        }
+    };
+    Simulation s(InitialSpawn::ExteriorGrade);
+    require(s.advance_frame(0.5).accepted, "flow: settle");
+    run(s, 0.75, true);
+    const double early = speed(s);
+    run(s, 1.75, true);
+    const double gathered = speed(s);
+    require(s.request_jump(), "flow: the jump");
+    double least_in_air = 99.0;
+    bool landed = false;
+    for (int tick = 0; tick < 2 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++tick) {
+        run(s, 1.0 / Simulation::kTickRateHz, true);
+        const auto now = s.snapshot();
+        if (!now.player_grounded) {
+            least_in_air = std::min(least_in_air, speed(s));
+        } else if (tick > 9) {
+            landed = true;
+        }
+    }
+    run(s, 0.3, true);
+    const double kept = speed(s);
+    run(s, 0.4, false);
+    run(s, 0.5, true);
+    const double regathering = speed(s);
+    std::cout << "  flow: " << early << " m/s at 0.75 s, " << gathered << " at 2.5 s, at least " << least_in_air
+              << " in the jump, " << kept << " run on after it; let go and run again, " << regathering << "\n";
+    require(early >= 7.95 && early < 8.4, "flow: the sprint's speed at once, flow's not yet");
+    require(gathered > 8.95, "flow: a sprint kept up gathers to flow's speed");
+    require(landed && least_in_air > 8.9 && kept > 8.9, "flow: a jump and a clean landing keep it");
+    require(regathering < 8.5, "flow: let go, it is lost and has to be gathered again");
+    std::cout << "PASS scraperx_sim flow: gathered_mps=" << gathered << " kept_mps=" << kept << "\n";
+}
+

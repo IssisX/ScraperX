@@ -29,6 +29,11 @@ const VIEW_PITCH_CLIMBING := 0.18
 const VIEW_PITCH_RATE := 9.0
 const CHECKPOINT_TOAST_RISE_METERS := 3.0
 const FOV_SPRINT_MAX_DEGREES := 4.0
+# Flow (sim kFlowSpeedMps): the view widens on as the run gathers from the
+# sprint's 8 m/s to flow's 9.
+const FOV_FLOW_DEGREES := 4.0
+const FLOW_FROM_MPS := 8.0
+const FLOW_FULL_MPS := 9.0
 const FOV_FALL_MAX_DEGREES := 3.0
 const FOV_FALL_FULL_MPS := 14.0
 const LANDING_DIP_DURATION_SECONDS := 0.22
@@ -682,7 +687,8 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
 
-	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
+	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + \
+		FOV_FLOW_DEGREES * smoothstep(FLOW_FROM_MPS, FLOW_FULL_MPS, horizontal_speed) + parkour_fov
 	var fov_fall := 0.0
 	if not grounded and velocity.y < 0.0:
 		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)

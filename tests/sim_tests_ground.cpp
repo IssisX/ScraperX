@@ -303,13 +303,14 @@ void run_teeter() {
         double slowest_teeter_mps;   // lowest horizontal speed seen while teetering
         bool restore_clears = false;  // a load taken mid-teeter publishes no teeter
     };
-    // Back 6 m from the edge, run at it, and at `release` metres short of the
-    // edge set the stick to `stick_z`.
+    // Back 5.5 m from the edge, run at it, and at `release` metres short of
+    // the edge set the stick to `stick_z`. The run-up is short: the sprint
+    // arrives at its own 8 m/s, not yet gathered on into flow (run_flow).
     const auto attempt = [&](const double release, const double stick_z, const bool sprint,
                              const bool check_restore = false) {
         Simulation sim(InitialSpawn::Deck4South);
         require(sim.set_facing(0.0, -1.0) && sim.set_move_input(0.0, -1.0), "inputs must be accepted");
-        require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z < edge_z - 7.0; }, 6.0),
+        require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z < edge_z - 5.5; }, 6.0),
                 "the walk back must get there");
         require(sim.set_facing(0.0, 1.0) && sim.set_move_input(0.0, 1.0) && sim.set_sprint_input(sprint),
                 "inputs must be accepted");
