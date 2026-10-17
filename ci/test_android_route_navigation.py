@@ -1,8 +1,11 @@
 """Sampled steering checks; the model is not Android/Jolt gameplay proof."""
 import math
 import unittest
+from copy import deepcopy
+from unittest.mock import patch
 
-from android_freight_route import _walking_intent
+from android_crane_route import _travel
+from android_freight_route import _walk, _walking_intent
 
 
 def sampled_approach(controller, hold_s, start, target, caps):
@@ -42,7 +45,118 @@ def sampled_approach(controller, hold_s, start, target, caps):
     return 'exhausted', 100, math.dist(position, target)
 
 
+class GradeSession:
+    """Rounded touch + finite acceleration plant at captured observer cadence.
+
+    Each observation advances 9 native ticks; software rendering costs ten
+    wall seconds per native second. Injection/acceptance takes 27 ticks and
+    release/cleanup 45. A 100 ms pulse plus the next observation totals 90
+    ticks, inside the captured 81–99 tick cycles. This excludes Jolt/contact.
+    """
+    def __init__(self, start, *, blocked=False):
+        self.wall = 0.0
+        self.blocked = blocked
+        self.held = False
+        self.holds = 0
+        self.state = {'instance': 'grade', 'ready': True, 'native_loaded': True,
+                      'paused': False, 'operating': '', 'grounded': True, 'support': 1,
+                      'position': [start[0], 0.9, start[1]], 'velocity': [0.0, 0.0, 0.0],
+                      'tick': 100, 'fixed_step_s': 1 / 90, 'yaw': 0.0,
+                      'stick': [65, 385], 'stick_up': [65, 362],
+                      'crane': {'connected': True, 'failure': 0, 'load_point': [0, 4, 0],
+                                'hoist_m': 30, 'work_j': 0, 'source_used_j': 0,
+                                'hoist_cmd': 0, 'slew_cmd': 0, 'trolley_cmd': 0}}
+
+    def advance(self, intent, ticks):
+        for _ in range(ticks):
+            self.state['tick'] += 1
+            self.wall += 10 / 90
+            velocity = self.state['velocity'][::2]
+            change = [5.5 * desired - actual for desired, actual in zip(intent, velocity)]
+            length = math.hypot(*change)
+            scale = min(1.0, 22 / 90 / length) if length else 1.0
+            for axis, actual, delta in zip((0, 2), velocity, change):
+                self.state['velocity'][axis] = 0.0 if self.blocked else actual + delta * scale
+                self.state['position'][axis] += self.state['velocity'][axis] / 90
+
+    def swipe(self, start, end, duration_ms, *, until=None):
+        self.holds += 1
+        self.held = True
+        # Invert the existing stick radial deadzone after actual pixel rounding.
+        local = [(round(end[0]) - round(start[0])) / 34.5,
+                 (round(start[1]) - round(end[1])) / 34.5]
+        magnitude = math.hypot(*local)
+        scale = max(0.0, min(1.0, (magnitude - 0.1) / 0.9)) / magnitude if magnitude else 0
+        intent = (local[0] * scale, -local[1] * scale)
+        try:
+            self.advance(intent, 27)
+            if until is None:
+                self.advance(intent, math.ceil(duration_ms / 1000 * 90))
+            else:
+                deadline = self.wall + 90
+                while not until(self.state):
+                    if self.wall >= deadline:
+                        raise RuntimeError('fixture required game response never arrived')
+                    self.advance(intent, 9)
+            return deepcopy(self.state)
+        finally:
+            self.held = False
+            self.advance((0, 0), 45)
+
+    def wait(self, label, predicate, **kwargs):
+        self.advance((0, 0), 9)
+        if not predicate(self.state):
+            raise RuntimeError('fixture rejected observation: ' + label)
+        return deepcopy(self.state)
+
+
 class AndroidRouteNavigationTests(unittest.TestCase):
+    def test_sustained_crane_travel_rejects_captured_slow_pulse_approach(self):
+        start, target = (-83.18502045, -63.18006134), (-83.15859, -69.10938)
+        baseline = GradeSession(start)
+        arrived = lambda s: math.dist(s['position'][::2], target) < 0.20
+        with patch('android_crane_route.time.monotonic', lambda: baseline.wall), \
+             self.assertRaisesRegex(RuntimeError, 'navigation deadline expired'):
+            _walk(baseline, deepcopy(baseline.state), 'captured crane piece', lambda s: target,
+                  caps=(0.55, 0.55), arrived=arrived, timeout=120)
+        self.assertFalse(baseline.held)
+        repaired = GradeSession(start)
+        with patch('android_crane_route.time.monotonic', lambda: repaired.wall):
+            state = _travel(repaired, deepcopy(repaired.state), 'captured crane piece', target)
+        self.assertLess(math.dist(state['position'][::2], target), 0.20)
+        self.assertTrue(state['grounded'])
+        self.assertLess(state['position'][1], 1.0)
+        self.assertLess(repaired.wall, 120)
+        self.assertLess(repaired.holds, baseline.holds)
+        self.assertFalse(repaired.held)
+
+    def test_sustained_crane_travel_fails_without_physical_progress_and_releases(self):
+        session = GradeSession((-83.18502045, -63.18006134), blocked=True)
+        with patch('android_crane_route.time.monotonic', lambda: session.wall), \
+             self.assertRaisesRegex(RuntimeError, 'required game response never arrived'):
+            _travel(session, deepcopy(session.state), 'blocked crane piece', (-83.15859, -69.10938))
+        self.assertFalse(session.held)
+        self.assertEqual(session.state['position'], [-83.18502045, 0.9, -63.18006134])
+
+    def test_long_crane_service_strip_retains_bounded_ground_checkpoints(self):
+        session = GradeSession((-83.18502045, -57.62761307))
+        target = (-83.0, -138.0)
+        with patch('android_crane_route.time.monotonic', lambda: session.wall):
+            state = _travel(session, deepcopy(session.state), 'long service strip', target)
+        self.assertLess(math.dist(state['position'][::2], target), 0.20)
+        self.assertGreater(session.wall, 120)  # One unsplit hold cannot satisfy its deadline.
+        self.assertLess(session.wall, 14 * 120)
+        self.assertTrue(state['grounded'])
+        self.assertFalse(session.held)
+
+    def test_sustained_crane_travel_never_accepts_airborne_endpoint(self):
+        session = GradeSession((-83.18502045, -69.0))
+        session.state['grounded'] = False
+        with patch('android_crane_route.time.monotonic', lambda: session.wall), \
+             self.assertRaisesRegex(RuntimeError, 'required game response never arrived'):
+            _travel(session, deepcopy(session.state), 'airborne endpoint', (-83.15859, -69.10938))
+        self.assertFalse(session.held)
+
     def test_direction_and_dimensioned_speed(self):
         wx, wz = _walking_intent((0, 0), (0, 0), (1, -1), (0.55, 0.55), 0.4)
         self.assertAlmostEqual(5.5 * wx, 1 / 0.8)

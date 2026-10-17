@@ -163,10 +163,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: compact-api24
-            api: 24
-            device: Nexus 5X
-            resize: 960x540
+          - name: compact-api34
+            api: 34
+            device: pixel_6a
+            resize: 1440x720
           - name: tall-api36
             api: 36
             device: pixel_7

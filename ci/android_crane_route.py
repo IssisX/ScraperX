@@ -5,8 +5,10 @@ screen observations. This module reads native observations and sends ordinary
 Android touches only. Host contract checks do not establish Android gameplay.
 """
 import math
+import time
 
-from android_freight_route import _angle, _finite, _fresh, _healthy, _swipe, _walk
+from android_freight_route import (_angle, _finite, _fresh, _healthy, _swipe,
+                                   _walk, _walking_intent, stick_endpoint)
 
 
 BOOTH_ENTITY = 1450
@@ -43,8 +45,52 @@ def _neutral(state):
                for key in ('hoist_cmd', 'slew_cmd', 'trolley_cmd'))
 
 
+def _walk_grade(session, state, label, target, *, caps, arrived):
+    """Hold ordinary walking input through measured progress before releasing.
+
+    A 100 ms pulse followed by slow ADB release/observation spends most of the
+    cycle braking. Sizing its next speed from that entire cycle compounds the
+    delay. Keep the existing initial observation allowance, but sustain each
+    command until half the remaining distance is covered. Near the target,
+    only the original grounded-grade arrival predicate ends the hold.
+    """
+    deadline = time.monotonic() + 120
+    instance = state['instance']
+    best, stalled = math.inf, 0
+    for pulse in range(100):
+        if arrived(state):
+            return state
+        _require(time.monotonic() < deadline, f'{label}: navigation deadline expired', state)
+        _require(state['operating'] == '', f'{label}: walking requires leaving controls', state)
+        px, _, pz = _finite(state['position'], 'walking position')
+        vx, _, vz = _finite(state['velocity'], 'walking velocity')
+        distance = math.hypot(target[0] - px, target[1] - pz)
+        if distance < best - 0.035:
+            best, stalled = distance, 0
+        else:
+            stalled += 1
+        _require(stalled < 12, f'{label}: no 3.5 cm progress in twelve holds; '
+                 f'target={target!r}, best_distance_m={best:.3f}', state)
+        wx, wz = _walking_intent((px, pz), (vx, vz), target, caps, 0.4)
+
+        def progressed(actual):
+            _healthy(actual, instance)
+            _require(time.monotonic() < deadline, f'{label}: navigation deadline expired', actual)
+            _require(actual['operating'] == '', f'{label}: walking requires leaving controls', actual)
+            if arrived(actual):
+                return True
+            # The final 40 cm hold must reach the original 20 cm arrival.
+            return distance > 0.40 and math.hypot(actual['position'][0] - target[0],
+                                                  actual['position'][2] - target[1]) <= distance / 2
+
+        before = state
+        session.swipe(state['stick'], stick_endpoint(state, wx, wz), 100, until=progressed)
+        state = _fresh(session, f'{label}: observed native hold {pulse + 1}', before)
+    raise RuntimeError(f'Crane route: {label}: exceeded 100 touch holds; actual state={state!r}')
+
+
 def _travel(session, state, label, destination, *, caps=(0.55, 0.55)):
-    """Split long straight legs to retain the existing pulse/stall bounds."""
+    """Retain the six-meter checkpoints and their ground-arrival acceptance."""
     instance = state['instance']
     start = _finite((state['position'][0], state['position'][2]), 'leg start')
     pieces = max(1, math.ceil(math.dist(start, destination) / 6.0))
@@ -58,8 +104,8 @@ def _travel(session, state, label, destination, *, caps=(0.55, 0.55)):
                     math.hypot(actual['position'][0] - target[0],
                                actual['position'][2] - target[1]) < 0.20)
 
-        state = _walk(session, state, f'{label} {piece}/{pieces}', lambda s: target,
-                      caps=caps, arrived=arrived, timeout=120)
+        state = _walk_grade(session, state, f'{label} {piece}/{pieces}', target,
+                            caps=caps, arrived=arrived)
     return state
 
 

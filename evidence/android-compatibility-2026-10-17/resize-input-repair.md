@@ -159,3 +159,41 @@ the actual compact route remains required.
 
 Primary owner:
 [Android 7 InputTransport resampleTouchState](https://android.googlesource.com/platform/frameworks/native/+/android-7.0.0_r1/libs/input/InputTransport.cpp#737).
+
+## Current-device scope and crane approach
+
+Owner correction: common capable Android phones, tablets and foldables are the
+target; legacy Android coverage is not. The main compact slot changes from
+API24/Nexus5X to API34/Pixel6a screen geometry. Android14/15/16 are the selected
+software classes. The unchanged API24 compile/signature floor is not a device
+support promise. No more legacy-emulator investigation is part of this slice.
+
+Run39063290401/source3d031c4 compact passed24 checks, including actual touch,
+pause/background and resize; the emulator then lost its control connection
+during process restart after a host EGL error. This remains a failed diagnostic,
+not accepted compatibility. A job-only rerun request returned HTTP403 because
+the containing run was still active; no rerun was started.
+
+Earlier run39062072573/source5867112 tall passed398 checks and the ordinary
+forklift operation/exit before the crane approach timed out. Piece2/14 ended
+0.2116m from its target after13 movement pulses; arrival still requires<0.20m.
+Each short100ms hold was sized from the entire81–99tick move/release/observation
+cycle, repeatedly braking to zero and shrinking the next command. The crane-local
+repair sustains an ordinary touch until measured progress, then releases and
+reobserves. It keeps six-meter checkpoints,120s deadlines, movement caps, native
+ground/identity/crane conditions, actual final arrival and UP cleanup. Shared
+forklift walking is unchanged.
+
+Existing Sol/high implementer command on3d031c4 plus the navigation edits:
+`python -m unittest discover -s ci -p test_android_route_navigation.py -v`:
+10 tests OK. Scoped diffcheck exit0. Root read the actual diff and reused this
+evidence. The deterministic finite-acceleration/rounded-touch model rejects the
+old slow approach, accepts sustained input, and rejects blocked/airborne arrival.
+This model does not establish real Android travel; the route remains unverified.
+
+Tablet3d031c4 passed27 checks, including actual notification-shade pause/frozen
+native ticks, then failed Resume. OS events show game focus returned before the
+tap, so a presumed focus-return race is not established. Startup succeeded in
+this run; the previous early resource-change teardown is not thereby repaired.
+Preserve the actual tablet artifact and diagnose the missing Resume interaction
+before changing its game or harness owner.

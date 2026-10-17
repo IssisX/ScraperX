@@ -24,26 +24,45 @@ without discarding native state, and player settings surviving process restart.
 Timeouts fail; elapsed time alone never establishes success. Screenshots,
 logcat, commands, source SHA and APK checksum are retained per profile.
 
-Initial matrix:
+Main delivery matrix (owner correction: common capable devices, not legacy
+coverage):
 
 | Profile | API | Hardware profile |
 | --- | --- | --- |
-| Compact phone | 24 | Nexus 5X |
+| Compact phone | 34 | Pixel 6a screen profile |
 | Tall phone | 36 | Pixel 7 |
 | Tablet | 36 | Pixel C |
 | Foldable | 35 | SDK 7.6in Foldable |
 
-API 24 matches the existing native compilation floor. API36 also exercises the
-Android version currently targeted by the export toolchain. A green matrix would
-establish only these exercised configurations, not an advertised device floor.
-The compact API24 profile is an older-OS diagnostic, not a promise to support
-old hardware. Android version and simulated screen size do not establish GPU,
+Android14/15/16 cover the selected current phone, tablet and foldable software
+and screen classes. API36 exercises the Android version currently targeted by
+the export toolchain. API24 remains only the unchanged native compilation and
+signature floor; it is not a delivery target. Archived Android7 diagnostic
+failures do not justify more legacy compatibility work. A green matrix would
+establish only the exercised configurations, not an advertised device floor.
+Android version and simulated screen size do not establish GPU,
 RAM, sustained frame time or thermal capacity. Devices unable to deliver the
 intended experience remain unsupported; physics and visual depth are not
 reduced merely to make an old profile pass. Owner correction: no fidelity,
 mechanic, content or physics cuts to widen device support. Improve efficiency
 without changing the intended experience; exclude insufficient hardware.
 Host acceleration and available profiles are captured before emulator launch.
+
+Device priorities follow the owner's common-device scope. Samsung Galaxy S/Ultra
+and capable A-series phones lead; Fold6 remains the existing foldable reference.
+Motorola Moto G/Edge and Google Pixel families are the next US examples.
+For broader markets, Xiaomi/Redmi, OPPO and vivo guide additional coverage.
+These are engineering priorities, not a claim that every model can run the game.
+Counterpoint's [Q2 2026 US shipments](https://counterpointresearch.com/en/insights/us-smartphone-market-share)
+rank Samsung, Motorola and Google as the leading named Android vendors; its
+[Q2 model sales report](https://counterpointresearch.com/en/insights/iphone-17-global-best-selling-smartphone-in-q2-2026)
+identifies the Galaxy S26 Ultra as the best-selling Android model. [IDC's global
+tracker](https://www.idc.com/promo/smartphone-market-share/) informs the other
+large Android vendors. Shipments/sales do not measure the whole installed base.
+One small set of emulator screen/OS classes covers these priorities; a Pixel
+AVD does not emulate Samsung One UI, Motorola software or their actual GPUs.
+Real-device testing must settle vendor behavior and the performance floor.
+
 The foldable driver uses the emulator's physical fold/unfold controls and
 requires Android state readback, changed display bounds and retained native
 identity. A green resize alone is not fold/posture evidence. The tall-phone
