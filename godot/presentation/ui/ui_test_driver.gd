@@ -36,6 +36,7 @@ const SCENARIOS := {
 	"touch_monkey_bars": 39,
 	"touch_swing_launch": 39,
 	"touch_zipline": 25,
+	"touch_zipline_slam": 25,
 	"touch_pipe_gallery": 40,
 	"touch_hook": 39,
 	"touch_hook_rope": 16,
@@ -267,6 +268,8 @@ func _run() -> void:
 			ok = await _touch_swing_launch()
 		"touch_zipline":
 			ok = await _touch_zipline()
+		"touch_zipline_slam":
+			ok = await _touch_zipline_slam()
 		"touch_pipe_gallery":
 			ok = await _touch_pipe_gallery()
 		"touch_hook":

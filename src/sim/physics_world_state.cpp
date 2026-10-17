@@ -364,6 +364,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.corpses_spawned = corpses_->spawned();
     state_.death_point = to_vector3(death_point_);
     state_.death_speed_mps = death_speed_mps_;
+    state_.death_side_on = death_side_on_;
+    state_.hit_count = hit_count_;
+    state_.hit_speed_mps = hit_speed_mps_;
     state_.zipline_riding = zip_riding_;
     state_.zipline_line = zipline_->state().line;
     state_.zipline_ride_count = zipline_->state().rides;

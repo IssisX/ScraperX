@@ -200,7 +200,21 @@ public:
         lock();
         sample_ = {};
         struck_closing_ = 0.0F;
+        hit_closing_ = 0.0F;
         unlock();
+    }
+
+    // The hardest the body ran into anything, or was run into, this tick: of
+    // the contacts new this tick that are not the floor under it (the normal
+    // to the other within 60 degrees of horizontal, or above), how fast the
+    // two closed along the normal, the body's velocity less the other's at
+    // the contact, as the step began (before the solver took it). m/s, 0 for
+    // none. A body's own corpses are not counted.
+    [[nodiscard]] float hit_closing() const noexcept {
+        lock();
+        const float result = hit_closing_;
+        unlock();
+        return result;
     }
 
     // Phase 4: the fastest a moving body came at the player this tick across a
@@ -250,6 +264,7 @@ public:
                         const JPH::ContactManifold &manifold,
                         JPH::ContactSettings &) override {
         observe_support(first, second, manifold);
+        observe_hit(first, second, manifold);
     }
 
     void OnContactPersisted(const JPH::Body &first,
@@ -260,6 +275,36 @@ public:
     }
 
 private:
+    void observe_hit(const JPH::Body &first, const JPH::Body &second, const JPH::ContactManifold &manifold) noexcept {
+        if (manifold.mRelativeContactPointsOn1.size() == 0) {
+            return;
+        }
+        using Sim = scraperx::sim::Simulation;
+        const bool player_first = first.GetUserData() == Sim::kPlayerEntityId;
+        if (!player_first && second.GetUserData() != Sim::kPlayerEntityId) {
+            return;
+        }
+        const JPH::Body &player = player_first ? first : second;
+        const JPH::Body &other = player_first ? second : first;
+        const std::uint64_t entity = other.GetUserData();
+        if (other.IsSensor() || (entity >= kCorpseEntityBase && entity < kCorpseEntityBase + 0x10000)) {
+            return;
+        }
+        // The normal points from body 1 to body 2: here from the player to
+        // the other. The floor under the body is a landing's.
+        const JPH::Vec3 toward = player_first ? manifold.mWorldSpaceNormal : -manifold.mWorldSpaceNormal;
+        if (toward.GetY() < -0.5F) {
+            return;
+        }
+        const JPH::RVec3 at = manifold.GetWorldSpaceContactPointOn1(0);
+        const float closing = (player.GetLinearVelocity() - other.GetPointVelocity(at)).Dot(toward);
+        if (closing > 0.0F) {
+            lock();
+            hit_closing_ = std::max(hit_closing_, closing);
+            unlock();
+        }
+    }
+
     [[nodiscard]] static int support_rank(const std::uint64_t entity_id) noexcept {
         if (entity_id == 0 || entity_id == scraperx::sim::Simulation::kPlayerEntityId) {
             return 0;
@@ -372,6 +417,9 @@ private:
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     SupportSample sample_{};
     float struck_closing_ = 0.0F;
+    float hit_closing_ = 0.0F;
+    // Corpses' bodies (Corpses: kUserDataBase on).
+    static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};
 };
 

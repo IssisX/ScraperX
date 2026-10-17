@@ -1108,6 +1108,19 @@ planted, not rolled; hobble 2.475 m/s, jump 3.19 m/s, 5.5 m/s once healed); touc
 `touch_lethal_feedback` (the view on the body's head, the blood down, two breaks felt, back to the
 restored climber) and `fall_voice` (15.4 m/s: broken, one cry, a 2.47 m/s hobble on the stick).
 
+**Hits, and the zipline's slam (2026-10-17).** The owner's own idea for the zipline: a brake
+the rider uses, or a death slamming into the end. Ridden flat out, the stop's jolt tore the hands
+off and the body went on into the bottom post at 10.7 m/s and lived: the lethal rule only knew
+falls onto the floor. Now any blow counts. Running into anything that is not the floor under the
+body (a wall, a post, an overhang, a machine), or being run into, the blow is the closing speed
+along the contact as the step begins. Side-on or head-on there are no legs to spring it: 10 m/s
+kills (a 5 m fall onto the face, half the feet-first 20 m/s) and leaves the body as a fall does,
+named HIT AT, not FELL AT. From 6 m/s (a sprint into a wall; flow tops out at 9) it is a blow the
+body feels: a thud, the view and the hand jolted, and from 8 m/s a cry and a red flash. So the
+unbraked zipline now kills at its post. Proof: `run_zipline` (flat out: torn off, into the post
+side-on, dead, the body by the post), `touch_zipline_slam` (new: ridden flat out on touch, the
+death named a hit, the body by the post).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1116,8 +1129,8 @@ fill in after).**
    line that is 20.6 m/s into the post and a 2.4 m drop, survived until injuries exist.
 2. The whole first-person body, and injuries and deaths as physical consequences. Done
    2026-10-17: the corpse the view rides, the blood, the cracks felt and heard, the broken ankle
-   and its limp, the cry. Next: hits from machines and the zipline's post (bruises, a broken
-   arm), blood on the lens, new break lines for the voice, and the body itself, legs and torso
+   and its limp, the cry; hits felt, and lethal side-on (the zipline's slam). Next: a broken
+   arm, blood on the lens, new break lines for the voice, and the body itself, legs and torso
    seen from inside.
 3. Route-building's reach: richer spots, heavy stock up the tower only where the crane or a
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up

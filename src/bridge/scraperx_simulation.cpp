@@ -1365,6 +1365,9 @@ godot::Dictionary ScraperXSimulation::get_death_state() const {
     out["corpse_count"] = static_cast<std::int64_t>(state.corpse_count);
     out["point"] = to_godot(state.death_point);
     out["speed_mps"] = state.death_speed_mps;
+    out["side_on"] = state.death_side_on;
+    out["hits"] = static_cast<std::int64_t>(state.hit_count);
+    out["hit_speed_mps"] = state.hit_speed_mps;
     return out;
 }
 

@@ -6,9 +6,12 @@
 // slowly, the buffer stops it short of the stop and the hands hold; DROP
 // lets go onto the yard, the trolley left at the bottom. Ridden flat out,
 // the stop's jolt tears the hands off the bar and the body goes on into the
-// bottom post. Ridden again, JUMP OFF midway throws the body on off the line.
+// bottom post and dies there. Ridden again, JUMP OFF midway throws the body
+// on off the line.
 
 #include "sim_tests.hpp"
+
+#include "sim/corpse.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -106,7 +109,8 @@ void run_zipline() {
             "zipline: the trolley and the buffer stay where the ride ended");
 
     // Flat out: the stop's jolt tears the hands off the bar; the body goes on
-    // into the bottom post and down beside it.
+    // into the bottom post, a blow that kills (kHitLethalSpeed): the body
+    // left by the post.
     Simulation f(InitialSpawn::Deck2South);
     require(catch_the_yard_line(f), "zipline: caught again");
     const double flat_out = ride_to_the_end(f, yard.length, 0.0, 0.0);
@@ -114,13 +118,16 @@ void run_zipline() {
     require(advance_until(f, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 3.0),
             "zipline: torn off, it comes down");
     const Snapshot after = f.snapshot();
-    std::cout << "  zipline: flat out at " << flat_out << " m/s, torn " << torn.zipline_torn_count << ", down at ("
-              << after.player_position.x << ", " << after.player_position.y << ", " << after.player_position.z << "), deaths "
-              << after.death_count << "\n";
+    const auto body = f.corpse_part(0, scraperx::sim::Corpses::kPelvis);
+    const double off_post = std::hypot(body.position.x - yard.bottom.x, body.position.z - yard.bottom.z);
+    std::cout << "  zipline: flat out at " << flat_out << " m/s, torn " << torn.zipline_torn_count << ", into the post at "
+              << after.death_speed_mps << " m/s side-on " << after.death_side_on << ", deaths " << after.death_count
+              << ", the body " << off_post << " m off the post\n";
     require(flat_out > 18.0 && !torn.zipline_riding && torn.zipline_torn_count == 1 && torn.hang_slip_count == 1,
             "zipline: unbraked, the stop's jolt tears the hands off the bar");
-    require(after.player_position.z > yard.bottom.z - 0.8 && after.player_position.z < yard.bottom.z,
-            "zipline: torn off, the body goes on into the bottom post and down beside it");
+    require(after.death_count == 1 && after.death_side_on && after.death_speed_mps >= 10.0 && after.corpse_count == 1 &&
+                off_post < 3.0,
+            "zipline: torn off, the body goes on into the bottom post and dies of it there");
 
     // Ridden again, JUMP OFF midway throws the body on and off the line.
     Simulation j(InitialSpawn::Deck2South);
@@ -137,6 +144,6 @@ void run_zipline() {
     require(advance_until(j, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 4.0),
             "zipline: it comes down");
     std::cout << "PASS scraperx_sim zipline: lines=" << s.zipline_count() << " braked_fastest_mps=" << fastest
-              << " stopped_m=" << at_stop.zipline_along_m << " flat_out_mps=" << flat_out << " torn_z="
-              << after.player_position.z << "\n";
+              << " stopped_m=" << at_stop.zipline_along_m << " flat_out_mps=" << flat_out << " post_hit_mps="
+              << after.death_speed_mps << "\n";
 }

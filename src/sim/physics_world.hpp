@@ -405,8 +405,10 @@ private:
     // (Zipline::kCatchReachM): its bar taken and the body hung from it. True
     // when caught.
     bool try_catch_zipline(JPH::BodyInterface &bodies, JPH::RVec3 origin) noexcept;
-    // A death: the body left where it died (Corpses), moving at velocity.
-    void leave_corpse(JPH::BodyInterface &bodies, JPH::Vec3 velocity) noexcept;
+    // A death: the body left where it died (Corpses), moving at velocity;
+    // the blow that killed it, `impact_mps`, taken `side_on` (a hit, not a
+    // fall onto the floor) or not.
+    void leave_corpse(JPH::BodyInterface &bodies, JPH::Vec3 velocity, float impact_mps, bool side_on) noexcept;
     // Hung from a zipline's trolley: a swing whose hold is the slide along
     // the cable (Zipline::clip), not the arms' constraint.
     void begin_zip_ride(JPH::BodyInterface &bodies, int line) noexcept;
@@ -622,6 +624,11 @@ public:
     std::unique_ptr<Corpses> corpses_;
     JPH::RVec3 death_point_ = JPH::RVec3::sZero();
     float death_speed_mps_ = 0.0F;
+    bool death_side_on_ = false;
+    // Hits (see kHitFeltSpeed): this tick's hardest, those felt, the last.
+    float hit_closing_mps_ = 0.0F;
+    std::uint64_t hit_count_ = 0;
+    float hit_speed_mps_ = 0.0F;
     // The swing under way hangs from a zipline's trolley (Zipline), riding it.
     bool zip_riding_ = false;
     // Rides ended by the stop's jolt tearing the hands off the bar.

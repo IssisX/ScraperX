@@ -870,9 +870,9 @@ func _touch_swing_launch() -> bool:
 # back over the last stretch (the hand brake), the buffer stopping it; DROP
 # lets go onto the yard. The hands on the bar, the trolley drawn over them,
 # the HUD naming the line and its brake.
-func _touch_zipline() -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	var device := InputRouter.Device.TOUCH
+# Round to the foot of the yard line's stand ramp on deck 2's band, up onto
+# the stand under the parked trolley, and a standing jump into its bar.
+func _board_yard_zipline(device: int) -> bool:
 	# Round to the foot of the stand's ramp, east of it along deck 2's band,
 	# up the ramp onto the stand under the parked trolley, stopped there.
 	if not (await _walk_to(device, Vector2(2.5, -127.0), 0.3, 20.0, true) and \
@@ -890,6 +890,45 @@ func _touch_zipline() -> bool:
 		func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5)
 	if not caught:
 		return _fail("the jump from the stand never took the trolley's bar (at %s)" % str(_position()))
+	return true
+
+# Ridden flat out, never braked: the stop's jolt tears the hands off the bar
+# and the body goes on into the bottom post, a blow that kills (sim
+# kHitLethalSpeed): the body left by the post, the hit named.
+func _touch_zipline_slam() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _board_yard_zipline(InputRouter.Device.TOUCH):
+		return false
+	var deaths := int(_native().get_death_count())
+	var died: bool = await _wait_until(func() -> bool: return int(_native().get_death_count()) > deaths, 15.0)
+	if not died:
+		return _fail("flat out into the end, the rider lived (at %s)" % str(_position()))
+	var death: Dictionary = _native().get_death_state()
+	if not bool(death["side_on"]) or float(death["speed_mps"]) < 10.0:
+		return _fail("the death at the end was not the post's blow (side-on %s, %.1f m/s)" % [
+			str(death["side_on"]), float(death["speed_mps"])])
+	await _frames(3)
+	var toasts: Array = _main._hud._toasts
+	if toasts.is_empty() or not String(toasts[-1]["sub"]).begins_with("HIT AT"):
+		return _fail("the slam was not named as a hit")
+	var corpses: Array = _native().get_corpses()
+	if corpses.is_empty():
+		return _fail("the slam left no body")
+	var pelvis: Transform3D = (corpses[-1]["parts"] as Array)[0]
+	var bottom: Vector3 = _native().get_zipline_lines()[0]["bottom"]
+	var off_post := Vector2(pelvis.origin.x - bottom.x, pelvis.origin.z - bottom.z).length()
+	await _seconds(1.0)
+	await _pose("zipline_slam")
+	if off_post > 4.0:
+		return _fail("the body lies %.1f m from the bottom post" % off_post)
+	_detail = "hit_mps=%.1f body_off_post_m=%.1f" % [float(death["speed_mps"]), off_post]
+	return true
+
+func _touch_zipline() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var device := InputRouter.Device.TOUCH
+	if not await _board_yard_zipline(device):
+		return false
 	if not _main._touch.is_button_shown(&"drop"):
 		return _fail("DROP was not offered on the zipline")
 	if _main._touch.button_label(&"jump") != "JUMP OFF":

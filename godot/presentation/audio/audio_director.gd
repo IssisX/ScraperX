@@ -793,6 +793,14 @@ func bone_cracks(at: Vector3, speed_mps: float, lethal_mps: float) -> void:
 	if hard >= 1.5:
 		_cracks_due.append([0.11, at, clampf(0.4 * hard, 0.6, 1.0), randf_range(0.75, 0.85)])
 
+# A blow the body felt and lived (sim kHitFeltSpeed): the thud of it, as
+# loud as it was hard, and from 8 m/s the cry.
+func body_hit(speed_mps: float) -> void:
+	var hard := clampf((speed_mps - 6.0) / 4.0, 0.0, 1.0)
+	_play(&"land_hard", linear_to_db(lerpf(0.5, 1.0, hard)), randf_range(0.8, 0.95))
+	if speed_mps >= 8.0 and _voice_tier != &"pain":
+		_voice_say(&"pain")
+
 # An ankle broken on landing: the crack at the feet, and the cry (one, if
 # the landing's own pain line has not already said it).
 func ankle_break(body: Vector3) -> void:

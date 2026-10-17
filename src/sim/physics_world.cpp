@@ -568,6 +568,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
 
     SupportSample support = contact_listener_.sample();
     struck_closing_mps_ = contact_listener_.struck_closing();
+    hit_closing_mps_ = contact_listener_.hit_closing();
     if (jump_started || traversal_state_ != TraversalState::None) {
         support = {};
     }
@@ -586,7 +587,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.
-            leave_corpse(bodies, pre_contact_velocity_);
+            leave_corpse(bodies, pre_contact_velocity_, pre_contact_velocity_.Length(), false);
             restore_from_checkpoint(bodies);
             died_this_tick = true;
         } else {
@@ -607,9 +608,19 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // Her hands on the player: a death like a lethal fall.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
         matron_->count_catch();
-        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_));
+        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), bodies.GetLinearVelocity(player_id_).Length(), false);
         restore_from_checkpoint(bodies);
         died_this_tick = true;
+    }
+    // Run into something (or run into) hard enough (kHitLethalSpeed): a
+    // death side-on. Softer, a hit the body feels.
+    if (!died_this_tick && hit_closing_mps_ >= kHitLethalSpeed) {
+        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), hit_closing_mps_, true);
+        restore_from_checkpoint(bodies);
+        died_this_tick = true;
+    } else if (!died_this_tick && hit_closing_mps_ >= kHitFeltSpeed) {
+        ++hit_count_;
+        hit_speed_mps_ = hit_closing_mps_;
     }
     if (!died_this_tick) {
         advance_recovery(bodies, delta_seconds);
@@ -1017,7 +1028,8 @@ void Simulation::PhysicsWorld::update_support_motion(JPH::BodyInterface &bodies,
 // A death leaves the body where it died: its corpse at the body's place,
 // moving at `velocity`, and the place and speed of the death for the
 // presentation (the view rides the corpse; the blood goes where it hit).
-void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JPH::Vec3 velocity) noexcept {
+void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JPH::Vec3 velocity, const float impact_mps,
+                                            const bool side_on) noexcept {
     const JPH::RVec3 at = bodies.GetPosition(player_id_);
     const JPH::RVec3 soles = at - JPH::Vec3(0.0F, active_half_height(), 0.0F);
     corpses_->spawn(soles, facing_, velocity);
@@ -1025,7 +1037,8 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
                        ? JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y,
                                     support_sample_.contact_point.z)
                        : soles;
-    death_speed_mps_ = velocity.Length();
+    death_speed_mps_ = impact_mps;
+    death_side_on_ = side_on;
 }
 
 } // namespace scraperx::sim

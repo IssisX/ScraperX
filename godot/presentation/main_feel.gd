@@ -97,6 +97,7 @@ var _reduced_motion := false
 # A hang torn off: a short drop of the view, as the hands go (seconds left).
 const SLIP_JOLT_SECONDS := 0.3
 var _slip_jolt := 0.0
+var _slip_jolt_depth := 1.0   # how deep this jolt goes, of the full one
 var _haul_phase := 0.0
 var _viewport_size := Vector2.ZERO
 
@@ -203,6 +204,7 @@ const LIMP_DIP_M := 0.07
 const LIMP_ROLL_RAD := 0.05
 var _fb_breaks := -1
 var _limping := false
+var _fb_hits := -1
 
 const HAPTICS := {
 	&"press": [12, 0.3],
@@ -293,8 +295,24 @@ func _update_body_feedback(delta: float) -> void:
 		_break_pulses.append(BREAK_PULSE_GAP_S * 1.5)
 		_audio.ankle_break(_native.get_player_position())
 		_slip_jolt = SLIP_JOLT_SECONDS
+		_slip_jolt_depth = 1.0
 	_fb_breaks = breaks
 	_limping = bool(landing["limping"])
+	# A blow the body felt and lived (sim kHitFeltSpeed): the jolt in the
+	# view and the hand, the thud, and from a hard one the cry and the flash.
+	var struck: Dictionary = _native.get_death_state()
+	var hits := int(struck["hits"])
+	if _fb_hits >= 0 and hits > _fb_hits:
+		var speed := float(struck["hit_speed_mps"])
+		var hard := clampf((speed - 6.0) / 4.0, 0.0, 1.0)
+		_haptic(&"land", lerpf(0.5, 1.0, hard))
+		# Always the whole jolt from its start, as deep as the blow was hard.
+		_slip_jolt = SLIP_JOLT_SECONDS
+		_slip_jolt_depth = lerpf(0.5, 1.0, hard)
+		_audio.body_hit(speed)
+		if hard >= 0.5:
+			_hud.flash(UiStyle.HAZARD)
+	_fb_hits = hits
 	var stumbles := int(landing["stumbles"])
 	if stumbles > _fb_stumbles:
 		_haptic(&"stumble", clampf(float(landing["loss"]) * 2.0, 0.4, 1.0))
@@ -323,6 +341,7 @@ func _update_body_feedback(delta: float) -> void:
 		_haptic(&"slip")
 		_audio.body_slip()
 		_slip_jolt = SLIP_JOLT_SECONDS
+		_slip_jolt_depth = 1.0
 	_fb_hang_slips = hang_slips
 	_fb_trapeze_slips = trapeze_slips
 	var reaches := int(hands["swing_reaches"])
@@ -384,8 +403,12 @@ func _update_feedback(delta: float) -> void:
 		_fb_deaths = deaths
 		var restored: Vector3 = _ctx["checkpoint"]
 		var quip: String = LETHAL_RESTORE_QUIPS[randi() % LETHAL_RESTORE_QUIPS.size()]
-		_hud.toast("LETHAL IMPACT", "FELL AT %.1f M/S  /  %s  /  RESTORED TO CHECKPOINT %+.1f M" % [
-			fall_speed_before, quip, restored.y], UiStyle.HAZARD, 3.8)
+		# A fall onto the floor, or a blow side-on (run into something).
+		var death: Dictionary = _native.get_death_state()
+		var how := "HIT AT %.1f M/S" % float(death["speed_mps"]) if bool(death["side_on"]) \
+			else "FELL AT %.1f M/S" % fall_speed_before
+		_hud.toast("LETHAL IMPACT", "%s  /  %s  /  RESTORED TO CHECKPOINT %+.1f M" % [
+			how, quip, restored.y], UiStyle.HAZARD, 3.8)
 		_hud.flash(UiStyle.HAZARD)
 		_haptic(&"death")
 
@@ -665,7 +688,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var slip_pitch := 0.0
 	if _slip_jolt > 0.0:
 		_slip_jolt = maxf(0.0, _slip_jolt - delta)
-		var slip_wave := sin(PI * (1.0 - _slip_jolt / SLIP_JOLT_SECONDS))
+		var slip_wave := _slip_jolt_depth * sin(PI * (1.0 - _slip_jolt / SLIP_JOLT_SECONDS))
 		dip += -0.09 * slip_wave
 		slip_pitch = -0.07 * slip_wave
 	# Hauling the pitman's line: the body heaves with each pull, by the force

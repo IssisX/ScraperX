@@ -544,6 +544,13 @@ struct Snapshot final {
     std::uint64_t corpses_spawned = 0;
     Vector3 death_point{};
     double death_speed_mps = 0.0;
+    // The latest death came side-on (run into something, or run into), not
+    // from a fall onto the floor (see kHitFeltSpeed).
+    bool death_side_on = false;
+    // Hits the body felt and lived (see kHitFeltSpeed), and the last one's
+    // closing speed.
+    std::uint64_t hit_count = 0;
+    double hit_speed_mps = 0.0;
     // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
     // its bar.
     bool zipline_riding = false;

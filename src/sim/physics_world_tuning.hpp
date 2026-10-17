@@ -116,6 +116,15 @@ constexpr float kAnkleBreakSpeed = 12.0F;
 constexpr float kAnkleBreakPreparedSpeed = 14.0F;
 constexpr float kAnkleBreakRolledSpeed = 16.0F;
 constexpr double kLimpSeconds = 30.0;
+// Injuries: hits. Running into anything (or being run into) that is not the
+// floor under the body: the blow is the closing speed along the contact. Met
+// side-on or head-on there are no legs to spring it, the head and chest take
+// it on steel: kHitLethalSpeed kills (a fall of 5 m onto the face; CHOSEN,
+// half the feet-first kLethalImpactSpeedMps), leaving the body as a fall
+// does. From kHitFeltSpeed (a sprint into a wall) it is a hit the body
+// feels, counted for the presentation (the crack, the cry, the jolt).
+constexpr float kHitLethalSpeed = 10.0F;
+constexpr float kHitFeltSpeed = 6.0F;
 constexpr float kLimpSpeedScale = 0.45F;
 constexpr float kLimpJumpScale = 0.6F;
 // Parkour step 3: the slide. Crouching at a run -- kSlideMinimumSpeed or more
