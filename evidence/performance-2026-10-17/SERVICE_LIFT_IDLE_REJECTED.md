@@ -1,0 +1,9 @@
+# Rejected service-lift idle-cost candidate
+
+Decision: do not change shared production. A predeclared5% prepared-world CPU acceptance floor was not supported by the first matched pair: baseline9.05707 ms/tick, candidate8.75761 ms/tick, a3.3% reduction. Both reached readiness tick386 with zero deaths. WALL means were6.81632 and6.60145 ms. This is Linux ARM64/proot host evidence, not phone FPS.
+
+The isolated prototype enabled ordinary Jolt sleep for only the service lift. A pinned-source review caught that activating only the drive endpoints did not pre-wake every linked body; the corrected candidate explicitly activated all nine owned moving bodies before accepted Up/Down steps. The expanded unit test passed normal sleep, all-nine pre-solve wake, zero idle force/energy change, real rise, finite brake and reverse, plus original finite-source/cutoff/obstruction/return/checkpoint cases. Work accounting retained the original impulse-times-displacement law.
+
+The untouched baseline failed the new sleep assertion as expected. The planned second timing pair was blocked by the existing experiment limiter as a duplicate command (exit75). No bypass or parameter sweep followed. One modest pair does not justify another physics change. The public-world route was not run because this candidate was rejected before that acceptance stage. Neither full behavior acceptance nor an aggregate two-pair speedup is claimed.
+
+All prototype sources remain isolated in /data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017. No service-lift source or unit-test edits entered the shared repository. Exact build/run commands, logs, source hashes, original negative and limiter result are in SERVICE_LIFT_IDLE_REJECTED.json. This closes this one candidate; it does not close the overall phone-performance problem.

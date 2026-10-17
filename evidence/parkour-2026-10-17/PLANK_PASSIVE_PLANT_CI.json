@@ -1,0 +1,77 @@
+{
+  "source": "9b6e1c741a5abe1a1845a35106e66565d6a4805d",
+  "run": "39076086572",
+  "commands": [
+    {
+      "argv": [
+        "cmake",
+        "-S",
+        "/home/runner/work/ScraperX/ScraperX",
+        "-B",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DSCRAPERX_BUILD_BRIDGE=OFF",
+        "-DSCRAPERX_WITH_JOLT=ON"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "cmake",
+        "--build",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--target",
+        "scraperx_deformable_plank_player_tests",
+        "scraperx_wood_foot_push_player_tests"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "ctest",
+        "--test-dir",
+        "/home/runner/work/ScraperX/ScraperX/build/native-repair",
+        "--parallel",
+        "2",
+        "--output-on-failure",
+        "--no-tests=error",
+        "--output-junit",
+        "/home/runner/work/ScraperX/ScraperX/artifacts/native-repair/native-tests.xml",
+        "-R",
+        "^scraperx_sim\\.(deformable_plank_player|wood_foot_push_player)$"
+      ],
+      "exit": 0
+    }
+  ],
+  "junit": {
+    "name": "Linux-c++",
+    "tests": "2",
+    "failures": "0",
+    "disabled": "0",
+    "skipped": "0",
+    "hostname": "runnervm8k3b6",
+    "time": "42",
+    "timestamp": "2026-10-17T22:43:28"
+  },
+  "tests": [
+    {
+      "name": "scraperx_sim.wood_foot_push_player",
+      "classname": "scraperx_sim.wood_foot_push_player",
+      "time": "33.2024",
+      "status": "run"
+    },
+    {
+      "name": "scraperx_sim.deformable_plank_player",
+      "classname": "scraperx_sim.deformable_plank_player",
+      "time": "42.0828",
+      "status": "run"
+    }
+  ],
+  "goal": "complete",
+  "full_release": "not established",
+  "phone_performance": "unverified"
+}

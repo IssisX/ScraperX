@@ -15,3 +15,5 @@ Limit: Linux ARM64 native evidence does not establish x86, Android or device beh
 Final observed execution: final-plank-all exited0 in44.296523s, with PASS DEFORMABLE_PLANK_PLAYER, PASS DEFORMABLE_PLANK_GRIP, and PASS DEFORMABLE_PLANK_PLAYER_FRACTURE. Shared test and archived built test remained SHA256 2d6cbeb45af8d7926bbec82ea3324e167a6382c00c061d08cdbea09c5fd24bd0. git diff --check exited0. No other source was changed.
 
 Root inspected the actual diff, shared helper and foot owner; accepted the supported test-contract correction. The published CI request runs deformable_plank_player and wood_foot_push_player against one x86 native archive. No full-release or phone-FPS claim.
+
+Published9b6e1c7 native-repair39076086572 is GREEN: deformable_plank_player and wood_foot_push_player both pass, tests2/failures0 on one x86 archive. Exact receipt: PLANK_PASSIVE_PLANT_CI.json.

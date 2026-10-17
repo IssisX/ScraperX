@@ -1,0 +1,395 @@
+{
+  "decision": {
+    "base_revision": "9b6e1c741a5abe1a1845a35106e66565d6a4805d",
+    "criterion": {
+      "mean_paired_cpu_gain_at_least": 0.05,
+      "each_pair_improves": true,
+      "original_physics_and_route": "must pass"
+    },
+    "steps": [
+      {
+        "name": "whole-wake-owner-build",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-DNDEBUG",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean/Build/..",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-pthread",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/src_sim_service_lift.cpp.o",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-owner-build.log"
+      },
+      {
+        "name": "whole-wake-archive",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "ar",
+          "rcs",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/src_sim_service_lift.cpp.o"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-archive.log"
+      },
+      {
+        "name": "whole-wake-build-physics-candidate",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/physics-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-build-physics-candidate.log"
+      },
+      {
+        "name": "whole-wake-build-route-candidate",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/route-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-build-route-candidate.log"
+      },
+      {
+        "name": "whole-wake-build-idle-candidate",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/idle_cost.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-build-idle-candidate.log"
+      },
+      {
+        "name": "whole-wake-physics",
+        "command": [
+          "/data/data/com.termux/files/usr/bin/python",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/mechanics_trial.py",
+          "--state",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.json",
+          "run",
+          "--stage",
+          "whole-wake-physics",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp",
+          "--",
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/physics-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/whole-wake-physics.log"
+      },
+      {
+        "name": "pair1-candidate",
+        "command": [
+          "/data/data/com.termux/files/usr/bin/python",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/mechanics_trial.py",
+          "--state",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.json",
+          "run",
+          "--stage",
+          "pair1-candidate",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp",
+          "--",
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-candidate"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/pair1-candidate.log"
+      },
+      {
+        "name": "pair1-baseline",
+        "command": [
+          "/data/data/com.termux/files/usr/bin/python",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/mechanics_trial.py",
+          "--state",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.json",
+          "run",
+          "--stage",
+          "pair1-baseline",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim-baseline.a",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp",
+          "--",
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-baseline"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/pair1-baseline.log"
+      },
+      {
+        "name": "pair2-baseline",
+        "command": [
+          "/data/data/com.termux/files/usr/bin/python",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/ci/mechanics_trial.py",
+          "--state",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.json",
+          "run",
+          "--stage",
+          "pair2-baseline",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim-baseline.a",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp",
+          "--source",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp",
+          "--",
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-baseline"
+        ],
+        "exit": 75,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/pair2-baseline.log"
+      }
+    ],
+    "result": "REJECT",
+    "baseline_reuse": "mechanics-window trial1 proves same untouched Kit policy cannot naturally sleep; first assertion unchanged, no duplicate baseline run",
+    "reason": "First paired CPU gain below the predeclared5% keep threshold. Required second pair was blocked as a matching duplicate experiment (runner75); no limit bypass/reassessment/sweep. Evidence does not justify shipping the candidate.",
+    "measured_first_pair": {
+      "pair1-candidate": {
+        "ready": "386",
+        "wall_mean_ms": "6.60145",
+        "p50_ms": "6.55297",
+        "p95_ms": "6.99651",
+        "cpu_ms": "8.75761",
+        "deaths": "0"
+      },
+      "pair1-baseline": {
+        "ready": "386",
+        "wall_mean_ms": "6.81632",
+        "p50_ms": "6.72438",
+        "p95_ms": "7.47187",
+        "cpu_ms": "9.05707",
+        "deaths": "0"
+      }
+    },
+    "first_pair_cpu_gain": 0.033063672909671604,
+    "public_route": "not run; candidate rejected before expensive route",
+    "shared_production_changed": false,
+    "limits": "One measured pair only, Linux ARM64/proot host; no phone FPS conclusion."
+  },
+  "mechanics_window": {
+    "objective": "One service-lift normal-sleep candidate: preserve original operation and keep only matched CPU gain >=5%; no other assembly",
+    "budget_seconds": 600.0,
+    "started": 1792277424.389993,
+    "failures": 1,
+    "trials": [
+      {
+        "stage": "baseline-no-sleep",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/physics-baseline"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim-baseline.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp": "c837e6e88db7cec22a80ed4d8b5952e99eca7827c7161e3d4f005f7a4fe95cfd"
+        },
+        "started": 1792277424.559524,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.trial-1.log",
+        "exit": 1,
+        "finished": 1792277425.6420717
+      },
+      {
+        "stage": "whole-wake-physics",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/physics-candidate"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a": "c64b63427dd9b88016ed6eef08f12400f5a6b0307b7039d46132bd617313251f",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp": "bfdb395a05626a66c18542bd2017217d6213ac7a229f1dc4d63b07038962042d",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp": "453becaba5daa9afa093a01ec9d779e83727122d34a7c392024a4a84c777086d"
+        },
+        "started": 1792277519.8191793,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.trial-2.log",
+        "exit": 0,
+        "finished": 1792277524.8738894
+      },
+      {
+        "stage": "pair1-candidate",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-candidate"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim.a": "c64b63427dd9b88016ed6eef08f12400f5a6b0307b7039d46132bd617313251f",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp": "bfdb395a05626a66c18542bd2017217d6213ac7a229f1dc4d63b07038962042d",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp": "453becaba5daa9afa093a01ec9d779e83727122d34a7c392024a4a84c777086d"
+        },
+        "started": 1792277524.9910338,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.trial-3.log",
+        "exit": 0,
+        "finished": 1792277541.042713
+      },
+      {
+        "stage": "pair1-baseline",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/idle-baseline"
+        ],
+        "sources": {
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/build/libscraperx_sim-baseline.a": "4a78389c98cbbcbd0ca50fbd6f0bfcb13e287a64e5dc1e8642dc96443232e6fa",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/src/sim/service_lift.cpp": "bfdb395a05626a66c18542bd2017217d6213ac7a229f1dc4d63b07038962042d",
+          "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/source/tests/service_lift_physics_tests.cpp": "453becaba5daa9afa093a01ec9d779e83727122d34a7c392024a4a84c777086d"
+        },
+        "started": 1792277541.2625067,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-service-idle-20261017/mechanics-window.trial-4.log",
+        "exit": 0,
+        "finished": 1792277566.0978248
+      }
+    ],
+    "reassessments": [],
+    "pending": false
+  }
+}
