@@ -174,12 +174,9 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	# Fit the safe short edge as well as the design canvas. Small windows and
 	# inset displays must not inherit the global quarter-unit drawing floor.
 	_u = minf(UiStyle.unit(self), minf(_safe.size.x, _safe.size.y) / 1856.0) * touch_scale
-	if forklift_mode:
-		# The selector row has a 13%-width pitch; expanded hit circles must fit.
-		_u = minf(_u, _safe.size.x * 0.13 / (164.0 * HIT_SLOP + 8.0))
-		_u = minf(_u, _safe.size.y * 0.18 / (168.0 * HIT_SLOP + 8.0))
-	if yard_crane_mode:
-		_u = minf(_u, _safe.size.y * 0.20 / (172.0 * HIT_SLOP + 8.0))
+	if forklift_mode or yard_crane_mode:
+		# Keep both thumb decks below the sightline, including enlarged touch.
+		_u = minf(_u, minf(_safe.size.x / 1250.0, _safe.size.y * 0.36 / 620.0))
 	var m := 56.0 * _u
 	var corner := _safe.end
 	var jump := Vector2(corner.x - m - 170.0 * _u, corner.y - m - 190.0 * _u)
@@ -237,27 +234,31 @@ func set_yard_crane_mode(value: bool) -> void:
 
 
 func _layout_yard_crane() -> void:
-	_stick_home = _safe.position + _safe.size * Vector2(0.18, 0.79)
-	_stick_zone = Rect2(_safe.position + _safe.size * Vector2(0.0, 0.48), _safe.size * Vector2(0.37, 0.52))
-	for entry in [[B_UP, 0.48, 0.67], [B_DOWN, 0.48, 0.87], [B_RIG, 0.65, 0.67], [B_UNRIG, 0.65, 0.87], [B_ACTION, 0.91, 0.87]]:
-		_place(entry[0], _safe.position + _safe.size * Vector2(entry[1], entry[2]), 86.0)
-	_pendant_center = _safe.position + _safe.size * Vector2(0.54, 0.51)
+	_stick_home = Vector2(_safe.position.x, _safe.end.y) + Vector2(200.0, -230.0) * _u
+	_stick_zone = Rect2(Vector2(_safe.position.x, _safe.end.y - 620.0 * _u), Vector2(490.0, 620.0) * _u)
+	_place(B_UP, _safe.end + Vector2(-150.0, -420.0) * _u, 64.0)
+	_place(B_DOWN, _safe.end + Vector2(-150.0, -170.0) * _u, 64.0)
+	_place(B_ACTION, Vector2(_safe.end.x - 108.0 * _u, _safe.position.y + 108.0 * _u), 52.0)
 
 
 func _layout_forklift() -> void:
-	# A thumb-sized operator deck at the bottom leaves the upper right for look.
-	_stick_home = _safe.position + _safe.size * Vector2(0.18, 0.79)
-	_stick_zone = Rect2(_safe.position + _safe.size * Vector2(0.0, 0.55), _safe.size * Vector2(0.37, 0.45))
-	for row in [[B_FORWARD, 0.10], [B_NEUTRAL, 0.23], [B_REVERSE, 0.36], [B_PARK, 0.49], [B_INCH, 0.62]]:
-		_place(row[0], _safe.position + _safe.size * Vector2(row[1], 0.46), 82.0)
-	_place(B_UP, _safe.position + _safe.size * Vector2(0.47, 0.69), 84.0)
-	_place(B_DOWN, _safe.position + _safe.size * Vector2(0.47, 0.87), 84.0)
-	_place(B_LEFT, _safe.position + _safe.size * Vector2(0.63, 0.69), 84.0)
-	_place(B_RIGHT, _safe.position + _safe.size * Vector2(0.63, 0.87), 84.0)
-	_place(B_TOOL, _safe.position + _safe.size * Vector2(0.78, 0.69), 84.0)
-	_place(B_HORN, _safe.position + _safe.size * Vector2(0.78, 0.87), 84.0)
-	_place(B_ACTION, _safe.position + _safe.size * Vector2(0.92, 0.87), 84.0)
-	_pendant_center = _safe.position + _safe.size * Vector2(0.55, 0.58)
+	# Drive and selector belong to the left thumb; hydraulics to the right.
+	# No operator button crosses the forward view through the mast.
+	var left := Vector2(_safe.position.x, _safe.end.y)
+	var right := _safe.end
+	_stick_home = left + Vector2(200.0, -230.0) * _u
+	_stick_zone = Rect2(Vector2(_safe.position.x, _safe.end.y - 620.0 * _u), Vector2(490.0, 620.0) * _u)
+	for row in [[B_FORWARD, 80.0], [B_NEUTRAL, 240.0], [B_REVERSE, 400.0]]:
+		_place(row[0], left + Vector2(row[1], -550.0) * _u, 52.0)
+	_place(B_PARK, left + Vector2(420.0, -150.0) * _u, 54.0)
+	_place(B_INCH, left + Vector2(420.0, -360.0) * _u, 54.0)
+	_place(B_UP, right + Vector2(-340.0, -420.0) * _u, 64.0)
+	_place(B_DOWN, right + Vector2(-340.0, -170.0) * _u, 64.0)
+	_place(B_LEFT, right + Vector2(-130.0, -420.0) * _u, 64.0)
+	_place(B_RIGHT, right + Vector2(-130.0, -170.0) * _u, 64.0)
+	_place(B_TOOL, Vector2(_safe.get_center().x - 85.0 * _u, right.y - 90.0 * _u), 60.0)
+	_place(B_HORN, Vector2(_safe.get_center().x + 85.0 * _u, right.y - 90.0 * _u), 52.0)
+	_place(B_ACTION, Vector2(right.x - 108.0 * _u, _safe.position.y + 108.0 * _u), 52.0)
 
 
 func _place(id: StringName, center: Vector2, radius: float) -> void:
@@ -633,6 +634,15 @@ func _draw_button(button: TouchButton) -> void:
 	var icon_color := UiStyle.INK if pressed else UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
 	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
 	if not button.label.is_empty():
+		if forklift_mode and button.id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL]:
+			# Text-only controls carry their name inside, not beneath an empty disc.
+			var font_size := 34.0 if button.id in [B_FORWARD, B_NEUTRAL, B_REVERSE] else 18.0
+			var pixels := int(roundf(font_size * _u))
+			while pixels > 1 and UiStyle.text_width(UiStyle.font_label(), button.label, pixels) > radius * 1.7:
+				pixels -= 1
+			UiStyle.text_centered(self, UiStyle.font_label(), button.label,
+				button.center, pixels, icon_color)
+			return
 		UiStyle.text_centered(self, UiStyle.font_label(), button.label,
 			button.center + Vector2(0.0, radius + 30.0 * _u), int(roundf(25.0 * _u)),
 			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(6.0 * _u)))
@@ -676,6 +686,8 @@ func _draw_stick() -> void:
 
 
 func _draw_pendant_labels() -> void:
+	if forklift_mode or yard_crane_mode:
+		return
 	var size := int(roundf(22.0 * _u))
 	var font := UiStyle.font_label()
 	if not _axis_names[0].is_empty():

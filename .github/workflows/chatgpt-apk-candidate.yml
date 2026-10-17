@@ -158,6 +158,24 @@ jobs:
           2>&1 | tee artifacts/yard_crane_operator_main_native.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/yard_crane_operator_main_native.log; then exit 1; fi
         grep -F 'SCRAPERX_YARD_CRANE_OPERATOR_MAIN PASS' artifacts/yard_crane_operator_main_native.log
+    - name: Check clear operator sightlines and capture forklift controls
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/android_responsive_controls_test.gd \
+          2>&1 | tee artifacts/operator-layout.log
+        grep -F 'failures=0' artifacts/operator-layout.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/operator-layout.log; then exit 1; fi
+        mkdir -p artifacts/forklift-operator
+        timeout 180s xvfb-run -a -s '-screen 0 1696x1456x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1696x1456 \
+          --script res://tests/forklift_operator_main_native_test.gd \
+          -- --capture-dir="${GITHUB_WORKSPACE}/artifacts/forklift-operator" \
+          2>&1 | tee artifacts/forklift-operator.log
+        grep -F 'SCRAPERX_FORKLIFT_OPERATOR_MAIN PASS' artifacts/forklift-operator.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/forklift-operator.log; then exit 1; fi
     - name: Render ordinary freight arrival
       shell: bash
       run: |
@@ -177,6 +195,9 @@ jobs:
         path: |
           artifacts/freight-arrival.png
           artifacts/freight-arrival-render.log
+          artifacts/operator-layout.log
+          artifacts/forklift-operator.log
+          artifacts/forklift-operator/
         if-no-files-found: error
         retention-days: 30
     - name: Export ChatGPT Android arm64 APK

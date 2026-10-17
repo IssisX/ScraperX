@@ -2,6 +2,8 @@ extends SceneTree
 
 const Touch := preload("res://presentation/ui/touch_controls.gd")
 const Router := preload("res://presentation/ui/input_router.gd")
+const Hud := preload("res://presentation/ui/hud.gd")
+const ForkliftPanel := preload("res://presentation/ui/forklift_panel.gd")
 var failures := 0
 var layouts := 0
 
@@ -39,8 +41,10 @@ func drag(controls: Control, index: int, origin: Vector2, delta: Vector2) -> voi
 func _run() -> void:
 	var controls := Touch.new()
 	var router := Router.new()
+	var hud := Hud.new()
 	root.add_child(controls)
 	root.add_child(router)
+	root.add_child(hud)
 	controls.router = router
 	router.touch = controls
 	router.capture_mouse = false
@@ -63,10 +67,13 @@ func _run() -> void:
 						controls._layout_in_safe_rect(safe)
 						var label := "window=%s canvas=%s scale=%s inset=%s station=%s" % [viewport, full.size, scale, inset, station]
 						var active: Array = controls._buttons.values().filter(func(b): return b.shown and b.enabled)
+						var sightline := Rect2(safe.position + Vector2(0.0, safe.size.y * 0.22), Vector2(safe.size.x, safe.size.y * 0.40))
 						for i in range(active.size()):
 							var button = active[i]
 							var hit: float = button.radius * Touch.HIT_SLOP
 							check(controls._safe.encloses(Rect2(button.center - Vector2.ONE * hit, Vector2.ONE * hit * 2.0)), label + " outside " + str(button.id))
+							if station in [&"forklift", &"yard_crane"]:
+								check(not sightline.intersects(Rect2(button.center - Vector2.ONE * hit, Vector2.ONE * hit * 2.0)), label + " obstructs forward view " + str(button.id))
 							for j in range(i):
 								var other = active[j]
 								check(button.center.distance_to(other.center) > (button.radius + other.radius) * Touch.HIT_SLOP, label + " overlap " + str(button.id) + "/" + str(other.id))
@@ -79,6 +86,10 @@ func _run() -> void:
 							else:
 								check(router.frame(0.016).verbs == [controls._verb_for(button.id)], label + " verb " + str(button.id))
 						controls.reset_touches()
+						if station == &"forklift":
+							hud._safe = safe
+							hud._panel = ForkliftPanel.describe({}, {}, 2)
+							check(safe.encloses(hud.compact_station_rect()) and not sightline.intersects(hud.compact_station_rect()), label + " instrument strip preserves sightline")
 						if not controls._movement_blocked:
 							var home: Vector2 = controls.stick_home()
 							finger(controls, 0, home)
@@ -93,5 +104,6 @@ func _run() -> void:
 						layouts += 1
 	controls.free()
 	router.free()
+	hud.free()
 	print("ANDROID_RESPONSIVE layouts=", layouts, " failures=", failures)
 	quit(0 if failures == 0 else 1)

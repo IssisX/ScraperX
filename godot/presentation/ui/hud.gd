@@ -357,6 +357,9 @@ func _draw_altimeter() -> void:
 
 
 func _draw_station_panel() -> void:
+	if touch_active and _ctx.get("operating", &"") in [&"forklift", &"yard_crane"]:
+		_draw_compact_station_panel()
+		return
 	var u := _u
 	var alpha := _panel_alpha
 	var rows: Array = _panel["rows"]
@@ -414,6 +417,37 @@ func _draw_station_panel() -> void:
 				glyph_center + Vector2(used + 10.0 * u, 0.0), h, alpha)
 		UiStyle.text(self, font, entry[1], Vector2(left + used + 16.0 * u, y), size,
 			UiStyle.with_alpha(UiStyle.PAPER, alpha))
+
+
+func compact_station_rect() -> Rect2:
+	var lines := ceili(float((_panel.get("rows", []) as Array).size()) / 2.0)
+	return Rect2(Vector2(_safe.get_center().x - 390.0 * _u, _safe.position.y + 90.0 * _u),
+		Vector2(780.0, 66.0 + float(lines) * 36.0) * _u)
+
+
+func _draw_compact_station_panel() -> void:
+	# Keep every native gauge and safety warning in a short instrument strip.
+	# Touch buttons already explain the controls; the driving view stays clear.
+	var rect := compact_station_rect()
+	var alpha := _panel_alpha
+	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.72 * alpha),
+		UiStyle.with_alpha(UiStyle.AMBER, alpha), 2.0 * _u, 10.0 * _u)
+	UiStyle.text(self, UiStyle.font_heavy(), _panel["title"], rect.position + Vector2(18.0, 34.0) * _u,
+		int(roundf(24.0 * _u)), UiStyle.with_alpha(UiStyle.PAPER, alpha))
+	var rows: Array = _panel["rows"]
+	for i in rows.size():
+		var row: Array = rows[i]
+		var at := rect.position + Vector2(18.0 + float(i % 2) * 390.0, 66.0 + float(i / 2) * 36.0) * _u
+		var tone := UiStyle.HAZARD if int(row[2]) == 2 else UiStyle.SAFE if int(row[2]) == 1 else UiStyle.PAPER
+		UiStyle.text(self, UiStyle.font_label(), row[0], at, int(roundf(15.0 * _u)),
+			UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha))
+		var key_width := UiStyle.text_width(UiStyle.font_label(), row[0], int(roundf(15.0 * _u)))
+		var available := 354.0 * _u - key_width - 12.0 * _u
+		var value_size := int(roundf(22.0 * _u))
+		while value_size > int(roundf(14.0 * _u)) and UiStyle.text_width(UiStyle.font_digits(), row[1], value_size) > available:
+			value_size -= 1
+		UiStyle.text(self, UiStyle.font_digits(), row[1], at + Vector2(354.0 * _u, 0.0), value_size,
+			UiStyle.with_alpha(tone, alpha), HORIZONTAL_ALIGNMENT_RIGHT)
 
 
 func _draw_toasts() -> void:
