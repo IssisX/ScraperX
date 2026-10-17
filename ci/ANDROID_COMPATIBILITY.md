@@ -95,3 +95,20 @@ Only controls past the actual touch owner's appearance threshold are published.
 Startup waits for those controls, not merely the earlier native-ready signal.
 Settings restart evidence also retains the actual persisted bytes and checks
 their nonempty checksum against the observer; an empty-file hash is insufficient.
+
+Held gestures use separate Android DOWN/MOVE/UP events. API35/36 use the
+platform `input touchscreen motionevent` command. API24 uses its stock Monkey
+network touch protocol because that shell predates `motionevent`. The driver
+waits for actual input-owner observations and advancing native ticks, holds
+for the requested simulation duration, releases in `finally`, and requires
+observed cleared touch ownership. Cleanup errors remain failures. A slow
+software-rendered frame cannot silently consume the whole finite shell swipe.
+The displacement, machine work and real-support assertions remain unchanged.
+
+Only the emulator export inserts passive receipts after TouchControls handles
+an event and after Main advances the native world. These record actual drag
+vectors, accepted world input and native ticks; they never issue commands.
+The ordinary phone export retains the original scripts. The tablet also
+exercises the real notification shade and emulator rotation, requiring OS
+rotation readback, retained native identity and usable touch afterward.
+These paths remain unverified until the corresponding Android jobs pass.

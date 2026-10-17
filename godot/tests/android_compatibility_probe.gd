@@ -10,6 +10,26 @@ var _sequence := 0
 var _instance := ""
 var _peak_upward_speed := 0.0
 var _touch_events := 0
+var _input_trace := {"events": 0, "drags": 0, "max_move": 0.0,
+	"nonzero_native_ticks": 0, "world_move": [0.0, 0.0], "history": []}
+
+func record_touch(event: InputEvent, touch: Control) -> void:
+	_input_trace.events += 1
+	if event is InputEventScreenDrag:
+		_input_trace.drags += 1
+	_input_trace.max_move = maxf(_input_trace.max_move, touch.move_vector.length())
+	_input_trace.history.append({"event": "drag" if event is InputEventScreenDrag else
+		("down" if event.pressed else "up"), "at": [event.position.x, event.position.y],
+		"usec": Time.get_ticks_usec(), "move": [touch.move_vector.x, touch.move_vector.y],
+		"frame": Engine.get_process_frames(), "stick_owner": touch._stick_index})
+	if _input_trace.history.size() > 12:
+		_input_trace.history.pop_front()
+
+func record_step(world_move: Vector2, tick: int, steps: int) -> void:
+	_input_trace.world_move = [world_move.x, world_move.y]
+	_input_trace.tick = tick
+	if world_move.length() > 0.01:
+		_input_trace.nonzero_native_ticks += maxi(0, steps)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -87,6 +107,10 @@ func _process(delta: float) -> void:
 	var safe_max: Array = _point(touch, current_safe.end) if touch != null else []
 	var look: Vector2 = touch._safe.position + touch._safe.size * Vector2(0.85, 0.30) if touch != null else Vector2.ZERO
 	var settings_path := "user://settings.cfg"
+	_input_trace["owned"] = touch != null and (touch._stick_index != -1 or touch._look_index != -1)
+	if touch != null:
+		for button in touch._buttons.values():
+			_input_trace.owned = _input_trace.owned or button.index != -1
 	_publish({
 		"instance": _instance, "sequence": _sequence, "ready": bool(main.get("_play_ready")),
 		"native_loaded": native != null, "paused": bool(main.get("_paused")),
@@ -94,6 +118,7 @@ func _process(delta: float) -> void:
 		"fixed_step_s": native.get_fixed_step_seconds() if native != null else 0,
 		"position": [position.x, position.y, position.z], "velocity": [velocity.x, velocity.y, velocity.z],
 		"peak_upward_speed": _peak_upward_speed, "touch_events": _touch_events,
+		"input_trace": _input_trace,
 		"jump_work_j": landing.get("landing_jump_work_j", 0.0),
 		"crouched": native.is_player_crouched() if native != null else false,
 		"grounded": native.is_player_grounded() if native != null else false,

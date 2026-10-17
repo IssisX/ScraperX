@@ -59,8 +59,7 @@ def stick_endpoint(state, world_x, world_z):
 
 
 def _swipe(session, start, end, duration_ms):
-    session.adb('shell', 'input', 'swipe', round(start[0]), round(start[1]),
-                round(end[0]), round(end[1]), duration_ms)
+    session.swipe(start, end, duration_ms)
 
 
 def _fresh(session, label, before, *, ticks=1, timeout=20):

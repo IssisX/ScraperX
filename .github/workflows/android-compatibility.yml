@@ -11,6 +11,9 @@ on:
       - ci/prepare_android_emulator_export.py
       - ci/android_freight_route.py
       - ci/android_crane_route.py
+      - ci/android_display_route.py
+      - ci/android_touch_driver.py
+      - ci/test_android_touch_driver.py
       - ci/android_emulator_host.sh
       - ci/test_build_info.py
       - ci/prepare_chatgpt_build_info.py
@@ -96,6 +99,7 @@ jobs:
           file godot/addons/scraperx_native/bin/android/x86_64/libscraperx_native.so \
             | tee artifacts/android-compatibility-build/native-library.txt
           python3 -m unittest discover -s ci -p test_android_compatibility.py
+          python3 -m unittest discover -s ci -p test_android_touch_driver.py
           ccache --show-stats
       - name: Check controls and export observed ordinary game
         shell: bash
@@ -112,6 +116,9 @@ jobs:
             2>&1 | tee artifacts/android-compatibility-build/pcm-loops.log
           grep -E 'PCM_LOOP checks=[0-9]+ failures=0' artifacts/android-compatibility-build/pcm-loops.log
           python3 ci/prepare_android_emulator_export.py
+          tools/godot/godot --headless --editor --path godot --import --quit 2>&1 \
+            | tee artifacts/android-compatibility-build/observed-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/android-compatibility-build/observed-import.log; then exit 1; fi
           tools/godot/godot --headless --path godot --export-debug "Android emulator" \
             "${GITHUB_WORKSPACE}/artifacts/android-compatibility-build/ScraperX-emulator.apk" \
             2>&1 | tee artifacts/android-compatibility-build/export.log
@@ -166,6 +173,7 @@ jobs:
             api: 36
             device: pixel_c
             resize: 1920x1200
+            route: --display-route
           - name: foldable-api35
             api: 35
             device: 7.6in Foldable

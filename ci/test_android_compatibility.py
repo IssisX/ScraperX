@@ -3,6 +3,7 @@ from pathlib import Path
 import base64
 import json
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -117,6 +118,10 @@ class AndroidExportTests(unittest.TestCase):
             main = (ROOT / 'godot/project.godot').read_text()
             (project / 'export_presets.cfg').write_text(shipping)
             (project / 'project.godot').write_text(main)
+            for path in ('presentation/ui/touch_controls.gd', 'presentation/main.gd'):
+                target = project / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / 'godot' / path, target)
             prepare(project)
             preset = (project / 'export_presets.cfg').read_text()
             config = (project / 'project.godot').read_text()
@@ -124,6 +129,8 @@ class AndroidExportTests(unittest.TestCase):
             self.assertIn('architectures/arm64-v8a=false', preset)
             self.assertIn('run/main_scene="res://main.tscn"', config)
             self.assertIn('AndroidCompatibilityProbe=', config)
+            self.assertEqual((project / 'presentation/ui/touch_controls.gd').read_text().count('.record_touch(event, self)'), 3)
+            self.assertIn('.record_step(world_move,', (project / 'presentation/main.gd').read_text())
             self.assertEqual((ROOT / 'godot/export_presets.cfg').read_text(), shipping)
             self.assertEqual((ROOT / 'godot/project.godot').read_text(), main)
             with self.assertRaises(ValueError):

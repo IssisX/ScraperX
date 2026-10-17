@@ -105,6 +105,7 @@ class Session:
         self.frame_key = None
         self.frame = None
         self.frame_error = None
+        self.touch_driver = None
 
     def adb(self, *args, timeout=30):
         command = ['adb', *map(str, args)]
@@ -164,6 +165,13 @@ class Session:
 
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
+
+    def swipe(self, start, end, duration_ms):
+        if self.touch_driver is None:
+            from android_touch_driver import TouchDriver
+            api = int(self.receipt['ro.build.version.sdk'])
+            self.touch_driver = TouchDriver(self, api)
+        return self.touch_driver.swipe(start, end, duration_ms)
 
     def first_controls(self, state):
         if state['paused']:
@@ -305,15 +313,14 @@ def exercise(args, session):
                          s['peak_upward_speed'] > 0.5, after=state)
     before = state
     start, end = state['stick'], state['stick_up']
-    session.adb('shell', 'input', 'swipe', round(start[0]), round(start[1]),
-                round(end[0]), round(end[1]), 1200)
+    session.swipe(start, end, 1200)
     state = session.wait('ordinary touch stick moves native player',
                          lambda s: math.dist(s['position'][::2], before['position'][::2]) > 0.1,
                          after=before)
     session.capture('after-input')
     before = state
     look = state['look']
-    session.adb('shell', 'input', 'swipe', round(look[0]), round(look[1]), round(look[0] + 80), round(look[1]), 400)
+    session.swipe(look, (look[0] + 80, look[1]), 400)
     state = session.wait('ordinary touch drag turns camera', lambda s: abs(s['yaw'] - before['yaw']) > 0.02, after=before)
     session.button(state, 'pause')
     state = session.wait('touch pause freezes native stepping', lambda s: s['paused'], after=state)
@@ -356,6 +363,9 @@ def exercise(args, session):
         state = session.fold(state)
     if args.profile.startswith('tall'):
         state = session.cutout(state)
+    if args.display_route:
+        from android_display_route import exercise_display
+        state = exercise_display(session, state)
     session.adb('shell', 'am', 'force-stop', PACKAGE)
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('process restart reloads persisted player settings',
@@ -375,6 +385,7 @@ def main():
     parser.add_argument('--resize', default='1280x800')
     parser.add_argument('--freight-route', action='store_true')
     parser.add_argument('--crane-route', action='store_true')
+    parser.add_argument('--display-route', action='store_true')
     parser.add_argument('--output', type=Path, default=Path('artifacts/android-compatibility'))
     args = parser.parse_args()
     if args.crane_route and not args.freight_route:
@@ -391,6 +402,14 @@ def main():
             session.receipt['diagnostic_error'] = str(diagnostic_error)
         raise
     finally:
+        if session.touch_driver is not None:
+            try:
+                session.touch_driver.close()
+            except Exception as error:
+                session.receipt['touch_driver_close_error'] = str(error)
+                session.receipt['status'] = 'failed'
+                session.save()
+                raise
         session.save()
 
 

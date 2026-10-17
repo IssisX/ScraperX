@@ -32,3 +32,43 @@ Android fullscreen tutorial setup now uses the real OS confirmation key before l
 The normal prepared arrival stands on actual dynamic cargo beam2446 (source WarehouseForkliftYard::kBeamEntity), at player centerY1.86m. The existing native freight_yard_arrival_tests requires actual solved footing, not a bare-gradeY<1m. Correct the harness's false height assumption; retain actual grounding, independent cab support, reach authorization, force/work and exit checks. Crane touch coverage is implemented and integrated: ordinary service-strip approach, actual booth support1450, Action, physical suspended-load rise plus work/source use, all targets neutral, Done, grade exit. Static clearance/contract checks pass; Android machine navigation remains pending.
 
 Focused follow-up commands: python3 -m unittest discover -s ci -p test_android_compatibility.py ->9tests OK; python3 /data/data/com.termux/files/usr/tmp/android-crane-route-check/check.py ->syntax/negative-hoist/neutral/footing checks and conservative2378solid route clearance PASS; pinned Godot4.7 probe parse ->ANDROID_PROBE_PARSE PASS. Current audio/signer evidence remains valid because those owners are unchanged. Settings restart evidence now also retains actual persisted bytes and requires a nonempty matching checksum; the previous empty-file hash alone was insufficient.
+# Held Android input follow-up — 2026-10-17
+
+Actual GitHub run39048317276 on92bd194: all four profiles initialized real
+native Main. Compact, foldable and tablet passed crouch, stand and native jump
+work, then failed stick displacement. Tall passed actual arrival footing but
+made no walking progress in twelve short touch pulses. This is not green.
+
+AOSP API24 Input.java starts its finite swipe clock before synchronous DOWN;
+its first MOVE remains at the origin. A slow delivery can consume the duration
+before a nonzero drag exists. Newer finite swipe commands have the same
+wall-clock problem. These source facts support repairing the driver; the
+captured run did not identify the exact failing input stage.
+
+The next source uses separate actual DOWN/MOVE/UP events, held across native
+ticks. API24 uses stock Monkey's network touch commands; API35/36 use platform
+motionevent. Passive emulator-only owner/step receipts distinguish missing
+drag, input lost before sampling, and accepted native intent without motion.
+UP is guaranteed through cleanup and actual ownership release is required.
+No game controller, physics, fidelity, displacement or work check was weakened.
+
+Local commands and actual output before publication:
+
+- `python3 -m unittest discover -s ci -p test_android_compatibility.py`:9 OK.
+- `python3 -m unittest discover -s ci -p test_android_touch_driver.py`:3 OK,
+  including failed MOVE, failed observation and failed UP/CANCEL cleanup.
+  Initial failures exposed an overstrict cleanup counter and rounded-down
+  duration; both driver defects were corrected before the passing run.
+- Pinned Godot4.7 ARM64, isolated prepared touch/probe project,
+  `--headless --script res://tests/parse.gd`:
+  `ANDROID_TOUCH_OBSERVER dispatch_events=3 drags=1 native_tick_receipts=9 released=true`.
+  This exercises observer wiring, not real Android or native movement.
+
+Android execution of this new driver, system shade/rotation and machine routes
+is pending. Physical-device performance and the hardware floor remain separate.
+
+Primary source references:
+
+- https://android.googlesource.com/platform/frameworks/base/+/android-7.0.0_r1/cmds/input/src/com/android/commands/input/Input.java
+- https://android.googlesource.com/platform/development/+/android-7.0.0_r1/cmds/monkey/src/com/android/commands/monkey/MonkeySourceNetwork.java
+- https://android.googlesource.com/platform/frameworks/base/+/android-16.0.0_r1/services/core/java/com/android/server/input/InputShellCommand.java
