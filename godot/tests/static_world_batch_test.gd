@@ -17,6 +17,26 @@ func _check(condition: bool, label: String) -> void:
 
 
 func _run() -> void:
+	# Strut endpoints are parent-local, just like add_box_to positions.
+	var strut_host := Node3D.new()
+	root.add_child(strut_host)
+	strut_host.position = Vector3(4, 2, -3)
+	strut_host.rotation.y = 0.6
+	var strut_geometry := Geometry.new(strut_host)
+	var strut_from := Vector3(-2, 0.1, -4)
+	var strut_to := Vector3(-2, 2.2, 4)
+	var strut := strut_geometry.add_strut("ParkourStructure", strut_from, strut_to,
+		0.14, strut_geometry.material(Color.GRAY, 0.0, 0.8))
+	var half_length := strut_from.distance_to(strut_to) * 0.5
+	_check((strut.global_transform * Vector3(0, 0, half_length)).distance_to(
+		strut_host.to_global(strut_from)) < 0.0002, "translated/rotated strut starts at its real parent-local joint")
+	_check((strut.global_transform * Vector3(0, 0, -half_length)).distance_to(
+		strut_host.to_global(strut_to)) < 0.0002, "translated/rotated strut ends at its real parent-local joint")
+	strut_host.free()
+	if "--strut-transform-only" in OS.get_cmdline_user_args():
+		print("SCRAPERX_STRUT_TRANSFORM_TEST failures=%d" % _failures)
+		quit(0 if _failures == 0 else 1)
+		return
 	var host := Node3D.new()
 	root.add_child(host)
 	var geometry := Geometry.new(host)

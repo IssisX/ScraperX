@@ -68,7 +68,7 @@ func add_strut(node_name: String, from: Vector3, to: Vector3, thickness: float,
 	var instance := add_box_to(node_name, Vector3(thickness, thickness, length),
 		from + delta * 0.5, material, host)
 	var up := Vector3.UP if absf(delta.normalized().y) < 0.99 else Vector3.RIGHT
-	instance.look_at(to, up)
+	instance.look_at(host.to_global(to), (host.global_transform.basis * up).normalized())
 	return instance
 
 

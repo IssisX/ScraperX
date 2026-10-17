@@ -1,6 +1,6 @@
 # West apron practice layout — 2026-10-15
 
-Status: authored builder, **unintegrated and native gameplay unproven**. Source baseline `ChatGPT` / `0db3c5dcfe4df28e0f2504bd6052b49fc740e97a`, preserving concurrent movement work. Owned implementation: `godot/presentation/parkour_yard.gd`. This is an optional ground playground; it supplies no connection to elevated canonical ascent machinery.
+Status: integrated into the normal world; public native ground loop accepted2026-10-17. The physical59-part layout is retained, translated4m east to clear existing storage. Coordinates below are the original builder-local coordinates: add4m to x for current world positions. The service aisle is now localx=-50/worldx=-46. Ground approach follows worldz=-43.5 north of the existing stock. Native acceptance covers six real jumps (including retry), recovery under the2.2m gallery, crouched duct passage, blocked standing and return. Optional upper-gallery/dock/wall branches and human feel remain unverified. This is an optional playground, never an elevated canonical bypass. See `evidence/parkour-2026-10-17/WEST_APRON.md`.
 
 Integration owner must instantiate `ParkourYard.new(geometry).build()` once after yard construction and before exporting world solids. `ParkourStructure` and `ScrambleRung` are solid box/strut parts; `ParkourPaint` is flush presentation only. No Godot collider, physics body, animation, update callback, route force, or scripted elevation is added. The existing ground remains the recovery floor. Export registration and native generated geometry belong to the integration owner.
 
@@ -36,7 +36,7 @@ Ground loop: utility bay → open z -68 cross-aisle → duct or wall lane → op
 
 Integration must export these parts into the normal native world, with no hidden test floor. Exercise the actual player capsule and ordinary movement inputs, starting from a reachable receiving-yard position:
 
-1. Walk west at z -45 to x -48 and south along the spine. Walk the full ground loop in both directions, including around every failed optional branch. Reject obstruction of the existing receiving yard or canonical route.
+1. From the normal freight spawn, walk east north of the existing stock along worldz=-43.5, then south atworldx=-48 to the first jump approach. The accepted ground return passes under the gallery atworldx=-72, crossesz=-67.5, uses the duct and returns through the east aisle atworldx=-46. Existing storage and canonical routes remain intact.
 2. Run and press jump before each utility gap, retaining normal camera/look controls. Traverse both ways; fall to ground deliberately, walk back and retry. Confirm landings have real native contact and no fabricated grounded state.
 3. Approach each 0.8 m partition, exercise current vault input and its ordinary jump alternative; walk around both ends. Hold crouch and move along x beneath the duct. Standing should be physically blocked by its real underside; crouched passage should work without clipping into posts/braces. Walk the bypass, then jump via the eastern plinth onto the roof and back.
 4. Use the east step to jump onto the first dock and traverse the two 2 m gaps at run speed in either direction. Turn around on every dock. Drop off, walk the perimeter and retry.

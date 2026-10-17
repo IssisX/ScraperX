@@ -27,6 +27,7 @@ var _geometry: WorldGeometry
 var _stack_world: StackWorldBuilder
 var _alpine_world: AlpineWorldBuilder
 const GroundYard := preload("res://presentation/ground_yard.gd")
+const ParkourYard := preload("res://presentation/parkour_yard.gd")
 var _ground_yard: GroundYard
 const FreightActivity := preload("res://presentation/freight_activity.gd")
 var _freight_activity: Node3D
@@ -2516,6 +2517,10 @@ func _build_world() -> void:
 		_machine_view.build_crane(mill_scale, hazard)
 	_alpine_world.build_foliage()
 	_machine_view.build_lighting()
+	if not _regression_scene:
+		# Append the practice yard after existing exported geometry so its
+		# arrival does not reorder established box/hull entries.
+		ParkourYard.new(_geometry).build()
 # Slightly darker variant of a base material, for members that should sit back
 # a value step without defining a whole new palette entry.
 func rust_deepen(source: Material) -> Material:
