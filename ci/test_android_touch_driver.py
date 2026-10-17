@@ -6,10 +6,11 @@ from android_touch_driver import TouchDriver
 
 
 class SessionFixture:
-    def __init__(self, *, fail_move=False, fail_hold=False, fail_up=False):
+    def __init__(self, *, fail_move=False, fail_hold=False, fail_up=False, drop_move=False):
         self.receipt = {}
         self.commands = []
         self.fail_move, self.fail_hold, self.fail_up = fail_move, fail_hold, fail_up
+        self.drop_move = drop_move
         self.state = {'instance': 'one', 'ready': True, 'paused': False,
                       'tick': 100, 'fixed_step_s': 1 / 90,
                       'input_trace': {'events': 0, 'owned': False}}
@@ -24,6 +25,8 @@ class SessionFixture:
             raise RuntimeError('injected move failure')
         if action == 'UP' and self.fail_up:
             raise RuntimeError('injected release failure')
+        if action == 'MOVE' and self.drop_move:
+            return b''
         self.state['input_trace']['events'] += 1
         self.state['input_trace']['owned'] = action not in ('UP', 'CANCEL')
         return b''
@@ -40,6 +43,12 @@ class SessionFixture:
 
 
 class TouchDriverTests(unittest.TestCase):
+    def test_stationary_button_hold_accepts_down_when_platform_omits_move(self):
+        session = SessionFixture(drop_move=True)
+        TouchDriver(session, 36).swipe((10, 20), (10, 20), 650)
+        self.assertEqual(session.state['input_trace']['events'], 2)
+        self.assertFalse(session.state['input_trace']['owned'])
+
     def test_real_release_after_observed_native_duration(self):
         session = SessionFixture()
         state = TouchDriver(session, 36).swipe((10, 20), (10, 5), 650)

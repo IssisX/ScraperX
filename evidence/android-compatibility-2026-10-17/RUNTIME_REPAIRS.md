@@ -55,8 +55,8 @@ No game controller, physics, fidelity, displacement or work check was weakened.
 Local commands and actual output before publication:
 
 - `python3 -m unittest discover -s ci -p test_android_compatibility.py`:9 OK.
-- `python3 -m unittest discover -s ci -p test_android_touch_driver.py`:3 OK,
-  including failed MOVE, failed observation and failed UP/CANCEL cleanup.
+- `python3 -m unittest discover -s ci -p test_android_touch_driver.py`:4 OK,
+  including stationary holds, failed MOVE, failed observation and failed UP/CANCEL cleanup.
   Initial failures exposed an overstrict cleanup counter and rounded-down
   duration; both driver defects were corrected before the passing run.
 - Pinned Godot4.7 ARM64, isolated prepared touch/probe project,

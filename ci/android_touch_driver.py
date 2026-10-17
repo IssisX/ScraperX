@@ -57,9 +57,12 @@ class TouchDriver:
             active = True
             self.pointer('DOWN', start)
             self.pointer('MOVE', end)
+            # Android/Godot may omit a stationary MOVE. A held machine button
+            # needs its real DOWN; a stick/look drag needs the MOVE as well.
+            event_count = 1 if tuple(map(round, start)) == tuple(map(round, end)) else 2
             accepted = self.session.wait('held Android gesture reaches native stepping',
                 lambda s: s['instance'] == before['instance'] and
-                s.get('input_trace', {}).get('events', 0) >= before.get('input_trace', {}).get('events', 0) + 2 and
+                s.get('input_trace', {}).get('events', 0) >= before.get('input_trace', {}).get('events', 0) + event_count and
                 s.get('input_trace', {}).get('owned', False) and
                 s['tick'] > before['tick'], after=before, timeout=45)
             release_after = accepted
