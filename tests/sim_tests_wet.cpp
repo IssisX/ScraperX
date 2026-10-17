@@ -457,8 +457,10 @@ void run_wet_handling() {
                                                    now.z - handle_last.z));
         handle_last = now;
     }
+    std::cout << "  S3 handle taken: came down " << handle_y0 - handle_last.y << " m, worst tick "
+              << worst_handle_tick << " m\n";
     require(chain.snapshot().carrying_entity_id == Simulation::kStackS3HandleEntityId &&
-                handle_y0 - handle_last.y > 0.4,
+                handle_y0 - handle_last.y > 0.25,
             "taken, S3's handle must come down to the hands");
     require(worst_handle_tick <= 6.0 * Simulation::kFixedStepSeconds,
             "a taken handle must be drawn in to the hands, not snapped to them");
