@@ -96,3 +96,11 @@ Apply the general [Engineering Delivery skill](/data/data/com.termux/files/home/
 Judge progress by what the player can see, hear, do and revisit in a normal shipped session. Finish approach, operation, onward play and recovery. Root codes a substantial owned critical-path slice while useful workers handle independent surfaces. Go deep where it changes a consequential design/repair; don't use more research, tests or agents to postpone a known implementation. Stop repeated unsuccessful methods and choose a supported different action without erasing history.
 
 Use the existing execution_state/checkpoint/backlog, not another task register. Preserve source-matching evidence and all deferred scope. Ordinary shell/Python workers own build watching. Publication, candidate/full gates, matching APK and phone experience remain distinct facts; never close the phone-responsiveness goal around host draw counts or material polish. The workflow study and its actual validation are recorded in `03_EXECUTION/ENGINEERING_WORKFLOW_20261016.md`.
+
+<!-- POLICY_BEFORE_REDESIGN_20261017_START -->
+## Distinguish policy from mechanics before redesign
+
+Before expensive mechanical changes, identify whether the failing value is a physical limit, a current owner contract, a tunable gameplay rule or a test assumption. Consider the smallest authorized change at the real owner first. Never silently change a contract or weaken a test for green results. State an authorized policy change and keep production and acceptance tied to the same source of truth; check both sides of a changed consequence boundary. Two failed mechanical variants require revisiting that framing, not another parameter search.
+
+Current example: owner explicitly authorized lowering rigid-impact death speed on2026-10-17. The shared rule is18m/s; first-rebound lethal spill remains required. Do not reopen net spring/damping/mass/restitution experiments to preserve the superseded20m/s rule. Actual causal net behavior, overload, clearance, energy, settling and restore remain required.
+<!-- POLICY_BEFORE_REDESIGN_20261017_END -->

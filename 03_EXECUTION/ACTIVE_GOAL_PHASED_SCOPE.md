@@ -79,7 +79,7 @@ The central rule is: **player intent requests an action; actual physical state d
 - Require deliberate preparation/input, compatible velocity, suitable footing, and sufficient clear forward room for a roll.
 - Implement actual roll travel and time, appropriate forward momentum, collision with surrounding geometry, and a changed distribution of deceleration.
 - The translation-only capsule and animation alone cannot demonstrate anatomical rolling. A reduced-order implementation must physically implement and identify its contacts, impulse exchange, energy loss, travel, and limitations.
-- Preserve the native 20 m/s lethal-impact rule. Rolling must not erase fall consequences or evade that threshold.
+- Preserve the shared native lethal-impact rule (18 m/s; owner tuning2026-10-17). Rolling must not erase fall consequences or evade that threshold.
 - Cause stumbles and recoverable instability through real off-axis impacts, landing slip, support acceleration, inadequate traction, obstruction, and narrow or rotating footing.
 - Give mild mistakes a short, playable correction opportunity. Severe mistakes can cause an uncontrolled fall.
 - Recovery requires actual contact, finite correction force, feasible foot placement/reach, and player input. Do not substitute random animations, fixed input lockouts, or invisible rescue forces.

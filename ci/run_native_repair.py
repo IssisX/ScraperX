@@ -23,6 +23,12 @@ OWNERS = {
     "forklift_boarding_diagnostic": "scraperx_forklift_boarding_diagnostic_tests",
     "suspended_ladder_route": "scraperx_suspended_ladder_tests",
     "cargo_net_ground_route": "scraperx_cargo_net_tests",
+    "catch_net_model": "scraperx_catch_net_model_tests",
+    "catch_net_force_phase": "scraperx_catch_net_model_tests",
+    "catch_net_contact_friction": "scraperx_catch_net_model_tests",
+    "soft_velocity": "scraperx_soft_velocity_tests",
+    "catch_net_player": "scraperx_catch_net_player_tests",
+    "landing_response": "scraperx_landing_tests",
     "swing_stair_route_2": "scraperx_swing_stair_route_tests",
     "split_inspection_route": "scraperx_split_inspection_route_tests",
 }

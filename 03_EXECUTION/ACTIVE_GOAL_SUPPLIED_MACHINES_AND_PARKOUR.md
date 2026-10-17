@@ -211,7 +211,7 @@ responsive, visceral and tactile movement with agile human limitations.
   the distribution of deceleration. Capsule tuck plus animation alone is not
   anatomical or physical rolling proof. A reduced-order roll must implement and
   identify its contact, impulse exchange, energy loss, travel and limitations.
-- Preserve the native20m/s lethal-impact contract. Rolling must not erase damage
+- Preserve the shared native18m/s lethal-impact contract (owner tuning2026-10-17). Rolling must not erase damage
   or evade death. A threshold change requires a separate gameplay decision.
 - Cause instability through off-axis impact, tangential slip, obstructed motion,
   inadequate traction, sudden support acceleration or narrow/rotating footing.

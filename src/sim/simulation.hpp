@@ -633,7 +633,10 @@ public:
     // WO-008 landing consequence: a genuine landing faster than this restores
     // the checkpoint. Public so presentation can show the real bound (the
     // fall-danger gauge) instead of mirroring a gameplay rule it cannot own.
-    static constexpr double kLethalImpactSpeedMps = 20.0;
+    // Rigid support-relative normal impact speed; cloth overload is separate.
+    // Owner gameplay tuning2026-10-17: a first-bounce spill remains dangerous
+    // without adding energy to the passive catching mechanism.
+    static constexpr double kLethalImpactSpeedMps = 18.0;
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;

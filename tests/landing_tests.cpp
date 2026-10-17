@@ -26,6 +26,21 @@ Snapshot drop(Simulation &simulation, Vector3 at) {
 }
 }
 int main() {
+    // Actual rigid landings straddle the shared policy. The upper case must
+    // kill below the retired20m/s rule, while the lower case still survives.
+    for(const double margin : {-.5,.5}) {
+        Simulation boundary;
+        const double speed=Simulation::kLethalImpactSpeedMps+margin;
+        const auto receipt=drop(boundary,{40,.9+speed*speed/(2*9.81),-50});
+        const bool lethal=margin>0;
+        require(receipt.landing_support_entity_id==1,
+                "impact boundary did not reach real rigid grade");
+        require((receipt.landing_normal_speed_mps>Simulation::kLethalImpactSpeedMps)==lethal &&
+                receipt.death_count==(lethal?1U:0U),
+                "actual impact speed and death disagree across shared lethal boundary");
+        std::cout<<"LANDING_BOUNDARY threshold_mps="<<Simulation::kLethalImpactSpeedMps
+            <<" measured_mps="<<receipt.landing_normal_speed_mps<<" deaths="<<receipt.death_count<<'\n';
+    }
     Simulation light_sim, medium_sim, heavy_sim, lethal_sim;
     const auto light = drop(light_sim, {40, 1.3, -50});
     const auto medium = drop(medium_sim, {40, 4.9, -50});

@@ -1,7 +1,11 @@
 {
-  "reason": "Correct route-driver assumptions proved by focused x86 run39039297586: use existing finite air braking before receiver acquisition; acquire180 consecutive genuinely unsupported hand-load solves after bounded real cloth-contact settling. No production physics, limits or public APIs change. Preserve same-life route completion, zero extra pause command work, hand weight/deflection and all receiver handoff criteria.",
+  "reason": "Owner-approved rigid-impact death tuning20\u219218m/s. Keep the published passive net unchanged; derive rebound/fatal checks from the shared gameplay rule. Exercise both sides of the actual rigid-landing boundary, catch survival/exit/overload/restore, original clearance/settling/energy and force/friction/velocity regressions.",
   "checks": [
-    "suspended_ladder_route",
-    "cargo_net_ground_route"
+    "catch_net_model",
+    "catch_net_force_phase",
+    "catch_net_contact_friction",
+    "soft_velocity",
+    "catch_net_player",
+    "landing_response"
   ]
 }

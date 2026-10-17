@@ -29,7 +29,7 @@ These are proposalbounds, not observed route behavior. They may be adapted by ro
 
 ## Physical prediction and player experience
 
-Player muscle supplies finite takeoff/climb work. Gravity governs flight and misses. Existing5.5m/s vertical takeoff gives approximately1.12s same-height flight; a2.1m sidewaysgap is feasible in principle, while actualapproach/braking/contact need ordinaryinputs. An11m fall plusjumpheight approaches15–16m/s, below the unchanged20m/s lethalimpact threshold; actual landing orientation/impulse still decides recovery.
+Player muscle supplies finite takeoff/climb work. Gravity governs flight and misses. Existing5.5m/s vertical takeoff gives approximately1.12s same-height flight; a2.1m sidewaysgap is feasible in principle, while actualapproach/braking/contact need ordinaryinputs. An11m fall plusjumpheight approaches15–16m/s, below the shared18m/s lethalimpact threshold; actual landing orientation/impulse still decides recovery.
 
 Purpose: exposed upperinspection access. Approach teaches the brace and shelteredreceiver; player reads height, commits sideways, brakes, turns, and climbsnarrow steel. Secure484m footing releases tension and prepares the nextascent. Contrast/nosing/materialwear must explain realedges without widening collision unintentionally. Reuse native Kit and existing entity-aware presentation; no newphysics/controller/effectdispatcher.
 

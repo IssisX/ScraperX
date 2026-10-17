@@ -141,9 +141,9 @@ void fatal_fixture(const char *label,Vector3 start,bool overload) {
         if(i%90==0||a.death_count)trace(s,i);
         if(a.death_count) {
             require(a.death_count==1,"one actual fatal event restores once");
-            if(overload)require(touched&&a.last_impact_speed_mps<20&&peak_g>20,
+            if(overload)require(touched&&a.last_impact_speed_mps<Simulation::kLethalImpactSpeedMps&&peak_g>20,
                 "overload consequence comes from finite net load policy before any lethal rigid strike");
-            else require(a.last_impact_speed_mps>20,"real rigid strike retains lethal impact consequence");
+            else require(a.last_impact_speed_mps>Simulation::kLethalImpactSpeedMps,"real rigid strike retains lethal impact consequence");
             cleared(s);mesh_equal(cargo,s.cargo_net_vertices());mesh_equal(catch_mesh,s.catch_net_vertices());
             mesh_equal(cargo,s.cargo_net_vertices(0));mesh_equal(catch_mesh,s.catch_net_vertices(0));
             const auto restored=s.kit_body_position(frame);
@@ -165,9 +165,9 @@ void bottom_out() {
         tick(s);const auto a=s.snapshot();
         if(a.death_count) {
             require(before.support_entity_id==1963&&prior.current_contact&&
-                    before.player_linear_velocity.y < -20&&!prior.overloaded,
+                    before.player_linear_velocity.y < -Simulation::kLethalImpactSpeedMps&&!prior.overloaded,
                     "bottom-out rigid strike begins with actual current cloth support and lethal descent");
-            require(a.death_count==1&&a.last_impact_speed_mps>20,
+            require(a.death_count==1&&a.last_impact_speed_mps>Simulation::kLethalImpactSpeedMps,
                     "actual rigid obstruction below cloth retains lethal consequence while soft supported");
             cleared(s);
             std::cout<<"PASS catch real clip bottom-out despite current soft support rigid_mps="
@@ -178,7 +178,7 @@ void bottom_out() {
 }
 void spill() {
     // This first rebound must produce a ground strike above the existing
-    // >20 m/s lethal threshold; the 36 m settling fixture lands below it.
+    // shared rigid-impact lethal threshold; neutral36m stays on the net.
     Simulation s;require(s.debug_restart_at({-34,40,-150}),"spill fall fixture is clear");
     bool contact=false,air_input=false,outside=false;
     for(int i=0;i<1000;++i) {
@@ -191,7 +191,7 @@ void spill() {
         outside=outside||a.player_position.x < -41;
         if(i%90==0||a.death_count)trace(s,i);
         if(a.death_count) {
-            require(air_input&&outside&&a.last_impact_speed_mps>20,
+            require(air_input&&outside&&a.last_impact_speed_mps>Simulation::kLethalImpactSpeedMps,
                 "ordinary airborne lateral intent spills first rebound into a fatal real ground landing");
             std::cout<<"PASS catch deliberate first-bounce spill remains lethal\n";return;
         }

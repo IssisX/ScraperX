@@ -1,3 +1,4 @@
+#include "sim/simulation.hpp"
 #include "sim/catch_net_route.hpp"
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/JobSystemSingleThreaded.h>
@@ -599,7 +600,7 @@ void fall(float height,float offset_z=0){World w;
     check(min_vertex<3.7F,"actual sag under load");check(reversed&&max_rebound>1,"neutral elastic rebound");
     check(min_vertex>.12F&&min_caught_player>.95F,"mesh and contacted capsule retain grade clearance");
     check(contacted&&separated&&recontacted,"real solved soft contacts separate and recontact");
-    if(height>=40)check(first_apex>.9F+20.0F*20.0F/(2*9.81F),"first rebound can supply rigid fatal grade descent");
+    if(height>=40)check(first_apex>.9F+float(scraperx::sim::Simulation::kLethalImpactSpeedMps*scraperx::sim::Simulation::kLethalImpactSpeedMps)/(2*9.81F),"first rebound can supply rigid fatal grade descent");
     else {
         check(final.GetY()>1.2&&final.GetX()>-40&&final.GetX()<-28&&final.GetZ()>-156&&final.GetZ()<-144,
               "lower drop settles on actual net above grade");

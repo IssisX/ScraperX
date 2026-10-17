@@ -1,3 +1,19 @@
+<!-- ANDROID_COMPATIBILITY_LIVE_START -->
+# Current execution — owner-approved catch death-rule correction,2026-10-17
+
+OWNER DECISION: stop net redesign/tuning; lower player death threshold instead. Shared Simulation::kLethalImpactSpeedMps20→18m/s, an explicit global gameplay-policy change. Supersedes previous20m/s invariant AND root's intervening suggestion to retire lethal first-rebound acceptance. Keep first-rebound spill/fatal check, actual support-relative impact, cloth overload, energy, clearance, settling and restore. All rootexperimental net/Jolt/render/force/mass changes removed; original production cloth/piston/frame/seal/tether byte-identical. Publishedbase5bd7ccd77cea010d13fa971d5926929e94ecaa72.
+
+Root owns clean-source71TU native build, critical player40spill and landing boundary/recovery, scopedpublication and APK. Clean sharedheader overlay preserves unrelateddirtygrapple changes. New tests read same publicthreshold; actual17.5/18.5m/s targeted falls must straddle death rule. Existing roll~17.7m/s must survive. Complete affected6check x86 native request covers catchmodel/player/force/friction/velocity andlanding. Build/evidence Q/catch-return/lethality-native; Q=/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017. Local71TUbuilt/force/original40spill/fulllandingresponsePASS; GitHubandAPKpending.
+
+One independentSol/high implementer inspection_seat_repair owns only split_inspection_route.hpp/.cpp plus focusednotes. Separate fullsuite blocker: counterweight blockescapes to roof462, actual28mspanfails receivingseatcontact. Originalexpectations preserved; nofake support/solver strength changes. Rootintegrates actualdiff/evidencewhenready. Ordinary shellworkers, notmodels, monitorGitHub in Q/github-workers.json.
+
+REJECTED HISTORY: springcartridges worsened45apex18.8044m. Relief300N passesmodel but player40strike19.0978m/s<old20. Distributed25node saddle nativeforcepasses but actualplayerstrike18.3527m/s. Bulkdragremoval improves19.8187m/s butstill<old20. No elasticcontactworldexperiment run. Patches/receipts preserved privately; no moremechanicalvariants. Persistentledger evidence/ci-repair-2026-10-15/catch-return-window.json retains failures. Newdecision evidence/ci-repair-2026-10-15/catch-lethality-decision.md distinguishes scopechangefromsolverrepair.
+
+ANDROID PRESERVED: real5bdpush; full39053372865failed, compatibility39053372849foldpasses/compacttablettallfail, candidate39053372844 separatelytracked. FontScale diagnosticdfad677/39053295105 reproducedunsafe earlyGodot recreation. UnpublishedfontScale-onlymanifestparser/test changes retained .github/actions/stable-apk/prepare-apk.py andci/test_android_manifest_policy.py; notenabledinsigner/norepairedAndroidproof. ResumeAndroidcompatibilityaftercatch/dependentdelivery; noquality/physicsdegradation forsupport.
+
+NEXT: local nativebuild/player40spill/fulllandingresponsepassed; keep necessary affectedchecks once; scopedcommitandREAL gitpush originChatGPT, exactsourcefocused/fullActions+matchingAPKlink. Candidategreenisnotfullgreen; neverclaimdevicefeelwithoutphone. Preserve all unrelateddirty/untracked andexistingpaused/deferredscope, noreset/clean/add-all/settingsaudit.
+<!-- ANDROID_COMPATIBILITY_LIVE_END -->
+
 <!-- CURRENT_PARKOUR_RENDER_CHECKPOINT -->
 # Current live checkpoint
 
