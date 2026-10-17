@@ -1,0 +1,154 @@
+{
+  "source": "3f391aa826e582a085164cebad294764f8752ba3",
+  "x86_focused_run": 39039297586,
+  "result": "Both original failures reproduced with unchanged original assertions and physics",
+  "receiver": {
+    "source_evidence": "focused-ci/run.log RECEIVER_CATCH and physical_hand_climb_tests.cpp passive_radial_arc/ForceObserver",
+    "left_reach_before_release_m": 1.76349,
+    "right_reach_before_release_m": 1.59159,
+    "allowed_reach_m": 1.75,
+    "cause": "Original route driver enters catch with unbraked sideways momentum. Native maximum-reach release follows the existing contract; no force/profile repair supported.",
+    "repair": "Use the same position/velocity feedback as ordinary walking, capped at original0.7 side-input, during flight toward existing8.25m inboard stance. Preserve all catch/force/work/deadline/exit assertions; additionally require measured finite air-braking work."
+  },
+  "cargo_pause": {
+    "sample": 137,
+    "tick": 2516,
+    "grounded": true,
+    "support": 1953,
+    "hand_count": 2,
+    "hand_support": 1953,
+    "gravity": 1,
+    "position_m": [
+      20.4865,
+      4.02983,
+      -118.169
+    ],
+    "actual_contact_m": [
+      20.5611,
+      3.27695,
+      -118.445
+    ],
+    "contact_offset_m": [
+      0.0746,
+      -0.75288,
+      -0.276
+    ],
+    "bottom_cap_surface_distance_m": 0.35057303718340915,
+    "capsule_radius_m": 0.35,
+    "cause": "Real cloth foot contact coexists with the retained two-hand hang; height>4.5 is not proof of a future contact-free two-second measurement interval.",
+    "independent_contract": "AS-024_CARGO_NET_ENTRY.md acceptance specifies idle sag, stop/resume, real hand load/deflection and onward footing; it does not prohibit physically valid incidental cloth foot contact. Native support.cpp accepts current upward bottom-cap contacts; suppressing grounding would violate contact truth.",
+    "repair": "Retain180 consecutive actually unsupported hand-load solves, original weight/zero-command-work/material-deflection checks and full route. Permit one2s settling interval for observed bottom-cap cloth contact; reset the measurement on each contact and fail if a continuous180-tick unsupported window is absent within4s."
+  },
+  "physics_changes": "none",
+  "checks_pending": "Corrected LinuxARM64 full routes pass; corrected x86 acceptance pending",
+  "corrected_arm_evidence": {
+    "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/corrected-result.json",
+    "native_archive_sha256": "a7be1c62e5faeb18848e5137595097ed9292ef6ca36dd965af26ce518cf6496d",
+    "builds": [
+      {
+        "name": "suspended_ladder_tests",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/corrected-source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/corrected-source/tests/suspended_ladder_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/build/suspended_ladder_tests"
+        ],
+        "exit": 0,
+        "seconds": 2.5051754670002992,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/suspended_ladder_tests-build.log",
+        "test_source_sha256": "72a2f43f871d4186f95d7d96ade01e19f1623791e0f224b666d04433aa8b45ef"
+      },
+      {
+        "name": "cargo_net_tests",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/corrected-source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/corrected-source/tests/cargo_net_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libscraperx_sim.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/build/cargo_net_tests"
+        ],
+        "exit": 0,
+        "seconds": 3.4194548429986753,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/cargo_net_tests-build.log",
+        "test_source_sha256": "1bc0ad9ff6f6f82538ad8bf6fbf9c026feffcefc36989ad388a1ac4cfe71eca5"
+      }
+    ],
+    "runs": [
+      {
+        "name": "suspended_ladder_tests",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/build/suspended_ladder_tests"
+        ],
+        "exit": 0,
+        "seconds": 41.88074665000022,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/suspended_ladder_tests-corrected.log"
+      },
+      {
+        "name": "cargo_net_tests",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/build/cargo_net_tests"
+        ],
+        "exit": 0,
+        "seconds": 114.05275933200028,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-climbing-handoff-20261017/cargo_net_tests-corrected.log"
+      }
+    ]
+  }
+}

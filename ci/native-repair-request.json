@@ -1,5 +1,5 @@
 {
-  "reason": "Both climbing cases pass exact-source LinuxARM64 but fail current full CIx86. Capture first failed cargo topology and actual receiver hand anchors; preserve all existing inputs, force/reach limits and assertions. No gameplay physics change in this request.",
+  "reason": "Correct route-driver assumptions proved by focused x86 run39039297586: use existing finite air braking before receiver acquisition; acquire180 consecutive genuinely unsupported hand-load solves after bounded real cloth-contact settling. No production physics, limits or public APIs change. Preserve same-life route completion, zero extra pause command work, hand weight/deflection and all receiver handoff criteria.",
   "checks": [
     "suspended_ladder_route",
     "cargo_net_ground_route"

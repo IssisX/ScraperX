@@ -233,8 +233,16 @@ int main() {
                     "receiver top-out preserves existing finite foot limits",s);
     };
     bool caught_receiver=false;
+    const double approach_braking_before=s.snapshot().air_control_command_absorbed_work_j;
     for(int i=0;i<150;++i) {
         const auto before=s.snapshot();
+        // Reach the existing inboard stance with ordinary bounded air control.
+        // Neutral radial hands carry tension; they do not cancel the committed
+        // sideways flight. Reuse walk's position/velocity feedback, capped at
+        // the original0.7 stick throw, before either hand acquires the lip.
+        const double side=std::clamp((8.25-before.player_position.x)*1.8-
+            before.player_linear_velocity.x*.28,-.7,.7);
+        require(s.set_move_input(side,.35),"ordinary air input brakes the receiver approach",s);
         require(s.set_facing(9-before.player_position.x,-178.45-before.player_position.z),
                 "ordinary airborne facing reaches toward the receiver lip",s);
         tick(s);
@@ -252,6 +260,8 @@ int main() {
         if(state.player_grounded)break;
     }
     require(caught_receiver,"swing departure reaches a real receiver lip catch within the flight budget",s);
+    require(s.snapshot().air_control_command_absorbed_work_j>approach_braking_before,
+            "receiver approach actually brakes through finite ordinary air control",s);
     const auto catch_receipt=[&](int ordinal) {
         const auto v=s.snapshot();
         std::cout<<"RECEIVER_CATCH ordinal="<<ordinal<<" tick="<<v.tick_index

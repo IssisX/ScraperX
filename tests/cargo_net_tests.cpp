@@ -42,14 +42,20 @@ void loaded_pause(Simulation &s, double lane) {
     (void)s.set_move_input(0,0);
     double force_y_sum=0, peak_material_dz=0, peak_grip_dz=0;
     constexpr int samples=180;
-    for(int i=0;i<samples;++i) {
+    // Height alone does not prove a contact-free hold: free radial swing can
+    // briefly put the real capsule's foot on the loaded cloth. Allow one
+    // existing two-second settling interval, then require the same180
+    // consecutive unsupported solves. A contact restarts the load window;
+    // it cannot contribute to the hand-only weight measurement.
+    int consecutive=0, elapsed=0, foot_brushes=0;
+    for(;elapsed<2*samples && consecutive<samples;++elapsed) {
         tick(s);
         const auto held=s.snapshot();
         if (held.player_grounded || held.support_entity_id!=0 ||
             held.traversal_state!=scraperx::sim::TraversalState::Climbing ||
             held.traversal_support_entity_id!=scraperx::sim::CargoNet::kEntity ||
             held.traversal_hand_constraint_count!=2 || held.player_gravity_factor!=1.0) {
-            std::cerr << "PAUSE_FAILURE lane=" << lane << " sample=" << i << " tick=" << held.tick_index
+            std::cerr << "PAUSE_TOPOLOGY lane=" << lane << " sample=" << elapsed << " tick=" << held.tick_index
                 << " grounded=" << held.player_grounded << " support=" << held.support_entity_id
                 << " traversal=" << int(held.traversal_state) << " hand_support=" << held.traversal_support_entity_id
                 << " hands=" << held.traversal_hand_constraint_count << " gravity=" << held.player_gravity_factor
@@ -63,21 +69,36 @@ void loaded_pause(Simulation &s, double lane) {
                 << " side_contact=" << held.soft_side_contact_entity
                 << " foot=" << held.foot_push_active << " foot_support=" << held.foot_push_support_entity_id << '\n';
         }
-        require(!held.player_grounded && held.support_entity_id==0 &&
-                held.traversal_state==scraperx::sim::TraversalState::Climbing &&
+        require(held.traversal_state==scraperx::sim::TraversalState::Climbing &&
                 held.traversal_support_entity_id==scraperx::sim::CargoNet::kEntity &&
                 held.traversal_hand_constraint_count==2 && held.player_gravity_factor==1.0,
-                "loaded pause has two net hands carrying a gravity-on rider with no foot support");
+                "loaded pause retains two actual material hands and ordinary gravity");
         require(held.traversal_command_work_bound_j==start.traversal_command_work_bound_j,
                 "idle loaded pause adds no commanded muscle work");
         const double force_y=held.traversal_left_hand_force.y+held.traversal_right_hand_force.y;
         require(std::isfinite(force_y),"loaded hand reaction is finite");
-        force_y_sum+=force_y;
+        if (held.player_grounded || held.support_entity_id!=0) {
+            const auto p=held.player_position, contact=held.support_contact_point;
+            // The authored standing capsule is0.9m half-height/0.35m radius.
+            // Retain its actual bottom-cap receipt, with20mm contact margin;
+            // a side/foreign support cannot be dismissed as a cloth brush.
+            require(held.player_grounded && held.support_entity_id==scraperx::sim::CargoNet::kEntity &&
+                    !held.foot_push_active && contact.y<=p.y-(.9-.35) &&
+                    contact.y>=p.y-.9-.02 && std::hypot(contact.x-p.x,contact.z-p.z)<=.35+.02,
+                    "pause settling permits only actual cloth contact on the capsule foot");
+            consecutive=0;
+            force_y_sum=0;
+            ++foot_brushes;
+        } else {
+            ++consecutive;
+            force_y_sum+=force_y;
+        }
         const auto mesh=s.cargo_net_vertices();
         require(mesh.size()==vertices.size(),"loaded mesh retains material identity");
         peak_material_dz=std::max(peak_material_dz,std::abs(mesh[vertex].z-vertices[vertex].z));
         peak_grip_dz=std::max(peak_grip_dz,std::abs(held.traversal_left_hand.z-start.traversal_left_hand.z));
     }
+    require(consecutive==samples,"loaded pause proves180 consecutive unsupported hand-load solves within4seconds");
     const double mean_force_y=force_y_sum/samples;
     constexpr double rider_weight_n=85.0*9.81;
     // Average over the compliant stop transient; a last-substep force sample
@@ -91,7 +112,8 @@ void loaded_pause(Simulation &s, double lane) {
             "climber load physically deflects the net and its real grip");
     std::cout << "CARGO_LOAD lane=" << lane << " mean_hand_force_n=" << mean_force_y
               << " material_peak_dz=" << peak_material_dz << " grip_peak_dz=" << peak_grip_dz
-              << " grounded=0 hands=2 command_work_delta=0\n";
+              << " grounded=0 hands=2 command_work_delta=0 unsupported_ticks=" << consecutive
+              << " elapsed_ticks=" << elapsed << " cloth_brush_ticks=" << foot_brushes << '\n';
     (void)s.set_move_input(0,-1);
 }
 void route(double lane) {
