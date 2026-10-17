@@ -387,6 +387,9 @@ public:
         JPH::Vec3 linear = JPH::Vec3::sZero();
         JPH::Vec3 angular = JPH::Vec3::sZero();
         bool enabled = true;
+        // Asleep at rest (loose stock): restored asleep, so a world restored
+        // from a save plays on as a fresh one loaded from it does.
+        bool asleep = false;
     };
     // Rubble spilled onto a static surface: a pile where it landed. Spills
     // landing within kPileMergeRadius of a pile join it; past kMaxPiles, a

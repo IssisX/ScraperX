@@ -10,10 +10,10 @@ namespace scraperx::sim {
 
 namespace {
 
-// "SXCLIMB2" and the sizes of every saved type: a build whose types differ
-// writes a different key.
+// "SXCLIMB3" and the sizes of every saved type: a build whose types differ
+// writes a different key (3: a kit body's state says whether it sleeps).
 std::uint64_t save_format_key() noexcept {
-    std::uint64_t key = 0x5358434C494D4232ULL;
+    std::uint64_t key = 0x5358434C494D4233ULL;
     const std::size_t sizes[] = {sizeof(kit::Kit::BodyState), sizeof(kit::AnchorIndex), sizeof(kit::Kit::Pile),
                                  sizeof(Slingshot::State), sizeof(Swing::State),
                                  sizeof(vertical::Command), sizeof(JPH::RVec3)};

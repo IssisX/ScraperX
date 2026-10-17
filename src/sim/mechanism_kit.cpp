@@ -1420,6 +1420,7 @@ void Kit::capture(Checkpoint &out) const {
         state.rotation = bodies.GetRotation(record.id);
         state.linear = bodies.GetLinearVelocity(record.id);
         state.angular = bodies.GetAngularVelocity(record.id);
+        state.asleep = record.enabled && !bodies.IsActive(record.id);
     }
     out.rope_anchor.resize(ropes_.size());
     out.rope_parted.resize(ropes_.size());
@@ -1486,7 +1487,11 @@ void Kit::restore(const Checkpoint &in) {
                                       JPH::EActivation::DontActivate);
         bodies.SetLinearAndAngularVelocity(record.id, state.linear, state.angular);
         set_enabled(body, true);
-        bodies.ActivateBody(record.id);
+        if (state.asleep) {
+            bodies.DeactivateBody(record.id);
+        } else {
+            bodies.ActivateBody(record.id);
+        }
     }
     for (std::size_t index = 0; index < ropes_.size(); ++index) {
         Rope &rope = ropes_[index];

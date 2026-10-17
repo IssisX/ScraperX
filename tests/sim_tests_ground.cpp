@@ -780,10 +780,16 @@ void run_save() {
     require(world_hash(b) == world_hash(c) && b.snapshot().tick_index == c.snapshot().tick_index,
             "save: two fresh simulations given the same save play on bit for bit");
     double worst = 0.0;
+    std::uint64_t worst_entity = 0;
     for (std::uint32_t i = 0; i < a.kit_body_count(); ++i) {
         const auto pa = a.kit_body_position(i), pb = b.kit_body_position(i);
-        worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
+        const double d = std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z);
+        if (d > worst) {
+            worst = d;
+            worst_entity = a.kit_body_entity(i);
+        }
     }
+    std::cout << "  save: the original's worst drift " << worst << " m (entity " << worst_entity << ")\n";
     const auto pa = a.snapshot().player_position, pb = b.snapshot().player_position;
     worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
     require(worst < 1e-3, "save: the original, restored from its own save, plays on with the fresh ones");
