@@ -110,6 +110,7 @@ const SCENARIOS := {
 	# renders only, not in CI).
 	"touch_stock": 8,
 	"touch_forklift": 8,
+	"touch_forklift_strain": 8,
 	"look_stock_yard": 8,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
@@ -347,6 +348,8 @@ func _run() -> void:
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
 			ok = await _forklift_touch(InputRouter.Device.TOUCH)
+		"touch_forklift_strain":
+			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
 		"look_stock_yard":
 			ok = await _look_stock_yard()
 		"look_summit":

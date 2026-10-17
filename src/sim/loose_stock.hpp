@@ -46,8 +46,10 @@ public:
         PlateStack = 9,     // a 3 x 1.5 m stack of steel plate, 8 t
         PlateSlab = 10,     // a 2.4 x 1.2 m slab of plate, 2 t
         Pipe = 11,          // an 8 m steel pipe, 0.6 m across, 700 kg
+        BilletStillage = 12,  // a stillage of steel billets on runners, 5 t: more than a forklift's load
+        CoilSkid = 13,        // a coil of steel strip cradled on a skid, 2.8 t: a forklift's hard lift
     };
-    static constexpr int kKinds = 12;
+    static constexpr int kKinds = 14;
 
     struct Placement {
         Kind kind;

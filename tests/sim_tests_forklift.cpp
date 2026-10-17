@@ -150,3 +150,158 @@ void run_forklift() {
     require(runs[0] == runs[1], "forklift: the same inputs end the same, bit for bit");
     std::cout << "PASS scraperx_sim forklift: carried_m=" << table[static_cast<std::size_t>(pallet)].z - runs[0][3] << "\n";
 }
+
+namespace {
+
+// Drives the truck as a driver does, from where it is parked, facing +z, to
+// the lane x = lane_x west of it: a full right turn, along until a full left
+// turn (which carries the truck as far on as the right one did) will end on
+// the lane, the left turn, then up the lane looking 1 m
+// ahead until the truck stands at z = stop_z. Arriving is the proof the
+// forks went in under the load: crooked, a blade strikes a runner and the
+// truck stops short.
+bool drive_to_lane(Simulation &s, const double lane_x, const double stop_z, const double pace) {
+    constexpr double kWest = -0.5 * 3.14159265358979;
+    int phase = 0;
+    const double turn_start_z = body_at(s, Forklift::kChassisEntity).z;
+    double turn_advance = 0.0;
+    for (int tick = 0; tick < 40 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        const auto at = body_at(s, Forklift::kChassisEntity);
+        const double yaw = truck_yaw(s);
+        double steer = 0.0;   // + right (yaw falls)
+        if (phase == 0) {
+            steer = 1.0;
+            if (yaw <= kWest + 0.2) {   // the wheel takes a moment to unwind
+                turn_advance = at.z - turn_start_z;
+                phase = 1;
+            }
+        } else if (phase == 1) {
+            steer = std::clamp(2.0 * (yaw - kWest), -1.0, 1.0);
+            if (at.x <= lane_x + turn_advance) {
+                phase = 2;
+            }
+        } else if (phase == 2) {
+            steer = -1.0;
+            if (yaw >= -0.2) {
+                phase = 3;
+            }
+        } else {
+            if (at.z >= stop_z) {
+                (void)s.set_move_input(0.0, 0.0);
+                return true;
+            }
+            const double dx = lane_x - at.x;
+            const double dz = 1.0;
+            const double right = -dx * std::cos(yaw) + dz * std::sin(yaw);
+            const double ahead = dx * std::sin(yaw) + dz * std::cos(yaw);
+            steer = std::clamp(4.0 * std::atan2(right, ahead), -1.0, 1.0);
+        }
+        const double fx = std::sin(yaw);
+        const double fz = std::cos(yaw);
+        (void)s.set_facing(fx, fz);
+        (void)s.set_move_input(fx * pace - fz * steer, fz * pace + fx * steer);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+struct LiftTry {
+    double peak_lift_n = 0.0;
+    double parked_rear_n = 0.0;
+    double least_rear_n = 1.0e9;
+    double peak_pitch_rad = 0.0;
+    double load_rise_m = 0.0;
+    double rise_at_rear_off_m = -1.0;   // the load's rise when the rear wheels left the ground
+    double held_rise_m = 0.0;           // a second after RAISE is let go
+    double lowered_rear_n = 0.0;        // the forks let down again
+    double lowered_pitch_rad = 0.0;
+};
+
+// From the start: aboard, the controls taken, into the load's lane, forks in
+// under it, then RAISE held for `seconds`, let go for a second, and LOWER
+// held until the forks are down.
+LiftTry try_lift(const std::uint64_t load_entity, const double lane_x, const double seconds) {
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    require(board(s) && s.request_forklift_action(), "forklift strain: aboard, the controls taken");
+    (void)s.advance_frame(0.5);
+    LiftTry result;
+    const auto parked = s.forklift_state();
+    result.parked_rear_n = parked.wheel_load_n[2] + parked.wheel_load_n[3];
+    const auto load0 = body_at(s, load_entity);
+    require(drive_to_lane(s, lane_x, load0.z - 1.85, 0.35), "forklift strain: driven in under the load");
+    (void)s.advance_frame(2.0);
+    (void)s.set_forklift_lift(1.0);
+    for (int tick = 0; tick < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto f = s.forklift_state();
+        const double rear = f.wheel_load_n[2] + f.wheel_load_n[3];
+        const double rise = body_at(s, load_entity).y - load0.y;
+        result.peak_lift_n = std::max(result.peak_lift_n, f.lift_n);
+        result.least_rear_n = std::min(result.least_rear_n, rear);
+        result.peak_pitch_rad = std::max(result.peak_pitch_rad, f.pitch_rad);
+        result.load_rise_m = std::max(result.load_rise_m, rise);
+        if (result.rise_at_rear_off_m < 0.0 && rear < 0.05 * result.parked_rear_n) {
+            result.rise_at_rear_off_m = rise;
+        }
+    }
+    (void)s.set_forklift_lift(0.0);
+    (void)s.advance_frame(1.0);
+    result.held_rise_m = body_at(s, load_entity).y - load0.y;
+    (void)s.set_forklift_lift(-1.0);
+    (void)s.advance_frame(seconds + 1.0);
+    (void)s.set_forklift_lift(0.0);
+    (void)s.advance_frame(1.0);
+    const auto lowered = s.forklift_state();
+    result.lowered_rear_n = lowered.wheel_load_n[2] + lowered.wheel_load_n[3];
+    result.lowered_pitch_rad = lowered.pitch_rad;
+    return result;
+}
+
+} // namespace
+
+// The forklift's power and its limit. The 2.8 t coil: the lift takes it up,
+// hard, the rear axle unloading. The 5 t stillage of billets: more than the
+// counterweight balances out on the forks -- straining at it, before it
+// leaves the ground, the truck's back end rises, nose down on its front
+// wheels. Let go, the ram holds; the forks let down, the truck comes back
+// down onto its rear wheels.
+void run_forklift_strain() {
+    const auto &table = LooseStock::placements();
+    std::uint64_t stillage = 0;
+    std::uint64_t coil = 0;
+    for (std::size_t i = 0; i < table.size(); ++i) {
+        if (table[i].kind == LooseStock::Kind::BilletStillage) {
+            stillage = LooseStock::kFirstEntity + i;
+        } else if (table[i].kind == LooseStock::Kind::CoilSkid) {
+            coil = LooseStock::kFirstEntity + i;
+        }
+    }
+    require(stillage != 0 && coil != 0, "forklift strain: the stillage and the coil");
+    const LiftTry light = try_lift(coil, 30.0, 3.0);
+    std::cout << "  forklift strain: the coil lifted " << light.load_rise_m << " m, the lift at " << light.peak_lift_n
+              << " N, the rear axle " << light.parked_rear_n << " -> " << light.least_rear_n << " N; held at "
+              << light.held_rise_m << " m; let down, the rear axle " << light.lowered_rear_n << " N\n";
+    const LiftTry heavy = try_lift(stillage, 34.0, 3.0);
+    std::cout << "  forklift strain: the stillage at " << heavy.rise_at_rear_off_m
+              << " m when the rear wheels left the ground, the lift at " << heavy.peak_lift_n << " N, the rear axle "
+              << heavy.parked_rear_n << " -> " << heavy.least_rear_n << " N, nose down "
+              << heavy.peak_pitch_rad * 57.2958 << " deg; let down, the rear axle " << heavy.lowered_rear_n
+              << " N, pitch " << heavy.lowered_pitch_rad * 57.2958 << " deg\n";
+    // The lift carries the coil's 2.7 t of steel, and holds it; at the
+    // stillage it pushes past 4 t's weight and the truck, not the load,
+    // gives. Let down, each stands back on its rear wheels.
+    require(light.load_rise_m > 0.3 && light.peak_lift_n > 2700.0 * 9.81 &&
+                light.least_rear_n < 0.6 * light.parked_rear_n,
+            "forklift strain: the coil is lifted, hard, the rear axle unloading");
+    require(light.held_rise_m > 0.3, "forklift strain: let go, the ram holds the coil up");
+    require(heavy.peak_lift_n > 4000.0 * 9.81 && heavy.rise_at_rear_off_m >= 0.0 &&
+                heavy.rise_at_rear_off_m < 0.05 && heavy.peak_pitch_rad > 0.03,
+            "forklift strain: straining at the stillage, the truck's back end comes up before the load does");
+    require(light.lowered_rear_n > 0.8 * light.parked_rear_n && heavy.lowered_rear_n > 0.8 * heavy.parked_rear_n &&
+                std::abs(heavy.lowered_pitch_rad) < 0.02,
+            "forklift strain: the forks let down, the truck stands back on its rear wheels");
+    std::cout << "PASS scraperx_sim forklift strain: coil_rise_m=" << light.load_rise_m
+              << " stillage_pitch_deg=" << heavy.peak_pitch_rad * 57.2958 << "\n";
+}

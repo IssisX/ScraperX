@@ -22,15 +22,30 @@ Part box(const Vec3 half, const Vec3 offset, const Material material, const floa
 }
 
 // The truck, in its own frame: +z forward, +y up, its origin on the ground
-// under the middle of its frame. Masses CHOSEN for a 2.5 t-class
-// counterbalance truck; the centre of mass falls between the axles, nearer
-// the rear (about 0.7 m behind the middle), as an empty one's does.
+// under the middle of its frame. Masses CHOSEN for a 3.5 t-class
+// counterbalance truck (about 5.1 t empty: the counterweight, the engine and
+// transmission in the frame, the drive axle, the mast); the centre of mass
+// falls between the axles about 1.05 m behind the front ones, near
+// three-quarters of the empty weight on the rear wheels, as an empty one's
+// does: the front wheels carry enough to drive it, and it balances about
+// 5.5 t m about them, 3.5 t half a metre out in front of the forks' face.
 std::vector<Part> chassis_parts() {
     std::vector<Part> parts;
-    // The frame, its top the driver's floor (0.32 m: a step up from the ground).
-    parts.push_back(box(Vec3(0.38F, 0.10F, 0.85F), Vec3(0.0F, 0.22F, -0.15F), Material::Yellow, 650.0F));
-    // The counterweight, behind the rear axle.
-    parts.push_back(box(Vec3(0.56F, 0.40F, 0.18F), Vec3(0.0F, 0.55F, -1.42F), Material::Steel, 1450.0F));
+    // The frame, its top the driver's floor (0.32 m: a step up from the
+    // ground), the engine and transmission in it under the seat.
+    parts.push_back(box(Vec3(0.38F, 0.10F, 0.85F), Vec3(0.0F, 0.22F, -0.15F), Material::Yellow, 1600.0F));
+    // The drive axle's housing across between the front wheels.
+    parts.push_back(box(Vec3(0.42F, 0.08F, 0.08F), Vec3(0.0F, 0.41F, 0.55F), Material::Steel, 250.0F));
+    // The counterweight, behind the rear axle, and on it the propane tank it
+    // runs on, lying across the back in its cradle under two straps.
+    parts.push_back(box(Vec3(0.56F, 0.40F, 0.18F), Vec3(0.0F, 0.55F, -1.42F), Material::Steel, 2300.0F));
+    const Quat across = Quat::sRotation(Vec3::sAxisZ(), 0.5F * JPH_PI);
+    parts.push_back({Vec3(0.16F, 0.32F, 0.0F), Vec3(0.0F, 1.13F, -1.40F), across, Material::Galvanised,
+                     Part::Shape::Cylinder, 30.0F});
+    for (const float x : {-0.22F, 0.22F}) {
+        parts.push_back(box(Vec3(0.03F, 0.05F, 0.15F), Vec3(x, 0.99F, -1.40F), Material::Steel, 2.0F));
+        parts.push_back(box(Vec3(0.015F, 0.012F, 0.17F), Vec3(x, 1.30F, -1.40F), Material::Rubble, 0.3F));
+    }
     // The cowl in front of the driver, between the front wheels, and the
     // wheel on its column.
     parts.push_back(box(Vec3(0.34F, 0.32F, 0.10F), Vec3(0.0F, 0.64F, 0.55F), Material::Yellow, 80.0F));
@@ -61,9 +76,13 @@ std::vector<Part> chassis_parts() {
     }
     // The mast: two uprights in front of the front wheels and their top tie.
     for (const float x : {-0.42F, 0.42F}) {
-        parts.push_back(box(Vec3(0.05F, 1.30F, 0.06F), Vec3(x, 1.40F, 0.97F), Material::Steel, 120.0F));
+        parts.push_back(box(Vec3(0.05F, 1.30F, 0.06F), Vec3(x, 1.40F, 0.97F), Material::Steel, 270.0F));
     }
-    parts.push_back(box(Vec3(0.47F, 0.05F, 0.06F), Vec3(0.0F, 2.65F, 0.97F), Material::Steel, 30.0F));
+    parts.push_back(box(Vec3(0.47F, 0.05F, 0.06F), Vec3(0.0F, 2.65F, 0.97F), Material::Steel, 60.0F));
+    // The lift ram's barrel, standing between the uprights (its rod, drawn
+    // up to the carriage, is the presentation's).
+    parts.push_back({Vec3(0.06F, 0.65F, 0.0F), Vec3(0.0F, 0.80F, 0.97F), Quat::sIdentity(), Material::Steel,
+                     Part::Shape::Cylinder, 25.0F});
     return parts;
 }
 
@@ -96,9 +115,11 @@ float total(const std::vector<Part> &parts) {
     return mass;
 }
 
-// The carriage's origin on the truck with the forks lowest: the blades 5.5 cm
-// off the ground, the plate just in front of the uprights.
-const Vec3 kCarriageAt(0.0F, 0.08F, 1.09F);
+// The carriage's origin on the truck with the forks lowest: the blades 3.5 cm
+// off the ground (their tips a little more: an empty truck sits slightly
+// nose up on its loaded rear wheels), the plate just in front of the
+// uprights.
+const Vec3 kCarriageAt(0.0F, 0.06F, 1.09F);
 // The driver's place on the floor, behind the cowl.
 const Vec3 kStation(0.0F, 0.32F, -0.15F);
 
@@ -141,6 +162,43 @@ WheeledVehicleController &controller_of(VehicleConstraint &vehicle) {
     return *static_cast<WheeledVehicleController *>(vehicle.GetController());
 }
 
+// The steer axle's geometry (Ackermann's). Jolt's controller turns every
+// steered wheel through the same angle; on a truck's steer axle the inner
+// wheel turns further than the outer, so that both roll about one point on
+// the line of the fixed front axle. Turned alike, on full lock under the
+// counterweight's load, the two scrub against each other and stall the
+// truck. The controller's angle is the one a wheel on the centreline would
+// take; each wheel is turned to roll about the same point.
+class SteerAxleController final : public WheeledVehicleController {
+public:
+    SteerAxleController(const WheeledVehicleControllerSettings &settings, VehicleConstraint &constraint)
+        : WheeledVehicleController(settings, constraint) {}
+
+protected:
+    void PreCollide(const float delta_seconds, PhysicsSystem &physics) override {
+        WheeledVehicleController::PreCollide(delta_seconds, physics);
+        for (Wheel *wheel : mConstraint.GetWheels()) {
+            const float centreline = wheel->GetSteerAngle();
+            if (centreline == 0.0F) {
+                continue;
+            }
+            // tan(wheel) = base tan(centreline) / (base + x tan(centreline)),
+            // base the wheel's distance behind the fixed axle, x its offset.
+            const Vec3 at = wheel->GetSettings()->mPosition;
+            const float base = kWheelSpecs[0].at.GetZ() - at.GetZ();
+            const float t = std::tan(centreline);
+            wheel->SetSteerAngle(std::atan2(base * t, base + at.GetX() * t));
+        }
+    }
+};
+
+class SteerAxleControllerSettings final : public WheeledVehicleControllerSettings {
+public:
+    VehicleController *ConstructController(VehicleConstraint &constraint) const override {
+        return new SteerAxleController(*this, constraint);
+    }
+};
+
 } // namespace
 
 Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer moving_layer, const BodyID player)
@@ -180,18 +238,19 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
         wheel->mLateralFriction.AddPoint(0.0F, 1.0F);
         wheel->mLateralFriction.AddPoint(3.0F, 1.2F);
         wheel->mLateralFriction.AddPoint(20.0F, 1.0F);
-        wheel->mMaxBrakeTorque = 1000.0F;
+        wheel->mMaxBrakeTorque = 2000.0F;
         wheel->mMaxHandBrakeTorque = 0.0F;
         // A solid tyre on its hub: 30 kg (front) or 20 kg (rear).
         const float wheel_kg = spec.driven ? 30.0F : 20.0F;
         wheel->mInertia = 0.5F * wheel_kg * spec.radius * spec.radius;
         settings.mWheels.push_back(wheel);
     }
-    auto *drive = new WheeledVehicleControllerSettings;
-    // An electric traction motor: full torque to 70 % of its speed, none at
-    // its top (CHOSEN: 150 N m through 30 : 1 to the front axle, a top speed
-    // of about 3.4 m/s, 12 km/h).
-    drive->mEngine.mMaxTorque = 150.0F;
+    auto *drive = new SteerAxleControllerSettings;
+    // The propane engine through its torque converter, as one drive: full
+    // torque from a standstill to 70 % of its speed, none at its top
+    // (CHOSEN: 220 N m through 30 : 1 to the front axle, a top speed of about
+    // 3.4 m/s, 12 km/h).
+    drive->mEngine.mMaxTorque = 220.0F;
     drive->mEngine.mMinRPM = 0.0F;
     drive->mEngine.mMaxRPM = 3000.0F;
     drive->mEngine.mNormalizedTorque.Clear();
@@ -225,8 +284,9 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
     slide.SetSliderAxis(Vec3::sAxisY());
     slide.mLimitsMin = 0.0F;
     slide.mLimitsMax = kLiftStrokeM;
-    slide.mMotorSettings = MotorSettings(8.0F, 1.0F, kLiftForceN, 0.0F);
-    slide.mMotorSettings.SetForceLimits(-kLiftForceN, kLiftForceN);
+    // Held, the ram is stiff: a 2 t load sags it about a centimetre.
+    slide.mMotorSettings = MotorSettings(20.0F, 1.0F, kHoldForceN, 0.0F);
+    slide.mMotorSettings.SetForceLimits(0.0F, kHoldForceN);
     lift_ = static_cast<SliderConstraint *>(slide.Create(chassis_body, carriage_body));
     physics_.AddConstraint(lift_);
     lift_->SetMotorState(EMotorState::Position);
@@ -271,12 +331,28 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     const float want_steer = state_.driving ? signed_unit(steer) : 0.0F;
     const float want_lift = state_.driving ? signed_unit(lift) : 0.0F;
 
-    // The forks: the target moves at the lift's speed and stays within 5 cm of
-    // the carriage, so a stalled lift does not wind up a jump to come.
+    // The forks, as a single-acting hydraulic ram: it only ever pushes up.
+    // RAISE held, the pump drives it at the lift's speed with all the force
+    // its relief valve allows (no more: past it, it stalls). LOWER held, the
+    // load's own weight lets the oil out through a valve that meters it to
+    // the lift's speed, whatever the weight. Let go, the check valve shuts and
+    // the ram holds where it stands, whatever the mast carries.
     const float at = lift_->GetCurrentPosition();
-    lift_target_ = std::clamp(lift_target_ + want_lift * kLiftSpeedMps * delta_seconds, 0.0F, kLiftStrokeM);
-    lift_target_ = std::clamp(lift_target_, at - 0.05F, at + 0.05F);
-    lift_->SetTargetPosition(lift_target_);
+    if (want_lift > 0.05F) {
+        lift_->GetMotorSettings().SetForceLimits(0.0F, kLiftForceN);
+        lift_->SetMotorState(EMotorState::Velocity);
+        lift_->SetTargetVelocity(want_lift * kLiftSpeedMps);
+        lift_target_ = at;
+    } else if (want_lift < -0.05F) {
+        lift_->GetMotorSettings().SetForceLimits(0.0F, kHoldForceN);
+        lift_->SetMotorState(EMotorState::Velocity);
+        lift_->SetTargetVelocity(want_lift * kLiftSpeedMps);
+        lift_target_ = at;
+    } else {
+        lift_->GetMotorSettings().SetForceLimits(0.0F, kHoldForceN);
+        lift_->SetMotorState(EMotorState::Position);
+        lift_->SetTargetPosition(lift_target_);
+    }
 
     // The wheels. The steered wheels turn at their rate; they are the rear
     // ones, so turning right turns them left.
@@ -294,8 +370,14 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     } else if (want_drive * speed < 0.0F && std::abs(speed) > 0.25F) {
         brake = std::abs(want_drive);   // the other way while moving: brake first
     } else if (std::abs(want_drive) > 0.05F) {
+        // The pedal asks for a speed, as a hydrostatic drive's does: the
+        // engine pushes toward it with all the torque it has, and short of
+        // it under a load it is slower to get there; past it (downhill) the
+        // drive holds back.
         gear = want_drive > 0.0F ? 1 : -1;
-        throttle = std::abs(want_drive);
+        const float short_of = std::abs(want_drive) * kTopSpeedMps - std::abs(speed);
+        throttle = std::clamp(2.0F * short_of, 0.0F, 1.0F);
+        brake = std::clamp(-0.5F * (short_of + 0.2F), 0.0F, 0.35F);
     } else {
         brake = 0.35F;   // stick let go: it slows to a stop
     }
@@ -305,6 +387,23 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     state_.drive = static_cast<float>(gear) * throttle;
     state_.speed_mps = speed;
     state_.lift_m = at;
+    state_.lift = want_lift;
+}
+
+void Forklift::post_step(const float delta_seconds) {
+    if (delta_seconds <= 0.0F) {
+        return;
+    }
+    state_.lift_n = std::abs(lift_->GetTotalLambdaMotor()) / delta_seconds;
+    for (int index = 0; index < kWheels; ++index) {
+        const Wheel *wheel = vehicle_->GetWheel(static_cast<uint>(index));
+        const auto i = static_cast<std::size_t>(index);
+        state_.wheel_contact[i] = wheel->HasContact();
+        state_.wheel_load_n[i] = wheel->HasContact() ? std::max(0.0F, wheel->GetSuspensionLambda()) / delta_seconds : 0.0F;
+    }
+    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+    const Vec3 forward = bodies.GetRotation(kit_.body_id(chassis_)) * Vec3::sAxisZ();
+    state_.pitch_rad = -std::asin(std::clamp(forward.GetY(), -1.0F, 1.0F));
 }
 
 void Forklift::restore() {
@@ -317,6 +416,8 @@ void Forklift::restore() {
     controller.GetTransmission().Set(0, 0.0F);
     controller.SetDriverInput(0.0F, 0.0F, 1.0F, 0.0F);
     lift_target_ = lift_->GetCurrentPosition();
+    lift_->GetMotorSettings().SetForceLimits(0.0F, kHoldForceN);
+    lift_->SetMotorState(EMotorState::Position);
     lift_->SetTargetPosition(lift_target_);
     state_.lift_m = lift_target_;
 }

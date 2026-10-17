@@ -17,6 +17,11 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # floor, DRIVE; the stick forward creeps it in until its forks are under the
 # first pallet, RAISE lifts the pallet with its drums, the stick back carries
 # it off, LOWER sets it down, the forks back out, STEP OFF.
+# touch_forklift_strain: aboard and driving, round onto the lane of the 5 t
+# stillage of billets and in under it; RAISE held: the pump strains, the
+# truck's back end comes up off the ground (heard, and felt in the hands);
+# let go, the ram holds; LOWER held: the truck comes back down onto its rear
+# wheels with a slam.
 
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
@@ -289,12 +294,9 @@ func _first_pallet() -> Array:
 	return [0, -1]
 
 
-func _forklift_touch(device: int) -> bool:
-	var pallet: Array = _first_pallet()
-	if int(pallet[1]) < 0:
-		return _fail("no pallet in the loose stock")
-	var truck := int(_native().get_kit_body_index(2982))
-	var before: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
+# From the start: round the beam stack, up onto the forklift's floor at its
+# wheel, facing its nose, DRIVE.
+func _board_forklift(device: int) -> bool:
 	for target in [Vector2(30.0, 10.0), Vector2(36.4, 16.35)]:
 		if not await _go(device, target, 0.3, 30.0):
 			return _fail("the walk to the forklift stopped short of %s" % str(target))
@@ -308,6 +310,17 @@ func _forklift_touch(device: int) -> bool:
 		return _fail("DRIVE did not take the controls")
 	if _main._touch.button_label(&"jump") != "RAISE" or _main._touch.button_label(&"crouch") != "LOWER":
 		return _fail("driving, Jump and Crouch do not read RAISE and LOWER")
+	return true
+
+
+func _forklift_touch(device: int) -> bool:
+	var pallet: Array = _first_pallet()
+	if int(pallet[1]) < 0:
+		return _fail("no pallet in the loose stock")
+	var truck := int(_native().get_kit_body_index(2982))
+	var before: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
+	if not await _board_forklift(device):
+		return false
 	# In until the forks are under the pallet's deck, the carriage short of it.
 	_move_dir(device, Vector2(0.0, 0.25))
 	var under := await _wait_until(func() -> bool:
@@ -351,3 +364,110 @@ func _forklift_touch(device: int) -> bool:
 	await _look_at_point(set_down)
 	await _pose("forklift_pallet_set_down")
 	return true
+
+
+# The truck's heading as the native's yaw (0 its nose +z, turning right -).
+func _truck_yaw() -> float:
+	var nose: Vector3 = (_native().get_kit_body_transform(int(_native().get_kit_body_index(2982))) as Transform3D).basis.z
+	return atan2(nose.x, nose.z)
+
+
+# Drives as a driver does, the view turning with the truck, from where it is
+# parked (nose +z) to the lane x = lane_x west of it: a full right turn,
+# along until a full left turn (which carries it as far on as the right one
+# did) will end on the lane, the left turn, then up the lane looking 1 m
+# ahead until the truck stands at z = stop_z. Gets there only with its forks
+# in under the load: crooked, a blade strikes a runner and it stops short.
+func _drive_to_lane(device: int, lane_x: float, stop_z: float, pace: float) -> bool:
+	var truck := int(_native().get_kit_body_index(2982))
+	var west := -0.5 * PI
+	var phase := 0
+	var start_z: float = (_native().get_kit_body_transform(truck) as Transform3D).origin.z
+	var advance := 0.0
+	var budget := 40.0
+	while budget > 0.0:
+		var at: Vector3 = (_native().get_kit_body_transform(truck) as Transform3D).origin
+		var yaw := _truck_yaw()
+		var steer := 0.0
+		if phase == 0:
+			steer = 1.0
+			if yaw <= west + 0.2:
+				advance = at.z - start_z
+				phase = 1
+		elif phase == 1:
+			steer = clampf(2.0 * (yaw - west), -1.0, 1.0)
+			if at.x <= lane_x + advance:
+				phase = 2
+		elif phase == 2:
+			steer = -1.0
+			if yaw >= -0.2:
+				phase = 3
+		else:
+			if at.z >= stop_z:
+				_move_dir(device, Vector2.ZERO)
+				return true
+			var dx := lane_x - at.x
+			var right := -dx * cos(yaw) + 1.0 * sin(yaw)
+			var ahead := dx * sin(yaw) + 1.0 * cos(yaw)
+			steer = clampf(4.0 * atan2(right, ahead), -1.0, 1.0)
+		_move_dir(device, Vector2(steer, pace))
+		await get_tree().process_frame
+		budget -= get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	return false
+
+
+func _forklift_strain_touch(device: int) -> bool:
+	var stillage := -1
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	for i in range(0, stock.size(), 3):
+		if stock[i + 1] == 12:   # LooseStock::Kind::BilletStillage
+			stillage = stock[i]
+	if stillage < 0:
+		return _fail("no stillage of billets in the loose stock")
+	var load0: Vector3 = _native().get_kit_body_transform(stillage).origin
+	if not await _board_forklift(device):
+		return false
+	if not await _drive_to_lane(device, load0.x, load0.z - 1.85, 0.35):
+		return _fail("the forklift was not driven in under the stillage (at %s)" % str(
+			(_native().get_kit_body_transform(int(_native().get_kit_body_index(2982))) as Transform3D).origin))
+	await _seconds(1.5)
+	var strains_before := int(_main.haptic_counts.get(&"strain", 0))
+	var lands_before := int(_main.haptic_counts.get(&"land", 0))
+	# RAISE held: the truck, not the load, gives.
+	_touch(2, _center(&"jump"), true)
+	var tipped := await _wait_until(func() -> bool:
+		var f: Dictionary = _native().get_forklift_state()
+		var contacts: Array = f["wheel_contact"]
+		return not bool(contacts[2]) and not bool(contacts[3]) and float(f["pitch_rad"]) > 0.03, 3.0)
+	await _seconds(0.6)
+	var rise: float = _native().get_kit_body_transform(stillage).origin.y - load0.y
+	var pitch := float(_native().get_forklift_state()["pitch_rad"])
+	await _pose("forklift_strain")
+	_touch(2, _center(&"jump"), false)
+	print("SCRAPERX_UITEST forklift strain: nose down %.1f deg, the stillage up %.2f m, strain pulses %d, cues %s" % [
+		rad_to_deg(pitch), rise, int(_main.haptic_counts.get(&"strain", 0)) - strains_before,
+		str(_main._audio.forklift_cues)])
+	if not tipped:
+		return _fail("RAISE under the stillage did not bring the truck's back end up")
+	if int(_main.haptic_counts.get(&"strain", 0)) <= strains_before:
+		return _fail("the strain was not felt in the hands")
+	if int(_main._audio.forklift_cues.get(&"unload", 0)) < 1 or int(_main._audio.forklift_cues.get(&"groan", 0)) < 1:
+		return _fail("the rear wheels lifting and the mast straining were not heard")
+	await _seconds(1.0)
+	# LOWER held: back down onto the rear wheels.
+	_touch(3, _center(&"crouch"), true)
+	var down := await _wait_until(func() -> bool:
+		var contacts: Array = _native().get_forklift_state()["wheel_contact"]
+		return bool(contacts[2]) and bool(contacts[3]), 4.0)
+	await _seconds(1.0)
+	_touch(3, _center(&"crouch"), false)
+	if not down:
+		return _fail("LOWER did not bring the truck back down onto its rear wheels")
+	if int(_main._audio.forklift_cues.get(&"slam", 0)) < 1 or int(_main.haptic_counts.get(&"land", 0)) <= lands_before:
+		return _fail("the rear wheels coming down were not heard and felt")
+	if not await _offered(&"drive", "STEP OFF"):
+		return _fail("STEP OFF was not offered while driving")
+	_act(device)
+	return await _wait_until(func() -> bool: return not bool(_native().get_forklift_state()["driving"]), 1.0)
+

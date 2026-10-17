@@ -459,6 +459,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     loose_stock_->post_step();
+    forklift_->post_step(delta_seconds);
     summit_->post_step();
     matron_->post_step(delta_seconds);
     if (matron_->take_released_edge()) {

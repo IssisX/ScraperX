@@ -736,6 +736,7 @@ bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation);
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity);
 void run_loose_stock();
 void run_forklift();
+void run_forklift_strain();
 void run_wet_isolation();
 void run_wet_band();
 bool climb_wet_hold(scraperx::sim::Simulation &simulation, const double x, const double z,

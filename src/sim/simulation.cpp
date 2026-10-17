@@ -757,6 +757,14 @@ ForkliftSnapshot Simulation::forklift_state() const noexcept {
     result.speed_mps = state.speed_mps;
     result.steer = state.steer;
     result.drive = state.drive;
+    result.lift = state.lift;
+    result.lift_n = state.lift_n;
+    result.lift_max_n = Forklift::kLiftForceN;
+    result.pitch_rad = state.pitch_rad;
+    for (int wheel = 0; wheel < Forklift::kWheels; ++wheel) {
+        result.wheel_load_n[static_cast<std::size_t>(wheel)] = state.wheel_load_n[static_cast<std::size_t>(wheel)];
+        result.wheel_contact[static_cast<std::size_t>(wheel)] = state.wheel_contact[static_cast<std::size_t>(wheel)];
+    }
     for (int wheel = 0; wheel < Forklift::kWheels; ++wheel) {
         const JPH::RMat44 at = forklift.wheel_transform(wheel);
         const auto index = static_cast<std::size_t>(wheel);

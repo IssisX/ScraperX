@@ -672,6 +672,13 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		roll_turn = 0.0
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion, _yaw,
 		_cam_bank + stagger * motion)
+	# Driving the forklift, the head goes with the seat: the view tilts with
+	# the truck's floor, so its nose going down under a load is seen.
+	if _forklift_view != null and bool(_ctx.get("forklift_driving", false)) and not _reduced_motion:
+		var floor_up: Vector3 = _forklift_view.body_transform().basis.y.normalized()
+		var axis := Vector3.UP.cross(floor_up)
+		if axis.length() > 1.0e-5:
+			_camera.basis = Basis(axis.normalized(), Vector3.UP.angle_to(floor_up)) * _camera.basis
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
 
@@ -719,8 +726,74 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _matron_view != null:
 		_matron_view.update_view(_native.get_matron_state(), delta, _camera.global_position, position)
 	if _forklift_view != null:
-		_forklift_view.update_view()
+		_feel_forklift(delta)
 	_sample_machines(delta)
+
+
+# The forklift (sim/forklift.hpp): its moving parts drawn, its engine, pump
+# and valves heard, and, to its driver, its strain in the hands. The strain
+# is the pump's push as a share of what its relief valve allows, while the
+# lever lifts. The rear wheels count as off the ground after 0.1 s clear of
+# it, so a bump is not a lift-off.
+const FORK_REAR_OFF_SECONDS := 0.1
+var _fork_lever := 0.0
+var _fork_last_n := 0.0
+var _fork_rear_off := 0.0
+var _fork_strain_clock := 0.0
+var _fork_groan_clock := 0.0
+
+func _feel_forklift(delta: float) -> void:
+	var state: Dictionary = _native.get_forklift_state()
+	_forklift_view.update_view(state)
+	if delta <= 0.0:
+		return
+	var body: Transform3D = _forklift_view.body_transform()
+	var driving := bool(state["driving"])
+	var lever := float(state["lift"])
+	var lift_n := float(state["lift_n"])
+	var relief_n := float(state["lift_max_n"])
+	var strain := clampf(lift_n / relief_n, 0.0, 1.0) if lever > 0.05 else 0.0
+	_audio.update_forklift(delta, state, body, strain)
+	var carriage := body * Vector3(0.0, 0.56 + float(state["lift_m"]), 1.1)
+	var rear := body * Vector3(0.0, 0.3, -1.0)
+	# The check valve shutting on a load: the whole truck takes it.
+	if absf(_fork_lever) > 0.05 and absf(lever) <= 0.05 and maxf(_fork_last_n, lift_n) > 0.15 * relief_n:
+		var weight := clampf(maxf(_fork_last_n, lift_n) / relief_n, 0.3, 1.0)
+		_audio.forklift_cue(&"clunk", carriage, weight)
+		if driving:
+			_haptic(&"press", weight)
+	_fork_lever = lever
+	_fork_last_n = lift_n
+	# The rear wheels: off the ground, and back down onto it.
+	var contacts: Array = state["wheel_contact"]
+	var loads: PackedFloat32Array = state["wheel_load_n"]
+	if bool(contacts[2]) or bool(contacts[3]):
+		if _fork_rear_off >= FORK_REAR_OFF_SECONDS:
+			var slam := clampf((loads[2] + loads[3]) / 60000.0, 0.3, 1.0)
+			_audio.forklift_cue(&"slam", rear, slam)
+			if driving:
+				_haptic(&"land", slam)
+		_fork_rear_off = 0.0
+	else:
+		var was := _fork_rear_off
+		_fork_rear_off += delta
+		if was < FORK_REAR_OFF_SECONDS and _fork_rear_off >= FORK_REAR_OFF_SECONDS:
+			_audio.forklift_cue(&"unload", rear, 1.0)
+	# Straining: the mast groans, and the seat shakes harder and faster.
+	if strain > 0.6:
+		_fork_groan_clock -= delta
+		if _fork_groan_clock <= 0.0:
+			_audio.forklift_cue(&"groan", body * Vector3(0.0, 2.4, 0.97), strain)
+			_fork_groan_clock = lerpf(1.4, 0.5, strain)
+	else:
+		_fork_groan_clock = 0.0
+	if driving and strain > 0.25:
+		_fork_strain_clock -= delta
+		if _fork_strain_clock <= 0.0:
+			_haptic(&"strain", strain)
+			_fork_strain_clock = lerpf(0.32, 0.09, strain)
+	else:
+		_fork_strain_clock = 0.0
 
 # The slingshot as the native has it now; the predicted shot is re-asked a
 # few times a second while a rider sits drawn, not every frame.

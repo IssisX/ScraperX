@@ -240,6 +240,12 @@ struct ForkliftSnapshot final {
     double speed_mps = 0.0;          // along its forward
     double steer = 0.0;              // the steered wheels, -1 .. 1 (right +)
     double drive = 0.0;              // the throttle as applied, -1 .. 1
+    double lift = 0.0;               // the lift lever as applied: + raising, - lowering
+    double lift_n = 0.0;             // the lift's push up the mast this tick
+    double lift_max_n = 0.0;         // the most it can push (the relief valve)
+    double pitch_rad = 0.0;          // nose down, + (on its front wheels)
+    std::array<double, 4> wheel_load_n{};
+    std::array<bool, 4> wheel_contact{};
     // Each wheel: its centre and its turn, a cylinder along its own y (the
     // axle), and its size. Front left, front right, rear left, rear right.
     std::array<Vector3, 4> wheel_position{};

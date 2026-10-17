@@ -129,6 +129,14 @@ var welds_heard := 0
 # name for the scripted runs.
 var _matron_loop: AudioStreamPlayer3D
 var matron_cues := {}
+# The forklift, heard where it stands: its engine, its pump and its valve
+# (the relief blowing off, or the lowering valve letting the load down), each
+# a loop; its one-shots, counted by name for the scripted runs.
+var _fork_engine: AudioStreamPlayer3D
+var _fork_pump: AudioStreamPlayer3D
+var _fork_valve: AudioStreamPlayer3D
+var _fork_rpm := 0.0
+var forklift_cues := {}
 var pours_heard := 0
 var _voice: AudioStreamPlayer
 var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
@@ -198,6 +206,9 @@ func _ready() -> void:
 		_weld_loops.append(_positional_player(BUS_AMBIENCE, Vector3.ZERO, 4.0, 70.0))
 		_weld_owner.append(-1)
 	_matron_loop = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
+	_fork_engine = _positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 120.0)
+	_fork_pump = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
+	_fork_valve = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -663,6 +674,72 @@ func matron_music(at: Vector3, volume_db: float, pitch: float) -> void:
 
 # One of her sounds (locker_knock, bolt_pop, locker_burst, matron_breath,
 # matron_step, matron_shriek, plank_crack), from `at`.
+# The forklift this frame (sim/forklift.hpp, its state as the native gives
+# it; `body` its frame in the world). Its engine runs while it is driven:
+# idling, it climbs with the throttle and with the lever, and lugs down as
+# the pump's pressure rises; the pump whines while it lifts, higher in pitch
+# with the engine, harder with the pressure; at the relief valve's pressure
+# the valve screams; letting a load down, the lowering valve hisses with its
+# weight.
+func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain: float) -> void:
+	var driving := bool(state["driving"])
+	var lever := float(state["lift"])
+	var raising := driving and lever > 0.05
+	var lowering := driving and lever < -0.05
+	var demand := maxf(absf(float(state["drive"])), lever if raising else 0.0) if driving else 0.0
+	var target := 0.0
+	if driving:
+		target = 750.0 + 1650.0 * demand - 650.0 * strain * demand
+	var rate := 2.5 if target > _fork_rpm else 4.0
+	_fork_rpm += (target - _fork_rpm) * minf(1.0, rate * delta)
+	if not _bank_ready or _silent:
+		return
+	var engine_at := body * Vector3(0.0, 0.5, -0.4)
+	var pump_at := body * Vector3(0.0, 0.4, 0.9)
+	_loop_level(_fork_engine, &"engine_loop", engine_at,
+		0.35 + 0.55 * demand + 0.2 * strain if _fork_rpm > 100.0 else 0.0, maxf(_fork_rpm, 300.0) / 1500.0, -4.0)
+	_loop_level(_fork_pump, &"pump_loop", pump_at,
+		lever * (0.4 + 0.6 * strain) if raising else 0.0, maxf(_fork_rpm, 300.0) / 1500.0 * (1.0 - 0.08 * strain), -6.0)
+	var held := clampf(float(state["lift_n"]) / float(state["lift_max_n"]), 0.0, 1.0)
+	if raising and strain > 0.97:
+		_loop_level(_fork_valve, &"relief_loop", pump_at, 1.0, 1.0, -3.0)
+	elif lowering:
+		_loop_level(_fork_valve, &"relief_loop", pump_at, -lever * (0.15 + 0.5 * held), 0.62, -8.0)
+	else:
+		_loop_level(_fork_valve, &"relief_loop", pump_at, 0.0, 1.0, 0.0)
+
+
+# A loop at `level` (0 silent): started when first heard, its stream set once.
+func _loop_level(player: AudioStreamPlayer3D, clip: StringName, at: Vector3, level: float,
+		pitch: float, trim_db: float) -> void:
+	player.position = at
+	if level <= 0.01:
+		player.volume_db = -80.0
+		return
+	if player.stream == null:
+		player.stream = _bank.pick(clip)
+	if not player.playing:
+		player.play()
+	player.volume_db = linear_to_db(clampf(level, 0.0, 1.0)) + trim_db
+	player.pitch_scale = clampf(pitch, 0.2, 3.0)
+
+
+# The forklift's moments: the check valve shutting on a load (`clunk`), the
+# rear wheels lifting off (`unload`) and slamming back down (`slam`), the
+# mast groaning under strain (`groan`); `strength` 0..1.
+func forklift_cue(name: StringName, at: Vector3, strength: float) -> void:
+	forklift_cues[name] = int(forklift_cues.get(name, 0)) + 1
+	var db := linear_to_db(clampf(strength, 0.2, 1.0))
+	match name:
+		&"clunk":
+			_play_at(&"clang", at, db - 2.0, randf_range(0.5, 0.58))
+		&"slam":
+			_play_at(&"land_hard", at, db + 2.0, randf_range(0.55, 0.65))
+			_play_at(&"clang", at, db - 4.0, randf_range(0.42, 0.5))
+		&"unload", &"groan":
+			_play_at(&"creak", at, db - 3.0, randf_range(0.6, 0.72))
+
+
 func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> void:
 	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
 	_play_at(name, at, volume_db, pitch)

@@ -44,6 +44,7 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
         run_forklift();
+        run_forklift_strain();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
@@ -301,6 +302,7 @@ int main() {
     run_matron();
     run_loose_stock();
     run_forklift();
+    run_forklift_strain();
     run_ascent();
 
     return EXIT_SUCCESS;

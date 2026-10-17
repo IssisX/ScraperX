@@ -1221,6 +1221,18 @@ godot::Dictionary ScraperXSimulation::get_forklift_state() const {
     out["speed_mps"] = state.speed_mps;
     out["steer"] = state.steer;
     out["drive"] = state.drive;
+    out["lift"] = state.lift;
+    out["lift_n"] = state.lift_n;
+    out["lift_max_n"] = state.lift_max_n;
+    out["pitch_rad"] = state.pitch_rad;
+    godot::PackedFloat32Array loads;
+    godot::Array contacts;
+    for (std::size_t wheel = 0; wheel < state.wheel_load_n.size(); ++wheel) {
+        loads.push_back(static_cast<float>(state.wheel_load_n[wheel]));
+        contacts.push_back(state.wheel_contact[wheel]);
+    }
+    out["wheel_load_n"] = loads;
+    out["wheel_contact"] = contacts;
     godot::Array wheels;
     godot::PackedFloat32Array radii;
     godot::PackedFloat32Array widths;

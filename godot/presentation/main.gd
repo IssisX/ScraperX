@@ -81,6 +81,9 @@ var _jump_buffer := 0.0
 var _since_jump_sent := INF
 var _canopy: Node3D
 var _sling_was_aiming := false
+# The forklift's heading last frame, as a view yaw: driving it, the view turns
+# with it.
+var _fork_heading := 0.0
 var _sling_goal_yaw := 0.0
 var _sling_goal_elevation := 1.4311699866353502
 var _clouds: Node3D
@@ -258,6 +261,13 @@ func _process(delta: float) -> void:
 		else:
 			_yaw -= look.x
 			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+	# Driving the forklift, the driver turns with the truck as a seat does:
+	# the view keeps its angle to the truck's nose while the truck turns, so
+	# the stick's forward stays the way the driver is looking.
+	var truck_heading := float(_forklift_view.heading()) if _forklift_view != null else 0.0
+	if bool(_ctx.get("forklift_driving", false)):
+		_yaw += wrapf(truck_heading - _fork_heading, -PI, PI)
+	_fork_heading = truck_heading
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()

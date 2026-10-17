@@ -272,7 +272,9 @@ jobs:
           # (touch_matron). A drum of the yard's loose stock, taken off its
           # pallet, carried 3 m and set down (touch_stock). The yard's forklift
           # driven in under a pallet of drums, raised, carried off, set down
-          # (touch_forklift).
+          # (touch_forklift); in under the 5 t stillage, RAISE tips its back
+          # end up, heard and felt, LOWER slams it back down
+          # (touch_forklift_strain).
           # From the 264 ring the owner's vertical machines on their motors,
           # the cascade mast, the pitman lift and the barrel helix, and a
           # mantle onto TP-340 (touch_machines); and from the 750 deck the
@@ -288,7 +290,7 @@ jobs:
               touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
-              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_stock touch_forklift touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
+              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_stock touch_forklift touch_forklift_strain touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

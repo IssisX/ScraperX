@@ -68,6 +68,10 @@ func build() -> void:
 	clips[&"matron_shriek"] = _variants(2, _matron_shriek)
 	clips[&"plank_crack"] = _variants(2, _plank_crack)
 	clips[&"bone_crack"] = _variants(3, _bone_crack)
+	# The forklift's (sim/forklift.hpp), after everything else for the same reason.
+	clips[&"engine_loop"] = [_loop(_engine(2.0), 0.3)]
+	clips[&"pump_loop"] = [_loop(_pump(1.6), 0.3)]
+	clips[&"relief_loop"] = [_loop(_relief(1.2), 0.25)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -591,6 +595,56 @@ func _bone_crack() -> PackedFloat32Array:
 		_add_tone(out, _rng.randf_range(90.0, 140.0), at, 0.08, 0.3, 0.02)
 		at += _rng.randf_range(0.05, 0.16)
 	_add_band_noise(out, 0.0, 0.8, 0.12, 0.35, 300.0, 1400.0)
+	return out
+
+
+# --- the forklift ------------------------------------------------------------
+
+
+# Its propane engine at 1500 rpm (played faster or slower for its speed): a
+# four-cylinder's 50 firings a second, each a chuff through the muffler and a
+# bark of exhaust, one cylinder a little weak -- the lope of a work engine --
+# and the valve train ticking over it.
+func _engine(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var period := 1.0 / 50.0
+	var at := 0.0
+	var k := 0
+	while at < length - 0.05:
+		var bark := _rng.randf_range(0.8, 1.0) * (0.8 if k % 4 == 2 else 1.0)
+		_add_mode(out, 95.0, at, 0.05, 0.5 * bark, 0.012, 2.0)
+		_add_band_noise(out, at, 0.03, 0.35 * bark, 0.006, 350.0, 2200.0)
+		at += period
+		k += 1
+	var valves := _band_noise_buffer(out.size(), 2500.0, 5500.0)
+	for i in out.size():
+		out[i] += valves[i] * 0.06
+	return out
+
+
+# Its hydraulic pump, driven off the engine: the whine of its gear teeth
+# meshing (12 teeth at 1500 rpm, 300 Hz, and the harmonics that carry on a
+# small speaker) over the rush of oil through its ports.
+func _pump(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	for pair in [[300.0, 0.12], [600.0, 0.10], [900.0, 0.05], [1500.0, 0.04], [2100.0, 0.02]]:
+		_add_tone(out, pair[0], 0.0, length, pair[1], 0.0)
+	var flow := _band_noise_buffer(out.size(), 700.0, 3000.0)
+	for i in out.size():
+		out[i] += flow[i] * 0.3
+	return out
+
+
+# Its relief valve blowing off: oil forced through a seat that will not hold
+# it, a screaming whistle that chatters as the poppet hammers on the seat.
+func _relief(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var whistle := _resonant_noise_buffer(n, 2600.0, 0.04, 3.0)
+	var rush := _band_noise_buffer(n, 1600.0, 4200.0)
+	for i in n:
+		var chatter := 0.6 + 0.4 * sin(TAU * 38.0 * float(i) / float(MIX_RATE))
+		out[i] = (whistle[i] * 3.0 + rush[i] * 0.8) * chatter
 	return out
 
 

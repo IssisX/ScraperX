@@ -881,19 +881,79 @@ while falling, Crouch still readies a roll. On touch a tuck made in the air lets
 Proof: native `wall climb` (the proving ground's 4 m run wall: run up and its top taken; the same
 jump with the stick let go peaks 1.5 m lower and misses; a jump off the wall kicks out at
 3.5 m/s) and `tuck` (the 1.85 m crawl beam cleared by 20 cm; with the legs down the jump stops
-at it); `touch_wall_climb`, `touch_tuck`. Next of item 3: ziplines, swing poles, speed carried.
+at it); `touch_wall_climb`, `touch_tuck`. A tucked landing still rolls: the roll's clear-lane
+check is measured from where the body would stand on the ground it struck (a hard landing sinks
+it a few centimetres for a tick; the full native suite caught the refused roll). Next of item 3:
+ziplines, swing poles, speed carried.
+
+**The forklift's power and strain (2026-10-17; the owner's to-do, item 6).** The truck is now
+weighed as a 3.5 t-class counterbalance truck is: about 5.1 t empty (the engine and
+transmission in its frame, the drive axle, a 600 kg mast), about three-quarters of it on the
+rear wheels, so the driven front wheels grip; the propane tank lies across the top of the
+counterweight in its cradle. Its rear axle steers as a real one does (the inner wheel turns
+further, so the two roll about one point and do not scrub the truck to a stop on full lock), and
+the stick asks for a speed, as a hydrostatic drive does: a small push is a slow, steady creep.
+The lift is a single-acting ram: RAISE drives it with up to 50 kN (its relief valve, about 1.4
+times the rating); let go, its check valve holds whatever is on the forks; LOWER lets the load
+down, metered, by its own weight; it can never pull the forks down. The limit is the real one:
+the 2.8 t coil goes up with the pump at 30 to 35 kN and the rear axle unloaded to a third; under
+the 5 t stillage of billets the rear wheels leave the ground when the load has risen 1.4 cm and
+the truck goes down on its nose, about 10 degrees, with the ram at its relief; let go, it stays
+tipped on the load; LOWER brings it back down onto its rear wheels with a slam. Heard: the
+engine idles, climbs with the throttle and the lever, and lugs down as the pressure rises; the
+pump whines higher with the engine and harder with the pressure; at the relief valve's pressure
+the valve screams; letting a load down, the lowering valve hisses; the check valve clunks shut
+on a load; the mast groans under strain; the rear wheels lift off and slam back down. Felt, by
+the driver: the seat shakes harder and faster as the pressure rises, a jolt at the clunk, a
+heavy one at the slam; the view turns with the truck and tilts with its floor. Drawn: the ram's
+rod rising out of its barrel with a crosshead and two sheaves, and two leaf chains over them to
+the carriage, which rises twice as far as the rod. Proof: native `forklift` (2.5 m in its first
+2 s, a right turn, a stop; the pallet forked and carried; two runs end the same to the bit) and
+`forklift strain` (the coil lifted 1.1 m at 35 kN, held when let go, set down; the stillage: the
+rear wheels off at 1.4 cm of rise, nose down 9.9 degrees, back on its wheels when lowered);
+`touch_forklift`, `touch_forklift_strain` (the same through the touch controls: the strain felt
+in the hands, the lift-off and the mast heard, the slam heard and felt).
+
+**Mirror's Edge research (2026-10-17; the owner: the movement alone should be a reason to play).**
+What its running is made of, against what ScraperX has. Already here: run and sprint, the
+wall-run, the kick off a wall, the wall climb, the tuck (its coil), the slide, vaults and the
+speed vault, the roll (its skill roll), mantle, hang, shimmy, ladders and pipes, hand over hand
+under bars, balance beams, the view widening with speed. Not here yet, in the order to build
+(each a rule that works anywhere it physically can, never in a marked spot):
+1. Speed built and kept: a run gathers to its top speed over a few seconds uninterrupted, and a
+   vault, a roll, a wall-run, a slide or a tuck keeps it; a collision, a heavy landing or a stop
+   loses it. Clean movement is fast movement; ugly movement is slow (its central idea).
+2. The springboard: a foot planted on anything knee- to waist-high at a run launches the jump
+   from it, higher and farther; every crate, drum, pallet and beam of the loose stock is one.
+3. Swing poles: any horizontal bar or pipe within a jump; caught at a run, the body swings under
+   and round it, and let go near the top of the swing it flies up and on.
+4. The quickturn: half a turn (or a quarter) in one flick, on the ground, in the air, and off a
+   wall climb to jump to the ledge behind. On touch, a flick on the look side of the screen.
+5. Wall-run chains: from one wall to the next, across between two walls or round a corner.
+6. Ziplines: down any sloping cable or rope, with a strap or a length of pipe over it.
+7. Off a pipe or ladder: a jump back or to the side; a slide down a ladder.
+8. The body felt at speed: breathing that follows the effort, the wind's roar and a slight shake
+   at top speed, the view leaning into a wall-run.
+9. A hint of the route: what the hands can take ahead picked out faintly (a setting, off by
+   default), as its runner vision picks out its red.
+10. Time trials against an exact ghost of your own best run: the simulation's determinism means
+    a recorded run replays exactly. A reason to run one stretch again and again.
+Left out: its fighting (disarms, attacks, the focus shield). Sources: EA's movement overview
+(ea.com, "Movement in Mirror's Edge Catalyst: The Basics"), the series wiki
+(mirrorsedge.fandom.com, Upgrades), StrategyWiki's controls page, Speed Demos Archive's notes,
+and essays on its design (gardinerbryant.com; DICE interviews on its camera and dot).
 
 **Running to-do (owner, 2026-10-17; done in this order).**
 1. Ideas from the ChatGPT branch's forklift, crane and movable objects: read (2026-10-17).
-2. Most objects movable everywhere: the yard (done, above; the decks up the tower hold no other
-   loose things); the forklift (done, above); then designed spots where moving or stacking stock
-   opens a new route; then a crane (containers).
-3. Mirror's Edge-style moves: a few steps up a wall and the kick off it to turn, legs tucked in a
-   jump (done, above); ziplines, swing poles, more speed kept between moves.
-6. (Owner, 2026-10-17.) Little lived-in spots of real, movable stock all over the tower's decks
-   and landings as well as the ground; and the forklift's power felt: the strain heard and felt
-   as the lift nears its limit, the rear rising off the ground under too heavy a load, a propane
-   tank on top at the back.
+2. Mirror's Edge movement (the owner, 2026-10-17: the movement alone should be a reason to
+   play): the wall climb and the tuck (done, above); then the research's list, in its order.
+3. Everything movable, everywhere (the owner, 2026-10-17: these are world rules, never a few
+   marked places; a route of your own anywhere comes from them, not from designed spots): the
+   yard (done); the forklift (done) and its power and strain (done, above); next, real loose
+   stock in little lived-in spots on every deck, band and landing of the tower, the heavy pieces
+   on pallets, skids or dunnage so forks go under them anywhere; then a very large, powerful yard
+   crane, driven from its cab, to lift the forklift, containers and stock up onto the structure
+   (the owner, 2026-10-17); then forklifts up there.
 4. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.
 5. The Matron's extras.
 

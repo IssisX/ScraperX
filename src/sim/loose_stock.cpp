@@ -144,6 +144,35 @@ Spec make_spec(const K kind) {
         s.half_height = 0.3F;
         s.friction = 0.5F;
         break;
+    case K::BilletStillage:
+    case K::CoilSkid: {
+        // On two runners 0.55 m either side of its middle, its deck 12 cm up:
+        // a forklift's 5 cm forks slide in between the runners, under the
+        // deck, from either end. Its origin on the ground.
+        for (const float x : {-0.55F, 0.55F}) {
+            s.parts.push_back(box(Vec3(0.06F, 0.06F, 0.62F), Vec3(x, 0.06F, 0.0F), Material::Timber, 20.0F));
+        }
+        s.parts.push_back(box(Vec3(0.66F, 0.02F, 0.62F), Vec3(0.0F, 0.14F, 0.0F), Material::Steel, 60.0F));
+        if (kind == K::BilletStillage) {
+            // Steel billets bundled 0.62 m deep in a frame of corner posts:
+            // 0.75 m3 of steel at 85 % packed, 4.9 t.
+            for (const float x : {-0.62F, 0.62F}) {
+                for (const float z : {-0.58F, 0.58F}) {
+                    s.parts.push_back(box(Vec3(0.03F, 0.33F, 0.03F), Vec3(x, 0.49F, z), Material::Steel, 5.0F));
+                }
+            }
+            s.parts.push_back(box(Vec3(0.55F, 0.31F, 0.55F), Vec3(0.0F, 0.47F, 0.0F), Material::Rust, 4900.0F));
+        } else {
+            // The coil on its side, eye along x, in two chocks.
+            s.parts.push_back(cylinder(0.55F, 0.35F, Vec3(0.0F, 0.71F, 0.0F), kAlongX, Material::Galvanised, 2700.0F));
+            for (const float z : {-0.5F, 0.5F}) {
+                s.parts.push_back(box(Vec3(0.4F, 0.07F, 0.08F), Vec3(0.0F, 0.23F, z), Material::Timber, 10.0F));
+            }
+        }
+        s.half_height = 0.0F;
+        s.friction = 0.6F;
+        break;
+    }
     }
     for (const Part &part : s.parts) {
         s.mass_kg += part.mass_kg;
@@ -203,6 +232,11 @@ void add_stock_yard(std::vector<LooseStock::Placement> &t) {
                          0.0F});
         }
     }
+    // Heavy steel for the forklift (forklift.hpp) west of the drums, their
+    // runners along z: the stillage of billets, too heavy for it (its lift
+    // stalls and its back end rises), and the coil, a hard lift.
+    t.push_back({K::BilletStillage, 0, 34.0F, 0.0F, 24.0F, 0.0F});
+    t.push_back({K::CoilSkid, 0, 30.0F, 0.0F, 24.0F, 0.0F});
     // Two pipe racks, three pipes side by side on three cradles each.
     for (const float rack_z : {25.0F, 28.0F}) {
         for (const float x : {47.0F, 50.0F, 53.0F}) {

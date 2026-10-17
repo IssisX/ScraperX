@@ -2,7 +2,7 @@
 
 // The yard's forklift (the owner, 2026-10-17: the heavy stock is moved by a
 // machine, and a forklift first; ideas taken from the ChatGPT branch's truck
-// and kept lean here). A counterbalance truck of about 2.7 t: two driven
+// and kept lean here). A counterbalance truck of about 5.1 t: two driven
 // front wheels, two steered rear wheels, a counterweight behind the rear
 // axle, an overhead guard, and a mast whose carriage and forks ride up it on
 // a powered slide. It stands parked north of the drums on their pallets,
@@ -12,9 +12,12 @@
 // the controls: the stick drives (forward and back) and steers, two held
 // buttons raise and lower the forks, and Action again lets go. Nothing is
 // scripted: the wheels drive through the tyres' friction, the forks lift
-// through a motor of finite force (kLiftForceN: a 3.75 t container stalls it,
-// and tips the truck onto its nose long before), and a load sits on the
-// forks only by its weight and their friction. Let go of, it brakes.
+// through a ram of finite force (kLiftForceN), and a load sits on the forks
+// only by its weight and their friction. Its limit is the real one: the ram
+// is stronger than the counterweight, so too heavy a load held out on the
+// forks lifts the truck's back end off the ground before it leaves its own;
+// heavier still, past what the ram can push, the ram stalls. Let go of, it
+// brakes.
 //
 // The wheels are Jolt's vehicle wheels (a ray of suspension and a cast
 // cylinder each); the chassis and the carriage are kit bodies, saved and
@@ -46,12 +49,19 @@ public:
     static constexpr float kParkX = 38.0F;
     static constexpr float kParkZ = 16.5F;
 
-    // The forks: from 5 cm off the ground up the mast to its top (it does
-    // not telescope), at kLiftSpeedMps, by a motor of at most kLiftForceN
-    // (CHOSEN: a 2.5 t truck's rating with the carriage's own weight).
+    // The forks: from 3.5 cm off the ground up the mast to its top (it does
+    // not telescope), at kLiftSpeedMps, by a ram of at most kLiftForceN
+    // (CHOSEN: a relief valve at about 1.4 times the truck's 3.5 t rating;
+    // what limits a lift far out on the forks is the counterweight).
     static constexpr float kLiftStrokeM = 1.8F;
     static constexpr float kLiftSpeedMps = 0.4F;
-    static constexpr float kLiftForceN = 30000.0F;
+    static constexpr float kLiftForceN = 50000.0F;
+    // What the ram holds with its valve shut, or lets down metered: whatever
+    // the mast can carry (CHOSEN: four times what the pump lifts).
+    static constexpr float kHoldForceN = 4.0F * kLiftForceN;
+    // The stick pushed all the way asks for kTopSpeedMps (about 11.5 km/h),
+    // less of it for less.
+    static constexpr float kTopSpeedMps = 3.2F;
     // The steered wheels turn at most kSteerMaxRad, at kSteerRateRadS.
     static constexpr float kSteerMaxRad = 0.9F;
     static constexpr float kSteerRateRadS = 1.6F;
@@ -65,6 +75,13 @@ public:
         float speed_mps = 0.0F;     // along the truck's forward
         float steer = 0.0F;         // -1 .. 1, the wheel as turned (right +)
         float drive = 0.0F;         // the throttle as applied, -1 .. 1
+        float lift = 0.0F;          // the lift lever as applied: + raising, - lowering
+        float lift_n = 0.0F;        // the lift's push up the mast this tick (to kLiftForceN)
+        float pitch_rad = 0.0F;     // the truck's nose down, + (on its front wheels)
+        // Each wheel's load on the ground this tick and whether it touches:
+        // front left, front right, rear left, rear right.
+        std::array<float, kWheels> wheel_load_n{};
+        std::array<bool, kWheels> wheel_contact{};
     };
 
     Forklift(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::ObjectLayer moving_layer, JPH::BodyID player);
@@ -78,6 +95,8 @@ public:
     // and lift are the stick's forward and right and the forks' buttons, each
     // -1 .. 1, and act only while driving.
     void pre_step(float delta_seconds, bool take, bool at_controls, float drive, float steer, float lift);
+    // After the physics step: what the lift pushed and the wheels carried.
+    void post_step(float delta_seconds);
 
     [[nodiscard]] bool driving() const noexcept { return state_.driving; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
