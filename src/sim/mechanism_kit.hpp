@@ -32,17 +32,25 @@ namespace scraperx::sim::kit {
 
 // Entity ids. Band structure is static and takes ids from kStaticEntityBase;
 // bodies that move take ids from kDynamicEntityBase, so the support rule can
-// tell a machine from the floor by id alone.
+// tell a machine from the floor by id alone. Loose stock (crates, drums,
+// beams lying about) moves too and takes ids from kStockEntityBase, past the
+// machines' band.
 constexpr std::uint64_t kStaticEntityBase = 1000;
 constexpr std::uint64_t kDynamicEntityBase = 2000;
 constexpr std::uint64_t kEntityLimit = 3000;
+constexpr std::uint64_t kStockEntityBase = 5000;
+constexpr std::uint64_t kStockEntityLimit = 6000;
+
+[[nodiscard]] constexpr bool is_stock_entity(const std::uint64_t entity) noexcept {
+    return entity >= kStockEntityBase && entity < kStockEntityLimit;
+}
 
 [[nodiscard]] constexpr bool is_kit_entity(const std::uint64_t entity) noexcept {
-    return entity >= kStaticEntityBase && entity < kEntityLimit;
+    return (entity >= kStaticEntityBase && entity < kEntityLimit) || is_stock_entity(entity);
 }
 
 [[nodiscard]] constexpr bool is_dynamic_entity(const std::uint64_t entity) noexcept {
-    return entity >= kDynamicEntityBase && entity < kEntityLimit;
+    return (entity >= kDynamicEntityBase && entity < kEntityLimit) || is_stock_entity(entity);
 }
 
 // What a surface is made of, for the presentation's palette. Not physics.
@@ -129,6 +137,10 @@ public:
     BodyIndex add_body(std::uint64_t entity, const std::vector<Part> &parts,
                        JPH::RVec3 position, JPH::Quat rotation, float mass_kg, float friction);
     void set_carry(BodyIndex body, CarryKind kind, JPH::Vec3 handle_local);
+    // Lets a moving body sleep once it has come to rest, as loose stock lying
+    // about does: it wakes when anything touches it or a restore moves it.
+    // Every other kit body stays awake.
+    void allow_sleeping(BodyIndex body);
     // Two bodies that pass through each other: parts of one machine built
     // interleaved (a pouch inside its fork). Every other pair still collides.
     // Indices up to kCollisionSubGroups - 1; the last is kept for a body that

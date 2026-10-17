@@ -31,6 +31,10 @@ int main() {
         run_wet_handling();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "stock") {
+        run_loose_stock();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -282,6 +286,7 @@ int main() {
     run_summit();
     run_summit_arm();
     run_matron();
+    run_loose_stock();
     run_ascent();
 
     return EXIT_SUCCESS;

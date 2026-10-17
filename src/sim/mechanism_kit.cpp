@@ -224,6 +224,10 @@ void Kit::set_carry(const BodyIndex body, const CarryKind kind, const JPH::Vec3 
     bodies_[body.value].handle = handle_local;
 }
 
+void Kit::allow_sleeping(const BodyIndex body) {
+    jolt_body(body).SetAllowSleeping(true);
+}
+
 void Kit::set_damping(const BodyIndex body, const float linear, const float angular) {
     JPH::MotionProperties *motion = jolt_body(body).GetMotionProperties();
     motion->SetLinearDamping(linear);

@@ -104,6 +104,10 @@ const SCENARIOS := {
 	"look_matron_catwalk": 11,
 	"look_matron_gallery": 11,
 	"look_matron_stock": 11,
+	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
+	# renders only, not in CI).
+	"touch_stock": 8,
+	"look_stock_yard": 8,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
 	"look_summit_ground": 8,
@@ -332,6 +336,10 @@ func _run() -> void:
 			ok = await _look_matron_gallery()
 		"look_matron_stock":
 			ok = await _look_matron("stock")
+		"touch_stock":
+			ok = await _stock_touch(InputRouter.Device.TOUCH)
+		"look_stock_yard":
+			ok = await _look_stock_yard()
 		"look_summit":
 			ok = await _look_summit(false)
 		"look_summit_ground":

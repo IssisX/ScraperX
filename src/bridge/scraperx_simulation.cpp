@@ -215,6 +215,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_points", "cable"),
                                 &ScraperXSimulation::get_kit_cable_points);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_bins"), &ScraperXSimulation::get_kit_bins);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_loose_stock"), &ScraperXSimulation::get_loose_stock);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_piles"),
                                 &ScraperXSimulation::get_kit_piles);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_pools"),
@@ -713,6 +714,19 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_bins() const {
         out.push_back(static_cast<float>(bin.stream_to.y));
         out.push_back(static_cast<float>(bin.stream_to.z));
         out.push_back(bin.water ? 1.0F : 0.0F);
+    }
+    return out;
+}
+
+// Per piece of loose stock: its kit body index, its kind and its paint.
+godot::PackedInt32Array ScraperXSimulation::get_loose_stock() const {
+    godot::PackedInt32Array out;
+    for (std::uint32_t index = 0; index < sim::Simulation::loose_stock_count(); ++index) {
+        const sim::Simulation::LooseStockPiece piece = sim::Simulation::loose_stock_piece(index);
+        out.push_back(static_cast<std::int32_t>(
+            simulation_->kit_body_index(sim::Simulation::kLooseStockFirstEntity + index)));
+        out.push_back(piece.kind);
+        out.push_back(piece.variant);
     }
     return out;
 }

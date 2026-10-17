@@ -1,8 +1,9 @@
 extends "res://presentation/main_geometry.gd"
 
 # The main scene, layer 2 of 6: the world. The Stack, the tower skin, the
-# yard, the stock yard, lighting, the basin's mountains, forest and
-# waterfall, and the works' signage.
+# yard, lighting, the basin's mountains, forest and waterfall, and the
+# works' signage. (The stock yard's containers, steel and drums are loose
+# stock, kit bodies: stock_view.gd.)
 
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
@@ -63,7 +64,6 @@ func _build_world() -> void:
 	_build_stack_accents(verdigris, lichen)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, faded_yellow, tar)
-	_build_stock_yard(timber, mill_scale, rust_deep)
 	_build_mountains_and_waterfall()
 	_build_kellerworks_signage(timber, faded_yellow)
 	_build_foliage()
@@ -546,77 +546,6 @@ func _build_walkway(paint: Material) -> void:
 					Vector3(WALKWAY_X + side * 0.42, 0.006, z + 0.45), paint)
 				bar.rotation.y = side * 0.75
 			z -= 9.0
-
-# Stock in the yard south of the start, where the player looks first when
-# they turn from the tower: a block of shipping containers on the west (two
-# high in places), steel on the east (beams on sleepers, plate, drums on
-# pallets, a pipe rack), and a row of containers closing the yard 95 m out.
-# All solid (solid_export.gd: Stock*), all clear of the start and the proving
-# ground's fixtures (x -20..20, z -12..25 is kept empty) and of the yard
-# crew's routes (north of z -12).
-const CONTAINER_SIZE := Vector3(12.19, 2.59, 2.44)
-
-func _build_stock_yard(timber: Material, mill_scale: Material, rust_deep: Material) -> void:
-	var ribbed := _corrugation_texture()
-	var paint := []
-	for colour in [Color("7b3422"), Color("34506b"), Color("42603f"), Color("8d8f88"), Color("9a5a26")]:
-		var material := _material(colour, 0.35, 0.78)
-		material.normal_enabled = true
-		material.normal_texture = ribbed
-		material.uv1_triplanar = true
-		material.uv1_triplanar_sharpness = 4.0
-		material.uv1_scale = Vector3(3.4, 3.4, 3.4)
-		paint.append(material)
-	var bar_material := _material(Color("2b2a28"), 0.6, 0.55)
-	var h := CONTAINER_SIZE.y
-	# [centre x, z, tier (0 on the ground), along x, paint]
-	var containers := [
-		[-42.0, 8.0, 0, true, 0], [-42.0, 10.6, 0, true, 1], [-42.0, 8.0, 1, true, 2],
-		[-40.0, 20.0, 0, true, 3], [-40.0, 20.0, 1, true, 4], [-54.5, 14.3, 0, false, 1],
-	]
-	var row_x := -36.0
-	for i in 7:
-		containers.append([row_x + 12.5 * float(i), 70.0, 0, true, (i * 3 + 1) % 5])
-		if i in [1, 4, 5]:
-			containers.append([row_x + 12.5 * float(i), 70.0, 1, true, (i * 3 + 3) % 5])
-	for c in containers:
-		var along_x: bool = c[3]
-		var size := CONTAINER_SIZE if along_x else Vector3(CONTAINER_SIZE.z, h, CONTAINER_SIZE.x)
-		var centre := Vector3(float(c[0]), h * (float(c[2]) + 0.5), float(c[1]))
-		_add_box("StockContainer", size, centre, paint[int(c[4])])
-		# The door end's four locking bars.
-		for bar in [-0.85, -0.35, 0.35, 0.85]:
-			var at := centre + (Vector3(size.x * 0.5 + 0.025, 0.0, bar) if along_x else
-				Vector3(bar, 0.0, size.z * 0.5 + 0.025))
-			_add_box("ContainerBar", Vector3(0.05, h * 0.9, 0.05), at, bar_material)
-
-	# Beams on sleepers, three layers.
-	for layer in 3:
-		var base := float(layer) * 0.45
-		for x in [32.0, 36.0, 40.0]:
-			_add_box("StockSleeper", Vector3(0.25, 0.15, 3.0), Vector3(x, base + 0.075, 11.9), timber)
-		for j in 6:
-			_add_box("StockBeam", Vector3(10.0, 0.3, 0.3), Vector3(36.0, base + 0.3, 10.5 + 0.55 * float(j)),
-				mill_scale if (j + layer) % 3 != 0 else rust_deep)
-	# Plate, stacked.
-	_add_box("StockPlate", Vector3(3.0, 0.8, 1.5), Vector3(47.0, 0.4, 12.0), mill_scale)
-	_add_box("StockPlate", Vector3(2.4, 0.3, 1.2), Vector3(47.3, 0.95, 12.1), rust_deep)
-	# Drums on pallets.
-	var drum_paint := [_material(Color("2c4a73"), 0.4, 0.6), _material(Color("a9851f"), 0.4, 0.6),
-		_material(Color("7c2a1e"), 0.4, 0.6)]
-	var pallets := [Vector3(38.0, 0.0, 24.0), Vector3(39.4, 0.0, 24.0), Vector3(38.0, 0.0, 25.3)]
-	for p in pallets.size():
-		_add_box("StockPallet", Vector3(1.2, 0.14, 1.0), pallets[p] + Vector3(0.0, 0.07, 0.0), timber)
-		for d in 4:
-			var offset := Vector3(-0.3 if d % 2 == 0 else 0.3, 0.14 + 0.44, -0.25 if d < 2 else 0.25)
-			_add_cylinder("StockDrum", 0.27, 0.88, pallets[p] + offset, drum_paint[(p + d) % 3])
-	# A pipe rack: six pipes in a pyramid on three sleepers.
-	for x in [47.0, 50.0, 53.0]:
-		_add_box("StockSleeper", Vector3(0.2, 0.2, 2.4), Vector3(x, 0.1, 25.0), timber)
-	for row in [[0.5, [24.38, 25.0, 25.62]], [1.037, [24.69, 25.31]], [1.574, [25.0]]]:
-		for z in row[1]:
-			var pipe := _add_cylinder("StockPipe", 0.3, 8.0, Vector3(50.0, float(row[0]), float(z)), mill_scale)
-			pipe.rotation = Vector3(0.0, 0.0, PI * 0.5)
 
 func _build_lighting() -> void:
 	# Sodium vapour: warm, low, and sourced from actual fittings on masts.

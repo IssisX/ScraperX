@@ -3,6 +3,7 @@
 
 #include "sim/simulation.hpp"
 
+#include "sim/loose_stock.hpp"
 #include "sim/physics_world.hpp"
 
 namespace scraperx::sim {
@@ -191,6 +192,20 @@ double Simulation::kit_body_mass(const std::uint32_t body) const noexcept {
 
 std::uint32_t Simulation::kit_body_index(const std::uint64_t entity) const noexcept {
     return physics_world_->kit().body_for_entity(entity).value;
+}
+
+static_assert(Simulation::kLooseStockFirstEntity == LooseStock::kFirstEntity);
+
+std::uint32_t Simulation::loose_stock_count() noexcept {
+    return static_cast<std::uint32_t>(LooseStock::placements().size());
+}
+
+Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) noexcept {
+    const std::vector<LooseStock::Placement> &table = LooseStock::placements();
+    if (index >= table.size()) {
+        return {};
+    }
+    return {static_cast<std::uint8_t>(table[index].kind), table[index].variant};
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {

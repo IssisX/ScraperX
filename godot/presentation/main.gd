@@ -26,6 +26,7 @@ const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const SwingView := preload("res://presentation/swing_view.gd")
 const SummitView := preload("res://presentation/summit_view.gd")
 const MatronView := preload("res://presentation/life/matron_view.gd")
+const StockView := preload("res://presentation/stock_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -169,6 +170,9 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_build_kit()
+	var stock_view := StockView.new()
+	add_child(stock_view)
+	stock_view.setup(self, _native, _kit_root)
 	_works = Works.new()
 	add_child(_works)
 	_clouds = CloudLayer.new()

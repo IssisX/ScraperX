@@ -280,9 +280,6 @@ const SOLID := [
 	"StairRail", "SkinStay", "MastBrace", "PendantCatwalk", "PendantRamp", "PendantStand",
 	"PendantBox", "YardJibMast", "OverweightMast", "BayPlate", "CradleGuideMast", "SheaveA",
 	"SheaveB",
-	# The stock yard south of the start.
-	"StockContainer", "StockSleeper", "StockBeam", "StockPlate", "StockPallet", "StockDrum",
-	"StockPipe",
 	# Landscape.
 	"TreeTrunk", "TreeCanopy", "MountainPeak", "MountainSnowCap", "MountainRidgeFar",
 	"MountainRidgeFarSnow", "ValleyFloor", "RimRidge", "RimRidgeSnow",

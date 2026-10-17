@@ -817,7 +817,7 @@ draw her off) so no new rules are needed; to be built after the owner has played
 
 **Loose stock on the Matron's deck (native + Godot; the owner's idea, 2026-10-16/17).** Seven
 real bodies on the 154 m deck, each shoved by walking into it, with no rule of its own
-(`src/sim/deck_stock.cpp`): three 160 kg timber crates by the south band's rail, two side by side
+(`src/sim/loose_stock.cpp`, the first seven pieces): three 160 kg timber crates by the south band's rail, two side by side
 and one on top like a step (climb the low one and shove the top one off); two loose crates either
 side of the catwalk's east end; a 420 kg box of ingots on a rolling dolly against the shaft's rail
 just north of the catwalk; a timber beam on the south band. What they do comes from the physics:
@@ -829,6 +829,33 @@ her: only a plate under her does). They are saved and restored with the machines
 `matron` (a crate shoved; the dolly round behind, into line, out onto the plates, a plate down,
 no one killed); `look_matron_stock` renders them. Not proven in a test: the crash luring her
 (the crash's loudness was measured in a probe, about 2.4 m/s off the stack's top).
+
+**Loose stock everywhere, first the yard (2026-10-17; the owner: "if SOME objects are moveable,
+MOST objects should be moveable").** Everything lying about that is not holding the tower up is
+now a real body (`src/sim/loose_stock.cpp`, kit entities from 5000): the stock yard south of the
+start, which was static scenery, is 72 pieces: 16 shipping containers (3.75 t, two high in
+places), 18 steel beams on 9 sleepers in three layers, a plate stack and slab, 3 pallets with 12
+oil drums, and two pipe racks of three 8 m pipes on steel cradles. A drum or a pallet is carried
+(PICK UP, named on the prompt), the middling pieces shoved, the heaviest wait for a machine (a
+container walked into does not move). They sleep once at rest and wake when touched, so they cost
+nothing while left alone; restore wakes them. Judged and changed: the yard's pyramid of six pipes
+sank into itself in the solver whatever the iterations (a single tier holds), so each rack holds
+one tier. Drawn by the kit's own renderer; `stock_view.gd` paints the containers, drums and
+rusted beams, and the hands grip a carried drum by its rim. Proof: native `stock` (79 pieces
+settle within 1.5 cm and all sleep; a drum carried 3.9 m and set down sleeps again; a container
+does not move); `touch_stock` (the same carry through the touch controls); `look_stock_yard`
+renders it. Not yet: stock on the decks up the tower, designed spots where moving stock opens a
+route, the forklift and the crane.
+
+**Running to-do (owner, 2026-10-17; done in this order).**
+1. Ideas from the ChatGPT branch's forklift, crane and movable objects: read (2026-10-17).
+2. Most objects movable everywhere: the yard (done, above); then stock on the decks up the tower;
+   then designed spots where stacking or laying stock opens a new route; then a forklift (heavy
+   stock), then a crane.
+3. Mirror's Edge-style moves: a few steps up a wall, a kick off a wall to turn, legs tucked in a
+   jump, ziplines, swing poles, more speed kept between moves.
+4. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.
+5. The Matron's extras.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

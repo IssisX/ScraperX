@@ -5,6 +5,7 @@
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
+#include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
 #include <godot_cpp/variant/transform3d.hpp>
@@ -127,6 +128,7 @@ public:
     // its kit body index, contents kg, capacity kg, flowing (0 or 1), the
     // stream's from and to points (zero unless flowing), and 1 for water.
     [[nodiscard]] godot::PackedFloat32Array get_kit_bins() const;
+    [[nodiscard]] godot::PackedInt32Array get_loose_stock() const;
     // Every pile of spilled rubble as 4 floats: where it lies, and its kg.
     [[nodiscard]] godot::PackedFloat32Array get_kit_piles() const;
     // AS-007 water: per pool its box (min, max) and level; per pipe whether

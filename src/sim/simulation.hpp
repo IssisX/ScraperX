@@ -974,6 +974,16 @@ public:
     [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
     [[nodiscard]] std::uint32_t kit_body_index(std::uint64_t entity) const noexcept;
+    // Loose stock (crates, drums, beams, containers lying about): piece i is
+    // kit entity kLooseStockFirstEntity + i. Its kind (LooseStock::Kind) and
+    // its paint, for the presentation; an index past the end reads as 0, 0.
+    static constexpr std::uint64_t kLooseStockFirstEntity = 5000;
+    struct LooseStockPiece {
+        std::uint8_t kind = 0;
+        std::uint8_t variant = 0;
+    };
+    [[nodiscard]] static std::uint32_t loose_stock_count() noexcept;
+    [[nodiscard]] static LooseStockPiece loose_stock_piece(std::uint32_t index) noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,

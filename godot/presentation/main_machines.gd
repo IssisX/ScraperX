@@ -40,6 +40,10 @@ var _kit_dynamic: Array[bool] = []
 # more, with the point of it farthest from its origin, whose speed is how fast
 # the machine moves.
 const MACHINE_MIN_KG := 40.0
+# Loose stock (kit entities from here, src/sim/loose_stock.hpp) is not a
+# machine: crates and drums lying about neither hum nor carry beacons.
+const STOCK_FIRST_ENTITY := 5000
+const STOCK_ENTITY_LIMIT := 6000
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
 # Per bin: the dust thrown up where its stream of stone lands (null for water).
@@ -165,7 +169,9 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
-		if bool(_native.is_kit_body_dynamic(body)) and \
+		var entity := int(_native.get_kit_body_entity_id(body))
+		var stock := entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT
+		if bool(_native.is_kit_body_dynamic(body)) and not stock and \
 				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
 			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
 				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,

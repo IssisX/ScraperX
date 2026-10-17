@@ -775,7 +775,7 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "SLIDING"
 	elif bool(_native.is_player_wall_running()):
 		_status.text = "WALL RUN"
-	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN:
+	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN and support < STOCK_FIRST_ENTITY:
 		_status.text = "RIDING A MACHINE"
 	elif grounded:
 		_status.text = "AT GRADE"

@@ -734,6 +734,7 @@ bool pull_wet_trip(scraperx::sim::Simulation &simulation);
 bool couple_wet_hose(scraperx::sim::Simulation &simulation);
 bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation);
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity);
+void run_loose_stock();
 void run_wet_isolation();
 void run_wet_band();
 bool climb_wet_hold(scraperx::sim::Simulation &simulation, const double x, const double z,

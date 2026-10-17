@@ -277,7 +277,17 @@ func _carry_center(entity: int) -> Vector3:
 	if _is_kit(entity):
 		var body := int(_native.get_kit_body_index(entity))
 		if body >= 0:
-			return (_native.get_kit_body_transform(body) as Transform3D).origin
+			var at: Transform3D = _native.get_kit_body_transform(body)
+			# Loose stock is lifted by its top (loose_stock.cpp's handles):
+			# a drum by its rim, a pallet by its deck.
+			if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
+				_stock_name(entity)
+				match int(_stock_kinds.get(entity, -1)):
+					3:
+						return at * Vector3(0.0, 0.44, 0.0)
+					4:
+						return at * Vector3(0.0, 0.07, 0.0)
+			return at.origin
 	return Vector3.ZERO
 
 func _carry_half(entity: int) -> float:
@@ -349,10 +359,29 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
+	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
+		return _stock_name(entity)
 	return "ROPE END" if _is_kit(entity) else ""
 
+# Loose stock that is carried (src/sim/loose_stock.cpp), by its kind.
+var _stock_kinds := {}
+func _stock_name(entity: int) -> String:
+	if _stock_kinds.is_empty():
+		var stock: PackedInt32Array = _native.get_loose_stock()
+		var piece := 0
+		for i in range(0, stock.size() - 2, 3):
+			_stock_kinds[STOCK_FIRST_ENTITY + piece] = stock[i + 1]
+			piece += 1
+	match int(_stock_kinds.get(entity, -1)):
+		3:
+			return "OIL DRUM"
+		4:
+			return "PALLET"
+	return ""
+
 func _is_kit(entity: int) -> bool:
-	return entity >= KIT_ENTITY_MIN and entity < KIT_ENTITY_MAX
+	return (entity >= KIT_ENTITY_MIN and entity < KIT_ENTITY_MAX) or \
+		(entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT)
 
 func _kit_anchor_name(entity: int) -> String:
 	match entity:

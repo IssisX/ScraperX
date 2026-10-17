@@ -3,11 +3,11 @@
 // the rotten catwalk. Every leg is on player inputs from the deck spawn.
 #include "sim_tests.hpp"
 
-#include "sim/deck_stock.hpp"
+#include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
 
 namespace {
-using scraperx::sim::DeckStock;
+using scraperx::sim::LooseStock;
 using scraperx::sim::InitialSpawn;
 using scraperx::sim::Matron;
 using scraperx::sim::MatronSnapshot;
@@ -117,7 +117,7 @@ CrossResult sprint_across(Simulation &s, const bool until_dead) {
 }
 
 scraperx::sim::Vector3 stock(const Simulation &s, const int piece) {
-    return s.kit_body_position(s.kit_body_index(DeckStock::kFirstEntity + static_cast<std::uint64_t>(piece)));
+    return s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(piece)));
 }
 
 // Pushes stock piece `piece` toward (tx, tz) the way a person does: round
@@ -354,34 +354,43 @@ void run_matron() {
                 "matron: a crouched walk to the loose crate north of the catwalk's end");
         (void)s.set_crouch_input(false);
         stand_still(s, 1.0);
-        const auto before = stock(s, 3);
+        const auto before = stock(s, LooseStock::kDeckCrateNorth);
         for (int i = 0; i < 4 * static_cast<int>(Simulation::kTickRateHz); ++i) {
             (void)s.set_move_input(0.0, -1.0);
             (void)s.set_facing(0.0, -1.0);
             tick(s);
         }
         (void)s.set_move_input(0.0, 0.0);
-        const auto after = stock(s, 3);
+        const auto after = stock(s, LooseStock::kDeckCrateNorth);
         const double moved = std::hypot(after.x - before.x, after.z - before.z);
         std::cout << "  matron: a crate shoved 4 s by walking into it moved " << moved << " m\n";
         require(moved > 1.0 && moved < 4.0 * 5.5 * 0.6, "matron: a crate walked into moves, and slower than a walk");
         require(s.matron_state().planks_fallen == 0, "matron: nothing has come down");
-        // The ingot dolly: round behind it and shoved out onto the catwalk.
+    }
+    // ---- the ingot dolly, from a fresh start: where a shoved crate ends up
+    // (and whether it crashes into the next one and wakes her) is not this
+    // check's business ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        (void)s.advance_frame(2.0);
+        // Round behind it and shoved out onto the catwalk.
         (void)s.set_crouch_input(true);
-        require(go(s, 21.5, -143.0, false, 20.0), "matron: to the dolly's side");
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0) && go(s, 24.6, -142.8, false, 20.0) &&
+                    go(s, 21.5, -143.0, false, 20.0),
+                "matron: to the dolly's side");
         (void)s.set_crouch_input(false);
         // First south into line with the catwalk, then west along it.
-        const bool lined = push_toward(s, 5, 19.0, Matron::kMidZ - 0.6, 40.0, [](const scraperx::sim::Vector3 &d) {
+        const bool lined = push_toward(s, LooseStock::kDeckIngotDolly, 19.0, Matron::kMidZ - 0.6, 40.0, [](const scraperx::sim::Vector3 &d) {
             return std::abs(d.z - Matron::kMidZ) < 0.2;
         });
         require(lined, "matron: the ingot dolly pushed into line with the catwalk");
-        const bool out = push_toward(s, 5, 10.0, Matron::kMidZ, 40.0,
+        const bool out = push_toward(s, LooseStock::kDeckIngotDolly, 10.0, Matron::kMidZ, 40.0,
                                      [](const scraperx::sim::Vector3 &d) { return d.x < 17.6; });
         require(out, "matron: the ingot dolly pushed to the catwalk's end");
         // A last hard shove sends it rolling out onto the plates; the
         // pusher stops on the deck.
         for (int i = 0; i < static_cast<int>(0.6 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
-            const auto d = stock(s, 5);
+            const auto d = stock(s, LooseStock::kDeckIngotDolly);
             const auto p = s.snapshot().player_position;
             (void)s.set_move_input(-1.0, (d.z - p.z) * 2.0);
             (void)s.set_facing(-1.0, 0.0);
@@ -395,7 +404,7 @@ void run_matron() {
         // Step back off the catwalk's end and let it do what it does.
         require(go(s, 21.5, Matron::kMidZ, false, 6.0), "matron: back off the catwalk's end");
         stand_still(s, 3.0);
-        const auto dolly = stock(s, 5);
+        const auto dolly = stock(s, LooseStock::kDeckIngotDolly);
         const auto m = s.matron_state();
         std::cout << "  matron: the dolly on the catwalk: plates down " << m.planks_fallen << ", the dolly at y " << dolly.y
                   << "\n";

@@ -7,6 +7,12 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # follows onto a plate that gives way under her: the one thing that kills her.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
+#
+# Loose stock (src/sim/loose_stock.hpp), in the yard south of the start.
+# touch_stock: round the beam stack to the drums on their pallet, PICK UP one,
+# carry it 3 m and LET GO: it lies on the ground where it was set.
+# look_stock_yard: renders only (not in CI): the containers, the steel, the
+# pipe racks.
 
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
@@ -200,4 +206,69 @@ func _look_matron_gallery() -> bool:
 			await _look_at_point(view.head_world_position())
 			await _pose("matron_face_%s" % entry[0])
 	view.previewing = false
+	return true
+
+
+# The first oil drum on the drums' pallet: [entity, kit body].
+func _first_drum() -> Array:
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	var piece := 0
+	for i in range(0, stock.size() - 2, 3):
+		if stock[i + 1] == 3:
+			return [5000 + piece, stock[i]]
+		piece += 1
+	return [0, -1]
+
+
+func _stock_touch(device: int) -> bool:
+	var drum: Array = _first_drum()
+	if int(drum[1]) < 0:
+		return _fail("no drum in the loose stock")
+	var at: Vector3 = _native().get_kit_body_transform(int(drum[1])).origin
+	# Round the east end of the beam stack, between it and the plate.
+	for target in [Vector2(30.0, -10.0), Vector2(43.5, 6.0), Vector2(43.5, 21.0),
+			Vector2(at.x, at.z - 1.6)]:
+		if not await _go(device, target, 0.3, 30.0):
+			return _fail("the walk to the drums stopped short of %s" % str(target))
+	if not await _go(device, Vector2(at.x, at.z - 0.75), 0.1, 6.0):
+		return _fail("the step up to the drum")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "PICK UP", "OIL DRUM"):
+		return _fail("PICK UP OIL DRUM was not offered at the drum")
+	_act(device)
+	if not await _wait_until(func() -> bool:
+			return int(_native().get_carrying_entity_id()) == int(drum[0]), 1.0):
+		return _fail("the drum is not in the hands")
+	if not await _go(device, Vector2(at.x, at.z - 3.75), 0.2, 8.0):
+		return _fail("the walk back with the drum")
+	await _seconds(0.5)
+	await _pose("stock_drum_carried")
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set the drum down")
+	await _seconds(3.0)
+	var now: Vector3 = _native().get_kit_body_transform(int(drum[1])).origin
+	var carried := Vector2(now.x - at.x, now.z - at.z).length()
+	print("SCRAPERX_UITEST stock: the drum carried %.2f m, at y %.2f" % [carried, now.y])
+	if carried < 2.0 or now.y >= at.y:
+		return _fail("the drum was not set down off its pallet, on the ground")
+	await _look_at_point(now)
+	await _pose("stock_drum_set_down")
+	return true
+
+
+func _look_stock_yard() -> bool:
+	_main._sky_cycle.set_hour(14.0)
+	var device := InputRouter.Device.TOUCH
+	await _go(device, Vector2(-24.0, -6.0), 0.4, 20.0)
+	await _look_at_point(Vector3(-44.0, 1.6, 12.0))
+	await _seconds(1.0)
+	await _pose("stock_containers")
+	await _go(device, Vector2(30.0, -2.0), 0.4, 40.0)
+	await _look_at_point(Vector3(40.0, 0.5, 14.0))
+	await _seconds(1.0)
+	await _pose("stock_steel")
+	await _go(device, Vector2(43.5, 18.0), 0.4, 30.0)
+	await _look_at_point(Vector3(50.0, 0.4, 26.5))
+	await _seconds(1.0)
+	await _pose("stock_pipes_drums")
 	return true
