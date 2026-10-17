@@ -11,13 +11,17 @@
 // the post (kStandM high, up a ramp at its back) puts its bar in the hands'
 // reach: the hands take the bar, the body's weight pulls the trolley off
 // the hook, and it rides down under that weight. The slope drives it; the
-// sheaves resist a little (kTrolleyDragN, rolling); over the line's last part
-// the trolley runs into a brake block, a clamp on the cable at rest
-// line.length - brake_m from the top, and pushes it down the cable against
-// its clamp's drag (brake_n, sized to the line so the block takes the speed
-// off at kBrakeDecelMps2, what a hanging body takes without swinging up far)
-// to a sprung stop kStopMarginM short of the bottom post. JUMP OFF throws
-// the body on as the hands open (the swing's launch); DROP lets go.
+// sheaves resist a little (kTrolleyDragN, rolling). The stick held back
+// squeezes the trolley's hand brake on the cable (up to kHandBrakeMaxN): the
+// rider sets the speed. Over the line's last kBufferM the trolley runs into
+// a buffer block, a clamp on the cable, and pushes it down the cable against
+// its clamp's drag (brake_n: kBufferDecelMps2 on a rider, over the slope's
+// drive) to a sprung stop kStopMarginM short of the bottom post. Arrive
+// braked (kSafeArrivalMps or under) and the buffer stops the trolley short
+// of the stop; arrive faster and the stop's jolt is more than the hands can
+// hold (the caller's grip, as on a ledge): they are torn off the bar and the
+// body goes on at what speed it had left, into the bottom post. JUMP OFF throws the body on
+// as the hands open (the swing's launch); DROP lets go.
 //
 // The trolley and the block stay where the ride left them: a ridden line has
 // no trolley at its top, and is not ridden again until a death or a load
@@ -69,12 +73,21 @@ public:
     static constexpr float kStopMarginM = 0.8F;
     static constexpr float kParkM = kStopMarginM;
     // The sheaves' rolling drag on the cable (CHOSEN: steel on steel, a
-    // rider's weight on two wheels); the brake block's deceleration of a
-    // rider (CHOSEN: half a g, a 26 degree swing-up on the arms), its travel
-    // and clamp drag worked out per line from its slope so the ride ends at
-    // the bottom post; the rider's mass the block is sized for.
+    // rider's weight on two wheels); the hand brake's most (CHOSEN: about
+    // 0.7 g net on the steepest line, and a rider held still on any); the
+    // buffer's travel and its deceleration of a rider (CHOSEN: half a g, a 26
+    // degree swing-up on the arms), its clamp drag worked out per line from
+    // its slope; the fastest arrival the buffer stops short of the stop
+    // (DERIVED: sqrt(2 * 4.9 * 3); what is left of a faster one meets the
+    // sprung stop, whose damping jolt runs about 4 kN a metre a second, and a
+    // few metres a second over tears the hands off: MEASURED, torn from 6.5
+    // to 9 m/s in at the buffer on the yard line); the rider's mass the
+    // buffer is sized for.
     static constexpr float kTrolleyDragN = 12.0F;
-    static constexpr float kBrakeDecelMps2 = 4.9F;
+    static constexpr float kHandBrakeMaxN = 900.0F;
+    static constexpr float kBufferM = 3.0F;
+    static constexpr float kBufferDecelMps2 = 4.9F;
+    static constexpr float kSafeArrivalMps = 5.4F;
     static constexpr float kRiderMassKg = 84.0F;
     // The hanging body's room under the cable, swept along the line when it
     // is built: half a metre either side, from just over the cable to
@@ -86,7 +99,7 @@ public:
         JPH::RVec3 bottom;     // the bottom anchor
         JPH::Vec3 direction;   // unit, top to bottom
         float length = 0.0F;
-        float brake_m = 0.0F;    // the brake block's travel, its rest to the stop
+        float brake_m = 0.0F;    // the buffer's travel, its rest to the stop (kStopMarginM short of the end)
         float brake_n = 0.0F;    // its clamp's drag on the cable
         float trolley_m = 0.0F;  // the trolley's place down the line from the top anchor
         float block_m = 0.0F;    // the block's
@@ -98,7 +111,9 @@ public:
         int line = -1;
         float along_m = 0.0F;      // the trolley's place down the line from the top anchor
         float speed_mps = 0.0F;    // down the line (+)
-        bool braking = false;      // pushing the brake block
+        bool braking = false;      // the hand brake on, or pushing the buffer
+        float hand_brake = 0.0F;   // the squeeze, 0..1
+        float hands_load_n = 0.0F; // what the bar puts on the hands, this step
         std::uint64_t rides = 0;
     };
 
@@ -122,7 +137,10 @@ public:
     [[nodiscard]] JPH::RVec3 bar() const;
     // The hands open; the trolley stays where it is.
     void unclip();
-    // After the physics step: where the trolley is and how fast; the brake.
+    // The hand brake squeezed 0..1 (the stick held back).
+    void set_hand_brake(float squeeze) noexcept;
+    // After the physics step: where the trolley is and how fast, the brakes,
+    // and the load on the hands.
     void post_step(float delta_seconds);
     // After a death or a load: the hands open, every trolley parked and every
     // block at its rest.

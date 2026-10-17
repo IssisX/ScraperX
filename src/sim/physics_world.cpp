@@ -520,6 +520,24 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     loose_stock_->post_step();
     forklift_->post_step(delta_seconds);
     zipline_->post_step(delta_seconds);
+    if (zip_riding_) {
+        // The hands on a zipline's bar hold what a ledge's grip holds: the
+        // stop's jolt at a run-in faster than the buffer takes tears them off
+        // and the body is thrown on (kLedgeGripMaxForceN, as hang_on_ledge).
+        const float load = zipline_->state().hands_load_n;
+        if (load > kLedgeGripMaxForceN) {
+            ++hang_over_grip_ticks_;
+            hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN) * delta_seconds;
+        } else {
+            hang_over_grip_ticks_ = 0;
+            hang_over_grip_impulse_ = 0.0F;
+        }
+        if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || hang_over_grip_impulse_ > kLedgeGripTearImpulseNs) {
+            ++hang_slip_count_;
+            ++zip_torn_count_;
+            release_hang(bodies);
+        }
+    }
     summit_->post_step();
     matron_->post_step(delta_seconds);
     if (matron_->take_released_edge()) {

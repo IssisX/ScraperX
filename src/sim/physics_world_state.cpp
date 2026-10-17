@@ -364,6 +364,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.zipline_speed_mps = zipline_->state().speed_mps;
     state_.zipline_along_m = zipline_->state().along_m;
     state_.zipline_braking = zipline_->state().braking;
+    state_.zipline_hand_brake = zipline_->state().hand_brake;
+    state_.zipline_hands_load_n = zipline_->state().hands_load_n;
+    state_.zipline_torn_count = zip_torn_count_;
     state_.player_wall_running = wall_running();
     state_.player_wall_climbing = wall_climbed_this_flight_ && wall_running();
     state_.has_hook = has_hook_;

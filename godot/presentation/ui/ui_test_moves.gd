@@ -860,9 +860,10 @@ func _touch_swing_launch() -> bool:
 
 # Ziplines (sim/zipline.hpp): from deck 2's south band, up the ramp onto the
 # stand behind the yard line's top post; a running JUMP at the parked
-# trolley takes its bar; the ride down to the yard, fast, the brake block,
-# the stop; DROP lets go onto the yard. The hands on the bar, the trolley
-# drawn over them, the HUD naming the line.
+# trolley takes its bar; the ride down to the yard, fast, the stick held
+# back over the last stretch (the hand brake), the buffer stopping it; DROP
+# lets go onto the yard. The hands on the bar, the trolley drawn over them,
+# the HUD naming the line and its brake.
 func _touch_zipline() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var device := InputRouter.Device.TOUCH
@@ -900,9 +901,13 @@ func _touch_zipline() -> bool:
 			str(hands)])
 	await _seconds(1.2)
 	await _pose("zipline")
+	# Ridden as a player rides it: flat out, then the stick held back (the
+	# hand brake) over the last 22 m while faster than 4 m/s, into the buffer.
+	var length := float(_native().get_zipline_lines()[0]["length"])
 	var fastest := 0.0
 	var braked := false
 	var stopped := false
+	var holding_back := false
 	var waited := 0.0
 	while waited < 14.0 and not stopped:
 		await get_tree().process_frame
@@ -911,11 +916,18 @@ func _touch_zipline() -> bool:
 		if not bool(zip["riding"]):
 			return _fail("the hands came off the bar mid-ride (at %s)" % str(_position()))
 		var speed := absf(float(zip["speed_mps"]))
+		var brake := float(zip["along_m"]) > length - 22.0 and speed > 4.0
+		if brake and not holding_back:
+			_stick_push(Vector2(0.0, 1.0))
+		elif not brake and holding_back:
+			_move_dir(device, Vector2.ZERO)
+		holding_back = brake
 		fastest = maxf(fastest, speed)
-		braked = braked or bool(zip["braking"])
-		stopped = braked and speed < 0.3
-	if not stopped:
-		return _fail("the ride never stopped at the bottom (fastest %.1f m/s, braked %s)" % [fastest, str(braked)])
+		braked = braked or float(zip["hand_brake"]) > 0.5
+		stopped = float(zip["along_m"]) > length - 4.0 and speed < 0.3
+	_move_dir(device, Vector2.ZERO)
+	if not stopped or not braked:
+		return _fail("the ride never stopped braked at the bottom (fastest %.1f m/s, braked %s)" % [fastest, str(braked)])
 	if fastest < 12.0:
 		return _fail("the ride never got up to speed (%.1f m/s)" % fastest)
 	_move_dir(device, Vector2.ZERO)

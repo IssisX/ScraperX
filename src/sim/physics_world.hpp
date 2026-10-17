@@ -613,6 +613,8 @@ public:
     std::unique_ptr<Zipline> zipline_;
     // The swing under way hangs from a zipline's trolley (Zipline), riding it.
     bool zip_riding_ = false;
+    // Rides ended by the stop's jolt tearing the hands off the bar.
+    std::uint64_t zip_torn_count_ = 0;
     std::unique_ptr<Matron> matron_;
     std::uint64_t matron_landing_seen_ = 0;
     bool matron_checkpoint_pending_ = false;

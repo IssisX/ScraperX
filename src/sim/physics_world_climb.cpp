@@ -159,8 +159,12 @@ void Simulation::PhysicsWorld::begin_swing(JPH::BodyInterface &bodies, const Gri
 void Simulation::PhysicsWorld::update_swing(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
     if (zip_riding_) {
         // On a zipline's trolley: the hands hold its bar as it rolls; no
-        // pumping, no reaching. The line does the moving.
+        // pumping, no reaching. The line does the moving; the stick held back
+        // (against the way the body faces) squeezes the hand brake.
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, zipline_->bar());
+        zipline_->set_hand_brake(static_cast<float>(
+            -(commands.move_input_x * static_cast<double>(facing_.GetX()) +
+              commands.move_input_z * static_cast<double>(facing_.GetZ()))));
         return;
     }
     if (hang_arms_ == nullptr || facing_.IsNearZero()) {

@@ -544,7 +544,10 @@ struct Snapshot final {
     std::uint64_t zipline_ride_count = 0;
     double zipline_speed_mps = 0.0;   // down the line
     double zipline_along_m = 0.0;     // from the top anchor
-    bool zipline_braking = false;
+    bool zipline_braking = false;     // the hand brake on, or in the end buffer
+    double zipline_hand_brake = 0.0;  // the squeeze, 0..1
+    double zipline_hands_load_n = 0.0;  // what the bar puts on the hands (they tear past the ledge grip)
+    std::uint64_t zipline_torn_count = 0;   // rides ended with the hands torn off at the stop
     bool player_wall_running = false;
     // On the wall, run up it (a climb this flight, the foot still on it).
     bool player_wall_climbing = false;

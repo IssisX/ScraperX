@@ -221,7 +221,7 @@ func _read_context() -> Dictionary:
 		# On a zipline's trolley: the line does the moving; JUMP OFF throws
 		# the body on, DROP lets go.
 		action = {"id": &"let_go", "label": "LET GO", "icon": &"down",
-			"detail": "ZIPLINE  %d M/S" % roundi(absf(float(zip["speed_mps"])))}
+			"detail": "ZIPLINE  %d M/S  BACK: BRAKE" % roundi(absf(float(zip["speed_mps"])))}
 	elif swinging:
 		# On a bar overhead: forward pumps the swing and reaches for the next
 		# bar; letting go flies on with the swing.

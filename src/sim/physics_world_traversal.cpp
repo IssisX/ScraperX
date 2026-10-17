@@ -740,6 +740,8 @@ void Simulation::PhysicsWorld::begin_zip_ride(JPH::BodyInterface &bodies, const 
     traversal_stall_ticks_ = 0;
     traversal_desired_ = origin;
     regrip_cooldown_ticks_ = 0;
+    hang_over_grip_ticks_ = 0;
+    hang_over_grip_impulse_ = 0.0F;
     zip_riding_ = true;
 }
 

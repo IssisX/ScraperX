@@ -1306,6 +1306,9 @@ godot::Dictionary ScraperXSimulation::get_zipline_state() const {
     out["speed_mps"] = state.zipline_speed_mps;
     out["along_m"] = state.zipline_along_m;
     out["braking"] = state.zipline_braking;
+    out["hand_brake"] = state.zipline_hand_brake;
+    out["hands_load_n"] = state.zipline_hands_load_n;
+    out["torn"] = static_cast<std::int64_t>(state.zipline_torn_count);
     out["bar"] = to_godot(simulation_->zipline_bar());
     return out;
 }

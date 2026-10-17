@@ -1,10 +1,12 @@
 // Ziplines (sim/zipline.hpp): the yard line from deck 2's south band down to
 // the yard, and a line across the well on nearly every level. Ridden: up the
 // stand behind the top post (up its ramp), a jump with the hands up takes the
-// parked trolley's bar; the body rides down under its own weight, fast, the
-// brake block takes the speed off, the stop holds it; DROP lets go onto the
-// yard, the trolley left at the bottom. Ridden again, JUMP OFF midway throws
-// the body on off the line.
+// parked trolley's bar; the body rides down under its own weight, fast. With
+// the stick held back near the end the hand brake brings it into the buffer
+// slowly, the buffer stops it short of the stop and the hands hold; DROP
+// lets go onto the yard, the trolley left at the bottom. Ridden flat out,
+// the stop's jolt tears the hands off the bar and the body goes on into the
+// bottom post. Ridden again, JUMP OFF midway throws the body on off the line.
 
 #include "sim_tests.hpp"
 
@@ -42,6 +44,33 @@ bool catch_the_yard_line(Simulation &s) {
     return advance_until(s, [](const Snapshot &n) { return n.zipline_riding; }, 1.2);
 }
 
+// Rides the caught line to its end: the stick held back (the hand brake)
+// from `brake_from_end` metres out while faster than `brake_to`, never when
+// brake_from_end is 0. Ends when the trolley stops near the end or the
+// hands leave the bar; the fastest speed down the line.
+double ride_to_the_end(Simulation &s, const double length, const double brake_from_end, const double brake_to) {
+    double fastest = 0.0;
+    int quiet = 0;
+    for (int tick = 0; tick < 15 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        const Snapshot n = s.snapshot();
+        const bool braking = brake_from_end > 0.0 && n.zipline_along_m > length - brake_from_end &&
+                             n.zipline_speed_mps > brake_to;
+        (void)s.set_move_input(0.0, braking ? -1.0 : 0.0);
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "zipline: riding");
+        const Snapshot m = s.snapshot();
+        if (!m.zipline_riding) {
+            break;
+        }
+        fastest = std::max(fastest, m.zipline_speed_mps);
+        quiet = m.zipline_along_m > length - 4.0 && std::abs(m.zipline_speed_mps) < 0.3 ? quiet + 1 : 0;
+        if (quiet >= 45) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return fastest;
+}
+
 } // namespace
 
 void run_zipline() {
@@ -52,35 +81,22 @@ void run_zipline() {
     const auto yard = s.zipline_line(0);
     require(std::abs(yard.top.x + 2.0) < 0.01 && std::abs(yard.bottom.z + 72.0) < 0.01 && yard.length > 50.0,
             "zipline: the yard line runs from deck 2's south band down to the yard");
+
+    // Braked: full brake from 22 m out down to 4 m/s, into the buffer slowly.
     require(catch_the_yard_line(s), "zipline: a jump at the parked trolley takes its bar");
     const Snapshot caught = s.snapshot();
     require(caught.zipline_ride_count == 1 && caught.traversal_state == scraperx::sim::TraversalState::Swinging,
             "zipline: the hands on the bar, the body hung from the trolley");
-    double fastest = 0.0;
-    bool braked = false;
-    double stopped_at = -1.0;
-    int quiet = 0;
-    for (int tick = 0; tick < 15 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
-        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "zipline: riding");
-        const Snapshot n = s.snapshot();
-        require(n.zipline_riding, "zipline: the ride holds to the end");
-        fastest = std::max(fastest, n.zipline_speed_mps);
-        braked = braked || n.zipline_braking;
-        const double body_mps = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
-        quiet = braked && body_mps < 0.5 && std::abs(n.zipline_speed_mps) < 0.5 ? quiet + 1 : 0;
-        if (quiet >= 45) {
-            stopped_at = n.zipline_along_m;
-            break;
-        }
-    }
+    const double fastest = ride_to_the_end(s, yard.length, 22.0, 4.0);
     const Snapshot at_stop = s.snapshot();
-    std::cout << "  zipline: rode to " << fastest << " m/s, braked " << braked << ", stopped at " << stopped_at
-              << " m of " << yard.length << ", hanging at (" << at_stop.player_position.x << ", "
-              << at_stop.player_position.y << ", " << at_stop.player_position.z << ")\n";
+    std::cout << "  zipline: braked, rode to " << fastest << " m/s, stopped at " << at_stop.zipline_along_m << " m of "
+              << yard.length << ", hanging at (" << at_stop.player_position.x << ", " << at_stop.player_position.y << ", "
+              << at_stop.player_position.z << ")\n";
     require(fastest > 12.0, "zipline: the slope takes the body to a real speed");
-    require(braked && stopped_at > yard.length - 3.0, "zipline: the brake block and the stop end the ride at the bottom");
-    require(at_stop.death_count == 0 && at_stop.hang_slip_count == 0, "zipline: the hands hold through the brake");
-    require(s.set_move_input(0.0, 0.0) && s.request_release(), "zipline: the stick let go, DROP");
+    require(at_stop.zipline_riding && at_stop.zipline_along_m > yard.length - 4.0 && at_stop.hang_slip_count == 0 &&
+                at_stop.zipline_torn_count == 0 && at_stop.death_count == 0,
+            "zipline: braked, the buffer stops the trolley at the end and the hands hold");
+    require(s.request_release(), "zipline: DROP");
     require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 2.0), "zipline: down onto the yard");
     const Snapshot down = s.snapshot();
     std::cout << "  zipline: let go, down at (" << down.player_position.x << ", " << down.player_position.y << ", "
@@ -88,14 +104,29 @@ void run_zipline() {
     require(down.death_count == 0 && !down.zipline_riding && down.player_position.y < 1.5 && down.player_position.z > -77.0,
             "zipline: let go at the bottom, the body lands on the yard under the line");
     const auto ridden = s.zipline_line(0);
-    std::cout << "  zipline: the trolley left at " << ridden.trolley_m << " m, the block pushed to " << ridden.block_m
-              << " m (its rest " << ridden.length - ridden.brake_m << ")\n";
-    require(!ridden.parked && ridden.trolley_m > ridden.length - 3.0 && ridden.block_m >= ridden.trolley_m - 0.01,
-            "zipline: the trolley and the block stay where the ride ended");
+    require(!ridden.parked && ridden.trolley_m > ridden.length - 4.0 && ridden.block_m >= ridden.trolley_m - 0.01,
+            "zipline: the trolley and the buffer stay where the ride ended");
+
+    // Flat out: the stop's jolt tears the hands off the bar; the body goes on
+    // into the bottom post and down beside it.
+    Simulation f(InitialSpawn::Deck2South);
+    require(catch_the_yard_line(f), "zipline: caught again");
+    const double flat_out = ride_to_the_end(f, yard.length, 0.0, 0.0);
+    const Snapshot torn = f.snapshot();
+    require(advance_until(f, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 3.0),
+            "zipline: torn off, it comes down");
+    const Snapshot after = f.snapshot();
+    std::cout << "  zipline: flat out at " << flat_out << " m/s, torn " << torn.zipline_torn_count << ", down at ("
+              << after.player_position.x << ", " << after.player_position.y << ", " << after.player_position.z << "), deaths "
+              << after.death_count << "\n";
+    require(flat_out > 18.0 && !torn.zipline_riding && torn.zipline_torn_count == 1 && torn.hang_slip_count == 1,
+            "zipline: unbraked, the stop's jolt tears the hands off the bar");
+    require(after.player_position.z > yard.bottom.z - 0.8 && after.player_position.z < yard.bottom.z,
+            "zipline: torn off, the body goes on into the bottom post and down beside it");
 
     // Ridden again, JUMP OFF midway throws the body on and off the line.
     Simulation j(InitialSpawn::Deck2South);
-    require(catch_the_yard_line(j), "zipline: caught again");
+    require(catch_the_yard_line(j), "zipline: caught a third time");
     require(j.advance_frame(1.5).accepted, "zipline: a second and a half down the line");
     const Snapshot riding = j.snapshot();
     require(j.request_jump() && j.advance_frame(Simulation::kFixedStepSeconds).accepted, "zipline: JUMP OFF");
@@ -107,6 +138,7 @@ void run_zipline() {
             "zipline: JUMP OFF throws the body on, the trolley left behind");
     require(advance_until(j, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 4.0),
             "zipline: it comes down");
-    std::cout << "PASS scraperx_sim zipline: lines=" << s.zipline_count() << " fastest_mps=" << fastest
-              << " stopped_m=" << stopped_at << "\n";
+    std::cout << "PASS scraperx_sim zipline: lines=" << s.zipline_count() << " braked_fastest_mps=" << fastest
+              << " stopped_m=" << at_stop.zipline_along_m << " flat_out_mps=" << flat_out << " torn_z="
+              << after.player_position.z << "\n";
 }

@@ -1075,8 +1075,10 @@ the stair's landing, square to the beam) and the zipline stand (now run up from 
 
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
-1. The zipline's hand brake (stick back squeezes it); a fast arrival at the end tears the hands
-   off and throws the body.
+1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
+   (3 m) stops a rider who comes in at 5.4 m/s or under; faster, the sprung stop's jolt tears the
+   hands off (as a ledge grip) and the body goes on into the bottom post. Flat out on the yard
+   line that is 20.6 m/s into the post and a 2.4 m drop, survived until injuries exist.
 2. The whole first-person body, and injuries and deaths as physical consequences: the lethal
    impact turns the body into a ragdoll the camera rides; bone breaks, blood, camera shake and
    haptics scaled to the hit; hard landings that break an ankle (a limp for a while); humorous,

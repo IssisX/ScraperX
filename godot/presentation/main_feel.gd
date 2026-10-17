@@ -752,6 +752,7 @@ const ZIP_BUZZ_M := 3.0
 var _zip_was_riding := false
 var _zip_was_braking := false
 var _zip_buzz_m := 0.0
+var _zip_torn_seen := 0
 
 func _feel_zipline(delta: float) -> void:
 	var state: Dictionary = _native.get_zipline_state()
@@ -766,6 +767,11 @@ func _feel_zipline(delta: float) -> void:
 		_haptic(&"reach")
 	if braking and not _zip_was_braking:
 		_haptic(&"strain")
+	# The stop's jolt tore the hands off the bar.
+	var torn := int(state.get("torn", 0))
+	if torn > _zip_torn_seen:
+		_haptic(&"slip")
+	_zip_torn_seen = torn
 	if riding and speed > 2.0:
 		_zip_buzz_m -= delta * speed
 		if _zip_buzz_m <= 0.0:
