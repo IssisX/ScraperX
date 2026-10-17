@@ -4,6 +4,7 @@
 #include <limits>
 
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 namespace scraperx::bridge {
@@ -291,6 +292,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_forklift_action"),
+                                &ScraperXSimulation::request_forklift_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_lift", "lift"), &ScraperXSimulation::set_forklift_lift);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("get_workers"), &ScraperXSimulation::get_workers);
@@ -1178,6 +1183,40 @@ godot::Dictionary ScraperXSimulation::get_trapeze_state() const {
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["slips"] = static_cast<std::int64_t>(state.slips);
     out["bar"] = to_godot(state.bar);
+    return out;
+}
+
+bool ScraperXSimulation::request_forklift_action() {
+    return simulation_->request_forklift_action();
+}
+
+bool ScraperXSimulation::set_forklift_lift(const double lift) {
+    return simulation_->set_forklift_lift(lift);
+}
+
+// The forklift: driving and offered, the forks' height, speed and steering,
+// and each wheel as drawn (a cylinder along its own y, the axle).
+godot::Dictionary ScraperXSimulation::get_forklift_state() const {
+    const sim::ForkliftSnapshot state = simulation_->forklift_state();
+    godot::Dictionary out;
+    out["driving"] = state.driving;
+    out["at_controls"] = state.at_controls;
+    out["lift_m"] = state.lift_m;
+    out["speed_mps"] = state.speed_mps;
+    out["steer"] = state.steer;
+    out["drive"] = state.drive;
+    godot::Array wheels;
+    godot::PackedFloat32Array radii;
+    godot::PackedFloat32Array widths;
+    for (std::size_t wheel = 0; wheel < state.wheel_position.size(); ++wheel) {
+        wheels.push_back(godot::Transform3D(godot::Basis(to_godot(state.wheel_rotation[wheel])),
+                                            to_godot(state.wheel_position[wheel])));
+        radii.push_back(static_cast<float>(state.wheel_radius[wheel]));
+        widths.push_back(static_cast<float>(state.wheel_width[wheel]));
+    }
+    out["wheels"] = wheels;
+    out["wheel_radius"] = radii;
+    out["wheel_width"] = widths;
     return out;
 }
 

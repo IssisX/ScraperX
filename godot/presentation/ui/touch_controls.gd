@@ -311,6 +311,11 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	jump.icon = &"climb" if hanging else &"jump"
 	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing or swinging else "JUMP")
 	jump.tone = TONE_PRIMARY
+	var driving: bool = ctx.get("forklift_driving", false)
+	if driving:
+		jump.icon = &"up"
+		jump.label = "RAISE"
+		jump.dimmed = false
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
@@ -353,6 +358,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
+	if driving:
+		crouch.icon = &"down"
+		crouch.label = "LOWER"
+		crouch.tone = TONE_NORMAL
 
 	for button in _buttons.values():
 		if not button.shown and button.index != -1:

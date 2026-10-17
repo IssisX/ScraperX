@@ -847,11 +847,33 @@ does not move); `touch_stock` (the same carry through the touch controls); `look
 renders it. Not yet: stock on the decks up the tower, designed spots where moving stock opens a
 route, the forklift and the crane.
 
+**The yard's forklift (2026-10-17; the owner's to-do, item 2: heavy stock moved by a machine).**
+A counterbalance truck of about 2.7 t parked north of the drums (`src/sim/forklift.cpp`): two
+driven front wheels and two steered rear wheels (Jolt's vehicle wheels, with solid hubs inside
+so nothing walks through a tyre), a counterweight behind the rear axle, an overhead guard, and a
+mast whose forks ride up it 1.8 m on a powered slide of finite force (30 kN). The driver steps up
+onto its floor under the guard; at the wheel DRIVE takes the controls. The stick drives and
+steers (forward and right of the view; rear-wheel steering), Jump and Crouch held become RAISE
+and LOWER, and STEP OFF lets go; let go of, it brakes. Nothing is scripted: it drives through its
+tyres' friction (about 1.1 m/s/s, 3.4 m/s at most), the forks lift through their motor, and a
+load sits on them by its weight. The forks are 5 cm thick and fit under a pallet's deck between
+its stringers (and, by their size, under the bottom layer of steel beams between its sleepers;
+not yet tried). Taken from the ChatGPT branch's truck: building it on Jolt's own vehicle (wheels
+cast against the ground, a wheeled controller). Changed: four wheels not three, tyres that grip
+from no slip (Jolt's default let a parked truck wander), no battery or tool coupler, the driver
+stands at the wheel rather than on a rear step. Rejected for now: their energy ledger and
+hydraulic power reservation (nothing the player meets yet). A restore lets go of
+the controls and stills the wheels and engine, so every world loaded from one save drives on
+alike. Proof: native `forklift` (parked 10 s it moves 0.1 mm; driven, turned right, stopped;
+the first pallet and its four drums forked, lifted 0.39 m, carried back 3.5 m and set down,
+the drums still on it; two runs end the same to the bit); `touch_forklift` (the same through the
+touch controls).
+
 **Running to-do (owner, 2026-10-17; done in this order).**
 1. Ideas from the ChatGPT branch's forklift, crane and movable objects: read (2026-10-17).
-2. Most objects movable everywhere: the yard (done, above); then stock on the decks up the tower;
-   then designed spots where stacking or laying stock opens a new route; then a forklift (heavy
-   stock), then a crane.
+2. Most objects movable everywhere: the yard (done, above; the decks up the tower hold no other
+   loose things); the forklift (done, above); then designed spots where moving or stacking stock
+   opens a new route; then a crane (containers).
 3. Mirror's Edge-style moves: a few steps up a wall, a kick off a wall to turn, legs tucked in a
    jump, ziplines, swing poles, more speed kept between moves.
 4. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.

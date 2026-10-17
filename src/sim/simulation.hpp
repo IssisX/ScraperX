@@ -232,6 +232,22 @@ struct SwingSnapshot final {
     Vector3 ram_pin{};
 };
 
+// The yard's forklift (src/sim/forklift.hpp).
+struct ForkliftSnapshot final {
+    bool driving = false;
+    bool at_controls = false;        // on its floor at the wheel: DRIVE offered
+    double lift_m = 0.0;             // the forks above their lowest
+    double speed_mps = 0.0;          // along its forward
+    double steer = 0.0;              // the steered wheels, -1 .. 1 (right +)
+    double drive = 0.0;              // the throttle as applied, -1 .. 1
+    // Each wheel: its centre and its turn, a cylinder along its own y (the
+    // axle), and its size. Front left, front right, rear left, rear right.
+    std::array<Vector3, 4> wheel_position{};
+    std::array<Quaternion, 4> wheel_rotation{};
+    std::array<double, 4> wheel_radius{};
+    std::array<double, 4> wheel_width{};
+};
+
 // Phase 3: the trapeze in the yard (src/sim/trapeze.hpp).
 struct TrapezeSnapshot final {
     bool catch_available = false;    // in the air, the bar in the hands' reach
@@ -1027,6 +1043,12 @@ public:
     [[nodiscard]] bool request_trapeze_action() noexcept;
     [[nodiscard]] bool request_trapeze_drop() noexcept;
     [[nodiscard]] TrapezeSnapshot trapeze_state() const noexcept;
+    // The yard's forklift: at its wheel, Action takes the controls (refused
+    // elsewhere) and, driving, lets go of them. Driving, the stick drives and
+    // steers and the forks' buttons, held, raise (1) and lower (-1) them.
+    [[nodiscard]] bool request_forklift_action() noexcept;
+    [[nodiscard]] bool set_forklift_lift(double lift) noexcept;
+    [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;
@@ -1088,6 +1110,8 @@ private:
     bool trapeze_drop_ = false;
     bool lift_action_ = false;
     bool lift_haul_ = false;
+    bool forklift_action_ = false;
+    double forklift_lift_ = 0.0;
     double hook_aim_x_ = 0.0;
     double hook_aim_y_ = 0.0;
     double hook_aim_z_ = -1.0;

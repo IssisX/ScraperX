@@ -89,8 +89,17 @@ func _read_context() -> Dictionary:
 	var lift: Dictionary = _native.get_lift_state()
 	var lift_machine := int(lift["machine"])
 	var support := int(_native.get_support_entity_id())
+	var forklift: Dictionary = _native.get_forklift_state()
+	var forklift_driving := bool(forklift["driving"])
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if bool(sling["can_retrieve"]) or bool(sling["recovering"]):
+	if forklift_driving:
+		# At the forklift's wheel: the stick drives and steers, Jump and
+		# Crouch held raise and lower the forks, Action lets go.
+		action = {"id": &"drive", "icon": &"down", "label": "STEP OFF",
+			"detail": "FORKS %.1f M" % float(forklift["lift_m"])}
+	elif bool(forklift["at_controls"]) and carrying == 0:
+		action = {"id": &"drive", "icon": &"up", "label": "DRIVE", "detail": "THE FORKLIFT"}
+	elif bool(sling["can_retrieve"]) or bool(sling["recovering"]):
 		action = {"id": &"slingshot", "icon": &"up",
 			"label": "STOP REELING" if bool(sling["recovering"]) else "RETRIEVE POUCH",
 			"detail": "HOLD BACK TO REEL IT IN" if bool(sling["recovering"]) else "REEL THE SPENT POUCH BACK"}
@@ -235,12 +244,14 @@ func _read_context() -> Dictionary:
 		# the slingshot's pouch it climbs out.
 		"has_hook": bool(hook["has_hook"]),
 		"hook_state": int(hook["state"]),
-		"drop_ok": int(hook["state"]) != 0 or hanging or climbing or swinging or (grounded and free and edge_drop and carrying == 0) or \
+		"drop_ok": int(hook["state"]) != 0 or hanging or climbing or swinging or \
+			(grounded and free and edge_drop and carrying == 0 and not forklift_driving) or \
 			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])) or \
 			trapeze_hanging,
 		"sling_seated": sling_seated,
 		"swing_seated": swing_seated,
 		"trapeze_hanging": trapeze_hanging,
+		"forklift_driving": forklift_driving,
 		"trapeze_pulled": bool(trapeze["pulled"]),
 		"sling_recovering": bool(sling["recovering"]),
 		"sling_flight": bool(sling["flight"]),

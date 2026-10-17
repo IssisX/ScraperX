@@ -13,6 +13,10 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # carry it 3 m and LET GO: it lies on the ground where it was set.
 # look_stock_yard: renders only (not in CI): the containers, the steel, the
 # pipe racks.
+# touch_forklift: to the forklift parked north of the drums, up onto its
+# floor, DRIVE; the stick forward creeps it in until its forks are under the
+# first pallet, RAISE lifts the pallet with its drums, the stick back carries
+# it off, LOWER sets it down, the forks back out, STEP OFF.
 
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
@@ -271,4 +275,79 @@ func _look_stock_yard() -> bool:
 	await _look_at_point(Vector3(50.0, 0.4, 26.5))
 	await _seconds(1.0)
 	await _pose("stock_pipes_drums")
+	return true
+
+
+# The drums' first pallet: [entity, kit body].
+func _first_pallet() -> Array:
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	var piece := 0
+	for i in range(0, stock.size() - 2, 3):
+		if stock[i + 1] == 4:
+			return [5000 + piece, stock[i]]
+		piece += 1
+	return [0, -1]
+
+
+func _forklift_touch(device: int) -> bool:
+	var pallet: Array = _first_pallet()
+	if int(pallet[1]) < 0:
+		return _fail("no pallet in the loose stock")
+	var truck := int(_native().get_kit_body_index(2982))
+	var before: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
+	for target in [Vector2(30.0, 10.0), Vector2(36.4, 16.35)]:
+		if not await _go(device, target, 0.3, 30.0):
+			return _fail("the walk to the forklift stopped short of %s" % str(target))
+	if not await _go(device, Vector2(38.0, 16.35), 0.12, 8.0):
+		return _fail("up onto the forklift's floor")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"drive", "DRIVE", "THE FORKLIFT"):
+		return _fail("DRIVE was not offered at the forklift's wheel")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_forklift_state()["driving"]), 1.0):
+		return _fail("DRIVE did not take the controls")
+	if _main._touch.button_label(&"jump") != "RAISE" or _main._touch.button_label(&"crouch") != "LOWER":
+		return _fail("driving, Jump and Crouch do not read RAISE and LOWER")
+	# In until the forks are under the pallet's deck, the carriage short of it.
+	_move_dir(device, Vector2(0.0, 0.25))
+	var under := await _wait_until(func() -> bool:
+		return (_native().get_kit_body_transform(truck) as Transform3D).origin.z >= before.z - 1.75, 20.0)
+	_move_dir(device, Vector2.ZERO)
+	if not under:
+		return _fail("the forklift did not drive in to the pallet")
+	await _seconds(1.5)
+	_touch(2, _center(&"jump"), true)
+	await _seconds(1.0)
+	_touch(2, _center(&"jump"), false)
+	await _seconds(0.5)
+	var lifted: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
+	if lifted.y < 0.3:
+		return _fail("RAISE did not lift the pallet (at y %.2f)" % lifted.y)
+	await _pose("forklift_pallet_raised")
+	# Back with it until it has come 3.5 m off its place.
+	_move_dir(device, Vector2(0.0, -0.4))
+	var off := await _wait_until(func() -> bool:
+		return (_native().get_kit_body_transform(int(pallet[1])) as Transform3D).origin.z <= before.z - 3.5, 10.0)
+	_move_dir(device, Vector2.ZERO)
+	if not off:
+		return _fail("the stick back did not carry the pallet off")
+	await _seconds(1.5)
+	_touch(3, _center(&"crouch"), true)
+	await _seconds(1.5)
+	_touch(3, _center(&"crouch"), false)
+	_move_dir(device, Vector2(0.0, -0.4))
+	await _seconds(1.5)
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(1.5)
+	var set_down: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
+	print("SCRAPERX_UITEST forklift: the pallet carried %.2f m, set down at y %.2f" % [before.z - set_down.z, set_down.y])
+	if before.z - set_down.z < 3.0 or set_down.y > 0.2:
+		return _fail("the pallet was not carried off and set down")
+	if not await _offered(&"drive", "STEP OFF"):
+		return _fail("STEP OFF was not offered while driving")
+	_act(device)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_forklift_state()["driving"]), 1.0):
+		return _fail("STEP OFF did not let go of the controls")
+	await _look_at_point(set_down)
+	await _pose("forklift_pallet_set_down")
 	return true

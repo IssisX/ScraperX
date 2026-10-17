@@ -36,6 +36,7 @@ add_library(scraperx_sim STATIC
     src/sim/summit.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
+    src/sim/forklift.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp
@@ -118,6 +119,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_summit.cpp
         tests/sim_tests_matron.cpp
         tests/sim_tests_stock.cpp
+        tests/sim_tests_forklift.cpp
     )
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE

@@ -27,6 +27,7 @@ const SwingView := preload("res://presentation/swing_view.gd")
 const SummitView := preload("res://presentation/summit_view.gd")
 const MatronView := preload("res://presentation/life/matron_view.gd")
 const StockView := preload("res://presentation/stock_view.gd")
+const ForkliftView := preload("res://presentation/forklift_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -173,6 +174,9 @@ func _ready() -> void:
 	var stock_view := StockView.new()
 	add_child(stock_view)
 	stock_view.setup(self, _native, _kit_root)
+	_forklift_view = ForkliftView.new()
+	add_child(_forklift_view)
+	_forklift_view.setup(self, _native)
 	_works = Works.new()
 	add_child(_works)
 	_clouds = CloudLayer.new()
@@ -284,6 +288,12 @@ func _process(delta: float) -> void:
 	# A hand line (the pitman lift's) is hauled while ACTION is held.
 	_hauling = bool(intent.get("action_held", false)) and _ctx.get("action", {}).get("id", &"") == &"haul"
 	_native.set_lift_haul(_hauling)
+	# The forklift's forks, while driving: Jump held raises, Crouch held lowers.
+	var forks := 0.0
+	if bool(_ctx.get("forklift_driving", false)):
+		forks = (1.0 if bool(intent.get("raise_held", false)) else 0.0) - \
+			(1.0 if bool(intent.get("lower_held", false)) else 0.0)
+	_native.set_forklift_lift(forks)
 	# The hook: aimed with the view; its reel turns while the button is held.
 	if bool(_ctx.get("has_hook", false)):
 		_native.set_hook_aim(-_camera.global_transform.basis.z)
@@ -598,6 +608,10 @@ func _resume() -> void:
 # always the native's decision.
 func _dispatch(verbs: Array, delta: float) -> void:
 	for verb in verbs:
+		# At the forklift's wheel Jump and Crouch are its forks' buttons, held
+		# (_process): pressed, they neither jump nor crouch.
+		if bool(_ctx.get("forklift_driving", false)) and verb in [&"jump", &"crouch"]:
+			continue
 		match verb:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
@@ -706,6 +720,8 @@ func _perform_action() -> void:
 				_native.request_trapeze_action()
 		&"lift":
 			_native.request_lift_action()
+		&"drive":
+			_native.request_forklift_action()
 		&"s1", &"incline", &"tram", &"derrick":
 			# S1 and the slab incline are worked by standing on their plates;
 			# Action only reads them out.

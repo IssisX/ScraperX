@@ -478,6 +478,8 @@ void Simulation::step_fixed() noexcept {
     commands.trapeze_drop = trapeze_drop_;
     commands.lift_action = lift_action_;
     commands.lift_haul = lift_haul_;
+    commands.forklift_action = forklift_action_;
+    commands.forklift_lift = forklift_lift_;
     commands.hook_aim_x = hook_aim_x_;
     commands.hook_aim_y = hook_aim_y_;
     commands.hook_aim_z = hook_aim_z_;
@@ -494,6 +496,7 @@ void Simulation::step_fixed() noexcept {
     trapeze_action_ = false;
     trapeze_drop_ = false;
     lift_action_ = false;
+    forklift_action_ = false;
     hook_fire_ = false;
     hook_release_ = false;
     hook_take_ = false;
@@ -726,6 +729,43 @@ bool Simulation::request_trapeze_drop() noexcept {
     }
     trapeze_drop_ = true;
     return true;
+}
+
+bool Simulation::request_forklift_action() noexcept {
+    if (!physics_world_->forklift().driving() && !physics_world_->at_forklift_controls()) {
+        return false;
+    }
+    forklift_action_ = true;
+    return true;
+}
+
+bool Simulation::set_forklift_lift(const double lift) noexcept {
+    if (!std::isfinite(lift)) {
+        return false;
+    }
+    forklift_lift_ = std::clamp(lift, -1.0, 1.0);
+    return true;
+}
+
+ForkliftSnapshot Simulation::forklift_state() const noexcept {
+    const Forklift &forklift = physics_world_->forklift();
+    const Forklift::State &state = forklift.state();
+    ForkliftSnapshot result;
+    result.driving = state.driving;
+    result.at_controls = !state.driving && physics_world_->at_forklift_controls();
+    result.lift_m = state.lift_m;
+    result.speed_mps = state.speed_mps;
+    result.steer = state.steer;
+    result.drive = state.drive;
+    for (int wheel = 0; wheel < Forklift::kWheels; ++wheel) {
+        const JPH::RMat44 at = forklift.wheel_transform(wheel);
+        const auto index = static_cast<std::size_t>(wheel);
+        result.wheel_position[index] = to_sim_vector(at.GetTranslation());
+        result.wheel_rotation[index] = to_sim_quaternion(at.GetQuaternion());
+        result.wheel_radius[index] = forklift.wheel_radius(wheel);
+        result.wheel_width[index] = forklift.wheel_width(wheel);
+    }
+    return result;
 }
 
 TrapezeSnapshot Simulation::trapeze_state() const noexcept {

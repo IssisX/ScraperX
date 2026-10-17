@@ -246,6 +246,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // Loose stock, the Matron's deck's and the yard's: after the summit, so older
     // saves line up.
     loose_stock_ = std::make_unique<LooseStock>(physics_system_, *kit_);
+    // The yard's forklift, north of the drums: after the stock, so older saves
+    // line up.
+    forklift_ = std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_);
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
@@ -269,6 +272,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
     summit_.reset();
+    forklift_.reset();
     loose_stock_.reset();
     vertical_.reset();
     trapeze_.reset();
@@ -299,9 +303,20 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     remove_and_destroy(bodies, deck_id_);
 }
 
-void Simulation::PhysicsWorld::step(const StepCommands &commands,
+bool Simulation::PhysicsWorld::at_forklift_controls() const noexcept {
+    if (!grounded_ || support_entity_id_ != Forklift::kChassisEntity) {
+        return false;
+    }
+    const JPH::RVec3 at = physics_system_.GetBodyInterfaceNoLock().GetPosition(player_id_);
+    const JPH::RVec3 station = forklift_->station();
+    return std::hypot(static_cast<float>(at.GetX() - station.GetX()), static_cast<float>(at.GetZ() - station.GetZ())) <=
+           Forklift::kStationReachM;
+}
+
+void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
+    StepCommands commands = requested;
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;
@@ -320,6 +335,27 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     }
     facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
     look_pitch_ = static_cast<float>(commands.look_pitch);
+
+    // The forklift: the stick read as the driver's, forward and right of the
+    // view. Driving, the stick and the buttons are the truck's and the body
+    // stands on its floor.
+    {
+        const JPH::Vec3 right(-facing_.GetZ(), 0.0F, facing_.GetX());
+        const double stick_forward = commands.move_input_x * facing_.GetX() + commands.move_input_z * facing_.GetZ();
+        const double stick_right = commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
+        forklift_->pre_step(delta_seconds, commands.forklift_action, at_forklift_controls(),
+                            static_cast<float>(stick_forward), static_cast<float>(stick_right),
+                            static_cast<float>(commands.forklift_lift));
+        if (forklift_->driving()) {
+            commands.move_input_x = 0.0;
+            commands.move_input_z = 0.0;
+            commands.jump_requested = false;
+            commands.traversal_requested = false;
+            commands.crouch_held = false;
+            commands.sprint_held = false;
+            commands.pick_up_requested = false;
+        }
+    }
 
     // Harnessed into the slingshot's pouch or the swing's seat, the body
     // is the machine's: no crouch, carry, rig or traversal begins.

@@ -191,6 +191,9 @@ public:
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
+    [[nodiscard]] bool request_forklift_action();
+    [[nodiscard]] bool set_forklift_lift(double lift);
+    [[nodiscard]] godot::Dictionary get_forklift_state() const;
     [[nodiscard]] godot::Dictionary get_hook_state() const;
     // The yard crew: kWorkerFloats per worker (x, y, z, yaw, state, speed,
     // stride, grounded), and what the player has made them do.

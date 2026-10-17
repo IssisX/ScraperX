@@ -53,6 +53,10 @@ public:
         // A vertical machine's control: Action, one-shot.
         bool lift_action = false;
         bool lift_haul = false;
+        // The yard's forklift: Action (take or let go of the controls),
+        // one-shot; the forks' buttons, held (-1 lower .. 1 raise).
+        bool forklift_action = false;
+        double forklift_lift = 0.0;
         // The grappling hook: aim (a unit world vector), Fire and Release
         // one-shot, Reel held, Take one-shot.
         double hook_aim_x = 0.0;
@@ -83,6 +87,9 @@ public:
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
+    [[nodiscard]] const Forklift &forklift() const noexcept { return *forklift_; }
+    // On the forklift's floor within reach of its wheel.
+    [[nodiscard]] bool at_forklift_controls() const noexcept;
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
     [[nodiscard]] std::uint64_t standing_entity() const noexcept { return grounded_ ? support_entity_id_ : 0; }
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
@@ -577,6 +584,7 @@ public:
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
     std::unique_ptr<LooseStock> loose_stock_;
+    std::unique_ptr<Forklift> forklift_;
     std::unique_ptr<Matron> matron_;
     std::uint64_t matron_landing_seen_ = 0;
     bool matron_checkpoint_pending_ = false;

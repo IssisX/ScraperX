@@ -146,6 +146,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     vertical_->restore(checkpoint_.vertical);
     matron_->restore(checkpoint_.matron);
     loose_stock_->resync();
+    forklift_->restore();
     restore_carry_topology(checkpoint_.carrying_entity);
     // The body comes back at rest, so what it holds does too. Restored
     // with the walking speed it was committed at, the load swung out of

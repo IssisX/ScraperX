@@ -19,6 +19,7 @@
 #include "sim/crew.hpp"
 #include "sim/climb_c7.hpp"
 #include "sim/summit.hpp"
+#include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
 #include "sim/vertical/vertical_route.hpp"
