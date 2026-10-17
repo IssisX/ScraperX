@@ -15,6 +15,14 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
     if (rising > (flight_from_jump_ ? kHangMaximumClimbSpeed : kHangApexSpeed)) {
         return;
     }
+    const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+    // A zipline's trolley parked over the head, in flight: the hands take
+    // its bar, rising to it or coming down onto it (Zipline::kCatchFallMps).
+    // Straight overhead, it needs no reach forward: a standing jump from the
+    // stand under it takes it.
+    if (rising > -Zipline::kCatchFallMps && try_catch_zipline(bodies, origin)) {
+        return;
+    }
     if (facing_.IsNearZero()) {
         return;
     }
@@ -24,12 +32,6 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
         return;
     }
 
-    const JPH::RVec3 origin = bodies.GetPosition(player_id_);
-    // A zipline's trolley parked over the head, in flight: the hands take
-    // its bar, rising to it or coming down onto it (Zipline::kCatchFallMps).
-    if (rising > -Zipline::kCatchFallMps && try_catch_zipline(bodies, origin)) {
-        return;
-    }
     const LedgeProbe probe = probe_ledge(origin,
                                          facing_,
                                          kPlayerHalfHeight + kHangMinimumRiseAboveCentre,

@@ -6,11 +6,11 @@
 // rides a trolley: two sheaves in a bracket over the cable, a bar hung
 // kBarDropM under it that the hands hold. Nothing of the rider's touches the
 // cable: the sheaves roll on it (a hand on a long steel cable at speed burns
-// off; the owner, 2026-10-17). The trolley parks on a hook under the top
-// post's bracket, kParkM down the line, where a jump from the stand behind
-// the post (kStandM high, up a ramp at its back) puts its bar in the hands'
-// reach: the hands take the bar, the body's weight pulls the trolley off
-// the hook, and it rides down under that weight. The slope drives it; the
+// off; the owner, 2026-10-17). The trolley parks on a hook kParkM down the
+// line from the top post's bracket, over a stand (kStandM high, up a ramp
+// along the band at its side): a standing jump from the stand puts its bar
+// in the hands' reach, the hands take the bar, the body's weight pulls the
+// trolley off the hook, and it rides down under that weight. The slope drives it; the
 // sheaves resist a little (kTrolleyDragN, rolling). The stick held back
 // squeezes the trolley's hand brake on the cable (up to kHandBrakeMaxN): the
 // rider sets the speed. Over the line's last kBufferM the trolley runs into

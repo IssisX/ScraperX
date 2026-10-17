@@ -858,26 +858,27 @@ func _touch_swing_launch() -> bool:
 		return _fail("the throw did not carry past where a let-go lands (x %.2f)" % _position().x)
 	return true
 
-# Ziplines (sim/zipline.hpp): from deck 2's south band, up the ramp onto the
-# stand behind the yard line's top post; a running JUMP at the parked
-# trolley takes its bar; the ride down to the yard, fast, the stick held
+# Ziplines (sim/zipline.hpp): along deck 2's south band, up the ramp onto the
+# stand under the yard line's parked trolley; a standing JUMP takes its bar;
+# the ride down to the yard, fast, the stick held
 # back over the last stretch (the hand brake), the buffer stopping it; DROP
 # lets go onto the yard. The hands on the bar, the trolley drawn over them,
 # the HUD naming the line and its brake.
 func _touch_zipline() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var device := InputRouter.Device.TOUCH
-	await _face(Vector2(0.0, 1.0))
-	if not await _walk_to(device, Vector2(-2.0, -129.4), 0.25, 20.0):
+	# Round to the foot of the stand's ramp, east of it along deck 2's band,
+	# up the ramp onto the stand under the parked trolley, stopped there.
+	if not (await _walk_to(device, Vector2(2.5, -127.0), 0.3, 20.0, true) and \
+			await _walk_to(device, Vector2(1.6, -124.77), 0.3, 10.0, true)):
 		return _fail("never reached the ramp's foot (at %s)" % str(_position()))
 	await _pose("zipline_stand")
-	# Up the ramp at a run and JUMP on the stand: the run over the ramp's
-	# crest has the feet off the stand for a few ticks, and the jump pressed
-	# there still goes (the native's coyote jump).
-	_stick_push(Vector2(0.0, -1.0))
-	var on_stand: bool = await _wait_until(func() -> bool: return _position().z > -126.4, 3.0)
-	if not on_stand or _position().y < 23.9:
+	if not await _walk_to(device, Vector2(-2.0, -124.77), 0.15, 8.0, true) or _position().y < 23.9:
 		return _fail("never got up the ramp onto the stand (at %s)" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(0.4)
+	# Face down the line and jump straight up into the bar.
+	await _face(Vector2(0.0, 1.0))
 	_tap(1, _center(&"jump"))
 	var caught: bool = await _wait_until(
 		func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5)

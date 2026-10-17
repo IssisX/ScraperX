@@ -95,22 +95,33 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
     // Along the line's run on the ground, and across it.
     const Vec3 run = Vec3(direction.GetX(), 0.0F, direction.GetZ()).NormalizedOr(Vec3::sAxisZ());
     const Vec3 across(-run.GetZ(), 0.0F, run.GetX());
+    // The stand stands under the parked trolley, so a climber on it jumps
+    // straight up into the bar (a standing jump's reach: kTopPostM); its ramp
+    // comes up along the band from the side away from the post. The post,
+    // the stand and the ramp keep to a strip by the line's start, and the
+    // rest of the band stays open to walk. All of it on floor, or no line.
+    const Vec3 stand_at = run * (kParkM * Vec3(direction.GetX(), 0.0F, direction.GetZ()).Length());
+    const Vec3 ramp_foot = stand_at - across * (0.6F + kRampRunM);
+    for (const float sa : {-0.55F, 0.55F}) {
+        for (const float sr : {-0.55F, 0.55F}) {
+            if (!floor_under(top_floor + stand_at + across * sa + run * sr)) {
+                return false;
+            }
+        }
+    }
+    if (!floor_under(top_floor + ramp_foot)) {
+        return false;
+    }
     // The body's origin under the top anchor, on the floor. The post stands
-    // beside the stand, its bracket arm reaching across over the line's
-    // start to the anchor, so the stand's front is open to run off; the
-    // stand behind the anchor with its ramp up its back (away from the line);
+    // beside the line's start, its bracket arm reaching across to the
+    // anchor; the stand under the parked trolley, its ramp up its far side;
     // the bottom post; and the cable.
     std::vector<Part> parts;
     const Vec3 post_at = across * 0.95F;
     parts.push_back(box(Vec3(0.08F, 0.5F * kTopPostM, 0.08F), post_at + Vec3(0.0F, 0.5F * kTopPostM, 0.0F),
                         Material::Steel));
     parts.push_back(box(Vec3(0.06F, 0.06F, 0.06F), Vec3(0.0F, kTopPostM, 0.0F), Material::Steel));
-    {
-        const Vec3 arm = Vec3(0.0F, kTopPostM, 0.0F) - (post_at + Vec3(0.0F, kTopPostM, 0.0F));
-        parts.push_back(member(post_at + Vec3(0.0F, kTopPostM, 0.0F), Vec3(0.0F, kTopPostM, 0.0F) + arm * 0.0F, 0.05F,
-                               Material::Steel));
-    }
-    const Vec3 stand_at = run * -0.9F;   // the stand's middle, under the cable's start, behind the anchor
+    parts.push_back(member(post_at + Vec3(0.0F, kTopPostM, 0.0F), Vec3(0.0F, kTopPostM, 0.0F), 0.05F, Material::Steel));
     parts.push_back(box(Vec3(0.6F, 0.05F, 0.6F), stand_at + Vec3(0.0F, kStandM - 0.05F, 0.0F), Material::Steel));
     for (const float sx : {-0.5F, 0.5F}) {
         for (const float sz : {-0.5F, 0.5F}) {
@@ -119,17 +130,16 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
                                 Material::Steel));
         }
     }
-    // A ramp up its back, kRampRunM long (a slope the legs walk).
+    // A ramp up its far side, kRampRunM long (a slope the legs walk).
     {
-        const Vec3 foot = stand_at + run * (-0.6F - kRampRunM);
-        const Vec3 head = stand_at + run * -0.6F + Vec3(0.0F, kStandM, 0.0F);
-        const Vec3 along = (head - foot).Normalized();
-        const Vec3 normal = across.Cross(along).GetY() > 0.0F ? across.Cross(along) : along.Cross(across);
+        const Vec3 head = stand_at - across * 0.6F + Vec3(0.0F, kStandM, 0.0F);
+        const Vec3 along = (head - ramp_foot).Normalized();
+        const Vec3 normal = run.Cross(along).GetY() > 0.0F ? run.Cross(along) : along.Cross(run);
         // A right-handed frame (x = y cross z): a mirrored one is no
         // rotation, and its quaternion tilts the slab wrong.
         const Mat44 frame(Vec4(normal.Cross(along), 0.0F), Vec4(normal, 0.0F), Vec4(along, 0.0F),
                           Vec4(0.0F, 0.0F, 0.0F, 1.0F));
-        parts.push_back({Vec3(0.5F, 0.04F, 0.5F * (head - foot).Length()), 0.5F * (foot + head) - normal * 0.04F,
+        parts.push_back({Vec3(0.5F, 0.04F, 0.5F * (head - ramp_foot).Length()), 0.5F * (ramp_foot + head) - normal * 0.04F,
                          frame.GetQuaternion(), Material::Hazard, Part::Shape::Box, 0.0F});
     }
     const Vec3 to_bottom(bottom_floor - top_floor);

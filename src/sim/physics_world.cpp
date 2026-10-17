@@ -274,17 +274,18 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // derrick's column at x = 0.8.
     zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_);
     (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
-    // Across the well, from the band's inner edge (the posts a metre and a
-    // half in from it) to the far band of the deck below: south to north on
+    // Across the well, from the band's inner edge (the top post 2.2 m in from
+    // it, room for its stand toward the well; the bottom post a metre and a
+    // half in from the far band's) to the far band of the deck below: south to north on
     // the even decks, east to west on the odd, and along the band wherever
     // it first fits.
     const auto across_well = [&](const double top_y, const double bottom_y, const double top_inner,
                                  const double bottom_inner, const bool south_to_north) {
         for (const double along : {6.0, -8.0, 10.0, -12.0, 0.0}) {
             const bool built = south_to_north
-                ? zipline_->add_line(JPH::RVec3(along, top_y, kStackCenterZ + top_inner + 1.5),
+                ? zipline_->add_line(JPH::RVec3(along, top_y, kStackCenterZ + top_inner + 2.2),
                                      JPH::RVec3(along, bottom_y, kStackCenterZ - bottom_inner - 1.5))
-                : zipline_->add_line(JPH::RVec3(kStackCenterX + top_inner + 1.5, top_y, kStackCenterZ + along),
+                : zipline_->add_line(JPH::RVec3(kStackCenterX + top_inner + 2.2, top_y, kStackCenterZ + along),
                                      JPH::RVec3(kStackCenterX - bottom_inner - 1.5, bottom_y, kStackCenterZ + along));
             if (built) {
                 return;

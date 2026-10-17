@@ -1,7 +1,7 @@
 // Ziplines (sim/zipline.hpp): the yard line from deck 2's south band down to
 // the yard, and a line across the well on nearly every level. Ridden: up the
-// stand behind the top post (up its ramp), a jump with the hands up takes the
-// parked trolley's bar; the body rides down under its own weight, fast. With
+// ramp onto the stand under the parked trolley, a standing jump with the
+// hands up takes its bar; the body rides down under its own weight, fast. With
 // the stick held back near the end the hand brake brings it into the buffer
 // slowly, the buffer stops it short of the stop and the hands hold; DROP
 // lets go onto the yard, the trolley left at the bottom. Ridden flat out,
@@ -18,28 +18,26 @@ using scraperx::sim::Snapshot;
 
 namespace {
 
-// Up the stand behind the yard line's top post (its ramp runs up from the
-// north, away from the line) at a run, and the jump south at the parked
-// trolley from the stand: riding, or not. The run over the ramp's crest
-// lifts the feet off the stand for a few ticks (2 m/s up, not a reach), so
-// the jump pressed there is a coyote jump (kCoyoteTicks): without it the
-// body hops past under the bar and off the deck.
+// The yard line's stand stands under its parked trolley, its ramp coming up
+// from the east along deck 2's band: from the deck past the ramp's foot,
+// west up the ramp onto the stand, stopped under the bar, then a jump
+// straight up: riding, or not.
+constexpr double kStandX = -2.0;
+constexpr double kStandZ = -124.77;
+constexpr double kRampFootX = 1.6;
 bool catch_the_yard_line(Simulation &s) {
     require(s.advance_frame(1.0).accepted, "zipline: settle");
-    require(walk_to(s, -2.0, -129.4, 20.0, 0.12), "zipline: to the ramp's foot");
-    // Stopped at the foot, then straight up it: walk_to hands over on
-    // arrival, still moving, and a run turned up the 1 m ramp with that
-    // sideways drift carries the body into the post beside the stand.
+    require(walk_to(s, 2.5, -127.0, 20.0, 0.3) && walk_to(s, kRampFootX, kStandZ, 10.0, 0.3), "zipline: to the ramp's foot");
     (void)s.set_move_input(0.0, 0.0);
     require(s.advance_frame(0.4).accepted, "zipline: stopped at the ramp's foot");
-    (void)s.set_facing(0.0, 1.0);
-    (void)s.set_move_input(0.0, 1.0);
-    require(advance_until(s, [](const Snapshot &n) { return n.player_position.z > -126.4; }, 3.0),
-            "zipline: up the ramp onto the stand");
+    require(walk_to(s, kStandX, kStandZ, 8.0, 0.12), "zipline: up the ramp onto the stand");
+    (void)s.set_move_input(0.0, 0.0);
+    require(s.advance_frame(0.5).accepted, "zipline: stopped under the bar");
     const Snapshot on_stand = s.snapshot();
-    std::cout << "  zipline: on the stand at y " << on_stand.player_position.y << ", grounded "
-              << on_stand.player_grounded << "\n";
-    require(on_stand.player_position.y > 23.9, "zipline: the stand is climbed");
+    std::cout << "  zipline: on the stand at (" << on_stand.player_position.x << ", " << on_stand.player_position.y << ", "
+              << on_stand.player_position.z << "), grounded " << on_stand.player_grounded << "\n";
+    require(on_stand.player_position.y > 23.9 && on_stand.player_grounded, "zipline: the stand is climbed");
+    (void)s.set_facing(0.0, 1.0);
     require(s.request_jump(), "zipline: the jump at the trolley");
     return advance_until(s, [](const Snapshot &n) { return n.zipline_riding; }, 1.2);
 }
