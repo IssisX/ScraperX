@@ -25,6 +25,8 @@ const B_CHUTE := &"chute"
 const B_PAUSE := &"pause"
 # The grappling hook, once found: tap fires it, held reels the line in.
 const B_HOOK := &"hook"
+# The quickturn (Mirror's Edge's): half a turn of the view in one tap.
+const B_TURN := &"turn"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -70,7 +72,7 @@ var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK, B_TURN]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -95,6 +97,8 @@ func _ready() -> void:
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
 	_buttons[B_DROP].label = "DROP"
+	_buttons[B_TURN].icon = &"turn"
+	_buttons[B_TURN].label = "TURN"
 	resized.connect(_layout)
 	_layout()
 
@@ -141,6 +145,8 @@ func _layout() -> void:
 	_place(B_CHUTE, jump + Vector2(-306.0, 96.0) * _u, 86.0)
 	# Over Action, away from the stick: the hook is aimed with the view.
 	_place(B_HOOK, jump + Vector2(-236.0, -370.0) * _u, 86.0)
+	# Over Crouch, the same thumb on up: the turn is a move of the run's.
+	_place(B_TURN, jump + Vector2(40.0, -430.0) * _u, 64.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
@@ -170,6 +176,8 @@ func _verb_for(id: StringName) -> StringName:
 			return &"pause"
 		B_HOOK:
 			return &"hook"
+		B_TURN:
+			return &"turn"
 	return &""
 
 
@@ -353,6 +361,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	hook.label = "HOOK" if hook_state == 0 else ("REEL" if hook_state == 2 else "...")
 	hook.tone = TONE_PRIMARY if hook_state == 2 else TONE_NORMAL
 
+	# The quickturn: on foot, in the air and on a wall; not with the hands on
+	# something, nor in a seat or at the forklift's wheel.
+	_buttons[B_TURN].shown = not (hanging or climbing or swinging or driving or ctx.get("sling_seated", false) or
+		ctx.get("sling_recovering", false) or ctx.get("swing_seated", false) or ctx.get("trapeze_hanging", false))
 	var crouch: TouchButton = _buttons[B_CROUCH]
 	crouch.shown = not hanging and not climbing
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"

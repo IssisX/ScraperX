@@ -272,6 +272,12 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 			ci.draw_polyline(PackedVector2Array([
 				c + Vector2(-r * 0.42, 0.0), c + Vector2(-r * 0.1, r * 0.32), c + Vector2(r * 0.46, -r * 0.3),
 			]), color, width * 1.1, true)
+		&"turn":
+			# Half a turn: up, over and back down the other way.
+			ci.draw_line(c + Vector2(-r * 0.32, r * 0.5), c + Vector2(-r * 0.32, -r * 0.05), color, width, true)
+			ci.draw_arc(c + Vector2(0.0, -r * 0.05), r * 0.32, PI, TAU, 16, color, width, true)
+			ci.draw_line(c + Vector2(r * 0.32, -r * 0.05), c + Vector2(r * 0.32, r * 0.22), color, width, true)
+			triangle(ci, c + Vector2(r * 0.32, r * 0.34), r * 0.2, Vector2.DOWN, color)
 		&"pause":
 			ci.draw_rect(Rect2(c + Vector2(-r * 0.32, -r * 0.4), Vector2(r * 0.22, r * 0.8)), color)
 			ci.draw_rect(Rect2(c + Vector2(r * 0.1, -r * 0.4), Vector2(r * 0.22, r * 0.8)), color)

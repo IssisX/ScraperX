@@ -351,6 +351,39 @@ func _touch_flow() -> bool:
 		return _fail("the view did not widen with the run's flow (%.1f -> %.1f)" % [early_fov, gathered_fov])
 	return true
 
+# The quickturn: standing, TURN turns the view half round in about a fifth of
+# a second, smoothly, and the native faces the new way; running east with
+# the stick held forward, TURN turns the run about: the feet brake it and
+# run it back west.
+func _touch_quickturn() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	await _face(Vector2(1.0, 0.0))
+	await _seconds(0.3)
+	var yaw0 := float(_main._yaw)
+	_tap(2, _center(&"turn"))
+	await _seconds(0.1)
+	var midway := wrapf(yaw0 - float(_main._yaw), -PI, PI)
+	await _seconds(0.3)
+	var turned := wrapf(yaw0 - float(_main._yaw), -PI, PI)
+	if absf(absf(turned) - PI) > 0.02:
+		return _fail("TURN did not turn the view half round (%.3f rad)" % turned)
+	if midway < 0.3 or midway > PI - 0.3:
+		return _fail("TURN cut the view round in one frame, not a turn (%.3f rad at 0.1 s)" % midway)
+	await _face(Vector2(1.0, 0.0))
+	_move(InputRouter.Device.TOUCH, 1.0)
+	await _seconds(1.0)
+	var east := float(_native().get_player_linear_velocity().x)
+	_tap(2, _center(&"turn"))
+	await _seconds(0.9)
+	var back := float(_native().get_player_linear_velocity().x)
+	_move(InputRouter.Device.TOUCH, 0.0)
+	_detail = "midway_rad=%.2f east_mps=%.2f back_mps=%.2f" % [midway, east, back]
+	if east < 5.0:
+		return _fail("the run east never got going (%.2f m/s)" % east)
+	if back > -4.0:
+		return _fail("TURN in a run did not turn it about (%.2f m/s east)" % back)
+	return true
+
 # The springboard (sim kSpringboardMinimumSpeed): round to the east side of
 # the yard's plate stack (its slab on top, 1.1 m up), the stick pushed past
 # its ring west at it, and one JUMP a stride short: a foot planted on the
@@ -783,6 +816,46 @@ func _touch_hook_rope() -> bool:
 	if not wound:
 		return _fail("the reel did not wind the body up toward the lip")
 	_detail = "lip=%s hung_y=%.2f rope_m=%.2f" % [str(lip), hung_y, rope]
+	return true
+
+# The swing's launch (sim kSwingLaunchMps): across the monkey bars hand over
+# hand, and on the last bar, rising up the front of its swing, JUMP OFF
+# throws the body on as the hands open (touch_monkey_bars lets the same
+# swing go with DROP and lands about x 6.6).
+func _touch_swing_launch() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_stick_push(Vector2(0.0, -1.0))
+	await _frames(2)
+	_tap(1, _center(&"jump"))
+	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
+	if not caught:
+		return _fail("a running JUMP under the bars never caught the first bar")
+	var crossed: bool = await _wait_until(
+		func() -> bool: return _native().get_traversal_left_hand().x > 4.95, 4.0)
+	if not crossed:
+		return _fail("held forward, the swing never carried the hands to the last bar")
+	var rising: bool = await _wait_until(
+		func() -> bool: return _velocity().x > 1.0 and _velocity().y > 0.8 and _position().x > 5.0, 4.0)
+	if not rising:
+		return _fail("the last bar's swing never came up its front")
+	var release_y := _position().y
+	_tap(2, _center(&"jump"))
+	var thrown: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
+	if not thrown or int(_native().get_swing_launch_count()) != 1:
+		return _fail("JUMP OFF at the front of the swing did not throw the body on")
+	var peak := release_y
+	var landed := false
+	var flown := 0.0
+	while flown < 2.5 and not landed:
+		await get_tree().process_frame
+		flown += get_process_delta_time()
+		peak = maxf(peak, _position().y)
+		landed = bool(_native().is_player_grounded())
+	_detail = "rise_m=%.2f landed_x=%.2f landed_y=%.2f" % [peak - release_y, _position().x, _position().y]
+	if not landed:
+		return _fail("the throw off the last bar never came down")
+	if _position().x < 7.0:
+		return _fail("the throw did not carry past where a let-go lands (x %.2f)" % _position().x)
 	return true
 
 func _touch_monkey_bars() -> bool:

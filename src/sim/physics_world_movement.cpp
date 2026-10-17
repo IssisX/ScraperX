@@ -216,9 +216,11 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
     }
 
     if (traversal_state_ == TraversalState::Swinging) {
-        // Letting go, or jumping off: the hands open; the body flies on
-        // with the swing's velocity.
-        if (commands.release_requested || commands.jump_requested) {
+        // Letting go: the hands open; the body flies on with the swing's
+        // velocity. Jumping off: thrown on as they open (kSwingLaunchMps).
+        if (commands.jump_requested) {
+            launch_from_swing(bodies);
+        } else if (commands.release_requested) {
             release_hang(bodies);
         }
         return;

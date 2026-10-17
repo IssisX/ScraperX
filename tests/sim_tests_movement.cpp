@@ -1298,3 +1298,67 @@ void run_springboard() {
     std::cout << "PASS scraperx_sim springboard: soles_peak_m=" << close.soles_peak << "\n";
 }
 
+// The swing's launch (kSwingLaunchMps): two worlds swing hand over hand to the
+// monkey bars' last bar and come forward on it, rising up the front of the
+// swing; at the same tick one jumps, the other lets go. The jump throws the body on as the hands open:
+// it flies higher, and is farther on when it comes back down past the bar's
+// height. Jump at the back of the swing only lets go.
+void run_swing_launch() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const auto to_last_bar = [](Simulation &s) {
+        require(s.set_facing(1.0, 0.0) && s.advance_frame(0.4).accepted, "swing launch: settle");
+        require(s.set_move_input(1.0, 0.0) && s.request_jump(), "swing launch: the running jump");
+        require(advance_until(s, [](const Snapshot &n) { return n.traversal_state == TraversalState::Swinging; }, 1.0),
+                "swing launch: the first bar caught");
+        require(advance_until(s, [](const Snapshot &n) { return n.swing_reach_count >= 5; }, 5.0),
+                "swing launch: hand over hand to the last bar");
+        require(advance_until(s, [](const Snapshot &n) {
+                    return n.player_linear_velocity.x > 1.0 && n.player_linear_velocity.y > 0.8 &&
+                           n.player_position.x > 5.0;
+                }, 4.0),
+                "swing launch: the last bar's swing comes up its front");
+    };
+    struct Flight {
+        double peak_y = -1.0e9;
+        double x_back_down = 0.0;
+        std::uint64_t launches = 0;
+    };
+    const auto fly = [](Simulation &s, const double from_y) {
+        Flight f;
+        for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "swing launch: flight tick");
+            const auto now = s.snapshot();
+            f.peak_y = std::max(f.peak_y, now.player_position.y);
+            if (now.player_linear_velocity.y < 0.0 && now.player_position.y < from_y) {
+                f.x_back_down = now.player_position.x;
+                break;
+            }
+            if (now.player_grounded) {
+                f.x_back_down = now.player_position.x;
+                break;
+            }
+        }
+        f.launches = s.snapshot().swing_launch_count;
+        return f;
+    };
+    Simulation thrown(InitialSpawn::SwingApproach);
+    Simulation let_go(InitialSpawn::SwingApproach);
+    to_last_bar(thrown);
+    to_last_bar(let_go);
+    const double release_y = thrown.snapshot().player_position.y;
+    require(release_y == let_go.snapshot().player_position.y, "swing launch: the two worlds swing alike");
+    require(thrown.request_jump() && let_go.request_release(), "swing launch: jump, and let go");
+    const Flight a = fly(thrown, release_y);
+    const Flight b = fly(let_go, release_y);
+    std::cout << "  swing launch: thrown, up " << a.peak_y - release_y << " m and at x " << a.x_back_down
+              << " back down; let go, up " << b.peak_y - release_y << " m and at x " << b.x_back_down << "\n";
+    require(a.launches == 1 && b.launches == 0, "swing launch: the jump throws, letting go does not");
+    require(a.peak_y > b.peak_y + 0.1 && a.x_back_down > b.x_back_down + 0.3,
+            "swing launch: thrown, the body flies higher and farther than let go");
+    std::cout << "PASS scraperx_sim swing launch: higher_m=" << a.peak_y - b.peak_y
+              << " farther_m=" << a.x_back_down - b.x_back_down << "\n";
+}
+

@@ -28,11 +28,13 @@ const SCENARIOS := {
 	"touch_tuck": 0,
 	"touch_flow": 8,
 	"touch_springboard": 8,
+	"touch_quickturn": 8,
 	"touch_crouch": 0,
 	"touch_slide": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
 	"touch_monkey_bars": 39,
+	"touch_swing_launch": 39,
 	"touch_pipe_gallery": 40,
 	"touch_hook": 39,
 	"touch_hook_rope": 16,
@@ -194,7 +196,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
 			"touch_wall_run", "touch_hang_drop",
-			"touch_hang_climb", "touch_monkey_bars", "touch_pipe_gallery"]:
+			"touch_hang_climb", "touch_monkey_bars", "touch_swing_launch", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
@@ -246,6 +248,8 @@ func _run() -> void:
 			ok = await _touch_flow()
 		"touch_springboard":
 			ok = await _touch_springboard()
+		"touch_quickturn":
+			ok = await _touch_quickturn()
 		"touch_crouch":
 			ok = await _touch_crouch()
 		"touch_slide":
@@ -256,6 +260,8 @@ func _run() -> void:
 			ok = await _touch_hang(true)
 		"touch_monkey_bars":
 			ok = await _touch_monkey_bars()
+		"touch_swing_launch":
+			ok = await _touch_swing_launch()
 		"touch_pipe_gallery":
 			ok = await _touch_pipe_gallery()
 		"touch_hook":

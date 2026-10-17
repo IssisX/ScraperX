@@ -476,6 +476,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.climb_count = climb_count_;
     state_.swing_catch_count = swing_catch_count_;
     state_.swing_reach_count = swing_reach_count_;
+    state_.swing_launch_count = swing_launch_count_;
     state_.hang_slip_count = hang_slip_count_;
 
     state_.ledge_available = affordance_.valid;

@@ -44,6 +44,9 @@ const JUMP_BUFFER_SECONDS := 0.12
 # which vaults if the takeoff could have (its own window is 0.30 s of ticks;
 # this is a frame's slack wider so the native, not frame timing, decides).
 const DOUBLE_TAP_SECONDS := 0.35
+# The quickturn (Mirror's Edge's): half a turn of the view, to the right, over
+# this long -- quick, but a turn, not a cut.
+const QUICKTURN_SECONDS := 0.22
 
 const PHASE_APPROACH := 0
 const PHASE_PROVEN := 2
@@ -84,6 +87,8 @@ var _sling_was_aiming := false
 # The forklift's heading last frame, as a view yaw: driving it, the view turns
 # with it.
 var _fork_heading := 0.0
+# The quickturn's turn still to make (radians).
+var _quickturn_left := 0.0
 var _sling_goal_yaw := 0.0
 var _sling_goal_elevation := 1.4311699866353502
 var _clouds: Node3D
@@ -261,6 +266,12 @@ func _process(delta: float) -> void:
 		else:
 			_yaw -= look.x
 			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+	# The quickturn, made over QUICKTURN_SECONDS. The stick is the view's, so
+	# a run held on turns about with it: the feet brake it and run it back.
+	if _quickturn_left > 0.0:
+		var turn := minf(_quickturn_left, PI / QUICKTURN_SECONDS * delta)
+		_yaw -= turn
+		_quickturn_left -= turn
 	# Driving the forklift, the driver turns with the truck as a seat does:
 	# the view keeps its angle to the truck's nose while the truck turns, so
 	# the stick's forward stays the way the driver is looking.
@@ -636,6 +647,9 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"action":
 				_crouch_toggled = false
 				_perform_action()
+			&"turn":
+				if _quickturn_left <= 0.0:
+					_quickturn_left = PI
 			&"crouch":
 				# Does what the button says: crouched, it asks to stand. On the
 				# trapeze it pulls up on the bar, or lets down.

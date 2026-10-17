@@ -26,6 +26,7 @@ int main() {
         run_tuck();
         run_flow();
         run_springboard();
+        run_swing_launch();
         run_hook();
         run_workers();
         run_c7();
@@ -44,6 +45,7 @@ int main() {
         run_tuck();
         run_flow();
         run_springboard();
+        run_swing_launch();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
@@ -300,6 +302,7 @@ int main() {
     run_tuck();
     run_flow();
     run_springboard();
+    run_swing_launch();
     run_hook();
     run_workers();
     run_c7();

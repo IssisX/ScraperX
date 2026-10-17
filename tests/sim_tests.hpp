@@ -828,6 +828,7 @@ void run_wall_climb();
 void run_tuck();
 void run_flow();
 void run_springboard();
+void run_swing_launch();
 void run_hook();
 void run_workers();
 void run_c7();

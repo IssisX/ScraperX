@@ -51,6 +51,7 @@ public:
     [[nodiscard]] bool is_player_tucked() const;
     [[nodiscard]] bool is_player_springboarding() const;
     [[nodiscard]] std::int64_t get_springboard_count() const;
+    [[nodiscard]] std::int64_t get_swing_launch_count() const;
     [[nodiscard]] std::int64_t get_wall_climb_count() const;
     [[nodiscard]] std::int64_t get_wall_step_count() const;
     [[nodiscard]] std::int64_t get_support_entity_id() const;

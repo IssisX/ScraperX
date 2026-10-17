@@ -110,6 +110,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_springboarding"),
                                 &ScraperXSimulation::is_player_springboarding);
     godot::ClassDB::bind_method(godot::D_METHOD("get_springboard_count"), &ScraperXSimulation::get_springboard_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_swing_launch_count"), &ScraperXSimulation::get_swing_launch_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wall_step_count"),
                                 &ScraperXSimulation::get_wall_step_count);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_sliding"),
@@ -459,6 +460,10 @@ bool ScraperXSimulation::is_player_springboarding() const {
 
 std::int64_t ScraperXSimulation::get_springboard_count() const {
     return static_cast<std::int64_t>(simulation_->snapshot().springboard_count);
+}
+
+std::int64_t ScraperXSimulation::get_swing_launch_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().swing_launch_count);
 }
 
 std::int64_t ScraperXSimulation::get_wall_step_count() const {

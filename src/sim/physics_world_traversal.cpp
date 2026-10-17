@@ -719,6 +719,26 @@ void Simulation::PhysicsWorld::release_hang(JPH::BodyInterface &bodies) noexcept
     bodies.SetGravityFactor(player_id_, 1.0F);
     regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
     clear_traversal();
+    // The air keeps what the hands let go of (a swing's fling), as it keeps
+    // a run's.
+    const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) - support_velocity;
+    air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed, JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
+}
+
+void Simulation::PhysicsWorld::launch_from_swing(JPH::BodyInterface &bodies) noexcept {
+    const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+    const JPH::Vec3 bar_velocity = bodies.GetPointVelocity(traversal_body_, hands);
+    const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) - bar_velocity;
+    if (!facing_.IsNearZero() && relative.Dot(facing_) > kSwingLaunchMinMps) {
+        const JPH::Vec3 pull = (facing_ + JPH::Vec3(0.0F, 1.0F, 0.0F)).Normalized() * kSwingLaunchMps;
+        bodies.SetLinearVelocity(player_id_, bodies.GetLinearVelocity(player_id_) + pull);
+        if (bodies.GetMotionType(traversal_body_) == JPH::EMotionType::Dynamic) {
+            bodies.AddImpulse(traversal_body_, -pull * static_cast<float>(kPlayerMassKg), hands);
+        }
+        ++swing_launch_count_;
+    }
+    release_hang(bodies);
+    flight_from_jump_ = true;
 }
 
 } // namespace scraperx::sim

@@ -442,6 +442,9 @@ private:
     void check_hang_grip(JPH::BodyInterface &bodies, const float delta_seconds) noexcept;
 
     void release_hang(JPH::BodyInterface &bodies) noexcept;
+    // Jump on a swing (see kSwingLaunchMps): thrown on in its forward half,
+    // let go in its back half.
+    void launch_from_swing(JPH::BodyInterface &bodies) noexcept;
 
     // ---- Step 2 movement (MECHANISM_ASCENT_PLAN.md §8) --------------------
 
@@ -682,6 +685,7 @@ public:
     std::uint64_t climb_count_ = 0;
     std::uint64_t swing_catch_count_ = 0;
     std::uint64_t swing_reach_count_ = 0;
+    std::uint64_t swing_launch_count_ = 0;
     Grip grip_affordance_{};
     Lip edge_affordance_{};
     bool sprinting_ = false;

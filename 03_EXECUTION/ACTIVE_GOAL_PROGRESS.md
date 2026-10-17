@@ -940,6 +940,23 @@ soles to 2.63 m against 1.51 m for the same jump 3 m short); `touch_springboard`
 the touch controls: 8.50 to 7.82 m/s, 2.63 m); `touch_double_tap_vault` and `touch_vault` still
 vault the rail.
 
+**The swing's launch (2026-10-17; the research's third).** Swinging under any bar was already a
+real pendulum that keeps the run it caught the bar with; what Mirror's Edge adds is the launch.
+JUMP OFF in a swing's forward half now throws the body on as the hands open -- the arms' pull,
+2 m/s forward and up at 45 degrees on top of the swing's own speed -- and the bar takes the
+push; in the back half, or near still, it only lets go, and DROP only ever lets go. A swing let
+go also keeps its speed in the air now: the air's steering held a fling to a walk's 5.5 m/s.
+Proof: native `swing launch` (two worlds alike to the tick on the monkey bars' last bar: thrown,
+0.21 m higher and 1.8 m farther than let go); `touch_swing_launch` (JUMP OFF up the front of the
+last bar's swing: up 0.24 m, down at x 9.35 against DROP's 6.6).
+
+**The quickturn (2026-10-17; the research's fourth).** A TURN button over Crouch, for the same
+thumb: half a turn of the view in about a fifth of a second, smooth, not a cut. The stick is the
+view's, so a run held on turns about with it: the feet brake it and run it back. Shown on foot,
+in the air and on a wall; not with the hands on something, in a seat or at the forklift's wheel.
+Proof: `touch_quickturn` (half round, 1.43 rad of it at 0.1 s; a run east at 5.5 m/s turned
+about to 5.5 m/s west within 0.9 s).
+
 **Mirror's Edge research (2026-10-17; the owner: the movement alone should be a reason to play).**
 What its running is made of, against what ScraperX has. Already here: run and sprint, the
 wall-run, the kick off a wall, the wall climb, the tuck (its coil), the slide, vaults and the

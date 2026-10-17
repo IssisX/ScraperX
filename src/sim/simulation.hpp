@@ -612,6 +612,7 @@ struct Snapshot final {
     // Bars and pipes caught overhead, and reaches from one to the next.
     std::uint64_t swing_catch_count = 0;
     std::uint64_t swing_reach_count = 0;
+    std::uint64_t swing_launch_count = 0;   // Jumps that threw the body on off a swing
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).

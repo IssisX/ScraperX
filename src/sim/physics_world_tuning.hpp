@@ -483,6 +483,14 @@ constexpr float kSwingReachAimAhead = 0.60F;
 constexpr float kSwingReachAimRise = 0.50F;
 constexpr float kSwingMinAdvanceM = 0.30F;
 constexpr std::uint32_t kSwingRegripTicks = 27;
+// The swing's launch (Mirror's Edge's swing pole): Jump in a swing's forward
+// half -- the body moving the way it faces, faster than kSwingLaunchMinMps --
+// throws it on as the hands open: the arms' pull, kSwingLaunchMps forward
+// and up at 45 degrees on top of the swing's own speed (CHOSEN: well under
+// the legs' 5.5 m/s jump). The bar takes the push. In the back half, or
+// near still, Jump only lets go.
+constexpr float kSwingLaunchMps = 2.0F;
+constexpr float kSwingLaunchMinMps = 0.5F;
 constexpr float kHangArmStop =
     kHangArmLength - 9.81F / ((2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz) *
                               (2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz));
