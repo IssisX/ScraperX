@@ -702,6 +702,10 @@ const INCLINE_BRAKE_ENTITY := INCLINE_DECK_ENTITY + 2
 # speed the trolley gains in the time a step back onto it takes.
 const INCLINE_OFF_BRAKE_M := 0.8
 const INCLINE_STEP_GAIN_MPS := 1.4
+# Within the last few metres a foot stays by the treadle: a step back from
+# 0.8 m off is half a second unbraked on the slope at the head.
+const INCLINE_NEAR_HEAD_M := 4.0
+const INCLINE_OFF_BRAKE_NEAR_M := 0.6
 
 func _incline_plate(entity: int) -> Vector3:
 	return _native().get_kit_body_transform(_native().get_kit_body_index(entity)).origin
@@ -753,7 +757,8 @@ func _ride_incline(device: int) -> bool:
 		var allowed := minf(3.5, sqrt(2.0 * 1.2 * maxf(0.0, remaining - 0.5)) + 0.2)
 		var on_brake := speed > 0.3 and speed + INCLINE_STEP_GAIN_MPS > allowed
 		var brake := _incline_plate(INCLINE_BRAKE_ENTITY)
-		_steer_on_deck(device, Vector2(brake.x - (0.0 if on_brake else INCLINE_OFF_BRAKE_M), brake.z))
+		var off_m := INCLINE_OFF_BRAKE_NEAR_M if remaining < INCLINE_NEAR_HEAD_M else INCLINE_OFF_BRAKE_M
+		_steer_on_deck(device, Vector2(brake.x - (0.0 if on_brake else off_m), brake.z))
 		await get_tree().process_frame
 		waited += get_process_delta_time()
 	_move_dir(device, Vector2.ZERO)

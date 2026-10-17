@@ -17,6 +17,11 @@ constexpr std::uint64_t kInclineDeck = scraperx::sim::vertical::Route::kInclineD
 constexpr std::uint64_t kInclineTrip = kInclineDeck + 1;
 constexpr std::uint64_t kInclineBrake = kInclineDeck + 2;
 constexpr double kOffBrakeM = 1.0;
+// Within the last kNearHeadM of the incline the rider keeps a foot by the
+// treadle, half a metre off: a full metre's walk back onto it is half a
+// second unbraked on the slope, a trolley at the head at over 2 m/s.
+constexpr double kNearHeadM = 4.0;
+constexpr double kOffBrakeNearM = 0.5;
 
 scraperx::sim::Vector3 kit_entity_position(const Simulation &s, std::uint64_t entity) {
     return s.kit_body_position(s.kit_body_index(entity));
@@ -84,7 +89,8 @@ void run_incline() {
         if (lift.travels[5] > 0.995 && lift.incline_speed_mps < 0.05) break;
         arrival = lift.incline_speed_mps;
         // Off the brake: a metre west of the treadle, clear of it on the deck.
-        hold_on(s, kInclineBrake, 1, lift.incline_speed_mps > allowed ? 0.0 : kOffBrakeM);
+        hold_on(s, kInclineBrake, 1,
+                lift.incline_speed_mps > allowed ? 0.0 : remaining < kNearHeadM ? kOffBrakeNearM : kOffBrakeM);
     }
     const double ride_s = s.snapshot().simulation_time_seconds - start;
     require(s.lift_state().travels[5] > 0.995 && s.snapshot().death_count == 0,
@@ -369,8 +375,11 @@ void run_teeter() {
     require(sprint_pull.over_tick > sprint_let_go.over_tick,
             "pulling back in a teeter must hold the body at the edge longer than letting go");
     // Entered at a sprint, the teeter lasts below its entry speed: the
-    // ground's 22 m/s/s does not come back halfway.
-    require(sprint_pull.slowest_teeter_mps < kTeeterEntryMps - 0.2,
+    // ground's 22 m/s/s does not come back halfway. (The margin was 0.2 m/s
+    // before the step-down: the feet now stay on an edge until the body's
+    // centre passes it, the measured edge sits that much further out, and
+    // the pulled-back teeter goes over at 5.89 m/s, still under its 6.)
+    require(sprint_pull.slowest_teeter_mps < kTeeterEntryMps - 0.05,
             "a teeter entered at a sprint must persist below the entry speed");
     require(attempt(2.0, 0.0, true, true).restore_clears,
             "a climb loaded from a mid-teeter save must not come back teetering");
