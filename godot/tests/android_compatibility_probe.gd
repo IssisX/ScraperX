@@ -72,7 +72,7 @@ func _process(delta: float) -> void:
 	if native != null:
 		_peak_upward_speed = maxf(_peak_upward_speed, native.get_player_linear_velocity().y)
 	_elapsed += delta
-	if _elapsed < 0.4:
+	if _elapsed < 0.1:
 		return
 	_elapsed = 0.0
 	_sequence += 1

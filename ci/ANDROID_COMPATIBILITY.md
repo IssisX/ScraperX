@@ -100,7 +100,7 @@ Held gestures use separate Android DOWN/MOVE/UP events. API35/36 use the
 platform `input touchscreen motionevent` command. API24 uses its stock Monkey
 network touch protocol because that shell predates `motionevent`. The driver
 waits for actual input-owner observations and advancing native ticks, holds
-for the requested simulation duration, releases in `finally`, and requires
+for a route pulse or until the unchanged required gameplay response, releases in `finally`, and requires
 observed cleared touch ownership. Cleanup errors remain failures. A slow
 software-rendered frame cannot silently consume the whole finite shell swipe.
 The displacement, machine work and real-support assertions remain unchanged.
@@ -112,3 +112,19 @@ The ordinary phone export retains the original scripts. The tablet also
 exercises the real notification shade and emulator rotation, requiring OS
 rotation readback, retained native identity and usable touch afterward.
 These paths remain unverified until the corresponding Android jobs pass.
+
+The API24 server must answer a harmless `listvar` handshake before any touch;
+an accepted ADB-forwarded TCP connection alone does not prove device readiness.
+At full tablet resolution, the new held driver produced117 actual nonzero-input
+native ticks and almost4m of movement, but its added108-tick hold exceeded90s
+on the software GPU. Basic movement now releases after the original displacement
+check and actual nonzero native input, rather than waiting an unnecessary extra
+duration. Camera input similarly waits for its original yaw response.
+
+The tall profile's long forklift/crane route uses a real960x540 Android window,
+then restores and requires the original full-size window before ordinary input
+and lifecycle checks. Startup and layout still run at the original device size.
+This controls emulator rendering cost; the app's quality, render scale, shadows,
+content, forces and solver are unchanged. It provides no phone-performance claim.
+Device jobs have a40-minute maximum for software-rendered functional checks;
+all position, support, force/work, cleanup and persistence conditions still apply.

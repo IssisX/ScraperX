@@ -1,6 +1,9 @@
 """Driver lifecycle checks; these do not establish Android gameplay."""
 from copy import deepcopy
 import unittest
+from unittest.mock import MagicMock, patch
+from pathlib import Path
+import tempfile
 
 from android_touch_driver import TouchDriver
 
@@ -43,6 +46,39 @@ class SessionFixture:
 
 
 class TouchDriverTests(unittest.TestCase):
+    def test_response_hold_releases_when_real_predicate_is_met(self):
+        session = SessionFixture()
+        state = TouchDriver(session, 36).swipe((10, 20), (10, 5), 1200,
+                                              until=lambda s: s['tick'] >= 103)
+        self.assertEqual(state['tick'], 103)
+        self.assertFalse(session.state['input_trace']['owned'])
+
+    def test_response_hold_does_not_pass_when_required_effect_is_absent(self):
+        session = SessionFixture()
+        with self.assertRaisesRegex(RuntimeError, 'predicate was never met'):
+            TouchDriver(session, 36).swipe((10, 20), (10, 5), 1200, until=lambda s: False)
+        self.assertFalse(session.state['input_trace']['owned'])
+
+    def test_api24_forwarded_socket_is_not_ready_until_protocol_responds(self):
+        session = SessionFixture()
+        session.adb = MagicMock(return_value=b'12345\n')
+        first, ready = MagicMock(), MagicMock()
+        first.makefile.return_value.readline.return_value = b''
+        ready.makefile.return_value.readline.return_value = b'OK:build.version.sdk monkey.version\n'
+        process = MagicMock()
+        process.poll.return_value = None
+        with tempfile.TemporaryDirectory() as directory:
+            session.output = Path(directory)
+            driver = TouchDriver(session, 24)
+            with patch('android_touch_driver.socket.create_connection', side_effect=[first, ready]), \
+                 patch('android_touch_driver.subprocess.Popen', return_value=process), \
+                 patch('android_touch_driver.time.sleep'):
+                driver._legacy()
+                first.close.assert_called_once()
+                ready.makefile.return_value.write.assert_called_once_with(b'listvar\n')
+                self.assertTrue(session.receipt['touch_server_ready'].startswith('OK:'))
+                driver.close()
+
     def test_stationary_button_hold_accepts_down_when_platform_omits_move(self):
         session = SessionFixture(drop_move=True)
         TouchDriver(session, 36).swipe((10, 20), (10, 20), 650)

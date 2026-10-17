@@ -166,12 +166,12 @@ class Session:
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
 
-    def swipe(self, start, end, duration_ms):
+    def swipe(self, start, end, duration_ms, *, until=None):
         if self.touch_driver is None:
             from android_touch_driver import TouchDriver
             api = int(self.receipt['ro.build.version.sdk'])
             self.touch_driver = TouchDriver(self, api)
-        return self.touch_driver.swipe(start, end, duration_ms)
+        return self.touch_driver.swipe(start, end, duration_ms, until=until)
 
     def first_controls(self, state):
         if state['paused']:
@@ -296,11 +296,29 @@ def exercise(args, session):
     check_touch_bounds(state)
     initial_window = state['window']
     if args.freight_route:
-        from android_freight_route import exercise_forklift
-        state = exercise_forklift(session, state)
-    if args.crane_route:
-        from android_crane_route import exercise_crane
-        state = exercise_crane(session, state)
+        # Long functional routes use a smaller real Android window on the CI
+        # software GPU. No app graphics/physics setting changes. Full-size
+        # startup/layout and subsequent input/lifecycle checks remain intact.
+        before = state
+        session.adb('shell', 'wm', 'size', '960x540')
+        try:
+            state = session.wait('machine test window retains actual native instance',
+                lambda s: s['instance'] == before['instance'] and s['window'] != initial_window,
+                after=before)
+            state = session.first_controls(state)
+            check_touch_bounds(state)
+            session.capture('machine-test-window')
+            from android_freight_route import exercise_forklift
+            state = exercise_forklift(session, state)
+            if args.crane_route:
+                from android_crane_route import exercise_crane
+                state = exercise_crane(session, state)
+        finally:
+            session.adb('shell', 'wm', 'size', 'reset')
+        state = session.wait('full-size Android window restored after real machine route',
+            lambda s: s['instance'] == before['instance'] and s['window'] == initial_window,
+            after=state)
+        state = session.first_controls(state)
     before = state
     session.button(state, 'crouch')
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
@@ -313,14 +331,17 @@ def exercise(args, session):
                          s['peak_upward_speed'] > 0.5, after=state)
     before = state
     start, end = state['stick'], state['stick_up']
-    session.swipe(start, end, 1200)
+    session.swipe(start, end, 1200, until=lambda s:
+        math.dist(s['position'][::2], before['position'][::2]) > 0.1 and
+        s['input_trace']['nonzero_native_ticks'] > before['input_trace']['nonzero_native_ticks'])
     state = session.wait('ordinary touch stick moves native player',
                          lambda s: math.dist(s['position'][::2], before['position'][::2]) > 0.1,
                          after=before)
     session.capture('after-input')
     before = state
     look = state['look']
-    session.swipe(look, (look[0] + 80, look[1]), 400)
+    session.swipe(look, (look[0] + 80, look[1]), 400,
+                  until=lambda s: abs(s['yaw'] - before['yaw']) > 0.02)
     state = session.wait('ordinary touch drag turns camera', lambda s: abs(s['yaw'] - before['yaw']) > 0.02, after=before)
     session.button(state, 'pause')
     state = session.wait('touch pause freezes native stepping', lambda s: s['paused'], after=state)

@@ -64,8 +64,35 @@ Local commands and actual output before publication:
   `ANDROID_TOUCH_OBSERVER dispatch_events=3 drags=1 native_tick_receipts=9 released=true`.
   This exercises observer wiring, not real Android or native movement.
 
-Android execution of this new driver, system shade/rotation and machine routes
-is pending. Physical-device performance and the hardware floor remain separate.
+Follow-up actual96e5b51 compact job117446514855: native startup/crouch/stand/jump
+passed. API24 forwarded TCP connected, but first DOWN returned EOF before any
+protocol readiness receipt; UP also returned EOF. This is an introduced driver
+startup defect, not evidence about movement. Local correction requires stock
+Monkey's harmless `listvar` response before touch and retries closed forwarded
+connections. Focused driver tests now5 OK, including a connected-but-not-ready
+socket followed by a valid protocol response. Android replay remains pending.
+
+Actual96e5b51 tablet job117446514808 proves held movement: accepted tick552,
+then tick651, nonzero-native-input ticks117, position z=-47.681446 from
+-43.721031. It failed the newly added108-tick duration (target660) before90s,
+then actual release cleared ownership at tick687. This is software-rendered
+test-clock exhaustion, not absent player movement. The original displacement
+assertion remains unchanged; the next driver releases on that actual response
+and positive native input, rather than requiring an extra duration.
+
+Actual tall job117446514856: four real held pulses move from normal arrival to
+(-98.783974,0.90,-56.690041), with378 nonzero-input native ticks. The240s
+approach deadline expires while real walking succeeds. Long machine routes now
+use a real960x540 Android window and restore original full size afterward. No
+app graphics, native owner, machine, displacement or work limit was changed.
+This is an emulator workload correction, not a phone performance improvement.
+Observer cadence becomes0.1s for closed-loop input feedback. Device job maximum
+becomes40minutes; deadlock/stall and all consequential behavior gates remain.
+
+The combined follow-up driver checks are7 OK, including a response predicate
+that never becomes true and must fail/release. ABI/export/packet/frame9 OK.
+Fold96e5b51 remains running; new combined Android replay is pending.
+Physical-device performance and the hardware floor remain separate.
 
 Primary source references:
 

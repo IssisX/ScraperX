@@ -24,8 +24,22 @@ class TouchDriver:
                 self.connection = socket.create_connection(('127.0.0.1', int(self.port)), timeout=5)
                 self.connection.settimeout(30)
                 self.stream = self.connection.makefile('rwb', buffering=0)
+                # ADB accepts the forwarded TCP connection even before the
+                # device-side server listens. Require a harmless protocol reply
+                # before the first touch; TCP connect alone is not readiness.
+                self.stream.write(b'listvar\n')
+                response = self.stream.readline(16384).decode().strip()
+                if not response.startswith('OK:'):
+                    raise ConnectionError(f'Monkey readiness reply absent: {response!r}')
+                self.session.receipt['touch_server_ready'] = response
                 return
             except OSError:
+                if self.stream:
+                    self.stream.close()
+                    self.stream = None
+                if self.connection:
+                    self.connection.close()
+                    self.connection = None
                 if self.monkey.poll() is not None or time.monotonic() >= deadline:
                     raise RuntimeError('API24 touch server unavailable; see touch-monkey.log')
                 time.sleep(0.2)
@@ -45,7 +59,7 @@ class TouchDriver:
         if response != 'OK':
             raise RuntimeError(f'API24 touch command {command!r} expected OK, got {response!r}')
 
-    def swipe(self, start, end, duration_ms):
+    def swipe(self, start, end, duration_ms, *, until=None):
         before = self.session.snapshot()
         if before is None or not before['ready'] or before['paused']:
             raise RuntimeError('Held Android gesture requires an observed active native world')
@@ -66,6 +80,14 @@ class TouchDriver:
                 s.get('input_trace', {}).get('owned', False) and
                 s['tick'] > before['tick'], after=before, timeout=45)
             release_after = accepted
+            if until is not None:
+                if until(accepted):
+                    return accepted
+                held = self.session.wait('held Android gesture produces required game response',
+                    lambda s: s['instance'] == before['instance'] and until(s),
+                    after=accepted, timeout=90)
+                release_after = held
+                return held
             # Wall time on a software renderer is unrelated to game time.
             # Keep a real finger down for the requested native duration.
             ticks = max(1, math.ceil(duration_ms / 1000 / accepted['fixed_step_s']))
