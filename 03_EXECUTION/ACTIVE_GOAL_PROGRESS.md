@@ -1073,6 +1073,20 @@ after the step-down found four things, each fixed at its cause:
 Two proofs were walking paths only the old hop allowed: Deck 2's runway (now stepped onto from
 the stair's landing, square to the beam) and the zipline stand (now run up from a stop).
 
+**Where a zipline may stand (2026-10-17).** The ziplines' stands, moved under the parked
+trolley, broke three things the full suite and touch run found: deck 6's line ran across S2's
+cage shaft (the cage, parked at deck 4 when the line was built, rose into its cable 0.75 m short
+of the top), the 220 ring's stand sat on the spawn in the path to well D's spool, and its post
+then sat where the hook's rope sweeps from its rack. A line is now built only where nothing is
+worked: its cable, with a rider's room under it, crosses no machine's travel (every guide's and
+lever's whole stroke, part by part, from the kit), and its posts and stand keep 2 m from that
+and from everything the hands take hold of, 4 m from every spawn and crew lane (as the tower's
+stock does) and off the hook's practice ground. The top post stands 1.4 m in from the band's
+edge, so the stand hugs the edge and the rest of the band stays open; where a band has no room
+the line starts from the far band. 22 lines; none on the 220 ring, whose bands are taken by
+C, D, the spawn and the hook. The touch proof of the hook's rope now finds the lip among the
+line's bends (the body swings back in under the band and the line wraps its underside too).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer

@@ -272,23 +272,42 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // shaft (x -7.1 .. -3.9, z -118 .. -121; the slab comes down it on a
     // ride and a cable through the shaft stopped it) and west of the yard
     // derrick's column at x = 0.8.
-    zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_);
+    // The places no fixture may take: 4 m about every place the player is
+    // put down and every lane the crew walk (the tower's stock below keeps
+    // clear of the same), and the hook's practice ground.
+    std::vector<JPH::RVec3> keep_clear = crew_->walked(1.0F);
+    for (int spawn = 0; spawn < static_cast<int>(InitialSpawn::Count); ++spawn) {
+        keep_clear.push_back(spawn_position(static_cast<InitialSpawn>(spawn)));
+    }
+    constexpr float kKeepClearM = 4.0F;
+    std::vector<JPH::AABox> reserved;
+    for (const JPH::RVec3 &place : keep_clear) {
+        reserved.emplace_back(JPH::Vec3(place) - JPH::Vec3(kKeepClearM, 2.0F, kKeepClearM),
+                              JPH::Vec3(place) + JPH::Vec3(kKeepClearM, 2.5F, kKeepClearM));
+    }
+    reserved.push_back(hook_practice_ground());
+    zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_, std::move(reserved));
     (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
-    // Across the well, from the band's inner edge (the top post 2.2 m in from
-    // it, room for its stand toward the well; the bottom post a metre and a
-    // half in from the far band's) to the far band of the deck below: south to north on
-    // the even decks, east to west on the odd, and along the band wherever
-    // it first fits.
+    // Across the well, from the band's inner edge (the top post 1.4 m in from
+    // it, its stand toward the well hugging the edge, the rest of the band
+    // open; the bottom post a metre and a half in from the far band's) to the
+    // far band of the deck below: south to north on the even decks, east to
+    // west on the odd, along the band wherever it first fits; and where the
+    // near band has no room, from the far band back across.
     const auto across_well = [&](const double top_y, const double bottom_y, const double top_inner,
                                  const double bottom_inner, const bool south_to_north) {
-        for (const double along : {6.0, -8.0, 10.0, -12.0, 0.0}) {
-            const bool built = south_to_north
-                ? zipline_->add_line(JPH::RVec3(along, top_y, kStackCenterZ + top_inner + 2.2),
-                                     JPH::RVec3(along, bottom_y, kStackCenterZ - bottom_inner - 1.5))
-                : zipline_->add_line(JPH::RVec3(kStackCenterX + top_inner + 2.2, top_y, kStackCenterZ + along),
-                                     JPH::RVec3(kStackCenterX - bottom_inner - 1.5, bottom_y, kStackCenterZ + along));
-            if (built) {
-                return;
+        for (const double side : {1.0, -1.0}) {
+            for (const double along : {6.0, -8.0, 10.0, -12.0, 0.0, -4.0, 3.0, 14.0, -14.0}) {
+                const double top_out = side * (top_inner + 1.4);
+                const double bottom_out = -side * (bottom_inner + 1.5);
+                const bool built = south_to_north
+                    ? zipline_->add_line(JPH::RVec3(along, top_y, kStackCenterZ + top_out),
+                                         JPH::RVec3(along, bottom_y, kStackCenterZ + bottom_out))
+                    : zipline_->add_line(JPH::RVec3(kStackCenterX + top_out, top_y, kStackCenterZ + along),
+                                         JPH::RVec3(kStackCenterX + bottom_out, bottom_y, kStackCenterZ + along));
+                if (built) {
+                    return;
+                }
             }
         }
     };
@@ -304,14 +323,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
         across_well(top_y, top_y - 22.0, 21.1 - 0.9 * ring, 21.1 - 0.9 * (ring - 1), ring % 2 == 0);
     }
     // The tower's lived-in spots of loose stock: after every other body, so
-    // each place is tested against all of them, and clear by 4 m of every
-    // place the player is put down and of every lane the crew walk. Their
-    // kit bodies come last, so older saves' lists line up.
-    std::vector<JPH::RVec3> keep_clear = crew_->walked(1.0F);
-    for (int spawn = 0; spawn < static_cast<int>(InitialSpawn::Count); ++spawn) {
-        keep_clear.push_back(spawn_position(static_cast<InitialSpawn>(spawn)));
-    }
-    loose_stock_->dress_tower(keep_clear, 4.0F);
+    // each place is tested against all of them, and clear by kKeepClearM of
+    // every place the player is put down and of every lane the crew walk.
+    // Their kit bodies come last, so older saves' lists line up.
+    loose_stock_->dress_tower(keep_clear, kKeepClearM);
 
     physics_system_.OptimizeBroadPhase();
 

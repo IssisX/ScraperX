@@ -796,9 +796,15 @@ func _touch_hook_rope() -> bool:
 	await _seconds(1.0)
 	var hook: Dictionary = _native().get_hook_state()
 	var points: PackedVector3Array = hook["points"]
-	var lip: Vector3 = points[1]
-	if absf(lip.y - 220.25) > 0.3:
-		return _fail("the line bent at %s, not over the ring's lip" % str(lip))
+	# The bend over the ring's top lip, among the bends: the body may have
+	# swung back in under the band, the line round its underside nearer it.
+	var lip := Vector3.INF
+	for i in range(1, mini(int(hook["bends"]) + 1, points.size())):
+		if absf(points[i].y - 220.25) <= 0.3:
+			lip = points[i]
+			break
+	if lip == Vector3.INF:
+		return _fail("the line bent at %s, never over the ring's lip" % str(points.slice(1, int(hook["bends"]) + 1)))
 	if int(_native().get_death_count()) != deaths or int(hook["state"]) != 2:
 		return _fail("the rope did not hold the fall")
 	if not _main._hook_bend_lines[0].visible:

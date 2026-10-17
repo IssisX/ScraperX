@@ -10,9 +10,11 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Geometry/RayAABox.h>
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace scraperx::sim {
 namespace {
@@ -48,8 +50,9 @@ private:
 
 } // namespace
 
-Zipline::Zipline(PhysicsSystem &physics, kit::Kit &kit, const BodyID player)
-    : physics_(physics), kit_(kit), player_(player) {}
+Zipline::Zipline(PhysicsSystem &physics, kit::Kit &kit, const BodyID player, std::vector<AABox> reserved)
+    : physics_(physics), kit_(kit), player_(player), machine_travel_(kit.travel_envelopes()),
+      worked_(kit.work_bounds()), reserved_(std::move(reserved)) {}
 
 Zipline::~Zipline() {
     unclip();
@@ -72,6 +75,38 @@ bool Zipline::room_along(const RVec3 top, const RVec3 bottom) const {
     AnyHitCollisionCollector<CastShapeCollector> hit;
     physics_.GetNarrowPhaseQuery().CastShape(sweep, ShapeCastSettings(), start, hit, {}, {}, people);
     return !hit.HadHit();
+}
+
+bool Zipline::clear_of_machines(const RVec3 top, const RVec3 bottom, const std::vector<AABox> &footings) const {
+    const Vec3 span(bottom - top);
+    const RayInvDirection along(span);
+    for (const AABox &travel : machine_travel_) {
+        // The cable crosses no envelope grown by the rider hanging under it
+        // (the room's half width each side, kRoomBelowM above its top).
+        const AABox rider_room(travel.mMin - Vec3(0.5F, 0.1F, 0.5F), travel.mMax + Vec3(0.5F, kRoomBelowM + 0.1F, 0.5F));
+        if (RayAABox(Vec3(top), along, rider_room.mMin, rider_room.mMax) <= 1.0F) {
+            return false;
+        }
+    }
+    for (const AABox &ground : reserved_) {
+        for (const AABox &footing : footings) {
+            if (footing.Overlaps(ground)) {
+                return false;
+            }
+        }
+    }
+    const Vec3 working_room(kWorkingRoomM, 0.0F, kWorkingRoomM);
+    for (const std::vector<AABox> *worked : {&machine_travel_, &worked_}) {
+        for (const AABox &spot : *worked) {
+            const AABox room(spot.mMin - working_room, spot.mMax + working_room);
+            for (const AABox &footing : footings) {
+                if (footing.Overlaps(room)) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
@@ -111,6 +146,23 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
     }
     if (!floor_under(top_floor + ramp_foot)) {
         return false;
+    }
+    {
+        const Vec3 base(top_floor);
+        const Vec3 post_foot = base + across * 0.95F;
+        AABox stand = AABox::sFromTwoPoints(base + stand_at - across * 0.6F - run * 0.6F,
+                                            base + stand_at + across * 0.6F + run * 0.6F + Vec3(0.0F, kStandM, 0.0F));
+        stand.Encapsulate(base + ramp_foot - run * 0.5F);
+        stand.Encapsulate(base + ramp_foot + run * 0.5F);
+        const std::vector<AABox> footings{
+            AABox::sFromTwoPoints(post_foot - Vec3(0.1F, 0.0F, 0.1F), post_foot + Vec3(0.1F, kTopPostM, 0.1F)),
+            stand,
+            AABox::sFromTwoPoints(Vec3(bottom_floor) - Vec3(0.1F, 0.0F, 0.1F),
+                                  Vec3(bottom_floor) + Vec3(0.1F, kBottomPostM, 0.1F)),
+        };
+        if (!clear_of_machines(top, bottom, footings)) {
+            return false;
+        }
     }
     // The body's origin under the top anchor, on the floor. The post stands
     // beside the line's start, its bracket arm reaching across to the

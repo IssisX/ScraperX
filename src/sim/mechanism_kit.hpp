@@ -12,6 +12,7 @@
 // every link is a body, a constraint or a force.
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Geometry/AABox.h>
 
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
@@ -440,6 +441,16 @@ public:
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
+    // Where the machines go, as boxes whose union holds every place a body
+    // can reach: for each guide, each of its body's parts' bounds over the
+    // whole travel; for each lever, each part's bounds at closely spaced
+    // angles over the whole swing, grown by the arc to the next. World
+    // space, from wherever each body is now. A fixture built later keeps out
+    // of these, not just out of the world at rest.
+    [[nodiscard]] std::vector<JPH::AABox> travel_envelopes() const;
+    // Where the player works: the bounds, where each is now, of every body
+    // the hands take hold of (a load, a shackle, a handle).
+    [[nodiscard]] std::vector<JPH::AABox> work_bounds() const;
 
     [[nodiscard]] std::uint32_t rope_count() const noexcept {
         return static_cast<std::uint32_t>(ropes_.size());

@@ -93,6 +93,9 @@ public:
     // is built: half a metre either side, from just over the cable to
     // kRoomBelowM under it.
     static constexpr float kRoomBelowM = 2.6F;
+    // The room around a machine, or anything the hands take hold of, that a
+    // line's footings leave to the one working it.
+    static constexpr float kWorkingRoomM = 2.0F;
 
     struct Line {
         JPH::RVec3 top;        // the top anchor
@@ -117,7 +120,9 @@ public:
         std::uint64_t rides = 0;
     };
 
-    Zipline(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::BodyID player);
+    // `reserved`: ground no line's footings may take (the places the player
+    // is put down, the crew's lanes, a practice ground).
+    Zipline(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::BodyID player, std::vector<JPH::AABox> reserved);
     ~Zipline();
     Zipline(const Zipline &) = delete;
     Zipline &operator=(const Zipline &) = delete;
@@ -153,10 +158,24 @@ public:
 private:
     [[nodiscard]] bool floor_under(JPH::RVec3 at) const;
     [[nodiscard]] bool room_along(JPH::RVec3 top, JPH::RVec3 bottom) const;
+    // Out of every machine's way: the cable with the rider's room under it
+    // clear of where the kit's guides and levers carry their bodies, and the
+    // footings (the posts, the stand and its ramp, each a box from the
+    // floor) kWorkingRoomM clear of that and of everything the hands take
+    // hold of, so a fixture never stands where a machine is worked, and off
+    // the reserved ground.
+    [[nodiscard]] bool clear_of_machines(JPH::RVec3 top, JPH::RVec3 bottom,
+                                         const std::vector<JPH::AABox> &footings) const;
 
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
     JPH::BodyID player_;
+    // The kit's travel envelopes, taken when the lines go up (the zipline is
+    // built after every machine): a cage parked at its bottom deck still
+    // rises through the shaft above it.
+    std::vector<JPH::AABox> machine_travel_;
+    std::vector<JPH::AABox> worked_;
+    std::vector<JPH::AABox> reserved_;
     std::vector<Line> lines_;
     JPH::Ref<JPH::SliderConstraint> slider_;
     JPH::Vec3 hands_offset_ = JPH::Vec3::sZero();

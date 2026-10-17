@@ -7,6 +7,7 @@
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CompoundShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
@@ -1150,6 +1151,85 @@ void Kit::apply_limits(Guide &guide) {
 }
 
 // ---- ropes, catches, bodies -------------------------------------------------
+
+std::vector<JPH::AABox> Kit::travel_envelopes() const {
+    // A lever's swing is sampled finely enough that between two samples no
+    // point of the body moves more than 2 kSwingSlackM along its arc (reach
+    // times the step), and each sample's bounds are grown by half that.
+    constexpr float kSwingSlackM = 0.1F;
+    constexpr int kMaxSwingSamples = 1024;
+    const JPH::Vec3 unit_scale = JPH::Vec3::sReplicate(1.0F);
+    // Each part's bounds with the body's centre of mass at `com`, one by
+    // one: a beam and the rods hung off its ends are not one box.
+    const auto parts_at = [&](const JPH::Shape &shape, const JPH::RMat44 &com, const float grow,
+                              std::vector<JPH::AABox> &out) {
+        if (shape.GetType() == JPH::EShapeType::Compound) {
+            for (const JPH::CompoundShape::SubShape &sub : static_cast<const JPH::CompoundShape &>(shape).GetSubShapes()) {
+                JPH::AABox box = sub.mShape->GetWorldSpaceBounds(com * sub.GetLocalTransformNoScale(unit_scale), unit_scale);
+                box.ExpandBy(JPH::Vec3::sReplicate(grow));
+                out.push_back(box);
+            }
+            return;
+        }
+        JPH::AABox box = shape.GetWorldSpaceBounds(com, unit_scale);
+        box.ExpandBy(JPH::Vec3::sReplicate(grow));
+        out.push_back(box);
+    };
+    std::vector<JPH::AABox> envelopes;
+    std::vector<JPH::AABox> parts;
+    for (const Guide &guide : guides_) {
+        const JPH::Body &body = jolt_body(guide.body);
+        const float now = guide.slider->GetCurrentPosition();
+        parts.clear();
+        parts_at(*body.GetShape(), body.GetCenterOfMassTransform(), 0.0F, parts);
+        for (const JPH::AABox &part : parts) {
+            JPH::AABox swept = part;
+            swept.Translate(guide.axis * (guide.min_travel - now));
+            JPH::AABox far_end = part;
+            far_end.Translate(guide.axis * (guide.max_travel - now));
+            swept.Encapsulate(far_end);
+            envelopes.push_back(swept);
+        }
+    }
+    for (const Lever &lever : levers_) {
+        const JPH::Body &body = jolt_body(lever.body);
+        const JPH::Vec3 axis = lever.hinge->GetLocalSpaceHingeAxis1();
+        const float now = lever.hinge->GetCurrentAngle();
+        const float low = lever.hinge->GetLimitsMin();
+        const float range = lever.hinge->GetLimitsMax() - low;
+        const JPH::AABox rest = body.GetWorldSpaceBounds();
+        float reach = 0.0F;
+        for (int corner = 0; corner < 8; ++corner) {
+            const JPH::Vec3 point((corner & 1) != 0 ? rest.mMax.GetX() : rest.mMin.GetX(),
+                                  (corner & 2) != 0 ? rest.mMax.GetY() : rest.mMin.GetY(),
+                                  (corner & 4) != 0 ? rest.mMax.GetZ() : rest.mMin.GetZ());
+            reach = std::max(reach, JPH::Vec3(point - JPH::Vec3(lever.pivot)).Length());
+        }
+        const int samples =
+            std::clamp(static_cast<int>(std::ceil(reach * range / (2.0F * kSwingSlackM))), 1, kMaxSwingSamples);
+        const float step = range / static_cast<float>(samples);
+        const float slack = 0.5F * reach * step + 0.01F;
+        const JPH::RMat44 at_rest = body.GetCenterOfMassTransform();
+        for (int i = 0; i <= samples; ++i) {
+            const float angle = low + step * static_cast<float>(i) - now;
+            const JPH::RMat44 turned = JPH::RMat44::sTranslation(lever.pivot) *
+                                       JPH::RMat44::sRotation(JPH::Quat::sRotation(axis, angle)) *
+                                       JPH::RMat44::sTranslation(-lever.pivot) * at_rest;
+            parts_at(*body.GetShape(), turned, slack, envelopes);
+        }
+    }
+    return envelopes;
+}
+
+std::vector<JPH::AABox> Kit::work_bounds() const {
+    std::vector<JPH::AABox> bounds;
+    for (std::uint32_t index = 0; index < bodies_.size(); ++index) {
+        if (bodies_[index].carry != CarryKind::None) {
+            bounds.push_back(jolt_body(BodyIndex{index}).GetWorldSpaceBounds());
+        }
+    }
+    return bounds;
+}
 
 JPH::Body &Kit::jolt_body(const BodyIndex body) const noexcept {
     // Every kit body is created by, and outlives nothing but, this kit; the

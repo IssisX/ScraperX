@@ -597,9 +597,23 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
     }
 }
 
+namespace {
+// The hook rack on the 220 ring's south band, and the member over the well
+// its hook is set for: where a hook fired from the rack first bites, over
+// well C's dumpster.
+const JPH::Vec3 kHookRackBase(-22.4F, 220.25F, -127.6F);
+const JPH::Vec3 kHookPracticeMember(-10.15F, 224.5F, -131.75F);
+} // namespace
+
+JPH::AABox Simulation::PhysicsWorld::hook_practice_ground() noexcept {
+    JPH::AABox ground = JPH::AABox::sFromTwoPoints(kHookRackBase, kHookPracticeMember);
+    ground.ExpandBy(JPH::Vec3(2.0F, 0.0F, 2.0F));
+    return ground;
+}
+
 // The rack on the 220 ring (deck top 220.25) and the hook gun on its shelf.
 void Simulation::PhysicsWorld::build_hook_rack() {
-    const JPH::RVec3 base(-22.4, 220.25, -127.6);
+    const JPH::RVec3 base(kHookRackBase);
     std::vector<kit::Part> rack;
     const auto box = [](const JPH::Vec3 half, const JPH::Vec3 offset, const kit::Material material) {
         kit::Part part;

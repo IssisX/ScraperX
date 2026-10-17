@@ -283,6 +283,10 @@ private:
     // ---- the grappling hook (see kHookLaunchMps) ---------------------------
 
     void build_hook_rack();
+    // The ground the hook rack is set for: the band from the rack to the
+    // member over the well its hook first bites (kHookPracticeMember), 2 m
+    // about. A post on it would take the rope's every sweep from the rack.
+    [[nodiscard]] static JPH::AABox hook_practice_ground() noexcept;
 
     [[nodiscard]] bool hook_take_in_reach(const JPH::BodyInterface &bodies) const noexcept;
 
