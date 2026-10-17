@@ -1,24 +1,28 @@
 name: Android startup replay (diagnostic, not release)
+run-name: Android replay — ${{ inputs.device_profile }} — APK ${{ inputs.apk_source }}
 
 on:
-  push:
-    branches: [ChatGPT]
-    paths: [.github/workflows/android-startup-replay.yml]
   workflow_dispatch:
     inputs:
+      device_profile:
+        description: Representative modern device path
+        default: compact-api34
+        required: true
+        type: choice
+        options: [compact-api34, tablet-api36, foldable-api35]
       apk_run:
         description: Existing Android compatibility APK build run
-        default: '39051032030'
+        default: '39066063158'
         required: true
         type: string
       apk_source:
         description: Full source SHA embedded in that APK
-        default: fa8e3a40b0efb93134cb2be0449d5802a2c93f3e
+        default: f3544cb10f12e0ae2b12f73af5cdfe06224f0bfb
         required: true
         type: string
       startup_font_scale:
         description: Controlled OS font-size change immediately after launching
-        default: '1.25'
+        default: 'none'
         required: true
         type: choice
         options: ['1.25', 'none']
@@ -32,12 +36,29 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      APK_RUN: ${{ inputs.apk_run || '39051032030' }}
-      APK_SOURCE: ${{ inputs.apk_source || 'fa8e3a40b0efb93134cb2be0449d5802a2c93f3e' }}
-      STARTUP_FONT_SCALE: ${{ inputs.startup_font_scale || '1.25' }}
+      APK_RUN: ${{ inputs.apk_run }}
+      APK_SOURCE: ${{ inputs.apk_source }}
+      STARTUP_FONT_SCALE: ${{ inputs.startup_font_scale }}
+      DEVICE_PROFILE: ${{ inputs.device_profile }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select the matching device path
+        id: device
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          profiles = {
+              'compact-api34': (34, 'pixel_6a', '1440x720', ''),
+              'tablet-api36': (36, 'pixel_c', '1920x1200', '--display-route'),
+              'foldable-api35': (35, '7.6in Foldable', '1080x2092', ''),
+          }
+          api, hardware, resize, route = profiles[os.environ['DEVICE_PROFILE']]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key, value in dict(api=api, hardware=hardware, resize=resize, route=route).items():
+                  print(f'{key}={value}', file=output)
+          PY
       - name: Fetch identified existing APK without rebuilding native code
         shell: bash
         run: |
@@ -59,25 +80,26 @@ jobs:
           sha256sum artifacts/existing-apk/ScraperX-emulator.apk > artifacts/startup-replay/APK-SHA256.txt
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
-      - name: Fresh foldable boot with continuous configuration event capture
+      - name: Fresh device boot with continuous configuration event capture
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
-          api-level: 35
+          api-level: ${{ steps.device.outputs.api }}
           target: google_apis
           arch: x86_64
-          profile: 7.6in Foldable
+          profile: ${{ steps.device.outputs.hardware }}
           cores: 2
           ram-size: 3072M
           emulator-boot-timeout: 300
           disable-linux-hw-accel: false
           emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim -camera-back none
-          pre-emulator-launch-script: bash ci/android_emulator_host.sh artifacts/startup-replay '7.6in Foldable'
+          pre-emulator-launch-script: bash ci/android_emulator_host.sh artifacts/startup-replay '${{ steps.device.outputs.hardware }}'
           script: >-
             python3 ci/android_startup_replay.py
             --apk artifacts/existing-apk/ScraperX-emulator.apk
-            --source "${APK_SOURCE}" --profile foldable-api35
-            --resize 1080x2092 --output artifacts/startup-replay
+            --source "${APK_SOURCE}" --profile "${DEVICE_PROFILE}"
+            --resize ${{ steps.device.outputs.resize }} --output artifacts/startup-replay
             --startup-font-scale "${STARTUP_FONT_SCALE}"
+            ${{ steps.device.outputs.route }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

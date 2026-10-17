@@ -9,12 +9,98 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from prepare_android_emulator_export import prepare
+from android_display_route import exercise_display
 from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, current_window_focus, immersive_confirmation_point, read_observations, runtime_errors, screen_observation
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidObservationTests(unittest.TestCase):
+    def test_first_touch_uses_focused_fresh_menu_instead_of_pre_capture_controls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            old = {'instance': 'one', 'ready': True, 'native_loaded': True,
+                   'android_window_focus': True, 'paused': False, 'tick': 10,
+                   'controls': {'crouch': {}}, 'menu_buttons': []}
+            focused = dict(old, paused=True, controls={},
+                           menu_buttons=[{'text': 'RESUME', 'point': [33, 44]}])
+            resumed = dict(old, tick=11, controls={'crouch': {}, 'jump': {}, 'pause': {}})
+            session.prepare_input_focus = MagicMock()
+            session.tap = MagicMock()
+
+            def observed(label, predicate, **kwargs):
+                if label == 'startup touch retains a focused native instance':
+                    for invalid in (dict(focused, instance='recreated'),
+                                    dict(focused, android_window_focus=False),
+                                    dict(focused, android_window_focus=None),
+                                    dict(focused, native_loaded=False)):
+                        self.assertFalse(predicate(invalid))
+                    self.assertTrue(predicate(focused))
+                    return focused
+                self.assertTrue(predicate(resumed))
+                return resumed
+
+            session.wait = observed
+            self.assertEqual(session.prepare_first_touch(old), resumed)
+            session.prepare_input_focus.assert_called_once_with()
+            session.tap.assert_called_once_with([33, 44])
+
+    def test_tablet_rotation_retains_physical_geometry_and_restores_framebuffer(self):
+        test = self
+
+        class DisplaySession:
+            physical = [2560, 1800]
+
+            def __init__(self, output):
+                self.output, self.receipt = output, {}
+                self.rotation = self.touch_count = 0
+                self.frame_key = None
+                self.state = {'instance': 'one', 'ready': True, 'paused': False,
+                    'sequence': 1, 'tick': 10, 'window': [800, 450], 'crouched': False,
+                    'controls': {'crouch': {}, 'jump': {}, 'pause': {}}, 'menu_buttons': [1]}
+
+            def adb(self, *args):
+                if args[:2] == ('emu', 'rotate'):
+                    # The observed Android policy blocks reverse rotation in
+                    # the small phone-class override, even with a valid sensor.
+                    test.assertEqual(self.state['window'], self.physical)
+                    self.rotation = (self.rotation + 1) % 4
+                elif args == ('shell', 'dumpsys', 'window', 'displays'):
+                    return f'mRotation={self.rotation}\n'.encode()
+                elif args[-1] == 'expand-notifications':
+                    self.state['paused'] = True
+                return b'OK\n'
+
+            def wait(self, label, predicate, **kwargs):
+                self.state['sequence'] += 3
+                test.assertTrue(predicate(self.state), label)
+                return dict(self.state)
+
+            def resume(self, state):
+                self.state.update(paused=False, tick=self.state['tick'] + 1)
+                return dict(self.state)
+
+            def resize_display(self, state, size, label, **kwargs):
+                self.state['window'] = list(self.physical) if size == 'reset' else [int(v) for v in size.split('x')]
+                return dict(self.state)
+
+            def button(self, state, name):
+                test.assertEqual(name, 'crouch')
+                self.touch_count += 1
+                self.state['crouched'] = not self.state['crouched']
+
+            def capture(self, name):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            session = DisplaySession(Path(directory))
+            result = exercise_display(session, dict(session.state))
+            self.assertEqual(result['instance'], 'one')
+            self.assertEqual(result['window'], [800, 450])
+            self.assertEqual(session.rotation, 0)
+            self.assertEqual(session.touch_count, 2)
+            self.assertFalse(result['crouched'])
+
     @staticmethod
     def tutorial_button(**attrs):
         values = {'package': 'com.android.systemui', 'resource-id': 'com.android.systemui:id/ok',

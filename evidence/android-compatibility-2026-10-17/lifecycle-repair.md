@@ -178,3 +178,38 @@ readback. Button listeners only record signals; they never activate a button,
 resume the tree or change native state. This observation must distinguish a
 missing platform event, failed GUI activation or immediate re-pause before a
 repair is selected. Shipping phone exports do not install this observer.
+
+## Focus preparation and real tablet rotation geometry
+
+Run39066063158/sourcef3544cb: foldable passed33 checks. The compact phone's
+first touch timed out with actual Java window focus false and no pointer events
+after a slow opening screenshot. The artifact service failed to upload that
+job's files, so the particular foreign window is unknown. The driver now resolves
+actual OS focus after the screenshot and requires a fresh focused observation
+from the retained native instance before using current Resume/control bounds.
+Existing exact tutorial/crash-dialog handling remains bounded; unknown windows
+and application crashes still fail.
+
+The tablet passed shade pause/freeze/Resume and28 checks, then rejected the
+expected reverse rotation. Its OS dump recorded predicted/proposed rotation2,
+actual rotation0 and mAllowAllRotations=false with the CI800x450 override
+classified as sw225dp. The rotation injection worked; the test geometry selected
+phone policy. Android's real tablet resource enables all rotations at sw600dp.
+Restore physical tablet metrics before the first rotation, retain rotation2,
+same-instance and real post-rotation touch assertions, then restore CI bounds.
+
+Primary owners:
+[DisplayRotation.getAllowAllRotations](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/services/core/java/com/android/server/wm/DisplayRotation.java#L1247),
+[tablet config_allowAllRotations](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/core/res/res/values-sw600dp/config.xml#L34).
+Raw observations remain in Q/tablet-f3544cb-artifact and
+Q/emulator-repair-f3544cb/compact-api34-terminal.log, where Q is
+/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017.
+
+Root command after these corrections:
+`PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s ci -p test_android_compatibility.py -v`:
+`Ran 22 tests ... OK`. The new checks reject stale/unfocused/recreated first-touch
+state and refuse sensor rotation under phone-class tablet metrics while requiring
+the original identity, rotation restoration and two ordinary crouch interactions.
+Android runtime acceptance remains pending. Targeted manual replays reuse the
+built f3544cb APK and record their distinct harness revision; no native, sensor,
+force, input threshold or release gate changes are involved.

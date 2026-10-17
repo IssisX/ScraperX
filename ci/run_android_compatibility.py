@@ -290,6 +290,17 @@ class Session:
                          lambda s: not s['paused'] and {'crouch', 'jump', 'pause'} <= s['controls'].keys(),
                          after=state)
 
+    def prepare_first_touch(self, state):
+        # Full-size screencap/export observation can outlast Android's delayed
+        # fullscreen tutorial. Resolve actual OS focus after those operations,
+        # then use fresh menu/control coordinates from the retained instance.
+        self.prepare_input_focus()
+        state = self.wait('startup touch retains a focused native instance',
+            lambda s: s['instance'] == state['instance'] and s['ready'] and
+            s['native_loaded'] and s.get('android_window_focus') is True,
+            after=state)
+        return self.first_controls(state)
+
     def button(self, state, name):
         if name not in state['controls']:
             raise RuntimeError(f'Android compatibility: required touch button {name!r} absent')
@@ -396,17 +407,13 @@ def exercise(args, session):
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('normal Main initializes with real native module',
                          lambda s: s['ready'] and s['native_loaded'], timeout=240)
-    if session.prepare_input_focus():
-        before = state
-        state = session.wait('external emulator dialog dismissal retains native instance',
-                             lambda s: s['ready'] and s['instance'] == before['instance'], after=before)
-    state = session.first_controls(state)
     session.require_runtime_clean()
     if not math.isclose(state['fixed_step_s'], 1 / 90, abs_tol=1e-7):
         raise RuntimeError(f'Android compatibility: native step changed: {state["fixed_step_s"]}')
     if state['source']['source_sha'] != args.source:
         raise RuntimeError(f'Android compatibility: unexpected APK source: {state["source"]!r}')
     session.capture('opening')
+    state = session.prepare_first_touch(state)
     check_touch_bounds(state)
     initial_window = state['window']
     # Exercise actual touch at full device size before reducing only the CI

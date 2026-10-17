@@ -54,6 +54,12 @@ def exercise_display(session, state):
                          after=state)
     state = session.resume(state)
 
+    # The small software-rendering window can classify a tablet as a phone
+    # (sw225dp) and disable 180-degree rotation. Exercise physical rotation
+    # with the actual tablet metrics, then restore the functional framebuffer.
+    functional_window = list(state['window'])
+    state = session.resize_display(state, 'reset',
+        'physical tablet geometry restored before sensor rotation')
     original = _rotation(session, 'rotation-original')
     performed = 0
     before = state
@@ -84,4 +90,8 @@ def exercise_display(session, state):
         session.frame_key = None
     state = session.wait('restored device rotation retains native instance',
                          lambda s: s['instance'] == instance and s['ready'], after=state)
-    return session.resume(state) if state['paused'] else state
+    state = session.resume(state) if state['paused'] else state
+    return session.resize_display(state,
+        f'{functional_window[0]}x{functional_window[1]}',
+        'functional framebuffer restored after physical tablet rotation',
+        expected=functional_window)

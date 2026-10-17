@@ -228,3 +228,17 @@ an observed startup activity recreation before Main produces any observations.
 Its complete display/lifecycle route is unchanged. No configuration input or
 launch retry is added; the events must identify the actual recreation reason
 before another activity configuration flag is considered.
+
+The manual diagnostic replay selects compact API34, tablet API36 or foldable
+API35 geometry and reuses an identified existing APK. It records the separate
+APK and harness revisions. This permits affected lifecycle paths to run before
+one complete final matrix, without rebuilding unchanged native code or repeating
+the long machine route for each harness edit. It never substitutes for final
+source-matched release acceptance.
+
+The first touch now requires fresh native-instance and actual window-focus
+readback after the opening screenshot. Tablet rotation restores real tablet
+metrics before exercising the physical sensor, then restores the functional CI
+framebuffer afterward. A phone-sized test override must not select Android's
+phone-only reverse-rotation policy. Rotation, touch and native-identity checks
+remain required; no application orientation or sensor setting is weakened.
