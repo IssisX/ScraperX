@@ -22,6 +22,7 @@ OWNERS = {
     "warehouse_forklift_route": "scraperx_warehouse_forklift_route_tests",
     "forklift_boarding_diagnostic": "scraperx_forklift_boarding_diagnostic_tests",
     "suspended_ladder_route": "scraperx_suspended_ladder_tests",
+    "cargo_net_ground_route": "scraperx_cargo_net_tests",
     "swing_stair_route_2": "scraperx_swing_stair_route_tests",
     "split_inspection_route": "scraperx_split_inspection_route_tests",
 }

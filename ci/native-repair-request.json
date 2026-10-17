@@ -1,10 +1,7 @@
 {
-  "reason": "New normal freight arrival and real exported canopy/stock must preserve ordinary cab boarding and established truck/exchange/crane corridors. Physics actuator laws and scheduler unchanged.",
+  "reason": "Both climbing cases pass exact-source LinuxARM64 but fail current full CIx86. Capture first failed cargo topology and actual receiver hand anchors; preserve all existing inputs, force/reach limits and assertions. No gameplay physics change in this request.",
   "checks": [
-    "freight_yard_arrival",
-    "forklift_boarding",
-    "forklift_tool_exchange",
-    "warehouse_forklift_route",
-    "yard_crane_route"
+    "suspended_ladder_route",
+    "cargo_net_ground_route"
   ]
 }

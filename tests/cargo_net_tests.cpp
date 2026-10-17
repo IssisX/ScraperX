@@ -45,6 +45,24 @@ void loaded_pause(Simulation &s, double lane) {
     for(int i=0;i<samples;++i) {
         tick(s);
         const auto held=s.snapshot();
+        if (held.player_grounded || held.support_entity_id!=0 ||
+            held.traversal_state!=scraperx::sim::TraversalState::Climbing ||
+            held.traversal_support_entity_id!=scraperx::sim::CargoNet::kEntity ||
+            held.traversal_hand_constraint_count!=2 || held.player_gravity_factor!=1.0) {
+            std::cerr << "PAUSE_FAILURE lane=" << lane << " sample=" << i << " tick=" << held.tick_index
+                << " grounded=" << held.player_grounded << " support=" << held.support_entity_id
+                << " traversal=" << int(held.traversal_state) << " hand_support=" << held.traversal_support_entity_id
+                << " hands=" << held.traversal_hand_constraint_count << " gravity=" << held.player_gravity_factor
+                << " position=" << held.player_position.x << ',' << held.player_position.y << ',' << held.player_position.z
+                << " velocity=" << held.player_linear_velocity.x << ',' << held.player_linear_velocity.y << ',' << held.player_linear_velocity.z
+                << " hand0=" << held.traversal_left_hand.x << ',' << held.traversal_left_hand.y << ',' << held.traversal_left_hand.z
+                << " hand1=" << held.traversal_right_hand.x << ',' << held.traversal_right_hand.y << ',' << held.traversal_right_hand.z
+                << " force0=" << held.traversal_left_hand_force.y << " force1=" << held.traversal_right_hand_force.y
+                << " contact=" << held.support_contact_point.x << ',' << held.support_contact_point.y << ',' << held.support_contact_point.z
+                << " generations=" << held.traversal_left_hand_generation << ',' << held.traversal_right_hand_generation
+                << " side_contact=" << held.soft_side_contact_entity
+                << " foot=" << held.foot_push_active << " foot_support=" << held.foot_push_support_entity_id << '\n';
+        }
         require(!held.player_grounded && held.support_entity_id==0 &&
                 held.traversal_state==scraperx::sim::TraversalState::Climbing &&
                 held.traversal_support_entity_id==scraperx::sim::CargoNet::kEntity &&

@@ -261,6 +261,9 @@ int main() {
             <<" hands="<<v.traversal_hand_constraint_count
             <<" reach="<<distance(v.player_position,v.traversal_left_hand)<<','<<distance(v.player_position,v.traversal_right_hand)
             <<" force="<<distance(v.traversal_left_hand_force,{})<<','<<distance(v.traversal_right_hand_force,{})
+            <<" anchor0="<<v.traversal_left_hand.x<<','<<v.traversal_left_hand.y<<','<<v.traversal_left_hand.z
+            <<" anchor1="<<v.traversal_right_hand.x<<','<<v.traversal_right_hand.y<<','<<v.traversal_right_hand.z
+            <<" normal="<<v.traversal_normal.x<<','<<v.traversal_normal.y<<','<<v.traversal_normal.z
             <<" command_j="<<v.traversal_command_work_bound_j
             <<" supplied_j="<<v.traversal_actuator_positive_work_j
             <<" absorbed_j="<<v.traversal_actuator_absorbed_work_j<<'\n';
