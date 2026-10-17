@@ -14,6 +14,7 @@ on:
       - ci/android_display_route.py
       - ci/android_touch_driver.py
       - ci/test_android_touch_driver.py
+      - ci/test_android_route_navigation.py
       - ci/android_emulator_host.sh
       - ci/test_build_info.py
       - ci/prepare_chatgpt_build_info.py
@@ -100,6 +101,7 @@ jobs:
             | tee artifacts/android-compatibility-build/native-library.txt
           python3 -m unittest discover -s ci -p test_android_compatibility.py
           python3 -m unittest discover -s ci -p test_android_touch_driver.py
+          python3 -m unittest discover -s ci -p test_android_route_navigation.py
           ccache --show-stats
       - name: Check controls and export observed ordinary game
         shell: bash

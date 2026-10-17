@@ -3,6 +3,16 @@
 set -euo pipefail
 task_output="${1:?Expected emulator evidence output directory}"
 mkdir -p "${task_output}"
+python3 - "${task_output}/host-resources.json" <<'PY'
+import json, os, sys
+from pathlib import Path
+record = {'logical_cpus': os.cpu_count(), 'allowed_cpus': sorted(os.sched_getaffinity(0))}
+for path in ('/proc/meminfo', '/sys/fs/cgroup/cpu.max', '/sys/fs/cgroup/memory.max'):
+    source = Path(path)
+    if source.exists():
+        record[path] = source.read_text()
+Path(sys.argv[1]).write_text(json.dumps(record, indent=2) + '\n')
+PY
 "${ANDROID_HOME}/emulator/emulator" -accel-check | tee "${task_output}/acceleration.txt"
 AVDMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/avdmanager' | sort -V | tail -n 1)"
 test -x "${AVDMANAGER_PATH}"

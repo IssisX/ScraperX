@@ -99,3 +99,39 @@ Primary source references:
 - https://android.googlesource.com/platform/frameworks/base/+/android-7.0.0_r1/cmds/input/src/com/android/commands/input/Input.java
 - https://android.googlesource.com/platform/development/+/android-7.0.0_r1/cmds/monkey/src/com/android/commands/monkey/MonkeySourceNetwork.java
 - https://android.googlesource.com/platform/frameworks/base/+/android-16.0.0_r1/services/core/java/com/android/server/input/InputShellCommand.java
+
+## Runtime classification and next bounded repairs
+
+Actual fa8e3a4 run39051032030: compact API24 passed21 checks, proving the protocol
+handshake repair through real Android controls and lifecycle. Tall API36 recorded
+945 nonzero-input native ticks but oscillated around the forklift doorway. Tablet
+API36 passed15 checks before an Android SystemUI ANR dialog covered Resume; the
+retained failure screenshot, not an assumed game-menu defect, establishes the
+visible obstruction. Fold API35 destroyed/recreated the activity before native
+startup, then reused an engine already terminating. The original OS configuration
+mask was not captured; its exact cause remains unknown.
+
+The same immutable fa APK passed23 fold checks in targeted natural startup replay
+39052199202 (harness0c966f8). No app relaunch event identified the prior trigger.
+Harness dfad677 now applies an explicit real Android font-scale update after first
+launch, with continuous events and OS-setting restoration. Its result is pending;
+no production lifecycle fix is claimed.
+
+Root functional-window repair retains full-size startup and actual crouch/stand,
+large-window layout, physical fold at native dimensions and full-size final restore.
+Extended functional checks use an800x450 OS window. The game configuration and
+physics are unchanged. Ordinary host resource/memory/CPU captures retain evidence
+without suppressing ANRs. Worker dimensioned walking repair uses100ms pulses and
+actual native observation intervals; support/work/arrival/stall predicates remain.
+
+Local affected evidence: `python3 -m unittest discover -s ci -p test_android_compatibility.py`
+->9 OK; `python3 -m unittest discover -s ci -p test_android_touch_driver.py` ->7 OK;
+`python3 -m unittest discover -s ci -p test_android_route_navigation.py -v` ->6 OK.
+The route model is not Android/Jolt execution. Actual Android acceptance of these
+latest functional/navigator changes remains pending.
+
+Full proof run39048317301 on92bd194 completed110/113 native cases. The failures
+were catch_net_model, catch_net_player and split_inspection_recovery, matching the
+separately deferred scope. This run is red; candidate builds and successful focused
+Android jobs do not replace required full release acceptance. No catch tests or
+expectations are weakened, skipped or repaired by this Android change.

@@ -70,11 +70,36 @@ def _fresh(session, label, before, *, ticks=1, timeout=20):
     return state
 
 
+def _walking_intent(position, velocity, target, caps, interval_s):
+    """Convert SI observations to normalized speed intent at observer cadence.
+
+    Native locomotion approaches intent * 5.5 m/s with finite acceleration
+    (simulation/constants.hpp). It already controls velocity; a per-tick PD
+    command becomes an unstable second velocity controller at Android cadence.
+    Allow at least two observed intervals to close the remaining distance and
+    predict only 150 ms of existing motion before requesting that speed.
+    """
+    px, pz = _finite(position, 'walking position')
+    vx, vz = _finite(velocity, 'walking velocity')
+    tx, tz = _finite(target, 'walking target')
+    cap_x, cap_z = _finite(caps, 'walking caps')
+    interval_s, = _finite((interval_s,), 'walking observation interval')
+    if interval_s <= 0 or not (0 < cap_x <= 1 and 0 < cap_z <= 1):
+        raise RuntimeError('Freight route: positive observation interval and caps in (0, 1] required')
+    horizon_s = max(0.5, 2.0 * interval_s)
+    prediction_s = min(0.15, interval_s)
+    wx = max(-cap_x, min(cap_x, (tx - px - prediction_s * vx) / (5.5 * horizon_s)))
+    wz = max(-cap_z, min(cap_z, (tz - pz - prediction_s * vz) / (5.5 * horizon_s)))
+    scale = max(1.0, math.hypot(wx, wz))
+    return wx / scale, wz / scale
+
+
 def _walk(session, state, label, target, *, caps, arrived, timeout=240):
     """Bounded feedback walking; every pulse ends with Android ACTION_UP."""
     deadline = time.monotonic() + timeout
     best = math.inf
     stalled = 0
+    interval_s = 0.4  # Initial estimate; subsequent pulses use actual native ticks.
     for pulse in range(100):
         if arrived(state):
             return state
@@ -90,13 +115,14 @@ def _walk(session, state, label, target, *, caps, arrived, timeout=240):
             stalled += 1
         _require(stalled < 12, f'{label}: no 3.5 cm progress in twelve pulses; '
                  f'target={(x, z)!r}, best_distance_m={best:.3f}', state)
-        # Same proportional/velocity damping as the native arrival replay.
-        wx = max(-caps[0], min(caps[0], 1.2 * (x - px) - 0.45 * vx))
-        wz = max(-caps[1], min(caps[1], 1.2 * (z - pz) - 0.45 * vz))
+        wx, wz = _walking_intent((px, pz), (vx, vz), (x, z), caps, interval_s)
         endpoint = stick_endpoint(state, wx, wz)
         before = state
-        _swipe(session, state['stick'], endpoint, 650)
+        _swipe(session, state['stick'], endpoint, 100)
         state = _fresh(session, f'{label}: observed native pulse {pulse + 1}', before)
+        step_s, = _finite((state['fixed_step_s'],), 'native fixed step')
+        _require(step_s > 0, f'{label}: positive native fixed step required', state)
+        interval_s = (state['tick'] - before['tick']) * step_s
     raise RuntimeError(f'Freight route: {label}: exceeded 100 touch pulses; actual state={state!r}')
 
 

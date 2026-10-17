@@ -121,11 +121,23 @@ on the software GPU. Basic movement now releases after the original displacement
 check and actual nonzero native input, rather than waiting an unnecessary extra
 duration. Camera input similarly waits for its original yaw response.
 
-The tall profile's long forklift/crane route uses a real960x540 Android window,
-then restores and requires the original full-size window before ordinary input
-and lifecycle checks. Startup and layout still run at the original device size.
-This controls emulator rendering cost; the app's quality, render scale, shadows,
-content, forces and solver are unchanged. It provides no phone-performance claim.
+Each profile starts at its actual full-size window and must crouch/stand through
+real touch before extended functional checks use a real800x450 Android window.
+The API36 tablet previously displayed Android's “System UI isn't responding”
+dialog over the game; its screenshot reported0.1FPS and14937.5ms frame p95.
+Reducing only the disposable emulator's display bounds controls software-rendering
+cost. The driver still requires a separate large-window layout check, restores
+native display dimensions before physical fold/unfold, and requires the original
+window again after process restart. All transitions must preserve the expected
+native instance. Failures restore the owned display override during cleanup.
+The app's quality, render scale, shadows, content, forces and solver are unchanged.
+This provides no physical-phone performance claim.
+
+Machine-route walking uses100ms held pulses, observed native time between
+samples, and dimensioned normalized speed requests. The previous650ms controller
+oscillated around the forklift door on the actual tall emulator. The sampled
+finite-acceleration regression can reject that controller, but Android arrival,
+actual cab/booth support, work, neutral and exit checks remain authoritative.
 Device jobs have a40-minute maximum for software-rendered functional checks;
 all position, support, force/work, cleanup and persistence conditions still apply.
 
@@ -138,3 +150,11 @@ configuration-change mask; `wm_destroy_activity` records a reason. This is
 necessary when ordinary logcat shows stock Godot teardown before startup but
 does not identify why Android recreated the activity. No failed launch is
 retried, and a diagnostic run never replaces required release checks.
+
+The startup replay optionally applies a real Android system font-size change
+immediately after the first activity launch. It records original/requested/readback
+values, captures continuous lifecycle events, and restores the original OS setting.
+A natural replay of the identified APK passed23 checks without reproducing the
+spontaneous startup teardown; that pass does not identify the original trigger.
+The controlled configuration input is diagnostic, not a game-state setter or a
+launch retry. No activity configuration mask is changed without supporting evidence.

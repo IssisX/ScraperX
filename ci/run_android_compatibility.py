@@ -106,6 +106,7 @@ class Session:
         self.frame = None
         self.frame_error = None
         self.touch_driver = None
+        self.display_overridden = False
 
     def adb(self, *args, timeout=30):
         command = ['adb', *map(str, args)]
@@ -172,6 +173,23 @@ class Session:
             api = int(self.receipt['ro.build.version.sdk'])
             self.touch_driver = TouchDriver(self, api)
         return self.touch_driver.swipe(start, end, duration_ms, until=until)
+
+    def resize_display(self, state, size, label, *, expected=None):
+        # Track cleanup ownership separately from actual display evidence.
+        # The observed Android window remains the acceptance authority.
+        if size != 'reset':
+            self.display_overridden = True
+        self.adb('shell', 'wm', 'size', size)
+        if size == 'reset':
+            self.display_overridden = False
+        self.frame_key = None
+        before = state
+        state = self.wait(label, lambda s: s['instance'] == before['instance'] and
+            (s['window'] == expected if expected is not None else s['window'] != before['window']),
+            after=before)
+        state = self.first_controls(state)
+        check_touch_bounds(state)
+        return state
 
     def first_controls(self, state):
         if state['paused']:
@@ -295,35 +313,24 @@ def exercise(args, session):
     session.capture('opening')
     check_touch_bounds(state)
     initial_window = state['window']
-    if args.freight_route:
-        # Long functional routes use a smaller real Android window on the CI
-        # software GPU. No app graphics/physics setting changes. Full-size
-        # startup/layout and subsequent input/lifecycle checks remain intact.
-        before = state
-        session.adb('shell', 'wm', 'size', '960x540')
-        try:
-            state = session.wait('machine test window retains actual native instance',
-                lambda s: s['instance'] == before['instance'] and s['window'] != initial_window,
-                after=before)
-            state = session.first_controls(state)
-            check_touch_bounds(state)
-            session.capture('machine-test-window')
-            from android_freight_route import exercise_forklift
-            state = exercise_forklift(session, state)
-            if args.crane_route:
-                from android_crane_route import exercise_crane
-                state = exercise_crane(session, state)
-        finally:
-            session.adb('shell', 'wm', 'size', 'reset')
-        state = session.wait('full-size Android window restored after real machine route',
-            lambda s: s['instance'] == before['instance'] and s['window'] == initial_window,
-            after=state)
-        state = session.first_controls(state)
+    # Exercise actual touch at full device size before reducing only the CI
+    # framebuffer. Full-size software rendering overloaded Android SystemUI
+    # in the API36 tablet run; this is not a phone performance measurement.
     before = state
     session.button(state, 'crouch')
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
     session.button(state, 'crouch')
     state = session.wait('ordinary touch stands native player', lambda s: not s['crouched'], after=state)
+    state = session.resize_display(state, '800x450',
+        'functional Android test window retains actual native instance')
+    functional_window = state['window']
+    session.capture('functional-test-window')
+    if args.freight_route:
+        from android_freight_route import exercise_forklift
+        state = exercise_forklift(session, state)
+        if args.crane_route:
+            from android_crane_route import exercise_crane
+            state = exercise_crane(session, state)
     before = state
     session.button(state, 'jump')
     state = session.wait('ordinary touch jump produces upward velocity',
@@ -365,36 +372,35 @@ def exercise(args, session):
     state = session.wait('background and return preserve pause and native instance',
                          lambda s: s['paused'] and s['instance'] == before['instance'], after=before)
     state = session.resume(state)
-    before = state
     # Resize is a real Android configuration change. Native state must survive.
-    session.adb('shell', 'wm', 'size', args.resize)
-    state = session.wait('Android resize updates layout without replacing native instance',
-                         lambda s: s['window'] != before['window'] and s['instance'] == before['instance'],
-                         after=before)
+    state = session.resize_display(state, args.resize,
+        'Android resize updates layout without replacing native instance')
     session.capture('resized')
-    if state['paused']:
-        state = session.resume(state)
-    check_touch_bounds(state)
-    session.adb('shell', 'wm', 'size', 'reset')
-    state = session.wait('reset Android display restores its original bounds',
-                         lambda s: s['window'] == initial_window, after=state)
-    if state['paused']:
-        state = session.resume(state)
+    state = session.resize_display(state, '800x450',
+        'functional Android bounds return after large-window layout check', expected=functional_window)
     if args.profile.startswith('foldable'):
+        # A display-size override would mask the physical fold's changing
+        # panel dimensions. Restore native device bounds for this check.
+        state = session.resize_display(state, 'reset',
+            'native display restored before physical fold', expected=initial_window)
         state = session.fold(state)
+        state = session.resize_display(state, '800x450',
+            'functional bounds restored after physical fold', expected=functional_window)
     if args.profile.startswith('tall'):
         state = session.cutout(state)
     if args.display_route:
         from android_display_route import exercise_display
         state = exercise_display(session, state)
+    before = state
     session.adb('shell', 'am', 'force-stop', PACKAGE)
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('process restart reloads persisted player settings',
                          lambda s: s['instance'] != before['instance'] and s['ready'] and
                          s['settings_sha256'] == settings_hash, after=before, timeout=240)
+    state = session.resize_display(state, 'reset',
+        'reset Android display restores original bounds after process restart', expected=initial_window)
     session.capture('restarted')
     session.require_runtime_clean()
-    session.adb('shell', 'wm', 'size', 'reset')
     session.receipt['status'] = 'passed'
 
 
@@ -412,9 +418,11 @@ def main():
     if args.crane_route and not args.freight_route:
         parser.error('--crane-route requires ordinary --freight-route arrival first')
     session = Session(args.output)
+    primary_failed = False
     try:
         exercise(args, session)
     except BaseException as error:
+        primary_failed = True
         session.receipt.update(status='failed', error=str(error))
         try:
             session.capture('failure')
@@ -423,15 +431,23 @@ def main():
             session.receipt['diagnostic_error'] = str(diagnostic_error)
         raise
     finally:
+        cleanup_errors = []
         if session.touch_driver is not None:
             try:
                 session.touch_driver.close()
             except Exception as error:
                 session.receipt['touch_driver_close_error'] = str(error)
-                session.receipt['status'] = 'failed'
-                session.save()
-                raise
+                cleanup_errors.append('touch driver close: ' + str(error))
+        if session.display_overridden:
+            try:
+                session.adb('shell', 'wm', 'size', 'reset')
+            except Exception as error:
+                cleanup_errors.append('restore Android display: ' + str(error))
+        if cleanup_errors:
+            session.receipt.update(status='failed', cleanup_errors=cleanup_errors)
         session.save()
+        if cleanup_errors and not primary_failed:
+            raise RuntimeError('Android compatibility cleanup failed: ' + '; '.join(cleanup_errors))
 
 
 if __name__ == '__main__':
