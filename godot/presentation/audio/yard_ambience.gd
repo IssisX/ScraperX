@@ -139,6 +139,9 @@ func _air_loop(kind: int) -> AudioStreamWAV:
 	data.resize(body * 2)
 	for i in body:
 		data.encode_s16(i * 2, int(samples[i] * gain * 32767.0))
+	# Godot 4.7 includes loop_end in decoding, then resumes at sample 1.
+	data.resize(data.size() + 2)
+	data.encode_s16(body * 2, data.decode_s16(0))
 	var stream := AudioStreamWAV.new()
 	stream.resource_name = "yard_sheltered_air" if kind == 0 else "yard_salvage_air"
 	stream.format = AudioStreamWAV.FORMAT_16_BITS

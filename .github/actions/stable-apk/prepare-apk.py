@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Set an increasing Android version without rebuilding or changing game payloads."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -12,6 +13,7 @@ VERSION_CODE_ID = 0x0101021B
 EPOCH = 1577836800  # 2020-01-01; leaves decades of headroom in Android's integer.
 LIMIT = 2100000000
 BUILD_INFO = "assets/build_info.json"
+SPARSE_PACK = "assets/assets.sparsepck"
 SIGNATURE = r"META-INF/(?:[^/]+\.(?:RSA|DSA|EC|SF)|MANIFEST\.MF)"
 
 
@@ -45,6 +47,41 @@ def version_location(data):
     return found[0]
 
 
+def update_sparse_identity(data, payload):
+    """Keep Godot 4.7's sparse resource length/hash in sync with signed JSON."""
+    if len(data) < 104 or data[:4] != b'GDPC':
+        raise ValueError('Invalid Godot sparse pack header')
+    version, _, _, _, flags = struct.unpack_from('<IIIII', data, 4)
+    if version != 4 or flags != 6:
+        raise ValueError('Expected an unencrypted Godot V4 sparse pack')
+    offset = struct.unpack_from('<Q', data, 32)[0]
+    if offset < 104 or offset + 4 > len(data):
+        raise ValueError('Invalid Godot sparse pack directory')
+    count = struct.unpack_from('<I', data, offset)[0]
+    offset += 4
+    result = bytearray(data)
+    found = 0
+    for _ in range(count):
+        if offset + 4 > len(data):
+            raise ValueError('Truncated Godot sparse pack entry')
+        size = struct.unpack_from('<I', data, offset)[0]
+        offset += 4
+        if offset + size + 36 > len(data):
+            raise ValueError('Truncated Godot sparse pack entry')
+        path = data[offset:offset + size].rstrip(b'\0')
+        offset += size
+        if path in (b'build_info.json', b'res://build_info.json'):
+            if struct.unpack_from('<I', data, offset + 32)[0] != 0:
+                raise ValueError('Expected a plain build identity sparse entry')
+            struct.pack_into('<Q', result, offset + 8, len(payload))
+            result[offset + 16:offset + 32] = hashlib.md5(payload).digest()
+            found += 1
+        offset += 36
+    if found != 1:
+        raise ValueError('Expected exactly one build identity sparse entry')
+    return bytes(result)
+
+
 def prepare(source, target, previous=0, now=None, source_sha=None):
     if source_sha is not None and not re.fullmatch(r"[0-9a-f]{40}", source_sha):
         raise ValueError("Build source must be the full Git commit SHA")
@@ -62,14 +99,17 @@ def prepare(source, target, previous=0, now=None, source_sha=None):
             raise ValueError('No valid increasing Android version available')
         struct.pack_into('<I', manifest, attr+8, 0xFFFFFFFF)  # use typed value
         struct.pack_into('<HBBI', manifest, attr+12, 8, 0, 0x10, code)
+        identity = (json.dumps({'version_code': code, 'source_sha': source_sha}) + '\n').encode() if source_sha is not None else None
         with zipfile.ZipFile(target, 'w') as output:
             for entry in archive.infolist():
                 if re.fullmatch(SIGNATURE, entry.filename, re.I) or (source_sha is not None and entry.filename == BUILD_INFO):
                     continue
                 payload = bytes(manifest) if entry.filename == 'AndroidManifest.xml' else archive.read(entry)
+                if identity is not None and entry.filename == SPARSE_PACK:
+                    payload = update_sparse_identity(payload, identity)
                 output.writestr(entry, payload)
             if source_sha is not None:
-                output.writestr(BUILD_INFO, json.dumps({'version_code': code, 'source_sha': source_sha}) + '\n')
+                output.writestr(BUILD_INFO, identity)
     return {'source_version_code': original, 'version_code': code, 'version_policy': 'monotonic-v1'}
 
 
@@ -93,7 +133,10 @@ def verify_prepared(source, target, code, source_sha=None):
         if payload_names(original) != payload_names(final):
             raise ValueError('APK game payload entries changed')
         for name in payload_names(original):
-            if original.read(name) != final.read(name):
+            expected = original.read(name)
+            if source_sha is not None and name == SPARSE_PACK:
+                expected = update_sparse_identity(expected, final.read(BUILD_INFO))
+            if expected != final.read(name):
                 raise ValueError('APK game payload changed: ' + name)
 
 

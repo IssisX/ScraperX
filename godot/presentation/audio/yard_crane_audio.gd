@@ -110,6 +110,9 @@ static func _make_clip(kind: int) -> AudioStreamWAV:
 		var t := float(i) / SAMPLE_RATE
 		var value := .42 * (sin(TAU * hz * t) + .3 * sin(TAU * hz * 3.0 * t) + .12 * sin(TAU * hz * 7.0 * t))
 		pcm.encode_s16(i * 2, int(value * 32767.0))
+	# Godot 4.7 includes loop_end in decoding, then resumes at sample 1.
+	pcm.resize(pcm.size() + 2)
+	pcm.encode_s16(count * 2, pcm.decode_s16(0))
 	var clip := AudioStreamWAV.new()
 	clip.format = AudioStreamWAV.FORMAT_16_BITS
 	clip.mix_rate = SAMPLE_RATE

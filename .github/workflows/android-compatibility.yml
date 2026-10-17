@@ -6,10 +6,13 @@ on:
     branches: [ChatGPT]
     paths:
       - .github/workflows/android-compatibility.yml
+      - .github/actions/stable-apk/**
       - ci/*android*compatibility*
       - ci/prepare_android_emulator_export.py
       - ci/android_freight_route.py
       - ci/android_emulator_host.sh
+      - ci/test_build_info.py
+      - ci/prepare_chatgpt_build_info.py
       - CMakeLists.txt
       - cmake/ScraperXAndroidAbi.cmake
       - godot/addons/scraperx_native/scraperx_native.gdextension
@@ -17,8 +20,10 @@ on:
       - godot/export_presets.cfg
       - godot/tests/android_compatibility_probe.gd
       - godot/tests/android_responsive_controls_test.gd
+      - godot/tests/pcm_loop_boundary_test.gd
       - godot/presentation/ui/touch_controls.gd
       - godot/presentation/ui/ui_style.gd
+      - godot/presentation/audio/**
 
 permissions:
   contents: read
@@ -102,6 +107,9 @@ jobs:
           timeout 120s tools/godot/godot --headless --path godot --script res://tests/android_responsive_controls_test.gd \
             2>&1 | tee artifacts/android-compatibility-build/controls.log
           grep -E 'ANDROID_RESPONSIVE layouts=[0-9]+ failures=0' artifacts/android-compatibility-build/controls.log
+          timeout 120s tools/godot/godot --headless --path godot --script res://tests/pcm_loop_boundary_test.gd \
+            2>&1 | tee artifacts/android-compatibility-build/pcm-loops.log
+          grep -E 'PCM_LOOP checks=[0-9]+ failures=0' artifacts/android-compatibility-build/pcm-loops.log
           python3 ci/prepare_android_emulator_export.py
           tools/godot/godot --headless --path godot --export-debug "Android emulator" \
             "${GITHUB_WORKSPACE}/artifacts/android-compatibility-build/ScraperX-emulator.apk" \
@@ -159,7 +167,7 @@ jobs:
             resize: 1920x1200
           - name: foldable-api35
             api: 35
-            device: pixel_fold
+            device: 7.6in Foldable
             resize: 1080x2092
     steps:
       - uses: actions/checkout@v4
@@ -185,8 +193,8 @@ jobs:
           ram-size: 3072M
           emulator-boot-timeout: 300
           disable-linux-hw-accel: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          pre-emulator-launch-script: bash ci/android_emulator_host.sh "artifacts/android-${{ matrix.name }}"
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none
+          pre-emulator-launch-script: bash ci/android_emulator_host.sh "artifacts/android-${{ matrix.name }}" "${{ matrix.device }}"
           script: >-
             python3 ci/run_android_compatibility.py
             --apk artifacts/android-compatibility-build/ScraperX-emulator.apk

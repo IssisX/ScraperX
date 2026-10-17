@@ -1,5 +1,6 @@
 """Focused final APK identity and payload regression tests."""
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import struct
@@ -24,6 +25,18 @@ def manifest():
     struct.pack_into('<HHH', element, 24, 20, 20, 1)
     struct.pack_into('<IIIHBBI', element, 36, 0, 0, 0xffffffff, 8, 0, 0x10, 12)
     return struct.pack('<HHI', 3, 8, 8 + len(resources) + len(element)) + resources + element
+
+def sparse_pack(entries):
+    header = bytearray(104)
+    header[:4] = b'GDPC'
+    struct.pack_into('<IIIIIQQ', header, 4, 4, 4, 7, 0, 6, 0, 104)
+    directory = bytearray(struct.pack('<I', len(entries)))
+    for name, payload in entries:
+        path = name.encode() + b'\0' * (4 - len(name) % 4)
+        directory += struct.pack('<I', len(path)) + path
+        directory += struct.pack('<QQ', 0, len(payload)) + hashlib.md5(payload).digest() + struct.pack('<I', 0)
+    return bytes(header + directory)
+
 
 class FinalIdentityTest(unittest.TestCase):
     def setUp(self):
@@ -79,6 +92,37 @@ class FinalIdentityTest(unittest.TestCase):
         with zipfile.ZipFile(self.target) as out:
             self.assertEqual(out.namelist().count('assets/build_info.json'), 1)
         apk.verify_prepared(self.source, self.target, 80, SHA)
+
+    def test_final_identity_updates_only_its_sparse_pack_entry(self):
+        stale = json.dumps({'source_sha': SHA, 'version_code': None}).encode()
+        other = b'unchanged game resource'
+        original = sparse_pack([('build_info.json', stale), ('presentation/game.gdc', other)])
+        with zipfile.ZipFile(self.source, 'a') as out:
+            out.writestr(apk.SPARSE_PACK, original)
+            out.writestr(apk.BUILD_INFO, stale)
+        apk.prepare(self.source, self.target, now=apk.EPOCH + 214999999, source_sha=SHA)
+        with zipfile.ZipFile(self.target) as out:
+            payload = out.read(apk.BUILD_INFO)
+            expected = sparse_pack([('build_info.json', payload), ('presentation/game.gdc', other)])
+            self.assertEqual(out.read(apk.SPARSE_PACK), expected)
+        apk.verify_prepared(self.source, self.target, 214999999, SHA)
+        changed = Path(self.temp.name) / 'stale-index.apk'
+        with zipfile.ZipFile(self.target) as inp, zipfile.ZipFile(changed, 'w') as out:
+            for entry in inp.infolist():
+                out.writestr(entry, original if entry.filename == apk.SPARSE_PACK else inp.read(entry))
+        with self.assertRaisesRegex(ValueError, 'APK game payload changed'):
+            apk.verify_prepared(self.source, changed, 214999999, SHA)
+
+    def test_sparse_identity_rejects_unsupported_or_missing_entries(self):
+        for data in [b'not a pack', sparse_pack([]),
+                     sparse_pack([('build_info.json', b'{}'), ('build_info.json', b'{}')]),
+                     sparse_pack([('build_info.json', b'{}')])[:-1]]:
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                apk.update_sparse_identity(data, b'{}')
+        encrypted = bytearray(sparse_pack([('build_info.json', b'{}')]))
+        struct.pack_into('<I', encrypted, 20, 7)
+        with self.assertRaises(ValueError):
+            apk.update_sparse_identity(encrypted, b'{}')
 
     def test_bad_source_is_rejected(self):
         with self.assertRaises(ValueError):

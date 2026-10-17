@@ -1,12 +1,45 @@
 """Focused checks of ABI routing and emulator export isolation, not gameplay."""
 from pathlib import Path
+import base64
+import json
 import subprocess
 import tempfile
 import unittest
 
 from prepare_android_emulator_export import prepare
+from run_android_compatibility import PART_PREFIX, read_observations
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+class AndroidObservationTests(unittest.TestCase):
+    @staticmethod
+    def packets(state):
+        data = json.dumps(state, ensure_ascii=False).encode()
+        chunks = [data[i:i + 512] for i in range(0, len(data), 512)]
+        return [PART_PREFIX + json.dumps({'instance': state['instance'],
+                'sequence': state['sequence'], 'part': i, 'count': len(chunks),
+                'data': base64.b64encode(chunk).decode()}) for i, chunk in enumerate(chunks)]
+
+    def test_large_unicode_observation_survives_android_log_limit(self):
+        state = {'instance': 'android-123', 'sequence': 7, 'menu': '→' * 900, 'native_loaded': True}
+        lines = self.packets(state)
+        self.assertGreater(len(lines), 1)
+        self.assertTrue(all(len(line.encode()) < 1023 for line in lines))
+        self.assertEqual(list(read_observations('\n'.join(lines))), [state])
+
+    def test_incomplete_observation_cannot_count_as_playable(self):
+        state = {'instance': 'android-123', 'sequence': 7, 'data': 'x' * 3000, 'ready': True}
+        lines = self.packets(state)
+        self.assertEqual(list(read_observations('\n'.join(lines[:-1]))), [])
+        self.assertEqual(list(read_observations('\n'.join(lines[:-1] + [lines[-1][:80]]))), [])
+
+    def test_interleaved_instances_and_sequences_never_mix(self):
+        states = [{'instance': instance, 'sequence': seq, 'data': str(seq) * 1700}
+                  for instance, seq in [('old', 7), ('new', 1), ('old', 8)]]
+        packets = [self.packets(state) for state in states]
+        lines = [line for parts in zip(*packets) for line in parts]
+        self.assertEqual(list(read_observations('\n'.join(lines))), states)
 
 
 class AndroidExportTests(unittest.TestCase):

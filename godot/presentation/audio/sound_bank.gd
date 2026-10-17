@@ -576,6 +576,11 @@ func _wav(samples: PackedFloat32Array, loop_end: int = -1) -> AudioStreamWAV:
 	data.resize(samples.size() * 2)
 	for i in samples.size():
 		data.encode_s16(i * 2, int(clampf(samples[i] * scale, -1.0, 1.0) * 32767.0))
+	if loop_end > 0:
+		# Godot 4.7 decodes loop_end before wrapping to loop_begin + 1.
+		# A head guard keeps that read valid without shortening the loop.
+		data.resize(data.size() + 2)
+		data.encode_s16(loop_end * 2, data.decode_s16(0))
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate = MIX_RATE

@@ -77,7 +77,8 @@ func _run() -> void:
 			energy += sample * sample
 		check(is_finite(energy) and peak > 0.08 and peak <= 0.901 and sqrt(energy / (wav.data.size() / 2)) > 0.008, "finite bounded audible PCM " + String(name))
 		if wav.loop_mode == AudioStreamWAV.LOOP_FORWARD:
-			check(wav.loop_end == wav.data.size() / 2 and absf(float(wav.data.decode_s16(0) - wav.data.decode_s16(wav.data.size() - 2)) / 32768.0) < 0.08, "seamless loop boundary " + String(name))
+			check(wav.loop_end == wav.data.size() / 2 - 1 and wav.data.decode_s16(wav.loop_end * 2) == wav.data.decode_s16(0), "readable head guard at loop boundary " + String(name))
+			check(absf(float(wav.data.decode_s16(0) - wav.data.decode_s16((wav.loop_end - 1) * 2)) / 32768.0) < 0.08, "seamless loop boundary " + String(name))
 		if not preview.is_empty():
 			check(wav.save_to_wav(preview.path_join(String(name) + ".wav")) == OK, "PCM preview saved")
 	audio.update_grapple_feedback({"equipped": true, "fresh": true, "winding": 0.5}, 0.016)

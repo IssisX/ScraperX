@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Drive the ordinary Android game through adb; retain source-bound observations."""
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import math
@@ -10,7 +12,34 @@ import subprocess
 import time
 
 PREFIX = 'SCRAPERX_ANDROID_COMPAT '
+PART_PREFIX = 'SCRAPERX_ANDROID_COMPAT_PART '
 PACKAGE = 'com.cory.scraperx.chatgpt'
+
+
+def read_observations(text):
+    """Accept only complete observations; Android may truncate/drop log lines."""
+    pending = {}
+    for line in text.splitlines():
+        try:
+            if PART_PREFIX in line:
+                packet = json.loads(line.split(PART_PREFIX, 1)[1])
+                key = (packet['instance'], packet['sequence'])
+                part, count = packet['part'], packet['count']
+                if not (isinstance(part, int) and isinstance(count, int) and 0 <= part < count <= 128):
+                    continue
+                group = pending.setdefault(key, {'count': count, 'parts': {}})
+                if group['count'] != count:
+                    continue
+                group['parts'][part] = base64.b64decode(packet['data'], validate=True)
+                if len(group['parts']) == count:
+                    state = json.loads(b''.join(group['parts'][i] for i in range(count)))
+                    if (state['instance'], state['sequence']) == key:
+                        yield state
+                    del pending[key]
+            elif PREFIX in line:
+                yield json.loads(line.split(PREFIX, 1)[1])
+        except (ValueError, KeyError, TypeError, binascii.Error):
+            continue
 
 
 def check_touch_bounds(state):
@@ -39,19 +68,17 @@ class Session:
         self.receipt['commands'].append({'argv': command, 'returncode': result.returncode})
         if result.returncode:
             raise RuntimeError(f'Android compatibility command failed: {command!r}: '
-                               f'{result.stderr.decode(errors="replace")}')
+                               f'stdout={result.stdout.decode(errors="replace")!r}; '
+                               f'stderr={result.stderr.decode(errors="replace")!r}')
         return result.stdout
 
     def snapshot(self):
         text = self.adb('logcat', '-d', '-v', 'brief').decode(errors='replace')
         (self.output / 'logcat.txt').write_text(text)
-        for line in reversed(text.splitlines()):
-            if PREFIX in line:
-                try:
-                    self.last = json.loads(line.split(PREFIX, 1)[1])
-                    return self.last
-                except json.JSONDecodeError:
-                    continue
+        observations = list(read_observations(text))
+        if observations:
+            self.last = observations[-1]
+            return self.last
         return None
 
     def wait(self, label, predicate, *, after=None, timeout=120):
@@ -136,7 +163,7 @@ class Session:
         try:
             for number, name in targets:
                 before = state
-                self.adb('shell', 'cmd', 'device_state', 'state', number)
+                self.adb('emu', 'fold' if (number, name) in closed else 'unfold')
                 deadline = time.monotonic() + 10
                 actual = ''
                 while time.monotonic() < deadline:
@@ -154,7 +181,7 @@ class Session:
                 check_touch_bounds(state)
                 self.capture('fold-' + str(number))
         finally:
-            self.adb('shell', 'cmd', 'device_state', 'state', original)
+            self.adb('emu', 'fold' if original == str(closed[0][0]) else 'unfold')
         return state
 
 

@@ -22,13 +22,20 @@ Initial matrix:
 | Compact phone | 24 | Nexus 5X |
 | Tall phone | 36 | Pixel 7 |
 | Tablet | 36 | Pixel C |
-| Foldable | 35 | Pixel Fold |
+| Foldable | 35 | SDK 7.6in Foldable |
 
 API 24 matches the existing native compilation floor. API36 also exercises the
 Android version currently targeted by the export toolchain. A green matrix would
 establish only these exercised configurations, not an advertised device floor.
+The compact API24 profile is an older-OS diagnostic, not a promise to support
+old hardware. Android version and simulated screen size do not establish GPU,
+RAM, sustained frame time or thermal capacity. Devices unable to deliver the
+intended experience remain unsupported; physics and visual depth are not
+reduced merely to make an old profile pass. Owner correction: no fidelity,
+mechanic, content or physics cuts to widen device support. Improve efficiency
+without changing the intended experience; exclude insufficient hardware.
 Host acceleration and available profiles are captured before emulator launch.
-The foldable driver requests the device's reported open/closed states and
+The foldable driver uses the emulator's physical fold/unfold controls and
 requires Android state readback, changed display bounds and retained native
 identity. A green resize alone is not fold/posture evidence. The tall-phone
 job enables a real Android notch overlay, checks reported insets and touch
@@ -61,3 +68,11 @@ heat or battery evidence. The separately built, signed ARM64 APK candidate is
 the phone download; an emulator fixture is not a tested Play Store release.
 Representative physical-device measurements and matching release acceptance
 remain required before setting store exclusions or claiming broad support.
+
+Observer messages are split into base64 packets below Android's per-print
+limit. Only a complete observation from one instance and sequence is accepted;
+a truncated or missing packet cannot count as playable state.
+The CI renderer uses the supported `swiftshader` backend instead of deprecated
+`swiftshader_indirect`. The previous backend rejected built-in Godot scene and
+canvas shaders on all three booted profiles. Game lighting is unchanged;
+successful rendering still requires actual emulator observations.

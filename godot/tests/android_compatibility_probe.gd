@@ -3,6 +3,8 @@ extends Node
 # Installed as an autoload only by the emulator export. This observer reads
 # ordinary Main and native state. It never creates a world or sends input.
 const PREFIX := "SCRAPERX_ANDROID_COMPAT "
+const PART_PREFIX := "SCRAPERX_ANDROID_COMPAT_PART "
+const UiStyle := preload("res://presentation/ui/ui_style.gd")
 var _elapsed := 0.0
 var _sequence := 0
 var _instance := ""
@@ -25,6 +27,16 @@ func _point(control: Control, local: Vector2) -> Array:
 
 func _xyz(point: Vector3) -> Array:
 	return [point.x, point.y, point.z]
+
+func _publish(state: Dictionary) -> void:
+	# Godot's Android logger truncates a single print at 1023 bytes. Encode
+	# small binary chunks so even Unicode menu text cannot exceed that limit.
+	var payload := JSON.stringify(state).to_utf8_buffer()
+	var count := ceili(float(payload.size()) / 512.0)
+	for part in count:
+		print(PART_PREFIX + JSON.stringify({"instance": _instance,
+			"sequence": _sequence, "part": part, "count": count,
+			"data": Marshalls.raw_to_base64(payload.slice(part * 512, (part + 1) * 512))}))
 
 func _menu_buttons(node: Node, output: Array) -> void:
 	if node is Button and node.is_visible_in_tree() and not node.disabled:
@@ -66,11 +78,14 @@ func _process(delta: float) -> void:
 	var crane: Dictionary = native.get_yard_crane_state() if native != null else {}
 	var stick: Array = _point(touch, touch.stick_home()) if touch != null else []
 	var stick_up: Array = _point(touch, touch.stick_home() - Vector2(0, 100.0 * touch._u)) if touch != null else []
-	var safe_min: Array = _point(touch, touch._safe.position) if touch != null else []
-	var safe_max: Array = _point(touch, touch._safe.end) if touch != null else []
+	# Expected bounds come from today's Android/viewport state, independently
+	# of the layout's cached rectangle. A stale layout must be able to fail.
+	var current_safe: Rect2 = UiStyle.safe_rect(touch) if touch != null else Rect2()
+	var safe_min: Array = _point(touch, current_safe.position) if touch != null else []
+	var safe_max: Array = _point(touch, current_safe.end) if touch != null else []
 	var look: Vector2 = touch._safe.position + touch._safe.size * Vector2(0.85, 0.30) if touch != null else Vector2.ZERO
 	var settings_path := "user://settings.cfg"
-	print(PREFIX + JSON.stringify({
+	_publish({
 		"instance": _instance, "sequence": _sequence, "ready": bool(main.get("_play_ready")),
 		"native_loaded": native != null, "paused": bool(main.get("_paused")),
 		"tick": native.get_tick_index() if native != null else -1,
@@ -100,4 +115,4 @@ func _process(delta: float) -> void:
 		"settings_path": ProjectSettings.globalize_path(settings_path),
 		"source": preload("res://presentation/ui/build_info.gd").read_identity(),
 		"android": OS.get_version(), "model": OS.get_model_name()
-	}))
+	})

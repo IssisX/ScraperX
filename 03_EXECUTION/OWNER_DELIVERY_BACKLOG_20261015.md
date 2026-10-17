@@ -65,7 +65,7 @@ Owner played an APK showing reused Android version0.1.0-dev.20261014.10 and repo
 
 ## R17 — Android device coverage before Play Store delivery (owner2026-10-17)
 
-**Status:** active after the delivered climbing repair/APK214410317. Root implemented separate Android ABI output, real-native x86_64 emulator export and Android touch/lifecycle driver. Responsive control repair passes576 host layout cases and existing affected input checks; native ABI/export isolation2checks pass. Android emulator execution, cutouts/postures, complete machine/parkour loop and physical-device measurements remain unverified. Run this baseline before costly expansion; retain full R17 acceptance below.
+**Status:** active. Actual35ed804 Android runs exposed a signed sparse-index identity mismatch, truncated observer logs and a Godot WAV endpoint overread on API36; supported repairs are implemented with focused host evidence. Legacy SwiftShader/profile setup is corrected; rebuilt Android startup, complete machine/parkour loop and physical-device acceptance remain pending. Preserve full R17 acceptance below. Owner correction: insufficient hardware remains unsupported; no physics, fidelity, mechanic or content degradation merely to widen device coverage.
 
 The current exported APK contains arm64-v8a native libraries only. Project defaults use the unfolded2160×1856 viewport with expanding canvas layout and GL Compatibility. These facts neither prove Fold6 exclusivity nor prove broad Android support. Avoid model-age guesses or claiming all Android devices. Determine the actual minimum supported Android version, CPU/GPU features, RAM and sustainable performance from package requirements and measurements.
 
