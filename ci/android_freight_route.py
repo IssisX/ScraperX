@@ -173,9 +173,11 @@ def exercise_forklift(session, state):
     _require(math.hypot(state['position'][0] + 94, state['position'][2] + 44) < 1.0,
              'route must begin at the normal freight arrival near (-94, -44)', state)
     _require(state['operating'] == '', 'arrival must start outside a machine mode', state)
-    state = session.wait('freight arrival has actual grade footing',
+    # The normal prepared arrival can stand on cargo beam2446. Native
+    # freight_yard_arrival_tests requires solved footing, not bare-grade Y.
+    state = session.wait('freight arrival has actual supported footing',
                          lambda s: s['grounded'] and not s['forklift']['reachable'] and
-                         s['position'][1] < 1.0, after=state, timeout=30)
+                         s['support'] != CHASSIS_ENTITY, after=state, timeout=30)
     _healthy(state, instance)
     doorway = (-98.0, -57.65)
     state = _walk(session, state, 'arrival to forklift doorway', lambda s: doorway,
@@ -202,7 +204,8 @@ def exercise_forklift(session, state):
     session.capture('freight-boarded')
     session.button(state, 'action')
     state = session.wait('contextual touch Action enters forklift controls',
-                         lambda s: s['operating'] == 'forklift' and boarded(s),
+                         lambda s: s['operating'] == 'forklift' and boarded(s) and
+                         {'pendant_up', 'pendant_left', 'action'} <= s['controls'].keys(),
                          after=state, timeout=30)
     _healthy(state, instance)
     state = _hold_hydraulic(session, state, 'pendant_up', 'lift_m', 0.05)

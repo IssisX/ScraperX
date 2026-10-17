@@ -10,6 +10,7 @@ on:
       - ci/*android*compatibility*
       - ci/prepare_android_emulator_export.py
       - ci/android_freight_route.py
+      - ci/android_crane_route.py
       - ci/android_emulator_host.sh
       - ci/test_build_info.py
       - ci/prepare_chatgpt_build_info.py
@@ -160,7 +161,7 @@ jobs:
             api: 36
             device: pixel_7
             resize: 1600x900
-            route: --freight-route
+            route: --freight-route --crane-route
           - name: tablet-api36
             api: 36
             device: pixel_c

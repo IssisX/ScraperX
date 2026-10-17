@@ -21,8 +21,8 @@ func _input(event: InputEvent) -> void:
 
 func _point(control: Control, local: Vector2) -> Array:
 	var point := control.get_viewport().get_screen_transform() * control.get_global_transform_with_canvas() * local
-	# adb addresses physical pixels. Compact integer coordinates also keep
-	# full machine-control observations below Android's log-line limit.
+	# Pixels inside the game window. The adb driver adds Android's measured
+	# window origin when the OS letterboxes or positions that window.
 	return [roundi(point.x), roundi(point.y)]
 
 func _xyz(point: Vector3) -> Array:
@@ -62,7 +62,7 @@ func _process(delta: float) -> void:
 	if touch != null and touch.is_visible_in_tree() and not bool(main.get("_paused")):
 		for id in touch._order:
 			var button = touch._buttons[id]
-			if button.shown and button.enabled:
+			if button.shown and button.enabled and button.appear >= 0.2:
 				var hit: float = button.radius * touch.HIT_SLOP
 				controls[String(id)] = {"point": _point(touch, button.center),
 					"min": _point(touch, button.center - Vector2.ONE * hit),
@@ -76,6 +76,8 @@ func _process(delta: float) -> void:
 	var landing: Dictionary = native.get_landing_state() if native != null else {}
 	var forklift: Dictionary = native.get_forklift_state() if native != null else {}
 	var crane: Dictionary = native.get_yard_crane_state() if native != null else {}
+	var crane_lines: Array = crane.get("lines", [])
+	var crane_load: Vector3 = crane_lines[0].get("to", Vector3.ZERO) if not crane_lines.is_empty() else Vector3.ZERO
 	var stick: Array = _point(touch, touch.stick_home()) if touch != null else []
 	var stick_up: Array = _point(touch, touch.stick_home() - Vector2(0, 100.0 * touch._u)) if touch != null else []
 	# Expected bounds come from today's Android/viewport state, independently
@@ -104,7 +106,11 @@ func _process(delta: float) -> void:
 			"work_j": forklift.get("positive_work_j", 0), "battery_j": forklift.get("battery_j", 0)},
 		"crane": {"reachable": crane.get("controls_reachable", false),
 			"station": _xyz(crane.get("station_position", Vector3.ZERO)),
-			"hoist_m": crane.get("hoist_length_m", 0), "work_j": crane.get("hoist_work_j", 0)},
+			"hoist_m": crane.get("hoist_length_m", 0), "work_j": crane.get("hoist_work_j", 0),
+			"hoist_cmd": crane.get("hoist_target_mps", 0), "slew_cmd": crane.get("slew_target_rad_s", 0),
+			"trolley_cmd": crane.get("trolley_target_mps", 0), "source_used_j": crane.get("hoist_source_used_j", 0),
+			"connected": crane.get("hoist_connected", false), "failure": crane.get("failure", 0),
+			"load_point": _xyz(crane_load)},
 		"window": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
 		"canvas": [view.get_visible_rect().size.x, view.get_visible_rect().size.y],
 		"safe_area": str(DisplayServer.get_display_safe_area()),

@@ -10,30 +10,50 @@ from pathlib import Path
 import re
 import subprocess
 import time
-import xml.etree.ElementTree as ET
+from copy import deepcopy
 
 PREFIX = 'SCRAPERX_ANDROID_COMPAT '
 PART_PREFIX = 'SCRAPERX_ANDROID_COMPAT_PART '
 PACKAGE = 'com.cory.scraperx.chatgpt'
 
 
-def fullscreen_confirmation(xml):
-    """Locate only Android's first-run fullscreen help button, never game UI."""
-    for node in ET.fromstring(xml).iter('node'):
-        if (node.get('package') in ('android', 'com.android.systemui') and
-                node.get('text', '').strip().upper() == 'GOT IT' and
-                node.get('clickable') == 'true'):
-            bounds = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
-            if bounds:
-                x0, y0, x1, y1 = map(int, bounds.groups())
-                if x1 > x0 and y1 > y0:
-                    return [(x0 + x1) // 2, (y0 + y1) // 2]
-    return None
+def app_window_frame(text, size):
+    """Read actual activity bounds; never infer letterboxing or input scaling."""
+    frames = set()
+    for block in re.split(r'(?m)^\s*Window #\d+ ', text):
+        title = block.split('\n', 1)[0]
+        if PACKAGE not in title or any(name in title for name in ('Starting ', 'Splash Screen')):
+            continue
+        match = re.search(r'\b(?:mFrame|frame)=\[(-?\d+),\s*(-?\d+)\]\[(-?\d+),\s*(-?\d+)\]', block)
+        if match:
+            frame = tuple(map(int, match.groups()))
+            if [frame[2] - frame[0], frame[3] - frame[1]] == list(size):
+                frames.add(frame)
+    if len(frames) != 1:
+        raise ValueError(f'Expected one Android app frame matching native size {size!r}; got {sorted(frames)!r}')
+    return frames.pop()
+
+
+def screen_observation(native, frame):
+    """Derive adb coordinates from native window pixels and measured OS origin."""
+    state = deepcopy(native)
+    def point(value):
+        return [value[0] + frame[0], value[1] + frame[1]] if len(value) == 2 else value
+    for key in ('stick', 'stick_up', 'look'):
+        state[key] = point(state[key])
+    state['touch_safe_screen'] = [point(value) for value in state['touch_safe_screen']]
+    for button in state['controls'].values():
+        for key in ('point', 'min', 'max'):
+            button[key] = point(button[key])
+    for button in state['menu_buttons']:
+        button['point'] = point(button['point'])
+    state['input_window_frame'] = list(frame)
+    return state
 
 
 def runtime_errors(text):
     return [line for line in text.splitlines() if re.search(
-        r'(?:SCRIPT ERROR:|(?:Scene|Canvas)ShaderGLES3: Program linking failed|'
+        r'(?:SCRIPT ERROR:|\w+ShaderGLES3: Program linking failed|'
         r'Error loading script|Failed loading resource|Can.t open dynamic library)', line)]
 
 
@@ -82,6 +102,9 @@ class Session:
         output.mkdir(parents=True, exist_ok=True)
         self.receipt = {'checks': [], 'observations': [], 'commands': [], 'status': 'running'}
         self.last = None
+        self.frame_key = None
+        self.frame = None
+        self.frame_error = None
 
     def adb(self, *args, timeout=30):
         command = ['adb', *map(str, args)]
@@ -98,8 +121,21 @@ class Session:
         (self.output / 'logcat.txt').write_text(text)
         observations = list(read_observations(text))
         if observations:
-            self.last = observations[-1]
-            return self.last
+            state = observations[-1]
+            if state['ready'] and (state['controls'] or state['menu_buttons']):
+                key = (state['instance'], tuple(state['window']), state['safe_area'])
+                if key != self.frame_key:
+                    windows = self.adb('shell', 'dumpsys', 'window', '-a', 'windows').decode()
+                    (self.output / 'window-frames.txt').write_text(windows)
+                    try:
+                        self.frame = app_window_frame(windows, state['window'])
+                    except ValueError as error:
+                        self.frame_error = str(error)
+                        return None  # A configuration transition must settle to a measured frame.
+                    self.frame_key, self.frame_error = key, None
+                state = screen_observation(state, self.frame)
+            self.last = state
+            return state
         return None
 
     def wait(self, label, predicate, *, after=None, timeout=120):
@@ -115,7 +151,7 @@ class Session:
                 print(f'ANDROID_COMPAT PASS {label}', flush=True)
                 return state
             time.sleep(0.5)  # Condition polling; elapsed time never counts as success.
-        raise RuntimeError(f'Android compatibility timeout: {label}; last actual state={self.last!r}')
+        raise RuntimeError(f'Android compatibility timeout: {label}; last actual state={self.last!r}; frame={self.frame_error!r}')
 
     def capture(self, name):
         (self.output / f'{name}.png').write_bytes(self.adb('exec-out', 'screencap', '-p'))
@@ -129,20 +165,12 @@ class Session:
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
 
-    def dismiss_fullscreen_help(self, state):
-        path = '/sdcard/scraperx-compatibility-ui.xml'
-        self.adb('shell', 'uiautomator', 'dump', '--compressed', path)
-        xml = self.adb('shell', 'cat', path).decode()
-        (self.output / 'opening-system-ui.xml').write_text(xml)
-        point = fullscreen_confirmation(xml)
-        if point is not None:
-            self.tap(point)
-            state = self.wait('ordinary touch dismisses Android fullscreen help',
-                              lambda s: s['instance'] == state['instance'], after=state)
-            self.adb('shell', 'uiautomator', 'dump', '--compressed', path)
-            if fullscreen_confirmation(self.adb('shell', 'cat', path).decode()) is not None:
-                raise RuntimeError('Android fullscreen help still intercepts game input after confirmation')
-        return self.resume(state) if state['paused'] else state
+    def first_controls(self, state):
+        if state['paused']:
+            state = self.resume(state)
+        return self.wait('first-person controls accept input after startup',
+                         lambda s: not s['paused'] and {'crouch', 'jump', 'pause'} <= s['controls'].keys(),
+                         after=state)
 
     def button(self, state, name):
         if name not in state['controls']:
@@ -237,11 +265,20 @@ def exercise(args, session):
     activity = session.adb('shell', 'cmd', 'package', 'resolve-activity', '--brief', PACKAGE).decode().strip().splitlines()[-1]
     if '/' not in activity or PACKAGE not in activity:
         raise RuntimeError(f'Android compatibility: no launcher activity for {PACKAGE}: {activity!r}')
+    # Disposable AVD setup only: Android's one-time fullscreen tutorial is
+    # already acknowledged. The game and every gameplay input stay ordinary.
+    session.adb('shell', 'settings', '--user', 'current', 'put', 'secure',
+                'immersive_mode_confirmations', 'confirmed')
+    confirmed = session.adb('shell', 'settings', '--user', 'current', 'get', 'secure',
+                            'immersive_mode_confirmations').decode().strip()
+    if confirmed != 'confirmed':
+        raise RuntimeError(f'Android fullscreen tutorial setup was not applied: {confirmed!r}')
+    session.receipt['fullscreen_tutorial'] = 'OS-only prelaunch confirmation in disposable AVD'
     session.adb('logcat', '-c')
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
     state = session.wait('normal Main initializes with real native module',
                          lambda s: s['ready'] and s['native_loaded'], timeout=240)
-    state = session.dismiss_fullscreen_help(state)
+    state = session.first_controls(state)
     session.require_runtime_clean()
     if not math.isclose(state['fixed_step_s'], 1 / 90, abs_tol=1e-7):
         raise RuntimeError(f'Android compatibility: native step changed: {state["fixed_step_s"]}')
@@ -253,6 +290,9 @@ def exercise(args, session):
     if args.freight_route:
         from android_freight_route import exercise_forklift
         state = exercise_forklift(session, state)
+    if args.crane_route:
+        from android_crane_route import exercise_crane
+        state = exercise_crane(session, state)
     before = state
     session.button(state, 'crouch')
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
@@ -287,6 +327,10 @@ def exercise(args, session):
     settings_hash = state['settings_sha256']
     if len(settings_hash) != 64:
         raise RuntimeError('Android compatibility: normal resume did not save player settings')
+    settings_data = session.adb('exec-out', 'run-as', PACKAGE, 'cat', 'files/settings.cfg')
+    (session.output / 'persisted-settings.cfg').write_bytes(settings_data)
+    if not settings_data.strip() or hashlib.sha256(settings_data).hexdigest() != settings_hash:
+        raise RuntimeError('Android compatibility: persisted settings bytes are empty or disagree with observer hash')
     before = state
     session.adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     session.adb('shell', 'am', 'start', '-W', '-n', activity)
@@ -330,8 +374,11 @@ def main():
     parser.add_argument('--profile', required=True)
     parser.add_argument('--resize', default='1280x800')
     parser.add_argument('--freight-route', action='store_true')
+    parser.add_argument('--crane-route', action='store_true')
     parser.add_argument('--output', type=Path, default=Path('artifacts/android-compatibility'))
     args = parser.parse_args()
+    if args.crane_route and not args.freight_route:
+        parser.error('--crane-route requires ordinary --freight-route arrival first')
     session = Session(args.output)
     try:
         exercise(args, session)

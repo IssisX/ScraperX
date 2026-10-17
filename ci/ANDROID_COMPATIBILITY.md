@@ -40,9 +40,11 @@ requires Android state readback, changed display bounds and retained native
 identity. A green resize alone is not fold/posture evidence. The tall-phone
 job enables a real Android notch overlay, checks reported insets and touch
 bounds, exercises input and then restores the original display. It also runs
-the ordinary forklift arrival/control/exit path. System bars, orientation
-behavior, and the complete
-normal forklift/crane/parkour loop remain part of R17 until actually exercised.
+the ordinary forklift arrival/control/exit and crane booth/hoist/neutral/exit
+paths. Crane acceptance requires actual suspended-load rise and positive native
+work/source use, not just a shorter cable setting. System bars, orientation
+behavior, and the remaining normal parkour loop remain part of R17 until
+actually exercised.
 
 Android x86_64 uses the NDK ABI CPU baseline; Jolt desktop AVX/FMA/BMI
 defaults are disabled for that ABI because they are optional on Android. See
@@ -79,6 +81,17 @@ The previous backend rejected built-in Godot scene and
 canvas shaders on all three booted profiles. Game lighting is unchanged;
 successful rendering still requires actual emulator observations.
 The driver rejects shader-link/script/resource failures even when the native
-simulation starts. It dismisses Android's first-run fullscreen help through
-the actual system button before driving the game; a system overlay is not
-evidence that a game control is broken.
+simulation starts. Disposable emulators start with Android's one-time fullscreen
+tutorial already acknowledged through its OS setting. Game input remains
+ordinary touch. This replaces unreliable accessibility-only tutorial dismissal;
+it changes no app setting or permission.
+
+Godot's points are pixels inside its window. ADB uses the whole display. The
+driver reads the actual activity frame from Android's window manager, requires
+dimensions matching the native observation, and adds its measured origin to
+all touch points. It never guesses letterboxing or scaling. This handles the
+foldable's observed441pixel vertical offset and records frame evidence.
+Only controls past the actual touch owner's appearance threshold are published.
+Startup waits for those controls, not merely the earlier native-ready signal.
+Settings restart evidence also retains the actual persisted bytes and checks
+their nonempty checksum against the observer; an empty-file hash is insufficient.

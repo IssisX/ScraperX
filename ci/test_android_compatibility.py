@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from prepare_android_emulator_export import prepare
-from run_android_compatibility import PART_PREFIX, fullscreen_confirmation, read_observations, runtime_errors
+from run_android_compatibility import PART_PREFIX, app_window_frame, read_observations, runtime_errors, screen_observation
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -16,13 +16,37 @@ class AndroidObservationTests(unittest.TestCase):
     def test_shader_link_failure_cannot_count_as_compatible_rendering(self):
         error = 'E/godot (3964): ERROR: CanvasShaderGLES3: Program linking failed:'
         self.assertEqual(runtime_errors('I/godot: ordinary startup\n' + error), [error])
+        particles = error.replace('CanvasShader', 'ParticlesShader')
+        self.assertEqual(runtime_errors(particles), [particles])
         self.assertEqual(runtime_errors('I/godot: OpenGL ES 3.0\nANDROID_COMPAT PASS ready'), [])
 
-    def test_fullscreen_help_is_identified_from_system_ui_bounds_only(self):
-        node = '<hierarchy><node package="{package}" text="GOT IT" clickable="true" bounds="[1133,480][1346,576]"/></hierarchy>'
-        self.assertEqual(fullscreen_confirmation(node.format(package='com.android.systemui')), [1239, 528])
-        self.assertIsNone(fullscreen_confirmation(node.format(package='com.cory.scraperx.chatgpt')))
-        self.assertIsNone(fullscreen_confirmation('<hierarchy/>'))
+    def test_window_origin_comes_from_matching_app_bounds_in_both_android_formats(self):
+        title = '  Window #2 Window{abc u0 com.cory.scraperx.chatgpt/com.godot.game.GodotAppLauncher}:\n'
+        for line in ['mFrame=[0,441][1768,1767]',
+                     'Frames: parent=[0,0][1768,2208] display=[0,0][1768,2208] frame=[0,441][1768,1767] last=[0,441][1768,1767]']:
+            text = '  Window #1 Window{other u0 com.android.systemui}:\n mFrame=[0,0][1768,2208]\n' + title + line
+            self.assertEqual(app_window_frame(text, [1768, 1326]), (0, 441, 1768, 1767))
+        with self.assertRaises(ValueError):
+            app_window_frame(title + 'mFrame=[0,0][1768,2208]', [1768, 1326])
+        with self.assertRaises(ValueError):
+            app_window_frame(title.replace('abc u0 ', 'abc u0 Starting ') + 'mFrame=[0,441][1768,1767]', [1768, 1326])
+
+    def test_display_offset_moves_all_touch_targets_without_changing_native_source(self):
+        native = {'controls': {'crouch': {'point': [1635, 970], 'min': [1567, 902], 'max': [1703, 1038]}},
+                  'stick': [204, 1122], 'stick_up': [204, 1050], 'look': [1503, 398],
+                  'touch_safe_screen': [[0, 0], [1768, 1326]],
+                  'menu_buttons': [{'point': [800, 500]}], 'position': [-94, 1.86, -44]}
+        state = screen_observation(native, (0, 441, 1768, 1767))
+        self.assertEqual(state['controls']['crouch']['point'], [1635, 1411])
+        self.assertEqual(state['controls']['crouch']['min'], [1567, 1343])
+        self.assertEqual(state['controls']['crouch']['max'], [1703, 1479])
+        self.assertEqual(state['stick'], [204, 1563])
+        self.assertEqual(state['stick_up'], [204, 1491])
+        self.assertEqual(state['look'], [1503, 839])
+        self.assertEqual(state['touch_safe_screen'], [[0, 441], [1768, 1767]])
+        self.assertEqual(state['menu_buttons'][0]['point'], [800, 941])
+        self.assertEqual(state['position'], native['position'])
+        self.assertEqual(native['controls']['crouch']['point'], [1635, 970])
 
     @staticmethod
     def packets(state):

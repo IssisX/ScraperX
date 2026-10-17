@@ -4,7 +4,6 @@ set -euo pipefail
 task_output="${1:?Expected emulator evidence output directory}"
 mkdir -p "${task_output}"
 "${ANDROID_HOME}/emulator/emulator" -accel-check | tee "${task_output}/acceleration.txt"
-"${ANDROID_HOME}/emulator/emulator" -version > "${task_output}/emulator-version.txt" 2>&1
 AVDMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/avdmanager' | sort -V | tail -n 1)"
 test -x "${AVDMANAGER_PATH}"
 "${AVDMANAGER_PATH}" list device > "${task_output}/available-profiles.txt"
