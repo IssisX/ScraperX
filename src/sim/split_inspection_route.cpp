@@ -162,12 +162,16 @@ void build_split_inspection_route(kit::Kit &kit) {
         beam(leaf, {x, 474.05F, -134.25F},
                    {x, 474.05F, -133.85F}, .025F);
     }
-    // A shallow open-backed steel pocket makes the useful ballast position
-    // legible and retains the real block by contact while the floor pitches.
-    // Its mass participates in the derived hatch counterbalance below.
-    box(leaf,{-19.65F,473.25F,-132.315F},{-19.05F,473.40F,-132.30F},true,Material::Yellow);
-    for(float x:{-19.65F,-19.065F})
-        box(leaf,{x,473.25F,-132.90F},{x+.015F,473.40F,-132.30F},true,Material::Yellow);
+    // The open-backed pocket receives a freely falling, rotating block,
+    // not just its gravity-projected center. The carried load drops about
+    // 1.2m and can reach the front rim at4m/s: a150mm lip only catches its
+    // bottom corner. A350mm wall intercepts the actual side before it can
+    // tip out. The900mm width keeps the side walls outside the ordinary
+    // standing capsule while allowing lateral drop drift. Pickup stays open
+    // above and behind; all added steel enters the counterbalance below.
+    box(leaf,{-19.80F,473.25F,-132.315F},{-18.90F,473.60F,-132.30F},true,Material::Yellow);
+    for(float x:{-19.80F,-18.915F})
+        box(leaf,{x,473.25F,-132.90F},{x+.015F,473.60F,-132.30F},true,Material::Yellow);
     // A real steel lug joins the raised counterweight to its cable eye.
     // CHOSEN1m rear lever gives stroke margin for receiver compliance; the
     // same mass/moment closure includes every gram of this attachment.

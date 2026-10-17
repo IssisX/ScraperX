@@ -31,6 +31,7 @@ OWNERS = {
     "landing_response": "scraperx_landing_tests",
     "swing_stair_route_2": "scraperx_swing_stair_route_tests",
     "split_inspection_route": "scraperx_split_inspection_route_tests",
+    "split_inspection_recovery": "scraperx_split_inspection_route_tests",
 }
 
 

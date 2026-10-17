@@ -1,11 +1,13 @@
 {
-  "reason": "Owner-approved rigid-impact death tuning20\u219218m/s. Keep the published passive net unchanged; derive rebound/fatal checks from the shared gameplay rule. Exercise both sides of the actual rigid-landing boundary, catch survival/exit/overload/restore, original clearance/settling/energy and force/friction/velocity regressions.",
+  "reason": "Combined source: owner-approved18m/s rigid-impact rule with unchanged catch mechanics, plus real open-backed ballast pocket retaining a falling/rotating block. Preserve original catch lethality/safety/energy/settling and split-route/recovery expectations.",
   "checks": [
     "catch_net_model",
     "catch_net_force_phase",
     "catch_net_contact_friction",
     "soft_velocity",
     "catch_net_player",
-    "landing_response"
+    "landing_response",
+    "split_inspection_route",
+    "split_inspection_recovery"
   ]
 }
