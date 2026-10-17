@@ -562,9 +562,28 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
     const bool wants_up = !rolling() &&
         (!commands.crouch_held || commands.jump_requested || commands.traversal_requested);
     if (crouched_) {
-        if (wants_up) {
-            (void)try_stand(bodies);
+        if (grounded_) {
+            tucked_ = false;   // landed tucked: an ordinary crouch now
         }
+        if (wants_up) {
+            if (tucked_) {
+                (void)try_untuck(bodies);
+            } else {
+                (void)try_stand(bodies);
+            }
+        }
+        return;
+    }
+    if (!wants_up && !grounded_ && carry_constraint_ == nullptr &&
+        bodies.GetLinearVelocity(player_id_).GetY() - airborne_inherited_velocity_.GetY() >= -kTuckMaximumFallMps) {
+        // The tuck: the legs drawn up, the head where it was. The short
+        // capsule lies inside the tall one, so there is always room.
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        bodies.SetShape(player_id_, player_crouch_shape_.GetPtr(), false, JPH::EActivation::Activate);
+        bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, kCrouchDrop, 0.0F), JPH::EActivation::Activate);
+        crouched_ = true;
+        tucked_ = true;
+        ++tuck_count_;
         return;
     }
     if (!wants_up && grounded_) {

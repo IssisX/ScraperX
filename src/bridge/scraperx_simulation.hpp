@@ -47,6 +47,9 @@ public:
     [[nodiscard]] bool is_player_crouched() const;
     [[nodiscard]] bool is_player_sliding() const;
     [[nodiscard]] bool is_player_wall_running() const;
+    [[nodiscard]] bool is_player_wall_climbing() const;
+    [[nodiscard]] bool is_player_tucked() const;
+    [[nodiscard]] std::int64_t get_wall_climb_count() const;
     [[nodiscard]] std::int64_t get_wall_step_count() const;
     [[nodiscard]] std::int64_t get_support_entity_id() const;
     [[nodiscard]] godot::Vector3 get_support_contact_point() const;

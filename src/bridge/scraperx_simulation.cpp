@@ -103,6 +103,10 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_player_grounded);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_wall_running"),
                                 &ScraperXSimulation::is_player_wall_running);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_wall_climbing"),
+                                &ScraperXSimulation::is_player_wall_climbing);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wall_climb_count"), &ScraperXSimulation::get_wall_climb_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_tucked"), &ScraperXSimulation::is_player_tucked);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wall_step_count"),
                                 &ScraperXSimulation::get_wall_step_count);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_sliding"),
@@ -432,6 +436,18 @@ bool ScraperXSimulation::is_player_grounded() const {
 
 bool ScraperXSimulation::is_player_wall_running() const {
     return simulation_->snapshot().player_wall_running;
+}
+
+bool ScraperXSimulation::is_player_wall_climbing() const {
+    return simulation_->snapshot().player_wall_climbing;
+}
+
+std::int64_t ScraperXSimulation::get_wall_climb_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().wall_climb_count);
+}
+
+bool ScraperXSimulation::is_player_tucked() const {
+    return simulation_->snapshot().player_tucked;
 }
 
 std::int64_t ScraperXSimulation::get_wall_step_count() const {

@@ -317,6 +317,9 @@ private:
     [[nodiscard]] bool wall_running() const noexcept { return wall_run_seconds_left_ > 0.0; }
 
     // (Defined in physics_world_movement.cpp.)
+    bool try_untuck(JPH::BodyInterface &bodies) noexcept;
+    [[nodiscard]] bool try_wall_climb(JPH::BodyInterface &bodies, const StepCommands &commands, JPH::Vec3 &velocity,
+                                      JPH::Vec3 reference) noexcept;
     void update_wall_run(JPH::BodyInterface &bodies, const StepCommands &commands, JPH::Vec3 &velocity,
                          const JPH::Vec3 reference) noexcept;
 
@@ -619,6 +622,9 @@ public:
     std::uint32_t jump_buffer_ticks_ = 0;   // kJumpBufferTicks
     float jump_takeoff_feet_y_ = 0.0F;
     bool crouched_ = false;
+    // Crouched in the air with the legs drawn up (see kTuckMaximumFallMps).
+    bool tucked_ = false;
+    std::uint64_t tuck_count_ = 0;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;
@@ -747,6 +753,9 @@ public:
     double wall_run_seconds_left_ = 0.0;
     JPH::Vec3 wall_normal_ = JPH::Vec3::sZero();
     std::uint32_t wall_kicks_this_flight_ = 0;
+    // The wall climb (see kWallClimbMinimumSpeed).
+    bool wall_climbed_this_flight_ = false;
+    std::uint64_t wall_climb_count_ = 0;
     // M3, the precision jump (see kPrecisionMinM).
     float look_pitch_ = 0.0F;
     bool precision_sighted_ = false;

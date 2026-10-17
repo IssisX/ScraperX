@@ -16,8 +16,13 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies, const
         --wall_step_cooldown_;
         return;
     }
-    if (!flight_from_jump_ || wall_steps_this_flight_ >= kWallStepsMax || crouched_ ||
-        carry_constraint_ != nullptr) {
+    if (!flight_from_jump_ || crouched_ || carry_constraint_ != nullptr) {
+        return;
+    }
+    if (try_wall_climb(bodies, commands, velocity, reference)) {
+        return;
+    }
+    if (wall_steps_this_flight_ >= kWallStepsMax) {
         return;
     }
     const JPH::Vec3 relative = velocity - reference;
@@ -65,6 +70,70 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies, const
         ++wall_step_count_;
         return;
     }
+}
+
+// Jumped at a tall wall: a foot planted on it turns the run into height (see
+// kWallClimbMinimumSpeed). True when it plants.
+bool Simulation::PhysicsWorld::try_wall_climb(JPH::BodyInterface &bodies, const StepCommands &commands,
+                                              JPH::Vec3 &velocity, const JPH::Vec3 reference) noexcept {
+    if (wall_climbed_this_flight_) {
+        return false;
+    }
+    const JPH::Vec3 relative = velocity - reference;
+    const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
+    const float speed = horizontal.Length();
+    // Still rising or near the top of the jump: a foot planted on the way
+    // down takes the fall, and that is the wall-run's step.
+    if (speed < kWallClimbMinimumSpeed || relative.GetY() < -1.0F) {
+        return false;
+    }
+    const JPH::Vec3 run = horizontal / speed;
+    const JPH::Vec3 stick(static_cast<float>(commands.move_input_x), 0.0F, static_cast<float>(commands.move_input_z));
+    if (stick.Dot(run) < 0.3F) {
+        return false;   // the stick not held at the wall
+    }
+    const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+    const float feet = static_cast<float>(centre.GetY()) - active_half_height();
+    const JPH::Vec3 reach = run * (kPlayerRadius + kWallClimbProbe);
+    // A wall whose top the jump's own arc brings into the hands is caught,
+    // not run up: the wall must stand above the highest the hands reach.
+    const float gravity = -physics_system_.GetGravity().GetY();
+    const float rising = std::max(relative.GetY(), 0.0F);
+    const float hands_reach = static_cast<float>(centre.GetY()) + rising * rising / (2.0F * gravity) +
+                              kHangMaximumRiseAboveCentre;
+    JPH::Vec3 wall_out = JPH::Vec3::sZero();
+    for (const float at : {feet + kWallClimbChestAboveFeet, hands_reach}) {
+        const JPH::RVec3 from(centre.GetX(), at, centre.GetZ());
+        JPH::RayCastResult hit;
+        if (!cast_ray(from, reach, hit)) {
+            return false;   // not a wall, or not a tall one
+        }
+        const JPH::Vec3 normal = surface_normal(hit.mBodyID, hit.mSubShapeID2, JPH::RRayCast(from, reach).GetPointOnRay(hit.mFraction));
+        if (std::abs(normal.GetY()) > 0.2F) {
+            return false;
+        }
+        wall_out = JPH::Vec3(normal.GetX(), 0.0F, normal.GetZ()).Normalized();
+    }
+    const float into = -horizontal.Dot(wall_out);
+    if (into < kWallClimbMinimumSpeed * std::cos(kWallClimbMaximumAngle) ||
+        into < speed * std::cos(kWallClimbMaximumAngle)) {
+        return false;
+    }
+    // The plant: the speed into the wall taken by the leg, and as much of it
+    // turned upward as the sole's friction can give.
+    velocity += wall_out * into;
+    const float rise = velocity.GetY() - reference.GetY();
+    const float climb = std::max(rise, std::min(rise + kWallFriction * into, kWallClimbMaxRiseMps));
+    velocity.SetY(reference.GetY() + climb);
+    wall_normal_ = wall_out;
+    // On the wall all the way up (a jump kicks off it, the wall turn), and
+    // a moment past the top.
+    wall_run_seconds_left_ =
+        std::max(kWallRunHoldSeconds, static_cast<double>(climb / -physics_system_.GetGravity().GetY()) + 0.15);
+    wall_step_cooldown_ = kWallStepTicks;
+    wall_climbed_this_flight_ = true;
+    ++wall_climb_count_;
+    return true;
 }
 
 // At the moment of crouching: fast enough, and running the way the body
@@ -118,6 +187,20 @@ bool Simulation::PhysicsWorld::try_stand(JPH::BodyInterface &bodies) noexcept {
     bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
     bodies.SetPosition(player_id_, standing, JPH::EActivation::Activate);
     crouched_ = false;
+    return true;
+}
+
+// The legs let down out of the tuck, the head where it is, where there is
+// room under the body.
+bool Simulation::PhysicsWorld::try_untuck(JPH::BodyInterface &bodies) noexcept {
+    const JPH::RVec3 standing = bodies.GetPosition(player_id_) - JPH::Vec3(0.0F, kCrouchDrop, 0.0F);
+    if (!shape_pose_is_clear(player_shape_.GetPtr(), standing - JPH::Vec3(0.0F, kStandClearanceSkin, 0.0F))) {
+        return false;
+    }
+    bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
+    bodies.SetPosition(player_id_, standing, JPH::EActivation::Activate);
+    crouched_ = false;
+    tucked_ = false;
     return true;
 }
 
@@ -339,7 +422,12 @@ void Simulation::PhysicsWorld::record_landing(JPH::BodyInterface &bodies, const 
     if (prepared && forward && tangent_speed >= kRollMinimumSpeed && normal_speed >= kRollMinimumNormalSpeed) {
         const float runout = std::max(0.5F, tangent_speed * float(kRollSeconds) -
                                                 0.5F * kRollDeceleration * float(kRollSeconds * kRollSeconds));
-        if (roll_lane_is_clear(bodies.GetPosition(player_id_), along, runout)) {
+        // The lane is measured from where the body would stand on the
+        // ground it struck: a hard landing sinks it into the ground for a
+        // tick, a tucked one is the crouched capsule.
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        const JPH::RVec3 standing(at.GetX(), support_sample_.contact_point.y + kPlayerHalfHeight, at.GetZ());
+        if (roll_lane_is_clear(standing, along, runout)) {
             landing_response_ = LandingResponse::Roll;
             loss *= kRollLossScale;
             roll_seconds_left_ = kRollSeconds;
@@ -541,7 +629,8 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                                                 const float delta_seconds) noexcept {
     JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
     JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
-    const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
+    // Crouched, the legs walk short; tucked in the air, they do not walk at all.
+    const double speed_scale = crouched_ && !tucked_ ? kCrouchSpeedScale : 1.0;
     double move_x = commands.move_input_x * speed_scale;
     double move_z = commands.move_input_z * speed_scale;
     const bool had_line = line_held_;
@@ -734,6 +823,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         wall_steps_this_flight_ = 0;
         wall_kicks_this_flight_ = 0;
         wall_step_cooldown_ = 0;
+        wall_climbed_this_flight_ = false;
     }
     if (commands.jump_requested && !grounded_ && wall_running() && wall_kicks_this_flight_ < kWallKicksMax) {
         // Kicked off the wall: out along its normal, along it where the

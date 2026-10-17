@@ -149,6 +149,21 @@ constexpr double kWallRunHoldSeconds = 0.3;
 // legs' push is finite.
 constexpr float kWallKickAlongMps = 2.0F;
 constexpr std::uint32_t kWallKicksMax = 2;
+// Mirror's Edge's wall climb (the owner, 2026-10-17: "running a few steps up
+// a wall"). Jumped at a wall at kWallClimbMinimumSpeed or more into it, within
+// kWallClimbMaximumAngle of square, the stick held at it, a foot plants on it:
+// the leg takes the speed into the wall and the sole's friction on the wall,
+// at most kWallFriction of that, turns it upward -- capped at
+// kWallClimbMaxRiseMps up, a fast jump's (CHOSEN: about a metre of reach over
+// a standing jump, 2.5 m of rise). Only a wall standing above the highest
+// the jump's own arc brings the hands (probed there and at the chest) is run
+// up; a lower one is caught, vaulted or mantled. Once a flight.
+// Off it, a jump kicks off the wall (see kWallKickMps): the wall turn.
+constexpr float kWallClimbMinimumSpeed = 3.0F;
+constexpr float kWallClimbMaximumAngle = 0.5F;   // radians, about 30 degrees
+constexpr float kWallClimbProbe = 0.3F;          // ahead of the capsule
+constexpr float kWallClimbChestAboveFeet = 1.3F;
+constexpr float kWallClimbMaxRiseMps = 7.0F;
 // Parkour step 5: the grappling hook, a toy found up the tower. A hook of
 // kHookMassKg is fired along the aim at kHookLaunchMps on a line of at most
 // kHookLineMaxM (tension only), and flies under gravity as a body like any
@@ -288,6 +303,12 @@ constexpr float kPlayerHalfHeight = 0.9F;
 // are, so the centre drops by the difference in half-heights.
 constexpr float kPlayerCrouchHalfHeight = 0.6F;
 constexpr float kCrouchDrop = kPlayerHalfHeight - kPlayerCrouchHalfHeight;
+// Mirror's Edge's tuck: Crouch while rising in a jump (or no faster than
+// kTuckMaximumFallMps falling) draws the legs up under the body -- the short
+// capsule, the head where it was, the feet kCrouchDrop higher -- to clear what
+// the standing legs would strike. Let go of, the legs reach down again where
+// there is room. Pressed while falling faster, Crouch readies a roll instead.
+constexpr float kTuckMaximumFallMps = 1.0F;
 // Crouched walking tops out at 45 % of the standing speed (2.5 of 5.5 m/s).
 constexpr double kCrouchSpeedScale = 0.45;
 // The standing capsule is tested this far above the soles, so the floor it

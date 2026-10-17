@@ -869,13 +869,31 @@ the first pallet and its four drums forked, lifted 0.39 m, carried back 3.5 m an
 the drums still on it; two runs end the same to the bit); `touch_forklift` (the same through the
 touch controls).
 
+**Mirror's Edge moves, first two (2026-10-17; the owner's to-do, item 3).** The wall climb: a
+sprint jumped square at a tall wall (probed at the chest and above the head) with the stick held
+at it plants a foot on it, and the leg takes the speed into the wall while the sole's friction
+(at most 0.8 of it) turns it upward, capped at a fast jump's 7 m/s: about a metre of reach over a
+standing jump, so a ledge up to about 4.7 m is caught. Once a flight; the foot counts as on the
+wall all the way up, so a jump off it kicks the body back out (the wall turn). The tuck: Crouch
+while rising in a jump draws the legs up (the head stays, the feet rise 0.6 m) to clear what the
+legs would strike, at full speed; let go, the legs reach down where there is room; pressed
+while falling, Crouch still readies a roll. On touch a tuck made in the air lets go on landing.
+Proof: native `wall climb` (the proving ground's 4 m run wall: run up and its top taken; the same
+jump with the stick let go peaks 1.5 m lower and misses; a jump off the wall kicks out at
+3.5 m/s) and `tuck` (the 1.85 m crawl beam cleared by 20 cm; with the legs down the jump stops
+at it); `touch_wall_climb`, `touch_tuck`. Next of item 3: ziplines, swing poles, speed carried.
+
 **Running to-do (owner, 2026-10-17; done in this order).**
 1. Ideas from the ChatGPT branch's forklift, crane and movable objects: read (2026-10-17).
 2. Most objects movable everywhere: the yard (done, above; the decks up the tower hold no other
    loose things); the forklift (done, above); then designed spots where moving or stacking stock
    opens a new route; then a crane (containers).
-3. Mirror's Edge-style moves: a few steps up a wall, a kick off a wall to turn, legs tucked in a
-   jump, ziplines, swing poles, more speed kept between moves.
+3. Mirror's Edge-style moves: a few steps up a wall and the kick off it to turn, legs tucked in a
+   jump (done, above); ziplines, swing poles, more speed kept between moves.
+6. (Owner, 2026-10-17.) Little lived-in spots of real, movable stock all over the tower's decks
+   and landings as well as the ground; and the forklift's power felt: the strain heard and felt
+   as the lift nears its limit, the rear rising off the ground under too heavy a load, a propane
+   tank on top at the back.
 4. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.
 5. The Matron's extras.
 

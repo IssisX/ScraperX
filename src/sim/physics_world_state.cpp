@@ -341,11 +341,15 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         {player_velocity.GetX(), player_velocity.GetY(), player_velocity.GetZ()};
     state_.player_grounded = grounded_;
     state_.player_crouched = crouched_;
+    state_.player_tucked = tucked_;
+    state_.tuck_count = tuck_count_;
     state_.player_sliding = sliding_;
     state_.slide_count = slide_count_;
     state_.wall_step_count = wall_step_count_;
     state_.wall_kick_count = wall_kick_count_;
+    state_.wall_climb_count = wall_climb_count_;
     state_.player_wall_running = wall_running();
+    state_.player_wall_climbing = wall_climbed_this_flight_ && wall_running();
     state_.has_hook = has_hook_;
     state_.hook_take_available = hook_take_in_reach(bodies);
     state_.hook_state = static_cast<std::uint8_t>(hook_state_);

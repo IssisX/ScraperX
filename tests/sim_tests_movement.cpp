@@ -1072,3 +1072,118 @@ void run_parkour_seams() {
         std::cout << "PASS scraperx_sim parkour precision: landed_x=" << landed << " plain_x=" << plain_landed << "\n";
     }
 }
+
+// Mirror's Edge's wall climb (kWallClimbMinimumSpeed): sprinting square at
+// the proving ground's 4 m run wall, a jump with the stick held at it plants
+// a foot on it that turns the run into height, and the hands take the wall's
+// top; the same jump with the stick let go off the ground runs nowhere up it
+// and the top is out of reach. Off the wall a jump kicks the body back out.
+void run_wall_climb() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    struct Result {
+        std::uint64_t climbs = 0;
+        double peak_y = 0.0;
+        bool hung = false;
+    };
+    const auto run_at_wall = [](const bool stick_held, const bool kick) {
+        Simulation s(InitialSpawn::StaticDeck);
+        require(s.advance_frame(1.0).accepted, "wall climb: settle");
+        require(walk_to(s, -6.0, -19.0, 20.0, 0.1), "wall climb: to the run-up, square to the run wall");
+        Result result;
+        bool jumped = false;
+        bool kicked = false;
+        double kick_vz = 0.0;
+        for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot now = s.snapshot();
+            const bool airborne = jumped && !now.player_grounded;
+            (void)s.set_facing(0.0, -1.0);
+            (void)s.set_sprint_input(!airborne);
+            (void)s.set_move_input(0.0, !jumped || stick_held ? -1.0 : 0.0);
+            if (!jumped && now.player_position.z < -25.2) {
+                require(s.request_jump(), "wall climb: the jump at the wall");
+                jumped = true;
+            }
+            if (kick && !kicked && now.wall_climb_count > 0 && now.player_linear_velocity.y < 1.0) {
+                // Turned from the wall, a jump kicks off it.
+                (void)s.set_move_input(0.0, 1.0);
+                require(s.request_jump(), "wall climb: the kick off the wall");
+                kicked = true;
+                (void)s.advance_frame(Simulation::kFixedStepSeconds * 3);
+                kick_vz = s.snapshot().player_linear_velocity.z;
+                break;
+            }
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "wall climb tick");
+            const Snapshot after = s.snapshot();
+            result.peak_y = std::max(result.peak_y, after.player_position.y);
+            result.climbs = after.wall_climb_count;
+            result.hung = result.hung || after.traversal_state == TraversalState::Hanging;
+        }
+        if (kick) {
+            std::cout << "  wall climb: kicked off the wall at " << kick_vz << " m/s out\n";
+            require(kicked && kick_vz > 2.0, "wall climb: off the wall, a jump kicks the body out from it");
+        }
+        return result;
+    };
+    const Result held = run_at_wall(true, false);
+    const Result let_go = run_at_wall(false, false);
+    std::cout << "  wall climb: stick held, " << held.climbs << " climb, peak " << held.peak_y << " m, hung "
+              << held.hung << "; stick let go, " << let_go.climbs << " climb, peak " << let_go.peak_y << " m, hung "
+              << let_go.hung << "\n";
+    require(held.climbs == 1 && held.hung, "wall climb: the run jumped up the wall reaches its top and the hands take it");
+    require(let_go.climbs == 0 && !let_go.hung && let_go.peak_y < held.peak_y - 0.8,
+            "wall climb: let go of the stick, the jump runs nowhere up the wall and the top is out of reach");
+    (void)run_at_wall(true, true);
+    std::cout << "PASS scraperx_sim wall climb: peak_m=" << held.peak_y << " plain_peak_m=" << let_go.peak_y << "\n";
+}
+
+// Mirror's Edge's tuck (kTuckMaximumFallMps): sprinting at the proving
+// ground's crawl beam (its top 1.85 m up), a jump 4.4 m short with Crouch held
+// while rising draws the legs up and the body clears the beam; the same jump
+// with the legs left down strikes it and stops.
+void run_tuck() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    struct Result {
+        double end_z = 0.0;
+        double lowest_over_beam = 9.0;
+        std::uint64_t tucks = 0;
+    };
+    const auto jump_the_beam = [](const bool tuck) {
+        Simulation s(InitialSpawn::StaticDeck);
+        require(s.advance_frame(1.0).accepted, "tuck: settle");
+        require(walk_to(s, -2.0, -5.0, 20.0, 0.1), "tuck: to the crawl beam's lane");
+        Result result;
+        bool jumped = false;
+        for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const auto now = s.snapshot();
+            (void)s.set_facing(0.0, -1.0);
+            (void)s.set_move_input(0.0, -1.0);
+            (void)s.set_sprint_input(!jumped);
+            if (!jumped && now.player_position.z < -8.6) {
+                require(s.request_jump(), "tuck: the jump at the beam");
+                jumped = true;
+            }
+            (void)s.set_crouch_input(tuck && jumped && !now.player_grounded && now.player_position.z > -13.8);
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "tuck tick");
+            const auto after = s.snapshot();
+            if (std::abs(after.player_position.z + 13.0) < 0.65) {   // over the beam (kCrawlBeamZ)
+                const double bottom = after.player_position.y - (after.player_crouched ? 0.6 : 0.9);
+                result.lowest_over_beam = std::min(result.lowest_over_beam, bottom);
+            }
+            result.tucks = after.tuck_count;
+        }
+        result.end_z = s.snapshot().player_position.z;
+        return result;
+    };
+    const Result tucked = jump_the_beam(true);
+    const Result straight = jump_the_beam(false);
+    std::cout << "  tuck: tucked, the lowest of the body over the beam " << tucked.lowest_over_beam << " m, ended at z "
+              << tucked.end_z << "; legs down, ended at z " << straight.end_z << "\n";
+    require(tucked.tucks >= 1 && tucked.lowest_over_beam > 1.85 && tucked.end_z < -14.0,
+            "tuck: the legs drawn up, the body clears the 1.85 m beam");
+    require(straight.tucks == 0 && straight.end_z > -13.0, "tuck: the legs left down, the jump strikes the beam");
+    std::cout << "PASS scraperx_sim tuck: clearance_m=" << tucked.lowest_over_beam - 1.85 << "\n";
+}

@@ -514,6 +514,9 @@ struct Snapshot final {
     bool player_grounded = false;
     // Crouched: the short capsule (see Simulation::set_crouch_input).
     bool player_crouched = false;
+    // Mirror's Edge's tuck: the legs drawn up in a jump (see kTuckMaximumFallMps).
+    bool player_tucked = false;
+    std::uint64_t tuck_count = 0;
     // Parkour step 3: crouched at a run, the body slides on (see kSlideFriction).
     bool player_sliding = false;
     std::uint64_t slide_count = 0;
@@ -521,7 +524,12 @@ struct Snapshot final {
     // and whether one was taken in the last kWallRunHoldSeconds.
     std::uint64_t wall_step_count = 0;
     std::uint64_t wall_kick_count = 0;
+    // Mirror's Edge's wall climb: a run jumped up a tall wall (see
+    // kWallClimbMinimumSpeed).
+    std::uint64_t wall_climb_count = 0;
     bool player_wall_running = false;
+    // On the wall, run up it (a climb this flight, the foot still on it).
+    bool player_wall_climbing = false;
     // Parkour step 5, the grappling hook. hook_state: 0 stowed, 1 flying,
     // 2 bitten. The line runs from the body's chest to hook_position;
     // hook_line_length is its present limit, hook_tension_n its pull.

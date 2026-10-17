@@ -22,6 +22,8 @@ int main() {
         run_slide();
         run_speed_vault();
         run_wall_run();
+        run_wall_climb();
+        run_tuck();
         run_hook();
         run_workers();
         run_c7();
@@ -33,6 +35,11 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "stock") {
         run_loose_stock();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "climb") {
+        run_wall_climb();
+        run_tuck();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
@@ -284,6 +291,8 @@ int main() {
     run_slide();
     run_speed_vault();
     run_wall_run();
+    run_wall_climb();
+    run_tuck();
     run_hook();
     run_workers();
     run_c7();

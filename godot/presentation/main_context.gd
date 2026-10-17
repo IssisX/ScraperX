@@ -48,6 +48,9 @@ const TRAVERSAL_SWINGING := 6
 # crouches too, for as long as it is held; the native decides whether the
 # body can crouch or stand.
 var _crouch_toggled := false
+# The legs drawn up in this flight (the native's tuck): the toggle that did it
+# lets go when the feet come down.
+var _tucked_this_flight := false
 var _trapeze_was_hanging := false
 
 func _read_context() -> Dictionary:
@@ -86,6 +89,11 @@ func _read_context() -> Dictionary:
 	if _trapeze_was_hanging and not trapeze_hanging:
 		_crouch_toggled = false
 	_trapeze_was_hanging = trapeze_hanging
+	if bool(_native.is_player_tucked()):
+		_tucked_this_flight = true
+	elif grounded and _tucked_this_flight:
+		_tucked_this_flight = false
+		_crouch_toggled = false
 	var lift: Dictionary = _native.get_lift_state()
 	var lift_machine := int(lift["machine"])
 	var support := int(_native.get_support_entity_id())
@@ -235,6 +243,7 @@ func _read_context() -> Dictionary:
 		"crouched": bool(_native.is_player_crouched()),
 		"sliding": bool(_native.is_player_sliding()),
 		"wall_running": bool(_native.is_player_wall_running()),
+		"wall_climbing": bool(_native.is_player_wall_climbing()),
 		"wall_steps": int(_native.get_wall_step_count()),
 		"traversal": traversal,
 		"hanging": hanging,

@@ -823,6 +823,8 @@ void run_pipe_gallery();
 void run_slide();
 void run_speed_vault();
 void run_wall_run();
+void run_wall_climb();
+void run_tuck();
 void run_hook();
 void run_workers();
 void run_c7();

@@ -242,6 +242,74 @@ func _touch_wall_run() -> bool:
 	_detail = "steps=%d landed_x=%.2f" % [int(_native().get_wall_step_count()), _position().x]
 	return true
 
+# Mirror's Edge's wall climb: from the static deck to the run-up square to
+# the proving ground's 4 m run wall, a sprint at it (the stick pushed past
+# its ring) and JUMP 1.5 m short: the planted foot runs the body up it, the
+# hands take its top, CLIMB UP stands on it.
+func _touch_wall_climb() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _go(InputRouter.Device.TOUCH, Vector2(-6.0, -19.0), 0.15, 20.0):
+		return _fail("the walk to the run-up")
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.3)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var near: bool = await _wait_until(func() -> bool: return _position().z < -25.2, 3.0)
+	if not near:
+		return _fail("the sprint never reached the wall (z %.2f)" % _position().z)
+	_tap(2, _center(&"jump"))
+	var climbed: bool = await _wait_until(func() -> bool: return int(_native().get_wall_climb_count()) >= 1, 1.0)
+	if not climbed:
+		return _fail("the jump at the wall did not run up it")
+	await _pose("wall_climb")
+	var hung: bool = await _wait_until(func() -> bool: return bool(_ctx()["hanging"]), 2.0)
+	_move(InputRouter.Device.TOUCH, 0.0)
+	if not hung:
+		return _fail("the hands did not take the wall's top (y %.2f)" % _position().y)
+	if not await _climb_up(InputRouter.Device.TOUCH):
+		return _fail("CLIMB UP was not offered on the wall's top")
+	var up: bool = await _wait_until(func() -> bool:
+		return bool(_native().is_player_grounded()) and _position().y > 4.5, 3.0)
+	if not up:
+		return _fail("the climb never stood on the wall's top (y %.2f)" % _position().y)
+	await _pose("wall_climb_top")
+	_detail = "climbs=%d top_y=%.2f" % [int(_native().get_wall_climb_count()), _position().y]
+	return true
+
+# Mirror's Edge's tuck: from the static deck down the crawl beam's lane at a
+# sprint, JUMP 4.4 m short of its 1.85 m beam and CROUCH as the body rises:
+# the legs draw up, the body clears the beam, and lets them down on landing.
+func _touch_tuck() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _go(InputRouter.Device.TOUCH, Vector2(-2.0, -5.0), 0.15, 20.0):
+		return _fail("the walk to the crawl beam's lane")
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.3)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var near: bool = await _wait_until(func() -> bool: return _position().z < -8.6, 3.0)
+	if not near:
+		return _fail("the sprint never reached the take-off (z %.2f)" % _position().z)
+	_tap(2, _center(&"jump"))
+	var up: bool = await _wait_until(func() -> bool: return not bool(_native().is_player_grounded()), 0.4)
+	if not up:
+		return _fail("JUMP did not leave the ground")
+	_tap(3, _center(&"crouch"))
+	var tucked: bool = await _wait_until(func() -> bool: return bool(_native().is_player_tucked()), 0.4)
+	if not tucked:
+		return _fail("CROUCH in the jump did not draw the legs up")
+	await _pose("tuck")
+	var over: bool = await _wait_until(func() -> bool: return _position().z < -14.0, 2.0)
+	if not over:
+		return _fail("the tucked jump did not clear the beam (z %.2f)" % _position().z)
+	var standing: bool = await _wait_until(func() -> bool:
+		return bool(_native().is_player_grounded()) and not bool(_ctx()["crouched"]), 2.0)
+	_move(InputRouter.Device.TOUCH, 0.0)
+	if not standing:
+		return _fail("landed, the legs did not let down (still crouched)")
+	_detail = "landed_z=%.2f" % _position().z
+	return true
+
 # The same rail, vaulted with JUMP twice and ACTION never touched.
 func _touch_double_tap_vault() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)

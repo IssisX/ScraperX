@@ -592,6 +592,9 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			var mantle_heave := sin(PI * (traversal_prog - 0.45) / 0.55)
 			dip += 0.04 * mantle_heave
 		parkour_fov = 3.5 * sin(PI * clampf(traversal_prog, 0.0, 1.0))
+	elif bool(_ctx.get("wall_climbing", false)):
+		# Running up a wall: no lean; the view widens with the push up it.
+		parkour_fov = 3.5
 	elif bool(_ctx.get("wall_running", false)):
 		# Running on the wall: the body leans off it, the view with it.
 		_cam_bank += 0.09
@@ -776,6 +779,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "SWINGING"
 	elif bool(_native.is_player_sliding()):
 		_status.text = "SLIDING"
+	elif bool(_native.is_player_wall_climbing()):
+		_status.text = "WALL CLIMB"
 	elif bool(_native.is_player_wall_running()):
 		_status.text = "WALL RUN"
 	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN and support < STOCK_FIRST_ENTITY:
