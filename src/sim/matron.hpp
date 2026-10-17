@@ -183,6 +183,11 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // A blow on the deck she can hear like the player's noise (a crate
+    // crashing down): given before pre_step, heard in it.
+    void hear(float x, float y, float z, float loudness) noexcept {
+        crash_ = {true, x, y, z, loudness};
+    }
     void post_step(float dt);
 
     // True once her hands are on the player.
@@ -275,6 +280,12 @@ private:
     float sight_far_s_ = 0.0F;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
+    struct Crash {
+        bool heard = false;
+        float x = 0.0F, y = 0.0F, z = 0.0F;
+        float loudness = 0.0F;
+    };
+    Crash crash_{};
     bool dead_ = false;
     std::uint64_t catches_ = 0;
     float plank_peak_n_ = 0.0F;

@@ -35,6 +35,7 @@ add_library(scraperx_sim STATIC
     src/sim/climb_c7.cpp
     src/sim/summit.cpp
     src/sim/matron.cpp
+    src/sim/deck_stock.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp

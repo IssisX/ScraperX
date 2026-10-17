@@ -243,6 +243,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     vertical_->build_wheel_reload();
     // The summit: the deck, the dead searchlight and the runway arm. Last.
     summit_ = std::make_unique<Summit>(physics_system_, *kit_);
+    // Loose stock on the Matron's deck: after the summit, so older saves line up.
+    deck_stock_ = std::make_unique<DeckStock>(physics_system_, *kit_);
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
@@ -266,6 +268,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
     summit_.reset();
+    deck_stock_.reset();
     vertical_.reset();
     trapeze_.reset();
     swing_.reset();
@@ -408,6 +411,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
     summit_->pre_step();
+    if (const DeckStock::Noise crash = deck_stock_->take_noise(); crash.heard) {
+        matron_->hear(crash.x, crash.y, crash.z, crash.loudness);
+    }
     matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
     kit_->pre_step(delta_seconds);
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
@@ -415,6 +421,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     contact_listener_.begin_tick();
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
+    deck_stock_->post_step();
     summit_->post_step();
     matron_->post_step(delta_seconds);
     if (matron_->take_released_edge()) {

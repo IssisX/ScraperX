@@ -103,6 +103,7 @@ const SCENARIOS := {
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
 	"look_matron_gallery": 11,
+	"look_matron_stock": 11,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
 	"look_summit_ground": 8,
@@ -329,6 +330,8 @@ func _run() -> void:
 			ok = await _look_matron("catwalk")
 		"look_matron_gallery":
 			ok = await _look_matron_gallery()
+		"look_matron_stock":
+			ok = await _look_matron("stock")
 		"look_summit":
 			ok = await _look_summit(false)
 		"look_summit_ground":

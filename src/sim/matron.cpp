@@ -412,10 +412,18 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     const bool on_deck = player.GetY() > kDeckTop - 1.0 && player.GetY() < kDeckTop + 6.0 && std::abs(px) < 27.0F &&
                          pz < -123.0F && pz > -177.0F;
     player_on_deck_ = on_deck;
+    const Crash crash = crash_;
+    crash_ = {};
+    const bool crash_on_deck = crash.heard && crash.y > kDeckTop - 1.0F && crash.y < kDeckTop + 6.0F;
     switch (state_) {
     case State::Dormant: {
         const float d = distance_xz(px, pz, kLockerX, kLockerZ);
-        if (on_deck && loudness > 0.0F && d <= kWakeNoiseM && loudness * kFullHearingM >= d) {
+        const float crash_d = distance_xz(crash.x, crash.z, kLockerX, kLockerZ);
+        if (crash_on_deck && crash_d <= kWakeNoiseM && crash.loudness * kFullHearingM >= crash_d) {
+            noise_heard_ = crash.loudness;
+            state_ = State::Straining;
+            strain_s_ = 0.0F;
+        } else if (on_deck && loudness > 0.0F && d <= kWakeNoiseM && loudness * kFullHearingM >= d) {
             noise_heard_ = loudness;
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -457,7 +465,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // (Low rays: a guard rail is bars, not a wall.)
         sees_far_ = on_deck && d <= kCommitSightM &&
                     (saw || sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0)));
-        if (heard || saw) {
+        // A crash on the deck louder than the player draws her to it instead.
+        const bool crash_heard = crash_on_deck && crash.loudness * kFullHearingM >= distance_xz(ax, az, crash.x, crash.z);
+        if (crash_heard && !saw && (!heard || crash.loudness > loudness)) {
+            noise_heard_ = crash.loudness;
+            heard_x_ = crash.x;
+            heard_z_ = crash.z;
+            since_heard_s_ = 0.0F;
+            state_ = State::Hunting;
+        } else if (heard || saw) {
             noise_heard_ = heard ? loudness : 0.3F;
             heard_x_ = px;
             heard_z_ = pz;

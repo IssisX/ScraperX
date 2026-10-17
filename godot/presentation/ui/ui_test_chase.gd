@@ -101,6 +101,17 @@ func _look_matron(stage: String) -> bool:
 	var device := InputRouter.Device.TOUCH
 	_main._sky_cycle.set_hour(20.2)
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if stage == "stock":
+		_main._sky_cycle.set_hour(17.5)
+		await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0)
+		await _go(device, Vector2(22.6, -142.0), 0.5, 20.0)
+		await _look_at_point(Vector3(19.4, MATRON_DECK_Y + 0.3, -147.4))
+		await _pose("matron_stock_dolly")
+		await _go(device, Vector2(MATRON_BAND_X, -165.0), 0.5, 20.0)
+		await _go(device, Vector2(12.0, -170.5), 0.5, 20.0)
+		await _look_at_point(Vector3(15.0, MATRON_DECK_Y + 0.8, -174.6))
+		await _pose("matron_stock_stack")
+		return true
 	if stage == "catwalk":
 		await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0)
 		await _go(device, Vector2(19.0, MATRON_MID_Z), 0.5, 20.0)

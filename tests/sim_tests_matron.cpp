@@ -3,9 +3,11 @@
 // the rotten catwalk. Every leg is on player inputs from the deck spawn.
 #include "sim_tests.hpp"
 
+#include "sim/deck_stock.hpp"
 #include "sim/matron.hpp"
 
 namespace {
+using scraperx::sim::DeckStock;
 using scraperx::sim::InitialSpawn;
 using scraperx::sim::Matron;
 using scraperx::sim::MatronSnapshot;
@@ -112,6 +114,64 @@ CrossResult sprint_across(Simulation &s, const bool until_dead) {
     result.end = s.matron_state();
     result.deaths = static_cast<std::uint32_t>(s.snapshot().death_count);
     return result;
+}
+
+scraperx::sim::Vector3 stock(const Simulation &s, const int piece) {
+    return s.kit_body_position(s.kit_body_index(DeckStock::kFirstEntity + static_cast<std::uint64_t>(piece)));
+}
+
+// Pushes stock piece `piece` toward (tx, tz) the way a person does: round
+// behind it, then walking through it, until `done` says stop or the time runs out.
+template <typename Done>
+bool push_toward(Simulation &s, const int piece, const double tx, const double tz, const double seconds, Done done) {
+    const auto ticks = static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (int i = 0; i < ticks; ++i) {
+        const auto d = stock(s, piece);
+        if (done(d)) {
+            (void)s.set_move_input(0.0, 0.0);
+            return true;
+        }
+        const auto p = s.snapshot().player_position;
+        double gx = tx - d.x;
+        double gz = tz - d.z;
+        const double gl = std::hypot(gx, gz);
+        gx /= gl;
+        gz /= gl;
+        const double bx = d.x - gx * 1.2;
+        const double bz = d.z - gz * 1.2;
+        const double px = bx - p.x;
+        const double pz = bz - p.z;
+        const double pl = std::hypot(px, pz);
+        const double ax = d.x - p.x;
+        const double az = d.z - p.z;
+        const double along = (ax * px + az * pz) / (pl + 1.0e-9);
+        const double side = std::abs(ax * pz - az * px) / (pl + 1.0e-9);
+        double mx = 0.0;
+        double mz = 0.0;
+        if (pl > 0.45 && along > 0.0 && along < pl && side < 1.1) {
+            double sx = -gz;
+            double sz = gx;
+            if ((p.x - d.x) * sx + (p.z - d.z) * sz < 0.0) {
+                sx = -sx;
+                sz = -sz;
+            }
+            // Round its side, toward its back.
+            mx = d.x + sx * 1.7 - gx * 1.0 - p.x;
+            mz = d.z + sz * 1.7 - gz * 1.0 - p.z;
+        } else if (pl > 0.45) {
+            mx = px;
+            mz = pz;
+        } else {
+            mx = gx + 0.8 * (bx - p.x);
+            mz = gz + 0.8 * (bz - p.z);
+        }
+        const double ml = std::hypot(mx, mz);
+        (void)s.set_move_input(mx / ml * 0.7, mz / ml * 0.7);
+        (void)s.set_facing(mx / ml, mz / ml);
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
 }
 } // namespace
 
@@ -284,6 +344,65 @@ void run_matron() {
         require(windup_still_s > 0.5, "matron: the wind-up stops her: the player's one warning");
         require(lunge_peak > 8.2, "matron: the lunges burst faster than a sprint");
         require(turns_started == 1, "matron: one Turn, then a long quiet spell");
+    }
+    // ---- the deck's loose stock: shoved by walking into it; the ingot dolly breaks a plate ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        (void)s.advance_frame(2.0);
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0) && go(s, 24.6, -142.8, false, 20.0),
+                "matron: a crouched walk to the loose crate north of the catwalk's end");
+        (void)s.set_crouch_input(false);
+        stand_still(s, 1.0);
+        const auto before = stock(s, 3);
+        for (int i = 0; i < 4 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            (void)s.set_move_input(0.0, -1.0);
+            (void)s.set_facing(0.0, -1.0);
+            tick(s);
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        const auto after = stock(s, 3);
+        const double moved = std::hypot(after.x - before.x, after.z - before.z);
+        std::cout << "  matron: a crate shoved 4 s by walking into it moved " << moved << " m\n";
+        require(moved > 1.0 && moved < 4.0 * 5.5 * 0.6, "matron: a crate walked into moves, and slower than a walk");
+        require(s.matron_state().planks_fallen == 0, "matron: nothing has come down");
+        // The ingot dolly: round behind it and shoved out onto the catwalk.
+        (void)s.set_crouch_input(true);
+        require(go(s, 21.5, -143.0, false, 20.0), "matron: to the dolly's side");
+        (void)s.set_crouch_input(false);
+        // First south into line with the catwalk, then west along it.
+        const bool lined = push_toward(s, 5, 19.0, Matron::kMidZ - 0.6, 40.0, [](const scraperx::sim::Vector3 &d) {
+            return std::abs(d.z - Matron::kMidZ) < 0.2;
+        });
+        require(lined, "matron: the ingot dolly pushed into line with the catwalk");
+        const bool out = push_toward(s, 5, 10.0, Matron::kMidZ, 40.0,
+                                     [](const scraperx::sim::Vector3 &d) { return d.x < 17.6; });
+        require(out, "matron: the ingot dolly pushed to the catwalk's end");
+        // A last hard shove sends it rolling out onto the plates; the
+        // pusher stops on the deck.
+        for (int i = 0; i < static_cast<int>(0.6 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+            const auto d = stock(s, 5);
+            const auto p = s.snapshot().player_position;
+            (void)s.set_move_input(-1.0, (d.z - p.z) * 2.0);
+            (void)s.set_facing(-1.0, 0.0);
+            (void)s.set_sprint_input(true);
+            tick(s);
+            if (p.x < 18.2) {
+                break;
+            }
+        }
+        (void)s.set_sprint_input(false);
+        // Step back off the catwalk's end and let it do what it does.
+        require(go(s, 21.5, Matron::kMidZ, false, 6.0), "matron: back off the catwalk's end");
+        stand_still(s, 3.0);
+        const auto dolly = stock(s, 5);
+        const auto m = s.matron_state();
+        std::cout << "  matron: the dolly on the catwalk: plates down " << m.planks_fallen << ", the dolly at y " << dolly.y
+                  << "\n";
+        require(m.planks_fallen >= 1 && dolly.y < Matron::kDeckTop - 5.0,
+                "matron: the ingot dolly brings a plate down and falls through");
+        require(m.alive && m.state != kStateDead && s.snapshot().death_count == 0,
+                "matron: a plate down under the dolly kills no one");
     }
     // ---- the same start and inputs give the same chase ------------------------------
     {

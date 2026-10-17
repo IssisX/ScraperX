@@ -576,6 +576,7 @@ public:
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
+    std::unique_ptr<DeckStock> deck_stock_;
     std::unique_ptr<Matron> matron_;
     std::uint64_t matron_landing_seen_ = 0;
     bool matron_checkpoint_pending_ = false;

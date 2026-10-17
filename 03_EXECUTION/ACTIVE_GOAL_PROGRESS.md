@@ -815,6 +815,21 @@ about on that deck to use against her. Taking only what the physics already give
 dropped on a plate would bring it down; a crate crashing over the edge would be heard and could
 draw her off) so no new rules are needed; to be built after the owner has played her.
 
+**Loose stock on the Matron's deck (native + Godot; the owner's idea, 2026-10-16/17).** Seven
+real bodies on the 154 m deck, each shoved by walking into it, with no rule of its own
+(`src/sim/deck_stock.cpp`): three 160 kg timber crates by the south band's rail, two side by side
+and one on top like a step (climb the low one and shove the top one off); two loose crates either
+side of the catwalk's east end; a 420 kg box of ingots on a rolling dolly against the shaft's rail
+just north of the catwalk; a timber beam on the south band. What they do comes from the physics:
+a crate is heavy to push (about 2 m in 4 s from a standing start); a crate that hits something hard
+(a sudden change of 2 m/s or more) is a crash she hears exactly as she hears the player, and a
+crash louder than the player draws her to it; the ingot dolly pushed out onto the rotten catwalk
+brings the plate under it down and falls through, which breaks the way across (it does not kill
+her: only a plate under her does). They are saved and restored with the machines. Proof: native
+`matron` (a crate shoved; the dolly round behind, into line, out onto the plates, a plate down,
+no one killed); `look_matron_stock` renders them. Not proven in a test: the crash luring her
+(the crash's loudness was measured in a probe, about 2.4 m/s off the stack's top).
+
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
    gust pushes jumps, tugs hanging hands, bows the hook's rope and the parachute; crouch or duck
