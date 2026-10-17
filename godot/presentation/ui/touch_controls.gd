@@ -166,8 +166,20 @@ func button_label(id: StringName) -> String:
 
 
 func _layout() -> void:
-	_safe = UiStyle.safe_rect(self)
-	_u = UiStyle.unit(self) * touch_scale
+	_layout_in_safe_rect(UiStyle.safe_rect(self))
+
+
+func _layout_in_safe_rect(safe: Rect2) -> void:
+	_safe = safe
+	# Fit the safe short edge as well as the design canvas. Small windows and
+	# inset displays must not inherit the global quarter-unit drawing floor.
+	_u = minf(UiStyle.unit(self), minf(_safe.size.x, _safe.size.y) / 1856.0) * touch_scale
+	if forklift_mode:
+		# The selector row has a 13%-width pitch; expanded hit circles must fit.
+		_u = minf(_u, _safe.size.x * 0.13 / (164.0 * HIT_SLOP + 8.0))
+		_u = minf(_u, _safe.size.y * 0.18 / (168.0 * HIT_SLOP + 8.0))
+	if yard_crane_mode:
+		_u = minf(_u, _safe.size.y * 0.20 / (172.0 * HIT_SLOP + 8.0))
 	var m := 56.0 * _u
 	var corner := _safe.end
 	var jump := Vector2(corner.x - m - 170.0 * _u, corner.y - m - 190.0 * _u)
@@ -189,11 +201,13 @@ func _layout() -> void:
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
 	# Stationary machines use the left thumb for their pendant. The portable
 	# grapple and forklift keep the stick and place tool controls to its right.
-	_pendant_center = Vector2(_safe.position.x + _safe.size.x * 0.56, corner.y - m - 470.0 * _u) \
+	_pendant_center = Vector2(_safe.position.x + _safe.size.x * 0.36, corner.y - m - 620.0 * _u) \
 		if _portable_tool else _stick_home + Vector2(20.0, -40.0) * _u
 	var arm := (190.0 if _portable_tool else 158.0) * _u
 	_place(B_REEL, _pendant_center, 110.0)
-	_place(B_AUTO_REEL, _pendant_center, 60.0)
+	# Without a portable pendant the center belongs to the movement stick
+	# (or recovery reel), so automatic reeling needs its own target above it.
+	_place(B_AUTO_REEL, _pendant_center + Vector2(0.0, 0.0 if _portable_tool else -400.0) * _u, 60.0)
 	_place(B_UP, _pendant_center + Vector2(0.0, -arm), 80.0)
 	_place(B_DOWN, _pendant_center + Vector2(0.0, arm), 80.0)
 	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)

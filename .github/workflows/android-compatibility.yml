@@ -1,0 +1,166 @@
+name: Android native compatibility
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ChatGPT]
+    paths:
+      - .github/workflows/android-compatibility.yml
+      - ci/*android*compatibility*
+      - ci/prepare_android_emulator_export.py
+      - cmake/ScraperXAndroidAbi.cmake
+      - godot/tests/android_compatibility_probe.gd
+      - godot/tests/android_responsive_controls_test.gd
+      - godot/presentation/ui/touch_controls.gd
+      - godot/presentation/ui/ui_style.gd
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7-stable
+  GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+  GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_NDK_VERSION: 29.0.14206865
+  GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/ci/android/ScraperX-ChatGPT-debug.keystore
+  GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+  GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+
+jobs:
+  native-emulator-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install existing pinned export toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build
+          sdkmanager "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable" artifacts/android-compatibility-build
+          curl --fail --location --retry 3 --output tools/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+          unzip -q tools/godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+          curl --fail --location --retry 3 --output tools/godot/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+      - name: Build real host bridge and Android x86_64 native graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/compat-host -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
+          cmake --build build/compat-host --target scraperx_native --parallel 2
+          cmake -S . -B build/android-x86_64 -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-24 -DBUILD_TESTING=OFF \
+            -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
+          cmake --build build/android-x86_64 --target scraperx_native --parallel 2
+          file godot/addons/scraperx_native/bin/android/x86_64/libscraperx_native.so \
+            | tee artifacts/android-compatibility-build/native-library.txt
+          python3 -m unittest discover -s ci -p test_android_compatibility.py
+      - name: Check controls and export observed ordinary game
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/prepare_chatgpt_build_info.py
+          tools/godot/godot --headless --editor --path godot --import --quit 2>&1 \
+            | tee artifacts/android-compatibility-build/import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/android-compatibility-build/import.log; then exit 1; fi
+          timeout 120s tools/godot/godot --headless --path godot --script res://tests/android_responsive_controls_test.gd \
+            2>&1 | tee artifacts/android-compatibility-build/controls.log
+          grep -E 'ANDROID_RESPONSIVE layouts=[0-9]+ failures=0' artifacts/android-compatibility-build/controls.log
+          python3 ci/prepare_android_emulator_export.py
+          tools/godot/godot --headless --path godot --export-debug "Android emulator" \
+            "${GITHUB_WORKSPACE}/artifacts/android-compatibility-build/ScraperX-emulator.apk" \
+            2>&1 | tee artifacts/android-compatibility-build/export.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:' artifacts/android-compatibility-build/export.log; then exit 1; fi
+          unzip -p artifacts/android-compatibility-build/ScraperX-emulator.apk lib/x86_64/libscraperx_native.so \
+            | cmp - godot/addons/scraperx_native/bin/android/x86_64/libscraperx_native.so
+          sha256sum artifacts/android-compatibility-build/ScraperX-emulator.apk \
+            > artifacts/android-compatibility-build/SHA256SUMS.txt
+          printf '%s\n' "${GITHUB_SHA}" > artifacts/android-compatibility-build/source-sha.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-emulator-apk-${{ github.sha }}
+          path: artifacts/android-compatibility-build/
+          if-no-files-found: warn
+
+  android-devices:
+    needs: native-emulator-apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: compact-api24
+            api: 24
+            device: Nexus 5X
+            resize: 960x540
+          - name: tall-api35
+            api: 35
+            device: pixel_7
+            resize: 1600x900
+          - name: tablet-api35
+            api: 35
+            device: pixel_c
+            resize: 1920x1200
+          - name: foldable-api35
+            api: 35
+            device: pixel_fold
+            resize: 1080x2092
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-emulator-apk-${{ github.sha }}
+          path: artifacts/android-compatibility-build
+      - name: Verify emulator acceleration and installed device profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "artifacts/android-${{ matrix.name }}"
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          "${ANDROID_HOME}/emulator/emulator" -accel-check \
+            | tee "artifacts/android-${{ matrix.name }}/acceleration.txt"
+          avdmanager list device > "artifacts/android-${{ matrix.name }}/available-profiles.txt"
+      - name: Boot Android and exercise real touch and lifecycle
+        uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.device }}
+          cores: 2
+          ram-size: 3072M
+          emulator-boot-timeout: 300
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: >-
+            python3 ci/run_android_compatibility.py
+            --apk artifacts/android-compatibility-build/ScraperX-emulator.apk
+            --source "${{ github.sha }}" --profile "${{ matrix.name }}"
+            --resize "${{ matrix.resize }}" --output "artifacts/android-${{ matrix.name }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-${{ matrix.name }}-${{ github.sha }}
+          path: artifacts/android-${{ matrix.name }}/
+          if-no-files-found: warn
