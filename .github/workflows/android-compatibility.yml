@@ -176,7 +176,8 @@ jobs:
             api: 36
             device: pixel_c
             resize: 1920x1200
-            route: --display-route
+            driver: ci/android_startup_replay.py
+            route: --display-route --startup-font-scale none
           - name: foldable-api35
             api: 35
             device: 7.6in Foldable

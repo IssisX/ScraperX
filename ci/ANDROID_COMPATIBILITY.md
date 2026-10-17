@@ -203,3 +203,9 @@ startup replay, with the real early `font_scale=1.25` input. Its existing
 fold/unfold, control, persistence and same-instance requirements remain intact.
 The reproduced failure and proposed repair do not establish a repaired Android
 run until the edited-source matrix completes.
+
+The tablet also uses this wrapper with `--startup-font-scale none` to capture
+an observed startup activity recreation before Main produces any observations.
+Its complete display/lifecycle route is unchanged. No configuration input or
+launch retry is added; the events must identify the actual recreation reason
+before another activity configuration flag is considered.

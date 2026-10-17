@@ -100,6 +100,11 @@ class TouchDriver:
             if midpoint not in (start, end):
                 self.pointer('MOVE', midpoint)
             self.pointer('MOVE', end)
+            if dragging and self.api < 35:
+                # API24 resamples fast Monkey moves and can extrapolate past
+                # the endpoint. End the path with two equal samples so its
+                # final velocity is zero; still require the observed endpoint.
+                self.pointer('MOVE', end)
             # Android/Godot may omit a stationary MOVE. A held machine button
             # needs its real DOWN; a stick/look drag needs the MOVE as well.
             accepted = self.session.wait('held Android gesture reaches native stepping',

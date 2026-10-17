@@ -10,13 +10,14 @@ from android_touch_driver import TouchDriver
 
 class SessionFixture:
     def __init__(self, *, fail_move=False, fail_hold=False, fail_up=False, drop_move=False,
-                 drop_at=None, stale_cache=False):
+                 drop_at=None, stale_cache=False, resample=False):
         self.receipt = {}
         self.commands = []
         self.fail_move, self.fail_hold, self.fail_up = fail_move, fail_hold, fail_up
         self.drop_move = drop_move
         self.drop_at, self.stale_cache = drop_at, stale_cache
         self.last_drag = self.down = None
+        self.resample, self.previous_sample = resample, None
         self.state = {'instance': 'one', 'ready': True, 'paused': False,
                       'tick': 100, 'fixed_step_s': 1 / 90,
                       'window': [800, 450], 'canvas': [3299, 1856],
@@ -36,9 +37,17 @@ class SessionFixture:
             raise RuntimeError('injected release failure')
         if action == 'DOWN':
             self.down = point
+            self.previous_sample = point
         if action == 'MOVE':
             if self.drop_move or point == self.drop_at:
                 return b''
+            raw = point
+            if self.resample:
+                # Android 7 InputTransport.cpp resampleTouchState: with no
+                # future sample, extrapolation is capped at half the last
+                # sample interval. Captured 368 -> 356 became 350 exactly.
+                point = tuple(a + 0.5 * (a - b) for a, b in zip(raw, self.previous_sample))
+            self.previous_sample = raw
             if self.stale_cache and point == self.last_drag:
                 return b''
             self.last_drag = point
@@ -68,6 +77,20 @@ class SessionFixture:
 
 
 class TouchDriverTests(unittest.TestCase):
+    @staticmethod
+    def monkey_driver(session):
+        class Stream:
+            def write(self, command):
+                _, action, x, y = command.decode().split()
+                session.adb('monkey', action.upper(), int(x), int(y))
+
+            def readline(self, limit):
+                return b'OK\n'
+
+        driver = TouchDriver(session, 24)
+        driver.stream = Stream()
+        return driver
+
     def test_response_hold_releases_when_real_predicate_is_met(self):
         session = SessionFixture()
         state = TouchDriver(session, 36).swipe((10, 20), (10, 5), 1200,
@@ -145,6 +168,49 @@ class TouchDriverTests(unittest.TestCase):
         endpoint = state['input_trace']['history'][-1]['at']
         self.assertAlmostEqual(endpoint[0], 65 * 3299 / 800)
         self.assertAlmostEqual(endpoint[1], 378 * 1856 / 450)
+
+    def test_api24_final_stationary_sample_stops_captured_endpoint_extrapolation(self):
+        session = SessionFixture(resample=True)
+        state = self.monkey_driver(session).swipe((69, 381), (69, 356), 100)
+        drags = [event['at'] for event in state['input_trace']['history'] if event['event'] == 'drag']
+        self.assertAlmostEqual(drags[-2][1], 350 * 1856 / 450)
+        self.assertAlmostEqual(drags[-1][1], 356 * 1856 / 450)
+        self.assertEqual([c[-3:] for c in session.commands],
+                         [('DOWN', 69, 381), ('MOVE', 69, 368), ('MOVE', 69, 356),
+                          ('MOVE', 69, 356), ('UP', 69, 356)])
+        self.assertGreaterEqual(state['tick'], 110)
+        self.assertFalse(session.state['input_trace']['owned'])
+
+    def test_api24_endpoint_extrapolation_still_fails_if_stationary_sample_drops(self):
+        session = SessionFixture(resample=True)
+        driver = self.monkey_driver(session)
+        pointer = driver.pointer
+        count = 0
+
+        def drop_stationary(action, point):
+            nonlocal count
+            if action == 'MOVE':
+                count += 1
+                if count == 3:
+                    return
+            pointer(action, point)
+
+        driver.pointer = drop_stationary
+        with self.assertRaisesRegex(RuntimeError, 'held Android gesture reaches native stepping'):
+            driver.swipe((69, 381), (69, 356), 100)
+        self.assertFalse(session.state['input_trace']['owned'])
+
+    def test_api24_dropped_endpoint_samples_cannot_pass_on_midpoint(self):
+        session = SessionFixture(resample=True, drop_at=(69, 356))
+        with self.assertRaisesRegex(RuntimeError, 'held Android gesture reaches native stepping'):
+            self.monkey_driver(session).swipe((69, 381), (69, 356), 100)
+        self.assertFalse(session.state['input_trace']['owned'])
+
+    def test_api24_stationary_hold_keeps_original_event_sequence(self):
+        session = SessionFixture(drop_move=True)
+        self.monkey_driver(session).swipe((69, 381), (69, 381), 100)
+        self.assertEqual([c[-3:] for c in session.commands],
+                         [('DOWN', 69, 381), ('MOVE', 69, 381), ('UP', 69, 381)])
 
     def test_one_pixel_drag_skips_duplicate_rounded_midpoint(self):
         session = SessionFixture()

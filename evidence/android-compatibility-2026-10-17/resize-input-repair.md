@@ -126,3 +126,36 @@ Actual corrected-source Android route execution remains required.
 
 Primary owner:
 [Godot4.7 GodotGestureHandler](https://github.com/godotengine/godot/blob/4.7-stable/platform/android/java/lib/src/main/java/org/godotengine/godot/input/GodotGestureHandler.kt#L128).
+
+## Follow-up: Android 7 extrapolates the injected endpoint
+
+Source `586711289839f71d7dc421c551f2de3874db58cd`, run `39062072573`:
+compact API24 passed eight checks before its first held movement failed the
+unchanged endpoint gate. The actual Monkey sequence was DOWN `(69,381)`,
+MOVE `(69,368)`, MOVE `(69,356)`. All commands returned OK, ownership remained
+active and native ticks advanced. The last observed drag instead mapped to
+`(69,350)`. The canvas conversion was correct.
+
+Android 7's input transport extrapolates fast motion by at most half the last
+sample interval. Here `356 + (356 - 368) / 2 = 350`, matching the captured
+failure. The Monkey-backed driver now sends one additional stationary MOVE
+at the same original endpoint. Equal final samples give the resampler zero
+terminal velocity. No coordinate, duration, deadline, response requirement or
+endpoint tolerance changes. Stationary button holds retain their old sequence.
+This is a harness correction, not a gameplay or upstream engine change.
+
+The existing bounded Sol/high implementer ran:
+
+```sh
+python -m unittest discover -s ci -p test_android_touch_driver.py -v
+git diff --check -- ci/android_touch_driver.py ci/test_android_touch_driver.py
+```
+
+Observed: 17 tests OK; whitespace check exit0. New cases model the captured
+368 to356 extrapolation, reject a dropped stationary sample or dropped final
+samples, and preserve stationary holds. Root inspected the actual diff and
+reused this evidence. These host fixtures do not prove repaired Android input;
+the actual compact route remains required.
+
+Primary owner:
+[Android 7 InputTransport resampleTouchState](https://android.googlesource.com/platform/frameworks/native/+/android-7.0.0_r1/libs/input/InputTransport.cpp#737).

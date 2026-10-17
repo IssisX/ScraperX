@@ -133,3 +133,26 @@ logs and prior failure output remain preserved under the existing Q directory.
 
 Native tutorial button owner:
 [Android 16 ImmersiveModeConfirmation](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/packages/SystemUI/src/com/android/systemui/statusbar/ImmersiveModeConfirmation.java#L430).
+
+## Separate tablet startup failure: capture the actual recreation reason
+
+Source `586711289839f71d7dc421c551f2de3874db58cd`, run `39062072573`:
+foldable API35 again passed all33 checks. Tablet API36 produced no Main
+observations, so the fullscreen tutorial acknowledgment was never reached.
+The failure screenshot shows Android Home. Logcat records game process2720
+loading Godot, then receiving updated navigation and dynamic-theme resource
+paths. Godot receives Pause, Stop and Destroy before startup succeeds; the
+recreated activity reuses the initialized engine and Godot then kills its own
+process with SIG9. This is not evidence of an out-of-memory kill or graphics
+overload. The separate Google Play Services ANR does not establish causation.
+
+The ordinary logcat capture lacks the activity-relaunch configuration mask.
+The tablet matrix now uses the existing startup replay wrapper with
+`--startup-font-scale none`. It records continuous Android lifecycle events
+and before/after configuration around the unchanged full tablet driver.
+No font input, failed-launch retry, deadline extension or new activity
+configuration flag is added. A resource-path change is observed; its precise
+role in this recreation remains unverified until the OS event records it.
+
+Source owner for the observed application-info message:
+[Android 16 ActivityThread.handleApplicationInfoChanged](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/core/java/android/app/ActivityThread.java#L6966).
