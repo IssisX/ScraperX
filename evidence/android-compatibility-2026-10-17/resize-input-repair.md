@@ -91,3 +91,38 @@ API24/35/36 workflow. Observe real Messenger dismissal/focus return if the
 foreign dialog occurs, original full-size crouch/stand, the unchanged small
 freight gestures reaching native movement, full lifecycle/resize/fold checks,
 and cleanup. No Android runtime pass or release claim is made for these edits.
+
+## Follow-up: repeated short endpoint in actual Android
+
+Source `ab94f44`, run `39060680132`: the first14 freight walking pulses deliver
+real MOVE/native movement, then pulse15 repeats pulse14's exact7px endpoint
+`(65,385)` to `(65,378)` and its MOVE is absent. DOWN owns the stick and
+native ticks continue. Pinned Godot4.7's sub-slop path caches `lastDragX/Y`
+without setting `dragInProgress`; the normal UP branch consequently leaves
+that cache, suppressing the repeated identical next MOVE. This differs from
+the earlier default-deadzone failure.
+
+`TouchDriver` now sends a distinct rounded linear midpoint, when one exists,
+then the original endpoint. No coordinate extends the original gesture.
+Acceptance also checks a fresh actual drag at the original endpoint using
+the existing canvas/window/measured-origin receipts, so midpoint-only delivery
+cannot manufacture success. Original native duration, response predicates,
+deadlines, finally-UP and release ownership remain intact. Stationary holds
+remain unchanged. One-pixel repeated gestures still fail honestly when no
+distinct midpoint exists. The upstream engine cache is not repaired here.
+
+Fresh Sol/high worker executed on `ab94f44` plus these local driver edits:
+
+```sh
+python -m unittest discover -s ci -p test_android_touch_driver.py -v
+git diff --check -- ci/android_touch_driver.py ci/test_android_touch_driver.py
+```
+
+Observed: 13 tests OK; whitespace check exit0. Added cases reject a dropped
+final endpoint, reproduce the stale-cache repeated gesture, account for
+scaled/offset windows, preserve cleanup and expose the one-pixel limitation.
+Root inspected the actual diff and reused this matching worker evidence.
+Actual corrected-source Android route execution remains required.
+
+Primary owner:
+[Godot4.7 GodotGestureHandler](https://github.com/godotengine/godot/blob/4.7-stable/platform/android/java/lib/src/main/java/org/godotengine/godot/input/GodotGestureHandler.kt#L128).

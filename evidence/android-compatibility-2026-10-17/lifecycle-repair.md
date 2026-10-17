@@ -91,3 +91,45 @@ execution remains required.
 
 Primary format owner:
 [Android 15 DisplayContent.dump](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-15.0.0_r1/services/core/java/com/android/server/wm/DisplayContent.java#L3355).
+
+## Corrected focus run and remaining startup/input repairs
+
+Run `39060680132`, source `ab94f4415b72d798d8da28fafe7eee17d8959550`:
+
+- Compact API24 passed 27 checks.
+- Foldable API35 passed 33 checks, including the controlled early font-size
+  change and real fold/unfold/lifecycle path. The previous missing-field
+  harness failure is resolved for this run.
+- Tablet API36's screenshot shows Android's actual “Viewing full screen”
+  tutorial over the game's Pause menu. Focus is truthfully reported as
+  `ImmersiveModeConfirmation` despite the recorded prelaunch setting readback.
+  The harness now captures the UI hierarchy, finds the unique enabled native
+  system confirmation button, rechecks the focused window and performs an
+  ordinary tap. It must then observe game focus and fresh native identity;
+  normal Resume remains necessary. Other dialogs and actual crashes retain
+  their previous failure/recovery rules.
+- Tall API36 passed 64 checks before missing pulse15's MOVE. Pulses14/15
+  repeat `(65,385)` to `(65,378)`. Pinned Godot forwards a sub-scroll-slop
+  MOVE but retains its exact endpoint cache across UP, then suppresses the
+  next identical single-MOVE endpoint. The bounded ordinary interpolation
+  correction and endpoint rejection tests are described in the input note.
+
+Root command after the tutorial repair:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s ci -p test_android_compatibility.py -v
+```
+
+Observed: `Ran 20 tests ... OK`. System identity, button bounds, duplicate or
+disabled/invalid targets and focus changes before tapping are covered.
+The source-edited tablet acknowledgment and final corrected four-device run
+remain unverified until actual Android execution.
+
+The ordinary profile collector initially exited before its watcher's first
+snapshot existed. Its process was confirmed absent, then the reader was
+corrected to wait for the first complete JSON snapshot and resumed. No
+GitHub job was restarted due to that observation failure. Terminal profile
+logs and prior failure output remain preserved under the existing Q directory.
+
+Native tutorial button owner:
+[Android 16 ImmersiveModeConfirmation](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-16.0.0_r1/packages/SystemUI/src/com/android/systemui/statusbar/ImmersiveModeConfirmation.java#L430).

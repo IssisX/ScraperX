@@ -10,11 +10,36 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 from copy import deepcopy
 
 PREFIX = 'SCRAPERX_ANDROID_COMPAT '
 PART_PREFIX = 'SCRAPERX_ANDROID_COMPAT_PART '
 PACKAGE = 'com.cory.scraperx.chatgpt'
+
+
+def immersive_confirmation_point(xml):
+    """Locate the observed Android tutorial's actual native confirmation button."""
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as error:
+        raise ValueError(f'Fullscreen tutorial: invalid UI hierarchy: {error}') from error
+    identities = {('android', 'android:id/ok'),
+                  ('com.android.systemui', 'com.android.systemui:id/ok')}
+    buttons = [node for node in root.iter('node')
+               if (node.get('package'), node.get('resource-id')) in identities
+               and node.get('class') == 'android.widget.Button'
+               and node.get('enabled') == 'true' and node.get('clickable') == 'true']
+    if len(buttons) != 1:
+        raise ValueError(f'Fullscreen tutorial: expected one enabled system confirmation button, got {len(buttons)}')
+    bounds = buttons[0].get('bounds', '')
+    match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
+    if not match:
+        raise ValueError(f'Fullscreen tutorial: invalid confirmation bounds {bounds!r}')
+    left, top, right, bottom = map(int, match.groups())
+    if left >= right or top >= bottom:
+        raise ValueError(f'Fullscreen tutorial: empty confirmation bounds {bounds!r}')
+    return (left + right) / 2, (top + bottom) / 2
 
 
 def current_window_focus(text):
@@ -182,10 +207,28 @@ class Session:
     def tap(self, point):
         self.adb('shell', 'input', 'tap', round(point[0]), round(point[1]))
 
+    def acknowledge_fullscreen_tutorial(self):
+        self.capture('startup-fullscreen-tutorial')
+        path = '/sdcard/scraperx-fullscreen-tutorial.xml'
+        windows = ('--windows',) if int(self.receipt['ro.build.version.sdk']) >= 35 else ()
+        self.adb('shell', 'uiautomator', 'dump', *windows, '--compressed', path)
+        xml = self.adb('shell', 'cat', path).decode()
+        (self.output / 'startup-fullscreen-tutorial.xml').write_text(xml)
+        point = immersive_confirmation_point(xml)
+        focus = current_window_focus(self.adb('shell', 'dumpsys', 'window', '-a').decode())
+        if not re.search(r'\bImmersiveModeConfirmation\}$', focus):
+            return False
+        self.tap(point)
+        self.receipt['startup_fullscreen_tap'] = {'point': point, 'focus': focus,
+            'operation': 'ordinary tap on observed Android fullscreen tutorial confirmation'}
+        return True
+
     def prepare_input_focus(self):
-        """Recover only the observed bundled Messenger crash on disposable AVDs."""
+        """Require real game focus, handling only the observed emulator startup UI."""
         deadline = time.monotonic() + 20
         recovered = False
+        tutorial_acknowledged = False
+        tutorial_observed = False
         focus = ''
         windows = ''
         while time.monotonic() < deadline:
@@ -204,10 +247,14 @@ class Session:
                 self.receipt['startup_external_crash'] = {'package': package, 'focus': focus}
                 self.adb('shell', 'am', 'force-stop', package)
                 recovered = True
+            elif re.search(r'\bImmersiveModeConfirmation\}$', focus) and not tutorial_acknowledged:
+                tutorial_observed = True
+                (self.output / 'startup-input-focus-last.txt').write_text(windows)
+                tutorial_acknowledged = self.acknowledge_fullscreen_tutorial()
             elif re.search(r'\bu\d+ ' + re.escape(PACKAGE) + r'/', focus):
                 (self.output / 'startup-input-focus.txt').write_text(windows)
                 self.receipt['startup_input_focus'] = focus
-                return recovered
+                return recovered or tutorial_observed
             time.sleep(0.2)  # Require the OS focus result, not elapsed time.
         (self.output / 'startup-input-focus-last.txt').write_text(windows)
         raise RuntimeError(f'Android startup has no game input focus; actual focus={focus!r}')

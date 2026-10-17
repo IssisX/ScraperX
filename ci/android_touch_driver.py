@@ -63,6 +63,28 @@ class TouchDriver:
         before = self.session.snapshot()
         if before is None or not before['ready'] or before['paused']:
             raise RuntimeError('Held Android gesture requires an observed active native world')
+        start, end = tuple(map(round, start)), tuple(map(round, end))
+        dragging = start != end
+        if dragging:
+            # Probe history uses viewport/canvas coordinates. ADB uses screen
+            # pixels including the measured Android window origin.
+            endpoint = tuple((end[i] - before['input_window_frame'][i]) *
+                             before['canvas'][i] / before['window'][i] for i in range(2))
+
+        def delivered(state):
+            trace = state.get('input_trace', {})
+            if trace.get('events', 0) < before.get('input_trace', {}).get('events', 0) + (2 if dragging else 1):
+                return False
+            if not dragging:
+                return True
+            history = trace.get('history', [])
+            # An intermediate MOVE alone must not satisfy the requested drag.
+            return (trace.get('drags', 0) > before.get('input_trace', {}).get('drags', 0) and
+                    bool(history) and history[-1].get('event') == 'drag' and
+                    len(history[-1].get('at', [])) == 2 and
+                    all(math.isclose(history[-1]['at'][i], endpoint[i], abs_tol=0.01,
+                                     rel_tol=0.0) for i in range(2)))
+
         active = False
         release_after = before
         try:
@@ -70,13 +92,19 @@ class TouchDriver:
             # when DOWN raises. Never kill an unfinished swipe to fake a hold.
             active = True
             self.pointer('DOWN', start)
+            # Pinned Godot 4.7 retains its last sub-scroll-slop drag position
+            # across UP, suppressing a subsequent identical one-MOVE endpoint.
+            # Traverse an ordinary linear midpoint without extending the drag;
+            # this corrects the harness path, not that upstream cache defect.
+            midpoint = tuple(round((a + b) / 2) for a, b in zip(start, end))
+            if midpoint not in (start, end):
+                self.pointer('MOVE', midpoint)
             self.pointer('MOVE', end)
             # Android/Godot may omit a stationary MOVE. A held machine button
             # needs its real DOWN; a stick/look drag needs the MOVE as well.
-            event_count = 1 if tuple(map(round, start)) == tuple(map(round, end)) else 2
             accepted = self.session.wait('held Android gesture reaches native stepping',
                 lambda s: s['instance'] == before['instance'] and
-                s.get('input_trace', {}).get('events', 0) >= before.get('input_trace', {}).get('events', 0) + event_count and
+                delivered(s) and
                 s.get('input_trace', {}).get('owned', False) and
                 s['tick'] > before['tick'], after=before, timeout=45)
             release_after = accepted

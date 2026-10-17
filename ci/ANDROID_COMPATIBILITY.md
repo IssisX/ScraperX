@@ -113,6 +113,13 @@ for a route pulse or until the unchanged required gameplay response, releases in
 observed cleared touch ownership. Cleanup errors remain failures. A slow
 software-rendered frame cannot silently consume the whole finite shell swipe.
 The displacement, machine work and real-support assertions remain unchanged.
+Nonstationary held gestures include a distinct rounded linear midpoint inside
+their original extent before reaching the original endpoint. This matches an
+ordinary finger path and avoids the pinned engine's cached identical short-MOVE
+suppression. Acceptance additionally requires the observed drag to reach the
+original endpoint in canvas coordinates; midpoint-only delivery cannot pass.
+This is a harness correction, not an upstream engine-cache repair. Stationary
+holds and native duration/response/cleanup requirements remain unchanged.
 
 Only the emulator export inserts passive receipts after TouchControls handles
 an event and after Main advances the native world. These record actual drag
@@ -132,6 +139,11 @@ Focus comes from the full window-manager dump: modern Android reports it per
 display, outside the windows-only subsection. The parser selects the actual
 top display and rejects missing/ambiguous focus rather than inferring it from
 the mere presence of the game window.
+If Android still presents `ImmersiveModeConfirmation` despite the prelaunch
+setting, the driver captures its real UI hierarchy and taps its unique enabled
+system confirmation button. It rechecks the focused window before tapping,
+then requires game focus and a fresh same-instance observation. No guessed
+coordinates or general dialog/permission dismissal is used.
 
 Main also reads the Android activity's actual window focus before consuming
 input or advancing physics. The notification shade can take focus while the

@@ -9,12 +9,69 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from prepare_android_emulator_export import prepare
-from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, current_window_focus, read_observations, runtime_errors, screen_observation
+from run_android_compatibility import PACKAGE, PART_PREFIX, Session, app_window_frame, current_window_focus, immersive_confirmation_point, read_observations, runtime_errors, screen_observation
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AndroidObservationTests(unittest.TestCase):
+    @staticmethod
+    def tutorial_button(**attrs):
+        values = {'package': 'com.android.systemui', 'resource-id': 'com.android.systemui:id/ok',
+                  'class': 'android.widget.Button', 'enabled': 'true', 'clickable': 'true',
+                  'bounds': '[120,200][220,260]'}
+        values.update(attrs)
+        return '<node ' + ' '.join(f'{key}="{value}"' for key, value in values.items()) + '/>'
+
+    def test_tutorial_confirmation_uses_actual_system_button_bounds(self):
+        xml = '<hierarchy>' + self.tutorial_button() + self.tutorial_button(
+            package=PACKAGE, **{'resource-id': PACKAGE + ':id/ok'}) + '</hierarchy>'
+        self.assertEqual(immersive_confirmation_point(xml), (170, 230))
+        self.assertEqual(immersive_confirmation_point(self.tutorial_button(
+            package='android', **{'resource-id': 'android:id/ok'})), (170, 230))
+
+    def test_tutorial_confirmation_rejects_missing_ambiguous_or_invalid_targets(self):
+        for xml in ('<invalid', '<hierarchy/>',
+                    '<hierarchy>' + self.tutorial_button() * 2 + '</hierarchy>',
+                    self.tutorial_button(enabled='false'),
+                    self.tutorial_button(package=PACKAGE),
+                    self.tutorial_button(bounds='[120,200][120,260]'),
+                    self.tutorial_button(bounds='not a rectangle')):
+            with self.subTest(xml=xml), self.assertRaisesRegex(ValueError, 'Fullscreen tutorial:'):
+                immersive_confirmation_point(xml)
+
+    def test_observed_fullscreen_tutorial_is_confirmed_through_real_ui_target(self):
+        tutorial = b'mCurrentFocus=Window{abc u0 ImmersiveModeConfirmation}\n'
+        focused = ('mCurrentFocus=Window{def u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}\n').encode()
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            session.receipt['ro.build.version.sdk'] = '36'
+            session.capture = MagicMock()
+            session.adb = MagicMock(side_effect=[tutorial, b'UI hierarchy dumped',
+                self.tutorial_button().encode(), tutorial, b'', focused])
+            with patch('run_android_compatibility.time.sleep'):
+                self.assertTrue(session.prepare_input_focus())
+            session.adb.assert_any_call('shell', 'uiautomator', 'dump', '--windows', '--compressed',
+                                       '/sdcard/scraperx-fullscreen-tutorial.xml')
+            session.adb.assert_any_call('shell', 'input', 'tap', 170, 230)
+            self.assertEqual(session.receipt['startup_fullscreen_tap']['point'], (170, 230))
+            self.assertIn(PACKAGE + '/', session.receipt['startup_input_focus'])
+            self.assertTrue((Path(directory) / 'startup-fullscreen-tutorial.xml').exists())
+
+    def test_tutorial_target_is_not_tapped_after_focus_changes(self):
+        focused = ('mCurrentFocus=Window{def u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}\n').encode()
+        with tempfile.TemporaryDirectory() as directory:
+            session = Session(Path(directory))
+            session.receipt['ro.build.version.sdk'] = '36'
+            session.capture = MagicMock()
+            session.adb = MagicMock(side_effect=[b'mCurrentFocus=Window{abc u0 ImmersiveModeConfirmation}\n',
+                b'dumped', self.tutorial_button().encode(), focused, focused])
+            with patch('run_android_compatibility.time.sleep'):
+                self.assertTrue(session.prepare_input_focus())
+            self.assertFalse(any(call.args[:3] == ('shell', 'input', 'tap')
+                                 for call in session.adb.call_args_list))
+            self.assertNotIn('startup_fullscreen_tap', session.receipt)
+
     def test_modern_focus_comes_from_the_top_display(self):
         game = 'Window{abc u0 ' + PACKAGE + '/com.godot.game.GodotAppLauncher}'
         shade = 'Window{def u0 NotificationShade}'
