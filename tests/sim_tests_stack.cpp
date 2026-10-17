@@ -339,18 +339,39 @@ void run_stack() {
     Simulation s2_idle(InitialSpawn::Deck4South);
     require(s2_idle.advance_frame(10.0).accepted, "S2 idle interval must be accepted");
     const auto s2_idle_state = s2_idle.stack_state();
-    require(std::abs(s2_idle_state.s2_cage_travel) <= 0.03 && s2_idle_state.s2_chock_latched &&
-                s2_handle_at_rest(s2_idle),
-            "left alone, S2 must wait as found with chock latched");
+    require(std::abs(s2_idle_state.s2_cage_travel) <= 0.03 && s2_bolt_at_rest(s2_idle),
+            "left alone, S2 must wait as found, its shoot bolt home");
     std::cout << "PASS scraperx_sim S2 at rest: cage_travel=" << s2_idle_state.s2_cage_travel
-              << " chock_latched=" << s2_idle_state.s2_chock_latched << "\n";
+              << " bolt_shot=" << s2_idle_state.s2_bolt_shot << "\n";
 
-    // S2 ride: board cage at deck 4, pull chock lanyard, ride walking beam to deck 6.
+    // S2 half shoved: the bolt pushed part way and let be still holds the cage.
+    {
+        Simulation half(InitialSpawn::Deck4South);
+        require(half.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
+        require(walk_to(half, 10.0, -130.5, 30.0) && walk_to(half, 10.0, -137.6, 20.0, 0.10) &&
+                    walk_to(half, 9.1, -138.3, 6.0, 0.08),
+                "into S2's cage, at the bolt's push plate");
+        for (int tick = 0; tick < 90 && half.stack_state().s2_bolt_travel < 0.35; ++tick) {
+            (void)half.set_move_input(0.0, 0.6);
+            (void)half.set_facing(0.0, 1.0);
+            (void)half.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)half.set_move_input(0.0, 0.0);
+        (void)half.advance_frame(5.0);
+        const auto held = half.stack_state();
+        std::cout << "  S2 half shoved: bolt_travel=" << held.s2_bolt_travel << " shot=" << held.s2_bolt_shot
+                  << " cage_travel=" << held.s2_cage_travel << "\n";
+        require(held.s2_bolt_travel > 0.2 && held.s2_bolt_shot && std::abs(held.s2_cage_travel) <= 0.03,
+                "a bolt shoved part way stays put and still holds S2's cage");
+    }
+
+    // S2 ride: board the cage at deck 4, shove the shoot bolt out with the body, ride the walking beam to deck 6.
     Simulation s2_sim(InitialSpawn::Deck4South);
     require(s2_sim.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
-    require(take_s2_handle(s2_sim), "the player must walk from deck 4 into S2's cage and take hold of its lanyard");
+    require(shove_s2_bolt(s2_sim), "the player must walk from deck 4 into S2's cage and shove its bolt out");
+    std::cout << "  S2: the bolt out " << s2_sim.stack_state().s2_bolt_travel << " m\n";
     const auto s2_rode = ride_s2(s2_sim, 20.0);
-    require(s2_rode.reached_top, "pulling S2's lanyard must carry the rider to deck 6");
+    require(s2_rode.reached_top, "shoving S2's bolt out must carry the rider to deck 6");
     require(s2_rode.rode_on_cage, "the rider must stand on S2's cage for the whole ride");
     const auto s2_top_state = s2_sim.stack_state();
     require(s2_top_state.s2_cage_peak_speed <= 2.6, "S2's governor must hold the cage to 2.5 m/s");
@@ -375,7 +396,7 @@ void run_stack() {
         const auto cage_vy_after = [&](const bool jump) {
             Simulation sim(InitialSpawn::Deck4South);
             require(sim.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
-            require(take_s2_handle(sim), "the rider must take S2's lanyard");
+            require(shove_s2_bolt(sim), "the rider must shove S2's bolt out");
             for (int i = 0; i < 270; ++i) {
                 (void)sim.set_move_input(0.0, 0.0);
                 require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
@@ -403,7 +424,7 @@ void run_stack() {
               << " peak_speed=" << s2_top_state.s2_cage_peak_speed
               << " deck6_y=" << on_deck6.player_position.y << "\n";
 
-    // S2 checkpoint continuation: commit checkpoint on deck 4, fatal fall, restore, then take S2 handle and ride.
+    // S2 checkpoint continuation: commit checkpoint on deck 4, fatal fall, restore, then shove S2's bolt and ride.
     Simulation s2_cp(InitialSpawn::Deck4South);
     require(s2_cp.advance_frame(0.5).accepted, "S2 CP settle interval must be accepted");
     require(walk_to(s2_cp, 10.0, -125.5, 4.0, 0.10), "walk to checkpoint location on deck 4");
@@ -421,13 +442,13 @@ void run_stack() {
     (void)s2_cp.advance_frame(0.5);
     require(s2_cp.snapshot().player_grounded, "player must be grounded after checkpoint restore");
     require(std::abs(s2_cp.snapshot().player_position.y - s2_cp_pos.y) <= 0.5, "player must restore to deck 4 altitude");
-    require(take_s2_handle(s2_cp), "player must be able to take S2 handle after checkpoint restore");
+    require(shove_s2_bolt(s2_cp), "player must be able to shove S2's bolt after checkpoint restore");
     const auto s2_cp_rode = ride_s2(s2_cp, 20.0);
     require(s2_cp_rode.reached_top, "S2 must carry rider to deck 6 after checkpoint restore");
     std::cout << "PASS scraperx_sim S2 checkpoint continuation: deaths=" << s2_cp.snapshot().death_count << "\n";
 
     // Full Stack ascent in one run from grade: S1 (0->22m) -> C1 (22->44m) -> S2 (44->66m)
-    require(take_s2_handle(band), "the Stack: from deck 4 into S2's cage and take hold of its lanyard");
+    require(shove_s2_bolt(band), "the Stack: from deck 4 into S2's cage and shove its bolt out");
     const auto band_s2_rode = ride_s2(band, 20.0);
     require(band_s2_rode.reached_top, "the Stack: S2 carries the rider to deck 6");
     require(walk_to(band, 10.0, -133.0, 6.0) && walk_to(band, 10.0, -126.0, 6.0),

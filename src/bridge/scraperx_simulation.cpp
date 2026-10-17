@@ -257,8 +257,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s2_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_beam_angle"),
                                 &ScraperXSimulation::get_stack_s2_beam_angle);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_chock_latched"),
-                                &ScraperXSimulation::is_stack_s2_chock_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_bolt_shot"),
+                                &ScraperXSimulation::is_stack_s2_bolt_shot);
     godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_cage_travel"),
                                 &ScraperXSimulation::get_stack_s3_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_brake_angle"),
@@ -831,8 +831,8 @@ double ScraperXSimulation::get_stack_s2_beam_angle() const {
     return simulation_->stack_state().s2_beam_angle;
 }
 
-bool ScraperXSimulation::is_stack_s2_chock_latched() const {
-    return simulation_->stack_state().s2_chock_latched;
+bool ScraperXSimulation::is_stack_s2_bolt_shot() const {
+    return simulation_->stack_state().s2_bolt_shot;
 }
 
 double ScraperXSimulation::get_stack_s3_cage_travel() const {

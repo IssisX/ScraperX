@@ -429,36 +429,37 @@ void run_wet_handling() {
     using scraperx::sim::Simulation;
     using scraperx::sim::Snapshot;
 
-    // S2's trip handle hangs 0.7 m over the hands: taken, the hands draw it
-    // down at 3 m/s while it swings on its chain, never faster than the
-    // hands' own limit on screen, 0.1 m a frame (6 m/s). Snapped to the
-    // hands, a handle moved 0.23 m in the first tick (S1's chain, since
-    // replaced by its scale plate).
-    Simulation chain(InitialSpawn::Deck4South);
-    require(chain.advance_frame(1.0).accepted, "S2 handle settle interval must be accepted");
-    require(walk_to(chain, 10.0, -130.5, 15.0) && walk_to(chain, 10.0, -137.6, 15.0, 0.08),
-            "the player must walk into S2's cage");
+    // S3's trip handle hangs over the hands: taken, the hands draw it down
+    // at 3 m/s while it swings on its chain, never faster than the hands'
+    // own limit on screen, 0.1 m a frame (6 m/s). Snapped to the hands, a
+    // handle moved 0.23 m in the first tick (S1's chain, since replaced by
+    // its scale plate; S2's handle, since replaced by its shoot bolt).
+    Simulation chain(InitialSpawn::Deck8North);
+    require(chain.advance_frame(1.0).accepted, "S3 handle settle interval must be accepted");
+    require(walk_to(chain, -8.0, -170.0, 20.0) && walk_to(chain, -8.0, -164.0, 10.0) &&
+                walk_to(chain, -8.0, -157.6, 10.0, 0.08),
+            "the player must walk into S3's cage");
     (void)chain.set_facing(0.0, -1.0);
     (void)chain.advance_frame(0.5);
-    require(chain.snapshot().carry_target_entity_id == Simulation::kStackS2HandleEntityId,
-            "S2's handle must be in reach");
-    const auto handle = chain.kit_body_index(Simulation::kStackS2HandleEntityId);
+    require(chain.snapshot().carry_target_entity_id == Simulation::kStackS3HandleEntityId,
+            "S3's handle must be in reach");
+    const auto handle = chain.kit_body_index(Simulation::kStackS3HandleEntityId);
     auto handle_last = chain.kit_body_position(handle);
     const double handle_y0 = handle_last.y;
     (void)chain.request_pick_up();
     double worst_handle_tick = 0.0;
     for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
         require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
-                "S2 handle pull-in tick must be accepted");
+                "S3 handle pull-in tick must be accepted");
         const auto now = chain.kit_body_position(handle);
         worst_handle_tick =
             std::max(worst_handle_tick, std::hypot(std::hypot(now.x - handle_last.x, now.y - handle_last.y),
                                                    now.z - handle_last.z));
         handle_last = now;
     }
-    require(chain.snapshot().carrying_entity_id == Simulation::kStackS2HandleEntityId &&
+    require(chain.snapshot().carrying_entity_id == Simulation::kStackS3HandleEntityId &&
                 handle_y0 - handle_last.y > 0.4,
-            "taken, S2's handle must come down to the hands");
+            "taken, S3's handle must come down to the hands");
     require(worst_handle_tick <= 6.0 * Simulation::kFixedStepSeconds,
             "a taken handle must be drawn in to the hands, not snapped to them");
 

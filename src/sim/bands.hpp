@@ -309,13 +309,12 @@ struct Stack final {
     kit::BodyIndex s2_cage;
     kit::BodyIndex s2_beam;
     kit::BodyIndex s2_cart;
-    kit::BodyIndex s2_chock_body;
-    kit::BodyIndex s2_handle;
+    kit::BodyIndex s2_bolt;           // the shoot bolt the rider shoves out
+    kit::GuideIndex s2_bolt_guide;
     kit::GuideIndex s2_cage_guide;
     kit::GuideIndex s2_cart_guide;
     kit::RopeIndex s2_rope;
     kit::LeverIndex s2_beam_hinge;
-    kit::LeverIndex s2_chock_lever;
     kit::CatchIndex s2_catch;
     kit::CatchIndex s2_cage_catch;
 

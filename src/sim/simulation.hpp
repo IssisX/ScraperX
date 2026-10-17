@@ -435,8 +435,8 @@ struct StackState final {
     double s2_cage_peak_speed = 0.0;
     double s2_cart_travel = 0.0;
     double s2_beam_angle = 0.0;
-    double s2_chock_angle = 0.0;
-    bool s2_chock_latched = false;
+    double s2_bolt_travel = 0.0;    // how far the shoot bolt is shoved out
+    bool s2_bolt_shot = false;      // the bolt holds the beam
     bool s2_cage_latched = false;
     double s2_rope_tension = 0.0;
 
@@ -884,8 +884,7 @@ public:
     static constexpr std::uint64_t kStackS2CageEntityId = 2210;
     static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
     static constexpr std::uint64_t kStackS2CartEntityId = 2212;
-    static constexpr std::uint64_t kStackS2ChockEntityId = 2213;
-    static constexpr std::uint64_t kStackS2HandleEntityId = 2214;
+    static constexpr std::uint64_t kStackS2BoltEntityId = 2213;
     // S3, the brake-override elevator hoist.
     static constexpr std::uint64_t kStackS3CageEntityId = 2220;
     static constexpr std::uint64_t kStackS3CarEntityId = 2221;

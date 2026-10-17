@@ -156,7 +156,7 @@ public:
     // S2, the Stack's walking-beam hoist, read back.
     [[nodiscard]] double get_stack_s2_cage_travel() const;
     [[nodiscard]] double get_stack_s2_beam_angle() const;
-    [[nodiscard]] bool is_stack_s2_chock_latched() const;
+    [[nodiscard]] bool is_stack_s2_bolt_shot() const;
     // S3, the Stack's brake-override hoist, read back.
     [[nodiscard]] double get_stack_s3_cage_travel() const;
     [[nodiscard]] double get_stack_s3_brake_angle() const;

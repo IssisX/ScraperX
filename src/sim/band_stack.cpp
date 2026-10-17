@@ -205,7 +205,7 @@ constexpr float kGangwaySouthZ = -122.30F;
 
 
 // A handle hanging with its top at `top` on a chain from above: a bar along
-// z, both hands close on it; hazard-striped. S2's and S3's trips still hang
+// z, both hands close on it; hazard-striped. S3's trip still hangs
 // from these (plan rule 11: each to be replaced in its turn).
 constexpr float kHandleHalfY = 0.04F;
 
@@ -849,10 +849,14 @@ void build_c1(std::vector<Part> &route) {
 // deck 4 (Y = 44.05).
 // A tow cable runs from the west arm over headframe sheaves to a passenger cage
 // at the east arm.
-// Inside the cage, a trip handle hangs on a lanyard to the chock lever.
-// When the rider boards at deck 4 and pulls the lanyard, the catch releases:
-// the 1500 kg ballast cart drives the walking beam down, tilting the massive
-// girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
+// Beam and cage are held by one shoot bolt: a 140 kg steel bolt on a slide on
+// the gangway, its nose run 0.85 m into the cage's floor frame at knee
+// height, its push plate standing inside the cage. Nothing to pull (plan rule
+// 11) and nothing the route has asked of the body before: the rider walks
+// into the plate and shoves the bolt out along its slide (its shoes hold it
+// with 420 N), and once its nose is clear of the cage the beam and the cage
+// are free: the 1500 kg ballast cart drives the walking beam down, tilting the
+// massive girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
 // the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
 // safety dogs engage, and the rider walks off across the upper gangway onto
 // deck 6's south band.
@@ -879,12 +883,20 @@ const JPH::RVec3 kS2Pivot(0.0, kDeck5Top, -141.0);
 constexpr float kS2BeamMassKg = 2400.0F; // 1500 kg ballast cart + 900 kg steel frame
 const JPH::Vec3 kS2BeamWestEye(-10.0F, 11.05F, 0.0F); // local to beam at angle 0
 
-// Chock lever at the trunnion stand:
-const JPH::RVec3 kS2ChockPivot(0.0, kDeck5Top + 1.20, -140.20);
-constexpr float kS2ChockArm = 1.80F;
-constexpr float kS2ChockMassKg = 35.0F;
-constexpr float kS2ChockTravel = 0.60F;
-constexpr float kS2ChockRelease = 0.15F;
+// The shoot bolt: on a slide on the gangway's west side, along z, its nose
+// in the cage's floor frame and its push plate inside the cage at knee
+// height. Shoved north (out toward the gangway) 0.86 m, its nose is clear
+// of the cage and the beam and cage are free; its slide stops it at 0.95 m.
+constexpr float kS2BoltX = kS2CageX - 0.90F;
+constexpr float kS2BoltAxisY = kDeck4Top + 0.55F;
+constexpr float kS2BoltHalfLength = 0.75F;
+constexpr float kS2BoltRadius = 0.11F;
+constexpr float kS2BoltNoseZ = -137.45F;            // inside the cage (its north edge at -136.60)
+constexpr float kS2BoltCentreZ = kS2BoltNoseZ + kS2BoltHalfLength;
+constexpr float kS2BoltMassKg = 140.0F;
+constexpr float kS2BoltClear = 0.86F;
+constexpr float kS2BoltTravel = 0.95F;
+constexpr float kS2BoltShoeN = 420.0F;
 
 // Head sheaves:
 const JPH::RVec3 kS2SheaveWest(-10.0F, kDeck6Top + 3.00, -141.0);
@@ -1033,6 +1045,21 @@ void build_deck6_traversal(std::vector<Part> &frame) {
 }
 
 void build_s2_frame(std::vector<Part> &frame) {
+    // The shoot bolt's slide on the gangway: a sole plate under it and two
+    // cheeks either side, clear of it, and the stop block at its far end.
+    {
+        const float tail_out = kS2BoltCentreZ + kS2BoltHalfLength + kS2BoltTravel;
+        const float near_z = kS2CageZ + kS2CageHalfZ + 0.06F;
+        frame.push_back(span({kS2BoltX - 0.20F, kDeck4Top, near_z}, {kS2BoltX + 0.20F, kS2BoltAxisY - kS2BoltRadius - 0.02F,
+                              tail_out + 0.12F}, Material::Steel));
+        for (const float side : {-1.0F, 1.0F}) {
+            const float x = kS2BoltX + side * (kS2BoltRadius + 0.09F);
+            frame.push_back(span({x - 0.05F, kDeck4Top, near_z}, {x + 0.05F, kS2BoltAxisY + 0.10F, tail_out + 0.12F},
+                                 Material::Hazard));
+        }
+        frame.push_back(span({kS2BoltX - 0.20F, kDeck4Top, tail_out + 0.12F},
+                             {kS2BoltX + 0.20F, kS2BoltAxisY + 0.22F, tail_out + 0.32F}, Material::Rust));
+    }
     build_crossover_gangway(frame, kDeck4Top);
     build_crossover_gangway(frame, kDeck6Top);
     build_deck4_traversal(frame);
@@ -1106,27 +1133,30 @@ void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     stack.s2_rope = kit.add_rope(stack.s2_beam, kS2BeamWestEye, kS2SheaveWest,
                                  stack.s2_cage, kS2CageEyeLocal, kS2SheaveEast, 1.0F, rope_len, 0.0F);
 
-    // ---- The chock lever, catch, trip line, and lanyard handle ---------------
-    stack.s2_chock_body = kit.add_body(
-        Sim::kStackS2ChockEntityId,
-        {box(JPH::Vec3(0.5F * kS2ChockArm, 0.06F, 0.05F), JPH::Vec3(0.5F * kS2ChockArm, 0.0F, 0.0F),
-             Material::Hazard),
-         box(JPH::Vec3(0.20F, 0.15F, 0.15F), JPH::Vec3(1.00F, 0.0F, 0.0F), Material::Rust)},
-        kS2ChockPivot, JPH::Quat::sIdentity(), kS2ChockMassKg, 0.5F);
-    stack.s2_chock_lever = kit.add_lever(stack.s2_chock_body, kS2ChockPivot, JPH::Vec3::sAxisZ(),
-                                         JPH::Vec3::sAxisX(), 0.0F, kS2ChockTravel);
-    stack.s2_catch = kit.add_catch(stack.s2_beam, stack.s2_chock_lever, kS2ChockRelease, 0.05F, true);
-    stack.s2_cage_catch = kit.add_catch(stack.s2_cage, stack.s2_chock_lever, kS2ChockRelease, 0.05F, true);
-
-    const JPH::RVec3 handle_top(kS2CageX, kS2CageFloorTop + 1.95F, kS2CageZ);
-    stack.s2_handle = add_chain_handle(kit, Sim::kStackS2HandleEntityId, handle_top);
-    kit.set_damping(stack.s2_handle, 8.0F, 8.0F);
-
-    const JPH::RVec3 trip_sheave1(kS2ChockPivot.GetX() + kS2ChockArm, kS2ChockPivot.GetY() + 0.60,
-                                  kS2ChockPivot.GetZ());
-    const JPH::RVec3 trip_sheave2(kS2CageX, kDeck6Top + 3.00, kS2CageZ);
-    (void)kit.add_trip_line(stack.s2_chock_body, JPH::Vec3(kS2ChockArm, 0.0F, 0.0F), stack.s2_handle,
-                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), trip_sheave1, trip_sheave2);
+    // ---- The shoot bolt, holding beam and cage while its nose is in -----------
+    {
+        const JPH::Quat along_z = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), 0.5F * JPH::JPH_PI);
+        std::vector<Part> bolt{
+            {JPH::Vec3(kS2BoltRadius, kS2BoltHalfLength, 0.0F), JPH::Vec3::sZero(), along_z, Material::Steel,
+             Part::Shape::Cylinder, 0.8F * kS2BoltMassKg},
+            // The push plate on its nose, inside the cage: hazard-striped.
+            box(JPH::Vec3(0.20F, 0.20F, 0.03F), JPH::Vec3(0.0F, 0.0F, -kS2BoltHalfLength - 0.03F), Material::Hazard),
+            // A collar at its tail, where the slide's stop meets it.
+            {JPH::Vec3(0.16F, 0.05F, 0.0F), JPH::Vec3(0.0F, 0.0F, kS2BoltHalfLength - 0.05F), along_z,
+             Material::Rust, Part::Shape::Cylinder, 0.0F},
+        };
+        bolt[1].mass_kg = 0.1F * kS2BoltMassKg;
+        bolt[2].mass_kg = 0.1F * kS2BoltMassKg;
+        stack.s2_bolt = kit.add_body(Sim::kStackS2BoltEntityId, bolt,
+                                     JPH::RVec3(kS2BoltX, kS2BoltAxisY, kS2BoltCentreZ), JPH::Quat::sIdentity(),
+                                     kS2BoltMassKg, 0.4F);
+        stack.s2_bolt_guide = kit.add_guide(stack.s2_bolt, JPH::Vec3::sAxisZ(), 0.0F, kS2BoltTravel, 0.0F, 0.0F, 0.0F);
+        kit.set_guide_friction(stack.s2_bolt_guide, kS2BoltShoeN);
+        // Its nose runs into the cage's frame: they pass, the bolt in its socket.
+        kit.disable_collision(stack.s2_bolt, stack.s2_cage);
+        stack.s2_catch = kit.add_pin_catch(stack.s2_beam, stack.s2_bolt, kS2BoltClear, 0.05F);
+        stack.s2_cage_catch = kit.add_pin_catch(stack.s2_cage, stack.s2_bolt, kS2BoltClear, 0.05F);
+    }
 
     build_s2_frame(frame);
 }

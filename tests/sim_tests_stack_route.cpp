@@ -370,27 +370,30 @@ constexpr double kS2CageMassKg = 300.0;
 constexpr double kS2CartMassKg = 1500.0; // West arm pig-iron ballast cart (beam total 2400 kg incl 900 kg frame)
 constexpr double kS2Travel = 22.0;
 
-bool take_s2_handle(scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    if (!(walk_to(simulation, 10.0, -130.5, 30.0) && walk_to(simulation, 10.0, -137.6, 20.0, 0.10))) {
+// Into S2's cage from deck 4, round to the shoot bolt's push plate, and
+// walking into it until the bolt is out and the cage is free.
+bool shove_s2_bolt(scraperx::sim::Simulation &simulation) {
+    if (!(walk_to(simulation, 10.0, -130.5, 30.0) && walk_to(simulation, 10.0, -137.6, 20.0, 0.10) &&
+          walk_to(simulation, 9.1, -138.3, 6.0, 0.08))) {
         return false;
     }
-    (void)simulation.set_facing(0.0, -1.0);
-    (void)simulation.advance_frame(0.5);
-    const auto facing = simulation.snapshot();
-    if (facing.carry_target_entity_id != Simulation::kStackS2HandleEntityId || facing.carry_target_kind != 2) {
-        return false;
+    (void)simulation.set_facing(0.0, 1.0);
+    for (int tick = 0; tick < 6 * 90; ++tick) {
+        (void)simulation.set_move_input(0.0, 0.6);
+        (void)simulation.set_facing(0.0, 1.0);
+        (void)simulation.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+        if (!simulation.stack_state().s2_bolt_shot) {
+            (void)simulation.set_move_input(0.0, 0.0);
+            return true;
+        }
     }
-    (void)simulation.request_pick_up();
-    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
-    return simulation.snapshot().carrying_entity_id == Simulation::kStackS2HandleEntityId;
+    (void)simulation.set_move_input(0.0, 0.0);
+    return false;
 }
 
-bool s2_handle_at_rest(const scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    const auto at = simulation.kit_body_position(simulation.kit_body_index(Simulation::kStackS2HandleEntityId));
-    return std::abs(at.x - 10.00) <= 0.15 && std::abs(at.y - (44.05 + 1.95)) <= 0.10 &&
-           std::abs(at.z - (-138.00)) <= 0.15 && simulation.snapshot().carrying_entity_id == 0;
+bool s2_bolt_at_rest(const scraperx::sim::Simulation &simulation) {
+    const auto stack = simulation.stack_state();
+    return stack.s2_bolt_shot && std::abs(stack.s2_bolt_travel) <= 0.02;
 }
 
 S2Ride ride_s2(scraperx::sim::Simulation &simulation, const double seconds) {
