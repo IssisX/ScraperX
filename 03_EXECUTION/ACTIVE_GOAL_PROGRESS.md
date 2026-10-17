@@ -926,6 +926,20 @@ it, 8.1 after letting go and running again; the sprint test now allows the gathe
 `touch_flow` (the same through the touch stick: 8.23 to 9.00 m/s, 9.00 in the jump, the view
 86 to 90 degrees).
 
+**The springboard (2026-10-17; the research's second).** Jump at a run (4.5 m/s or more) with
+something knee- to waist-high a stride ahead, with half a metre of top to stand on and room
+above it: a foot goes onto its top (a vault's path) and the jump goes from there -- the same
+jump, from that much higher. The step up keeps 92 % of the run, and its push goes into what the
+foot stood on (a loose crate or drum is shoved). Any piece of loose stock that size, anywhere,
+is one; a rail or a thin wall stays a vault (Action, or Jump twice). Two faults found on the
+way and fixed: after any vault finished in the air, the air's steering held the run to a walk's
+5.5 m/s (a speed vault's flow was bled off in its flight); and a vault held over its top to the
+very end worked out its height as 0/0 (the springboard's plant sent the body's height to NaN).
+Proof: native `springboard` (the yard's plate stack, 1.1 m: 8.49 m/s in, 7.81 launched, the
+soles to 2.63 m against 1.51 m for the same jump 3 m short); `touch_springboard` (the same through
+the touch controls: 8.50 to 7.82 m/s, 2.63 m); `touch_double_tap_vault` and `touch_vault` still
+vault the rail.
+
 **Mirror's Edge research (2026-10-17; the owner: the movement alone should be a reason to play).**
 What its running is made of, against what ScraperX has. Already here: run and sprint, the
 wall-run, the kick off a wall, the wall climb, the tuck (its coil), the slide, vaults and the

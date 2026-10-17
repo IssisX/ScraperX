@@ -198,6 +198,9 @@ private:
     [[nodiscard]] bool shape_pose_is_clear(const JPH::Shape *shape,
                                            const JPH::RVec3 centre) const noexcept;
 
+    // A springboard off what is close ahead of a run, begun (see
+    // kSpringboardMinimumSpeed); false where there is none.
+    bool try_begin_springboard(JPH::BodyInterface &bodies, JPH::Vec3 relative_velocity) noexcept;
     [[nodiscard]] LedgeProbe probe_ledge(const JPH::RVec3 origin,
                                          const JPH::Vec3 facing,
                                          const float minimum_rise,
@@ -625,6 +628,7 @@ public:
     // Crouched in the air with the legs drawn up (see kTuckMaximumFallMps).
     bool tucked_ = false;
     std::uint64_t tuck_count_ = 0;
+    std::uint64_t springboard_count_ = 0;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;
@@ -800,6 +804,9 @@ public:
     std::uint64_t hook_stall_ticks_ = 0;
     // A speed vault ends past the far edge in free flight, not on a placed descent.
     bool traversal_speed_vault_ = false;
+    // The vault path under way is a springboard's plant (kSpringboardSpeedKept):
+    // it ends in a jump off the top.
+    bool traversal_springboard_ = false;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
     float roll_entry_speed_ = 0.0F;
     double roll_blocked_loss_ = 0.0;

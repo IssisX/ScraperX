@@ -315,6 +315,37 @@ bool Simulation::PhysicsWorld::try_begin_jump_vault(JPH::BodyInterface &bodies) 
     return true;
 }
 
+// See kSpringboardMinimumSpeed. Felt for along the run: a face within a
+// stride, its top a vault's rise above the soles, and room to stand there
+// (the mantle's own landing). The plant is a vault's path onto that spot;
+// complete_traversal jumps from it.
+bool Simulation::PhysicsWorld::try_begin_springboard(JPH::BodyInterface &bodies,
+                                                     const JPH::Vec3 relative_velocity) noexcept {
+    const JPH::Vec3 run(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
+    const float speed = run.Length();
+    if (speed < kSpringboardMinimumSpeed || carry_constraint_ != nullptr || balancing_) {
+        return false;
+    }
+    const JPH::Vec3 along = run / speed;
+    const JPH::RVec3 at = bodies.GetPosition(player_id_);
+    const LedgeProbe probe = probe_ledge(at, along, kVaultMinimumRise, kVaultMaximumRise, true, false,
+                                         speed * kSpringboardStrideSeconds);
+    if (!probe.valid) {
+        return false;
+    }
+    for (float depth = 0.1F; depth <= kSpringboardTopDepth + 1.0e-3F; depth += 0.1F) {
+        const JPH::RVec3 over(probe.wall_point.GetX() + along.GetX() * depth, probe.ledge_point.GetY() + 0.3,
+                              probe.wall_point.GetZ() + along.GetZ() * depth);
+        JPH::RayCastResult hit;
+        if (!cast_ray(over, JPH::Vec3(0.0F, -0.4F, 0.0F), hit) || std::abs(0.3F - 0.4F * hit.mFraction) > 0.06F) {
+            return false;
+        }
+    }
+    begin_vault(bodies, probe, probe.landing_centre, probe.landing_body, at);
+    traversal_springboard_ = true;
+    return true;
+}
+
 // Something the soles could stand on under this point: within 0.3 m
 // either side of their height.
 bool Simulation::PhysicsWorld::feet_supported_at(const JPH::RVec3 at, const float soles) const noexcept {
@@ -854,6 +885,13 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         jump_buffer_ticks_ = 0;
     } else if (commands.jump_requested && !grounded_ && !kicked && jump_vault_ticks_left_ == 0) {
         jump_buffer_ticks_ = kJumpBufferTicks;
+    }
+    // A run's jump at something knee- to waist-high close ahead goes from
+    // its top (kSpringboardMinimumSpeed); a sighted landing is jumped as it
+    // was sighted.
+    if (jump_started && !precision_sighted_ && try_begin_springboard(bodies, player_velocity - reference_velocity)) {
+        flight_from_jump_ = false;
+        return true;
     }
     if (jump_started) {
         flight_from_jump_ = true;

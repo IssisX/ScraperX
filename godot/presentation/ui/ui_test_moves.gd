@@ -351,6 +351,51 @@ func _touch_flow() -> bool:
 		return _fail("the view did not widen with the run's flow (%.1f -> %.1f)" % [early_fov, gathered_fov])
 	return true
 
+# The springboard (sim kSpringboardMinimumSpeed): round to the east side of
+# the yard's plate stack (its slab on top, 1.1 m up), the stick pushed past
+# its ring west at it, and one JUMP a stride short: a foot planted on the
+# top, the jump from there, the soles a top's height above a ground jump's.
+func _touch_springboard() -> bool:
+	for target in [Vector2(30.0, 6.0), Vector2(58.0, 6.0)]:
+		if not await _go(InputRouter.Device.TOUCH, target, 0.3, 30.0):
+			return _fail("the walk round the yard stopped short of %s" % str(target))
+	if not await _go(InputRouter.Device.TOUCH, Vector2(58.0, 12.0), 0.12, 20.0):
+		return _fail("the walk to the plate stack's east side")
+	await _face(Vector2(-1.0, 0.0))
+	await _seconds(0.3)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var near: bool = await _wait_until(func() -> bool: return _position().x < 49.6, 3.0)
+	if not near:
+		_move(InputRouter.Device.TOUCH, 0.0)
+		return _fail("the sprint never reached the plate stack (x %.2f)" % _position().x)
+	var entry := _run_speed()
+	_tap(2, _center(&"jump"))
+	var planted: bool = await _wait_until(func() -> bool: return int(_native().get_springboard_count()) >= 1, 0.6)
+	if not planted:
+		_move(InputRouter.Device.TOUCH, 0.0)
+		return _fail("JUMP a stride short of the plate stack did not springboard off it")
+	var launch := _run_speed()
+	var peak := 0.0
+	var flown := 0.0
+	var posed := false
+	while flown < 2.5:
+		peak = maxf(peak, _position().y - 0.9)
+		if not posed and float(_native().get_player_linear_velocity().y) < 0.5:
+			posed = true
+			await _pose("springboard")
+		if bool(_native().is_player_grounded()) and flown > 0.3:
+			break
+		await get_tree().process_frame
+		flown += get_process_delta_time()
+	_move(InputRouter.Device.TOUCH, 0.0)
+	_detail = "entry_mps=%.2f launch_mps=%.2f soles_peak_m=%.2f" % [entry, launch, peak]
+	if peak < 2.5:
+		return _fail("the springboard did not carry the soles a top's height up (%.2f m)" % peak)
+	if launch < 0.9 * entry:
+		return _fail("the springboard did not carry the run on (%.2f of %.2f m/s)" % [launch, entry])
+	return true
+
 func _run_speed() -> float:
 	var v: Vector3 = _native().get_player_linear_velocity()
 	return Vector2(v.x, v.z).length()

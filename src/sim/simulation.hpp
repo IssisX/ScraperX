@@ -523,6 +523,10 @@ struct Snapshot final {
     // Mirror's Edge's tuck: the legs drawn up in a jump (see kTuckMaximumFallMps).
     bool player_tucked = false;
     std::uint64_t tuck_count = 0;
+    // Springboards jumped (physics_world kSpringboardMinimumSpeed), and the
+    // plant under way: a foot going onto a top to jump from it.
+    std::uint64_t springboard_count = 0;
+    bool player_springboarding = false;
     // Parkour step 3: crouched at a run, the body slides on (see kSlideFriction).
     bool player_sliding = false;
     std::uint64_t slide_count = 0;

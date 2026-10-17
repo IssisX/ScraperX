@@ -1239,3 +1239,62 @@ void run_flow() {
     std::cout << "PASS scraperx_sim flow: gathered_mps=" << gathered << " kept_mps=" << kept << "\n";
 }
 
+// The springboard (kSpringboardMinimumSpeed): sprinting west at the yard's
+// plate stack (its slab on top, 1.1 m up), Jump a stride short of its face
+// plants a foot on the top and jumps from there: the soles go a top's height
+// above a jump from the ground, with most of the run carried on. The same
+// Jump 3 m short is a jump from the ground. (The proving ground's 0.44 m
+// rail is no foothold: run_double_tap_vault still vaults it.)
+void run_springboard() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    struct Run {
+        std::uint64_t springboards = 0;
+        double entry_mps = 0.0;
+        double soles_peak = 0.0;
+        double launch_mps = 0.0;
+    };
+    const auto run_at = [](const double jump_x) {
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(0.5).accepted, "springboard: settle");
+        require(walk_to(s, 30.0, 6.0, 30.0) && walk_to(s, 58.0, 6.0, 30.0) && walk_to(s, 58.0, 12.0, 20.0, 0.1),
+                "springboard: round to the plate stack's east side");
+        Run run;
+        bool jumped = false;
+        for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const auto now = s.snapshot();
+            (void)s.set_facing(-1.0, 0.0);
+            (void)s.set_move_input(-1.0, 0.0);
+            (void)s.set_sprint_input(true);
+            if (!jumped && now.player_position.x < jump_x) {
+                run.entry_mps = std::hypot(now.player_linear_velocity.x, now.player_linear_velocity.z);
+                require(s.request_jump(), "springboard: the jump");
+                jumped = true;
+            }
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "springboard tick");
+            const auto after = s.snapshot();
+            if (jumped) {
+                run.soles_peak = std::max(run.soles_peak, after.player_position.y - 0.9);
+            }
+            if (after.springboard_count > run.springboards) {
+                run.springboards = after.springboard_count;
+                run.launch_mps = std::hypot(after.player_linear_velocity.x, after.player_linear_velocity.z);
+            }
+            if (jumped && tick > 45 && after.player_grounded) {
+                break;
+            }
+        }
+        return run;
+    };
+    const Run close = run_at(49.6);
+    const Run far = run_at(51.5);
+    std::cout << "  springboard: at " << close.entry_mps << " m/s a stride short, " << close.springboards
+              << " springboard, soles to " << close.soles_peak << " m, launched at " << close.launch_mps
+              << " m/s; 3 m short, " << far.springboards << ", soles to " << far.soles_peak << " m\n";
+    require(close.springboards == 1 && close.soles_peak > 1.1 + 1.4,
+            "springboard: a stride short, the jump goes from the top");
+    require(close.launch_mps > 0.9 * close.entry_mps, "springboard: most of the run is carried on");
+    require(far.springboards == 0, "springboard: 3 m short, a jump from the ground");
+    std::cout << "PASS scraperx_sim springboard: soles_peak_m=" << close.soles_peak << "\n";
+}
+

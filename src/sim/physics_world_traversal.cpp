@@ -434,9 +434,12 @@ JPH::RVec3 Simulation::PhysicsWorld::traversal_point(const JPH::BodyInterface &b
         } else if (progress < traversal_vault_descend_at_) {
             height = apex.GetY();
         } else {
+            // Held over the top to the very end (descend_at 1: a springboard's
+            // plant, or a top deeper than the crossing), the body is at the
+            // target at the end, not 0/0 of the way down.
             const float down = traversal_vault_descend_at_;
-            height = apex.GetY() + (target.GetY() - apex.GetY()) *
-                                       smoothstep(0.0F, 1.0F, (progress - down) / (1.0F - down));
+            const float t = down < 1.0F ? (progress - down) / (1.0F - down) : 1.0F;
+            height = apex.GetY() + (target.GetY() - apex.GetY()) * smoothstep(0.0F, 1.0F, t);
         }
         return JPH::RVec3(start.GetX() + (target.GetX() - start.GetX()) * horizontal,
                           height,
@@ -546,15 +549,40 @@ JPH::Vec3 Simulation::PhysicsWorld::traversal_support_point_velocity(
 void Simulation::PhysicsWorld::complete_traversal(JPH::BodyInterface &bodies) noexcept {
     const JPH::Vec3 support_velocity = traversal_support_point_velocity(bodies);
     JPH::Vec3 exit_velocity = support_velocity;
+    JPH::Vec3 carried = JPH::Vec3::sZero();
     if (traversal_state_ == TraversalState::Vaulting || traversal_state_ == TraversalState::Mantling) {
-        exit_velocity.SetX(support_velocity.GetX() + traversal_exit_relative_velocity_.GetX());
-        exit_velocity.SetZ(support_velocity.GetZ() + traversal_exit_relative_velocity_.GetZ());
+        carried = JPH::Vec3(traversal_exit_relative_velocity_.GetX(), 0.0F, traversal_exit_relative_velocity_.GetZ());
     }
+    const bool springboard = traversal_springboard_;
+    const JPH::BodyID plant_body = traversal_target_body_;
+    if (springboard) {
+        // The plant (kSpringboardSpeedKept): the leg's push off the top --
+        // a jump from here -- and what the step up took off the run, both
+        // into what the foot stood on.
+        const JPH::Vec3 kept = carried * kSpringboardSpeedKept;
+        if (!plant_body.IsInvalid() && bodies.GetMotionType(plant_body) == JPH::EMotionType::Dynamic) {
+            const JPH::Vec3 push = (carried - kept + JPH::Vec3(0.0F, -kJumpSpeed, 0.0F)) *
+                                   static_cast<float>(kPlayerMassKg);
+            bodies.AddImpulse(plant_body, push,
+                              bodies.GetPosition(player_id_) - JPH::Vec3(0.0F, kPlayerHalfHeight, 0.0F));
+        }
+        carried = kept;
+        exit_velocity.SetY(support_velocity.GetY() + kJumpSpeed);
+    }
+    exit_velocity += carried;
     bodies.SetLinearVelocity(player_id_, exit_velocity);
     airborne_inherited_velocity_ = support_velocity;
     bodies.SetGravityFactor(player_id_, 1.0F);
     ++accepted_traversal_count_;
     clear_traversal();
+    // The air keeps what the move gave, as it keeps a run's (a speed
+    // vault's flow, a springboard's run).
+    air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed, carried.Length());
+    if (springboard) {
+        flight_from_jump_ = true;
+        jump_takeoff_feet_y_ = static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
+        ++springboard_count_;
+    }
 }
 
 void Simulation::PhysicsWorld::abort_traversal(JPH::BodyInterface &bodies) noexcept {

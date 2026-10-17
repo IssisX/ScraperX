@@ -526,6 +526,20 @@ constexpr double kSprintSpeedScale = 8.0 / 5.5;
 // 8 to 9 in about 1.7 s of clean running.
 constexpr float kFlowSpeedMps = 9.0F;
 constexpr float kFlowGatherMps2 = 0.6F;
+// The springboard (Mirror's Edge's): Jump at a run (at least
+// kSpringboardMinimumSpeed) with something knee- to waist-high (a vault's
+// rise) close ahead, and room to stand on its top: a foot is planted on the
+// top and the jump goes from there -- the same jump, from that much higher.
+// The plant takes a vault's path onto the top; the step up costs the run
+// some of its speed (it keeps kSpringboardSpeedKept, CHOSEN), and the foot's
+// push goes into what it stood on. Close ahead: its face within
+// kSpringboardStrideSeconds of the run (CHOSEN: about one stride). A foothold,
+// not a rail: its top runs on kSpringboardTopDepth past the face along the
+// run (CHOSEN: so the proving ground's 0.44 m rail is still vaulted).
+constexpr float kSpringboardMinimumSpeed = 4.5F;
+constexpr float kSpringboardTopDepth = 0.5F;
+constexpr float kSpringboardStrideSeconds = 0.18F;
+constexpr float kSpringboardSpeedKept = 0.92F;
 constexpr double kSprintMinimumInput = 0.7;
 constexpr double kSprintMaximumAngleCos = 0.7071;
 // A hold: a member a hand can close round -- its two thinner dimensions at

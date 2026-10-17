@@ -84,6 +84,7 @@ var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
 var _fb_sliding := false
 var _fb_wall_steps := 0
+var _fb_springboards := 0
 var _crouch_eye := 0.0
 var _step_eye_lag := 0.0
 var _step_meters_seen := 0.0
@@ -328,6 +329,10 @@ func _update_feedback(delta: float) -> void:
 	if wall_steps > _fb_wall_steps:
 		_haptic(&"tick")   # a foot on the wall
 	_fb_wall_steps = wall_steps
+	var springboards: int = _ctx.get("springboards", 0)
+	if springboards > _fb_springboards:
+		_haptic(&"vault")   # the foot's push off the top
+	_fb_springboards = springboards
 	_update_body_feedback(delta)
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
@@ -712,7 +717,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
-			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
+			int(_ctx["traversal"]), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity())
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.

@@ -59,6 +59,12 @@ func _read_context() -> Dictionary:
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 	var traversal := int(_native.get_traversal_state())
+	# A springboard's plant runs a vault's path (sim kSpringboardMinimumSpeed),
+	# but it is a foot on a top, not hands on a rail: the hands, the view and
+	# the sounds take it as the run's.
+	var springboarding := bool(_native.is_player_springboarding())
+	if springboarding:
+		traversal = TRAVERSAL_NONE
 	var chute := bool(_native.is_parachute_deployed())
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
@@ -245,6 +251,8 @@ func _read_context() -> Dictionary:
 		"wall_running": bool(_native.is_player_wall_running()),
 		"wall_climbing": bool(_native.is_player_wall_climbing()),
 		"wall_steps": int(_native.get_wall_step_count()),
+		"springboarding": springboarding,
+		"springboards": int(_native.get_springboard_count()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,

@@ -343,6 +343,8 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.player_crouched = crouched_;
     state_.player_tucked = tucked_;
     state_.tuck_count = tuck_count_;
+    state_.springboard_count = springboard_count_;
+    state_.player_springboarding = traversal_springboard_;
     state_.player_sliding = sliding_;
     state_.slide_count = slide_count_;
     state_.wall_step_count = wall_step_count_;

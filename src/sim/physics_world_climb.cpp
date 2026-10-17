@@ -644,6 +644,7 @@ Simulation::PhysicsWorld::Beam Simulation::PhysicsWorld::beam_underfoot(const JP
 void Simulation::PhysicsWorld::clear_traversal() noexcept {
     drop_hang_arms();
     traversal_speed_vault_ = false;
+    traversal_springboard_ = false;
     traversal_vault_descend_at_ = 0.5F;
     traversal_state_ = TraversalState::None;
     traversal_normal_ = JPH::Vec3::sZero();
