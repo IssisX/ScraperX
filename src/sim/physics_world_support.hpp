@@ -21,6 +21,7 @@
 #include "sim/summit.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/zipline.hpp"
 #include "sim/matron.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"

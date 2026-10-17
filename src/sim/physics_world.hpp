@@ -88,6 +88,7 @@ public:
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const Forklift &forklift() const noexcept { return *forklift_; }
+    [[nodiscard]] const Zipline &zipline() const noexcept { return *zipline_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     // On the forklift's floor within reach of its wheel.
     [[nodiscard]] bool at_forklift_controls() const noexcept;
@@ -386,11 +387,22 @@ private:
 
     void try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
                      const float delta_seconds);
+    // The feet just off the ground at a walk's speeds (kCoyoteTicks) with
+    // walkable support within a step below: put back on it. True when they
+    // were.
+    bool try_step_down(JPH::BodyInterface &bodies, JPH::Vec3 &player_velocity, JPH::Vec3 reference_velocity);
 
     void apply_parachute_drag(JPH::BodyInterface &bodies, const float delta_seconds) noexcept;
 
     // (Defined in physics_world_traversal.cpp.)
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+    // In flight with the hands up at a zipline's parked trolley
+    // (Zipline::kCatchReachM): its bar taken and the body hung from it. True
+    // when caught.
+    bool try_catch_zipline(JPH::BodyInterface &bodies, JPH::RVec3 origin) noexcept;
+    // Hung from a zipline's trolley: a swing whose hold is the slide along
+    // the cable (Zipline::clip), not the arms' constraint.
+    void begin_zip_ride(JPH::BodyInterface &bodies, int line) noexcept;
 
     void begin_hang(JPH::BodyInterface &bodies, const LedgeProbe &probe, const JPH::RVec3 origin) noexcept;
 
@@ -497,7 +509,10 @@ private:
 
     void let_go_climb(JPH::BodyInterface &bodies) noexcept;
 
-    void jump_off_climb(JPH::BodyInterface &bodies) noexcept;
+    void jump_off_climb(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+    // The fireman's slide down a climb's holds (kClimbSlideMps), one tick:
+    // true while the body stays on them.
+    bool slide_down_climb(JPH::BodyInterface &bodies, float delta_seconds) noexcept;
 
     [[nodiscard]] Lip probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal) const noexcept;
 
@@ -595,6 +610,9 @@ public:
     std::unique_ptr<Summit> summit_;
     std::unique_ptr<LooseStock> loose_stock_;
     std::unique_ptr<Forklift> forklift_;
+    std::unique_ptr<Zipline> zipline_;
+    // The swing under way hangs from a zipline's trolley (Zipline), riding it.
+    bool zip_riding_ = false;
     std::unique_ptr<Matron> matron_;
     std::uint64_t matron_landing_seen_ = 0;
     bool matron_checkpoint_pending_ = false;
@@ -624,9 +642,12 @@ public:
 
     std::uint64_t step_up_count_ = 0;
     double step_up_meters_ = 0.0;
+    std::uint64_t step_down_count_ = 0;
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
     std::uint32_t jump_buffer_ticks_ = 0;   // kJumpBufferTicks
+    std::uint32_t coyote_ticks_ = 0;        // kCoyoteTicks, left since the feet walked off
+    std::uint32_t step_up_grace_ticks_ = 0; // kStepUpGraceTicks, left since a step up
     float jump_takeoff_feet_y_ = 0.0F;
     bool crouched_ = false;
     // Crouched in the air with the legs drawn up (see kTuckMaximumFallMps).
@@ -684,6 +705,9 @@ public:
     HandHold hands_[2]{};
     std::uint32_t regrip_cooldown_ticks_ = 0;
     std::uint64_t climb_count_ = 0;
+    float climb_slide_mps_ = 0.0F;        // the fireman's slide's speed down the holds
+    bool climb_sliding_ = false;
+    std::uint64_t climb_slide_count_ = 0;
     std::uint64_t swing_catch_count_ = 0;
     std::uint64_t swing_reach_count_ = 0;
     std::uint64_t swing_launch_count_ = 0;

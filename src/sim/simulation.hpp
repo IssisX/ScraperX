@@ -537,6 +537,14 @@ struct Snapshot final {
     // Mirror's Edge's wall climb: a run jumped up a tall wall (see
     // kWallClimbMinimumSpeed).
     std::uint64_t wall_climb_count = 0;
+    // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
+    // its bar.
+    bool zipline_riding = false;
+    int zipline_line = -1;            // the line ridden
+    std::uint64_t zipline_ride_count = 0;
+    double zipline_speed_mps = 0.0;   // down the line
+    double zipline_along_m = 0.0;     // from the top anchor
+    bool zipline_braking = false;
     bool player_wall_running = false;
     // On the wall, run up it (a climb this flight, the foot still on it).
     bool player_wall_climbing = false;
@@ -607,6 +615,9 @@ struct Snapshot final {
     bool edge_drop_available = false;
     Vector3 edge_drop_point{};
     std::uint64_t climb_count = 0;
+    // The fireman's slide down a climb's holds (physics_world kClimbSlideMps).
+    bool player_climb_sliding = false;
+    std::uint64_t climb_slide_count = 0;
     // Hangs torn off by a load past the hands' grip (kLedgeGripMaxForceN).
     std::uint64_t hang_slip_count = 0;
     // Bars and pipes caught overhead, and reaches from one to the next.
@@ -617,6 +628,9 @@ struct Snapshot final {
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
     std::uint64_t step_up_count = 0;
+    // The feet put back on the ground a step below after a crest or a
+    // stair's step (try_step_down).
+    std::uint64_t step_down_count = 0;
     // The height those steps lifted the body, in all: a step is one tick's
     // lift, which the presentation eases the eye over instead of snapping.
     double step_up_meters = 0.0;
@@ -1068,6 +1082,20 @@ public:
     [[nodiscard]] bool request_forklift_action() noexcept;
     [[nodiscard]] bool set_forklift_lift(double lift) noexcept;
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
+    // The ziplines (sim/zipline.hpp): each line's anchors, where its trolley
+    // and its brake block are down it, and the trolley's bar while held.
+    struct ZiplineLine {
+        Vector3 top{};
+        Vector3 bottom{};
+        double length = 0.0;
+        double brake_m = 0.0;     // the block's travel, its rest to the stop
+        double trolley_m = 0.0;   // from the top anchor
+        double block_m = 0.0;
+        bool parked = false;
+    };
+    [[nodiscard]] std::uint32_t zipline_count() const noexcept;
+    [[nodiscard]] ZiplineLine zipline_line(std::uint32_t index) const noexcept;
+    [[nodiscard]] Vector3 zipline_bar() const noexcept;
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;

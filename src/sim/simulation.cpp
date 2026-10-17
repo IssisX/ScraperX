@@ -776,6 +776,24 @@ ForkliftSnapshot Simulation::forklift_state() const noexcept {
     return result;
 }
 
+std::uint32_t Simulation::zipline_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->zipline().lines().size());
+}
+
+Simulation::ZiplineLine Simulation::zipline_line(const std::uint32_t index) const noexcept {
+    const auto &lines = physics_world_->zipline().lines();
+    if (index >= lines.size()) {
+        return {};
+    }
+    const auto &line = lines[index];
+    return {to_sim_vector(line.top), to_sim_vector(line.bottom), line.length, line.brake_m, line.trolley_m,
+            line.block_m, line.parked};
+}
+
+Vector3 Simulation::zipline_bar() const noexcept {
+    return to_sim_vector(physics_world_->zipline().bar());
+}
+
 TrapezeSnapshot Simulation::trapeze_state() const noexcept {
     const auto &state = physics_world_->trapeze().state();
     TrapezeSnapshot result;

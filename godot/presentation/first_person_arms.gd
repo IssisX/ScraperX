@@ -428,6 +428,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			pose = POSE_BALANCE
 		elif speed > 0.8:
 			pose = POSE_RUN
+		var same_pose: bool = hand.pose == pose
 		hand.pose = pose
 
 		var target := _pose_target(hand, pose, state, camera, forward, torso_right, remote_frame)
@@ -435,6 +436,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var world_basis: Basis = target[1]
 		var anchored: bool = target[2]
 		var rate: float = target[3]
+		var was_anchored: bool = hand.anchored
+		var previous_anchor: Vector3 = hand.anchor
 		hand.anchored = anchored
 		hand.anchor = world_wrist
 		hand.curl = lerpf(hand.curl, target[4], 1.0 - exp(-14.0 * delta))
@@ -456,7 +459,13 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var reach_step := REACH_SPEED * delta if traversal == 0 or traversal == TRAVERSAL_CLIMBING \
 			else INF
 		if anchored:
-			hand.world_wrist = world_wrist + _close(hand.world_wrist - world_wrist, blend, reach_step)
+			# The chase closes on the hold, measured from where the hold was
+			# last frame: a hold that moves (a zipline's bar at 16 m/s) carries
+			# the hand with it, and the hand lands on it rather than trailing
+			# it by a frame's travel for the whole ride. Only within one pose:
+			# a new pose's hold is a new place, reached for, not jumped to.
+			var from := previous_anchor if was_anchored and same_pose else world_wrist
+			hand.world_wrist = world_wrist + _close(hand.world_wrist - from, blend, reach_step)
 			hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
 			if hand.world_wrist.distance_to(world_wrist) < 0.012:
 				hand.world_wrist = world_wrist

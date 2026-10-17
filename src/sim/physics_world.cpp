@@ -173,7 +173,16 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
                                 JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
                                 Simulation::kHookRackEntityId);
         machine_bodies_.push_back(hook_rack_id_);
-        machine_bodies_.push_back(add_box(bodies, JPH::Vec3(6.0F, 2.0F, 0.25F), JPH::RVec3(-6.0, 2.0, -27.0),
+        // The run wall, 18 m long (x -12 to 6), and a second facing its south
+        // face across a 2.5 m passage (faces at z -27.25 and -29.75): the
+        // wall-run chain is kicked from one to the other and back
+        // (run_wall_chain), each crossing at a sprint covering 4 m of wall.
+        // South, so the north face's wall-run lane and the wall climb's
+        // run-up at x -6 stay as they were.
+        machine_bodies_.push_back(add_box(bodies, JPH::Vec3(9.0F, 2.0F, 0.25F), JPH::RVec3(-3.0, 2.0, -27.0),
+                                          JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                                          Simulation::kRunWallEntityId));
+        machine_bodies_.push_back(add_box(bodies, JPH::Vec3(9.0F, 2.0F, 0.25F), JPH::RVec3(-3.0, 2.0, -30.0),
                                           JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
                                           Simulation::kRunWallEntityId));
     }
@@ -253,6 +262,46 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving, player_id_);
+    // The ziplines (zipline.hpp): after everything they must keep clear of
+    // (each line is swept against the world as built so far), before the
+    // tower's loose stock, which keeps clear of their posts. From the lowest
+    // deck down to the yard; from each deck's band across the well down to
+    // the far band of the deck below, sides alternating; the same up the
+    // rings. A line that does not fit is not built. The sweep sees the world
+    // at rest: the yard line runs at x = -2, east of the incline's slab
+    // shaft (x -7.1 .. -3.9, z -118 .. -121; the slab comes down it on a
+    // ride and a cable through the shaft stopped it) and west of the yard
+    // derrick's column at x = 0.8.
+    zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, object_layers::kMoving, player_id_);
+    (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
+    // Across the well, from the band's inner edge (the posts a metre and a
+    // half in from it) to the far band of the deck below: south to north on
+    // the even decks, east to west on the odd, and along the band wherever
+    // it first fits.
+    const auto across_well = [&](const double top_y, const double bottom_y, const double top_inner,
+                                 const double bottom_inner, const bool south_to_north) {
+        for (const double along : {6.0, -8.0, 10.0, -12.0, 0.0}) {
+            const bool built = south_to_north
+                ? zipline_->add_line(JPH::RVec3(along, top_y, kStackCenterZ + top_inner + 1.5),
+                                     JPH::RVec3(along, bottom_y, kStackCenterZ - bottom_inner - 1.5))
+                : zipline_->add_line(JPH::RVec3(kStackCenterX + top_inner + 1.5, top_y, kStackCenterZ + along),
+                                     JPH::RVec3(kStackCenterX - bottom_inner - 1.5, bottom_y, kStackCenterZ + along));
+            if (built) {
+                return;
+            }
+        }
+    };
+    const double stack_inner = kStackHalfExtent - kStackDeckBandDepth;
+    for (int level = 2; level <= kStackLevelCount; ++level) {
+        across_well(kStackLevelHeight * level, kStackLevelHeight * (level - 1), stack_inner, stack_inner,
+                    level % 2 == 0);
+    }
+    // The upper rings (world_solids.inc, UpperDeck: 4 m bands whose inner
+    // edges close in 0.9 m a ring going up, from 21.1 m out at 176 m).
+    for (int ring = 1; ring <= 10; ++ring) {
+        const double top_y = 176.25 + 22.0 * ring;
+        across_well(top_y, top_y - 22.0, 21.1 - 0.9 * ring, 21.1 - 0.9 * (ring - 1), ring % 2 == 0);
+    }
     // The tower's lived-in spots of loose stock: after every other body, so
     // each place is tested against all of them, and clear by 4 m of every
     // place the player is put down and of every lane the crew walk. Their
@@ -405,6 +454,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
 
     if (sling_controlling || traversal_state_ != TraversalState::None) {
         jump_buffer_ticks_ = 0;
+        coyote_ticks_ = 0;
     }
     if (jump_buffer_ticks_ > 0) {
         --jump_buffer_ticks_;
@@ -469,6 +519,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     kit_->post_step(delta_seconds);
     loose_stock_->post_step();
     forklift_->post_step(delta_seconds);
+    zipline_->post_step(delta_seconds);
     summit_->post_step();
     matron_->post_step(delta_seconds);
     if (matron_->take_released_edge()) {

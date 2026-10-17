@@ -1007,19 +1007,139 @@ Left out: its fighting (disarms, attacks, the focus shield). Sources: EA's movem
 (mirrorsedge.fandom.com, Upgrades), StrategyWiki's controls page, Speed Demos Archive's notes,
 and essays on its design (gardinerbryant.com; DICE interviews on its camera and dot).
 
+**The slide jump, the side jump off a pipe, the fireman's slide (2026-10-17; the research's
+seventh, and the slide's own jump).** Jump out of a slide and the body leaves the ground with the
+slide's speed, not a standing jump's: at 7.65 m/s it flies 8.9 m before it lands (proof
+`run_slide_jump`). On a ladder, a pipe or a wall's holds, Jump with the stick to the side throws the
+body sideways off it (3.5 m/s across, kClimbJumpSideSpeed, less of the push back), to a ledge or a
+hold beside it; the stick straight back is the jump back as before. Crouch held on a climb is the
+fireman's slide: the hands loosen and the body runs down the holds under gravity to 4.5 m/s
+(kClimbSlideMps), the hands taking each hold as it passes, and at the bottom it stands, or where
+the holds end it lets go at the slide's speed; Crouch released stops the slide and the hands hold
+again (`run_climb_moves`: slide 4.50 m/s, side jump 3.64 m/s across).
+
+**Wall-run chains (2026-10-17; the research's fifth).** Two walls facing each other a passage
+apart: the kick off one lands the feet on the other, running again, and the next kick comes back,
+each kick higher; the chain is capped at four kicks a flight (kWallKicksMax: enough to climb a
+passage, not to float up one). The proving ground has the pair south of the run wall, 18 m long
+and 2.5 m apart (the width a kick crosses without losing height). Proof `run_wall_chain`: four
+kicks, 2.8 s in the air, 2.86 m gained.
+
+**Ziplines (2026-10-17; the research's sixth).** A taut steel cable from a post on one deck down
+across the well to the far band of the deck below, on every stack level and ring where it fits
+(swept for a hanging body's room along its whole length, built only where clear), and the yard
+line from deck 2's south band down to the yard, 58 m at 23 degrees: 22 lines. On each a trolley,
+two sheaves in a bracket over the cable and a bar hung under them, parked on a hook at the top
+post; up the ramp onto the stand behind the post, a jump with the hands up takes the bar and the
+body's weight pulls the trolley off the hook (the owner, 2026-10-17: hands never slide on a long
+cable; the trolley rolls, nothing of the rider touches the wire). The slope drives it, the
+sheaves' rolling drag takes a little (12 N), and over the line's last part the trolley runs into a
+brake block, a clamp on the cable sized per line to take the speed off at half a g, pushing it
+down the cable to a sprung stop 0.8 m short of the bottom post. JUMP OFF throws the body on
+(the swing's launch); DROP lets go. The trolley and the block stay where the ride left them, so a
+line is one ride until a death or a load parks them again. The trolley, its bar in the hands and
+the block are drawn where the native has them (`zipline_view.gd`); the sheaves' buzz and the
+block's squeal are heard at the trolley and felt in the hands; the HUD names the line and its
+speed. Found by the full suite and fixed: the yard line's cable ran through the incline's
+counter-mass shaft (clear at build time, the slab comes down it on a ride) and stopped the
+incline; the line now runs at x = -2, east of the shaft. Found by the touch run and fixed, in the
+movement itself: a run over a ramp's crest sailed on in a hop (2 m/s up for half a second,
+the jump pressed on the stand refused in the air, the body carried off the deck's edge). Now
+the feet just off the ground at a walk's speeds are swept down a step and put back on what
+is there (`try_step_down`: the legs extend over a crest or a stair's step, as a runner's
+do), and a jump pressed within a tenth of a second of the feet leaving (kCoyoteTicks) still
+jumps; never off a jump, a kick, a launch or a let-go. The stand's ramp was also built on a
+mirrored frame (no rotation at all, so its quaternion tilted it to 39 degrees); it is 27 now. Proof `run_zipline`: 22 lines, 16.5 m/s
+down the yard line, braked and stopped at 57.45 of 58.23 m, DROP lands on the yard alive, the
+trolley and block left at the bottom; a second ride's JUMP OFF at 10.8 m/s throws the body on at
+11.4 m/s. Touch: `touch_zipline`.
+
+**Handoff for the next model (2026-10-17, written at the owner's request before a model switch).**
+Read this before anything else in this file; it says where the work stands and what is in flight.
+1. *Branch and state.* Everything pushed is on `ScraperX-Claude` up to fe123a5 (the tower's loose
+   stock). The local branch `claude/android-game-dev-continue-m045pq` carries the next commit,
+   "Ziplines on a wheeled trolley, and four more Mirror's Edge moves": the ziplines (above), the
+   slide jump, the side jump and the fireman's slide, wall-run chains, the step-down and the
+   coyote jump in the movement, the arms' moving-anchor fix (a hand anchored to a hold that moves
+   lands on it instead of trailing), `touch_zipline` in CI, and these doc entries. Native proofs
+   green: `SCRAPERX_ONLY=zipline`, `climb`, `well`, `incline`; step2's no-lift route is green
+   again (a step up now gets kStepUpGraceTicks with no step-down, which had pulled the body onto
+   the boards' corner). The full native suite's last run (30 PASS) stops in sim_tests_stack.cpp at
+   "must balance east along runway girder": from `InitialSpawn::Deck2South`, `walk_to(7.5,-125.8)`,
+   `walk_to(7.5,-128.8)` (up the access stair), `walk_to(8.5,-129.5)` onto deck 2's crane runway
+   I-beam all pass, then the walk east to (12.5,-129.5) along the beam slides off its south edge
+   within 0.3 s: the body arrives on the beam with -1.1 m/s across it (from the turn onto it) and
+   the balance pace holds the line but not the across speed; before the step-down and coyote
+   changes this walk passed, so one of them changes the arrival (a probe printing z, vz, grounded
+   and step_down_count a tick at a time from the beam's start shows it; compare with a build of
+   fe123a5 in a side worktree if the cause is not plain). The whole native suite must be green
+   before anything is pushed. Touch: `touch_zipline` and `touch_monkey_bars` pass headless;
+   `touch_rig` tripped the arms' hand-jump check and the fix (the moving-anchor carry only within
+   one pose) is in but not yet rerun; the whole CI list was not rerun after the step-down.
+2. *Verify before any push* (never push unverified; never edit GDScript or rebuild the host while
+   a touch run is live): build and run `./build/stock/scraperx_sim_tests` (no filter: everything);
+   `cmake --build build/host`; `./build/host/scraperx_parkour_flow_tests`; a clang build of the sim
+   (`cmake -S . -B build/clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
+   -DCMAKE_CXX_COMPILER=clang++ -DSCRAPERX_WITH_JOLT=ON && cmake --build build/clang --target
+   scraperx_sim`); then every scenario in the `for scenario in touch_jump ...` list of
+   .github/workflows/wo000-delivery-spine.yml with `tools/godot/godot --headless --fixed-fps 60
+   --path godot -- --uitest=<name>` (its verdict line is `SCRAPERX_UITEST PASS|FAIL ...`; three
+   at a time is fine). Screenshots: the same under `xvfb-run -a` with `--rendering-driver opengl3`
+   and `--capture=<dir>/<prefix>` (saved as `<prefix>_<pose>.png`). Probes against the sim link
+   `build/stock/libscraperx_sim.a` and `build/stock/_deps/jolt-build/libJolt.a` with the Jolt
+   defines from `build/host/compile_commands.json`.
+3. *Push mechanics.* Commit on the local branch (committer Claude <noreply@anthropic.com>, author
+   `sTiX_ww4 <IssisX@users.noreply.github.com>`, the message ending with the model's
+   Co-Authored-By and the Claude-Session line; model names nowhere else), then `git fetch origin
+   ScraperX-Claude`, `git merge-base --is-ancestor origin/ScraperX-Claude <sha>`, `git push origin
+   <sha>:ScraperX-Claude`. Never main; no pull request unless asked; afterwards report the
+   branch, the commit and the CI run. Frozen: MANIFEST.txt, SHA256SUMS.txt,
+   01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md. Visibility, keys and the app id stay as they are.
+4. *Designs in flight.* (a) The zipline's hold is a wheeled trolley, not a sling (the owner:
+   hands never slide on a long cable; then: "sliding shackle is fine", but the trolley is the
+   better thing: a visible object parked at the top to jump for), one ride a line until a
+   restore. (b) The step-down and the coyote jump are movement-wide: keep them, fix what they
+   shift. (c) The whole first-person body, option A (hips, chest, shoulders with the arms
+   re-hung from them, legs with knees and boots, no head, a real shadow, every pose from the
+   physics body's actual state; Godot work, plus the native exposing the wall-run foot and the
+   rung the feet are on); the owner answered "Outstanding": build it next. (d) The Matron's AI:
+   proposed and awaiting the owner's letters. Honest senses (hearing and line of sight, a
+   last-known spot and a guess of where you are going, baitable by noise, but a second noise
+   from an empty place is checked from a vantage first); she uses the lifts, ladders, stairs and
+   ziplines and plans to where you will come out; she messes back only reversibly (sends a lift
+   away, waits quiet at a choke point, boards the lift you called), never making the summit
+   impossible; two tiers (frail: machines and lines; the Turn: the parkour moves); readable
+   states heard before seen; she can fall, be stunned by a dropped drum, be trapped. Not the
+   forklift, not carrying. Open, a letter each: A the two tiers (or A2 she climbs unturned);
+   B reversible route meddling (or B2 none); C she adapts to a repeated trick within a run and
+   forgets (or C2 always baitable). (e) Decided: no diegetic UI, no ghost time trials, no lean.
+5. *How the owner works.* Answer the message first, briefly, in plain words; short updates during
+   long runs; questions rarely, lettered options with the recommended one first; they may be
+   wrong and want to be told; a safe point to switch models is a commit; after a push, say
+   branch, commit and CI run. They judge by what they can install and play.
+
 **Running to-do (owner, 2026-10-17; done in this order).**
 1. Ideas from the ChatGPT branch's forklift, crane and movable objects: read (2026-10-17).
 2. Mirror's Edge movement (the owner, 2026-10-17: the movement alone should be a reason to
-   play): the wall climb and the tuck (done, above); then the research's list, in its order.
-3. Everything movable, everywhere (the owner, 2026-10-17: these are world rules, never a few
+   play): the wall climb, the tuck, flow, the springboard, the swing's launch, the quickturn,
+   the slide jump, the side jump and the fireman's slide, wall-run chains and ziplines (done,
+   above); next the body felt at speed and the faint route hint. No ghost time trials and no
+   lean (the owner, 2026-10-17).
+3. The whole first-person body (the owner, 2026-10-17: "FINALLY adding some damn legs and
+   feet"; agreed, the whole body rather than legs alone): hips, chest, shoulders, the arms hung
+   from them, legs with knees and boots, no head, a real shadow, every pose from the physics
+   body's actual state.
+4. Everything movable, everywhere (the owner, 2026-10-17: these are world rules, never a few
    marked places; a route of your own anywhere comes from them, not from designed spots): the
-   yard (done); the forklift (done) and its power and strain (done, above); next, real loose
-   stock in little lived-in spots on every deck, band and landing of the tower, the heavy pieces
-   on pallets, skids or dunnage so forks go under them anywhere; then a very large, powerful yard
-   crane, driven from its cab, to lift the forklift, containers and stock up onto the structure
-   (the owner, 2026-10-17); then forklifts up there.
-4. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.
-5. The Matron's extras.
+   yard (done); the forklift (done) and its power and strain (done, above); the tower's stock
+   (done, above); next richer spots, the heavy pieces on pallets, skids or dunnage so forks go
+   under them anywhere; then a very large, powerful yard crane, driven from its cab, to lift the
+   forklift, containers and stock up onto the structure (the owner, 2026-10-17); then forklifts
+   up there.
+5. Every machine its own start: S2's shoot bolt (done, 2026-10-17), then S3 and the rest.
+6. The Matron's AI (the owner, 2026-10-17: she must know how to use everything in the game and
+   her AI must be uniquely good; scoped together: the lifts, the ziplines and the moves, not the
+   forklift or the stock), and her extras.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

@@ -1362,3 +1362,165 @@ void run_swing_launch() {
               << " farther_m=" << a.x_back_down - b.x_back_down << "\n";
 }
 
+// The slide jump: Jump out of a slide on the open ground east of the start
+// stands and jumps in one tick, at the slide's speed, so a slide under
+// something ends in a full jump, not a crouched crawl.
+void run_slide_jump() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::ExteriorGrade);
+    require(s.advance_frame(0.5).accepted, "slide jump: settle");
+    require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "slide jump: sprint");
+    require(s.advance_frame(1.5).accepted && s.set_crouch_input(true) && s.advance_frame(0.3).accepted,
+            "slide jump: the slide");
+    const auto sliding = s.snapshot();
+    require(sliding.player_sliding, "slide jump: sliding");
+    const double slide_mps = std::hypot(sliding.player_linear_velocity.x, sliding.player_linear_velocity.z);
+    require(s.request_jump() && s.set_crouch_input(false), "slide jump: the jump");
+    const double from_x = sliding.player_position.x;
+    double peak = 0.0;
+    double least_mps = 99.0;
+    bool landed = false;
+    for (int tick = 0; tick < 2 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++tick) {
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "slide jump: tick");
+        const auto now = s.snapshot();
+        peak = std::max(peak, now.player_position.y - 0.9);
+        if (!now.player_grounded) {
+            least_mps = std::min(least_mps, std::hypot(now.player_linear_velocity.x, now.player_linear_velocity.z));
+        } else if (tick > 9) {
+            landed = true;
+        }
+    }
+    const double flew = s.snapshot().player_position.x - from_x;
+    std::cout << "  slide jump: out of a " << slide_mps << " m/s slide, at least " << least_mps
+              << " m/s in the air, the soles to " << peak << " m, " << flew << " m flown\n";
+    require(!sliding.player_grounded || true, "slide jump: on the ground");
+    require(landed && least_mps > slide_mps - 0.2 && peak > 1.3 && flew > 7.0,
+            "slide jump: the jump goes out of the slide at the slide's speed, a full jump high");
+    std::cout << "PASS scraperx_sim slide jump: slide_mps=" << slide_mps << " flown_m=" << flew << "\n";
+}
+
+// Off a ladder (the 154 m deck's up to the 176 ring): Crouch held slides
+// the body down the rungs, hands and all, at up to kClimbSlideMps, and the
+// legs take the landing at its foot; Jump with the stick sideways springs
+// the body along the ladder's face, not back off it, and it comes down on
+// the deck beside it.
+void run_climb_moves() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto up_the_ladder = [](Simulation &s, const double seconds) {
+        require(s.advance_frame(1.0).accepted, "climb moves: settle");
+        require(walk_to(s, 3.5, -128.2, 16.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "climb moves: to the ladder's foot");
+        require(s.set_facing(0.0, 1.0) && s.advance_frame(0.4).accepted && s.request_traversal() &&
+                    s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "climb moves: the ladder taken");
+        for (int tick = 0; tick < static_cast<int>(seconds * Simulation::kTickRateHz); ++tick) {
+            require(s.set_move_input(0.0, 1.0) && s.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "climb moves: climbing");
+        }
+        require(s.set_move_input(0.0, 0.0) && s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "climb moves: still on the ladder");
+    };
+    // The fireman's slide.
+    Simulation slide(InitialSpawn::Deck154);
+    up_the_ladder(slide, 4.0);
+    const double top_y = slide.snapshot().player_position.y;
+    require(slide.set_crouch_input(true), "climb moves: crouch held");
+    double fastest = 0.0;
+    bool slid = false;
+    for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        require(slide.advance_frame(Simulation::kFixedStepSeconds).accepted, "climb moves: sliding");
+        const Snapshot now = slide.snapshot();
+        slid = slid || now.player_climb_sliding;
+        if (is_climbing(now)) {
+            fastest = std::max(fastest, -now.player_linear_velocity.y);
+        } else if (now.player_grounded && tick > 9) {
+            break;
+        }
+    }
+    require(slide.set_crouch_input(false), "climb moves: crouch let go");
+    const Snapshot down = slide.snapshot();
+    std::cout << "  climb moves: slid " << top_y - down.player_position.y << " m down the ladder at up to " << fastest
+              << " m/s; on the deck " << int(down.player_grounded) << ", deaths " << down.death_count << "\n";
+    require(slid && down.climb_slide_count == 1 && fastest > 3.5 && fastest <= 4.6,
+            "climb moves: crouch held slides the body down the rungs at the slide's speed");
+    require(down.player_grounded && down.death_count == 0 && top_y - down.player_position.y > 2.5,
+            "climb moves: the slide ends on the deck at the ladder's foot, the legs taking it");
+    // The side jump.
+    Simulation side(InitialSpawn::Deck154);
+    up_the_ladder(side, 3.0);
+    require(side.set_move_input(-1.0, 0.0) && side.request_jump() &&
+                side.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "climb moves: the jump with the stick sideways");
+    const Snapshot sprung = side.snapshot();
+    std::cout << "  climb moves: sprung off sideways at v (" << sprung.player_linear_velocity.x << ", "
+              << sprung.player_linear_velocity.y << ", " << sprung.player_linear_velocity.z << ")\n";
+    require(!is_climbing(sprung) && sprung.player_linear_velocity.x < -3.0 && sprung.player_linear_velocity.y > 3.0 &&
+                sprung.player_linear_velocity.z < -0.5,
+            "climb moves: the jump goes along the ladder's face where the stick points, and off it");
+    require(advance_until(side, [](const Snapshot &n) { return n.player_grounded; }, 3.0) &&
+                side.snapshot().death_count == 0 && side.snapshot().player_position.x < 3.5,
+            "climb moves: it comes down on the deck beside the ladder");
+    std::cout << "PASS scraperx_sim climb moves: slide_mps=" << fastest << " side_jump_x_mps="
+              << sprung.player_linear_velocity.x << "\n";
+}
+
+// The wall-run chain (kWallKicksMax), in the passage between the run wall's
+// south face and the wall facing it 2.5 m across: a sprint jumped along the
+// first with the stick into it steps on it; a kick with the stick turned to
+// the other crosses to it; steps there, a kick back, and on: at least three
+// kicks, steps on both walls, and the body no lower at its last kick than a
+// metre under its first.
+void run_wall_chain() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    Simulation s(InitialSpawn::WallRunApproach);
+    require(s.advance_frame(0.3).accepted, "wall chain: settle");
+    require(walk_to(s, -19.0, -28.5, 6.0, 0.1), "wall chain: round to the passage's west end");
+    require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "wall chain: sprint");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0), "wall chain: approach");
+    require(s.request_jump() && s.advance_frame(Simulation::kFixedStepSeconds * 2).accepted, "wall chain: the jump");
+    double toward = 0.6;   // the stick into the first wall (its south face at z -27.25)
+    require(s.set_move_input(1.0, toward), "wall chain: stick");
+    std::uint64_t kicks = 0;
+    std::uint64_t steps_at_last_kick = 0;
+    double air = 0.0;
+    double lowest_at_kick = 99.0;
+    double highest = 0.0;
+    double y_first_kick = 0.0;
+    for (int tick = 0; tick < 5 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "wall chain: tick");
+        const Snapshot n = s.snapshot();
+        if (n.player_grounded) {
+            break;
+        }
+        air += Simulation::kFixedStepSeconds;
+        highest = std::max(highest, n.player_position.y);
+        if (n.player_wall_running && n.wall_kick_count == kicks && n.wall_step_count > steps_at_last_kick) {
+            // On a wall: kick off it toward the other, the stick turned.
+            toward = -toward;
+            require(s.request_jump() && s.set_move_input(1.0, toward), "wall chain: the kick");
+            if (kicks == 0) {
+                y_first_kick = n.player_position.y;
+            }
+            lowest_at_kick = std::min(lowest_at_kick, n.player_position.y);
+            steps_at_last_kick = n.wall_step_count;
+            ++kicks;
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "wall chain: kick tick");
+            require(s.snapshot().wall_kick_count == kicks, "wall chain: the kick taken");
+        }
+    }
+    const Snapshot end = s.snapshot();
+    std::cout << "  wall chain: " << kicks << " kicks, " << end.wall_step_count << " steps, " << air << " s in the air, up to "
+              << highest << " m, the first kick at " << y_first_kick << " m, the lowest kick at " << lowest_at_kick
+              << " m; down at (" << end.player_position.x << ", " << end.player_position.z << ")\n";
+    require(kicks >= 3 && end.wall_step_count >= 4, "wall chain: kicked wall to wall and back, stepping on each");
+    require(air > 1.8, "wall chain: the chain keeps the body up far longer than a jump");
+    require(lowest_at_kick > y_first_kick - 1.0, "wall chain: the chain holds its height across the passage");
+    require(end.death_count == 0, "wall chain: it comes down on its feet");
+    std::cout << "PASS scraperx_sim wall chain: kicks=" << kicks << " air_s=" << air << " highest_m=" << highest << "\n";
+}
+

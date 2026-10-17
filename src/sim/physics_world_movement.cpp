@@ -230,7 +230,7 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
         if (commands.release_requested) {
             let_go_climb(bodies);
         } else if (commands.jump_requested) {
-            jump_off_climb(bodies);
+            jump_off_climb(bodies, commands);
         } else if (commands.traversal_requested && !try_top_out(bodies)) {
             ++rejected_traversal_count_;
         }
@@ -853,9 +853,31 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         update_wall_run(bodies, commands, player_velocity, reference_velocity);
     }
 
+    // The feet just off the ground at a walk's speeds (kCoyoteTicks): a jump
+    // still goes, as from the ground it ran off; otherwise, with walkable
+    // support within a step below (a ramp's crest run over, a stair's step
+    // walked off), the legs extend and put the feet back on it, rather than
+    // the body sailing on over the crest.
+    {
+        const float lift = player_velocity.GetY() - reference_velocity.GetY();
+        if (grounded_) {
+            coyote_ticks_ = kCoyoteTicks;
+        } else if (coyote_ticks_ > 0 && lift < kCoyoteMaxRiseMps && lift > -kCoyoteMaxFallMps) {
+            --coyote_ticks_;
+        } else {
+            coyote_ticks_ = 0;
+        }
+        if (step_up_grace_ticks_ > 0) {
+            --step_up_grace_ticks_;
+        }
+        if (!grounded_ && coyote_ticks_ > 0 && step_up_grace_ticks_ == 0 && !commands.jump_requested &&
+            jump_buffer_ticks_ == 0 && try_step_down(bodies, player_velocity, reference_velocity)) {
+            ++step_down_count_;
+        }
+    }
     // Crouched here means there was no room to stand, so no room to jump.
     const bool jump_wanted = commands.jump_requested || jump_buffer_ticks_ > 0;
-    const bool jump_started = jump_wanted && grounded_ && !crouched_;
+    const bool jump_started = jump_wanted && (grounded_ || coyote_ticks_ > 0) && !crouched_;
     bool kicked = false;
     if (grounded_) {
         flight_from_jump_ = false;
@@ -885,6 +907,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
     }
     if (jump_started) {
         jump_buffer_ticks_ = 0;
+        coyote_ticks_ = 0;
     } else if (commands.jump_requested && !grounded_ && !kicked && jump_vault_ticks_left_ == 0) {
         jump_buffer_ticks_ = kJumpBufferTicks;
     }
@@ -1012,6 +1035,34 @@ void Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
                        JPH::EActivation::Activate);
     ++step_up_count_;
     step_up_meters_ += static_cast<double>(rise + 0.01F);
+    step_up_grace_ticks_ = kStepUpGraceTicks;
+}
+
+// Stepping down. The feet just off the ground (the coyote window) with
+// ground under the body's centre within the maximum step (a ray: a corner
+// the capsule's side still grazes as it goes over an edge is not ground to
+// stand on, and the body must leave an edge cleanly) are swept down onto
+// it: the body put at the touch and its upward speed, the crest's launch,
+// taken off. Off a real edge nothing is found, and the body falls.
+bool Simulation::PhysicsWorld::try_step_down(JPH::BodyInterface &bodies, JPH::Vec3 &player_velocity,
+                                             const JPH::Vec3 reference_velocity) {
+    const JPH::RVec3 at = bodies.GetPosition(player_id_);
+    const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+    const JPH::RRayCast under(at, JPH::Vec3(0.0F, -(half_height + kStepMaximumHeight), 0.0F));
+    JPH::RayCastResult under_hit;
+    const JPH::IgnoreSingleBodyFilter self(player_id_);
+    if (!physics_system_.GetNarrowPhaseQuery().CastRay(under, under_hit, {}, {}, self)) {
+        return false;
+    }
+    const JPH::Vec3 down(0.0F, -kStepMaximumHeight, 0.0F);
+    float fraction = 1.0F;
+    JPH::Vec3 normal = JPH::Vec3::sZero();
+    if (!cast_capsule(at, down, fraction, normal) || normal.GetY() < kSupportNormalThreshold) {
+        return false;
+    }
+    bodies.SetPosition(player_id_, at + down * fraction, JPH::EActivation::Activate);
+    player_velocity.SetY(std::min(player_velocity.GetY(), reference_velocity.GetY()));
+    return true;
 }
 
 // Real quadratic drag opposing the full velocity vector, not a clamp: it

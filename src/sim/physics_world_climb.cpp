@@ -157,6 +157,12 @@ void Simulation::PhysicsWorld::begin_swing(JPH::BodyInterface &bodies, const Gri
 // Swinging: the kip pumps the swing; held forward, the free hand takes
 // the next hold ahead in reach.
 void Simulation::PhysicsWorld::update_swing(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
+    if (zip_riding_) {
+        // On a zipline's trolley: the hands hold its bar as it rolls; no
+        // pumping, no reaching. The line does the moving.
+        traversal_local_ledge_ = to_support_local(bodies, traversal_body_, zipline_->bar());
+        return;
+    }
     if (hang_arms_ == nullptr || facing_.IsNearZero()) {
         return;
     }
@@ -230,6 +236,8 @@ void Simulation::PhysicsWorld::begin_climb(JPH::BodyInterface &bodies, const Gri
     traversal_desired_ = hold;
     bodies.SetGravityFactor(player_id_, 0.0F);
     take_hand_holds(bodies, hold, grip);
+    climb_sliding_ = false;
+    climb_slide_mps_ = 0.0F;
     ++climb_count_;
 }
 
@@ -251,6 +259,19 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
     const double side_input =
         commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
     const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+    // Crouch held: the fireman's slide (kClimbSlideMps), the stick not read.
+    if (commands.crouch_held) {
+        if (!climb_sliding_) {
+            climb_sliding_ = true;
+            ++climb_slide_count_;
+        }
+        if (slide_down_climb(bodies, delta_seconds)) {
+            return;
+        }
+        return;
+    }
+    climb_sliding_ = false;
+    climb_slide_mps_ = 0.0F;
     JPH::RVec3 next = hold;
     Grip carries;
     if (up_input > kClimbInputDeadzone) {
@@ -413,17 +434,58 @@ void Simulation::PhysicsWorld::let_go_climb(JPH::BodyInterface &bodies) noexcept
     clear_traversal();
 }
 
-// Springing back off the structure, away from it and up.
-void Simulation::PhysicsWorld::jump_off_climb(JPH::BodyInterface &bodies) noexcept {
+// Springing off the structure: back off it and up, or along it where the
+// stick points (kClimbJumpSideSpeed), with a push off it either way.
+void Simulation::PhysicsWorld::jump_off_climb(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
     const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
     const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
-    bodies.SetLinearVelocity(player_id_, support_velocity -
-                                             traversal_normal_ * kClimbJumpBackSpeed +
-                                             JPH::Vec3(0.0F, kClimbJumpUpSpeed, 0.0F));
+    const JPH::Vec3 right = traversal_right();
+    const float side = std::clamp(
+        static_cast<float>(commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ()), -1.0F,
+        1.0F);
+    const JPH::Vec3 push = -traversal_normal_ * (kClimbJumpBackSpeed * (1.0F - 0.6F * std::abs(side))) +
+                           right * (side * kClimbJumpSideSpeed) + JPH::Vec3(0.0F, kClimbJumpUpSpeed, 0.0F);
+    bodies.SetLinearVelocity(player_id_, support_velocity + push);
     airborne_inherited_velocity_ = support_velocity;
     bodies.SetGravityFactor(player_id_, 1.0F);
     regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
     clear_traversal();
+    flight_from_jump_ = true;
+}
+
+// See kClimbSlideMps. The hands slide down the holds with the body, level
+// with its shoulders; the sweep below must be clear and a hold must still be
+// there, or the body is off the structure and falling.
+bool Simulation::PhysicsWorld::slide_down_climb(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+    const float gravity = -physics_system_.GetGravity().GetY();
+    climb_slide_mps_ = std::min(kClimbSlideMps, climb_slide_mps_ + gravity * delta_seconds);
+    const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+    const JPH::RVec3 moved = hold - JPH::Vec3(0.0F, climb_slide_mps_ * delta_seconds, 0.0F);
+    const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
+    if (feet_on_ground(moved)) {
+        // At the ground: the legs take the slide's speed as a landing.
+        bodies.SetLinearVelocity(player_id_, support_velocity - JPH::Vec3(0.0F, climb_slide_mps_, 0.0F));
+        airborne_inherited_velocity_ = support_velocity;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        clear_traversal();
+        return false;
+    }
+    const Grip below = find_grip(moved, hand_aim(moved, kClimbHandLow, 0.0F), traversal_normal_);
+    if (!below.valid || !climb_move_clear(hold, moved)) {
+        // Out of holds under the hands: off the structure, at the slide's speed.
+        bodies.SetLinearVelocity(player_id_, support_velocity - JPH::Vec3(0.0F, climb_slide_mps_, 0.0F));
+        airborne_inherited_velocity_ = support_velocity;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+        clear_traversal();
+        return false;
+    }
+    traversal_body_ = below.body;
+    traversal_entity_id_ = below.entity_id;
+    traversal_local_hold_ = to_support_local(bodies, traversal_body_, moved);
+    traversal_local_ledge_ = to_support_local(bodies, traversal_body_, below.point);
+    take_hand_holds(bodies, moved, below);
+    return true;
 }
 
 // The lip of a ledge near `near` (a point on or near its top edge),
@@ -643,6 +705,12 @@ Simulation::PhysicsWorld::Beam Simulation::PhysicsWorld::beam_underfoot(const JP
 
 void Simulation::PhysicsWorld::clear_traversal() noexcept {
     drop_hang_arms();
+    if (zip_riding_) {
+        zipline_->unclip();   // the hands open; the trolley stays on the line
+        zip_riding_ = false;
+    }
+    climb_sliding_ = false;
+    climb_slide_mps_ = 0.0F;
     traversal_speed_vault_ = false;
     traversal_springboard_ = false;
     traversal_vault_descend_at_ = 0.5F;

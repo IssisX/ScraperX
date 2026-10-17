@@ -27,6 +27,10 @@ int main() {
         run_flow();
         run_springboard();
         run_swing_launch();
+        run_slide_jump();
+        run_climb_moves();
+        run_wall_chain();
+        run_zipline();
         run_hook();
         run_workers();
         run_c7();
@@ -46,6 +50,21 @@ int main() {
         run_flow();
         run_springboard();
         run_swing_launch();
+        run_slide_jump();
+        run_climb_moves();
+        run_wall_chain();
+        run_zipline();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "zipline") {
+        run_zipline();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "well") {
+        run_well_stage_a();
+        run_well_stage_b();
+        run_well_stage_c();
+        run_well_band();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
@@ -303,6 +322,10 @@ int main() {
     run_flow();
     run_springboard();
     run_swing_launch();
+    run_slide_jump();
+    run_climb_moves();
+    run_wall_chain();
+    run_zipline();
     run_hook();
     run_workers();
     run_c7();

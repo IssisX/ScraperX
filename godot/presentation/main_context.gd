@@ -88,6 +88,8 @@ func _read_context() -> Dictionary:
 	var sling_seated := bool(sling["seated"])
 	var swing: Dictionary = _native.get_swing_state()
 	var swing_seated := bool(swing["seated"])
+	var zip: Dictionary = _native.get_zipline_state()
+	var zip_riding := bool(zip["riding"])
 	var trapeze: Dictionary = _native.get_trapeze_state()
 	var hook: Dictionary = _native.get_hook_state()
 	var trapeze_hanging := bool(trapeze["harnessed"])
@@ -215,6 +217,11 @@ func _read_context() -> Dictionary:
 			action = {"id": &"s1", "icon": &"up", "label": "STAND ON", "detail": "THE SCALE PLATE"}
 	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
+	elif swinging and zip_riding:
+		# On a zipline's trolley: the line does the moving; JUMP OFF throws
+		# the body on, DROP lets go.
+		action = {"id": &"let_go", "label": "LET GO", "icon": &"down",
+			"detail": "ZIPLINE  %d M/S" % roundi(absf(float(zip["speed_mps"])))}
 	elif swinging:
 		# On a bar overhead: forward pumps the swing and reaches for the next
 		# bar; letting go flies on with the swing.
@@ -257,6 +264,7 @@ func _read_context() -> Dictionary:
 		"hanging": hanging,
 		"climbing": climbing,
 		"swinging": swinging,
+		"zipline_riding": zip_riding,
 		# Drop at an edge behind lowers into a hang; on holds it lets go; in
 		# the slingshot's pouch it climbs out.
 		"has_hook": bool(hook["has_hook"]),

@@ -665,6 +665,9 @@ void run_well_band() {
     (void)band.set_move_input(0.0, 0.0);
     (void)band.advance_frame(0.5);
     const auto band_landed = band.snapshot();
+    std::cout << "  band: chute " << chute << " landed " << landed << " at (" << band_landed.player_position.x << ", "
+              << band_landed.player_position.y << ", " << band_landed.player_position.z << ") grounded "
+              << band_landed.player_grounded << " deaths " << band_landed.death_count - band_deaths << "\n";
     require(landed && band_landed.death_count == band_deaths && band_landed.player_grounded &&
                 band_landed.player_position.y > 154.8 && band_landed.player_position.y < 155.0,
             "a parachute must set the rider down alive on the 154 m deck");

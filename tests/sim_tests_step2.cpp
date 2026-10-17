@@ -279,7 +279,8 @@ void run_step2_movement() {
     // push steps it off. On the ring's deck it is not balancing, nor on the
     // boards' first metre, which lies over the deck: a step off them there
     // lands on it. Out over the well (z < -129.0) the boards are a beam, and
-    // by -129.35 the walk has settled to the balance pace.
+    // by -129.4 (the run walked off over the first 0.4 m of beam) the walk
+    // has settled to the balance pace.
     Simulation beam(InitialSpawn::Ring176East);
     require(beam.advance_frame(1.0).accepted, "the balance settle interval must be accepted");
     const bool deck_balancing = beam.snapshot().player_balancing;
@@ -290,7 +291,7 @@ void run_step2_movement() {
     double beam_peak = 0.0;
     bool beam_flag = true;
     (void)hold_stick(beam, 0.0, -1.0, 0.0, -1.0, 0.6, [&](const Snapshot &state) {
-        if (state.player_position.z < -129.35) {
+        if (state.player_position.z < -129.4) {
             beam_peak = std::max(beam_peak, horizontal_speed(state));
             beam_flag = beam_flag && state.player_balancing;
         }

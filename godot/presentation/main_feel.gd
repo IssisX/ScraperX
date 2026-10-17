@@ -122,6 +122,7 @@ var _slingshot_view: Node3D
 # The slingshot's launch shot: slow time and a look back, after the push.
 var _launch_shot := LaunchShot.new()
 var _swing_view: Node3D
+var _zipline_view: Node3D
 var _summit_view: Node3D
 var _matron_view: Node3D
 var _forklift_view: Node3D
@@ -732,6 +733,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_render_slingshot(delta)
 	if _swing_view != null:
 		_swing_view.update_view(_native.get_swing_state())
+	if _zipline_view != null:
+		_feel_zipline(delta)
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
@@ -739,6 +742,39 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _forklift_view != null:
 		_feel_forklift(delta)
 	_sample_machines(delta)
+
+
+# The ziplines (sim/zipline.hpp): every trolley and brake block drawn where
+# the native has them, the ride heard (the sheaves on the cable, the brake
+# block's drag) and felt in the hands: the bar taken, the block run into,
+# and the sheaves' buzz, a pulse every few metres of cable.
+const ZIP_BUZZ_M := 3.0
+var _zip_was_riding := false
+var _zip_was_braking := false
+var _zip_buzz_m := 0.0
+
+func _feel_zipline(delta: float) -> void:
+	var state: Dictionary = _native.get_zipline_state()
+	_zipline_view.update_view(_native.get_zipline_trolleys(), state)
+	if delta <= 0.0:
+		return
+	var riding := bool(state["riding"])
+	var speed := absf(float(state["speed_mps"]))
+	var braking := riding and bool(state["braking"])
+	_audio.update_zipline(riding, speed, braking, state["bar"])
+	if riding and not _zip_was_riding:
+		_haptic(&"reach")
+	if braking and not _zip_was_braking:
+		_haptic(&"strain")
+	if riding and speed > 2.0:
+		_zip_buzz_m -= delta * speed
+		if _zip_buzz_m <= 0.0:
+			_zip_buzz_m = ZIP_BUZZ_M
+			_haptic(&"strain" if braking else &"release", clampf(speed / 16.0, 0.3, 1.0))
+	else:
+		_zip_buzz_m = 0.0
+	_zip_was_riding = riding
+	_zip_was_braking = braking
 
 
 # The forklift (sim/forklift.hpp): its moving parts drawn, its engine, pump

@@ -120,10 +120,16 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 // publishing a snapshot that mixes a teleported position with a contact
 // sample that referred to the pre-restore position.
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
-    // Out of the slingshot's harness before the body moves.
+    // Out of the slingshot's harness, and the hands off whatever they hold
+    // (a ledge, a climb's holds, a bar, a zipline's trolley), before the body
+    // moves: the checkpoint is a standing one.
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
+    if (traversal_state_ != TraversalState::None) {
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        clear_traversal();
+    }
     slingshot_flight_ = false;
     // The capsule the checkpoint was committed in: a crouched commit's
     // centre is a crouched centre, and may sit under a low ceiling.
@@ -147,6 +153,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     matron_->restore(checkpoint_.matron);
     loose_stock_->resync();
     forklift_->restore();
+    zipline_->restore();
+    zip_riding_ = false;
     restore_carry_topology(checkpoint_.carrying_entity);
     // The body comes back at rest, so what it holds does too. Restored
     // with the walking speed it was committed at, the load swung out of
@@ -350,6 +358,12 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wall_step_count = wall_step_count_;
     state_.wall_kick_count = wall_kick_count_;
     state_.wall_climb_count = wall_climb_count_;
+    state_.zipline_riding = zip_riding_;
+    state_.zipline_line = zipline_->state().line;
+    state_.zipline_ride_count = zipline_->state().rides;
+    state_.zipline_speed_mps = zipline_->state().speed_mps;
+    state_.zipline_along_m = zipline_->state().along_m;
+    state_.zipline_braking = zipline_->state().braking;
     state_.player_wall_running = wall_running();
     state_.player_wall_climbing = wall_climbed_this_flight_ && wall_running();
     state_.has_hook = has_hook_;
@@ -474,6 +488,8 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.edge_drop_point =
         edge_affordance_.valid ? to_vector3(edge_affordance_.ledge) : Vector3{};
     state_.climb_count = climb_count_;
+    state_.player_climb_sliding = climb_sliding_;
+    state_.climb_slide_count = climb_slide_count_;
     state_.swing_catch_count = swing_catch_count_;
     state_.swing_reach_count = swing_reach_count_;
     state_.swing_launch_count = swing_launch_count_;
@@ -490,6 +506,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.world_solid_bodies = world_solid_bodies_;
     state_.step_up_count = step_up_count_;
     state_.step_up_meters = step_up_meters_;
+    state_.step_down_count = step_down_count_;
     state_.jump_vault_count = jump_vault_count_;
     state_.precision_sighted = precision_sighted_;
     state_.precision_point = precision_sighted_ ? to_vector3(precision_point_) : Vector3{};

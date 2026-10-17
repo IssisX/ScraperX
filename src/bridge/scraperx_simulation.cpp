@@ -304,6 +304,9 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_forklift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_lift", "lift"), &ScraperXSimulation::set_forklift_lift);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_lines"), &ScraperXSimulation::get_zipline_lines);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_trolleys"), &ScraperXSimulation::get_zipline_trolleys);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_state"), &ScraperXSimulation::get_zipline_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("get_workers"), &ScraperXSimulation::get_workers);
@@ -1261,6 +1264,49 @@ godot::Dictionary ScraperXSimulation::get_forklift_state() const {
     out["wheels"] = wheels;
     out["wheel_radius"] = radii;
     out["wheel_width"] = widths;
+    return out;
+}
+
+// The ziplines, as built: each line's top and bottom anchors and its brake
+// block's travel from its rest to the stop.
+godot::Array ScraperXSimulation::get_zipline_lines() const {
+    godot::Array out;
+    for (std::uint32_t index = 0; index < simulation_->zipline_count(); ++index) {
+        const sim::Simulation::ZiplineLine line = simulation_->zipline_line(index);
+        godot::Dictionary entry;
+        entry["top"] = to_godot(line.top);
+        entry["bottom"] = to_godot(line.bottom);
+        entry["length"] = line.length;
+        entry["brake_m"] = line.brake_m;
+        out.push_back(entry);
+    }
+    return out;
+}
+
+// Where each line's trolley and brake block are down it from the top
+// anchor, in turn: [trolley_m, block_m] a line.
+godot::PackedFloat32Array ScraperXSimulation::get_zipline_trolleys() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->zipline_count(); ++index) {
+        const sim::Simulation::ZiplineLine line = simulation_->zipline_line(index);
+        out.push_back(static_cast<float>(line.trolley_m));
+        out.push_back(static_cast<float>(line.block_m));
+    }
+    return out;
+}
+
+// Riding: which line, the trolley's place down it and its speed, and the
+// bar the hands hold.
+godot::Dictionary ScraperXSimulation::get_zipline_state() const {
+    const sim::Snapshot &state = simulation_->snapshot();
+    godot::Dictionary out;
+    out["riding"] = state.zipline_riding;
+    out["line"] = state.zipline_line;
+    out["rides"] = static_cast<std::int64_t>(state.zipline_ride_count);
+    out["speed_mps"] = state.zipline_speed_mps;
+    out["along_m"] = state.zipline_along_m;
+    out["braking"] = state.zipline_braking;
+    out["bar"] = to_godot(simulation_->zipline_bar());
     return out;
 }
 

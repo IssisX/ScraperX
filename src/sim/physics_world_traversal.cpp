@@ -25,6 +25,11 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
     }
 
     const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+    // A zipline's trolley parked over the head, in flight: the hands take
+    // its bar, rising to it or coming down onto it (Zipline::kCatchFallMps).
+    if (rising > -Zipline::kCatchFallMps && try_catch_zipline(bodies, origin)) {
+        return;
+    }
     const LedgeProbe probe = probe_ledge(origin,
                                          facing_,
                                          kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
@@ -710,6 +715,34 @@ void Simulation::PhysicsWorld::check_hang_grip(JPH::BodyInterface &bodies, const
 
 // Letting go: the hands open and nothing else; the body keeps the
 // velocity it had on the arms.
+bool Simulation::PhysicsWorld::try_catch_zipline(JPH::BodyInterface &bodies, const JPH::RVec3 origin) noexcept {
+    const JPH::RVec3 hands = origin + JPH::Vec3(0.0F, kHangShoulderAboveCentre + 0.55F, 0.0F);
+    JPH::RVec3 bar;
+    const int line = zipline_->at_hand(hands, Zipline::kCatchReachM, bar);
+    if (line < 0 || bar.GetY() - origin.GetY() < kSwingMinHandRise) {
+        return false;
+    }
+    begin_zip_ride(bodies, line);
+    return true;
+}
+
+void Simulation::PhysicsWorld::begin_zip_ride(JPH::BodyInterface &bodies, const int line) noexcept {
+    const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+    traversal_body_ = zipline_->clip(line, JPH::Vec3(0.0F, kHangShoulderAboveCentre + kHangArmStop, 0.0F));
+    traversal_state_ = TraversalState::Swinging;
+    traversal_entry_offset_ = JPH::Vec3::sZero();
+    traversal_entity_id_ = Zipline::kFirstLineEntity + static_cast<std::uint64_t>(line);
+    traversal_target_body_ = {};
+    traversal_normal_ = facing_;
+    traversal_local_hold_ = to_support_local(bodies, traversal_body_, origin);
+    traversal_local_ledge_ = to_support_local(bodies, traversal_body_, zipline_->bar());
+    traversal_progress_ = 0.0;
+    traversal_stall_ticks_ = 0;
+    traversal_desired_ = origin;
+    regrip_cooldown_ticks_ = 0;
+    zip_riding_ = true;
+}
+
 void Simulation::PhysicsWorld::release_hang(JPH::BodyInterface &bodies) noexcept {
     const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
     const JPH::Vec3 support_velocity =

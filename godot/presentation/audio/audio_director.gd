@@ -135,6 +135,8 @@ var matron_cues := {}
 var _fork_engine: AudioStreamPlayer3D
 var _fork_pump: AudioStreamPlayer3D
 var _fork_valve: AudioStreamPlayer3D
+var _zip_roll: AudioStreamPlayer3D
+var _zip_brake: AudioStreamPlayer3D
 var _fork_rpm := 0.0
 var forklift_cues := {}
 var pours_heard := 0
@@ -209,6 +211,8 @@ func _ready() -> void:
 	_fork_engine = _positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 120.0)
 	_fork_pump = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	_fork_valve = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
+	_zip_roll = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
+	_zip_brake = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -711,6 +715,20 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, -lever * (0.15 + 0.5 * held), 0.62, -8.0)
 	else:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, 0.0, 1.0, 0.0)
+
+
+# A zipline ride (sim/zipline.hpp), heard at the trolley over the rider's
+# hands: its sheaves rolling the cable's strands, a buzz that climbs with
+# the speed, and the brake block's clamp dragged down the cable once the
+# trolley has run into it.
+func update_zipline(riding: bool, speed_mps: float, braking: bool, bar: Vector3) -> void:
+	if not _bank_ready or _silent:
+		return
+	var at := bar + Vector3(0.0, 0.25, 0.0)
+	var pace := clampf(speed_mps / 12.0, 0.0, 1.4)
+	_loop_level(_zip_roll, &"zip_loop", at, 0.9 * pace if riding and speed_mps > 0.3 else 0.0, 0.5 + pace, -6.0)
+	_loop_level(_zip_brake, &"zip_brake_loop", at,
+		0.4 + 0.6 * pace if riding and braking and speed_mps > 0.5 else 0.0, 0.8 + 0.4 * pace, -5.0)
 
 
 # A loop at `level` (0 silent): started when first heard, its stream set once.

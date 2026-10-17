@@ -72,6 +72,9 @@ func build() -> void:
 	clips[&"engine_loop"] = [_loop(_engine(2.0), 0.3)]
 	clips[&"pump_loop"] = [_loop(_pump(1.6), 0.3)]
 	clips[&"relief_loop"] = [_loop(_relief(1.2), 0.25)]
+	# The ziplines' (sim/zipline.hpp).
+	clips[&"zip_loop"] = [_loop(_zip(1.5), 0.3)]
+	clips[&"zip_brake_loop"] = [_loop(_zip_brake(1.2), 0.25)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -645,6 +648,40 @@ func _relief(length: float) -> PackedFloat32Array:
 	for i in n:
 		var chatter := 0.6 + 0.4 * sin(TAU * 38.0 * float(i) / float(MIX_RATE))
 		out[i] = (whistle[i] * 3.0 + rush[i] * 0.8) * chatter
+	return out
+
+
+# --- the ziplines ------------------------------------------------------------
+
+
+# A trolley's two sheaves rolling a laid steel cable at 12 m/s (played
+# faster or slower for the speed): the wheels bumping over the cable's
+# strands, a buzz near 600 Hz and its overtones, the cable's own hum under
+# it, and the air whispering past the wire.
+func _zip(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	for pair in [[600.0, 0.10], [1200.0, 0.06], [1800.0, 0.03]]:
+		_add_tone(out, pair[0], 0.0, length, pair[1], 0.0)
+	_add_tone(out, 140.0, 0.0, length, 0.08, 0.0)
+	var n := out.size()
+	var air := _band_noise_buffer(n, 900.0, 4000.0)
+	for i in n:
+		var flutter := 0.8 + 0.2 * sin(TAU * 7.0 * float(i) / float(MIX_RATE))
+		out[i] = out[i] * flutter + air[i] * 0.25
+	return out
+
+
+# The brake block's clamp dragged down the cable by the trolley: a squeal of
+# rubber on wire that wavers as the clamp grabs and slips, over the rumble
+# of the block hammering along the strands.
+func _zip_brake(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var squeal := _resonant_noise_buffer(n, 1900.0, 0.06, 2.5)
+	var rumble := _band_noise_buffer(n, 120.0, 500.0)
+	for i in n:
+		var grab := 0.55 + 0.45 * sin(TAU * 23.0 * float(i) / float(MIX_RATE))
+		out[i] = squeal[i] * 2.2 * grab + rumble[i] * 0.9
 	return out
 
 

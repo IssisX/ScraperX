@@ -148,7 +148,10 @@ constexpr double kWallRunHoldSeconds = 0.3;
 // steps start again there. At most kWallKicksMax kicks in one flight: the
 // legs' push is finite.
 constexpr float kWallKickAlongMps = 2.0F;
-constexpr std::uint32_t kWallKicksMax = 2;
+// Kicks in one flight: enough for a chain across a passage, wall to facing
+// wall and back (Mirror's Edge's wall-run chain), each kick needing a real
+// step on the wall it leaves; not enough to pogo up one wall for ever.
+constexpr std::uint32_t kWallKicksMax = 4;
 // Mirror's Edge's wall climb (the owner, 2026-10-17: "running a few steps up
 // a wall"). Jumped at a wall at kWallClimbMinimumSpeed or more into it, within
 // kWallClimbMaximumAngle of square, the stick held at it, a foot plants on it:
@@ -382,6 +385,23 @@ constexpr std::uint32_t kJumpVaultWindowTicks =
 // spends it.
 constexpr std::uint32_t kJumpBufferTicks =
     static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+// Its twin the other way: a jump pressed within kCoyoteTicks of the feet
+// leaving the ground without a jump (a ramp's crest run over at speed, an
+// edge stepped off) still jumps, as a runner's does, the legs having loaded
+// as the ground ran out. Only from a walk's leaving -- rising under
+// kCoyoteMaxRiseMps (a sprint over a 27 degree crest: 8 m/s at a half
+// rise), falling under kCoyoteMaxFallMps -- never off a jump (5.5 m/s), a
+// kick, a launch or a let-go, which the speed alone rules out.
+constexpr std::uint32_t kCoyoteTicks =
+    static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+constexpr float kCoyoteMaxRiseMps = 4.5F;
+// A step up lifts the body onto the step and lets it come down on top; for
+// this long after one the step-down leaves it be (it found the body a hair
+// off the ground beside the step's edge and pulled it onto the edge, which
+// shoved it sideways off a 0.3 m board).
+constexpr std::uint32_t kStepUpGraceTicks =
+    static_cast<std::uint32_t>(0.10 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
+constexpr float kCoyoteMaxFallMps = 1.5F;
 // PARKOUR_MOVE_SET.md M3, the precision jump: the sighted, committed jump
 // onto a lip or ledge the eyes have picked. Grounded, the look (facing and
 // pitch) is cast ahead; a surface it meets between kPrecisionMinM and
@@ -579,6 +599,16 @@ constexpr float kClimbSideLead = 0.35F;
 constexpr std::uint32_t kClimbRegripTicks = 18;
 constexpr float kClimbJumpBackSpeed = 2.5F;
 constexpr float kClimbJumpUpSpeed = 4.0F;
+// The jump off a climb goes where the stick points along the structure
+// (Mirror's Edge's side jump off a pipe): kClimbJumpSideSpeed along it at
+// full stick, and that much less of the push back off it. Neutral, or
+// pulled back, it is the spring back off.
+constexpr float kClimbJumpSideSpeed = 3.5F;
+// The fireman's slide (its ladder slide): Crouch held on a climb loosens the
+// hands, and the body drops down the holds, braked by their grip to at most
+// kClimbSlideMps (CHOSEN: a fireman's pole). Out of holds, it falls; at the
+// ground, the legs take the landing.
+constexpr float kClimbSlideMps = 4.5F;
 // Climbing down, the soles find ground this close under them and step off.
 constexpr float kClimbFootReach = 0.10F;
 // Shimmy along a hung ledge.

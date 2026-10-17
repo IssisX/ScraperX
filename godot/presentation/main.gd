@@ -28,6 +28,7 @@ const SummitView := preload("res://presentation/summit_view.gd")
 const MatronView := preload("res://presentation/life/matron_view.gd")
 const StockView := preload("res://presentation/stock_view.gd")
 const ForkliftView := preload("res://presentation/forklift_view.gd")
+const ZiplineView := preload("res://presentation/zipline_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -203,6 +204,9 @@ func _ready() -> void:
 	_swing_view = SwingView.new()
 	add_child(_swing_view)
 	_swing_view.setup()
+	_zipline_view = ZiplineView.new()
+	add_child(_zipline_view)
+	_zipline_view.setup(_native)
 	# The summit's lamp: lit before (the profile keeps it) opens the world lit.
 	if _save_enabled and FileAccess.file_exists(SUMMIT_PROFILE_PATH):
 		_native.light_summit()

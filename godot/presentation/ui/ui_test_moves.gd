@@ -858,6 +858,78 @@ func _touch_swing_launch() -> bool:
 		return _fail("the throw did not carry past where a let-go lands (x %.2f)" % _position().x)
 	return true
 
+# Ziplines (sim/zipline.hpp): from deck 2's south band, up the ramp onto the
+# stand behind the yard line's top post; a running JUMP at the parked
+# trolley takes its bar; the ride down to the yard, fast, the brake block,
+# the stop; DROP lets go onto the yard. The hands on the bar, the trolley
+# drawn over them, the HUD naming the line.
+func _touch_zipline() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var device := InputRouter.Device.TOUCH
+	await _face(Vector2(0.0, 1.0))
+	if not await _walk_to(device, Vector2(-2.0, -129.4), 0.25, 20.0):
+		return _fail("never reached the ramp's foot (at %s)" % str(_position()))
+	await _pose("zipline_stand")
+	# Up the ramp at a run and JUMP on the stand: the run over the ramp's
+	# crest has the feet off the stand for a few ticks, and the jump pressed
+	# there still goes (the native's coyote jump).
+	_stick_push(Vector2(0.0, -1.0))
+	var on_stand: bool = await _wait_until(func() -> bool: return _position().z > -126.4, 3.0)
+	if not on_stand or _position().y < 23.9:
+		return _fail("never got up the ramp onto the stand (at %s)" % str(_position()))
+	_tap(1, _center(&"jump"))
+	var caught: bool = await _wait_until(
+		func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5)
+	if not caught:
+		return _fail("the jump from the stand never took the trolley's bar (at %s)" % str(_position()))
+	if not _main._touch.is_button_shown(&"drop"):
+		return _fail("DROP was not offered on the zipline")
+	if _main._touch.button_label(&"jump") != "JUMP OFF":
+		return _fail("JUMP read '%s' on the zipline, expected JUMP OFF" % _main._touch.button_label(&"jump"))
+	if not String(_ctx()["action"]["detail"]).begins_with("ZIPLINE"):
+		return _fail("the HUD did not name the zipline ('%s')" % String(_ctx()["action"]["detail"]))
+	await _seconds(0.4)
+	var grip_error: float = _main._arms.anchored_error()
+	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
+		var hands: Array = []
+		for hand in _main._arms._hands:
+			hands.append([hand.anchor, hand.root.global_position])
+		return _fail("hands not gripping the trolley's bar (poses %s, error %.3f m; eye %s pitch %.2f, body %s, native %s / %s, hands %s)" % [
+			str(_main._arms.hand_poses()), grip_error, str(_main._camera.global_position), float(_main._pitch),
+			str(_position()), str(_native().get_traversal_left_hand()), str(_native().get_traversal_right_hand()),
+			str(hands)])
+	await _seconds(1.2)
+	await _pose("zipline")
+	var fastest := 0.0
+	var braked := false
+	var stopped := false
+	var waited := 0.0
+	while waited < 14.0 and not stopped:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		var zip: Dictionary = _native().get_zipline_state()
+		if not bool(zip["riding"]):
+			return _fail("the hands came off the bar mid-ride (at %s)" % str(_position()))
+		var speed := absf(float(zip["speed_mps"]))
+		fastest = maxf(fastest, speed)
+		braked = braked or bool(zip["braking"])
+		stopped = braked and speed < 0.3
+	if not stopped:
+		return _fail("the ride never stopped at the bottom (fastest %.1f m/s, braked %s)" % [fastest, str(braked)])
+	if fastest < 12.0:
+		return _fail("the ride never got up to speed (%.1f m/s)" % fastest)
+	_move_dir(device, Vector2.ZERO)
+	await _frames(2)
+	_tap(1, _center(&"drop"))
+	var landed: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.5)
+	_detail = "fastest_mps=%.1f landed=(%.1f, %.2f, %.1f) deaths=%d" % [
+		fastest, _position().x, _position().y, _position().z, int(_native().get_death_count())]
+	if not landed or int(_native().get_death_count()) != 0:
+		return _fail("DROP at the bottom did not put the body down alive on the yard")
+	if _position().y > 1.5:
+		return _fail("let go, the body is not on the yard (y %.2f)" % _position().y)
+	return true
+
 func _touch_monkey_bars() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))
