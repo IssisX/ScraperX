@@ -102,9 +102,11 @@ def exercise(args, session):
     state = session.wait('ordinary touch crouches native player', lambda s: s['crouched'], after=before)
     session.button(state, 'crouch')
     state = session.wait('ordinary touch stands native player', lambda s: not s['crouched'], after=state)
+    before = state
     session.button(state, 'jump')
     state = session.wait('ordinary touch jump produces upward velocity',
-                         lambda s: s['peak_upward_speed'] > 0.5, after=state)
+                         lambda s: s['jump_work_j'] > before['jump_work_j'] and
+                         s['peak_upward_speed'] > 0.5, after=state)
     before = state
     start, end = state['stick'], state['stick_up']
     session.adb('shell', 'input', 'swipe', round(start[0]), round(start[1]),
@@ -166,8 +168,8 @@ def main():
         try:
             session.capture('failure')
             session.snapshot()
-        finally:
-            session.save()
+        except Exception as diagnostic_error:
+            session.receipt['diagnostic_error'] = str(diagnostic_error)
         raise
     finally:
         session.save()

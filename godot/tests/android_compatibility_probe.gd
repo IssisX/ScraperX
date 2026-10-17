@@ -53,6 +53,7 @@ func _process(delta: float) -> void:
 		_menu_buttons(menu, buttons)
 	var position: Vector3 = native.get_player_position() if native != null else Vector3.ZERO
 	var velocity: Vector3 = native.get_player_linear_velocity() if native != null else Vector3.ZERO
+	var landing: Dictionary = native.get_landing_state() if native != null else {}
 	var stick: Array = _point(touch, touch.stick_home()) if touch != null else []
 	var stick_up: Array = _point(touch, touch.stick_home() - Vector2(0, 100.0 * touch._u)) if touch != null else []
 	var settings_path := "user://settings.cfg"
@@ -63,6 +64,7 @@ func _process(delta: float) -> void:
 		"fixed_step_s": native.get_fixed_step_seconds() if native != null else 0,
 		"position": [position.x, position.y, position.z], "velocity": [velocity.x, velocity.y, velocity.z],
 		"peak_upward_speed": _peak_upward_speed, "touch_events": _touch_events,
+		"jump_work_j": landing.get("landing_jump_work_j", 0.0),
 		"crouched": native.is_player_crouched() if native != null else false,
 		"window": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
 		"canvas": [view.get_visible_rect().size.x, view.get_visible_rect().size.y],

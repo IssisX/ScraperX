@@ -43,7 +43,9 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --yes ninja-build
-          sdkmanager "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
           mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable" artifacts/android-compatibility-build
           curl --fail --location --retry 3 --output tools/godot/godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
@@ -140,7 +142,9 @@ jobs:
           sudo chmod a+rw /dev/kvm
           "${ANDROID_HOME}/emulator/emulator" -accel-check \
             | tee "artifacts/android-${{ matrix.name }}/acceleration.txt"
-          avdmanager list device > "artifacts/android-${{ matrix.name }}/available-profiles.txt"
+          AVDMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/avdmanager' | sort -V | tail -n 1)"
+          test -x "${AVDMANAGER_PATH}"
+          "${AVDMANAGER_PATH}" list device > "artifacts/android-${{ matrix.name }}/available-profiles.txt"
       - name: Boot Android and exercise real touch and lifecycle
         uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
         with:
