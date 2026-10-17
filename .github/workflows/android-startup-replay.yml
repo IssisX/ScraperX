@@ -16,6 +16,12 @@ on:
         default: fa8e3a40b0efb93134cb2be0449d5802a2c93f3e
         required: true
         type: string
+      startup_font_scale:
+        description: Controlled OS font-size change immediately after launching
+        default: '1.25'
+        required: true
+        type: choice
+        options: ['1.25', 'none']
 
 permissions:
   contents: read
@@ -28,6 +34,7 @@ jobs:
     env:
       APK_RUN: ${{ inputs.apk_run || '39051032030' }}
       APK_SOURCE: ${{ inputs.apk_source || 'fa8e3a40b0efb93134cb2be0449d5802a2c93f3e' }}
+      STARTUP_FONT_SCALE: ${{ inputs.startup_font_scale || '1.25' }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +77,7 @@ jobs:
             --apk artifacts/existing-apk/ScraperX-emulator.apk
             --source "${APK_SOURCE}" --profile foldable-api35
             --resize 1080x2092 --output artifacts/startup-replay
+            --startup-font-scale "${STARTUP_FONT_SCALE}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
