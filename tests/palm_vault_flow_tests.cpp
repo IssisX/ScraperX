@@ -198,6 +198,35 @@ void slow(Simulation &sim) {
     require(airborne && tucked && landed, "refused palm attempt retains ordinary flight and real receiving contact", sim);
     std::cout << "PALM_SLOW approach_mps=" << -approach.player_linear_velocity.z << " palm_count=0\n";
 }
+void flat(Simulation &sim) {
+    stage(sim);
+    require(sim.set_facing(1, 0) && sim.set_move_input(1, 0), "ordinary run across clear grade", sim);
+    for (unsigned i = 0; i < 150; ++i) {
+        tick(sim);
+        if (sim.snapshot().player_linear_velocity.x > 5.4) break;
+    }
+    require(sim.snapshot().player_grounded && sim.snapshot().player_linear_velocity.x > 5.4 &&
+            sim.request_jump(), "earned running jump without an obstacle", sim);
+    bool airborne = false, tucked = false;
+    for (unsigned i = 0; i < 180; ++i) {
+        tick(sim);
+        const auto s = sim.snapshot();
+        airborne = airborne || !s.player_grounded;
+        if (!tucked && !s.player_grounded && s.player_position.y > 1.2) {
+            require(sim.set_crouch_input(true), "ordinary airborne tuck above flat ground", sim);
+            tucked = true;
+        }
+        require(!active(s) && load(s) == 0 && s.palm_vault_count == 0,
+                "a flat receiving floor cannot become an automatic vault palm", sim);
+        if (airborne && s.player_grounded && s.support_entity_id == 1) {
+            require(tucked && s.player_linear_velocity.x > 2.475,
+                    "ordinary tuck retains its momentum and actual foot landing", sim);
+            std::cout << "PALM_FLAT grade_tick=" << s.tick_index << " palm_count=0\n";
+            return;
+        }
+    }
+    require(false, "ordinary flat-ground tuck reaches real receiving feet", sim);
+}
 } // namespace
 int main(int argc, char **argv) {
     std::cout << std::unitbuf;
@@ -207,6 +236,7 @@ int main(int argc, char **argv) {
     else if (mode == "cancel") { stage(sim); crossing(sim, true); }
     else if (mode == "under") under(sim);
     else if (mode == "slow") slow(sim);
+    else if (mode == "flat") flat(sim);
     else require(false, "known mode required", sim);
     std::cout << "PASS PALM_VAULT_FLOW mode=" << mode << '\n';
 }

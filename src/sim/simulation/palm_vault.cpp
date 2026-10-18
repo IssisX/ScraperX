@@ -85,6 +85,18 @@ void Simulation::PhysicsWorld::update_palm_vault(JPH::BodyInterface &bodies,
         const JPH::Vec3 approach(point - shoulder);
         if (normal.GetY() < kSupportNormalThreshold || approach.IsNearZero() ||
             approach.Length() > kTransferShoulderReachM) continue;
+        // A reachable top alone also finds the ordinary landing floor.
+        // Pair it with the exposed leading face of this same physical part;
+        // a flat-ground tuck must remain an ordinary foot landing.
+        const auto edge_from = point - facing_*kClimbHandReach - JPH::Vec3(0, kLandingSkin, 0);
+        const auto edge_ray = facing_*(kClimbHandReach + kLandingSkin);
+        JPH::RayCastResult face;
+        if (!cast_ray(edge_from, edge_ray, face) || face.mFraction <= 0 ||
+            face.mBodyID != hit.mBodyID || face.mSubShapeID2 != hit.mSubShapeID2) continue;
+        const auto face_normal = surface_normal(face.mBodyID, face.mSubShapeID2,
+                                                edge_from + edge_ray*face.mFraction);
+        if (std::abs(face_normal.GetY()) >= kSupportNormalThreshold ||
+            face_normal.Dot(facing_) >= -kHangIntentDotThreshold) continue;
         JPH::RayCastResult first;
         if (!cast_ray(shoulder, approach + approach.Normalized()*kLandingSkin, first) ||
             first.mBodyID != hit.mBodyID || first.mSubShapeID2 != hit.mSubShapeID2) continue;

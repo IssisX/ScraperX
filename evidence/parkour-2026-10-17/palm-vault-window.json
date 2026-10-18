@@ -4,11 +4,11 @@
   "source_sha256": {
     "src/sim/physical_hand_prop.cpp": "6e9d0ad47b7301028da512239c761c40d9b935f62fd74bcc4142277e39712523",
     "src/sim/physical_hand_prop.hpp": "21895ea7c4a0641291674fd7934d15595f7d1247f886f14140077de01b555b56",
-    "src/sim/simulation/palm_vault.cpp": "cda1bb007cc36ba1422d03a5397f84135198d413bbec6fe36b0fbdbd14537f6c",
+    "src/sim/simulation/palm_vault.cpp": "d7f2058b32ab4501d29be3834c1b470c37f2b979f1f16eb733b799af0575895c",
     "src/sim/simulation/world.cpp": "3002a16cf0102db45ebbb02afe464f7dc4b87ead59b49197a94f5adcfaaba1db",
     "src/sim/simulation/world.hpp": "eb68a556cfd5c048f31e0744b260fd49e47994a486aabd9f0e9dab6033e9fdff",
     "src/sim/vault_rail_route.cpp": "8b05725eb163ad743cbf5dddfe7e08aa0031391a9b8f005297be27ab20d9ee29",
-    "tests/palm_vault_flow_tests.cpp": "8805bb8a8825a76d73becfbd51682e2b6dcf896a82963c4002bf12eefa503536"
+    "tests/palm_vault_flow_tests.cpp": "4bb4e78f03c1b36a16a5196ac60f6b7b91c8b64036a210f5bb471c5e0915b589"
   },
   "coherent_native_build": {
     "commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/build-commands.json",
@@ -256,5 +256,93 @@
     "Transient rail capsule contact renewed cancelled held Crouch. Rearm now requires receiving feet plus released Crouch.",
     "East retry path hit existing storage trays. Actual walking retry uses clear west aisle atx=-45; no geometry removed."
   ],
-  "delivery": "Source/APK publication follows this local acceptance; matching candidate receipts are separate. Prior wider CI failures are not counted as green."
+  "delivery": "Source/APK publication follows this local acceptance; matching candidate receipts are separate. Prior wider CI failures are not counted as green.",
+  "exposed_edge_followup": {
+    "base_source": "891569a34fbf0a1e77c525f5cb9eb380ff6f78b2",
+    "old_probe_commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/flat-probe-commands.json",
+    "old_actual_output": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "FLAT_PLANT y=0.692852 support=1 count=1",
+      "FLAT_PLANT y=0.634331 support=1 count=1",
+      "FLAT_PLANT y=0.6 support=1 count=1",
+      "FLAT_LAND tick=196 palms=3 support=1"
+    ],
+    "cause": "Top+approach alone admitted3unwanted normal palms on ordinary grade; floor now fails same-part exposed leading-face/top pairing. Actual mechanics and force/age/work laws are unchanged.",
+    "native_compile_archive_and_positive_flow_commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-edge-commands.json",
+    "positive_flow_result": {
+      "operation": "flow",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_edge_flow_tests",
+        "flow"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-edge-flow.log"
+    },
+    "flat_actual_speed_commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/edge-flat-commands.json",
+    "flat_results": [
+      {
+        "operation": "link",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/palm_vault_flow_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/libscraperx_palm_edge.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_edge_flat_tests"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/edge-flat-link.log"
+      },
+      {
+        "operation": "run",
+        "argv": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_edge_flat_tests",
+          "flat"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/edge-flat-run.log"
+      }
+    ],
+    "flat_output": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "PALM_FLAT grade_tick=227 palm_count=0",
+      "PASS PALM_VAULT_FLOW mode=flat"
+    ],
+    "fixture_correction": "45ticks had actual4.169m/s rather than the unchanged5.4m/s running precondition. Wait within150ticks for real running speed; no game tuning or assertion weakened.",
+    "reuse": "Positive rail trace retains identical17loadedticks and both actual receiving-grade ticks. Existing cancellation/rearm/underpass, passive mechanics and Godot consumers are unchanged and reused."
+  }
 }
