@@ -11,6 +11,7 @@ extends Node
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const ClimbEffort := preload("res://presentation/climb_effort_feedback.gd")
+const SwingBearing := preload("res://presentation/swing_bearing_feedback.gd")
 const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const RUBBLE_IMPACT := preload("res://assets/audio/rubble/concrete_break_denoised_843338_preview.wav")
@@ -141,6 +142,8 @@ var _sling_air_speed := 0.0
 var _bullet_time: AudioStreamPlayer
 var _ladder_strain: AudioStreamPlayer3D
 var ladder_motion_frames := 0
+var _swing_bearing := SwingBearing.new()
+var swing_bearing_cues := 0
 var climb_regrips := 0
 var climb_effort_cues := 0
 var last_climb_effort_strength := 0.0
@@ -229,6 +232,7 @@ func _exit_tree() -> void:
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
 	_quiesced = true
+	_swing_bearing.reset()
 	_climb_effort.reset()
 	last_climb_effort_strength = 0.0
 	reset_grapple_feedback()
@@ -293,6 +297,7 @@ func ui_tap(back: bool = false) -> void:
 # Explicit restart establishes a quiet receipt baseline; no old contact is
 # replayed when gameplay resumes. Death restores are handled by update().
 func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Dictionary = {}) -> void:
+	_swing_bearing.reset()
 	_climb_effort.reset()
 	last_climb_effort_strength = 0.0
 	_last_landing_count = landing_count
@@ -871,6 +876,18 @@ func get_grip_feedback_stats() -> Dictionary:
 	return {"grabs": grabs, "climb_regrips": climb_regrips, "grab_playbacks": grab_playbacks,
 		"last_climb_regrip_position": last_climb_regrip_position,
 		"climb_effort_cues": climb_effort_cues, "last_climb_effort_strength": last_climb_effort_strength}
+
+
+# Sparse ground-bearing creaks use real native motion and the existing pool.
+func update_ground_swing(native: Object, player: Vector3, tick: int, deaths: int) -> void:
+	var enabled := not _quiesced
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index) or AudioServer.get_bus_volume_db(index) <= -60.0:
+			enabled = false
+	for cue in _swing_bearing.sample(native, player, tick, deaths, enabled):
+		swing_bearing_cues += 1
+		_play_at(&"creak", cue["at"], lerpf(-24.0, -13.0, float(cue["strength"])), 1.18)
 
 
 # Passive bearing noise follows native COM speed. Loading makes the same

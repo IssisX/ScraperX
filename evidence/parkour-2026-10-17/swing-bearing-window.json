@@ -1,0 +1,65 @@
+{
+  "base_commit": "36a4abf057fae373c0316d550dc2cd104386716f",
+  "runtime": "Godot4.7 stable arm64 under Ubuntu proot, headless Dummy audio",
+  "commands": {
+    "import": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--editor",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-swing-bearing-36428ty4",
+      "--import",
+      "--quit"
+    ],
+    "bearing": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-swing-bearing-36428ty4",
+      "--audio-driver",
+      "Dummy",
+      "--script",
+      "res://tests/swing_bearing_test.gd"
+    ]
+  },
+  "results": {
+    "import": {
+      "exit_code": 0
+    },
+    "bearing": {
+      "exit_code": 0
+    }
+  },
+  "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nSWING_BEARING PASS failures=0 native_physics_exercised=0 heard_audio=0\n",
+  "source_sha256": {
+    "godot/presentation/swing_bearing_feedback.gd": "080515b95c6e64751d169f0b577a71cffd4cf7230a454c5cdb1f3a06b72bab11",
+    "godot/presentation/audio/audio_director.gd": "5f490f541ca8458d24ef21692302a1ca35c8ee78ae5168c32e83497c9b207bde",
+    "godot/tests/swing_bearing_test.gd": "9b8b1cb0f279a6a89b03c39fd2ec15acb4e179f8a3305adfc75ee7b451b12dbf"
+  },
+  "coverage": [
+    "production audio-director routing through existing positional pool",
+    "native-tick grouping and repeated-render deduplication",
+    "stationary/distant/missing/invalid sample silence",
+    "Effects mute, restart, rewind, death and shutdown",
+    "fixed two-body lookup cache"
+  ],
+  "limits": [
+    "supplied native observations; no Jolt physics executed in this audio check",
+    "Dummy audio: cue routing observed, not heard mix or phone speaker quality",
+    "full shipping Main/native import and Android export belong to matching CI",
+    "native gameplay unchanged; reuse36a4abf swing-transfer evidence without rerun"
+  ],
+  "published_main_sha256": "d93d4e1a4053238297b136c83683262d8bb8d8224f69ef62d75069d6e15037f3"
+}

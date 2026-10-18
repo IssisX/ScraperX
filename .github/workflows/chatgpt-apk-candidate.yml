@@ -120,6 +120,15 @@ jobs:
           2>&1 | tee artifacts/climb-effort-candidate.log
         grep -F 'CLIMB_EFFORT PASS' artifacts/climb-effort-candidate.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/climb-effort-candidate.log; then exit 1; fi
+    - name: Check moving swing-bearing sound feedback
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/swing_bearing_test.gd \
+          2>&1 | tee artifacts/swing-bearing-candidate.log
+        grep -F 'SWING_BEARING PASS' artifacts/swing-bearing-candidate.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/swing-bearing-candidate.log; then exit 1; fi
     - name: Check static batching and native cable rendering
       shell: bash
       run: |

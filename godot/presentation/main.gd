@@ -2222,6 +2222,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			_reclaim_dust.update_from_native(reclaim_state, delta)
 		var audio_landing: Dictionary = _native.get_landing_state()
 		var audio_tick := int(_native.get_tick_index())
+		_audio.update_ground_swing(_native, position, audio_tick, deaths)
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity(),
