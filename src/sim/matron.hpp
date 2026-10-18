@@ -54,6 +54,14 @@
 // (Zipline::clip_other, on the bare cable, kCableFriction her drag on it), to
 // let go over the far band and hunt the deck below.
 //
+// Climbs (A again, the Turn's parkour): a ladder from her level up to the
+// next (the 154 m deck's to the 176 ring). Seen or heard on it, the player
+// is where it tops out (her guess where they are going). Frail, she cannot
+// take hold of it: she stands at its foot looking up, and gives up there. In
+// the Turn she takes hold, and then does not let go: up rung by rung at
+// kClimbMps, in jerks (kClimbBurstMps) while a Turn has her, her hands
+// holding her weight, and over its head onto the floor above.
+//
 // Meddling that can be undone (decision 9's B): a way up the player has
 // rigged (its rope's end on the cage's eye) and left, she goes into the cage
 // at her post and takes the rope off the eye (Unrigging): kUnrigSeconds of her
@@ -199,6 +207,14 @@ public:
     static constexpr float kCableFriction = 0.3F;
     // Letting go of a cable at its end, she swings on this fast over the band.
     static constexpr float kLetGoSwingMps = 1.6F;
+    // A climb: her hands' steady pull up it (the player climbs at 0.9), the
+    // Turn's jerks on it and how hard they snap, and her mantle over its head
+    // (on until her middle is this far out over the floor above).
+    static constexpr float kClimbMps = 0.6F;
+    static constexpr float kClimbBurstMps = 2.2F;
+    static constexpr float kClimbAccel = 70.0F;
+    static constexpr float kMantleMps = 1.4F;
+    static constexpr float kMantleOutM = 1.0F;
     // How long her hands are at a rigged cage's eye before the rope is off it.
     static constexpr float kUnrigSeconds = 2.0F;
     // The 176 ring (world_solids.inc, UpperDeck): its band's middle line, and
@@ -221,6 +237,13 @@ public:
     static constexpr float kCageBCenterX = -7.2F;
     static constexpr float kCagesCenterZ = -131.4F;
     static constexpr float kLeapX = -11.9F;   // across the open half of A's mouth
+    // The ladder from her deck's north band to the 176 ring
+    // (band_counterweight_well.cpp: its rungs on x 5.00, z -129.05): where she
+    // hangs on it (the player's foot spot, 0.5 m off the rungs), and the way
+    // to there from the band, round its west rail.
+    static constexpr float kLadderX = 5.0F;
+    static constexpr float kLadderFootZ = -129.55F;
+    static constexpr float kLadderSideX = 3.9F;
 
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
@@ -277,6 +300,8 @@ public:
         std::uint32_t unrigs = 0;   // ropes she took off a way out's eye, this run
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
+        bool climbing = false;      // on a ladder, going up it (stride: metres climbed)
+        std::uint32_t climbs = 0;   // ladders she went up after the player, this run
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
     };
@@ -379,6 +404,14 @@ private:
         int way;
         Post eye;
     };
+    // A climb she knows (a ladder): where she hangs on it (her middle's
+    // line, on the climber's side, a node of its foot's level), the floor it
+    // stands on and the one it tops out onto, and the way off its head.
+    struct Climb {
+        float x, z;
+        float foot_y, head_y;
+        float out_x, out_z;
+    };
     struct Plank {
         JPH::BodyID body;
         JPH::Ref<JPH::FixedConstraint> bolt;
@@ -414,6 +447,11 @@ private:
     bool follow_line(float dt, JPH::RVec3 at);
     // On a line's cable: her drag on it, and letting go at its end.
     void ride_line();
+    // After a lead on the level above, up the climb that goes there: to its
+    // foot, and in the Turn onto it. False when no climb does.
+    bool follow_climb(float dt, JPH::RVec3 at);
+    // On a climb: up it, and over its head.
+    void climb(float dt);
     // A lead: a place she heard (or saw) the player, or a crash, at that loudness.
     void take_lead(float x, float z, float loudness, bool seen);
     // Back to her post if there is a way out to guard, else the patrol.
@@ -477,6 +515,13 @@ private:
     float lead_floor_ = kDeckTop;
     bool on_line_ = false;
     std::uint32_t cable_slides_ = 0;
+    // Climbs: the ones she knows, the one whose head she guessed, the one
+    // she is on (-1, none) and whether she is over its head.
+    std::vector<Climb> climbs_;
+    int guess_climb_ = -1;
+    int climb_ = -1;
+    bool mantling_ = false;
+    std::uint32_t climbs_done_ = 0;
     // Her mind (see above): what she has learned this run.
     std::array<bool, 2> ways_out_{true, true};
     std::array<bool, 2> rigged_{false, false};

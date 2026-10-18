@@ -346,6 +346,17 @@ func _process(delta: float) -> void:
 	_save_climb()
 	_arms.visible = _death_cam_left <= 0.0
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	# The body under them: hidden while the view rides a death.
+	_body.visible = _death_cam_left <= 0.0
+	_body.update_body({
+		"position": _native.get_player_render_position(),
+		"velocity": _native.get_player_linear_velocity(),
+		"grounded": bool(_native.is_player_grounded()),
+		"crouched": bool(_native.is_player_crouched()),
+		"sliding": bool(_native.is_player_sliding()),
+		"traversal": int(_ctx.get("traversal", 0)),
+		"on_line": bool(_native.get_zipline_state()["riding"]),
+	}, _yaw, delta)
 	if _canopy == null:
 		_canopy = CanopyView.new()
 		add_child(_canopy)

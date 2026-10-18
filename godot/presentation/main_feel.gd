@@ -312,6 +312,8 @@ func _update_body_feedback(delta: float) -> void:
 		_audio.body_hit(speed)
 		if hard >= 0.5:
 			_hud.flash(UiStyle.HAZARD)
+		if hard >= 0.3:
+			_hud.blood(0.35 + 0.45 * hard)
 	_fb_hits = hits
 	var stumbles := int(landing["stumbles"])
 	if stumbles > _fb_stumbles:
@@ -477,6 +479,20 @@ func _arm_material(color: Color, roughness: float, bump: NoiseTexture2D, grain: 
 	return material
 
 func _build_arms() -> void:
+	# The body below the arms (first_person_body.gd), dressed as they are: the
+	# jacket and its band, trousers, leather boots on rubber soles. Cloth
+	# barely shines: with the default sheen the sun on a crouched back reads
+	# pale.
+	var jacket := _arm_material(Color("1f231c"), 0.93, _bump_concrete, 9.0)
+	var trousers := _arm_material(Color("23262b"), 0.9, _bump_concrete, 9.0)
+	var boots := _arm_material(Color("1c130b"), 0.82, _bump_concrete, 16.0)
+	jacket.metallic_specular = 0.08
+	trousers.metallic_specular = 0.08
+	boots.metallic_specular = 0.15
+	_body = FirstPersonBody.new()
+	add_child(_body)
+	_body.build(jacket, _arm_material(Color("b8611d"), 0.55, null, 1.0, 0.1), trousers, boots,
+		_arm_material(Color("0d0d0c"), 0.95, null, 1.0))
 	_arms = FirstPersonArms.new()
 	_arms.name = "FirstPersonArms"
 	add_child(_arms)
@@ -851,6 +867,7 @@ func _feel_death(delta: float) -> void:
 		_death_point = death["point"]
 		_death_back = Vector3(sin(_yaw), 0.0, cos(_yaw))
 		_corpse_view.splash(death["point"], speed, lethal)
+		_hud.blood(1.0)
 		_audio.bone_cracks(death["point"], speed, lethal)
 		_break_pulses.clear()
 		for i in clampi(roundi(1.0 + 2.0 * (hard - 1.0)), 1, 5):

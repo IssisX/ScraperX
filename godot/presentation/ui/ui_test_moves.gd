@@ -490,6 +490,69 @@ func _touch_slide() -> bool:
 	_detail = "entry_mps=%.2f under_mps=%.2f" % [entry, Vector2(_velocity().x, _velocity().z).length()]
 	return Vector2(_velocity().x, _velocity().z).length() > 2.5
 
+# touch_body: looking down, the climber's own body (first_person_body.gd):
+# both boots in view standing, striding while the stick walks, the hips
+# dropping as CROUCH takes them, nothing of it at the lens; looking ahead,
+# out of view.
+func _touch_body() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var device := InputRouter.Device.TOUCH
+	var body: Node3D = _main._body
+	var camera: Camera3D = _main._camera
+	await _tilt(0.0)
+	await _frames(3)
+	for side in 2:
+		if camera.is_position_in_frustum(body.foot_world[side]):
+			return _fail("looking ahead, a boot is in view (it should be under the frame)")
+	await _tilt(-1.2)
+	await _frames(3)
+	for side in 2:
+		if not camera.is_position_in_frustum(body.foot_world[side]):
+			return _fail("looking down, the %s boot is not in view (at %s, eye %s)" % [
+				"left" if side == 0 else "right", str(body.foot_world[side]), str(camera.global_position)])
+	var clearance: float = body.nearest_to(camera.global_position)
+	if clearance < 0.1:
+		return _fail("the body comes %.2f m from the lens" % clearance)
+	await _pose("body_standing")
+	# Walking: each boot strides forward and back past the hips.
+	var forward := Vector3(-sin(float(_main._yaw)), 0.0, -cos(float(_main._yaw)))
+	var reach := [[INF, -INF], [INF, -INF]]
+	_stick_push(Vector2(0.0, -1.0))
+	var walked := 0.0
+	var shot := false
+	while walked < 1.4:
+		await get_tree().process_frame
+		walked += get_process_delta_time()
+		for side in 2:
+			var ahead: float = ((body.foot_world[side] as Vector3) - (body.pelvis_world as Vector3)).dot(forward)
+			reach[side][0] = minf(reach[side][0], ahead)
+			reach[side][1] = maxf(reach[side][1], ahead)
+		if walked > 1.0 and not shot:
+			shot = true
+			await _pose("body_walking")
+	_touch(0, _main._touch.stick_home(), false)
+	var strides := [reach[0][1] - reach[0][0], reach[1][1] - reach[1][0]]
+	if strides[0] < 0.35 or strides[1] < 0.35:
+		return _fail("walking, the boots stride only %.2f and %.2f m" % [strides[0], strides[1]])
+	await _seconds(0.6)
+	# Crouched: the hips come down over the boots.
+	var hips_standing: float = (body.pelvis_world as Vector3).y - (body.foot_world[0] as Vector3).y
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.4):
+		return _fail("CROUCH did not crouch the native body")
+	await _seconds(0.6)
+	var hips_crouched: float = (body.pelvis_world as Vector3).y - (body.foot_world[0] as Vector3).y
+	if hips_standing - hips_crouched < 0.2:
+		return _fail("crouched, the hips came down only %.2f m" % (hips_standing - hips_crouched))
+	if body.nearest_to(camera.global_position) < 0.1:
+		return _fail("crouched, the body comes %.2f m from the lens" % body.nearest_to(camera.global_position))
+	await _pose("body_crouched")
+	_tap(1, _center(&"crouch"))
+	await _seconds(0.3)
+	_detail = "strides_m=%.2f/%.2f hips_m=%.2f->%.2f clearance_m=%.2f" % [strides[0], strides[1],
+		hips_standing, hips_crouched, clearance]
+	return true
+
 func _touch_crouch() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not _main._touch.is_button_shown(&"crouch") or _main._touch.button_label(&"crouch") != "CROUCH":
@@ -1132,6 +1195,8 @@ func _touch_lethal_feedback() -> bool:
 		return _fail("riding the death, the view is %.2f m from the body's head" % from_head)
 	if int(_main._corpse_view.splashes_shown()) < 1:
 		return _fail("no blood where the body hit")
+	if float(_main._hud.lens_blood) < 0.6:
+		return _fail("no blood thrown onto the lens by the death (%.2f)" % float(_main._hud.lens_blood))
 	await _seconds(0.3)
 	await _pose("lethal_toast")
 	if _felt(&"break") < 1:

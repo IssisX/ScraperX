@@ -1185,6 +1185,41 @@ there; every earlier proof unchanged); touch `touch_matron_line` (new, in CI); h
 cable in `look_matron_gallery`. The zipline takes a second rider for her (the trolley's or the
 bare cable), the player's ride unchanged (touch_zipline, touch_zipline_slam).
 
+**The body seen from inside it, and blood on the lens (2026-10-18; to-do 2).** Looking down
+used to show nothing but the floor. Now the climber has a body under the arms
+(`first_person_body.gd`): hips, belly and chest in the work jacket with its hi-vis band,
+trousers, boots, standing on the native body's soles and turning with the view, its spine 0.2 m
+behind the eye and the torso as deep as a body, so looking straight down is over the chest's
+front and the boots show past the belly. The legs do what the native body does: a stride paced
+by the ground covered (each boot 0.66 m fore and aft at a walk), a deep squat crouched (the hips
+down from 0.92 to 0.37 m, the feet forward under the knees, as the eye is down at 0.95), out in
+front in a slide, hanging under a grip and stepping on the face climbed, knees up over a mantle
+or a vault, trailing in the air and kicking in a hard fall; it is hidden while the view rides a
+death. A death throws blood onto the lens and a hard blow some: ragged drops round the frame's
+edges, spatter thrown off them the way it hit, runs down the glass into a bead, wet glints,
+gone in about 4 s. Proof: touch `touch_body` (new, in CI: looking ahead no boot in view, looking
+down both; strides 0.66 m; the hips down 0.55 m crouched; nothing of it within 0.25 m of the
+lens); `touch_lethal_feedback` (the death leaves the lens bloodied); renders `body_standing`,
+`body_walking`, `body_crouched`, `lethal_toast`.
+
+**The Matron climbs: up the ladder after you (2026-10-18; decision 9, A's climb).** The ladder
+from her deck to the 176 ring was a way out of her reach: on it you were off her level and gone.
+Now a climber on it is heard (boots and hands on steel rungs, as loud as a walk) and seen up it,
+and her guess is where it goes: its head. Frail, she cannot take hold of it: she comes to its
+foot, round its west rail, and stands looking up, and gives up there once the trail is cold. In
+the Turn she takes hold, with a shriek, and then does not let go: her hands hold her weight, up
+rung by rung at 0.6 m/s (the player climbs at 0.9), still in a Turn's wind-up and in jerks to
+2.2 m/s in its lunges, every rung ringing under her; at the head, over it onto the ring, and she
+hunts the ring. So the ladder is a way up only ahead of her: start up it with her at your heels
+and she has your legs before they are out of reach. Proof: native `matron` (climb: up the ladder
+as she bursts out, 7 m off; frail 7.0 s at its foot; in the Turn she takes hold with the player
+10 m up, at most 2.2 m/s; the player tops out uncaught; over the head she stands on the ring;
+every earlier proof unchanged); touch `touch_matron_climb` (new, in CI: on the stick, 7.0 s at
+the foot, 31 rungs heard, she on the ring after); her pose in `look_matron_gallery`. Not
+reachable in today's world: B's cage with her (its unrig and a ride on it are the same rules,
+written). B waits on the island of cages 1.09 m off the 176 ring, where she arrives only riding
+A up with the player, and B cannot be rigged before that.
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1193,9 +1228,9 @@ fill in after).**
    line that is 20.6 m/s into the post and a 2.4 m drop, survived until injuries exist.
 2. The whole first-person body, and injuries and deaths as physical consequences. Done
    2026-10-17: the corpse the view rides, the blood, the cracks felt and heard, the broken ankle
-   and its limp, the cry; hits felt, and lethal side-on (the zipline's slam). Next: a broken
-   arm, blood on the lens, new break lines for the voice, and the body itself, legs and torso
-   seen from inside.
+   and its limp, the cry; hits felt, and lethal side-on (the zipline's slam). Done 2026-10-18:
+   the body itself, legs and torso seen from inside, and blood on the lens. Next: a broken arm,
+   new break lines for the voice.
 3. Route-building's reach: richer spots, heavy stock up the tower only where the crane or a
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up
    there.
@@ -1208,8 +1243,8 @@ fill in after).**
    hunts the ring, leaps its gap in the Turn). Meddling: done 2026-10-18 for a rig left
    unridden (she takes the rope off the eye; you hook it on again). Lines: done 2026-10-18 (in
    the Turn she goes down a line's bare cable after you; the stack's decks and the rings above
-   are levels she hunts). Next: her parkour beyond the vault and the leap (the climb, a ladder
-   in the Turn), B's and C's rides with her proven.
+   are levels she hunts). Climbs: done 2026-10-18 (in the Turn she comes up the ladder from her
+   deck after you). Not reachable yet: B's cage with her (its island), and C's beyond it.
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
 

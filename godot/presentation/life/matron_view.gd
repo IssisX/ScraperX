@@ -59,6 +59,8 @@ var _cry_fall := false
 var _vaults_seen := -1
 var _leaps_seen := -1
 var _unrigs_seen := -1
+var _climbs_seen := -1
+var _last_rung := 0
 var _rattle_in := 0.0
 # Going down a line's bare cable: the sparks off her forearms and the screech.
 var _sparks: CPUParticles3D
@@ -706,6 +708,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var arms_fwd := 0.0
 	var arms_bend := 0.0
 	var arms_splay := 0.0
+	# One arm higher than the other (+ the left), and the higher one
+	# straighter: hand over hand.
+	var arms_alt := 0.0
+	var bend_alt := 0.0
 	var knees := 0.0
 	var wide := 0.0
 	var tick := int(floorf(_clock * 14.0))
@@ -714,8 +720,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	if state == STATE_HUNTING and turn == 0 and bool(data.get("wary", false)):
 		state = STATE_SEARCHING
 	var still_on_post := state == STATE_GUARDING and speed < 0.3
+	# Going up a ladder after the player.
+	var climbing := bool(data.get("climbing", false))
 	# Rising off the floor in the Turn: a vault, or a leap over a gap.
-	var vaulting := turn == 2 and _fall_speed > 1.0
+	var vaulting := turn == 2 and _fall_speed > 1.0 and not climbing
 	# Holding on to a floor that moves (a cage she stepped into as it left).
 	var clinging := bool(data.get("clinging", false))
 	# Going down a line's bare cable on her forearms.
@@ -745,6 +753,25 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.9
 		head_roll = 0.3 * sin(_clock * 1.3)
 		jaw_open = 0.95
+	elif climbing:
+		# Up the ladder after the player, hand over hand: the higher hand
+		# reaching for the next rung while the lower one hauls, the other
+		# side's knee coming up to step, her face turned up the ladder at
+		# whoever is above her.
+		var ph := stride / 0.6 * PI
+		pitch = 0.1
+		hip_y = 1.0
+		arms_fwd = 2.55
+		arms_alt = 0.45 * sin(ph)
+		arms_bend = 0.75
+		bend_alt = -0.55 * sin(ph)
+		arms_splay = 0.25
+		legs_fwd = 0.75 + 0.55 * sin(ph + PI)
+		legs_back = 0.75 + 0.55 * sin(ph)
+		knees = 1.25
+		head_pitch = -1.1
+		head_roll = 0.15 * sin(_clock * 1.4)
+		jaw_open = 0.45
 	elif clinging:
 		# Down on her haunches with a hand locked on the cage's frame either
 		# side, rocking with it, the head never off the player.
@@ -901,7 +928,11 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		limb_scale = 1.3
 		jaw_open = 1.35
 		jolt = Vector3(r1, r2 * 0.5, r3) * 0.05
-		if turn == 1:
+		if climbing:
+			# On the rungs the Turn breaks her where she hangs: the climb's
+			# pose holds, the joints go wrong.
+			pass
+		elif turn == 1:
 			# The wind-up: still, folded forward at the waist, and shaking.
 			pitch = 0.55 + 0.9 * (0.5 + 0.5 * sin(_clock * 3.0))
 			hip_y = 0.95
@@ -945,8 +976,8 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
 	_p["an_l"].rotation.x = -0.2
 	_p["an_r"].rotation.x = -0.2
-	_limb(_p["sh_l"], _p["el_l"], arms_fwd + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -arms_bend * elbow_flip, -arms_splay)
-	_limb(_p["sh_r"], _p["el_r"], arms_fwd, -arms_bend * elbow_flip, arms_splay)
+	_limb(_p["sh_l"], _p["el_l"], arms_fwd + arms_alt + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -(arms_bend + bend_alt) * elbow_flip, -arms_splay)
+	_limb(_p["sh_r"], _p["el_r"], arms_fwd - arms_alt, -(arms_bend - bend_alt) * elbow_flip, arms_splay)
 	if state == STATE_SEARCHING and turn == 0:
 		# The right hand cupped to the ear.
 		_limb(_p["sh_r"], _p["el_r"], 1.6, -2.0, 0.5)
@@ -1055,6 +1086,17 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		if _unrigs_seen >= 0 and unrigs > _unrigs_seen:
 			_audio.matron_cue(&"clang", _hip_world(), -2.0, randf_range(1.1, 1.25))
 		_unrigs_seen = unrigs
+		# Taking hold of a ladder after the player: a shriek; then every rung
+		# rings under her hands and feet, louder while the Turn has her.
+		var climbs := int(data.get("climbs", 0))
+		if _climbs_seen >= 0 and climbs > _climbs_seen:
+			_audio.matron_cue(&"matron_shriek", _hip_world(), 1.0, randf_range(0.8, 0.95))
+		_climbs_seen = climbs
+		if bool(data.get("climbing", false)):
+			var rung := int(float(data["stride"]) / 0.3)
+			if rung != _last_rung:
+				_last_rung = rung
+				_audio.matron_cue(&"clang", centre + Vector3(0.0, 1.2, 0.0), -9.0 if turn == 0 else -3.0, randf_range(1.35, 1.6))
 		# Down a cable on her forearms: steel shrieking under them.
 		if on_line:
 			_screech_in -= delta

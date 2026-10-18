@@ -859,6 +859,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.unrigs = view.unrigs;
     result.on_line = view.on_line;
     result.cable_slides = view.cable_slides;
+    result.climbing = view.climbing;
+    result.climbs = view.climbs;
     result.clinging = view.clinging;
     result.floor_y = view.floor_y;
     result.catches = matron.catches();

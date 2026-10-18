@@ -879,6 +879,78 @@ void run_matron() {
         require(landed && down.cable_slides == 1, "matron line: down the cable, she let go over 143's band and hunts there");
         std::cout << "PASS scraperx_sim matron line: slides=" << down.cable_slides << " level=" << down.floor_y << "\n";
     }
+    // ---- climbs: frail, she stands at the ladder's foot looking up; in the Turn she takes
+    //      hold and comes up it after the player, and over its head onto the ring --------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron climb: settle");
+        require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron climb: a sprint toward her locker");
+        require(s.matron_state().state == kStateStraining, "matron climb: the sprint woke her");
+        require(walk_to(s, 3.5, -128.2, 6.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "matron climb: to the ladder's foot");
+        // As she bursts out of her locker, 7 m off, up the ladder (any later and
+        // she has the player's legs before they are out of her reach).
+        bool out = false;
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            out = s.matron_state().state == kStateEmerging;
+        }
+        require(out, "matron climb: she bursts out");
+        (void)s.set_facing(0.0, 1.0);
+        require(s.request_traversal() && s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "matron climb: the ladder taken");
+        const auto deaths = s.snapshot().death_count;
+        double frail_s = 0.0;
+        double held_at_y = 0.0;
+        double peak_rate = 0.0;
+        double last_y = s.matron_state().position.y;
+        bool topped = false;
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !topped; ++i) {
+            (void)s.set_move_input(0.0, 1.0);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            const auto m = s.matron_state();
+            const auto p = s.snapshot();
+            if (m.climbing) {
+                held_at_y = held_at_y > 0.0 ? held_at_y : p.player_position.y;
+                peak_rate = std::max(peak_rate, (m.position.y - last_y) * static_cast<double>(Simulation::kTickRateHz));
+            } else if (m.climbs == 0 &&
+                       std::hypot(m.position.x - Matron::kLadderX, m.position.z - Matron::kLadderFootZ) < 0.35) {
+                frail_s += Simulation::kFixedStepSeconds;
+            }
+            last_y = m.position.y;
+            topped = standing_above(p, 176.5);
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        const auto at_top = s.matron_state();
+        std::cout << "  matron climb: frail at the foot " << frail_s << " s; took hold with the player at y "
+                  << held_at_y << "; climbs " << at_top.climbs << ", up at " << peak_rate
+                  << " m/s at most; she at y " << at_top.position.y << " as the player topped out; deaths "
+                  << s.snapshot().death_count - deaths << "\n";
+        require(topped && s.snapshot().death_count == deaths, "matron climb: the player tops out onto the 176 ring");
+        require(frail_s > 1.0, "matron climb: frail, she stands at the ladder's foot and does not take hold");
+        require(at_top.climbs == 1 && held_at_y > 0.0, "matron climb: in the Turn she takes hold and comes up after");
+        require(peak_rate > 1.5 && peak_rate < Matron::kClimbBurstMps + 0.1,
+                "matron climb: in jerks while the Turn has her");
+        // Away east along the ring: she comes over the ladder's head and stands on it.
+        require(go(s, 15.0, Matron::kRingNorthZ, false, 6.0), "matron climb: away east along the ring");
+        (void)s.set_move_input(0.0, 0.0);
+        bool over = false;
+        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !over; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            over = !m.climbing && m.alive && std::abs(m.floor_y - Matron::kRingFloor) < 0.1 &&
+                   std::abs(m.position.y - (Matron::kRingFloor + Matron::kStandCentre)) < 0.06;
+        }
+        const auto on_ring = s.matron_state();
+        std::cout << "  matron climb: over the head at (" << on_ring.position.x << ", " << on_ring.position.y << ", "
+                  << on_ring.position.z << "), level " << on_ring.floor_y << ", state " << int(on_ring.state)
+                  << ", deaths " << s.snapshot().death_count - deaths << "\n";
+        require(over && s.snapshot().death_count == deaths, "matron climb: over the ladder's head she stands on the ring");
+        std::cout << "PASS scraperx_sim matron climb: frail_s=" << frail_s << " climbs=" << on_ring.climbs
+                  << " peak_mps=" << peak_rate << "\n";
+    }
     // ---- the same start and inputs give the same chase ------------------------------
     {
         const auto run = [] {

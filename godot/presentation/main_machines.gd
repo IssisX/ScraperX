@@ -5,6 +5,7 @@ extends "res://presentation/main_world.gd"
 # stones.
 
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
+const FirstPersonBody := preload("res://presentation/first_person_body.gd")
 const KIT_PART_FLOATS := 12
 const KIT_SHAPE_CYLINDER := 1
 const KIT_SHAPE_CAPSULE := 2
@@ -32,6 +33,7 @@ const RUBBLE_FALL_SPEED := 6.0
 var _native: Object
 var _ctx := {}
 var _arms: Node3D
+var _body: Node3D
 
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []

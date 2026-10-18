@@ -208,6 +208,8 @@ struct MatronSnapshot final {
     std::uint32_t unrigs = 0;   // ropes she took off a way out's eye
     bool on_line = false;       // going down a line's bare cable after the player
     std::uint32_t cable_slides = 0;
+    bool climbing = false;      // going up a ladder after the player (stride: metres climbed)
+    std::uint32_t climbs = 0;
     bool clinging = false;
     double floor_y = 154.0;
     static constexpr int kPlanks = 11;

@@ -34,6 +34,11 @@ var _alt_timer := 0.0
 var _alt_anchor := NAN
 var _toasts: Array[Dictionary] = []
 var _flash := 0.0
+# Blood on the lens (blood()): how much, which splash, and how long it has
+# been running.
+var lens_blood := 0.0
+var _blood_seed := 0
+var _blood_age := 0.0
 var _flash_color := UiStyle.HAZARD
 # The climber's line, printed while it is said (empty: none, or captions off).
 var caption := ""
@@ -56,6 +61,16 @@ func toast(title: String, sub: String, color: Color, life: float = 2.4) -> void:
 	_toasts.append({"title": title, "sub": sub, "color": color, "t": 0.0, "life": life})
 	while _toasts.size() > 2:
 		_toasts.pop_front()
+
+
+# Blood thrown onto the lens by a death or a hard blow (0..1): dark drops
+# round the frame's edges, where a splash off the face lands, a few of them
+# running down, drying off over a few seconds. A harder one is a new splash.
+func blood(amount: float) -> void:
+	if amount > lens_blood:
+		lens_blood = clampf(amount, 0.0, 1.0)
+		_blood_seed += 1
+		_blood_age = 0.0
 
 
 func flash(color: Color) -> void:
@@ -102,6 +117,8 @@ func update_hud(ctx: Dictionary, delta: float) -> void:
 	while not _toasts.is_empty() and float(_toasts[0]["t"]) >= float(_toasts[0]["life"]):
 		_toasts.pop_front()
 	_flash = maxf(0.0, _flash - delta * 1.5)
+	lens_blood = maxf(0.0, lens_blood - delta * 0.22)
+	_blood_age += delta
 	queue_redraw()
 
 
@@ -159,6 +176,8 @@ func _draw() -> void:
 		return
 	if _flash > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, size), UiStyle.with_alpha(_flash_color, 0.34 * _flash * _flash))
+	if lens_blood > 0.0:
+		_draw_lens_blood()
 	var center := size * 0.5
 	_draw_reticle(center)
 	if _gauge > 0.01:
@@ -173,6 +192,55 @@ func _draw() -> void:
 		_draw_toasts()
 	if not caption.is_empty():
 		_draw_caption()
+
+
+func _draw_lens_blood() -> void:
+	# The same splash every frame it lasts, from its own seed: heavy drops
+	# near the frame's edges, each a ragged clot with a fan of spatter thrown
+	# off it the way it hit, most running down the glass into a bead, wet
+	# enough to catch a little light.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9173 + _blood_seed * 7919
+	var fade := clampf(lens_blood * 1.4, 0.0, 1.0)
+	for i in 9:
+		var t := rng.randf_range(0.04, 0.96)
+		var inset := rng.randf_range(0.0, 0.14)
+		var at := Vector2.ZERO
+		match rng.randi() % 4:
+			0:
+				at = Vector2(t * size.x, inset * size.y)
+			1:
+				at = Vector2(t * size.x, (1.0 - inset) * size.y)
+			2:
+				at = Vector2(inset * size.x, t * size.y)
+			_:
+				at = Vector2((1.0 - inset) * size.x, t * size.y)
+		var r := rng.randf_range(12.0, 40.0) * _u
+		var colour := Color(rng.randf_range(0.26, 0.38), 0.01, 0.015, 0.9 * fade)
+		# The clot: a ragged outline.
+		var outline := PackedVector2Array()
+		var wobble := rng.randf_range(0.0, TAU)
+		for k in 18:
+			var a := TAU * float(k) / 18.0
+			var reach := r * (0.75 + 0.18 * sin(a * 3.0 + wobble) + rng.randf_range(-0.08, 0.12))
+			outline.append(at + Vector2.from_angle(a) * reach)
+		draw_colored_polygon(outline, colour)
+		# Spatter thrown off the way it hit.
+		var away := Vector2.from_angle(rng.randf() * TAU)
+		for k in 10:
+			var spot := at + away.rotated(rng.randf_range(-0.7, 0.7)) * r * rng.randf_range(1.1, 3.4)
+			UiStyle.disc(self, spot, r * rng.randf_range(0.04, 0.16), colour)
+		# Down the glass from its low edge: a streak narrowing to a bead.
+		if rng.randf() < 0.6:
+			var run := minf(_blood_age * 55.0, rng.randf_range(40.0, 160.0)) * _u
+			var w := r * rng.randf_range(0.18, 0.32)
+			var top := at + Vector2(rng.randf_range(-0.35, 0.35) * r, 0.5 * r)
+			var end := top + Vector2(rng.randf_range(-4.0, 4.0) * _u, run)
+			draw_colored_polygon(PackedVector2Array([top + Vector2(-w, 0.0), top + Vector2(w, 0.0),
+				end + Vector2(w * 0.4, 0.0), end + Vector2(-w * 0.4, 0.0)]), colour)
+			UiStyle.disc(self, end, w * 0.7, colour)
+		# Wet: a glint on it.
+		UiStyle.disc(self, at + Vector2(-0.3, -0.35) * r, r * 0.1, Color(1.0, 0.75, 0.75, 0.22 * fade))
 
 
 func _draw_reticle(c: Vector2) -> void:

@@ -1120,8 +1120,9 @@ void Simulation::PhysicsWorld::apply_parachute_drag(JPH::BodyInterface &bodies, 
 }
 
 // How loud the player is this tick, 0..1, for the Matron's hearing (see
-// matron.hpp): a hard landing is loudest, then a sprint, then a walk; a
-// crouched creep is nearly silent and standing still makes no sound.
+// matron.hpp): a hard landing is loudest, then a sprint, then a walk or a
+// climb on rungs; a crouched creep is nearly silent and standing still makes
+// no sound.
 float Simulation::PhysicsWorld::matron_loudness(JPH::BodyInterface &bodies) noexcept {
     float loud = 0.0F;
     if (landing_count_ != matron_landing_seen_) {
@@ -1141,6 +1142,9 @@ float Simulation::PhysicsWorld::matron_loudness(JPH::BodyInterface &bodies) noex
         } else if (speed >= 3.5F) {
             loud = std::max(loud, 0.30F);
         }
+    } else if (traversal_state_ == TraversalState::Climbing && std::abs(velocity.GetY()) > 0.3F) {
+        // Boots and hands on steel rungs, going up or down them.
+        loud = std::max(loud, 0.25F);
     }
     return loud;
 }

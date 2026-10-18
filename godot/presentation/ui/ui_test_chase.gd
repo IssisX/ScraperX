@@ -15,6 +15,11 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # stand; with her near, a JUMP takes the bar and the ride down (braked) to
 # 143 m; in the Turn she goes after the player down the bare cable, sparks
 # off her forearms, and lets go over 143's south band.
+# touch_matron_climb: woken, she bursts out as the player takes hold of the
+# ladder from her deck to the 176 ring and climbs: frail she stands at its
+# foot looking up; in the Turn she takes hold and comes up it after the
+# player, the rungs ringing; at the top the player goes off along the ring
+# and she comes over the ladder's head onto it.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
 #
@@ -336,6 +341,78 @@ func _matron_line_touch(device: int) -> bool:
 	return true
 
 
+func _matron_climb_touch(device: int) -> bool:
+	if not await _wake_matron(device):
+		return false
+	# To the ladder's foot, round its west rail, facing it.
+	if not (await _walk_to(device, Vector2(3.5, -128.2), 0.15, 8.0, true) and \
+			await _walk_to(device, Vector2(3.5, -129.8), 0.15, 4.0, true) and \
+			await _walk_to(device, Vector2(5.0, -129.6), 0.08, 4.0, true)):
+		return _fail("the walk to the ladder's foot stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("Action read '%s' facing the ladder, not CLIMB HOLD" % _action_label())
+	# As she bursts out of her locker, 7 m off, up the ladder.
+	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 30.0):
+		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+		return _fail("CLIMB did not take hold of the ladder")
+	_move(device, 1.0)
+	# Frail, she comes to its foot and stands looking up; in the Turn she
+	# takes hold.
+	var at_foot := 0.0
+	var waited := 0.0
+	var holding := false
+	while waited < 25.0 and not holding:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		var m := _matron_state()
+		var her: Vector3 = m["position"]
+		holding = bool(m["climbing"])
+		if not holding and Vector2(her.x, her.z).distance_to(Vector2(5.0, -129.55)) < 0.35:
+			at_foot += get_process_delta_time()
+	if not holding:
+		return _fail("in the Turn she never took hold of the ladder (state %d, turn %d, at %s, %.1f s at its foot)" % [
+			int(_matron_state()["state"]), int(_matron_state()["turn"]), str(_matron_state()["position"]), at_foot])
+	if at_foot < 1.0:
+		return _fail("she took hold without standing frail at the ladder's foot first (%.1f s)" % at_foot)
+	# A look down the ladder at her coming up it, the climb going on.
+	var rungs_before := int(_main._audio.matron_cues.get(&"clang", 0))
+	await _seconds(2.5)
+	await _tilt(-1.25)
+	await _pose("matron_climb_below")
+	await _tilt(0.0)
+	var on_ring: bool = await _wait_until(func() -> bool: return _standing_above(176.5), 40.0)
+	_move(device, 0.0)
+	if not on_ring or int(_native().get_death_count()) != 0:
+		return _fail("the climb did not top out onto the 176 ring (y %.2f, deaths %d)" % [_position().y,
+			int(_native().get_death_count())])
+	var rungs_heard := int(_main._audio.matron_cues.get(&"clang", 0)) - rungs_before
+	if rungs_heard < 3:
+		return _fail("her climb was not heard on the rungs (%d)" % rungs_heard)
+	# Off east along the ring, then a look back at the ladder's head.
+	if not await _sprint_to(device, Vector2(16.0, -126.91), 1.0, 8.0):
+		return _fail("away east along the ring stalled at %s" % str(_position()))
+	var over: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var her: Vector3 = m["position"]
+		return not bool(m["climbing"]) and bool(m["alive"]) and absf(float(m["floor_y"]) - 176.25) < 0.1 and \
+			absf(her.y - 177.3) < 0.06, 60.0)
+	if not over:
+		return _fail("she never came over the ladder's head onto the ring (climbing %s, at %s, level %.2f)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"]), float(_matron_state()["floor_y"])])
+	var her: Vector3 = _matron_state()["position"]
+	await _face(Vector2(her.x - _position().x, her.z - _position().z))
+	await _pose("matron_climb_over")
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died")
+	_detail = "climbs=%d at_foot_s=%.1f rungs_heard=%d she_at=%s" % [int(_matron_state()["climbs"]), at_foot, rungs_heard,
+		str(her)]
+	return true
+
+
 # Renders only: the locker straining at three points of the climb, then her
 # bursting out and the hunt, from where the player stands.
 func _look_matron(stage: String) -> bool:
@@ -419,6 +496,7 @@ func _look_matron_gallery() -> bool:
 		["cling", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "clinging": true}],
 		["unrig", {"state": 9, "speed": 0.0, "stride": 0.0, "turn": 0}],
 		["on_line", {"state": 3, "speed": 4.0, "stride": 0.0, "turn": 0, "clinging": true, "on_line": true}],
+		["climb", {"state": 3, "speed": 0.0, "stride": 0.45, "turn": 0, "climbing": true}],
 		# Rising (0.15 m a frame): the vault.
 		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
 	]

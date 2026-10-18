@@ -30,6 +30,7 @@ const SCENARIOS := {
 	"touch_springboard": 8,
 	"touch_quickturn": 8,
 	"touch_crouch": 0,
+	"touch_body": 0,
 	"touch_slide": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
@@ -109,6 +110,7 @@ const SCENARIOS := {
 	"touch_matron": 11,
 	"touch_matron_ride": 11,
 	"touch_matron_line": 11,
+	"touch_matron_climb": 11,
 	"look_matron_locker": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
@@ -256,6 +258,8 @@ func _run() -> void:
 			ok = await _touch_springboard()
 		"touch_quickturn":
 			ok = await _touch_quickturn()
+		"touch_body":
+			ok = await _touch_body()
 		"touch_crouch":
 			ok = await _touch_crouch()
 		"touch_slide":
@@ -360,6 +364,8 @@ func _run() -> void:
 			ok = await _matron_ride_touch(InputRouter.Device.TOUCH)
 		"touch_matron_line":
 			ok = await _matron_line_touch(InputRouter.Device.TOUCH)
+		"touch_matron_climb":
+			ok = await _matron_climb_touch(InputRouter.Device.TOUCH)
 		"look_matron_locker":
 			ok = await _look_matron("locker")
 		"look_matron_hunt":
