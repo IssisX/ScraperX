@@ -21,7 +21,9 @@ func configure(generic: AudioStreamWAV, metal: AudioStreamWAV) -> void:
 
 func reset(voice: AudioStreamPlayer) -> void:
 	_stop(voice)
-	voice.stream = null
+	# Reset is also legal before the audio owner's _ready creates players.
+	if is_instance_valid(voice):
+		voice.stream = null
 	_last_tick = -1
 	_last_deaths = -1
 	_last_count = -1
@@ -29,6 +31,9 @@ func reset(voice: AudioStreamPlayer) -> void:
 
 func update(voice: AudioStreamPlayer, state: Dictionary, grounded: bool,
 		support: int, native_tick: int, deaths: int, audible: bool) -> void:
+	if not is_instance_valid(voice):
+		reset(voice)
+		return
 	var sliding: Variant = state.get("player_sliding")
 	var speed: Variant = state.get("slide_speed_mps")
 	var count: Variant = state.get("slide_count")
@@ -77,6 +82,8 @@ func _stop(voice: AudioStreamPlayer) -> void:
 	active = false
 	strength = 0.0
 	surface = 0
+	if not is_instance_valid(voice):
+		return
 	voice.volume_db = -80.0
 	if voice.playing:
 		voice.stop()

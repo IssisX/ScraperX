@@ -54,3 +54,11 @@ to quiet footing. The rest of the existing controls chain also completes.
 `mcp-receipt.json` owns the calls/output; the runtime stopped afterward.
 Host 3D was disabled for this interaction check and the driver was Dummy.
 Rendered candidate CI, phone feel and heard sound are separate evidence.
+
+The first candidate, e1f8547, exposed a pre-ready lifecycle regression:
+existing contact-feedback consumers can reset the director before it enters
+the scene tree and creates audio players. The friction owner now clears
+logical history even when that player is absent; reset never creates one.
+The exact previously failing landing-camera command passes 107 checks with
+no script errors, and the friction unit still passes 48 checks. Actual
+commands and output are in `lifecycle-repair.json` in the prototype directory.
