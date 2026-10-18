@@ -164,7 +164,10 @@ func update_legs(state: Dictionary, _camera: Transform3D, delta: float) -> void:
 			_planted_index = i
 		_set_visible(leg, true)
 		var down := (ankle - hip) / distance
-		var pole := facing - down * facing.dot(down)
+		# A wall plant folds the knee away from the wall, keeping the boot
+		# visible below the body rather than burying it behind the shin.
+		var bend_direction := normal.normalized() if planting and absf(normal.y) < 0.2 else facing
+		var pole := bend_direction - down * bend_direction.dot(down)
 		if pole.length_squared() < 0.0001:
 			pole = body.x * leg.side
 		pole = pole.normalized()

@@ -129,7 +129,7 @@ jobs:
           tools/godot/godot --path godot --audio-driver Dummy \
           --rendering-method gl_compatibility --resolution 640x360 \
           --script res://tests/first_person_legs_native_test.gd \
-          -- --capture-dir=artifacts/first-person-legs \
+          -- --capture-dir="${GITHUB_WORKSPACE}/artifacts/first-person-legs" \
           2>&1 | tee artifacts/first-person-legs-native.log
         grep -F 'SCRAPERX_LEGS_NATIVE PASS' artifacts/first-person-legs-native.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/first-person-legs-native.log; then exit 1; fi
