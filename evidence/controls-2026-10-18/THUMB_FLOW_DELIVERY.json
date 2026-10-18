@@ -1,0 +1,27 @@
+{
+  "source_commit": "4ddba4ac6d2416c562dfcefaed94e9b57b9747cc",
+  "candidate_run": "39149026120",
+  "candidate_conclusion": "success",
+  "download_returncode": 0,
+  "version_code": 214507695,
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39149026120/artifacts/12144443439",
+  "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-4ddba4a.apk",
+  "bytes": 36919830,
+  "CI_command_owner": ".github/workflows/chatgpt-apk-candidate.yml at 4ddba4ac6d2416c562dfcefaed94e9b57b9747cc",
+  "actual_CI_results": {
+    "thumb-profile-settings.log": [
+      "SCRAPERX_THUMB_PROFILE_SETTINGS PASS checks=52 standalone_ui=1"
+    ],
+    "thumb-controls.log": [
+      "SCRAPERX_THUMB_CONTROLS PASS checks=54"
+    ],
+    "thumb-flow-input.log": [
+      "SCRAPERX_THUMB_FLOW_INPUT PASS checks=297 native=1"
+    ]
+  },
+  "direct_MCP_result": "SCRAPERX_THUMB_FLOW_INPUT PASS checks=297 native=1",
+  "direct_MCP_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/thumb-runtime-receipt.json",
+  "routine_APK_verification_owner": "Matching green candidate producer; reused, not repeated locally",
+  "phone_ergonomics": "Not played; no human comfort or FPS claim",
+  "full_proof": "Separate39149026121; no full-release claim"
+}
