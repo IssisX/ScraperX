@@ -180,6 +180,9 @@ public:
 
     [[nodiscard]] const Snapshot &state() const noexcept;
     [[nodiscard]] SupportSoundSurface support_sound_surface() const noexcept;
+    [[nodiscard]] SupportSoundSurface landing_sound_surface() const noexcept {
+        return landing_sound_surface_;
+    }
 
     bool debug_restart_at(const Vector3 centre) noexcept;
 
@@ -707,6 +710,8 @@ private:
     [[nodiscard]] bool try_begin_jump_vault(JPH::BodyInterface &bodies) noexcept;
 
     void clear_landing_recovery() noexcept;
+
+    [[nodiscard]] SupportSoundSurface contact_sound_surface(const SupportSample &support) const noexcept;
 
     void record_landing(const JPH::BodyInterface &bodies, const SupportSample &support,
                         const bool prepared) noexcept;
@@ -1375,6 +1380,7 @@ private:
     float pre_contact_fall_speed_mps_ = 0.0F;
     float last_impact_speed_mps_ = 0.0F;
     std::uint64_t landing_count_ = 0, landing_support_entity_id_ = 0;
+    SupportSoundSurface landing_sound_surface_ = SupportSoundSurface::Unknown;
     double landing_approach_energy_j_ = 0, landing_tangent_energy_j_ = 0;
     double landing_normal_speed_mps_ = 0, landing_tangent_speed_mps_ = 0;
     unsigned landing_response_ = 0; //0 ordinary,1 brace,2 roll,3 stumble

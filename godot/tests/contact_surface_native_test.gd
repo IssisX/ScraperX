@@ -11,6 +11,7 @@ var checks := 0
 var failures := 0
 var finished := false
 var observed_steps := 0
+var observed_landings := 0
 
 
 func _ready() -> void:
@@ -44,11 +45,12 @@ func key(code: Key, pressed: bool) -> void:
 	get_viewport().push_input(event, true)
 
 
-func step(count: int, expected_sound: StringName = &"") -> void:
+func step(count: int, expected_sound: StringName = &"", expected_landing_surface: int = -1) -> void:
 	var before_tick: int = native.get_tick_index()
 	for _i in count:
 		var before_steps: int = audio.steps
 		var voice_index: int = audio._next_voice
+		var before_landing: Dictionary = native.get_landing_state()
 		main._process(STEP)
 		if audio.steps > before_steps and not expected_sound.is_empty():
 			observed_steps += 1
@@ -56,6 +58,27 @@ func step(count: int, expected_sound: StringName = &"") -> void:
 			var clips: Array = audio._bank.clips[expected_sound]
 			check(voice.stream in clips and voice.playing,
 				"real ordinary footstep plays recorded " + str(expected_sound))
+		var after_landing: Dictionary = native.get_landing_state()
+		if expected_landing_surface >= 0 and int(after_landing.landing_count) > int(before_landing.landing_count):
+			observed_landings += 1
+			check(int(after_landing.landing_sound_surface) == expected_landing_surface,
+				"actual rigid impact latches its own surface")
+			check(float(after_landing.landing_normal_speed_mps) >= 2.0,
+				"real Jump return exceeds the existing audible impact boundary")
+			var body: AudioStreamPlayer = audio._voices[voice_index]
+			var body_key := &"land_hard" if float(after_landing.landing_normal_speed_mps) >= 7.0 else &"land_soft"
+			check(body.stream in audio._bank.clips[body_key] and body.playing,
+				"actual landing plays the existing severity-driven body sound")
+			var expected_voices := 1
+			if expected_landing_surface == 2:
+				expected_voices = 2
+				var accent: AudioStreamPlayer = audio._voices[(voice_index + 1) % audio._voices.size()]
+				check(accent.stream in audio._bank.clips[&"step_metal"] and accent.playing,
+					"real steel landing adds the recorded metal contact")
+				check(is_equal_approx(accent.volume_db, body.volume_db - 9.0),
+					"metal contact stays below the body impact")
+			check(audio._next_voice == (voice_index + expected_voices) % audio._voices.size(),
+				"one actual event starts only its bounded landing voices")
 	check(native.get_tick_index() == before_tick + count, "exact native input time")
 	check(native.get_death_count() == 0, "no hidden death or reset")
 
@@ -104,6 +127,7 @@ func _run() -> void:
 	step(45)
 	var arrival: Vector3 = native.get_player_position()
 	check(native.get_landing_state().has("support_sound_surface"), "native bridge exposes current support sound")
+	check(native.get_landing_state().has("landing_sound_surface"), "native bridge exposes latched impact sound")
 	for example in [
 		[Vector3(-72.0, 3.3, -62.0), 2, &"step_metal", "steel-gallery"],
 		[Vector3(-66.0, 2.1, -90.0), 1, &"step_concrete", "concrete-platform"],
@@ -124,6 +148,12 @@ func _run() -> void:
 		check(observed_steps > before_steps, "ordinary movement emits an actual selected footstep")
 		step(30)
 		await capture(str(example[3]))
+		if example[1] == 1:
+			key(KEY_SPACE, true)
+			key(KEY_SPACE, false)
+			step(8)
+			step(100, &"", 1)
+			check(native.is_player_grounded(), "concrete Jump returns to the real platform")
 	# The same high-line perch keeps steel identity through loss/reacquisition.
 	check(native.debug_restart_at(Vector3(-69.8, 3.95, -67.5)), "stage real upper-gallery perch")
 	step(45)
@@ -137,9 +167,18 @@ func _run() -> void:
 	var airborne_steps: int = audio.steps
 	step(8)
 	check(audio.steps == airborne_steps, "no ordinary footsteps in free flight")
-	step(100)
+	step(100, &"", 2)
 	check(native.is_player_grounded() and int(native.get_landing_state().support_sound_surface) == 2,
 		"ordinary gravity reacquires the actual steel perch")
+	var impact_count: int = native.get_landing_state().landing_count
+	key(KEY_SPACE, true)
+	key(KEY_SPACE, false)
+	step(8)
+	var airborne_receipt: Dictionary = native.get_landing_state()
+	check(not native.is_player_grounded() and int(airborne_receipt.support_sound_surface) == 0 and
+		int(airborne_receipt.landing_sound_surface) == 2 and int(airborne_receipt.landing_count) == impact_count,
+		"leaving steel clears current footing while preserving the exact earlier impact receipt")
+	check(observed_landings == 2, "both real concrete and steel Jump landings were observed")
 	# An unannotated real arrival support remains Unknown for legacy fallback.
 	# Debug relocation requires2cm clearance; the solved standing capsule
 	# touches the floor. Reacquire that same real surface from5cm above it.
@@ -154,7 +193,7 @@ func _finish() -> void:
 	finished = true
 	if audio != null:
 		audio.quiesce()
-	print("SCRAPERX_CONTACT_SOUND %s checks=%d failures=%d actual_steps=%d staged_footing=1 heard_audio=0" % [
-		"PASS" if failures == 0 else "FAIL", checks, failures, observed_steps])
+	print("SCRAPERX_CONTACT_SOUND %s checks=%d failures=%d actual_steps=%d actual_landings=%d staged_footing=1 heard_audio=0" % [
+		"PASS" if failures == 0 else "FAIL", checks, failures, observed_steps, observed_landings])
 	if "--quit-after-contact-sound-check" in OS.get_cmdline_user_args():
 		get_tree().quit(1 if failures else 0)

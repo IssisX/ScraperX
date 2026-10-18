@@ -167,6 +167,11 @@ jobs:
           2>&1 | tee artifacts/contact-surface-audio.log
         grep -F 'CONTACT_SURFACE_AUDIO PASS' artifacts/contact-surface-audio.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/contact-surface-audio.log; then exit 1; fi
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/landing_surface_audio_test.gd \
+          2>&1 | tee artifacts/landing-surface-audio.log
+        grep -F 'LANDING_SURFACE_AUDIO PASS' artifacts/landing-surface-audio.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/landing-surface-audio.log; then exit 1; fi
         mkdir -p artifacts/contact-surface
         timeout 120s xvfb-run -a -s '-screen 0 1280x720x24' \
           tools/godot/godot --path godot --audio-driver Dummy \
@@ -357,6 +362,7 @@ jobs:
           artifacts/forklift-operator/
           artifacts/first-person-legs-native.log
           artifacts/contact-surface-audio.log
+          artifacts/landing-surface-audio.log
           artifacts/contact-surface-native.log
           artifacts/contact-surface/
           artifacts/first-person-legs-unit.log

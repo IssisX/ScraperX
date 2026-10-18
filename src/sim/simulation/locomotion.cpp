@@ -244,6 +244,7 @@ void Simulation::PhysicsWorld::record_landing(const JPH::BodyInterface &bodies, 
                     const bool prepared) noexcept {
     ++landing_count_;
     landing_support_entity_id_ = support.entity_id;
+    landing_sound_surface_ = contact_sound_surface(support);
     landing_normal_speed_mps_ = support.approach_normal_speed;
     landing_tangent_speed_mps_ = support.approach_tangent_speed;
     landing_approach_energy_j_ = .5 * kPlayerMassKg * landing_normal_speed_mps_ * landing_normal_speed_mps_;

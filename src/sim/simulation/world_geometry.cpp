@@ -89,18 +89,21 @@ void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
 }
 
 SupportSoundSurface Simulation::PhysicsWorld::support_sound_surface() const noexcept {
+    return grounded_ ? contact_sound_surface(support_sample_) : SupportSoundSurface::Unknown;
+}
+
+SupportSoundSurface Simulation::PhysicsWorld::contact_sound_surface(const SupportSample &support) const noexcept {
     // The contact listener resets this sample each collision step. No ray,
     // remembered surface or visual material can supply a grounded receipt.
-    if (!grounded_ || !support_sample_.grounded || support_sample_.body_id.IsInvalid() ||
-        support_sample_.shape_identity == nullptr ||
-        support_sample_.entity_id != Simulation::kWorldSolidEntityId)
+    if (!support.grounded || support.body_id.IsInvalid() ||
+        support.shape_identity == nullptr || support.entity_id != Simulation::kWorldSolidEntityId)
         return SupportSoundSurface::Unknown;
-    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), support_sample_.body_id);
+    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), support.body_id);
     if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() ||
-        lock.GetBody().GetShape() != support_sample_.shape_identity ||
-        lock.GetBody().GetUserData() != support_sample_.entity_id)
+        lock.GetBody().GetShape() != support.shape_identity ||
+        lock.GetBody().GetUserData() != support.entity_id)
         return SupportSoundSurface::Unknown;
-    const auto surface = lock.GetBody().GetShape()->GetSubShapeUserData(support_sample_.subshape);
+    const auto surface = lock.GetBody().GetShape()->GetSubShapeUserData(support.subshape);
     switch (surface) {
     case static_cast<std::uint64_t>(SupportSoundSurface::Concrete): return SupportSoundSurface::Concrete;
     case static_cast<std::uint64_t>(SupportSoundSurface::Metal): return SupportSoundSurface::Metal;

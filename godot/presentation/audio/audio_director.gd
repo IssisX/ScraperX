@@ -362,8 +362,14 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 			and impact >= LAND_MIN_IMPACT and deaths == _last_deaths:
 		landings += 1
 		var hard := impact >= LAND_HARD_IMPACT
+		var impact_db := linear_to_db(clampf(impact / 12.0, 0.3, 1.0))
 		_play(&"land_hard" if hard else &"land_soft",
-			linear_to_db(clampf(impact / 12.0, 0.3, 1.0)), randf_range(0.95, 1.05))
+			impact_db, randf_range(0.95, 1.05))
+		# The event's latched impact material survives a later support change.
+		# Keep the contact accent beneath the unchanged body cue.
+		var landing_surface: Variant = landing_state.get("landing_sound_surface", 0)
+		if landing_surface is int and landing_surface == 2:
+			_play(&"step_metal", impact_db - 9.0, 1.0)
 	_last_landing_count = landing_count
 	_update_foot_transfer(landing_state, position, deaths)
 	_update_wall_stride(landing_state, position, deaths)

@@ -19,8 +19,8 @@ contact, new force, friction change, collision change or Snapshot layout change.
 
 The existing get_landing_state dictionary carries optional support_sound_surface:
 0 Unknown,1 Concrete,2 Metal. This describes current footing, not a historical
-landing event. Only ordinary stride playback consumes it. Existing landing,
-wall-stride, foot-transfer and unannotated fallback behavior remains unchanged.
+landing event. Only ordinary stride playback consumes it. The current-footing field never selects historical landing sounds.
+Wall-stride, foot-transfer and unannotated fallback behavior remain unchanged.
 Stride distance, relative support motion, crouch gain, variant selection,
 pitch variation and effects-bus routing retain their existing owners.
 
@@ -51,3 +51,34 @@ owners compiled and linked with -Wall/-Wextra/-Wpedantic/-Werror, exit0.
 Exact build/MCP commands and matching source hashes are in
 /data/data/com.termux/files/usr/tmp/scraperx-contact-sound-20261018/source-receipt.json.
 No existing ABI data layout changed or unrelated dirty hook code was included.
+
+## Latched steel landing contact
+
+The next bounded slice captures landing_sound_surface at record_landing, alongside
+the existing landing_count and real approach speed. Its validated contact body
+and shape are the impact source even if the player later leaves that surface.
+Unknown and concrete retain the existing body cue. Metal adds one recorded
+step_metal contact9dB below the same severity-driven body sound, using the
+existing fixed Effects voice pool. Repeated counts, first sample and death
+retain their previous suppression; current support never replaces impact data.
+No fall threshold, recovery force, input, friction or contact law changed.
+
+One private PhysicsWorld enum field was added, so the host rebuild compiled all
+26 world-header native owners plus the bridge before replacing the archive.
+Snapshot data layout is unchanged. The separate coherent L source keeps the
+new layout out of W's frozen current-footstep build. L/build-receipt.json
+contains every real command/output and source hash; all commands exited0.
+
+The focused worker command was
+`timeout60s godot-mcp-godot --headless --path L/source/godot --audio-driver Dummy --script res://tests/landing_surface_audio_test.gd`:
+exit0, LANDING_SURFACE_AUDIO PASS checks=72 native_contacts_exercised=0 heard_audio=0.
+Root reused the unaffected ordinary38-check evidence.
+
+Direct Godot MCP on the real Main/native/audio graph completed
+SCRAPERX_CONTACT_SOUND PASS checks=66 failures=0 actual_steps=2 actual_landings=2
+staged_footing=1 heard_audio=0. It checked actual concrete/steel Jump impacts,
+body and metal streams in real AudioStreamPlayers, relative gain, bounded voice
+count and preserved impact identity after another takeoff cleared current
+footing. Host3D was disabled for this sound check; candidate CI retains the
+rendered scene. L/mcp-receipt.json records native tool launch/start/stop output.
+This proves selected playback, not sound heard on a device.

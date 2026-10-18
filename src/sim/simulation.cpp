@@ -719,6 +719,10 @@ SupportSoundSurface Simulation::support_sound_surface() const noexcept {
     return physics_world_->support_sound_surface();
 }
 
+SupportSoundSurface Simulation::landing_sound_surface() const noexcept {
+    return physics_world_->landing_sound_surface();
+}
+
 Vector3 Simulation::render_player_position() const noexcept {
     const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
     return {
