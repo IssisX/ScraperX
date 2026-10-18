@@ -37,7 +37,7 @@ public:
         float last_load_n = 0;
         float peak_load_n = 0;
         double elapsed_seconds = 0;
-        // Legacy: Fmax * representable rest increment. Planted motor:
+        // Legacy: Fmax * representable rest increment. Force profiles:
         // sum of admitted positive work of its actual frozen-Jacobian impulses.
         double command_work_bound_j = 0;
         double last_command_work_bound_j = 0;
@@ -53,6 +53,7 @@ public:
         double motor_absorbed_work_j = 0; // Never credited to command budget.
         double retired_nominal_storage_j = 0; // Diagnostic at dissipative clutch-over.
         float actual_motor_extension_m = 0; // Actual L-L0, not commanded rest travel.
+        bool walking_step = false;
     };
 
     PhysicalFootPush(JPH::PhysicsSystem &system, JPH::BodyID player);
@@ -81,6 +82,16 @@ public:
     // motor rows have no warm start; holding stops drive without adding a spring.
     // A refused activation leaves the row unchanged.
     bool activate_planted_push();
+    // A single finite walking stroke from a solved foot contact. The damped
+    // compression motor shares the jump motor's force/power/work/reach limits,
+    // and phases lift with measured approach instead of launching a free hop.
+    bool begin_walking_step(JPH::BodyID support, JPH::RVec3 world_material_point,
+                            JPH::Vec3 world_surface_normal, float friction,
+                            float requested_rise_m, JPH::Vec3 world_approach_direction,
+                            float approach_distance_m);
+    // Refresh an admissible surface normal of the same retained material contact.
+    // Does not move its anchor or renew time, work, stroke or force limits.
+    bool refresh_walking_contact_normal(JPH::Vec3 world_surface_normal);
     void clear(StopReason reason = StopReason::Cleared);
     // Stop further target extension without changing the actual row, its
     // compression or its original finite lifetime. Only a new begin resets it.

@@ -85,12 +85,22 @@ void Simulation::PhysicsWorld::refresh_rigid_transfer_foot() noexcept {
     if ((foot_push_purpose_ != FootPushPurpose::RigidTransfer &&
          foot_push_purpose_ != FootPushPurpose::TrailingPlant &&
          foot_push_purpose_ != FootPushPurpose::CoyotePush &&
-         foot_push_purpose_ != FootPushPurpose::WallKick) || !physical_foot_push_->active() ||
+         foot_push_purpose_ != FootPushPurpose::WallKick &&
+         foot_push_purpose_ != FootPushPurpose::WalkingStep) || !physical_foot_push_->active() ||
         crouched_ || !foot_push_contact_.valid) return;
-    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
-    rigid_transfer_foot_valid_ = lock.Succeeded() && lock.GetBody().IsInBroadPhase() &&
-        !lock.GetBody().IsSensor() && lock.GetBody().GetShape() == foot_push_contact_.shape_identity &&
-        lock.GetBody().GetUserData() == foot_push_contact_.entity_id;
+    JPH::Vec3 walking_normal = JPH::Vec3::sZero();
+    bool walking_top = false;
+    {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
+        rigid_transfer_foot_valid_ = lock.Succeeded() && lock.GetBody().IsInBroadPhase() &&
+            !lock.GetBody().IsSensor() && lock.GetBody().GetShape() == foot_push_contact_.shape_identity &&
+            lock.GetBody().GetUserData() == foot_push_contact_.entity_id;
+        if (rigid_transfer_foot_valid_ && foot_push_purpose_ == FootPushPurpose::WalkingStep) {
+            const auto contact = lock.GetBody().GetCenterOfMassTransform()*foot_push_contact_.local_point;
+            walking_top = walking_top_face_normal(lock.GetBody(),foot_push_contact_.subshape,contact,walking_normal);
+        }
+    }
+    if (walking_top) (void)physical_foot_push_->refresh_walking_contact_normal(walking_normal);
     // The foot owner continuously checks real distance, traction and
     // compression itself. A new ray cannot renew this material anchor.
 }

@@ -407,6 +407,8 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
 [[nodiscard]] bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                                     const StepCommands &commands,
                                     const float delta_seconds) noexcept {
+    const bool step_allowed = !commands.cancel_jump_requested && !commands.release_requested &&
+        !commands.set_down_requested && !commands.sling_drop;
     JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
     JPH::Vec3 requested_velocity = player_velocity;
     JPH::Vec3 ground_force_request = JPH::Vec3::sZero();
@@ -583,7 +585,7 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
         // cargo walking after the impact-recovery interval has expired.
         apply_landing_recovery(bodies, commands, delta_seconds);
         if(causal_support || causal_step) causal_airborne_=true;
-        if(causal_support || causal_step) {
+        if((causal_support || causal_step) && step_allowed) {
             const JPH::Vec3 intended(float(commands.move_input_x*kPlayerMaximumRelativeSpeed),0,
                                      float(commands.move_input_z*kPlayerMaximumRelativeSpeed));
             if(try_step_up(bodies,intended,delta_seconds)) return true;
@@ -643,7 +645,7 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
     const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
     if (jump_started && !push_off_ordinary_support(bodies)) return false;
     bool step_started = false;
-    if (!jump_started && grounded_ && support_entity_id_ != 0) {
+    if (!jump_started && step_allowed && grounded_ && support_entity_id_ != 0) {
         step_started = try_step_up(bodies, step_probe_velocity, delta_seconds,
             std::hypot(commands.move_input_x, commands.move_input_z) > 0.001);
     }
@@ -656,7 +658,7 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
 
 [[nodiscard]] bool Simulation::PhysicsWorld::cast_capsule(const JPH::RVec3 from, const JPH::Vec3 displacement,
                                 float &fraction, JPH::Vec3 &normal, JPH::BodyID *hit_body,
-                                JPH::SubShapeID *hit_shape) const {
+                                JPH::SubShapeID *hit_shape, JPH::RVec3 *hit_point) const {
     JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
     const JPH::RShapeCast sweep(active_player_shape(), JPH::Vec3::sReplicate(1.0F),
                                 JPH::RMat44::sTranslation(from), displacement);
@@ -669,11 +671,14 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
     fraction = collector.mHit.mFraction;
     if(hit_body) *hit_body=collector.mHit.mBodyID2;
     if(hit_shape) *hit_shape=collector.mHit.mSubShapeID2;
+    if(hit_point) *hit_point=from+collector.mHit.mContactPointOn2;
     normal = -collector.mHit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
     return true;
 }
 
-bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
+// Vehicle boarding keeps its existing finite reciprocal push-off. Its
+// short approach and rising hand catch are separate from ordinary stair gait.
+bool Simulation::PhysicsWorld::try_vehicle_boarding_step(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
                  const float delta_seconds, const bool deliberate_step) {
     // The still-contacting finite leg already owns this push-off. A
     // separate step impulse must not stack its own vertical work on it.
@@ -788,11 +793,146 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
         physical_step_start_feet_y_=at.GetY()-kPlayerHalfHeight;
         return true;
     }
-    bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, rise + 0.01F, 0.0F),
-                       JPH::EActivation::Activate);
-    ++step_up_count_;
-    ++step_up_pose_count_;
     return false;
+}
+
+bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
+                 const float delta_seconds, const bool deliberate_step) {
+    if (support_entity_id_ == WarehouseForkliftYard::kChassisEntity ||
+        (support_entity_id_ >= 1450 && support_entity_id_ <= 1452))
+        return try_vehicle_boarding_step(bodies,relative_velocity,delta_seconds,deliberate_step);
+    // One finite leg owns the foot at a time. Only an unpowered trailing
+    // plant may hand its fresh contact to a new walking stroke.
+    const bool passive_plant = physical_foot_push_->active() &&
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant;
+    if (crouched_ || (physical_foot_push_->active() && !passive_plant) ||
+        net_for_body(support_sample_.body_id)) return false;
+    const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
+    const float speed = horizontal.Length();
+    if (speed < kStepMinimumSpeed) {
+        return false;
+    }
+    const float leg_acceleration = PhysicalFootPush::force_bound_n()/kPlayerMassKg+
+        physics_system_.GetGravity().GetY();
+    const float lift_lead_seconds = leg_acceleration > 0 ?
+        std::sqrt(2*kStepMaximumHeight/leg_acceleration) : delta_seconds;
+    const JPH::Vec3 ahead = horizontal/speed*
+        (speed*std::max(delta_seconds,lift_lead_seconds)+kStepLookahead);
+    const JPH::RVec3 at = bodies.GetPosition(player_id_);
+    float fraction = 1.0F;
+    JPH::Vec3 normal = JPH::Vec3::sZero();
+    JPH::BodyID obstacle;
+    JPH::SubShapeID obstacle_shape;
+    // Reject resting/support hits before closest-hit pruning. A zero-time
+    // floor overlap must not hide a later riser of the same compound body.
+    class StepObstacleCollector final : public JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> {
+    public:
+        StepObstacleCollector(JPH::Vec3 movement, JPH::BodyID support, JPH::SubShapeID support_shape)
+            : movement_(movement), support_(support), support_shape_(support_shape) {}
+        void AddHit(const JPH::ShapeCastResult &hit) override {
+            const auto n = -hit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
+            if (n.Dot(movement_) >= 0) return;
+            const double height = hit.mContactPointOn2.GetY()+kPlayerHalfHeight;
+            if (n.GetY() >= kSupportNormalThreshold &&
+                ((hit.mBodyID2 == support_ && hit.mSubShapeID2 == support_shape_) ||
+                 height < kStepMinimumHeight)) return;
+            JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector>::AddHit(hit);
+        }
+    private:
+        JPH::Vec3 movement_;
+        JPH::BodyID support_;
+        JPH::SubShapeID support_shape_;
+    } obstacle_hits(ahead,foot_contact_.body,foot_contact_.subshape);
+    const JPH::RShapeCast step_sweep(active_player_shape(), JPH::Vec3::sReplicate(1.0F),
+        JPH::RMat44::sTranslation(at),ahead);
+    const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+    physics_system_.GetNarrowPhaseQuery().CastShape(step_sweep,JPH::ShapeCastSettings(),at,
+        obstacle_hits,{},{},player_filter);
+    if (!obstacle_hits.HadHit()) return false;
+    const auto &obstacle_hit = obstacle_hits.mHit;
+    fraction = obstacle_hit.mFraction;
+    normal = -obstacle_hit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
+    obstacle = obstacle_hit.mBodyID2;
+    obstacle_shape = obstacle_hit.mSubShapeID2;
+    // Inspect only the first riser plus its lip. A longer anticipatory
+    // query must not reject that step because it also reaches later treads.
+    const JPH::Vec3 crossing = horizontal/speed*
+        std::min(ahead.Length(),std::max(0.0F,fraction)*ahead.Length()+kStepLookahead);
+    bool teeter_member_crossing = false;
+    const auto obstacle_entity = bodies.GetUserData(obstacle);
+    if (deliberate_step && grounded_ && !support_sample_.body_id.IsInvalid() &&
+        (obstacle_entity == 2800 || obstacle_entity == 1800)) {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), obstacle);
+        LeafBox member;
+        // Identify the actual thin rail or fixed entry-tongue leaf, not
+        // either whole compound. Only transverse intent qualifies: a
+        // rounded low lip can block the capsule despite its slope normal.
+        if (lock.Succeeded() && leaf_box(lock.GetBody(), obstacle_shape, member) &&
+            2 * member.half.GetY() <= kStepMaximumHeight) {
+            const bool beam_rail = obstacle_entity == 2800 &&
+                2 * member.half.GetX() >= kBalanceMinLength &&
+                2 * member.half.GetZ() <= kGripMaxSection &&
+                std::abs(horizontal.Dot(member.axes[2])) > 0.25F * speed;
+            const bool entry_tongue = obstacle_entity == 1800 &&
+                2 * member.half.GetZ() >= kBalanceMinLength &&
+                2 * member.half.GetX() <= kGripMaxSection &&
+                std::abs(horizontal.Dot(member.axes[0])) > 0.25F * speed;
+            teeter_member_crossing = (beam_rail || entry_tongue) &&
+                horizontal.Dot(normal) < 0;
+        }
+    }
+    if (teeter_member_crossing && physical_step_pending_) return false;
+    const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
+    if (!capsule_pose_is_clear(raised) || cast_capsule(raised, crossing, fraction, normal)) {
+        return false;  // No headroom, or the obstacle is taller than a step.
+    }
+    const JPH::RVec3 over = raised + crossing;
+    const JPH::Vec3 down(0.0F, -(kStepMaximumHeight + kStepMinimumHeight), 0.0F);
+    JPH::BodyID receiver;
+    JPH::SubShapeID receiver_shape;
+    JPH::RVec3 receiver_point;
+    if (!cast_capsule(over, down, fraction, normal, &receiver, &receiver_shape, &receiver_point) ||
+        normal.GetY() < kSupportNormalThreshold) {
+        return false;  // Nothing walkable to put the feet on.
+    }
+    const float rise = float(receiver_point.GetY() - (at.GetY()-kPlayerHalfHeight));
+    if (rise < kStepMinimumHeight || rise > kStepMaximumHeight+kLandingSkin) {
+        return false;
+    }
+    // The prospective upper face is only an effort/clearance request. The
+    // current completed solve supplies the actual foot and reciprocal load.
+    if (!grounded_ || !foot_contact_.valid ||
+        foot_contact_.solved_tick != contact_solve_serial_ ||
+        foot_contact_.body != support_sample_.body_id) return false;
+    if (passive_plant) {
+        physical_foot_push_->clear();
+        foot_push_purpose_ = FootPushPurpose::None;
+    }
+    const auto contact = from_support_local(bodies, foot_contact_.body, foot_contact_.local_point);
+    auto plant_normal = bodies.GetRotation(foot_contact_.body)*foot_contact_.local_normal;
+    {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),foot_contact_.body);
+        if (!lock.Succeeded()) return false;
+        // The actual sharp lip also belongs to its top face. Choosing that
+        // admissible surface normal never moves or manufactures the foot.
+        (void)walking_top_face_normal(lock.GetBody(),foot_contact_.subshape,contact,plant_normal);
+    }
+    if (!physical_foot_push_->begin_walking_step(foot_contact_.body, contact,
+            plant_normal, foot_contact_.friction, rise+kLandingSkin, horizontal/speed,
+            std::max(kStepLookahead,JPH::Vec3(receiver_point-at).Dot(horizontal/speed)))) return false;
+    foot_push_contact_ = foot_contact_;
+    foot_push_purpose_ = FootPushPurpose::WalkingStep;
+    foot_push_started_this_tick_ = true;
+    ++foot_push_start_count_;
+    step_receiver_ = receiver;
+    step_receiver_subshape_ = receiver_shape;
+    step_receiver_local_point_ = to_support_local(bodies,receiver,receiver_point);
+    step_direction_ = horizontal/speed;
+    refresh_rigid_transfer_foot();
+    airborne_inherited_velocity_ = support_point_velocity(bodies,foot_contact_.body,contact);
+    physical_step_pending_ = true;
+    physical_step_start_feet_y_ = at.GetY()-kPlayerHalfHeight;
+    return true;
 }
 
 void Simulation::PhysicsWorld::apply_parachute_drag(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {

@@ -104,5 +104,11 @@ struct LeafBox final {
 [[nodiscard]] bool leaf_box(const JPH::Body &body, const JPH::SubShapeID &sub_shape,
                             LeafBox &out) noexcept;
 
+// Validate an existing material point on the exact sharp box leaf's +Y face.
+// This does not acquire contact or move the point. Failure leaves normal intact.
+[[nodiscard]] bool walking_top_face_normal(const JPH::Body &body,
+    const JPH::SubShapeID &sub_shape, JPH::RVec3 real_world_point,
+    JPH::Vec3 &normal) noexcept;
+
 
 } // namespace scraperx::sim::detail

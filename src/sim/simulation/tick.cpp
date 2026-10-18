@@ -26,7 +26,7 @@ void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds)
     // single-step worlds invoke it after lifecycle/face validation below.
     const bool rigid_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
         foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
-        foot_push_purpose_ == FootPushPurpose::WallKick;
+        foot_push_purpose_ == FootPushPurpose::WallKick || foot_push_purpose_ == FootPushPurpose::WalkingStep;
     const bool face_valid = rigid_foot
         ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
             deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
@@ -48,6 +48,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     const bool jump_cancelled = commands.cancel_jump_requested ||
         commands.release_requested || commands.set_down_requested || commands.sling_drop;
     prepare_trailing_plant(commands);
+    if (foot_push_purpose_ == FootPushPurpose::WalkingStep && physical_foot_push_->active() &&
+        (jump_cancelled || commands.jump_requested || commands.crouch_held ||
+         step_direction_.GetX()*commands.move_input_x+
+         step_direction_.GetZ()*commands.move_input_z <= .001)) {
+        physical_foot_push_->clear();
+        foot_push_purpose_ = FootPushPurpose::None;
+        physical_step_pending_ = false;
+    }
     // An involuntary hand loss must not erase an already valid real foot.
     // Explicit cancel/death/restart still use full cleanup.
     if (!jump_cancelled && !commands.crouch_held && cargo_transfer_active_ &&
@@ -293,8 +301,16 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         grappling_gun_->set_reel_input(0);
         grapple_equipped_ = false;
     }
-    contact_listener_.set_transfer_receiver(cargo_transfer_active_ ? traversal_plan_.receiver : JPH::BodyID(),
-                                            traversal_plan_.receiver_patch);
+    const bool walking_step = foot_push_purpose_ == FootPushPurpose::WalkingStep;
+    const double walking_work_before = physical_foot_push_->readback().motor_positive_work_j;
+    auto receiver_patch = traversal_plan_.receiver_patch;
+    auto receiver_body = cargo_transfer_active_ ? traversal_plan_.receiver : JPH::BodyID();
+    if (walking_step) {
+        receiver_patch = {};
+        (void)receiver_patch.add(step_receiver_subshape_);
+        receiver_body = step_receiver_;
+    }
+    contact_listener_.set_transfer_receiver(receiver_body,receiver_patch);
     if (!slingshot_) pre_step_physical_foot(delta_seconds);
     physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
     if (grappling_gun_) grappling_gun_->post_step();
@@ -303,6 +319,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     kit_->finish_weld_steps();
     if (deformable_plank_) deformable_plank_->finish_collision_steps();
     physical_foot_push_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+    if (walking_step)
+        landing_jump_work_j_ += std::max(0.0,
+            physical_foot_push_->readback().motor_positive_work_j-walking_work_before);
     if (physical_foot_push_->active() && foot_push_purpose_ == FootPushPurpose::PlankJump && deformable_plank_ &&
         (deformable_plank_->capture().broken_mask != foot_push_start_broken_mask_ ||
          !deformable_plank_->fragment_supported(physical_foot_push_->readback().support)))
@@ -359,8 +378,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     support_sample_ = support;
     ++contact_solve_serial_;
     const auto transfer_contact = contact_listener_.transfer_sample();
-    record_foot_contact(bodies, cargo_transfer_active_ && support.grounded && transfer_contact.grounded
-        ? transfer_contact : support);
+    record_foot_contact(bodies, ((cargo_transfer_active_ && support.grounded) || walking_step) &&
+        transfer_contact.grounded ? transfer_contact : support);
     grounded_ = support.grounded;
     support_entity_id_ = support.entity_id;
     wall_contact_ = contact_listener_.wall_sample();
@@ -384,7 +403,33 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 wall_kick_consumed_body_ = JPH::BodyID();
         }
     }
-    if(grounded_ && physical_step_pending_) {
+    bool walking_receiver_contact = false;
+    if (walking_step && physical_step_pending_ && foot_contact_.valid &&
+        foot_contact_.solved_tick == contact_solve_serial_ && foot_contact_.body == step_receiver_ &&
+        foot_contact_.subshape == step_receiver_subshape_) {
+        const auto receiving = from_support_local(bodies,step_receiver_,step_receiver_local_point_);
+        // Retire the leg only when the actual receiving normal is shallow
+        // enough for the existing ground traction law to carry gravity.
+        // Waiting for flat soles overextends a rear leg on short treads;
+        // the first steep corner brush instead releases it too early.
+        const float traction = std::min(foot_contact_.friction,
+            entity_is_causal_section_support(foot_contact_.entity_id) ? .8F : .85F);
+        const float carrying_normal_y = 1.0F/std::sqrt(1.0F+traction*traction);
+        walking_receiver_contact = foot_contact_.world_point.GetY() >= receiving.GetY()-kLandingSkin &&
+            foot_contact_.world_normal.GetY() >= carrying_normal_y;
+        if (walking_receiver_contact) {
+            physical_foot_push_->clear();
+            foot_push_purpose_ = FootPushPurpose::None;
+            physical_step_pending_ = false;
+            ++step_up_count_;
+        }
+    }
+    if (walking_step && !physical_foot_push_->active() && !walking_receiver_contact) {
+        physical_step_pending_ = false;
+        step_receiver_ = JPH::BodyID();
+        foot_push_purpose_ = FootPushPurpose::None;
+    }
+    if(grounded_ && physical_step_pending_ && !walking_step) {
         const auto point = JPH::RVec3(support.contact_point.x,
             support.contact_point.y, support.contact_point.z);
         const auto relative = bodies.GetLinearVelocity(player_id_) -
@@ -414,6 +459,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         (ordinary_landing || (was_soft_grounded_before_tick && rigid_impact.approach_normal_speed > .5F));
     if (rigid_strike) {
         record_landing(bodies, rigid_impact, commands.crouch_held);
+        // Receiving an intended low step is walking, even when the rounded
+        // capsule briefly loses bottom contact. Keep the real impact receipt;
+        // only a harmless matched step skips a new stumble/slowdown interval.
+        if (walking_receiver_contact && rigid_impact.approach_normal_speed < kJumpSpeed)
+            clear_landing_recovery();
         last_impact_speed_mps_ = rigid_impact.approach_normal_speed;
     } else if (ordinary_landing && !slingshot_) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;

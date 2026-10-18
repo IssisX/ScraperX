@@ -133,7 +133,51 @@ public:
             const double root = std::sqrt(speed * speed + 2 * inverse_mass * energy);
             const double power_cap = u >= 0 ? (energy > 0 ? 2 * energy / (root + u) : 0) :
                 (-u + root) / inverse_mass;
-            float impulse = static_cast<float>(std::min(double(max_lambda_), power_cap));
+            double requested_impulse = max_lambda_;
+            if (walking_) {
+                const double stiffness = PhysicalFootPush::stiffness_n_per_m();
+                const double damping = 2 * std::sqrt(stiffness / inverse_mass);
+                const auto delta = JPH::Vec3(player_point_-anchor_);
+                const auto relative_velocity = player->GetLinearVelocity()-mBody1->GetPointVelocity(anchor_);
+                const auto direction = mBody1->GetRotation()*walking_local_direction_;
+                const double approach_speed = std::max(0.0F,relative_velocity.Dot(direction));
+                // Phase the bounded target with material-relative progress.
+                // A stationary player receives weight support, never a launch
+                // toward the full tread height. Lead covers the leg response
+                // time using measured approach speed, not requested input.
+                const double response = std::sqrt(1/(stiffness*inverse_mass));
+                const auto local_delta = mBody1->GetRotation().Conjugated()*delta;
+                const double travelled = (local_delta-walking_local_start_).Dot(walking_local_direction_);
+                const double phase = std::clamp((travelled+approach_speed*response)/walking_approach_m_,0.0,1.0);
+                constexpr double half_pi = 1.5707963267948966;
+                const double rise = walking_height_m_-walking_start_height_m_;
+                const double target_height = walking_start_height_m_+rise*std::sin(half_pi*phase);
+                const double target_speed = phase < 1 ?
+                    rise*half_pi*std::cos(half_pi*phase)*approach_speed/walking_approach_m_ : 0;
+                if (axis_.GetY() > .1F) {
+                    const double force = std::clamp((walking_weight_n_+stiffness*(target_height-delta.GetY())+
+                        damping*(target_speed-relative_velocity.GetY()))/axis_.GetY(),0.0,
+                        double(PhysicalFootPush::force_bound_n()));
+                    double vertical_inverse = player->GetInverseMass()*axis_.GetY();
+                    if (mBody1->IsDynamic()) {
+                        const auto *support = mBody1->GetMotionPropertiesUnchecked();
+                        const auto lever = JPH::Vec3(anchor_-mBody1->GetCenterOfMassPosition());
+                        const auto rotation = support->MultiplyWorldSpaceInverseInertiaByVector(
+                            mBody1->GetRotation(),lever.Cross(axis_));
+                        vertical_inverse += support->GetInverseMass()*axis_.GetY()+rotation.Cross(lever).GetY();
+                    }
+                    // This push-only leg cannot brake by pulling downward.
+                    // Limit effort with a gravity stopping estimate; actual
+                    // moving-support/contact forces still decide the outcome.
+                    const double remaining = std::max(0.0,double(walking_height_m_)-delta.GetY());
+                    const double gravity = walking_weight_n_*player->GetInverseMass();
+                    const double stopping_speed = std::sqrt(2*gravity*remaining);
+                    const double stopping_impulse = vertical_inverse > 0 ? std::max(0.0,
+                        (stopping_speed-relative_velocity.GetY())/vertical_inverse) : 0;
+                    requested_impulse = std::min(force*solve_dt_,stopping_impulse);
+                } else requested_impulse = 0;
+            }
+            float impulse = static_cast<float>(std::min(requested_impulse, power_cap));
             const auto positive_work = [&](float value) {
                 const double after = std::max(0.0, u + inverse_mass * value);
                 return std::max(0.0, (after * after - speed * speed) / (2 * inverse_mass));
@@ -216,6 +260,9 @@ public:
             axial_normal > 0 &&
             (axis - axial_normal * normal).Length() <= friction_ * axial_normal;
     }
+    void refresh_walking_normal(JPH::Vec3 normal) noexcept {
+        local_normal_ = mBody1->GetRotation().Conjugated()*normal;
+    }
     void disable() noexcept {
         SetEnabled(false);
         ResetWarmStart();
@@ -233,6 +280,17 @@ public:
         motor_impulse_ = axis_part_.GetTotalLambda();
         force_motor_ = true;
         motor_drive_ = false;
+    }
+    void activate_walking(float goal_height, float weight_n, JPH::Vec3 direction, float approach) noexcept {
+        activate_motor();
+        walking_ = true;
+        walking_weight_n_ = weight_n;
+        walking_height_m_ = goal_height;
+        const auto delta = JPH::Vec3(player_point_-anchor_);
+        walking_start_height_m_ = delta.GetY();
+        walking_local_start_ = mBody1->GetRotation().Conjugated()*delta;
+        walking_local_direction_ = mBody1->GetRotation().Conjugated()*direction;
+        walking_approach_m_ = approach;
     }
     void begin_motor_step(bool drive) noexcept {
         motor_drive_ = drive;
@@ -259,6 +317,11 @@ private:
     float friction_;
     bool planted_geometry_;
     bool force_motor_ = false, motor_drive_ = false, motor_applied_ = false;
+    bool walking_ = false;
+    float walking_weight_n_ = 0;
+    float walking_height_m_ = 0, walking_start_height_m_ = 0, walking_approach_m_ = 1;
+    JPH::Vec3 walking_local_start_ = JPH::Vec3::sZero();
+    JPH::Vec3 walking_local_direction_ = JPH::Vec3::sAxisX();
     JPH::Vec3 motor_lever_cross_ = JPH::Vec3::sZero();
     float motor_impulse_ = 0;
     double motor_positive_work_ = 0, motor_absorbed_work_ = 0, last_motor_work_ = 0;
@@ -391,6 +454,26 @@ bool PhysicalFootPush::begin_passive_plant(JPH::BodyID support, JPH::RVec3 point
     return true;
 }
 
+bool PhysicalFootPush::begin_walking_step(JPH::BodyID support, JPH::RVec3 point,
+                                        JPH::Vec3 normal, float friction, float rise,
+                                        JPH::Vec3 direction, float approach) {
+    if (!std::isfinite(rise) || rise <= 0 || !finite(direction) ||
+        std::abs(direction.LengthSq()-1) > 1.0e-4F ||
+        !std::isfinite(approach) || approach <= 0) return false;
+    const float stroke = std::min(rise,maximum_stroke_m());
+    if (!begin_contact(support, point, normal, friction, stroke, false)) return false;
+    auto &owner = *impl_;
+    const JPH::BodyLockRead lock(owner.system.GetBodyLockInterface(), owner.player);
+    if (!lock.Succeeded()) { clear(StopReason::InvalidBody); return false; }
+    const float inverse_mass = lock.GetBody().GetMotionProperties()->GetInverseMass();
+    const float weight = -owner.system.GetGravity().GetY() / inverse_mass;
+    const float height = JPH::Vec3(lock.GetBody().GetCenterOfMassPosition()-point).GetY()+rise;
+    owner.row->activate_walking(height, weight, direction, approach);
+    owner.state.walking_step = true;
+    owner.sample_geometry();
+    return true;
+}
+
 bool PhysicalFootPush::activate_planted_push() {
     auto &owner = *impl_;
     const auto &state = owner.state;
@@ -409,6 +492,16 @@ bool PhysicalFootPush::activate_planted_push() {
     owner.row->activate_motor();
     owner.state.planted_motor_profile = true;
     owner.sample_geometry();
+    return true;
+}
+
+bool PhysicalFootPush::refresh_walking_contact_normal(JPH::Vec3 normal) {
+    auto &owner = *impl_;
+    if (!owner.row || !owner.state.active || !owner.state.walking_step ||
+        !finite(normal) || normal.LengthSq() < 1.0e-8F) return false;
+    const JPH::BodyLockRead lock(owner.system.GetBodyLockInterface(),owner.state.support);
+    if (!lock.Succeeded()) return false;
+    owner.row->refresh_walking_normal(normal.Normalized());
     return true;
 }
 

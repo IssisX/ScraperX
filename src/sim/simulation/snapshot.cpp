@@ -512,7 +512,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.foot_contact_tick = foot_contact_.valid ? foot_contact_.solved_tick : 0;
     const bool rigid_foot_source = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
         foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
-        foot_push_purpose_ == FootPushPurpose::WallKick;
+        foot_push_purpose_ == FootPushPurpose::WalkingStep || foot_push_purpose_ == FootPushPurpose::WallKick;
     state_.foot_push_source_contact_tick = rigid_foot_source && foot_push_contact_.valid
         ? foot_push_contact_.solved_tick : 0;
     state_.hand_foot_overlap_active = physical_hands_->active() && physical_foot_push_->active();

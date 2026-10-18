@@ -1,4 +1,5 @@
 #include "sim/simulation/world.hpp"
+#include <limits>
 
 namespace scraperx::sim::detail {
 
@@ -213,6 +214,37 @@ void restore_body(JPH::BodyInterface &bodies, const JPH::BodyID id,
     for (std::uint32_t axis = 0; axis < 3; ++axis) {
         out.axes[axis] = frame.GetColumn3(axis).Normalized();
     }
+    return true;
+}
+
+[[nodiscard]] bool walking_top_face_normal(const JPH::Body &body,
+    const JPH::SubShapeID &sub_shape, JPH::RVec3 real_world_point,
+    JPH::Vec3 &normal) noexcept {
+    JPH::SubShapeID remainder;
+    const auto leaf = body.GetShape()->GetSubShapeTransformedShape(sub_shape,
+        body.GetCenterOfMassPosition(), body.GetRotation(), JPH::Vec3::sReplicate(1.0F), remainder);
+    if (leaf.mShape == nullptr || leaf.mShape->GetSubType() != JPH::EShapeSubType::Box ||
+        !remainder.IsEmpty() || leaf.GetShapeScale() != JPH::Vec3::sReplicate(1.0F)) return false;
+    const auto *box = static_cast<const JPH::BoxShape *>(leaf.mShape.GetPtr());
+    if (box->GetConvexRadius() != 0.0F) return false;
+    const auto frame = leaf.GetCenterOfMassTransform();
+    const auto face_normal = frame.GetAxisY();
+    if (face_normal.GetY() < kSupportNormalThreshold) return false;
+    const auto local = frame.InversedRotationTranslation() * real_world_point;
+    const auto half = box->GetHalfExtent();
+    // Four float roundoff units at the actual coordinate magnitude cover the
+    // world/local transforms. This is numerical error, never a landing skin.
+    const auto centre = frame.GetTranslation();
+    const double magnitude = std::max({1.0, std::abs(double(real_world_point.GetX())),
+        std::abs(double(real_world_point.GetY())), std::abs(double(real_world_point.GetZ())),
+        std::abs(double(centre.GetX())), std::abs(double(centre.GetY())),
+        std::abs(double(centre.GetZ())), double(half.GetX()), double(half.GetY()), double(half.GetZ())});
+    const double tolerance = 4.0 * std::numeric_limits<float>::epsilon() * magnitude;
+    if (!std::isfinite(local.GetX()) || !std::isfinite(local.GetY()) || !std::isfinite(local.GetZ()) ||
+        std::abs(local.GetY() - half.GetY()) > tolerance ||
+        std::abs(local.GetX()) > half.GetX() + tolerance ||
+        std::abs(local.GetZ()) > half.GetZ() + tolerance) return false;
+    normal = face_normal;
     return true;
 }
 

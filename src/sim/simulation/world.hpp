@@ -731,15 +731,18 @@ private:
     // the hit fraction and the surface normal (pointing out of what was hit).
     [[nodiscard]] bool cast_capsule(const JPH::RVec3 from, const JPH::Vec3 displacement,
                                     float &fraction, JPH::Vec3 &normal, JPH::BodyID *hit_body=nullptr,
-                                    JPH::SubShapeID *hit_shape=nullptr) const;
+                                    JPH::SubShapeID *hit_shape=nullptr,
+                                    JPH::RVec3 *hit_point=nullptr) const;
 
     // Stepping up. Blocked at the feet, clear with the body raised by the
-    // maximum step, and walkable support found by sweeping back down: then
-    // unconverted surfaces retain the existing character step. Converted
-    // members request bounded reciprocal leg work from actual foot contact;
-    // their rise is resolved by gravity and collision, never a pose write.
+    // maximum step, and a walkable receiving face found by sweeping down.
+    // Geometry requests one bounded stroke from the actual current foot;
+    // gravity/contact resolve the rise and actual receiver contact ends it.
     bool try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
                      const float delta_seconds, const bool deliberate_step = false);
+    // Keep the established finite push-off for vehicle boarding and its hand catch.
+    bool try_vehicle_boarding_step(JPH::BodyInterface &bodies, JPH::Vec3 relative_velocity,
+                                   float delta_seconds, bool deliberate_step);
 
     // Real quadratic drag opposing the full velocity vector, not a clamp: it
     // can only ever pull speed toward the terminal value, never accelerate
@@ -1093,12 +1096,17 @@ private:
     std::unique_ptr<GrapplingGun> grappling_gun_;
     bool grapple_acquired_ = false, grapple_equipped_ = false;
     bool foot_push_started_this_tick_ = false;
-    enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush, WallKick };
+    enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush,
+                                WallKick, WalkingStep };
     std::uint64_t trailing_foot_contact_tick_ = 0;
     FootPushPurpose foot_push_purpose_ = FootPushPurpose::None;
     FootContactSample foot_contact_{}, foot_push_contact_{};
     FootContactSample wall_contact_{};
     JPH::BodyID wall_kick_consumed_body_;
+    JPH::BodyID step_receiver_;
+    JPH::SubShapeID step_receiver_subshape_;
+    JPH::Vec3 step_receiver_local_point_ = JPH::Vec3::sZero();
+    JPH::Vec3 step_direction_ = JPH::Vec3::sZero();
     std::uint64_t contact_solve_serial_ = 0;
     bool rigid_transfer_foot_valid_ = false;
     TraversalAffordanceCache traversal_affordances_;
