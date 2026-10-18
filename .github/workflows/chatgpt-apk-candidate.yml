@@ -69,12 +69,20 @@ jobs:
       run: |
         set -euo pipefail
         cmake -S . -B build/candidate-host -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
           -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
           -DGODOTCPP_TARGET=template_release \
           -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
         cmake --build build/candidate-host --target scraperx_native --parallel 2
         mkdir -p artifacts/apk
+    - name: Check real airborne Action catch, cancellation and expiry
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host --target scraperx_air_catch_intent_tests --parallel 2
+        timeout 90s build/candidate-host/scraperx_air_catch_intent_tests \
+          2>&1 | tee artifacts/air-catch-intent-native.log
+        grep -F 'SCRAPERX_AIR_CATCH PASS' artifacts/air-catch-intent-native.log
     - name: Cross-compile native graph for Android arm64
       shell: bash
       run: |
@@ -102,6 +110,15 @@ jobs:
         if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/godot-candidate-import.log; then
           exit 1
         fi
+    - name: Check shipping phone and keyboard early-catch input
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 90s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          res://tests/air_catch_input_test.tscn -- --quit-after-air-catch-check \
+          2>&1 | tee artifacts/air-catch-input-godot.log
+        grep -F 'SCRAPERX_AIR_CATCH_INPUT PASS' artifacts/air-catch-input-godot.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/air-catch-input-godot.log; then exit 1; fi
     - name: Check native-driven landing and slide camera feedback
       shell: bash
       run: |

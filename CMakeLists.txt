@@ -221,6 +221,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     target_link_libraries(scraperx_parkour_intent_buffer_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.parkour_intent_buffer COMMAND scraperx_parkour_intent_buffer_tests)
 
+    add_executable(scraperx_air_catch_intent_tests tests/air_catch_intent_tests.cpp)
+    target_link_libraries(scraperx_air_catch_intent_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.air_catch_intent COMMAND scraperx_air_catch_intent_tests)
+
     add_executable(scraperx_ground_yard_tests tests/ground_yard_tests.cpp)
     target_link_libraries(scraperx_ground_yard_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.ground_yard COMMAND scraperx_ground_yard_tests)

@@ -542,6 +542,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.foot_push_source_contact_tick = rigid_foot_source && foot_push_contact_.valid
         ? foot_push_contact_.solved_tick : 0;
     state_.hand_foot_overlap_active = physical_hands_->active() && physical_foot_push_->active();
+    state_.air_catch_intent_pending = air_catch_action_ticks_left_ > 0;
     state_.actual_hand_load_n = physical_hands_->hand_force(0).Length() + physical_hands_->hand_force(1).Length();
     state_.actual_foot_load_n = physical_foot_push_->readback().player_force.Length();
     const auto actuator_load = state_.actual_hand_load_n + state_.actual_foot_load_n;

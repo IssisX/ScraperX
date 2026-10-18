@@ -48,6 +48,13 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
 
 void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodies,
                               const StepCommands &commands) noexcept {
+    const bool air_reach_allowed = !regression_fixtures_ && !grounded_ && !crouched_ &&
+        traversal_state_ == TraversalState::None && !physical_hands_->active() &&
+        !palm_props_active() && !carry_constraint_ &&
+        !grapple_equipped_ && !parachute_deployed_ &&
+        !(slingshot_ && slingshot_->controls_player()) &&
+        !commands.cancel_jump_requested && !commands.release_requested && !commands.crouch_held;
+    if (!air_reach_allowed) air_catch_action_ticks_left_ = 0;
     if (palm_props_active()) return;
     if (traversal_state_ != TraversalState::Hanging || !physical_hands_->compatible_hands() ||
         hands_[0].generation != hang_topout_left_generation_ ||
@@ -179,15 +186,24 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
         return;
     }
 
-    // Action: a vault or mantle where one is offered, else a hold faced
-    // at hand height is climbed.
-    if (commands.traversal_requested && !try_begin_ground_traversal(bodies)) {
-        // Action expresses deliberate reach in free flight too. The same
-        // actual geometry and finite hands decide whether a catch holds.
+    // Drop wins even when a fresh Action arrived in the same input batch.
+    if (commands.cancel_jump_requested || commands.release_requested) return;
+    // Ground Action keeps its immediate vault/mantle path. Airborne Action
+    // may wait through the existing short input window for hand reach.
+    if (commands.traversal_requested && try_begin_ground_traversal(bodies)) {
+        air_catch_action_ticks_left_ = 0;
+        return;
+    }
+    if (commands.traversal_requested && air_reach_allowed)
+        air_catch_action_ticks_left_ = kOrdinaryJumpIntentTicks;
+    if (commands.traversal_requested || air_catch_action_ticks_left_ > 0) {
+        // Every retry queries current geometry and clearance. Intent never
+        // grants a constraint, extends reach or remembers physical support.
         const Grip grip = grip_in_front(bodies);
         if (grip.valid) {
+            air_catch_action_ticks_left_ = 0;
             begin_climb(bodies, grip, true);
-        } else {
+        } else if (air_catch_action_ticks_left_ == 0 || --air_catch_action_ticks_left_ == 0) {
             ++rejected_traversal_count_;
         }
     }

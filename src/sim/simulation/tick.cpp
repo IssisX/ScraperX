@@ -131,6 +131,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
     hanging_posture_input_ = commands.crouch_held;
 
+    if (slingshot_ && slingshot_->controls_player()) air_catch_action_ticks_left_ = 0;
     if (!slingshot_ || !slingshot_->controls_player()) {
         auto posture_commands = commands;
         // A buffered ordinary Jump may request a legitimate stand attempt;

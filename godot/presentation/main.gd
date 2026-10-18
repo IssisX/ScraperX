@@ -1414,10 +1414,11 @@ func _read_context() -> Dictionary:
 		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": "SERVICE LIFT"}
 	elif grounded and station == &"supplied_machine":
 		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": String(balance["name"])}
-	elif not grounded and free and carrying == 0 and (ledge or grip):
-		# A native ledge or grip probe exposes the catch opportunity; Action
-		# requests traversal and native contact/reach rules decide.
-		action = {"id": &"catch", "label": "CATCH", "icon": &"climb", "detail": "HOLD ON"}
+	elif not grounded and free and carrying == 0 and not chute and not bool(_native.is_player_crouched()):
+		# Reach stays pressable before a grip appears. Only the native's short
+		# intent window and current physical grip query can acquire a hand.
+		action = {"id": &"catch", "label": "CATCH" if ledge or grip else "REACH", "icon": &"climb",
+			"detail": "REACHING" if bool(landing.get("air_catch_intent_pending", false)) else ("HOLD ON" if ledge or grip else "TAP NEAR A GRIP")}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -1453,7 +1454,8 @@ func _read_context() -> Dictionary:
 		"grapple_draw_available": grapple_draw_available,
 		"grapple_line_attached": bool(grapple.get("line_attached", false)),
 		"grapple_auto_reel": bool(grapple.get("auto_reel", false)),
-		"drop_ok": bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
+		"air_catch_intent_pending": bool(landing.get("air_catch_intent_pending", false)),
+		"drop_ok": bool(landing.get("air_catch_intent_pending", false)) or bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),

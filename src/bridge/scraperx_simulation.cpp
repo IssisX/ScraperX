@@ -860,6 +860,7 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["foot_contact_tick"] = s.foot_contact_tick;
     out["foot_push_source_contact_tick"] = s.foot_push_source_contact_tick;
     out["hand_foot_overlap_active"] = s.hand_foot_overlap_active;
+    out["air_catch_intent_pending"] = s.air_catch_intent_pending;
     out["hand_foot_overlap_solved_ticks"] = s.hand_foot_overlap_solved_ticks;
     out["hand_foot_last_solve_tick"] = s.hand_foot_last_solve_tick;
     out["hand_foot_last_hand_load_n"] = s.hand_foot_last_hand_load_n;

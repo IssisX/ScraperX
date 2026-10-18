@@ -328,7 +328,9 @@ func _touch_down(index: int, at: Vector2) -> bool:
 	_touch_up(index)
 	for id in _order:
 		var button: TouchButton = _buttons[id]
-		if not button.shown or not button.enabled or button.index != -1 or button.appear < 0.2:
+		# Fade is presentation only. A newly enabled Cancel must receive the
+		# press immediately during the native's short reach-intent window.
+		if not button.shown or not button.enabled or button.index != -1:
 			continue
 		if at.distance_to(button.center) > button.radius * HIT_SLOP:
 			continue
@@ -459,6 +461,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	drop.shown = ctx.get("drop_ok", hanging)
 	drop.label = ("RELEASE" if ctx.get("grapple_line_attached", false) else "STOW") \
 		if ctx.get("grapple_equipped", false) else ("LET GO" if passive_release else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN"))
+	if bool(ctx.get("air_catch_intent_pending", false)):
+		drop.label = "CANCEL"
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	var split_drop_chute: bool = drop.shown and chute.shown

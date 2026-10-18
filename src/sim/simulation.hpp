@@ -615,6 +615,8 @@ struct Snapshot final {
     double well_b_lever_angle = 0.0;
     std::array<HandPropSnapshot, 2> hand_props{};
     std::uint64_t palm_vault_count = 0;
+    // Read-only input intent; pending reach is never physical support.
+    bool air_catch_intent_pending = false;
 };
 
 struct AdvanceResult final {
