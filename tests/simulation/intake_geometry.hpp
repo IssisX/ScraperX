@@ -1,7 +1,7 @@
 #pragma once
 
 // Existing test geometry shared by intake, Legal Forty and the loaded Hook5 route.
-// Values remain the original falsifier literals, independent of production geometry.
+// Waypoint literals remain independent of the production geometry definitions.
 namespace scraperx::tests {
 
 constexpr double kThroatX = 0.0;

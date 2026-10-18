@@ -129,6 +129,9 @@ struct Actuator final {
 };
 
 void limits(const PhysicalFootPush::Readback &state, double previous_work, bool planted_profile = false) {
+    // Walking also uses activate_motor(), with admitted event work rather
+    // than the legacy spring's force-bound-times-target-extension ledger.
+    const bool motor_profile = planted_profile || state.walking_step;
     require(std::isfinite(state.command_work_bound_j) &&
                 std::isfinite(state.nominal_spring_storage_j) &&
                 std::isfinite(state.last_impulse_ns) && finite(state.player_force),
@@ -136,7 +139,7 @@ void limits(const PhysicalFootPush::Readback &state, double previous_work, bool 
     require(state.command_work_bound_j >= previous_work - 1.0e-8 &&
                 state.command_work_bound_j <= 1285.625 + 1.0e-5 &&
                 state.last_command_work_bound_j <= 5000.0 * kDt + 1.0e-4 &&
-                (!planted_profile || (state.motor_positive_work_j == state.command_work_bound_j &&
+                (!motor_profile || (state.motor_positive_work_j == state.command_work_bound_j &&
                     state.target_storage_delta_j == 0 && state.nominal_spring_storage_j == 0)),
             "actual target advances respect total work and the selected profile power limit");
     require(state.commanded_stroke_m >= -1.0e-6F && state.commanded_stroke_m <= .3F + 1.0e-6F &&
@@ -146,8 +149,9 @@ void limits(const PhysicalFootPush::Readback &state, double previous_work, bool 
                 state.last_impulse_ns <= 3500.0F * kDt + 1.0e-4F &&
                 state.peak_load_n <= 3500.01F,
             "one native collision row is compression-only and force-capped");
-    if (planted_profile) {
-        require(state.planted_motor_profile && state.commanded_stroke_m == 0 &&
+    if (motor_profile) {
+        require((planted_profile ? state.planted_motor_profile : state.walking_step) &&
+                    state.commanded_stroke_m == 0 &&
                     state.rest_distance_m == state.initial_distance_m &&
                     state.motor_absorbed_work_j >= 0 && state.retired_nominal_storage_j >= 0 &&
                     std::abs(state.actual_motor_extension_m -
@@ -635,6 +639,38 @@ void planted_motor_hold_stops_drive_on_original_clock() {
             "held motor expires on original passive-attachment clock and cannot rearm");
 }
 
+void blocked_walking_commit_preserves_existing_row() {
+    scenario = "blocked_walking_commit_preserves_existing_row";
+    Pair pair;
+    pair.fixture.system.SetGravity(Vec3(0, -9.81F, 0));
+    Actuator actuator(pair);
+    require(!actuator.push.commit_blocked_walking_step(),
+            "blocked lift cannot create an attachment");
+    require(actuator.push.begin_walking_step(pair.kit.body_id(pair.cell), pair.foot,
+                Vec3::sAxisY(), .7F, .25F, Vec3::sAxisX(), .35F),
+            "walking stroke starts on its supplied real material point");
+    const auto before = actuator.push.readback();
+    require(actuator.push.commit_blocked_walking_step(),
+            "a newly begun walking stroke can commit its requested lift");
+    const auto committed = actuator.push.readback();
+    require(committed.support == before.support &&
+                committed.initial_distance_m == before.initial_distance_m &&
+                committed.stroke_limit_m == before.stroke_limit_m &&
+                committed.elapsed_seconds == before.elapsed_seconds &&
+                committed.command_work_bound_j == before.command_work_bound_j,
+            "commit retains support, reach, age and work ledger");
+    actuator.tick();
+    const auto solved = actuator.push.readback();
+    require(solved.last_load_n > 0 && solved.command_work_bound_j > 0,
+            "committed lift supplies a real finite reciprocal solve without forward travel");
+    limits(solved, 0);
+    require(!actuator.push.commit_blocked_walking_step(),
+            "an aged stroke cannot restart its blocked lift");
+    require(actuator.push.readback().elapsed_seconds == solved.elapsed_seconds &&
+                actuator.push.readback().command_work_bound_j == solved.command_work_bound_j,
+            "refused recommit preserves the actual clock and spent work");
+}
+
 void finite_actuation_and_energy() {
     scenario = "finite_stroke_power_time_energy";
     Pair pair(Vec3(0, .019F, 0), Vec3(0, .9F, 0), Quat::sIdentity(), 5000);
@@ -713,6 +749,7 @@ int main() {
     planted_motor_geometric_limits_stop_real_drive(false);
     planted_motor_geometric_limits_stop_real_drive(true);
     planted_motor_hold_stops_drive_on_original_clock();
+    blocked_walking_commit_preserves_existing_row();
     finite_actuation_and_energy();
     UnregisterTypes();
     delete Factory::sInstance;

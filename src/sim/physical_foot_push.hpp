@@ -87,6 +87,10 @@ public:
     // The material anchor, age, stroke and admitted-work ledger are retained.
     // Failed or repeated transitions leave the current row unchanged.
     bool push_off_existing_step();
+    // Commit only a newly begun walking stroke whose caller verified an
+    // already blocking low riser and clear receiving face. This advances the
+    // existing height target; it cannot renew contact, age, reach or work.
+    bool commit_blocked_walking_step();
     // A single finite walking stroke from a solved foot contact. The damped
     // compression motor shares the jump motor's force/power/work/reach limits,
     // and phases lift with measured approach instead of launching a free hop.

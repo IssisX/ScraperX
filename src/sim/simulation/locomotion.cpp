@@ -992,6 +992,16 @@ bool Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
     if (!physical_foot_push_->begin_walking_step(foot_contact_.body, contact,
             plant_normal, foot_contact_.friction, rise+kLandingSkin, horizontal/speed,
             std::max(kStepLookahead,JPH::Vec3(receiver_point-at).Dot(horizontal/speed)))) return false;
+    // The original sweep can already touch a steep riser. Continuing forward
+    // then requests its validated finite lift, rather than progress through
+    // the obstruction. The lower foot remains the only actuator anchor.
+    const auto blocking_normal = -obstacle_hit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
+    if (obstacle_hit.mFraction <= 0 && blocking_normal.GetY() < kSupportNormalThreshold &&
+        blocking_normal.Dot(horizontal) < 0 &&
+        !physical_foot_push_->commit_blocked_walking_step()) {
+        physical_foot_push_->clear(PhysicalFootPush::StopReason::InvalidGeometry);
+        return false;
+    }
     foot_push_contact_ = foot_contact_;
     foot_push_purpose_ = FootPushPurpose::WalkingStep;
     foot_push_started_this_tick_ = true;

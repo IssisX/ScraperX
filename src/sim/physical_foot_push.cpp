@@ -141,14 +141,14 @@ public:
                 const auto relative_velocity = player->GetLinearVelocity()-mBody1->GetPointVelocity(anchor_);
                 const auto direction = mBody1->GetRotation()*walking_local_direction_;
                 const double approach_speed = std::max(0.0F,relative_velocity.Dot(direction));
-                // Phase the bounded target with material-relative progress.
-                // A stationary player receives weight support, never a launch
-                // toward the full tread height. Lead covers the leg response
-                // time using measured approach speed, not requested input.
+                // Approach follows material-relative progress. An already
+                // blocking, validated low riser permits the requested finite
+                // lift without waiting for impossible forward travel.
                 const double response = std::sqrt(1/(stiffness*inverse_mass));
                 const auto local_delta = mBody1->GetRotation().Conjugated()*delta;
                 const double travelled = (local_delta-walking_local_start_).Dot(walking_local_direction_);
-                const double phase = std::clamp((travelled+approach_speed*response)/walking_approach_m_,0.0,1.0);
+                const double phase = walking_committed_ ? 1.0 :
+                    std::clamp((travelled+approach_speed*response)/walking_approach_m_,0.0,1.0);
                 constexpr double half_pi = 1.5707963267948966;
                 const double rise = walking_height_m_-walking_start_height_m_;
                 const double target_height = walking_start_height_m_+rise*std::sin(half_pi*phase);
@@ -285,6 +285,7 @@ public:
     void activate_walking(float goal_height, float weight_n, JPH::Vec3 direction, float approach) noexcept {
         activate_motor();
         walking_ = true;
+        walking_committed_ = false;
         walking_weight_n_ = weight_n;
         walking_height_m_ = goal_height;
         const auto delta = JPH::Vec3(player_point_-anchor_);
@@ -301,6 +302,7 @@ public:
     }
     void hold_motor() noexcept { motor_drive_ = false; }
     void push_off_step() noexcept { walking_ = false; }
+    void commit_walking_step() noexcept { walking_committed_ = true; }
     bool motor_profile() const noexcept { return force_motor_; }
     double motor_positive_work() const noexcept { return motor_positive_work_; }
     double motor_absorbed_work() const noexcept { return motor_absorbed_work_; }
@@ -319,7 +321,7 @@ private:
     float friction_;
     bool planted_geometry_;
     bool force_motor_ = false, motor_drive_ = false, motor_applied_ = false;
-    bool walking_ = false;
+    bool walking_ = false, walking_committed_ = false;
     float walking_weight_n_ = 0;
     float walking_height_m_ = 0, walking_start_height_m_ = 0, walking_approach_m_ = 1;
     JPH::Vec3 walking_local_start_ = JPH::Vec3::sZero();
@@ -495,6 +497,14 @@ bool PhysicalFootPush::activate_planted_push() {
     owner.row->activate_motor();
     owner.state.planted_motor_profile = true;
     owner.sample_geometry();
+    return true;
+}
+
+bool PhysicalFootPush::commit_blocked_walking_step() {
+    auto &owner = *impl_;
+    if (!owner.row || !owner.state.active || owner.state.stop_requested ||
+        !owner.state.walking_step || owner.state.elapsed_seconds != 0) return false;
+    owner.row->commit_walking_step();
     return true;
 }
 

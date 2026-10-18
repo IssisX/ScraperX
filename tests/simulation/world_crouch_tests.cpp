@@ -192,8 +192,13 @@ void run_world_crouch_tests() {
     const auto beyond = crouch.snapshot();
     require(beyond.player_position.z < kCrawlBeamZ - kCrawlBeamHalfZ - 0.35,
             "the released-crouch body must still walk on out from under the beam");
+    // The exit may stand on higher world collision than the approach.
+    // Compare capsule clearance above each actual support, not world elevation.
+    const double standing_clearance =
+        crouch_standing.player_position.y - crouch_standing.support_contact_point.y;
+    const double exit_clearance = beyond.player_position.y - beyond.support_contact_point.y;
     require(!beyond.player_crouched && beyond.player_grounded &&
-                std::abs(beyond.player_position.y - crouch_standing.player_position.y) < 0.03,
+                std::abs(exit_clearance - standing_clearance) < 0.03,
             "clear of the beam, a released crouch must stand the body back up");
 
     std::cout << "PASS scraperx_sim crouch: standing_deepest_z=" << standing_deepest

@@ -88,12 +88,9 @@ void wait(Simulation &s, double secs, FirmCheckpointRecord *checkpoint = nullptr
 // All progress is through public player inputs, with no spawned upper checkpoint.
 bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance=.15,
              FirmCheckpointRecord *checkpoint = nullptr) {
-  bool physical=false;
   for (int i=0; i<int(seconds*90); ++i) {
     const auto state=s.snapshot();
     const auto p=state.player_position;
-    const auto owner=state.support_entity_id;
-    physical=physical || owner==1600 || (owner>=2560 && owner<=2566) || owner==2952 || owner==2954;
     const double dx=x-p.x,dz=z-p.z,distance=std::hypot(dx,dz);
     const double relative_x=state.player_linear_velocity.x-state.support_point_linear_velocity.x;
     const double relative_z=state.player_linear_velocity.z-state.support_point_linear_velocity.z;
@@ -101,11 +98,10 @@ bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance
     if(distance<tolerance && state.player_grounded && slip<.15) {
       (void)s.set_move_input(0,0);return true;
     }
-    // Keep the existing approach scale, but brake actual support-relative
-    // motion before accepting every waypoint, including Tower footing.
-    const double approach_scale=physical?2.75:.6;
-    const double input_x=dx/approach_scale-relative_x*.28;
-    const double input_z=dz/approach_scale-relative_z*.28;
+    // Use the ordinary walking driver's bounded input and braking law.
+    // Support identity must not silently slow the input during a tight arrival.
+    const double input_x=dx*1.8-relative_x*.28;
+    const double input_z=dz*1.8-relative_z*.28;
     const double scale=std::max(1.,std::hypot(input_x,input_z));
     (void)s.set_move_input(input_x/scale,input_z/scale);
     if(distance>1e-8) (void)s.set_facing(dx,dz);
