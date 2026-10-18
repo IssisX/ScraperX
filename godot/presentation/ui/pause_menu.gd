@@ -510,26 +510,47 @@ func _refresh_controls_layout() -> void:
 # [kind, value, name, description]; kind "verb" draws the shared binding,
 # "key" a keycap, "pad" a pad glyph, "icon" a touch icon.
 func _controls_rows(_view_family: int) -> Array:
-	return [
-		["icon", &"move", "LEFT THUMB", "Move; the stick appears where you touch"],
-		["icon", &"look", "RIGHT THUMB", "Drag to look; Gyro Aim adds tilt"],
+	var thumb_flow := settings.touch_profile == SettingsStore.TouchProfile.THUMB_FLOW
+	var rows: Array
+	if thumb_flow:
+		rows = [
+			["icon", &"move", "LEFT THUMB", "Drag to move; push past the ring to sprint. Quick stationary tap changes stance"],
+			["icon", &"crouch", "LEFT TAP", "Quick tap the left zone without dragging to crouch, slide, tuck or stand when possible. Lifting after a drag never changes stance"],
+			["icon", &"look", "RIGHT THUMB", "Drag to look; Gyro Aim adds tilt"],
+			["icon", &"jump", "QUICK TAP", "Tap the right zone without dragging to Jump, wall kick or top-out when possible"],
+			["icon", &"climb", "NEXT HAND", "While one-hand holding or swinging, quick tap reaches for the next handhold or bar instead of releasing"],
+			["icon", &"climb", "ACTION FAN", "Hold the right thumb still briefly to open the fan, then stroke UP to Reach or use contextual Action"],
+			["icon", &"crouch", "FAN: DOWN", "Fan DOWN is another way to crouch, slide, tuck or stand when possible"],
+			["icon", &"drop", "FAN: RELEASE", "When offered, stroke INWARD toward screen center, hold until armed, then lift to Drop or release; moving away cancels"],
+			["icon", &"look", "CANCEL", "Stroke OUTWARD to cancel the fan. Lift before a catch to cancel that gesture's pending airborne Reach; a caught grip stays held"],
+			["icon", &"move", "WALL STEP", "Sprint-jump along a wall, keep moving into it, then quick tap to push away"],
+			["icon", &"move", "LANDING", "Face your travel and quick tap LEFT before a hard landing to roll through; quick tap RIGHT exits when clear"],
+		]
+	else:
+		rows = [
+			["icon", &"move", "LEFT THUMB", "Move; the stick appears where you touch"],
+			["icon", &"look", "RIGHT THUMB", "Drag to look; Gyro Aim adds tilt"],
+			["icon", &"jump", "JUMP", "Jump; push off a contacted wall; climb up while hanging"],
+			["icon", &"move", "WALL STEP", "Sprint-jump along a wall, keep moving into it, then Jump to push away"],
+			["icon", &"crouch", "CROUCH / SLIDE", "Crouch from a run to slide; tap again to stand, or Jump out when clear"],
+			["icon", &"climb", "ACTION", "Catch a ledge or operate a machine"],
+			["icon", &"move", "LANDING", "Face your travel and crouch before a hard landing to roll through; Jump exits when clear"],
+		]
+	# Equipment keeps its explicit controls in both parkour profiles.
+	rows.append_array([
 		["icon", &"sling", "BOARD", "Stand in the leather pouch, then tap BOARD"],
 		["icon", &"look", "AIM", "Drag on the right to aim up/down and sideways, including with the bands drawn"],
 		["icon", &"move", "DRAW", "Pull the left stick backward; watch the power bar, then let go to hold"],
 		["icon", &"sling", "RELEASE", "Tap RELEASE to fire the chosen stretch"],
 		["icon", &"chute", "CHUTE / BRAKE", "After the pouch exit, open the canopy to brake ascent or descent; tap again to stow"],
 		["icon", &"operate", "RETRIEVE", "At the RETURN SEAT wheel, tap Action, then hold REEL until the seat latches"],
-		["icon", &"drop", "DROP", "Leave the pouch or a ledge; stop retrieval"],
-		["icon", &"jump", "JUMP", "Jump; push off a contacted wall; climb up while hanging"],
-		["icon", &"move", "WALL STEP", "Sprint-jump along a wall, keep moving into it, then Jump to push away"],
-		["icon", &"crouch", "CROUCH / SLIDE", "Crouch from a run to slide; tap again to stand, or Jump out when clear"],
-		["icon", &"climb", "ACTION", "Catch a ledge or operate a machine"],
+		["icon", &"drop", "DROP", "Equipment DROP leaves the pouch or stops retrieval" if thumb_flow else "Leave the pouch or a ledge; stop retrieval"],
 		["verb", &"toggle_grapple", "GRAPPLE", "Draw or stow the acquired gun, including beside other interactions"],
 		["verb", &"auto_reel", "AUTO REEL / STOP", "Toggle finite line take-up while the gun has an attached line"],
-		["icon", &"move", "LANDING", "Face your travel and crouch before a hard landing to roll through; Jump exits when clear"],
 		["icon", &"operate", "MACHINE", "Hold its arrows or move its load; Action leaves pendant controls"],
 		["icon", &"pause", "PAUSE", "Options, checkpoint and supported-ring restarts"],
-	]
+	])
+	return rows
 
 
 func _draw_controls() -> void:
@@ -595,7 +616,13 @@ func _end_page(page: StringName, first: Control, note: String) -> void:
 
 func _build_settings_page() -> void:
 	_settings_page = _begin_page(PAGE_SETTINGS)
-	_first_setting = _slider_row("LOOK SENSITIVITY", &"look_sensitivity",
+	_first_setting = _choice_row("TOUCH PROFILE", &"touch_profile", SettingsStore.TOUCH_PROFILE_NAMES,
+		_refresh_controls_layout)
+	var profile_note := _label("BUTTONS: separate parkour buttons. THUMB FLOW: move and act with thumb-zone gestures. See CONTROLS for the selected profile. Equipment keeps its buttons.",
+		21.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	profile_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_building.add_child(profile_note)
+	_slider_row("LOOK SENSITIVITY", &"look_sensitivity",
 		SettingsStore.LOOK_SENSITIVITY_RANGE, 0.05, "%.2fx")
 	_slider_row("STICK SENSITIVITY", &"stick_sensitivity", SettingsStore.STICK_SENSITIVITY_RANGE,
 		0.05, "%.2fx")

@@ -8,6 +8,9 @@ extends RefCounted
 const PATH := "user://settings.cfg"
 const SECTION := "interface"
 
+enum TouchProfile { BUTTONS = 0, THUMB_FLOW = 1 }
+const TOUCH_PROFILE_NAMES := ["BUTTONS", "THUMB FLOW"]
+
 const LOOK_SENSITIVITY_RANGE := Vector2(0.3, 2.5)
 const STICK_SENSITIVITY_RANGE := Vector2(0.3, 2.5)
 const TOUCH_SCALE_RANGE := Vector2(0.8, 1.3)
@@ -66,6 +69,7 @@ var gyro_aim := false
 var gyro_sensitivity := 1.0
 var vibration := true
 var touch_scale := 1.0
+var touch_profile: int = TouchProfile.BUTTONS
 var telemetry := false
 var quality := 2
 var render_scale := 1.0
@@ -140,6 +144,7 @@ func load_from_disk() -> void:
 	look_sensitivity = _read_range(file, "look_sensitivity", look_sensitivity, LOOK_SENSITIVITY_RANGE)
 	stick_sensitivity = _read_range(file, "stick_sensitivity", stick_sensitivity, STICK_SENSITIVITY_RANGE)
 	touch_scale = _read_range(file, "touch_scale", touch_scale, TOUCH_SCALE_RANGE)
+	touch_profile = _read_index(file, "touch_profile", TouchProfile.BUTTONS, TOUCH_PROFILE_NAMES.size())
 	gyro_sensitivity = _read_range(file, "gyro_sensitivity", gyro_sensitivity, GYRO_SENSITIVITY_RANGE)
 	invert_y = _read_bool(file, "invert_y", invert_y)
 	gyro_aim = _read_bool(file, "gyro_aim", gyro_aim)
@@ -183,6 +188,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	file.set_value(SECTION, "stick_sensitivity", stick_sensitivity)
 	file.set_value(SECTION, "touch_scale", touch_scale)
+	file.set_value(SECTION, "touch_profile", touch_profile)
 	file.set_value(SECTION, "invert_y", invert_y)
 	file.set_value(SECTION, "gyro_aim", gyro_aim)
 	file.set_value(SECTION, "gyro_sensitivity", gyro_sensitivity)

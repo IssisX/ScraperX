@@ -132,6 +132,33 @@ jobs:
           2>&1 | tee artifacts/air-catch-input-godot.log
         grep -F 'SCRAPERX_AIR_CATCH_INPUT PASS' artifacts/air-catch-input-godot.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/air-catch-input-godot.log; then exit 1; fi
+    - name: Check selectable thumb controls and safe gesture routing
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/thumb_profile_settings_test.gd \
+          2>&1 | tee artifacts/thumb-profile-settings.log
+        grep -F 'SCRAPERX_THUMB_PROFILE_SETTINGS PASS' artifacts/thumb-profile-settings.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-profile-settings.log; then exit 1; fi
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/thumb_parkour_controls_test.gd \
+          2>&1 | tee artifacts/thumb-controls.log
+        grep -F 'SCRAPERX_THUMB_CONTROLS PASS' artifacts/thumb-controls.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-controls.log; then exit 1; fi
+    - name: Check thumb-zone controls through actual Main and native physics
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p artifacts/thumb-flow
+        timeout 90s xvfb-run -a -s '-screen 0 1280x900x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1280x900 \
+          res://tests/thumb_flow_input_test.tscn -- --quit-after-thumb-flow-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/thumb-flow" \
+          2>&1 | tee artifacts/thumb-flow-input.log
+        grep -F 'SCRAPERX_THUMB_FLOW_INPUT PASS' artifacts/thumb-flow-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-flow-input.log; then exit 1; fi
     - name: Check native-driven landing and slide camera feedback
       shell: bash
       run: |
@@ -273,6 +300,10 @@ jobs:
           artifacts/air-reach-arms.log
           artifacts/air-catch-input-godot.log
           artifacts/air-reach/
+          artifacts/thumb-profile-settings.log
+          artifacts/thumb-controls.log
+          artifacts/thumb-flow-input.log
+          artifacts/thumb-flow/
         if-no-files-found: error
         retention-days: 30
     - name: Export ChatGPT Android arm64 APK

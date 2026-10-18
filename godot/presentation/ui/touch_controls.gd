@@ -16,6 +16,8 @@ extends Control
 signal pressed_feedback
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
+const SettingsStore := preload("res://presentation/ui/settings_store.gd")
+const ThumbGestures := preload("res://presentation/ui/thumb_parkour_gestures.gd")
 
 const B_JUMP := &"jump"
 const B_ACTION := &"action"
@@ -88,6 +90,7 @@ var forklift_mode := false
 var yard_crane_mode := false
 var forklift_inch := 0.0
 var forklift_horn := false
+var control_profile: int = SettingsStore.TouchProfile.BUTTONS
 
 var _u := 1.0
 var _buttons := {}
@@ -113,6 +116,16 @@ var _hint_clock := 0.0
 var _moved := false
 var _looked := false
 var _clock := 0.0
+var _thumb := ThumbGestures.new()
+var _thumb_active := false
+var _thumb_ctx := {}
+var _thumb_reach_owned := false
+var _thumb_drop_identity: Array = []
+var _thumb_crouch_ok := false
+var _thumb_notice := ""
+var _thumb_notice_left := 0.0
+var _stick_tap_age := 0.0
+var _stick_tap_candidate := false
 
 
 func _ready() -> void:
@@ -145,8 +158,26 @@ func _ready() -> void:
 
 
 func set_touch_scale(value: float) -> void:
+	if not is_equal_approx(value, touch_scale):
+		reset_touches()
 	touch_scale = value
 	_layout()
+
+
+func set_control_profile(value: int) -> void:
+	var profile := value if value == SettingsStore.TouchProfile.THUMB_FLOW else SettingsStore.TouchProfile.BUTTONS
+	if control_profile == profile:
+		return
+	control_profile = profile
+	reset_touches()
+	_thumb_active = profile == SettingsStore.TouchProfile.THUMB_FLOW and not _operating \
+		and not _retrieving and not bool(_thumb_ctx.get("slingshot_seated", false))
+	_hint_clock = 0.0
+	_moved = false
+	_looked = false
+	if not _thumb_ctx.is_empty():
+		update_context(_thumb_ctx, 0.0)
+	queue_redraw()
 
 
 func button_center(id: StringName) -> Vector2:
@@ -170,6 +201,8 @@ func _layout() -> void:
 
 
 func _layout_in_safe_rect(safe: Rect2) -> void:
+	if _safe != safe:
+		reset_touches()
 	_safe = safe
 	# Fit the safe short edge as well as the design canvas. Small windows and
 	# inset displays must not inherit the global quarter-unit drawing floor.
@@ -293,6 +326,11 @@ func _verb_for(id: StringName) -> StringName:
 
 
 func reset_touches() -> void:
+	_thumb.reset()
+	_thumb_reach_owned = false
+	_thumb_drop_identity.clear()
+	_stick_tap_candidate = false
+	_stick_tap_age = 0.0
 	_stick_index = -1
 	_look_index = -1
 	_look_accum = Vector2.ZERO
@@ -305,9 +343,24 @@ func reset_touches() -> void:
 
 
 func take_look_delta() -> Vector2:
-	var value := _look_accum
+	var value := _look_accum + _thumb.take_look()
 	_look_accum = Vector2.ZERO
 	return value
+
+
+# Called once by the input owner before it consumes this frame's verbs.
+# Menu, rendering and native tick rate do not provide a second gesture clock.
+func advance_input(delta: float) -> void:
+	if not _thumb_active:
+		return
+	if _stick_tap_candidate:
+		_stick_tap_age += maxf(0.0, delta)
+	_thumb.advance(delta)
+	if _thumb.armed_feedback or _thumb.ready_feedback:
+		pressed_feedback.emit()
+		_thumb.armed_feedback = false
+		_thumb.ready_feedback = false
+	_flush_thumb_commands()
 
 
 func handle_touch(event: InputEvent) -> bool:
@@ -315,7 +368,7 @@ func handle_touch(event: InputEvent) -> bool:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed and not touch.canceled:
 			return _touch_down(touch.index, touch.position)
-		return _touch_up(touch.index)
+		return _touch_up(touch.index, touch.canceled)
 	if event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		return _touch_drag(drag.index, drag.position, drag.relative)
@@ -325,7 +378,7 @@ func handle_touch(event: InputEvent) -> bool:
 func _touch_down(index: int, at: Vector2) -> bool:
 	# A fresh press owns exactly one control, including finger-ID reuse.
 	# Clear every old owner so release cannot stop at an unrelated capture.
-	_touch_up(index)
+	_touch_up(index, true)
 	for id in _order:
 		var button: TouchButton = _buttons[id]
 		# Fade is presentation only. A newly enabled Cancel must receive the
@@ -347,10 +400,14 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
+		_stick_tap_age = 0.0
+		_stick_tap_candidate = _thumb_active
 		_update_stick_vector()
 		return true
 	if _look_index == -1:
 		_look_index = index
+		if _thumb_active and _safe.has_point(at) and at.x >= _safe.get_center().x:
+			_thumb.begin(index, at, _u)
 		return true
 	return false
 
@@ -359,6 +416,8 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	if index == _stick_index:
 		var throw := STICK_THROW * _u
 		var offset := at - _stick_origin
+		if offset.length() > maxf(6.0, LOOK_SLOP * _u):
+			_stick_tap_candidate = false
 		if not forklift_mode and not yard_crane_mode and offset.length() > throw * SPRINT_OVERSHOOT and -offset.y > absf(offset.x):
 			sprint_latched = true
 		if offset.length() > throw:
@@ -370,6 +429,15 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 		_update_stick_vector()
 		return true
 	if index == _look_index:
+		if index == _thumb.index:
+			var old_sector: int = _thumb.sector
+			_thumb.drag(at, relative)
+			if _thumb.sector == ThumbGestures.Sector.DROP and old_sector != _thumb.sector:
+				_thumb_drop_identity = _thumb_contact_identity()
+			_flush_thumb_commands()
+			_looked = _looked or _thumb.phase == ThumbGestures.Phase.LOOK
+			queue_redraw()
+			return true
 		_look_accum += relative
 		_looked = true
 		return true
@@ -385,15 +453,31 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	return false
 
 
-func _touch_up(index: int) -> bool:
+func _touch_up(index: int, cancelled: bool = false) -> bool:
 	var released := false
 	if index == _stick_index:
+		if _stick_tap_candidate and not cancelled and _stick_tap_age < ThumbGestures.ARM_SECONDS \
+				and _thumb_crouch_ok and router != null:
+			router.push_verb(&"crouch")
+			pressed_feedback.emit()
+		_stick_tap_candidate = false
 		_stick_index = -1
 		_stick_knob = Vector2.ZERO
 		move_vector = Vector2.ZERO
 		sprint_latched = false
 		released = true
 	if index == _look_index:
+		if index == _thumb.index:
+			_thumb.release(cancelled)
+			_flush_thumb_commands()
+			_look_accum += _thumb.take_look()
+			# Lifting can cancel this finger's unfulfilled reach. It never
+			# releases a grip the native solver has actually acquired.
+			if _thumb_reach_owned and not bool(_thumb_ctx.get("grounded", false)) \
+					and not bool(_thumb_ctx.get("hanging", false)) \
+					and not bool(_thumb_ctx.get("climbing", false)) and router != null:
+				router.push_verb(&"drop")
+			_thumb_reach_owned = false
 		_look_index = -1
 		released = true
 	for button in _buttons.values():
@@ -404,6 +488,45 @@ func _touch_up(index: int) -> bool:
 		_refresh_held_controls()
 		queue_redraw()
 	return released
+
+
+func _thumb_contact_identity() -> Array:
+	return [_thumb_ctx.get("traversal", 0), _thumb_ctx.get("left_hand_generation", 0),
+		_thumb_ctx.get("right_hand_generation", 0), _thumb_ctx.get("carrying", 0),
+		_thumb_ctx.get("grounded", false), _thumb_ctx.get("lowering", false),
+		_thumb_ctx.get("support_entity", 0)]
+
+
+func _flush_thumb_commands() -> void:
+	for command in _thumb.take_commands():
+		var verb: StringName = command
+		var allowed := true
+		var action: Dictionary = _thumb_ctx.get("action", {})
+		if command == &"primary":
+			# A tap cannot accidentally let go of a solo hand or swing.
+			# Those native Jump paths mean release, so use deliberate Drop.
+			verb = &"action" if bool(_thumb_ctx.get("single_hand_hold", false)) \
+				or bool(_thumb_ctx.get("swinging", false)) else &"jump"
+		if verb == &"action":
+			allowed = action.get("id", &"") != &""
+			if action.get("id", &"") == &"reach_hand":
+				allowed = bool(_thumb_ctx.get("missing_hand_grip_available", false))
+		elif verb == &"crouch":
+			allowed = _thumb_crouch_ok
+		elif verb == &"drop":
+			allowed = (bool(_thumb_ctx.get("drop_ok", false)) or int(_thumb_ctx.get("carrying", 0)) != 0) \
+				and _thumb_drop_identity == _thumb_contact_identity()
+		if allowed and router != null:
+			router.push_verb(verb)
+			if verb == &"action" and action.get("id", &"") == &"catch":
+				_thumb_reach_owned = true
+			_thumb_notice = "REACH · LIFT TO CANCEL" if _thumb_reach_owned else String(
+				action.get("label", "REACH") if verb == &"action" else verb).to_upper()
+			pressed_feedback.emit()
+		else:
+			_thumb_notice = "NO CLEAR GRIP" if verb == &"action" else "NOT AVAILABLE"
+		_thumb_notice_left = 0.8
+	queue_redraw()
 
 
 func _update_stick_vector() -> void:
@@ -425,6 +548,7 @@ func _update_stick_vector() -> void:
 # ctx is main.gd's per-frame read of native state (see _read_context there).
 func update_context(ctx: Dictionary, delta: float) -> void:
 	_clock += delta
+	_thumb_notice_left = maxf(0.0, _thumb_notice_left - delta)
 	if visible:
 		_hint_clock += delta
 	var hanging: bool = ctx["hanging"]
@@ -568,6 +692,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		_axis_names = ["HOIST", ""]
 	if _movement_blocked and _stick_index != -1:
 		_touch_up(_stick_index)
+	_update_thumb_context(ctx)
 
 	for button in _buttons.values():
 		if (not button.shown or not button.enabled) and button.index != -1:
@@ -577,6 +702,21 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_refresh_held_controls()
 	if visible:
 		queue_redraw()
+
+
+func _update_thumb_context(ctx: Dictionary) -> void:
+	var active := control_profile == SettingsStore.TouchProfile.THUMB_FLOW and not _operating \
+		and not _retrieving and not bool(ctx.get("slingshot_seated", false))
+	if active != _thumb_active:
+		reset_touches()
+		_thumb_active = active
+	_thumb_ctx = ctx
+	if bool(ctx.get("hanging", false)) or bool(ctx.get("climbing", false)) or bool(ctx.get("grounded", false)):
+		_thumb_reach_owned = false
+	_thumb_crouch_ok = _buttons[B_CROUCH].shown
+	if _thumb_active:
+		for id in [B_JUMP, B_ACTION, B_CROUCH, B_DROP]:
+			_buttons[id].shown = false
 
 
 func _refresh_held_controls() -> void:
@@ -599,7 +739,55 @@ func _draw() -> void:
 		_draw_button(_buttons[id])
 	if _operating:
 		_draw_pendant_labels()
-	_draw_hints()
+	if _thumb_active:
+		_draw_thumb_commands()
+	else:
+		_draw_hints()
+
+
+func _draw_thumb_commands() -> void:
+	var font := UiStyle.font_label()
+	var text_size := maxi(10, int(roundf(26.0 * _u)))
+	var home: Vector2 = _buttons[B_JUMP].center
+	var action: Dictionary = _thumb_ctx.get("action", {})
+	var primary := "REACH" if bool(_thumb_ctx.get("single_hand_hold", false)) \
+		or bool(_thumb_ctx.get("swinging", false)) else ("CLIMB UP" if bool(_thumb_ctx.get("hanging", false)) else "JUMP")
+	if _thumb.phase != ThumbGestures.Phase.COMMAND:
+		if _thumb_crouch_ok:
+			UiStyle.text_centered(self, font, "TAP: " + _buttons[B_CROUCH].label,
+				_stick_home + Vector2(0.0, 200.0) * _u, text_size, UiStyle.PAPER_DIM, int(5.0 * _u))
+		UiStyle.ring(self, home, 90.0 * _u, UiStyle.with_alpha(UiStyle.PAPER, 0.13), 3.0 * _u)
+		UiStyle.text_centered(self, font, "TAP: " + primary, home, text_size, UiStyle.PAPER, int(5.0 * _u))
+		UiStyle.text_centered(self, font, "HOLD: ACTIONS", home + Vector2(0.0, 40.0) * _u,
+			text_size, UiStyle.PAPER_DIM, int(5.0 * _u))
+		if _thumb_notice_left > 0.0:
+			UiStyle.text_centered(self, font, _thumb_notice, home + Vector2(-80.0, -160.0) * _u,
+				text_size, UiStyle.AMBER, int(5.0 * _u))
+		if _hint_clock < HINT_SECONDS:
+			var hint := _safe.position + Vector2(_safe.size.x * 0.5, _safe.size.y * 0.82)
+			UiStyle.text_centered(self, font, "LEFT: DRAG TO MOVE / TAP TO CROUCH · RIGHT: LOOK / TAP TO JUMP", hint,
+				text_size, UiStyle.PAPER, int(5.0 * _u))
+			UiStyle.text_centered(self, font, "HOLD STILL, THEN ↑ REACH · ↓ CROUCH · ← HOLD + LIFT TO DROP",
+				hint + Vector2(0.0, 44.0) * _u, text_size, UiStyle.PAPER_DIM, int(5.0 * _u))
+		return
+	var margin := Vector2(320.0, 280.0) * _u
+	var center := _thumb.origin.clamp(_safe.position + margin, _safe.end - margin)
+	UiStyle.disc(self, center, 230.0 * _u, UiStyle.with_alpha(UiStyle.INK, 0.65))
+	UiStyle.ring(self, center, _thumb.stroke, UiStyle.with_alpha(UiStyle.AMBER, 0.6), 3.0 * _u)
+	var drop_ok := bool(_thumb_ctx.get("drop_ok", false)) or int(_thumb_ctx.get("carrying", 0)) != 0
+	var labels := [[Vector2(0.0, -180.0), String(action.get("label", "REACH")), action.get("id", &"") != &""],
+		[Vector2(0.0, 180.0), _buttons[B_CROUCH].label, _thumb_crouch_ok],
+		[Vector2(-190.0, 0.0), "DROP", drop_ok], [Vector2(190.0, 0.0), "CANCEL", true]]
+	for entry in labels:
+		UiStyle.text_centered(self, font, entry[1], center + entry[0] * _u, text_size,
+			UiStyle.PAPER if entry[2] else UiStyle.PAPER_DIM, int(5.0 * _u))
+	if _thumb.sector == ThumbGestures.Sector.DROP:
+		var ready: bool = _thumb.drop_hold >= ThumbGestures.DROP_HOLD_SECONDS
+		draw_arc(center, _thumb.stroke + 12.0 * _u, -PI * 0.5,
+			-PI * 0.5 + TAU * _thumb.drop_hold / ThumbGestures.DROP_HOLD_SECONDS,
+			32, UiStyle.HAZARD if ready else UiStyle.AMBER, 8.0 * _u, true)
+		UiStyle.text_centered(self, font, "LIFT TO DROP" if ready and drop_ok else "HOLD TO ARM",
+			center, text_size, UiStyle.HAZARD if ready and drop_ok else UiStyle.AMBER, int(5.0 * _u))
 
 
 func _draw_button(button: TouchButton) -> void:

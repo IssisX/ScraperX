@@ -410,6 +410,8 @@ func frame(delta: float) -> Dictionary:
 	var forklift := {}
 	var yard_crane := Vector3.ZERO
 	if enabled and gameplay_active:
+		if touch != null:
+			touch.advance_input(delta)
 		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
 		if keyboard != Vector2.ZERO:

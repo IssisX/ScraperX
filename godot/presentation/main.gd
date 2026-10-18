@@ -775,6 +775,7 @@ func _apply_settings() -> void:
 	_router.gyro_aim = _settings.gyro_aim
 	_router.gyro_sensitivity = _settings.gyro_sensitivity
 	_touch.set_touch_scale(_settings.touch_scale)
+	_touch.set_control_profile(_settings.touch_profile)
 	_set_telemetry_visible(_settings.telemetry or _ci_mode)
 	# GRAPHICS
 	var viewport := get_viewport()
@@ -1437,10 +1438,13 @@ func _read_context() -> Dictionary:
 		"position": position,
 		"velocity": velocity,
 		"grounded": grounded,
+		"support_entity": int(_native.get_support_entity_id()),
 		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"single_hand_hold": single_hand_hold,
+		"left_hand_generation": int(landing.get("left_hand_generation", 0)),
+		"right_hand_generation": int(landing.get("right_hand_generation", 0)),
 		"missing_hand_grip_available": bool(landing.get("missing_hand_grip_available", false)),
 		"swinging": bool(landing.get("player_swinging", false)),
 		"swing_tuck_available": bool(landing.get("swing_tuck_available", false)),
