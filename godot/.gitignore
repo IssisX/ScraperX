@@ -1,0 +1,4 @@
+# Runtime bridge artifacts of the godot MCP server (.mcp.json). The server
+# creates this file with this entry when it is missing; committing it keeps a
+# run from leaving an untracked file behind.
+.mcp/
