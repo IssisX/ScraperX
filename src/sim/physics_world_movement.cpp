@@ -204,6 +204,49 @@ bool Simulation::PhysicsWorld::try_untuck(JPH::BodyInterface &bodies) noexcept {
     return true;
 }
 
+// request_up, made. up_move_ was chosen at the end of the last tick, from
+// the state this tick starts from (update_up_move), so the move made is the
+// move offered; each goes by the path its own control takes, so it is
+// tested, refused and counted as that control's.
+void Simulation::PhysicsWorld::resolve_up(StepCommands &commands) noexcept {
+    if (!commands.up_requested) {
+        return;
+    }
+    commands.up_requested = false;
+    switch (up_move_) {
+    case UpMove::None:
+        return;
+    case UpMove::Jump:
+    case UpMove::Precision:
+    case UpMove::Springboard:
+    case UpMove::ClimbUp:
+    case UpMove::JumpOff:
+    case UpMove::Launch:
+    case UpMove::Kick:
+        commands.jump_requested = true;
+        break;
+    case UpMove::Vault:
+    case UpMove::Mantle:
+    case UpMove::Climb:
+    case UpMove::TopOut:
+        commands.traversal_requested = true;
+        break;
+    case UpMove::Stand:
+        // Up from a crouch is up on to the feet: the crouch let go this
+        // tick, and no jump (update_crouch stands the body where it can).
+        commands.crouch_held = false;
+        break;
+    case UpMove::Catch:
+        commands.trapeze_action = true;
+        break;
+    case UpMove::LetGo:
+        commands.trapeze_drop = true;
+        break;
+    }
+    up_resolved_ = up_move_;
+    ++up_count_;
+}
+
 void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodies,
                                                         const StepCommands &commands) noexcept {
     if (traversal_state_ == TraversalState::Hanging) {
@@ -321,28 +364,38 @@ bool Simulation::PhysicsWorld::try_begin_jump_vault(JPH::BodyInterface &bodies) 
 // stride, its top a vault's rise above the soles, and room to stand there
 // (the mantle's own landing). The plant is a vault's path onto that spot;
 // complete_traversal jumps from it.
-bool Simulation::PhysicsWorld::try_begin_springboard(JPH::BodyInterface &bodies,
-                                                     const JPH::Vec3 relative_velocity) noexcept {
+auto Simulation::PhysicsWorld::springboard_ahead(
+    const JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity) const noexcept -> LedgeProbe {
     const JPH::Vec3 run(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
     const float speed = run.Length();
     if (speed < kSpringboardMinimumSpeed || carry_constraint_ != nullptr || balancing_) {
-        return false;
+        return {};
     }
     const JPH::Vec3 along = run / speed;
     const JPH::RVec3 at = bodies.GetPosition(player_id_);
     const LedgeProbe probe = probe_ledge(at, along, kVaultMinimumRise, kVaultMaximumRise, true, false,
                                          speed * kSpringboardStrideSeconds);
     if (!probe.valid) {
-        return false;
+        return {};
     }
     for (float depth = 0.1F; depth <= kSpringboardTopDepth + 1.0e-3F; depth += 0.1F) {
         const JPH::RVec3 over(probe.wall_point.GetX() + along.GetX() * depth, probe.ledge_point.GetY() + 0.3,
                               probe.wall_point.GetZ() + along.GetZ() * depth);
         JPH::RayCastResult hit;
         if (!cast_ray(over, JPH::Vec3(0.0F, -0.4F, 0.0F), hit) || std::abs(0.3F - 0.4F * hit.mFraction) > 0.06F) {
-            return false;
+            return {};
         }
     }
+    return probe;
+}
+
+bool Simulation::PhysicsWorld::try_begin_springboard(JPH::BodyInterface &bodies,
+                                                     const JPH::Vec3 relative_velocity) noexcept {
+    const LedgeProbe probe = springboard_ahead(bodies, relative_velocity);
+    if (!probe.valid) {
+        return false;
+    }
+    const JPH::RVec3 at = bodies.GetPosition(player_id_);
     begin_vault(bodies, probe, probe.landing_centre, probe.landing_body, at);
     traversal_springboard_ = true;
     return true;

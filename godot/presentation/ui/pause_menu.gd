@@ -446,6 +446,17 @@ func _select_controls_family(value: int) -> void:
 # [kind, value, name, description]; kind "verb" draws the shared binding,
 # "key" a keycap, "pad" a pad glyph, "icon" a touch icon.
 func _controls_rows(view_family: int) -> Array:
+	if view_family == UiStyle.Family.TOUCH and settings.touch_scheme == SettingsStore.TOUCH_SCHEME_GESTURES:
+		return [
+			["icon", &"move", "LEFT THUMB", "Move - the stick appears where you touch; push on past it to sprint"],
+			["icon", &"turn", "FLICK BACK", "Flick the stick from forward to back to turn about"],
+			["icon", &"look", "RIGHT THUMB", "Look - drag anywhere; Gyro Aim tilts"],
+			["icon", &"up", "SWIPE UP", "Jump, vault, climb: the move ahead, chosen for you"],
+			["icon", &"down", "SWIPE DOWN", "Slide, crouch, let go; hold to stay down"],
+			["icon", &"climb", "ACTION", "Take a rope, handle or load; drive; work a machine"],
+			["icon", &"chute", "CHUTE", "Open or stow the canopy (only while falling)"],
+			["icon", &"pause", "PAUSE", "This menu"],
+		]
 	if view_family == UiStyle.Family.TOUCH:
 		return [
 			["icon", &"move", "LEFT THUMB", "Move - the stick appears where you touch"],
@@ -531,6 +542,8 @@ func _build_settings_page() -> void:
 		"%.2fx")
 	_slider_row("TOUCH CONTROL SIZE", &"touch_scale", SettingsStore.TOUCH_SCALE_RANGE, 0.05, "%.0f%%",
 		100.0)
+	_choice_row("TOUCH CONTROLS", &"touch_scheme", SettingsStore.TOUCH_SCHEME_NAMES,
+		func() -> void: _controls_view.queue_redraw())
 	_toggle_row("VIBRATION", &"vibration")
 	_toggle_row("TELEMETRY OVERLAY", &"telemetry")
 	_end_page(PAGE_SETTINGS, _first_setting, "Settings are saved on this device when you resume.")

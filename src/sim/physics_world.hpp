@@ -29,6 +29,9 @@ public:
         double look_pitch = 0.0;   // radians, up positive
         bool jump_requested = false;
         bool traversal_requested = false;
+        // The gesture controls' "up": resolved at the top of the tick into
+        // Jump, Action or the trapeze's request (resolve_up).
+        bool up_requested = false;
         bool release_requested = false;
         bool crouch_held = false;
         bool sprint_held = false;
@@ -228,6 +231,9 @@ private:
     // A springboard off what is close ahead of a run, begun (see
     // kSpringboardMinimumSpeed); false where there is none.
     bool try_begin_springboard(JPH::BodyInterface &bodies, JPH::Vec3 relative_velocity) noexcept;
+    // The springboard's own test, nothing begun: the top it would plant on.
+    [[nodiscard]] LedgeProbe springboard_ahead(const JPH::BodyInterface &bodies,
+                                               JPH::Vec3 relative_velocity) const noexcept;
     [[nodiscard]] LedgeProbe probe_ledge(const JPH::RVec3 origin,
                                          const JPH::Vec3 facing,
                                          const float minimum_rise,
@@ -366,6 +372,12 @@ private:
 
     void apply_traversal_commands(JPH::BodyInterface &bodies,
                                   const StepCommands &commands) noexcept;
+
+    // request_up, made: up_move_ (chosen at the end of the last tick, the
+    // state this tick starts from) turned into the request that makes it.
+    void resolve_up(StepCommands &commands) noexcept;
+    // (Defined in physics_world_state.cpp, after the affordances.)
+    void update_up_move(const JPH::BodyInterface &bodies) noexcept;
 
     [[nodiscard]] bool try_begin_jump_vault(JPH::BodyInterface &bodies) noexcept;
 
@@ -537,6 +549,8 @@ private:
     [[nodiscard]] bool feet_on_ground(const JPH::RVec3 centre) const noexcept;
 
     [[nodiscard]] bool try_top_out(JPH::BodyInterface &bodies) noexcept;
+    // try_top_out's own test, nothing begun: the top a climb would go over on to.
+    [[nodiscard]] LedgeProbe top_out_ahead(const JPH::BodyInterface &bodies) const noexcept;
 
     void step_off_climb(JPH::BodyInterface &bodies) noexcept;
 
@@ -740,6 +754,11 @@ public:
     std::uint64_t rejected_traversal_count_ = 0;
     std::uint64_t aborted_traversal_count_ = 0;
     LedgeProbe affordance_{};
+    // The grounded affordance is a vault (a landing beyond), not a mantle.
+    bool affordance_vault_ = false;
+    UpMove up_move_ = UpMove::None;
+    UpMove up_resolved_ = UpMove::None;
+    std::uint64_t up_count_ = 0;
     // Step 2 movement. The direction a hang or a climb faces its structure;
     // each hand's hold, in the frame of the body it is on; the affordances a
     // grounded body is offered; and what the legs are doing.

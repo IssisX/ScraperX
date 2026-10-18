@@ -113,7 +113,7 @@ func _roll(reduced := false) -> bool:
 	if not await _wait_until(func() -> bool: return not bool(_ctx()["grounded"]), 3.0):
 		_touch(0, _main._touch.stick_home(), false)
 		return _fail("roll: never left the platform (at %s)" % str(_position()))
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	if not await _wait_until(func() -> bool:
 			return int(_native().get_landing_state()["count"]) > before, 3.0):
 		_touch(0, _main._touch.stick_home(), false)
@@ -146,7 +146,9 @@ func _roll(reduced := false) -> bool:
 		return _fail("roll: died")
 	if _felt(&"roll") < 1:
 		return _fail("roll: the hands felt no roll (haptics %s)" % str(_main.haptic_counts))
-	_tap(1, _center(&"crouch"))
+	# Up again: the button's toggle let go; swiped, the down let go on landing.
+	if not _gestures or bool(_native().is_player_crouched()):
+		_press(&"crouch", 1)
 	await _seconds(0.5)
 	_detail = "drop_m=%.2f normal_mps=%.2f forward_mps=%.2f balance_after=%.2f roll_travel_m=%.2f" % [
 		top - _position().y, float(landing["normal_speed"]), float(landing["tangent_speed"]),
@@ -164,16 +166,18 @@ func _trapeze() -> bool:
 	if not await _wait_until(func() -> bool: return _position().x > 30.5, 3.0):
 		_touch(0, _main._touch.stick_home(), false)
 		return _fail("trapeze: the run never reached the stand's edge (at %s)" % str(_position()))
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	await _frames(2)
 	_touch(0, _main._touch.stick_home(), false)
 	if not await _wait_until(func() -> bool: return str(_ctx()["action"]["label"]) == "GRAB THE BAR", 1.0):
 		return _fail("trapeze: GRAB THE BAR was never offered in the air (at %s)" % str(_position()))
-	_tap(1, _center(&"action"))
+	_press(&"action", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().get_trapeze_state()["harnessed"]), 1.0):
 		return _fail("trapeze: the hands never closed on the bar (at %s)" % str(_position()))
 	await _pose("trapeze_caught")
-	# Pump: Crouch pulls up as the bar passes plumb, and lets down at the ends.
+	# Pump: Crouch pulls up as the bar passes plumb, and lets down at the ends;
+	# swiped, a swipe down kept on the glass pulls, and lifting it lets down.
+	var pull_index := -1
 	var t := 0.0
 	var released := false
 	var peak := 0.0
@@ -187,15 +191,23 @@ func _trapeze() -> bool:
 		var w := float(trap["angular_speed"])
 		peak = maxf(peak, angle)
 		if absf(angle) < 0.12 and not bool(trap["pulled"]):
-			_tap(1, _center(&"crouch"))
+			if _gestures:
+				pull_index = _swipe(1.0, true)
+			else:
+				_press(&"crouch", 1)
 			await _frames(2)
 		elif absf(w) < 0.25 and bool(trap["pulled"]):
-			_tap(1, _center(&"crouch"))
+			if _gestures:
+				_lift(pull_index)
+			else:
+				_press(&"crouch", 1)
 			await _frames(2)
 		if angle > 0.82 and w > 0.0:
 			if peak > 0.82:
 				await _pose("trapeze_high")
-			_tap(1, _center(&"action"))
+			if _gestures and pull_index != -1:
+				_lift(pull_index)
+			_press(&"action", 1)
 			released = true
 	if not released:
 		return _fail("trapeze: the swing never grew to 0.82 rad in 40 s (peak %.2f)" % peak)

@@ -198,29 +198,37 @@ const SCENARIOS := {
 	"audio_fall": 9,
 }
 var _scenario := ""
+# The name run, as the result line prints it: a touch scenario's name with
+# _buttons on the end is the same scenario played on the BUTTONS scheme.
+var _scenario_name := ""
 
 func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
-	if not SCENARIOS.has(scenario):
+	var played := scenario.trim_suffix("_buttons")
+	if not SCENARIOS.has(played) or (played != scenario and not played.begins_with("touch_")):
 		return false
 	_main = main
-	_scenario = scenario
+	_scenario = played
+	_scenario_name = scenario
+	_gestures = played == scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[scenario]))):
+	main._settings.touch_scheme = SettingsStore.TOUCH_SCHEME_GESTURES if _gestures else SettingsStore.TOUCH_SCHEME_BUTTONS
+	main._apply_settings()
+	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[played]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
+	if played in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
 			"touch_wall_run", "touch_hang_drop",
 			"touch_hang_climb", "touch_monkey_bars", "touch_swing_launch", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
 	# from the first tick, exactly as the native falsifier holds it.
-	if scenario.begins_with("touch_hang"):
+	if played.begins_with("touch_hang"):
 		_stick_push(Vector2(0.0, -1.0))
 	# From the static-deck spawn (0, -8) straight down the crawl beam's lane,
 	# toward (-2, -15).
-	if scenario == "touch_crouch" or scenario == "touch_slide":
+	if played == "touch_crouch" or played == "touch_slide":
 		main._yaw = atan2(2.0, 7.0)
 		main._pitch = 0.0
 	_run.call_deferred()
@@ -451,6 +459,10 @@ func _run() -> void:
 			ok = await _audio_mix()
 		"audio_fall":
 			ok = await _audio_fall()
-	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
+	if _scenario.begins_with("touch_"):
+		var counts: Dictionary = _main._touch.gesture_counts
+		_detail += " scheme=%s swipes_up=%d swipes_down=%d flicks=%d" % ["gestures" if _gestures else "buttons",
+			int(counts[&"up"]), int(counts[&"down"]), int(counts[&"turn"])]
+	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario_name, _detail])
 	get_tree().paused = false
 	get_tree().quit(0 if ok else 31)

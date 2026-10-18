@@ -12,7 +12,7 @@ func _touch_jump() -> bool:
 	var settled: bool = await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not settled:
 		return _fail("never grounded at spawn")
-	_tap(0, _center(&"jump"))
+	_press(&"jump", 0)
 	var peak := [0.0]
 	var airborne_and_rising := func() -> bool:
 		peak[0] = maxf(peak[0], _velocity().y)
@@ -60,8 +60,24 @@ func _touch_move_look() -> bool:
 	# 4.9 m of walking at a 0.69 m stride is several footfalls, each a cue.
 	if _main._audio.steps < 4:
 		return _fail("walking %.2f m played %d footsteps" % [along, _main._audio.steps])
-	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f steps=%d" % [along, turned, speed,
-		_main._audio.steps]
+	# Looking up is a look, not a swipe, at a look's pace: 120 units over a
+	# third of a second (360 a second, under the swipe's 560) tilts the view
+	# by all of 0.36 rad, and nothing is jumped.
+	var pitch_start: float = _main._pitch
+	var swipes := int(_main._touch.gesture_counts[&"up"])
+	_touch(1, look_at, true)
+	for i in 20:
+		_drag(1, look_at + Vector2(0.0, -6.0 * (i + 1)), Vector2(0.0, -6.0))
+		await _frames(1)
+	_touch(1, look_at + Vector2(0.0, -120.0), false)
+	await _frames(2)
+	var tilted: float = _main._pitch - pitch_start
+	if absf(tilted - 0.36) > 0.02:
+		return _fail("a slow drag up tilted the view %.3f rad, expected 0.360" % tilted)
+	if int(_main._touch.gesture_counts[&"up"]) != swipes or not bool(_ctx()["grounded"]):
+		return _fail("a slow drag up was taken for a swipe")
+	_detail = "forward_m=%.2f turned_rad=%.3f tilted_rad=%.3f settle_mps=%.2f steps=%d" % [along, turned,
+		tilted, speed, _main._audio.steps]
 	return true
 
 # Gyro aim is inert until the player turns it on; then the device's own
@@ -118,11 +134,11 @@ func _touch_climb(expected: StringName, expected_state: int) -> bool:
 	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == expected, 2.0)
 	if not reached:
 		return _fail("ACTION never offered %s (got %s)" % [expected, _ctx()["action"]["id"]])
-	if _main._touch.button_label(&"action") != "CLIMB":
-		return _fail("ACTION button label was '%s'" % _main._touch.button_label(&"action"))
+	if _reads(&"action") != "CLIMB":
+		return _fail("ACTION read '%s'" % _reads(&"action"))
 	await _pose("climb_prompt")
 	var start_y := _position().y
-	_tap(0, _center(&"action"))
+	_press(&"action", 0)
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == expected_state, 0.2)
 	if not reached_2:
 		return _fail("ACTION did not commit traversal state %d" % expected_state)
@@ -149,7 +165,7 @@ func _touch_vault() -> bool:
 	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"climb", 2.5)
 	if not reached:
 		return _fail("ACTION never offered the vault rail")
-	_tap(1, _center(&"action"))
+	_press(&"action", 1)
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 3, 0.2)
 	if not reached_2:
 		return _fail("ACTION did not commit a vault (state %d)" % int(_native().get_traversal_state()))
@@ -186,7 +202,7 @@ func _touch_precision() -> bool:
 	if not sighted:
 		return _fail("the rail's top was never the sighted landing")
 	await _pose("precision_sight")
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var took_off: bool = await _wait_until(func() -> bool: return int(_native().get_precision_jump_count()) >= 1, 0.3)
 	if not took_off:
 		return _fail("JUMP did not take the sighted landing")
@@ -209,7 +225,7 @@ func _touch_speed_vault() -> bool:
 		return _fail("ACTION never offered the rail at a sprint")
 	var entry := _velocity().x
 	var offered_x := _position().x
-	_tap(1, _center(&"action"))
+	_press(&"action", 1)
 	var vaulting: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 3, 0.2)
 	if not vaulting:
 		return _fail("ACTION did not commit a vault")
@@ -231,7 +247,7 @@ func _touch_wall_run() -> bool:
 	var at_wall: bool = await _wait_until(func() -> bool: return _position().x > -12.5, 3.0)
 	if not at_wall:
 		return _fail("the sprint never reached the wall (x %.2f)" % _position().x)
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var stepped: bool = await _wait_until(func() -> bool: return int(_native().get_wall_step_count()) >= 2, 1.5)
 	if not stepped:
 		return _fail("no steps on the wall (%d)" % int(_native().get_wall_step_count()))
@@ -275,7 +291,7 @@ func _touch_wall_climb() -> bool:
 	var near: bool = await _wait_until(func() -> bool: return _position().z < -25.2, 3.0)
 	if not near:
 		return _fail("the sprint never reached the wall (z %.2f)" % _position().z)
-	_tap(2, _center(&"jump"))
+	_press(&"jump", 2)
 	var climbed: bool = await _wait_until(func() -> bool: return int(_native().get_wall_climb_count()) >= 1, 1.0)
 	if not climbed:
 		return _fail("the jump at the wall did not run up it")
@@ -308,11 +324,11 @@ func _touch_tuck() -> bool:
 	var near: bool = await _wait_until(func() -> bool: return _position().z < -8.6, 3.0)
 	if not near:
 		return _fail("the sprint never reached the take-off (z %.2f)" % _position().z)
-	_tap(2, _center(&"jump"))
+	_press(&"jump", 2)
 	var up: bool = await _wait_until(func() -> bool: return not bool(_native().is_player_grounded()), 0.4)
 	if not up:
 		return _fail("JUMP did not leave the ground")
-	_tap(3, _center(&"crouch"))
+	_press(&"crouch", 3)
 	var tucked: bool = await _wait_until(func() -> bool: return bool(_native().is_player_tucked()), 0.4)
 	if not tucked:
 		return _fail("CROUCH in the jump did not draw the legs up")
@@ -350,7 +366,7 @@ func _touch_flow() -> bool:
 	var effort := float(_main._audio.effort)
 	var breaths := int(_main._audio.breaths)
 	await _pose("flow")
-	_tap(2, _center(&"jump"))
+	_press(&"jump", 2)
 	var up: bool = await _wait_until(func() -> bool: return not bool(_native().is_player_grounded()), 0.4)
 	if not up:
 		_move(InputRouter.Device.TOUCH, 0.0)
@@ -394,7 +410,7 @@ func _touch_quickturn() -> bool:
 	await _face(Vector2(1.0, 0.0))
 	await _seconds(0.3)
 	var yaw0 := float(_main._yaw)
-	_tap(2, _center(&"turn"))
+	_press(&"turn", 2)
 	await _seconds(0.1)
 	var midway := wrapf(yaw0 - float(_main._yaw), -PI, PI)
 	await _seconds(0.3)
@@ -407,7 +423,7 @@ func _touch_quickturn() -> bool:
 	_move(InputRouter.Device.TOUCH, 1.0)
 	await _seconds(1.0)
 	var east := float(_native().get_player_linear_velocity().x)
-	_tap(2, _center(&"turn"))
+	_press(&"turn", 2)
 	await _seconds(0.9)
 	var back := float(_native().get_player_linear_velocity().x)
 	_move(InputRouter.Device.TOUCH, 0.0)
@@ -437,7 +453,7 @@ func _touch_springboard() -> bool:
 		_move(InputRouter.Device.TOUCH, 0.0)
 		return _fail("the sprint never reached the plate stack (x %.2f)" % _position().x)
 	var entry := _run_speed()
-	_tap(2, _center(&"jump"))
+	_press(&"jump", 2)
 	var planted: bool = await _wait_until(func() -> bool: return int(_native().get_springboard_count()) >= 1, 0.6)
 	if not planted:
 		_move(InputRouter.Device.TOUCH, 0.0)
@@ -474,13 +490,13 @@ func _touch_double_tap_vault() -> bool:
 	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"climb", 2.5)
 	if not reached:
 		return _fail("the approach never reached the vault rail")
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var lifted: bool = await _wait_until(
 		func() -> bool: return not bool(_native().is_player_grounded()), 0.3)
 	if not lifted:
 		return _fail("the first JUMP did not leave the ground")
 	await _seconds(0.08)
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	# Committed in the air, from the tap itself -- not by a buffered press
 	# that waited for the feet to find the rail top.
 	var landed := [false]
@@ -513,7 +529,7 @@ func _touch_slide() -> bool:
 	if not near:
 		return _fail("the sprint never reached the beam's approach (z %.2f)" % _position().z)
 	var entry := Vector2(_velocity().x, _velocity().z).length()
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	var slid: bool = await _wait_until(func() -> bool: return bool(_native().is_player_sliding()), 0.2)
 	if not slid:
 		return _fail("CROUCH at %.1f m/s did not slide" % entry)
@@ -571,7 +587,7 @@ func _touch_body() -> bool:
 	await _seconds(0.6)
 	# Crouched: the hips come down over the boots.
 	var hips_standing: float = (body.pelvis_world as Vector3).y - (body.foot_world[0] as Vector3).y
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.4):
 		return _fail("CROUCH did not crouch the native body")
 	await _seconds(0.6)
@@ -581,7 +597,7 @@ func _touch_body() -> bool:
 	if body.nearest_to(camera.global_position) < 0.1:
 		return _fail("crouched, the body comes %.2f m from the lens" % body.nearest_to(camera.global_position))
 	await _pose("body_crouched")
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	await _seconds(0.3)
 	_detail = "strides_m=%.2f/%.2f hips_m=%.2f->%.2f clearance_m=%.2f" % [strides[0], strides[1],
 		hips_standing, hips_crouched, clearance]
@@ -589,7 +605,7 @@ func _touch_body() -> bool:
 
 func _touch_crouch() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	if not _main._touch.is_button_shown(&"crouch") or _main._touch.button_label(&"crouch") != "CROUCH":
+	if _main._touch.is_button_shown(&"crouch") == _gestures or _reads(&"crouch") != "CROUCH":
 		return _fail("CROUCH was not offered standing on the deck")
 	_stick_push(Vector2(0.0, -1.0))
 	await _seconds(1.6)
@@ -599,7 +615,7 @@ func _touch_crouch() -> bool:
 	if bool(_native().is_player_crouched()):
 		return _fail("the body crouched before CROUCH was pressed")
 	await _pose("beam_blocks")
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	var crouched: bool = await _wait_until(
 		func() -> bool: return bool(_native().is_player_crouched()), 0.2)
 	if not crouched:
@@ -613,10 +629,10 @@ func _touch_crouch() -> bool:
 	await _seconds(0.4)
 	var passed_z := _position().z
 	var eye_crouched := _eye_over_soles()
-	if _main._touch.button_label(&"crouch") != "STAND":
+	if _reads(&"crouch") != "STAND":
 		return _fail("the crouch button did not read STAND while crouched")
 	await _pose("crouched")
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	var stood: bool = await _wait_until(
 		func() -> bool: return not bool(_native().is_player_crouched()), 0.2)
 	if not stood:
@@ -640,9 +656,9 @@ func _touch_hang(climb: bool) -> bool:
 		return _fail("pushing into the wall never produced a hang")
 	_touch(0, _main._touch.stick_home(), false)
 	await _seconds(0.3)
-	if not _main._touch.is_button_shown(&"drop"):
+	if not _offers_drop():
 		return _fail("DROP was not offered while hanging")
-	if _main._touch.button_label(&"jump") != "CLIMB UP":
+	if _reads(&"jump") != "CLIMB UP":
 		return _fail("JUMP did not relabel to CLIMB UP while hanging")
 	# Both hands on the native ledge, not near it: the rendered wrists sit on
 	# the grip points the native ledge point implies.
@@ -655,7 +671,7 @@ func _touch_hang(climb: bool) -> bool:
 		return _fail("the arms do not read on screen: " + view_fault)
 	await _pose("hanging")
 	if climb:
-		_tap(1, _center(&"jump"))
+		_press(&"jump", 1)
 		var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 2, 0.2)
 		if not reached_2:
 			return _fail("CLIMB UP did not commit the mantle")
@@ -668,7 +684,7 @@ func _touch_hang(climb: bool) -> bool:
 			return _fail("mantle from hang never landed")
 		_detail = "top_y=%.2f grip_error_m=%.4f" % [_position().y, grip_error]
 		return _position().y > 4.4
-	_tap(1, _center(&"drop"))
+	_press(&"drop", 1)
 	var reached_4: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
 	if not reached_4:
 		return _fail("DROP did not release the hang")
@@ -802,7 +818,7 @@ func _touch_hook() -> bool:
 		return _fail("HOOK was offered before the hook was taken")
 	if _ctx()["action"]["id"] != &"hook_take":
 		return _fail("ACTION offered '%s' beside the rack, expected TAKE HOOK" % str(_ctx()["action"]["id"]))
-	_tap(0, _center(&"action"))
+	_press(&"action", 0)
 	var taken: bool = await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 0.5)
 	if not taken:
 		return _fail("TAKE HOOK did not take the hook")
@@ -842,9 +858,9 @@ func _touch_hook() -> bool:
 	if not lifted:
 		return _fail("holding HOOK never reeled the body off the deck (rise %.2f)" % (_position().y - y0))
 	var risen := _position().y - y0
-	if not _main._touch.is_button_shown(&"drop"):
+	if not _offers_drop():
 		return _fail("DROP was not offered on the line")
-	_tap(2, _center(&"drop"))
+	_press(&"drop", 2)
 	var free: bool = await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 0, 0.5)
 	if not free:
 		return _fail("DROP did not let go of the line")
@@ -867,7 +883,7 @@ func _touch_hook_rope() -> bool:
 		return _fail("never reached the hook's rack (at %s)" % str(_position()))
 	if _ctx()["action"]["id"] != &"hook_take":
 		return _fail("ACTION offered '%s' at the rack, expected TAKE HOOK" % str(_ctx()["action"]["id"]))
-	_tap(0, _center(&"action"))
+	_press(&"action", 0)
 	var taken: bool = await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 0.5)
 	if not taken:
 		return _fail("TAKE HOOK did not take the hook")
@@ -929,7 +945,7 @@ func _touch_swing_launch() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))
 	await _frames(2)
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
 	if not caught:
 		return _fail("a running JUMP under the bars never caught the first bar")
@@ -942,7 +958,7 @@ func _touch_swing_launch() -> bool:
 	if not rising:
 		return _fail("the last bar's swing never came up its front")
 	var release_y := _position().y
-	_tap(2, _center(&"jump"))
+	_press(&"jump", 2)
 	var thrown: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
 	if not thrown or int(_native().get_swing_launch_count()) != 1:
 		return _fail("JUMP OFF at the front of the swing did not throw the body on")
@@ -982,7 +998,7 @@ func _board_yard_zipline(device: int) -> bool:
 	await _seconds(0.4)
 	# Face down the line and jump straight up into the bar.
 	await _face(Vector2(0.0, 1.0))
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var caught: bool = await _wait_until(
 		func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5)
 	if not caught:
@@ -1026,10 +1042,10 @@ func _touch_zipline() -> bool:
 	var device := InputRouter.Device.TOUCH
 	if not await _board_yard_zipline(device):
 		return false
-	if not _main._touch.is_button_shown(&"drop"):
+	if not _offers_drop():
 		return _fail("DROP was not offered on the zipline")
-	if _main._touch.button_label(&"jump") != "JUMP OFF":
-		return _fail("JUMP read '%s' on the zipline, expected JUMP OFF" % _main._touch.button_label(&"jump"))
+	if _reads(&"jump") != "JUMP OFF":
+		return _fail("JUMP read '%s' on the zipline, expected JUMP OFF" % _reads(&"jump"))
 	if not String(_ctx()["action"]["detail"]).begins_with("ZIPLINE"):
 		return _fail("the HUD did not name the zipline ('%s')" % String(_ctx()["action"]["detail"]))
 	await _seconds(0.4)
@@ -1075,7 +1091,7 @@ func _touch_zipline() -> bool:
 		return _fail("the ride never got up to speed (%.1f m/s)" % fastest)
 	_move_dir(device, Vector2.ZERO)
 	await _frames(2)
-	_tap(1, _center(&"drop"))
+	_press(&"drop", 1)
 	var landed: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.5)
 	_detail = "fastest_mps=%.1f landed=(%.1f, %.2f, %.1f) deaths=%d" % [
 		fastest, _position().x, _position().y, _position().z, int(_native().get_death_count())]
@@ -1089,14 +1105,14 @@ func _touch_monkey_bars() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))
 	await _frames(2)
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
 	if not caught:
 		return _fail("a running JUMP under the bars never caught the first bar")
-	if not _main._touch.is_button_shown(&"drop"):
+	if not _offers_drop():
 		return _fail("DROP was not offered while swinging")
-	if _main._touch.button_label(&"jump") != "JUMP OFF":
-		return _fail("JUMP read '%s' while swinging, expected JUMP OFF" % _main._touch.button_label(&"jump"))
+	if _reads(&"jump") != "JUMP OFF":
+		return _fail("JUMP read '%s' while swinging, expected JUMP OFF" % _reads(&"jump"))
 	await _seconds(0.2)
 	var grip_error: float = _main._arms.anchored_error()
 	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
@@ -1117,7 +1133,7 @@ func _touch_monkey_bars() -> bool:
 	if not forward:
 		return _fail("the last bar's swing never came forward fast")
 	var fling_vx := _velocity().x
-	_tap(2, _center(&"drop"))
+	_press(&"drop", 2)
 	var let_go: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
 	if not let_go:
 		return _fail("DROP did not let go of the bar")
@@ -1137,7 +1153,7 @@ func _touch_pipe_gallery() -> bool:
 	var at_edge: bool = await _wait_until(func() -> bool: return _position().x > 25.5, 2.0)
 	if not at_edge:
 		return _fail("the run never reached the start stand's edge (x %.2f)" % _position().x)
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
 	if not caught:
 		return _fail("the JUMP from the stand's edge never caught a pipe")
@@ -1159,9 +1175,9 @@ func _touch_pipe_gallery() -> bool:
 		return _fail("swung bar to bar, the hands felt no reach (haptics %s)" % str(_main.haptic_counts))
 	_touch(0, _main._touch.stick_home(), false)
 	await _seconds(0.3)
-	if _main._touch.button_label(&"jump") != "CLIMB UP":
-		return _fail("JUMP read '%s' on the lip, expected CLIMB UP" % _main._touch.button_label(&"jump"))
-	_tap(1, _center(&"jump"))
+	if _reads(&"jump") != "CLIMB UP":
+		return _fail("JUMP read '%s' on the lip, expected CLIMB UP" % _reads(&"jump"))
+	_press(&"jump", 1)
 	var up: bool = await _wait_until(
 		func() -> bool: return bool(_native().is_player_grounded()) and _position().y > 5.4, 3.0)
 	if not up:

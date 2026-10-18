@@ -38,14 +38,10 @@ const MAX_SIM_FRAME_DELTA := 0.1
 # stretched bands, the fork and the whole predicted arc are in front of the
 # rider rather than straight overhead.
 const SLING_VIEW_BELOW_AIM := 0.45
-# A Jump pressed this long before touchdown fires on the grounded tick. Input
-# timing assistance only (GDD 7.2): it never jumps from anything the native
-# does not report as ground at the moment it fires.
+# A Jump (or a swipe up) made while a mantle or vault is still under way,
+# which the native takes no request in, is sent when the body is free again
+# if that is within this long. Input timing assistance only (GDD 7.2).
 const JUMP_BUFFER_SECONDS := 0.12
-# A second Jump this soon after one was sent goes straight to the native,
-# which vaults if the takeoff could have (its own window is 0.30 s of ticks;
-# this is a frame's slack wider so the native, not frame timing, decides).
-const DOUBLE_TAP_SECONDS := 0.35
 # The quickturn (Mirror's Edge's): half a turn of the view, to the right, over
 # this long -- quick, but a turn, not a cut.
 const QUICKTURN_SECONDS := 0.22
@@ -83,7 +79,7 @@ var _force_touch := false
 var _uitest_scenario := ""
 var _paused := false
 var _jump_buffer := 0.0
-var _since_jump_sent := INF
+var _up_buffer := 0.0
 var _canopy: Node3D
 var _sling_was_aiming := false
 # The forklift's heading last frame, as a view yaw: driving it, the view turns
@@ -322,7 +318,8 @@ func _process(delta: float) -> void:
 	_native.set_facing(facing.x, facing.y)
 	_native.set_look_pitch(_pitch)
 	_dispatch(intent["verbs"], delta)
-	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
+	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]) or
+		(bool(intent["down_held"]) and _down_hold_counts))
 	# A hand line (the pitman lift's) is hauled while ACTION is held.
 	_hauling = bool(intent.get("action_held", false)) and _ctx.get("action", {}).get("id", &"") == &"haul"
 	_native.set_lift_haul(_hauling)
@@ -376,6 +373,7 @@ func _process(delta: float) -> void:
 		add_child(_canopy)
 	_canopy.update(bool(_ctx.get("chute", false)), _camera.global_position, _yaw, _arms.riser_tops, delta)
 	_update_feedback(delta)
+	_update_gesture_hints()
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.caption = _audio.caption if _settings.captions else ""
@@ -496,6 +494,7 @@ func _apply_settings() -> void:
 	_router.gyro_aim = _settings.gyro_aim
 	_router.gyro_sensitivity = _settings.gyro_sensitivity
 	_touch.set_touch_scale(_settings.touch_scale)
+	_touch.gestures = _settings.touch_scheme == SettingsStore.TOUCH_SCHEME_GESTURES
 	_set_telemetry_visible(_settings.telemetry or _ci_mode)
 	# GRAPHICS
 	var viewport := get_viewport()
@@ -684,14 +683,23 @@ func _dispatch(verbs: Array, delta: float) -> void:
 		match verb:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
+				# Sent whatever the body is doing: the native jumps it, kicks it off
+				# the wall it runs, vaults the takeoff, or holds it for the landing.
 				_crouch_toggled = false
-				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"] or _ctx["swinging"]:
-					_native.request_jump()
-					_since_jump_sent = 0.0
-				else:
-					if _since_jump_sent <= DOUBLE_TAP_SECONDS:
-						_native.request_jump()
+				_down_until = DOWN_UNTIL_UP
+				_native.request_jump()
+				if _committed():
 					_jump_buffer = JUMP_BUFFER_SECONDS
+			&"up":
+				# Sliding down a climb's holds, up takes hold again; otherwise it is
+				# the native's move from where the body is.
+				var holding_on: bool = _ctx["climbing"] and _crouch_toggled
+				_crouch_toggled = false
+				_down_until = DOWN_UNTIL_UP
+				if not holding_on and not _native.request_up():
+					_up_buffer = JUMP_BUFFER_SECONDS
+			&"down":
+				_down()
 			&"action":
 				_crouch_toggled = false
 				_perform_action()
@@ -700,9 +708,13 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_quickturn_left = PI
 			&"crouch":
 				# Does what the button says: crouched, it asks to stand. On the
-				# trapeze it pulls up on the bar, or lets down.
+				# trapeze it pulls up on the bar, or lets down. On a climb's
+				# holds it slides down them, or holds on.
 				if bool(_ctx["trapeze_hanging"]):
 					_crouch_toggled = not bool(_ctx["trapeze_pulled"])
+				elif bool(_ctx["climbing"]):
+					_crouch_toggled = not _crouch_toggled
+					_down_until = DOWN_CLIMB
 				else:
 					_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
@@ -751,14 +763,91 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"telemetry":
 				_settings.telemetry = not _settings.telemetry
 				_set_telemetry_visible(_settings.telemetry or _ci_mode)
-	_since_jump_sent += delta
 	if _jump_buffer > 0.0:
 		if _ctx["jump_ok"]:
 			_native.request_jump()
-			_since_jump_sent = 0.0
 			_jump_buffer = 0.0
 		else:
 			_jump_buffer = maxf(0.0, _jump_buffer - delta)
+	if _up_buffer > 0.0:
+		if _native.request_up():
+			_up_buffer = 0.0
+		else:
+			_up_buffer = maxf(0.0, _up_buffer - delta)
+
+
+# A mantle, vault or lowering under way: the native takes no jump in it.
+func _committed() -> bool:
+	var traversal := int(_ctx["traversal"])
+	return traversal == TRAVERSAL_MANTLING or traversal == TRAVERSAL_VAULTING or \
+		traversal == TRAVERSAL_LOWERING
+
+
+# What a swipe down does from here, in the order the hands let go: off the
+# hook's line, the trapeze's pull (held), off a ledge or a bar, down a climb's
+# holds, a load put down; on the ground with an edge close behind and the
+# body nearly still, over it into a hang; already crouched, nothing (a swipe
+# up stands); running, a slide; else a crouch; in the air, the legs drawn up
+# (a tuck, or a braced landing).
+func _down_route() -> StringName:
+	if int(_ctx.get("hook_state", 0)) != 0:
+		return &"hook_release"
+	if bool(_ctx["trapeze_hanging"]):
+		return &"pull"
+	if _ctx["hanging"] or _ctx["swinging"]:
+		return &"let_go"
+	if _ctx["climbing"]:
+		return &"slide_down"
+	if int(_ctx["traversal"]) != TRAVERSAL_NONE:
+		return &""
+	if int(_ctx["carrying"]) != 0:
+		return &"set_down"
+	if not _ctx["grounded"]:
+		return &"tuck"
+	var velocity: Vector3 = _ctx["velocity"]
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if _ctx["edge_drop"] and speed < EDGE_DROP_MAX_MPS:
+		return &"drop_down"
+	if _ctx["crouched"]:
+		return &""
+	return &"slide" if speed >= SLIDE_MPS else &"crouch"
+
+
+func _down() -> void:
+	var route := _down_route()
+	# The thumb kept on the glass keeps the body down only where down is a
+	# crouch, a pull or a slide down the holds, never after letting go.
+	_down_hold_counts = route in [&"crouch", &"slide", &"tuck", &"slide_down", &"pull"]
+	match route:
+		&"hook_release":
+			_native.request_hook_release()
+		&"let_go", &"drop_down":
+			_native.request_release()
+		&"set_down":
+			_native.request_set_down()
+		&"slide_down":
+			_crouch_toggled = true
+			_down_until = DOWN_CLIMB
+		&"crouch", &"slide":
+			_crouch_toggled = true
+			_down_until = DOWN_GROUND
+			_down_frames = 0
+		&"tuck":
+			_crouch_toggled = true
+			_down_until = DOWN_AIR
+
+
+# What a swipe would do, drawn where the thumb swipes (touch_controls).
+func _update_gesture_hints() -> void:
+	var up := int(_native.get_up_move())
+	_touch.up_hint = UP_HINTS[up] if up < UP_HINTS.size() else ""
+	_touch.up_hint_special = not up in [UP_NONE, UP_JUMP, UP_PRECISION]
+	if _ctx["climbing"] and _crouch_toggled:
+		_touch.up_hint = "HOLD ON"
+	var route := _down_route()
+	_touch.down_hint = DOWN_HINTS.get(route, "")
+	_touch.down_hint_special = route in [&"hook_release", &"pull", &"let_go", &"slide_down", &"set_down",
+		&"drop_down"]
 
 # Contextual Action is a gateway (Governing Law 27): it climbs what the
 # native affordance reports, takes hold of what is in reach, or hooks what is

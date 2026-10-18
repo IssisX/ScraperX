@@ -579,6 +579,26 @@ enum class TraversalState : std::uint8_t {
     Swinging = 6,
 };
 
+// The gesture controls' one "up" (request_up): the move the body makes
+// upward from where it is, chosen here from what is ahead of it.
+enum class UpMove : std::uint8_t {
+    None = 0,          // nothing to do now (a mantle under way, a seat)
+    Jump = 1,          // a plain jump; in the air, held for the landing
+    Precision = 2,     // the sighted landing jumped (M3)
+    Springboard = 3,   // a run's foot planted on a top close ahead
+    Vault = 4,         // over what is ahead (a speed vault at a run)
+    Mantle = 5,        // up on to what is ahead
+    Climb = 6,         // the hold ahead at hand height taken
+    Stand = 7,         // crouched: stand up, no jump
+    ClimbUp = 8,       // hanging: pull up over the lip
+    TopOut = 9,        // on a climb's holds at the top: over on to it
+    JumpOff = 10,      // on a climb's holds: jump off them
+    Launch = 11,       // on a bar or zipline: thrown on as the hands open
+    Kick = 12,         // running a wall: kicked off it
+    Catch = 13,        // the trapeze's bar in reach: taken
+    LetGo = 14,        // on the trapeze: its bar let go
+};
+
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
 // -- the player is still under normal air control, with drag layered on top.
 enum class FallState : std::uint8_t {
@@ -753,6 +773,11 @@ struct Snapshot final {
     std::uint32_t world_solid_rejected = 0;
     std::uint64_t rejected_traversal_count = 0;
     std::uint64_t aborted_traversal_count = 0;
+    // What request_up would do now, and what the last one did (and how many
+    // were taken).
+    UpMove up_move = UpMove::None;
+    UpMove up_resolved = UpMove::None;
+    std::uint64_t up_count = 0;
 
     // --- WO-008 fall / parachute / checkpoint -----------------------------
     FallState fall_state = FallState::Grounded;
@@ -1081,6 +1106,11 @@ public:
     [[nodiscard]] bool set_look_pitch(double radians) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
+    // The gesture controls' "up", one-shot: the native picks the move, as
+    // snapshot.up_move says (UpMove), and makes it through the same paths
+    // as Jump and Action. Refused while a mantle, vault or lowering is under
+    // way, which takes no request.
+    [[nodiscard]] bool request_up() noexcept;
     // Let go: of a hung ledge or a climb's holds; on the ground, with an edge
     // behind the body and a drop beyond it, lower over it into a hang.
     [[nodiscard]] bool request_release() noexcept;
@@ -1281,6 +1311,7 @@ private:
     double look_pitch_input_ = 0.0;
     bool jump_requested_ = false;
     bool traversal_requested_ = false;
+    bool up_requested_ = false;
     bool release_requested_ = false;
     bool crouch_input_ = false;
     bool sprint_input_ = false;

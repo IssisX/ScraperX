@@ -49,10 +49,41 @@ const TRAVERSAL_HANGING := 1
 const TRAVERSAL_CLIMBING := 4
 # Parkour step 2: hanging from a bar or pipe overhead, swinging hand over hand.
 const TRAVERSAL_SWINGING := 6
+const TRAVERSAL_MANTLING := 2
+const TRAVERSAL_VAULTING := 3
+const TRAVERSAL_LOWERING := 5
+# The native's UpMove (simulation.hpp): what a swipe up would do, as drawn.
+const UP_NONE := 0
+const UP_JUMP := 1
+const UP_PRECISION := 2
+const UP_HINTS := ["", "JUMP", "JUMP", "SPRINGBOARD", "VAULT", "CLIMB", "GRAB", "STAND", "CLIMB UP",
+	"CLIMB OVER", "JUMP OFF", "JUMP OFF", "KICK", "GRAB", "LET GO"]
+const DOWN_HINTS := {&"hook_release": "LET GO", &"pull": "HOLD: PULL", &"let_go": "LET GO",
+	&"slide_down": "SLIDE DOWN", &"set_down": "PUT DOWN", &"drop_down": "DROP DOWN", &"slide": "SLIDE",
+	&"crouch": "CROUCH", &"tuck": "TUCK"}
+# Down with an edge close behind lowers over it only from nearly still; on the
+# ground at a run (the native slides from 5 m/s) it is a slide.
+const EDGE_DROP_MAX_MPS := 1.5
+const SLIDE_MPS := 5.0
+# How long the gesture scheme's down holds the body (the crouch toggle): until
+# a swipe up; a slide's until the slide ends; the air's (a tuck, a braced
+# landing) until the feet come down; a climb's (the fireman's slide) until
+# the hands leave the holds. DOWN_GROUND is a down just made on the ground,
+# a slide or a crouch: the native's next ticks say which.
+const DOWN_UNTIL_UP := 0
+const DOWN_GROUND := 1
+const DOWN_SLIDE := 2
+const DOWN_AIR := 3
+const DOWN_CLIMB := 4
+const DOWN_GROUND_FRAMES := 3
 # The crouch toggle (C, right-stick click, the touch button). Held Ctrl
 # crouches too, for as long as it is held; the native decides whether the
 # body can crouch or stand.
 var _crouch_toggled := false
+var _down_until := DOWN_UNTIL_UP
+var _down_frames := 0
+# The swipe's thumb, kept down, keeps the body down (main.gd _down).
+var _down_hold_counts := false
 # The legs drawn up in this flight (the native's tuck): the toggle that did it
 # lets go when the feet come down.
 var _tucked_this_flight := false
@@ -101,12 +132,33 @@ func _read_context() -> Dictionary:
 	# Off the trapeze, the arms' pull (the crouch toggle while hanging) ends.
 	if _trapeze_was_hanging and not trapeze_hanging:
 		_crouch_toggled = false
+		_down_hold_counts = false
 	_trapeze_was_hanging = trapeze_hanging
 	if bool(_native.is_player_tucked()):
 		_tucked_this_flight = true
 	elif grounded and _tucked_this_flight:
 		_tucked_this_flight = false
 		_crouch_toggled = false
+	var sliding := bool(_native.is_player_sliding())
+	match _down_until:
+		DOWN_GROUND:
+			_down_frames += 1
+			if sliding:
+				_down_until = DOWN_SLIDE
+			elif _down_frames >= DOWN_GROUND_FRAMES:
+				_down_until = DOWN_UNTIL_UP
+		DOWN_SLIDE:
+			if not sliding:
+				_crouch_toggled = false
+				_down_until = DOWN_UNTIL_UP
+		DOWN_AIR:
+			if grounded:
+				_crouch_toggled = false
+				_down_until = DOWN_UNTIL_UP
+		DOWN_CLIMB:
+			if traversal != TRAVERSAL_CLIMBING:
+				_crouch_toggled = false
+				_down_until = DOWN_UNTIL_UP
 	var lift: Dictionary = _native.get_lift_state()
 	var lift_machine := int(lift["machine"])
 	var support := int(_native.get_support_entity_id())
@@ -275,7 +327,8 @@ func _read_context() -> Dictionary:
 		"velocity": velocity,
 		"grounded": grounded,
 		"crouched": bool(_native.is_player_crouched()),
-		"sliding": bool(_native.is_player_sliding()),
+		"crouch_toggled": _crouch_toggled,
+		"sliding": sliding,
 		"wall_running": bool(_native.is_player_wall_running()),
 		"wall_climbing": bool(_native.is_player_wall_climbing()),
 		"wall_normal": _native.get_player_wall_normal(),

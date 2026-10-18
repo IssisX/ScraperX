@@ -84,6 +84,16 @@ bool Simulation::request_traversal() noexcept {
     return true;
 }
 
+bool Simulation::request_up() noexcept {
+    if (snapshot_.traversal_state == TraversalState::Mantling ||
+        snapshot_.traversal_state == TraversalState::Vaulting ||
+        snapshot_.traversal_state == TraversalState::Lowering) {
+        return false;
+    }
+    up_requested_ = true;
+    return true;
+}
+
 bool Simulation::request_release() noexcept {
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
                          snapshot_.traversal_state == TraversalState::Climbing ||
@@ -460,6 +470,7 @@ void Simulation::step_fixed() noexcept {
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
     commands.traversal_requested = traversal_requested_;
+    commands.up_requested = up_requested_;
     commands.release_requested = release_requested_;
     commands.crouch_held = crouch_input_;
     commands.sprint_held = sprint_input_;
@@ -507,6 +518,7 @@ void Simulation::step_fixed() noexcept {
     hook_take_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
+    up_requested_ = false;
     release_requested_ = false;
     parachute_toggle_requested_ = false;
     pick_up_requested_ = false;

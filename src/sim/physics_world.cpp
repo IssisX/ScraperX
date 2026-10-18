@@ -500,6 +500,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             commands.move_input_z = 0.0;
             commands.jump_requested = false;
             commands.traversal_requested = false;
+            commands.up_requested = false;
             commands.crouch_held = false;
             commands.sprint_held = false;
             commands.pick_up_requested = false;
@@ -521,11 +522,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             commands.move_input_z = 0.0;
             commands.jump_requested = false;
             commands.traversal_requested = false;
+            commands.up_requested = false;
             commands.crouch_held = false;
             commands.sprint_held = false;
             commands.pick_up_requested = false;
         }
     }
+
+    resolve_up(commands);
 
     // Harnessed into the slingshot's pouch or the swing's seat, the body
     // is the machine's: no crouch, carry, rig or traversal begins.
@@ -788,6 +792,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
 
     update_affordance(bodies);
     update_precision_sight(bodies);
+    update_up_move(bodies);
     read_state();
 }
 

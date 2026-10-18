@@ -64,7 +64,7 @@ func _matron_state() -> Dictionary:
 func _crouch_on(device: int, on: bool) -> bool:
 	if bool(_native().is_player_crouched()) == on:
 		return true
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	return await _wait_until(func() -> bool: return bool(_native().is_player_crouched()) == on, 1.5)
 
 
@@ -290,7 +290,7 @@ func _matron_line_touch(device: int) -> bool:
 	if not near or int(_native().get_death_count()) != 0:
 		return _fail("she did not come for the player on the stand (deaths %d)" % int(_native().get_death_count()))
 	await _face(Vector2(0.0, -1.0))
-	_tap(1, _center(&"jump"))
+	_press(&"jump", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5):
 		return _fail("the jump from the stand never took the trolley's bar (at %s)" % str(_position()))
 	# Down the line, braked over the last stretch; she comes after.
@@ -322,7 +322,7 @@ func _matron_line_touch(device: int) -> bool:
 	if not stopped:
 		return _fail("the ride never stopped at the bottom")
 	await _frames(2)
-	_tap(1, _center(&"drop"))
+	_press(&"drop", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()) and _position().y < 145.0, 2.5):
 		return _fail("DROP at the bottom did not put the body down on 143 m (at %s)" % str(_position()))
 	# Away along 143's south band, then a look back up the line at her

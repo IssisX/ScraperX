@@ -31,6 +31,10 @@ public:
     [[nodiscard]] std::int64_t get_precision_landing_count() const;
     [[nodiscard]] bool request_jump();
     [[nodiscard]] bool request_traversal();
+    [[nodiscard]] bool request_up();
+    [[nodiscard]] std::int64_t get_up_move() const;
+    [[nodiscard]] std::int64_t get_up_resolved() const;
+    [[nodiscard]] std::int64_t get_up_count() const;
     [[nodiscard]] bool request_release();
     [[nodiscard]] bool request_parachute();
     [[nodiscard]] bool set_crouch_input(bool held);

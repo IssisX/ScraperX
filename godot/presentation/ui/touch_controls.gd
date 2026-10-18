@@ -7,6 +7,14 @@ extends Control
 # permanent buttons because they are locomotion, not interactions; Crouch is
 # a toggle that reads STAND while the native reports the body crouched.
 #
+# GESTURES (the default, settings_store TOUCH_SCHEME_GESTURES) takes the run's
+# moves off the glass: a right thumb that sets down and flicks up or down is a
+# swipe (the verbs up and down, which the native resolves into the move ahead
+# of the body), the stick pulled back hard turns about, and Jump, Crouch, Drop
+# and Turn are not drawn. A thumb that drags is look, as ever: a drag that
+# goes across is look from its first movement; one that goes up or down is
+# held back for at most SWIPE_SECONDS, until it is known not to be a swipe.
+#
 # Every touch index is owned by exactly one thing -- a button, the stick, or
 # look -- from press to release, so two thumbs never fight over a control.
 # Action buttons fire on press (the whole point of a jump button is the
@@ -46,6 +54,25 @@ const STICK_DEADZONE := 0.1
 const SPRINT_OVERSHOOT := 1.25
 const SPRINT_HOLD := 0.5
 const LOOK_SLOP := 26.0
+# A swipe: the thumb travels this far (scaled units) up or down within
+# SWIPE_SECONDS of touching down, SWIPE_STEEPNESS times more up or down than
+# across: 560 units a second at the least, quicker than a look's drag.
+const SWIPE_UNITS := 90.0
+const SWIPE_SECONDS := 0.16
+const SWIPE_STEEPNESS := 1.6
+# Under this travel a look touch has not yet gone anywhere.
+const GESTURE_SLOP := 16.0
+# The quickturn by the stick: a run reversed, the stick pulled back past
+# FLICK_BACK of its throw within FLICK_SECONDS of pushing forward past
+# FLICK_FORWARD (a stick pulled back from rest walks backward, so the body can
+# back away from something with its eyes on it). The run goes on the other
+# way: the stick held back reads as forward until it leaves the back half.
+const FLICK_BACK := 0.85
+const FLICK_FORWARD := 0.5
+const FLICK_SECONDS := 0.14
+const FLICK_HALF := -0.3
+const LOOK_UNDECIDED := 0
+const LOOK_DRAG := 1
 const HIT_SLOP := 1.22
 const APPEAR_RATE := 8.0
 const HINT_SECONDS := 16.0
@@ -72,6 +99,17 @@ var router: Node
 var move_vector := Vector2.ZERO
 var sprint_latched := false
 var touch_scale := 1.0
+var gestures := true
+# What a swipe up and down would do now (main.gd, from the native's choice),
+# and whether it is more than a jump or a crouch: then it is drawn where the
+# thumb swipes.
+var up_hint := ""
+var down_hint := ""
+var up_hint_special := false
+var down_hint_special := false
+# The thumb that swiped down is still on the glass.
+var down_held := false
+var gesture_counts := {&"up": 0, &"down": 0, &"turn": 0}
 
 var _u := 1.0
 var _buttons := {}
@@ -84,6 +122,22 @@ var _stick_zone := Rect2()
 var _safe := Rect2()
 var _look_index := -1
 var _look_accum := Vector2.ZERO
+var _look_kind := LOOK_DRAG
+var _look_start := Vector2.ZERO
+var _look_start_clock := 0.0
+var _look_held := Vector2.ZERO
+# A thumb that swiped, until it lifts: it neither looks nor swipes again.
+var _swipe_index := -1
+var _down_index := -1
+# On foot or on holds, in the gesture scheme: swipes and the stick's flick
+# are read. In a seat or at a machine's controls the buttons are as they are
+# in BUTTONS.
+var _gestures_live := true
+var _turn_allowed := true
+var _stick_flipped := false
+var _stick_forward_clock := -INF
+# The stick's own forward (not turned about), as it last read.
+var _stick_raw_forward := 0.0
 var _hint_clock := 0.0
 var _moved := false
 var _looked := false
@@ -193,11 +247,26 @@ func reset_touches() -> void:
 	_stick_index = -1
 	_look_index = -1
 	_look_accum = Vector2.ZERO
+	_look_held = Vector2.ZERO
+	_swipe_index = -1
+	_down_index = -1
+	down_held = false
+	_stick_flipped = false
+	_stick_raw_forward = 0.0
 	move_vector = Vector2.ZERO
 	sprint_latched = false
 	for button in _buttons.values():
 		button.index = -1
 	queue_redraw()
+
+
+# What a swipe up (&"up") or down (&"down") would do now, as drawn.
+func gesture_hint(verb: StringName) -> String:
+	return up_hint if verb == &"up" else down_hint
+
+
+func gestures_live() -> bool:
+	return _gestures_live
 
 
 func take_look_delta() -> Vector2:
@@ -237,10 +306,17 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
+		_stick_flipped = false
+		_stick_forward_clock = -INF
+		_stick_raw_forward = 0.0
 		_update_stick_vector()
 		return true
 	if _look_index == -1:
 		_look_index = index
+		_look_start = at
+		_look_start_clock = _clock
+		_look_held = Vector2.ZERO
+		_look_kind = LOOK_UNDECIDED if _gestures_live else LOOK_DRAG
 		return true
 	return false
 
@@ -249,7 +325,9 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	if index == _stick_index:
 		var throw := STICK_THROW * _u
 		var offset := at - _stick_origin
-		if offset.length() > throw * SPRINT_OVERSHOOT and -offset.y > absf(offset.x):
+		# Turned about by the stick, the thumb pushing on back is the run's forward.
+		var ahead := offset.y if _stick_flipped else -offset.y
+		if offset.length() > throw * SPRINT_OVERSHOOT and ahead > absf(offset.x):
 			sprint_latched = true
 		if offset.length() > throw:
 			# The base follows a thumb that overshoots, so the stick never
@@ -259,9 +337,23 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 		_stick_knob = offset
 		_update_stick_vector()
 		return true
+	if index == _swipe_index:
+		return true
 	if index == _look_index:
-		_look_accum += relative
 		_looked = true
+		if _look_kind == LOOK_DRAG:
+			_look_accum += relative
+			return true
+		_look_held += relative
+		var travel := at - _look_start
+		if travel.length() < GESTURE_SLOP * _u:
+			return true
+		if absf(travel.x) >= absf(travel.y):
+			_settle_look()
+			return true
+		if absf(travel.y) >= SWIPE_UNITS * _u and absf(travel.y) >= SWIPE_STEEPNESS * absf(travel.x) \
+				and _clock - _look_start_clock <= SWIPE_SECONDS:
+			_swipe(index, &"up" if travel.y < 0.0 else &"down")
 		return true
 	for button in _buttons.values():
 		if button.index != index:
@@ -270,6 +362,7 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 				and at.distance_to(button.press_position) > LOOK_SLOP * _u:
 			button.index = -1
 			_look_index = index
+			_look_kind = LOOK_DRAG
 			queue_redraw()
 		return true
 	return false
@@ -279,11 +372,20 @@ func _touch_up(index: int) -> bool:
 	if index == _stick_index:
 		_stick_index = -1
 		_stick_knob = Vector2.ZERO
+		_stick_raw_forward = 0.0
 		move_vector = Vector2.ZERO
 		sprint_latched = false
 		queue_redraw()
 		return true
+	if index == _swipe_index:
+		_swipe_index = -1
+		if index == _down_index:
+			_down_index = -1
+			down_held = false
+		return true
 	if index == _look_index:
+		if _look_kind == LOOK_UNDECIDED:
+			_settle_look()
 		_look_index = -1
 		return true
 	for button in _buttons.values():
@@ -294,16 +396,54 @@ func _touch_up(index: int) -> bool:
 	return false
 
 
+# The look touch is look after all: what was held back goes to the view.
+func _settle_look() -> void:
+	_look_kind = LOOK_DRAG
+	_look_accum += _look_held
+	_look_held = Vector2.ZERO
+
+
+func _swipe(index: int, verb: StringName) -> void:
+	_look_index = -1
+	_look_held = Vector2.ZERO
+	_swipe_index = index
+	if verb == &"down":
+		_down_index = index
+		down_held = true
+	gesture_counts[verb] += 1
+	if router != null:
+		router.push_verb(verb)
+	pressed_feedback.emit()
+
+
 func _update_stick_vector() -> void:
+	# Held forward until this moment: a thumb held still sends no drags.
+	if _stick_raw_forward >= FLICK_FORWARD:
+		_stick_forward_clock = _clock
 	var throw := STICK_THROW * _u
 	var value := _stick_knob / throw
 	var magnitude := value.length()
 	if magnitude < STICK_DEADZONE:
 		move_vector = Vector2.ZERO
 		sprint_latched = false
+		_stick_flipped = false
+		_stick_raw_forward = 0.0
 		return
 	var scaled := minf(1.0, (magnitude - STICK_DEADZONE) / (1.0 - STICK_DEADZONE))
 	move_vector = Vector2(value.x, -value.y) / magnitude * scaled
+	_stick_raw_forward = move_vector.y
+	if move_vector.y > FLICK_HALF:
+		_stick_flipped = false
+		if move_vector.y >= FLICK_FORWARD:
+			_stick_forward_clock = _clock
+	elif _gestures_live and _turn_allowed and not _stick_flipped and move_vector.y <= -FLICK_BACK \
+			and _clock - _stick_forward_clock <= FLICK_SECONDS:
+		_stick_flipped = true
+		gesture_counts[&"turn"] += 1
+		if router != null:
+			router.push_verb(&"turn")
+	if _stick_flipped:
+		move_vector = -move_vector
 	if move_vector.y < SPRINT_HOLD:
 		sprint_latched = false
 	if scaled > 0.3:
@@ -315,11 +455,18 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_clock += delta
 	if visible:
 		_hint_clock += delta
+	if _look_index != -1 and _look_kind == LOOK_UNDECIDED and _clock - _look_start_clock > SWIPE_SECONDS:
+		_settle_look()
 	var hanging: bool = ctx["hanging"]
 	var climbing: bool = ctx.get("climbing", false)
 	var swinging: bool = ctx.get("swinging", false)
+	var driving: bool = ctx.get("forklift_driving", false)
+	var craning: bool = ctx.get("crane_operating", false)
+	var seated: bool = ctx.get("sling_seated", false) or ctx.get("sling_recovering", false) or \
+		ctx.get("swing_seated", false)
+	_gestures_live = gestures and not (driving or craning or seated)
 	var jump: TouchButton = _buttons[B_JUMP]
-	jump.shown = true
+	jump.shown = not _gestures_live
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
@@ -327,8 +474,6 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	jump.icon = &"climb" if hanging else &"jump"
 	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing or swinging else "JUMP")
 	jump.tone = TONE_PRIMARY
-	var driving: bool = ctx.get("forklift_driving", false)
-	var craning: bool = ctx.get("crane_operating", false)
 	if driving or craning:
 		jump.icon = &"up"
 		jump.label = "RAISE"
@@ -336,7 +481,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
-	action.shown = true
+	# Swiped, the climbs and the letting go are the swipes': Action is drawn
+	# only for what it alone does.
+	action.shown = not _gestures_live or (act["id"] != &"" and
+		not act["id"] in [&"climb", &"climb_up", &"let_go", &"trapeze"])
 	# While hanging, Jump already reads CLIMB UP (the same native mantle);
 	# a second identical button beside it is noise, so Action rests.
 	action.enabled = act["id"] != &"" and not hanging
@@ -347,7 +495,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
 	# body lowers it over into a hang.
 	var drop: TouchButton = _buttons[B_DROP]
-	drop.shown = ctx.get("drop_ok", hanging)
+	drop.shown = ctx.get("drop_ok", hanging) and not _gestures_live
 	if ctx.get("sling_seated", false) or ctx.get("sling_recovering", false) or ctx.get("swing_seated", false):
 		drop.label = "LEAVE"
 	else:
@@ -377,13 +525,20 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	crane_button.enabled = craning or ctx.get("crane_able", false)
 	crane_button.label = "WALK" if craning else "CRANE"
 	crane_button.tone = TONE_PRIMARY if craning else TONE_NORMAL
-	_buttons[B_TURN].shown = not (hanging or climbing or swinging or driving or craning or ctx.get("sling_seated", false) or
-		ctx.get("sling_recovering", false) or ctx.get("swing_seated", false) or ctx.get("trapeze_hanging", false))
+	_turn_allowed = not (hanging or climbing or swinging or driving or craning or seated or
+		ctx.get("trapeze_hanging", false))
+	_buttons[B_TURN].shown = _turn_allowed and not gestures
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not hanging and not climbing
+	crouch.shown = not hanging and not _gestures_live
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
+	if climbing:
+		# On a climb's holds: slide down them (the fireman's slide), or hold on.
+		var sliding_down: bool = ctx.get("crouch_toggled", false)
+		crouch.icon = &"up" if sliding_down else &"down"
+		crouch.label = "HOLD ON" if sliding_down else "SLIDE DOWN"
+		crouch.tone = TONE_SAFE if sliding_down else TONE_NORMAL
 	if driving or craning:
 		crouch.icon = &"down"
 		crouch.label = "LOWER"
@@ -477,6 +632,7 @@ func _draw_stick() -> void:
 
 
 func _draw_hints() -> void:
+	_draw_gesture_hints()
 	if _hint_clock > HINT_SECONDS or (_moved and _looked):
 		return
 	var alpha := clampf(_hint_clock * 2.0, 0.0, 1.0) * clampf(HINT_SECONDS - _hint_clock, 0.0, 1.0)
@@ -491,3 +647,23 @@ func _draw_hints() -> void:
 			UiStyle.with_alpha(UiStyle.PAPER, 0.7 * alpha), 4.0 * _u)
 		UiStyle.text_centered(self, font, "DRAG TO LOOK", at, size,
 			UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
+
+
+# Where the right thumb swipes: what up and down would do, when it is more
+# than a jump or a crouch.
+func _draw_gesture_hints() -> void:
+	if not _gestures_live:
+		return
+	var at := Vector2(_safe.position.x + _safe.size.x * 0.8, _safe.position.y + _safe.size.y * 0.5)
+	var size := int(roundf(26.0 * _u))
+	var font := UiStyle.font_label()
+	if up_hint_special and not up_hint.is_empty():
+		UiStyle.draw_icon(self, &"up", at + Vector2(0.0, -86.0 * _u), 26.0 * _u,
+			UiStyle.with_alpha(UiStyle.AMBER, 0.9), 4.0 * _u)
+		UiStyle.text_centered(self, font, up_hint, at + Vector2(0.0, -42.0 * _u), size,
+			UiStyle.with_alpha(UiStyle.PAPER, 0.9), int(roundf(6.0 * _u)))
+	if down_hint_special and not down_hint.is_empty():
+		UiStyle.text_centered(self, font, down_hint, at + Vector2(0.0, 42.0 * _u), size,
+			UiStyle.with_alpha(UiStyle.PAPER, 0.9), int(roundf(6.0 * _u)))
+		UiStyle.draw_icon(self, &"down", at + Vector2(0.0, 86.0 * _u), 26.0 * _u,
+			UiStyle.with_alpha(UiStyle.AMBER, 0.9), 4.0 * _u)

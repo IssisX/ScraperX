@@ -404,7 +404,8 @@ bool Simulation::PhysicsWorld::feet_on_ground(const JPH::RVec3 centre) const noe
 // body is. The ledge is looked for where the player looks, then along
 // the structure's normal: a climber on a pipe faced from an angle looks
 // round at the deck it means to climb onto.
-bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept {
+auto Simulation::PhysicsWorld::top_out_ahead(
+    const JPH::BodyInterface &bodies) const noexcept -> LedgeProbe {
     const JPH::RVec3 origin = bodies.GetPosition(player_id_);
     LedgeProbe probe;
     if (!facing_.IsNearZero()) {
@@ -414,6 +415,12 @@ bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept 
         probe = probe_ledge(origin, traversal_normal_, kMantleMinimumRise, kMantleMaximumRise,
                             true, true);
     }
+    return probe;
+}
+
+bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept {
+    const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+    const LedgeProbe probe = top_out_ahead(bodies);
     if (!probe.valid) {
         return false;
     }

@@ -198,12 +198,12 @@ func _service_c5(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return _standing_above(706.6) and _position().x > 0.9, 2.0):
 		return _fail("C5: the vault over the manifold did not land (at %s)" % str(_position()))
 	# Under the duct bank, crouched, and up again past it.
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.3):
 		return _fail("C5: CROUCH did not crouch the body before the duct bank")
 	if not await _go(device, Vector2(5.6, -145.5), 0.08, 8.0):
 		return _fail("C5: the crawl under the duct bank stalled at %s" % str(_position()))
-	_tap(1, _center(&"crouch"))
+	_press(&"crouch", 1)
 	if not await _wait_until(func() -> bool: return not bool(_native().is_player_crouched()), 0.5):
 		return _fail("C5: STAND did not stand the body up past the duct bank")
 	# Onto the tank and up its standpipe onto the platform over it.
@@ -338,7 +338,7 @@ func _service_c4(device: int) -> bool:
 		return _fail("C4: the walk to the runway's edge stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _wait_until(func() -> bool: return bool(_ctx()["drop_ok"]) and \
-			(device != InputRouter.Device.TOUCH or _main._touch.is_button_shown(&"drop")), 1.5):
+			(device != InputRouter.Device.TOUCH or _offers_drop()), 1.5):
 		return _fail("C4: DROP was not offered with the runway's edge behind (at %s)" % str(_position()))
 	_drop(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 1.5):

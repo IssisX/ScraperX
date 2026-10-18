@@ -1377,6 +1377,47 @@ jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matro
 `audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
 while she keeps to 154 m and up (see to-do 11).
 
+**The moves by gesture (2026-10-18; to-do 9, the owner's goal).** On touch the run's moves no longer
+take a button. The right thumb drags to look, as before; set down and flicked up it is "up", flicked
+down it is "down", and the game picks the move from what is ahead of the body. Up: the native's new
+request (Simulation::request_up), which it resolves from where the body is into the move the old
+Jump or Action made (snapshot.up_move says which, before it is made, and the touch layer draws it
+where the thumb swipes): on the ground a sighted precision jump, a run's springboard off a top deep
+enough for a foot, a vault over what is ahead (a speed vault at a run), a mantle up on to it, the
+hold ahead taken, else a jump; crouched, stand (no jump); sliding, a jump out of the slide at its
+speed; hanging, climb up; on a climb's holds, over the top where there is one, else jump off them;
+on a bar or a zipline, thrown on; in the air, a kick off the wall being run, the trapeze's bar
+taken, else a jump held for the landing (or the vault the takeoff could have been); on the
+trapeze, let go. Down (the presentation's routing, by the native's state): off the hook's line;
+off a ledge, a bar or a zipline; down a ladder's rungs (the fireman's slide, until the hands leave
+the holds); a load put down; standing with an edge close behind, over it into a hang; running, a
+slide, back on the feet as it ends; walking or standing, a crouch until a swipe up; in the air,
+the legs drawn up, a roll on landing at a run; on the trapeze, a swipe down kept on the glass pulls
+up on the bar and lifting it lets down. The stick reversed (from forward to back within 0.14 s)
+turns the body about, its run going on the other way; a stick pulled back from rest walks
+backward. A swipe is 90 units up or down within 0.16 s of touching down (560 a second at the
+least), 1.6 times more up or down than across; a drag across is look from its first movement, and
+an up-and-down drag is held back from the view for at most 0.16 s until it is known not to be a
+swipe. Jump, Crouch, Drop and Turn are not drawn, nor Action where what it offers is a move; Action,
+Hook, Chute, the crane's switch and Pause stay, and in a seat or at a machine's controls the
+buttons are as before. Settings, TOUCH CONTROLS: GESTURES (the default) or BUTTONS, the layout as it
+was. Fixed on the way: in the air the presentation dropped every Jump but one 0.35 s after a jump,
+so the wall kick could never be made and the native's coyote time never reached; every Jump is now
+sent and the native decides. On the buttons, Crouch on a climb's holds slides down them, and lets go
+of itself when the climb ends. Decided by Claude (the owner's conflicts): a top deep enough for a
+foot is springboarded at a run, a rail too thin for one vaulted; a ledge in reach is mantled, not
+jumped at; up from a crouch stands, up from a slide jumps. Proof: native `up` (new: each move made
+by request_up alone, the move offered first and the move made matched: a springboard a stride short
+of the plate stack and a jump 3 m short, the rail vaulted walking and speed-vaulted at 8 m/s, the
+mantle, the climb up from a hang, the ladder taken, jumped off, and topped out on to the 176 ring,
+the bars reached and launched off, four wall kicks, a stand with no jump, a slide jumped out of at
+7.9 m/s, the trapeze's bar taken in the air and let go), and `determinism`, `save`, `parkour`,
+`jumpbuffer`, `swing`, `trapeze`; every touch scenario plays on the gestures (its result line counts
+the swipes and flicks), `touch_move_look` now also tilting the view by a slow drag up that is not a
+swipe; six play again on the buttons (`touch_jump_buttons`, `touch_vault_buttons`,
+`touch_double_tap_vault_buttons`, `touch_crouch_buttons`, `touch_quickturn_buttons`,
+`touch_hang_climb_buttons`).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1420,6 +1461,8 @@ fill in after).**
    starts, so the moves those
    add (shoving, stomping, hanging the body's weight on a lever) are built into the gestures, not
    added as buttons first.
+   Done 2026-10-18: swipes up and down and the stick reversed, the game choosing the move; the
+   buttons kept as a setting.
 10. The crane's end of the line (owner, 2026-10-18: "a correct end-effector like a clamp and/or grip
    ... and that we can control them easily"; "multiple ways to grip things"): a lifting magnet hung
    from the hook, switched from the radio remote, for every steel load (rated force, gripping only
@@ -1430,7 +1473,7 @@ fill in after).**
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her
    there by the routes she can use (a lift she calls and rides, the ladder, a line down), a route
-   planner over the tower's levels. Sequenced after 10 and before 9.
+   planner over the tower's levels. Sequenced after 10 and before 4's route hint.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

@@ -61,6 +61,10 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_jump);
     godot::ClassDB::bind_method(godot::D_METHOD("request_traversal"),
                                 &ScraperXSimulation::request_traversal);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_up"), &ScraperXSimulation::request_up);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_up_move"), &ScraperXSimulation::get_up_move);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_up_resolved"), &ScraperXSimulation::get_up_resolved);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_up_count"), &ScraperXSimulation::get_up_count);
     godot::ClassDB::bind_method(godot::D_METHOD("request_release"),
                                 &ScraperXSimulation::request_release);
     godot::ClassDB::bind_method(godot::D_METHOD("request_parachute"),
@@ -400,6 +404,22 @@ bool ScraperXSimulation::request_jump() {
 
 bool ScraperXSimulation::request_traversal() {
     return simulation_->request_traversal();
+}
+
+bool ScraperXSimulation::request_up() {
+    return simulation_->request_up();
+}
+
+std::int64_t ScraperXSimulation::get_up_move() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().up_move);
+}
+
+std::int64_t ScraperXSimulation::get_up_resolved() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().up_resolved);
+}
+
+std::int64_t ScraperXSimulation::get_up_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().up_count);
 }
 
 bool ScraperXSimulation::request_release() {

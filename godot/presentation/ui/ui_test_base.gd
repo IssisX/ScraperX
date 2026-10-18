@@ -8,6 +8,7 @@ extends Node
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const InputRouter := preload("res://presentation/ui/input_router.gd")
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
+const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 
 # The native's TraversalState and the tower's entity id, as main.gd reads them.
 const TRAVERSAL_NONE := 0
@@ -20,6 +21,13 @@ const KEY_CARRY_BRAKE_MPS2 := 5.0
 var _main: Node
 var _capture_prefix := ""
 var _detail := ""
+# The touch scheme under test (settings_store TOUCH_SCHEME_*): the gestures,
+# the game's default, unless the scenario's name ends in _buttons
+# (ui_test_driver). A pad or a keyboard has no scheme.
+var _gestures := true
+# The right thumb's swipes take turns on two touch indices, so one can follow
+# another at once.
+var _swipe_index := 5
 
 func _fail(reason: String) -> bool:
 	_detail = "reason=" + reason
@@ -47,8 +55,16 @@ func _go(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
 	return await _walk_to(device, target, tolerance, budget, device == InputRouter.Device.KEYBOARD_MOUSE)
 
 # Presses what reads CLIMB UP on the device under test while hanging: on
-# touch the jump button relabels to it; on a pad or keyboard it is Action.
+# touch the jump button relabels to it (swiped, up reads it, or CLIMB OVER
+# at a climb's top); on a pad or keyboard it is Action.
 func _climb_up(device: int) -> bool:
+	if _gesturing(device):
+		var offered: bool = await _wait_until(
+			func() -> bool: return _main._touch.gesture_hint(&"up") in ["CLIMB UP", "CLIMB OVER"], 1.5)
+		if not offered:
+			return false
+		_swipe(-1.0)
+		return true
 	if device == InputRouter.Device.TOUCH:
 		var relabelled: bool = await _wait_until(
 			func() -> bool: return _main._touch.button_label(&"jump") == "CLIMB UP", 1.5)
@@ -87,18 +103,25 @@ func _leap(device: int, amount: float, caught: Callable, budget: float) -> bool:
 func _jump(device: int) -> void:
 	match device:
 		InputRouter.Device.TOUCH:
-			_tap(2, _center(&"jump"))
+			if _gestures:
+				_swipe(-1.0)
+			else:
+				_tap(2, _center(&"jump"))
 		InputRouter.Device.GAMEPAD:
 			_button(JOY_BUTTON_A)
 		_:
 			_key(KEY_SPACE, true)
 			_key(KEY_SPACE, false)
 
-# One press of Drop on the device under test: the touch button, pad B, Q.
+# One press of Drop on the device under test: the touch button (swiped,
+# down), pad B, Q.
 func _drop(device: int) -> void:
 	match device:
 		InputRouter.Device.TOUCH:
-			_tap(1, _center(&"drop"))
+			if _gestures:
+				_swipe(1.0)
+			else:
+				_tap(1, _center(&"drop"))
 		InputRouter.Device.GAMEPAD:
 			_button(JOY_BUTTON_B)
 		_:
@@ -146,16 +169,119 @@ func _offered(id: StringName, label: String, detail: String = "") -> bool:
 		_action_label() == label and \
 		(detail.is_empty() or String(_ctx()["action"]["detail"]) == detail), 1.5)
 
-# One press of the Action verb on the device under test.
+# One press of the Action verb on the device under test. Swiped, what Action
+# offers that is a move is the swipe's: a climb, a climb up, the trapeze's bar
+# taken or let go, up; letting go of a bar, down.
 func _act(device: int) -> void:
 	match device:
 		InputRouter.Device.TOUCH:
+			if _gestures and _act_by_swipe():
+				return
 			_tap(1, _center(&"action"))
 		InputRouter.Device.GAMEPAD:
 			_button(JOY_BUTTON_X)
 		_:
 			_key(KEY_E, true)
 			_key(KEY_E, false)
+
+func _act_by_swipe() -> bool:
+	match StringName(_ctx()["action"]["id"]):
+		&"climb", &"climb_up", &"trapeze":
+			_swipe(-1.0)
+			return true
+		&"let_go":
+			_swipe(1.0)
+			return true
+	return false
+
+# One press of a run's verb on touch, at touch `index` for the buttons: Jump,
+# Crouch (STAND when crouched), Drop, Turn or Action. Swiped: up, down (up to
+# stand), down, the stick flicked back, and as _act.
+func _press(verb: StringName, index: int) -> void:
+	if not _gestures:
+		_tap(index, _center(verb))
+		return
+	match verb:
+		&"jump":
+			_swipe(-1.0)
+		&"crouch":
+			_swipe(-1.0 if bool(_native().is_player_crouched()) else 1.0)
+		&"drop":
+			_swipe(1.0)
+		&"turn":
+			_stick_flick()
+		&"action":
+			if not _act_by_swipe():
+				_tap(index, _center(&"action"))
+
+# What a run's verb reads on the glass: its button's label; swiped, the
+# swipe's hint (Jump and Action that climbs: up; Drop: down; Crouch: down,
+# or up -- STAND -- when crouched).
+func _reads(verb: StringName) -> String:
+	if not _gestures:
+		return _main._touch.button_label(verb)
+	match verb:
+		&"jump", &"action":
+			return _main._touch.gesture_hint(&"up")
+		&"drop":
+			return _main._touch.gesture_hint(&"down")
+		&"crouch":
+			return _main._touch.gesture_hint(&"up" if bool(_native().is_player_crouched()) else &"down")
+	return _main._touch.button_label(verb)
+
+# Drop is offered: its button drawn; swiped, down lets go or drops down, and
+# the button is not drawn.
+func _offers_drop() -> bool:
+	if not _gestures:
+		return _main._touch.is_button_shown(&"drop")
+	return not _main._touch.is_button_shown(&"drop") and \
+		_main._touch.gesture_hint(&"down") in ["LET GO", "DROP DOWN", "PUT DOWN"]
+
+func _gesturing(device: int) -> bool:
+	return device == InputRouter.Device.TOUCH and _gestures
+
+# Where the right thumb swipes: high on the look side, clear of every button.
+func _swipe_point() -> Vector2:
+	return Vector2(_viewport_size().x * 0.85, _viewport_size().y * 0.3)
+
+# A swipe of the right thumb, up (-1) or down (+1): set down on the look side
+# and flicked 120 units within the frame -- past the recognizer's 90 in its
+# 0.16 s -- then lifted the next frame; or, `hold`, kept on the glass until
+# _lift. Returns the touch index.
+func _swipe(direction: float, hold := false) -> int:
+	var index := _swipe_index
+	_swipe_index = 11 - _swipe_index
+	var at := _swipe_point()
+	var step := Vector2(0.0, direction * 40.0 * float(_main._touch._u))
+	_touch(index, at, true)
+	for i in 3:
+		at += step
+		_drag(index, at, step)
+	if not hold:
+		_lift_later(index, at)
+	return index
+
+func _lift_later(index: int, at: Vector2) -> void:
+	await get_tree().process_frame
+	_touch(index, at, false)
+
+func _lift(index: int) -> void:
+	_touch(index, _swipe_point(), false)
+
+# The quickturn by the stick: a run reversed, the stick pulled straight back
+# to its rim in one frame. A thumb already on the stick (a run) stays there,
+# so the run goes on the other way until _move lets it go; standing, the
+# thumb sets down, flicks forward and back, and lifts the next frame.
+func _stick_flick() -> void:
+	var home: Vector2 = _main._touch.stick_home()
+	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u)
+	var held := int(_main._touch._stick_index) == 0
+	if not held:
+		_touch(0, home, true)
+		_drag(0, home + Vector2(0.0, -throw), Vector2(0.0, -throw))
+	_drag(0, home + Vector2(0.0, throw), Vector2(0.0, 2.0 * throw))
+	if not held:
+		_lift_later(0, home)
 
 # Holds ACTION down (or lets it go) on the device under test: a held verb,
 # like the pitman lift's HAUL.
@@ -245,8 +371,14 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 func _stick_hold(direction: Vector2, amount: float) -> void:
 	var home: Vector2 = _main._touch.stick_home()
 	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u) * clampf(amount, 0.0, 1.0)
-	_touch(0, home, true)
+	_stick_down(home)
 	_drag(0, home + direction.normalized() * throw, direction.normalized() * throw)
+
+# Sets the thumb down on the stick, unless it is on it already: a second
+# press of the same index would be taken for look.
+func _stick_down(home: Vector2) -> void:
+	if int(_main._touch._stick_index) != 0:
+		_touch(0, home, true)
 
 # Samples both rendered wrists every frame until stopped, in the camera's
 # frame -- where a player sees them -- and reports the largest single-frame
@@ -550,7 +682,7 @@ func _tap(index: int, at: Vector2) -> void:
 func _stick_push(direction: Vector2) -> void:
 	var home: Vector2 = _main._touch.stick_home()
 	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u)
-	_touch(0, home, true)
+	_stick_down(home)
 	for i in 3:
 		var at := home + direction.normalized() * throw * float(i + 1) / 3.0
 		_drag(0, at, direction.normalized() * throw / 3.0)
@@ -561,7 +693,7 @@ func _stick_push(direction: Vector2) -> void:
 func _stick_sprint() -> bool:
 	var home: Vector2 = _main._touch.stick_home()
 	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u)
-	_touch(0, home, true)
+	_stick_down(home)
 	# Four thirds of the throw: past SPRINT_OVERSHOOT's 1.25.
 	for i in 4:
 		_drag(0, home + Vector2(0.0, -throw) * float(i + 1) / 3.0, Vector2(0.0, -throw / 3.0))

@@ -9,6 +9,7 @@ extends Node
 # walking the player off a ledge.
 #
 # Verbs: jump, action, drop, chute, back (pad B: let go / set down),
+# up and down (the touch gestures' swipes), turn (the quickturn),
 # alt (pad Y: chute), crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 # Sprint is held too: Shift; a left-stick click, latched until the stick comes
@@ -351,6 +352,8 @@ func frame(delta: float) -> Dictionary:
 		(touch != null and touch.is_held(&"jump")))
 	var lower_held: bool = enabled and gameplay_active and (_keys.has(KEY_C) or _buttons.has(JOY_BUTTON_RIGHT_STICK) or
 		(touch != null and touch.is_held(&"crouch")))
-	return {"move": move, "look": look, "verbs": verbs,
+	# The thumb that swiped down, still on the glass (the gesture scheme).
+	var down_held: bool = enabled and gameplay_active and touch != null and bool(touch.down_held)
+	return {"move": move, "look": look, "verbs": verbs, "down_held": down_held,
 		"crouch_held": crouch_held, "sprint_held": sprint_held, "hook_held": hook_held,
 		"action_held": action_held, "raise_held": raise_held, "lower_held": lower_held}

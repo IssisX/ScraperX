@@ -833,6 +833,7 @@ void run_swing_launch();
 void run_slide_jump();
 void run_climb_moves();
 void run_wall_chain();
+void run_up_controls();
 void run_zipline();
 void run_corpse();
 void run_arm_break();

@@ -56,6 +56,10 @@ int main() {
         run_zipline();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "up") {
+        run_up_controls();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "zipline") {
         run_zipline();
         return EXIT_SUCCESS;
@@ -334,6 +338,7 @@ int main() {
     run_slide_jump();
     run_climb_moves();
     run_wall_chain();
+    run_up_controls();
     run_zipline();
     run_corpse();
     run_arm_break();

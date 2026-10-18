@@ -44,6 +44,7 @@ void Simulation::PhysicsWorld::update_precision_sight(const JPH::BodyInterface &
 
 void Simulation::PhysicsWorld::update_affordance(const JPH::BodyInterface &bodies) noexcept {
     affordance_ = {};
+    affordance_vault_ = false;
     grip_affordance_ = {};
     edge_affordance_ = {};
     carry_target_entity_ = 0;
@@ -75,6 +76,7 @@ void Simulation::PhysicsWorld::update_affordance(const JPH::BodyInterface &bodie
                                     landing_centre,
                                     landing_body)) {
                 affordance_ = vault_probe;
+                affordance_vault_ = true;
                 return;
             }
         }
@@ -87,6 +89,77 @@ void Simulation::PhysicsWorld::update_affordance(const JPH::BodyInterface &bodie
                               kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
                               kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
                               true);
+}
+
+// What request_up would do from here, in the order a runner means it.
+// Hands on something: what they do with it. In the air: a kick off the wall
+// being run, the trapeze's bar in reach, else a jump held for the landing
+// (or the vault the takeoff could have been). Crouched: stand; a slide is
+// jumped out of at its speed. On the ground: the landing the eyes are on;
+// a run's springboard off a top close ahead; a vault over what is ahead; a
+// mantle up on to it; the hold ahead taken; else a jump. So a box deep
+// enough to plant a foot on is springboarded at a run, and a rail too thin
+// for one is vaulted; a ledge in reach is mantled, not jumped at.
+void Simulation::PhysicsWorld::update_up_move(const JPH::BodyInterface &bodies) noexcept {
+    up_move_ = UpMove::None;
+    if (trapeze_->controls_player()) {
+        up_move_ = UpMove::LetGo;
+        return;
+    }
+    if (slingshot_->controls_player() || swing_->controls_player()) {
+        return;
+    }
+    switch (traversal_state_) {
+    case TraversalState::None:
+        break;
+    case TraversalState::Hanging:
+        up_move_ = UpMove::ClimbUp;
+        return;
+    case TraversalState::Swinging:
+        up_move_ = UpMove::Launch;
+        return;
+    case TraversalState::Climbing:
+        up_move_ = top_out_ahead(bodies).valid ? UpMove::TopOut : UpMove::JumpOff;
+        return;
+    case TraversalState::Mantling:
+    case TraversalState::Vaulting:
+    case TraversalState::Lowering:
+        return;
+    }
+    if (!grounded_ && coyote_ticks_ == 0) {
+        const Trapeze::State &bar = trapeze_->state();
+        if (wall_running() && wall_kicks_this_flight_ < kWallKicksMax) {
+            up_move_ = UpMove::Kick;
+        } else if (bar.catch_available || bar.catch_near) {
+            up_move_ = UpMove::Catch;
+        } else {
+            up_move_ = UpMove::Jump;
+        }
+        return;
+    }
+    if (crouched_) {
+        up_move_ = sliding_ ? UpMove::Jump : UpMove::Stand;
+        return;
+    }
+    if (!grounded_) {
+        up_move_ = UpMove::Jump;   // walked off an edge, still in the coyote ticks
+        return;
+    }
+    if (precision_sighted_) {
+        up_move_ = UpMove::Precision;
+        return;
+    }
+    const JPH::Vec3 reference =
+        support_entity_id_ != 0 ? current_support_point_velocity(bodies) : airborne_inherited_velocity_;
+    if (springboard_ahead(bodies, bodies.GetLinearVelocity(player_id_) - reference).valid) {
+        up_move_ = UpMove::Springboard;
+        return;
+    }
+    if (affordance_.valid) {
+        up_move_ = affordance_vault_ ? UpMove::Vault : UpMove::Mantle;
+        return;
+    }
+    up_move_ = grip_affordance_.valid ? UpMove::Climb : UpMove::Jump;
 }
 
 // Machine half of a checkpoint (TDD 14.1: "machine/control state"): the
@@ -152,6 +225,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     vertical_->restore(checkpoint_.vertical);
     matron_->restore(checkpoint_.matron);
     impacts_->resync();
+    up_move_ = UpMove::None;   // chosen afresh from the restored body by the next tick
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->restore();
     }
@@ -517,6 +591,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.ledge_entity_id = affordance_.valid ? affordance_.ledge_entity_id : 0;
     state_.ledge_point = affordance_.valid ? to_vector3(affordance_.ledge_point) : Vector3{};
     state_.ledge_rise_meters = affordance_.valid ? affordance_.rise : 0.0;
+    state_.up_move = up_move_;
+    state_.up_resolved = up_resolved_;
+    state_.up_count = up_count_;
 
     read_machine_state();
 

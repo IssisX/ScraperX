@@ -41,6 +41,12 @@ const START_NAMES := ["GROUND", "22 M DECK", "44 M DECK", "66 M DECK", "88 M DEC
 	"154 M DECK", "176 M RING", "198 M RING", "220 M RING", "340 M PLATE",
 	"374 M RING", "418 M CAGE", "484 M RING", "528 M CRANE CAGE", "572 M WINCH CAB", "640 M PLATE", "662 M DECK",
 	"684 M DECK", "706 M DECK", "728 M DECK"]
+# How the touch screen moves the body. GESTURES: the right thumb swipes up or
+# down and the game picks the move from what is ahead; the stick pulled back
+# hard turns about. BUTTONS: Jump, Crouch, Drop and Turn on the glass.
+const TOUCH_SCHEME_NAMES := ["GESTURES", "BUTTONS"]
+const TOUCH_SCHEME_GESTURES := 0
+const TOUCH_SCHEME_BUTTONS := 1
 const START_SPAWNS := [-1, 25, 26, 27, 28, 29, 11, 12, 13, 16, 19, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34]
 
 var look_sensitivity := 1.0
@@ -52,6 +58,7 @@ var gyro_aim := false
 var gyro_sensitivity := 1.0
 var vibration := true
 var touch_scale := 1.0
+var touch_scheme := TOUCH_SCHEME_GESTURES
 var telemetry := false
 var quality := 2
 var render_scale := 1.0
@@ -103,6 +110,7 @@ func load_from_disk() -> void:
 	look_sensitivity = _read_range(file, "look_sensitivity", look_sensitivity, LOOK_SENSITIVITY_RANGE)
 	stick_sensitivity = _read_range(file, "stick_sensitivity", stick_sensitivity, STICK_SENSITIVITY_RANGE)
 	touch_scale = _read_range(file, "touch_scale", touch_scale, TOUCH_SCALE_RANGE)
+	touch_scheme = _read_index(file, "touch_scheme", touch_scheme, TOUCH_SCHEME_NAMES.size())
 	gyro_sensitivity = _read_range(file, "gyro_sensitivity", gyro_sensitivity, GYRO_SENSITIVITY_RANGE)
 	invert_y = _read_bool(file, "invert_y", invert_y)
 	gyro_aim = _read_bool(file, "gyro_aim", gyro_aim)
@@ -138,6 +146,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	file.set_value(SECTION, "stick_sensitivity", stick_sensitivity)
 	file.set_value(SECTION, "touch_scale", touch_scale)
+	file.set_value(SECTION, "touch_scheme", touch_scheme)
 	file.set_value(SECTION, "invert_y", invert_y)
 	file.set_value(SECTION, "gyro_aim", gyro_aim)
 	file.set_value(SECTION, "gyro_sensitivity", gyro_sensitivity)
