@@ -910,11 +910,26 @@ void run_derrick() {
         const auto lift = s.lift_state();
         up = std::abs(lift.travels[4] - 1.0) < 0.01 && !lift.moving && s.snapshot().player_grounded;
     }
-    require(up && walk_to(s, 13.5, -184.3, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3 &&
+    require(up, "derrick: lightened with its rider aboard, it must luff up to the top");
+    // At the top the cradle beds in level: 2 s at the rider's spot, then
+    // walked to its south edge over the pigs' side and stood there. Hung free
+    // it swung up to 11 degrees either side of a 5.5 degree lean, and leaned
+    // 14 as its rider stepped off: its edge 0.7 m under the receiver's top.
+    const auto lean_deg = [&s] {
+        const auto q = s.kit_body_rotation(s.kit_body_index(kDerrickCradle));
+        return std::asin(std::clamp(2.0 * (q.x * q.y + q.w * q.z), -1.0, 1.0)) * 180.0 / 3.141592653589793;
+    };
+    double worst_lean = 0.0;
+    for (int i = 0; i < 4 * 90; ++i) {
+        (void)stand_on_cradle(s, -1.2, i < 2 * 90 ? 0.0 : -2.6, 1.0 / 90.0);
+        worst_lean = std::max(worst_lean, std::abs(lean_deg()));
+    }
+    require(worst_lean < 2.5, "derrick: seated at the top, the cradle must stay level under a rider at its edge");
+    require(walk_to(s, 13.5, -184.3, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3 &&
                 s.snapshot().death_count == 0,
-            "derrick: lightened with its rider aboard, up to its upper receiver, alive");
-    std::cout << "PASS scraperx_sim derrick: gone_empty_travel=" << gone << " top_y=" << s.snapshot().player_position.y
-              << '\n';
+            "derrick: off the cradle's edge onto its upper receiver, alive");
+    std::cout << "PASS scraperx_sim derrick: gone_empty_travel=" << gone << " top_lean_deg=" << worst_lean
+              << " top_y=" << s.snapshot().player_position.y << '\n';
 }
 
 void run_high() {

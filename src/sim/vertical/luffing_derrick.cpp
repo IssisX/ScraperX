@@ -67,6 +67,27 @@ std::unique_ptr<Machine> luffing_derrick(BuildContext c) {
     }, Vec3(initial_tip.GetX(), initial_deck_y, 0), 1200);
     auto hanger = m->hinge(boom, deck, initial_tip);
     hanger->SetMaxFrictionTorque(120);
+    // The upper receiver's keeps: in the last kSeatRad of the boom's luff the
+    // cradle beds in level (the hanger's motor undoes the boom's turn), so a
+    // step on or off it pushes the frame instead of tilting the cradle. Hung
+    // free there, two pigs at its south end leaned it 5.5 degrees, arriving
+    // set it swinging up to 11 degrees either side of that for 10 s, and as
+    // its rider stepped off it leaned 14: a gap of 0.84 m to the receiver,
+    // whose top stood 0.7 m above the cradle's edge. Below the top it hangs
+    // free; at the lower receiver the load's lean is the rider's to read.
+    constexpr float kSeatRad = .01f;
+    constexpr float kSeatHz = 1.0f;
+    constexpr float kSeatTorque = 12000.0f;   // ~3x a rider and two pigs at the south edge
+    hanger->GetMotorSettings() = MotorSettings(kSeatHz, 1.0f, 0.0f, kSeatTorque);
+    m->stepping.push_back([boom_hinge, hanger, delta](float, const Command &) {
+        const float boom_angle = boom_hinge->GetCurrentAngle();
+        if (boom_angle >= delta - kSeatRad) {
+            hanger->SetMotorState(EMotorState::Position);
+            hanger->SetTargetAngle(-boom_angle);
+        } else {
+            hanger->SetMotorState(EMotorState::Off);
+        }
+    });
     c.kit.set_damping(deck, 0, .55f);
     c.kit.set_damping(boom, 0, .03f);
     m->no_collision(boom, deck);

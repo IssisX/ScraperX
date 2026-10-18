@@ -323,7 +323,8 @@ summit route, so it is not in:
 
 The fix belongs to the derrick. Its cradle must seat against a stop at each receiver, as real
 cradles do, so a step pushes the frame rather than swinging the cradle. Then the push-back can
-return. (S1's balance check also moved by about 1 kg with it; see that test when it does.)
+return. (2026-10-18: seated at the upper receiver, see "The derrick's cradle seated at the top";
+the lower receiver still hangs it free.) (S1's balance check also moved by about 1 kg with it; see that test when it does.)
 
 **Phase 4, struck by something moving (native).** A moving body coming at the player across a side
 contact (its own velocity toward the player at 0.5 m/s or more) now reaches the player's balance.
@@ -1376,6 +1377,21 @@ tires, chain, six beeps backing), `touch_yard_crane` (heard: slew, trolley, winc
 jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matron`; `audio_mix`,
 `audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
 while she keeps to 154 m and up (see to-do 11).
+
+**The derrick's cradle seated at the top (2026-10-18).** Stepping off at 802.64 m was a game of
+timing. The cradle hangs free on its hanger: the two pigs left at its south end lean it 5.5 degrees,
+arriving set it swinging up to 11 degrees either side of that for 10 s, and as its rider stepped off
+it leaned 14, its edge 0.7 m under the upper receiver's top across a 0.84 m gap.
+`touch_stack`'s rider stepped off mid-swing, fell into the gap and wedged there; the native test
+had crossed the edge while the swing happened to hold the cradle level (0.1 degrees). In the last 0.6
+degrees of the boom's luff the hanger's motor now beds the cradle in level (a 1 Hz spring, at most
+12 kNm, three times a rider and two pigs at its edge), so a step pushes the frame, not the cradle;
+below the top it hangs free as before. Proof: native `derrick` (new: 2 s after arriving, then with
+the rider stood at the south edge, the cradle leans at most 1.8 degrees, under the check's 2.5; it
+fails without the seat), `high` (the same three stumbles, all the gondola's), `summit`,
+`save`, `determinism`; `touch_high`, `touch_stack`, `pad_stack`, `keyboard_stack`. The lower
+receiver is unchanged: a rigid seat there would make where the pigs lie count in the load that
+holds the cradle down.
 
 **The gesture controls reviewed (2026-10-18, three independent reviews: the native side, the
 touch handling, the tests).** Fixed in the native: a wall run that ended on the ground kept its
