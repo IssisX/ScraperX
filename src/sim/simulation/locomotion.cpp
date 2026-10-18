@@ -234,7 +234,7 @@ void Simulation::PhysicsWorld::record_landing(const JPH::BodyInterface &bodies, 
 }
 
 void Simulation::PhysicsWorld::apply_ground_contact_force(JPH::BodyInterface &bodies, JPH::Vec3 correction,
-                                const float dt) noexcept {
+                                const float dt, const bool oppose_slope) noexcept {
     const auto support_id = support_sample_.body_id;
     if (support_id.IsInvalid() || dt <= 0) return;
     if (soft_foot_policy_.passive && net_for_body(support_id)) {
@@ -259,7 +259,8 @@ void Simulation::PhysicsWorld::apply_ground_contact_force(JPH::BodyInterface &bo
     // traction/work caps; it cannot hold an overloaded slope or missing
     // contact and does not prescribe velocity on accelerating supports.
     const auto gravity = physics_system_.GetGravity();
-    correction -= (gravity - normal * gravity.Dot(normal)) * kPlayerMassKg;
+    if (oppose_slope)
+        correction -= (gravity - normal * gravity.Dot(normal)) * kPlayerMassKg;
     const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
                                std::max(.3F, normal.GetY());
     if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
@@ -419,6 +420,10 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
     double move_z = commands.move_input_z * speed_scale;
     sprinting_ = false;
     balancing_ = false;
+    if (ground_sliding_ && grounded_) {
+        apply_ground_slide(bodies, commands, delta_seconds);
+        return false;
+    }
     if (!grounded_) {
         // Every departure uses bounded force steering. Releasing the stick
         // supplies no horizontal braking force; earned jump/support momentum

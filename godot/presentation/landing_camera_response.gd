@@ -3,7 +3,14 @@ extends RefCounted
 # A view response to actual support-relative landing events. These springs
 # move only the lens; their state never enters the native player solver.
 var translation := Vector3.ZERO # Camera right, up, forward, in metres.
-var rotation := Vector2.ZERO # Pitch and roll, in radians.
+var _landing_rotation := Vector2.ZERO
+var rotation: Vector2: # Additive pitch and roll, in radians.
+	get:
+		return _landing_rotation + Vector2(_slide_pitch, 0.0)
+var _slide_pitch := 0.0
+var _slide_velocity := 0.0
+var _last_slide_count := -1
+var _slide_deaths := -1
 var _translation_velocity := Vector3.ZERO
 var _rotation_velocity := Vector2.ZERO
 var _last_landing_count := -1
@@ -16,7 +23,7 @@ var _foot_deaths := -1
 
 func reset() -> void:
 	translation = Vector3.ZERO
-	rotation = Vector2.ZERO
+	_landing_rotation = Vector2.ZERO
 	_translation_velocity = Vector3.ZERO
 	_rotation_velocity = Vector2.ZERO
 	_last_landing_count = -1
@@ -25,6 +32,7 @@ func reset() -> void:
 	_last_foot_transfer_count = -1
 	_last_foot_transfer_tick = -1
 	_foot_deaths = -1
+	_reset_slide()
 
 
 func update(state: Dictionary, delta: float, enabled: bool,
@@ -44,6 +52,7 @@ func update(state: Dictionary, delta: float, enabled: bool,
 		reset()
 		_last_landing_count = count
 	_update_foot_transfer(state, delta, deaths)
+	_update_slide(state, delta, deaths)
 	var normal_speed := maxf(float(state.get("landing_normal_speed_mps", 0.0)), 0.0)
 	var tangent_energy := maxf(float(state.get("landing_tangent_energy_j", 0.0)), 0.0)
 	var normal_energy := maxf(float(state.get("landing_approach_energy_j", 0.0)), 0.0)
@@ -97,17 +106,59 @@ func update(state: Dictionary, delta: float, enabled: bool,
 		translation[axis] = response.x
 		_translation_velocity[axis] = response.y
 	for axis in 2:
-		var response := _step(rotation[axis], _rotation_velocity[axis], rotation_target[axis], 14.0, dt)
-		rotation[axis] = response.x
+		var response := _step(_landing_rotation[axis], _rotation_velocity[axis], rotation_target[axis], 14.0, dt)
+		_landing_rotation[axis] = response.x
 		_rotation_velocity[axis] = response.y
 	if not recovering and translation.length_squared() < 1.0e-10 \
-			and rotation.length_squared() < 1.0e-10 \
+			and _landing_rotation.length_squared() < 1.0e-10 \
 			and _translation_velocity.length_squared() < 1.0e-10 \
 			and _rotation_velocity.length_squared() < 1.0e-10:
 		translation = Vector3.ZERO
-		rotation = Vector2.ZERO
+		_landing_rotation = Vector2.ZERO
 		_translation_velocity = Vector3.ZERO
 		_rotation_velocity = Vector2.ZERO
+
+
+func _reset_slide() -> void:
+	_slide_pitch = 0.0
+	_slide_velocity = 0.0
+	_last_slide_count = -1
+	_slide_deaths = -1
+
+
+func _update_slide(state: Dictionary, delta: float, deaths: int) -> void:
+	# Native contact and support-relative speed own the response. No entry
+	# impulse: repeated samples cannot replay a slide or move the real eye.
+	var active: Variant = state.get("player_sliding")
+	var speed: Variant = state.get("slide_speed_mps")
+	var count: Variant = state.get("slide_count")
+	if not active is bool or not (speed is float or speed is int) \
+			or not count is int:
+		_reset_slide()
+		return
+	var speed_mps := float(speed)
+	var slide_count := int(count)
+	if not is_finite(speed_mps) or speed_mps < 0.0 or slide_count < 0:
+		_reset_slide()
+		return
+	var baseline := _last_slide_count < 0 or slide_count < _last_slide_count \
+		or deaths != _slide_deaths
+	if baseline:
+		_slide_pitch = 0.0
+		_slide_velocity = 0.0
+	_last_slide_count = slide_count
+	_slide_deaths = deaths
+	if baseline:
+		return
+	# A restrained forward pitch reads sustained motion; capsule crouch
+	# already supplies eye height. There is no synthetic yaw or roll.
+	var target := -0.035 * clampf(speed_mps / 10.0, 0.0, 1.0) if active else 0.0
+	var response := _step(_slide_pitch, _slide_velocity, target, 12.0, maxf(delta, 0.0))
+	_slide_pitch = response.x
+	_slide_velocity = response.y
+	if not active and absf(_slide_pitch) < 0.000001 and absf(_slide_velocity) < 0.000001:
+		_slide_pitch = 0.0
+		_slide_velocity = 0.0
 
 
 func _update_foot_transfer(state: Dictionary, delta: float, deaths: int) -> void:

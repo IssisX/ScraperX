@@ -318,7 +318,9 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	var foot_velocity := velocity - support_point_velocity if grounded else velocity
 	var horizontal := Vector2(foot_velocity.x, foot_velocity.z).length()
 
-	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
+	if grounded and bool(landing_state.get("player_sliding", false)):
+		_stride = 0.0
+	elif grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
 		_stride += horizontal * delta
 		if _stride >= STRIDE_METERS:
 			_stride -= STRIDE_METERS

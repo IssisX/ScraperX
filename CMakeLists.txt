@@ -35,6 +35,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/hand_transfer.cpp
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
+    src/sim/simulation/ground_slide.cpp
     src/sim/simulation/parkour_intent.cpp
     src/sim/simulation/machine_build.cpp
     src/sim/simulation/machine_update.cpp
@@ -293,6 +294,11 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
             add_test(NAME scraperx_sim.physical_walking_step_${mode} COMMAND scraperx_physical_walking_step_tests ${mode})
         endforeach()
         add_executable(scraperx_physical_wall_kick_tests tests/physical_wall_kick_tests.cpp)
+        add_executable(scraperx_ground_slide_tests tests/ground_slide_tests.cpp)
+        target_link_libraries(scraperx_ground_slide_tests PRIVATE scraperx_sim)
+        foreach(mode flow glide brake steer jump guards)
+            add_test(NAME scraperx_sim.ground_slide_${mode} COMMAND scraperx_ground_slide_tests ${mode})
+        endforeach()
         target_link_libraries(scraperx_physical_wall_kick_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_wall_kick COMMAND scraperx_physical_wall_kick_tests)
         add_test(NAME scraperx_sim.physical_wall_kick_no_wall COMMAND scraperx_physical_wall_kick_tests no-wall)

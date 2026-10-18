@@ -521,7 +521,7 @@ func _controls_rows(_view_family: int) -> Array:
 		["icon", &"operate", "RETRIEVE", "At the RETURN SEAT wheel, tap Action, then hold REEL until the seat latches"],
 		["icon", &"drop", "DROP", "Leave the pouch or a ledge; stop retrieval"],
 		["icon", &"jump", "JUMP", "Jump; climb up while hanging"],
-		["icon", &"crouch", "CROUCH", "Duck under low gaps; tap again to stand"],
+		["icon", &"crouch", "CROUCH / SLIDE", "Crouch from a run to slide; tap again to stand, or Jump out when clear"],
 		["icon", &"climb", "ACTION", "Catch a ledge or operate a machine"],
 		["verb", &"toggle_grapple", "GRAPPLE", "Draw or stow the acquired gun, including beside other interactions"],
 		["verb", &"auto_reel", "AUTO REEL / STOP", "Toggle finite line take-up while the gun has an attached line"],

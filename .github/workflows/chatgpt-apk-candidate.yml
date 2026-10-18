@@ -102,6 +102,15 @@ jobs:
         if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/godot-candidate-import.log; then
           exit 1
         fi
+    - name: Check native-driven landing and slide camera feedback
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/landing_camera_test.gd -- --landing-camera-unit-only \
+          2>&1 | tee artifacts/landing-camera-candidate.log
+        grep -F 'SCRAPERX_LANDING_CAMERA_UNIT PASS' artifacts/landing-camera-candidate.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/landing-camera-candidate.log; then exit 1; fi
     - name: Check static batching and native cable rendering
       shell: bash
       run: |

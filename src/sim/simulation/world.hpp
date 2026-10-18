@@ -710,7 +710,13 @@ private:
                         const bool prepared) noexcept;
 
     void apply_ground_contact_force(JPH::BodyInterface &bodies, JPH::Vec3 correction,
-                                    const float dt) noexcept;
+                                    const float dt, const bool oppose_slope = true) noexcept;
+
+    void update_ground_slide(const JPH::BodyInterface &bodies,
+                             const StepCommands &commands) noexcept;
+
+    void apply_ground_slide(JPH::BodyInterface &bodies, const StepCommands &commands,
+                            const float dt) noexcept;
 
     void apply_landing_recovery(JPH::BodyInterface &bodies, const StepCommands &commands,
                                 const float dt) noexcept;
@@ -1324,6 +1330,9 @@ private:
     double landing_recovery_duration_ = 0, landing_initial_balance_loss_ = 0;
     double landing_recovery_work_j_ = 0;
     double landing_jump_work_j_ = 0;
+    bool ground_sliding_ = false;
+    bool ground_slide_armed_ = true;
+    std::uint64_t ground_slide_count_ = 0;
     double air_control_command_positive_work_j_ = 0;
     double air_control_command_absorbed_work_j_ = 0;
     JPH::Vec3 air_control_force_ = JPH::Vec3::sZero();

@@ -38,6 +38,9 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     parachute_deployed_ = false;
     fall_peak_speed_mps_ = pre_contact_fall_speed_mps_ = last_impact_speed_mps_ = 0.0F;
     clear_landing_recovery();
+    ground_sliding_ = false;
+    ground_slide_armed_ = true;
+    ground_slide_count_ = 0;
     jump_vault_ticks_left_ = regrab_lockout_ticks_ = ordinary_jump_ticks_left_ = 0;
     // An explicit debug relocation creates its own retry point. Ordinary
     // walking still commits only on verified firm footing.
@@ -288,6 +291,9 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     fall_peak_speed_mps_ = 0.0F;
     pre_contact_fall_speed_mps_ = 0.0F;
     clear_landing_recovery();
+    ground_sliding_ = false;
+    ground_slide_armed_ = true;
+    ground_slide_count_ = 0;
     parachute_deployed_ = false;
     air_control_force_ = JPH::Vec3::sZero();
     ++death_count_;

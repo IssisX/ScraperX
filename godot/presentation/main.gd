@@ -2107,6 +2107,8 @@ func _layout_hud() -> void:
 # position is never filtered here: native simulation supplies the render pose.
 func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, crouched: bool,
 		delta: float) -> void:
+	var landing: Dictionary = _native.get_landing_state() if _native.has_method("get_landing_state") else {}
+	var sliding := grounded and bool(landing.get("player_sliding", false))
 	# A stationary rider is carried by the support without walking. Match the
 	# footstep cadence's native point velocity, which also includes rotation.
 	var locomotion_velocity: Vector3 = velocity
@@ -2117,7 +2119,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
 	var bob_target := 0.0
-	if grounded and int(_native.get_traversal_state()) == 0:
+	if grounded and not sliding and int(_native.get_traversal_state()) == 0:
 		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
 	if not _head_bob_on:
@@ -2131,7 +2133,6 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
 	var forward_vector := Vector3(-sin(_yaw), 0.0, -cos(_yaw))
-	var landing: Dictionary = _native.get_landing_state() if _native.has_method("get_landing_state") else {}
 	_landing_camera.update(landing, delta, _head_bob_on, right_vector, forward_vector,
 		int(_native.get_death_count()))
 	if not _head_bob_on:

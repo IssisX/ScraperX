@@ -68,6 +68,119 @@ func _response_checks() -> bool:
 		"restart seeds current event count without replaying a historical impact")
 
 
+func _slide_checks() -> bool:
+	# Synthetic bridge samples test lens behavior, not native slide physics.
+	var baseline := {"landing_count": 0, "player_sliding": false,
+		"slide_speed_mps": 0.0, "slide_count": 0}
+	var active := {"landing_count": 0, "player_sliding": true,
+		"slide_speed_mps": 8.0, "slide_count": 1}
+	var unchanged := active.duplicate(true)
+	var one := Response.new()
+	var divided := Response.new()
+	one.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	divided.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	one.update(active, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	for i in 4:
+		divided.update(active, 0.02, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(one.rotation.distance_to(divided.rotation) < 0.000001
+			and one.rotation.x < 0.0 and one.rotation.y == 0.0
+			and one.translation == Vector3.ZERO and one.foot_settle == Vector2.ZERO
+			and active == unchanged,
+			"native slide gives subdivision-stable pitch without roll, eye-height or physics writes"):
+		return false
+	var landing := {"landing_count": 1, "landing_normal_speed_mps": 5.0,
+		"landing_slip_velocity": Vector3(2.0, 0.0, -1.0), "landing_tangent_energy_j": 200.0,
+		"foot_transfer_count": 1, "foot_transfer_tick": 90,
+		"foot_transfer_support_entity_id": 11, "foot_transfer_peak_hand_load_n": 600.0}
+	var plain_landing := Response.new()
+	var combined_landing := Response.new()
+	var combined_baseline := baseline.duplicate()
+	combined_baseline.merge({"foot_transfer_count": 0, "foot_transfer_tick": 0})
+	plain_landing.update(combined_baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	combined_landing.update(combined_baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	var combined_state := landing.duplicate()
+	combined_state.merge(active)
+	combined_state.landing_count = 1
+	plain_landing.update(landing, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	combined_landing.update(combined_state, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(combined_landing.translation == plain_landing.translation
+			and combined_landing.foot_settle == plain_landing.foot_settle
+			and combined_landing.rotation.y == plain_landing.rotation.y
+			and absf(combined_landing.rotation.x - plain_landing.rotation.x - one.rotation.x) < 0.000001,
+			"slide pitch adds to landing without changing impact, slip roll or foot-transfer settle"):
+		return false
+	var slow := Response.new()
+	slow.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	var slow_state := active.duplicate()
+	slow_state.slide_speed_mps = 2.0
+	slow.update(slow_state, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(slow.rotation.x < 0.0 and slow.rotation.x > one.rotation.x,
+			"measured support-relative slide speed scales pitch"):
+		return false
+	active.slide_speed_mps = 1000000.0
+	for i in 120:
+		one.update(active, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(is_finite(one.rotation.x) and absf(one.rotation.x) <= 0.035001,
+			"extreme finite speed stays within two degrees of additive pitch"):
+		return false
+	var before := one.rotation.x
+	active.player_sliding = false
+	one.update(active, 0.016, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(one.rotation.x < 0.0 and one.rotation.x > before,
+			"loss of native slide contact releases the lens smoothly"):
+		return false
+	for i in 180:
+		one.update(active, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(one.rotation == Vector2.ZERO,
+			"inactive slide settles exactly to neutral even with stale speed"):
+		return false
+	active.player_sliding = true
+	active.slide_speed_mps = 8.0
+	one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+	one.update(active, 0.1, false, Vector3.RIGHT, Vector3.FORWARD)
+	one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(one.rotation == Vector2.ZERO and one._slide_velocity == 0.0,
+			"motion OFF clears slide and re-enable establishes a quiet baseline"):
+		return false
+	for reset_kind in ["restart", "rewind", "death"]:
+		one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		var deaths := 0
+		if reset_kind == "restart":
+			one.reset()
+		elif reset_kind == "rewind":
+			active.slide_count = 0
+		else:
+			deaths = 1
+		one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD, deaths)
+		if not _check(one.rotation == Vector2.ZERO and one._slide_velocity == 0.0,
+				"%s clears slide without a historical entry impulse" % reset_kind):
+			return false
+	# Invalid bridge data clears only the slide channel. Landing still matches
+	# a consumer that never received any slide fields.
+	for invalid in [{}, {"player_sliding": true},
+			{"player_sliding": true, "slide_speed_mps": NAN, "slide_count": 1},
+			{"player_sliding": true, "slide_speed_mps": INF, "slide_count": 1},
+			{"player_sliding": true, "slide_speed_mps": -1.0, "slide_count": 1},
+			{"player_sliding": "true", "slide_speed_mps": 8.0, "slide_count": 1},
+			{"player_sliding": true, "slide_speed_mps": "8", "slide_count": 1},
+			{"player_sliding": true, "slide_speed_mps": 8.0, "slide_count": -1}]:
+		var plain := Response.new()
+		var combined := Response.new()
+		plain.update({"landing_count": 0}, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined.update(unchanged, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+		var invalid_landing := {"landing_count": 1, "landing_normal_speed_mps": 5.0}
+		var sample := invalid_landing.duplicate()
+		sample.merge(invalid)
+		plain.update(invalid_landing, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined.update(sample, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+		if not _check(combined.translation == plain.translation and combined.rotation == plain.rotation
+				and combined.foot_settle == plain.foot_settle,
+				"missing or invalid slide fields preserve the existing landing response"):
+			return false
+	return true
+
+
 func _foot_transfer_checks() -> bool:
 	# Scripted receipts exercise presentation only; no native completion or
 	# device sound/vibration is claimed by these consumer checks.
@@ -339,7 +452,7 @@ func _drop(height: float, move_x: float) -> Dictionary:
 
 
 func _run() -> void:
-	if not _response_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
+	if not _response_checks() or not _slide_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

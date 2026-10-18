@@ -354,6 +354,10 @@ struct Snapshot final {
     double foot_transfer_peak_hand_load_n = 0.0;
     bool player_swinging = false;
     bool player_sprinting = false;
+    // Compact ground travel, driven by actual support-relative momentum.
+    bool player_sliding = false;
+    double slide_speed_mps = 0.0;
+    std::uint64_t slide_count = 0;
     // Walking a support narrower than 0.5 m and at least 1.5 m long.
     bool player_balancing = false;
     // A hold in reach at hand height, faced from the ground: Action climbs it.

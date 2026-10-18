@@ -570,6 +570,17 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.traversal_target_point = to_vector3(physical_hands_->commanded_position());
     state_.player_swinging = physical_hands_ && physical_hands_->swinging();
     state_.player_sprinting = sprinting_;
+    state_.player_sliding = ground_sliding_ && grounded_ && crouched_ &&
+        !support_sample_.body_id.IsInvalid();
+    state_.slide_count = ground_slide_count_;
+    state_.slide_speed_mps = 0.0;
+    if (state_.player_sliding) {
+        const auto &bodies = physics_system_.GetBodyInterface();
+        const auto relative = bodies.GetLinearVelocity(player_id_) -
+            current_support_point_velocity(bodies);
+        const auto normal = support_traction_normal();
+        state_.slide_speed_mps = (relative - normal * relative.Dot(normal)).Length();
+    }
     state_.player_balancing = balancing_;
     state_.grip_available = grip_affordance_.valid;
     state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;

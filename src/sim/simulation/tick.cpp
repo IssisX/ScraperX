@@ -160,6 +160,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if ((traversal_state_ != TraversalState::None && !foot_overlap_is_legal()) || carry_constraint_ != nullptr)
         physical_foot_push_->clear();
     publish_soft_foot_policy(commands);
+    update_ground_slide(bodies, commands);
     bool jump_started = false;
     if (!sling_controlling && traversal_state_ == TraversalState::None) {
         if (slingshot_flight_ && !grounded_) {
