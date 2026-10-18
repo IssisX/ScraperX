@@ -71,7 +71,7 @@ void observe(Simulation &simulation, unsigned driver_tick, double move_x, double
         JPH::Vec3 normal = JPH::Vec3::sZero();
         JPH::BodyID obstacle;
         JPH::SubShapeID leaf;
-        const bool low = (world.*member(CastTag{}))(at, ahead, fraction, normal, &obstacle, &leaf);
+        const bool low = (world.*member(CastTag{}))(at, ahead, fraction, normal, &obstacle, &leaf, nullptr);
         std::cout << " low=" << low;
         if (low) {
             std::cout << " obstacle=" << bodies.GetUserData(obstacle)
@@ -80,10 +80,10 @@ void observe(Simulation &simulation, unsigned driver_tick, double move_x, double
             vec(normal);
             const auto raised = at + JPH::Vec3(0, kStepMaximumHeight, 0);
             const bool clear = (world.*member(ClearTag{}))(raised);
-            const bool blocked = (world.*member(CastTag{}))(raised, ahead, fraction, normal, nullptr, nullptr);
+            const bool blocked = (world.*member(CastTag{}))(raised, ahead, fraction, normal, nullptr, nullptr, nullptr);
             const bool down = (world.*member(CastTag{}))(raised + ahead,
                 JPH::Vec3(0, -(kStepMaximumHeight + kStepMinimumHeight), 0),
-                fraction, normal, &obstacle, &leaf);
+                fraction, normal, &obstacle, &leaf, nullptr);
             std::cout << " raised_clear=" << clear << " raised_blocked=" << blocked << " down=" << down;
             if (down) {
                 std::cout << " down_entity=" << bodies.GetUserData(obstacle)
