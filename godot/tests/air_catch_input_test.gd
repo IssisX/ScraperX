@@ -51,7 +51,7 @@ func stage() -> void:
 	main._yaw = -PI * 0.5
 	main._pitch = 0.0
 	check(native.debug_restart_at(Vector3(16.85, 15, -118)), "initial airborne gantry stage")
-	step(FIRST_REACH_TICK - 7)
+	step(FIRST_REACH_TICK - 3)
 	check(not native.is_grip_available() and not native.is_player_grounded(),
 		"input begins before actual grip reach")
 	check(main._ctx.action.id == &"catch" and main._ctx.action.label == "REACH",
@@ -148,7 +148,14 @@ func _run() -> void:
 	native = main._native
 	check(native != null and not main._regression_scene, "shipping Main and native normal world")
 	step(180)
-	stage()
+	# This initial condition has no prospective geometry. The gantry's
+	# earlier top offer already raises the hands before its real grip can
+	# be reached, so that route cannot measure an air-to-reach transition.
+	main._yaw = -PI * 0.5
+	main._pitch = 0.0
+	check(native.debug_restart_at(Vector3(1000, 15, -1000)), "clear-air initial condition")
+	step(30)
+	ordinary_air("unrequested clear flight")
 	var before_reach := local_wrists()
 	var before_curl: Array = []
 	for hand in main._arms._hands:
@@ -167,7 +174,16 @@ func _run() -> void:
 		check(hand.curl < before_curl[i].x - 0.04 and hand.thumb_curl < before_curl[i].y - 0.03,
 			"early input visibly opens the fingers before physical acquisition")
 	await capture("02-pending-open-hands")
-	step(5)
+	touch(&"drop")
+	step()
+	ordinary_air("phone Cancel in clear flight")
+	await capture("04-cancelled-reach")
+
+	stage()
+	touch(&"action")
+	step()
+	pending()
+	step(7)
 	caught()
 	await capture("03-real-catch")
 
@@ -176,9 +192,6 @@ func _run() -> void:
 	step()
 	pending()
 	touch(&"drop")
-	step()
-	ordinary_air("phone Cancel")
-	await capture("04-cancelled-reach")
 	step(5)
 	var cancelled: Dictionary = native.get_landing_state()
 	check(not bool(cancelled.get("air_catch_intent_pending", true)) and

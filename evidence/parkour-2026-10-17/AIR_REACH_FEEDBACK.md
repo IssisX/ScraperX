@@ -39,3 +39,19 @@ Runtime/render acceptance and a matching APK remain pending until that
 candidate finishes. The existing live checkpoint owns its actual source,
 run, artifact and delivery receipt. No phone-feel or full-release claim
 follows from these host checks.
+
+The first candidate `39143296980`, source `d4cbbe5`, rejected the new
+fixture: `SCRAPERX_AIR_CATCH_INPUT FAIL checks=1024`. Its 58-check module
+test succeeded. The earliest failure was the test's tick-66 assumption:
+the actual screenshot already showed CATCH and raised hands from a
+prospective ledge, before the new input. That cannot measure a transition
+from ordinary air balance. Pending/cancel/expiry and real-grip pose checks
+did not fail in that run.
+
+The correction restores the previously accepted tick-70 gantry approach
+and all its input assertions. Visible hand motion is measured separately
+through the same shipping Main/native path at a clear-air initial
+condition, where actual sensing must report no ledge, no support and no
+pending intent before Action. The wrist-rise and finger-opening assertions
+are unchanged. No game geometry, pose or physics parameter was altered to
+repair the fixture. Its new execution remains pending.
