@@ -111,6 +111,15 @@ jobs:
           2>&1 | tee artifacts/landing-camera-candidate.log
         grep -F 'SCRAPERX_LANDING_CAMERA_UNIT PASS' artifacts/landing-camera-candidate.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/landing-camera-candidate.log; then exit 1; fi
+    - name: Check loaded climbing cloth feedback
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/climb_effort_test.gd \
+          2>&1 | tee artifacts/climb-effort-candidate.log
+        grep -F 'CLIMB_EFFORT PASS' artifacts/climb-effort-candidate.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/climb-effort-candidate.log; then exit 1; fi
     - name: Check static batching and native cable rendering
       shell: bash
       run: |

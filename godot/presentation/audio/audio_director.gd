@@ -10,6 +10,7 @@ extends Node
 # the mix can sit loud enough for a phone speaker without clipping.
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
+const ClimbEffort := preload("res://presentation/climb_effort_feedback.gd")
 const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const RUBBLE_IMPACT := preload("res://assets/audio/rubble/concrete_break_denoised_843338_preview.wav")
@@ -85,6 +86,7 @@ var _bank_ready := false
 # Movie Maker (--write-movie) also reports Dummy, but it drives that driver's
 # mix itself and writes it out, so there the bank plays.
 var _silent := false
+var _quiesced := false
 var _bank_task := -1
 var _voices: Array[AudioStreamPlayer] = []
 var _next_voice := 0
@@ -140,6 +142,9 @@ var _bullet_time: AudioStreamPlayer
 var _ladder_strain: AudioStreamPlayer3D
 var ladder_motion_frames := 0
 var climb_regrips := 0
+var climb_effort_cues := 0
+var last_climb_effort_strength := 0.0
+var _climb_effort := ClimbEffort.new()
 var last_climb_regrip_position := Vector3.ZERO
 var grab_playbacks := 0
 var _ladder_gain := 0.0
@@ -223,6 +228,9 @@ func _exit_tree() -> void:
 # Maker -- whose mixing ends with the recording -- gives it a few frames
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
+	_quiesced = true
+	_climb_effort.reset()
+	last_climb_effort_strength = 0.0
 	reset_grapple_feedback()
 	_silent = true
 	fall_reactions.quiesce()
@@ -285,6 +293,8 @@ func ui_tap(back: bool = false) -> void:
 # Explicit restart establishes a quiet receipt baseline; no old contact is
 # replayed when gameplay resumes. Death restores are handled by update().
 func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Dictionary = {}) -> void:
+	_climb_effort.reset()
+	last_climb_effort_strength = 0.0
 	_last_landing_count = landing_count
 	_last_foot_transfer_count = int(foot_state.get("foot_transfer_count", -1))
 	_last_foot_transfer_tick = int(foot_state.get("foot_transfer_tick", -1))
@@ -319,7 +329,7 @@ func reset_reclaim_feedback() -> void:
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
 		support_point_velocity: Vector3 = Vector3.ZERO, landing_state: Dictionary = {},
-		positional_grasp_pending: bool = false) -> void:
+		positional_grasp_pending: bool = false, native_tick: int = -1) -> void:
 	fall_reactions.update(delta, position, velocity, grounded, traversal, chute, deaths)
 	# A planted rider moves with the support without taking a step. Native
 	# point velocity includes rotation as well as the support's translation.
@@ -352,6 +362,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_update_foot_transfer(landing_state, position, deaths)
 	_update_wall_stride(landing_state, position, deaths)
 	_update_palm_prop(landing_state, position, deaths)
+	_update_climb_effort(landing_state, native_tick, traversal, deaths)
 	var foot_jump := _consume_foot_jump(delta, landing_state, velocity, grounded,
 		traversal, deaths, crouched)
 	var climbing_jump := traversal != _last_traversal and _last_traversal == TRAVERSAL_CLIMBING \
@@ -840,10 +851,26 @@ func climb_regrip(at: Vector3, initial_grasp: bool = false) -> void:
 		randf_range(0.95, 1.05) if initial_grasp else 1.10)
 
 
+func _update_climb_effort(state: Dictionary, tick: int, traversal: int, deaths: int) -> void:
+	# Dummy output still records requested cues; shutdown and player mute
+	# consume the native work quietly and never queue it for later playback.
+	var enabled := not _quiesced
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index):
+			enabled = false
+	var strength := _climb_effort.sample(state, tick, traversal, deaths, enabled)
+	last_climb_effort_strength = strength
+	if strength > 0.0:
+		climb_effort_cues += 1
+		_play(&"climb_pull", lerpf(-21.0, -14.0, strength), 1.0)
+
+
 # Observational receipts also work under the headless Dummy audio driver.
 func get_grip_feedback_stats() -> Dictionary:
 	return {"grabs": grabs, "climb_regrips": climb_regrips, "grab_playbacks": grab_playbacks,
-		"last_climb_regrip_position": last_climb_regrip_position}
+		"last_climb_regrip_position": last_climb_regrip_position,
+		"climb_effort_cues": climb_effort_cues, "last_climb_effort_strength": last_climb_effort_strength}
 
 
 # Passive bearing noise follows native COM speed. Loading makes the same

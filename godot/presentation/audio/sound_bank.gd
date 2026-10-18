@@ -80,6 +80,8 @@ func build() -> void:
 	clips[&"rattle_loop"] = [_loop(_rattle(1.4), 0.2)]
 	clips[&"motor_loop"] = [_loop(_motor(1.8), 0.3)]
 	_build_grapple_clips()
+	# Append to preserve the seeded recipes of all existing sounds.
+	clips[&"climb_pull"] = _variants(3, _climb_pull)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -245,6 +247,16 @@ func _scrape() -> PackedFloat32Array:
 		if i % 90 == 0:
 			grain = _rng.randf_range(0.4, 1.0)
 		out[i] += band[i] * grain * sin(PI * t) * 1.6
+	return out
+
+
+# Clothing under a loaded hand pull.
+func _climb_pull() -> PackedFloat32Array:
+	var out := _silence(0.24)
+	# Cloth under tension, then a softer glove movement. No voiced grunt or
+	# metal impact competes with the separately positioned hand-placement tap.
+	_add_band_noise(out, 0.0, 0.20, 0.48, 0.065, 350.0, 2400.0)
+	_add_band_noise(out, 0.07, 0.15, 0.20, 0.045, 1400.0, 4200.0)
 	return out
 
 

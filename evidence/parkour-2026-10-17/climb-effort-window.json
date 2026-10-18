@@ -1,0 +1,91 @@
+{
+  "base_commit": "b800335b0df40bbfa91f23c1e1f7897fb495967f",
+  "source_sha256": {
+    "godot/presentation/climb_effort_feedback.gd": "75da4241c3522bd0ef3c5a2acbdf649262c42882f4e1beae7f0a574cb2fcf2b2",
+    "godot/presentation/audio/audio_director.gd": "21859a377ba176449218c4df215a7b6118e349f62d19cdc5688186240147c1ff",
+    "godot/presentation/audio/sound_bank.gd": "c3489ddb416a3d1660e8a3427eb618a4d0550c425ad03f88048e6b388169d15a",
+    "godot/tests/climb_effort_test.gd": "dd634792c5fdc04f934b7f6151043d3d322a4fe1b3146cc069f56ad7b8f93aa2",
+    ".github/workflows/chatgpt-apk-candidate.yml": "b99eeb74d737c79d2f1a84175d89e8f5e8467a7bb663a3b32d0e30be368b2691"
+  },
+  "main_gd_sha256": "187ec36677275d6dcad8fc6ffffea3138fa6f9fc3a5d62bf8b4cac45a8da7b4c",
+  "main_scope": "Only the published audio.update call receives one shared landing-state/tick sample. All unrelated dirty grapple edits are excluded.",
+  "commands": {
+    "import": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--editor",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-climb-effort-5sfv68zk",
+      "--import",
+      "--quit"
+    ],
+    "effort": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-climb-effort-5sfv68zk",
+      "--audio-driver",
+      "Dummy",
+      "--script",
+      "res://tests/climb_effort_test.gd"
+    ],
+    "footsteps": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-climb-effort-5sfv68zk",
+      "--audio-driver",
+      "Dummy",
+      "--script",
+      "res://tests/footstep_contact_test.gd"
+    ]
+  },
+  "host_project_scope": "Minimal Godot4.7 affected-presentation project, actual production audio/model/bank scripts and recorded assets. No native extension or main scene exercised.",
+  "results": [
+    {
+      "name": "import",
+      "exit_code": 0
+    },
+    {
+      "name": "effort",
+      "exit_code": 0
+    },
+    {
+      "name": "footsteps",
+      "exit_code": 0
+    }
+  ],
+  "effort_final_result": {
+    "exit_code": 0,
+    "script_errors": false,
+    "pass_marker": true
+  },
+  "effort_output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nCLIMB_EFFORT PASS failures=0 native_physics_exercised=0 heard_audio=0\n",
+  "footstep_output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nFOOTSTEP_CONTACT PASS case=carried steps=0 expected=0..0\nFOOTSTEP_CONTACT PASS case=walk_on_carrier steps=5 expected=5..6\nFOOTSTEP_CONTACT PASS case=rotating_contact steps=0 expected=0..0\nFOOTSTEP_CONTACT PASS case=fixed_floor steps=5 expected=5..6\nFOOTSTEP_CONTACT PASS case=airborne steps=0 expected=0..0\n",
+  "first_attempt": {
+    "classification": "introduced test teardown error",
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nERROR: Object is locked and can't be freed.\n   at: callp (core/object/object.cpp:787)\n   GDScript backtrace (most recent call first):\n       [0] _audio_path (res://tests/climb_effort_test.gd:114)\n       [1] _run (res://tests/climb_effort_test.gd:81)\nSCRIPT ERROR: Attempted to free a locked object (calling or emitting).\n          at: _audio_path (res://tests/climb_effort_test.gd:114)\n          GDScript backtrace (most recent call first):\n              [0] _audio_path (res://tests/climb_effort_test.gd:114)\n              [1] _run (res://tests/climb_effort_test.gd:81)\nCLIMB_EFFORT PASS failures=0 native_physics_exercised=0 heard_audio=0\n",
+    "repair": "Join the director-owned asynchronous bank task before freeing its test node; substantive model/audio assertions unchanged."
+  },
+  "phone_audio_heard": false,
+  "native_physics_exercised_by_audio_unit": false,
+  "shipping_integration": "Pending matching candidate CI."
+}

@@ -2220,12 +2220,14 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			reclaim_state["player_position"] = position
 			_reclaim_dust.set_reduced_motion(not _settings.launch_cinematics)
 			_reclaim_dust.update_from_native(reclaim_state, delta)
+		var audio_landing: Dictionary = _native.get_landing_state()
+		var audio_tick := int(_native.get_tick_index())
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity(),
-			_native.get_landing_state(),
-			_grip_feedback_hand(_native.get_landing_state(), int(_native.get_traversal_state()),
-				int(_native.get_tick_index()), int(_native.get_death_count()), delta) != 0)
+			audio_landing,
+			_grip_feedback_hand(audio_landing, int(_native.get_traversal_state()),
+				audio_tick, int(_native.get_death_count()), delta) != 0, audio_tick)
 		if _regression_scene:
 			_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
 				_native.get_hoist_scoop_position(), _native.get_ballast_position(),
