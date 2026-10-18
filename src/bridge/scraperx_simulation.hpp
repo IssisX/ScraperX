@@ -59,6 +59,7 @@ public:
     [[nodiscard]] std::int64_t get_swing_launch_count() const;
     [[nodiscard]] std::int64_t get_wall_climb_count() const;
     [[nodiscard]] std::int64_t get_wall_step_count() const;
+    [[nodiscard]] std::int64_t get_wall_kick_count() const;
     [[nodiscard]] std::int64_t get_support_entity_id() const;
     [[nodiscard]] godot::Vector3 get_support_contact_point() const;
     [[nodiscard]] godot::Vector3 get_support_point_linear_velocity() const;

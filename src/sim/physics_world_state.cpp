@@ -109,6 +109,16 @@ void Simulation::PhysicsWorld::update_up_move(const JPH::BodyInterface &bodies) 
     if (slingshot_->controls_player() || swing_->controls_player()) {
         return;
     }
+    // At a machine's controls the stick and the buttons are the machine's;
+    // thrown off the slingshot, the throw is the body's way.
+    if (yard_crane_->operating() || (slingshot_flight_ && !grounded_)) {
+        return;
+    }
+    for (const std::unique_ptr<Forklift> &truck : forklifts_) {
+        if (truck->driving()) {
+            return;
+        }
+    }
     switch (traversal_state_) {
     case TraversalState::None:
         break;
@@ -128,7 +138,9 @@ void Simulation::PhysicsWorld::update_up_move(const JPH::BodyInterface &bodies) 
     }
     if (!grounded_ && coyote_ticks_ == 0) {
         const Trapeze::State &bar = trapeze_->state();
-        if (wall_running() && wall_kicks_this_flight_ < kWallKicksMax) {
+        // The run's hold counts down at the top of the next tick, before its
+        // kick is tried: offered only where it will still be running then.
+        if (wall_run_seconds_left_ > kFixedStepSeconds && wall_kicks_this_flight_ < kWallKicksMax) {
             up_move_ = UpMove::Kick;
         } else if (bar.catch_available || bar.catch_near) {
             up_move_ = UpMove::Catch;
@@ -137,12 +149,19 @@ void Simulation::PhysicsWorld::update_up_move(const JPH::BodyInterface &bodies) 
         }
         return;
     }
-    if (crouched_) {
-        up_move_ = sliding_ ? UpMove::Jump : UpMove::Stand;
+    if (!grounded_) {
+        // Walked (or slid, or crouch-walked) off an edge, still in the coyote
+        // ticks: a jump, standing the body first as update_crouch does.
+        up_move_ = UpMove::Jump;
         return;
     }
-    if (!grounded_) {
-        up_move_ = UpMove::Jump;   // walked off an edge, still in the coyote ticks
+    if (crouched_) {
+        // Up from a crouch stands, and from a slide jumps, where the body has
+        // room to stand (try_stand's own test); under a low beam, nothing.
+        const JPH::RVec3 standing = bodies.GetPosition(player_id_) + JPH::Vec3(0.0F, kCrouchDrop, 0.0F);
+        if (shape_pose_is_clear(player_shape_.GetPtr(), standing + JPH::Vec3(0.0F, kStandClearanceSkin, 0.0F))) {
+            up_move_ = sliding_ ? UpMove::Jump : UpMove::Stand;
+        }
         return;
     }
     if (precision_sighted_) {
@@ -226,6 +245,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     matron_->restore(checkpoint_.matron);
     impacts_->resync();
     up_move_ = UpMove::None;   // chosen afresh from the restored body by the next tick
+    wall_run_seconds_left_ = 0.0;
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->restore();
     }

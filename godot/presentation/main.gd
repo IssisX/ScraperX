@@ -696,6 +696,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				var holding_on: bool = _ctx["climbing"] and _crouch_toggled
 				_crouch_toggled = false
 				_down_until = DOWN_UNTIL_UP
+				_down_hold_counts = false
 				if not holding_on and not _native.request_up():
 					_up_buffer = JUMP_BUFFER_SECONDS
 			&"down":
@@ -804,7 +805,8 @@ func _down_route() -> StringName:
 		return &"set_down"
 	if not _ctx["grounded"]:
 		return &"tuck"
-	var velocity: Vector3 = _ctx["velocity"]
+	# Over what the feet stand on: on a moving deck, standing still is still.
+	var velocity: Vector3 = _ctx["velocity"] - _native.get_support_point_linear_velocity()
 	var speed := Vector2(velocity.x, velocity.z).length()
 	if _ctx["edge_drop"] and speed < EDGE_DROP_MAX_MPS:
 		return &"drop_down"
@@ -848,6 +850,9 @@ func _update_gesture_hints() -> void:
 	_touch.down_hint = DOWN_HINTS.get(route, "")
 	_touch.down_hint_special = route in [&"hook_release", &"pull", &"let_go", &"slide_down", &"set_down",
 		&"drop_down"]
+	# What lets go of a hold or jumps off it is made only by a flick that lifts.
+	_touch.up_on_lift = up in [UP_JUMP_OFF, UP_LAUNCH, UP_LET_GO]
+	_touch.down_on_lift = route in [&"hook_release", &"let_go", &"slide_down"]
 
 # Contextual Action is a gateway (Governing Law 27): it climbs what the
 # native affordance reports, takes hold of what is in reach, or hooks what is

@@ -85,9 +85,7 @@ bool Simulation::request_traversal() noexcept {
 }
 
 bool Simulation::request_up() noexcept {
-    if (snapshot_.traversal_state == TraversalState::Mantling ||
-        snapshot_.traversal_state == TraversalState::Vaulting ||
-        snapshot_.traversal_state == TraversalState::Lowering) {
+    if (snapshot_.up_move == UpMove::None) {
         return false;
     }
     up_requested_ = true;

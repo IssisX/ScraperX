@@ -980,6 +980,11 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         wall_kicks_this_flight_ = 0;
         wall_step_cooldown_ = 0;
         wall_climbed_this_flight_ = false;
+        // The run on the wall ends with the feet on the ground. Its hold only
+        // counts down in the air, so landed inside it, it was kept: the body
+        // read as running a wall on open ground (the view leaning off it), and
+        // the next jump's second press kicked off nothing, a jump in the air.
+        wall_run_seconds_left_ = 0.0;
     }
     if (commands.jump_requested && !grounded_ && wall_running() && wall_kicks_this_flight_ < kWallKicksMax) {
         // Kicked off the wall: out along its normal, along it where the

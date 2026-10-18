@@ -56,6 +56,9 @@ const TRAVERSAL_LOWERING := 5
 const UP_NONE := 0
 const UP_JUMP := 1
 const UP_PRECISION := 2
+const UP_JUMP_OFF := 10
+const UP_LAUNCH := 11
+const UP_LET_GO := 14
 const UP_HINTS := ["", "JUMP", "JUMP", "SPRINGBOARD", "VAULT", "CLIMB", "GRAB", "STAND", "CLIMB UP",
 	"CLIMB OVER", "JUMP OFF", "JUMP OFF", "KICK", "GRAB", "LET GO"]
 const DOWN_HINTS := {&"hook_release": "LET GO", &"pull": "HOLD: PULL", &"let_go": "LET GO",

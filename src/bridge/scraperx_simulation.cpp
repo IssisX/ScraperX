@@ -121,6 +121,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_launch_count"), &ScraperXSimulation::get_swing_launch_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wall_step_count"),
                                 &ScraperXSimulation::get_wall_step_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wall_kick_count"),
+                                &ScraperXSimulation::get_wall_kick_count);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_sliding"),
                                 &ScraperXSimulation::is_player_sliding);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_crouched"),
@@ -514,6 +516,10 @@ std::int64_t ScraperXSimulation::get_swing_launch_count() const {
 
 std::int64_t ScraperXSimulation::get_wall_step_count() const {
     return static_cast<std::int64_t>(simulation_->snapshot().wall_step_count);
+}
+
+std::int64_t ScraperXSimulation::get_wall_kick_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().wall_kick_count);
 }
 
 bool ScraperXSimulation::is_player_sliding() const {

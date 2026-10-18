@@ -1377,6 +1377,41 @@ jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matro
 `audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
 while she keeps to 154 m and up (see to-do 11).
 
+**The gesture controls reviewed (2026-10-18, three independent reviews: the native side, the
+touch handling, the tests).** Fixed in the native: a wall run that ended on the ground kept its
+0.3 s hold until the next flight, so the body read as running a wall on open ground (the view
+leaning off it) and the next jump's second press kicked off nothing, a jump in the air, on every
+device; the hold now ends with the feet down, and on a restore. Up in the coyote ticks after a
+slide or a crouch-walk off an edge stood the body instead of the jump the legs still had; it is
+the jump now. Up offers nothing at a forklift's wheel or the crane's controls, thrown off the
+slingshot, or crouched under a beam with no room to stand (it offered STAND), and the kick only
+while the run on the wall will still be on next tick; request_up is refused wherever it offers
+nothing, so the presentation sends it again once something can be made (after a load, a mantle's
+end). Fixed in the touch handling: a swipe was 90 canvas units, 3 mm of glass on a phone at the
+speed of an ordinary glance, so looking down from a ledge could let go of it; a swipe is now 10 mm
+of glass (from the screen's dots per inch) within 0.15 s, and the swipes that let go of a hold or
+jump off one (off a ledge, a bar, a zipline, the hook's line, the trapeze, a ladder's rungs, or
+sliding down them) are made only by a flick that lifts within 0.35 s, a thumb that goes on dragging
+being a look. The stick turned about mirrored left and right, and easing the thumb off it ran the
+body back the other way; only its back now reads as forward, until the thumb comes into the front
+half or to rest, and a run reversed keeps its sprint. A second right-hand finger's swipe could leave
+the first's down held, the body crouched for good. Down's drop over an edge now reads the speed over
+the deck underfoot, and the hints keep clear of the hook's button at large touch sizes. Fixed in
+the tests: every swipe they made was in one frame, so the swipe's time limit was never tried, and
+the quickturn's run passed if the body only backpedaled; now a swipe over three frames jumps and
+leaves the view still, a steep diagonal drag stays a look, a slow drag up tilts the view and jumps
+nothing, the run's turn is a half turn of the view, and the stick pulled back from rest walks back
+and turns nothing; the double tap is a jump short of the rail and a vault from the air; every
+touch run fails unless every swipe and flick it made was recognized, and nothing more; the touch
+test stick aims from its base where the sprint's overshoot carried it (it aimed from where it
+started, so "into the wall" read 45 degrees at 70%). New: `touch_wall_kick` (four kicks across the
+passage, by up while KICK is offered; on the buttons by Jump in the air), `touch_ladder` (taken,
+climbed, slid down, held, jumped off, by the swipes; on the buttons by Action, SLIDE DOWN, HOLD ON,
+JUMP OFF); thirteen runs on the buttons layout, Drop and the settings row among them. Native `up`
+now also proves: no kick off an ended wall run, the coyote jump off an edge, nothing at the
+forklift's wheel or under a beam, the same world from the same input; each of these fails without
+its fix.
+
 **Review fixes to the machines' sounds (2026-10-18, from an independent review).** The crane test
 lands the forklift again as the game does, lowered on to the slack-rope switch, and now checks
 that the hook raised 3 m off the landed truck leaves it where it stands (it moves 1.4 mm). The
@@ -1481,7 +1516,19 @@ fill in after).**
    from the hook, switched from the radio remote, for every steel load (rated force, gripping only
    steel it lies flat against); the sling and shackle kept for lifting eyes; a container spreader
    locking onto the corner castings and a plate clamp where a site would use one. Sequenced next
-   after 9.
+   after 9. Planned 2026-10-18 (from a map of the crane, the kit and the loads): each device a kit
+   body with a lifting eye, hooked on and off the sling's shackle as anything is rigged now, so
+   choosing one is rigging it, not a menu; while the crane is worked, Action is the device's switch
+   (MAGNET ON / MAGNET OFF; LOCK / UNLOCK), on touch, pad and keys alike, and CRANE gets a key and a
+   pad button (today only the touch button can switch the crane on). A grip is a weld between the
+   device and the load, made when the device is switched on and seated, broken when switched off or
+   past its rated force for two ticks (a rope's rule); the magnet takes only steel lying flat under
+   it and lets go wherever it is switched off (a magnet's work, and loud); the spreader's twistlocks
+   turn only with the box landed and the rope slack. The loads: within the crane's reach only the
+   billet stillage is flat steel the hoist can lift (the 8 t plate stack is past its 6.9 t), so plate
+   slabs and beams are laid down in reach; the containers get corner castings for the spreader; the
+   plate clamp waits for thin plates in a rack. Saves: the devices built last, their grips kept in
+   their own record and rebuilt on a restore, older saves still loading.
 11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her

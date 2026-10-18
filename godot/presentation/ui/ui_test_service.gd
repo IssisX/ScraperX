@@ -338,7 +338,7 @@ func _service_c4(device: int) -> bool:
 		return _fail("C4: the walk to the runway's edge stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _wait_until(func() -> bool: return bool(_ctx()["drop_ok"]) and \
-			(device != InputRouter.Device.TOUCH or _offers_drop()), 1.5):
+			(device != InputRouter.Device.TOUCH or _offers_drop("DROP DOWN")), 1.5):
 		return _fail("C4: DROP was not offered with the runway's edge behind (at %s)" % str(_position()))
 	_drop(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 1.5):

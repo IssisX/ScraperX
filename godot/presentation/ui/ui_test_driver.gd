@@ -24,6 +24,7 @@ const SCENARIOS := {
 	"touch_speed_vault": 3,
 	"touch_precision": 3,
 	"touch_wall_run": 41,
+	"touch_wall_kick": 41,
 	"touch_wall_climb": 0,
 	"touch_tuck": 0,
 	"touch_flow": 8,
@@ -48,6 +49,7 @@ const SCENARIOS := {
 	"touch_lethal_feedback": 9,
 	# A broken arm: flat out into the Matron's locker, then the ladder one-armed.
 	"touch_arm_break": 11,
+	"touch_ladder": 11,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"keyboard_core": 8,
@@ -245,6 +247,10 @@ func _run() -> void:
 	_main._audio.voice_rng.seed = 0x5C4A9E
 	var ok := false
 	match _scenario:
+		"touch_wall_kick":
+			ok = await _touch_wall_kick()
+		"touch_ladder":
+			ok = await _touch_ladder()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -463,6 +469,11 @@ func _run() -> void:
 		var counts: Dictionary = _main._touch.gesture_counts
 		_detail += " scheme=%s swipes_up=%d swipes_down=%d flicks=%d" % ["gestures" if _gestures else "buttons",
 			int(counts[&"up"]), int(counts[&"down"]), int(counts[&"turn"])]
+		# Every swipe and flick made was recognized, and nothing else was: a
+		# dropped swipe, or a turn the walk made by itself, fails the run.
+		if ok and counts != _injected:
+			ok = false
+			_detail += " reason=recognized %s, made %s" % [str(counts), str(_injected)]
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario_name, _detail])
 	get_tree().paused = false
 	get_tree().quit(0 if ok else 31)

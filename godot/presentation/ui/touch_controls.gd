@@ -54,25 +54,33 @@ const STICK_DEADZONE := 0.1
 const SPRINT_OVERSHOOT := 1.25
 const SPRINT_HOLD := 0.5
 const LOOK_SLOP := 26.0
-# A swipe: the thumb travels this far (scaled units) up or down within
-# SWIPE_SECONDS of touching down, SWIPE_STEEPNESS times more up or down than
-# across: 560 units a second at the least, quicker than a look's drag.
-const SWIPE_UNITS := 90.0
-const SWIPE_SECONDS := 0.16
+# A swipe: the thumb travels SWIPE_MM up or down within SWIPE_SECONDS of
+# touching down (67 mm a second at the least: a flick, where a look's drag up
+# or down goes at a few centimeters a second), SWIPE_STEEPNESS times more up or
+# down than across. Measured on the glass, from the screen's dots per inch: in
+# canvas units the same flick is 3 mm on a phone and 6 on the Fold.
+const SWIPE_MM := 10.0
+const SWIPE_SECONDS := 0.15
 const SWIPE_STEEPNESS := 1.6
 # Under this travel a look touch has not yet gone anywhere.
-const GESTURE_SLOP := 16.0
+const GESTURE_SLOP_MM := 1.5
+# A swipe that lets go of something or jumps off it (main.gd says which:
+# up_on_lift, down_on_lift) is made only by a flick that lifts within
+# LIFT_SECONDS of touching down. A thumb that goes on dragging is looking,
+# and a look down from a ledge must never drop the body off it.
+const LIFT_SECONDS := 0.35
 # The quickturn by the stick: a run reversed, the stick pulled back past
 # FLICK_BACK of its throw within FLICK_SECONDS of pushing forward past
 # FLICK_FORWARD (a stick pulled back from rest walks backward, so the body can
 # back away from something with its eyes on it). The run goes on the other
-# way: the stick held back reads as forward until it leaves the back half.
+# way: the stick's back reads as forward, its sides as they are, until the
+# thumb comes into the front half or to rest.
 const FLICK_BACK := 0.85
 const FLICK_FORWARD := 0.5
 const FLICK_SECONDS := 0.14
-const FLICK_HALF := -0.3
 const LOOK_UNDECIDED := 0
 const LOOK_DRAG := 1
+const LOOK_PENDING := 2
 const HIT_SLOP := 1.22
 const APPEAR_RATE := 8.0
 const HINT_SECONDS := 16.0
@@ -109,6 +117,8 @@ var up_hint_special := false
 var down_hint_special := false
 # The thumb that swiped down is still on the glass.
 var down_held := false
+var up_on_lift := false
+var down_on_lift := false
 var gesture_counts := {&"up": 0, &"down": 0, &"turn": 0}
 
 var _u := 1.0
@@ -126,9 +136,12 @@ var _look_kind := LOOK_DRAG
 var _look_start := Vector2.ZERO
 var _look_start_clock := 0.0
 var _look_held := Vector2.ZERO
-# A thumb that swiped, until it lifts: it neither looks nor swipes again.
-var _swipe_index := -1
+var _pending_verb := &""
+# Thumbs that swiped, until they lift: they neither look nor swipe again.
+var _swiped := {}
 var _down_index := -1
+# Canvas units in a millimeter of glass (_layout).
+var _units_per_mm := 4.0
 # On foot or on holds, in the gesture scheme: swipes and the stick's flick
 # are read. In a seat or at a machine's controls the buttons are as they are
 # in BUTTONS.
@@ -136,8 +149,10 @@ var _gestures_live := true
 var _turn_allowed := true
 var _stick_flipped := false
 var _stick_forward_clock := -INF
-# The stick's own forward (not turned about), as it last read.
+# The stick's own forward (not turned about), as it last read, and whether
+# sprint was latched then (a run reversed keeps its sprint).
 var _stick_raw_forward := 0.0
+var _sprint_at_forward := false
 var _hint_clock := 0.0
 var _moved := false
 var _looked := false
@@ -187,9 +202,29 @@ func button_label(id: StringName) -> String:
 	return _buttons[id].label
 
 
+# How far a swipe must go, in canvas units.
+func swipe_units() -> float:
+	return SWIPE_MM * _units_per_mm
+
+
+# Canvas units per millimeter of glass: the screen's dots per inch over the
+# canvas's stretch to the window. Without a window (headless), a pixel a unit.
+func _measure_units_per_mm() -> float:
+	var dpi := float(DisplayServer.screen_get_dpi())
+	if dpi <= 0.0:
+		dpi = 160.0
+	var px_per_unit := 1.0
+	if DisplayServer.window_get_size().y > 0:
+		var scale := get_viewport().get_final_transform().get_scale().y
+		if scale > 0.0:
+			px_per_unit = scale
+	return dpi / 25.4 / px_per_unit
+
+
 func _layout() -> void:
 	_safe = UiStyle.safe_rect(self)
 	_u = UiStyle.unit(self) * touch_scale
+	_units_per_mm = _measure_units_per_mm()
 	var m := 56.0 * _u
 	var corner := _safe.end
 	var jump := Vector2(corner.x - m - 170.0 * _u, corner.y - m - 190.0 * _u)
@@ -248,7 +283,7 @@ func reset_touches() -> void:
 	_look_index = -1
 	_look_accum = Vector2.ZERO
 	_look_held = Vector2.ZERO
-	_swipe_index = -1
+	_swiped.clear()
 	_down_index = -1
 	down_held = false
 	_stick_flipped = false
@@ -337,7 +372,7 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 		_stick_knob = offset
 		_update_stick_vector()
 		return true
-	if index == _swipe_index:
+	if _swiped.has(index):
 		return true
 	if index == _look_index:
 		_looked = true
@@ -345,15 +380,23 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 			_look_accum += relative
 			return true
 		_look_held += relative
+		if _look_kind == LOOK_PENDING:
+			return true
 		var travel := at - _look_start
-		if travel.length() < GESTURE_SLOP * _u:
+		if travel.length() < GESTURE_SLOP_MM * _units_per_mm:
 			return true
 		if absf(travel.x) >= absf(travel.y):
 			_settle_look()
 			return true
-		if absf(travel.y) >= SWIPE_UNITS * _u and absf(travel.y) >= SWIPE_STEEPNESS * absf(travel.x) \
+		if absf(travel.y) >= swipe_units() and absf(travel.y) >= SWIPE_STEEPNESS * absf(travel.x) \
 				and _clock - _look_start_clock <= SWIPE_SECONDS:
-			_swipe(index, &"up" if travel.y < 0.0 else &"down")
+			var verb := &"up" if travel.y < 0.0 else &"down"
+			if up_on_lift if verb == &"up" else down_on_lift:
+				# Made only if the thumb lifts in time (_touch_up).
+				_look_kind = LOOK_PENDING
+				_pending_verb = verb
+			else:
+				_swipe(index, verb)
 		return true
 	for button in _buttons.values():
 		if button.index != index:
@@ -377,14 +420,24 @@ func _touch_up(index: int) -> bool:
 		sprint_latched = false
 		queue_redraw()
 		return true
-	if index == _swipe_index:
-		_swipe_index = -1
+	if _swiped.has(index):
+		_swiped.erase(index)
 		if index == _down_index:
 			_down_index = -1
 			down_held = false
 		return true
 	if index == _look_index:
-		if _look_kind == LOOK_UNDECIDED:
+		if _look_kind == LOOK_PENDING and _clock - _look_start_clock <= LIFT_SECONDS:
+			# The flick lifted: the swipe that lets go or jumps off is made.
+			_look_kind = LOOK_DRAG
+			_look_held = Vector2.ZERO
+			_look_index = -1
+			gesture_counts[_pending_verb] += 1
+			if router != null:
+				router.push_verb(_pending_verb)
+			pressed_feedback.emit()
+			return true
+		if _look_kind != LOOK_DRAG:
 			_settle_look()
 		_look_index = -1
 		return true
@@ -406,7 +459,7 @@ func _settle_look() -> void:
 func _swipe(index: int, verb: StringName) -> void:
 	_look_index = -1
 	_look_held = Vector2.ZERO
-	_swipe_index = index
+	_swiped[index] = true
 	if verb == &"down":
 		_down_index = index
 		down_held = true
@@ -420,6 +473,7 @@ func _update_stick_vector() -> void:
 	# Held forward until this moment: a thumb held still sends no drags.
 	if _stick_raw_forward >= FLICK_FORWARD:
 		_stick_forward_clock = _clock
+		_sprint_at_forward = sprint_latched
 	var throw := STICK_THROW * _u
 	var value := _stick_knob / throw
 	var magnitude := value.length()
@@ -432,18 +486,20 @@ func _update_stick_vector() -> void:
 	var scaled := minf(1.0, (magnitude - STICK_DEADZONE) / (1.0 - STICK_DEADZONE))
 	move_vector = Vector2(value.x, -value.y) / magnitude * scaled
 	_stick_raw_forward = move_vector.y
-	if move_vector.y > FLICK_HALF:
+	if move_vector.y >= 0.0:
 		_stick_flipped = false
 		if move_vector.y >= FLICK_FORWARD:
 			_stick_forward_clock = _clock
+			_sprint_at_forward = sprint_latched
 	elif _gestures_live and _turn_allowed and not _stick_flipped and move_vector.y <= -FLICK_BACK \
 			and _clock - _stick_forward_clock <= FLICK_SECONDS:
 		_stick_flipped = true
+		sprint_latched = _sprint_at_forward
 		gesture_counts[&"turn"] += 1
 		if router != null:
 			router.push_verb(&"turn")
 	if _stick_flipped:
-		move_vector = -move_vector
+		move_vector.y = -move_vector.y
 	if move_vector.y < SPRINT_HOLD:
 		sprint_latched = false
 	if scaled > 0.3:
@@ -455,7 +511,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_clock += delta
 	if visible:
 		_hint_clock += delta
-	if _look_index != -1 and _look_kind == LOOK_UNDECIDED and _clock - _look_start_clock > SWIPE_SECONDS:
+	if _look_index != -1 and ((_look_kind == LOOK_UNDECIDED and _clock - _look_start_clock > SWIPE_SECONDS) or
+			(_look_kind == LOOK_PENDING and _clock - _look_start_clock > LIFT_SECONDS)):
 		_settle_look()
 	var hanging: bool = ctx["hanging"]
 	var climbing: bool = ctx.get("climbing", false)
@@ -655,10 +712,17 @@ func _draw_gesture_hints() -> void:
 	if not _gestures_live:
 		return
 	var at := Vector2(_safe.position.x + _safe.size.x * 0.8, _safe.position.y + _safe.size.y * 0.5)
+	# Above any button drawn under the hints' column (the hook's, at a large
+	# touch size), and below the screen's top.
+	var down_y := at.y + 64.0 * _u
+	for button: TouchButton in _buttons.values():
+		if button.appear > 0.01 and absf(button.center.x - at.x) < button.radius + 190.0 * _u:
+			down_y = minf(down_y, button.center.y - button.radius - 44.0 * _u)
+	down_y = maxf(down_y, _safe.position.y + 200.0 * _u)
 	if up_hint_special and not up_hint.is_empty():
-		_draw_gesture_hint(up_hint, &"up", at + Vector2(0.0, -64.0 * _u))
+		_draw_gesture_hint(up_hint, &"up", Vector2(at.x, down_y - 128.0 * _u))
 	if down_hint_special and not down_hint.is_empty():
-		_draw_gesture_hint(down_hint, &"down", at + Vector2(0.0, 64.0 * _u))
+		_draw_gesture_hint(down_hint, &"down", Vector2(at.x, down_y))
 
 
 # One hint on a dark plate, so it reads over a bright sky as over steel:

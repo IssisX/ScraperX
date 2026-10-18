@@ -1108,8 +1108,9 @@ public:
     [[nodiscard]] bool request_traversal() noexcept;
     // The gesture controls' "up", one-shot: the native picks the move, as
     // snapshot.up_move says (UpMove), and makes it through the same paths
-    // as Jump and Action. Refused while a mantle, vault or lowering is under
-    // way, which takes no request.
+    // as Jump and Action. Refused where up_move is None (a mantle, vault or
+    // lowering under way, a seat, a machine's controls, a crouch with no
+    // room to stand, the tick after a load), so it can be sent again.
     [[nodiscard]] bool request_up() noexcept;
     // Let go: of a hung ledge or a climb's holds; on the ground, with an edge
     // behind the body and a drop beyond it, lower over it into a hang.

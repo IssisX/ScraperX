@@ -1,10 +1,13 @@
 // The gesture controls' one "up" (Simulation::request_up): every move a
 // runner makes upward, made by that one request alone, the native choosing
 // it from what is ahead (UpMove). Each test reads what up_move offers before
-// the request, makes the request, and checks the move made is that move and
-// is the move the old button made.
+// the request, makes the request, checks it was taken as that move, and then
+// checks the move's own effect (a vault, a springboard's height, a kick).
+// And where up must offer nothing: at a machine's controls, crouched under a
+// beam; and never a kick off a wall run that has ended on the ground.
 
 #include "sim_tests.hpp"
+#include "sim/forklift.hpp"
 
 namespace {
 
@@ -80,7 +83,7 @@ void up_springboard() {
     std::cout << "  up: a stride short of the slab, " << close_boards << " springboard, soles to " << close_peak
               << " m; 3 m short, a jump, soles to " << far_peak << " m\n";
     require(close_boards == 1 && close_peak > 1.1 + 1.4, "up springboard: a stride short, from the top");
-    require(far_boards == 0, "up springboard: 3 m short, a jump from the ground");
+    require(far_boards == 0 && far_peak > 1.0, "up springboard: 3 m short, a jump from the ground");
 }
 
 // The proving ground's 0.44 m rail: walked at, up vaults it; sprinted at,
@@ -177,8 +180,10 @@ void up_ladder() {
     require(top.set_move_input(0.0, 0.0), "up ladder: stick let go");
     const double at_y = top.snapshot().player_position.y;
     up_as(top, UpMove::TopOut, "up ladder: up at the top");
+    const std::uint64_t deaths = top.snapshot().death_count;
     require(advance_until(top, [](const Snapshot &n) { return n.player_grounded && n.traversal_state == TraversalState::None; },
-                          3.0),
+                          3.0) &&
+                top.snapshot().player_position.y > at_y && top.snapshot().death_count == deaths,
             "up ladder: over on to the top");
     std::cout << "  up: the ladder taken, jumped off at " << sprung.player_linear_velocity.y
               << " m/s up; topped out from " << at_y << " m to " << top.snapshot().player_position.y << " m\n";
@@ -235,6 +240,52 @@ void up_wall_kicks() {
     require(kicks >= 3 && s.snapshot().death_count == 0, "up kicks: wall to wall and back");
 }
 
+// One run along the passage's wall, no kick, ending on the ground inside the
+// run's 0.3 s hold: landed, the run is over. Out of the passage, a standing
+// jump offers no kick in the air, and up makes none (it was a second jump).
+void up_wall_run_ends() {
+    Simulation s(InitialSpawn::WallRunApproach);
+    require(s.advance_frame(0.3).accepted && walk_to(s, -19.0, -28.5, 6.0, 0.1), "up run ends: to the passage");
+    require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "up run ends: sprint");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0), "up run ends: approach");
+    up_as(s, UpMove::Jump, "up run ends: up beside the wall");
+    require(s.set_move_input(1.0, 0.6) && advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 3.0) &&
+                s.snapshot().wall_step_count >= 1,
+            "up run ends: a run on the wall, then the ground");
+    require(s.set_move_input(0.0, 0.0) && s.set_sprint_input(false) && s.advance_frame(0.5).accepted &&
+                !s.snapshot().player_wall_running,
+            "up run ends: landed, no longer running a wall");
+    require(walk_to(s, 10.0, -28.5, 10.0, 0.1) && s.advance_frame(1.0).accepted, "up run ends: out of the passage");
+    up_as(s, UpMove::Jump, "up run ends: a standing jump in the open");
+    require(advance_until(s, [](const Snapshot &n) { return !n.player_grounded; }, 0.5), "up run ends: off the ground");
+    const std::uint64_t kicks = s.snapshot().wall_kick_count;
+    require(s.snapshot().up_move == UpMove::Jump, "up run ends: in the open air, no kick offered");
+    require(s.request_up() && s.advance_frame(Simulation::kFixedStepSeconds).accepted && s.snapshot().wall_kick_count == kicks,
+            "up run ends: in the open air, up kicks off nothing");
+    std::cout << "  up: a wall run ended on the ground; in the open, no kick offered or made\n";
+}
+
+// The wall kicks again from a fresh world: the same input, the same world to
+// the bit (up's choice is the world's own, never the frame's).
+std::vector<std::uint64_t> wall_kick_run() {
+    Simulation s(InitialSpawn::WallRunApproach);
+    require(s.advance_frame(0.3).accepted && walk_to(s, -19.0, -28.5, 6.0, 0.1), "up again: to the passage");
+    require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "up again: sprint");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0), "up again: approach");
+    require(s.request_up(), "up again: up beside the wall");
+    double toward = 0.6;
+    for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)s.set_move_input(1.0, toward);
+        if (s.snapshot().up_move == UpMove::Kick) {
+            toward = -toward;
+            (void)s.set_move_input(1.0, toward);
+            (void)s.request_up();
+        }
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "up again: tick");
+    }
+    return world_bits(s);
+}
+
 // Crouched, up stands the body and does not jump it; under the proving
 // ground's beam, where it cannot stand, it stays down and does not jump.
 // Sliding, up jumps out of the slide at its speed (run_slide_jump's).
@@ -251,16 +302,33 @@ void up_from_crouch() {
     }
     require(!s.snapshot().player_crouched && !left_ground, "up stand: stood, not jumped");
 
-    // Held crouched (the button scheme's toggle still on): up still only stands
-    // for its tick, and never jumps.
-    Simulation held(InitialSpawn::ExteriorGrade);
-    require(held.advance_frame(0.5).accepted && held.set_crouch_input(true) && held.advance_frame(0.3).accepted,
-            "up stand: crouched, held");
-    up_as(held, UpMove::Stand, "up stand: up, crouch still held");
-    for (int tick = 0; tick < 45; ++tick) {
-        require(held.advance_frame(Simulation::kFixedStepSeconds).accepted && held.snapshot().player_grounded,
-                "up stand: held, never off the ground");
-    }
+    // Under the proving ground's crawl beam (1.45 m clear) there is no room to
+    // stand: up offers nothing and is refused, and the body stays down.
+    // Walked out from under it, Stand is offered again.
+    Simulation beam(InitialSpawn::StaticDeck);
+    require(beam.advance_frame(0.5).accepted && beam.set_crouch_input(true) && beam.advance_frame(0.3).accepted &&
+                walk_to(beam, -1.55, -13.3, 8.0, 0.1),
+            "up stand: crouched under the crawl beam");
+    require(beam.snapshot().player_crouched && beam.snapshot().up_move == UpMove::None && !beam.request_up(),
+            "up stand: under the beam, nothing offered and up refused");
+    require(walk_to(beam, -2.1, -15.4, 8.0, 0.1) && beam.snapshot().up_move == UpMove::Stand,
+            "up stand: out from under the beam, Stand offered");
+
+    // Crouch-walked off the trapeze's launch stand: in the coyote ticks up is
+    // the jump the legs still have, standing the body to make it.
+    Simulation edge(InitialSpawn::ExteriorGrade);
+    require(edge.advance_frame(0.5).accepted && walk_to(edge, 14.0, -28.0, 12.0) && walk_to(edge, 29.6, -28.0, 12.0, 0.1),
+            "up coyote: on the launch stand");
+    require(edge.set_facing(1.0, 0.0) && edge.set_crouch_input(true) && edge.advance_frame(0.3).accepted &&
+                edge.set_move_input(1.0, 0.0),
+            "up coyote: crouched, walking at the edge");
+    require(advance_until(edge, [](const Snapshot &n) { return !n.player_grounded; }, 4.0), "up coyote: off the edge");
+    require(edge.advance_frame(2.0 * Simulation::kFixedStepSeconds).accepted && edge.snapshot().player_crouched,
+            "up coyote: two ticks over the edge, still crouched");
+    require(edge.set_crouch_input(false), "up coyote: the crouch let go with the up");
+    up_as(edge, UpMove::Jump, "up coyote: up in the coyote ticks");
+    require(advance_until(edge, [](const Snapshot &n) { return n.player_linear_velocity.y > 4.0; }, 0.1),
+            "up coyote: jumped off the edge");
 
     Simulation slide(InitialSpawn::ExteriorGrade);
     require(slide.advance_frame(0.5).accepted && slide.set_facing(1.0, 0.0) && slide.set_move_input(1.0, 0.0) &&
@@ -287,6 +355,21 @@ void up_from_crouch() {
     std::cout << "  up: crouched, stood without a jump; out of a " << slide_mps << " m/s slide, jumped to "
               << peak << " m at no less than " << least << " m/s\n";
     require(peak > 1.3 && least > slide_mps - 0.2, "up slide: jumped out at the slide's speed");
+}
+
+// At the yard forklift's wheel (run_forklift's boarding), the stick and the
+// buttons are the truck's: up offers nothing and is refused.
+void up_at_the_wheel() {
+    using scraperx::sim::Forklift;
+    Simulation s(InitialSpawn::ExteriorGrade);
+    require(s.advance_frame(0.5).accepted && walk_to(s, 30.0, 10.0, 30.0) && walk_to(s, 36.4, 16.35, 20.0) &&
+                walk_to(s, Forklift::kParkX, 16.35, 8.0, 0.1),
+            "up at the wheel: aboard");
+    require(s.set_facing(0.0, 1.0) && s.advance_frame(0.5).accepted && s.forklift_state().at_controls &&
+                s.request_forklift_action() && s.advance_frame(0.2).accepted && s.forklift_state().driving,
+            "up at the wheel: driving");
+    require(s.snapshot().up_move == UpMove::None && !s.request_up(), "up at the wheel: nothing offered, up refused");
+    std::cout << "  up: at the forklift's wheel, nothing offered\n";
 }
 
 // The trapeze (run_trapeze's run off the launch stand): up in the air as
@@ -319,8 +402,14 @@ void run_up_controls() {
     up_ladder();
     up_swing();
     up_wall_kicks();
+    up_wall_run_ends();
     up_from_crouch();
+    up_at_the_wheel();
     up_trapeze();
+    const auto first = wall_kick_run();
+    const auto second = wall_kick_run();
+    require(first == second, "up again: the same input, the same world");
     std::cout << "PASS scraperx_sim up controls: springboard, vault, speed vault, mantle, climb up, ladder, "
-                 "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze\n";
+                 "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze; none under a beam or "
+                 "at the wheel; the coyote jump; no kick off an ended wall run; deterministic\n";
 }

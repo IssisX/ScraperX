@@ -28,6 +28,9 @@ var _gestures := true
 # The right thumb's swipes take turns on two touch indices, so one can follow
 # another at once.
 var _swipe_index := 5
+# Swipes and flicks injected, by verb: the driver checks the touch layer
+# recognized exactly these, no more and no fewer.
+var _injected := {&"up": 0, &"down": 0, &"turn": 0}
 
 func _fail(reason: String) -> bool:
 	_detail = "reason=" + reason
@@ -229,13 +232,12 @@ func _reads(verb: StringName) -> String:
 			return _main._touch.gesture_hint(&"up" if bool(_native().is_player_crouched()) else &"down")
 	return _main._touch.button_label(verb)
 
-# Drop is offered: its button drawn; swiped, down lets go or drops down, and
-# the button is not drawn.
-func _offers_drop() -> bool:
+# Drop is offered: its button drawn; swiped, down reads `label` (LET GO, DROP
+# DOWN) and the button is not drawn.
+func _offers_drop(label: String) -> bool:
 	if not _gestures:
 		return _main._touch.is_button_shown(&"drop")
-	return not _main._touch.is_button_shown(&"drop") and \
-		_main._touch.gesture_hint(&"down") in ["LET GO", "DROP DOWN", "PUT DOWN"]
+	return not _main._touch.is_button_shown(&"drop") and _main._touch.gesture_hint(&"down") == label
 
 func _gesturing(device: int) -> bool:
 	return device == InputRouter.Device.TOUCH and _gestures
@@ -245,18 +247,19 @@ func _swipe_point() -> Vector2:
 	return Vector2(_viewport_size().x * 0.85, _viewport_size().y * 0.3)
 
 # A swipe of the right thumb, up (-1) or down (+1): set down on the look side
-# and flicked 120 units within the frame -- past the recognizer's 90 in its
-# 0.16 s -- then lifted the next frame; or, `hold`, kept on the glass until
-# _lift. Returns the touch index.
+# and flicked half again the recognizer's own distance within the frame, then
+# lifted the next frame (a swipe that lets go is made as it lifts); or, `hold`,
+# kept on the glass until _lift. Returns the touch index.
 func _swipe(direction: float, hold := false) -> int:
 	var index := _swipe_index
 	_swipe_index = 11 - _swipe_index
 	var at := _swipe_point()
-	var step := Vector2(0.0, direction * 40.0 * float(_main._touch._u))
+	var step := Vector2(0.0, direction * 0.5 * float(_main._touch.swipe_units()))
 	_touch(index, at, true)
 	for i in 3:
 		at += step
 		_drag(index, at, step)
+	_injected[&"up" if direction < 0.0 else &"down"] += 1
 	if not hold:
 		_lift_later(index, at)
 	return index
@@ -280,6 +283,7 @@ func _stick_flick() -> void:
 		_touch(0, home, true)
 		_drag(0, home + Vector2(0.0, -throw), Vector2(0.0, -throw))
 	_drag(0, home + Vector2(0.0, throw), Vector2(0.0, 2.0 * throw))
+	_injected[&"turn"] += 1
 	if not held:
 		_lift_later(0, home)
 
@@ -372,7 +376,10 @@ func _stick_hold(direction: Vector2, amount: float) -> void:
 	var home: Vector2 = _main._touch.stick_home()
 	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u) * clampf(amount, 0.0, 1.0)
 	_stick_down(home)
-	_drag(0, home + direction.normalized() * throw, direction.normalized() * throw)
+	# From the stick's base where it is now: a thumb pushed on past the ring
+	# (a sprint) carried the base along with it.
+	var base: Vector2 = _main._touch._stick_origin
+	_drag(0, base + direction.normalized() * throw, direction.normalized() * throw)
 
 # Sets the thumb down on the stick, unless it is on it already: a second
 # press of the same index would be taken for look.

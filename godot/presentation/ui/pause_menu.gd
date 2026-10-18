@@ -40,6 +40,7 @@ var _content: Control
 var _plate: Control
 var _controls_page: Control
 var _controls_view: Control
+var _choice_controls := {}
 var _controls_tabs := {}
 var _controls_family := UiStyle.Family.KEYBOARD
 var _settings_page: Control
@@ -105,6 +106,12 @@ func page_first_center(page: StringName) -> Vector2:
 
 func current_page() -> StringName:
 	return _page
+
+
+# Where a choice row's button is (for the scripted runs): the settings key's.
+func setting_center(key: StringName) -> Vector2:
+	var control: Control = _choice_controls[key]
+	return control.global_position + control.size * 0.5
 
 
 # Height the tallest settings page needs beyond its plate; > 0 means
@@ -668,6 +675,7 @@ func _choice_row(title: String, key: StringName, names: Array, on_change: Callab
 	choice.custom_minimum_size = Vector2(300.0 * _u, 0.0)
 	choice.add_theme_font_override("font", UiStyle.font_heavy())
 	row.add_child(choice)
+	_choice_controls[key] = choice
 	choice.pressed.connect(func() -> void:
 		settings.set(key, (int(settings.get(key)) + 1) % names.size())
 		if on_change.is_valid():
