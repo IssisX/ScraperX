@@ -33,6 +33,11 @@ flock "${lock_fd}"
 if [[ -x "${godot_bin}" && "$(cat "${godot_stamp}" 2>/dev/null)" == "${godot_sha256}" ]]; then
   exit 0
 fi
+# A binary put here by the workflow's own steps has no stamp; accept it when it
+# reports the pinned release, as the workflow's own check does.
+if [[ -x "${godot_bin}" && "$("${godot_bin}" --headless --version 2>/dev/null)" == "${godot_version/-/.}.official."* ]]; then
+  exit 0
+fi
 
 staging="$(mktemp -d "${godot_dir}/.staging.XXXXXX")"
 trap 'rm -rf -- "${staging}"' EXIT
