@@ -105,8 +105,13 @@ func caught() -> void:
 		main._touch.button_label(&"drop") != "CANCEL",
 		"successful acquisition consumes input and restores ordinary release feedback")
 	for hand in main._arms._hands:
-		check(hand.pose in [Arms.POSE_GRIP, Arms.POSE_CLIMB] and hand.anchored,
-			"actual native grip overrides the open-hand preview")
+		var attached := bool(state.get("left_hand_attached" if hand.side < 0.0 else "right_hand_attached", false))
+		if attached:
+			check(hand.pose in [Arms.POSE_GRIP, Arms.POSE_CLIMB] and hand.anchored,
+				"each actual native grip overrides its open-hand preview")
+		else:
+			check(hand.pose == Arms.POSE_AIR and not hand.anchored and not hand.planted,
+				"a valid one-hand catch cannot plant the unattached hand")
 
 func ordinary_air(label: String) -> void:
 	check(not bool(native.get_landing_state().get("air_catch_intent_pending", true)) and
@@ -153,7 +158,7 @@ func _run() -> void:
 	# be reached, so that route cannot measure an air-to-reach transition.
 	main._yaw = -PI * 0.5
 	main._pitch = 0.0
-	check(native.debug_restart_at(Vector3(1000, 15, -1000)), "clear-air initial condition")
+	check(native.debug_restart_at(Vector3(16.85, 15, -118)), "clear-air initial condition above the gantry")
 	step(30)
 	ordinary_air("unrequested clear flight")
 	var before_reach := local_wrists()
