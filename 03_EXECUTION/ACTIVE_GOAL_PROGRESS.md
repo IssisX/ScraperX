@@ -1138,7 +1138,7 @@ fill in after).**
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint.
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
-   her extras.
+   her extras; her mind decided 2026-10-18 (decision 9: A + B + C).
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
 
@@ -1182,3 +1182,9 @@ that is otherwise ready. A letter is enough to answer.
    smaller escape beats for later.
 8. **Still yours to decide when ready:** the store name, the price, whether the code stays public,
    the credits, and whether you have the rights to the fall-scream voice clip.
+9. **The Matron's mind:** decided 2026-10-18, A + B + C. A: two tiers, frail first (she rides the
+   lifts and lines like anyone), then the Turn (she runs the parkour moves). B: she meddles with
+   your route only in ways that can be undone (sends a lift away, waits quiet at a choke point,
+   boards the lift you called), never making the summit impossible. C: she learns a trick you
+   repeat within a run and forgets it when the run ends. Her senses stay honest: hearing and
+   sight, a last-known place and a guess where you are going; never the forklift or carrying.
