@@ -1378,6 +1378,10 @@ fill in after).**
    real collision reported by the native (where, its energy, its material) is heard by its material
    and heard by the Matron too; then the forklift's and the crane's own sounds from their parts.
    Decided 2026-10-18: hits first; loud machines draw the Matron too. Done 2026-10-18: the hits.
+9. Controls for the movement, as its own goal (owner, 2026-10-18): the advanced moves worked
+   through the thumbsticks or gestures, something elegant and intuitive, not on-screen buttons
+   that take the player's eyes off the run. Done as one piece of work at some point, never
+   piecemeal inside other tasks.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
