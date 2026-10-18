@@ -278,6 +278,7 @@ func _read_context() -> Dictionary:
 		"sliding": bool(_native.is_player_sliding()),
 		"wall_running": bool(_native.is_player_wall_running()),
 		"wall_climbing": bool(_native.is_player_wall_climbing()),
+		"wall_normal": _native.get_player_wall_normal(),
 		"wall_steps": int(_native.get_wall_step_count()),
 		"springboarding": springboarding,
 		"springboards": int(_native.get_springboard_count()),

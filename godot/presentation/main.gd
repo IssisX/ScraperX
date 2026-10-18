@@ -412,6 +412,17 @@ func _build_interface() -> void:
 	_settings = SettingsStore.new()
 	_settings.persistent = not _ci_mode and _uitest_scenario.is_empty()
 	_settings.load_from_disk()
+	# A preview on a machine with no GPU (the cloud dev box: its Godot tool
+	# sets SCRAPERX_PREVIEW=1, and Mesa's CPU renderer is llvmpipe): the
+	# lowest render, no shadows, and nothing saved, so a frame is drawn in
+	# well under a second. Scripted runs keep their own settings.
+	var software_gl := RenderingServer.get_video_adapter_name().containsn("llvmpipe")
+	if OS.get_environment("SCRAPERX_PREVIEW") == "1" or (software_gl and _settings.persistent):
+		_settings.persistent = false
+		_settings.apply_quality(0)
+		_settings.render_scale = SettingsStore.RENDER_SCALE_RANGE.x
+		_settings.shadow_quality = 0
+		_settings.quality = SettingsStore.QUALITY_CUSTOM
 	var hud_layer: CanvasLayer = $HUD
 	_hud = Hud.new()
 	_hud.name = "Hud"

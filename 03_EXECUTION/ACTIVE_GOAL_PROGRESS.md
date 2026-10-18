@@ -1296,6 +1296,20 @@ pieces settle within 1.6 cm and sleep; the 52 heavy pieces up the tower are all 
 skids; the crane's loads stand only on the 11, 22 and 44 m decks, 6, 4 and 3 of them) and `crane`
 (the 44 m deck's forklift forks its skid crate).
 
+**The body felt at speed (2026-10-18; to-do 4, the first of its two).** The climber breathes with
+the effort: an effort rises toward what the body is doing (the feet's speed over the ground past a
+walk, full at flow's 9 m/s; a hang, a mantle or a vault at 0.7) over 5 s and falls over 9 s, so a
+sprint's panting goes on after it. Past 0.2 a breath is heard, an inhale and an exhale (two new
+synthesized clips), every 4 s at that and every 1.1 s spent, louder with it; none over a fear
+line. At flow's speed the view trembles slightly (two fixed tones on pitch and roll, never random;
+off with reduced motion or head bob). The wall run's lean now goes off the wall on whichever side
+it is: it was a fixed roll that leaned into a wall on the runner's left. The native now gives the
+wall's outward normal (`get_player_wall_normal`). Proof: `touch_flow` (in a 2.65 s sprint the
+effort goes 0.00 to 0.38 and a breath is taken; the tremor is full at 9 m/s) and `touch_wall_run`
+(the wall on the left, the view leaned 0.09 rad off it). On a machine with no GPU (Mesa's CPU
+renderer, or `SCRAPERX_PREVIEW=1`, set by the Godot MCP launcher) an unscripted launch draws at
+the lowest render with no shadows and saves nothing: about 7 frames a second there, from 1.
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1311,7 +1325,8 @@ fill in after).**
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up
    there. Done 2026-10-18: the yard crane, its three docks, forkable heavy stock by the rules,
    forklifts on the 11 m and 44 m decks.
-4. Mirror's Edge's last two: the body felt at speed, the faint route hint.
+4. Mirror's Edge's last two: the body felt at speed, the faint route hint. Done 2026-10-18: the
+   body felt at speed (breath with the effort, a tremor at flow, the wall run's lean off the wall).
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
@@ -1324,6 +1339,10 @@ fill in after).**
    deck after you). Not reachable yet: B's cage with her (its island), and C's beyond it.
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
+8. Sound from the physics (owner, 2026-10-18: "GOOD immersive physics linked audio for things like
+   the forklift, crane, and everything else", and sound is linked to the Matron). Proposed: every
+   real collision reported by the native (where, its energy, its material) is heard by its material
+   and heard by the Matron too; then the forklift's and the crane's own sounds from their parts.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

@@ -105,6 +105,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_player_grounded);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_wall_running"),
                                 &ScraperXSimulation::is_player_wall_running);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_player_wall_normal"),
+                                &ScraperXSimulation::get_player_wall_normal);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_wall_climbing"),
                                 &ScraperXSimulation::is_player_wall_climbing);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wall_climb_count"), &ScraperXSimulation::get_wall_climb_count);
@@ -457,6 +459,10 @@ bool ScraperXSimulation::is_player_grounded() const {
 
 bool ScraperXSimulation::is_player_wall_running() const {
     return simulation_->snapshot().player_wall_running;
+}
+
+godot::Vector3 ScraperXSimulation::get_player_wall_normal() const {
+    return to_godot(simulation_->snapshot().player_wall_normal);
 }
 
 bool ScraperXSimulation::is_player_wall_climbing() const {

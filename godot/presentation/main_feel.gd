@@ -35,6 +35,13 @@ const FOV_SPRINT_MAX_DEGREES := 4.0
 const FOV_FLOW_DEGREES := 4.0
 const FLOW_FROM_MPS := 8.0
 const FLOW_FULL_MPS := 9.0
+# On a wall run the head leans off the wall, eased in and out over ~0.15 s.
+const WALL_LEAN_RAD := 0.09
+const WALL_LEAN_RESPONSE_PER_SECOND := 14.0
+# At flow's speed the view trembles a little: two incommensurate tones on
+# pitch and roll, never a random jitter (the same run shakes the same way).
+const SPEED_SHAKE_RAD := 0.0035
+const SPEED_SHAKE_HZ := Vector2(11.3, 7.9)
 const FOV_FALL_MAX_DEGREES := 3.0
 const FOV_FALL_FULL_MPS := 14.0
 const LANDING_DIP_DURATION_SECONDS := 0.22
@@ -118,6 +125,9 @@ var _teeter_phase := 0.0
 # The native's TraversalState for a hang (the arms' grip pose).
 const TRAVERSAL_HANGING_STATE := 1
 var _beam_bank := 0.0
+var _wall_lean := 0.0
+var _speed_shake := 0.0   # its weight, 0..1, for the scripted runs
+var _shake_clock := 0.0
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
 # second while a rider sits drawn), and the aim the look is steering.
 var _slingshot_view: Node3D
@@ -725,7 +735,6 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		parkour_fov = 3.5
 	elif bool(_ctx.get("wall_running", false)):
 		# Running on the wall: the body leans off it, the view with it.
-		_cam_bank += 0.09
 		parkour_fov = 3.0
 	elif bool(_ctx.get("sliding", false)):
 		# On the hip: the view leans back and a little to the trailing side,
@@ -737,6 +746,28 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var sway := sin(_cam_bob_phase * 0.75)
 		lateral_bob += 0.025 * sway
 		_cam_bank += 0.015 * sway
+
+	# The wall's outward normal on the right means the wall is on the left:
+	# the head leans right, off it (a negative roll), and the other way round.
+	var wall_lean_target := 0.0
+	if bool(_ctx.get("wall_running", false)) and not bool(_ctx.get("wall_climbing", false)):
+		var wall_normal: Vector3 = _ctx.get("wall_normal", Vector3.ZERO)
+		wall_lean_target = -WALL_LEAN_RAD * clampf(wall_normal.dot(right_vector) * 2.0, -1.0, 1.0)
+	_wall_lean = lerpf(_wall_lean, wall_lean_target, 1.0 - exp(-WALL_LEAN_RESPONSE_PER_SECOND * delta))
+	if absf(_wall_lean - wall_lean_target) < 0.0005:
+		_wall_lean = wall_lean_target
+	_cam_bank += _wall_lean
+	# Flow's speed felt: the slight shake, on the ground or in the air.
+	var shake_target := smoothstep(FLOW_FROM_MPS, FLOW_FULL_MPS, horizontal_speed) \
+		if _head_bob_on and not _reduced_motion else 0.0
+	_speed_shake = move_toward(_speed_shake, shake_target, delta / 0.4)
+	var shake_pitch := 0.0
+	if _speed_shake > 0.0:
+		_shake_clock += delta
+		shake_pitch = SPEED_SHAKE_RAD * _speed_shake * sin(TAU * SPEED_SHAKE_HZ.x * _shake_clock)
+		_cam_bank += SPEED_SHAKE_RAD * _speed_shake * sin(TAU * SPEED_SHAKE_HZ.y * _shake_clock + 1.1)
+	else:
+		_shake_clock = 0.0
 
 	# A hang torn off: the view drops and tips down as the hands go.
 	var slip_pitch := 0.0
@@ -798,7 +829,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	stagger -= 0.07 * _beam_bank
 	if _reduced_motion:
 		roll_turn = 0.0
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion, _yaw,
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion + shake_pitch, _yaw,
 		_cam_bank + stagger * motion)
 	# Driving the forklift, the head goes with the seat: the view tilts with
 	# the truck's floor, so its nose going down under a load is seen.

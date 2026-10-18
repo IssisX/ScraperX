@@ -47,6 +47,7 @@ public:
     [[nodiscard]] bool is_player_crouched() const;
     [[nodiscard]] bool is_player_sliding() const;
     [[nodiscard]] bool is_player_wall_running() const;
+    [[nodiscard]] godot::Vector3 get_player_wall_normal() const;
     [[nodiscard]] bool is_player_wall_climbing() const;
     [[nodiscard]] bool is_player_tucked() const;
     [[nodiscard]] bool is_player_springboarding() const;

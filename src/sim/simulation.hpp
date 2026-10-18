@@ -603,6 +603,8 @@ struct Snapshot final {
     double zipline_hands_load_n = 0.0;  // what the bar puts on the hands (they tear past the ledge grip)
     std::uint64_t zipline_torn_count = 0;   // rides ended with the hands torn off at the stop
     bool player_wall_running = false;
+    // The wall run along: its face's outward normal, level (zero off a wall).
+    Vector3 player_wall_normal{};
     // On the wall, run up it (a climb this flight, the foot still on it).
     bool player_wall_climbing = false;
     // Parkour step 5, the grappling hook. hook_state: 0 stowed, 1 flying,

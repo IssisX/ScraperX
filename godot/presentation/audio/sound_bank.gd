@@ -75,6 +75,9 @@ func build() -> void:
 	# The ziplines' (sim/zipline.hpp).
 	clips[&"zip_loop"] = [_loop(_zip(1.5), 0.3)]
 	clips[&"zip_brake_loop"] = [_loop(_zip_brake(1.2), 0.25)]
+	# The climber's breath, after everything else for the same reason.
+	clips[&"breath_in"] = _variants(3, _breath.bind(true))
+	clips[&"breath_out"] = _variants(3, _breath.bind(false))
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -544,6 +547,24 @@ func _matron_breath() -> PackedFloat32Array:
 		var exhale := sin(PI * clampf((t - 0.85) / 0.8, 0.0, 1.0)) if t > 0.85 else 0.0
 		var rattle := 0.5 + 0.5 * sin(TAU * 31.0 * t)
 		out[i] = air[i] * (0.9 * inhale + 0.7 * exhale * rattle) + wheeze[i] * 0.8 * inhale
+	return out
+
+
+# The climber's own breath, one half of it: air drawn in through the mouth
+# (brighter, rising) or pushed out (darker, falling, with a little voice in
+# the throat). The director paces the halves by the effort.
+func _breath(inhale: bool) -> PackedFloat32Array:
+	var length := 0.34 if inhale else 0.42
+	var out := _silence(length)
+	var n := out.size()
+	var air := _band_noise_buffer(n, 450.0 if inhale else 350.0, 3200.0 if inhale else 2200.0)
+	var throat := _band_noise_buffer(n, 900.0, 1500.0)
+	var tilt := _rng.randf_range(0.9, 1.1)
+	for i in n:
+		var u := float(i) / float(n)
+		var env := sin(PI * pow(u, 0.6 if inhale else 1.4))
+		var lift := (0.6 + 0.4 * u) if inhale else (1.0 - 0.4 * u)
+		out[i] = (air[i] * 0.9 * lift + throat[i] * (0.25 if inhale else 0.45)) * env * env * tilt
 	return out
 
 

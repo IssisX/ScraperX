@@ -73,6 +73,16 @@ const REGIONS := [
 	[&"machine", 640.0, &"clang", Vector2(5.0, 12.0), Vector2(25.0, 70.0), Vector2(-20.0, 5.0), -15.0, Vector2(0.5, 0.65)],
 ]
 const REGION_ENTRY_SECONDS := Vector2(0.4, 1.5)
+# The climber's breath follows the effort: a load from what the body is doing
+# (the feet's speed over what they stand on, past a walk; a hang, a mantle or
+# a vault), which the effort climbs toward over BREATH_RISE_S and leaves
+# over BREATH_FALL_S, so a sprint's breath goes on for a while after it.
+# Heard past BREATH_HEARD; a breath every 4 s at that, every 1.1 s spent.
+const BREATH_RISE_S := 5.0
+const BREATH_FALL_S := 9.0
+const BREATH_HEARD := 0.2
+const BREATH_CYCLE_S := Vector2(4.0, 1.1)
+const BREATH_HANG_LOAD := 0.7
 
 # Counted whether or not the bank has finished building, so the scripted
 # UI runs can prove the cues fire.
@@ -173,6 +183,11 @@ var _bird_clock := 3.0
 var region_sounds := {}   # region name -> one-shots played there
 var _region := &""
 var _region_clock := 0.0
+# The effort, 0 rested to 1 spent, and the breaths taken (halves counted as
+# one, at the inhale), for the scripted runs.
+var effort := 0.0
+var breaths := 0
+var _breath_phase := 0.0
 
 
 func _ready() -> void:
@@ -359,6 +374,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	if _last_deaths >= 0 and deaths > _last_deaths:
 		_play(&"impact_lethal", 0.0, 1.0)
 	_sound_cracks(delta)
+	_update_breath(delta, grounded, horizontal, traversal, deaths)
 	_update_voice(delta, position, velocity, grounded, traversal, chute, deaths)
 
 	_was_grounded = grounded
@@ -370,6 +386,34 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_update_air(position, velocity, grounded, delta)
 	_update_birds(position, delta)
 	_update_region(position, delta)
+
+
+func _update_breath(delta: float, grounded: bool, foot_speed: float, traversal: int, deaths: int) -> void:
+	if _last_deaths >= 0 and deaths > _last_deaths:
+		effort = 0.0
+		_breath_phase = 0.0
+		return
+	var load := effort   # in the air the effort holds
+	if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_MANTLING or traversal == TRAVERSAL_VAULTING:
+		load = BREATH_HANG_LOAD
+	elif grounded:
+		load = smoothstep(2.0, 9.0, foot_speed)
+	var tau := BREATH_RISE_S if load > effort else BREATH_FALL_S
+	effort = clampf(effort + (load - effort) * (1.0 - exp(-delta / tau)), 0.0, 1.0)
+	if effort < BREATH_HEARD:
+		_breath_phase = 0.0
+		return
+	var before := _breath_phase
+	_breath_phase += delta / lerpf(BREATH_CYCLE_S.x, BREATH_CYCLE_S.y,
+		smoothstep(BREATH_HEARD, 1.0, effort))
+	# A fear line is breath enough: none is taken over one.
+	var level := lerpf(-24.0, -11.0, smoothstep(BREATH_HEARD, 1.0, effort))
+	if before == 0.0 or floorf(_breath_phase) > floorf(before):
+		breaths += 1
+		if _voice_tier == &"":
+			_play(&"breath_in", level, randf_range(0.95, 1.05))
+	elif fmod(before, 1.0) < 0.42 and fmod(_breath_phase, 1.0) >= 0.42 and _voice_tier == &"":
+		_play(&"breath_out", level + 1.0, randf_range(0.93, 1.03))
 
 
 # Once per rendered frame, with every machine's motion as main.gd sampled it:

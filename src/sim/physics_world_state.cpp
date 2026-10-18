@@ -382,6 +382,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.zipline_hands_load_n = zipline_->state().hands_load_n;
     state_.zipline_torn_count = zip_torn_count_;
     state_.player_wall_running = wall_running();
+    state_.player_wall_normal = wall_running() ? to_vector3(wall_normal_) : Vector3{};
     state_.player_wall_climbing = wall_climbed_this_flight_ && wall_running();
     state_.has_hook = has_hook_;
     state_.hook_take_available = hook_take_in_reach(bodies);

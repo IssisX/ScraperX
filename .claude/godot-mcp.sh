@@ -27,6 +27,11 @@ if [[ -z "${GODOT_PATH:-}" && -x "${repo_root}/tools/godot/godot" ]]; then
   export GODOT_PATH="${repo_root}/tools/godot/godot"
 fi
 
+# The game's fast preview (godot/presentation/main.gd): this box draws on the
+# CPU, about a frame a second at full quality, too slow for run_project's
+# bridge to come up in time.
+export SCRAPERX_PREVIEW=1
+
 # run_project refuses to start without DISPLAY or WAYLAND_DISPLAY. A headless
 # Linux host gets a private Xvfb at the window override size in project.godot.
 # xvfb-run is not used because it merges the child's stderr into stdout.

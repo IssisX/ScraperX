@@ -1,5 +1,11 @@
 {
   "enabledMcpjsonServers": ["godot"],
+  "env": {
+    "MCP_TOOL_TIMEOUT": "300000"
+  },
+  "permissions": {
+    "allow": ["mcp__godot"]
+  },
   "hooks": {
     "SessionStart": [
       {

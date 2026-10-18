@@ -235,11 +235,24 @@ func _touch_wall_run() -> bool:
 	var stepped: bool = await _wait_until(func() -> bool: return int(_native().get_wall_step_count()) >= 2, 1.5)
 	if not stepped:
 		return _fail("no steps on the wall (%d)" % int(_native().get_wall_step_count()))
+	# The view leans off the wall: right of the view when the wall is on the
+	# left (its normal pointing right), and the other way round.
+	await _seconds(0.15)
+	var normal: Vector3 = _native().get_player_wall_normal()
+	var right := Vector3(cos(float(_main._yaw)), 0.0, -sin(float(_main._yaw)))
+	var lean := float(_main._wall_lean)
+	if bool(_main._head_bob_on) and bool(_native().is_player_wall_running()):
+		if normal.length() < 0.5:
+			return _fail("on the wall the native gave no wall normal")
+		if absf(normal.dot(right)) > 0.3 and (lean * normal.dot(right) >= 0.0 or absf(lean) < 0.05):
+			return _fail("the view did not lean off the wall (lean %.3f rad, normal.right %.2f)" % [
+				lean, normal.dot(right)])
 	await _pose("wall_run")
 	var down: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
 	if not down:
 		return _fail("the wall run never came down")
-	_detail = "steps=%d landed_x=%.2f" % [int(_native().get_wall_step_count()), _position().x]
+	_detail = "steps=%d landed_x=%.2f lean_rad=%.3f normal=%s" % [int(_native().get_wall_step_count()),
+		_position().x, lean, str(normal)]
 	return true
 
 # Mirror's Edge's wall climb: from the static deck to the run-up square to
@@ -318,14 +331,19 @@ func _touch_flow() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	await _face(Vector2(1.0, 0.0))
 	await _seconds(0.3)
+	var rested := float(_main._audio.effort)
 	if not _stick_sprint():
 		return _fail("the stick pushed past its ring did not latch sprint")
 	await _seconds(0.75)
 	var early := _run_speed()
 	var early_fov: float = _main._camera.fov
+	var early_shake := float(_main._speed_shake)
 	await _seconds(1.9)
 	var gathered := _run_speed()
 	var gathered_fov: float = _main._camera.fov
+	var gathered_shake := float(_main._speed_shake)
+	var effort := float(_main._audio.effort)
+	var breaths := int(_main._audio.breaths)
 	await _pose("flow")
 	_tap(2, _center(&"jump"))
 	var up: bool = await _wait_until(func() -> bool: return not bool(_native().is_player_grounded()), 0.4)
@@ -339,8 +357,19 @@ func _touch_flow() -> bool:
 		await get_tree().process_frame
 		flown += get_process_delta_time()
 	_move(InputRouter.Device.TOUCH, 0.0)
-	_detail = "early_mps=%.2f gathered_mps=%.2f in_air_mps=%.2f fov=%.1f->%.1f" % [
-		early, gathered, least, early_fov, gathered_fov]
+	_detail = "early_mps=%.2f gathered_mps=%.2f in_air_mps=%.2f fov=%.1f->%.1f shake=%.2f->%.2f effort=%.2f->%.2f breaths=%d" % [
+		early, gathered, least, early_fov, gathered_fov, early_shake, gathered_shake, rested, effort, breaths]
+	# The body felt at speed: breath that follows the effort, the shake at
+	# flow's speed and not below it.
+	if rested > 0.15:
+		return _fail("standing, the climber was already out of breath (effort %.2f)" % rested)
+	if effort < 0.3 or breaths < 1:
+		return _fail("the sprint did not bring the breath on (effort %.2f, %d breaths)" % [effort, breaths])
+	if bool(_main._head_bob_on) and not bool(_main._reduced_motion):
+		if gathered_shake < 0.8:
+			return _fail("at flow's speed the view did not shake (%.2f)" % gathered_shake)
+		if early > 8.0 and early_shake > gathered_shake:
+			return _fail("the shake came before the speed (%.2f at %.2f m/s)" % [early_shake, early])
 	if early > 8.4:
 		return _fail("the sprint was at flow's speed at once (%.2f m/s)" % early)
 	if gathered < 8.9:
