@@ -1,0 +1,12 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+approach tick=126 pos=-41.9427,1.0195,-38.9296 velocity=6.8023,5.282,-0.333282 count=0 active=0
+approach tick=141 pos=-40.8161,1.76131,-38.8657 velocity=6.74975,3.64701,0.541713 count=0 active=0
+approach tick=156 pos=-39.6912,2.23062,-38.7756 velocity=6.74975,2.01201,0.541713 count=0 active=0
+approach tick=171 pos=-38.5662,2.42744,-38.6854 velocity=6.74975,0.377005,0.541713 count=0 active=0
+approach tick=186 pos=-37.4413,2.35175,-38.5952 velocity=6.74975,-1.258,0.541713 count=0 active=0
+approach tick=201 pos=-36.3163,2.00356,-38.505 velocity=6.74975,-2.893,0.541713 count=0 active=0
+WALL_CONTACT_WINDOW solve=212 active=1 walking=1 fresh=1 same=1 delta=0.075138,-0.040933,0.000000 elapsed=0.011111 load=3500.0000 reason=0 friction=0.8000
+WALL_CONTACT_WINDOW solve=213 active=1 walking=1 fresh=1 same=1 delta=0.151112,-0.083168,0.000000 elapsed=0.022222 load=3500.0000 reason=0 friction=0.8000
+WALL_CONTACT_WINDOW solve=214 active=1 walking=1 fresh=1 same=1 delta=0.228405,-0.126423,0.000000 elapsed=0.033333 load=1757.0959 reason=0 friction=0.8000
+WALL_STRIDE flow push_off=0 entry_tangent_mps=6.80094 receiving_tangent_mps=6.74975 step_work_j=0
+WALL_STRIDE PASS mode=flow

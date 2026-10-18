@@ -140,6 +140,101 @@ bool Simulation::PhysicsWorld::try_begin_wall_kick(JPH::BodyInterface &bodies) n
     return begin_wall_foot(bodies, false);
 }
 
+void Simulation::PhysicsWorld::arm_wall_run() noexcept {
+    wall_run_ = {};
+    const float gravity = physics_system_.GetGravity().Length();
+    if (!(gravity > 0)) return;
+    wall_run_.phase = WallRunEpisode::Phase::Armed;
+    // Two finite foot efforts may extend the ordinary earned flight window.
+    // The original takeoff owns this deadline; replanting never renews it.
+    const double seconds = 2.0 * kJumpSpeed / gravity +
+        2.0 * PhysicalFootPush::duration_seconds();
+    wall_run_.deadline_solve = contact_solve_serial_ +
+        std::uint64_t(std::ceil(seconds * Simulation::kTickRateHz));
+}
+
+bool Simulation::PhysicsWorld::wall_run_contact_is_distinct() const noexcept {
+    const auto &first = wall_run_.first;
+    const auto &next = wall_contact_;
+    if (!next.valid || next.solved_tick != contact_solve_serial_ ||
+        next.body != first.body || next.entity_id != first.entity_id ||
+        next.subshape != first.subshape || next.shape_identity != first.shape_identity ||
+        next.local_normal.Dot(first.local_normal) < .995F) return false;
+    // Only material progress counts. A skin-sized displacement rejects
+    // same-point jitter; the actual second start also requires half stroke.
+    return (next.local_point-first.local_point).Dot(wall_run_.local_direction) > kLandingSkin;
+}
+
+void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies,
+                                               const StepCommands &commands) noexcept {
+    using Phase = WallRunEpisode::Phase;
+    if (wall_run_.phase == Phase::None) return;
+    const bool cancelled = grounded_ || commands.jump_requested || commands.release_requested ||
+        commands.cancel_jump_requested || commands.set_down_requested || commands.sling_drop ||
+        commands.crouch_held || !sprint_is_eligible(commands) || physical_hands_->active() ||
+        carry_constraint_ || traversal_state_ != TraversalState::None ||
+        (slingshot_ && slingshot_->controls_player()) ||
+        contact_solve_serial_ > wall_run_.deadline_solve;
+    if (cancelled) { wall_run_ = {}; return; }
+    if (wall_run_.phase == Phase::Armed) return;
+    if (wall_run_.phase == Phase::SecondPlant) return;
+    const auto &first = wall_run_.first;
+    JPH::Vec3 normal, direction, support_velocity;
+    {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),first.body);
+        if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() || lock.GetBody().IsSensor() ||
+            lock.GetBody().GetShape() != first.shape_identity ||
+            lock.GetBody().GetUserData() != first.entity_id) { wall_run_ = {}; return; }
+        const auto &wall = lock.GetBody();
+        normal = wall.GetRotation()*first.local_normal;
+        direction = wall.GetRotation()*wall_run_.local_direction;
+        const auto point = wall.GetCenterOfMassTransform()*first.local_point;
+        support_velocity = wall.GetPointVelocity(point);
+    }
+    const auto relative = bodies.GetLinearVelocity(player_id_)-support_velocity;
+    const auto intent = JPH::Vec3(float(commands.move_input_x),0,float(commands.move_input_z));
+    // A deliberate lean into the wall authorizes the second step. The
+    // existing light-brush single-plant path remains an ordinary departure.
+    if (-intent.Dot(normal) <= kClimbInputDeadzone ||
+        intent.Dot(direction) < kSprintMaximumAngleCos || relative.Dot(direction) <= 0) {
+        wall_run_ = {};
+        return;
+    }
+    if (wall_run_.phase == Phase::FirstPlant) {
+        const auto &read = physical_foot_push_->readback();
+        if (!read.active || read.stop_requested || !read.walking_step) { wall_run_ = {}; return; }
+        if (!wall_run_contact_is_distinct() || read.last_load_n <= 0) return;
+        const float progress = (wall_contact_.local_point-first.local_point).Dot(wall_run_.local_direction);
+        const float next_progress = progress + std::max(0.0F,relative.Dot(direction)) *
+            float(Simulation::kFixedStepSeconds);
+        // Prediction schedules release only. It cannot create the next foot:
+        // a later actual solved material point still needs half a stroke.
+        if (next_progress < .5F * PhysicalFootPush::maximum_stroke_m()) return;
+        // Validate through the actual actuator without mutating its cached
+        // geometry or disguising a traction/reach failure as another step.
+        if (!physical_foot_push_->can_retain_contact()) { wall_run_ = {}; return; }
+        physical_foot_push_->clear();
+        foot_push_purpose_ = FootPushPurpose::None;
+        wall_run_.phase = Phase::AwaitingContact;
+        wall_run_.retired_solve = contact_solve_serial_;
+        return;
+    }
+    if (contact_solve_serial_ <= wall_run_.retired_solve) return;
+    // A real solve without the first row must supply the new contact.
+    // A missed wall, changed face or stale point ends the episode.
+    if (!wall_run_contact_is_distinct() || physical_foot_push_->active()) { wall_run_ = {}; return; }
+    const float progress = (wall_contact_.local_point-first.local_point).Dot(wall_run_.local_direction);
+    if (progress < .5F * PhysicalFootPush::maximum_stroke_m()) return;
+    const auto consumed = wall_kick_consumed_body_;
+    wall_kick_consumed_body_ = JPH::BodyID();
+    if (!begin_wall_foot(bodies,true,direction)) {
+        wall_kick_consumed_body_ = consumed;
+        wall_run_ = {};
+        return;
+    }
+    wall_run_.phase = Phase::SecondPlant;
+}
+
 bool Simulation::PhysicsWorld::try_begin_wall_stride(JPH::BodyInterface &bodies,
                                                      const StepCommands &commands) noexcept {
     if (!wall_stride_available_ || grounded_ || !sprint_is_eligible(commands) ||
@@ -218,6 +313,11 @@ bool Simulation::PhysicsWorld::begin_wall_foot(JPH::BodyInterface &bodies, const
     foot_push_contact_.world_point = anchor;
     foot_push_contact_.world_normal = normal;
     foot_push_purpose_ = stride ? FootPushPurpose::WallStride : FootPushPurpose::WallKick;
+    if (stride && wall_run_.phase == WallRunEpisode::Phase::Armed) {
+        wall_run_.phase = WallRunEpisode::Phase::FirstPlant;
+        wall_run_.first = wall_contact_;
+        wall_run_.local_direction = bodies.GetRotation(wall_contact_.body).Conjugated()*direction;
+    } else if (!stride) wall_run_ = {};
     wall_kick_consumed_body_ = wall_contact_.body;
     wall_stride_available_ = false;
     if (stride) ++wall_stride_count_;

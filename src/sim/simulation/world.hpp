@@ -927,6 +927,9 @@ private:
     [[nodiscard]] bool try_begin_wall_kick(JPH::BodyInterface &bodies) noexcept;
     [[nodiscard]] bool try_begin_wall_stride(JPH::BodyInterface &bodies,
                                              const StepCommands &commands) noexcept;
+    void arm_wall_run() noexcept;
+    void update_wall_run(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+    [[nodiscard]] bool wall_run_contact_is_distinct() const noexcept;
     [[nodiscard]] bool begin_wall_foot(JPH::BodyInterface &bodies, bool stride,
                                        JPH::Vec3 direction = JPH::Vec3::sZero()) noexcept;
 
@@ -1127,8 +1130,17 @@ private:
     FootContactSample foot_contact_{}, foot_push_contact_{};
     FootContactSample wall_contact_{};
     JPH::BodyID wall_kick_consumed_body_;
-    // One automatic wall step per real takeoff; another wall body cannot refill it.
+    // Ordinary first-plant opportunity; the latched episode may earn one
+    // distinct same-face replant. Another wall body cannot refill either.
     bool wall_stride_available_ = false;
+    struct WallRunEpisode {
+        enum class Phase : std::uint8_t { None, Armed, FirstPlant, AwaitingContact, SecondPlant };
+        Phase phase = Phase::None;
+        FootContactSample first{};
+        JPH::Vec3 local_direction = JPH::Vec3::sZero();
+        std::uint64_t deadline_solve = 0;
+        std::uint64_t retired_solve = 0;
+    } wall_run_;
     std::uint64_t wall_stride_count_ = 0;
     JPH::BodyID step_receiver_;
     JPH::SubShapeID step_receiver_subshape_;

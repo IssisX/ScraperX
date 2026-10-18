@@ -535,6 +535,16 @@ void PhysicalFootPush::clear(StopReason reason) {
     impl_->state.player_force = JPH::Vec3::sZero();
 }
 
+bool PhysicalFootPush::can_retain_contact() const noexcept {
+    const auto &owner = *impl_;
+    if (!owner.row || !owner.state.active || owner.state.stop_requested ||
+        owner.state.elapsed_seconds >= duration_seconds()) return false;
+    const JPH::BodyID ids[]{owner.state.support, owner.player};
+    JPH::BodyLockMultiRead lock(owner.system.GetBodyLockInterface(), ids, 2);
+    return lock.GetBody(0) && lock.GetBody(1) &&
+        owner.row->valid_for_activation(owner.state.initial_distance_m);
+}
+
 void PhysicalFootPush::hold_target() noexcept {
     if (impl_->row && !impl_->state.stop_requested) {
         impl_->state.target_held = true;

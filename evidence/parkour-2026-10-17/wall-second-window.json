@@ -1,0 +1,123 @@
+{
+  "objective": "Observe whether one actual lateral wall plant retains a fresh distinct material contact before traction failure; one bounded baseline probe, no physical changes.",
+  "budget_seconds": 180.0,
+  "started": 1792325851.355361,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "baseline-contact-window",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-second-jjsxr3ju/candidate",
+        "flow"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-second-jjsxr3ju/parkour_intent.cpp": "bd347caff126fde2df7b767022a7ff6c27075d8cd40edc0542787f4cf752ddfa",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-second-jjsxr3ju/candidate.cpp": "f1f50c44b6633bb4e245977c61cb0c8d0645f49a418e41b58daca2ca40128f80",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-second-jjsxr3ju/libwall-observe.a": "2c39df71e5551f9f059682eb6f70af2c14f33b2805771294d7cb09932be41a61"
+      },
+      "started": 1792325055.6482081,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-1.log",
+      "exit": 0,
+      "finished": 1792325064.3747704
+    },
+    {
+      "stage": "first-two-plant-candidate",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/candidate"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/candidate.cpp": "80277a08dbd97eea58c537dd728ec4e90d3cbf01da081bf1b1af7d5619d83b9c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/libwall-run.a": "2006c1274912708598cc379c079298f6901d885766776ba158e7ae8a77da12f7"
+      },
+      "started": 1792325571.1658173,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-2.log",
+      "exit": 1,
+      "finished": 1792325577.713302
+    },
+    {
+      "stage": "retirement-window-diagnosis",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/diagnosis/candidate"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/diagnosis/parkour_intent.cpp": "621a3dac96d81a8b9a1f5bb7b694e4470365f8ea50e734efff6490b71d4d11d4",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/diagnosis/libwall-diagnose.a": "063e57781e344ca19fa0fb1264e69ceba8d20d9c92160130ea4459f155b75499"
+      },
+      "started": 1792325699.2622745,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-3.log",
+      "exit": 1,
+      "finished": 1792325707.7287564
+    },
+    {
+      "stage": "predicted-retirement-real-contact",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/candidate"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/parkour_intent.cpp": "a65e6403c4533d031d9faebf953be99e0d7c18b929c3f328ffc0ea8f399ae06a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/libwall-predict.a": "6e5ce13c488ddb1327dab7f2de31d47d807afc58191612cc5be0525dc2724957"
+      },
+      "started": 1792325851.4486246,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-4.log",
+      "exit": 0,
+      "finished": 1792325861.349857
+    }
+  ],
+  "reassessments": [
+    {
+      "at": 1792325571.0557501,
+      "cause": "The first actual loaded lateral row retains fresh distinct material contact at0.151m; source still enforces one coordinator plant.",
+      "change": "Try max two original finite plants with deliberate inward input. Retire only still-valid loaded first contact after half stroke, then require a later fresh material point and original earned-takeoff deadline.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-1.log",
+      "evidence_sha256": "ef2590a928fae8a8fdc4741d5305d95187323cc714db6146c2dbd12f24c562d7",
+      "previous_failures": 0,
+      "previous_started": 1792325055.5594065,
+      "previous_pending": false
+    },
+    {
+      "at": 1792325699.0848024,
+      "cause": "First strong-inward two-plant replay lost traction at178 after first loaded plant176. Need separate old-row geometry failure from material-progress scheduling.",
+      "change": "Replay identical physics/input with read-only old-row validity and actual material-progress observations; no target or limit change.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-2.log",
+      "evidence_sha256": "cd98a8f32d01c96dc6ac39aa8def45f5f8fa8cb66d74549eb7e4450c54b00d01",
+      "previous_failures": 1,
+      "previous_started": 1792325571.0561256,
+      "previous_pending": false
+    },
+    {
+      "at": 1792325851.355201,
+      "cause": "At solve177 the loaded old row is valid with actual material progress0.146358m; fixed0.15m retirement waits until178 where traction is already lost.",
+      "change": "Use measured support-relative speed to predict the next actual contact window for old-row retirement. Require subsequent real same-face contact with actual0.15m material separation; prediction cannot create support. No actuator law/target/limit changes.",
+      "evidence": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/evidence/parkour-2026-10-17/wall-second-window.trial-3.log",
+      "evidence_sha256": "12b443907e472f3cc751f4cbf21bb6c611d2cecc922a091c6a409ec83868e44a",
+      "previous_failures": 1,
+      "previous_started": 1792325699.0852633,
+      "previous_pending": false
+    }
+  ],
+  "pending": false
+}

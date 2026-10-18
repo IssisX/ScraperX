@@ -63,6 +63,7 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 	_palm_rail_route(geometry, root, paint)
 	_workshop_roof_route(geometry, root, paint)
 	_upward_wall_step_route(geometry, root, paint)
+	_wall_run_route(geometry, root, paint)
 	_corner_hang_route(geometry, root, paint)
 	_swing_transfer_route(geometry, root, paint)
 
@@ -88,6 +89,14 @@ static func _corner_hang_route(geometry: WorldGeometry, root: Node3D, paint: Mat
 		Vector3(-41.4, 5.149, -35.9) - offset)
 	_strip(geometry, root, paint, Vector3(-43.1, 5.14, -38.32) - offset, Vector2(0.8, 0.08))
 	_strip(geometry, root, paint, Vector3(-44.07, 5.14, -37.5) - offset, Vector2(0.08, 0.8))
+
+
+static func _wall_run_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	var offset := root.position
+	_roof_label(root, paint, "WALL RUN\nSPRINT + JUMP ALONG WALL\nLEAN INTO THE WALL\nJUMP TO KICK AWAY",
+		Vector3(-39.0, 0.009, -40.2) - offset)
+	_arrow(geometry, root, paint, Vector3(-42.5, 0.0, -39.5) - offset, Vector2.RIGHT)
+	_arrow(geometry, root, paint, Vector3(-30.0, 0.0, -39.5) - offset, Vector2.RIGHT)
 
 
 static func _upward_wall_step_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:

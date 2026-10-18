@@ -60,6 +60,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         traversal_state_ != TraversalState::None || carry_constraint_ ||
         (slingshot_ && slingshot_->controls_player())) wall_stride_available_ = false;
     prepare_trailing_plant(commands);
+    update_wall_run(physics_system_.GetBodyInterface(), commands);
     if (foot_push_purpose_ == FootPushPurpose::WalkingStep && physical_foot_push_->active() &&
         (jump_cancelled || commands.jump_requested || commands.crouch_held ||
          step_direction_.GetX()*commands.move_input_x+
@@ -203,8 +204,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
             // Only an earned Jump arms a later wall step. A finite walking
             // riser also returns true, but grants no airborne wall action.
             if (jump_started && !wall_jump_started &&
-                (ordinary_jump_requested || foot_push_purpose_ == FootPushPurpose::CoyotePush))
+                (ordinary_jump_requested || foot_push_purpose_ == FootPushPurpose::CoyotePush)) {
                 wall_stride_available_ = true;
+                arm_wall_run();
+            }
             if (ordinary_jump_requested && jump_started) {
                 ordinary_jump_ticks_left_ = 0;
                 physical_step_pending_ = false;

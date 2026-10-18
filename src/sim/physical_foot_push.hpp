@@ -109,6 +109,9 @@ public:
     void post_step(float collision_dt);
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] bool stop_requested() const noexcept;
+    // Owner-thread, read-only retained-row geometry/traction validation.
+    // Does not renew the material point, lifetime, target or work ledger.
+    [[nodiscard]] bool can_retain_contact() const noexcept;
     [[nodiscard]] const Readback &readback() const noexcept;
 
     [[nodiscard]] static constexpr float force_bound_n() noexcept { return 3500; }
