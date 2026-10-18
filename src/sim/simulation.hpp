@@ -309,7 +309,7 @@ enum class ImpactSound : std::uint8_t {
 struct ImpactSnapshot final {
     std::uint64_t sequence = 0;   // 1 for the world's first hit, counting up
     std::uint64_t entity = 0;     // the body struck
-    Vector3 at{};                 // its centre of mass as the tick ended
+    Vector3 at{};                 // its center of mass as the tick ended
     double energy_j = 0.0;        // half its mass times its change of speed squared
     double speed_mps = 0.0;       // that change of velocity
     double mass_kg = 0.0;

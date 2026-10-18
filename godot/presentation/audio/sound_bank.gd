@@ -644,7 +644,7 @@ func _hit_container() -> PackedFloat32Array:
 	return out
 
 
-# A machine struck (a forklift's frame on its stops or a kerb, its forks on
+# A machine struck (a forklift's frame on its stops or a curb, its forks on
 # the floor, the crane's hook block swinging into steel): a hard clank
 # through a heavy frame, and its chains and loose fittings jingling after.
 func _hit_machine() -> PackedFloat32Array:
