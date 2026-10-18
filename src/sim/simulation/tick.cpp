@@ -194,7 +194,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 !physical_foot_push_->active();
             const bool ordinary_jump_requested = locomotion_commands.jump_requested;
             jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds) || jump_started;
-            if (jump_started && !wall_jump_started) wall_stride_available_ = true;
+            // Only an earned Jump arms a later wall step. A finite walking
+            // riser also returns true, but grants no airborne wall action.
+            if (jump_started && !wall_jump_started &&
+                (ordinary_jump_requested || foot_push_purpose_ == FootPushPurpose::CoyotePush))
+                wall_stride_available_ = true;
             if (ordinary_jump_requested && jump_started) {
                 ordinary_jump_ticks_left_ = 0;
                 physical_step_pending_ = false;

@@ -1,0 +1,270 @@
+{
+  "base_revision": "fa128cafea881bdfc856f622bc1c5525711bf0a1",
+  "native_scope": "Coherent76-TU published archive plus current parkour_intent/tick/climb TUs; World/Snapshot layout unchanged. Matching committed source is separately rebuilt by GitHub candidate CI.",
+  "current_source_sha256": {
+    "src/sim/simulation/parkour_intent.cpp": "abd47add531b08312a969dc8a2f2901cf4cc4d4e93b93eec18d4fdaaff4611ee",
+    "src/sim/simulation/tick.cpp": "aa5b5759f6cdb0cd53f10dfca674317c45de4e9f3bea24800e17784b47c34a92",
+    "src/sim/simulation/climb.cpp": "22218f53c8b39016bf4ca8f4476b420056058c4ca67d0eeb98e7c699fe24ae95",
+    "tests/physical_wall_climb_tests.cpp": "3586c57b34e9f40a90d49252c7b8de95411179324adb3f5b1fb8025eb1e2065f",
+    "tests/physical_wall_stride_tests.cpp": "a10dad2d0c4f0cc7b27192056585419c32ab8e0c3c3c772e63f07b270e597fd9",
+    "godot/presentation/parkour_route_markings.gd": "da57724d9ef17c8deb63d409c88720fb17c3ef9dd94d28777050fc5c25ded30c"
+  },
+  "wall_stride_test_at_initial_run_sha256": "521d4b889810963177a3724b816527015e76bd1be886082dc9c670b6de251e98",
+  "unchanged_evidence_reused": "Only guards() staging changed after initial runs; flow/jump/cancel source paths and native archive are unchanged, so their passing results are reused. Corrected guard was relinked and executed once.",
+  "commands": [
+    {
+      "receipt": "commands.json",
+      "commands": [
+        {
+          "name": "compile-parkour_intent",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean -c /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/parkour_intent.cpp -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_parkour_intent.cpp.o"
+        },
+        {
+          "name": "compile-tick",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean -c /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/tick.cpp -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_tick.cpp.o"
+        },
+        {
+          "name": "archive",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/ar r /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall.a /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_parkour_intent.cpp.o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_tick.cpp.o"
+        },
+        {
+          "name": "link",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/probe.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/probe"
+        },
+        {
+          "name": "run",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/probe"
+        }
+      ]
+    },
+    {
+      "receipt": "catch-commands.json",
+      "commands": [
+        {
+          "name": "compile-climb",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean -c /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/climb.cpp -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_climb.cpp.o"
+        },
+        {
+          "name": "archive-climb",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/ar r /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/objects/src_sim_simulation_climb.cpp.o"
+        },
+        {
+          "name": "link-wall-climb",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_wall_climb_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-climb"
+        },
+        {
+          "name": "link-wall-stride",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_wall_stride_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride"
+        },
+        {
+          "name": "link-wall-kick",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_wall_kick_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-kick"
+        },
+        {
+          "name": "link-rigid-hand",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_traversal_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/rigid-hand"
+        },
+        {
+          "name": "wall-climb-flow",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-climb flow"
+        },
+        {
+          "name": "wall-climb-cancel",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-climb cancel"
+        },
+        {
+          "name": "wall-climb-guards",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-climb guards"
+        },
+        {
+          "name": "wall-stride-flow",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride flow"
+        },
+        {
+          "name": "wall-stride-jump",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride jump"
+        },
+        {
+          "name": "wall-stride-cancel",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride cancel"
+        },
+        {
+          "name": "wall-stride-guards",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride guards"
+        },
+        {
+          "name": "wall-kick-public",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-kick public"
+        },
+        {
+          "name": "rigid-hand-single_rigid_hand",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/rigid-hand single_rigid_hand"
+        }
+      ]
+    },
+    {
+      "receipt": "guard-trace-commands.json",
+      "commands": [
+        {
+          "name": "link",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/guard_contact_trace.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/guard-contact-trace"
+        },
+        {
+          "name": "run",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/guard-contact-trace guards"
+        }
+      ]
+    },
+    {
+      "receipt": "clear-guard-commands.json",
+      "commands": [
+        {
+          "name": "link-wall-stride",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /usr/bin/c++ -O3 -DNDEBUG -std=c++17 -pthread -fPIC -Wall -Wextra -Wpedantic -Werror -DSCRAPERX_HAS_JOLT=1 -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src -isystem /data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_wall_stride_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/libwall_climb.a /data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a -o /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride"
+        },
+        {
+          "name": "wall-stride-guards",
+          "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-upward-wall-cm6rce24/wall-stride guards"
+        }
+      ]
+    }
+  ],
+  "initial_combined_results": [
+    {
+      "name": "compile-climb",
+      "exit_code": 0,
+      "seconds": 19.537424212001497
+    },
+    {
+      "name": "archive-climb",
+      "exit_code": 0,
+      "seconds": 1.481029842994758
+    },
+    {
+      "name": "link-wall-climb",
+      "exit_code": 0,
+      "seconds": 9.317540413001552
+    },
+    {
+      "name": "link-wall-stride",
+      "exit_code": 0,
+      "seconds": 8.98282739300339
+    },
+    {
+      "name": "link-wall-kick",
+      "exit_code": 0,
+      "seconds": 19.369086711994896
+    },
+    {
+      "name": "link-rigid-hand",
+      "exit_code": 0,
+      "seconds": 11.47810379799921
+    },
+    {
+      "name": "wall-climb-flow",
+      "exit_code": 0,
+      "seconds": 35.22876894500223
+    },
+    {
+      "name": "wall-climb-cancel",
+      "exit_code": 0,
+      "seconds": 7.615836611999839
+    },
+    {
+      "name": "wall-climb-guards",
+      "exit_code": 0,
+      "seconds": 62.348017891999916
+    },
+    {
+      "name": "wall-stride-flow",
+      "exit_code": 0,
+      "seconds": 21.07934254399879
+    },
+    {
+      "name": "wall-stride-jump",
+      "exit_code": 0,
+      "seconds": 17.215117180996458
+    },
+    {
+      "name": "wall-stride-cancel",
+      "exit_code": 0,
+      "seconds": 22.553832386998693
+    },
+    {
+      "name": "wall-stride-guards",
+      "exit_code": 1,
+      "seconds": 19.15390082600061
+    },
+    {
+      "name": "wall-kick-public",
+      "exit_code": 0,
+      "seconds": 9.224796923997928
+    },
+    {
+      "name": "rigid-hand-single_rigid_hand",
+      "exit_code": 0,
+      "seconds": 52.17707445999986
+    }
+  ],
+  "corrected_guard_results": [
+    {
+      "name": "link-wall-stride",
+      "exit_code": 0,
+      "seconds": 9.683156506995147
+    },
+    {
+      "name": "wall-stride-guards",
+      "exit_code": 0,
+      "seconds": 33.92608816400025
+    }
+  ],
+  "output_excerpts": {
+    "wall-climb-flow": [
+      "WALL_CLIMB_STEP tick=163 contact=162 force_y_n=1882.52 work_j=3.46535 upward_m_s=0.078297",
+      "WALL_CLIMB_FLOW catch_tick=168 y=2.45656 hand_n=741.678 actual_grade_recovery=1 onward=1 retry=1",
+      "PASS WALL_CLIMB mode=flow"
+    ],
+    "wall-climb-cancel": [
+      "WALL_CLIMB_STEP tick=163 contact=162 force_y_n=1882.52 work_j=3.46535 upward_m_s=0.078297",
+      "PASS WALL_CLIMB mode=cancel"
+    ],
+    "wall-climb-guards": [
+      "PASS WALL_CLIMB mode=guards"
+    ],
+    "wall-stride-flow": [
+      "WALL_STRIDE flow push_off=0 entry_tangent_mps=6.80094 receiving_tangent_mps=6.74975 step_work_j=0"
+    ],
+    "wall-stride-jump": [
+      "WALL_STRIDE flow push_off=1 entry_tangent_mps=6.80094 receiving_tangent_mps=7.11054 step_work_j=0"
+    ],
+    "wall-stride-cancel": [],
+    "wall-stride-guards": [
+      "WALL_STRIDE FAIL prospective wall geometry created an empty-air foot step"
+    ],
+    "wall-kick-public": [
+      "PASS PHYSICAL_WALL_KICK public_jump outward_m_s=3.80949 upward_m_s=0.203272 work_j=612.05"
+    ],
+    "rigid-hand-single_rigid_hand": [
+      "PASS single_rigid_hand actual_owner=2952 missing_right=0 tuck=paid Drop=1 Jump=passive"
+    ],
+    "corrected-wall-stride-guards": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "WALL_STRIDE PASS mode=guards"
+    ],
+    "failed-original-guard-contact-witness": [
+      "GUARD_CONTACT tick=187 p=-37.9515,2.03714,-41.5589 support=1460 source=186 normal=-1,0,0 load=3500"
+    ]
+  },
+  "failure_classification": {
+    "initial_scratch_staging": "Introduced scratch probe setup: debug_restart_at(-44,.9,-47) rejected before movement. Replaced with existing valid grade entry.",
+    "first_no_contact_probe": "Actual x=-46 path went outside authored wall span[-44,-28]; it earned no step. Preserved as a real no-contact negative.",
+    "no_catch_at_narrow_lip": "Actual loaded upward push succeeded but paired ledge query demanded a standing receiver behind a160mm wall. Separate handhold validation now permits real catch; top-out still rejects absent receiver.",
+    "old_empty_air_guard": "Pre-existing invalid fixture assumption exposed by new feature. Exact contact186 on real roof-plinth1460, normal -X,3500N. Moved only staging z=-42 to clear z=-39.9 north of footprint[-44.2,-41.4]; every assertion retained."
+  },
+  "presentation": "Owned marking diff inspected; no local Godot executable/parser run. Matching candidate import/export owns parse evidence; device appearance and feel remain unobserved.",
+  "limits": [
+    "One finite wall step; sustained multi-step wall running remains pending.",
+    "No actuator-law, force, power, stroke, work, reach, mass or gravity changes.",
+    "No full-project release or phone FPS claim."
+  ]
+}

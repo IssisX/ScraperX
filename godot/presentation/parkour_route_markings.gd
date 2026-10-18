@@ -62,6 +62,17 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 	_duct_tuck_route(geometry, root, paint)
 	_palm_rail_route(geometry, root, paint)
 	_workshop_roof_route(geometry, root, paint)
+	_upward_wall_step_route(geometry, root, paint)
+
+
+static func _upward_wall_step_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# This grade approach faces the workshop's narrow south-wall lip. It is
+	# a step/catch/release opportunity, separate from the roof-access stairs.
+	var offset := root.position
+	_roof_label(root, paint, "WALL STEP\nSPRINT + JUMP\nCATCH THE LIP\nDROP TO RETRY",
+		Vector3(-41.0, 0.009, -45.2) - offset, PI)
+	_arrow(geometry, root, paint, Vector3(-41.0, 0.0, -43.2) - offset, Vector2(0.0, 1.0))
+	_strip(geometry, root, paint, Vector3(-41.0, 0.0, -42.0) - offset, Vector2(1.2, 0.10))
 
 
 static func _palm_rail_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
@@ -125,7 +136,8 @@ static func _workshop_roof_route(geometry: WorldGeometry, root: Node3D, paint: M
 	_strip(geometry, root, paint, Vector3(-44.08, 5.14, -30.0) - offset, Vector2(0.10, 1.6))
 
 
-static func _roof_label(root: Node3D, paint: Material, text: String, at: Vector3) -> void:
+static func _roof_label(root: Node3D, paint: Material, text: String, at: Vector3,
+		yaw: float = 0.0) -> void:
 	var label := Label3D.new()
 	label.text = text
 	label.font_size = 64
@@ -136,6 +148,7 @@ static func _roof_label(root: Node3D, paint: Material, text: String, at: Vector3
 	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	label.position = at
 	label.rotation.x = -PI / 2.0
+	label.rotation.y = yaw
 	label.visibility_range_end = 45.0
 	root.add_child(label)
 

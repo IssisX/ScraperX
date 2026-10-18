@@ -144,7 +144,10 @@ void cancel() {
 }
 void guards() {
     Simulation sim;
-    stage(sim, -42);
+    // Keep this empty-air lane north of the later roof-access plinth,
+    // whose actual solid occupies z[-44.2,-41.4]. At z=-42 this jump
+    // reaches its real side and legitimately plants a foot on entity1460.
+    stage(sim, -39.9);
     (void)sprint(sim);
     require(sim.set_move_input(.9968, .08) && sim.request_jump(), "empty-air takeoff rejected");
     tick(sim, 105);

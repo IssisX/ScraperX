@@ -159,6 +159,17 @@ bool Simulation::PhysicsWorld::try_begin_wall_stride(JPH::BodyInterface &bodies,
     // supply a finite step; upward body speed is never replaced or clamped.
     if (relative.GetY() > 0) return false;
     const auto horizontal_normal = JPH::Vec3(normal.GetX(),0,normal.GetZ()).NormalizedOr(JPH::Vec3::sZero());
+    const double inward_intent = -(horizontal_normal.GetX()*commands.move_input_x +
+        horizontal_normal.GetZ()*commands.move_input_z);
+    if (inward_intent >= kSprintMaximumAngleCos) {
+        // A committed takeoff into a real wall may spend its one finite
+        // plant pushing up and away. The existing radial motor supplies
+        // both components; it cannot adhere to the wall or renew the step.
+        if (!begin_wall_foot(bodies,false)) return false;
+        foot_push_purpose_ = FootPushPurpose::WallStride;
+        ++wall_stride_count_;
+        return true;
+    }
     const JPH::Vec3 horizontal(relative.GetX(),0,relative.GetZ());
     const auto tangent = horizontal-horizontal_normal*horizontal.Dot(horizontal_normal);
     const double speed = tangent.Length();

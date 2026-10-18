@@ -117,7 +117,9 @@ using namespace detail;
             const auto probe = probe_ledge_from_wall(origin, forward,
                 kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
                 kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
-                true, false, wall_hit, wall_point, true);
+                // A real handhold need not have a standing receiver behind
+                // it. Top-out validates that separate opportunity later.
+                false, false, wall_hit, wall_point, true);
             if (probe.valid && hang_ledge_is_reachable(origin, forward, probe)) return probe;
         }
     }
