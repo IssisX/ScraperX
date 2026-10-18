@@ -126,6 +126,13 @@ func _run() -> void:
 	if native == null:
 		_finish()
 		return
+	var bank_deadline := Time.get_ticks_msec() + 30000
+	while not main._audio._bank_ready and Time.get_ticks_msec() < bank_deadline:
+		await get_tree().process_frame
+	check(main._audio._bank_ready, "actual slide friction bank is ready")
+	if not main._audio._bank_ready:
+		_finish()
+		return
 	step(180)
 	main._open_pause()
 	main._pause_menu._show_page(&"settings")
@@ -183,11 +190,30 @@ func _run() -> void:
 	touch(1, at(), true)
 	drag(1, at(), at() + Vector2(30, 0))
 	touch(0, forward, false)
+	var was_silent: bool = main._audio._silent
+	main._audio._silent = false
 	tap(0, left)
 	step(2)
 	check(bool(native.get_landing_state().get("player_sliding", false)), "left tap at real speed enters native slide")
+	check(main._audio.slide_friction.active and main._audio._slide_voice.playing,
+		"actual native sliding drives its real continuous friction player")
+	var slide: Dictionary = native.get_landing_state()
+	check(is_equal_approx(main._audio.slide_friction.strength,
+		clampf(float(slide.slide_speed_mps) / 8.0, 0.0, 1.0)),
+		"friction strength follows measured support-relative native slip")
+	check(main._audio._slide_voice.bus == &"Effects" and main._audio._voices.size() == 6,
+		"one dedicated Effects loop retains the original fixed one-shot voice pool")
+	main._audio._silent = was_silent
 	touch(1, at(), false)
+	main._open_pause()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(not main._audio.slide_friction.active and not main._audio._slide_voice.playing,
+		"actual pause stops ground friction while menu audio remains available")
+	main._pause_menu.press_resume()
 	stage(Vector3(6, 1.2, -25), 45)
+	check(not main._audio.slide_friction.active and not main._audio._slide_voice.playing,
+		"restart to actual stance cannot replay the previous slide")
 	touch(0, main._touch.stick_home(), true)
 	drag(0, main._touch.stick_home(), main._touch.stick_home() + Vector2(0, -120) * main._touch._u)
 	tap(1, at())

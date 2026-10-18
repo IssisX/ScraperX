@@ -1,0 +1,33 @@
+{
+  "source_commit": "e014c22c63c738f7606529a684d056eadef9717e",
+  "candidate_run": "39161472653",
+  "candidate_result": "success",
+  "direct_apk": {
+    "source_commit": "e014c22c63c738f7606529a684d056eadef9717e",
+    "version_code": 214517456,
+    "tag": "chatgpt-candidate-e014c22",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-e014c22/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-e014c22",
+    "asset_id": 654379552,
+    "asset_size": 36966723
+  },
+  "local_delivery": {
+    "source_commit": "e014c22c63c738f7606529a684d056eadef9717e",
+    "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-e014c22.apk",
+    "bytes": 36966723,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39161472653/artifacts/12148769213"
+  },
+  "actual_CI_results": [
+    "SCRAPERX_WALL_EXIT PASS public_arrival=1 wall_runs=3 same_plant_kicks=3 steel_receivings=2 firm_ticks=90 onward=1 ground_miss=1 recovery=1 retry=1 resets=0 deaths=0 tick=4647",
+    "WALL_STRIDE PASS modes=flow,jump,cancel,guards",
+    "SCRAPERX_UPPER_GALLERY_VIEW PASS checks=203 failures=0 staged_footing=1"
+  ],
+  "new_captures_inspected": [
+    "upper-gallery/04-wall-exit-deck.png",
+    "upper-gallery/05-wall-exit-ground-return.png"
+  ],
+  "host_mcp": "N/mcp-receipt.json actual targeted162PASS; initial footing staged",
+  "full_release": "Separate39161472669; result not asserted",
+  "phone_play": "UNVERIFIED; matchingAPK needs actual device play"
+}

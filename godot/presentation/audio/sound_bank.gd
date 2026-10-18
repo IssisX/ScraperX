@@ -82,7 +82,28 @@ func build() -> void:
 	_build_grapple_clips()
 	# Append to preserve the seeded recipes of all existing sounds.
 	clips[&"climb_pull"] = _variants(3, _climb_pull)
+	# Append new recipes so every previously seeded cue retains its bytes.
+	var prior_rng_state := _rng.state
+	clips[&"slide_friction_loop"] = [_loop(_slide_friction(false), 0.2)]
+	clips[&"slide_metal_loop"] = [_loop(_slide_friction(true), 0.2)]
+	_rng.state = prior_rng_state
 	build_msec = Time.get_ticks_msec() - started
+
+
+func _slide_friction(metal: bool) -> PackedFloat32Array:
+	# Continuous cloth/sole grit, with damped sheet resonance only for steel.
+	# Speed controls playback gain/pitch; this recipe grants no physical force.
+	var out := _silence(1.6)
+	var grit := _band_noise_buffer(out.size(), 350.0, 4200.0)
+	var cloth := _band_noise_buffer(out.size(), 110.0, 1100.0)
+	var resonance := _resonant_noise_buffer(out.size(), 720.0, 0.12, 3.0) if metal else PackedFloat32Array()
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		var texture := 0.72 + 0.18 * sin(TAU * 7.0 * t) + 0.1 * sin(TAU * 13.0 * t)
+		out[i] = (grit[i] * 0.8 + cloth[i] * 0.45) * texture
+		if metal:
+			out[i] += resonance[i] * 0.35
+	return out
 
 
 func pick(name: StringName) -> AudioStreamWAV:

@@ -13,6 +13,7 @@ const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const ClimbEffort := preload("res://presentation/climb_effort_feedback.gd")
 const SwingBearing := preload("res://presentation/swing_bearing_feedback.gd")
 const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
+const SlideFriction := preload("res://presentation/audio/slide_friction.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const RUBBLE_IMPACT := preload("res://assets/audio/rubble/concrete_break_denoised_843338_preview.wav")
 const TIMBER_FRACTURE := preload("res://assets/audio/timber/timber_snap_400638_preview.wav")
@@ -94,6 +95,8 @@ var _next_voice := 0
 var _voices_3d: Array[AudioStreamPlayer3D] = []
 var _next_voice_3d := 0
 var _wind: AudioStreamPlayer
+var _slide_voice: AudioStreamPlayer
+var slide_friction := SlideFriction.new()
 var _rush: AudioStreamPlayer
 var _drone: AudioStreamPlayer
 var _hum: AudioStreamPlayer3D
@@ -197,6 +200,8 @@ func _ready() -> void:
 	add_child(_bullet_time)
 	_grapple_motor = _looping_player(BUS_EFFECTS)
 	_grapple_load = _looping_player(BUS_EFFECTS)
+	_slide_voice = _looping_player(BUS_EFFECTS)
+	_slide_voice.process_mode = Node.PROCESS_MODE_PAUSABLE
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
@@ -213,6 +218,12 @@ func _ready() -> void:
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
 	_bank_task = WorkerThreadPool.add_task(_build_bank)
+
+
+func _process(_delta: float) -> void:
+	# Interface audio stays live in menus, but ground friction must not.
+	if get_tree().paused and slide_friction.active:
+		slide_friction.reset(_slide_voice)
 
 
 func _exit_tree() -> void:
@@ -232,6 +243,7 @@ func _exit_tree() -> void:
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
 	_quiesced = true
+	slide_friction.reset(_slide_voice)
 	_swing_bearing.reset()
 	_climb_effort.reset()
 	last_climb_effort_strength = 0.0
@@ -251,6 +263,7 @@ func _build_bank() -> void:
 
 func _on_bank_ready() -> void:
 	_bank_ready = true
+	slide_friction.configure(_bank.clips[&"slide_friction_loop"][0], _bank.clips[&"slide_metal_loop"][0])
 	print("SCRAPERX_AUDIO_BANK clips=%d msec=%d driver=%s" % [_bank.clips.size(), _bank.build_msec,
 		AudioServer.get_driver_name()])
 	if _silent:
@@ -297,6 +310,7 @@ func ui_tap(back: bool = false) -> void:
 # Explicit restart establishes a quiet receipt baseline; no old contact is
 # replayed when gameplay resumes. Death restores are handled by update().
 func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Dictionary = {}) -> void:
+	slide_friction.reset(_slide_voice)
 	_swing_bearing.reset()
 	_climb_effort.reset()
 	last_climb_effort_strength = 0.0
@@ -340,6 +354,13 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	# point velocity includes rotation as well as the support's translation.
 	var foot_velocity := velocity - support_point_velocity if grounded else velocity
 	var horizontal := Vector2(foot_velocity.x, foot_velocity.z).length()
+	var slide_audible := _bank_ready and not _silent and not _quiesced and traversal == 0 and not chute
+	for bus in [&"Master", BUS_EFFECTS]:
+		var bus_index := AudioServer.get_bus_index(bus)
+		if bus_index < 0 or AudioServer.is_bus_mute(bus_index):
+			slide_audible = false
+	slide_friction.update(_slide_voice, landing_state, grounded, support_entity,
+		native_tick, deaths, slide_audible)
 
 	if grounded and bool(landing_state.get("player_sliding", false)):
 		_stride = 0.0
