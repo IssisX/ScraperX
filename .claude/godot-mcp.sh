@@ -12,8 +12,12 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # lifetime, and nothing orders MCP startup after the SessionStart hook. In a
 # cloud session, install (or wait on the hook's install of) the pinned binary
 # before the server can look for it.
+# A failed install still starts the server: its project-config tools need no
+# Godot, and it names the missing binary itself when a tool needs one.
 if [[ "${CLAUDE_CODE_REMOTE:-}" == "true" && -z "${GODOT_PATH:-}" ]]; then
-  bash "${repo_root}/.claude/install-godot.sh"
+  if ! bash "${repo_root}/.claude/install-godot.sh"; then
+    echo "godot-mcp.sh: install-godot.sh failed; starting with whatever Godot is already present" >&2
+  fi
 fi
 
 # An explicit GODOT_PATH wins; otherwise the SHA-pinned binary that CI and
