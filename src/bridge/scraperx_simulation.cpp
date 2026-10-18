@@ -317,6 +317,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_yard_crane_hoist", "hoist"),
                                 &ScraperXSimulation::set_yard_crane_hoist);
     godot::ClassDB::bind_method(godot::D_METHOD("get_yard_crane_state"), &ScraperXSimulation::get_yard_crane_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_impacts"), &ScraperXSimulation::get_impacts);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_last_impact_sequence"),
+                                &ScraperXSimulation::get_last_impact_sequence);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_lines"), &ScraperXSimulation::get_zipline_lines);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_trolleys"), &ScraperXSimulation::get_zipline_trolleys);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_state"), &ScraperXSimulation::get_zipline_state);
@@ -1403,6 +1406,28 @@ godot::Dictionary ScraperXSimulation::get_zipline_state() const {
 
 // The corpses, oldest first: each a Dictionary of its parts' transforms
 // (sim/corpse.hpp's order) and whether it has come to rest.
+// The last hits the tracked bodies took (sim/impacts.hpp), oldest first:
+// {sequence, entity, at, energy_j, speed_mps, mass_kg, sound (ImpactSound)}.
+godot::Array ScraperXSimulation::get_impacts() const {
+    godot::Array out;
+    for (const sim::ImpactSnapshot &hit : simulation_->impacts()) {
+        godot::Dictionary entry;
+        entry["sequence"] = static_cast<std::int64_t>(hit.sequence);
+        entry["entity"] = static_cast<std::int64_t>(hit.entity);
+        entry["at"] = to_godot(hit.at);
+        entry["energy_j"] = hit.energy_j;
+        entry["speed_mps"] = hit.speed_mps;
+        entry["mass_kg"] = hit.mass_kg;
+        entry["sound"] = static_cast<int>(hit.sound);
+        out.push_back(entry);
+    }
+    return out;
+}
+
+std::int64_t ScraperXSimulation::get_last_impact_sequence() const {
+    return static_cast<std::int64_t>(simulation_->last_impact_sequence());
+}
+
 godot::Array ScraperXSimulation::get_corpses() const {
     godot::Array out;
     const sim::Snapshot &state = simulation_->snapshot();

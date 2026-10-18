@@ -756,6 +756,14 @@ ForkliftSnapshot Simulation::forklift_state() const noexcept {
     return forklift_state(static_cast<std::uint32_t>(std::max(0, physics_world_->active_forklift())));
 }
 
+std::vector<ImpactSnapshot> Simulation::impacts() const {
+    return physics_world_->impacts().kept();
+}
+
+std::uint64_t Simulation::last_impact_sequence() const noexcept {
+    return physics_world_->impacts().last_sequence();
+}
+
 std::uint32_t Simulation::forklift_count() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->forklift_count());
 }

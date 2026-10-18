@@ -1,6 +1,7 @@
 // Loose stock: the yard's containers, beams, plate, drums and pipes, and the
 // Matron's deck's crates, are real bodies that lie where they were put,
 // sleep there, and move when moved.
+#include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim_tests.hpp"
 
@@ -9,6 +10,8 @@
 #include <iostream>
 #include <vector>
 
+using scraperx::sim::ImpactLedger;
+using scraperx::sim::ImpactSound;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
 
@@ -24,6 +27,23 @@ bool asleep(const Simulation &s, const int piece) {
     const auto v =
         s.kit_body_velocity(s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(piece)));
     return v.x == 0.0 && v.y == 0.0 && v.z == 0.0;
+}
+
+// The hits on `entity` after sequence `after`.
+std::vector<scraperx::sim::ImpactSnapshot> hits_on(const Simulation &s, const std::uint64_t entity,
+                                                   const std::uint64_t after) {
+    std::vector<scraperx::sim::ImpactSnapshot> found;
+    for (const auto &hit : s.impacts()) {
+        if (hit.entity == entity && hit.sequence > after) {
+            found.push_back(hit);
+        }
+    }
+    return found;
+}
+
+std::uint64_t last_hit(const Simulation &s) {
+    const auto hits = s.impacts();
+    return hits.empty() ? 0 : hits.back().sequence;
 }
 
 int first_of(const LooseStock::Kind kind) {
@@ -107,6 +127,14 @@ void run_loose_stock() {
               << "), " << awake << " awake after 12 s\n";
     require(worst < 0.03, "stock: left alone, every piece lies where it was put");
     require(awake == 0, "stock: left alone, every piece sleeps");
+    // Settling is not a hit: nothing is heard from stock left alone.
+    std::cout << "  stock: " << s.impacts().size() << " hits heard while settling\n";
+    require(s.impacts().empty(), "stock: left alone, nothing is struck");
+    // How loud a hit is to the Matron, by its energy.
+    require(ImpactLedger::loudness(ImpactLedger::kSilentJ) == 0.0F &&
+                ImpactLedger::loudness(ImpactLedger::kFullJ) == 1.0F &&
+                std::abs(ImpactLedger::loudness(500.0F) - 2.0F / 3.0F) < 1.0e-4F,
+            "stock: a hit's loudness runs by the log of its energy, silent at 5 J, full at 5 kJ");
 
     // A drum is carried: taken off its pallet, walked 3 m and set down, it
     // lies where it was set and sleeps again.
@@ -121,6 +149,8 @@ void run_loose_stock() {
     (void)s.advance_frame(0.3);
     require(s.snapshot().carry_target_entity_id == LooseStock::kFirstEntity + static_cast<std::uint64_t>(drum),
             "stock: the nearest drum is in reach");
+    const std::uint64_t drum_entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(drum);
+    const std::uint64_t before_carry = last_hit(s);
     require(s.request_pick_up(), "stock: the drum's pick-up is accepted");
     (void)s.advance_frame(0.5);
     require(s.snapshot().carrying_entity_id == LooseStock::kFirstEntity + static_cast<std::uint64_t>(drum),
@@ -128,6 +158,8 @@ void run_loose_stock() {
     require(walk_to(s, drum0.x, drum0.z - 3.75, 8.0), "stock: walked back 3 m with the drum");
     (void)s.set_facing(0.0, -1.0);
     (void)s.advance_frame(0.5);
+    require(hits_on(s, drum_entity, before_carry).empty(), "stock: a drum in the hands is not struck by the carry");
+    const std::uint64_t before_set_down = last_hit(s);
     require(s.request_set_down(), "stock: the drum's set-down is accepted");
     require(walk_to(s, drum0.x + 2.0, drum0.z - 3.5, 6.0), "stock: stepped away from the drum");
     (void)s.advance_frame(6.0);
@@ -137,6 +169,15 @@ void run_loose_stock() {
     require(std::hypot(drum1.x - drum0.x, drum1.z - drum0.z) > 2.0 && drum1.y < drum0.y,
             "stock: the drum is set down off its pallet, on the ground");
     require(asleep(s, drum), "stock: set down and left, the drum sleeps again");
+    // Let go from the hands, the drum drops to the ground: a hit, heard hollow.
+    const auto drop = hits_on(s, drum_entity, before_set_down);
+    require(!drop.empty(), "stock: the drum let down from the hands is heard landing");
+    std::cout << "  stock: the drum landed with " << drop.front().energy_j << " J at " << drop.front().speed_mps
+              << " m/s, " << drop.size() << " hits, loudness "
+              << ImpactLedger::loudness(static_cast<float>(drop.front().energy_j)) << "\n";
+    require(drop.front().sound == ImpactSound::Hollow, "stock: a drum sounds hollow");
+    require(drop.front().energy_j > 5.0 && drop.front().energy_j < 1000.0,
+            "stock: the drum's landing carries the energy of a drop from the hands");
 
     // A container is a machine's load: walked into for 4 s, it does not move.
     int container = -1;
@@ -150,6 +191,7 @@ void run_loose_stock() {
     }
     require(container >= 0, "stock: the yard's lone container");
     const auto box0 = piece_at(s, container);
+    const std::uint64_t before_shove = last_hit(s);
     require(walk_to(s, box0.x + 4.0, box0.z, 60.0) && walk_to(s, box0.x + 1.6, box0.z, 6.0, 0.1),
             "stock: the walk to the lone container's side");
     for (int i = 0; i < 4 * static_cast<int>(Simulation::kTickRateHz); ++i) {
@@ -162,5 +204,7 @@ void run_loose_stock() {
     const double shoved = std::hypot(box1.x - box0.x, box1.z - box0.z);
     std::cout << "  stock: a container walked into for 4 s moved " << shoved << " m\n";
     require(shoved < 0.01, "stock: a 3.75 t container is not shoved by hand");
+    require(hits_on(s, LooseStock::kFirstEntity + static_cast<std::uint64_t>(container), before_shove).empty(),
+            "stock: a container leaned on is not struck");
     std::cout << "PASS scraperx_sim stock: pieces=" << pieces << " settle_m=" << worst << " shoved_m=" << shoved << "\n";
 }

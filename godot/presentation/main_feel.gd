@@ -126,6 +126,7 @@ var _teeter_phase := 0.0
 const TRAVERSAL_HANGING_STATE := 1
 var _beam_bank := 0.0
 var _wall_lean := 0.0
+var _impact_sequence := 0   # the native's newest hit when last read
 var _speed_shake := 0.0   # its weight, 0..1, for the scripted runs
 var _shake_clock := 0.0
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
@@ -872,6 +873,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_ctx["traversal"]), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity())
+		var hit_sequence := int(_native.get_last_impact_sequence())
+		if hit_sequence != _impact_sequence:
+			_impact_sequence = hit_sequence
+			_audio.update_impacts(_native.get_impacts(), _camera.global_position)
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:

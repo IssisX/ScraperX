@@ -31,11 +31,11 @@
 // only on the decks the yard crane lands loads on (yard_crane.hpp: 11, 22 and
 // 44 m), which also have the most spots.
 //
-// A sudden blow to a piece (a change of velocity of kImpactMps or more in one
-// tick) is a crash, reported with its loudness for whoever listens (the
-// Matron hears crashes on her deck).
+// A sudden blow to a piece is a hit in the impact ledger (impacts.hpp),
+// heard by its sound (sound()) and by the Matron.
 
 #include "sim/mechanism_kit.hpp"
+#include "sim/simulation.hpp"
 
 #include <Jolt/Jolt.h>
 
@@ -81,6 +81,8 @@ public:
     // Heavier than the hands carry (the carry's grip holds about 70 kg): a
     // forklift's or a crane's to move, set where one of them could have put it.
     [[nodiscard]] static bool heavy(Kind kind) noexcept;
+    // What a piece of this kind sounds like when it is struck.
+    [[nodiscard]] static ImpactSound sound(Kind kind) noexcept;
     // A forklift's forks fit under it: a pallet, a skid's runners, dunnage.
     [[nodiscard]] static bool forkable(Kind kind) noexcept;
 
@@ -91,31 +93,7 @@ public:
         float yaw;             // about +y
     };
 
-    // A sudden blow of this much change of velocity in one tick is a crash,
-    // heard as loud as kNoisePerMps per m/s above kQuietMps.
-    static constexpr float kImpactMps = 2.0F;
-    static constexpr float kQuietMps = 0.5F;
-    static constexpr float kNoisePerMps = 0.3F;
-
-    struct Crash {
-        bool heard = false;
-        float x = 0.0F, y = 0.0F, z = 0.0F;
-        float loudness = 0.0F;
-    };
-
     LooseStock(JPH::PhysicsSystem &physics, kit::Kit &kit);
-
-    // After the physics step: the loudest blow among the pieces this tick.
-    void post_step();
-    // The loudest blow since it was last taken (taken once).
-    [[nodiscard]] Crash take_crash() noexcept {
-        const Crash crash = crash_;
-        crash_ = {};
-        return crash;
-    }
-    // After a restore puts the pieces back: their velocities are taken as they
-    // now are, so the jump is not heard as a blow.
-    void resync();
 
     // Finds the tower's spots and leaves the stock in them (see above): after
     // every other body of the world is built, so the places it takes are
@@ -145,10 +123,8 @@ private:
     kit::Kit &kit_;
     std::vector<kit::BodyIndex> pieces_;
     std::vector<Placement> placed_;
-    std::vector<JPH::Vec3> last_velocity_;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
-    Crash crash_{};
 };
 
 } // namespace scraperx::sim

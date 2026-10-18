@@ -207,6 +207,8 @@ public:
     [[nodiscard]] bool request_yard_crane_operate();
     [[nodiscard]] bool set_yard_crane_hoist(double hoist);
     [[nodiscard]] godot::Dictionary get_yard_crane_state() const;
+    [[nodiscard]] godot::Array get_impacts() const;
+    [[nodiscard]] std::int64_t get_last_impact_sequence() const;
     [[nodiscard]] godot::Array get_zipline_lines() const;
     [[nodiscard]] godot::PackedFloat32Array get_zipline_trolleys() const;
     [[nodiscard]] godot::Dictionary get_zipline_state() const;

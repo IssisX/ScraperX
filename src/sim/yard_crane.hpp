@@ -161,6 +161,8 @@ public:
 
     [[nodiscard]] bool operating() const noexcept { return state_.operating; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
+    // The hook block, as a kit body.
+    [[nodiscard]] kit::BodyIndex hook_body() const noexcept { return hook_; }
     // The hoist rope's ends, on the trolley and on the hook block.
     [[nodiscard]] JPH::RVec3 rope_top() const;
     [[nodiscard]] JPH::RVec3 rope_bottom() const;

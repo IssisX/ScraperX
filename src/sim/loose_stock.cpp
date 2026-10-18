@@ -491,6 +491,38 @@ namespace {
 constexpr float kHandledKg = 80.0F;
 } // namespace
 
+ImpactSound LooseStock::sound(const Kind kind) noexcept {
+    switch (kind) {
+    case K::Drum:
+    case K::GasBottle:
+    case K::Toolbox:
+    case K::BottleCage:
+        return ImpactSound::Hollow;
+    case K::Container:
+        return ImpactSound::Container;
+    case K::IngotDolly:
+    case K::SteelBeam:
+    case K::PipeBearer:
+    case K::PlateStack:
+    case K::PlateSlab:
+    case K::Pipe:
+    case K::BilletStillage:
+    case K::CoilSkid:
+    case K::PlateSkid:
+        return ImpactSound::HeavySteel;
+    case K::Crate:
+    case K::TimberBeam:
+    case K::Pallet:
+    case K::Sleeper:
+    case K::CableReel:
+    case K::PlankBundle:
+    case K::SkidCrate:
+    case K::PalletReel:
+        return ImpactSound::Timber;
+    }
+    return ImpactSound::Timber;
+}
+
 bool LooseStock::heavy(const Kind kind) noexcept {
     return make_spec(kind).mass_kg > kHandledKg;
 }
@@ -538,7 +570,6 @@ void LooseStock::add_piece(const Placement &p) {
     kit_.allow_sleeping(body);
     pieces_.push_back(body);
     placed_.push_back(p);
-    last_velocity_.push_back(physics_.GetBodyInterface().GetLinearVelocity(kit_.body_id(body)));
 }
 
 namespace {
@@ -790,38 +821,6 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 spots.push_back(origin);
                 ++taken;
             }
-        }
-    }
-}
-
-void LooseStock::resync() {
-    const BodyInterface &bodies = physics_.GetBodyInterface();
-    for (std::size_t i = 0; i < pieces_.size(); ++i) {
-        last_velocity_[i] = bodies.GetLinearVelocity(kit_.body_id(pieces_[i]));
-    }
-    crash_ = {};
-}
-
-void LooseStock::post_step() {
-    const BodyInterface &bodies = physics_.GetBodyInterface();
-    for (std::size_t i = 0; i < pieces_.size(); ++i) {
-        const BodyID id = kit_.body_id(pieces_[i]);
-        if (!bodies.IsActive(id)) {
-            // Asleep: it is at rest.
-            last_velocity_[i] = Vec3::sZero();
-            continue;
-        }
-        const Vec3 velocity = bodies.GetLinearVelocity(id);
-        const float change = (velocity - last_velocity_[i]).Length();
-        last_velocity_[i] = velocity;
-        if (change < kImpactMps) {
-            continue;
-        }
-        const float loudness = std::clamp((change - kQuietMps) * kNoisePerMps, 0.0F, 1.0F);
-        if (!crash_.heard || loudness > crash_.loudness) {
-            const RVec3 at = bodies.GetPosition(id);
-            crash_ = {true, static_cast<float>(at.GetX()), static_cast<float>(at.GetY()), static_cast<float>(at.GetZ()),
-                      loudness};
         }
     }
 }

@@ -122,6 +122,9 @@ public:
 
     [[nodiscard]] bool driving() const noexcept { return state_.driving; }
     [[nodiscard]] std::uint64_t chassis_entity() const noexcept { return chassis_entity_; }
+    // Its frame and its fork carriage, as kit bodies.
+    [[nodiscard]] kit::BodyIndex chassis_body() const noexcept { return chassis_; }
+    [[nodiscard]] kit::BodyIndex carriage_body() const noexcept { return carriage_; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
     // Where the driver stands, in the world.
     [[nodiscard]] JPH::RVec3 station() const;

@@ -78,6 +78,13 @@ func build() -> void:
 	# The climber's breath, after everything else for the same reason.
 	clips[&"breath_in"] = _variants(3, _breath.bind(true))
 	clips[&"breath_out"] = _variants(3, _breath.bind(false))
+	# What a struck body sounds like (sim/impacts.hpp ImpactSound, in its
+	# order), after everything else for the same reason.
+	clips[&"hit_timber"] = _variants(3, _hit_timber)
+	clips[&"hit_hollow"] = _variants(3, _hit_hollow)
+	clips[&"hit_heavy"] = _variants(3, _hit_heavy)
+	clips[&"hit_container"] = _variants(3, _hit_container)
+	clips[&"hit_machine"] = _variants(3, _hit_machine)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -565,6 +572,86 @@ func _breath(inhale: bool) -> PackedFloat32Array:
 		var env := sin(PI * pow(u, 0.6 if inhale else 1.4))
 		var lift := (0.6 + 0.4 * u) if inhale else (1.0 - 0.4 * u)
 		out[i] = (air[i] * 0.9 * lift + throat[i] * (0.25 if inhale else 0.45)) * env * env * tilt
+	return out
+
+
+# Timber struck (a crate, a pallet, a baulk landing): the dry crack of the
+# grain, the boards' own knock in the low mids, quickly choked, and a loose
+# board answering a moment after.
+func _hit_timber() -> PackedFloat32Array:
+	var out := _silence(0.4)
+	_add_band_noise(out, 0.0, 0.015, 0.9, 0.003, 1200.0, 5000.0)
+	var base := _rng.randf_range(210.0, 290.0)
+	for mode in [[1.0, 1.0, 0.045, 5.0], [1.9, 0.7, 0.03, 5.0], [3.1, 0.45, 0.02, 4.0]]:
+		_add_mode(out, base * mode[0] * _rng.randf_range(0.95, 1.05), 0.0, 0.3, mode[1], mode[2], mode[3])
+	_add_tone(out, _rng.randf_range(70.0, 90.0), 0.0, 0.15, 0.4, 0.03)
+	var rattle := _rng.randf_range(0.025, 0.05)
+	_add_band_noise(out, rattle, 0.03, 0.35, 0.008, 700.0, 3500.0)
+	_add_mode(out, base * 1.4, rattle, 0.12, 0.3, 0.02, 5.0)
+	return out
+
+
+# An empty drum or a gas bottle struck: thin steel round air. The strike's
+# click, the shell's broad modes ringing a little, and the air inside
+# booming low under them: a bong, not a bell (every mode is noise through a
+# resonance, none a pure tone).
+func _hit_hollow() -> PackedFloat32Array:
+	var out := _silence(0.9)
+	_add_band_noise(out, 0.0, 0.012, 0.8, 0.003, 1500.0, 6000.0)
+	_add_mode(out, _rng.randf_range(140.0, 185.0), 0.0, 0.9, 1.0, 0.22, 10.0)
+	var shell := _rng.randf_range(430.0, 520.0)
+	for mode in [[1.0, 0.7, 0.16, 9.0], [1.72, 0.5, 0.12, 9.0], [2.65, 0.35, 0.09, 8.0], [4.1, 0.2, 0.05, 6.0]]:
+		_add_mode(out, shell * mode[0] * _rng.randf_range(0.97, 1.03), 0.0, 0.8, mode[1], mode[2], mode[3])
+	_add_tone(out, _rng.randf_range(55.0, 70.0), 0.0, 0.2, 0.35, 0.04)
+	return out
+
+
+# Solid steel landing (a beam, plate, a coil, billets): a dull, massive slam.
+# The weight is a low thump and low modes that die in a tenth of a second;
+# over them the grit of steel on concrete, scraped and crushed.
+func _hit_heavy() -> PackedFloat32Array:
+	var out := _silence(0.7)
+	_add_band_noise(out, 0.0, 0.02, 1.0, 0.005, 800.0, 5000.0)
+	_add_tone(out, _rng.randf_range(48.0, 62.0), 0.0, 0.4, 0.9, 0.09)
+	var base := _rng.randf_range(115.0, 150.0)
+	for mode in [[1.0, 1.0, 0.1, 5.0], [2.3, 0.7, 0.07, 5.0], [4.2, 0.45, 0.04, 4.0]]:
+		_add_mode(out, base * mode[0] * _rng.randf_range(0.95, 1.05), 0.0, 0.6, mode[1], mode[2], mode[3])
+	_add_band_noise(out, 0.005, 0.25, 0.45, 0.06, 600.0, 4000.0)
+	return out
+
+
+# A shipping container set down or struck: its walls are big corrugated
+# panels, so a low boom that hangs, the panels' oil-can thrum over it, and
+# the doors and their bars rattling in their keepers after.
+func _hit_container() -> PackedFloat32Array:
+	var out := _silence(1.4)
+	_add_band_noise(out, 0.0, 0.03, 0.8, 0.008, 600.0, 4000.0)
+	_add_mode(out, _rng.randf_range(58.0, 72.0), 0.0, 1.4, 1.0, 0.3, 4.0)
+	_add_tone(out, _rng.randf_range(40.0, 50.0), 0.0, 0.6, 0.6, 0.14)
+	var panel := _rng.randf_range(190.0, 240.0)
+	for mode in [[1.0, 0.7, 0.2, 6.0], [1.6, 0.5, 0.15, 6.0], [2.5, 0.35, 0.1, 5.0]]:
+		_add_mode(out, panel * mode[0] * _rng.randf_range(0.96, 1.04), 0.0, 1.2, mode[1], mode[2], mode[3])
+	var at := 0.05
+	for i in 5:
+		at += _rng.randf_range(0.04, 0.09)
+		_add_band_noise(out, at, 0.05, 0.4 * pow(0.7, i), 0.012, 900.0, 4500.0)
+	return out
+
+
+# A machine struck (a forklift's frame on its stops or a kerb, its forks on
+# the floor, the crane's hook block swinging into steel): a hard clank
+# through a heavy frame, and its chains and loose fittings jingling after.
+func _hit_machine() -> PackedFloat32Array:
+	var out := _silence(0.7)
+	_add_band_noise(out, 0.0, 0.015, 1.0, 0.004, 1500.0, 6000.0)
+	var base := _rng.randf_range(220.0, 300.0)
+	for mode in [[1.0, 1.0, 0.07, 7.0], [1.8, 0.7, 0.05, 7.0], [3.3, 0.45, 0.035, 6.0]]:
+		_add_mode(out, base * mode[0] * _rng.randf_range(0.95, 1.05), 0.0, 0.5, mode[1], mode[2], mode[3])
+	_add_tone(out, _rng.randf_range(60.0, 80.0), 0.0, 0.25, 0.5, 0.05)
+	var at := 0.03
+	for i in 6:
+		at += _rng.randf_range(0.02, 0.05)
+		_add_band_noise(out, at, 0.025, 0.3 * pow(0.75, i), 0.006, 2500.0, 6500.0)
 	return out
 
 

@@ -112,6 +112,7 @@ public:
     [[nodiscard]] const Zipline &zipline() const noexcept { return *zipline_; }
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
+    [[nodiscard]] const ImpactLedger &impacts() const noexcept { return *impacts_; }
     // On a forklift's floor within reach of its wheel (that forklift's, or
     // any's).
     [[nodiscard]] bool at_forklift_controls(int index) const noexcept;
@@ -641,6 +642,7 @@ public:
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
     std::unique_ptr<LooseStock> loose_stock_;
+    std::unique_ptr<ImpactLedger> impacts_;
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;

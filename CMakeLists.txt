@@ -36,6 +36,7 @@ add_library(scraperx_sim STATIC
     src/sim/summit.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
+    src/sim/impacts.cpp
     src/sim/forklift.cpp
     src/sim/yard_crane.cpp
     src/sim/zipline.cpp

@@ -1310,6 +1310,25 @@ effort goes 0.00 to 0.38 and a breath is taken; the tremor is full at 9 m/s) and
 renderer, or `SCRAPERX_PREVIEW=1`, set by the Godot MCP launcher) an unscripted launch draws at
 the lowest render with no shadows and saves nothing: about 7 frames a second there, from 1.
 
+**Hits heard, by what is struck (2026-10-18; to-do 8, its first step).** The native keeps an
+impact ledger (`src/sim/impacts.*`): after each step, a tracked body whose velocity changed by more
+than 0.35 m/s in the tick was struck, with half its mass times that change squared as the hit's
+energy. Tracked: every piece of loose stock, each forklift's frame and fork carriage, and the yard
+crane's hook block; a body in the hands is not read. Read in a fixed order after the step (never
+from the contact callbacks), so the same run hears the same hits. The hardest 8 of a tick are
+kept, the last 32 listed for the presentation (`get_impacts`, `get_last_impact_sequence`). It
+replaces the loose stock's own crash detector: the Matron now hears the tick's loudest hit with a
+loudness from its energy (nothing at 5 J, full, 55 m, at 5 kJ, by the log between), so a toolbox
+set down is a walk's noise and a crate dropped off a deck carries 46 m. Each stock kind has its
+sound (`LooseStock::sound`): timber, hollow (drums, bottles, a toolbox), heavy steel, a container,
+a machine. Five new synthesized hits, each played where it happened, 0 dB at its kind's full energy
+and 10 dB down for each tenth of it, deeper the heavier the body. Proof: native `stock` (317
+pieces settle with no hit heard; a drum in the hands is not struck; the drum set down lands with
+36 J at 1.14 m/s, hollow, loudness 0.29; a container leaned on is not struck); `touch_stock` (the
+drum set down is heard, 3 hollow hits); `audio_mix` and `audio_fall` unchanged within 0.6 dB.
+Not yet proven: the Matron drawn by a hit on her level (no test had it before either); it comes
+with step 2, where loud machines draw her too.
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1343,6 +1362,7 @@ fill in after).**
    the forklift, crane, and everything else", and sound is linked to the Matron). Proposed: every
    real collision reported by the native (where, its energy, its material) is heard by its material
    and heard by the Matron too; then the forklift's and the crane's own sounds from their parts.
+   Decided 2026-10-18: hits first; loud machines draw the Matron too. Done 2026-10-18: the hits.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

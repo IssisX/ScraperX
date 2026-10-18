@@ -574,9 +574,16 @@ func _stock_touch(device: int) -> bool:
 		return _fail("the walk back with the drum")
 	await _seconds(0.5)
 	await _pose("stock_drum_carried")
+	# The hits heard: none from the drum in the hands; set down, it lands
+	# hollow (ImpactSound.Hollow, 1).
+	var hollow_before := int(_main._audio.impacts_heard.get(1, 0))
 	if not await _let_go_if_held(device):
 		return _fail("LET GO did not set the drum down")
 	await _seconds(3.0)
+	var hollow := int(_main._audio.impacts_heard.get(1, 0)) - hollow_before
+	print("SCRAPERX_UITEST stock: %d hollow hits heard as the drum landed" % hollow)
+	if hollow < 1:
+		return _fail("the drum set down was not heard landing")
 	var now: Vector3 = _native().get_kit_body_transform(int(drum[1])).origin
 	var carried := Vector2(now.x - at.x, now.z - at.z).length()
 	print("SCRAPERX_UITEST stock: the drum carried %.2f m, at y %.2f" % [carried, now.y])

@@ -345,6 +345,21 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // every place the player is put down and of every lane the crew walk.
     // Their kit bodies come last, so older saves' lists line up.
     loose_stock_->dress_tower(keep_clear, kKeepClearM);
+    // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
+    // and forks, the yard crane's hook block. After the tower's stock, so it
+    // has them all.
+    impacts_ = std::make_unique<ImpactLedger>(physics_system_);
+    const auto track = [this](const kit::BodyIndex body, const ImpactSound sound) {
+        impacts_->track(kit_->body_id(body), kit_->body_entity(body), sound, kit_->body_mass(body));
+    };
+    for (int i = 0; i < loose_stock_->count(); ++i) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+    for (const std::unique_ptr<Forklift> &truck : forklifts_) {
+        track(truck->chassis_body(), ImpactSound::Machine);
+        track(truck->carriage_body(), ImpactSound::Machine);
+    }
+    track(yard_crane_->hook_body(), ImpactSound::Machine);
 
     physics_system_.OptimizeBroadPhase();
 
@@ -366,6 +381,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     summit_.reset();
     yard_crane_.reset();
     forklifts_.clear();
+    impacts_.reset();
     loose_stock_.reset();
     vertical_.reset();
     trapeze_.reset();
@@ -603,8 +619,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
     summit_->pre_step();
-    if (const LooseStock::Crash crash = loose_stock_->take_crash(); crash.heard) {
-        matron_->hear(crash.x, crash.y, crash.z, crash.loudness);
+    if (const ImpactLedger::Loudest hit = impacts_->take_loudest(); hit.heard) {
+        matron_->hear(hit.x, hit.y, hit.z, hit.loudness);
     }
     // Her ways out to guard: Stage A's cage, while it is down at her deck;
     // B's, while it is down at the 176 ring.
@@ -625,7 +641,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     contact_listener_.begin_tick();
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
-    loose_stock_->post_step();
+    impacts_->post_step(carried_entity_);
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->post_step(delta_seconds);
     }

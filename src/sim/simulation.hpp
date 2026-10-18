@@ -294,6 +294,28 @@ struct YardCraneSnapshot final {
     Vector3 hook{};                 // the hook's throat
 };
 
+// What a struck body sounds like (src/sim/impacts.hpp), by what it is made
+// of and how it is built: not its paint (kit::Material).
+enum class ImpactSound : std::uint8_t {
+    Timber = 0,      // crates, pallets, baulks, sleepers, planks, wooden reels
+    Hollow = 1,      // thin steel round air: drums, gas bottles, a toolbox
+    HeavySteel = 2,  // solid steel: beams, pipe, plate, billets, coils
+    Container = 3,   // a shipping container's corrugated box
+    Machine = 4,     // a forklift's frame or forks, the yard crane's hook block
+};
+
+// One hit a tracked body took: its change of velocity in one tick past
+// ImpactLedger::kMinChangeMps.
+struct ImpactSnapshot final {
+    std::uint64_t sequence = 0;   // 1 for the world's first hit, counting up
+    std::uint64_t entity = 0;     // the body struck
+    Vector3 at{};                 // its centre of mass as the tick ended
+    double energy_j = 0.0;        // half its mass times its change of speed squared
+    double speed_mps = 0.0;       // that change of velocity
+    double mass_kg = 0.0;
+    ImpactSound sound = ImpactSound::Timber;
+};
+
 // Phase 3: the trapeze in the yard (src/sim/trapeze.hpp).
 struct TrapezeSnapshot final {
     bool catch_available = false;    // in the air, the bar in the hands' reach
@@ -1165,6 +1187,10 @@ public:
     [[nodiscard]] bool request_yard_crane_operate() noexcept;
     [[nodiscard]] bool set_yard_crane_hoist(double hoist) noexcept;
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
+    // The last hits the tracked bodies took (src/sim/impacts.hpp), oldest
+    // first: a reader keeps the last sequence it has seen.
+    [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
+    [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
     // The ziplines (sim/zipline.hpp): each line's anchors, where its trolley
     // and its brake block are down it, and the trolley's bar while held.
     struct ZiplineLine {

@@ -83,6 +83,18 @@ const BREATH_FALL_S := 9.0
 const BREATH_HEARD := 0.2
 const BREATH_CYCLE_S := Vector2(4.0, 1.1)
 const BREATH_HANG_LOAD := 0.7
+# Hits (sim/impacts.hpp): each heard where it happened, as what was struck
+# sounds (ImpactSound's order), as loud as its energy: 0 dB at its kind's
+# full energy, 10 dB down for each tenth of it; deeper the heavier it is
+# than its kind's usual weight. A loud hit carries farther. At most
+# IMPACTS_PER_FRAME are started a frame, the hardest first.
+const IMPACT_CLIPS := [&"hit_timber", &"hit_hollow", &"hit_heavy", &"hit_container", &"hit_machine"]
+const IMPACT_FULL_J := [400.0, 300.0, 4000.0, 6000.0, 3000.0]
+const IMPACT_USUAL_KG := [160.0, 55.0, 1500.0, 3750.0, 3000.0]
+const IMPACT_FLOOR_DB := -36.0
+const IMPACT_PLAYERS := 6
+const IMPACTS_PER_FRAME := 3
+const IMPACT_REACH_M := 160.0
 
 # Counted whether or not the bank has finished building, so the scripted
 # UI runs can prove the cues fire.
@@ -188,6 +200,11 @@ var _region_clock := 0.0
 var effort := 0.0
 var breaths := 0
 var _breath_phase := 0.0
+# Hits heard, by ImpactSound, counted whether or not the bank is ready.
+var impacts_heard := {}
+var _impact_seen := 0
+var _impact_players: Array[AudioStreamPlayer3D] = []
+var _next_impact := 0
 
 
 func _ready() -> void:
@@ -231,6 +248,8 @@ func _ready() -> void:
 	for i in WELD_LOOPS:
 		_weld_loops.append(_positional_player(BUS_AMBIENCE, Vector3.ZERO, 4.0, 70.0))
 		_weld_owner.append(-1)
+	for i in IMPACT_PLAYERS:
+		_impact_players.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, IMPACT_REACH_M))
 	_matron_loop = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	_fork_engine = _positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 120.0)
 	_fork_pump = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
@@ -473,6 +492,43 @@ func update_pours(pours: Array, listener: Vector3) -> void:
 			player.volume_db = linear_to_db(clampf(0.4 + float(pours[i][1]) / 12.0, 0.4, 1.0)) - 3.0
 		else:
 			player.volume_db = -80.0
+
+
+# The hits since the last frame, from the native's kept list (oldest first):
+# {sequence, entity, at, energy_j, speed_mps, mass_kg, sound}. A new world
+# counts its hits from 1 again.
+func update_impacts(impacts: Array, listener: Vector3) -> void:
+	if impacts.is_empty():
+		return
+	if int(impacts.back()["sequence"]) < _impact_seen:
+		_impact_seen = 0
+	var fresh: Array = []
+	for hit in impacts:
+		if int(hit["sequence"]) <= _impact_seen:
+			continue
+		var sound := int(hit["sound"])
+		impacts_heard[sound] = int(impacts_heard.get(sound, 0)) + 1
+		if (hit["at"] as Vector3).distance_to(listener) <= IMPACT_REACH_M:
+			fresh.append(hit)
+	_impact_seen = int(impacts.back()["sequence"])
+	if not _bank_ready or _silent or fresh.is_empty():
+		return
+	fresh.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a["energy_j"]) > float(b["energy_j"]))
+	for i in mini(fresh.size(), IMPACTS_PER_FRAME):
+		var hit: Dictionary = fresh[i]
+		var sound := clampi(int(hit["sound"]), 0, IMPACT_CLIPS.size() - 1)
+		var energy := maxf(float(hit["energy_j"]), 0.001)
+		var level_db := clampf(10.0 * log(energy / float(IMPACT_FULL_J[sound])) / log(10.0), IMPACT_FLOOR_DB, 3.0)
+		var heft := float(IMPACT_USUAL_KG[sound]) / maxf(float(hit["mass_kg"]), 1.0)
+		var player := _impact_players[_next_impact]
+		_next_impact = (_next_impact + 1) % _impact_players.size()
+		player.position = hit["at"]
+		player.stream = _bank.pick(IMPACT_CLIPS[sound])
+		player.volume_db = level_db
+		player.unit_size = lerpf(3.0, 12.0, inverse_lerp(IMPACT_FLOOR_DB, 0.0, level_db))
+		player.pitch_scale = clampf(pow(heft, 0.15), 0.7, 1.3) * randf_range(0.96, 1.04)
+		player.play()
 
 
 # Wind rises with altitude; a falling body hears the air tear past. The

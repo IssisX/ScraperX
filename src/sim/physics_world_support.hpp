@@ -22,6 +22,7 @@
 #include "sim/forklift.hpp"
 #include "sim/yard_crane.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/impacts.hpp"
 #include "sim/zipline.hpp"
 #include "sim/corpse.hpp"
 #include "sim/matron.hpp"

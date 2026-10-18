@@ -151,7 +151,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     trapeze_->restore();
     vertical_->restore(checkpoint_.vertical);
     matron_->restore(checkpoint_.matron);
-    loose_stock_->resync();
+    impacts_->resync();
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->restore();
     }
