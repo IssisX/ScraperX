@@ -1381,7 +1381,10 @@ fill in after).**
 9. Controls for the movement, as its own goal (owner, 2026-10-18): the advanced moves worked
    through the thumbsticks or gestures, something elegant and intuitive, not on-screen buttons
    that take the player's eyes off the run. Done as one piece of work at some point, never
-   piecemeal inside other tasks.
+   piecemeal inside other tasks. Sequenced by Claude, 2026-10-18 (the owner: "you decide"): next
+   after 8's machine sounds and before 4's route hint and 5's machine starts, so the moves those
+   add (shoving, stomping, hanging the body's weight on a lever) are built into the gestures, not
+   added as buttons first.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
