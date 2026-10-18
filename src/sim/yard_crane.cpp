@@ -243,6 +243,38 @@ bool magnetic(const Material material) {
     return material == Material::Steel || material == Material::Rust || material == Material::Galvanised;
 }
 
+// ---- the container spreader, in its own frame: +x along it, its origin at
+// its middle on the level of its pockets' undersides, which sit on a box's
+// corner castings ----------------------------------------------------------
+// Its two side beams over the twistlocks' lines and its two end beams, all
+// clear of a box's roof; a pocket at each corner with its twistlock in it;
+// the head block across its middle and the lug on it, the eye at the lug's top.
+const Vec3 kSpreaderEye(0.0F, 0.9F, 0.0F);
+// Where it lies in the yard, on its pockets, before it is rigged: west of the
+// laydown's containers and lying the way they do (along z), 22 m out from
+// the mast.
+constexpr float kSpreaderParkX = -84.5F;
+constexpr float kSpreaderParkZ = -121.0F;
+
+std::vector<Part> spreader_parts() {
+    using C = YardCrane;
+    std::vector<Part> parts;
+    for (const float z : {-C::kTwistlockZ, C::kTwistlockZ}) {
+        parts.push_back(box(Vec3(6.1F, 0.15F, 0.1F), Vec3(0.0F, 0.27F, z), Material::Yellow, 450.0F));
+    }
+    for (const float x : {-6.0F, 6.0F}) {
+        parts.push_back(box(Vec3(0.12F, 0.15F, 1.23F), Vec3(x, 0.27F, 0.0F), Material::Yellow, 180.0F));
+    }
+    for (const float x : {-C::kTwistlockX, C::kTwistlockX}) {
+        for (const float z : {-C::kTwistlockZ, C::kTwistlockZ}) {
+            parts.push_back(box(Vec3(0.15F, 0.12F, 0.15F), Vec3(x, 0.12F, z), Material::Steel, 60.0F));
+        }
+    }
+    parts.push_back(box(Vec3(0.4F, 0.22F, 1.13F), Vec3(0.0F, 0.42F, 0.0F), Material::Yellow, 450.0F));
+    parts.push_back(box(Vec3(0.06F, 0.14F, 0.04F), Vec3(0.0F, 0.78F, 0.0F), Material::Steel, 30.0F));
+    return parts;
+}
+
 // ---- the remote's cabinet, by the foundation's south-east corner, open to
 // the south; the remote hangs in it ----------------------------------------
 const Vec3 kCabinetAt(4.2F, 0.0F, 4.2F);
@@ -433,6 +465,20 @@ void YardCrane::build_devices() {
     // under the hook in a few swings: declared, as damping of its motion.
     kit_.set_damping(magnet_, 0.2F, 0.5F);
     magnet_grip_ = kit_.add_grip(magnet_, kMagnetRatedN);
+    // The spreader after it, so a save made with the magnet lines up too.
+    const std::vector<Part> spreader = spreader_parts();
+    spreader_ = kit_.add_body(kSpreaderEntity, spreader, RVec3(kSpreaderParkX, 0.004F, kSpreaderParkZ),
+                              Quat::sRotation(Vec3::sAxisY(), 0.5F * JPH_PI), total(spreader), 0.6F);
+    (void)kit_.add_anchor(spreader_, kSpreaderEye, 1.5F);
+    // Its four-leg sling, spread to the frame's corners, keeps it from
+    // turning or swinging far under the hook: declared, as damping.
+    kit_.set_damping(spreader_, 0.2F, 2.0F);
+    spreader_grip_ = kit_.add_grip(spreader_, 4.0F * kTwistlockRatedN);
+}
+
+bool YardCrane::own(const kit::BodyIndex body) const noexcept {
+    return body == jib_ || body == trolley_ || body == hook_ || body == shackle_ || body == magnet_ ||
+           body == spreader_;
 }
 
 kit::BodyIndex YardCrane::magnet_contact(const std::uint64_t carried, int &points) const {
@@ -455,8 +501,7 @@ kit::BodyIndex YardCrane::magnet_contact(const std::uint64_t carried, int &point
     for (std::uint32_t index = 0; index < kit_.body_count(); ++index) {
         const kit::BodyIndex body{index};
         const std::uint64_t entity = kit_.body_entity(body);
-        if (body == magnet_ || !kit_.body_dynamic(body) || !kit_.body_enabled(body) || entity == carried ||
-            body == jib_ || body == trolley_ || body == hook_ || body == shackle_) {
+        if (own(body) || !kit_.body_dynamic(body) || !kit_.body_enabled(body) || entity == carried) {
             continue;
         }
         const RVec3 where = kit_.body_position(body);
@@ -532,8 +577,84 @@ void YardCrane::work_magnet(const bool rigged, const bool flip, const std::uint6
     if (!body.valid()) {
         state_.magnet_torn = false;
     } else if (!state_.magnet_torn) {
-        kit_.set_grip_rating(magnet_grip_, kMagnetRatedN * static_cast<float>(points) / 9.0F);
+        const float sheet = kit_.body_hollow(body) ? kMagnetSheetShare : 1.0F;
+        kit_.set_grip_rating(magnet_grip_, sheet * kMagnetRatedN * static_cast<float>(points) / 9.0F);
         (void)kit_.grip(magnet_grip_, body);
+    }
+}
+
+kit::BodyIndex YardCrane::spreader_seat() const {
+    // A box's corner castings: their apertures 89 mm in from its top corners.
+    constexpr float kCastingInsetM = 0.089F;
+    // The twistlocks, where they come out of the pockets' undersides.
+    const RVec3 at = kit_.body_position(spreader_);
+    const Quat turn = kit_.body_rotation(spreader_);
+    std::array<RVec3, 4> locks{};
+    std::size_t n = 0;
+    for (const float x : {-kTwistlockX, kTwistlockX}) {
+        for (const float z : {-kTwistlockZ, kTwistlockZ}) {
+            locks[n++] = at + turn * Vec3(x, 0.0F, z);
+        }
+    }
+    const Vec3 along = turn * Vec3::sAxisX();
+    const Vec3 up = turn * Vec3::sAxisY();
+    const float square = std::cos(kSpreaderSquareRad);
+    for (std::uint32_t index = 0; index < kit_.body_count(); ++index) {
+        const kit::BodyIndex body{index};
+        if (own(body) || !kit_.body_dynamic(body) || !kit_.body_enabled(body)) {
+            continue;
+        }
+        const RVec3 where = kit_.body_position(body);
+        if (Vec3(where - at).LengthSq() > 9.0F * 9.0F) {
+            continue;
+        }
+        const Quat turned = kit_.body_rotation(body);
+        for (const Part &part : kit_.body_parts(body)) {
+            // A box whose castings its twistlocks fit (a 40 ft box's).
+            const float cx = part.half.GetX() - kCastingInsetM;
+            const float cz = part.half.GetZ() - kCastingInsetM;
+            if (part.shape != Part::Shape::Box || std::abs(cx - kTwistlockX) > 0.02F ||
+                std::abs(cz - kTwistlockZ) > 0.02F) {
+                continue;
+            }
+            const Quat back = (turned * part.rotation).Conjugated();
+            const RVec3 middle = where + turned * part.offset;
+            // Square to it, along it either way, its roof up under the frame.
+            if (std::abs((back * along).GetX()) < square || (back * up).GetY() < square) {
+                continue;
+            }
+            bool sits = true;
+            for (const RVec3 &lock : locks) {
+                const Vec3 p = back * Vec3(lock - middle);
+                const float above = p.GetY() - part.half.GetY();
+                sits = sits && std::abs(std::abs(p.GetX()) - cx) <= kTwistlockReachM &&
+                       std::abs(std::abs(p.GetZ()) - cz) <= kTwistlockReachM && above >= -0.02F &&
+                       above <= kSpreaderSitM;
+            }
+            if (sits) {
+                return body;
+            }
+        }
+    }
+    return {};
+}
+
+void YardCrane::work_spreader(const bool rigged, const bool flip) {
+    const kit::BodyIndex box = spreader_seat();
+    const kit::BodyIndex locked = kit_.grip_load(spreader_grip_);
+    const kit::BodyIndex under = locked.valid() ? locked : box;
+    // Landed: what it sits on or holds at rest, and the sling carrying little
+    // of the frame (unhooked, none of it).
+    const bool slack = !rigged || state_.sling_n < kSpreaderSlackShare * kSpreaderKg * 9.81F;
+    state_.spreader_seated = box.valid();
+    state_.spreader_landed = under.valid() && slack && kit_.body_velocity(under).Length() < 0.05F;
+    if (!flip || !state_.spreader_landed) {
+        return;
+    }
+    if (locked.valid()) {
+        kit_.release(spreader_grip_);
+    } else {
+        (void)kit_.grip(spreader_grip_, box);
     }
 }
 
@@ -587,8 +708,12 @@ void YardCrane::pre_step(const float delta_seconds, const bool toggle, const boo
     }
     // The device on the sling, and its switch on the remote, worked with it.
     const bool magnet_rigged = state_.load_entity == kMagnetEntity;
+    const bool spreader_rigged = state_.load_entity == kSpreaderEntity;
     if (magnet_.valid()) {
         work_magnet(magnet_rigged, device && state_.operating && magnet_rigged, carried);
+    }
+    if (spreader_.valid()) {
+        work_spreader(spreader_rigged, device && state_.operating && spreader_rigged);
     }
 
     // Where the stick sends the hook, shared between the slew and the
@@ -715,14 +840,21 @@ void YardCrane::post_step(const float delta_seconds) {
     state_.sling_n = kit_.rope_tension(sling_);
     const std::uint64_t end = kit_.rope_end_entity(sling_);
     state_.load_entity = end == kShackleEntity ? 0 : end;
-    // What the device holds, after the step: a load torn off is let go.
-    const kit::BodyIndex held = kit_.grip_load(magnet_grip_);
-    if (state_.holding_entity != 0 && !held.valid() && state_.magnet_on) {
+    // What the magnet holds, after the step: a load torn off it is let go.
+    const kit::BodyIndex magnet_held = kit_.grip_load(magnet_grip_);
+    const std::uint64_t magnet_now = magnet_held.valid() ? kit_.body_entity(magnet_held) : 0;
+    if (state_.magnet_holding != 0 && magnet_now == 0 && state_.magnet_on) {
         state_.magnet_torn = true;
     }
+    state_.magnet_holding = magnet_now;
+    // What the device on the sling holds, how hard and to what.
+    const kit::GripIndex grip = state_.load_entity == kMagnetEntity     ? magnet_grip_
+                                : state_.load_entity == kSpreaderEntity ? spreader_grip_
+                                                                        : kit::GripIndex{};
+    const kit::BodyIndex held = kit_.grip_load(grip);
     state_.holding_entity = held.valid() ? kit_.body_entity(held) : 0;
-    state_.hold_n = kit_.grip_force(magnet_grip_);
-    state_.hold_rated_n = held.valid() ? kit_.grip_rating(magnet_grip_) : 0.0F;
+    state_.hold_n = kit_.grip_force(grip);
+    state_.hold_rated_n = held.valid() ? kit_.grip_rating(grip) : 0.0F;
 }
 
 std::array<YardCrane::Noise, 3> YardCrane::noises() const {

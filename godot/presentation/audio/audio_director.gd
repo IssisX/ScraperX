@@ -1011,6 +1011,11 @@ func crane_cue(name: StringName, at: Vector3, strength: float) -> void:
 		&"magnet_drop":
 			# Let go: the contactor dropping out and the steel parting from it.
 			_play_at(&"clang", at, db - 2.0, randf_range(0.55, 0.65))
+		&"twistlocks":
+			# The spreader's four locks turning in the box's castings together:
+			# a short, high steel clack and the cams grinding home.
+			_play_at(&"clang", at, db, randf_range(0.85, 0.95))
+			_play_at(&"creak", at, db - 6.0, randf_range(0.9, 1.0))
 
 
 # A zipline ride (sim/zipline.hpp), heard at the trolley over the rider's

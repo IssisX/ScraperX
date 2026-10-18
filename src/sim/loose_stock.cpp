@@ -33,6 +33,8 @@ struct Spec {
     bool eye = false;
     Vec3 eye_at = Vec3::sZero();
     float eye_reach = 1.2F;
+    // Thin-walled, drawn as a solid (kit::Kit::set_hollow).
+    bool hollow = false;
 };
 
 // A cylinder lying along x (a cylinder part runs along its local y).
@@ -145,6 +147,7 @@ Spec make_spec(const K kind) {
         s.eye = true;
         s.eye_at = Vec3(0.0F, 1.32F, 0.0F);
         s.eye_reach = 1.5F;
+        s.hollow = true;
         break;
     case K::SteelBeam:
         s.parts = {box(Vec3(5.0F, 0.15F, 0.15F), Vec3::sZero(), Material::Steel, 600.0F)};
@@ -575,6 +578,9 @@ void LooseStock::add_piece(const Placement &p) {
     }
     if (spec.eye) {
         (void)kit_.add_anchor(body, spec.eye_at, spec.eye_reach);
+    }
+    if (spec.hollow) {
+        kit_.set_hollow(body);
     }
     kit_.allow_sleeping(body);
     pieces_.push_back(body);

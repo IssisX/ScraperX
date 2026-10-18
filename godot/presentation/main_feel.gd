@@ -1067,6 +1067,7 @@ var _crane_at_limit := false
 var _crane_slack := false
 var _crane_had_remote := false
 var _crane_holding := 0
+var _crane_device := 0
 
 func _feel_crane(delta: float) -> void:
 	var state: Dictionary = _native.get_yard_crane_state()
@@ -1082,18 +1083,23 @@ func _feel_crane(delta: float) -> void:
 	var magnet: Vector3 = _native.get_kit_body_transform(_native.get_kit_body_index(YARD_CRANE_MAGNET)).origin
 	_audio.update_crane(delta, state, jib, magnet)
 	var operating := bool(state["operating"])
-	# The magnet taking hold of steel, and letting it go (switched off, or
-	# the load torn off it).
+	# The magnet taking hold of steel and letting it go (switched off, or the
+	# load torn off it); the spreader's twistlocks locking and unlocking. Only
+	# while the same device stays on the sling: unrigged, it reads nothing held.
 	var holding := int(state["holding_entity"])
-	if holding != 0 and _crane_holding == 0:
-		_audio.crane_cue(&"magnet_take", magnet, 1.0)
+	var device := int(state["device"])
+	if device == _crane_device and (holding != 0) != (_crane_holding != 0):
+		var taken := holding != 0
+		if device == CRANE_DEVICE_MAGNET:
+			_audio.crane_cue(&"magnet_take" if taken else &"magnet_drop", magnet, 1.0 if taken else 0.8)
+		elif device == CRANE_DEVICE_SPREADER:
+			var spreader: Vector3 = _native.get_kit_body_transform(
+				_native.get_kit_body_index(YARD_CRANE_SPREADER)).origin
+			_audio.crane_cue(&"twistlocks", spreader, 1.0)
 		if operating:
-			_haptic(&"land", 0.5)
-	elif holding == 0 and _crane_holding != 0:
-		_audio.crane_cue(&"magnet_drop", magnet, 0.8)
-		if operating:
-			_haptic(&"press", 0.6)
+			_haptic(&"land" if taken else &"press", 0.5 if taken else 0.6)
 	_crane_holding = holding
+	_crane_device = device
 	var slewing := absf(float(state["slew_rate"])) > 0.002
 	var trolleying := absf(float(state["trolley_rate"])) > 0.02
 	if _crane_slewing and not slewing:

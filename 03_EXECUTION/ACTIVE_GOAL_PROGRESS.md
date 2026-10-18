@@ -1404,6 +1404,27 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The yard crane's container spreader (2026-10-18; to-do 10, second of its devices).** A 40 ft
+spreader frame (1,980 kg, 12 m) lies west of the laydown, its long side north to south. It is
+rigged as the magnet is: the hook let down by its side, the sling's shackle TAKEn and HOOKed on the
+lug in its middle. Let down on a 40 ft box, its four twistlocks sit in the box's corner castings
+when all four are within 12 cm of them, the frame square to the box within 3 degrees and resting
+on its roof. Its locks turn only with the box at rest and the rope slack (the interlock a real
+spreader has): only then does Action read LOCK (ON THE BOX'S CORNERS) or UNLOCK (THE BOX IS DOWN).
+In the air Action stays the crane's WALK, the hold read beside it (LOCKED 3.7 T OF 99.9 T); landed
+off a box, NOT SQUARE ON A BOX. Locked, the four locks hold 25 t each. Heard: the locks turning,
+locking and unlocking. Changed with it: the magnet's hold counts only the load's pull on it, not
+its own weight pressing down (on a light hold, its own 1.1 t could tear the grip off), and a
+container's roof is thin sheet, held a tenth as hard, so the magnet tears off an empty box and
+the spreader is the way to lift one. Proof: native `spreader` (new: off a box LOCK turns nothing;
+seated and landed on the container, LOCK, the box lifted 2.2 m; UNLOCK refused in the air; set
+down, UNLOCK, and the frame raised leaves the box where it was set), `magnet` (new: the container's
+roof held at a tenth and torn off; saves from before the spreader, and from before the grips, still
+load), `crane`, `stock`, `save`, `determinism`, `forklift`; `touch_crane_spreader` (new: by touch,
+rigged, landed, LOCK, lifted, set down, UNLOCK, heard), `touch_crane_magnet`, `pad_crane_magnet`,
+`keyboard_crane_magnet`, `touch_yard_crane`, `touch_c4`, `touch_stock`. Next: the closing review of
+to-do 10; the plate clamp waits for thin plates in a rack.
+
 **The derrick's cradle seated at the top (2026-10-18).** Stepping off at 802.64 m was a game of
 timing. The cradle hangs free on its hanger: the two pigs left at its south end lean it 5.5 degrees,
 arriving set it swinging up to 11 degrees either side of that for 10 s, and as its rider stepped off
@@ -1571,7 +1592,8 @@ fill in after).**
    slabs and beams are laid down in reach; the containers get corner castings for the spreader; the
    plate clamp waits for thin plates in a rack. Saves: the devices built last, their grips kept in
    their own record and rebuilt on a restore, older saves still loading.
-   Done 2026-10-18: the grips and the magnet, with CRANE on R and LB. Next: the spreader.
+   Done 2026-10-18: the grips, the magnet (CRANE on R and LB) and the container spreader. Next: the
+   closing review; the plate clamp waits for thin plates in a rack.
 11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her

@@ -376,9 +376,11 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         }
     }
     ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size());
-    // A save made before the grips ends here: it holds nothing.
+    // A save made before the grips ends here: it holds nothing. One made with
+    // fewer (before the spreader) holds nothing in the grips built since.
     if (ok && !r.done()) {
-        ok = r.list(k.grip_load, c.grip_load.size()) && r.list(k.grip_rating, c.grip_rating.size()) &&
+        ok = r.list_up_to(k.grip_load, c.grip_load.size()) &&
+             r.list_up_to(k.grip_rating, c.grip_rating.size()) && k.grip_rating.size() == k.grip_load.size() &&
              std::all_of(k.grip_load.begin(), k.grip_load.end(),
                          [&k](const std::uint32_t load) { return load == kit::kNone || load < k.bodies.size(); }) &&
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),

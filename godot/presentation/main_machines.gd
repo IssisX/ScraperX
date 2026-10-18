@@ -44,9 +44,9 @@ var _kit_dynamic: Array[bool] = []
 const MACHINE_MIN_KG := 40.0
 # The kit bodies sounded by their own parts: each forklift's frame and fork
 # carriage (sim/forklift.hpp: the yard's, the crane's, the 11 m and 44 m
-# decks') and the yard crane's jib, trolley, hook block, shackle and lifting
-# magnet (sim/yard_crane.hpp).
-const OWN_SOUND_ENTITIES := [2982, 2983, 2989, 2990, 2991, 2992, 2993, 2994, 2984, 2985, 2986, 2987, 2995]
+# decks') and the yard crane's jib, trolley, hook block, shackle, lifting
+# magnet and container spreader (sim/yard_crane.hpp).
+const OWN_SOUND_ENTITIES := [2982, 2983, 2989, 2990, 2991, 2992, 2993, 2994, 2984, 2985, 2986, 2987, 2995, 2996]
 # Loose stock (kit entities from here, src/sim/loose_stock.hpp) is not a
 # machine: crates and drums lying about neither hum nor carry beacons.
 const STOCK_FIRST_ENTITY := 5000

@@ -143,6 +143,10 @@ public:
     // about does: it wakes when anything touches it or a restore moves it.
     // Every other kit body stays awake.
     void allow_sleeping(BodyIndex body);
+    // A thin-walled body drawn as a solid (a container's corrugated sheet): a
+    // lifting magnet holds it by its sheet alone. Build time only.
+    void set_hollow(BodyIndex body);
+    [[nodiscard]] bool body_hollow(BodyIndex body) const noexcept;
     // Two bodies that pass through each other: parts of one machine built
     // interleaved (a pouch inside its fork). Every other pair still collides.
     // Indices up to kCollisionSubGroups - 1; the last is kept for a body that
@@ -358,11 +362,14 @@ public:
     // ---- grips -----------------------------------------------------------
     // A grip (a lifting magnet's face, a spreader's twistlocks): while it
     // holds, a weld keeps the load where it lay against the device when the
-    // grip was made. Past rating_newtons for kPartSteps ticks the weld lets
+    // grip was made. Its pull is the weld's force drawing the load toward the
+    // device against `pull_local` (the device's way to the load, in its own
+    // frame): pressed together, the two bear on each other and the hold takes
+    // nothing. Past rating_newtons of pull for kPartSteps ticks the weld lets
     // go, as a rope parts (rating 0: never). When a device may grip and must
     // let go is the device's own (yard_crane.hpp); the kit only holds, and
     // lets go of a body taken out of the world.
-    GripIndex add_grip(BodyIndex device, float rating_newtons);
+    GripIndex add_grip(BodyIndex device, float rating_newtons, JPH::Vec3 pull_local = JPH::Vec3(0.0F, -1.0F, 0.0F));
     // Welds load to the grip's device where the two lie now. False when the
     // grip holds already, or load is the device, static or out of the world.
     bool grip(GripIndex grip, BodyIndex load);
@@ -371,7 +378,7 @@ public:
     // The body the grip holds, invalid for none.
     [[nodiscard]] BodyIndex grip_load(GripIndex grip) const noexcept;
     [[nodiscard]] float grip_rating(GripIndex grip) const noexcept;
-    // The weld's pull last step, N; 0 holding nothing.
+    // The hold's pull last step, N; 0 holding nothing.
     [[nodiscard]] float grip_force(GripIndex grip) const noexcept;
     // True while some grip holds the body.
     [[nodiscard]] bool gripped(BodyIndex body) const noexcept;
@@ -565,6 +572,7 @@ private:
         CarryKind carry = CarryKind::None;
         JPH::Vec3 handle = JPH::Vec3::sZero();
         JPH::RVec3 parked = JPH::RVec3::sZero();
+        bool hollow = false;
     };
     struct Anchor final {
         BodyIndex body;
@@ -763,6 +771,7 @@ private:
     struct Grip final {
         BodyIndex device;
         BodyIndex load;             // invalid holding nothing
+        JPH::Vec3 pull = JPH::Vec3(0.0F, -1.0F, 0.0F);   // device-local, toward the load
         float rating = 0.0F;
         float force = 0.0F;
         std::uint32_t over_rating_steps = 0;

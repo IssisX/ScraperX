@@ -882,14 +882,14 @@ func _crane_hook_over(device: int, target: Vector2, tolerance: float, timeout: f
 	_move_dir(device, Vector2.ZERO)
 	return false
 
-# Up to the sling's shackle where it lies (on the magnet's bail, or beside
-# it), facing it, until TAKE CRANE SLING is offered; then TAKE.
-func _take_crane_sling(device: int) -> bool:
+# Up to the sling's shackle where it lies (on a device's lug, or beside the
+# device `beside`), facing it, until TAKE CRANE SLING is offered; then TAKE.
+func _take_crane_sling(device: int, beside: int = YARD_CRANE_MAGNET) -> bool:
 	for attempt in 6:
-		# From the side away from the magnet (its body in the way), or, on the
-		# bail, from where the rigger stands.
+		# From the side away from the device (its body in the way), or, on its
+		# lug, from where the rigger stands.
 		var shackle := _kit_origin(YARD_CRANE_SLING_SHACKLE)
-		var magnet := _kit_origin(YARD_CRANE_MAGNET)
+		var magnet := _kit_origin(beside)
 		var me := _position()
 		var out := Vector2(shackle.x - magnet.x, shackle.z - magnet.z)
 		var side := out.normalized() if out.length() > 0.3 else Vector2(me.x - shackle.x, me.z - shackle.z).normalized()
@@ -1030,6 +1030,194 @@ func _crane_magnet(device: int) -> bool:
 	_detail = "slab=%d lifted_to=%.2f held_read='%s' heard=%s cues=%s" % [held, up, detail, str(heard), str(cues)]
 	return true
 
+
+# The yard crane's container spreader (sim/yard_crane.hpp) and the laydown's
+# empty 40 ft box it lifts (LooseStock), found where they lie.
+const YARD_CRANE_SPREADER := 2996
+const CONTAINER_KIND := 5
+const YARD_CONTAINER_NEAR := Vector2(-76.0, -113.0)
+
+# The container lying nearest the laydown's place for it: its entity.
+func _yard_container() -> int:
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	var piece := 0
+	var best := 0
+	var best_off := 20.0
+	for i in range(0, stock.size() - 2, 3):
+		if stock[i + 1] == CONTAINER_KIND:
+			var at := _kit_origin(5000 + piece)
+			var off := (Vector2(at.x, at.z) - YARD_CONTAINER_NEAR).length()
+			if off < best_off:
+				best = 5000 + piece
+				best_off = off
+		piece += 1
+	return best
+
+# Until the device on the sling hangs still: within a 5 cm box for 8 s. The
+# hook block swings on 50 m of rope, 14 s a swing, and stands near still for
+# a few seconds at either end of it; over more than half a swing, only a
+# swing of under 2.5 cm stays in the box.
+func _crane_device_still(entity: int, timeout: float) -> bool:
+	var marks: Array[Vector2] = []
+	var waited := 0.0
+	while waited < timeout:
+		await _seconds(0.25)
+		waited += 0.25
+		var now := _kit_origin(entity)
+		marks.append(Vector2(now.x, now.z))
+		if marks.size() > 32:
+			marks.pop_front()
+		if marks.size() == 32:
+			var low := marks[0]
+			var high := marks[0]
+			for mark in marks:
+				low = Vector2(minf(low.x, mark.x), minf(low.y, mark.y))
+				high = Vector2(maxf(high.x, mark.x), maxf(high.y, mark.y))
+			if high.x - low.x < 0.05 and high.y - low.y < 0.05:
+				return true
+	return false
+
+# The device on the sling sent over `target` and hanging still within
+# `tolerance` of it: the operator watches the device, not the trolley, and
+# sets the trolley again by how far off the spot it hangs.
+func _crane_device_over(device: int, entity: int, target: Vector2, tolerance: float) -> bool:
+	if not await _crane_hook_over(device, target, 0.12, 150.0):
+		return false
+	for pass_n in 4:
+		var still := await _crane_device_still(entity, 90.0)
+		var at := _kit_origin(entity)
+		var off := target - Vector2(at.x, at.z)
+		print("SCRAPERX_UITEST crane: pass %d, %d %s at %s, %.3f m off" % [pass_n, entity,
+			"still" if still else "not still", str(at), off.length()])
+		if not still:
+			return false
+		if off.length() < tolerance:
+			return true
+		var top: Vector3 = _native().get_yard_crane_state()["rope_top"]
+		if not await _crane_hook_over(device, Vector2(top.x, top.z) + off, 0.1, 60.0):
+			print("SCRAPERX_UITEST crane: the trolley not set again over %s" % str(Vector2(top.x, top.z) + off))
+			return false
+	return false
+
+# The spreader's job by touch: the remote taken, the hook let down by the
+# frame's side; round the yard's steel to it, the sling's shackle taken and
+# HOOKed on its lug. Worked: up, over the laydown's container and down on to
+# its corner castings until the rope goes slack; Action reads LOCK, and the
+# box rises with it. In the air there is no UNLOCK (the interlock); set down,
+# Action reads UNLOCK and lets go, and the frame raised leaves the box where
+# it was set. Heard: the twistlocks turning, locking and unlocking.
+func _crane_spreader(device: int) -> bool:
+	var box := _yard_container()
+	if box == 0:
+		return _fail("spreader: the laydown's container was not found")
+	for target in [Vector2(-25.0, -40.0), Vector2(-50.0, -100.0), Vector2(-50.0, -125.0)]:
+		if not await _go(device, target, 0.3, 50.0):
+			return _fail("spreader: the walk to the crane stopped short of %s" % str(target))
+	if not await _go(device, Vector2(YARD_CRANE_MAST_X + 4.2, YARD_CRANE_MAST_Z + 5.6), 0.12, 20.0):
+		return _fail("spreader: the walk to the remote's cabinet stopped short")
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"crane_take", "TAKE REMOTE", "THE YARD CRANE"):
+		return _fail("spreader: TAKE REMOTE was not offered at the cabinet")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["has_remote"]), 1.0):
+		return _fail("spreader: TAKE REMOTE did not take the remote")
+	await _seconds(0.4)
+	var frame := _kit_origin(YARD_CRANE_SPREADER)
+	var box0 := _kit_origin(box)
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("spreader: CRANE did not take the crane")
+	# The hook by the frame's east side, let down until its shackle lies on
+	# the ground there.
+	if not await _crane_hook_over(device, Vector2(frame.x + 1.7, frame.z), 0.3, 120.0):
+		return _fail("spreader: the hook was not sent by the spreader")
+	if not await _crane_hoist_until(device, -1,
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.4, 60.0):
+		return _fail("spreader: LOWER did not let the hook down by the spreader")
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("spreader: CRANE did not let go of the crane")
+	# Round the slabs, the magnet and the beams, north of them, to the frame.
+	for target in [Vector2(-60.5, -126.0), Vector2(-60.5, -119.5), Vector2(-80.0, -119.5),
+			Vector2(frame.x + 2.4, frame.z - 1.0)]:
+		if not await _go(device, target, 0.2, 40.0):
+			return _fail("spreader: the walk to the spreader stopped short of %s (at %s)" % [str(target), str(_position())])
+	if not await _take_crane_sling(device, YARD_CRANE_SPREADER):
+		var shackle := _kit_origin(YARD_CRANE_SLING_SHACKLE)
+		return _fail("spreader: TAKE CRANE SLING was not offered by the shackle at %s, the rigger at %s (read '%s %s')" % [
+			str(shackle), str(_position()), _action_label(), String(_ctx()["action"]["detail"])])
+	if not await _go(device, Vector2(frame.x + 1.65, frame.z), 0.08, 6.0):
+		return _fail("spreader: the step to the spreader's lug stopped short")
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO THE SPREADER"):
+		return _fail("spreader: HOOK ONTO THE SPREADER was not offered (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_yard_crane_state()["device"]) == 2, 1.5):
+		return _fail("spreader: HOOK did not put the sling on the spreader")
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("spreader: CRANE did not take the crane again")
+	# On the ground off a box: no LOCK to offer.
+	await _seconds(0.5)
+	if _ctx()["action"]["id"] == &"crane_device":
+		return _fail("spreader: lying off a box, Action offered '%s'" % _action_label())
+	# Up 4.5 m, over the box, and down on to its castings until the rope goes
+	# slack.
+	var lifted_from := float((_native().get_yard_crane_state()["hook"] as Vector3).y)
+	if not await _crane_hoist_until(device, 1,
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) > lifted_from + 4.5, 30.0):
+		return _fail("spreader: RAISE did not lift the spreader")
+	if not await _crane_device_over(device, YARD_CRANE_SPREADER, Vector2(box0.x, box0.z), 0.08):
+		var at := _kit_origin(YARD_CRANE_SPREADER)
+		return _fail("spreader: it was not brought still over the container (at %s, the box at %s)" % [str(at), str(box0)])
+	if not await _crane_hoist_until(device, -1,
+			func() -> bool: return bool(_native().get_yard_crane_state()["spreader_landed"]), 40.0):
+		var at := _kit_origin(YARD_CRANE_SPREADER)
+		var crane: Dictionary = _native().get_yard_crane_state()
+		return _fail("spreader: let down on to the container, it did not land on its castings (at %s, seated %s, the sling %.0f N)" % [
+			str(at), str(crane["spreader_seated"]), float(crane["sling_n"])])
+	if not await _offered(&"crane_device", "LOCK", "ON THE BOX'S CORNERS"):
+		return _fail("spreader: landed on the box, Action did not read LOCK (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_yard_crane_state()["holding_entity"]) == box, 1.0):
+		return _fail("spreader: LOCK did not lock on to the box")
+	if not await _crane_hoist_until(device, 1, func() -> bool: return _kit_origin(box).y > box0.y + 2.0, 40.0):
+		return _fail("spreader: RAISE did not lift the box on the spreader")
+	await _seconds(1.0)
+	var high := _kit_origin(box).y
+	# In the air: Action is the crane's WALK again, the hold read beside it.
+	var held_read := String(_ctx()["action"]["detail"])
+	if _ctx()["action"]["id"] == &"crane_device" or not held_read.begins_with("LOCKED"):
+		return _fail("spreader: the box in the air, Action read '%s %s'" % [_action_label(), held_read])
+	if not await _crane_hoist_until(device, -1,
+			func() -> bool: return bool(_native().get_yard_crane_state()["spreader_landed"]), 40.0):
+		return _fail("spreader: the box was not set down")
+	if not await _offered(&"crane_device", "UNLOCK", "THE BOX IS DOWN"):
+		return _fail("spreader: the box set down, Action did not read UNLOCK (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_yard_crane_state()["holding_entity"]) == 0, 1.0):
+		return _fail("spreader: UNLOCK did not let go of the box")
+	var landed := _kit_origin(box).y
+	var raised_from := float((_native().get_yard_crane_state()["hook"] as Vector3).y)
+	if not await _crane_hoist_until(device, 1,
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) > raised_from + 2.0, 20.0):
+		return _fail("spreader: RAISE did not lift the frame off the box")
+	await _seconds(1.0)
+	var left := _kit_origin(box).y
+	if absf(left - landed) > 0.02 or absf(landed - box0.y) > 0.05:
+		return _fail("spreader: the frame raised did not leave the box where it was set (set at %.3f, left at %.3f, from %.3f)" % [
+			landed, left, box0.y])
+	var cues: Dictionary = _main._audio.crane_cues
+	if int(cues.get(&"twistlocks", 0)) < 2:
+		return _fail("spreader: the twistlocks not heard locking and unlocking (cues %s)" % str(cues))
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("spreader: CRANE did not let go of the crane at the end")
+	_detail = "box=%d lifted_to=%.2f set_down=%.3f held_read='%s' cues=%s" % [box, high, landed, held_read, str(cues)]
+	return true
 
 # The truck's heading as the native's yaw (0 its nose +z, turning right -).
 func _truck_yaw() -> float:

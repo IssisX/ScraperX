@@ -143,6 +143,28 @@ public:
     static constexpr float kMagnetTouchM = 0.01F;
     static constexpr float kMagnetTiltRad = 0.035F;
     static constexpr int kMagnetMinContact = 3;
+    // Thin sheet (a container's corrugated walls, kit::Kit::set_hollow) holds
+    // a magnet's flux poorly: a tenth of the hold.
+    static constexpr float kMagnetSheetShare = 0.1F;
+
+    // The container spreader (CHOSEN: a 40 ft top-lift frame of kSpreaderKg):
+    // a frame a 40 ft box's length and width, a twistlock in a pocket at each
+    // corner over where a box's corner castings are. Let down on a box, its
+    // four twistlocks within kTwistlockReachM of the four castings, square to
+    // it within kSpreaderSquareRad and sitting on its roof, LOCK turns them;
+    // UNLOCK turns them back. Either only with the box at rest and the rope
+    // slack (the sling carrying under kSpreaderSlackShare of the frame's
+    // weight): the interlock every spreader has, so a box in the air is
+    // never let go. Locked, frame and box are one (kTwistlockRatedN each).
+    static constexpr std::uint64_t kSpreaderEntity = 2996;
+    static constexpr float kSpreaderKg = 1980.0F;
+    static constexpr float kTwistlockX = 6.006F;   // out from its middle along it
+    static constexpr float kTwistlockZ = 1.131F;   // and across it
+    static constexpr float kTwistlockReachM = 0.12F;
+    static constexpr float kSpreaderSquareRad = 0.05F;
+    static constexpr float kSpreaderSitM = 0.05F;
+    static constexpr float kSpreaderSlackShare = 0.25F;
+    static constexpr float kTwistlockRatedN = 245000.0F;
 
     // The docks: the face out to x_out, between z_min and z_max, their decks'
     // tops at top_y; the low one is a pier on two legs, reaching past the
@@ -191,9 +213,14 @@ public:
         // nothing): the hold's pull this tick and what it holds to.
         bool magnet_on = false;
         bool magnet_torn = false;     // a load tore off it, and it has not been clear of steel since
+        std::uint64_t magnet_holding = 0;   // what the magnet holds, rigged or not
         std::uint64_t holding_entity = 0;
         float hold_n = 0.0F;
         float hold_rated_n = 0.0F;
+        // The spreader: its twistlocks over a box's castings and sitting on
+        // it; and landed, what it sits on or holds at rest, the rope slack.
+        bool spreader_seated = false;
+        bool spreader_landed = false;
     };
 
     YardCrane(JPH::PhysicsSystem &physics, kit::Kit &kit);
@@ -226,6 +253,7 @@ public:
     // The hook block and the magnet, as kit bodies.
     [[nodiscard]] kit::BodyIndex hook_body() const noexcept { return hook_; }
     [[nodiscard]] kit::BodyIndex magnet_body() const noexcept { return magnet_; }
+    [[nodiscard]] kit::BodyIndex spreader_body() const noexcept { return spreader_; }
     // Its drives as heard (for the Matron's hearing, matron.hpp hear): where
     // each is and how loud while it runs, 0 when it does not. The slewing
     // ring's motors; the hoist's drum on the counter-jib (louder under load,
@@ -254,6 +282,12 @@ private:
     // The magnet: its switch, and a hold made while it is on and lies flat
     // against steel. Unhooked, it is dead.
     void work_magnet(bool rigged, bool flip, std::uint64_t carried);
+    // The box the spreader's twistlocks sit over, invalid for none.
+    [[nodiscard]] kit::BodyIndex spreader_seat() const;
+    // The spreader: where it sits, and LOCK or UNLOCK when flipped.
+    void work_spreader(bool rigged, bool flip);
+    // One of the crane's own bodies or devices, which no device takes.
+    [[nodiscard]] bool own(kit::BodyIndex body) const noexcept;
 
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
@@ -266,6 +300,8 @@ private:
     kit::BodyIndex cabinet_{};
     kit::BodyIndex magnet_{};
     kit::GripIndex magnet_grip_{};
+    kit::BodyIndex spreader_{};
+    kit::GripIndex spreader_grip_{};
     kit::RopeIndex sling_{};
     JPH::Ref<JPH::HingeConstraint> slew_;
     JPH::Ref<JPH::SliderConstraint> trolley_drive_;

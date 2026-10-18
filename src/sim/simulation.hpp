@@ -317,14 +317,18 @@ struct YardCraneSnapshot final {
     double rope_mps = 0.0;
     double hook_mps = 0.0;
     double sling_n = 0.0;
-    // The device on the sling (0 none, 1 the magnet), the magnet's switch,
-    // and what the device holds (0 nothing): the hold's pull and what it
-    // holds to before the load tears off.
+    // The device on the sling (0 none, 1 the magnet, 2 the spreader), the
+    // magnet's switch, and what the device holds (0 nothing): the hold's pull
+    // and what it holds to before the load tears off. The spreader: its
+    // twistlocks over a box's castings, sitting on it; landed, what it sits
+    // on or holds at rest and the rope slack (LOCK and UNLOCK only then).
     int device = 0;
     bool magnet_on = false;
     std::uint64_t holding_entity = 0;
     double hold_n = 0.0;
     double hold_rated_n = 0.0;
+    bool spreader_seated = false;
+    bool spreader_landed = false;
 };
 
 // What a struck body sounds like (src/sim/impacts.hpp), by what it is made
@@ -1247,8 +1251,8 @@ public:
     // (refused where it cannot be worked: hands full, on a hold, in a seat).
     // Working it, the stick sends the hook and the hoist's buttons, held,
     // raise (1) and lower (-1) it. The device switch works the device on the
-    // sling (the magnet: on, off), refused unless the crane is worked with
-    // a device on its sling.
+    // sling (the magnet: on, off; the spreader: LOCK, UNLOCK), refused unless
+    // the crane is worked with a device on its sling.
     [[nodiscard]] bool request_yard_crane_take() noexcept;
     [[nodiscard]] bool request_yard_crane_operate() noexcept;
     [[nodiscard]] bool request_yard_crane_device() noexcept;

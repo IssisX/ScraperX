@@ -235,6 +235,15 @@ void Kit::allow_sleeping(const BodyIndex body) {
     jolt_body(body).SetAllowSleeping(true);
 }
 
+void Kit::set_hollow(const BodyIndex body) {
+    bodies_[body.value].hollow = true;
+}
+
+bool Kit::body_hollow(const BodyIndex body) const noexcept {
+    const Body *record = find(bodies_, body);
+    return record != nullptr && record->hollow;
+}
+
 void Kit::set_damping(const BodyIndex body, const float linear, const float angular) {
     JPH::MotionProperties *motion = jolt_body(body).GetMotionProperties();
     motion->SetLinearDamping(linear);
@@ -910,7 +919,9 @@ void Kit::post_step(const float delta_seconds) {
             grip.force = 0.0F;
             continue;
         }
-        grip.force = grip.weld->GetTotalLambdaPosition().Length() / delta_seconds;
+        // The weld's impulse on the load, against the device's way to it.
+        const JPH::Vec3 toward = jolt_body(grip.device).GetRotation() * grip.pull;
+        grip.force = std::max(0.0F, -grip.weld->GetTotalLambdaPosition().Dot(toward)) / delta_seconds;
         if (grip.rating <= 0.0F) {
             continue;
         }
@@ -923,9 +934,10 @@ void Kit::post_step(const float delta_seconds) {
 
 // ---- grips ------------------------------------------------------------------
 
-GripIndex Kit::add_grip(const BodyIndex device, const float rating_newtons) {
+GripIndex Kit::add_grip(const BodyIndex device, const float rating_newtons, const JPH::Vec3 pull_local) {
     Grip grip;
     grip.device = device;
+    grip.pull = pull_local.NormalizedOr(JPH::Vec3(0.0F, -1.0F, 0.0F));
     grip.rating = rating_newtons;
     grips_.push_back(grip);
     return GripIndex{static_cast<std::uint32_t>(grips_.size() - 1U)};

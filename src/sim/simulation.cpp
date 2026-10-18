@@ -842,7 +842,8 @@ bool Simulation::request_yard_crane_operate() noexcept {
 
 bool Simulation::request_yard_crane_device() noexcept {
     const YardCrane &crane = physics_world_->yard_crane();
-    if (!crane.operating() || crane.state().load_entity != YardCrane::kMagnetEntity) {
+    const std::uint64_t on_sling = crane.state().load_entity;
+    if (!crane.operating() || (on_sling != YardCrane::kMagnetEntity && on_sling != YardCrane::kSpreaderEntity)) {
         return false;
     }
     yard_crane_device_ = true;
@@ -888,7 +889,11 @@ YardCraneSnapshot Simulation::yard_crane_state() const noexcept {
     result.rope_mps = state.rope_mps;
     result.hook_mps = state.hook_mps;
     result.sling_n = state.sling_n;
-    result.device = state.load_entity == YardCrane::kMagnetEntity ? 1 : 0;
+    result.device = state.load_entity == YardCrane::kMagnetEntity     ? 1
+                    : state.load_entity == YardCrane::kSpreaderEntity ? 2
+                                                                      : 0;
+    result.spreader_seated = state.spreader_seated;
+    result.spreader_landed = state.spreader_landed;
     result.magnet_on = state.magnet_on;
     result.holding_entity = state.holding_entity;
     result.hold_n = state.hold_n;

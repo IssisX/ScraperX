@@ -1380,7 +1380,8 @@ bool ScraperXSimulation::set_yard_crane_hoist(const double hoist) {
 
 // The yard crane: its remote and whether it is being worked, its drives as
 // they go, the hoist's pull, the hoist rope's ends and the hook as drawn, and
-// the device on its sling (the magnet: its switch, what it holds and how hard).
+// the device on its sling (the magnet's switch, the spreader's seat; what it
+// holds and how hard).
 godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
     const sim::YardCraneSnapshot state = simulation_->yard_crane_state();
     godot::Dictionary out;
@@ -1416,6 +1417,8 @@ godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
     out["holding_entity"] = static_cast<std::int64_t>(state.holding_entity);
     out["hold_n"] = state.hold_n;
     out["hold_rated_n"] = state.hold_rated_n;
+    out["spreader_seated"] = state.spreader_seated;
+    out["spreader_landed"] = state.spreader_landed;
     return out;
 }
 

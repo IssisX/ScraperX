@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 
 using scraperx::sim::Forklift;
@@ -531,17 +532,18 @@ bool magnet(Simulation &s, const bool on) {
     return s.yard_crane_state().magnet_on == on;
 }
 
-// Worked, the magnet hoisted clear, sent over (x, z) and let down on to what
-// is there until the sling goes slack: the magnet sits on it (the hook block
-// still hangs over it).
-bool magnet_onto(Simulation &s, const double x, const double z) {
-    if (!(hoist_to(s, s.yard_crane_state().hook.y + 2.0, 30.0) && hook_over(s, x, z, 120.0))) {
+// Worked, the device on the sling (`device`, of `kg`) hoisted `rise` m, sent
+// over (x, z) and let down on to what is there until the sling goes slack:
+// it sits on it (the hook block still hangs over it).
+bool device_onto(Simulation &s, const std::uint64_t device, const double kg, const double rise, const double x,
+                 const double z) {
+    if (!(hoist_to(s, s.yard_crane_state().hook.y + rise, 40.0) && hook_over(s, x, z, 120.0))) {
         return false;
     }
-    // The operator watches the magnet, not the trolley: once it hangs still,
+    // The operator watches the device, not the trolley: once it hangs still,
     // the trolley is set again by how far off the spot it hangs, and it is
     // let down only once it hangs still within 0.1 m of it.
-    const std::uint32_t body = s.kit_body_index(YardCrane::kMagnetEntity);
+    const std::uint32_t body = s.kit_body_index(device);
     // Still for 2 s: the hook block swings on 50 m of rope, 15 s a swing, and
     // stands still for a moment at either end of it.
     const int hold = 2 * static_cast<int>(Simulation::kTickRateHz);
@@ -566,10 +568,11 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     }
     const auto over = s.kit_body_position(body);
     if (!there || std::hypot(over.x - x, over.z - z) >= 0.1) {
-        std::cout << "  magnet: not still over (" << x << ", " << z << "): at (" << over.x << ", " << over.z << ")\n";
+        std::cout << "  crane: " << device << " not still over (" << x << ", " << z << "): at (" << over.x << ", "
+                  << over.z << ")\n";
         return false;
     }
-    const double hanging = YardCrane::kMagnetKg * 9.81;
+    const double hanging = kg * 9.81;
     for (int tick = 0; tick < 40 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
         (void)s.set_yard_crane_hoist(-0.3);
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
@@ -581,10 +584,49 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     }
     (void)s.set_yard_crane_hoist(0.0);
     const auto crane = s.yard_crane_state();
-    const auto m = body_at(s, YardCrane::kMagnetEntity);
-    std::cout << "  magnet: not landed over (" << x << ", " << z << "): the magnet at (" << m.x << ", " << m.y << ", "
-              << m.z << "), the sling pulling " << crane.sling_n << " N, the hook at y " << crane.hook.y << "\n";
+    const auto m = body_at(s, device);
+    std::cout << "  crane: " << device << " not landed over (" << x << ", " << z << "): at (" << m.x << ", " << m.y
+              << ", " << m.z << "), the sling pulling " << crane.sling_n << " N, the hook at y " << crane.hook.y << "\n";
     return false;
+}
+
+bool magnet_onto(Simulation &s, const double x, const double z) {
+    return device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 2.0, x, z);
+}
+
+// The grips' two lists at a save's end ([n][n loads][n][n ratings]): how many
+// grips it holds, 0 if it does not end in them.
+std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
+    for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
+        std::uint32_t loads = 0;
+        std::uint32_t ratings = 0;
+        std::memcpy(&loads, bytes.data() + bytes.size() - (8 + 8 * n), 4);
+        std::memcpy(&ratings, bytes.data() + bytes.size() - (4 + 4 * n), 4);
+        if (loads == n && ratings == n) {
+            return n;
+        }
+    }
+    return 0;
+}
+
+// The save as a build with only its first `keep` grips wrote it (0: from
+// before the grips).
+std::vector<std::uint8_t> with_grips(const std::vector<std::uint8_t> &bytes, const std::size_t keep) {
+    const std::size_t n = saved_grips(bytes);
+    const std::size_t section = bytes.size() - (8 + 8 * n);
+    std::vector<std::uint8_t> out(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(section));
+    if (keep == 0 || keep > n) {
+        return out;
+    }
+    const auto count = static_cast<std::uint32_t>(keep);
+    const std::uint8_t *loads = bytes.data() + section + 4;
+    const std::uint8_t *ratings = loads + 4 * n + 4;
+    const auto *bytes_of_count = reinterpret_cast<const std::uint8_t *>(&count);
+    out.insert(out.end(), bytes_of_count, bytes_of_count + 4);
+    out.insert(out.end(), loads, loads + 4 * keep);
+    out.insert(out.end(), bytes_of_count, bytes_of_count + 4);
+    out.insert(out.end(), ratings, ratings + 4 * keep);
+    return out;
 }
 
 } // namespace
@@ -651,7 +693,14 @@ void run_yard_crane_magnet() {
         require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
-        std::vector<std::uint8_t> before(bytes.begin(), bytes.end() - 16);
+        require(saved_grips(bytes) == 2, "magnet: the save ends in its two grips (the magnet's, the spreader's)");
+        const std::vector<std::uint8_t> one = with_grips(bytes, 1);
+        Simulation magnet_build(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(magnet_build.load_game(one.data(), one.size()), "magnet: a save from before the spreader loads");
+        (void)magnet_build.advance_frame(2.0);
+        require(magnet_build.yard_crane_state().holding_entity == top && std::abs(body_at(magnet_build, top).y - here.y) < 0.05,
+                "magnet: loaded from a save from before the spreader, it holds the slab");
+        const std::vector<std::uint8_t> before = with_grips(bytes, 0);
         Simulation older(scraperx::sim::InitialSpawn::ExteriorGrade);
         require(older.load_game(before.data(), before.size()), "magnet: a save without the grips loads");
         (void)older.advance_frame(2.0);
@@ -688,6 +737,103 @@ void run_yard_crane_magnet() {
               << s.yard_crane_state().holding_entity << "\n";
     require(s.yard_crane_state().holding_entity == 0 && rose < 0.05,
             "magnet: the 8 t plate stack tears off it and stays down");
+    // A container's roof is thin sheet: a tenth of the hold, and the empty
+    // box tears off it too (the spreader's to lift).
+    const std::uint64_t box = laydown_piece(LooseStock::Kind::Container);
+    const auto box0 = body_at(s, box);
+    require(magnet(s, false) && hoist_to(s, s.yard_crane_state().hook.y + 1.0, 10.0) && magnet(s, true) &&
+                device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 4.0, box0.x, box0.z),
+            "magnet: on, let down on to a container's roof");
+    (void)s.advance_frame(0.5);
+    const auto on_box = s.yard_crane_state();
+    std::cout << "  magnet: on the container's roof it holds " << on_box.holding_entity << " to "
+              << on_box.hold_rated_n << " N\n";
+    require(on_box.holding_entity == box && on_box.hold_rated_n <= YardCrane::kMagnetSheetShare * YardCrane::kMagnetRatedN + 1.0,
+            "magnet: a container's sheet roof it holds a tenth as hard");
+    (void)hoist_to(s, s.yard_crane_state().hook.y + 1.0, 10.0);
+    (void)s.advance_frame(1.0);
+    const double box_rose = body_at(s, box).y - box0.y;
+    require(s.yard_crane_state().holding_entity == 0 && box_rose < 0.05,
+            "magnet: the empty container tears off its face and stays down");
     std::cout << "PASS scraperx_sim magnet: slab_held_n=" << took.hold_rated_n << " beam_held_n="
-              << on_beam.hold_rated_n << " stack_rose_m=" << rose << "\n";
+              << on_beam.hold_rated_n << " stack_rose_m=" << rose << " box_held_n=" << on_box.hold_rated_n << "\n";
+}
+
+// The yard crane's container spreader (yard_crane.hpp): rigged by HOOKing the
+// sling on its lug from beside the frame; LOCK in the air turns nothing. Let
+// down on the laydown's container it sits on the box's corner castings, the
+// rope slack; LOCK, and the box rises with it. In the air UNLOCK is refused
+// (the interlock); set down, it lets go, and raised the frame leaves the box.
+void run_yard_crane_spreader() {
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    const std::uint64_t box = laydown_piece(LooseStock::Kind::Container);
+    require(box != 0, "spreader: the laydown's container");
+    const auto box0 = body_at(s, box);
+    const auto at = body_at(s, YardCrane::kSpreaderEntity);
+    require(take_remote(s), "spreader: the remote taken");
+    // The hook let down by the frame's side, its shackle on the ground there.
+    require(work(s, true) && hook_over(s, at.x + 1.7, at.z, 120.0) && hoist_to(s, 3.4, 60.0) && work(s, false),
+            "spreader: the hook let down by the spreader");
+    // Round the slabs, the magnet and the beams to it; the shackle taken, and
+    // HOOKed on the lug from beside the frame.
+    require(walk_to(s, -60.5, -126.0, 20.0, 0.2) && walk_to(s, -60.5, -120.5, 20.0, 0.2) &&
+                walk_to(s, at.x + 2.4, at.z - 1.0, 40.0, 0.1) && take_shackle(s, 8.0),
+            "spreader: the sling's shackle taken");
+    require(walk_to(s, at.x + 1.65, at.z, 6.0, 0.08) && hook_on(s, -1.0, 0.0, YardCrane::kSpreaderEntity),
+            "spreader: HOOK onto the spreader's lug");
+    require(work(s, true) && s.yard_crane_state().device == 2, "spreader: worked, the device on the sling is the spreader");
+    // Not on a box: LOCK turns nothing.
+    require(s.request_yard_crane_device(), "spreader: the device switch, worked");
+    (void)s.advance_frame(0.3);
+    require(s.yard_crane_state().holding_entity == 0 && !s.yard_crane_state().spreader_seated,
+            "spreader: off a box, LOCK turns nothing");
+    // Up over the container and down on to it.
+    require(device_onto(s, YardCrane::kSpreaderEntity, YardCrane::kSpreaderKg, 4.5, box0.x, box0.z),
+            "spreader: let down on to the container");
+    (void)s.advance_frame(0.5);
+    const auto sat = s.yard_crane_state();
+    const auto frame = body_at(s, YardCrane::kSpreaderEntity);
+    std::cout << "  spreader: on the container at (" << frame.x << ", " << frame.y << ", " << frame.z << "), seated "
+              << sat.spreader_seated << ", landed " << sat.spreader_landed << ", the sling " << sat.sling_n << " N\n";
+    require(sat.spreader_seated && sat.spreader_landed, "spreader: seated on the container's castings, the rope slack");
+    require(s.request_yard_crane_device(), "spreader: LOCK");
+    (void)s.advance_frame(0.3);
+    const auto locked = s.yard_crane_state();
+    require(locked.holding_entity == box && std::abs(locked.hold_rated_n - 4.0 * YardCrane::kTwistlockRatedN) < 1.0,
+            "spreader: LOCK turns its twistlocks in the box's castings");
+    // Up with it.
+    require(hoist_load_to(s, box, box0.y + 2.0, 40.0), "spreader: the container lifted on the spreader");
+    (void)s.set_yard_crane_hoist(0.0);
+    (void)s.advance_frame(1.0);
+    const auto high = body_at(s, box);
+    std::cout << "  spreader: the container up to y " << high.y << ", the hold " << s.yard_crane_state().hold_n
+              << " N\n";
+    // In the air: UNLOCK is refused.
+    (void)s.request_yard_crane_device();
+    (void)s.advance_frame(0.5);
+    require(s.yard_crane_state().holding_entity == box && body_at(s, box).y > box0.y + 1.5,
+            "spreader: in the air, UNLOCK is refused and the box stays on it");
+    // Set down: UNLOCK lets go, and the frame raised leaves the box.
+    const double hanging = YardCrane::kSpreaderKg * 9.81;
+    bool down = false;
+    for (int tick = 0; tick < 40 * static_cast<int>(Simulation::kTickRateHz) && !down; ++tick) {
+        (void)s.set_yard_crane_hoist(-0.3);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        down = tick > 10 && s.yard_crane_state().sling_n < 0.2 * hanging;
+    }
+    (void)s.set_yard_crane_hoist(0.0);
+    (void)s.advance_frame(1.0);
+    require(down && s.yard_crane_state().spreader_landed, "spreader: the container set down, the rope slack");
+    require(s.request_yard_crane_device(), "spreader: UNLOCK");
+    (void)s.advance_frame(0.3);
+    require(s.yard_crane_state().holding_entity == 0, "spreader: set down, UNLOCK lets go of the box");
+    const auto landed = body_at(s, box);
+    require(hoist_to(s, s.yard_crane_state().hook.y + 2.0, 20.0), "spreader: the frame raised off the box");
+    (void)s.advance_frame(1.0);
+    const auto left = body_at(s, box);
+    std::cout << "  spreader: set down at y " << landed.y << ", left at " << left.y << " with the frame raised\n";
+    require(std::abs(left.y - landed.y) < 0.02 && std::abs(landed.y - box0.y) < 0.05,
+            "spreader: raised, the frame leaves the box where it was set down");
+    std::cout << "PASS scraperx_sim spreader: lifted_to_y=" << high.y << " set_down_y=" << landed.y << "\n";
 }

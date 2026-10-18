@@ -365,6 +365,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     }
     track(yard_crane_->hook_body(), ImpactSound::Machine);
     track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
+    track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
 
     physics_system_.OptimizeBroadPhase();
 

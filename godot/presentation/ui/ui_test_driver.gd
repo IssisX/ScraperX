@@ -134,6 +134,9 @@ const SCENARIOS := {
 	"touch_crane_magnet": 8,
 	"pad_crane_magnet": 8,
 	"keyboard_crane_magnet": 8,
+	# The yard crane's container spreader: rigged by HOOK, landed on the
+	# laydown's container, LOCK, lifted, set down, UNLOCK.
+	"touch_crane_spreader": 8,
 	"look_yard_crane": 8,
 	"look_stock_yard": 8,
 	"look_tower_stock_deck2": 25,
@@ -419,6 +422,8 @@ func _run() -> void:
 			ok = await _crane_magnet(InputRouter.Device.GAMEPAD)
 		"keyboard_crane_magnet":
 			ok = await _crane_magnet(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_crane_spreader":
+			ok = await _crane_spreader(InputRouter.Device.TOUCH)
 		"look_yard_crane":
 			ok = await _look_yard_crane()
 		"look_stock_yard":

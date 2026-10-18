@@ -40,7 +40,9 @@ const CRANE_FORKLIFT_CHASSIS := 2989
 # The yard crane's lifting magnet, and the device on its sling as the native
 # reads it (YardCraneSnapshot::device).
 const YARD_CRANE_MAGNET := 2995
+const YARD_CRANE_SPREADER := 2996
 const CRANE_DEVICE_MAGNET := 1
+const CRANE_DEVICE_SPREADER := 2
 # S1's cage and the scale plate in its floor (Simulation::kStackS1CageEntityId,
 # kStackS1PlateEntityId).
 const STACK_S1_CAGE := 2200
@@ -197,6 +199,19 @@ func _read_context() -> Dictionary:
 				reading = "ON: LET IT DOWN ON STEEL"
 			action = {"id": &"crane_device", "icon": &"set_down" if on else &"pick_up",
 				"label": "MAGNET OFF" if on else "MAGNET ON", "detail": reading}
+		elif int(crane["device"]) == CRANE_DEVICE_SPREADER:
+			# The spreader on the sling: its twistlocks turn only on a box at
+			# rest with the rope slack, so Action is LOCK or UNLOCK only then.
+			var locked := int(crane["holding_entity"]) != 0
+			if bool(crane["spreader_landed"]):
+				action = {"id": &"crane_device", "icon": &"set_down" if locked else &"pick_up",
+					"label": "UNLOCK" if locked else "LOCK",
+					"detail": "THE BOX IS DOWN" if locked else "ON THE BOX'S CORNERS"}
+			elif locked:
+				action["detail"] = "LOCKED  %.1f T OF %.1f T" % [float(crane["hold_n"]) / 9810.0,
+					float(crane["hold_rated_n"]) / 9810.0]
+			elif bool(crane["slack"]) and not bool(crane["spreader_seated"]):
+				action["detail"] = "NOT SQUARE ON A BOX"
 	elif forklift_driving:
 		# At the forklift's wheel: the stick drives and steers, Jump and
 		# Crouch held raise and lower the forks, Action lets go.
@@ -537,6 +552,8 @@ func _kit_anchor_name(entity: int) -> String:
 			return "FORKLIFT'S EYE"
 		YARD_CRANE_MAGNET:
 			return "THE MAGNET"
+		YARD_CRANE_SPREADER:
+			return "THE SPREADER"
 	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
 		_stock_name(entity)
 		match int(_stock_kinds.get(entity, -1)):

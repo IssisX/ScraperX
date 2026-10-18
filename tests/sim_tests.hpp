@@ -739,6 +739,7 @@ void run_forklift();
 void run_forklift_strain();
 void run_yard_crane();
 void run_yard_crane_magnet();
+void run_yard_crane_spreader();
 void run_wet_isolation();
 void run_wet_band();
 bool climb_wet_hold(scraperx::sim::Simulation &simulation, const double x, const double z,
