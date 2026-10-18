@@ -655,15 +655,26 @@ func _draw_gesture_hints() -> void:
 	if not _gestures_live:
 		return
 	var at := Vector2(_safe.position.x + _safe.size.x * 0.8, _safe.position.y + _safe.size.y * 0.5)
+	if up_hint_special and not up_hint.is_empty():
+		_draw_gesture_hint(up_hint, &"up", at + Vector2(0.0, -64.0 * _u))
+	if down_hint_special and not down_hint.is_empty():
+		_draw_gesture_hint(down_hint, &"down", at + Vector2(0.0, 64.0 * _u))
+
+
+# One hint on a dark plate, so it reads over a bright sky as over steel:
+# the arrow on the side the thumb swipes toward, the move beside it.
+func _draw_gesture_hint(label: String, arrow: StringName, center: Vector2) -> void:
 	var size := int(roundf(26.0 * _u))
 	var font := UiStyle.font_label()
-	if up_hint_special and not up_hint.is_empty():
-		UiStyle.draw_icon(self, &"up", at + Vector2(0.0, -86.0 * _u), 26.0 * _u,
-			UiStyle.with_alpha(UiStyle.AMBER, 0.9), 4.0 * _u)
-		UiStyle.text_centered(self, font, up_hint, at + Vector2(0.0, -42.0 * _u), size,
-			UiStyle.with_alpha(UiStyle.PAPER, 0.9), int(roundf(6.0 * _u)))
-	if down_hint_special and not down_hint.is_empty():
-		UiStyle.text_centered(self, font, down_hint, at + Vector2(0.0, 42.0 * _u), size,
-			UiStyle.with_alpha(UiStyle.PAPER, 0.9), int(roundf(6.0 * _u)))
-		UiStyle.draw_icon(self, &"down", at + Vector2(0.0, 86.0 * _u), 26.0 * _u,
-			UiStyle.with_alpha(UiStyle.AMBER, 0.9), 4.0 * _u)
+	var arrow_r := 18.0 * _u
+	var gap := 14.0 * _u
+	var width := 2.0 * arrow_r + gap + UiStyle.text_width(font, label, size) + 40.0 * _u
+	var rect := Rect2(center - Vector2(width, 56.0 * _u) * 0.5, Vector2(width, 56.0 * _u))
+	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.62), UiStyle.with_alpha(UiStyle.AMBER, 0.9),
+		4.0 * _u, 12.0 * _u)
+	var left := rect.position.x + 20.0 * _u
+	UiStyle.draw_icon(self, arrow, Vector2(left + arrow_r, center.y), arrow_r,
+		UiStyle.with_alpha(UiStyle.AMBER, 0.95), 4.0 * _u)
+	UiStyle.text(self, font, label, Vector2(left + 2.0 * arrow_r + gap,
+		center.y + (font.get_ascent(size) - font.get_descent(size)) * 0.5), size,
+		UiStyle.with_alpha(UiStyle.PAPER, 0.95))
