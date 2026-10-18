@@ -928,13 +928,13 @@ private:
 
     void pre_step_physical_foot(float delta_seconds) noexcept;
 
-    void try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 landing) noexcept;
+    void try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 receiving_goal) noexcept;
 
     bool begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,
                               JPH::RVec3 origin) noexcept;
 
     [[nodiscard]] bool try_finish_cargo_transfer(JPH::BodyInterface &bodies,
-                                                std::uint64_t event_tick = 0) noexcept;
+                                                std::uint64_t event_tick) noexcept;
 
     void update_cargo_transfer(JPH::BodyInterface &bodies,double up_input,float dt) noexcept;
 

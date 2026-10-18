@@ -9,7 +9,9 @@ enum class TraversalPlanKind : std::uint8_t {
 };
 enum class TraversalPhase : std::uint8_t {
     None, CandidateLatched, CatchPending, HandSupported, AwaitingFootContact,
-    SharedHandFoot, FootSupported, Releasing, Aborting
+    SharedHandFoot, FootSupported, Releasing, Aborting,
+    // Cleared approach toward the receiver; actual feet are still required.
+    ReceiverApproach
 };
 enum class TraversalRejection : std::uint8_t {
     None, InvalidReceiver, StaleContact, WrongContact, BlockedClearance, LostHands

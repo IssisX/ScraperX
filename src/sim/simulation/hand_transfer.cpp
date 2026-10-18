@@ -4,6 +4,33 @@
 namespace scraperx::sim {
 using namespace detail;
 
+namespace {
+bool receiving_path_is_clear(const JPH::PhysicsSystem &system, JPH::BodyID player,
+                             const JPH::Shape *shape, JPH::RVec3 from, JPH::RVec3 to) {
+    const JPH::Vec3 movement(to-from);
+    if (movement.IsNearZero()) return true;
+    class Collector final : public JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> {
+    public:
+        explicit Collector(JPH::Vec3 movement) : movement_(movement) {}
+        void AddHit(const JPH::ShapeCastResult &hit) override {
+            const auto normal = -hit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
+            // Existing resting contact may separate or slide tangentially.
+            // A new hit or motion deeper into any contact still blocks.
+            if (hit.mFraction <= 0 && !normal.IsNearZero() && normal.Dot(movement_) >= 0) return;
+            JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector>::AddHit(hit);
+        }
+    private:
+        JPH::Vec3 movement_;
+    } collector(movement);
+    const JPH::RShapeCast sweep(shape,JPH::Vec3::sReplicate(1),
+        JPH::RMat44::sTranslation(from),movement);
+    const JPH::IgnoreSingleBodyFilter filter(player);
+    system.GetNarrowPhaseQuery().CastShape(sweep,JPH::ShapeCastSettings(),from,
+        collector,{},{},filter);
+    return !collector.HadHit();
+}
+} // namespace
+
 [[nodiscard]] bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept {
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
     // Action may reaffirm this physical handoff, never change its owner.
@@ -106,7 +133,7 @@ void Simulation::PhysicsWorld::refresh_rigid_transfer_foot() noexcept {
     // compression itself. A new ray cannot renew this material anchor.
 }
 
-void Simulation::PhysicsWorld::try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 landing) noexcept {
+void Simulation::PhysicsWorld::try_begin_transfer_foot(JPH::BodyInterface &bodies, JPH::RVec3 receiving_goal) noexcept {
     if (traversal_plan_.foot_started || physical_foot_push_->active() ||
         !traversal_plan_.accepts(foot_contact_, contact_solve_serial_) || crouched_ ||
         (deformable_plank_ && deformable_plank_->logical_member_for_body(foot_contact_.body))) return;
@@ -115,12 +142,16 @@ void Simulation::PhysicsWorld::try_begin_transfer_foot(JPH::BodyInterface &bodie
     // than accepting some other face of a large compound body.
     const auto world_offset = bodies.GetRotation(foot_contact_.body) * relative;
     if (std::hypot(world_offset.GetX(), world_offset.GetZ()) > kPlayerRadius) return;
-    const float remaining = float(landing.GetY() - bodies.GetPosition(player_id_).GetY());
-    const float stroke = std::clamp(remaining, kLandingSkin, PhysicalFootPush::maximum_stroke_m());
     // Refresh BOTH coordinates from the same material frame at acquisition:
     // a kinematic support may have moved since the last completed solve.
     foot_contact_.world_point = from_support_local(bodies,foot_contact_.body,foot_contact_.local_point);
     foot_contact_.world_normal = bodies.GetRotation(foot_contact_.body) * foot_contact_.local_normal;
+    // The leg extends along COM-to-material distance, including the inward
+    // travel. Vertical rise alone leaves this compression-only row slack.
+    const auto centre = bodies.GetCenterOfMassPosition(player_id_);
+    const float remaining = JPH::Vec3(receiving_goal-foot_contact_.world_point).Length() -
+        JPH::Vec3(centre-foot_contact_.world_point).Length();
+    const float stroke = std::clamp(remaining, kLandingSkin, PhysicalFootPush::maximum_stroke_m());
     if (!physical_foot_push_->begin(foot_contact_.body, foot_contact_.world_point,
             foot_contact_.world_normal, foot_contact_.friction, stroke)) return;
     traversal_plan_.foot_started = true;
@@ -213,18 +244,21 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
 [[nodiscard]] bool Simulation::PhysicsWorld::try_finish_cargo_transfer(JPH::BodyInterface &bodies,
                                             std::uint64_t event_tick) noexcept {
     if (!cargo_transfer_active_ || traversal_plan_.shared_solved_ticks == 0 ||
+        state_.hand_foot_last_solve_tick != event_tick ||
+        state_.hand_foot_last_hand_load_n <= 0 || state_.hand_foot_last_foot_load_n <= 0 ||
         !traversal_plan_.accepts(foot_contact_,contact_solve_serial_)) return false;
     const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
     if (!grounded_ || !footing_is_firm(bodies) ||
         support_sample_.body_id != traversal_target_body_ ||
         !shape_pose_is_clear(player_shape_.GetPtr(),landing)) return false;
-    // Fresh receiver contact and firm actual footing complete the handoff.
+    // This event must carry actual hand AND foot load, not just two active
+    // constraints. Fresh receiver contact and firm footing complete it.
     // Onward movement need not settle at the planned aim point first.
     cargo_transfer_peak_hand_load_n_=std::max(cargo_transfer_peak_hand_load_n_,
         double((physical_hands_->hand_force(0)+physical_hands_->hand_force(1)).Length()));
     ++accepted_traversal_count_;
     ++state_.foot_transfer_count;
-    if (event_tick) state_.foot_transfer_tick=event_tick;
+    state_.foot_transfer_tick=event_tick;
     state_.foot_transfer_support_entity_id=support_sample_.entity_id;
     state_.foot_transfer_peak_hand_load_n=cargo_transfer_peak_hand_load_n_;
     const bool preserve_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active();
@@ -257,15 +291,13 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
         return;
     }
     traversal_plan_.rejection = TraversalRejection::None;
-    if (!traversal_plan_.foot_started) traversal_plan_.phase = TraversalPhase::AwaitingFootContact;
-    try_begin_transfer_foot(bodies,landing);
-    if (try_finish_cargo_transfer(bodies)) return;
+    bool receiving = traversal_plan_.phase == TraversalPhase::ReceiverApproach || traversal_plan_.foot_started;
+    if (!traversal_plan_.foot_started && !receiving)
+        traversal_plan_.phase = TraversalPhase::AwaitingFootContact;
     // A deliberate top-out/Action authorizes the bounded muscle action.
-    // Releasing the stick does not cancel that input transaction; pushing
-    // away pauses it while the real hand constraints keep taking load.
-    if (up_input < -kClimbInputDeadzone) return;
+    // Releasing the stick does not cancel that input transaction. Before
+    // receiving clearance, pushing away pauses the real hand-supported lift.
     JPH::RVec3 hand_goal=landing;
-    double remaining_inward=horizontal;
     // Reconstruct inward from refreshed material points for both approach
     // and onward commands, including a receiver that has rotated.
     auto inward=JPH::Vec3(landing-ledge);
@@ -280,26 +312,39 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
                 receiver_supports_continuation(physics_system_,JPH::RRayCast(origin,down),
                     traversal_plan_,player_id_,kSupportNormalThreshold)) {
                 hand_goal=onward;
-                remaining_inward=JPH::Vec3(landing-actual).Dot(inward);
             }
         }
     }
-    JPH::RVec3 goal=hand_goal+JPH::Vec3(0,0.15F,0);
+    const auto receiving_goal=hand_goal+JPH::Vec3(0,0.02F,0);
+    if (receiving || actual.GetY()-kPlayerHalfHeight >= ledge.GetY()+0.04F) {
+        if (!shape_pose_is_clear(player_shape_.GetPtr(),receiving_goal) ||
+            !receiving_path_is_clear(physics_system_,player_id_,player_shape_.GetPtr(),actual,receiving_goal)) {
+            traversal_plan_.rejection = TraversalRejection::BlockedClearance;
+            return;
+        }
+        // Clearance admits only a bounded target command, never footing.
+        // Keep lowering after subsequent steering so a raised hand target
+        // cannot strand the body above the receiver. Release still cancels.
+        receiving = true;
+        if (!traversal_plan_.foot_started) traversal_plan_.phase = TraversalPhase::ReceiverApproach;
+    }
+    // Request the finite leg stroke toward the accepted receiving goal,
+    // never toward the higher pre-clearance hand-lift target.
+    if (shape_pose_is_clear(player_shape_.GetPtr(),receiving_goal))
+        try_begin_transfer_foot(bodies,receiving_goal);
+    if (up_input < -kClimbInputDeadzone && !receiving) return;
+    JPH::RVec3 goal=receiving ? receiving_goal : hand_goal+JPH::Vec3(0,0.15F,0);
     // Close the free space to the wall while lifting instead of first
     // pulling straight up at arm's length. Before sole clearance, the
     // target stays outside the face by the full capsule radius and skin.
     // The lip probe is inset from that face by kTopProbeInset.
-    if (actual.GetY()-kPlayerHalfHeight<ledge.GetY()+0.04 && horizontal>0.10 &&
+    if (!receiving && actual.GetY()-kPlayerHalfHeight<ledge.GetY()+0.04 && horizontal>0.10 &&
         !inward.IsNearZero()) {
         const float outside = -(kTopProbeInset+kPlayerRadius+kLandingSkin);
         const float limit = std::max(outside,JPH::Vec3(actual-ledge).Dot(inward));
         const float excess = JPH::Vec3(goal-ledge).Dot(inward)-limit;
         if (excess>0) goal-=inward*excess;
     }
-    // Begin receiving the load inside the already accepted footprint;
-    // waiting until the aim point brakes the body before its foot can land.
-    // Only fresh actual contact can start the foot and close the transfer.
-    if (remaining_inward<=kPlayerRadius) goal=hand_goal+JPH::Vec3(0,0.02F,0);
     auto lead=JPH::Vec3(goal-actual);
     if (lead.Length()>0.45F) lead*=0.45F/lead.Length();
     auto command=JPH::Vec3(actual+lead-physical_hands_->commanded_position());
