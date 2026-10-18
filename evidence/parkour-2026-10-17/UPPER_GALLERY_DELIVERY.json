@@ -1,0 +1,39 @@
+{
+  "source_commit": "788cba5417aa8d36c7ffd6a9bf289f8db9847766",
+  "candidate": {
+    "result": "matching_signed_candidate_available_from_green_CI",
+    "source_commit": "788cba5417aa8d36c7ffd6a9bf289f8db9847766",
+    "run_id": "39152049044",
+    "artifact_id": 12145722994,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39152049044/artifacts/12145722994",
+    "version_code": 214510198,
+    "version_name": "0.1.0-chatgpt.788cba5417aa.39152049044.1",
+    "apk": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-788cba5/artifacts/ScraperX-ChatGPT-candidate-788cba5417aa8d36c7ffd6a9bf289f8db9847766/ScraperX-ChatGPT.apk",
+    "apk_sha256": "947345c75d760e8deac712f82cdf31cf570b4d9b824e9b96128aac4a3a009777",
+    "native_sha256": "a6c668a670794100a8c1ed53f9e9447b3edb64748c8cb0a12da1e66607961ea2",
+    "actual_signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+    "producer_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-788cba5/artifacts/ScraperX-ChatGPT-candidate-788cba5417aa8d36c7ffd6a9bf289f8db9847766/CANDIDATE-PROVENANCE.json",
+    "verification_owner": "Candidate CI signing and producer-provenance stages",
+    "local_apk_checks_run": false,
+    "full_gameplay": "Separate full-release acceptance; not established by this development candidate",
+    "phone_play": "Not run; no FPS improvement claim",
+    "delivered_local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-788cba5.apk"
+  },
+  "local_delivery": {
+    "source_commit": "788cba5417aa8d36c7ffd6a9bf289f8db9847766",
+    "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-788cba5.apk",
+    "bytes": 36928438,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39152049044/artifacts/12145722994"
+  },
+  "ci_outputs": {
+    "upper-gallery-native.log": "SCRAPERX_UPPER_GALLERY PASS perches=3 miss_recovery=1 retry=1 deaths=0 public_input=1 no_reset=1 tick=8083",
+    "parkour-yard-native.log": "SCRAPERX_PARKOUR_YARD PASS public_arrival=1 jumps=6 crouch=1 blocked_stand=1 recovery=1 retry=1",
+    "upper-gallery-view.log": "SCRAPERX_UPPER_GALLERY_VIEW PASS checks=34 failures=0 staged_footing=1"
+  },
+  "full_workflow_observed": {
+    "run_id": "39152049027",
+    "status": "in_progress",
+    "conclusion": null
+  },
+  "evidence_policy": "Reuse final stable-signer, package, native and source proof from actual green candidate producer; no local APK re-audit."
+}

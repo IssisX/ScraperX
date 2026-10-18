@@ -72,3 +72,14 @@ The host has no ALSA device and fell back to Dummy audio. Its software renderer
 is not phone performance evidence. The matching APK, separate full-release
 acceptance and physical-device play remain distinct; no device FPS, touch feel
 or commercial-quality claim follows from these host checks.
+
+## Published development APK
+
+Source788cba5417aa8d36c7ffd6a9bf289f8db9847766 was pushed to origin/ChatGPT.
+Matching candidate39152049044 completed fullyGREEN and its ordinary collector
+delivered build214510198 to Download/ScraperX-ChatGPT-788cba5.apk.
+CI recorded the upper route at8083ticks, lower route at6451ticks and rendered
+view34checks, allPASS. [UPPER_GALLERY_DELIVERY.json](UPPER_GALLERY_DELIVERY.json)
+binds the actual terminal workflow, final stable-signing producer receipt and
+local APK copy. No local APK re-audit was needed. Full-release proof and phone
+play remain separate; development delivery does not establish phone FPS/feel.
