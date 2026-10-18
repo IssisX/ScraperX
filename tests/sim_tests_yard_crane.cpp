@@ -147,27 +147,6 @@ bool lower_to_rest(Simulation &s, const double budget) {
     return false;
 }
 
-// Lowers until the load's weight is off the rope (the hoist pulling no more
-// than half again the empty hook block's and shackle's own 782 kg): the load
-// has landed, and the block still hangs on its rope above it, as an operator
-// stops it. Lowered on to the slack-rope switch instead, the block comes to
-// rest on the load, where it can foul it.
-bool lower_until_landed(Simulation &s, const double budget) {
-    constexpr double kEmptyHookN = 782.0 * 9.81;
-    const auto ticks = static_cast<int>(budget * static_cast<double>(Simulation::kTickRateHz));
-    for (int tick = 0; tick < ticks; ++tick) {
-        (void)s.set_yard_crane_hoist(-0.3);
-        (void)s.advance_frame(Simulation::kFixedStepSeconds);
-        if (tick > 10 && s.yard_crane_state().hoist_n < 1.5 * kEmptyHookN) {
-            (void)s.set_yard_crane_hoist(0.0);
-            (void)s.advance_frame(0.5);
-            return true;
-        }
-    }
-    (void)s.set_yard_crane_hoist(0.0);
-    return false;
-}
-
 // The rigger steps to the sling's shackle where it dangles and takes it.
 bool take_shackle(Simulation &s, const double budget) {
     const auto ticks = static_cast<int>(budget * static_cast<double>(Simulation::kTickRateHz));
@@ -440,7 +419,9 @@ void run_yard_crane() {
         const auto high = s.snapshot();
         require(high.support_entity_id == Forklift::kCraneChassisEntity, "crane: the driver rides the forklift up");
         require(hook_over(s, -31.3, 0.5 * (dock.z_min + dock.z_max), 180.0), "crane: the forklift over the dock");
-        require(lower_until_landed(s, 90.0), "crane: the forklift let down until its weight is off the rope");
+        // Lowered as the game lowers it, on to the slack-rope switch: the
+        // block may come down on the truck, and must not foul it.
+        require(lower_to_rest(s, 90.0), "crane: the forklift let down until the rope slackens");
         const auto landed = body_at(s, Forklift::kCraneChassisEntity);
         std::cout << "  crane: the forklift ridden up to y " << high.player_position.y << " and landed at (" << landed.x
                   << ", " << landed.y << ", " << landed.z << ")\n";
@@ -450,6 +431,11 @@ void run_yard_crane() {
         // The hook raised clear, then the driver drives it in.
         require(work(s, true) && hoist_to(s, s.yard_crane_state().hook.y + 3.0, 20.0) && work(s, false),
                 "crane: the hook raised clear of the truck");
+        const auto after_hoist = body_at(s, Forklift::kCraneChassisEntity);
+        std::cout << "  crane: the hook raised 3 m off the landed truck, the truck moved " << after_hoist.y - landed.y
+                  << " m up\n";
+        require(std::abs(after_hoist.y - landed.y) < 0.02 && s.yard_crane_state().load_entity == 0,
+                "crane: the hook raised off the landed truck does not lift it");
         (void)s.set_facing(1.0, 0.0);
         (void)s.advance_frame(0.3);
         require(s.forklift_state().at_controls && s.forklift_state().index == 1 && s.request_forklift_action(),

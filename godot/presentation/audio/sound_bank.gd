@@ -784,7 +784,7 @@ func _relief(length: float) -> PackedFloat32Array:
 # --- the forklift's and the yard crane's parts ---------------------------------
 
 
-# A solid tyre rolling at about 3 m/s (played faster or slower for the speed).
+# A solid tire rolling at about 3 m/s (played faster or slower for the speed).
 # On concrete, the rumble of the tread and the grit it crushes, tick by tick;
 # on steel deck plate, the plate drumming under it and the seams it crosses.
 func _tire(length: float, steel: bool) -> PackedFloat32Array:

@@ -580,7 +580,9 @@ std::array<YardCrane::Noise, 3> YardCrane::noises() const {
     float hoist = 0.0F;
     if (state_.hoist_stalled) {
         hoist = 0.7F;
-    } else if (std::abs(state_.rope_mps) > 0.02F) {
+    } else if (std::abs(state_.hoist_rate) > 0.02F) {
+        // The drum turning, not the rope's length changing as the block
+        // swings under a stopped drum.
         hoist = 0.35F + 0.25F * std::min(1.0F, state_.hoist_n / kHoistForceN);
     }
     out[1] = {float(drum.GetX()), float(drum.GetY()), float(drum.GetZ()), hoist};

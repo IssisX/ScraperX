@@ -11,7 +11,7 @@
 // The driver stands on its floor under the guard. At the wheel, Action takes
 // the controls: the stick drives (forward and back) and steers, two held
 // buttons raise and lower the forks, and Action again lets go. Nothing is
-// scripted: the wheels drive through the tyres' friction, the forks lift
+// scripted: the wheels drive through the tires' friction, the forks lift
 // through a ram of finite force (kLiftForceN), and a load sits on the forks
 // only by its weight and their friction. Its limit is the real one: the ram
 // is stronger than the counterweight, so too heavy a load held out on the

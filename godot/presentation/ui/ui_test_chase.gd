@@ -732,7 +732,7 @@ func _forklift_touch(device: int) -> bool:
 	if before.z - set_down.z < 3.0 or set_down.y > 0.2:
 		return _fail("the pallet was not carried off and set down")
 	# Heard from its parts as the native ran them: the engine while driven, the
-	# tyres rolling, the mast's chains as the forks rose and fell, and the
+	# tires rolling, the mast's chains as the forks rose and fell, and the
 	# reverse alarm backing off with the pallet.
 	var heard: Dictionary = _main._audio.forklift_heard
 	print("SCRAPERX_UITEST forklift: heard %s" % str(heard))

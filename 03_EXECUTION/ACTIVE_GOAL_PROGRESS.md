@@ -1377,6 +1377,19 @@ jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matro
 `audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
 while she keeps to 154 m and up (see to-do 11).
 
+**Review fixes to the machines' sounds (2026-10-18, from an independent review).** The crane test
+lands the forklift again as the game does, lowered on to the slack-rope switch, and now checks
+that the hook raised 3 m off the landed truck leaves it where it stands (it moves 1.4 mm). The
+fouling the hoist's ramp was said to cause (the block resting on the truck's guard and lifting it)
+did not happen on that path, at a third of full speed or at full speed, so no switch was added
+for it. The crane's winch is heard, by the player and the Matron, while its drum turns, no longer
+whenever the rope's length changes as the block swings under a stopped drum. The forklift's tires
+roll only by the front wheels on the floor, held through 0.2 s off it. `touch_flow`'s check that
+the shake comes with the speed could never fail and now can. Seen and not yet chased: the truck
+landed at full speed comes to rest 1 m further south than at a third of it, and the crane test's
+drive in from there stops 1.7 m on. Proof: native `crane`, `forklift`; `touch_yard_crane`,
+`touch_forklift`, `touch_forklift_strain`, `touch_flow`.
+
 **The moves by gesture (2026-10-18; to-do 9, the owner's goal).** On touch the run's moves no longer
 take a button. The right thumb drags to look, as before; set down and flicked up it is "up", flicked
 down it is "down", and the game picks the move from what is ahead of the body. Up: the native's new

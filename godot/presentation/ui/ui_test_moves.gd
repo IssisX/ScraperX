@@ -389,7 +389,9 @@ func _touch_flow() -> bool:
 	if bool(_main._head_bob_on) and not bool(_main._reduced_motion):
 		if gathered_shake < 0.8:
 			return _fail("at flow's speed the view did not shake (%.2f)" % gathered_shake)
-		if early > 8.0 and early_shake > gathered_shake:
+		# The shake follows the speed (smoothstep 8 to 9 m/s): early in the
+		# sprint it is no more than that speed's share of it.
+		if early_shake > smoothstep(8.0, 9.0, early) + 0.2:
 			return _fail("the shake came before the speed (%.2f at %.2f m/s)" % [early_shake, early])
 	if early > 8.4:
 		return _fail("the sprint was at flow's speed at once (%.2f m/s)" % early)

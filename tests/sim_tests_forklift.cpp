@@ -133,7 +133,7 @@ void run_forklift() {
         const auto ahead = body_at(s, Forklift::kChassisEntity);
         const double peak = s.forklift_state().speed_mps;
         // Driven forward: in forward gear, the engine turning the front
-        // wheels through the transmission, the tyres rolling on the grade.
+        // wheels through the transmission, the tires rolling on the grade.
         const auto driven = s.forklift_state();
         std::cout << "  forklift: driving, gear " << driven.gear << ", the engine at " << driven.engine_rpm
                   << " rpm, the front wheels at " << driven.wheel_spin_rad_s[0] << " rad/s on entity "

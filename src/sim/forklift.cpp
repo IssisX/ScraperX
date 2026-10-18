@@ -146,7 +146,7 @@ constexpr float kSuspensionMax = 0.08F;
 // The wheels themselves are Jolt's vehicle wheels, which nothing but the
 // ground meets. Inside each, where it stands at rest, the truck carries a
 // solid hub a little smaller (6 cm off the ground, 2 cm narrower) so a body
-// walked or shoved into a tyre stops at it.
+// walked or shoved into a tire stops at it.
 void add_wheel_hubs(std::vector<Part> &parts) {
     const Quat axle = Quat::sRotation(Vec3::sAxisZ(), 0.5F * JPH_PI);
     for (const WheelSpec &spec : kWheelSpecs) {
@@ -247,7 +247,7 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
         wheel->mLateralFriction.AddPoint(20.0F, 1.0F);
         wheel->mMaxBrakeTorque = 2000.0F;
         wheel->mMaxHandBrakeTorque = 0.0F;
-        // A solid tyre on its hub: 30 kg (front) or 20 kg (rear).
+        // A solid tire on its hub: 30 kg (front) or 20 kg (rear).
         const float wheel_kg = spec.driven ? 30.0F : 20.0F;
         wheel->mInertia = 0.5F * wheel_kg * spec.radius * spec.radius;
         settings.mWheels.push_back(wheel);

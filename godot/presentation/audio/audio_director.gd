@@ -817,7 +817,7 @@ func matron_music(at: Vector3, volume_db: float, pitch: float) -> void:
 # - the engine at the native's own rpm (ticking over at FORK_IDLE_RPM while
 #   driven: the native's engine has no idle), working with the throttle and
 #   lugging down as the pump's pressure rises;
-# - the tyres rolling at the front wheels' spin, on concrete or steel by what
+# - the tires rolling at the front wheels' spin, on concrete or steel by what
 #   they roll on;
 # - the blades scraping only while the native finds them on what is under
 #   them and sliding over it;
@@ -831,6 +831,9 @@ const FORK_BEEP_SECONDS := 0.9
 const FORK_TOP_MPS := 3.2
 const FORK_LIFT_MPS := 0.4
 var _fork_beep_clock := 0.0
+# Both front wheels off the floor this long, the tires go quiet.
+const FORK_TIRE_AIR_HOLD_S := 0.2
+var _fork_tires_air := 0.0
 # What was heard, counted whether or not the bank plays, for the scripted
 # runs: frames each part was heard running, and beeps.
 var forklift_heard := {}
@@ -851,7 +854,18 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 	var spins: PackedFloat32Array = state["wheel_spin_rad_s"]
 	var radii: PackedFloat32Array = state["wheel_radius"]
 	var grounds: PackedInt64Array = state["wheel_ground"]
-	var roll := 0.5 * (absf(spins[0]) * radii[0] + absf(spins[1]) * radii[1])
+	# The front wheels' rolling, from those on the floor: a wheel spun in the
+	# air rolls on nothing. With both off it for a moment (a curb, a bump)
+	# the sound holds; longer, it stops.
+	var rolling := 0.0
+	var touching := 0
+	for i in 2:
+		if int(grounds[i]) != 0:
+			rolling += absf(spins[i]) * radii[i]
+			touching += 1
+	_fork_tires_air = 0.0 if touching > 0 else _fork_tires_air + delta
+	var roll := rolling / float(touching) if touching > 0 else \
+		(0.5 * (absf(spins[0]) * radii[0] + absf(spins[1]) * radii[1]) if _fork_tires_air < FORK_TIRE_AIR_HOLD_S else 0.0)
 	var scraping := float(state["fork_gap_m"]) <= FORK_TOUCH_M and float(state["fork_drag_mps"]) > 0.05
 	var chain := absf(float(state["lift_mps"]))
 	var backing := driving and int(state["gear"]) < 0
@@ -927,7 +941,9 @@ var _crane_jingle_clock := 0.0
 func update_crane(delta: float, state: Dictionary, jib: Transform3D) -> void:
 	var slew := clampf(absf(float(state["slew_measured"])) / 0.08, 0.0, 1.0)
 	var trolley := clampf(absf(float(state["trolley_mps"])) / 1.2, 0.0, 1.0)
-	var rope := clampf(absf(float(state["rope_mps"])) / 1.0, 0.0, 1.0)
+	# The drum as driven (kHoistMps 1 m/s), not the rope's length changing
+	# as the block swings under a stopped drum.
+	var rope := clampf(absf(float(state["hoist_rate"])) / 1.0, 0.0, 1.0)
 	var hoist_n := float(state["hoist_n"])
 	var load := clampf(hoist_n / float(state["hoist_max_n"]), 0.0, 1.0)
 	var stalled := bool(state["hoist_stalled"])
