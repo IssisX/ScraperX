@@ -24,10 +24,23 @@
       "TaskUpdate",
       "TaskList",
       "TaskGet",
+      "TaskStop",
       "ToolSearch",
       "Artifact",
+      "Monitor",
+      "ReadNotifications",
+      "SendMessage",
+      "ListAgents",
+      "SendUserFile",
+      "PushNotification",
+      "ScheduleWakeup",
       "mcp__github",
-      "mcp__Claude_Code_Remote"
+      "mcp__Claude_Code_Remote",
+      "mcp__Claude_Code_Remote__send_later",
+      "mcp__Claude_Code_Remote__get_session",
+      "mcp__Claude_Code_Remote__list_triggers",
+      "mcp__Claude_Code_Remote__delete_trigger",
+      "mcp__Claude_Code_Remote__read_documentation"
     ]
   },
   "hooks": {
