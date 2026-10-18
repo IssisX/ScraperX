@@ -1329,6 +1329,21 @@ drum set down is heard, 3 hollow hits); `audio_mix` and `audio_fall` unchanged w
 Not yet proven: the Matron drawn by a hit on her level (no test had it before either); it comes
 with step 2, where loud machines draw her too.
 
+**Footfalls that thud, on one gait (2026-10-18; the owner: running "sounds too tap-dance like; it
+needs to be more thud like, not high pitched").** Two causes, measured. The rhythm: a footstep
+played every 0.69 m at any speed, so a run struck 8 times a second and flow 13; real running
+strikes about 3 times a second and lengthens the step instead. Now one gait
+(`presentation/gait.gd`, from measured human gait: 1.8 strikes a second at a 1.4 m/s walk, 2.9 at a
+5.5 m/s run, 3.5 at 9 m/s, and each foot's contact time) paces the footsteps heard, the head's bob
+(one dip a footfall, one sway a pair), the arms' pump and the legs drawn, which had each kept their
+own rhythm. The sound: each step was a 30-40 ms click with 40-45% of its energy above 1.5 kHz
+(centroid 2.0-2.6 kHz). Now a thud: a soft slap of the sole, the body's weight as a thump in
+200-800 Hz (where a phone speaker still plays it), the floor answering low: centroid 520-890 Hz, 3-14%
+above 1.5 kHz, 50-60 ms long; a run's footfalls land up to 14% deeper than a walk's. Proof:
+`footstep_contact_test` (4 footfalls for 2 s at 2 m/s over the floor, none carried or in the air);
+`audio_mix` (a 1.4 s walk plays 4 steps, was 10; steps -15.3 dBFS above 300 Hz over a -21.8 bed);
+`touch_body` (the boots stride 0.9 m); `touch_flow`, `touch_move_look`.
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer

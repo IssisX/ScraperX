@@ -7,13 +7,14 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var failures := 0
-	# Expected stride counts come from distance walked relative to the floor,
-	# not the distance a lift/rotating support carries a planted player.
+	# Expected footfalls come from the feet's speed over the floor (the gait's
+	# cadence at 2 m/s, 2.1 a second, for 2 s), not from the speed a
+	# lift/rotating support carries a planted player.
 	var cases := [
 		["carried", Vector3(4, 0, 0), Vector3(4, 0, 0), true, 0, 0],
-		["walk_on_carrier", Vector3(6, 0, 0), Vector3(4, 0, 0), true, 5, 6],
+		["walk_on_carrier", Vector3(6, 0, 0), Vector3(4, 0, 0), true, 4, 4],
 		["rotating_contact", Vector3(0, 0, 4), Vector3(0, 0, 4), true, 0, 0],
-		["fixed_floor", Vector3(2, 0, 0), Vector3.ZERO, true, 5, 6],
+		["fixed_floor", Vector3(2, 0, 0), Vector3.ZERO, true, 4, 4],
 		["airborne", Vector3(5, 0, 0), Vector3.ZERO, false, 0, 0],
 	]
 	for item in cases:

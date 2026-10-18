@@ -641,10 +641,11 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var basis := _hand_basis(-back * 0.85 - up * 0.2 - right * (0.25 * side), right * side + up * 0.8)
 			return [wrist, basis, false, 11.0, 0.45, 0.35]
 		POSE_RUN:
-			# Arm pump locked to the head-bob stride, one arm against the other.
+			# Arm pump locked to the gait (the bob's phase, half a turn a
+			# footfall): one swing a pair of steps, one arm against the other.
 			var velocity: Vector3 = state["velocity"]
 			var speed_fraction := clampf(Vector2(velocity.x, velocity.z).length() / 5.5, 0.0, 1.0)
-			var swing := sin(float(state["bob_phase"]) * 0.5 + (0.0 if side > 0.0 else PI)) * speed_fraction
+			var swing := sin(float(state["bob_phase"]) + (0.0 if side > 0.0 else PI)) * speed_fraction
 			var wrist := camera.origin + right * (0.24 * side) + up * (-0.39 + 0.05 * swing) \
 				- back * (0.31 + 0.10 * swing)
 			var basis := _hand_basis(-up * 0.35 - back * 0.9, right * side)

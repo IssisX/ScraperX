@@ -1,10 +1,34 @@
 {
-  "enabledMcpjsonServers": ["godot"],
+  "enabledMcpjsonServers": [
+    "godot"
+  ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000"
   },
   "permissions": {
-    "allow": ["mcp__godot"]
+    "allow": [
+      "mcp__godot",
+      "Bash",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Workflow",
+      "Skill",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskList",
+      "TaskGet",
+      "ToolSearch",
+      "Artifact",
+      "mcp__github",
+      "mcp__Claude_Code_Remote"
+    ]
   },
   "hooks": {
     "SessionStart": [

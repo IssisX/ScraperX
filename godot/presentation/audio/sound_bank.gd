@@ -98,39 +98,45 @@ func pick(name: StringName) -> AudioStreamWAV:
 # --- clips -------------------------------------------------------------------
 
 
-# Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.
+# A boot on concrete under a running body: a thud, not a tap. The sole meets
+# the slab as a soft, dull slap (no heel click); the weight comes down the
+# leg as a thump in the low mids, where a phone speaker still carries it,
+# held a little while the knee gives; a little grit under the sole. (The
+# first bank's steps were 30-40 ms clicks with 40-45% of their energy above
+# 1.5 kHz, a centroid over 2 kHz: tap shoes.)
 func _step_concrete() -> PackedFloat32Array:
-	var out := _silence(0.15)
-	_add_band_noise(out, 0.0, 0.02, 0.9, 0.004, 1500.0, 6000.0)
-	_add_tone(out, _rng.randf_range(330.0, 420.0), 0.0, 0.05, 0.22, 0.008)
-	_add_band_noise(out, 0.006, 0.13, 0.75, 0.035, _rng.randf_range(500.0, 700.0),
-		_rng.randf_range(2600.0, 3600.0))
-	_add_tone(out, _rng.randf_range(62.0, 78.0), 0.0, 0.08, 0.35, 0.02)
+	var out := _silence(0.24)
+	_add_band_noise(out, 0.0, 0.03, 0.5, 0.007, 500.0, 2200.0)
+	_add_band_noise(out, 0.0, 0.2, 1.6, 0.045, 200.0, 800.0)
+	_add_mode(out, _rng.randf_range(260.0, 340.0), 0.0, 0.2, 0.9, 0.05, 2.5)
+	_add_tone(out, _rng.randf_range(70.0, 85.0), 0.0, 0.2, 0.15, 0.05)
+	_add_band_noise(out, 0.008, 0.08, 0.22, 0.02, 900.0, 3000.0)
 	return out
 
 
-# Boot on steel plate: the heel's click, then the plate answering as a short
-# hollow knock -- its modes excited by the blow and choked by the boot.
+# A boot on steel plate or grating: the same thud, and the plate answering
+# low and dull, its modes choked by the boot on it.
 func _step_metal() -> PackedFloat32Array:
-	var out := _silence(0.18)
-	_add_band_noise(out, 0.0, 0.02, 0.7, 0.004, 1500.0, 6500.0)
-	_add_tone(out, _rng.randf_range(80.0, 96.0), 0.0, 0.07, 0.3, 0.02)
-	var base := _rng.randf_range(260.0, 320.0)
-	for mode in [[1.0, 0.9, 0.035], [2.3, 0.6, 0.025], [4.1, 0.35, 0.015]]:
-		_add_mode(out, base * mode[0] * _rng.randf_range(0.95, 1.05), 0.0, 0.18, mode[1],
-			mode[2], 3.0)
-	_add_band_noise(out, 0.004, 0.1, 0.45, 0.03, 500.0, 2400.0)
+	var out := _silence(0.26)
+	_add_band_noise(out, 0.0, 0.025, 0.45, 0.006, 600.0, 2500.0)
+	_add_band_noise(out, 0.0, 0.2, 1.4, 0.04, 200.0, 750.0)
+	var base := _rng.randf_range(230.0, 290.0)
+	for mode in [[1.0, 1.0, 0.06], [2.1, 0.55, 0.04], [3.4, 0.25, 0.025]]:
+		_add_mode(out, base * mode[0] * _rng.randf_range(0.95, 1.05), 0.0, 0.24, mode[1],
+			mode[2], 4.0)
+	_add_tone(out, _rng.randf_range(75.0, 90.0), 0.0, 0.2, 0.12, 0.045)
 	return out
 
 
-# Meadow: a soft crunch of grit and stalks.
+# Meadow: the thump into soil, the crunch of stalks and grit over it.
 func _step_earth() -> PackedFloat32Array:
-	var out := _silence(0.16)
-	_add_band_noise(out, 0.0, 0.16, 0.7, 0.04, 300.0, 2200.0)
-	for i in 9:
-		var at := _rng.randf_range(0.0, 0.08)
-		_add_band_noise(out, at, 0.006, 0.4, 0.002, 2500.0, 7000.0)
-	_add_tone(out, 58.0, 0.0, 0.06, 0.25, 0.02)
+	var out := _silence(0.22)
+	_add_band_noise(out, 0.0, 0.2, 1.3, 0.045, 180.0, 700.0)
+	_add_band_noise(out, 0.005, 0.12, 0.55, 0.035, 400.0, 1800.0)
+	for i in 5:
+		var at := _rng.randf_range(0.0, 0.07)
+		_add_band_noise(out, at, 0.006, 0.15, 0.002, 1500.0, 4000.0)
+	_add_tone(out, 60.0, 0.0, 0.15, 0.12, 0.04)
 	return out
 
 

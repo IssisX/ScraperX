@@ -15,6 +15,7 @@ extends Node3D
 # straight down the lens is over the chest's front, never inside it, and the
 # boots show past the belly.
 
+const Gait := preload("res://presentation/gait.gd")
 const HIP_Y := 0.92
 const KNEE_Y := 0.50
 const SPINE_Y := 1.07
@@ -48,7 +49,7 @@ var _belly: MeshInstance3D
 var _chest: MeshInstance3D
 var _band: MeshInstance3D
 var _legs := []             # per side: [thigh, shin, boot, sole]
-var _stride := 0.0          # metres walked: the gait's phase
+var _stride := 0.0          # the gait's phase, in cycles of two footfalls
 var _feet := [Vector3.ZERO, Vector3.ZERO]   # where each foot is, body space
 var _hip_drop := 0.0        # the hips lowered (crouch), eased
 var _lean := 0.0            # the torso pitched forward (+) or back (-), eased
@@ -143,11 +144,15 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 		lean_goal = -0.05
 	_lean = lerpf(_lean, lean_goal, ease)
 	var hip := Vector3(0.0, HIP_Y - _hip_drop, 0.0)
-	# The gait: two steps a cycle, each as long as the speed asks.
+	# The gait (presentation/gait.gd): two footfalls a cycle at the cadence
+	# the speed asks. Each foot is down for the gait's contact time, sliding
+	# back under the hip exactly as far as the body passes over it, and the
+	# rest of the cycle swings through ahead.
 	if grounded and not sliding:
-		_stride += speed * delta
-	var step := clampf(0.35 + 0.11 * speed, 0.35, 1.25)
-	var phase := _stride / (2.0 * step)
+		_stride += 0.5 * Gait.cadence(speed) * delta
+	var phase := _stride
+	var stance := clampf(Gait.contact_seconds(speed) * Gait.cadence(speed) * 0.5, 0.15, 0.65)
+	var step := maxf(speed * Gait.contact_seconds(speed), 0.35)
 	for side in 2:
 		var x := -HIP_HALF_SPAN if side == 0 else HIP_HALF_SPAN
 		var goal := Vector3(x, 0.0, 0.0)
@@ -183,10 +188,10 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 			var along := 0.0
 			var lift := 0.0
 			if speed >= 0.2:
-				if p < 0.5:
-					along = lerpf(0.5, -0.5, p / 0.5) * step
+				if p < stance:
+					along = lerpf(0.5, -0.5, p / stance) * step
 				else:
-					var s := (p - 0.5) / 0.5
+					var s := (p - stance) / (1.0 - stance)
 					along = lerpf(-0.5, 0.5, s) * step
 					lift = sin(s * PI) * clampf(0.08 + 0.03 * speed, 0.08, 0.3)
 			# A crouched foot sits a little wider, and both forward under the

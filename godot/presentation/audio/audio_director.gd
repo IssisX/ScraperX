@@ -21,9 +21,10 @@ const BUS_VOICE := &"Voice"
 const EFFECT_VOICES := 6
 const POSITIONAL_VOICES := 5
 
-# One step per half head-bob cycle (main.gd HEAD_BOB_CYCLES_PER_METER 0.72),
-# so each footfall lands on the camera's own dip.
-const STRIDE_METERS := 1.0 / (2.0 * 0.72)
+# Footfalls at the gait's cadence (presentation/gait.gd), the same rhythm as
+# the head's dip, the arms and the legs: a run strikes about three times a
+# second, not eight.
+const Gait := preload("res://presentation/gait.gd")
 const STEP_MIN_SPEED := 0.3
 const LAND_MIN_IMPACT := 2.0
 const LAND_HARD_IMPACT := 7.0
@@ -357,16 +358,18 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	var horizontal := Vector2(foot_velocity.x, foot_velocity.z).length()
 
 	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
-		_stride += horizontal * delta
-		if _stride >= STRIDE_METERS:
-			_stride -= STRIDE_METERS
+		_stride += Gait.cadence(horizontal) * delta
+		if _stride >= 1.0:
+			_stride -= 1.0
 			steps += 1
-			# Crouched feet are placed, not planted: the same step, softer.
+			# Crouched feet are placed, not planted: the same step, softer. A
+			# run's footfall lands harder and deeper than a walk's.
+			var weight := smoothstep(1.5, 8.0, horizontal)
 			_play(_surface(support_entity, position.y),
 				linear_to_db(clampf(0.35 + horizontal / 8.0, 0.35, 1.0)) - (9.0 if crouched else 3.0),
-				randf_range(0.94, 1.06))
+				randf_range(0.95, 1.05) * lerpf(1.0, 0.86, weight))
 	elif not grounded:
-		_stride = STRIDE_METERS * 0.5  # the first step after landing comes quickly
+		_stride = 0.5  # the first step after landing comes quickly
 
 	if grounded and not _was_grounded:
 		var impact := -_last_vy

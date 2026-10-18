@@ -13,6 +13,7 @@ const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const InputRouter := preload("res://presentation/ui/input_router.gd")
 const CorpseView := preload("res://presentation/corpse_view.gd")
+const Gait := preload("res://presentation/gait.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
@@ -48,7 +49,6 @@ const LANDING_DIP_DURATION_SECONDS := 0.22
 const LANDING_DIP_MAX_METERS := 0.16
 const LANDING_DIP_MIN_IMPACT_MPS := 2.0
 const LANDING_DIP_FULL_IMPACT_MPS := 9.0
-const HEAD_BOB_CYCLES_PER_METER := 0.72
 const HEAD_BOB_VERTICAL_METERS := 0.028
 const HEAD_BOB_LATERAL_METERS := 0.016
 # Crouched, the eye sits 0.95 m over the soles instead of 1.52: the native
@@ -684,7 +684,9 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var bob_target := 0.0
 	if grounded:
 		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
-		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
+		# The gait's phase (presentation/gait.gd): half a turn a footfall, the
+		# left foot down at even multiples of PI, the right at odd.
+		_cam_bob_phase += PI * Gait.cadence(horizontal_speed) * delta
 	if not _head_bob_on:
 		_cam_bob_weight = 0.0
 	else:
@@ -692,8 +694,10 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			1.0 - exp(-HEAD_BOB_RESPONSE_PER_SECOND * delta))
 		if absf(_cam_bob_weight - bob_target) < 0.001:
 			_cam_bob_weight = bob_target
-	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
-	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
+	# The head is lowest as each foot takes the weight, and sways over the
+	# foot that is down: one dip a footfall, one sway a pair.
+	var vertical_bob := -HEAD_BOB_VERTICAL_METERS * cos(2.0 * _cam_bob_phase) * _cam_bob_weight
+	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
 	if not _head_bob_on:
 		_cam_bank = 0.0
@@ -709,7 +713,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	# and tips to that side, the good leg's as before.
 	if _limping and grounded:
 		var hobbling := smoothstep(0.3, 1.5, horizontal_speed)
-		var bad_step := maxf(0.0, sin(_cam_bob_phase * 0.5))
+		var bad_step := maxf(0.0, -cos(_cam_bob_phase))
 		dip += -LIMP_DIP_M * bad_step * bad_step * hobbling
 		_cam_bank += LIMP_ROLL_RAD * bad_step * hobbling
 
