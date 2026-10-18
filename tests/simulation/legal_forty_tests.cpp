@@ -26,6 +26,8 @@ void run_legal_forty_tests() {
     // read off the kLegalForty*/kIntake* constants in simulation.cpp.
     constexpr double kLegalFortyHandoffSurfaceY = 24.1872;
     constexpr double kLegalFortyMidLandingSurfaceY = 32.1872;
+    // Centre of the hall's west strip, clear of the well opening at x=-4.8.
+    constexpr double kLegalFortyHallArrivalX = -7.4;
     constexpr double kLegalFortyTravelFull = 0.907572; // stowed 8 deg .. deployed 60 deg
 
     // 1. wo015_unloaded_flight_is_not_a_route: the stowed flight hangs up
@@ -249,27 +251,11 @@ void run_legal_forty_tests() {
     // the flat landing (contact normal y=0.531, below the support limit).
     // An ordinary Jump clears that lip; the flight then carries the feet.
     (void)ascent.request_jump();
-    // Walks onto the hall deck itself and stops steering the instant it
-    // does, rather than continuing to drive into the well's own edge --
-    // found by direct observation that a capsule still being steered past
-    // its target there jitters between the flight, the deck and open air
-    // instead of settling on either.
-    bool reached_hall_deck = false;
-    for (int i = 0; i < 40 * 90 && !reached_hall_deck; ++i) {
-        const auto state = ascent.snapshot();
-        double dx = kLegalFortyWellX - state.player_position.x;
-        double dz = kLegalFortyUpperFlightZ - state.player_position.z;
-        const double len = std::hypot(dx, dz);
-        if (len > 1.0e-6) {
-            dx /= len;
-            dz /= len;
-        }
-        (void)ascent.set_move_input(dx, dz);
-        (void)ascent.set_facing(dx, dz);
-        (void)ascent.advance_frame(Simulation::kFixedStepSeconds);
-        reached_hall_deck =
-            ascent.snapshot().support_entity_id == Simulation::kIntakeHallDeckEntityId;
-    }
+    // First contact can still carry momentum back into the well. Walk to
+    // the west strip's interior and brake to grounded, low-speed footing.
+    const bool reached_hall_deck =
+        walk_to(ascent, kLegalFortyHallArrivalX, kLegalFortyUpperFlightZ, 40.0, 0.15, true) &&
+        ascent.snapshot().support_entity_id == Simulation::kIntakeHallDeckEntityId;
     require(reached_hall_deck,
             "the route must reach MOD-HALL-DECK itself, at the top of the upper flight, within "
             "budget");
@@ -482,22 +468,10 @@ void run_legal_forty_tests() {
     walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
     // Same rotated foot and real landing as the deployed-flight route.
     (void)skin_forty.request_jump();
-    bool skin_forty_reached_hall_deck = false;
-    for (int i = 0; i < 40 * 90 && !skin_forty_reached_hall_deck; ++i) {
-        const auto state = skin_forty.snapshot();
-        double dx = kLegalFortyWellX - state.player_position.x;
-        double dz = kLegalFortyUpperFlightZ - state.player_position.z;
-        const double len = std::hypot(dx, dz);
-        if (len > 1.0e-6) {
-            dx /= len;
-            dz /= len;
-        }
-        (void)skin_forty.set_move_input(dx, dz);
-        (void)skin_forty.set_facing(dx, dz);
-        (void)skin_forty.advance_frame(Simulation::kFixedStepSeconds);
-        skin_forty_reached_hall_deck =
-            skin_forty.snapshot().support_entity_id == Simulation::kIntakeHallDeckEntityId;
-    }
+    const bool skin_forty_reached_hall_deck =
+        walk_to(skin_forty, kLegalFortyHallArrivalX, kLegalFortyUpperFlightZ,
+                40.0, 0.15, true) &&
+        skin_forty.snapshot().support_entity_id == Simulation::kIntakeHallDeckEntityId;
     require(skin_forty_reached_hall_deck,
             "SKIN's own bypass must reach MOD-HALL-DECK itself within budget");
     require(skin_forty.set_move_input(0.0, 0.0), "skin-forty settle input must be accepted");

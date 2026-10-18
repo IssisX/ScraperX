@@ -43,3 +43,14 @@ PASS scraperx_sim parkour flow
 This proves the affected host cases. The broader full native suite has
 other captured failures; these two repairs do not establish full-green
 release acceptance or device play.
+
+
+## Stair approach and hall arrival
+
+The lower stair approach now targets the real landing centres at X=+/-8m. The former +/-7.5m path hits the end of the frozen StairRail collision; the trace identified entity51 during the raised capsule sweep. The handrail, stair geometry and physical stepper are unchanged.
+
+Both hall approaches now use the existing settled walking controller toward X=-7.4m, inside the west deck strip [-10,-4.8]. The old target -4.51m lies in the well. A natural SKIN replay recorded first hall contact at X=-5.223m while moving east at3.093m/s; neutral input let it return to upper-flight support44. The repaired replay holds actual hall support49 through the original two-second neutral interval, at Y=41.0872m with zero deaths. All original final guards remain.
+
+Command: `python /data/data/com.termux/files/usr/tmp/scraperx-hall-arrival-20261018/run-skin-repaired.py` exited0. Exact commands/output: `skin-repaired-result.json` and `skin-repaired-run.log` in that directory.
+
+Combined command: `python /data/data/com.termux/files/usr/tmp/scraperx-hall-arrival-20261018/run-arrival-repair.py`. Strict build exited0. The complete original athletic executable passed the +24m intake and both +40m routes, then exited1 at the later world-crouch return-to-standing assertion. This is scoped stair acceptance, not full-suite acceptance. `arrival-repair-result.json` and `arrival-run.log` preserve the actual commands/output against the unchanged coherent e014 native archive. The later crouch failure remains unresolved; x86 acceptance of these stair changes is pending.

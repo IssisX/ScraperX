@@ -5,7 +5,8 @@
 namespace scraperx::tests {
 
 constexpr double kThroatX = 0.0;
-constexpr double kStairLandingX = 7.5;
+// The landing centre clears the flight's end rail before turning onto it.
+constexpr double kStairLandingX = 8.0;
 constexpr double kHandoffSurfaceY = 24.19;
 constexpr double kLegalFortyHallDeckSurfaceY = 40.1872;
 constexpr double kLegalFortyHingeX = 7.856;
