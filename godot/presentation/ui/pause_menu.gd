@@ -525,7 +525,7 @@ func _controls_rows(_view_family: int) -> Array:
 		["icon", &"climb", "ACTION", "Catch a ledge or operate a machine"],
 		["verb", &"toggle_grapple", "GRAPPLE", "Draw or stow the acquired gun, including beside other interactions"],
 		["verb", &"auto_reel", "AUTO REEL / STOP", "Toggle finite line take-up while the gun has an attached line"],
-		["icon", &"move", "LANDING", "Impact and sideways speed affect balance; find your footing before moving on"],
+		["icon", &"move", "LANDING", "Face your travel and crouch before a hard landing to roll through; Jump exits when clear"],
 		["icon", &"operate", "MACHINE", "Hold its arrows or move its load; Action leaves pendant controls"],
 		["icon", &"pause", "PAUSE", "Options, checkpoint and supported-ring restarts"],
 	]

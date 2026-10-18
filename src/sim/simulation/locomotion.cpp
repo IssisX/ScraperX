@@ -214,7 +214,10 @@ void Simulation::PhysicsWorld::record_landing(const JPH::BodyInterface &bodies, 
     const auto tangent_velocity = relative-normal*relative.Dot(normal);
     const auto along = tangent_velocity.NormalizedOr(JPH::Vec3::sZero());
     const bool forward = !along.IsNearZero() && along.Dot(facing_) > .7F;
-    bool roll_floor = prepared && forward && landing_normal_speed_mps_>=12 &&
+    // Preparation selects compact recovery at the existing brace boundary.
+    // The actual impact, lethal policy and actuator laws remain unchanged.
+    constexpr double kBraceMinimumImpactSpeedMps = 8.0;
+    bool roll_floor = prepared && forward && landing_normal_speed_mps_>=kBraceMinimumImpactSpeedMps &&
         landing_normal_speed_mps_<=kLethalImpactSpeedMps && landing_tangent_speed_mps_>=2.5;
     const auto centre = bodies.GetPosition(player_id_);
     const float roll_runout = tangent_velocity.Length()*float(landing_recovery_duration_)+
@@ -226,9 +229,9 @@ void Simulation::PhysicsWorld::record_landing(const JPH::BodyInterface &bodies, 
             !shape_pose_is_clear(player_crouch_shape_.GetPtr(),compact_centre+along*ahead+
                 JPH::Vec3(0,kStandClearanceSkin,0))) {roll_floor=false;break;}
     }
-    if (landing_normal_speed_mps_ >= 12 && landing_normal_speed_mps_ <= kLethalImpactSpeedMps &&
+    if (landing_normal_speed_mps_ >= kBraceMinimumImpactSpeedMps && landing_normal_speed_mps_ <= kLethalImpactSpeedMps &&
         landing_tangent_speed_mps_ >= 2.5 && roll_floor) landing_response_ = 2;
-    else if (landing_normal_speed_mps_ >= 8) landing_response_ = 1;
+    else if (landing_normal_speed_mps_ >= kBraceMinimumImpactSpeedMps) landing_response_ = 1;
     else if (landing_tangent_speed_mps_ >= 4 && landing_initial_balance_loss_ > .18 && !forward)
         landing_response_ = 3;
 }
