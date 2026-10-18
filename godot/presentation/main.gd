@@ -618,7 +618,8 @@ func _process(delta: float) -> void:
 	_performance_report.record_frame(delta, native_wall_usec, steps_advanced,
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
-		float(_native.get_player_position().y), rad_to_deg(_pitch))
+		float(_native.get_player_position().y), rad_to_deg(_pitch), -1,
+		int(_native.get_last_advance_process_cpu_usec()))
 	_render_snapshot(delta)
 	_ctx = _read_context()
 	# Attachment ownership can end natively without a presentation release verb.

@@ -6,6 +6,8 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
+#include <ctime>
+
 namespace scraperx::bridge {
 namespace {
 
@@ -121,6 +123,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_edge_drop_available);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"),
                                 &ScraperXSimulation::advance_frame);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_last_advance_process_cpu_usec"),
+                                &ScraperXSimulation::get_last_advance_process_cpu_usec);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"),
                                 &ScraperXSimulation::get_tick_index);
     godot::ClassDB::bind_method(godot::D_METHOD("get_simulation_time_seconds"),
@@ -943,13 +947,26 @@ bool ScraperXSimulation::set_sprint_input(const bool held) {
 }
 
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
+    last_advance_process_cpu_usec_ = -1;
+    const auto cpu_start = std::clock();
     const auto result = simulation_->advance_frame(frame_delta_seconds);
+    const auto cpu_end = std::clock();
     if (!result.accepted) {
         godot::UtilityFunctions::push_error(
             "ScraperX native authority rejected an invalid frame delta; state was not mutated.");
         return -1;
     }
+    if (cpu_start != static_cast<std::clock_t>(-1) &&
+        cpu_end != static_cast<std::clock_t>(-1) && cpu_end >= cpu_start) {
+        const double elapsed_usec = (static_cast<double>(cpu_end) - static_cast<double>(cpu_start)) *
+                                    1000000.0 / static_cast<double>(CLOCKS_PER_SEC);
+        last_advance_process_cpu_usec_ = static_cast<std::int64_t>(elapsed_usec);
+    }
     return static_cast<std::int64_t>(result.steps_advanced);
+}
+
+std::int64_t ScraperXSimulation::get_last_advance_process_cpu_usec() const {
+    return last_advance_process_cpu_usec_;
 }
 
 bool ScraperXSimulation::is_initial_world_settled() const {

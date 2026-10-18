@@ -75,6 +75,9 @@ public:
     [[nodiscard]] bool set_crouch_input(bool held);
     [[nodiscard]] bool set_sprint_input(bool held);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
+    // Process CPU across all app threads during the last accepted advance;
+    // microseconds, or -1 when the host clock cannot provide a valid sample.
+    [[nodiscard]] std::int64_t get_last_advance_process_cpu_usec() const;
     [[nodiscard]] std::int64_t get_tick_index() const;
     [[nodiscard]] double get_simulation_time_seconds() const;
     [[nodiscard]] double get_fixed_step_seconds() const;
@@ -286,6 +289,7 @@ protected:
 
 private:
     std::unique_ptr<sim::Simulation> simulation_;
+    std::int64_t last_advance_process_cpu_usec_ = -1;
 };
 
 } // namespace scraperx::bridge
