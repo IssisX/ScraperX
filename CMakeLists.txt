@@ -52,6 +52,7 @@ add_library(scraperx_sim STATIC
     src/sim/traversal_plan.cpp
     src/sim/traversal_receiver.cpp
     src/sim/parkour_route.cpp
+    src/sim/workshop_roof_route.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
     src/sim/north_transfer_route.cpp
@@ -221,6 +222,9 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_parkour_yard_route_tests tests/parkour_yard_route_tests.cpp)
     target_link_libraries(scraperx_parkour_yard_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.parkour_yard_route COMMAND scraperx_parkour_yard_route_tests)
+    add_executable(scraperx_workshop_roof_route_tests tests/workshop_roof_route_tests.cpp)
+    target_link_libraries(scraperx_workshop_roof_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.workshop_roof_route COMMAND scraperx_workshop_roof_route_tests)
 
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)

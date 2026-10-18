@@ -1,4 +1,5 @@
 #include "sim/simulation/world.hpp"
+#include "sim/workshop_roof_route.hpp"
 
 namespace scraperx::sim {
 using namespace detail;
@@ -238,8 +239,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
     physics_system_.SetSoftBodyContactListener(&soft_contact_listener_);
     physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_, cargo_net_.get());
     physical_foot_push_ = std::make_unique<PhysicalFootPush>(physics_system_, player_id_);
-    if (content == WorldContent::Slingshot)
+    if (content == WorldContent::Slingshot) {
         grappling_gun_ = std::make_unique<GrapplingGun>(physics_system_, player_id_, object_layers::kMoving);
+        // Append after all retained physics bodies, including the hook.
+        build_workshop_roof_route(*kit_);
+    }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
     physics_system_.OptimizeBroadPhase();

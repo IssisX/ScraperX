@@ -59,6 +59,52 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 		_strip(geometry, root, paint, Vector3(x, 1.65, -74.0), Vector2(0.12, 2.2))
 	_strip(geometry, root, paint, Vector3(-50.68, 0.8, -74.0), Vector2(0.12, 2.2))
 	_strip(geometry, root, paint, Vector3(-51.68, 0.6, -90.0), Vector2(0.12, 2.2))
+	_workshop_roof_route(geometry, root, paint)
+
+
+static func _workshop_roof_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# Native service plinth/treads and workshop slab use world coordinates.
+	# ParkourYard's container has translation only; remove that translation
+	# here so new paint stays on the actual solids without moving old paths.
+	var offset := root.position
+	_arrow(geometry, root, paint, Vector3(-46.5, 0.0, -43.5) - offset, Vector2.RIGHT)
+	_strip(geometry, root, paint, Vector3(-42.5, 0.0, -43.5) - offset, Vector2(1.2, 0.12))
+	_arrow(geometry, root, paint, Vector3(-39.2, 0.0, -44.0) - offset, Vector2(0.0, -1.0))
+	_strip(geometry, root, paint, Vector3(-39.2, 0.0, -46.5) - offset, Vector2(0.12, 1.2))
+	_strip(geometry, root, paint, Vector3(-38.0, 0.0, -48.5) - offset, Vector2(1.2, 0.12))
+	_roof_label(root, paint, "ROOF ACCESS", Vector3(-38.7, 0.009, -50.0) - offset)
+	_arrow(geometry, root, paint, Vector3(-36.0, 0.0, -48.5) - offset, Vector2(0.0, 1.0))
+	# Eight inset nosings expose the real 225 mm rises, clear of tread edges.
+	for i in 8:
+		var top := 1.8 * float(i + 1) / 8.0
+		var near_z := -47.4 + 0.4 * float(i)
+		_strip(geometry, root, paint, Vector3(-36.0, top, near_z + 0.08) - offset,
+			Vector2(1.2, 0.08))
+	# Direction and paired gap-edge bars remain entirely on real concrete.
+	_arrow(geometry, root, paint, Vector3(-36.0, 1.8, -42.7) - offset, Vector2(0.0, 1.0))
+	_strip(geometry, root, paint, Vector3(-36.0, 1.8, -41.55) - offset, Vector2(2.0, 0.10))
+	_strip(geometry, root, paint, Vector3(-36.0, 5.14, -38.35) - offset, Vector2(2.0, 0.10))
+	# The roof's west edge faces the open return yard, away from the south
+	# wall-step lane. The cue describes the prepared landing at actual grade.
+	_roof_label(root, paint, "YARD RETURN\nRUN, CROUCH + DROP", Vector3(-41.8, 5.149, -28.4) - offset)
+	_arrow(geometry, root, paint, Vector3(-43.3, 5.14, -30.0) - offset, Vector2.LEFT)
+	_strip(geometry, root, paint, Vector3(-44.08, 5.14, -30.0) - offset, Vector2(0.10, 1.6))
+
+
+static func _roof_label(root: Node3D, paint: Material, text: String, at: Vector3) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = 64
+	label.pixel_size = 0.006
+	label.modulate = (paint as StandardMaterial3D).albedo_color
+	label.outline_size = 0
+	label.no_depth_test = false
+	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	label.position = at
+	label.rotation.x = -PI / 2.0
+	label.visibility_range_end = 45.0
+	root.add_child(label)
+
 
 static func _strip(geometry: WorldGeometry, root: Node3D, paint: Material,
 		at: Vector3, size: Vector2, yaw: float = 0.0) -> void:

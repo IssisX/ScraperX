@@ -601,7 +601,7 @@ func _update_birds(position: Vector3, delta: float) -> void:
 func _surface(entity: int, height: float) -> StringName:
 	if entity == 51 and height < 0.5:
 		return &"step_earth"      # the valley floor, off the grade
-	if entity in [1, 35, 43, 45, 51]:
+	if entity in [1, 35, 43, 45, 51, 1460]:
 		return &"step_concrete"   # grade, apron, bay, handoff deck, dressing
 	return &"step_metal"
 

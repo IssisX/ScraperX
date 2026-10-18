@@ -418,7 +418,10 @@ void Simulation::PhysicsWorld::apply_landing_recovery(JPH::BodyInterface &bodies
     JPH::Vec3 ground_force_request = JPH::Vec3::sZero();
     JPH::Vec3 step_probe_velocity = JPH::Vec3::sZero();
     JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
-    const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
+    // Crouch limits walking speed on contact. Applying that walk scale in
+    // flight makes forward intent brake a compact departure toward2.475m/s.
+    // Air steering retains its existing departure target and finite work law.
+    const double speed_scale = grounded_ && crouched_ ? kCrouchSpeedScale : 1.0;
     double move_x = commands.move_input_x * speed_scale;
     double move_z = commands.move_input_z * speed_scale;
     sprinting_ = false;
