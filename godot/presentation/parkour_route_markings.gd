@@ -59,7 +59,23 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 		_strip(geometry, root, paint, Vector3(x, 1.65, -74.0), Vector2(0.12, 2.2))
 	_strip(geometry, root, paint, Vector3(-50.68, 0.8, -74.0), Vector2(0.12, 2.2))
 	_strip(geometry, root, paint, Vector3(-51.68, 0.6, -90.0), Vector2(0.12, 2.2))
+	_duct_tuck_route(geometry, root, paint)
 	_workshop_roof_route(geometry, root, paint)
+
+
+static func _duct_tuck_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# The direct jump uses the existing duct's real north face and roof.
+	# Ground-level bypasses and the separate crouch-under route remain open.
+	var offset := root.position
+	_roof_label(root, paint, "DUCT CROSSING\nJUMP, THEN HOLD CROUCH",
+		Vector3(-57.0, 0.009, -66.2) - offset)
+	_arrow(geometry, root, paint, Vector3(-57.0, 0.0, -68.0) - offset, Vector2(0.0, -1.0))
+	_strip(geometry, root, paint, Vector3(-57.0, 0.0, -68.65) - offset, Vector2(1.4, 0.10))
+	_strip(geometry, root, paint, Vector3(-57.0, 1.65, -72.65) - offset, Vector2(1.4, 0.10))
+	_arrow(geometry, root, paint, Vector3(-57.0, 1.65, -74.0) - offset, Vector2(0.0, -1.0))
+	_arrow(geometry, root, paint, Vector3(-57.0, 0.0, -78.0) - offset, Vector2(0.0, -1.0))
+	_strip(geometry, root, paint, Vector3(-57.0, 0.0, -81.0) - offset, Vector2(0.12, 1.2))
+	_arrow(geometry, root, paint, Vector3(-57.0, 0.0, -84.5) - offset, Vector2.RIGHT)
 
 
 static func _workshop_roof_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:

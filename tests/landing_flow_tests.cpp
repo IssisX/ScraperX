@@ -42,8 +42,12 @@ void require_moderate_impact(const Snapshot &impact) {
             "fixture did not reach a moderate forward impact on actual grade");
 }
 void flow() {
+    // Airborne posture now changes the real collider around unchanged COM.
+    // Match actual sole descent, not COM height, so this comparison isolates
+    // prepared recovery from impact energy. Neither impact assertion changes.
+    constexpr double kSoleDescentM = 5.0;
     Simulation prepared;
-    const auto impact = fall(prepared, true);
+    const auto impact = fall(prepared, true, true, kSoleDescentM + .6);
     require_moderate_impact(impact);
     require(prepared.set_crouch_input(false), "post-impact stand intent rejected");
     tick(prepared, 18);
@@ -58,7 +62,7 @@ void flow() {
             "prepared moderate landing failed to carry momentum through compact recovery");
 
     Simulation unprepared;
-    const auto braced = fall(unprepared, false);
+    const auto braced = fall(unprepared, false, true, kSoleDescentM + .9);
     require_moderate_impact(braced);
     tick(unprepared, 18);
     require(braced.landing_response == 1 && unprepared.snapshot().death_count == 0 &&

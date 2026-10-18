@@ -17,25 +17,31 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
         }
         return;
     }
-    if (!wants_up && grounded_) {
+    if (!wants_up) {
         const JPH::RVec3 at = bodies.GetPosition(player_id_);
         bodies.SetShape(player_id_, player_crouch_shape_.GetPtr(), false,
                         JPH::EActivation::Activate);
-        bodies.SetPosition(player_id_, at - JPH::Vec3(0.0F, kCrouchDrop, 0.0F),
-                           JPH::EActivation::Activate);
+        // On contact the existing stance owner preserves planted soles.
+        // In flight the knees tuck around the same COM: no position,
+        // velocity, impulse or takeoff work is granted by the shape change.
+        if (grounded_)
+            bodies.SetPosition(player_id_, at - JPH::Vec3(0.0F, kCrouchDrop, 0.0F),
+                               JPH::EActivation::Activate);
         crouched_ = true;
     }
 }
 
 [[nodiscard]] bool Simulation::PhysicsWorld::try_stand(JPH::BodyInterface &bodies) noexcept {
-    const JPH::RVec3 standing =
-        bodies.GetPosition(player_id_) + JPH::Vec3(0.0F, kCrouchDrop, 0.0F);
-    if (!shape_pose_is_clear(player_shape_.GetPtr(),
-                             standing + JPH::Vec3(0.0F, kStandClearanceSkin, 0.0F))) {
+    const JPH::RVec3 standing = bodies.GetPosition(player_id_) +
+        (grounded_ ? JPH::Vec3(0.0F, kCrouchDrop, 0.0F) : JPH::Vec3::sZero());
+    const auto clearance_pose = standing + (grounded_ ?
+        JPH::Vec3(0.0F, kStandClearanceSkin, 0.0F) : JPH::Vec3::sZero());
+    if (!shape_pose_is_clear(player_shape_.GetPtr(), clearance_pose)) {
         return false;
     }
     bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
-    bodies.SetPosition(player_id_, standing, JPH::EActivation::Activate);
+    if (grounded_)
+        bodies.SetPosition(player_id_, standing, JPH::EActivation::Activate);
     crouched_ = false;
     return true;
 }

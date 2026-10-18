@@ -32,6 +32,12 @@ At both z -62 and -98, three 2 × 2.4 m ground-bearing maintenance steps are cen
 
 Ground loop: utility bay → open z -68 cross-aisle → duct or wall lane → open z -84.5 cross-aisle → loading apron → spine → utility bay. Upper variant: loading apron → southern steps via z -98 → return gallery north → northern steps → utility bay. Duct roof and retaining lane branch from the ground loop; neither is necessary to finish it. Heights are limited to 2.6 m and all content stays far west of the ascent route; no progression or checkpoint state changes.
 
+## Direct duct crossing — 2026-10-17
+
+Worldx=-57 is a clear approach through the gap between the retained partitions. Run south fromz=-65, Jump nearz=-68.6, then hold Crouch in flight. The real compact capsule lifts the soles around unchanged body center, allowing a committed jump onto the existing1.65m duct roof atz[-75.5,-72.5]. Release Crouch after receiving contact to stand if clear; earned forward momentum can continue off the far edge into a real ground landing. Ground arrows lead toward the openz=-84.5 cross-aisle and east to the existing service aisle. Surface paint has no collision and provides no extra reach or jump height. The separate under-duct passage and walk-around alternatives remain open.
+
+The native route uses initial grade staging only, followed by actual sprint, Jump and Crouch inputs. It reaches compact duct support at tick214, clear supported standing at215 and onward grade contact at289, without hands, traversal plans or body writes during the route. Paired ordinary-jump traces show60free-flight samples with identical center-of-mass position, velocity and actuator work through repeated tuck/release; actual grade obstruction also blocks premature airborne extension until landing permits planted standing. These are native behavior results; matching Godot/Android rendering and phone feel require their artifact/device evidence.
+
 ## Workshop-roof branch — 2026-10-17
 
 This branch uses world coordinates directly. The existing workshop slab is at5.14m; the south wall below it stops at3.8m. A new fixed concrete service plinth supplies a1.8m running takeoff. Eight225mm risers, each400mm deep and1.6m wide, lead from actual grade to the3.2m-wide plinth. Their bounds arex[-36.8,-35.2],z[-47.4,-44.2]; the plinth occupiesx[-37.6,-34.4],z[-44.2,-41.4]. Kit entity1460 owns both native collision and rendered concrete parts. Every part bears on grade. No player actuator, gravity, force limit or collision rule changes for this branch.
