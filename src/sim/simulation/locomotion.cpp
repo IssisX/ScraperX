@@ -42,6 +42,13 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
 
 void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodies,
                               const StepCommands &commands) noexcept {
+    if (traversal_state_ != TraversalState::Hanging || !physical_hands_->compatible_hands() ||
+        hands_[0].generation != hang_topout_left_generation_ ||
+        hands_[1].generation != hang_topout_right_generation_ ||
+        commands.cancel_jump_requested || commands.release_requested ||
+        (commands.crouch_held && !commands.jump_requested && !commands.traversal_requested)) {
+        hang_topout_ticks_left_ = 0;
+    }
     if (traversal_state_ == TraversalState::Lowering && commands.release_requested) {
         // Lowering still owns the hands. Drop cancels that ownership
         // through the same passive, momentum-preserving release as a hang.
@@ -71,10 +78,38 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
     // Each accepted action changes its own load topology. Merely requesting
     // a top-out must not unload a radial catch that validation then rejects.
     if (traversal_state_ == TraversalState::Hanging) {
+        // Retained legacy regression fixtures do not use the physical
+        // transfer reach law. Their explicitly separate path is unchanged.
+        const bool physical_topout = !regression_fixtures_ ||
+            entity_is_causal_section_support(traversal_entity_id_) ||
+            (traversal_entity_id_ == 1901 && physical_hands_->active());
+        if (!physical_topout) {
+            hang_topout_ticks_left_ = 0;
+            if (commands.release_requested) release_hang(bodies);
+            else if (commands.jump_requested || commands.traversal_requested)
+                begin_mantle_from_hang(bodies);
+            return;
+        }
         if (commands.release_requested) {
             release_hang(bodies);
-        } else if (commands.jump_requested || commands.traversal_requested) {
-            begin_mantle_from_hang(bodies);
+        } else if (!commands.cancel_jump_requested) {
+            if (commands.jump_requested || commands.traversal_requested) {
+                hang_topout_ticks_left_ = kOrdinaryJumpIntentTicks;
+                hang_topout_left_generation_ = hands_[0].generation;
+                hang_topout_right_generation_ = hands_[1].generation;
+            }
+            if (hang_topout_ticks_left_ > 0) {
+                const auto ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+                const auto shoulder = bodies.GetPosition(player_id_) + JPH::Vec3(0, kClimbHandMid, 0);
+                if (JPH::Vec3(ledge - shoulder).Length() <= kTransferShoulderReachM) {
+                    // Consume once at real reach. The existing receiver,
+                    // clearance and physical handoff checks still decide it.
+                    hang_topout_ticks_left_ = 0;
+                    begin_mantle_from_hang(bodies);
+                } else if (--hang_topout_ticks_left_ == 0) {
+                    ++rejected_traversal_count_;
+                }
+            }
         }
         return;
     }

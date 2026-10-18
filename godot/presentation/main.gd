@@ -72,6 +72,8 @@ const KitView := preload("res://presentation/kit_view.gd")
 const GrapplingGunViewScript := preload("res://presentation/grappling_gun_view.gd")
 const GrappleFeedbackModel := preload("res://presentation/grapple_feedback_model.gd")
 const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
+const MovementDust := preload("res://presentation/movement_dust.gd")
+var _movement_dust: MovementDust
 const InspectionBalanceFeedback := preload("res://presentation/inspection_balance_feedback.gd")
 var _inspection_balance_feedback: InspectionBalanceFeedback
 const InspectionWorksiteLife := preload("res://presentation/inspection_worksite_life.gd")
@@ -929,6 +931,8 @@ func _after_restart() -> void:
 		_freight_activity.reset()
 	_reset_grapple_feedback()
 	_landing_camera.reset()
+	if _movement_dust != null:
+		_movement_dust.reset()
 	if _reclaim_dust != null:
 		_reclaim_dust.reset()
 	if _slingshot_view != null:
@@ -2135,6 +2139,10 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var forward_vector := Vector3(-sin(_yaw), 0.0, -cos(_yaw))
 	_landing_camera.update(landing, delta, _head_bob_on, right_vector, forward_vector,
 		int(_native.get_death_count()))
+	if _movement_dust != null:
+		_movement_dust.update_from_native(landing, _native.get_support_contact_point(),
+			locomotion_velocity, grounded, int(_native.get_support_entity_id()), delta,
+			int(_native.get_death_count()), _settings.launch_cinematics)
 	if not _head_bob_on:
 		_cam_bank = 0.0
 	else:
@@ -2642,6 +2650,9 @@ func _setup_kit_view() -> void:
 	var cable_material := _geometry.material(Color("1b1916") if _regression_scene else Color("b2a383"), 0.6, 0.5)
 	_kit_view.setup(_native, palette, cable_material, cargo_material, _geometry.add_sign_text)
 	if not _regression_scene:
+		_movement_dust = MovementDust.new()
+		_movement_dust.name = "MovementDust"
+		add_child(_movement_dust)
 		_reclaim_dust = ReclaimDust.new()
 		_reclaim_dust.name = "ReclaimDust"
 		add_child(_reclaim_dust)

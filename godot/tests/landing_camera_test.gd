@@ -4,6 +4,7 @@ const Response := preload("res://presentation/landing_camera_response.gd")
 const MainPresentation := preload("res://presentation/main.gd")
 const Director := preload("res://presentation/audio/audio_director.gd")
 const Settings := preload("res://presentation/ui/settings_store.gd")
+const MovementDust := preload("res://presentation/movement_dust.gd")
 
 class FootAudio extends Director:
 	var played: Array[StringName] = []
@@ -636,8 +637,49 @@ func _drop(height: float, move_x: float) -> Dictionary:
 	return witness
 
 
+func _movement_dust_checks() -> bool:
+	# Synthetic receipts check presentation consumption, not native contacts.
+	var dust := MovementDust.new()
+	root.add_child(dust)
+	var contact := Vector3(-36, 1.8, -43)
+	var velocity := Vector3(0, 0, 7)
+	var state := {"landing_count": 10, "landing_normal_speed_mps": 9.0,
+		"landing_support_entity_id": 1460, "player_sliding": false, "slide_speed_mps": 7.0}
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, true)
+	var ok := _check(dust.bursts == 0, "contact dust seeds historical landing receipts quietly")
+	state.landing_count = 11
+	var unchanged := state.duplicate(true)
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, true)
+	ok = _check(dust.bursts == 1 and state == unchanged and dust._pool.size() == 3
+		and dust._pool[0].amount == 16 and not dust._pool[0].local_coords
+		and dust._pool[0].global_position.distance_to(contact + Vector3.UP * 0.025) < 0.00001,
+		"fresh matching actual support receipt emits one bounded world-space contact burst") and ok
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, true)
+	ok = _check(dust.bursts == 1, "repeated landing receipt does not replay contact dust") and ok
+	state.player_sliding = true
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.20, 0, true)
+	ok = _check(dust.bursts == 2, "actual grounded fast slide emits a sparse shoe trail") and ok
+	dust.update_from_native(state, contact, velocity, false, 1460, 0.20, 0, true)
+	dust.update_from_native(state, contact, velocity, true, 42, 0.20, 0, true)
+	ok = _check(dust.bursts == 2, "airborne or non-dust support cannot emit a slide trail") and ok
+	state.player_sliding = false
+	state.landing_count = 12
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, false)
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, true)
+	ok = _check(dust.bursts == 2 and not dust._pool[0].visible and not dust._pool[1].visible,
+		"motion setting stops existing dust and does not replay disabled impacts") and ok
+	dust.reset()
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 0, true)
+	state.landing_count = 13
+	dust.update_from_native(state, Vector3(NAN, 0, 0), velocity, true, 1460, 0.016, 0, true)
+	dust.update_from_native(state, contact, velocity, true, 1460, 0.016, 1, true)
+	ok = _check(dust.bursts == 2, "restart, malformed contact and death stay quiet") and ok
+	dust.free()
+	return ok
+
+
 func _run() -> void:
-	if not _response_checks() or not _slide_checks() or not _wall_stride_checks() or not _wall_stride_audio_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
+	if not _response_checks() or not _slide_checks() or not _wall_stride_checks() or not _wall_stride_audio_checks() or not _foot_transfer_checks() or not _landing_feedback_checks() or not _movement_dust_checks():
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

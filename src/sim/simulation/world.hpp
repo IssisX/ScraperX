@@ -1351,6 +1351,11 @@ private:
     JPH::Vec3 landing_force_support_local_point_ = JPH::Vec3::sZero();
 
     Snapshot state_{};
+    // A short input transaction on these exact two grips. This never extends
+    // their reach or lifetime and cannot survive a release/regrip/restart.
+    std::uint32_t hang_topout_ticks_left_ = 0;
+    std::uint64_t hang_topout_left_generation_ = 0;
+    std::uint64_t hang_topout_right_generation_ = 0;
 };
 
 } // namespace scraperx::sim

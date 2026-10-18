@@ -190,6 +190,7 @@ inline constexpr float kClimbHandHigh = 0.80F;
 // its chest, so it rises to the top of a pipe, not an arm's length short.
 inline constexpr float kClimbMoveAim = 0.50F;
 inline constexpr float kClimbHandMid = 0.45F;
+inline constexpr float kTransferShoulderReachM = 1.05F;
 inline constexpr float kClimbHandLow = 0.20F;
 inline constexpr float kClimbHandReach = 0.40F;
 inline constexpr float kClimbHandSpan = 0.20F;

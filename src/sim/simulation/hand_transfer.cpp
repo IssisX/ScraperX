@@ -138,7 +138,7 @@ bool Simulation::PhysicsWorld::begin_cargo_transfer(JPH::BodyInterface &bodies,c
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
     const auto shoulder=origin+JPH::Vec3(0,kClimbHandMid,0);
     const float shoulder_to_lip = JPH::Vec3(probe.ledge_point-shoulder).Length();
-    if (shoulder_to_lip>1.05F) return false;
+    if (shoulder_to_lip>kTransferShoulderReachM) return false;
     Lip lips[2];
     if(!probe_lip_pair(probe.ledge_point,probe.inward,probe.ledge_body,lips)) return false;
     // Revalidate a real receiving surface, including reconstructed hang
