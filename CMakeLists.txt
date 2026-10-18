@@ -34,6 +34,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/yard_crane_control.cpp
     src/sim/simulation/hand_transfer.cpp
     src/sim/simulation/ledge_corner.cpp
+    src/sim/simulation/swing_transfer.cpp
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
     src/sim/simulation/ground_slide.cpp
@@ -54,6 +55,7 @@ add_library(scraperx_sim STATIC
     src/sim/traversal_plan.cpp
     src/sim/traversal_receiver.cpp
     src/sim/parkour_route.cpp
+    src/sim/ground_swing_route.cpp
     src/sim/workshop_roof_route.cpp
     src/sim/vault_rail_route.cpp
     src/sim/physical_hand_prop.cpp
@@ -252,6 +254,11 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         target_link_libraries(scraperx_physical_corner_tests PRIVATE scraperx_sim)
         foreach(mode flow reverse release)
             add_test(NAME scraperx_sim.physical_corner_${mode} COMMAND scraperx_physical_corner_tests ${mode})
+        endforeach()
+        add_executable(scraperx_swing_transfer_tests tests/swing_transfer_tests.cpp)
+        target_link_libraries(scraperx_swing_transfer_tests PRIVATE scraperx_sim)
+        foreach(mode flow release jump restart)
+            add_test(NAME scraperx_sim.swing_transfer_${mode} COMMAND scraperx_swing_transfer_tests ${mode})
         endforeach()
         add_executable(scraperx_grapple_bay_clearance_tests tests/grapple_bay_clearance_tests.cpp)
         target_link_libraries(scraperx_grapple_bay_clearance_tests PRIVATE scraperx_sim)

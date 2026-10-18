@@ -124,8 +124,10 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
     if (traversal_state_ == TraversalState::Climbing) {
         if (commands.release_requested) {
             let_go_climb(bodies);
-        } else if (physical_hands_->swinging() && (commands.jump_requested || commands.traversal_requested)) {
+        } else if (physical_hands_->swinging() && commands.jump_requested) {
             let_go_climb(bodies);
+        } else if (physical_hands_->swinging() && commands.traversal_requested) {
+            if (!try_swing_regrip(bodies,commands)) ++rejected_traversal_count_;
         } else if (commands.jump_requested) {
             jump_off_climb(bodies);
         } else if (commands.traversal_requested && !try_top_out(bodies)) {

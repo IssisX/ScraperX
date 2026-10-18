@@ -150,7 +150,7 @@ using namespace detail;
 }
 
 void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
-    if (grounded_ || crouched_ || carry_constraint_ != nullptr) {
+    if (automatic_grip_cancelled_ || grounded_ || crouched_ || carry_constraint_ != nullptr) {
         return;
     }
     // A finite walking step may briefly leave its tread. Keep that rising
@@ -619,6 +619,7 @@ void Simulation::PhysicsWorld::sync_radial_profile(JPH::BodyInterface &bodies,co
         // A rejected neutral Action preserves the existing loaded radial row.
         if (!neutral || !radial_ownership_eligible()) (void)leave_radial_profile(bodies);
     } else if (neutral && !action && !corner_transfer_.active &&
+               !(physical_hands_->swinging() && hands_[0].body != hands_[1].body) &&
                !plank_entry_overlap_is_legal() && hanging_posture_eligible(bodies)) {
         (void)physical_hands_->set_radial_profile(true);
     }
@@ -672,6 +673,7 @@ void Simulation::PhysicsWorld::advance_hanging_posture(const JPH::BodyInterface 
 
 void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const StepCommands &commands,
                   const float delta_seconds) noexcept {
+    if (physical_hands_->swinging() && regrip_cooldown_ticks_ > 0) --regrip_cooldown_ticks_;
     if (!physical_hands_->compatible_hands()) {
         if (physical_hands_->radial_active() && hanging_posture_eligible(bodies))
             advance_hanging_posture(bodies,JPH::Vec3::sZero(),delta_seconds);
@@ -686,19 +688,12 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
         const auto grip = .5F*(hand_point(bodies,0)+hand_point(bodies,1));
         // Human arm/torso reach, measured from the real grip to the body.
         // An overspeed miss must release rather than stretch invisible arms.
-        if (JPH::Vec3(grip-bodies.GetPosition(player_id_)).Length()>1.75F) {
+        if (JPH::Vec3(grip-bodies.GetPosition(player_id_)).Length()>1.75F ||
+            (hands_[0].body != hands_[1].body && !actual_hands_in_reach(bodies))) {
             let_go_climb(bodies);
             return;
         }
-        const JPH::Vec3 radius(grip-parkour_swing_pivot(traversal_entity_id_));
-        const JPH::Vec3 tangent = JPH::Vec3(-radius.GetY(),radius.GetX(),0).NormalizedOr(JPH::Vec3::sAxisX());
-        // CHOSEN +/-0.15m body lean,0.6m/s stroke and500W measured
-        // positive spring-rest-target work. No constant hinge torque.
-        // Gravity, real player mass and the passive hinge create the swing.
-        // The player chooses the phase; no automatic pumping or angle grant.
-        const auto goal = grip+swing_rest_offset_+tangent*float(.15*commands.move_input_x);
-        advance_hanging_posture(bodies, JPH::Vec3(goal-physical_hands_->commanded_position()) +
-            JPH::Vec3(0, hanging_posture_offset_m_, 0), delta_seconds, .12F);
+        advance_swing_targets(bodies,commands,delta_seconds);
         if (grounded_ && support_entity_id_==parkour_swing_recovery(traversal_entity_id_))
             let_go_climb(bodies);
         return;

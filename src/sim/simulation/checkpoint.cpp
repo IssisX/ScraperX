@@ -44,6 +44,7 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     ground_slide_armed_ = true;
     ground_slide_count_ = 0;
     jump_vault_ticks_left_ = regrab_lockout_ticks_ = ordinary_jump_ticks_left_ = 0;
+    automatic_grip_cancelled_ = false;
     // An explicit debug relocation creates its own retry point. Ordinary
     // walking still commits only on verified firm footing.
     checkpoint_position_ = destination;
@@ -168,6 +169,7 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 }
 
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+    automatic_grip_cancelled_ = false;
     clear_forklift_commands();
     if (grappling_gun_) grappling_gun_->clear_transients();
     grapple_equipped_ = false;

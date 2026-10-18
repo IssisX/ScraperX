@@ -64,6 +64,20 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 	_workshop_roof_route(geometry, root, paint)
 	_upward_wall_step_route(geometry, root, paint)
 	_corner_hang_route(geometry, root, paint)
+	_swing_transfer_route(geometry, root, paint)
+
+
+static func _swing_transfer_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	var offset := root.position
+	_arrow(geometry, root, paint, Vector3(-50.0, 0.0, -54.0) - offset, Vector2(0.0, -1.0))
+	_roof_label(root, paint, "SWING TRANSFER\nJUMP TO THE FIRST BAR\nLEAN TOWARD THE NEXT BAR\nACTION: REACH NEXT BAR\nJUMP / DROP: LET GO",
+		Vector3(-52.6, 0.009, -60.3) - offset)
+	for step in 3:
+		_strip(geometry, root, paint,
+			Vector3(-52.1 + float(step) * 0.45, 0.15 * float(step + 1), -59.0) - offset,
+			Vector2(0.07, 1.2))
+	_arrow(geometry, root, paint, Vector3(-50.4, 0.45, -59.0) - offset, Vector2.RIGHT)
+	_arrow(geometry, root, paint, Vector3(-46.2, 0.30, -59.0) - offset, Vector2.RIGHT)
 
 
 static func _corner_hang_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:

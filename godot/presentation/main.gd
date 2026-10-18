@@ -1347,11 +1347,11 @@ func _read_context() -> Dictionary:
 			action = {"id": &"reach_hand", "label": "REACH HAND", "icon": &"climb",
 				"detail": "" if bool(landing.get("missing_hand_grip_available", false)) else "NO CLEAR GRIP"}
 		else:
-			# The native swinging subtype releases these hands on Action;
+			# Swing Action reaches a verified next bar. Jump/Drop release;
 			# ordinary climbing still requests its contextual top-out.
 			var swinging := bool(landing.get("player_swinging", false))
-			action = {"id": &"climb_up", "label": "LET GO" if swinging else "CLIMB UP",
-				"icon": &"drop" if swinging else &"climb", "detail": ""}
+			action = {"id": &"climb_up", "label": "REACH BAR" if swinging else "CLIMB UP",
+				"icon": &"climb", "detail": "LEAN TOWARD THE NEXT BAR" if swinging else ""}
 	elif not free:
 		pass
 	elif carrying != 0 and rig == RIG_HOOK:

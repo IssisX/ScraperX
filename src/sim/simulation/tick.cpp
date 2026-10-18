@@ -46,6 +46,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     const auto foot_transfers_before_tick = state_.foot_transfer_count;
     const auto traversal_before_commands = traversal_state_;
     apply_grapple_commands(commands);
+    // Drop cancels held automatic reach across every nearby body. A new
+    // deliberate action, neutral stick or real footing rearms that intent.
+    if (commands.release_requested) automatic_grip_cancelled_ = true;
+    else if (grounded_ || commands.traversal_requested || commands.jump_requested ||
+             std::hypot(commands.move_input_x,commands.move_input_z) <= kClimbInputDeadzone)
+        automatic_grip_cancelled_ = false;
     foot_push_started_this_tick_ = false;
     if (grounded_) wall_stride_available_ = false;
     const bool jump_cancelled = commands.cancel_jump_requested ||

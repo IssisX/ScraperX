@@ -1,0 +1,185 @@
+{
+  "base_commit": "337cf5bcd0e04202a045fab5b9f965bd270d8d07",
+  "host": "Termux host, Ubuntu proot C++17 strict Release, native90Hz",
+  "source_sha256": {
+    "src/sim/ground_swing_route.hpp": "aa8a24bb42943d5d0df564a38a7ba398fc0d3076d1443c93badfc1a057784094",
+    "src/sim/ground_swing_route.cpp": "e4862c45a52272223ef0671deb6902ab9437391c953492ddaf7955d66064a859",
+    "src/sim/parkour_route.hpp": "0cdb9b716a89f0a9927cff5f686885324e503dc5d8b34b109fc7608697fbac4b",
+    "src/sim/simulation/world.hpp": "258830d5b4f365c33d4d61ca19778b48d60aa1051f165d3dffac801c4bcf4c5f",
+    "src/sim/simulation/world.cpp": "1908c7eb78d48c46f30e08954ec8e6b3309a61506ac2727b5113add72b37f164",
+    "src/sim/simulation/climb.cpp": "a25f8ea4a41a38508dcea685193910dc7604e96bbde1c19b002cda6d3ae7c33b",
+    "src/sim/simulation/locomotion.cpp": "ae332372886e82d663b21d3f30b763bd0fecccb4c962c8c0ca384d12cd41f9dc",
+    "src/sim/simulation/tick.cpp": "875510964f41b3e74f1c092acc6a6c4b77910eb9e6223b8f6a32e287c19179db",
+    "src/sim/simulation/checkpoint.cpp": "5c1c7a7026f6a3ef85a4cfae95cd15d9fcab7dc054c7e9ed8726fe5eaf763721",
+    "src/sim/simulation/swing_transfer.cpp": "97060d7be0c0bec9ddf834e17eba83bf6a38d734699d8da779299412a3d1e646",
+    "tests/swing_transfer_tests.cpp": "292e5ea70fa32c6cb9ccb4a61ccedfa0883ff8b99936acd24d1d0b1929413f25",
+    "godot/presentation/parkour_route_markings.gd": "fe6e25a47ca99a217cfff1bc5b93c1aee4c6ea71e70d773a0a99a28abbc6984c"
+  },
+  "coherent_native_build": {
+    "all_translation_units": 79,
+    "exit_codes": 0,
+    "commands": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/native-build-commands.json",
+    "results": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/native-build-results.json",
+    "world_layout_dependent_rebuild": 26,
+    "world_commands": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/commands.json",
+    "world_results": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/results.json",
+    "archive": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/libswing-drop.a"
+  },
+  "test_compile": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+    "--",
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++17",
+    "-pthread",
+    "-fPIC",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/source/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+    "-c",
+    "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic.cpp",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic.o"
+  ],
+  "test_link": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+    "--",
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++17",
+    "-pthread",
+    "-fPIC",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/source/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+    "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic.o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/libswing-drop.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic"
+  ],
+  "checks": [
+    {
+      "mode": "flow",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic",
+        "flow"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSWING_REGRIP tick=92 hand=0 v_before=3.11584,-0.892857 v_after=2.94162,-0.808635\nSWING_REGRIP tick=231 hand=1 v_before=2.50558,0.0130067 v_after=2.52023,0.0256322\nPASS SWING_TRANSFER mode=flow placements=2\n",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-flow.log"
+    },
+    {
+      "mode": "release",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic",
+        "release"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSWING_REGRIP tick=92 hand=0 v_before=3.11584,-0.892857 v_after=2.94162,-0.808635\nPASS SWING_TRANSFER mode=release placements=1\n",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/accepted-release.log"
+    },
+    {
+      "mode": "jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic",
+        "jump"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSWING_REGRIP tick=92 hand=0 v_before=3.11584,-0.892857 v_after=2.94162,-0.808635\nPASS SWING_TRANSFER mode=jump placements=1\n",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/accepted-jump.log"
+    },
+    {
+      "mode": "restart",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/forward-diagnostic",
+        "restart"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nSWING_REGRIP tick=92 hand=0 v_before=3.11584,-0.892857 v_after=2.94162,-0.808635\nPASS SWING_TRANSFER mode=restart placements=1\n",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/accepted-restart.log"
+    }
+  ],
+  "reused_private_candidate": {
+    "commands": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/candidate-commands.json",
+    "result": {
+      "exit_code": 0
+    },
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/candidate-run.log"
+  },
+  "retained_failed_attempts": [
+    {
+      "classification": "introduced implementation failure",
+      "observation": "first hand crossed; body could not keep second reachable before natural release178",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/candidate-run.log",
+      "repair": "input-driven, collision-clear torso command through existing finite hand owner"
+    },
+    {
+      "classification": "introduced input lifecycle failure",
+      "observation": "completed transfer272; Drop with held forward recaught old body276",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/torso/candidate-run.log",
+      "repair": "Drop cancels held automatic reach until fresh Action/Jump, neutral stick or actual ground"
+    },
+    {
+      "classification": "acceptance input-driver error against player-facing forward-lean control",
+      "observation": "neutral mixed pause survived; driver resumed alternating old-bar pumping and physically lost reach171",
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-swing-transfer-xa23ztrs/drop/public-flow.log",
+      "repair": "after one hand crosses, driver leans toward actual receiving bar; all pause, reach, force, anchor, cadence, release and footing assertions retained"
+    }
+  ],
+  "limits": [
+    "rigid recognized Cartesian swing support only; no implicit radial/material migration",
+    "native public input after one initial actual-plinth staging; approach from spawn/device feel not played here",
+    "Godot import and Android artifact belong to exact-source candidate CI; full project release is separate"
+  ]
+}

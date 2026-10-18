@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/mechanism_kit.hpp"
+#include "sim/ground_swing_route.hpp"
 #include "sim/west_brace_bay_route.hpp"
 #include "sim/inspection_junction_route.hpp"
 #include "sim/north_transfer_route.hpp"
@@ -18,16 +19,19 @@ inline constexpr float kParkourSwingLength = 7.0F;
 inline constexpr float kParkourSwingMassKg = 40.0F;
 
 [[nodiscard]] constexpr bool is_parkour_swing_entity(std::uint64_t entity) noexcept {
-    return entity == kParkourSwingEntity || entity == kInspectionSwingEntity;
+    return entity == kParkourSwingEntity || entity == kInspectionSwingEntity ||
+           is_ground_swing_entity(entity);
 }
 
 // Each passive hanger uses its real bearing, rather than the Crown bearing
 // as an implicit origin for all pumping tangents.
 [[nodiscard]] inline JPH::RVec3 parkour_swing_pivot(std::uint64_t entity) noexcept {
+    if (is_ground_swing_entity(entity)) return ground_swing_pivot(entity);
     return entity == kInspectionSwingEntity ? kInspectionSwingPivot : kParkourSwingPivot;
 }
 
 [[nodiscard]] constexpr std::uint64_t parkour_swing_recovery(std::uint64_t entity) noexcept {
+    if (is_ground_swing_entity(entity)) return kGroundSwingRecoveryEntity;
     return entity == kInspectionSwingEntity ? kInspectionRecoveryEntity : kParkourRecoveryEntity;
 }
 

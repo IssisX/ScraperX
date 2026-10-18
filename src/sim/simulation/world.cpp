@@ -250,6 +250,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         // Append after all retained physics bodies, including the hook.
         build_workshop_roof_route(*kit_);
         build_vault_rail_route(*kit_);
+        build_ground_swing_route(*kit_);
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());

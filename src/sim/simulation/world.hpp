@@ -858,6 +858,10 @@ private:
 
     void set_hand(const JPH::BodyInterface &bodies, const std::uint32_t hand,
                   const Grip &grip) noexcept;
+    [[nodiscard]] bool try_swing_regrip(const JPH::BodyInterface &bodies,
+                                       const StepCommands &commands) noexcept;
+    void advance_swing_targets(const JPH::BodyInterface &bodies, const StepCommands &commands,
+                                float dt) noexcept;
 
     // Both hands onto the holds nearest their rest aims, left a little lower
     // than right; a hand that finds none may share the initial hold if its
@@ -1261,6 +1265,7 @@ private:
     std::uint32_t traversal_stall_ticks_ = 0;
     JPH::BodyID last_released_grip_;
     std::uint32_t regrab_lockout_ticks_ = 0;
+    bool automatic_grip_cancelled_ = false;
     std::uint64_t accepted_traversal_count_ = 0;
     std::uint64_t rejected_traversal_count_ = 0;
     std::uint64_t aborted_traversal_count_ = 0;
