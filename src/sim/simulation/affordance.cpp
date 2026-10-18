@@ -91,6 +91,7 @@ void Simulation::PhysicsWorld::clear_traversal(bool preserve_valid_foot) noexcep
         state_.hand_foot_last_hand_load_n=state_.hand_foot_last_foot_load_n=0;
     }
     traversal_plan_.clear();
+    corner_transfer_.clear();
     traversal_affordances_.clear();
     traversal_state_ = TraversalState::None;
     traversal_normal_ = JPH::Vec3::sZero();

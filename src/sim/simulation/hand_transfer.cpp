@@ -4,9 +4,7 @@
 namespace scraperx::sim {
 using namespace detail;
 
-namespace {
-bool receiving_path_is_clear(const JPH::PhysicsSystem &system, JPH::BodyID player,
-                             const JPH::Shape *shape, JPH::RVec3 from, JPH::RVec3 to) {
+bool Simulation::PhysicsWorld::standing_path_is_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept {
     const JPH::Vec3 movement(to-from);
     if (movement.IsNearZero()) return true;
     class Collector final : public JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> {
@@ -22,16 +20,16 @@ bool receiving_path_is_clear(const JPH::PhysicsSystem &system, JPH::BodyID playe
     private:
         JPH::Vec3 movement_;
     } collector(movement);
-    const JPH::RShapeCast sweep(shape,JPH::Vec3::sReplicate(1),
+    const JPH::RShapeCast sweep(player_shape_.GetPtr(),JPH::Vec3::sReplicate(1),
         JPH::RMat44::sTranslation(from),movement);
-    const JPH::IgnoreSingleBodyFilter filter(player);
-    system.GetNarrowPhaseQuery().CastShape(sweep,JPH::ShapeCastSettings(),from,
+    const JPH::IgnoreSingleBodyFilter filter(player_id_);
+    physics_system_.GetNarrowPhaseQuery().CastShape(sweep,JPH::ShapeCastSettings(),from,
         collector,{},{},filter);
     return !collector.HadHit();
 }
-} // namespace
 
 [[nodiscard]] bool Simulation::PhysicsWorld::try_top_out(JPH::BodyInterface &bodies) noexcept {
+    if (corner_transfer_.active) return false;
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
     // Action may reaffirm this physical handoff, never change its owner.
     if (cargo_transfer_active_ || cargo_push_seconds_>=0.0F) return true;
@@ -318,7 +316,7 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
     const auto receiving_goal=hand_goal+JPH::Vec3(0,0.02F,0);
     if (receiving || actual.GetY()-kPlayerHalfHeight >= ledge.GetY()+0.04F) {
         if (!shape_pose_is_clear(player_shape_.GetPtr(),receiving_goal) ||
-            !receiving_path_is_clear(physics_system_,player_id_,player_shape_.GetPtr(),actual,receiving_goal)) {
+            !standing_path_is_clear(actual,receiving_goal)) {
             traversal_plan_.rejection = TraversalRejection::BlockedClearance;
             return;
         }
@@ -355,8 +353,10 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
     (void)physical_hands_->advance_targets(command,dt);
 }
 
-[[nodiscard]] Lip Simulation::PhysicsWorld::probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal) const noexcept {
+[[nodiscard]] Lip Simulation::PhysicsWorld::probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal,
+                                                     JPH::Vec3 *observed_inward) const noexcept {
     Lip lip;
+    if (observed_inward) *observed_inward = JPH::Vec3::sZero();
     const JPH::RVec3 outside =
         near - normal * 0.5F - JPH::Vec3(0.0F, kLipProbeDepth, 0.0F);
     const JPH::Vec3 across = normal * 0.9F;
@@ -365,6 +365,10 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
         return lip;
     }
     const JPH::RVec3 face = JPH::RRayCast(outside, across).GetPointOnRay(face_hit.mFraction);
+    if (observed_inward) {
+        const auto surface = surface_normal(face_hit.mBodyID,face_hit.mSubShapeID2,face);
+        *observed_inward = -JPH::Vec3(surface.GetX(),0,surface.GetZ()).NormalizedOr(JPH::Vec3::sZero());
+    }
     const JPH::RVec3 above = face + normal * kTopProbeInset + JPH::Vec3(0.0F, 0.30F, 0.0F);
     const JPH::Vec3 down(0.0F, -0.45F, 0.0F);
     JPH::RayCastResult top_hit;
@@ -396,6 +400,10 @@ void Simulation::PhysicsWorld::update_shimmy(JPH::BodyInterface &bodies, const S
     const bool regrip_ready = regrip_cooldown_ticks_ == 0;
     if (regrip_cooldown_ticks_ > 0) --regrip_cooldown_ticks_;
     if (physical_hands_->active() && !physical_hands_->compatible_hands()) return;
+    if (corner_transfer_.active) {
+        update_corner_shimmy(bodies,commands,delta_seconds,regrip_ready);
+        return;
+    }
     if (physical_hands_->radial_active()) return;
     const JPH::Vec3 right = traversal_right();
     const double side_input =
@@ -424,6 +432,12 @@ void Simulation::PhysicsWorld::update_shimmy(JPH::BodyInterface &bodies, const S
         std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
         !climb_move_clear(bodies.GetPosition(player_id_),
                           bodies.GetPosition(player_id_) + JPH::Vec3(at.hold - hold))) {
+        // Crossing into a new face needs intent along that face as well.
+        // Sideways-only input retains the current ledge's blocked end.
+        const double around = commands.move_input_x*traversal_normal_.GetX()+
+                              commands.move_input_z*traversal_normal_.GetZ();
+        if (around > kClimbInputDeadzone && begin_corner_shimmy(bodies,sign))
+            update_corner_shimmy(bodies,commands,delta_seconds,regrip_ready);
         return;
     }
     Lip pair[2];

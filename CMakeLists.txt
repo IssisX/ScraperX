@@ -33,6 +33,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/forklift.cpp
     src/sim/simulation/yard_crane_control.cpp
     src/sim/simulation/hand_transfer.cpp
+    src/sim/simulation/ledge_corner.cpp
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
     src/sim/simulation/ground_slide.cpp
@@ -247,6 +248,11 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_alternating_shimmy_tests tests/alternating_shimmy_tests.cpp)
         target_link_libraries(scraperx_alternating_shimmy_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.alternating_shimmy COMMAND scraperx_alternating_shimmy_tests)
+        add_executable(scraperx_physical_corner_tests tests/physical_corner_tests.cpp)
+        target_link_libraries(scraperx_physical_corner_tests PRIVATE scraperx_sim)
+        foreach(mode flow reverse release)
+            add_test(NAME scraperx_sim.physical_corner_${mode} COMMAND scraperx_physical_corner_tests ${mode})
+        endforeach()
         add_executable(scraperx_grapple_bay_clearance_tests tests/grapple_bay_clearance_tests.cpp)
         target_link_libraries(scraperx_grapple_bay_clearance_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.grapple_bay_clearance COMMAND scraperx_grapple_bay_clearance_tests)

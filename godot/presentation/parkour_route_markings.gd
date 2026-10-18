@@ -63,6 +63,17 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 	_palm_rail_route(geometry, root, paint)
 	_workshop_roof_route(geometry, root, paint)
 	_upward_wall_step_route(geometry, root, paint)
+	_corner_hang_route(geometry, root, paint)
+
+
+static func _corner_hang_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# The same actual workshop slab supplies both exposed grip faces. Paint
+	# stays inset on its top and supplies no collision or hand support.
+	var offset := root.position
+	_roof_label(root, paint, "CORNER HANG\nBACK TO EDGE + DROP\nMOVE DIAGONALLY TO TURN\nACTION TO PULL UP",
+		Vector3(-41.4, 5.149, -35.9) - offset)
+	_strip(geometry, root, paint, Vector3(-43.1, 5.14, -38.32) - offset, Vector2(0.8, 0.08))
+	_strip(geometry, root, paint, Vector3(-44.07, 5.14, -37.5) - offset, Vector2(0.08, 0.8))
 
 
 static func _upward_wall_step_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:

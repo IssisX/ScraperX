@@ -1,0 +1,221 @@
+{
+  "base_commit": "ecc3d2b416d888e2a56870d30c632d29800c99d7",
+  "source_sha256": {
+    "src/sim/simulation/ledge_corner.cpp": "798fa6987b5d0f82a22123331b96a681fdc6278dc89659e1904e02f7ef123154",
+    "src/sim/simulation/hand_transfer.cpp": "004cc7ac5844c26c778dcf1df54bb5461dd6cb5a97a124bc4be8aba28e9ab4b0",
+    "src/sim/simulation/climb.cpp": "4d6c1137def953e50ef8811080776c2e400d0fec3cbd60426585e55e7a18403f",
+    "src/sim/simulation/affordance.cpp": "8981271cb8819996f6410590b636af666af9fd391c288eaaa27d85b723987aa6",
+    "src/sim/simulation/world.hpp": "ac653f7c445b8f04728877ff9c7a97007129f7ba7caf84d0339670e19dc3caf8",
+    "tests/physical_corner_tests.cpp": "ed923d0ee390dafcea331766483f3a9eb5828517e7e1e28281acebb251f2e3db",
+    "tests/alternating_shimmy_tests.cpp": "9aaed58bdb9c9006c31bb028b530a24ab93a344218eefe36b7913d696a0ee72c",
+    "godot/presentation/parkour_route_markings.gd": "7d3b96b520598cfaff1ca7c287568d390e44d5e55a277edf8826cdf47aad667e"
+  },
+  "native_build": {
+    "translation_units": 77,
+    "exit_code": 0,
+    "command_file": "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/native-build-commands.json",
+    "scope": "Coherent published-base plus private corner-state/native owner edits; no unrelated dirty hook or Snapshot changes. Intent revision replaces only hand_transfer object in a copied archive."
+  },
+  "commands": {
+    "compile": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/source/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/hand_transfer.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/src_sim_simulation_hand_transfer.cpp.o"
+    ],
+    "archive": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/ar",
+      "rcs",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/libcorner-intent.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/src_sim_simulation_hand_transfer.cpp.o"
+    ],
+    "corner-link": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/source/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/physical-corner-tests.o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/libcorner-intent.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/corner"
+    ],
+    "alternating-link": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/source/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/alternating_shimmy_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/libcorner-intent.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/alternating"
+    ],
+    "corner-flow": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/corner",
+      "flow"
+    ],
+    "corner-reverse": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/corner",
+      "reverse"
+    ],
+    "corner-release": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/corner",
+      "release"
+    ],
+    "alternating": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/intent/alternating"
+    ]
+  },
+  "results": [
+    {
+      "name": "compile",
+      "exit_code": 0,
+      "seconds": 16.253231295995647
+    },
+    {
+      "name": "archive",
+      "exit_code": 0,
+      "seconds": 1.5845614050049335
+    },
+    {
+      "name": "corner-link",
+      "exit_code": 0,
+      "seconds": 2.039480468010879
+    },
+    {
+      "name": "alternating-link",
+      "exit_code": 0,
+      "seconds": 10.625070619993494
+    },
+    {
+      "name": "corner-reverse",
+      "exit_code": 0,
+      "seconds": 11.031633382008295
+    },
+    {
+      "name": "corner-release",
+      "exit_code": 0,
+      "seconds": 11.669419005993404
+    },
+    {
+      "name": "corner-flow",
+      "exit_code": 0,
+      "seconds": 25.58318420899741
+    },
+    {
+      "name": "alternating",
+      "exit_code": 0,
+      "seconds": 15.301007442001719
+    }
+  ],
+  "output": {
+    "corner-flow": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCORNER_REGRIP tick=32 left=0 right=1 forward=1\nCORNER_REGRIP tick=54 left=1 right=0 forward=1\nCORNER_REGRIP tick=76 left=0 right=1 forward=1\nCORNER_REGRIP tick=106 left=1 right=0 forward=1\nCORNER_MIXED tick=106\nCORNER_REGRIP tick=159 left=0 right=1 forward=1\nCORNER_REGRIP tick=485 left=1 right=0 forward=1\nPASS PHYSICAL_CORNER mode=flow placements=6\n",
+    "corner-reverse": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCORNER_REGRIP tick=32 left=0 right=1 forward=1\nCORNER_REGRIP tick=54 left=1 right=0 forward=1\nCORNER_REGRIP tick=76 left=0 right=1 forward=1\nCORNER_REGRIP tick=106 left=1 right=0 forward=1\nCORNER_MIXED tick=106\nCORNER_REGRIP tick=143 left=1 right=0 forward=0\nPASS PHYSICAL_CORNER mode=reverse placements=5\n",
+    "corner-release": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCORNER_REGRIP tick=32 left=0 right=1 forward=1\nCORNER_REGRIP tick=54 left=1 right=0 forward=1\nCORNER_REGRIP tick=76 left=0 right=1 forward=1\nCORNER_REGRIP tick=106 left=1 right=0 forward=1\nCORNER_MIXED tick=106\nPASS PHYSICAL_CORNER mode=release placements=4\n",
+    "alternating": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCATCH tick=52 z=-180.6\nREGRIP tick=134 changed=0,1 hand_z=-180.82,-180.957\nREGRIP tick=153 changed=1,0 hand_z=-181.083,-180.957\nREGRIP tick=172 changed=0,1 hand_z=-181.083,-181.21\nREGRIP tick=191 changed=1,0 hand_z=-181.337,-181.21\nREGRIP tick=210 changed=0,1 hand_z=-181.337,-181.463\nREGRIP tick=260 changed=0,1 hand_z=-181.337,-180.843\nREGRIP tick=279 changed=1,0 hand_z=-180.717,-180.843\nREGRIP tick=298 changed=0,1 hand_z=-180.717,-180.59\nREGRIP tick=317 changed=1,0 hand_z=-180.463,-180.59\nREGRIP tick=336 changed=0,1 hand_z=-180.463,-180.337\nREGRIP tick=355 changed=1,0 hand_z=-180.21,-180.337\nREGRIP tick=374 changed=0,1 hand_z=-180.21,-180.083\nBLOCKED_EDGE tick=619 z=-180.253\nREGRIP tick=656 changed=0,1 hand_z=-180.21,-180.61\nREGRIP tick=675 changed=1,0 hand_z=-180.737,-180.61\nREGRIP tick=694 changed=0,1 hand_z=-180.737,-180.863\nREGRIP tick=713 changed=1,0 hand_z=-180.99,-180.863\nREGRIP tick=732 changed=0,1 hand_z=-180.99,-181.117\nREGRIP tick=751 changed=1,0 hand_z=-181.243,-181.117\nREGRIP tick=770 changed=0,1 hand_z=-181.243,-181.37\nREGRIP tick=789 changed=1,0 hand_z=-181.497,-181.37\nREGRIP tick=808 changed=0,1 hand_z=-181.497,-181.623\nREGRIP tick=827 changed=1,0 hand_z=-181.75,-181.623\nREGRIP tick=846 changed=0,1 hand_z=-181.75,-181.877\nREGRIP tick=865 changed=1,0 hand_z=-182.004,-181.877\nREGRIP tick=884 changed=0,1 hand_z=-182.004,-182.13\nREGRIP tick=903 changed=1,0 hand_z=-182.257,-182.13\nALTERNATION both=0 left=12 right=14 cadence=1 planted=1 trailing=1\nPASS SHIMMY ordinary_jump_canopy_reversal_clear_topout firm90=1 tick=1139\n"
+  },
+  "initial_corner_probe": {
+    "command_file": "/data/data/com.termux/files/usr/tmp/scraperx-corner-shimmy-j24azrls/candidate-commands.json",
+    "exit_code": 0,
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCORNER tick=32 p=-43.65,3.78679,-38.8488 L=-43.87,-38.38 R=-44.0047,-38.38 gen=1,2\nCORNER tick=62 p=-43.7253,3.9651,-38.9426 L=-44.1084,-38.38 R=-44.0047,-38.38 gen=2,2\nCORNER tick=92 p=-43.9463,3.99853,-38.8826 L=-44.1084,-38.38 R=-44.2122,-38.38 gen=2,3\nCORNER tick=122 p=-44.0589,4.02282,-38.9267 L=-44.13,-38.03 R=-44.2122,-38.38 gen=3,3\nCORNER tick=152 p=-44.2079,3.99427,-38.9015 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=182 p=-44.3491,4.0138,-38.9138 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=212 p=-44.4891,4.00308,-38.9086 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=242 p=-44.6317,4.00811,-38.9102 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=272 p=-44.635,4.00609,-38.768 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=302 p=-44.6495,4.00674,-38.6364 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=332 p=-44.6457,4.00662,-38.4868 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=362 p=-44.6554,4.00658,-38.3505 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=392 p=-44.6574,4.00664,-38.2066 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=422 p=-44.661,4.0066,-38.0708 L=-44.13,-38.03 R=-44.13,-37.68 gen=3,4\nCORNER tick=452 p=-44.6597,4.00662,-37.9269 L=-44.13,-37.5784 R=-44.13,-37.68 gen=4,4\nCORNER tick=482 p=-44.66,4.00661,-37.7868 L=-44.13,-37.5784 R=-44.13,-37.4747 gen=4,5\nCORNER tick=512 p=-44.66,4.00661,-37.6447 L=-44.13,-37.3709 R=-44.13,-37.4747 gen=5,5\nCORNER tick=542 p=-44.66,4.00661,-37.5035 L=-44.13,-37.1635 R=-44.13,-37.2672 gen=6,6\nCORNER tick=572 p=-44.66,4.00661,-37.3619 L=-44.13,-37.1635 R=-44.13,-37.0598 gen=6,7\nCORNER tick=602 p=-44.66,4.00661,-37.2205 L=-44.13,-36.956 R=-44.13,-37.0598 gen=7,7\nCORNER_END p=-44.66,4.00661,-37.0838 hands=2\n"
+  },
+  "observed_repaired_failure": {
+    "classification": "introduced missing corner-intent gate",
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nCATCH tick=52 z=-180.6\nREGRIP tick=134 changed=0,1 hand_z=-180.82,-180.957\nREGRIP tick=153 changed=1,0 hand_z=-181.083,-180.957\nREGRIP tick=172 changed=0,1 hand_z=-181.083,-181.21\nREGRIP tick=191 changed=1,0 hand_z=-181.337,-181.21\nREGRIP tick=210 changed=0,1 hand_z=-181.337,-181.463\nREGRIP tick=260 changed=0,1 hand_z=-181.337,-180.843\nREGRIP tick=279 changed=1,0 hand_z=-180.717,-180.843\nREGRIP tick=298 changed=0,1 hand_z=-180.717,-180.59\nREGRIP tick=317 changed=1,0 hand_z=-180.463,-180.59\nREGRIP tick=336 changed=0,1 hand_z=-180.463,-180.337\nREGRIP tick=355 changed=1,0 hand_z=-180.21,-180.337\nREGRIP tick=374 changed=0,1 hand_z=-180.21,-180.083\nREGRIP tick=402 changed=1,0 hand_z=-180.12,-180.083\nFAIL SHIMMY reversal reaches the authored south lip end tick=583 pos=13.8912,104.867,-179.596 state=1 hands=2 generations=7,8 target=13.56,106.92,-180.253 ledge=13.91,106,-180.253 plan=0 reject=0 phase=0 foot=0 transfers=0 command_work=9559.25 positive_work=1470\n",
+    "repair": "Require prospective destination-tangent input as well as current-face side input before latching a corner. The unchanged existing test then passes."
+  },
+  "test_contract_correction": "New corner test allows existing neutral radial hang before corner entry and after returning to the original face; active mixed-corner pause still requires Cartesian ownership and unchanged span. Source sync_radial_profile independently establishes ordinary neutral radial behavior.",
+  "godot_runtime": "Pending matching candidate CI import/export. No phone or whole-project release claim."
+}

@@ -950,7 +950,12 @@ private:
     // The lip of a ledge near `near` (a point on or near its top edge),
     // faced along `normal`: a ray across just under the top onto its face,
     // then a ray down onto the top just inside the face.
-    [[nodiscard]] Lip probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal) const noexcept;
+    [[nodiscard]] Lip probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal,
+                               JPH::Vec3 *observed_inward = nullptr) const noexcept;
+    [[nodiscard]] bool standing_path_is_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    [[nodiscard]] bool begin_corner_shimmy(JPH::BodyInterface &bodies, float direction) noexcept;
+    void update_corner_shimmy(JPH::BodyInterface &bodies, const StepCommands &commands,
+                              float dt, bool regrip_ready) noexcept;
 
     // Hanging, the stick sideways moves along the ledge while its lip goes
     // on under the hands. Something standing on the ledge back from its lip
@@ -1129,6 +1134,23 @@ private:
     bool rigid_transfer_foot_valid_ = false;
     TraversalAffordanceCache traversal_affordances_;
     TraversalPlanState traversal_plan_;
+    // Transient intent for one same-part convex corner. Contacts and body
+    // motion remain owned by the existing finite hands and Jolt solve.
+    struct CornerTransferState {
+        bool active = false;
+        JPH::BodyID support;
+        JPH::SubShapeID part;
+        const JPH::Shape *shape = nullptr;
+        std::uint64_t entity = 0;
+        JPH::Vec3 local_corner = JPH::Vec3::sZero();
+        JPH::Vec3 local_old_normal = JPH::Vec3::sZero();
+        JPH::Vec3 local_new_normal = JPH::Vec3::sZero();
+        std::array<std::uint64_t,2> generations{};
+        float direction = 0;
+        float hang_drop_m = 0;
+        std::uint8_t destination_hands = 0;
+        void clear() noexcept { *this = CornerTransferState{}; }
+    } corner_transfer_;
     std::uint16_t foot_push_start_broken_mask_ = 0;
     std::uint64_t foot_push_start_count_ = 0;
     std::unique_ptr<TeeterRise> teeter_rise_;

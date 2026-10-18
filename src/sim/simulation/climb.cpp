@@ -618,7 +618,8 @@ void Simulation::PhysicsWorld::sync_radial_profile(JPH::BodyInterface &bodies,co
         // Successful top-out/release changes the owner before this sync.
         // A rejected neutral Action preserves the existing loaded radial row.
         if (!neutral || !radial_ownership_eligible()) (void)leave_radial_profile(bodies);
-    } else if (neutral && !action && !plank_entry_overlap_is_legal() && hanging_posture_eligible(bodies)) {
+    } else if (neutral && !action && !corner_transfer_.active &&
+               !plank_entry_overlap_is_legal() && hanging_posture_eligible(bodies)) {
         (void)physical_hands_->set_radial_profile(true);
     }
     if (physical_hands_->radial_active()) {
