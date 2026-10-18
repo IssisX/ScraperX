@@ -1,0 +1,229 @@
+{
+  "base_revision": "24922413354803d40b251ab7b99a6454c6bc3f41",
+  "scope": "New upper-gallery geometry over accepted unchanged native owners; exact clean CI publication follows.",
+  "native_build_receipt": {
+    "commands": [
+      {
+        "name": "world-geometry-build",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/source/src/sim/simulation/world_geometry.cpp",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/src_sim_simulation_world_geometry.cpp.o"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/world-geometry-build.log"
+      },
+      {
+        "name": "world-geometry-archive",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/ar",
+          "rcs",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/src_sim_simulation_world_geometry.cpp.o"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/world-geometry-archive.log"
+      },
+      {
+        "name": "bridge-link",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-shared",
+          "-pthread",
+          "-static-libgcc",
+          "-static-libstdc++",
+          "-Wl,-z,defs",
+          "-Wl,-soname,libscraperx_native.so",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libscraperx_native.so",
+          "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/bridge/register_types.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/bridge/scraperx_simulation.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/bridge/yard_crane_bridge.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/bridge-link.log"
+      },
+      {
+        "name": "lower-route-build",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_yard_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/lower-route"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/lower-route-build.log"
+      },
+      {
+        "name": "upper-route-build",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/upper_gallery_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-route"
+        ],
+        "exit": 0,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-route-build.log"
+      }
+    ],
+    "native_base": "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/libaircatch.a",
+    "exit": 0,
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/parkour_yard.gd": "a6369a17efae9ebfb25f2e28847b3b3c57ddfe2eb995dc28b694660944cfa33e",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/parkour_route_markings.gd": "5394b2d4df931d6673d2844b27d6e9445904748f554fd9508a4c6086b1641755",
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/world_solids.inc": "c36259122eb83d54391fcbc1b5199e4e1aded7b11bffe3a42f18fc05361cc459",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a": "0f1b95da44529f7ba06bfa3d713a3065e2cf658a370241f11cb8a7ddabb2a1f2"
+    }
+  },
+  "public_upper": {
+    "stage": "upper-public-stair-clearance",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-route"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/upper_gallery_route_tests.cpp": "90eb43d7296a3e647185f52e593e1c766bda2bbbb6ec2818642d4d5d385d9eb1",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-route": "cfae96844a20cfb12aaad85d8618cedd2026033503114b79131243a75abb45c9",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a": "0f1b95da44529f7ba06bfa3d713a3065e2cf658a370241f11cb8a7ddabb2a1f2"
+    },
+    "started": 1792346057.7849782,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-gallery-window.trial-5.log",
+    "exit": 0,
+    "finished": 1792346209.319603
+  },
+  "public_lower": {
+    "stage": "lower-public",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/lower-route"
+    ],
+    "sources": {
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/parkour_yard_route_tests.cpp": "ad029bc3bcf7009b366f3cf04cfeaf11735c968f33eb4e6f45faef1ee2721313",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/lower-route": "0130cb530514a2b73fb7ae6d8cdfb5eb7ee70133a0c3bc6260cca1ad9f2171d7",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a": "0f1b95da44529f7ba06bfa3d713a3065e2cf658a370241f11cb8a7ddabb2a1f2"
+    },
+    "started": 1792345798.3635004,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-gallery-window.trial-3.log",
+    "exit": 0,
+    "finished": 1792345868.1090178
+  },
+  "rendered": {
+    "result": "SCRAPERX_UPPER_GALLERY_VIEW PASS checks=34 failures=0 staged_footing=1",
+    "method": "native Godot MCP run_project + run_script deferred check + get_debug_output + stop_project",
+    "project": "/data/data/com.termux/files/usr/tmp/scraperx-air-catch-jz8afyr5/source/godot",
+    "native_archive": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/libuppergallery.a",
+    "native_bridge_sha256": "f456d142d163e459cd06f6907f221c0413451690f351f132207804b661f9ead8",
+    "sources": {
+      "godot/presentation/parkour_yard.gd": "a6369a17efae9ebfb25f2e28847b3b3c57ddfe2eb995dc28b694660944cfa33e",
+      "godot/presentation/parkour_route_markings.gd": "5394b2d4df931d6673d2844b27d6e9445904748f554fd9508a4c6086b1641755",
+      "godot/tests/upper_gallery_view_test.gd": "50f47cd5581e4ba930316a6f5723e1831d44da9a70f504178c461bdff92c2721",
+      "godot/tests/upper_gallery_view_test.tscn": "5cd2b9cdf50f2753a9ca839db45c76fd7e07caec5c26c825c253c72ebf08700e"
+    },
+    "captures": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/mcp-upper/01-perch-view.png",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/mcp-upper/02-perch-view.png",
+      "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/mcp-upper/03-perch-view.png"
+    ],
+    "scope": "Initial perch footing staged; actual Main, keyboard Jump, normal native world; full public approach and recovery covered separately by native route.",
+    "environment": "Godot4.7 ARM64 under proot/Xvfb/softpipe. Host audio unavailable; Dummy fallback, no device audio claim.",
+    "runtime_stopped": "Godot project stopped"
+  },
+  "trial_history": "/data/data/com.termux/files/usr/tmp/scraperx-upper-gallery-20261018/upper-gallery-window.json"
+}

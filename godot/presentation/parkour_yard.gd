@@ -4,6 +4,13 @@ extends RefCounted
 const WorldGeometry := preload("res://presentation/world_geometry.gd")
 const RouteMarkings := preload("res://presentation/parkour_route_markings.gd")
 const YARD_OFFSET := Vector3(4.0, 0.0, 0.0)
+# Local deck-top centres. The alternating maintenance perches branch off the
+# existing2.4m gallery; native export supplies their actual collision.
+const UPPER_GALLERY_PERCHES: Array[Vector3] = [
+	Vector3(-73.8, 3.0, -67.5),
+	Vector3(-78.2, 3.2, -78.5),
+	Vector3(-73.8, 3.0, -89.5),
+]
 var _g: WorldGeometry
 var _root: Node3D
 var _concrete: Material
@@ -27,10 +34,12 @@ func build() -> void:
 	_duct_gallery()
 	_loading_apron()
 	_return_gallery()
+	_upper_gallery()
 	# The service aisle remains an ordinary walkable recovery route.
 	for z in [-54.0, -66.0, -78.0, -90.0, -99.0]:
 		_box("ParkourPaint", Vector3(0.12, 0.003, 3.0), Vector3(-50.0, 0.004, z), _paint)
 	RouteMarkings.build(_g, _root, _paint)
+	RouteMarkings.upper_gallery(_g, _root, _paint, UPPER_GALLERY_PERCHES)
 
 func _utility_bay() -> void:
 	# Ground-bearing concrete equipment plinths: 1.6m gaps, 2.4m landings.
@@ -85,10 +94,29 @@ func _return_gallery() -> void:
 			_box("ScrambleRung", Vector3(2.0, height, 2.4),
 				Vector3(-70.0 - float(i) * 2.0, height * 0.5, z), _concrete)
 
-func _box(part: String, size: Vector3, at: Vector3, material: Material) -> void:
+func _upper_gallery() -> void:
+	# Brackets bear on the existing gallery's paired post heads. New ground
+	# posts would block the proven recovery aisle atz=-67.5; every bracket
+	# stays above2m. The west middle perch clears both existing storage cages.
+	for index in UPPER_GALLERY_PERCHES.size():
+		var top := UPPER_GALLERY_PERCHES[index]
+		var deck := _box("ParkourStructure", Vector3(1.4, 0.18, 1.8),
+			top - Vector3.UP * 0.09, _steel)
+		deck.set_meta(&"upper_gallery_perch", index)
+		var post_x := -74.8 if top.x > -76.0 else -77.2
+		for side in [-1.0, 1.0]:
+			_box("ParkourStructure", Vector3(1.4, 0.16, 0.16),
+				top + Vector3(0.0, -0.26, side * 0.58), _steel)
+			for end_x in [-0.5, 0.5]:
+				_strut(Vector3(post_x, 2.14, top.z + side * 1.5),
+					top + Vector3(end_x, -0.34, side * 0.58))
+
+
+func _box(part: String, size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
 	var instance := _g.add_box_to(part, size, at, material, _root)
 	instance.visibility_range_end = 180.0
 	instance.visibility_range_end_margin = 12.0
+	return instance
 
 func _strut(from: Vector3, to: Vector3) -> void:
 	var instance := _g.add_strut("ParkourStructure", from, to, 0.14, _steel, _root)

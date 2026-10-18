@@ -81,6 +81,25 @@ static func _swing_transfer_route(geometry: WorldGeometry, root: Node3D, paint: 
 	_arrow(geometry, root, paint, Vector3(-46.2, 0.30, -59.0) - offset, Vector2.RIGHT)
 
 
+static func upper_gallery(geometry: WorldGeometry, root: Node3D, paint: Material,
+		perches: Array[Vector3]) -> void:
+	_roof_label(root, paint, "HIGH LINE\nSTAGGERED INSPECTION PERCHES\nMISSED JUMP: RETURN BELOW",
+		Vector3(-68.6, 0.009, -60.0))
+	_arrow(geometry, root, paint, Vector3(-69.2, 0.0, -61.2), Vector2.LEFT)
+	for top in perches:
+		# Edge paint follows actual deck dimensions and stays inset. It does
+		# not add an invisible landing surface across the existing gallery gap.
+		for x_sign in [-1.0, 1.0]:
+			_strip(geometry, root, paint, top + Vector3(x_sign * 0.59, 0.0, 0.0), Vector2(0.08, 1.5))
+		for z_sign in [-1.0, 1.0]:
+			_strip(geometry, root, paint, top + Vector3(0.0, 0.0, z_sign * 0.77), Vector2(1.1, 0.08))
+		var launch := Vector3(-76.0, 2.4, top.z + 2.9)
+		var direction := Vector2(top.x - launch.x, top.z - launch.z).normalized()
+		_arrow(geometry, root, paint, launch, direction)
+		_arrow(geometry, root, paint, top, Vector2(-direction.x, direction.y))
+	_roof_label(root, paint, "HIGH LINE EXIT\nSOUTH STAIRS / RETURN AISLE", Vector3(-76.0, 2.409, -97.0))
+
+
 static func _corner_hang_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
 	# The same actual workshop slab supplies both exposed grip faces. Paint
 	# stays inset on its top and supplies no collision or hand support.

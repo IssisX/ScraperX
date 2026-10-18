@@ -4,7 +4,8 @@ The normal receiving-yard opening now has a connected physical practice network:
 approach from actual freight spawn, five running platform jumps, a deliberate
 floor recovery through the gallery, crouch passage beneath the service duct,
 return to open air and a sixth jump on retry. Docks, retaining faces and the
-raised gallery provide optional branches; their full upper routes are unproven.
+raised gallery provide optional branches. The connected upper-gallery extension
+now has its own public-route and rendered evidence in [UPPER_GALLERY.md](UPPER_GALLERY.md).
 Movement phases2–8 remain separate work. This change adds terrain, not new
 vault/wall-run/climbing actuator claims.
 

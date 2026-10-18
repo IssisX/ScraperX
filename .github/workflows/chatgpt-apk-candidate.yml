@@ -83,6 +83,18 @@ jobs:
         timeout 90s build/candidate-host/scraperx_air_catch_intent_tests \
           2>&1 | tee artifacts/air-catch-intent-native.log
         grep -F 'SCRAPERX_AIR_CATCH PASS' artifacts/air-catch-intent-native.log
+    - name: Check connected upper gallery and lower recovery course
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host \
+          --target scraperx_upper_gallery_route_tests scraperx_parkour_yard_route_tests --parallel 2
+        timeout 180s build/candidate-host/scraperx_upper_gallery_route_tests \
+          2>&1 | tee artifacts/upper-gallery-native.log
+        grep -F 'SCRAPERX_UPPER_GALLERY PASS' artifacts/upper-gallery-native.log
+        timeout 180s build/candidate-host/scraperx_parkour_yard_route_tests \
+          2>&1 | tee artifacts/parkour-yard-native.log
+        grep -F 'SCRAPERX_PARKOUR_YARD PASS' artifacts/parkour-yard-native.log
     - name: Cross-compile native graph for Android arm64
       shell: bash
       run: |
@@ -159,6 +171,19 @@ jobs:
           2>&1 | tee artifacts/thumb-flow-input.log
         grep -F 'SCRAPERX_THUMB_FLOW_INPUT PASS' artifacts/thumb-flow-input.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-flow-input.log; then exit 1; fi
+    - name: Check upper-gallery collision and controls in the shipping view
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p artifacts/upper-gallery
+        timeout 90s xvfb-run -a -s '-screen 0 1280x720x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1280x720 \
+          res://tests/upper_gallery_view_test.tscn -- --quit-after-upper-gallery-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/upper-gallery" \
+          2>&1 | tee artifacts/upper-gallery-view.log
+        grep -F 'SCRAPERX_UPPER_GALLERY_VIEW PASS' artifacts/upper-gallery-view.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/upper-gallery-view.log; then exit 1; fi
     - name: Check native-driven landing and slide camera feedback
       shell: bash
       run: |
@@ -304,6 +329,10 @@ jobs:
           artifacts/thumb-controls.log
           artifacts/thumb-flow-input.log
           artifacts/thumb-flow/
+          artifacts/upper-gallery-native.log
+          artifacts/parkour-yard-native.log
+          artifacts/upper-gallery-view.log
+          artifacts/upper-gallery/
         if-no-files-found: error
         retention-days: 30
     - name: Export ChatGPT Android arm64 APK
