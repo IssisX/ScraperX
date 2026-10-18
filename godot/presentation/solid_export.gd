@@ -116,6 +116,9 @@ static func _classify(mesh_node: MeshInstance3D, boxes: Array, hulls: Array,
 			hulls.append({"part": part, "points": _box_points(xform, (mesh as BoxMesh).size)})
 		else:
 			entry["part"] = part
+			var material := mesh_node.get_active_material(0)
+			var sound_surface := 0 if material == null else int(material.get_meta(&"support_sound_surface", 0))
+			entry["sound_surface"] = sound_surface if sound_surface in [1, 2] else 0
 			boxes.append(entry)
 	elif mesh is CylinderMesh:
 		var cylinder := mesh as CylinderMesh
@@ -242,6 +245,17 @@ static func write_cpp(collected: Dictionary, path: String) -> Error:
 	for hull_range in hull_ranges:
 		lines.append("    {%d, %d},  // %s" % [hull_range[0], hull_range[1], hull_range[2]])
 	lines.append("};")
+	# Sparse sound tags leave all existing collision coordinates and ordering
+	# unchanged. Unannotated geometry keeps its established sound fallback.
+	var sound_tags := PackedStringArray()
+	for index in collected["boxes"].size():
+		var surface := int(collected["boxes"][index].get("sound_surface", 0))
+		if surface in [1, 2]:
+			sound_tags.append("    {%d, %d}," % [index, surface])
+	lines.append("")
+	lines.append("constexpr std::array<WorldSolidSoundTag, %d> kWorldSolidSoundTags{{" % sound_tags.size())
+	lines.append_array(sound_tags)
+	lines.append("}};")
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()

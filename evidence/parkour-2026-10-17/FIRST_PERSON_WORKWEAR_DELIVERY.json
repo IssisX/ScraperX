@@ -1,0 +1,29 @@
+{
+  "source_commit": "a28937b8f6c966d415517467cba24021b59018a6",
+  "version_code": 214513419,
+  "tag": "chatgpt-candidate-a28937b",
+  "prerelease": true,
+  "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-a28937b/ScraperX-ChatGPT.apk",
+  "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-a28937b",
+  "asset_id": 654243956,
+  "asset_size": 36941349,
+  "candidate_run": 39156155944,
+  "candidate_conclusion": "success",
+  "candidate_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-a28937b/accepted-candidate.json",
+  "local_delivery": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-a28937b/local-delivery.json",
+  "ci_unit": "SCRAPERX_LEGS PASS checks=61",
+  "ci_native_contacts": "SCRAPERX_LEGS_NATIVE PASS checks=860",
+  "ci_body_view": "SCRAPERX_BODY_VIEW PASS checks=68 failures=0 baseline_only=0",
+  "inspected_images": [
+    "body-workwear/01-standing.png",
+    "body-workwear/02-walking.png",
+    "body-workwear/03-crouching.png",
+    "body-workwear/04-airborne.png",
+    "body-workwear/05-landed.png",
+    "first-person-legs/01-wall-step.png",
+    "first-person-legs/02-topout-step.png"
+  ],
+  "direct_mcp": "Final standing inspected; final motion follow-ups timed out; same-source CI completed full motion check. Runtime stopped.",
+  "phone_play": "Unverified; no FPS or phone-feel claim",
+  "separate_full_run": 39156155948
+}

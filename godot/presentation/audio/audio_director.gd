@@ -349,7 +349,8 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 			_stride -= STRIDE_METERS
 			steps += 1
 			# Crouched feet are placed, not planted: the same step, softer.
-			_play(_surface(support_entity, position.y),
+			var sound_surface: Variant = landing_state.get("support_sound_surface", 0)
+			_play(_surface(support_entity, position.y, sound_surface if sound_surface is int else 0),
 				linear_to_db(clampf(0.35 + horizontal / 8.0, 0.35, 1.0)) - (9.0 if crouched else 3.0),
 				randf_range(0.94, 1.06))
 	elif not grounded:
@@ -620,7 +621,12 @@ func _update_birds(position: Vector3, delta: float) -> void:
 		sin(angle) * reach), -6.0, randf_range(0.9, 1.15), BUS_AMBIENCE)
 
 
-func _surface(entity: int, height: float) -> StringName:
+func _surface(entity: int, height: float, sound_surface: int = 0) -> StringName:
+	# Only explicit current support metadata overrides the legacy fallback.
+	if sound_surface == 1:
+		return &"step_concrete"
+	if sound_surface == 2:
+		return &"step_metal"
 	if entity == 51 and height < 0.5:
 		return &"step_earth"      # the valley floor, off the grade
 	if entity in [1, 35, 43, 45, 51, 1460]:

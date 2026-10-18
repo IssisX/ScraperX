@@ -15,6 +15,10 @@ struct WorldSolidHull final {
     std::uint32_t first;
     std::uint32_t count;
 };
+struct WorldSolidSoundTag final {
+    std::uint32_t box_index;
+    std::uint8_t surface;
+};
 #include "sim/world_solids.inc"
 namespace regression_geometry {
 #include "../../../tests/fixtures/world_solids.inc"
@@ -42,7 +46,14 @@ void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
             continue;
         }
         const float convex_radius = std::min(JPH::cDefaultConvexRadius, half.ReduceMin());
-        add_shape_body(bodies, new JPH::BoxShape(half, convex_radius), position, rotation,
+        auto *shape = new JPH::BoxShape(half, convex_radius);
+        if (!regression_fixtures_) {
+            const auto tag = std::lower_bound(kWorldSolidSoundTags.begin(), kWorldSolidSoundTags.end(), i,
+                [](const WorldSolidSoundTag &entry, const std::size_t index) { return entry.box_index < index; });
+            if (tag != kWorldSolidSoundTags.end() && tag->box_index == i)
+                shape->SetUserData(tag->surface);
+        }
+        add_shape_body(bodies, shape, position, rotation,
                        JPH::EMotionType::Static, object_layers::kStatic, kWorldSolidFriction,
                        Simulation::kWorldSolidEntityId, 0.0F);
         ++world_solid_bodies_;
@@ -74,6 +85,26 @@ void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
                        JPH::Quat::sIdentity(), JPH::EMotionType::Static, object_layers::kStatic,
                        kWorldSolidFriction, Simulation::kWorldSolidEntityId, 0.0F);
         ++world_solid_bodies_;
+    }
+}
+
+SupportSoundSurface Simulation::PhysicsWorld::support_sound_surface() const noexcept {
+    // The contact listener resets this sample each collision step. No ray,
+    // remembered surface or visual material can supply a grounded receipt.
+    if (!grounded_ || !support_sample_.grounded || support_sample_.body_id.IsInvalid() ||
+        support_sample_.shape_identity == nullptr ||
+        support_sample_.entity_id != Simulation::kWorldSolidEntityId)
+        return SupportSoundSurface::Unknown;
+    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), support_sample_.body_id);
+    if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() ||
+        lock.GetBody().GetShape() != support_sample_.shape_identity ||
+        lock.GetBody().GetUserData() != support_sample_.entity_id)
+        return SupportSoundSurface::Unknown;
+    const auto surface = lock.GetBody().GetShape()->GetSubShapeUserData(support_sample_.subshape);
+    switch (surface) {
+    case static_cast<std::uint64_t>(SupportSoundSurface::Concrete): return SupportSoundSurface::Concrete;
+    case static_cast<std::uint64_t>(SupportSoundSurface::Metal): return SupportSoundSurface::Metal;
+    default: return SupportSoundSurface::Unknown;
     }
 }
 

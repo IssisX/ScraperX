@@ -44,11 +44,18 @@ commands. Root Main's unrelated dirty grapple/hook hunk is excluded.
 - Direct Godot MCP recorded the original standing baseline and rejected the
   first waist cap because it hid the legs. A profile-only correction was still
   insufficient. The final eye-to-hip alignment changes the actual posed body
-  arrangement. Its standing frame was inspected before continuing the same
-  actual arrival through walking, crouch, Jump and landing. Final live sequence
-  and matching candidate results are recorded with delivery evidence.
+  arrangement. Its standing frame was inspected. Final MCP follow-up motion
+  scheduling/state reads timed out; the runtime was stopped. Same-source CI
+  completed standing, walking, crouch, Jump and landing: PASS68. All five body
+  images and the two native-contact images were inspected.
 
 The candidate retains the existing native-contact gate and adds the actual
 look-down movement view plus the affected unit check. Host screenshots/checks
 do not establish phone frame time, sustained performance or human game feel.
 The host has no ALSA output and uses Dummy audio; no heard-sound claim.
+
+Matching source a28937b8f6c966d415517467cba24021b59018a6 is published.
+Candidate39156155944 completed GREEN; build214513419 is directly available at
+https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-a28937b/ScraperX-ChatGPT.apk . Native-contact rendered checksPASS860 and unitPASS61;
+exact delivery/command ownership is in FIRST_PERSON_WORKWEAR_DELIVERY.json.
+Separate full-release proof and phone play remain distinct.

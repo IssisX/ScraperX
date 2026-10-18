@@ -9,6 +9,10 @@
 
 namespace scraperx::sim {
 
+// Optional sound metadata of the current solved support. This does not select
+// friction, create contact or describe an earlier landing event.
+enum class SupportSoundSurface : std::uint8_t { Unknown = 0, Concrete = 1, Metal = 2 };
+
 struct Vector3 final {
     double x = 0.0;
     double y = 0.0;
@@ -936,6 +940,7 @@ public:
     void set_boiler_feed_enabled(bool enabled) noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
+    [[nodiscard]] SupportSoundSurface support_sound_surface() const noexcept;
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;

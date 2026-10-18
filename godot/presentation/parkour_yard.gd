@@ -29,6 +29,10 @@ func build() -> void:
 	_g.presentation_root.add_child(_root)
 	_concrete = _g.material(Color("858679"), 0.0, 0.94, Color.BLACK, 1.0, _g.bump_concrete)
 	_steel = _g.material(Color("42595b"), 0.58, 0.78, Color.BLACK, 1.0, _g.bump_steel)
+	# Explicit export metadata; native solved contact chooses the sound. Values
+	# match SupportSoundSurface and do not change friction or collision.
+	_concrete.set_meta(&"support_sound_surface", 1)
+	_steel.set_meta(&"support_sound_surface", 2)
 	_paint = _g.material(Color("bcaa75"), 0.0, 0.95)
 	_utility_bay()
 	_duct_gallery()

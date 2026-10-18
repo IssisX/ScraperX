@@ -179,6 +179,7 @@ public:
     [[nodiscard]] RenderHandAnchor render_hand_anchor(const std::uint32_t hand) const noexcept;
 
     [[nodiscard]] const Snapshot &state() const noexcept;
+    [[nodiscard]] SupportSoundSurface support_sound_surface() const noexcept;
 
     bool debug_restart_at(const Vector3 centre) noexcept;
 

@@ -158,6 +158,24 @@ jobs:
           2>&1 | tee artifacts/thumb-controls.log
         grep -F 'SCRAPERX_THUMB_CONTROLS PASS' artifacts/thumb-controls.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-controls.log; then exit 1; fi
+    - name: Check footsteps against actual steel and concrete contacts
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/contact_surface_audio_test.gd \
+          2>&1 | tee artifacts/contact-surface-audio.log
+        grep -F 'CONTACT_SURFACE_AUDIO PASS' artifacts/contact-surface-audio.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/contact-surface-audio.log; then exit 1; fi
+        mkdir -p artifacts/contact-surface
+        timeout 120s xvfb-run -a -s '-screen 0 1280x720x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1280x720 \
+          res://tests/contact_surface_native_test.tscn -- --quit-after-contact-sound-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/contact-surface" \
+          2>&1 | tee artifacts/contact-surface-native.log
+        grep -F 'SCRAPERX_CONTACT_SOUND PASS' artifacts/contact-surface-native.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/contact-surface-native.log; then exit 1; fi
     - name: Check thumb-zone controls through actual Main and native physics
       shell: bash
       run: |
@@ -338,6 +356,9 @@ jobs:
           artifacts/forklift-operator.log
           artifacts/forklift-operator/
           artifacts/first-person-legs-native.log
+          artifacts/contact-surface-audio.log
+          artifacts/contact-surface-native.log
+          artifacts/contact-surface/
           artifacts/first-person-legs-unit.log
           artifacts/first-person-legs/
           artifacts/body-workwear-view.log
