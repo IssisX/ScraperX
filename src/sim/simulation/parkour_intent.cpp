@@ -169,9 +169,13 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies,
                                                const StepCommands &commands) noexcept {
     using Phase = WallRunEpisode::Phase;
     if (wall_run_.phase == Phase::None) return;
-    const bool cancelled = grounded_ || commands.jump_requested || commands.release_requested ||
+    // A Jump in the unloaded handoff waits for the already accepted next
+    // real material contact. The existing input buffer owns its expiry.
+    const bool handoff_jump = wall_run_.phase == Phase::AwaitingContact &&
+        (commands.jump_requested || ordinary_jump_ticks_left_ > 0);
+    const bool cancelled = grounded_ || (commands.jump_requested && !handoff_jump) || commands.release_requested ||
         commands.cancel_jump_requested || commands.set_down_requested || commands.sling_drop ||
-        commands.crouch_held || !sprint_is_eligible(commands) || physical_hands_->active() ||
+        commands.crouch_held || (!handoff_jump && !sprint_is_eligible(commands)) || physical_hands_->active() ||
         carry_constraint_ || traversal_state_ != TraversalState::None ||
         (slingshot_ && slingshot_->controls_player()) ||
         contact_solve_serial_ > wall_run_.deadline_solve;
@@ -195,8 +199,8 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies,
     const auto intent = JPH::Vec3(float(commands.move_input_x),0,float(commands.move_input_z));
     // A deliberate lean into the wall authorizes the second step. The
     // existing light-brush single-plant path remains an ordinary departure.
-    if (-intent.Dot(normal) <= kClimbInputDeadzone ||
-        intent.Dot(direction) < kSprintMaximumAngleCos || relative.Dot(direction) <= 0) {
+    if ((!handoff_jump && (-intent.Dot(normal) <= kClimbInputDeadzone ||
+        intent.Dot(direction) < kSprintMaximumAngleCos)) || relative.Dot(direction) <= 0) {
         wall_run_ = {};
         return;
     }
@@ -225,6 +229,7 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies,
     if (!wall_run_contact_is_distinct() || physical_foot_push_->active()) { wall_run_ = {}; return; }
     const float progress = (wall_contact_.local_point-first.local_point).Dot(wall_run_.local_direction);
     if (progress < .5F * PhysicalFootPush::maximum_stroke_m()) return;
+    const auto buffered_jump_ticks = ordinary_jump_ticks_left_;
     const auto consumed = wall_kick_consumed_body_;
     wall_kick_consumed_body_ = JPH::BodyID();
     if (!begin_wall_foot(bodies,true,direction)) {
@@ -232,6 +237,9 @@ void Simulation::PhysicsWorld::update_wall_run(JPH::BodyInterface &bodies,
         wall_run_ = {};
         return;
     }
+    // Acquisition consumes ordinary intent. Preserve only an existing
+    // handoff Jump's remaining ticks for the normal same-row push-off owner.
+    if (handoff_jump) ordinary_jump_ticks_left_ = buffered_jump_ticks;
     wall_run_.phase = Phase::SecondPlant;
 }
 

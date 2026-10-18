@@ -116,13 +116,20 @@ int main(int argc,char **argv) {
     std::cout << std::unitbuf;
     const std::string mode=argc>1?argv[1]:"flow";
     Simulation sim;approach(sim,mode=="fast");Episode episode;
-    if (mode=="flow" || mode=="fast" || mode=="jump") {
-        episode.wait(sim,3);
-        if (mode=="jump") {
+    if (mode=="flow" || mode=="fast" || mode=="jump" || mode=="gap-jump") {
+        const bool gap_jump = mode=="gap-jump";
+        episode.wait(sim,gap_jump?2:3);
+        if (mode=="jump" || gap_jump) {
             const auto before=sim.snapshot();
             require(sim.set_move_input(0,0) && sim.request_jump(),"deliberate wall-run push-off",sim);
             const auto s=episode.step(sim);
-            require(s.wall_stride_count == 2 && s.foot_push_start_count == before.foot_push_start_count &&
+            if (gap_jump) {
+                require(episode.second && s.wall_stride_count == 2 && s.wall_stride_active &&
+                        s.wall_stride_pushing_off &&
+                        s.foot_push_start_count == before.foot_push_start_count+1 &&
+                        s.foot_push_source_contact_tick > before.foot_push_source_contact_tick,
+                        "Jump during unloaded handoff waits for the distinct real second foot",sim);
+            } else require(s.wall_stride_count == 2 && s.foot_push_start_count == before.foot_push_start_count &&
                     s.foot_push_source_contact_tick == before.foot_push_source_contact_tick &&
                     s.foot_push_initial_distance_m == before.foot_push_initial_distance_m &&
                     s.foot_push_elapsed_seconds > before.foot_push_elapsed_seconds &&
@@ -130,7 +137,7 @@ int main(int argc,char **argv) {
                     "Jump spends the same second row without a replant or refill",sim);
         }
         land(sim,episode,2);
-    } else if (mode=="cancel" || mode=="restart") {
+    } else if (mode=="cancel" || mode=="gap-cancel" || mode=="restart") {
         episode.wait(sim,2);
         if (mode=="restart") {
             require(sim.restart_checkpoint(),"retry during unloaded handoff",sim);
@@ -138,6 +145,7 @@ int main(int argc,char **argv) {
             require(sim.snapshot().wall_stride_count == 0 && !sim.snapshot().foot_push_active &&
                     sim.snapshot().player_grounded,"retry clears pending second plant",sim);
         } else {
+            if (mode=="gap-cancel") require(sim.request_jump(),"Jump queued before deliberate Drop",sim);
             // Drop always cancels pending Jump intent. Its return value says
             // whether a current attachment was released; this gap has none.
             require(!sim.request_release(),"unloaded handoff has no current attachment",sim);

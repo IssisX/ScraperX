@@ -1,0 +1,241 @@
+{
+  "base_revision": "4017734bbf7f4cf0aa1ca09b259e8ecc8c549ef7",
+  "source": {
+    "path": "src/sim/simulation/parkour_intent.cpp",
+    "sha256": "4cecdb77d12b9315ce25627f04b13624992ee433d75b0f242e999a6350e3156f"
+  },
+  "test_source": {
+    "path": "tests/physical_wall_run_tests.cpp",
+    "sha256": "d4c73c3be532e76d342653bc64dfac24d3a0ee4d53a14a7d2a16abad0f1d3a1b"
+  },
+  "baseline": {
+    "commands": {
+      "compile": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_wall_run_tests.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/test-before.o"
+      ],
+      "link": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/test-before.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/libwall-predict.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/test-before"
+      ],
+      "run": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/test-before",
+        "gap-jump"
+      ]
+    },
+    "results": [
+      {
+        "name": "compile",
+        "exit_code": 0
+      },
+      {
+        "name": "link",
+        "exit_code": 0
+      },
+      {
+        "name": "run",
+        "exit_code": 1
+      }
+    ],
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nWALL_FIRST tick=176 contact=175\nFAIL WALL_RUN Jump during unloaded handoff waits for the distinct real second foot tick=179 p=-38.0649,2.43579,-38.4397 v=6.62872,-0.0835977 plants=1 active=0 reason=1\n",
+    "classification": "Existing4017734 input timing defect: queued Jump clears AwaitingContact before the next real wall contact can start the second foot."
+  },
+  "repair": "Keep existing fresh/buffered Jump during AwaitingContact, preserve only remaining ordinary intent across begin, and leave all actual-contact/identity/geometry/deadline/actuator gates intact. Neutral move input is legal for deliberate push-off; automatic run still needs inward sprint intent. Drop/cancel wins. No new state fields or public schema.",
+  "checks": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/parkour_intent.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/src_sim_simulation_parkour_intent.cpp.o"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n"
+    },
+    {
+      "name": "archive",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/ar",
+        "rcs",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/libhandoff-jump.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/src_sim_simulation_parkour_intent.cpp.o"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n"
+    },
+    {
+      "name": "link",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/test-before.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/libhandoff-jump.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/tests"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\n"
+    },
+    {
+      "name": "gap-jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/tests",
+        "gap-jump"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nWALL_FIRST tick=176 contact=175\nWALL_SECOND tick=179 contact=178 gap_tick=178 load_n=3073.63\nWALL_LAND tick=233 p=-33.995,0.9,-38.9547 tangent_mps=6.83854\nWALL_RUN PASS mode=gap-jump first_work_j=86.2572 second_work_j=122.879\n"
+    },
+    {
+      "name": "gap-cancel",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/tests",
+        "gap-cancel"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nWALL_FIRST tick=176 contact=175\nWALL_LAND tick=229 p=-34.5114,0.9,-38.43 tangent_mps=6.34989\nWALL_RUN PASS mode=gap-cancel first_work_j=86.2572 second_work_j=0\n"
+    },
+    {
+      "name": "jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/tests",
+        "jump"
+      ],
+      "exit_code": 0,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nWALL_FIRST tick=176 contact=175\nWALL_SECOND tick=179 contact=178 gap_tick=178 load_n=3333.92\nWALL_LAND tick=233 p=-34.013,0.9,-38.8503 tangent_mps=6.78861\nWALL_RUN PASS mode=jump first_work_j=86.2572 second_work_j=107.073\n"
+    }
+  ],
+  "build_scope": "One changed parkour translation unit compiled with frozen matching World/Snapshot headers; replace only its same-named archive member. Reuse unchanged test object from baseline. No repeated full local build or primitive/APK campaign.",
+  "accepted_archive": "/data/data/com.termux/files/usr/tmp/scraperx-wall-run-68fa141h/predict/handoff-jump/libhandoff-jump.a",
+  "archive_sha256": "bb7fcb31000abba4cb45fe28328df1a5693592b5a2c408eaed8fe52fec654645",
+  "limits": [
+    "Observed static workshop gap, immediate next actual contact, real landing and onward play. No claim of kicks without actual contact or extended buffer/airtime.",
+    "Matching source GitHub/Android delivery remains separate. Device feel unobserved."
+  ]
+}
