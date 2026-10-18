@@ -35,5 +35,15 @@
     "status": "in_progress",
     "conclusion": null
   },
-  "evidence_policy": "Reuse final stable-signer, package, native and source proof from actual green candidate producer; no local APK re-audit."
+  "evidence_policy": "Reuse final stable-signer, package, native and source proof from actual green candidate producer; no local APK re-audit.",
+  "direct_apk_publication": {
+    "tag": "chatgpt-candidate-788cba5",
+    "prerelease": true,
+    "source_commit": "788cba5417aa8d36c7ffd6a9bf289f8db9847766",
+    "version_code": 214510198,
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-788cba5",
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-788cba5/ScraperX-ChatGPT-788cba5.apk",
+    "asset_id": 654142085,
+    "asset_size": 36928438
+  }
 }
