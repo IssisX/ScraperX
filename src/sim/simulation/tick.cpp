@@ -25,7 +25,8 @@ void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds)
     // world. Slingshot worlds invoke this from their substep listener;
     // single-step worlds invoke it after lifecycle/face validation below.
     const bool rigid_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
-        foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush;
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
+        foot_push_purpose_ == FootPushPurpose::WallKick;
     const bool face_valid = rigid_foot
         ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
             deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
@@ -162,6 +163,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 slingshot_->note_external_influence();
         } else {
             jump_started = try_begin_coyote_push(bodies);
+            if (!jump_started) jump_started = try_begin_wall_kick(bodies);
             if (jump_started) physical_step_pending_ = false;
             auto locomotion_commands = commands;
             locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
@@ -361,6 +363,27 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         ? transfer_contact : support);
     grounded_ = support.grounded;
     support_entity_id_ = support.entity_id;
+    wall_contact_ = contact_listener_.wall_sample();
+    wall_contact_.solved_tick = contact_solve_serial_;
+    if (grounded_ || (wall_contact_.valid && wall_contact_.body != wall_kick_consumed_body_))
+        wall_kick_consumed_body_ = JPH::BodyID();
+    else if (!wall_kick_consumed_body_.IsInvalid()) {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),wall_kick_consumed_body_);
+        if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase())
+            wall_kick_consumed_body_ = JPH::BodyID();
+        else {
+            const auto &wall = lock.GetBody();
+            const auto point = wall.GetCenterOfMassTransform()*foot_push_contact_.local_point;
+            const auto normal = wall.GetRotation()*foot_push_contact_.local_normal;
+            const float capsule_extent = kPlayerRadius+
+                (kPlayerHalfHeight-kPlayerRadius)*std::abs(normal.GetY());
+            const float separation = JPH::Vec3(bodies.GetCenterOfMassPosition(player_id_)-point).Dot(normal);
+            // A rejected foot-patch sample is not proof of separation. Rearm
+            // only after the real capsule has cleared its retained wall face.
+            if (separation > capsule_extent+kLandingSkin+kStepLookahead)
+                wall_kick_consumed_body_ = JPH::BodyID();
+        }
+    }
     if(grounded_ && physical_step_pending_) {
         const auto point = JPH::RVec3(support.contact_point.x,
             support.contact_point.y, support.contact_point.z);

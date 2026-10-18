@@ -70,8 +70,8 @@ Snapshot topout(WorldContent content = WorldContent::Slingshot) {
             break;
         }
     }
-    require(elapsed<153&&shared&&positive_loads&&preserved_foot,
-            "responsive physical hand-foot transfer preserves valid finite foot",s);
+    require(elapsed<120&&shared&&positive_loads&&preserved_foot,
+            "lower ledge receives the physical transfer within120ticks",s);
     for(int i=0;i<90;++i)tick(s);
     require(s.snapshot().checkpoint_footing_valid&&!s.snapshot().foot_push_active&&
             s.snapshot().traversal_plan_kind==0&&s.snapshot().player_grounded,
@@ -79,6 +79,48 @@ Snapshot topout(WorldContent content = WorldContent::Slingshot) {
     std::cout<<"PASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed="
         <<elapsed<<" final_tick="<<s.snapshot().tick_index<<'\n';
     return s.snapshot();
+}
+void higher_ledge() {
+    Simulation s(InitialSpawn::ExteriorGrade,WorldContent::Slingshot);
+    require(s.debug_restart_at({20,11.9,-121.3}),"existing higher cabinet approach",s);
+    for(int i=0;i<63;++i)tick(s);
+    require(s.snapshot().player_grounded&&s.set_facing(0,-1)&&s.set_move_input(0,0),
+            "higher ledge starts from real footing and ordinary neutral input",s);
+    const auto before=s.snapshot();
+    require(s.request_traversal(),"higher ledge ordered Action",s);
+    auto previous=before;
+    int elapsed=0;
+    for(;elapsed<145;++elapsed) {
+        tick(s);const auto v=s.snapshot();
+        for(const auto &f:{v.traversal_left_hand_force,v.traversal_right_hand_force})
+            require(std::hypot(f.x,f.y,f.z)<=1501.0,"unchanged finite hand force",s);
+        const double debit=v.traversal_command_work_bound_j-previous.traversal_command_work_bound_j;
+        const double supplied=v.traversal_actuator_positive_work_j-previous.traversal_actuator_positive_work_j;
+        const double budget=6600.0*Simulation::kFixedStepSeconds+.001;
+        require(debit>=-.000001&&debit<=budget&&supplied>=-.000001&&supplied<=budget,
+                "unchanged finite hand command and spring-work budgets",s);
+        if(v.foot_push_active)
+            require(v.foot_push_source_contact_tick>before.foot_contact_tick&&
+                    v.foot_push_support_entity_id==2560&&v.foot_push_peak_load_n<=3500.01&&
+                    v.foot_push_stroke_m<=.300001&&v.foot_push_command_work_bound_j<=1285.62501,
+                    "higher receiving foot uses fresh contact and existing finite limits",s);
+        previous=v;
+        if(v.accepted_traversal_count>before.accepted_traversal_count)break;
+    }
+    const auto received=s.snapshot();
+    require(elapsed<145&&received.traversal_hand_constraint_count==0&&received.player_grounded&&
+            received.support_entity_id==2560&&received.foot_push_active&&
+            received.hand_foot_overlap_solved_ticks>before.hand_foot_overlap_solved_ticks&&
+            received.hand_foot_last_hand_load_n>0&&received.hand_foot_last_foot_load_n>0,
+            "higher ledge receives actual shared load within145ticks",s);
+    require(-received.player_linear_velocity.z>.5,
+            "higher ledge retains solved inward momentum at hand release",s);
+    for(int i=0;i<90;++i)tick(s);
+    require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==2560&&
+            !s.snapshot().foot_push_active&&s.snapshot().traversal_plan_kind==0,
+            "higher ledge settles on its real receiver after finite foot expiry",s);
+    std::cout<<"PASS PHYSICAL_TOPOUT higher_ledge elapsed="<<elapsed+1
+        <<" release_inward_m_s="<<-received.player_linear_velocity.z<<'\n';
 }
 void release_or_no_candidate(bool release) {
     Simulation s;stage(s);
@@ -234,5 +276,5 @@ int main(int argc,char**argv) {
     else if(mode=="jump-buffer")jump_after_transfer();
     else if(mode=="onward-run")onward_run();
     else if(mode=="single-step") (void)topout(WorldContent::PipeBridge);
-    else (void)topout();
+    else { (void)topout(); higher_ledge(); }
 }

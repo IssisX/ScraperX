@@ -226,7 +226,7 @@ bool Simulation::request_release() noexcept {
                          snapshot_.traversal_state == TraversalState::Lowering;
     const bool standing =
         snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
-    if (!holding && !standing) {
+    if (!holding && !standing && !snapshot_.foot_push_active) {
         return false;
     }
     release_requested_ = true;

@@ -906,6 +906,7 @@ private:
     void prepare_trailing_plant(const StepCommands &commands) noexcept;
     void retain_trailing_plant(const StepCommands &commands, bool jump_started) noexcept;
     [[nodiscard]] bool try_begin_coyote_push(JPH::BodyInterface &bodies) noexcept;
+    [[nodiscard]] bool try_begin_wall_kick(JPH::BodyInterface &bodies) noexcept;
 
     void pre_step_physical_foot(float delta_seconds) noexcept;
 
@@ -1092,10 +1093,12 @@ private:
     std::unique_ptr<GrapplingGun> grappling_gun_;
     bool grapple_acquired_ = false, grapple_equipped_ = false;
     bool foot_push_started_this_tick_ = false;
-    enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush };
+    enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush, WallKick };
     std::uint64_t trailing_foot_contact_tick_ = 0;
     FootPushPurpose foot_push_purpose_ = FootPushPurpose::None;
     FootContactSample foot_contact_{}, foot_push_contact_{};
+    FootContactSample wall_contact_{};
+    JPH::BodyID wall_kick_consumed_body_;
     std::uint64_t contact_solve_serial_ = 0;
     bool rigid_transfer_foot_valid_ = false;
     TraversalAffordanceCache traversal_affordances_;

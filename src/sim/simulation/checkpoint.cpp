@@ -16,6 +16,8 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     slingshot_flight_ = false;
     causal_airborne_ = false;
     physical_step_pending_ = false;
+    wall_contact_ = {};
+    wall_kick_consumed_body_ = JPH::BodyID();
     release_carry();
     clear_traversal();
     crouched_ = false;
@@ -168,6 +170,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     slingshot_flight_ = false;
     causal_airborne_ = false;
     physical_step_pending_ = false;
+    wall_contact_ = {};
+    wall_kick_consumed_body_ = JPH::BodyID();
     // The capsule the checkpoint was committed in: a crouched commit's
     // centre is a crouched centre, and may sit under a low ceiling.
     crouched_ = checkpoint_crouched_;

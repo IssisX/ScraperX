@@ -84,7 +84,8 @@ void Simulation::PhysicsWorld::refresh_rigid_transfer_foot() noexcept {
     rigid_transfer_foot_valid_ = false;
     if ((foot_push_purpose_ != FootPushPurpose::RigidTransfer &&
          foot_push_purpose_ != FootPushPurpose::TrailingPlant &&
-         foot_push_purpose_ != FootPushPurpose::CoyotePush) || !physical_foot_push_->active() ||
+         foot_push_purpose_ != FootPushPurpose::CoyotePush &&
+         foot_push_purpose_ != FootPushPurpose::WallKick) || !physical_foot_push_->active() ||
         crouched_ || !foot_push_contact_.valid) return;
     const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
     rigid_transfer_foot_valid_ = lock.Succeeded() && lock.GetBody().IsInBroadPhase() &&
@@ -254,13 +255,13 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
     if (up_input < -kClimbInputDeadzone) return;
     JPH::RVec3 hand_goal=landing;
     double remaining_inward=horizontal;
+    // Reconstruct inward from refreshed material points for both approach
+    // and onward commands, including a receiver that has rotated.
+    auto inward=JPH::Vec3(landing-ledge);
+    inward.SetY(0);
+    if (!inward.IsNearZero()) inward=inward.Normalized();
     if (up_input > kClimbInputDeadzone) {
-        // Reconstruct inward from the refreshed material points, rather than
-        // reusing a world direction latched before the receiver rotated.
-        auto inward=JPH::Vec3(landing-ledge);
-        inward.SetY(0);
         if (!inward.IsNearZero()) {
-            inward=inward.Normalized();
             const auto onward=landing+inward*(kPlayerRadius*float(std::min(up_input,1.0)));
             const auto origin=onward-JPH::Vec3(0,kPlayerHalfHeight-kLandingSupportProbeUp,0);
             const JPH::Vec3 down(0,-(kLandingSupportProbeUp+kLandingSupportTolerance),0);
@@ -273,14 +274,21 @@ void Simulation::PhysicsWorld::update_cargo_transfer(JPH::BodyInterface &bodies,
         }
     }
     JPH::RVec3 goal=hand_goal+JPH::Vec3(0,0.15F,0);
-    // Geometric clearance opens the forward move; actual supported contact
-    // closes the transfer. Neither a timer nor a prescribed capsule path
-    // decides arrival. Limit spring-target lead to prevent blocked wind-up.
-    if (actual.GetY()-kPlayerHalfHeight<ledge.GetY()+0.04 && horizontal>0.10)
-        goal=JPH::RVec3(actual.GetX(),goal.GetY(),actual.GetZ());
-    // Lower at the original receiving plane even while continuing inward.
-    // The accepted foot footprint and its actual-contact gate stay unchanged.
-    if (remaining_inward<=0.10) goal=hand_goal+JPH::Vec3(0,0.02F,0);
+    // Close the free space to the wall while lifting instead of first
+    // pulling straight up at arm's length. Before sole clearance, the
+    // target stays outside the face by the full capsule radius and skin.
+    // The lip probe is inset from that face by kTopProbeInset.
+    if (actual.GetY()-kPlayerHalfHeight<ledge.GetY()+0.04 && horizontal>0.10 &&
+        !inward.IsNearZero()) {
+        const float outside = -(kTopProbeInset+kPlayerRadius+kLandingSkin);
+        const float limit = std::max(outside,JPH::Vec3(actual-ledge).Dot(inward));
+        const float excess = JPH::Vec3(goal-ledge).Dot(inward)-limit;
+        if (excess>0) goal-=inward*excess;
+    }
+    // Begin receiving the load inside the already accepted footprint;
+    // waiting until the aim point brakes the body before its foot can land.
+    // Only fresh actual contact can start the foot and close the transfer.
+    if (remaining_inward<=kPlayerRadius) goal=hand_goal+JPH::Vec3(0,0.02F,0);
     auto lead=JPH::Vec3(goal-actual);
     if (lead.Length()>0.45F) lead*=0.45F/lead.Length();
     auto command=JPH::Vec3(actual+lead-physical_hands_->commanded_position());

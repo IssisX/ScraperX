@@ -510,7 +510,10 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.traversal_plan_generation = traversal_plan_.generation;
     state_.traversal_receiver_entity_id = traversal_plan_.receiver_entity;
     state_.foot_contact_tick = foot_contact_.valid ? foot_contact_.solved_tick : 0;
-    state_.foot_push_source_contact_tick = foot_push_purpose_ == FootPushPurpose::RigidTransfer
+    const bool rigid_foot_source = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
+        foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
+        foot_push_purpose_ == FootPushPurpose::WallKick;
+    state_.foot_push_source_contact_tick = rigid_foot_source && foot_push_contact_.valid
         ? foot_push_contact_.solved_tick : 0;
     state_.hand_foot_overlap_active = physical_hands_->active() && physical_foot_push_->active();
     state_.actual_hand_load_n = physical_hands_->hand_force(0).Length() + physical_hands_->hand_force(1).Length();

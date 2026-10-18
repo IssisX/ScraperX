@@ -3,6 +3,12 @@
 #include "sim/simulation/constants.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/traversal_affordance.hpp"
+#include "sim/traversal_plan.hpp"
+#include "sim/physical_foot_push.hpp"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <tuple>
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
@@ -62,6 +68,7 @@ public:
         lock();
         sample_ = {};
         transfer_sample_ = {};
+        wall_sample_ = {};
         transfer_receiver_ = JPH::BodyID();
         transfer_patch_ = {};
         impact_sample_ = {};
@@ -76,6 +83,7 @@ public:
         // strongest rigid strike across the entire tick for consequences.
         sample_ = {};
         transfer_sample_ = {};
+        wall_sample_ = {};
         inspection_seat_contact_ = false;
         unlock();
     }
@@ -102,6 +110,13 @@ public:
     [[nodiscard]] SupportSample transfer_sample() const noexcept {
         lock();
         const auto result = transfer_sample_;
+        unlock();
+        return result;
+    }
+
+    [[nodiscard]] scraperx::sim::FootContactSample wall_sample() const noexcept {
+        lock();
+        const auto result = wall_sample_;
         unlock();
         return result;
     }
@@ -177,6 +192,7 @@ public:
         observe_slingshot(first, second);
         observe_inspection_seat(first, second, manifold);
         observe_support(first, second, manifold);
+        observe_wall(first, second, manifold);
         observe_reclaim(first,second,manifold);
     }
 
@@ -187,6 +203,7 @@ public:
         observe_slingshot(first, second);
         observe_inspection_seat(first, second, manifold);
         observe_support(first, second, manifold);
+        observe_wall(first, second, manifold);
     }
 
 private:
@@ -243,6 +260,79 @@ private:
             return 0;
         }
         return entity_is_moving_support(entity_id) ? 2 : 1;
+    }
+
+    void observe_wall(const JPH::Body &first, const JPH::Body &second,
+                      const JPH::ContactManifold &manifold) noexcept {
+        const bool player_first = first.GetUserData() == scraperx::sim::Simulation::kPlayerEntityId;
+        const bool player_second = second.GetUserData() == scraperx::sim::Simulation::kPlayerEntityId;
+        if ((!player_first && !player_second) || first.IsSensor() || second.IsSensor() ||
+            !first.IsRigidBody() || !second.IsRigidBody()) return;
+        const auto &player = player_first ? first : second;
+        const auto &wall = player_first ? second : first;
+        const auto normal = player_first ? -manifold.mWorldSpaceNormal : manifold.mWorldSpaceNormal;
+        const auto count = player_first ? manifold.mRelativeContactPointsOn2.size() :
+                                         manifold.mRelativeContactPointsOn1.size();
+        if (count == 0 || std::abs(normal.GetY()) > .2F || wall.GetFriction() <= 0) return;
+        const auto point = [&](JPH::uint i) {
+            return player_first ? manifold.GetWorldSpaceContactPointOn2(i) :
+                                  manifold.GetWorldSpaceContactPointOn1(i);
+        };
+        const auto centre = player.GetCenterOfMassPosition();
+        const float depth = JPH::Vec3(centre-point(0)).Dot(normal);
+        if (!(depth > 0)) return;
+        // Select within the actual convex manifold patch. A vertical capsule
+        // contributes a line: interpolate its real endpoints below the COM,
+        // leaving friction-cone margin as the existing leg starts extending.
+        const float drop = std::min(.8F*scraperx::sim::PhysicalFootPush::lateral_reach_m(),
+                                    .8F*wall.GetFriction()*depth);
+        const double target_y = centre.GetY()-drop;
+        scraperx::sim::FootContactSample candidate;
+        float best_error = std::numeric_limits<float>::max();
+        const auto consider = [&](JPH::RVec3 anchor) {
+            const auto delta = JPH::Vec3(centre-anchor);
+            const float height = delta.Dot(normal);
+            const float tangent = (delta-normal*height).Length();
+            if (delta.GetY() < .05F || height <= 0 ||
+                tangent > scraperx::sim::PhysicalFootPush::lateral_reach_m() ||
+                tangent > wall.GetFriction()*height) return;
+            const float error = float(std::abs(anchor.GetY()-target_y));
+            if (error >= best_error) return;
+            best_error = error;
+            candidate.valid = true;
+            candidate.body = wall.GetID();
+            candidate.subshape = player_first ? manifold.mSubShapeID2 : manifold.mSubShapeID1;
+            candidate.entity_id = wall.GetUserData();
+            candidate.world_point = anchor;
+            candidate.local_point = JPH::Vec3(wall.GetInverseCenterOfMassTransform()*anchor);
+            candidate.world_normal = normal;
+            candidate.local_normal = wall.GetRotation().Conjugated()*normal;
+            candidate.point_velocity = wall.GetPointVelocity(anchor);
+            candidate.friction = wall.GetFriction();
+            candidate.shape_identity = wall.GetShape();
+        };
+        for (JPH::uint i=0;i<count;++i) {
+            const auto a = point(i);
+            consider(a);
+            for (JPH::uint j=i+1;j<count;++j) {
+                const auto b = point(j);
+                const double span = b.GetY()-a.GetY();
+                if (std::abs(span) < 1.0e-6) continue;
+                const double fraction = (target_y-a.GetY())/span;
+                if (fraction >= 0 && fraction <= 1) consider(a+(b-a)*float(fraction));
+            }
+        }
+        if (!candidate.valid) return;
+        lock();
+        const auto key = [](const scraperx::sim::FootContactSample &sample) {
+            return std::make_tuple(sample.entity_id,sample.body.GetIndexAndSequenceNumber(),
+                sample.subshape.GetValue(),sample.local_point.GetX(),sample.local_point.GetY(),
+                sample.local_point.GetZ(),sample.local_normal.GetX(),sample.local_normal.GetY(),
+                sample.local_normal.GetZ());
+        };
+        // Callback order cannot choose a different face of a compound wall.
+        if (!wall_sample_.valid || key(candidate) < key(wall_sample_)) wall_sample_ = candidate;
+        unlock();
     }
 
     void observe_support(const JPH::Body &first,
@@ -359,6 +449,7 @@ private:
     bool landing_feedback_ = false;
     SupportSample sample_{};
     SupportSample transfer_sample_{};
+    scraperx::sim::FootContactSample wall_sample_{};
     JPH::BodyID transfer_receiver_;
     ReceiverSurfacePatch transfer_patch_;
     SupportSample impact_sample_{};
