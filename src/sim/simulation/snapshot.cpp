@@ -591,6 +591,8 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.foot_push_actual_distance_m = foot.actual_distance_m;
         state_.foot_push_initial_distance_m = foot.initial_distance_m;
         state_.foot_push_player_force = to_vector3(foot.player_force);
+        state_.foot_push_world_anchor = foot.active ? to_vector3(foot.world_anchor) : Vector3{};
+        state_.foot_push_world_normal = foot.active ? to_vector3(foot.world_surface_normal) : Vector3{};
     }
     if (cargo_net_ && traversal_body_ == cargo_net_->body() && physical_hands_->active())
         state_.traversal_target_point = to_vector3(physical_hands_->commanded_position());

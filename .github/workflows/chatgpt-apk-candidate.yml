@@ -120,6 +120,19 @@ jobs:
           2>&1 | tee artifacts/climb-effort-candidate.log
         grep -F 'CLIMB_EFFORT PASS' artifacts/climb-effort-candidate.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/climb-effort-candidate.log; then exit 1; fi
+    - name: Check native foot contacts in the shipping player view
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p artifacts/first-person-legs
+        timeout 120s xvfb-run -a -s '-screen 0 640x360x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 640x360 \
+          --script res://tests/first_person_legs_native_test.gd \
+          -- --capture-dir=artifacts/first-person-legs \
+          2>&1 | tee artifacts/first-person-legs-native.log
+        grep -F 'SCRAPERX_LEGS_NATIVE PASS' artifacts/first-person-legs-native.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/first-person-legs-native.log; then exit 1; fi
     - name: Check moving swing-bearing sound feedback
       shell: bash
       run: |
@@ -225,6 +238,8 @@ jobs:
           artifacts/operator-layout.log
           artifacts/forklift-operator.log
           artifacts/forklift-operator/
+          artifacts/first-person-legs-native.log
+          artifacts/first-person-legs/
         if-no-files-found: error
         retention-days: 30
     - name: Export ChatGPT Android arm64 APK

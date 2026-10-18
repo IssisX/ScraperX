@@ -24,6 +24,7 @@ public:
         StopReason stop_reason = StopReason::None;
         JPH::BodyID support;
         JPH::RVec3 world_anchor = JPH::RVec3::sZero();
+        JPH::Vec3 world_surface_normal = JPH::Vec3::sAxisY();
         JPH::Vec3 leg_axis = JPH::Vec3::sAxisY();
         JPH::Vec3 last_solve_axis = JPH::Vec3::sAxisY();
         float last_collision_dt = 0;

@@ -81,6 +81,7 @@ var _inspection_worksite_life: InspectionWorksiteLife
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
+const FirstPersonLegs := preload("res://presentation/first_person_legs.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 # Traversal head motion, added on top of the player's own pitch and never
@@ -269,6 +270,8 @@ var _fb_best_checkpoint_y := 0.0
 var _sling_check_timer := 0.0
 var _sling_check_was_slung := false
 var _arms: Node3D
+var _legs: Node3D
+var _leg_deaths := 0
 var _view_pitch_offset := 0.0
 
 var _kit_view: KitView
@@ -357,6 +360,7 @@ func _ready() -> void:
 		_yard_ambience.configure(Vector3(-92, 2.4, -34.5), Vector3(-80, 1.6, -92))
 		add_child(_yard_ambience)
 	_build_arms()
+	_build_legs()
 	_build_interface()
 	_layout_hud()
 	get_viewport().size_changed.connect(_layout_hud)
@@ -632,7 +636,9 @@ func _process(delta: float) -> void:
 		_crouch_toggled = false
 		_crouch_toggle_from_hang = false
 		_native.set_crouch_input(bool(intent["crouch_held"]))
-	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	var body_state := _arms_state(intent)
+	_arms.update_arms(body_state, _camera.global_transform, delta)
+	_update_legs(body_state, delta)
 	if _slingshot_view != null:
 		var sling: Dictionary = _native.get_slingshot_render_state()
 		_audio.update_slingshot(sling, _native.get_player_linear_velocity())
@@ -2012,6 +2018,33 @@ func _build_arms() -> void:
 		_arm_material(Color("b8281b"), 0.45, null, 1.0),
 		_arm_material(Color("59e08a"), 0.4, null, 1.0, 2.2),
 		_arm_material(Color("d7d2c4"), 0.72, null, 1.0))
+
+
+func _build_legs() -> void:
+	_legs = FirstPersonLegs.new()
+	_legs.name = "FirstPersonLegs"
+	add_child(_legs)
+	_legs.build(_arm_material(Color("1f231c"), 0.93, _geometry.bump_concrete, 9.0),
+		_arm_material(Color("34271e"), 0.86, _geometry.bump_steel, 14.0),
+		_arm_material(Color("101311"), 0.96, null, 1.0))
+
+
+func _update_legs(body_state: Dictionary, delta: float) -> void:
+	# Reuse this frame's native landing receipt and the existing body pose.
+	# This dictionary is presentation input only; nothing feeds native motion.
+	var state: Dictionary = body_state["landing"]
+	var deaths := int(_ctx["deaths"])
+	state["native_tick"] = int(_native.get_tick_index())
+	state["render_position"] = body_state["render_position"]
+	state["facing"] = Vector3.FORWARD.rotated(Vector3.UP, _yaw)
+	state["player_grounded"] = body_state["grounded"]
+	state["player_crouched"] = _ctx["crouched"]
+	state["operating"] = body_state["operating"]
+	state["dead"] = deaths != _leg_deaths
+	state["velocity"] = body_state["velocity"]
+	state["bob_phase"] = body_state["bob_phase"]
+	_leg_deaths = deaths
+	_legs.update_legs(state, _camera.global_transform, delta)
 
 
 # Everything the arms may know, all of it native or already-presented state.

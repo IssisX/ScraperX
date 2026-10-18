@@ -727,6 +727,26 @@ Vector3 Simulation::render_player_position() const noexcept {
     };
 }
 
+Simulation::RenderFootAnchor Simulation::render_foot_anchor() const noexcept {
+    RenderFootAnchor current{snapshot_.foot_push_world_anchor, snapshot_.foot_push_world_normal,
+        snapshot_.foot_push_support_entity_id, snapshot_.foot_push_start_count,
+        snapshot_.foot_push_source_contact_tick, snapshot_.foot_push_active};
+    const auto &before = previous_foot_anchor_;
+    if (!current.active || !before.active || current.support_entity != before.support_entity ||
+        current.start_count != before.start_count || current.source_tick != before.source_tick)
+        return current;
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    current.point = {before.point.x + (current.point.x-before.point.x)*alpha,
+        before.point.y + (current.point.y-before.point.y)*alpha,
+        before.point.z + (current.point.z-before.point.z)*alpha};
+    const Vector3 normal{before.normal.x + (current.normal.x-before.normal.x)*alpha,
+        before.normal.y + (current.normal.y-before.normal.y)*alpha,
+        before.normal.z + (current.normal.z-before.normal.z)*alpha};
+    const double length = std::hypot(normal.x,normal.y,normal.z);
+    if (length > 1.0e-9) current.normal = {normal.x/length,normal.y/length,normal.z/length};
+    return current;
+}
+
 Simulation::RenderHandAnchor Simulation::traversal_hand_anchor(const bool left) const noexcept {
     return physics_world_->render_hand_anchor(left ? 0 : 1);
 }
@@ -788,6 +808,9 @@ Vector3 Simulation::render_traversal_hand(const bool left) const noexcept {
 
 void Simulation::capture_render_history() noexcept {
     previous_player_position_ = snapshot_.player_position;
+    previous_foot_anchor_ = {snapshot_.foot_push_world_anchor, snapshot_.foot_push_world_normal,
+        snapshot_.foot_push_support_entity_id, snapshot_.foot_push_start_count,
+        snapshot_.foot_push_source_contact_tick, snapshot_.foot_push_active};
     previous_left_hand_ = snapshot_.traversal_left_hand;
     previous_right_hand_ = snapshot_.traversal_right_hand;
     previous_hand_anchors_[0] = physics_world_->render_hand_anchor(0);

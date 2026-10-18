@@ -905,6 +905,9 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["plank_fracture_count"] = s.plank_fracture_count;
     out["plank_discarded_strain_energy_j"] = s.plank_discarded_strain_energy_j;
     out["foot_push_active"] = s.foot_push_active;
+    const auto foot_anchor = simulation_->render_foot_anchor();
+    out["foot_push_world_anchor"] = to_godot(foot_anchor.point);
+    out["foot_push_world_normal"] = to_godot(foot_anchor.normal);
     out["foot_push_start_count"] = s.foot_push_start_count;
     out["foot_push_support_entity_id"] = s.foot_push_support_entity_id;
     out["foot_push_stop_reason"] = s.foot_push_stop_reason;

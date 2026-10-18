@@ -273,6 +273,7 @@ public:
     float impulse() const noexcept { return force_motor_ ? motor_impulse_ : axis_part_.GetTotalLambda(); }
     float impulse_dt() const noexcept { return solve_dt_; }
     JPH::Vec3 impulse_axis() const noexcept { return solve_axis_; }
+    JPH::Vec3 surface_normal() const noexcept { return normal_; }
     float distance() const noexcept { return distance_; }
     float rest_distance() const noexcept { return rest_distance_; }
     void set_rest_distance(float value) noexcept { rest_distance_ = value; }
@@ -359,6 +360,7 @@ struct PhysicalFootPush::Impl {
     }
     void sample_geometry() noexcept {
         state.world_anchor = row->anchor();
+        state.world_surface_normal = row->surface_normal();
         state.leg_axis = row->axis();
         state.actual_distance_m = row->distance();
         state.rest_distance_m = row->rest_distance();

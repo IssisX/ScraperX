@@ -29,6 +29,24 @@ Snapshot tick(Simulation &sim) {
             s.foot_push_stroke_m <= PhysicalFootPush::maximum_stroke_m()+.000001 &&
             s.foot_push_elapsed_seconds <= PhysicalFootPush::duration_seconds()+.000001,
             "two-start ceiling and unchanged per-plant physical bounds",sim);
+    const auto visual = sim.render_foot_anchor();
+    require(visual.active == s.foot_push_active &&
+            visual.start_count == s.foot_push_start_count &&
+            visual.source_tick == s.foot_push_source_contact_tick &&
+            visual.support_entity == s.foot_push_support_entity_id,
+            "render contact keeps actual native lifecycle and identity",sim);
+    if (s.foot_push_active) {
+        const auto normal = s.foot_push_world_normal;
+        const auto anchor = s.foot_push_world_anchor;
+        const auto player = s.player_position;
+        require(std::abs(std::hypot(normal.x,normal.y,normal.z)-1) < 1.0e-5 &&
+                (!s.wall_stride_active || normal.z < -.9) &&
+                std::abs(std::hypot(player.x-anchor.x,player.y-anchor.y,player.z-anchor.z) -
+                         s.foot_push_actual_distance_m) < .0001,
+                "wall readback is the actual surface point and normal",sim);
+    } else require(s.foot_push_world_anchor.x == 0 && s.foot_push_world_anchor.y == 0 &&
+                   s.foot_push_world_anchor.z == 0,
+                   "released contact cannot retain a visible planted anchor",sim);
     return s;
 }
 void approach(Simulation &sim, bool fast = false) {

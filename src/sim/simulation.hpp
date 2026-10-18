@@ -360,6 +360,8 @@ struct Snapshot final {
     double foot_push_actual_distance_m = 0;
     double foot_push_initial_distance_m = 0;
     Vector3 foot_push_player_force{};
+    // Actual retained material point and surface normal from the finite foot owner.
+    Vector3 foot_push_world_anchor{}, foot_push_world_normal{};
     // Successful physical hand-to-foot transfer. Serial persists across render
     // sampling; force is measured grip load, not a fabricated landing impulse.
     std::uint64_t foot_transfer_count = 0;
@@ -935,6 +937,13 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    struct RenderFootAnchor final {
+        Vector3 point{}, normal{};
+        std::uint64_t support_entity = 0, start_count = 0, source_tick = 0;
+        bool active = false;
+    };
+    // Interpolates only the same live material contact; never bridges two plants.
+    [[nodiscard]] RenderFootAnchor render_foot_anchor() const noexcept;
     // Read-only current support-anchor receipt; no render interpolation applied.
     // Physical holds remain owned by PhysicsWorld. Rigid local points use the
     // visible shape origin, not its COM; deforming points use material space.
@@ -1040,6 +1049,7 @@ private:
     bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    RenderFootAnchor previous_foot_anchor_{};
     Vector3 previous_left_hand_{}, previous_right_hand_{};
     RenderHandAnchor previous_hand_anchors_[2]{};
     TraversalState previous_traversal_state_ = TraversalState::None;
