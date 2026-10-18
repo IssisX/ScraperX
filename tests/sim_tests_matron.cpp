@@ -599,6 +599,141 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron vault: feet_up_m=" << peak_y - Matron::kStandCentre - Matron::kDeckTop
                   << " past_m=" << beyond << " crate_moved_m=" << shoved << "\n";
     }
+    // ---- off her deck: into the cage as it leaves she rides it up, clinging; at the top,
+    //      frail, she cannot cross the gap to the ring; in the Turn she leaps it ----------
+    {
+        // The ride alone, for her weight's part in it.
+        double alone_s = 0.0;
+        {
+            Simulation s(InitialSpawn::Deck154);
+            require(s.advance_frame(1.0).accepted && board_well_a(s) && rig_well_a(s) && pull_well_a(s, 0.5, 3.0),
+                    "matron ride: Stage A ridden alone");
+            for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().well_a_cage_travel < 21.99;
+                 ++i) {
+                tick(s);
+                alone_s += Simulation::kFixedStepSeconds;
+            }
+            require(s.matron_state().state == kStateDormant, "matron ride: the ride alone did not wake her");
+        }
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron ride: settle");
+        require(board_well_a(s) && rig_well_a(s), "matron ride: Stage A's cage rigged");
+        require(s.matron_state().state == kStateDormant, "matron ride: rigging the cage did not wake her");
+        require(go(s, -10.0, -129.2, false, 6.0) && go(s, 0.0, -128.6, true, 4.0, 0.8),
+                "matron ride: out of the cage, a sprint toward her locker");
+        require(s.matron_state().state == kStateStraining, "matron ride: the sprint woke her");
+        // Round the gantry's east post, back in to the handle, and take it.
+        require(go(s, -10.0, -128.4, false, 6.0) && board_well_a(s) && walk_to(s, -11.05, -130.35, 3.0, 0.08),
+                "matron ride: back in the cage at the trip handle");
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.advance_frame(0.5);
+        (void)s.request_pick_up();
+        (void)s.advance_frame(0.3);
+        require(s.snapshot().carrying_entity_id == Simulation::kWellAHandleEntityId, "matron ride: the handle in hand");
+        // She comes for the cage; with her 4.5 m from its mouth, step back.
+        bool near = false;
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !near; ++i) {
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            const auto m = s.matron_state();
+            near = m.state == kStateHunting && std::hypot(m.position.x + 10.5, m.position.z + 129.9) < 4.5;
+        }
+        require(near, "matron ride: she comes for the cage");
+        bool opened = false;
+        for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !opened; ++i) {
+            (void)s.set_move_input(0.0, -0.35);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            opened = !s.snapshot().well_a_catch_latched;
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        if (s.snapshot().carrying_entity_id != 0) {
+            (void)s.request_set_down();
+        }
+        require(opened, "matron ride: the catch let go");
+        const auto deaths = s.snapshot().death_count;
+        // The ride: she steps aboard as it leaves and holds on all the way.
+        double with_her_s = 0.0;
+        bool clung_all_way = true;
+        bool aboard = false;
+        for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().well_a_cage_travel < 21.99;
+             ++i) {
+            tick(s);
+            with_her_s += Simulation::kFixedStepSeconds;
+            const auto m = s.matron_state();
+            const double travel = s.snapshot().well_a_cage_travel;
+            aboard = aboard || m.position.y > 155.05 + 0.5 * travel + 1.0;
+            if (travel > 1.0) {
+                clung_all_way = clung_all_way && m.clinging && m.position.y > 155.05 + travel - 0.3;
+            }
+        }
+        std::cout << "  matron ride: aboard " << aboard << ", clung all the way " << clung_all_way << ", the ride "
+                  << with_her_s << " s with her, " << alone_s << " s alone; deaths " << s.snapshot().death_count - deaths
+                  << "\n";
+        require(aboard && clung_all_way, "matron ride: she stepped into the cage as it left and held on to the top");
+        require(s.snapshot().death_count == deaths, "matron ride: clinging, she took nobody on the way up");
+        require(with_her_s > alone_s + 0.5, "matron ride: her weight slows the cage away");
+        // At the top: out of the cage's mouth and across the 1.09 m to the ring,
+        // then off east along it, out of her reach.
+        require(walk_to(s, -11.0, -130.3, 2.0, 0.1), "matron ride: to the cage's mouth at the top");
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.set_move_input(0.0, 0.6);
+        tick(s);
+        (void)s.request_jump();
+        bool across = false;
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz) && !across; ++i) {
+            tick(s);
+            const auto p = s.snapshot();
+            if (p.player_position.z > -128.4) {
+                (void)s.set_move_input(0.0, 0.0);
+            }
+            across = p.player_grounded && p.player_position.z > -128.8 && p.player_position.y > 176.5;
+        }
+        require(across, "matron ride: the player hops the gap onto the 176 ring");
+        require(go(s, -11.0, Matron::kRingNorthZ, false, 3.0) && go(s, 6.0, Matron::kRingNorthZ, true, 6.0),
+                "matron ride: off east along the ring's north band");
+        (void)s.set_move_input(0.0, 0.0);
+        // Frail, she stays on the cages: she comes to their edge and no farther.
+        double island_s = 0.0;
+        bool crossed_without_leap = false;
+        for (int i = 0; i < 6 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            if (m.position.z > -129.0 && m.leaps == 0) {
+                crossed_without_leap = true;
+            }
+            if (m.alive && m.position.y > 176.5 && m.position.z < -129.9) {
+                island_s += Simulation::kFixedStepSeconds;
+            }
+        }
+        const auto held = s.matron_state();
+        std::cout << "  matron ride: on the cages " << island_s << " s of 6 with the player on the ring, at ("
+                  << held.position.x << ", " << held.position.y << ", " << held.position.z << "), level " << held.floor_y
+                  << ", leaps " << held.leaps << "\n";
+        require(held.alive && !crossed_without_leap && island_s > 5.9 && held.floor_y > 176.0,
+                "matron ride: frail, she cannot cross the gap to the ring");
+        // Come within her reach and the Turn takes her over it.
+        bool leapt = false;
+        for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && !leapt; ++i) {
+            (void)steer(s, -2.0, Matron::kRingNorthZ, false);
+            tick(s);
+            leapt = s.matron_state().leaps > 0;
+        }
+        require(leapt, "matron ride: in the Turn she leaps the gap");
+        // Down on the ring's band, standing.
+        bool landed = false;
+        for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            landed = m.position.z > -128.9 && std::abs(m.position.y - (Matron::kRingFloor + Matron::kStandCentre)) < 0.06;
+        }
+        const auto over = s.matron_state();
+        std::cout << "  matron ride: leapt to (" << over.position.x << ", " << over.position.y << ", " << over.position.z
+                  << "), alive " << over.alive << "\n";
+        require(landed && over.alive, "matron ride: she lands on the ring");
+        std::cout << "PASS scraperx_sim matron ride: with_her_s=" << with_her_s << " alone_s=" << alone_s
+                  << " island_s=" << island_s << " leaps=" << over.leaps << "\n";
+    }
     // ---- the same start and inputs give the same chase ------------------------------
     {
         const auto run = [] {

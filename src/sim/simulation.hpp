@@ -202,6 +202,11 @@ struct MatronSnapshot final {
     std::uint32_t fooled = 0;
     bool wary = false;
     std::uint32_t vaults = 0;
+    // Off her deck: gaps leapt in the Turn, holding on to a floor that moves,
+    // and the level she hunts (its floor's top).
+    std::uint32_t leaps = 0;
+    bool clinging = false;
+    double floor_y = 154.0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

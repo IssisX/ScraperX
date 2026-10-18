@@ -37,6 +37,15 @@
 // she learns lasts the run: a restore (a death, a load) forgets it. In the
 // Turn she vaults what blocks her way (kVaultUpMps); frail, she shoves it.
 //
+// Off her deck (decision 9's A: frail, she rides the lifts like anyone). A
+// floor that moves under her (a cage she stepped into as it left) she clings
+// to: no step, no grab, no Turn, until it has stopped and kLetGoSeconds more.
+// Then she hunts the level it stopped at, on that level's walking lines
+// (Level). She never walks off an edge; frail, she cannot cross a gap, so the
+// 1.1 m from Stage A's cage at its top to the 176 ring keeps her on the cages.
+// In the Turn she leaps a gap (kLeapUpMps) as she vaults a crate. Each level
+// has the way up she guards: A's cage on her deck, B's on the 176 ring.
+//
 // Only simulation state decides anything here (no clock, no randomness): the
 // same start and inputs give the same chase.
 
@@ -146,6 +155,33 @@ public:
     static constexpr float kVaultUpMps = 5.2F;
     static constexpr float kVaultForwardMps = 4.0F;
     static constexpr float kVaultCooldownS = 0.8F;
+    // The Turn's leap: a floor that ends ahead of her with floor again within
+    // reach beyond (kLeapReachM) at about her height and nothing in the way at
+    // her head, she jumps the gap.
+    static constexpr float kLeapUpMps = 3.0F;
+    static constexpr float kLeapForwardMps = 5.0F;
+    static constexpr float kLeapReachM = 3.0F;
+    // Riding: her floor moving up or down faster than kRideMps, she clings;
+    // stopped, she lets go kLetGoSeconds later.
+    static constexpr float kRideMps = 0.3F;
+    static constexpr float kLetGoSeconds = 1.0F;
+    // An edge: no floor within kEdgeDropM below her feet ahead of her. She
+    // keeps kEdgeMarginM from one.
+    static constexpr float kEdgeDropM = 1.2F;
+    static constexpr float kEdgeMarginM = 0.25F;
+    // A gap no wider than this (the 0.3 m between two cages) she steps over.
+    static constexpr float kStepOverM = 0.45F;
+    // The 176 ring (world_solids.inc, UpperDeck): its band's middle line, and
+    // the cages at its north edge: Stage A's at the top of its travel, B's at
+    // the bottom of its, their open north sides 1.09 m off the ring's edge.
+    static constexpr float kRingFloor = 176.25F;
+    static constexpr float kRingX = 23.09F;
+    static constexpr float kRingNorthZ = -126.91F;
+    static constexpr float kRingSouthZ = -173.09F;
+    static constexpr float kCageACenterX = -10.5F;
+    static constexpr float kCageBCenterX = -7.2F;
+    static constexpr float kCagesCenterZ = -131.4F;
+    static constexpr float kLeapX = -11.9F;   // across the open half of A's mouth
 
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
@@ -198,6 +234,9 @@ public:
         std::uint32_t fooled = 0;   // noises she went to and found nobody at, this run
         bool wary = false;          // checking the present noise from a vantage first
         std::uint32_t vaults = 0;   // things vaulted in the Turn, this run
+        std::uint32_t leaps = 0;    // gaps leapt in the Turn, this run
+        bool clinging = false;      // holding on to a floor that moves (or just stopped)
+        float floor_y = kDeckTop;   // the level she hunts: its floor's top
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -215,9 +254,12 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
-    // Whether the way out (Stage A's cage) is down at her deck: given before
-    // pre_step. Gone up, there is nothing to guard.
-    void set_way_out(const bool down) noexcept { way_out_ = down; }
+    // Whether each level's way up is there to guard (Stage A's cage down at
+    // her deck, B's down at the 176 ring): given before pre_step. Gone up,
+    // there is nothing to guard.
+    void set_ways_out(const bool a_down, const bool b_down) noexcept {
+        ways_out_ = {a_down, b_down};
+    }
     // A blow on the deck she can hear like the player's noise (a crate
     // crashing down): given before pre_step, heard in it.
     void hear(float x, float y, float z, float loudness) noexcept {
@@ -255,9 +297,31 @@ private:
     struct Node {
         float x, z;
     };
+    // How a walking line is taken: on foot, over the catwalk (only in sight
+    // of prey on it), or across a gap (only leapt, in the Turn).
+    enum class Link : std::uint8_t {
+        Floor,
+        Catwalk,
+        Gap,
+    };
     struct Edge {
         int a, b;
-        bool catwalk;
+        Link link;
+    };
+    // Where she stands guard, and the way she faces there.
+    struct Post {
+        float x, z, yaw;
+    };
+    // A level she can hunt: its floor, its walking lines, the loops she
+    // patrols, and the posts by its way up (guarded while ways_out_[way]):
+    // the first she can walk to is hers.
+    struct Level {
+        float floor_y;
+        std::vector<Node> nodes;
+        std::vector<Edge> edges;
+        std::vector<std::vector<int>> patrols;
+        std::vector<Post> posts;
+        int way;
     };
     struct Plank {
         JPH::BodyID body;
@@ -272,10 +336,23 @@ private:
     void remove_body();
     [[nodiscard]] bool sees(JPH::RVec3 from, JPH::RVec3 to) const;
     [[nodiscard]] static bool on_catwalk_line(float x, float z, float margin);
-    // The next point to walk to, along the cheapest path to (tx, tz), with
-    // the catwalk allowed or not.
-    void route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz) const;
-    void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel, bool vault = false);
+    // The next point to walk to, along the cheapest path on her level to
+    // (tx, tz), with the catwalk allowed or not and gaps (leapt) or not;
+    // false when no such path reaches it (she then heads straight for it).
+    bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
+                      bool allow_gaps = false) const;
+    // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
+    void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
+                     bool turn_moves = false);
+    // Her floor this tick: its height under her, whether it moves (she clings).
+    void feel_floor(float dt);
+    // The level whose floor is under her feet, once she is on one.
+    void settle_level();
+    // The post on her level she can walk to, if its way out is there to guard.
+    [[nodiscard]] const Post *reachable_post(float ax, float az) const;
+    // Of her level's patrol loops, the one she can walk onto from here, and
+    // its node nearest her.
+    void pick_patrol(float ax, float az);
     // A lead: a place she heard (or saw) the player, or a crash, at that loudness.
     void take_lead(float x, float z, float loudness, bool seen);
     // Back to her post if there is a way out to guard, else the patrol.
@@ -294,8 +371,9 @@ private:
     bool body_in_world_ = false;
     std::array<Plank, kPlanks> planks_{};
     std::array<PlankView, kPlanks> plank_views_{};
-    std::vector<Node> nodes_;
-    std::vector<Edge> edges_;
+    std::vector<Level> levels_;
+    int level_ = 0;
+    int patrol_ = 0;   // which of her level's loops, and how far round it
 
     State state_ = State::Dormant;
     float strain_s_ = 0.0F;
@@ -326,8 +404,13 @@ private:
     };
     Crash crash_{};
     bool dead_ = false;
+    // Her floor (feel_floor): its top under her, and riding it.
+    float feet_y_ = kDeckTop;
+    bool riding_ = false;
+    float let_go_s_ = 0.0F;
+    std::uint32_t leaps_ = 0;
     // Her mind (see above): what she has learned this run.
-    bool way_out_ = true;
+    std::array<bool, 2> ways_out_{true, true};
     bool lead_seen_ = false;
     bool wary_ = false;
     float peer_s_ = 0.0F;

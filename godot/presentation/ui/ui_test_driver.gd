@@ -107,6 +107,7 @@ const SCENARIOS := {
 	# The Matron on the 154 m deck: wake her, creep away while she strains,
 	# run her over the rotten catwalk (look_matron_*: renders only, not in CI).
 	"touch_matron": 11,
+	"touch_matron_ride": 11,
 	"look_matron_locker": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
@@ -354,6 +355,8 @@ func _run() -> void:
 			ok = await _summit(InputRouter.Device.TOUCH)
 		"touch_matron":
 			ok = await _matron_touch(InputRouter.Device.TOUCH)
+		"touch_matron_ride":
+			ok = await _matron_ride_touch(InputRouter.Device.TOUCH)
 		"look_matron_locker":
 			ok = await _look_matron("locker")
 		"look_matron_hunt":

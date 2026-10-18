@@ -1137,6 +1137,27 @@ vault: led round three bands she comes up the east band, snaps, the player steps
 crate in her wind-up, she clears it 2.0 m past its middle, the crate unmoved); the poses render in
 `look_matron_gallery` (guard, peer, vault).
 
+**The Matron off her deck: she rides the cage with you (2026-10-18; decision 9, second piece).**
+Her deck has no stair and the zipline down takes its one trolley with its rider, so the only way
+off it for her is the way up: Stage A's cage, with you. Trip it while she is close and she steps in
+as it leaves (from 4 to 5 m off its mouth, in the proof); her 220 kg slows it away (10.5 s to the
+top against 9.7 alone). Frail, a floor that moves under her she clings to: crouched, a hand on the
+frame either side, eyes on you, no step and no grab until it has stopped and a second more. Then
+she hunts the level it stopped at (the 176 ring, its band and the two cages at its north edge) by
+the same rules as her deck. She never walks off an edge, now anywhere: no floor ahead within 1.2 m
+down, as far as she needs to stop, and she plants her feet, keeping 0.25 m from it to either side;
+a crack her foot bridges (the 0.3 m between the cages) is no edge. So the 1.09 m from the cages to
+the ring holds her, frail, while you get away along it; in the Turn she leaps it (3 m/s up, 5 on,
+from the open half of A's mouth: the cascade striker's post stands before its middle and B's
+gantry over B's), and lands on the ring. On the ring her way up to guard is B's cage. A death
+still returns you to where she burst out and her to her locker. Not yet: the rings above 176 as
+levels she knows (her clinging would carry her up in B's cage; her walking lines stop at 176).
+Proof: native `matron` (ride:
+aboard, clinging the whole way, nobody taken, her weight +0.8 s; at the top 6 s on the cages
+with the player on the ring, then the leap, down on the ring standing; every earlier Matron
+proof unchanged); touch `touch_matron_ride` (new, in CI: rigged on touch, the handle tripped as
+she nears, the ride, the hop to the ring, her leap and landing); `look_matron_gallery` (cling).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1155,9 +1176,10 @@ fill in after).**
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
-   2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Next:
-   she follows you off the deck (the cage, the zipline, the stairs) and hunts other levels; then
-   lift meddling you can undo.
+   2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Off
+   it: done 2026-10-18 for Stage A's cage to the 176 ring (she rides it with you, clinging,
+   hunts the ring, leaps its gap in the Turn). Next: the rings above as levels and B's and C's
+   rides; then lift meddling you can undo.
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
 

@@ -1391,6 +1391,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["fooled"] = static_cast<std::int64_t>(state.fooled);
     out["wary"] = state.wary;
     out["vaults"] = static_cast<std::int64_t>(state.vaults);
+    out["leaps"] = static_cast<std::int64_t>(state.leaps);
+    out["clinging"] = state.clinging;
+    out["floor_y"] = state.floor_y;
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;

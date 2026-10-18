@@ -855,6 +855,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.fooled = view.fooled;
     result.wary = view.wary;
     result.vaults = view.vaults;
+    result.leaps = view.leaps;
+    result.clinging = view.clinging;
+    result.floor_y = view.floor_y;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

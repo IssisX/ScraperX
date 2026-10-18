@@ -6,32 +6,8 @@ extends "res://presentation/ui/ui_test_moves.gd"
 const TRAVERSAL_CLIMBING := 4
 
 func _well_stage_a(device: int) -> bool:
-	for leg in [Vector2(-10.0, -129.2), Vector2(-10.2, -130.6), Vector2(-11.35, -131.95)]:
-		if not await _walk_to(device, leg, 0.2):
-			return _fail("the walk into the cage stalled at (%.2f, %.2f)" % [
-				_position().x, _position().z])
-	await _face(Vector2(-0.7, -0.7))
-	if not await _offered(&"unhook", "UNHOOK"):
-		return _fail("Action read '%s' facing the bollard, not UNHOOK" % _action_label())
-	_act(device)
-	var holding_shackle: bool = await _wait_until(
-		func() -> bool: return int(_native().get_carrying_entity_id()) == 2002, 0.5)
-	if not holding_shackle:
-		return _fail("UNHOOK did not put the rope's shackle in the hands")
-	if not await _walk_to(device, Vector2(-11.35, -131.4), 0.2):
-		return _fail("the step to the cage's eye stalled")
-	await _face(Vector2(-1.0, 0.0))
-	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
-		return _fail("Action read '%s %s' at the cage's eye, not HOOK ONTO CAGE EYE" % [
-			_action_label(), String(_ctx()["action"]["detail"])])
-	await _pose("rig_shackle")
-	_act(device)
-	var hooked: bool = await _wait_until(
-		func() -> bool: return int(_native().get_well_a_rope_end_entity_id()) == 2000, 0.5)
-	if not hooked:
-		return _fail("HOOK did not put the rope's end on the cage's eye (end %d, at %s, carrying %d)" % [
-			int(_native().get_well_a_rope_end_entity_id()), str(_position()),
-			int(_native().get_carrying_entity_id())])
+	if not await _rig_stage_a(device):
+		return false
 	if not await _walk_to(device, Vector2(-11.05, -130.35), 0.2):
 		return _fail("the step to the trip handle stalled")
 	await _face(Vector2(0.0, 1.0))
@@ -68,6 +44,37 @@ func _well_stage_a(device: int) -> bool:
 	await _pose("rig_top")
 	if int(_native().get_support_entity_id()) != 2000 or _position().y < 177.0:
 		return _fail("the rider is not standing in the cage at the top (y %.2f)" % _position().y)
+	return true
+
+# Into Stage A's cage from the deck, UNHOOK the rope's end off the bollard and
+# HOOK it onto the cage's eye.
+func _rig_stage_a(device: int) -> bool:
+	for leg in [Vector2(-10.0, -129.2), Vector2(-10.2, -130.6), Vector2(-11.35, -131.95)]:
+		if not await _walk_to(device, leg, 0.2):
+			return _fail("the walk into the cage stalled at (%.2f, %.2f)" % [
+				_position().x, _position().z])
+	await _face(Vector2(-0.7, -0.7))
+	if not await _offered(&"unhook", "UNHOOK"):
+		return _fail("Action read '%s' facing the bollard, not UNHOOK" % _action_label())
+	_act(device)
+	var holding_shackle: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 2002, 0.5)
+	if not holding_shackle:
+		return _fail("UNHOOK did not put the rope's shackle in the hands")
+	if not await _walk_to(device, Vector2(-11.35, -131.4), 0.2):
+		return _fail("the step to the cage's eye stalled")
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
+		return _fail("Action read '%s %s' at the cage's eye, not HOOK ONTO CAGE EYE" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("rig_shackle")
+	_act(device)
+	var hooked: bool = await _wait_until(
+		func() -> bool: return int(_native().get_well_a_rope_end_entity_id()) == 2000, 0.5)
+	if not hooked:
+		return _fail("HOOK did not put the rope's end on the cage's eye (end %d, at %s, carrying %d)" % [
+			int(_native().get_well_a_rope_end_entity_id()), str(_position()),
+			int(_native().get_carrying_entity_id())])
 	return true
 
 func _rig(device: int) -> bool:

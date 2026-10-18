@@ -56,6 +56,7 @@ var _was_seen := false
 var _last_turn := 0
 var _cry_fall := false
 var _vaults_seen := -1
+var _leaps_seen := -1
 var _planks: Array[MeshInstance3D] = []
 var _plank_bolted: Array[bool] = []
 # The locker.
@@ -678,8 +679,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	if state == STATE_HUNTING and turn == 0 and bool(data.get("wary", false)):
 		state = STATE_SEARCHING
 	var still_on_post := state == STATE_GUARDING and speed < 0.3
-	# Rising off the floor in the Turn: a vault.
+	# Rising off the floor in the Turn: a vault, or a leap over a gap.
 	var vaulting := turn == 2 and _fall_speed > 1.0
+	# Holding on to a floor that moves (a cage she stepped into as it left).
+	var clinging := bool(data.get("clinging", false))
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -691,6 +694,20 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		legs_fwd = sin(_clock * 27.0) * 0.8
 		legs_back = -sin(_clock * 27.0) * 0.8
 		knees = 0.5
+	elif clinging:
+		# Down on her haunches with a hand locked on the cage's frame either
+		# side, rocking with it, the head never off the player.
+		pitch = 1.05
+		hip_y = 0.6
+		knees = 1.9
+		legs_fwd = 1.1
+		legs_back = 1.1
+		arms_fwd = 0.5
+		arms_bend = 0.4
+		arms_splay = 1.45
+		head_pitch = -0.85
+		head_roll = 0.25 * sin(_clock * 1.7)
+		jaw_open = 0.55
 	elif state == STATE_HUNTING and speed > 1.0:
 		# All fours: hips high, chest low, arms reaching and elbows out, a
 		# stuttering scuttle, the head up and cocked and always on you.
@@ -857,7 +874,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	torso.rotation.x = pitch
 	neck.rotation = Vector3(head_pitch * 0.4, head_back, head_roll * 0.3)
-	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING or still_on_post else yaw_to_player * (0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
+	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING or still_on_post else yaw_to_player * (1.0 if clinging else 0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
 	jaw.rotation.x = jaw_open
 	_limb(_p["hp_l"], _p["kn_l"], legs_fwd, knees * knee_flip)
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
@@ -922,7 +939,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	var centre: Vector3 = data["position"]
 	# Fall speed from her own height, for the plunge.
 	_fall_speed = (centre.y - _last_pos.y) / maxf(delta, 0.0001) if delta > 0.0 else 0.0
-	var falling := out and _fall_speed < -6.0 and centre.y < DECK + 0.4
+	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
 	_last_pos = centre
 	if not out or centre.distance_to(camera_position) > DRAW_RANGE_M:
 		_figure.visible = false
@@ -954,6 +971,11 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			_audio.matron_cue(&"matron_step", _hip_world(), 2.0, 0.7)
 			_audio.matron_cue(&"bone_crack", _hip_world(), -4.0, randf_range(1.2, 1.35))
 		_vaults_seen = vaults
+		# A leap over a gap: the shriek as she goes.
+		var leaps := int(data.get("leaps", 0))
+		if _leaps_seen >= 0 and leaps > _leaps_seen:
+			_audio.matron_cue(&"matron_shriek", _hip_world(), 0.0, randf_range(0.75, 0.9))
+		_leaps_seen = leaps
 		if turn != _last_turn:
 			if turn == 1:
 				_audio.matron_cue(&"bone_crack", _hip_world(), 1.0, randf_range(0.9, 1.1))

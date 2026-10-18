@@ -5,6 +5,12 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # bolts pop while the player walks quietly on to the catwalk's east end; she
 # bursts out and hunts; the player sprints over the rotten catwalk and she
 # follows onto a plate that gives way under her: the one thing that kills her.
+# touch_matron_ride: Stage A rigged quietly (UNHOOK, HOOK); out of the cage a
+# sprint toward her locker wakes her; back in, GRAB the trip handle and wait
+# for her. With her 4.5 m from the cage's mouth, step back: she steps in as it
+# leaves and rides it up holding on, taking nobody. At the top a hop over the
+# 1.09 m to the 176 ring and away along it: frail, she stays on the cages;
+# back within her reach, the Turn takes her over the gap.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
 #
@@ -23,6 +29,7 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # let go, the ram holds; LOWER held: the truck comes back down onto its rear
 # wheels with a slam.
 
+const MATRON_STATE_DORMANT := 0
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
 const MATRON_STATE_DEAD := 6
@@ -110,6 +117,107 @@ func _matron_touch(device: int) -> bool:
 	return true
 
 
+func _matron_ride_touch(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _rig_stage_a(device):
+		return false
+	if int(_matron_state()["state"]) != MATRON_STATE_DORMANT:
+		return _fail("rigging the cage woke her (state %d)" % int(_matron_state()["state"]))
+	# Out of the cage's mouth; a sprint toward her locker wakes her.
+	for leg in [Vector2(-10.2, -130.6), Vector2(-10.0, -129.2)]:
+		if not await _walk_to(device, leg, 0.2):
+			return _fail("the walk out of the cage stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var woke: bool = await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_STRAINING, 6.0)
+	_move(device, 0.0)
+	if not woke:
+		return _fail("the sprint toward her locker did not wake her (at %s)" % str(_position()))
+	# Back round the gantry's east post, in, and the handle in hand.
+	for leg in [Vector2(-10.0, -128.4), Vector2(-10.0, -129.2), Vector2(-10.2, -130.6), Vector2(-11.05, -130.35)]:
+		if not await _go(device, leg, 0.2, 8.0):
+			return _fail("the walk back in to the trip handle stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("Action read '%s' facing the trip handle, not GRAB" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2004, 0.5):
+		return _fail("GRAB did not put the trip handle in the hands")
+	# Her coming for the cage; at 4.5 m from its mouth, step back.
+	var near: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(-10.5, -129.9)) < 4.5, 45.0)
+	if not near:
+		return _fail("she did not come for the cage (state %d, at %s)" % [int(_matron_state()["state"]), str(_matron_state()["position"])])
+	_move(device, -0.6)
+	var tripped: bool = await _wait_until(func() -> bool: return not bool(_native().is_well_a_catch_latched()), 3.0)
+	_move(device, 0.0)
+	if not tripped:
+		return _fail("stepping back with the handle never opened the catch")
+	_act(device)
+	await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.5)
+	var deaths := int(_native().get_death_count())
+	# The ride: she steps in as it leaves and holds on to the top, looked at
+	# halfway up.
+	var seen := {"clung": false, "shot": false}
+	var arrived: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var travel := float(_native().get_well_a_cage_travel())
+		seen["clung"] = bool(seen["clung"]) or (bool(m["clinging"]) and travel > 2.0)
+		return travel >= 21.95, 20.0)
+	if not arrived:
+		return _fail("the cage never reached the top (travel %.2f m)" % float(_native().get_well_a_cage_travel()))
+	if not bool(seen["clung"]) or int(_native().get_death_count()) != deaths:
+		return _fail("she did not ride up holding on (clung %s, deaths %d, she at %s)" % [
+			str(seen["clung"]), int(_native().get_death_count()) - deaths, str(_matron_state()["position"])])
+	var her: Vector3 = _matron_state()["position"]
+	await _face(Vector2(her.x - _position().x, her.z - _position().z))
+	await _pose("matron_ride_clinging")
+	# At the top: to the cage's mouth and over the gap to the ring.
+	if not await _walk_to(device, Vector2(-11.0, -130.3), 0.15, 2.0):
+		return _fail("the step to the cage's mouth at the top stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	var across: bool = await _leap(device, 0.6, func() -> bool:
+		return bool(_ctx()["grounded"]) and _position().z > -128.8 and _position().y > 176.5, 2.0)
+	if not across:
+		return _fail("the hop over the gap to the ring missed (at %s)" % str(_position()))
+	if not await _go(device, Vector2(6.0, -126.9), 0.5, 8.0):
+		return _fail("the walk away along the ring stalled at %s" % str(_position()))
+	# Frail, she stays on the cages: off them only by the Turn's leap, now
+	# (her Turn ready as the player went) or once the player comes back within
+	# her reach.
+	var held := {"off": false}
+	await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		held["off"] = bool(held["off"]) or not bool(m["alive"]) or (int(m["leaps"]) == 0 and (at.z > -129.9 or at.y < 176.5))
+		return int(m["leaps"]) > 0, 6.0)
+	if bool(held["off"]):
+		return _fail("frail, she left the cages without a leap (at %s, alive %s)" % [
+			str(_matron_state()["position"]), str(_matron_state()["alive"])])
+	var stranded := int(_matron_state()["leaps"]) == 0
+	if stranded:
+		her = _matron_state()["position"]
+		await _face(Vector2(her.x - _position().x, her.z - _position().z))
+		await _pose("matron_ride_stranded")
+		if not await _go(device, Vector2(-2.0, -126.9), 0.5, 8.0):
+			return _fail("the walk back along the ring stalled at %s" % str(_position()))
+	var leapt: bool = await _wait_until(func() -> bool: return int(_matron_state()["leaps"]) > 0, 25.0)
+	if not leapt:
+		return _fail("in reach on the ring, she never leapt the gap (state %d, turn %d, at %s)" % [
+			int(_matron_state()["state"]), int(_matron_state()["turn"]), str(_matron_state()["position"])])
+	var landed: bool = await _wait_until(func() -> bool:
+		var at: Vector3 = _matron_state()["position"]
+		return at.z > -128.9 and absf(at.y - 177.3) < 0.06, 3.0)
+	if not landed:
+		return _fail("she leapt but did not come down on the ring (at %s)" % str(_matron_state()["position"]))
+	_detail = "deaths_on_ride=%d stranded_6s=%s leaps=%d she_at=%s" % [int(_native().get_death_count()) - deaths,
+		str(stranded), int(_matron_state()["leaps"]), str(_matron_state()["position"])]
+	return true
+
+
 # Renders only: the locker straining at three points of the climb, then her
 # bursting out and the hunt, from where the player stands.
 func _look_matron(stage: String) -> bool:
@@ -190,6 +298,7 @@ func _look_matron_gallery() -> bool:
 		["emerge", {"state": 2, "speed": 0.0, "stride": 0.0, "turn": 0}],
 		["guard", {"state": 7, "speed": 0.0, "stride": 0.0, "turn": 0}],
 		["peer", {"state": 8, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		["cling", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "clinging": true}],
 		# Rising (0.15 m a frame): the vault.
 		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
 	]

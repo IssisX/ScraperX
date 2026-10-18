@@ -50,11 +50,33 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
                const BodyID player)
     : physics_(physics), moving_layer_(moving_layer), player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
-    // The walking lines: down the middle of each band, the catwalk across.
-    nodes_ = {{-kBandX, kBandNorthZ}, {0.0F, kBandNorthZ}, {kBandX, kBandNorthZ}, {kBandX, kMidZ},
-              {kBandX, kBandSouthZ},  {0.0F, kBandSouthZ}, {-kBandX, kBandSouthZ}, {-kBandX, kMidZ}};
-    edges_ = {{0, 1, false}, {1, 2, false}, {2, 3, false}, {3, 4, false}, {4, 5, false},
-              {5, 6, false}, {6, 7, false}, {7, 0, false}, {7, 3, true}};
+    // Her deck: down the middle of each band, the catwalk across; her post in
+    // the mouth of Stage A's cage, facing out over the band.
+    Level deck{kDeckTop, {}, {}, {}, {}, 0};
+    deck.nodes = {{-kBandX, kBandNorthZ}, {0.0F, kBandNorthZ}, {kBandX, kBandNorthZ}, {kBandX, kMidZ},
+                  {kBandX, kBandSouthZ},  {0.0F, kBandSouthZ}, {-kBandX, kBandSouthZ}, {-kBandX, kMidZ}};
+    deck.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor}, {3, 4, Link::Floor},
+                  {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor}, {7, 0, Link::Floor},
+                  {7, 3, Link::Catwalk}};
+    deck.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}};
+    deck.posts = {{kPostX, kPostZ, 0.0F}};
+    // The 176 ring: down the middle of its band, and the two cages at its
+    // north edge, a step apart, a gap (1.09 m) off the ring. The gap is open
+    // air from the west half of A's mouth (the cascade striker's post stands
+    // on the ring's edge before its middle; B's gantry and its gear hang over
+    // B's). Its post is by B's cage, its way up: on the ring facing the cage,
+    // or in the cage's mouth.
+    Level ring{kRingFloor, {}, {}, {}, {}, 1};
+    ring.nodes = {{-kRingX, kRingNorthZ},       {kLeapX, kRingNorthZ},        {kCageBCenterX, kRingNorthZ},
+                  {kRingX, kRingNorthZ},        {kRingX, kMidZ},              {kRingX, kRingSouthZ},
+                  {-kRingX, kRingSouthZ},       {-kRingX, kMidZ},             {kCageACenterX, kCagesCenterZ},
+                  {kCageBCenterX, kCagesCenterZ}, {kLeapX + 0.5F, kCagesCenterZ + 0.9F}};
+    ring.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor},  {3, 4, Link::Floor},
+                  {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor},  {7, 0, Link::Floor},
+                  {8, 9, Link::Floor}, {8, 10, Link::Floor}, {10, 1, Link::Gap}};
+    ring.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}, {8, 9}};
+    ring.posts = {{kCageBCenterX, kRingNorthZ - 1.2F, kPi}, {kCageBCenterX, kCagesCenterZ + 0.9F, 0.0F}};
+    levels_ = {deck, ring};
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -160,17 +182,23 @@ bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
     return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
 }
 
-void Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
-                          float &wx, float &wz) const {
-    std::vector<Node> nodes = nodes_;
-    std::vector<Edge> edges = edges_;
+bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
+                          float &wx, float &wz, const bool allow_gaps) const {
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    std::vector<Node> nodes = level.nodes;
+    std::vector<Edge> edges = level.edges;
+    const auto allowed = [&](const Edge &e) {
+        return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps);
+    };
+    // She stands on a line she may take (the catwalk under her counts), and
+    // the place she heads for is put on one.
     const auto insert = [&](const float x, const float z, const bool loop_only) {
         int best = -1;
         float best_d = std::numeric_limits<float>::max();
         float bx = 0.0F;
         float bz = 0.0F;
         for (std::size_t e = 0; e < edges.size(); ++e) {
-            if (loop_only && edges[e].catwalk) {
+            if ((loop_only && !allowed(edges[e])) || (edges[e].link == Link::Gap && !allow_gaps)) {
                 continue;
             }
             float px = 0.0F;
@@ -190,13 +218,13 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
         const Edge old = edges[static_cast<std::size_t>(best)];
         nodes.push_back({bx, bz});
         const int fresh = static_cast<int>(nodes.size()) - 1;
-        edges[static_cast<std::size_t>(best)] = {old.a, fresh, old.catwalk};
-        edges.push_back({fresh, old.b, old.catwalk});
+        edges[static_cast<std::size_t>(best)] = {old.a, fresh, old.link};
+        edges.push_back({fresh, old.b, old.link});
         return fresh;
     };
     const int from = insert(fx, fz, false);
-    const int to = insert(tx, tz, !allow_catwalk);
-    // Dijkstra over at most ten nodes.
+    const int to = insert(tx, tz, true);
+    // Dijkstra over at most a dozen nodes.
     const std::size_t n = nodes.size();
     std::vector<float> dist(n, std::numeric_limits<float>::max());
     std::vector<int> prev(n, -1);
@@ -214,7 +242,7 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
         }
         done[static_cast<std::size_t>(u)] = true;
         for (const Edge &e : edges) {
-            if (e.catwalk && !allow_catwalk) {
+            if (!allowed(e)) {
                 continue;
             }
             int v = -1;
@@ -241,7 +269,7 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
     if (prev[static_cast<std::size_t>(to)] < 0 && to != from) {
         wx = tx;
         wz = tz;
-        return;
+        return false;
     }
     std::vector<int> path;
     for (int at = to; at >= 0 && at != from; at = prev[static_cast<std::size_t>(at)]) {
@@ -257,9 +285,10 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
                 wx = node.x;
                 wz = node.z;
             }
-            return;
+            return true;
         }
     }
+    return true;
 }
 
 void Matron::take_lead(const float x, const float z, const float loudness, const bool seen) {
@@ -275,21 +304,111 @@ void Matron::stand_down() {
     turn_s_ = 0.0F;
     wary_ = false;
     peer_s_ = 0.0F;
-    state_ = way_out_ ? State::Guarding : State::Shuffling;
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    if (reachable_post(float(at.GetX()), float(at.GetZ())) != nullptr) {
+        state_ = State::Guarding;
+    } else {
+        state_ = State::Shuffling;
+        pick_patrol(float(at.GetX()), float(at.GetZ()));
+    }
+}
+
+const Matron::Post *Matron::reachable_post(const float ax, const float az) const {
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    if (!ways_out_[static_cast<std::size_t>(level.way)]) {
+        return nullptr;
+    }
+    for (const Post &post : level.posts) {
+        float wx = 0.0F;
+        float wz = 0.0F;
+        if (route_toward(ax, az, post.x, post.z, false, wx, wz)) {
+            return &post;
+        }
+    }
+    return nullptr;
+}
+
+void Matron::pick_patrol(const float ax, const float az) {
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    for (std::size_t loop = 0; loop < level.patrols.size(); ++loop) {
+        const std::vector<int> &nodes = level.patrols[loop];
+        const Node &first = level.nodes[static_cast<std::size_t>(nodes.front())];
+        float wx = 0.0F;
+        float wz = 0.0F;
+        if (!route_toward(ax, az, first.x, first.z, false, wx, wz)) {
+            continue;
+        }
+        patrol_ = static_cast<int>(loop);
+        float best = std::numeric_limits<float>::max();
+        for (std::size_t i = 0; i < nodes.size(); ++i) {
+            const Node &node = level.nodes[static_cast<std::size_t>(nodes[i])];
+            const float d = distance_xz(ax, az, node.x, node.z);
+            if (d < best) {
+                best = d;
+                patrol_node_ = static_cast<int>(i);
+            }
+        }
+        return;
+    }
+}
+
+void Matron::feel_floor(const float dt) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    RayCastResult hit;
+    const IgnoreSingleBodyFilter self(body_);
+    const float reach = kStandCentre + 0.3F;
+    float floor_vy = 0.0F;
+    if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(at, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self)) {
+        feet_y_ = float(at.GetY()) - reach * hit.mFraction;
+        floor_vy = bodies.GetLinearVelocity(hit.mBodyID).GetY();
+    }
+    if (std::abs(floor_vy) > kRideMps) {
+        if (!riding_) {
+            // Whatever she was about, the floor going takes it from her.
+            turn_ = Turn::None;
+            turn_s_ = 0.0F;
+        }
+        riding_ = true;
+        let_go_s_ = kLetGoSeconds;
+    } else if (riding_) {
+        let_go_s_ -= dt;
+        if (let_go_s_ <= 0.0F) {
+            riding_ = false;
+            let_go_s_ = 0.0F;
+        }
+    }
+}
+
+void Matron::settle_level() {
+    if (riding_) {
+        return;
+    }
+    for (std::size_t i = 0; i < levels_.size(); ++i) {
+        if (static_cast<int>(i) != level_ && std::abs(feet_y_ - levels_[i].floor_y) < 0.6F) {
+            level_ = static_cast<int>(i);
+            commit_s_ = 0.0F;
+            const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+            pick_patrol(float(at.GetX()), float(at.GetZ()));
+            return;
+        }
+    }
 }
 
 void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed, const float foot_accel,
-                         const bool vault) {
+                         const bool turn_moves) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     target_x_ = wx;
     target_z_ = wz;
     Vec3 velocity = bodies.GetLinearVelocity(body_);
-    // Feet drive only on a floor.
+    // Feet drive only on a floor, and not once she has jumped off it (rising
+    // off it faster than it rises): a vault or a leap flies until she lands.
     RayCastResult hit;
     const IgnoreSingleBodyFilter self(body_);
     const bool floor = physics_.GetNarrowPhaseQuery().CastRay(
-        RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), hit, {}, {}, self);
+                           RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), hit, {}, {}, self) &&
+                       velocity.GetY() < bodies.GetLinearVelocity(hit.mBodyID).GetY() + 1.0F;
     float dx = wx - float(at.GetX());
     float dz = wz - float(at.GetZ());
     const float length = std::hypot(dx, dz);
@@ -320,14 +439,89 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
             delta = delta.Normalized() * (foot_accel * dt);
         }
         velocity = Vec3(velocity.GetX() + delta.GetX(), velocity.GetY(), velocity.GetZ() + delta.GetZ());
+        IgnoreMultipleBodiesFilter not_us;
+        not_us.Reserve(2);
+        not_us.IgnoreBody(body_);
+        not_us.IgnoreBody(player_);
+        // Floor `ahead_m` along `dir`, looked for from `above` her feet down
+        // `depth`: its top, if there is one.
+        const float feet = float(at.GetY()) - kStandCentre;
+        const auto floor_at = [&](const Vec3 &dir, const float ahead_m, const float above, const float depth,
+                                  float &top) {
+            RayCastResult down;
+            const RVec3 from = at + dir * ahead_m + Vec3(0.0F, above - kStandCentre, 0.0F);
+            if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), down, {}, {},
+                                                        not_us)) {
+                return false;
+            }
+            top = float(from.GetY()) - depth * down.mFraction;
+            return true;
+        };
+        // An edge `ahead_m` along `dir`: no floor within kEdgeDropM below her
+        // feet there, nor for kStepOverM on (a crack between plates, or the
+        // step between two cages, her foot bridges: not an edge).
+        float top = 0.0F;
+        const auto edge_at = [&](const Vec3 &dir, const float ahead_m) {
+            for (float on = 0.0F; on <= kStepOverM + 0.01F; on += 0.15F) {
+                if (floor_at(dir, ahead_m + on, 0.5F, 0.5F + kEdgeDropM, top)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        bool leapt = false;
+        if (turn_moves && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.0F) {
+            // The Turn's leap: at an edge in her way, with floor again within
+            // reach beyond at about her height, she jumps the gap.
+            const Vec3 heading(dx / length, 0.0F, dz / length);
+            // Nothing in the way across her width, at her middle and her head.
+            const Vec3 across(-heading.GetZ(), 0.0F, heading.GetX());
+            bool headroom = true;
+            for (const float side : {-kRadius, 0.0F, kRadius}) {
+                for (const float rise : {0.0F, 0.9F}) {
+                    RayCastResult clear;
+                    headroom = headroom && !physics_.GetNarrowPhaseQuery().CastRay(
+                                               RRayCast(at + across * side + Vec3(0.0F, rise, 0.0F), heading * kLeapReachM),
+                                               clear, {}, {}, not_us);
+                }
+            }
+            if (headroom && edge_at(heading, 0.45F)) {
+                bool landing = false;
+                for (float reach = 0.9F; reach <= kLeapReachM && !landing; reach += 0.5F) {
+                    landing = floor_at(heading, reach, 0.8F, 1.6F, top) && std::abs(top - feet) < 0.8F;
+                }
+                if (landing) {
+                    velocity = Vec3(heading.GetX() * kLeapForwardMps, kLeapUpMps, heading.GetZ() * kLeapForwardMps);
+                    vault_cooldown_s_ = kVaultCooldownS;
+                    ++leaps_;
+                    leapt = true;
+                }
+            }
+        }
+        const Vec3 flat_new(velocity.GetX(), 0.0F, velocity.GetZ());
+        const float going = flat_new.Length();
+        if (!leapt && going > 0.05F) {
+            // Never off an edge: where her feet are taking her (just ahead, and
+            // as far as she needs to stop from this speed), she plants them.
+            const Vec3 way = flat_new / going;
+            const float check = 0.3F + going * going / 40.0F + going * dt;
+            if (edge_at(way, 0.2F) || edge_at(way, check)) {
+                velocity -= way * std::min(going, cut_limit);
+            }
+            // And no step that brings her within kEdgeMarginM of an edge to
+            // either side (the tower's edges run along x and z): sliding along
+            // one at a slant she keeps her distance.
+            for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
+                const float toward = velocity.Dot(side);
+                if (toward > 0.0F && edge_at(side, toward * dt + kEdgeMarginM)) {
+                    velocity -= side * toward;
+                }
+            }
+        }
         // The Turn's vault: something lower than her chest close ahead in
         // her way (not the player), and nothing at her head: she jumps it.
-        if (vault && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
+        if (turn_moves && !leapt && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
             const Vec3 ahead(dx / length * 1.1F, 0.0F, dz / length * 1.1F);
-            IgnoreMultipleBodiesFilter not_us;
-            not_us.Reserve(2);
-            not_us.IgnoreBody(body_);
-            not_us.IgnoreBody(player_);
             RayCastResult knee;
             RayCastResult head;
             const bool low = physics_.GetNarrowPhaseQuery().CastRay(
@@ -451,15 +645,21 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     if (dead_) {
         return;
     }
+    if (body_in_world_) {
+        feel_floor(dt);
+        settle_level();
+    }
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
-    // On the deck (its height, its footprint) the player can be heard at all.
-    const bool on_deck = player.GetY() > kDeckTop - 1.0 && player.GetY() < kDeckTop + 6.0 && std::abs(px) < 27.0F &&
+    // On her level (the height of the floor under her, within the tower's
+    // footprint) the player can be heard at all: her deck, the ring a cage
+    // brought her to, the cage she rides with the player in it.
+    const bool on_deck = player.GetY() > feet_y_ - 1.0 && player.GetY() < feet_y_ + 6.0 && std::abs(px) < 27.0F &&
                          pz < -123.0F && pz > -177.0F;
     player_on_deck_ = on_deck;
     const Crash crash = crash_;
     crash_ = {};
-    const bool crash_on_deck = crash.heard && crash.y > kDeckTop - 1.0F && crash.y < kDeckTop + 6.0F;
+    const bool crash_on_deck = crash.heard && crash.y > feet_y_ - 1.0F && crash.y < feet_y_ + 6.0F;
     switch (state_) {
     case State::Dormant: {
         const float d = distance_xz(px, pz, kLockerX, kLockerZ);
@@ -546,17 +746,29 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         } else {
             since_heard_s_ += dt;
         }
-        // The catwalk is only ever taken in plain sight of prey ahead, or once
-        // she is already on it.
-        const bool on_catwalk = on_catwalk_line(ax, az, 0.4F);
+        // Holding on to a floor that moves (or has only just stopped): she
+        // keeps her eyes on the player and does nothing else.
+        if (riding_) {
+            commit_s_ = 0.0F;
+            allow_catwalk_ = false;
+            walk_toward(dt, ax, az, 0.0F);
+            if (saw) {
+                yaw_ = turn_toward(yaw_, std::atan2(px - ax, pz - az), kTurnRate, dt);
+            }
+            break;
+        }
+        // The catwalk (her deck's) is only ever taken in plain sight of prey
+        // ahead, or once she is already on it.
+        const bool deck = level_ == 0;
+        const bool on_catwalk = deck && on_catwalk_line(ax, az, 0.4F);
         const bool prey_at_catwalk =
-            on_catwalk_line(px, pz, 0.0F) ||
-            distance_xz(px, pz, -kBandX, kMidZ) < kEndM || distance_xz(px, pz, kBandX, kMidZ) < kEndM;
+            deck && (on_catwalk_line(px, pz, 0.0F) || distance_xz(px, pz, -kBandX, kMidZ) < kEndM ||
+                     distance_xz(px, pz, kBandX, kMidZ) < kEndM);
         // Once she has decided for the catwalk she keeps to it a moment.
         // At the catwalk's end she is off its axis as often as on it, and a rail
         // post can hide the prey on the plates: a sound a moment ago counts as sight there.
-        const bool at_end = distance_xz(ax, az, -kBandX, kMidZ) < kEndM + 3.0F ||
-                            distance_xz(ax, az, kBandX, kMidZ) < kEndM + 3.0F;
+        const bool at_end = deck && (distance_xz(ax, az, -kBandX, kMidZ) < kEndM + 3.0F ||
+                                     distance_xz(ax, az, kBandX, kMidZ) < kEndM + 3.0F);
         if ((sees_far_ || (at_end && since_heard_s_ < 1.0F)) && prey_at_catwalk) {
             commit_s_ = kCommitHoldSeconds;
         } else {
@@ -585,7 +797,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     break;
                 }
             } else {
-                route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz);
+                // In the Turn a gap is no bar: she leaps it.
+                route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz, turn_ != Turn::None);
                 step_turn(dt, d, loudness);
                 if (turn_ == Turn::Windup) {
                     walk_toward(dt, wx, wz, 0.0F, kTurnFootAccel);
@@ -627,28 +840,32 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             break;
         }
         if (state_ == State::Guarding) {
-            if (!way_out_) {
+            const Post *post = reachable_post(ax, az);
+            if (post == nullptr) {
                 state_ = State::Shuffling;
+                pick_patrol(ax, az);
             } else {
-                if (distance_xz(ax, az, kPostX, kPostZ) > 0.5F) {
-                    route_toward(ax, az, kPostX, kPostZ, on_catwalk, wx, wz);
+                if (distance_xz(ax, az, post->x, post->z) > 0.5F) {
+                    route_toward(ax, az, post->x, post->z, on_catwalk, wx, wz);
                     walk_toward(dt, wx, wz, kSearchMps);
                 } else {
                     // In the mouth of the way out, still and silent: facing out
-                    // over the band, or toward a far noise she let go.
+                    // from it, or toward a far noise she let go.
                     walk_toward(dt, ax, az, 0.0F);
-                    const float want = look_s_ > 0.0F ? std::atan2(look_x_ - ax, look_z_ - az) : 0.0F;
+                    const float want = look_s_ > 0.0F ? std::atan2(look_x_ - ax, look_z_ - az) : post->yaw;
                     yaw_ = turn_toward(yaw_, want, 2.0F, dt);
                 }
                 break;
             }
         }
-        // Shuffling: the stooped patrol round the loop.
-        const Node &next = nodes_[static_cast<std::size_t>(patrol_node_)];
+        // Shuffling: the stooped patrol round her level's loop.
+        const Level &level = levels_[static_cast<std::size_t>(level_)];
+        const std::vector<int> &loop = level.patrols[static_cast<std::size_t>(patrol_)];
+        const Node &next = level.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
-            patrol_node_ = (patrol_node_ + 1) % 8;
+            patrol_node_ = (patrol_node_ + 1) % static_cast<int>(loop.size());
         }
-        const Node &goal = nodes_[static_cast<std::size_t>(patrol_node_)];
+        const Node &goal = level.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         route_toward(ax, az, goal.x, goal.z, on_catwalk, wx, wz);
         walk_toward(dt, wx, wz, kShuffleMps);
         break;
@@ -662,7 +879,7 @@ void Matron::post_step(const float dt) {
     (void)dt;
     if (body_in_world_ && !dead_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-        if (at.GetY() < kDeckTop - kFallenBelowM) {
+        if (at.GetY() < levels_[static_cast<std::size_t>(level_)].floor_y - kFallenBelowM) {
             dead_ = true;
             state_ = State::Dead;
             remove_body();
@@ -672,7 +889,8 @@ void Matron::post_step(const float dt) {
 }
 
 bool Matron::caught(const RVec3 player) const noexcept {
-    if (!body_in_world_ || dead_ ||
+    // Clinging to a moving floor, her hands are on the rail.
+    if (!body_in_world_ || dead_ || riding_ ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering)) {
         return false;
@@ -701,6 +919,14 @@ void Matron::restore(const Saved &saved) {
         look_s_ = 0.0F;
         vault_cooldown_s_ = 0.0F;
         vaults_ = 0;
+        leaps_ = 0;
+        // Back on her deck, off whatever she rode.
+        level_ = 0;
+        patrol_ = 0;
+        patrol_node_ = 2;
+        feet_y_ = kDeckTop;
+        riding_ = false;
+        let_go_s_ = 0.0F;
         if (state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
             state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering) {
             // Back at her locker, as she burst out of it.
@@ -721,6 +947,9 @@ void Matron::refresh_view() {
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
+    view_.leaps = leaps_;
+    view_.clinging = riding_;
+    view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;
