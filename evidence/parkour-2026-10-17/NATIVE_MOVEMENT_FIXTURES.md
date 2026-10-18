@@ -134,3 +134,17 @@ The native artifact is `blocked-step/libblocked-step.a`, SHA256
 it replaces only locomotion and physical-foot objects in the coherent e014
 archive. The focused header overlay preserves the existing Simulation ABI.
 Separate GitHub full-native results and phone play/feel remain distinct.
+
+
+## Published matching APK
+
+Source `8fb79aa8427a9f1b42264a4bb2a1f031f8bce43f` was actually pushed
+to GitHub ChatGPT. Candidate run39171723565 completed success. Its matching
+build214525657 APK (36,979,377bytes) is available directly:
+https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-8fb79aa/ScraperX-ChatGPT.apk
+
+The ordinary worker copied only the APK to Download. Existing receipts in
+`/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-8fb79aa`
+retain CI acceptance, local delivery and the actual release asset. Root did
+not repeat CI-owned package, signing, checksum or native-payload checks.
+Separate full39171723614 was still running at delivery; phone feel is unverified.
