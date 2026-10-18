@@ -1,5 +1,7 @@
 extends Node3D
 
+const Workwear := preload("res://presentation/first_person_leg_meshes.gd")
+
 # Read-only body presentation. A sole is planted only at a supplied native
 # material point. Leg parity is artistic; native foot motors have no side.
 const THIGH := 0.44
@@ -7,6 +9,7 @@ const SHIN := 0.44
 const MAX_HIP_LEAN := 0.18
 const ANKLE_HEIGHT := 0.14
 const RETURN_TIME := 0.12
+const HIP_BEHIND_EYES := 0.16
 
 class Leg:
 	var side := 1.0
@@ -27,28 +30,30 @@ class Leg:
 var _legs: Array[Leg] = []
 var _last_tick := -1
 var _planted_index := -1
+var _pelvis: MeshInstance3D
+var _sole_bounds := AABB()
 
 func build(sleeve: Material, boot: Material, sole: Material) -> void:
 	if not _legs.is_empty():
 		return
-	var upper_mesh := _cylinder(0.075, 0.095)
-	var lower_mesh := _cylinder(0.052, 0.074)
-	var knee_mesh := SphereMesh.new()
-	knee_mesh.radius = 0.073
-	knee_mesh.height = 0.146
-	knee_mesh.radial_segments = 10
-	knee_mesh.rings = 5
-	var boot_mesh := _work_boot()
-	var sole_mesh := BoxMesh.new()
-	sole_mesh.size = Vector3(0.16, 0.025, 0.31)
+	var upper_mesh := Workwear.trouser_segment(true)
+	var lower_mesh := Workwear.trouser_segment(false)
+	var knee_mesh := Workwear.knee()
+	var boot_mesh := Workwear.boot()
+	var sole_mesh := Workwear.sole()
+	_sole_bounds = sole_mesh.get_aabb()
+	var cloth := _vertex_material(sleeve)
+	var leather := _vertex_material(boot)
+	var rubber := _vertex_material(sole)
+	_pelvis = _mesh(Workwear.pelvis(), cloth)
 	for side in [-1.0, 1.0]:
 		var leg := Leg.new()
 		leg.side = side
-		leg.upper = _mesh(upper_mesh, sleeve)
-		leg.lower = _mesh(lower_mesh, sleeve)
-		leg.knee = _mesh(knee_mesh, sleeve)
-		leg.boot = _mesh(boot_mesh, boot)
-		leg.sole = _mesh(sole_mesh, sole)
+		leg.upper = _mesh(upper_mesh, cloth)
+		leg.lower = _mesh(lower_mesh, cloth)
+		leg.knee = _mesh(knee_mesh, cloth)
+		leg.boot = _mesh(boot_mesh, leather)
+		leg.sole = _mesh(sole_mesh, rubber)
 		_legs.append(leg)
 	reset()
 
@@ -112,6 +117,17 @@ func update_legs(state: Dictionary, _camera: Transform3D, delta: float) -> void:
 	if not is_finite(phase):
 		phase = 0.0
 	var grounded := bool(state.get("player_grounded", false))
+	# Share Main's already-presented crouch blend. Feet keep their real floor
+	# height while the hip and camera lower together, without another clock.
+	var crouch_blend := float(state.get("crouch_visual_01", 1.0 if crouched else 0.0))
+	if not is_finite(crouch_blend):
+		crouch_blend = 1.0 if crouched else 0.0
+	var hip_height := lerpf(0.915, 0.57, smoothstep(0.0, 1.0, crouch_blend))
+	# The camera sits over the capsule centre. Present the hip joints behind
+	# the eyes so the waist does not cover the knees in the look-down view.
+	var hip_centre := Vector3(com.x, com.y - half_height + hip_height, com.z) \
+		- facing * HIP_BEHIND_EYES
+	_place(_pelvis, body, hip_centre)
 	for i in _legs.size():
 		var leg := _legs[i]
 		var neutral := com + body.x * leg.side * 0.115 + facing * 0.035 - Vector3.UP * half_height
@@ -127,6 +143,19 @@ func update_legs(state: Dictionary, _camera: Transform3D, delta: float) -> void:
 		var target := neutral
 		var frame := body
 		var planting := i == selected
+		if grounded and not planting and stride > 0.0:
+			# The same supplied stride phase rolls the unloaded boot through
+			# heel/toe motion. It never rotates a native planted contact.
+			var cycle := phase + float(i) * PI
+			var toe_roll := sin(cycle) * 0.15 * stride * (0.6 if crouched else 1.0)
+			frame = body * Basis(Vector3.RIGHT, toe_roll)
+			# Keep the unloaded silhouette above the floor while it rolls.
+			# A real planted sole takes its native point/frame below instead.
+			var centre := _sole_bounds.get_center() + Vector3.UP * 0.0125
+			var half := _sole_bounds.size * 0.5
+			var lowest := (frame * centre).y - absf(frame.x.y) * half.x \
+				- absf(frame.y.y) * half.y - absf(frame.z.y) * half.z
+			target.y += maxf(0.0, -lowest)
 		if planting:
 			target = anchor
 			frame = _sole_frame(normal.normalized(), facing)
@@ -144,7 +173,7 @@ func update_legs(state: Dictionary, _camera: Transform3D, delta: float) -> void:
 			target = leg.return_point.lerp(neutral, weight)
 			frame = Basis(leg.return_rotation.slerp(body.get_rotation_quaternion(), weight))
 			leg.returning = leg.return_elapsed < RETURN_TIME
-		var hip := com + body.x * leg.side * 0.115 + Vector3.UP * (0.015 if not crouched else -0.03)
+		var hip := hip_centre + body.x * leg.side * 0.115
 		var ankle := target + frame.y * ANKLE_HEIGHT + frame.z * 0.045
 		var distance := hip.distance_to(ankle)
 		# Lean only the presented hip, never move the sole to fit the leg.
@@ -174,9 +203,9 @@ func update_legs(state: Dictionary, _camera: Transform3D, delta: float) -> void:
 		var along := (THIGH * THIGH - SHIN * SHIN + distance * distance) / (2.0 * distance)
 		var bend := sqrt(maxf(0.0, THIGH * THIGH - along * along))
 		var knee := hip + down * along + pole * bend
-		_segment(leg.upper, hip, knee)
-		_segment(leg.lower, knee, ankle)
-		_place(leg.knee, Basis.IDENTITY, knee)
+		_segment(leg.upper, hip, knee, facing)
+		_segment(leg.lower, knee, ankle, facing)
+		_place(leg.knee, body, knee)
 		_place(leg.boot, frame, target + frame.y * 0.095)
 		_place(leg.sole, frame, target + frame.y * 0.0125)
 
@@ -205,11 +234,16 @@ func _sole_frame(normal: Vector3, facing: Vector3) -> Basis:
 	toe = toe.normalized()
 	return Basis(toe.cross(normal).normalized(), normal, -toe)
 
-func _segment(mesh: MeshInstance3D, start: Vector3, end: Vector3) -> void:
-	var axis := end - start
+func _segment(mesh: MeshInstance3D, start: Vector3, end: Vector3, facing: Vector3) -> void:
+	# Mesh +Y is the hip end, -Y the ankle end; local -Z is the garment front.
+	var axis := start - end
 	var y := axis.normalized()
-	var reference := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.95 else Vector3.RIGHT
-	var x := y.cross(reference).normalized()
+	var front := facing - y * facing.dot(y)
+	if front.length_squared() < 0.0001:
+		front = Vector3.UP - y * y.y
+	if front.length_squared() < 0.0001:
+		front = Vector3.RIGHT - y * y.x
+	var x := y.cross(-front.normalized()).normalized()
 	_place(mesh, Basis(x, y * axis.length(), x.cross(y)), (start + end) * 0.5)
 
 func _place(mesh: MeshInstance3D, frame: Basis, point: Vector3) -> void:
@@ -230,47 +264,10 @@ func _mesh(shape: Mesh, material: Material) -> MeshInstance3D:
 	add_child(mesh)
 	return mesh
 
-func _cylinder(top: float, bottom: float) -> CylinderMesh:
-	var shape := CylinderMesh.new()
-	shape.top_radius = top
-	shape.bottom_radius = bottom
-	shape.height = 1.0
-	shape.radial_segments = 10
-	shape.rings = 1
-	return shape
-
-# Three chamfered outline rings make a rounded toe and sloping instep.
-# Built once, shared by both boots, with one surface and the supplied leather.
-func _work_boot() -> ArrayMesh:
-	var outline := PackedVector2Array([
-		Vector2(-0.052, 0.13), Vector2(-0.072, 0.11),
-		Vector2(-0.075, -0.065), Vector2(-0.065, -0.115),
-		Vector2(-0.035, -0.145), Vector2(0.035, -0.145),
-		Vector2(0.065, -0.115), Vector2(0.075, -0.065),
-		Vector2(0.072, 0.11), Vector2(0.052, 0.13)])
-	var rings: Array[PackedVector3Array] = []
-	for ring in 3:
-		var vertices := PackedVector3Array()
-		for point in outline:
-			var shrink := 0.88 if ring == 2 else (0.96 if ring == 0 else 1.0)
-			var height := -0.07 if ring == 0 else (-0.04 if ring == 1 else 0.07)
-			# Toe cap stays low while the heel rises to cover the ankle.
-			if ring == 2:
-				height -= clampf((-point.y - 0.015) / 0.13, 0.0, 1.0) * 0.07
-			vertices.append(Vector3(point.x * shrink, height, point.y * shrink))
-		rings.append(vertices)
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for ring in 2:
-		for i in outline.size():
-			var j := (i + 1) % outline.size()
-			for vertex in [rings[ring][i], rings[ring][j], rings[ring + 1][j],
-				rings[ring][i], rings[ring + 1][j], rings[ring + 1][i]]:
-				surface.add_vertex(vertex)
-	for i in outline.size():
-		var j := (i + 1) % outline.size()
-		for vertex in [Vector3(0, 0.055, 0), rings[2][i], rings[2][j],
-			Vector3(0, -0.07, 0), rings[0][j], rings[0][i]]:
-			surface.add_vertex(vertex)
-	surface.generate_normals()
-	return surface.commit()
+func _vertex_material(source: Material) -> Material:
+	# One shared material per fabric, never one resource per mesh/leg.
+	if source is BaseMaterial3D:
+		var material := source.duplicate() as BaseMaterial3D
+		material.vertex_color_use_as_albedo = true
+		return material
+	return source

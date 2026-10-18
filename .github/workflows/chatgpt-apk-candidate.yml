@@ -206,6 +206,10 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/first_person_legs_test.gd \
+          2>&1 | tee artifacts/first-person-legs-unit.log
+        grep -F 'SCRAPERX_LEGS PASS' artifacts/first-person-legs-unit.log
         mkdir -p artifacts/first-person-legs
         timeout 120s xvfb-run -a -s '-screen 0 640x360x24' \
           tools/godot/godot --path godot --audio-driver Dummy \
@@ -215,6 +219,19 @@ jobs:
           2>&1 | tee artifacts/first-person-legs-native.log
         grep -F 'SCRAPERX_LEGS_NATIVE PASS' artifacts/first-person-legs-native.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/first-person-legs-native.log; then exit 1; fi
+    - name: Check look-down body through standing walking crouching and landing
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p artifacts/body-workwear
+        timeout 120s xvfb-run -a -s '-screen 0 1280x900x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1280x900 \
+          res://tests/first_person_body_view_test.tscn -- --quit-after-body-view-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/body-workwear" \
+          2>&1 | tee artifacts/body-workwear-view.log
+        grep -F 'SCRAPERX_BODY_VIEW PASS' artifacts/body-workwear-view.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/body-workwear-view.log; then exit 1; fi
     - name: Check moving swing-bearing sound feedback
       shell: bash
       run: |
@@ -321,7 +338,10 @@ jobs:
           artifacts/forklift-operator.log
           artifacts/forklift-operator/
           artifacts/first-person-legs-native.log
+          artifacts/first-person-legs-unit.log
           artifacts/first-person-legs/
+          artifacts/body-workwear-view.log
+          artifacts/body-workwear/
           artifacts/air-reach-arms.log
           artifacts/air-catch-input-godot.log
           artifacts/air-reach/
