@@ -143,6 +143,12 @@ Kit::~Kit() {
             catch_record.pin = nullptr;
         }
     }
+    for (Grip &grip : grips_) {
+        if (grip.weld != nullptr) {
+            system_.RemoveConstraint(grip.weld);
+            grip.weld = nullptr;
+        }
+    }
     for (Lever &lever : levers_) {
         if (lever.hinge != nullptr) {
             system_.RemoveConstraint(lever.hinge);
@@ -667,6 +673,12 @@ void Kit::govern(Guide &guide) noexcept {
 }
 
 void Kit::pre_step(const float delta_seconds) {
+    for (Grip &grip : grips_) {
+        // Taken out of the world (a thing put away), the weld goes with it.
+        if (grip.weld != nullptr && (!bodies_[grip.device.value].enabled || !bodies_[grip.load.value].enabled)) {
+            unweld(grip);
+        }
+    }
     press(delta_seconds);
     for (Reel &reel : reels_) {
         // The cable below the drum's start stays where it paid out.
@@ -893,6 +905,107 @@ void Kit::post_step(const float delta_seconds) {
             rope.tension = 0.0F;
         }
     }
+    for (Grip &grip : grips_) {
+        if (grip.weld == nullptr) {
+            grip.force = 0.0F;
+            continue;
+        }
+        grip.force = grip.weld->GetTotalLambdaPosition().Length() / delta_seconds;
+        if (grip.rating <= 0.0F) {
+            continue;
+        }
+        grip.over_rating_steps = grip.force > grip.rating ? grip.over_rating_steps + 1U : 0U;
+        if (grip.over_rating_steps >= kPartSteps) {
+            unweld(grip);
+        }
+    }
+}
+
+// ---- grips ------------------------------------------------------------------
+
+GripIndex Kit::add_grip(const BodyIndex device, const float rating_newtons) {
+    Grip grip;
+    grip.device = device;
+    grip.rating = rating_newtons;
+    grips_.push_back(grip);
+    return GripIndex{static_cast<std::uint32_t>(grips_.size() - 1U)};
+}
+
+bool Kit::grip(const GripIndex grip_index, const BodyIndex load) {
+    if (find(grips_, grip_index) == nullptr) {
+        return false;
+    }
+    Grip &grip = grips_[grip_index.value];
+    const Body *held = find(bodies_, load);
+    if (grip.weld != nullptr || held == nullptr || load == grip.device || !held->dynamic || !held->enabled ||
+        !bodies_[grip.device.value].enabled) {
+        return false;
+    }
+    weld(grip, load);
+    return true;
+}
+
+void Kit::release(const GripIndex grip_index) {
+    if (find(grips_, grip_index) != nullptr) {
+        unweld(grips_[grip_index.value]);
+    }
+}
+
+void Kit::set_grip_rating(const GripIndex grip_index, const float rating_newtons) {
+    if (find(grips_, grip_index) != nullptr) {
+        grips_[grip_index.value].rating = rating_newtons;
+    }
+}
+
+BodyIndex Kit::grip_load(const GripIndex grip_index) const noexcept {
+    const Grip *grip = find(grips_, grip_index);
+    return grip != nullptr ? grip->load : BodyIndex{};
+}
+
+float Kit::grip_rating(const GripIndex grip_index) const noexcept {
+    const Grip *grip = find(grips_, grip_index);
+    return grip != nullptr ? grip->rating : 0.0F;
+}
+
+float Kit::grip_force(const GripIndex grip_index) const noexcept {
+    const Grip *grip = find(grips_, grip_index);
+    return grip != nullptr ? grip->force : 0.0F;
+}
+
+bool Kit::gripped(const BodyIndex body) const noexcept {
+    return std::any_of(grips_.begin(), grips_.end(),
+                       [body](const Grip &grip) { return grip.weld != nullptr && grip.load == body; });
+}
+
+void Kit::weld(Grip &grip, const BodyIndex load) {
+    // Fixed where the two lie now: the load hangs as it lay against the
+    // device's face, and nothing is drawn in or pushed off as the weld is made.
+    JPH::FixedConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mAutoDetectPoint = true;
+    grip.weld = static_cast<JPH::FixedConstraint *>(settings.Create(jolt_body(grip.device), jolt_body(load)));
+    system_.AddConstraint(grip.weld);
+    grip.load = load;
+    grip.force = 0.0F;
+    grip.over_rating_steps = 0;
+    auto &bodies = system_.GetBodyInterface();
+    bodies.ActivateBody(bodies_[grip.device.value].id);
+    bodies.ActivateBody(bodies_[load.value].id);
+}
+
+void Kit::unweld(Grip &grip) {
+    if (grip.weld == nullptr) {
+        return;
+    }
+    system_.RemoveConstraint(grip.weld);
+    grip.weld = nullptr;
+    // Let go, the load falls from where it is.
+    if (bodies_[grip.load.value].enabled) {
+        system_.GetBodyInterface().ActivateBody(bodies_[grip.load.value].id);
+    }
+    grip.load = BodyIndex{};
+    grip.force = 0.0F;
+    grip.over_rating_steps = 0;
 }
 
 // ---- water and air (declared models, AS-007) -------------------------------
@@ -1379,8 +1492,10 @@ void Kit::unlatch(Catch &catch_record) {
 
 void Kit::carry_candidates(std::vector<CarryCandidate> &out) const {
     out.clear();
-    for (const Body &body : bodies_) {
-        if (body.carry == CarryKind::None || !body.enabled) {
+    for (std::uint32_t index = 0; index < bodies_.size(); ++index) {
+        const Body &body = bodies_[index];
+        // A load a grip holds is the device's, not the hands'.
+        if (body.carry == CarryKind::None || !body.enabled || gripped(BodyIndex{index})) {
             continue;
         }
         out.push_back({body.id, body.entity, body.handle, body.carry});
@@ -1560,6 +1675,12 @@ void Kit::capture(Checkpoint &out) const {
     for (std::size_t index = 0; index < reels_.size(); ++index) {
         out.reel_paid[index] = reels_[index].paid;
     }
+    out.grip_load.resize(grips_.size());
+    out.grip_rating.resize(grips_.size());
+    for (std::size_t index = 0; index < grips_.size(); ++index) {
+        out.grip_load[index] = grips_[index].weld != nullptr ? grips_[index].load.value : kNone;
+        out.grip_rating[index] = grips_[index].rating;
+    }
     out.drained = drained_;
 }
 
@@ -1572,6 +1693,9 @@ void Kit::restore(const Checkpoint &in) {
     }
     for (Catch &catch_record : catches_) {
         unlatch(catch_record);
+    }
+    for (Grip &grip : grips_) {
+        unweld(grip);
     }
     auto &bodies = system_.GetBodyInterface();
     for (std::size_t index = 0; index < bodies_.size(); ++index) {
@@ -1644,6 +1768,15 @@ void Kit::restore(const Checkpoint &in) {
     }
     for (std::size_t index = 0; index < latches_.size() && index < in.latch_set.size(); ++index) {
         set_latch(latches_[index], in.latch_set[index]);
+    }
+    // Each grip welds again what it held, where the restore put the two (as
+    // they lay when saved). A save from before the grips holds nothing.
+    for (std::size_t index = 0; index < grips_.size() && index < in.grip_load.size(); ++index) {
+        if (index < in.grip_rating.size()) {
+            grips_[index].rating = in.grip_rating[index];
+        }
+        const BodyIndex load{in.grip_load[index]};
+        (void)grip(GripIndex{static_cast<std::uint32_t>(index)}, load);
     }
 }
 

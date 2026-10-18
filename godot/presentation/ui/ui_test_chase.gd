@@ -817,6 +817,220 @@ func _yard_crane_touch(device: int) -> bool:
 	return true
 
 
+# The yard crane's lifting magnet (sim/yard_crane.hpp) and the top of the two
+# slabs laid for it (LooseStock::lay_crane_steel), found where they lie.
+const YARD_CRANE_MAGNET := 2995
+const YARD_CRANE_SLING_SHACKLE := 2987
+const MAGNET_SLAB_AT := Vector3(-64.0, 0.458, -124.0)
+
+# The remote's switch on the device under test: the CRANE button, R, LB.
+func _crane_switch(device: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_tap(4, _center(&"crane"))
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_LEFT_SHOULDER)
+		_:
+			_key(KEY_R, true)
+			_key(KEY_R, false)
+
+# The hoist's two held buttons on the device under test: RAISE (+1) is Jump,
+# LOWER (-1) is Crouch; 0 lets both go.
+func _crane_hoist(device: int, way: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_touch(2, _center(&"jump"), way > 0)
+			_touch(3, _center(&"crouch"), way < 0)
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_A, way > 0)
+			_button(JOY_BUTTON_RIGHT_STICK, way < 0)
+		_:
+			_key(KEY_SPACE, way > 0)
+			_key(KEY_C, way < 0)
+
+# The operator sends the hook over `target` (world x, z) with the stick and
+# waits until the trolley is there and the hook hangs still under it. A key
+# has no throw: it is held toward the spot while the drives could still stop
+# short of it, and let go inside that.
+func _crane_hook_over(device: int, target: Vector2, tolerance: float, timeout: float) -> bool:
+	var waited := 0.0
+	var settled := 0.0
+	while waited < timeout:
+		var crane: Dictionary = _native().get_yard_crane_state()
+		var top: Vector3 = crane["rope_top"]
+		var hook: Vector3 = crane["hook"]
+		var off := target - Vector2(top.x, top.z)
+		if off.length() < tolerance and (target - Vector2(hook.x, hook.z)).length() < 2.0 * tolerance:
+			_move_dir(device, Vector2.ZERO)
+			settled += get_process_delta_time()
+			if settled > 1.0:
+				return true
+		else:
+			settled = 0.0
+			if device == InputRouter.Device.KEYBOARD_MOUSE:
+				# Pressed while it would stop short, at rest whenever it is off
+				# by more than the tolerance.
+				var speed := Vector2(float(crane["trolley_rate"]),
+					float(crane["slew_rate"]) * float(crane["trolley_m"])).length()
+				var stopping := speed * speed / 1.2
+				_move_world(device, off.normalized() if off.length() > 0.75 * tolerance + stopping else Vector2.ZERO)
+			else:
+				# Never less than a push past the stick's dead zone (0.14).
+				_move_world(device, off.normalized() * clampf(off.length() / 6.0, 0.25, 1.0))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	return false
+
+# Up to the sling's shackle where it lies (on the magnet's bail, or beside
+# it), facing it, until TAKE CRANE SLING is offered; then TAKE.
+func _take_crane_sling(device: int) -> bool:
+	for attempt in 6:
+		# From the side away from the magnet (its body in the way), or, on the
+		# bail, from where the rigger stands.
+		var shackle := _kit_origin(YARD_CRANE_SLING_SHACKLE)
+		var magnet := _kit_origin(YARD_CRANE_MAGNET)
+		var me := _position()
+		var out := Vector2(shackle.x - magnet.x, shackle.z - magnet.z)
+		var side := out.normalized() if out.length() > 0.3 else Vector2(me.x - shackle.x, me.z - shackle.z).normalized()
+		# 0.6 m off, give or take 0.2: within the hands' 1.2 m of the body's
+		# middle even on the ground.
+		await _go(device, Vector2(shackle.x, shackle.z) + side * 0.6, 0.2, 6.0)
+		var at := _position()
+		await _face(Vector2(shackle.x - at.x, shackle.z - at.z))
+		if await _offered(&"pick_up", "TAKE", "CRANE SLING"):
+			_act(device)
+			return await _wait_until(func() -> bool: return int(_ctx()["carrying"]) == YARD_CRANE_SLING_SHACKLE, 1.0)
+	return false
+
+# The hoist held one way until `done`, or `timeout`.
+func _crane_hoist_until(device: int, way: int, done: Callable, timeout: float) -> bool:
+	_crane_hoist(device, way)
+	var ok := await _wait_until(done, timeout)
+	_crane_hoist(device, 0)
+	return ok
+
+# The magnet's job on the device under test: the remote taken, the hook sent
+# over the magnet and let down until its shackle lies on the bail; the shackle
+# taken and HOOKed on; worked, MAGNET ON (the remote's device switch is
+# Action), up, over the slabs and down: it takes the top one; up with it;
+# MAGNET OFF, and the slab falls. Heard: the coil humming while on, the steel
+# taken against the face and let go. CRANE (the button, R, LB) works the
+# crane and lets it go.
+func _crane_magnet(device: int) -> bool:
+	for target in [Vector2(-25.0, -40.0), Vector2(-50.0, -100.0), Vector2(-50.0, -125.0)]:
+		if not await _go(device, target, 0.3, 50.0):
+			return _fail("magnet: the walk to the crane stopped short of %s" % str(target))
+	if not await _go(device, Vector2(YARD_CRANE_MAST_X + 4.2, YARD_CRANE_MAST_Z + 5.6), 0.12, 20.0):
+		return _fail("magnet: the walk to the remote's cabinet stopped short")
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"crane_take", "TAKE REMOTE", "THE YARD CRANE"):
+		return _fail("magnet: TAKE REMOTE was not offered at the cabinet")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["has_remote"]), 1.0):
+		return _fail("magnet: TAKE REMOTE did not take the remote")
+	await _seconds(0.4)
+	var magnet := _kit_origin(YARD_CRANE_MAGNET)
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("magnet: CRANE did not take the crane")
+	# The hook just north of the magnet, on the rigger's side, let down until
+	# its shackle lies on the ground there (the throat 3.5 m up: the sling
+	# reaches the bail with 0.3 m to spare).
+	if not await _crane_hook_over(device, Vector2(magnet.x, magnet.z - 0.9), 0.3, 120.0):
+		return _fail("magnet: the hook was not sent by the magnet")
+	if not await _crane_hoist_until(device, -1,
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.5, 60.0):
+		return _fail("magnet: LOWER did not let the hook down by the magnet")
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("magnet: CRANE did not let go of the crane")
+	# By the magnet: TAKE the sling where it lies, then HOOK it on.
+	if not await _go(device, Vector2(magnet.x, magnet.z - 1.3), 0.15, 30.0):
+		return _fail("magnet: the walk to the magnet stopped short (at %s)" % str(_position()))
+	if not await _take_crane_sling(device):
+		var shackle := _kit_origin(YARD_CRANE_SLING_SHACKLE)
+		return _fail("magnet: TAKE CRANE SLING was not offered by the shackle at %s, the rigger at %s, %.2f m off (read '%s %s')" % [
+			str(shackle), str(_position()), (shackle - _position()).length(), _action_label(),
+			String(_ctx()["action"]["detail"])])
+	if not await _go(device, Vector2(magnet.x, magnet.z - 1.0), 0.08, 6.0):
+		return _fail("magnet: the step to the magnet's bail stopped short")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"hook", "HOOK", "ONTO THE MAGNET"):
+		return _fail("magnet: HOOK ONTO THE MAGNET was not offered (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_yard_crane_state()["device"]) == 1, 1.5):
+		return _fail("magnet: HOOK did not put the sling on the magnet")
+	# Worked: Action is the magnet's switch.
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("magnet: CRANE did not take the crane again")
+	if not await _offered(&"crane_device", "MAGNET ON"):
+		return _fail("magnet: worked with the magnet on the sling, Action did not read MAGNET ON (read '%s')" %
+			_action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["magnet_on"]), 1.0):
+		return _fail("magnet: MAGNET ON did not switch it on")
+	# Up 2 m, over the top slab, and down on to it until it takes hold.
+	var lifted_from := float((_native().get_yard_crane_state()["hook"] as Vector3).y)
+	if not await _crane_hoist_until(device, 1,
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) > lifted_from + 2.0, 20.0):
+		return _fail("magnet: RAISE did not lift the magnet")
+	# Close over the slab's middle, so the most of the magnet's face lands on it
+	# (a magnet holds by the steel under its face).
+	if not await _crane_hook_over(device, Vector2(MAGNET_SLAB_AT.x, MAGNET_SLAB_AT.z), 0.12, 150.0):
+		return _fail("magnet: the magnet was not sent over the slabs")
+	# Let down only once it hangs still: within a 5 cm box for 3 s (the hook
+	# block swings on 50 m of rope, 15 s a swing, and stands still for a
+	# moment at either end of it).
+	var marks: Array[Vector2] = []
+	var settling := 0.0
+	while settling < 60.0:
+		await _seconds(0.25)
+		settling += 0.25
+		var now := _kit_origin(YARD_CRANE_MAGNET)
+		marks.append(Vector2(now.x, now.z))
+		if marks.size() > 12:
+			marks.pop_front()
+		if marks.size() == 12:
+			var low := marks[0]
+			var high := marks[0]
+			for mark in marks:
+				low = Vector2(minf(low.x, mark.x), minf(low.y, mark.y))
+				high = Vector2(maxf(high.x, mark.x), maxf(high.y, mark.y))
+			if high.x - low.x < 0.05 and high.y - low.y < 0.05:
+				break
+	if not await _crane_hoist_until(device, -1,
+			func() -> bool: return int(_native().get_yard_crane_state()["holding_entity"]) != 0, 40.0):
+		var at := _kit_origin(YARD_CRANE_MAGNET)
+		return _fail("magnet: let down on to the slabs, it took hold of nothing (the magnet at %s)" % str(at))
+	var held := int(_native().get_yard_crane_state()["holding_entity"])
+	var slab_y := _kit_origin(held).y
+	if absf(slab_y - MAGNET_SLAB_AT.y) > 0.1:
+		return _fail("magnet: it took hold of %d at y %.2f, not the top slab" % [held, slab_y])
+	if not await _crane_hoist_until(device, 1, func() -> bool: return _kit_origin(held).y > slab_y + 1.0, 20.0):
+		return _fail("magnet: RAISE did not lift the slab on the magnet")
+	if not await _offered(&"crane_device", "MAGNET OFF"):
+		return _fail("magnet: holding the slab, Action did not read MAGNET OFF (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	var detail := String(_ctx()["action"]["detail"])
+	var up := _kit_origin(held).y
+	_act(device)
+	if not await _wait_until(func() -> bool: return _kit_origin(held).y < up - 0.8, 3.0):
+		return _fail("magnet: MAGNET OFF did not let the slab fall")
+	await _seconds(0.5)
+	var heard: Dictionary = _main._audio.crane_heard
+	var cues: Dictionary = _main._audio.crane_cues
+	if int(heard.get(&"magnet", 0)) < 1 or int(cues.get(&"magnet_take", 0)) < 1 or int(cues.get(&"magnet_drop", 0)) < 1:
+		return _fail("magnet: not heard on, taking hold and letting go (heard %s, cues %s)" % [str(heard), str(cues)])
+	_crane_switch(device)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("magnet: CRANE did not let go of the crane at the end")
+	_detail = "slab=%d lifted_to=%.2f held_read='%s' heard=%s cues=%s" % [held, up, detail, str(heard), str(cues)]
+	return true
+
+
 # The truck's heading as the native's yaw (0 its nose +z, turning right -).
 func _truck_yaw() -> float:
 	var nose: Vector3 = (_native().get_kit_body_transform(int(_native().get_kit_body_index(2982))) as Transform3D).basis.z

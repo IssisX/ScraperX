@@ -317,6 +317,14 @@ struct YardCraneSnapshot final {
     double rope_mps = 0.0;
     double hook_mps = 0.0;
     double sling_n = 0.0;
+    // The device on the sling (0 none, 1 the magnet), the magnet's switch,
+    // and what the device holds (0 nothing): the hold's pull and what it
+    // holds to before the load tears off.
+    int device = 0;
+    bool magnet_on = false;
+    std::uint64_t holding_entity = 0;
+    double hold_n = 0.0;
+    double hold_rated_n = 0.0;
 };
 
 // What a struck body sounds like (src/sim/impacts.hpp), by what it is made
@@ -1238,9 +1246,12 @@ public:
     // reach); with the remote, the switch starts and stops working it
     // (refused where it cannot be worked: hands full, on a hold, in a seat).
     // Working it, the stick sends the hook and the hoist's buttons, held,
-    // raise (1) and lower (-1) it.
+    // raise (1) and lower (-1) it. The device switch works the device on the
+    // sling (the magnet: on, off), refused unless the crane is worked with
+    // a device on its sling.
     [[nodiscard]] bool request_yard_crane_take() noexcept;
     [[nodiscard]] bool request_yard_crane_operate() noexcept;
+    [[nodiscard]] bool request_yard_crane_device() noexcept;
     [[nodiscard]] bool set_yard_crane_hoist(double hoist) noexcept;
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
     // The last hits the tracked bodies took (src/sim/impacts.hpp), oldest
@@ -1335,6 +1346,7 @@ private:
     double forklift_lift_ = 0.0;
     bool yard_crane_take_ = false;
     bool yard_crane_operate_ = false;
+    bool yard_crane_device_ = false;
     double yard_crane_hoist_ = 0.0;
     double hook_aim_x_ = 0.0;
     double hook_aim_y_ = 0.0;

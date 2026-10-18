@@ -128,6 +128,12 @@ const SCENARIOS := {
 	# The yard crane west of the stack: its remote taken, worked, let go
 	# (look_yard_crane: renders only, not in CI).
 	"touch_yard_crane": 8,
+	# The yard crane's lifting magnet, on each device: rigged by HOOK, MAGNET
+	# ON from the remote, a slab taken and lifted, MAGNET OFF; CRANE by the
+	# button, R and LB.
+	"touch_crane_magnet": 8,
+	"pad_crane_magnet": 8,
+	"keyboard_crane_magnet": 8,
 	"look_yard_crane": 8,
 	"look_stock_yard": 8,
 	"look_tower_stock_deck2": 25,
@@ -407,6 +413,12 @@ func _run() -> void:
 			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
 		"touch_yard_crane":
 			ok = await _yard_crane_touch(InputRouter.Device.TOUCH)
+		"touch_crane_magnet":
+			ok = await _crane_magnet(InputRouter.Device.TOUCH)
+		"pad_crane_magnet":
+			ok = await _crane_magnet(InputRouter.Device.GAMEPAD)
+		"keyboard_crane_magnet":
+			ok = await _crane_magnet(InputRouter.Device.KEYBOARD_MOUSE)
 		"look_yard_crane":
 			ok = await _look_yard_crane()
 		"look_stock_yard":

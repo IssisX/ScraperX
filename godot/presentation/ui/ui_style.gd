@@ -30,6 +30,7 @@ const G_START := &"start"
 const G_SELECT := &"select"
 const G_LT := &"lt"
 const G_RT := &"rt"
+const G_LB := &"lb"
 const G_DPAD_V := &"dpad_v"
 const G_DPAD_H := &"dpad_h"
 const G_LSTICK_FWD := &"lstick_fwd"
@@ -45,6 +46,7 @@ const BINDINGS := {
 	&"drop": [G_EAST, "Q", &"drop"],
 	&"chute": [G_NORTH, "F", &"chute"],
 	&"crouch": [G_RSTICK_CLICK, "C", &"crouch"],
+	&"crane": [G_LB, "R", &"crane"],
 	&"grab": [G_LSTICK_FWD, "W", &"move"],
 	&"pause": [G_START, "ESC", &"pause"],
 	&"telemetry": [G_SELECT, "F3", &""],
@@ -341,7 +343,7 @@ static func glyph_width(family: int, glyph: StringName, key_label: String, h: fl
 		var size := int(roundf(h * 0.46))
 		return maxf(h, text_width(font_label(), key_label, size) + h * 0.62)
 	match glyph:
-		G_LT, G_RT, G_START, G_SELECT:
+		G_LT, G_RT, G_LB, G_START, G_SELECT:
 			return h * 1.5
 		G_LSTICK_FWD, G_RSTICK_CLICK:
 			return h * 1.05
@@ -422,7 +424,7 @@ static func draw_glyph(ci: CanvasItem, family: int, glyph: StringName, key_label
 				ring(ci, c, r - line * 0.5, with_alpha(PAPER, 0.7 * alpha), line)
 				text_centered(ci, font_heavy(), _face_letter(family, glyph), c, int(roundf(h * 0.56)),
 					with_alpha(PAPER, alpha))
-		G_LT, G_RT, G_START, G_SELECT:
+		G_LT, G_RT, G_LB, G_START, G_SELECT:
 			var rect := Rect2(Vector2(left_center.x, left_center.y - r * 0.8), Vector2(width, h * 0.8))
 			ci.draw_rect(rect, with_alpha(INK, 0.88 * alpha))
 			ci.draw_rect(rect, with_alpha(PAPER, 0.75 * alpha), false, line)
@@ -432,6 +434,8 @@ static func draw_glyph(ci: CanvasItem, family: int, glyph: StringName, key_label
 					label = "L2" if family == Family.PLAYSTATION else ("ZL" if family == Family.NINTENDO else "LT")
 				G_RT:
 					label = "R2" if family == Family.PLAYSTATION else ("ZR" if family == Family.NINTENDO else "RT")
+				G_LB:
+					label = "L1" if family == Family.PLAYSTATION else ("L" if family == Family.NINTENDO else "LB")
 				G_START:
 					label = "OPT" if family == Family.PLAYSTATION else ("+" if family == Family.NINTENDO else "MENU")
 				G_SELECT:

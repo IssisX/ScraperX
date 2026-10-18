@@ -345,6 +345,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // every place the player is put down and of every lane the crew walk.
     // Their kit bodies come last, so older saves' lists line up.
     loose_stock_->dress_tower(keep_clear, kKeepClearM);
+    // The yard crane's devices and the steel laid for its magnet: after the
+    // tower's stock, so saves made before them line up too.
+    loose_stock_->lay_crane_steel();
+    yard_crane_->build_devices();
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.
@@ -360,6 +364,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
         track(truck->carriage_body(), ImpactSound::Machine);
     }
     track(yard_crane_->hook_body(), ImpactSound::Machine);
+    track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
 
     physics_system_.OptimizeBroadPhase();
 
@@ -516,7 +521,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
         yard_crane_->pre_step(delta_seconds, commands.yard_crane_operate, yard_crane_able(),
                          static_cast<float>(commands.move_input_x), static_cast<float>(commands.move_input_z),
-                         static_cast<float>(commands.yard_crane_hoist));
+                         static_cast<float>(commands.yard_crane_hoist), commands.yard_crane_device,
+                         carry_constraint_ != nullptr ? carried_entity_ : 0);
         if (yard_crane_->operating()) {
             commands.move_input_x = 0.0;
             commands.move_input_z = 0.0;

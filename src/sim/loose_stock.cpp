@@ -548,6 +548,15 @@ LooseStock::LooseStock(PhysicsSystem &physics, kit::Kit &kit) : physics_(physics
     }
 }
 
+void LooseStock::lay_crane_steel() {
+    // North of the laydown, 13 m out from the mast; the beams west of it,
+    // lying along z clear of the containers.
+    add_piece({K::PlateSlab, 0, -64.0F, 0.0F, -124.0F, 0.0F});
+    add_piece({K::PlateSlab, 0, -64.0F, 0.304F, -124.0F, 0.0F});
+    add_piece({K::SteelBeam, 0, -72.0F, 0.0F, -126.5F, 0.5F * JPH_PI});
+    add_piece({K::SteelBeam, 0, -73.0F, 0.0F, -126.5F, 0.5F * JPH_PI});
+}
+
 void LooseStock::add_piece(const Placement &p) {
     static const std::array<Spec, kKinds> specs = [] {
         std::array<Spec, kKinds> all;

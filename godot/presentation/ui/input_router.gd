@@ -178,6 +178,9 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"chute")
 		KEY_G:
 			_verbs.append(&"hook")
+		KEY_R:
+			# The yard crane's remote: its switch (CRANE, and WALK again).
+			_verbs.append(&"crane")
 		KEY_C:
 			_verbs.append(&"crouch")
 		KEY_ESCAPE:
@@ -211,6 +214,8 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_pad_sprint = true
 		JOY_BUTTON_RIGHT_SHOULDER:
 			_verbs.append(&"hook")
+		JOY_BUTTON_LEFT_SHOULDER:
+			_verbs.append(&"crane")
 		JOY_BUTTON_START:
 			_verbs.append(&"pause")
 		JOY_BUTTON_BACK:

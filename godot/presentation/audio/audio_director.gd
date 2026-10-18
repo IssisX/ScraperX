@@ -170,6 +170,8 @@ var _crane_slew: AudioStreamPlayer3D
 var _crane_trolley: AudioStreamPlayer3D
 var _crane_hoist: AudioStreamPlayer3D
 var _crane_stall: AudioStreamPlayer3D
+# Its lifting magnet's coil, humming while it is on.
+var _crane_magnet: AudioStreamPlayer3D
 var crane_cues := {}
 var forklift_cues := {}
 var pours_heard := 0
@@ -266,6 +268,7 @@ func _ready() -> void:
 	_crane_trolley = _positional_player(BUS_EFFECTS, Vector3.ZERO, 10.0, 220.0)
 	_crane_hoist = _positional_player(BUS_EFFECTS, Vector3.ZERO, 14.0, 280.0)
 	_crane_stall = _positional_player(BUS_EFFECTS, Vector3.ZERO, 12.0, 240.0)
+	_crane_magnet = _positional_player(BUS_EFFECTS, Vector3.ZERO, 4.0, 70.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -929,7 +932,8 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 # as the jib turns; the trolley's wheels as it runs; the hoist's winch as the
 # rope comes in or pays out, deeper under load, groaning stalled. The rope
 # creaks as its pull changes fast (a load taken up, a swing); the hook's
-# chain jingles as the block is jerked.
+# chain jingles as the block is jerked. The lifting magnet's coil hums where
+# it hangs while it is on.
 const CRANE_CREAK_NPS := 25000.0
 const CRANE_JINGLE_MPS2 := 0.8
 var _crane_last_n := -1.0
@@ -938,8 +942,11 @@ var _crane_creak_clock := 0.0
 var _crane_jingle_clock := 0.0
 
 
-func update_crane(delta: float, state: Dictionary, jib: Transform3D) -> void:
+func update_crane(delta: float, state: Dictionary, jib: Transform3D, magnet: Vector3) -> void:
 	var slew := clampf(absf(float(state["slew_measured"])) / 0.08, 0.0, 1.0)
+	var magnet_on := bool(state["magnet_on"])
+	if magnet_on:
+		_count(crane_heard, &"magnet")
 	var trolley := clampf(absf(float(state["trolley_mps"])) / 1.2, 0.0, 1.0)
 	# The drum as driven (kHoistMps 1 m/s), not the rope's length changing
 	# as the block swings under a stopped drum.
@@ -978,6 +985,7 @@ func update_crane(delta: float, state: Dictionary, jib: Transform3D) -> void:
 	_loop_level(_crane_hoist, &"winch_loop", drum, (0.4 + 0.5 * load) * rope if not stalled else 0.0,
 		0.55 + 0.45 * rope - 0.15 * load, -1.0)
 	_loop_level(_crane_stall, &"winch_loop", drum, 1.0 if stalled else 0.0, 0.32, -1.0)
+	_loop_level(_crane_magnet, &"magnet_loop", magnet, 0.8 if magnet_on else 0.0, 1.0, -6.0)
 	if creak:
 		_play_at(&"creak", drum, linear_to_db(clampf(0.4 + load, 0.4, 1.0)) - 2.0, randf_range(0.45, 0.6))
 	if jingle:
@@ -997,6 +1005,12 @@ func crane_cue(name: StringName, at: Vector3, strength: float) -> void:
 			_play_at(&"creak", at, db - 3.0, randf_range(0.5, 0.6))
 		&"landed":
 			_play_at(&"land_hard", at, db + 2.0, randf_range(0.5, 0.6))
+		&"magnet_take":
+			# The steel drawn hard against the magnet's face.
+			_play_at(&"hit_heavy", at, db + 1.0, randf_range(0.75, 0.85))
+		&"magnet_drop":
+			# Let go: the contactor dropping out and the steel parting from it.
+			_play_at(&"clang", at, db - 2.0, randf_range(0.55, 0.65))
 
 
 # A zipline ride (sim/zipline.hpp), heard at the trolley over the rider's

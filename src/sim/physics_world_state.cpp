@@ -330,6 +330,10 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
         w.list(control.target_speeds);
     }
     w.list(v.targets);
+    // Last, so a save made before the grips (which ends here) still loads:
+    // what each grip holds and its rating.
+    w.list(k.grip_load);
+    w.list(k.grip_rating);
 }
 
 // Reads a saved checkpoint, then restores the world from it as a death
@@ -371,7 +375,16 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                         current.vertical.controls[i].target_speeds.size());
         }
     }
-    ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size()) && r.done();
+    ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size());
+    // A save made before the grips ends here: it holds nothing.
+    if (ok && !r.done()) {
+        ok = r.list(k.grip_load, c.grip_load.size()) && r.list(k.grip_rating, c.grip_rating.size()) &&
+             std::all_of(k.grip_load.begin(), k.grip_load.end(),
+                         [&k](const std::uint32_t load) { return load == kit::kNone || load < k.bodies.size(); }) &&
+             std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
+                         [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
+    }
+    ok = ok && r.done();
     // Bodies added to the world since the save was written (always built
     // last, after every body before them) start as built.
     for (std::size_t index = k.bodies.size(); ok && index < c.bodies.size(); ++index) {

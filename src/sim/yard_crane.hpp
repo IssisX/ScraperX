@@ -117,6 +117,33 @@ public:
     static constexpr float kRemoteReachM = 1.6F;
     static constexpr float kRadioRangeM = 400.0F;
 
+    // The devices hung from the sling (to-do 10): each a body with a lifting
+    // eye, rigged as any load is, by HOOKing the sling's shackle on its eye,
+    // so choosing one is rigging it. While the crane is worked, the remote's
+    // device switch works the one on the sling; unhooked, it is dead.
+    //
+    // The lifting magnet (CHOSEN: a 1.2 m electro-lifting magnet): on, it
+    // takes hold of steel lying flat against its face. Of the face's nine
+    // points (its middle and eight round it), those over a steel part's face
+    // turned to it within kMagnetTiltRad, from kMagnetGapM off it to 2 cm
+    // into it, are in contact; with the middle and kMagnetMinContact in all,
+    // it holds that body, kMagnetRatedN times the share in contact (a magnet
+    // holds by the steel under it), and past that for two ticks the load
+    // tears off; torn off, it takes hold again only once it has been clear
+    // of the steel. It takes hold as its middle touches (within
+    // kMagnetTouchM), flat: within kMagnetTiltRad, the tilt that keeps the far
+    // edge of the ring within kMagnetGapM, so touched down on an edge as it
+    // swings, it takes hold only as it comes flat. Off, it lets go wherever
+    // it is.
+    static constexpr std::uint64_t kMagnetEntity = 2995;
+    static constexpr float kMagnetRadiusM = 0.6F;
+    static constexpr float kMagnetKg = 1100.0F;
+    static constexpr float kMagnetRatedN = 49000.0F;
+    static constexpr float kMagnetGapM = 0.04F;
+    static constexpr float kMagnetTouchM = 0.01F;
+    static constexpr float kMagnetTiltRad = 0.035F;
+    static constexpr int kMagnetMinContact = 3;
+
     // The docks: the face out to x_out, between z_min and z_max, their decks'
     // tops at top_y; the low one is a pier on two legs, reaching past the
     // machine hall that overhangs its inner end.
@@ -160,6 +187,13 @@ public:
         float rope_mps = 0.0F;        // + coming in
         float hook_mps = 0.0F;
         float sling_n = 0.0F;
+        // The magnet's switch, and what the device on the sling holds (0
+        // nothing): the hold's pull this tick and what it holds to.
+        bool magnet_on = false;
+        bool magnet_torn = false;     // a load tore off it, and it has not been clear of steel since
+        std::uint64_t holding_entity = 0;
+        float hold_n = 0.0F;
+        float hold_rated_n = 0.0F;
     };
 
     YardCrane(JPH::PhysicsSystem &physics, kit::Kit &kit);
@@ -172,18 +206,26 @@ public:
     [[nodiscard]] bool remote_in_reach(JPH::RVec3 player) const;
     [[nodiscard]] bool has_remote() const;
 
+    // After every other kit body, so saves made before them line up: the
+    // devices, laid out in the yard.
+    void build_devices();
+
     // Before the physics step. toggle: the remote's switch. able: the
     // player could work it now (hands free, within range).
     // hook_x, hook_z: where the stick sends the hook (world, -1 .. 1 each,
-    // length at most 1). hoist: -1 lowering .. 1 raising.
-    void pre_step(float delta_seconds, bool toggle, bool able, float hook_x, float hook_z, float hoist);
+    // length at most 1). hoist: -1 lowering .. 1 raising. device: the
+    // remote's device switch, worked while the crane is. carried: the
+    // entity in the player's hands (0 for none), which no device takes.
+    void pre_step(float delta_seconds, bool toggle, bool able, float hook_x, float hook_z, float hoist, bool device,
+                  std::uint64_t carried);
     // After the physics step: the rope's pull and the drives as they went.
     void post_step(float delta_seconds);
 
     [[nodiscard]] bool operating() const noexcept { return state_.operating; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
-    // The hook block, as a kit body.
+    // The hook block and the magnet, as kit bodies.
     [[nodiscard]] kit::BodyIndex hook_body() const noexcept { return hook_; }
+    [[nodiscard]] kit::BodyIndex magnet_body() const noexcept { return magnet_; }
     // Its drives as heard (for the Matron's hearing, matron.hpp hear): where
     // each is and how loud while it runs, 0 when it does not. The slewing
     // ring's motors; the hoist's drum on the counter-jib (louder under load,
@@ -206,6 +248,12 @@ private:
     [[nodiscard]] float rope_length_now() const;
     // A point on one of the crane's bodies, in the world.
     [[nodiscard]] JPH::RVec3 on(kit::BodyIndex body, JPH::Vec3 local) const;
+    // The body the magnet's face lies flat against, invalid for none, and
+    // how many of the face's nine points are in contact with its steel.
+    [[nodiscard]] kit::BodyIndex magnet_contact(std::uint64_t carried, int &points) const;
+    // The magnet: its switch, and a hold made while it is on and lies flat
+    // against steel. Unhooked, it is dead.
+    void work_magnet(bool rigged, bool flip, std::uint64_t carried);
 
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
@@ -216,6 +264,8 @@ private:
     kit::BodyIndex shackle_{};
     kit::BodyIndex remote_{};
     kit::BodyIndex cabinet_{};
+    kit::BodyIndex magnet_{};
+    kit::GripIndex magnet_grip_{};
     kit::RopeIndex sling_{};
     JPH::Ref<JPH::HingeConstraint> slew_;
     JPH::Ref<JPH::SliderConstraint> trolley_drive_;

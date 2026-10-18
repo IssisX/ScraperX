@@ -892,6 +892,8 @@ func _perform_action() -> void:
 			_native.request_forklift_action()
 		&"crane":
 			_native.request_yard_crane_operate()
+		&"crane_device":
+			_native.request_yard_crane_device()
 		&"crane_take":
 			_native.request_yard_crane_take()
 		&"s1", &"incline", &"tram", &"derrick":

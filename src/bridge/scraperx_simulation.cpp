@@ -320,6 +320,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_take"), &ScraperXSimulation::request_yard_crane_take);
     godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_operate"),
                                 &ScraperXSimulation::request_yard_crane_operate);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_device"),
+                                &ScraperXSimulation::request_yard_crane_device);
     godot::ClassDB::bind_method(godot::D_METHOD("set_yard_crane_hoist", "hoist"),
                                 &ScraperXSimulation::set_yard_crane_hoist);
     godot::ClassDB::bind_method(godot::D_METHOD("get_yard_crane_state"), &ScraperXSimulation::get_yard_crane_state);
@@ -1368,12 +1370,17 @@ bool ScraperXSimulation::request_yard_crane_operate() {
     return simulation_->request_yard_crane_operate();
 }
 
+bool ScraperXSimulation::request_yard_crane_device() {
+    return simulation_->request_yard_crane_device();
+}
+
 bool ScraperXSimulation::set_yard_crane_hoist(const double hoist) {
     return simulation_->set_yard_crane_hoist(hoist);
 }
 
 // The yard crane: its remote and whether it is being worked, its drives as
-// they go, the hoist's pull, and the hoist rope's ends and the hook as drawn.
+// they go, the hoist's pull, the hoist rope's ends and the hook as drawn, and
+// the device on its sling (the magnet: its switch, what it holds and how hard).
 godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
     const sim::YardCraneSnapshot state = simulation_->yard_crane_state();
     godot::Dictionary out;
@@ -1404,6 +1411,11 @@ godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
     out["rope_mps"] = state.rope_mps;
     out["hook_mps"] = state.hook_mps;
     out["sling_n"] = state.sling_n;
+    out["device"] = state.device;
+    out["magnet_on"] = state.magnet_on;
+    out["holding_entity"] = static_cast<std::int64_t>(state.holding_entity);
+    out["hold_n"] = state.hold_n;
+    out["hold_rated_n"] = state.hold_rated_n;
     return out;
 }
 

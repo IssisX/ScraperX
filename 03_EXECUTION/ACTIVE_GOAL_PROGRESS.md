@@ -1378,6 +1378,32 @@ jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matro
 `audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
 while she keeps to 154 m and up (see to-do 11).
 
+**The yard crane's lifting magnet (2026-10-18; to-do 10, first of its devices).** A 1.2 m
+electro-lifting magnet (1,100 kg) lies on its face north of the laydown, with steel laid in reach
+for it: two 2 t slabs one on the other, two 10 m beams. It is rigged as any load: the hook let down
+by it, the sling's shackle TAKEn and HOOKed on its bail. While the crane is worked, Action is its
+switch (MAGNET ON / MAGNET OFF), on touch, pad and keys; the detail reads what it holds and how
+hard it can (HOLDING 2.0 T OF 5.0 T). CRANE, until now only a touch button, is R on the keyboard
+and LB on a pad, prompted on both, and on the controls page. On, the magnet takes hold of steel
+lying flat against its face: of its face's nine points, those over steel (bare, rusted or
+galvanized, not the machines' paint) within 4 cm, with its middle touching and the face within 2
+degrees of the steel's; a hold of 5 t times the share of the face in contact (a 0.3 m beam: three
+points, 1.7 t). Past that for two ticks the load tears off, and it takes that load again only once
+it has been clear of the steel; off, it lets go wherever it is; unhooked, its cable is dead. Heard:
+its coil humming while on, the steel taken against its face, let go. The hold is the kit's new
+grip, a weld made where the two lie, kept in the save at its end (a save from before loads holding
+nothing), the new bodies built last so older saves line up. Found on the way: touched down on an
+edge as it swung, the first version welded the tilt in and held by half its face; it now takes
+hold only as it comes flat. Proof: native `magnet` (new: the top slab taken by its whole face,
+lifted alone and dropped; the beam by three points; the 8 t plate stack torn off, staying down;
+a save holding the slab loads holding it, 0.2 mm off; one without the grips loads holding
+nothing), `crane` (its forklift now steered in off the dock: driven straight, it drifted onto the
+dock's rail when the new bodies changed how it landed), `stock` (its tower check now ends where
+the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`;
+`touch_crane_magnet`, `pad_crane_magnet`, `keyboard_crane_magnet` (new), `touch_yard_crane`,
+`look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
+`perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
+
 **The derrick's cradle seated at the top (2026-10-18).** Stepping off at 802.64 m was a game of
 timing. The cradle hangs free on its hanger: the two pigs left at its south end lean it 5.5 degrees,
 arriving set it swinging up to 11 degrees either side of that for 10 s, and as its rider stepped off
@@ -1545,6 +1571,7 @@ fill in after).**
    slabs and beams are laid down in reach; the containers get corner castings for the spreader; the
    plate clamp waits for thin plates in a rack. Saves: the devices built last, their grips kept in
    their own record and rebuilt on a restore, older saves still loading.
+   Done 2026-10-18: the grips and the magnet, with CRANE on R and LB. Next: the spreader.
 11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her

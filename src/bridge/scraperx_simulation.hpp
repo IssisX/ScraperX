@@ -210,6 +210,7 @@ public:
     [[nodiscard]] godot::Dictionary get_forklift_state_at(std::int64_t index) const;
     [[nodiscard]] bool request_yard_crane_take();
     [[nodiscard]] bool request_yard_crane_operate();
+    [[nodiscard]] bool request_yard_crane_device();
     [[nodiscard]] bool set_yard_crane_hoist(double hoist);
     [[nodiscard]] godot::Dictionary get_yard_crane_state() const;
     [[nodiscard]] godot::Array get_impacts() const;

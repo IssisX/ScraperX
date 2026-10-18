@@ -96,6 +96,7 @@ func build() -> void:
 	clips[&"trolley_loop"] = [_loop(_trolley_run(1.6), 0.3)]
 	clips[&"winch_loop"] = [_loop(_winch(2.0), 0.3)]
 	clips[&"jingle"] = _variants(3, _jingle)
+	clips[&"magnet_loop"] = [_loop(_magnet_hum(1.6), 0.3)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -897,6 +898,20 @@ func _winch(length: float) -> PackedFloat32Array:
 	for i in n:
 		var wrap := 0.75 + 0.25 * sin(TAU * 6.0 * float(i) / float(MIX_RATE))
 		out[i] = (whine[i] * 2.0 + whine2[i] * 1.0 + gears[i] * 0.5) * wrap
+	return out
+
+
+# The lifting magnet switched on: its coil buzzing at the rectifier's ripple
+# (100 Hz) and the overtones a phone's speaker still plays, steady, and its
+# contactor's faint hiss above.
+func _magnet_hum(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	for pair in [[100.0, 1.2], [200.0, 1.6], [300.0, 1.0], [600.0, 0.5]]:
+		var tone := _resonant_noise_buffer(n, pair[0], 0.002, 1.0)
+		for i in n:
+			out[i] += tone[i] * pair[1]
+	_add_band_noise(out, 0.0, length, 0.04, 0.0, 1500.0, 3500.0)
 	return out
 
 

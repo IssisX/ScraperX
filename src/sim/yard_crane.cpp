@@ -214,6 +214,35 @@ std::vector<Part> shackle_parts() {
             box(Vec3(0.05F, 0.07F, 0.03F), Vec3(0.0F, -0.04F, 0.0F), Material::Hazard, 4.0F)};
 }
 
+// ---- the lifting magnet, in its own frame: its origin at its casing's
+// middle, its face down ---------------------------------------------------
+// Its casing, the steel face under it, the cable's terminal box, and the
+// bail it hangs by, the eye at the bail's middle.
+constexpr float kMagnetHalfHeight = 0.24F;   // from the origin to the face
+const Vec3 kMagnetFace(0.0F, -kMagnetHalfHeight, 0.0F);
+const Vec3 kMagnetEye(0.0F, 0.54F, 0.0F);
+// Where it lies in the yard, on its face, before it is rigged: north of the
+// laydown, 15.5 m out from the mast, 2 m clear of the way from the remote's
+// cabinet to the containers.
+constexpr float kMagnetParkX = -70.0F;
+constexpr float kMagnetParkZ = -122.0F;
+
+std::vector<Part> magnet_parts() {
+    const float r = YardCrane::kMagnetRadiusM;
+    return {cylinder(r, 0.2F, Vec3::sZero(), Quat::sIdentity(), Material::Yellow, 900.0F),
+            cylinder(r, 0.02F, Vec3(0.0F, -0.22F, 0.0F), Quat::sIdentity(), Material::Steel, 120.0F),
+            box(Vec3(0.12F, 0.08F, 0.1F), Vec3(0.32F, 0.28F, 0.0F), Material::Galvanised, 20.0F),
+            box(Vec3(0.04F, 0.16F, 0.04F), Vec3(-0.22F, 0.36F, 0.0F), Material::Steel, 15.0F),
+            box(Vec3(0.04F, 0.16F, 0.04F), Vec3(0.22F, 0.36F, 0.0F), Material::Steel, 15.0F),
+            box(Vec3(0.26F, 0.04F, 0.05F), Vec3(0.0F, 0.54F, 0.0F), Material::Steel, 30.0F)};
+}
+
+// What a magnet holds by: steel bare, rusted or galvanized (not the paint the
+// machines wear).
+bool magnetic(const Material material) {
+    return material == Material::Steel || material == Material::Rust || material == Material::Galvanised;
+}
+
 // ---- the remote's cabinet, by the foundation's south-east corner, open to
 // the south; the remote hangs in it ----------------------------------------
 const Vec3 kCabinetAt(4.2F, 0.0F, 4.2F);
@@ -395,6 +424,119 @@ YardCrane::~YardCrane() {
     physics_.RemoveConstraint(slew_);
 }
 
+void YardCrane::build_devices() {
+    const std::vector<Part> magnet = magnet_parts();
+    magnet_ = kit_.add_body(kMagnetEntity, magnet, RVec3(kMagnetParkX, kMagnetHalfHeight + 0.004F, kMagnetParkZ),
+                            Quat::sIdentity(), total(magnet), 0.6F);
+    (void)kit_.add_anchor(magnet_, kMagnetEye, 1.2F);
+    // Its chain sling's links grind as it swings, so a hung magnet settles
+    // under the hook in a few swings: declared, as damping of its motion.
+    kit_.set_damping(magnet_, 0.2F, 0.5F);
+    magnet_grip_ = kit_.add_grip(magnet_, kMagnetRatedN);
+}
+
+kit::BodyIndex YardCrane::magnet_contact(const std::uint64_t carried, int &points) const {
+    points = 0;
+    // The face's nine points: its middle, and eight round it at 0.6 of its
+    // radius. A point is in contact over a steel box part's face turned to
+    // the magnet within kMagnetTiltRad, from kMagnetGapM off it to 2 cm in.
+    const RVec3 at = kit_.body_position(magnet_);
+    const Quat turn = kit_.body_rotation(magnet_);
+    const Vec3 down = turn * Vec3(0.0F, -1.0F, 0.0F);
+    std::array<RVec3, 9> face{};
+    face[0] = at + turn * kMagnetFace;
+    for (int k = 0; k < 8; ++k) {
+        const float a = 0.25F * JPH_PI * static_cast<float>(k);
+        const float ring = 0.6F * kMagnetRadiusM;
+        face[static_cast<std::size_t>(k) + 1] = at + turn * (kMagnetFace + Vec3(ring * std::cos(a), 0.0F, ring * std::sin(a)));
+    }
+    const float square = std::cos(kMagnetTiltRad);
+    kit::BodyIndex best{};
+    for (std::uint32_t index = 0; index < kit_.body_count(); ++index) {
+        const kit::BodyIndex body{index};
+        const std::uint64_t entity = kit_.body_entity(body);
+        if (body == magnet_ || !kit_.body_dynamic(body) || !kit_.body_enabled(body) || entity == carried ||
+            body == jib_ || body == trolley_ || body == hook_ || body == shackle_) {
+            continue;
+        }
+        const RVec3 where = kit_.body_position(body);
+        const Quat turned = kit_.body_rotation(body);
+        // Nothing of it near the face (the longest stock is 12.2 m).
+        if (Vec3(where - face[0]).LengthSq() > 7.0F * 7.0F) {
+            continue;
+        }
+        std::uint32_t touching = 0;
+        for (const Part &part : kit_.body_parts(body)) {
+            if (part.shape != Part::Shape::Box || !magnetic(part.material)) {
+                continue;
+            }
+            const Quat part_turn = turned * part.rotation;
+            const RVec3 middle = where + turned * part.offset;
+            const Quat back = part_turn.Conjugated();
+            // The part's face turned to the magnet: along its axis most in
+            // line with the magnet's, on the side toward it.
+            const Vec3 d = back * down;
+            int axis = 0;
+            for (int i = 1; i < 3; ++i) {
+                if (std::abs(d[i]) > std::abs(d[axis])) {
+                    axis = i;
+                }
+            }
+            if (std::abs(d[axis]) < square) {
+                continue;
+            }
+            const float side = d[axis] > 0.0F ? -1.0F : 1.0F;
+            for (std::size_t j = 0; j < face.size(); ++j) {
+                const Vec3 p = back * Vec3(face[j] - middle);
+                const float off = side * p[axis] - part.half[axis];
+                bool over = off >= -0.02F && off <= (j == 0 ? kMagnetTouchM : kMagnetGapM);
+                for (int i = 0; i < 3 && over; ++i) {
+                    over = i == axis || std::abs(p[i]) <= part.half[i];
+                }
+                if (over) {
+                    touching |= 1U << j;
+                }
+            }
+        }
+        int count = 0;
+        for (std::uint32_t bits = touching; bits != 0U; bits &= bits - 1U) {
+            ++count;
+        }
+        if ((touching & 1U) != 0U && count >= kMagnetMinContact && count > points) {
+            best = body;
+            points = count;
+        }
+    }
+    return best;
+}
+
+void YardCrane::work_magnet(const bool rigged, const bool flip, const std::uint64_t carried) {
+    if (flip) {
+        state_.magnet_on = !state_.magnet_on;
+    }
+    if (!rigged) {
+        state_.magnet_on = false;   // off the sling, its cable is dead
+    }
+    if (!state_.magnet_on) {
+        kit_.release(magnet_grip_);
+        return;
+    }
+    if (kit_.grip_load(magnet_grip_).valid()) {
+        return;
+    }
+    // On and holding nothing: it takes hold of what it lies flat against, as
+    // hard as the steel under its face lets it; not the load that just tore
+    // off it, until it has been clear of the steel.
+    int points = 0;
+    const kit::BodyIndex body = magnet_contact(carried, points);
+    if (!body.valid()) {
+        state_.magnet_torn = false;
+    } else if (!state_.magnet_torn) {
+        kit_.set_grip_rating(magnet_grip_, kMagnetRatedN * static_cast<float>(points) / 9.0F);
+        (void)kit_.grip(magnet_grip_, body);
+    }
+}
+
 bool YardCrane::remote_in_reach(const RVec3 player) const {
     return kit_.body_enabled(remote_) &&
            Vec3(kit_.body_position(remote_) - player).Length() <= kRemoteReachM;
@@ -434,7 +576,7 @@ float YardCrane::rope_length_now() const {
 }
 
 void YardCrane::pre_step(const float delta_seconds, const bool toggle, const bool able, const float hook_x,
-                         const float hook_z, const float hoist) {
+                         const float hook_z, const float hoist, const bool device, const std::uint64_t carried) {
     state_.has_remote = has_remote();
     const bool may = able && state_.has_remote;
     if (toggle) {
@@ -442,6 +584,11 @@ void YardCrane::pre_step(const float delta_seconds, const bool toggle, const boo
     } else if (state_.operating && !may) {
         // Hands taken, out of range: the remote's dead man lets go.
         state_.operating = false;
+    }
+    // The device on the sling, and its switch on the remote, worked with it.
+    const bool magnet_rigged = state_.load_entity == kMagnetEntity;
+    if (magnet_.valid()) {
+        work_magnet(magnet_rigged, device && state_.operating && magnet_rigged, carried);
     }
 
     // Where the stick sends the hook, shared between the slew and the
@@ -568,6 +715,14 @@ void YardCrane::post_step(const float delta_seconds) {
     state_.sling_n = kit_.rope_tension(sling_);
     const std::uint64_t end = kit_.rope_end_entity(sling_);
     state_.load_entity = end == kShackleEntity ? 0 : end;
+    // What the device holds, after the step: a load torn off is let go.
+    const kit::BodyIndex held = kit_.grip_load(magnet_grip_);
+    if (state_.holding_entity != 0 && !held.valid() && state_.magnet_on) {
+        state_.magnet_torn = true;
+    }
+    state_.holding_entity = held.valid() ? kit_.body_entity(held) : 0;
+    state_.hold_n = kit_.grip_force(magnet_grip_);
+    state_.hold_rated_n = held.valid() ? kit_.grip_rating(magnet_grip_) : 0.0F;
 }
 
 std::array<YardCrane::Noise, 3> YardCrane::noises() const {
@@ -595,6 +750,9 @@ std::array<YardCrane::Noise, 3> YardCrane::noises() const {
 void YardCrane::restore() {
     state_ = {};
     state_.has_remote = has_remote();
+    // The controls let go, but a magnet holding a load keeps it: on while it
+    // holds (the kit's restore welded it again).
+    state_.magnet_on = kit_.grip_load(magnet_grip_).valid();
     slew_->SetTargetAngularVelocity(0.0F);
     trolley_drive_->SetTargetVelocity(0.0F);
     hoist_->SetMotor(0.0F, 0.0F);

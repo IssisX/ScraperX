@@ -124,6 +124,7 @@ using CellIndex = Index<struct CellTag>;
 using ReelIndex = Index<struct ReelTag>;
 using ChainIndex = Index<struct ChainTag>;
 using WheelIndex = Index<struct WheelTag>;
+using GripIndex = Index<struct GripTag>;
 
 class Kit final {
 public:
@@ -354,6 +355,27 @@ public:
     // A bleed: a small opening to the air, always open, either way.
     void add_bleed(CellIndex cell, float area);
 
+    // ---- grips -----------------------------------------------------------
+    // A grip (a lifting magnet's face, a spreader's twistlocks): while it
+    // holds, a weld keeps the load where it lay against the device when the
+    // grip was made. Past rating_newtons for kPartSteps ticks the weld lets
+    // go, as a rope parts (rating 0: never). When a device may grip and must
+    // let go is the device's own (yard_crane.hpp); the kit only holds, and
+    // lets go of a body taken out of the world.
+    GripIndex add_grip(BodyIndex device, float rating_newtons);
+    // Welds load to the grip's device where the two lie now. False when the
+    // grip holds already, or load is the device, static or out of the world.
+    bool grip(GripIndex grip, BodyIndex load);
+    void release(GripIndex grip);
+    void set_grip_rating(GripIndex grip, float rating_newtons);
+    // The body the grip holds, invalid for none.
+    [[nodiscard]] BodyIndex grip_load(GripIndex grip) const noexcept;
+    [[nodiscard]] float grip_rating(GripIndex grip) const noexcept;
+    // The weld's pull last step, N; 0 holding nothing.
+    [[nodiscard]] float grip_force(GripIndex grip) const noexcept;
+    // True while some grip holds the body.
+    [[nodiscard]] bool gripped(BodyIndex body) const noexcept;
+
     // ---- stepping -------------------------------------------------------
     void pre_step(float delta_seconds);
     void post_step(float delta_seconds);
@@ -416,6 +438,10 @@ public:
         std::vector<float> pool_water;
         std::vector<float> cell_air;
         std::vector<float> reel_paid;
+        // Each grip's held body, kNone for none, and its rating; empty in a
+        // save made before the grips.
+        std::vector<std::uint32_t> grip_load;
+        std::vector<float> grip_rating;
         float drained = 0.0F;
     };
     void capture(Checkpoint &out) const;
@@ -734,6 +760,14 @@ private:
         float pin_tolerance = 0.0F;
         JPH::Ref<JPH::FixedConstraint> pin;
     };
+    struct Grip final {
+        BodyIndex device;
+        BodyIndex load;             // invalid holding nothing
+        float rating = 0.0F;
+        float force = 0.0F;
+        std::uint32_t over_rating_steps = 0;
+        JPH::Ref<JPH::FixedConstraint> weld;
+    };
 
     template <typename Record, typename Tag>
     [[nodiscard]] static const Record *find(const std::vector<Record> &table,
@@ -754,6 +788,8 @@ private:
     void set_enabled(BodyIndex body, bool enabled);
     void latch(Catch &catch_record);
     void unlatch(Catch &catch_record);
+    void weld(Grip &grip, BodyIndex load);
+    void unweld(Grip &grip);
     void set_latch(Latch &latch, bool set);
     void govern(Guide &guide) noexcept;
     void engage_dogs(Guide &guide);
@@ -803,6 +839,7 @@ private:
     std::vector<Reel> reels_;
     std::vector<Chain> chains_;
     std::vector<Wheel> wheels_;
+    std::vector<Grip> grips_;
     std::vector<RopeIndex> wound_;
     float drained_ = 0.0F;
 };

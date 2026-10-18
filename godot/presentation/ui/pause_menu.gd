@@ -484,6 +484,7 @@ func _controls_rows(view_family: int) -> Array:
 		["verb", &"action", "ACTION", "Climb a ledge or a hold; take a rope, handle or load"],
 		["verb", &"drop", "DROP", "Let go of a ledge, a hold or a load; lower over an edge"],
 		["verb", &"chute", "CHUTE", "Open or stow the canopy while falling"],
+		["verb", &"crane", "CRANE", "With its remote: work the yard crane, and let it go"],
 		["verb", &"pause", "PAUSE", "This menu"],
 		["verb", &"telemetry", "TELEMETRY", "Native readouts overlay"],
 	]

@@ -60,11 +60,12 @@ public:
         // one-shot; the forks' buttons, held (-1 lower .. 1 raise).
         bool forklift_action = false;
         double forklift_lift = 0.0;
-        // The yard crane: Take the remote and its switch, one-shot; the
-        // hoist's buttons, held (-1 lowering .. 1 raising). Working it, the
-        // stick sends the hook.
+        // The yard crane: Take the remote, its switch and the device switch
+        // (the magnet's on the sling), one-shot; the hoist's buttons, held
+        // (-1 lowering .. 1 raising). Working it, the stick sends the hook.
         bool yard_crane_take = false;
         bool yard_crane_operate = false;
+        bool yard_crane_device = false;
         double yard_crane_hoist = 0.0;
         // The grappling hook: aim (a unit world vector), Fire and Release
         // one-shot, Reel held, Take one-shot.

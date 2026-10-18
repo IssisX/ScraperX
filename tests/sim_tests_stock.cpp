@@ -66,8 +66,10 @@ void run_loose_stock() {
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
     const int pieces = static_cast<int>(s.loose_stock_count());
     const int tabled = static_cast<int>(LooseStock::placements().size());
-    std::cout << "  stock: " << tabled << " pieces in the table, " << pieces - tabled << " in the tower's spots\n";
-    require(pieces > tabled + 60, "stock: the tower's rings are dressed");
+    // The tower's spots end where the yard crane's steel begins.
+    const int towered = pieces - LooseStock::kCraneSteelPieces;
+    std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
+    require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
     // stands on a pallet or a skid, so a forklift's forks fit under it; and
     // what only the yard crane could have brought up stands only on the
@@ -76,7 +78,7 @@ void run_loose_stock() {
         const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
         std::array<int, 3> crane_pieces{};
         int heavy = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < towered; ++i) {
             const auto kind = static_cast<LooseStock::Kind>(s.loose_stock_piece(static_cast<std::uint32_t>(i)).kind);
             if (!LooseStock::heavy(kind)) {
                 continue;

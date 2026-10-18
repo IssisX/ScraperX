@@ -441,9 +441,24 @@ void run_yard_crane() {
         require(s.forklift_state().at_controls && s.forklift_state().index == 1 && s.request_forklift_action(),
                 "crane: DRIVE the crane's forklift on the dock");
         (void)s.advance_frame(0.2);
-        for (int tick = 0; tick < 6 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
-            (void)s.set_move_input(0.6, 0.0);
-            (void)s.set_facing(1.0, 0.0);
+        // In along the dock's middle, steered for a point on it 2 m ahead (it
+        // lands turned as it hung, and the dock is 4.4 m wide), until 2.5 m
+        // in off the face.
+        const double mid_z = 0.5 * (dock.z_min + dock.z_max);
+        for (int tick = 0; tick < 8 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const auto at = body_at(s, Forklift::kCraneChassisEntity);
+            if (at.x > YardCrane::kFaceX + 2.5) {
+                break;
+            }
+            const auto q = s.kit_body_rotation(s.kit_body_index(Forklift::kCraneChassisEntity));
+            const double yaw = 2.0 * std::atan2(q.y, q.w);
+            const double fx = std::sin(yaw);
+            const double fz = std::cos(yaw);
+            const double right = -2.0 * fz + (mid_z - at.z) * fx;
+            const double ahead = 2.0 * fx + (mid_z - at.z) * fz;
+            const double steer = std::clamp(2.0 * std::atan2(right, ahead), -1.0, 1.0);
+            (void)s.set_facing(fx, fz);
+            (void)s.set_move_input(fx * 0.6 - fz * steer, fz * 0.6 + fx * steer);
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
         }
         (void)s.set_move_input(0.0, 0.0);
@@ -485,4 +500,194 @@ void run_yard_crane() {
     }
     std::cout << "PASS scraperx_sim crane: forked_up_44_m=" << forked_y << " forklift_x=" << driven_x
               << " stall_n=" << stalled_n << "\n";
+}
+
+namespace {
+
+// A piece of stock lying at (x, y, z), its middle within a few centimeters:
+// the steel laid for the magnet (LooseStock::lay_crane_steel) and the
+// laydown's plate stack.
+std::uint64_t stock_at(const Simulation &s, const double x, const double y, const double z) {
+    for (std::uint32_t i = 0; i < s.kit_body_count(); ++i) {
+        const std::uint64_t entity = s.kit_body_entity(i);
+        const auto p = s.kit_body_position(i);
+        if (scraperx::sim::kit::is_stock_entity(entity) && std::abs(p.x - x) < 0.3 && std::abs(p.y - y) < 0.1 &&
+            std::abs(p.z - z) < 0.3) {
+            return entity;
+        }
+    }
+    return 0;
+}
+
+// The device switch, until the magnet reads `on`.
+bool magnet(Simulation &s, const bool on) {
+    if (s.yard_crane_state().magnet_on == on) {
+        return true;
+    }
+    if (!s.request_yard_crane_device()) {
+        return false;
+    }
+    (void)s.advance_frame(0.1);
+    return s.yard_crane_state().magnet_on == on;
+}
+
+// Worked, the magnet hoisted clear, sent over (x, z) and let down on to what
+// is there until the sling goes slack: the magnet sits on it (the hook block
+// still hangs over it).
+bool magnet_onto(Simulation &s, const double x, const double z) {
+    if (!(hoist_to(s, s.yard_crane_state().hook.y + 2.0, 30.0) && hook_over(s, x, z, 120.0))) {
+        return false;
+    }
+    // The operator watches the magnet, not the trolley: once it hangs still,
+    // the trolley is set again by how far off the spot it hangs, and it is
+    // let down only once it hangs still within 0.1 m of it.
+    const std::uint32_t body = s.kit_body_index(YardCrane::kMagnetEntity);
+    // Still for 2 s: the hook block swings on 50 m of rope, 15 s a swing, and
+    // stands still for a moment at either end of it.
+    const int hold = 2 * static_cast<int>(Simulation::kTickRateHz);
+    const auto settle = [&s, body, hold](const double tolerance, const double tx, const double tz) {
+        int still = 0;
+        for (int tick = 0; tick < 90 * static_cast<int>(Simulation::kTickRateHz) && still < hold; ++tick) {
+            const auto m = s.kit_body_position(body);
+            const auto v = s.kit_body_velocity(body);
+            still = std::hypot(m.x - tx, m.z - tz) < tolerance && std::hypot(v.x, v.z) < 0.02 ? still + 1 : 0;
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        return still >= hold;
+    };
+    bool there = settle(0.6, x, z);
+    for (int pass = 0; there && pass < 3; ++pass) {
+        const auto m = s.kit_body_position(body);
+        if (std::hypot(m.x - x, m.z - z) < 0.1) {
+            break;
+        }
+        const auto top = s.yard_crane_state().rope_top;
+        there = hook_over(s, top.x + (x - m.x), top.z + (z - m.z), 60.0) && settle(0.6, x, z);
+    }
+    const auto over = s.kit_body_position(body);
+    if (!there || std::hypot(over.x - x, over.z - z) >= 0.1) {
+        std::cout << "  magnet: not still over (" << x << ", " << z << "): at (" << over.x << ", " << over.z << ")\n";
+        return false;
+    }
+    const double hanging = YardCrane::kMagnetKg * 9.81;
+    for (int tick = 0; tick < 40 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)s.set_yard_crane_hoist(-0.3);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        if (tick > 10 && s.yard_crane_state().sling_n < 0.2 * hanging) {
+            (void)s.set_yard_crane_hoist(0.0);
+            (void)s.advance_frame(0.3);
+            return true;
+        }
+    }
+    (void)s.set_yard_crane_hoist(0.0);
+    const auto crane = s.yard_crane_state();
+    const auto m = body_at(s, YardCrane::kMagnetEntity);
+    std::cout << "  magnet: not landed over (" << x << ", " << z << "): the magnet at (" << m.x << ", " << m.y << ", "
+              << m.z << "), the sling pulling " << crane.sling_n << " N, the hook at y " << crane.hook.y << "\n";
+    return false;
+}
+
+} // namespace
+
+// The yard crane's lifting magnet (yard_crane.hpp): rigged by HOOKing the
+// sling on its bail; switched on from the remote, lowered on to the two slabs,
+// it takes the top one (steel flat under its whole face) and lifts it alone;
+// off, it lets the slab fall where it hangs. A beam a quarter of its face wide
+// it holds by the points over it, and so less hard. The 8 t plate stack tears
+// off it. A save made while it holds a slab up loads holding it; one made
+// before the grips (without them at its end) loads holding nothing.
+void run_yard_crane_magnet() {
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    const std::uint64_t top = stock_at(s, -64.0, 0.458, -124.0);
+    const std::uint64_t bottom = stock_at(s, -64.0, 0.154, -124.0);
+    const std::uint64_t beam = stock_at(s, -72.0, 0.154, -126.5);
+    const std::uint64_t plates = laydown_piece(LooseStock::Kind::PlateStack);
+    require(top != 0 && bottom != 0 && beam != 0 && plates != 0, "magnet: the slabs, the beam and the plate stack");
+    const auto at = body_at(s, YardCrane::kMagnetEntity);
+    require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
+    require(take_remote(s), "magnet: the remote taken");
+    // The hook let down over the magnet until its shackle lies on the bail;
+    // the shackle taken from beside it, and HOOKed on the bail's eye.
+    require(work(s, true) && hook_over(s, at.x, at.z, 120.0) && hoist_to(s, 0.55 + YardCrane::kSlingM, 60.0) &&
+                work(s, false),
+            "magnet: the hook let down over the magnet");
+    require(walk_to(s, at.x, at.z - 1.3, 20.0, 0.1) && take_shackle(s, 8.0), "magnet: the sling's shackle taken");
+    require(walk_to(s, at.x, at.z - 1.0, 6.0, 0.08) && hook_on(s, 0.0, 1.0, YardCrane::kMagnetEntity),
+            "magnet: HOOK onto the magnet's bail");
+    require(work(s, true) && s.yard_crane_state().device == 1 && !s.yard_crane_state().magnet_on,
+            "magnet: worked, the device on the sling is the magnet, off");
+    // On, and on to the slabs: it takes the top one.
+    require(magnet(s, true), "magnet: MAGNET ON");
+    const auto slab0 = body_at(s, top);
+    require(magnet_onto(s, slab0.x, slab0.z), "magnet: let down on to the slabs");
+    (void)s.advance_frame(0.5);
+    const auto took = s.yard_crane_state();
+    std::cout << "  magnet: on the slabs it holds " << took.holding_entity << " (the top " << top << "), to "
+              << took.hold_rated_n << " N\n";
+    require(took.holding_entity == top && std::abs(took.hold_rated_n - YardCrane::kMagnetRatedN) < 1.0,
+            "magnet: on, it takes the top slab, its whole face on it");
+    require(hoist_load_to(s, top, slab0.y + 1.5, 30.0), "magnet: the top slab lifted");
+    (void)s.set_yard_crane_hoist(0.0);
+    (void)s.advance_frame(1.0);
+    const auto lifted = body_at(s, top);
+    const auto stayed = body_at(s, bottom);
+    std::cout << "  magnet: the top slab up to y " << lifted.y << ", the bottom one at " << stayed.y << ", the hold "
+              << s.yard_crane_state().hold_n << " N\n";
+    require(lifted.y > slab0.y + 1.4 && std::abs(stayed.y - 0.154) < 0.02,
+            "magnet: the top slab rises alone, the bottom one stays");
+    // Saved holding it up: a fresh world loads holding it there; one loaded
+    // from a save without the grips at its end holds nothing.
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    {
+        Simulation loaded(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(loaded.load_game(bytes.data(), bytes.size()), "magnet: the save loads");
+        (void)loaded.advance_frame(2.0);
+        (void)s.advance_frame(2.0);
+        const auto here = body_at(s, top);
+        const auto there = body_at(loaded, top);
+        std::cout << "  magnet: 2 s after the load the slab hangs at y " << there.y << " (" << here.y
+                  << " in the world saved)\n";
+        require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
+                    std::abs(there.y - here.y) < 0.05,
+                "magnet: loaded, it holds the slab where it was saved");
+        std::vector<std::uint8_t> before(bytes.begin(), bytes.end() - 16);
+        Simulation older(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(older.load_game(before.data(), before.size()), "magnet: a save without the grips loads");
+        (void)older.advance_frame(2.0);
+        require(older.yard_crane_state().holding_entity == 0 && body_at(older, top).y < lifted.y - 0.5,
+                "magnet: loaded from a save without the grips, it holds nothing and the slab falls");
+    }
+    // Off: the slab falls where it hangs.
+    require(magnet(s, false), "magnet: MAGNET OFF");
+    (void)s.advance_frame(2.0);
+    const auto fell = body_at(s, top);
+    std::cout << "  magnet: off, the slab fell to y " << fell.y << "\n";
+    require(s.yard_crane_state().holding_entity == 0 && fell.y < lifted.y - 1.0,
+            "magnet: off, it lets the slab fall where it hangs");
+    // A beam, 0.3 m wide under a 1.2 m face: held by the points over it.
+    const auto beam0 = body_at(s, beam);
+    require(magnet(s, true) && magnet_onto(s, beam0.x, beam0.z), "magnet: on, let down on to the beam");
+    (void)s.advance_frame(0.5);
+    const auto on_beam = s.yard_crane_state();
+    std::cout << "  magnet: on the beam it holds " << on_beam.holding_entity << " to " << on_beam.hold_rated_n << " N\n";
+    require(on_beam.holding_entity == beam && on_beam.hold_rated_n < 0.6 * YardCrane::kMagnetRatedN &&
+                on_beam.hold_rated_n > 0.3 * YardCrane::kMagnetRatedN,
+            "magnet: a beam narrower than its face it holds by the points over it, less hard");
+    require(hoist_load_to(s, beam, beam0.y + 1.0, 30.0) && magnet(s, false), "magnet: the beam lifted and let go");
+    (void)s.advance_frame(2.0);
+    // The 8 t plate stack, its whole face on it: torn off as the hoist pulls.
+    const auto stack0 = body_at(s, plates);
+    require(magnet(s, true) && magnet_onto(s, stack0.x, stack0.z), "magnet: on, let down on to the plate stack");
+    (void)s.advance_frame(0.5);
+    require(s.yard_crane_state().holding_entity == plates, "magnet: it takes the plate stack");
+    (void)hoist_to(s, s.yard_crane_state().hook.y + 1.0, 10.0);
+    (void)s.advance_frame(1.0);
+    const double rose = body_at(s, plates).y - stack0.y;
+    std::cout << "  magnet: hoisted, the plate stack rose " << rose << " m and is held by "
+              << s.yard_crane_state().holding_entity << "\n";
+    require(s.yard_crane_state().holding_entity == 0 && rose < 0.05,
+            "magnet: the 8 t plate stack tears off it and stays down");
+    std::cout << "PASS scraperx_sim magnet: slab_held_n=" << took.hold_rated_n << " beam_held_n="
+              << on_beam.hold_rated_n << " stack_rose_m=" << rose << "\n";
 }

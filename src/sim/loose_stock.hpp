@@ -101,6 +101,12 @@ public:
     // Nothing is set within keep_clear_radius of a point of keep_clear (the
     // places the player is put down).
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
+    // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
+    // hook's reach after the tower's stock, so saves made before it line up:
+    // two slabs of plate one on the other, and two beams side by side, the
+    // last kCraneSteelPieces pieces.
+    void lay_crane_steel();
+    static constexpr int kCraneSteelPieces = 4;
 
     [[nodiscard]] int count() const noexcept { return static_cast<int>(pieces_.size()); }
     // Every piece as placed, the table's and then the tower's.

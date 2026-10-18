@@ -491,6 +491,7 @@ void Simulation::step_fixed() noexcept {
     commands.forklift_lift = forklift_lift_;
     commands.yard_crane_take = yard_crane_take_;
     commands.yard_crane_operate = yard_crane_operate_;
+    commands.yard_crane_device = yard_crane_device_;
     commands.yard_crane_hoist = yard_crane_hoist_;
     commands.hook_aim_x = hook_aim_x_;
     commands.hook_aim_y = hook_aim_y_;
@@ -511,6 +512,7 @@ void Simulation::step_fixed() noexcept {
     forklift_action_ = false;
     yard_crane_take_ = false;
     yard_crane_operate_ = false;
+    yard_crane_device_ = false;
     hook_fire_ = false;
     hook_release_ = false;
     hook_take_ = false;
@@ -838,6 +840,15 @@ bool Simulation::request_yard_crane_operate() noexcept {
     return true;
 }
 
+bool Simulation::request_yard_crane_device() noexcept {
+    const YardCrane &crane = physics_world_->yard_crane();
+    if (!crane.operating() || crane.state().load_entity != YardCrane::kMagnetEntity) {
+        return false;
+    }
+    yard_crane_device_ = true;
+    return true;
+}
+
 bool Simulation::set_yard_crane_hoist(const double hoist) noexcept {
     if (!std::isfinite(hoist)) {
         return false;
@@ -877,6 +888,11 @@ YardCraneSnapshot Simulation::yard_crane_state() const noexcept {
     result.rope_mps = state.rope_mps;
     result.hook_mps = state.hook_mps;
     result.sling_n = state.sling_n;
+    result.device = state.load_entity == YardCrane::kMagnetEntity ? 1 : 0;
+    result.magnet_on = state.magnet_on;
+    result.holding_entity = state.holding_entity;
+    result.hold_n = state.hold_n;
+    result.hold_rated_n = state.hold_rated_n;
     return result;
 }
 

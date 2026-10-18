@@ -1066,6 +1066,7 @@ var _crane_trolleying := false
 var _crane_at_limit := false
 var _crane_slack := false
 var _crane_had_remote := false
+var _crane_holding := 0
 
 func _feel_crane(delta: float) -> void:
 	var state: Dictionary = _native.get_yard_crane_state()
@@ -1078,8 +1079,21 @@ func _feel_crane(delta: float) -> void:
 		_haptic(&"press", 0.6)
 	_crane_had_remote = has_remote
 	var jib: Transform3D = _crane_view.jib_transform()
-	_audio.update_crane(delta, state, jib)
+	var magnet: Vector3 = _native.get_kit_body_transform(_native.get_kit_body_index(YARD_CRANE_MAGNET)).origin
+	_audio.update_crane(delta, state, jib, magnet)
 	var operating := bool(state["operating"])
+	# The magnet taking hold of steel, and letting it go (switched off, or
+	# the load torn off it).
+	var holding := int(state["holding_entity"])
+	if holding != 0 and _crane_holding == 0:
+		_audio.crane_cue(&"magnet_take", magnet, 1.0)
+		if operating:
+			_haptic(&"land", 0.5)
+	elif holding == 0 and _crane_holding != 0:
+		_audio.crane_cue(&"magnet_drop", magnet, 0.8)
+		if operating:
+			_haptic(&"press", 0.6)
+	_crane_holding = holding
 	var slewing := absf(float(state["slew_rate"])) > 0.002
 	var trolleying := absf(float(state["trolley_rate"])) > 0.02
 	if _crane_slewing and not slewing:
