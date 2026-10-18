@@ -493,7 +493,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		elif chute:
 			pose = POSE_CHUTE
 		elif not grounded:
-			pose = POSE_REACH if bool(state["affordance"]) else POSE_AIR
+			pose = POSE_REACH if bool(state["affordance"]) \
+				or bool(landing.get("air_catch_intent_pending", false)) else POSE_AIR
 		elif recovering and landing_response == 1:
 			pose = POSE_BRACE
 		elif recovering and landing_response == 2:
@@ -646,6 +647,12 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var basis := _hand_basis(right * (0.8 * side) - back * 0.3, up)
 			return [wrist, basis, false, 8.0, 0.2, 0.2]
 		POSE_REACH:
+			if not bool(state["affordance"]):
+				# Pending input has no physical anchor. Reach with open hands
+				# in camera space until native reports a real grip or ends intent.
+				var wrist := camera.origin + right * (0.19 * side) - up * 0.13 - back * 0.43
+				var basis := _hand_basis(up * 0.75 - back * 0.65, back)
+				return [wrist, basis, false, 16.0, 0.12, 0.1]
 			var target: Vector3 = state["affordance_point"]
 			var along := forward.cross(Vector3.UP).normalized()
 			var wrist := target - forward * (TOP_PROBE_INSET + 0.06) + Vector3.UP * 0.02 \
@@ -731,7 +738,7 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 				lerpf(0.35, curl, weight), lerpf(0.3, curl * 0.85, weight)]
 		POSE_AIR:
 			# Arms thrown up for balance: palms turned in and down, fingers
-			# loose -- not a reach, which only an edge in range earns.
+			# loose. A nearby edge or deliberate native intent earns a reach.
 			var sway := sin(_clock * 5.3 + side) * 0.012
 			var wrist := camera.origin + right * (0.27 * side) + up * (-0.34 + sway) - back * 0.45
 			var basis := _hand_basis(-back * 0.85 - up * 0.2 - right * (0.25 * side), right * side + up * 0.8)

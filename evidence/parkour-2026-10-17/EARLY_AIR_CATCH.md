@@ -18,7 +18,8 @@ dictionary, supplies waiting/cancellation feedback. Godot cannot extend the
 window or decide that a physical catch succeeded. The separate grapple
 equipment control remains available while the tool is stowed.
 
-Final local source-matched checks:
+Accepted baseline checks for the native/input implementation published as
+`bd69d22e49666be8a382969cdc910b5229fc16f4`:
 
 - `air-catch-tests` exited 0: `SCRAPERX_AIR_CATCH PASS checks=3453`.
   Actual shipping gantry 2952 covers an early loaded catch, expiry/fresh
@@ -48,3 +49,5 @@ Required delivery evidence:
 
 Local experiment history is retained in `air-catch-window.json`. The final
 source/run/artifact receipt belongs in the existing live checkpoint.
+The subsequent visible open-hand change and its separate acceptance are
+documented in [AIR_REACH_FEEDBACK.md](AIR_REACH_FEEDBACK.md).

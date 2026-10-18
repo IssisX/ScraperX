@@ -5,14 +5,19 @@ extends Node
 # the early input window. The initial stage is the existing shipping gantry.
 const STEP := 1.0 / 90.0
 const FIRST_REACH_TICK := 73
+const Arms := preload("res://presentation/first_person_arms.gd")
 var main: Node
 var native: Object
 var checks := 0
 var failures := 0
 var finished := false
 var result_label: Label
+var capture_dir := ""
 
 func _ready() -> void:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--capture-dir="):
+			capture_dir = argument.trim_prefix("--capture-dir=")
 	if "--quit-after-air-catch-check" in OS.get_cmdline_user_args():
 		_run.call_deferred()
 	else:
@@ -46,7 +51,7 @@ func stage() -> void:
 	main._yaw = -PI * 0.5
 	main._pitch = 0.0
 	check(native.debug_restart_at(Vector3(16.85, 15, -118)), "initial airborne gantry stage")
-	step(FIRST_REACH_TICK - 3)
+	step(FIRST_REACH_TICK - 7)
 	check(not native.is_grip_available() and not native.is_player_grounded(),
 		"input begins before actual grip reach")
 	check(main._ctx.action.id == &"catch" and main._ctx.action.label == "REACH",
@@ -85,6 +90,10 @@ func pending() -> void:
 	check(main._ctx.action.detail == "REACHING" and main._touch.is_button_shown(&"drop")
 		and main._touch.button_label(&"drop") == "CANCEL",
 		"phone exposes honest waiting feedback and a cancellation control")
+	for hand in main._arms._hands:
+		check(hand.pose == Arms.POSE_REACH and not hand.anchored and not hand.planted,
+			"native waiting intent raises an unplanted hand through shipping Main")
+	check(main._arms.anchored_error() == -1, "waiting input cannot create a visual anchor")
 
 func caught() -> void:
 	var state: Dictionary = native.get_landing_state()
@@ -95,6 +104,37 @@ func caught() -> void:
 	check(not bool(state.get("air_catch_intent_pending", true)) and
 		main._touch.button_label(&"drop") != "CANCEL",
 		"successful acquisition consumes input and restores ordinary release feedback")
+	for hand in main._arms._hands:
+		check(hand.pose in [Arms.POSE_GRIP, Arms.POSE_CLIMB] and hand.anchored,
+			"actual native grip overrides the open-hand preview")
+
+func ordinary_air(label: String) -> void:
+	check(not bool(native.get_landing_state().get("air_catch_intent_pending", true)) and
+		int(native.get_landing_state().traversal_hand_constraint_count) == 0,
+		label + " leaves no pending intent or physical hand")
+	check(not native.is_ledge_available() and main._arms.hand_poses().all(
+		func(pose: int) -> bool: return pose == Arms.POSE_AIR),
+		label + " returns empty flight to its ordinary balance pose")
+	check(main._arms.anchored_error() == -1 and not main._touch.is_button_shown(&"drop"),
+		label + " removes the visual anchor and Cancel control")
+
+func local_wrists() -> Array:
+	var inverse: Transform3D = main._camera.global_transform.affine_inverse()
+	var wrists: Array = []
+	for point: Vector3 in main._arms.wrist_positions():
+		wrists.append(inverse * point)
+	return wrists
+
+func capture(label: String) -> void:
+	if capture_dir.is_empty():
+		return
+	var tick: int = native.get_tick_index()
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	check(native.get_tick_index() == tick, "drawing a capture cannot advance native time")
+	var image := get_viewport().get_texture().get_image()
+	check(image != null and image.save_png(capture_dir.path_join(label + ".png")) == OK,
+		"actual shipping viewport capture " + label)
 
 func _run() -> void:
 	get_tree().root.size = Vector2i(1280, 900)
@@ -109,17 +149,36 @@ func _run() -> void:
 	check(native != null and not main._regression_scene, "shipping Main and native normal world")
 	step(180)
 	stage()
+	var before_reach := local_wrists()
+	var before_curl: Array = []
+	for hand in main._arms._hands:
+		before_curl.append(Vector2(hand.curl, hand.thumb_curl))
+	await capture("01-before-reach")
 	touch(&"action")
 	step()
 	pending()
-	step(7)
+	step(2)
+	pending()
+	var preview := local_wrists()
+	for i in preview.size():
+		var hand = main._arms._hands[i]
+		check((preview[i] as Vector3).y > (before_reach[i] as Vector3).y + 0.03,
+			"early input visibly raises the palm relative to the moving camera")
+		check(hand.curl < before_curl[i].x - 0.04 and hand.thumb_curl < before_curl[i].y - 0.03,
+			"early input visibly opens the fingers before physical acquisition")
+	await capture("02-pending-open-hands")
+	step(5)
 	caught()
+	await capture("03-real-catch")
 
 	stage()
 	touch(&"action")
 	step()
 	pending()
 	touch(&"drop")
+	step()
+	ordinary_air("phone Cancel")
+	await capture("04-cancelled-reach")
 	step(5)
 	var cancelled: Dictionary = native.get_landing_state()
 	check(not bool(cancelled.get("air_catch_intent_pending", true)) and
@@ -140,6 +199,15 @@ func _run() -> void:
 	step()
 	check(int(native.get_landing_state().traversal_hand_constraint_count) == 0,
 		"keyboard Drop releases the actual caught hands")
+
+	main._router.clear_held()
+	check(native.debug_restart_at(Vector3(16.85, 15, -118)), "airborne expiry stage")
+	step(FIRST_REACH_TICK - 17)
+	touch(&"action")
+	step()
+	pending()
+	step(11)
+	ordinary_air("expired early input")
 	finished = true
 	var verdict := "SCRAPERX_AIR_CATCH_INPUT %s checks=%d" % ["PASS" if failures == 0 else "FAIL", checks]
 	print(verdict)

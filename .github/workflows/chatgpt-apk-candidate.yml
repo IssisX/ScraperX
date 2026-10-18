@@ -110,12 +110,25 @@ jobs:
         if grep -E 'SCRIPT ERROR:|Parse Error:|Error loading script' artifacts/godot-candidate-import.log; then
           exit 1
         fi
-    - name: Check shipping phone and keyboard early-catch input
+    - name: Check open-hand Reach presentation
       shell: bash
       run: |
         set -euo pipefail
-        timeout 90s tools/godot/godot --headless --path godot --audio-driver Dummy \
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/air_reach_arms_test.gd \
+          2>&1 | tee artifacts/air-reach-arms.log
+        grep -F 'SCRAPERX_AIR_REACH_ARMS PASS' artifacts/air-reach-arms.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/air-reach-arms.log; then exit 1; fi
+    - name: Check shipping early-catch input and visible hand feedback
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p artifacts/air-reach
+        timeout 90s xvfb-run -a -s '-screen 0 1280x900x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 1280x900 \
           res://tests/air_catch_input_test.tscn -- --quit-after-air-catch-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/air-reach" \
           2>&1 | tee artifacts/air-catch-input-godot.log
         grep -F 'SCRAPERX_AIR_CATCH_INPUT PASS' artifacts/air-catch-input-godot.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/air-catch-input-godot.log; then exit 1; fi
@@ -257,6 +270,9 @@ jobs:
           artifacts/forklift-operator/
           artifacts/first-person-legs-native.log
           artifacts/first-person-legs/
+          artifacts/air-reach-arms.log
+          artifacts/air-catch-input-godot.log
+          artifacts/air-reach/
         if-no-files-found: error
         retention-days: 30
     - name: Export ChatGPT Android arm64 APK
