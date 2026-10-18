@@ -627,6 +627,7 @@ public:
     bool death_side_on_ = false;
     // Hits (see kHitFeltSpeed): this tick's hardest, those felt, the last.
     float hit_closing_mps_ = 0.0F;
+    JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();
     std::uint64_t hit_count_ = 0;
     float hit_speed_mps_ = 0.0F;
     // The swing under way hangs from a zipline's trolley (Zipline), riding it.
@@ -799,6 +800,14 @@ public:
     double limp_seconds_left_ = 0.0;
     std::uint64_t ankle_break_count_ = 0;
     [[nodiscard]] bool limping() const noexcept { return limp_seconds_left_ > 0.0; }
+    // Injuries (see kArmBreakHitSpeed): the broken arm's time left, which it
+    // is (0 the left, 1 the right), every break.
+    double arm_broken_seconds_left_ = 0.0;
+    int broken_arm_side_ = 1;
+    std::uint64_t arm_break_count_ = 0;
+    [[nodiscard]] bool arm_broken() const noexcept { return arm_broken_seconds_left_ > 0.0; }
+    // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
+    void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at
     // `break_speed` or more: the limp starts (again) from kLimpSeconds.
     void break_ankle_if(float normal_speed, float break_speed) noexcept;

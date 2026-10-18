@@ -191,7 +191,8 @@ void Simulation::PhysicsWorld::update_swing(JPH::BodyInterface &bodies, const St
         --regrip_cooldown_ticks_;
         return;
     }
-    if (input.Dot(facing_) < 0.5F) {
+    // Hand over hand needs a good hand to let go: one broken arm, none.
+    if (arm_broken() || input.Dot(facing_) < 0.5F) {
         return;
     }
     const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
@@ -276,6 +277,8 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
     }
     climb_sliding_ = false;
     climb_slide_mps_ = 0.0F;
+    // One good arm hauls the body at kOneArmClimbScale.
+    const float arm = arm_broken() ? kOneArmClimbScale : 1.0F;
     JPH::RVec3 next = hold;
     Grip carries;
     if (up_input > kClimbInputDeadzone) {
@@ -286,7 +289,7 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
             return;
         }
         const JPH::RVec3 moved =
-            hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbUpSpeed * delta_seconds, 0.0F);
+            hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbUpSpeed * arm * delta_seconds, 0.0F);
         const Grip above = find_grip(moved, hand_aim(moved, kClimbMoveAim, 0.0F), normal);
         if (above.valid) {
             next = moved;
@@ -294,7 +297,7 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
         }
     } else if (up_input < -kClimbInputDeadzone) {
         const JPH::RVec3 moved =
-            hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbDownSpeed * delta_seconds, 0.0F);
+            hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbDownSpeed * arm * delta_seconds, 0.0F);
         if (feet_on_ground(moved)) {
             step_off_climb(bodies);
             return;
@@ -308,7 +311,7 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
     if (std::abs(side_input) > kClimbInputDeadzone) {
         const float lead = side_input > 0.0 ? kClimbSideLead : -kClimbSideLead;
         const JPH::RVec3 moved =
-            next + right * (static_cast<float>(side_input) * kClimbSideSpeed * delta_seconds);
+            next + right * (static_cast<float>(side_input) * kClimbSideSpeed * arm * delta_seconds);
         const Grip beside = find_grip(moved, hand_aim(moved, kClimbHandMid, lead), normal);
         if (beside.valid) {
             next = moved;

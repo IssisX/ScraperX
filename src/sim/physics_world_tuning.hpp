@@ -127,6 +127,20 @@ constexpr float kHitLethalSpeed = 10.0F;
 constexpr float kHitFeltSpeed = 6.0F;
 constexpr float kLimpSpeedScale = 0.45F;
 constexpr float kLimpJumpScale = 0.6F;
+// Injuries: the broken arm. An arm breaks when it takes more than its bones
+// do: a blow side-on from kArmBreakHitSpeed (CHOSEN, past a sprint into a
+// wall: the forearm thrown up before the face takes it), the arm on the side
+// it came from; or a catch torn out of the hands by its spike (a grip torn
+// by the impulse over it, not a slow slip: the shoulder takes the wrench),
+// the right arm. The lethal rule is decided first. For kArmBrokenSeconds the
+// body has one good arm: it climbs at kOneArmClimbScale, a hang's grip holds
+// kOneArmGripScale of two hands' (kLedgeGripMaxForceN and
+// kLedgeGripTearImpulseNs both), and it reaches no bar hand over hand (the
+// good hand cannot let go). A death's restore is a whole body.
+constexpr float kArmBreakHitSpeed = 8.5F;
+constexpr double kArmBrokenSeconds = 30.0;
+constexpr float kOneArmClimbScale = 0.5F;
+constexpr float kOneArmGripScale = 0.5F;
 // Parkour step 3: the slide. Crouching at a run -- kSlideMinimumSpeed or more
 // over the ground, within 45 degrees of the facing -- drops the body onto its
 // hip in the 1.2 m capsule and lets it run on: the ground takes the speed off

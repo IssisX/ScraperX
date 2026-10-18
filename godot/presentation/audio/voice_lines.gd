@@ -61,6 +61,20 @@ const TIERS := {
 		"pain_04.ogg",
 		"pain_05.ogg",
 	],
+	&"break_leg": [
+		"break_leg_00.ogg",
+		"break_leg_01.ogg",
+		"break_leg_02.ogg",
+		"break_leg_03.ogg",
+		"break_leg_04.ogg",
+	],
+	&"break_arm": [
+		"break_arm_00.ogg",
+		"break_arm_01.ogg",
+		"break_arm_02.ogg",
+		"break_arm_03.ogg",
+		"break_arm_04.ogg",
+	],
 }
 const CAPTIONS := {
 	"yelp_00.ogg": "Whoa, whoa, whoa!",
@@ -110,4 +124,14 @@ const CAPTIONS := {
 	"pain_03.ogg": "Ugh. That was stupid.",
 	"pain_04.ogg": "Ow, ow, ow, ow.",
 	"pain_05.ogg": "Argh, son of a bitch!",
+	"break_leg_00.ogg": "Aaah! My ankle! My fucking ankle!",
+	"break_leg_01.ogg": "Fuck! My leg, my leg!",
+	"break_leg_02.ogg": "Shit, it's broken, it's broken!",
+	"break_leg_03.ogg": "Oh god, my foot, oh god!",
+	"break_leg_04.ogg": "Ah, fuck, I heard it snap!",
+	"break_arm_00.ogg": "Aaah! My arm! My arm!",
+	"break_arm_01.ogg": "Fuck! My fucking arm!",
+	"break_arm_02.ogg": "Shit, my shoulder, my shoulder!",
+	"break_arm_03.ogg": "Ah, it's broken, it's broken!",
+	"break_arm_04.ogg": "Oh fuck, I can't feel my hand!",
 }

@@ -923,6 +923,10 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["limping"] = s.limping;
     out["limp_left"] = s.limp_seconds_left;
     out["ankle_breaks"] = static_cast<std::int64_t>(s.ankle_break_count);
+    out["arm_broken"] = s.arm_broken;
+    out["arm_left"] = s.arm_broken_seconds_left;
+    out["arm_breaks"] = static_cast<std::int64_t>(s.arm_break_count);
+    out["arm_side"] = static_cast<std::int64_t>(s.broken_arm_side);
     out["teetering"] = s.player_teetering;
     out["beam_xcom"] = s.beam_xcom;
     out["beam_lean"] = to_godot(s.beam_lean);

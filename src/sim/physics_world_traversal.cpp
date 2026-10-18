@@ -701,17 +701,23 @@ void Simulation::PhysicsWorld::check_hang_grip(JPH::BodyInterface &bodies, const
         (traversal_state_ != TraversalState::Hanging && traversal_state_ != TraversalState::Swinging)) {
         return;
     }
+    // One good arm holds kOneArmGripScale of two hands'.
+    const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
     const float load = std::abs(hang_arms_->GetTotalLambdaPosition()) / delta_seconds;
-    if (load > kLedgeGripMaxForceN) {
+    if (load > kLedgeGripMaxForceN * grip) {
         ++hang_over_grip_ticks_;
-        hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN) * delta_seconds;
+        hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN * grip) * delta_seconds;
     } else {
         hang_over_grip_ticks_ = 0;
         hang_over_grip_impulse_ = 0.0F;
     }
-    if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || hang_over_grip_impulse_ > kLedgeGripTearImpulseNs) {
+    const bool wrenched = hang_over_grip_impulse_ > kLedgeGripTearImpulseNs * grip;
+    if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || wrenched) {
         ++hang_slip_count_;
         release_hang(bodies);
+        if (wrenched) {
+            break_arm(1);   // a catch torn out of the hands by its spike: the shoulder takes it
+        }
     }
 }
 

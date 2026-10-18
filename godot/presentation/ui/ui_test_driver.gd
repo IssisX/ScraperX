@@ -46,6 +46,8 @@ const SCENARIOS := {
 	"touch_works": 27,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
+	# A broken arm: flat out into the Matron's locker, then the ladder one-armed.
+	"touch_arm_break": 11,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"keyboard_core": 8,
@@ -184,7 +186,8 @@ const SCENARIOS := {
 	"touch_stack": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
-	# The fear voice on a ~12 m drop lived through: a yelp, then pain.
+	# The fear voice on a ~12 m drop lived through: a yelp, then the cry for
+	# the ankle it breaks.
 	"fall_voice": 10,
 	# Need a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
@@ -290,6 +293,8 @@ func _run() -> void:
 			ok = await _touch_works()
 		"touch_chute":
 			ok = await _touch_chute()
+		"touch_arm_break":
+			ok = await _touch_arm_break()
 		"touch_lethal_feedback":
 			ok = await _touch_lethal_feedback()
 		"touch_pause":

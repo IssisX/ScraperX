@@ -172,6 +172,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     clear_recovery();
     clear_support_jolt();
     limp_seconds_left_ = 0.0;   // a whole body: no break carried over
+    arm_broken_seconds_left_ = 0.0;
     teetering_ = false;
     flight_from_jump_ = false;
     jump_vault_ticks_left_ = 0;
@@ -549,6 +550,10 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.limping = limping();
     state_.limp_seconds_left = limp_seconds_left_;
     state_.ankle_break_count = ankle_break_count_;
+    state_.arm_broken = arm_broken();
+    state_.arm_broken_seconds_left = arm_broken_seconds_left_;
+    state_.arm_break_count = arm_break_count_;
+    state_.broken_arm_side = broken_arm_side_;
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;
     state_.summit_seconds = summit_seconds_;

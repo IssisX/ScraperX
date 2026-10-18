@@ -708,6 +708,12 @@ struct Snapshot final {
     bool limping = false;
     double limp_seconds_left = 0.0;
     std::uint64_t ankle_break_count = 0;
+    // A broken arm (see kArmBreakHitSpeed): one good arm, the time left on
+    // it, every break so far, and which (0 the left, 1 the right).
+    bool arm_broken = false;
+    double arm_broken_seconds_left = 0.0;
+    std::uint64_t arm_break_count = 0;
+    std::int32_t broken_arm_side = 1;
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;

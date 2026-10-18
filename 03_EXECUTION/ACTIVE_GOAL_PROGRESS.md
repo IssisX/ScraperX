@@ -1220,6 +1220,28 @@ reachable in today's world: B's cage with her (its unrig and a ride on it are th
 written). B waits on the island of cages 1.09 m off the 176 ring, where she arrives only riding
 A up with the player, and B cannot be rigged before that.
 
+**The broken arm, and a cry for each break (2026-10-18; to-do 2).** Bones break where the body
+takes more than they do, and now an arm can go too: a blow side-on from 8.5 m/s (a little past a
+sprint into a wall; flow's 9 m/s into steel does it, the forearm thrown up before the face), the
+arm on the side it came from; or a catch torn out of the hands by its spike (a ledge caught in a
+fall from 6 m, a line's stop hit too fast), the shoulder wrenched, the right arm. For 30 s the
+climber has one good arm: climbing at half the rate (0.45 m/s up a ladder), a hang's grip half
+of two hands' (catches tear sooner), and no bar reached hand over hand. The broken arm is held
+across the belly in the view, trembling; the crack is at the shoulder, felt twice, the break named
+(BROKEN ARM, which, a quip, the seconds left), and cried. The cries are new: ten lines in the
+voice's own pipeline (Chatterbox, Whisper-checked word for word), five for a leg ("Aaah! My
+ankle! My fucking ankle!", "Ah, fuck, I heard it snap!") and five for an arm ("Fuck! My fucking
+arm!", "Oh fuck, I can't feel my hand!"); a break's line takes over the landing's or the blow's
+own pain line in the frame it starts, so a break is cried once. Proof: native `run_arm_break`
+(flat out into the proving ground's wall at 8.8 m/s: the right arm; a line's stop at 10.6 m/s:
+torn off, the right arm wrenched, alive on 143 m; into the Matron's locker at 9 m/s, then the
+ladder to the 176 ring at 0.45 m/s one-armed and 0.90 healed; the deck's line braked to 7.5 m/s
+into its stop holds two hands and tears one; one-armed, the monkey bars' first bar is caught and
+none reached after it); the 6 m torn catch wrenches the
+right arm (`run_core_traversal`); touch `touch_arm_break` (new, in CI: on the stick into the
+locker, named, cried once, one arm held to the body, the ladder at 0.45 m/s); `fall_voice` (the
+ankle's break cried once, its own line).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1229,8 +1251,8 @@ fill in after).**
 2. The whole first-person body, and injuries and deaths as physical consequences. Done
    2026-10-17: the corpse the view rides, the blood, the cracks felt and heard, the broken ankle
    and its limp, the cry; hits felt, and lethal side-on (the zipline's slam). Done 2026-10-18:
-   the body itself, legs and torso seen from inside, and blood on the lens. Next: a broken arm,
-   new break lines for the voice.
+   the body itself, legs and torso seen from inside, and blood on the lens. Done 2026-10-18: a
+   broken arm (a blow or a wrenched catch; 30 s one-armed) and a cry for each break.
 3. Route-building's reach: richer spots, heavy stock up the tower only where the crane or a
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up
    there.

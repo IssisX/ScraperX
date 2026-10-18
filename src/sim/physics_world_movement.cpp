@@ -667,6 +667,9 @@ void Simulation::PhysicsWorld::advance_recovery(JPH::BodyInterface &bodies, cons
     if (limp_seconds_left_ > 0.0) {
         limp_seconds_left_ = std::max(0.0, limp_seconds_left_ - dt);
     }
+    if (arm_broken_seconds_left_ > 0.0) {
+        arm_broken_seconds_left_ = std::max(0.0, arm_broken_seconds_left_ - dt);
+    }
 }
 
 void Simulation::PhysicsWorld::break_ankle_if(const float normal_speed, const float break_speed) noexcept {
@@ -675,6 +678,12 @@ void Simulation::PhysicsWorld::break_ankle_if(const float normal_speed, const fl
     }
     ++ankle_break_count_;
     limp_seconds_left_ = kLimpSeconds;
+}
+
+void Simulation::PhysicsWorld::break_arm(const int side) noexcept {
+    ++arm_break_count_;
+    broken_arm_side_ = side;
+    arm_broken_seconds_left_ = kArmBrokenSeconds;
 }
 
 bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,

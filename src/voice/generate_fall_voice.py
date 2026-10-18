@@ -50,6 +50,8 @@ except ImportError:  # --table-only needs none of the audio stack
 #   terror -- a long fall: screaming, pleading, swearing
 #   relief -- the canopy opens, a hand catches hold, or a long fall ends alive
 #   pain   -- landed hard and lived
+#   break_leg, break_arm -- heard a bone go: an ankle on landing, an arm
+#             taking a blow or a wrenched catch
 LINES = {
     "yelp": (1.3, [
         "Whoa, whoa, whoa!",
@@ -107,6 +109,20 @@ LINES = {
         "Ugh. That was stupid.",
         "Ow, ow, ow, ow.",
         "Argh, son of a bitch!",
+    ]),
+    "break_leg": (1.5, [
+        "Aaah! My ankle! My fucking ankle!",
+        "Fuck! My leg, my leg!",
+        "Shit, it's broken, it's broken!",
+        "Oh god, my foot, oh god!",
+        "Ah, fuck, I heard it snap!",
+    ]),
+    "break_arm": (1.5, [
+        "Aaah! My arm! My arm!",
+        "Fuck! My fucking arm!",
+        "Shit, my shoulder, my shoulder!",
+        "Ah, it's broken, it's broken!",
+        "Oh fuck, I can't feel my hand!",
     ]),
 }
 

@@ -62,6 +62,7 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "corpse") {
         run_corpse();
+        run_arm_break();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "well") {
@@ -331,6 +332,7 @@ int main() {
     run_wall_chain();
     run_zipline();
     run_corpse();
+    run_arm_break();
     run_hook();
     run_workers();
     run_c7();

@@ -834,6 +834,7 @@ void run_climb_moves();
 void run_wall_chain();
 void run_zipline();
 void run_corpse();
+void run_arm_break();
 void run_hook();
 void run_workers();
 void run_c7();

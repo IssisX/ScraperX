@@ -481,6 +481,8 @@ void run_core_traversal() {
             "a ledge caught at the end of a 6 m fall must tear out of the hands");
     const auto tore = torn.snapshot();
     require(tore.hang_slip_count == 1, "the torn catch must be the grip's slip, not a release");
+    require(tore.arm_broken && tore.arm_break_count == 1 && tore.broken_arm_side == 1,
+            "a catch torn out of the hands by its spike must wrench the right arm");
     require(tore.player_linear_velocity.y < -2.0, "a torn grip must leave the body still falling");
 
     Simulation swing(InitialSpawn::HangApproach);

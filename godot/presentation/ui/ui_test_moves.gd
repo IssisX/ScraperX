@@ -1160,6 +1160,71 @@ func _touch_chute() -> bool:
 		float(_native().get_last_impact_speed_mps())]
 	return true
 
+# touch_arm_break: on the 154 m deck, flat out on the stick along the north
+# band into the Matron's steel locker: the arm that took it breaks (named,
+# cried, felt, held to the body), and the ladder to the 176 ring is a
+# one-armed haul at half the climb's rate.
+func _touch_arm_break() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _walk_to(device, Vector2(-15.0, -126.2), 0.15, 10.0, true):
+		return _fail("the walk back along the north band stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	await _face(Vector2(1.0, 0.0))
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var broke: bool = await _wait_until(func() -> bool: return int(_native().get_landing_state()["arm_breaks"]) > 0, 6.0)
+	_move(device, 0.0)
+	if not broke:
+		return _fail("flat out into the locker broke no arm (hits %d, at %s)" % [
+			int(_native().get_death_state()["hits"]), str(_position())])
+	await _frames(4)
+	var hit_mps := float(_native().get_death_state()["hit_speed_mps"])
+	var toasts: Array = _main._hud._toasts
+	if toasts.is_empty() or String(toasts[-1]["title"]) != "BROKEN ARM":
+		return _fail("the break was not named (toasts %s)" % str(toasts))
+	if int(_main._audio.voice_lines.get(&"break_arm", 0)) < 1:
+		return _fail("no cry for the arm (lines %s)" % str(_main._audio.voice_lines))
+	var slung := 0
+	for hand in _main._arms._hands:
+		slung += 1 if int(hand.pose) == 13 else 0
+	if slung != 1:
+		return _fail("%d arms held to the body, not the broken one" % slung)
+	if int(_native().get_death_count()) != 0:
+		return _fail("the blow killed")
+	await _tilt(-0.55)
+	await _pose("arm_broken")
+	await _tilt(0.0)
+	# Up the ladder one-armed.
+	if not (await _walk_to(device, Vector2(3.5, -128.2), 0.15, 8.0, true) and \
+			await _walk_to(device, Vector2(3.5, -129.8), 0.15, 4.0, true) and \
+			await _walk_to(device, Vector2(5.0, -129.6), 0.08, 4.0, true)):
+		return _fail("the walk to the ladder's foot stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("Action read '%s' facing the ladder, not CLIMB HOLD" % _action_label())
+	_act(device)
+	# The native's TraversalState::Climbing (ui_test_bands.gd's TRAVERSAL_CLIMBING).
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 4, 0.5):
+		return _fail("CLIMB did not take hold of the ladder")
+	_move(device, 1.0)
+	await _seconds(0.5)
+	var from_y := _position().y
+	await _seconds(3.0)
+	var rate := (_position().y - from_y) / 3.0
+	await _tilt(0.45)
+	await _pose("arm_one_armed_climb")
+	_move(device, 0.0)
+	if not bool(_native().get_landing_state()["arm_broken"]):
+		return _fail("the arm healed too soon")
+	if rate < 0.35 or rate > 0.55:
+		return _fail("one-armed, the ladder climbed at %.2f m/s, not half the climb's 0.9" % rate)
+	_detail = "hit_mps=%.1f side=%d one_armed_mps=%.2f cry=%d" % [hit_mps, int(_native().get_landing_state()["arm_side"]),
+		rate, int(_main._audio.voice_lines.get(&"break_arm", 0))]
+	return true
+
+
 func _touch_lethal_feedback() -> bool:
 	# Captions on for this fall: each line the climber says is printed as said.
 	_main._settings.captions = true
@@ -1251,12 +1316,14 @@ func _fall_voice() -> bool:
 		return _fail("the survivable drop killed (%.1f m/s)" % impact)
 	if int(said.get(&"yelp", 0)) < 1:
 		return _fail("no yelp on a %.1f m/s drop" % impact)
-	if int(said.get(&"pain", 0)) < 1:
+	if int(said.get(&"pain", 0)) + int(said.get(&"break_leg", 0)) < 1:
 		return _fail("a %.1f m/s landing lived through said nothing" % impact)
 	# Twelve metres onto steel, planted: an ankle broken (sim kAnkleBreakSpeed),
-	# said once, named, felt, and walked on as a hobble.
-	if int(said.get(&"pain", 0)) != 1:
-		return _fail("the break cried out %d times, not once" % int(said.get(&"pain", 0)))
+	# cried once (its own line, not the landing's), named, felt, and walked on
+	# as a hobble.
+	if int(said.get(&"break_leg", 0)) != 1 or int(said.get(&"pain", 0)) != 0:
+		return _fail("the break cried out %d times and the landing %d, not the break once" % [
+			int(said.get(&"break_leg", 0)), int(said.get(&"pain", 0))])
 	var landing: Dictionary = _native().get_landing_state()
 	if not bool(landing["limping"]) or int(landing["ankle_breaks"]) != 1:
 		return _fail("a %.1f m/s planted landing broke nothing (breaks %d)" % [impact, int(landing["ankle_breaks"])])

@@ -66,6 +66,8 @@ const POSE_BALANCE := 10
 const POSE_BAR := 11
 # The right fist closed on the grappling hook's line, held out toward it.
 const POSE_LINE := 12
+# A broken arm (the native's arm_broken): held across the belly, out of use.
+const POSE_SLING := 13
 # Wrist to where the line leaves the closed fist.
 const LINE_GRIP_REACH := 0.09
 
@@ -402,7 +404,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		var pose := POSE_REST
 		var reachable := true
-		if traversal == TRAVERSAL_SWINGING:
+		if int(state.get("broken_arm", -1)) == (1 if hand.side > 0.0 else 0):
+			pose = POSE_SLING
+		elif traversal == TRAVERSAL_SWINGING:
 			pose = POSE_BAR
 		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
 			pose = POSE_GRIP
@@ -552,6 +556,13 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# of the hand takes the push as the body rises past it.
 			var basis := _hand_basis(_grip_forward, Vector3.UP)
 			return [wrist, basis, true, 30.0, 0.1, 0.15]
+		POSE_SLING:
+			# The broken arm held to the body: the forearm across the belly, the
+			# hand at the far side of it, fingers half closed, trembling.
+			var shake := sin(_clock * 17.0 + side) * 0.004
+			var wrist := camera.origin - right * (0.06 * side) + up * (-0.47 + shake) - back * 0.24
+			var basis := _hand_basis(-right * (0.9 * side) - up * 0.3, -back)
+			return [wrist, basis, false, 10.0, 0.6, 0.45]
 		POSE_LINE:
 			# Held out ahead and right of the chest, turned a little toward
 			# the hook, the fist pointing along the line it is closed on.
@@ -675,6 +686,9 @@ func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 			return right * side * 0.3 + Vector3.DOWN * 1.0 - forward * 0.3
 		POSE_REMOTE, POSE_CHUTE:
 			return right * side * 0.9 + Vector3.DOWN * 1.0
+		POSE_SLING:
+			# The elbow tucked at the side, the forearm across.
+			return right * side * 0.6 + Vector3.DOWN * 1.0 + forward * 0.1
 	return right * side * 0.5 + Vector3.DOWN * 1.0 - forward * 0.4
 
 

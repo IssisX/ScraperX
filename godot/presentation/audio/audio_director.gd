@@ -149,6 +149,7 @@ var _voice_left := 0.0   # seconds of the current line still to run
 var caption := ""
 var _voice_names := {}   # tier -> clip file names, as _voice_clips
 var _voice_tier := &""   # tier of the line running, "" when quiet
+var _voice_frame := -1   # the frame it started
 var _fall_top := -INF    # highest point since the climber last had support
 var _fall_lines := 0     # fear lines said in this fall
 var _fall_worst := &""   # worst tier said in this fall
@@ -476,7 +477,7 @@ func _update_voice(delta: float, position: Vector3, velocity: Vector3, grounded:
 		_fall_reset(position)
 		return
 	if grounded and not _was_grounded and voiced:
-		if _voice_tier == &"pain":
+		if _voice_tier in [&"pain", &"break_leg", &"break_arm"]:
 			pass   # a break on this landing has already cried out
 		elif -_last_vy >= LAND_HARD_IMPACT:
 			_voice_say(&"pain")
@@ -517,6 +518,11 @@ func _voice_say(tier: StringName) -> void:
 	var clips: Array = _voice_clips.get(tier, [])
 	if clips.is_empty():
 		return
+	# A line cut in the frame it started (a landing's pain line taken over by
+	# the break it caused) was never heard: it does not count.
+	if _voice_tier != &"" and _voice_frame == Engine.get_process_frames():
+		voice_lines[_voice_tier] = maxi(0, int(voice_lines.get(_voice_tier, 1)) - 1)
+	_voice_frame = Engine.get_process_frames()
 	var bag: Array = _voice_bags.get(tier, [])
 	if bag.is_empty():
 		for i in clips.size():
@@ -798,15 +804,22 @@ func bone_cracks(at: Vector3, speed_mps: float, lethal_mps: float) -> void:
 func body_hit(speed_mps: float) -> void:
 	var hard := clampf((speed_mps - 6.0) / 4.0, 0.0, 1.0)
 	_play(&"land_hard", linear_to_db(lerpf(0.5, 1.0, hard)), randf_range(0.8, 0.95))
-	if speed_mps >= 8.0 and _voice_tier != &"pain":
+	if speed_mps >= 8.0 and not (_voice_tier in [&"pain", &"break_leg", &"break_arm"]):
 		_voice_say(&"pain")
 
-# An ankle broken on landing: the crack at the feet, and the cry (one, if
-# the landing's own pain line has not already said it).
+# An ankle broken on landing: the crack at the feet, and the cry for the
+# break (over the landing's own pain line, if that has started).
 func ankle_break(body: Vector3) -> void:
 	_cracks_due.append([0.0, body - Vector3(0.0, 0.85, 0.0), 1.0, randf_range(1.05, 1.2)])
-	if _voice_tier != &"pain":
-		_voice_say(&"pain")
+	if _voice_tier != &"break_leg":
+		_voice_say(&"break_leg")
+
+# An arm broken by a blow or a wrenched catch: the crack at the shoulder, and
+# the cry for it (over the blow's own pain line, if that has started).
+func arm_break(body: Vector3) -> void:
+	_cracks_due.append([0.0, body + Vector3(0.0, 0.45, 0.0), 1.0, randf_range(1.2, 1.35)])
+	if _voice_tier != &"break_arm":
+		_voice_say(&"break_arm")
 
 func _sound_cracks(delta: float) -> void:
 	var keep: Array = []

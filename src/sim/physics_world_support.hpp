@@ -201,6 +201,7 @@ public:
         sample_ = {};
         struck_closing_ = 0.0F;
         hit_closing_ = 0.0F;
+        hit_toward_ = JPH::Vec3::sZero();
         unlock();
     }
 
@@ -213,6 +214,13 @@ public:
     [[nodiscard]] float hit_closing() const noexcept {
         lock();
         const float result = hit_closing_;
+        unlock();
+        return result;
+    }
+    // That hardest hit's normal, from the body toward what it met.
+    [[nodiscard]] JPH::Vec3 hit_toward() const noexcept {
+        lock();
+        const JPH::Vec3 result = hit_toward_;
         unlock();
         return result;
     }
@@ -300,7 +308,10 @@ private:
         const float closing = (player.GetLinearVelocity() - other.GetPointVelocity(at)).Dot(toward);
         if (closing > 0.0F) {
             lock();
-            hit_closing_ = std::max(hit_closing_, closing);
+            if (closing > hit_closing_) {
+                hit_closing_ = closing;
+                hit_toward_ = toward;
+            }
             unlock();
         }
     }
@@ -418,6 +429,7 @@ private:
     SupportSample sample_{};
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
+    JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();
     // Corpses' bodies (Corpses: kUserDataBase on).
     static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};

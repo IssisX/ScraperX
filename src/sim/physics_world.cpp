@@ -555,18 +555,24 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         // The hands on a zipline's bar hold what a ledge's grip holds: the
         // stop's jolt at a run-in faster than the buffer takes tears them off
         // and the body is thrown on (kLedgeGripMaxForceN, as hang_on_ledge).
+        // One good arm holds kOneArmGripScale of two hands'.
+        const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
         const float load = zipline_->state().hands_load_n;
-        if (load > kLedgeGripMaxForceN) {
+        if (load > kLedgeGripMaxForceN * grip) {
             ++hang_over_grip_ticks_;
-            hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN) * delta_seconds;
+            hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN * grip) * delta_seconds;
         } else {
             hang_over_grip_ticks_ = 0;
             hang_over_grip_impulse_ = 0.0F;
         }
-        if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || hang_over_grip_impulse_ > kLedgeGripTearImpulseNs) {
+        const bool wrenched = hang_over_grip_impulse_ > kLedgeGripTearImpulseNs * grip;
+        if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || wrenched) {
             ++hang_slip_count_;
             ++zip_torn_count_;
             release_hang(bodies);
+            if (wrenched) {
+                break_arm(1);   // torn out of the hands by the jolt: the shoulder takes it
+            }
         }
     }
     summit_->post_step();
@@ -583,6 +589,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     SupportSample support = contact_listener_.sample();
     struck_closing_mps_ = contact_listener_.struck_closing();
     hit_closing_mps_ = contact_listener_.hit_closing();
+    hit_toward_ = contact_listener_.hit_toward();
     if (jump_started || traversal_state_ != TraversalState::None) {
         support = {};
     }
@@ -635,6 +642,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     } else if (!died_this_tick && hit_closing_mps_ >= kHitFeltSpeed) {
         ++hit_count_;
         hit_speed_mps_ = hit_closing_mps_;
+        if (hit_closing_mps_ >= kArmBreakHitSpeed) {
+            // The forearm thrown up before the face takes it, on the side the
+            // blow came from.
+            const JPH::Vec3 right = facing_.Cross(JPH::Vec3::sAxisY());
+            break_arm(hit_toward_.Dot(right) >= 0.0F ? 1 : 0);
+        }
     }
     if (!died_this_tick) {
         advance_recovery(bodies, delta_seconds);

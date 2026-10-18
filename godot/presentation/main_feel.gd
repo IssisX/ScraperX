@@ -198,12 +198,22 @@ const BREAK_QUIPS := [
 	"Hobble on, legend. Hobble on.",
 	"Bone says no. The tower says keep climbing."
 ]
+# The broken arm's toast.
+const ARM_QUIPS := [
+	"Arm's purely decorative now.",
+	"One-handed climbing. Brave. Stupid. Both.",
+	"Elbows don't bend that way.",
+	"Hold on with the good one.",
+	"The bone said no. The tower doesn't care."
+]
 # The limp (the native's broken ankle): the bad leg's steps drop the head
 # LIMP_DIP_M and tip it LIMP_ROLL_RAD to that side.
 const LIMP_DIP_M := 0.07
 const LIMP_ROLL_RAD := 0.05
 var _fb_breaks := -1
 var _limping := false
+var _fb_arm_breaks := -1
+var _arm_broken_side := -1   # the broken arm (0 left, 1 right), -1 none
 var _fb_hits := -1
 
 const HAPTICS := {
@@ -298,6 +308,23 @@ func _update_body_feedback(delta: float) -> void:
 		_slip_jolt_depth = 1.0
 	_fb_breaks = breaks
 	_limping = bool(landing["limping"])
+	# An arm broken by a blow or a catch torn out of the hands: the crack at
+	# the shoulder, the cry, the view jolted, felt twice, and named; the arm
+	# held to the body until it heals.
+	var arm_breaks := int(landing["arm_breaks"])
+	if _fb_arm_breaks >= 0 and arm_breaks > _fb_arm_breaks:
+		var arm_quip: String = ARM_QUIPS[randi() % ARM_QUIPS.size()]
+		_hud.toast("BROKEN ARM", "%s ARM  /  %s  /  ONE ARM %d S" % [
+			"RIGHT" if int(landing["arm_side"]) == 1 else "LEFT", arm_quip, ceili(float(landing["arm_left"]))],
+			UiStyle.HAZARD, 3.5)
+		_hud.flash(UiStyle.HAZARD)
+		_haptic(&"break")
+		_break_pulses.append(BREAK_PULSE_GAP_S * 1.5)
+		_audio.arm_break(_native.get_player_position())
+		_slip_jolt = SLIP_JOLT_SECONDS
+		_slip_jolt_depth = 1.0
+	_fb_arm_breaks = arm_breaks
+	_arm_broken_side = int(landing["arm_side"]) if bool(landing["arm_broken"]) else -1
 	# A blow the body felt and lived (sim kHitFeltSpeed): the jolt in the
 	# view and the hand, the thud, and from a hard one the cry and the flash.
 	var struck: Dictionary = _native.get_death_state()
@@ -537,6 +564,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 			"carry_half": 0.18,
 			"move": intent["move"],
 			"bob_phase": _cam_bob_phase,
+			"broken_arm": _arm_broken_side,
 		}
 	return {
 		"traversal": int(_ctx["traversal"]),
@@ -560,6 +588,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"hook_line": _hand_line_end(),
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
+		"broken_arm": _arm_broken_side,
 	}
 
 # --- telemetry overlay, sized to the bounds the device actually gives us ------
