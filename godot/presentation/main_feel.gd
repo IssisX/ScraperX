@@ -686,7 +686,9 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		# The gait's phase (presentation/gait.gd): half a turn a footfall, the
 		# left foot down at even multiples of PI, the right at odd.
-		_cam_bob_phase += PI * Gait.cadence(horizontal_speed) * delta
+		# Only while the feet are moving: standing still, the gait holds.
+		if horizontal_speed > HEAD_BOB_SPEED_FLOOR_MPS:
+			_cam_bob_phase += PI * Gait.cadence(horizontal_speed) * delta
 	if not _head_bob_on:
 		_cam_bob_weight = 0.0
 	else:
@@ -708,6 +710,11 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			1.0 - exp(-CAMERA_BANK_RESPONSE_PER_SECOND * delta))
 		if absf(_cam_bank - bank_target) < 0.0001:
 			_cam_bank = bank_target
+	# The roll this frame: the eased bank from the sideways speed, and on it
+	# what the body is doing now. Built fresh each frame: added into the eased
+	# value, a lean compounded through its easing (a wall run's 5 degrees
+	# settled at 34 at 60 fps, more the higher the frame rate).
+	var bank := _cam_bank
 
 	# A broken ankle: on the bad leg's steps (every other one) the head drops
 	# and tips to that side, the good leg's as before.
@@ -715,7 +722,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var hobbling := smoothstep(0.3, 1.5, horizontal_speed)
 		var bad_step := maxf(0.0, -cos(_cam_bob_phase))
 		dip += -LIMP_DIP_M * bad_step * bad_step * hobbling
-		_cam_bank += LIMP_ROLL_RAD * bad_step * hobbling
+		bank += LIMP_ROLL_RAD * bad_step * hobbling
 
 	# Parkour movement dynamics and tactile camera feel:
 	var traversal: int = int(_ctx.get("traversal", TRAVERSAL_NONE))
@@ -725,7 +732,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		# Athletic speed vault: tuck dip and subtle roll bank along apex
 		var vault_wave := sin(PI * clampf(traversal_prog, 0.0, 1.0))
 		dip += -0.07 * vault_wave
-		_cam_bank += 0.035 * vault_wave
+		bank += 0.035 * vault_wave
 		parkour_fov = 4.5 * vault_wave
 	elif traversal == TRAVERSAL_MANTLING:
 		# Muscular mantle heave: hand plant compression then powerful crest push-up
@@ -744,13 +751,13 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	elif bool(_ctx.get("sliding", false)):
 		# On the hip: the view leans back and a little to the trailing side,
 		# and widens with the speed the slide carries.
-		_cam_bank += 0.05
+		bank += 0.05
 		parkour_fov = 4.0 * clampf(Vector2(velocity.x, velocity.z).length() / 8.0, 0.0, 1.0)
 	elif bool(_ctx.get("balancing", false)) and grounded:
 		# Narrow beam balance micro-sway: subtle tightrope dynamic centering
 		var sway := sin(_cam_bob_phase * 0.75)
 		lateral_bob += 0.025 * sway
-		_cam_bank += 0.015 * sway
+		bank += 0.015 * sway
 
 	# The wall's outward normal on the right means the wall is on the left:
 	# the head leans right, off it (a negative roll), and the other way round.
@@ -761,7 +768,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	_wall_lean = lerpf(_wall_lean, wall_lean_target, 1.0 - exp(-WALL_LEAN_RESPONSE_PER_SECOND * delta))
 	if absf(_wall_lean - wall_lean_target) < 0.0005:
 		_wall_lean = wall_lean_target
-	_cam_bank += _wall_lean
+	bank += _wall_lean
 	# Flow's speed felt: the slight shake, on the ground or in the air.
 	var shake_target := smoothstep(FLOW_FROM_MPS, FLOW_FULL_MPS, horizontal_speed) \
 		if _head_bob_on and not _reduced_motion else 0.0
@@ -770,7 +777,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _speed_shake > 0.0:
 		_shake_clock += delta
 		shake_pitch = SPEED_SHAKE_RAD * _speed_shake * sin(TAU * SPEED_SHAKE_HZ.x * _shake_clock)
-		_cam_bank += SPEED_SHAKE_RAD * _speed_shake * sin(TAU * SPEED_SHAKE_HZ.y * _shake_clock + 1.1)
+		bank += SPEED_SHAKE_RAD * _speed_shake * sin(TAU * SPEED_SHAKE_HZ.y * _shake_clock + 1.1)
 	else:
 		_shake_clock = 0.0
 
@@ -835,7 +842,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _reduced_motion:
 		roll_turn = 0.0
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn + slip_pitch * motion + shake_pitch, _yaw,
-		_cam_bank + stagger * motion)
+		bank + stagger * motion)
 	# Driving the forklift, the head goes with the seat: the view tilts with
 	# the truck's floor, so its nose going down under a load is seen.
 	if _forklift_view != null and bool(_ctx.get("forklift_driving", false)) and not _reduced_motion:

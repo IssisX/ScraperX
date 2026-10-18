@@ -344,16 +344,25 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     // load's own weight lets the oil out through a valve that meters it to
     // the lift's speed, whatever the weight. Let go, the check valve shuts and
     // the ram holds where it stands, whatever the mast carries.
+    // The valve opens and closes at kLiftAccelMps2: the forks run up to the
+    // speed the lever asks and back down to a stop before the check valve
+    // holds them.
     const float at = lift_->GetCurrentPosition();
-    if (want_lift > 0.05F) {
+    const float want_rate = std::abs(want_lift) > 0.05F ? want_lift * kLiftSpeedMps : 0.0F;
+    const float lift_step = kLiftAccelMps2 * delta_seconds;
+    lift_rate_ += std::clamp(want_rate - lift_rate_, -lift_step, lift_step);
+    if (want_rate == 0.0F && std::abs(lift_rate_) < 1.0e-4F) {
+        lift_rate_ = 0.0F;
+    }
+    if (lift_rate_ > 0.0F) {
         lift_->GetMotorSettings().SetForceLimits(0.0F, kLiftForceN);
         lift_->SetMotorState(EMotorState::Velocity);
-        lift_->SetTargetVelocity(want_lift * kLiftSpeedMps);
+        lift_->SetTargetVelocity(lift_rate_);
         lift_target_ = at;
-    } else if (want_lift < -0.05F) {
+    } else if (lift_rate_ < 0.0F) {
         lift_->GetMotorSettings().SetForceLimits(0.0F, kHoldForceN);
         lift_->SetMotorState(EMotorState::Velocity);
-        lift_->SetTargetVelocity(want_lift * kLiftSpeedMps);
+        lift_->SetTargetVelocity(lift_rate_);
         lift_target_ = at;
     } else {
         lift_->GetMotorSettings().SetForceLimits(0.0F, kHoldForceN);
@@ -454,6 +463,7 @@ void Forklift::post_step(const float delta_seconds) {
 
 void Forklift::restore() {
     state_ = {};
+    lift_rate_ = 0.0F;
     WheeledVehicleController &controller = controller_of(*vehicle_);
     for (Wheel *wheel : vehicle_->GetWheels()) {
         wheel->SetAngularVelocity(0.0F);

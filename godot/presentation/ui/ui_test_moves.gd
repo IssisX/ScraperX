@@ -241,18 +241,23 @@ func _touch_wall_run() -> bool:
 	var normal: Vector3 = _native().get_player_wall_normal()
 	var right := Vector3(cos(float(_main._yaw)), 0.0, -sin(float(_main._yaw)))
 	var lean := float(_main._wall_lean)
+	# What the camera does: its roll, all of it, not the lean's own value (the
+	# lean compounded through the bank's easing to 34 degrees once).
+	var roll := float(_main._camera.rotation.z)
 	if bool(_main._head_bob_on) and bool(_native().is_player_wall_running()):
 		if normal.length() < 0.5:
 			return _fail("on the wall the native gave no wall normal")
 		if absf(normal.dot(right)) > 0.3 and (lean * normal.dot(right) >= 0.0 or absf(lean) < 0.05):
 			return _fail("the view did not lean off the wall (lean %.3f rad, normal.right %.2f)" % [
 				lean, normal.dot(right)])
+		if absf(normal.dot(right)) > 0.3 and (roll * normal.dot(right) >= 0.0 or absf(roll) > 0.15):
+			return _fail("the camera does not roll a few degrees off the wall (roll %.3f rad)" % roll)
 	await _pose("wall_run")
 	var down: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
 	if not down:
 		return _fail("the wall run never came down")
-	_detail = "steps=%d landed_x=%.2f lean_rad=%.3f normal=%s" % [int(_native().get_wall_step_count()),
-		_position().x, lean, str(normal)]
+	_detail = "steps=%d landed_x=%.2f lean_rad=%.3f roll_rad=%.3f normal=%s" % [
+		int(_native().get_wall_step_count()), _position().x, lean, roll, str(normal)]
 	return true
 
 # Mirror's Edge's wall climb: from the static deck to the run-up square to

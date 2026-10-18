@@ -883,7 +883,13 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 	var mast_at := body * Vector3(0.0, 1.4 + 0.5 * lift_m, 1.0)
 	_loop_level(_fork_engine, &"engine_loop", engine_at,
 		0.3 + 0.45 * throttle + 0.2 * strain if rpm > 0.0 else 0.0, rpm / 1500.0 * (1.0 - 0.06 * strain), -4.0)
-	_loop_level(_fork_tires, &"tire_concrete_loop" if _floor_is_concrete(int(grounds[0])) else &"tire_steel_loop",
+	# The floor from a front wheel on it; with both off it for a moment, the
+	# sound keeps to the floor it was on.
+	var ground := int(grounds[0]) if int(grounds[0]) != 0 else int(grounds[1])
+	var tire_clip: StringName = _fork_tires.get_meta(&"clip", &"tire_concrete_loop")
+	if ground != 0:
+		tire_clip = &"tire_concrete_loop" if _floor_is_concrete(ground) else &"tire_steel_loop"
+	_loop_level(_fork_tires, tire_clip,
 		front, clampf(roll / FORK_TOP_MPS, 0.0, 1.0) if roll > 0.1 else 0.0,
 		0.6 + 0.5 * clampf(roll / FORK_TOP_MPS, 0.0, 1.5), -5.0)
 	_loop_level(_fork_scrape, &"fork_scrape_loop", tips_at,

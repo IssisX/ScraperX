@@ -72,6 +72,11 @@ public:
     // what limits a lift far out on the forks is the counterweight).
     static constexpr float kLiftStrokeM = 1.8F;
     static constexpr float kLiftSpeedMps = 0.4F;
+    // The lift's valve opens and closes over a fifth of a second (CHOSEN): the
+    // forks spool up to their speed and down to a stop at this rate. Stepped
+    // in one tick, the 150 kg carriage (and a light load on it) changed speed
+    // by 0.4 m/s at once, logged as a hit in the impact ledger.
+    static constexpr float kLiftAccelMps2 = 2.0F;
     static constexpr float kLiftForceN = 50000.0F;
     // What the ram holds with its valve shut, or lets down metered: whatever
     // the mast can carry (CHOSEN: four times what the pump lifts).
@@ -165,6 +170,7 @@ private:
     JPH::Ref<JPH::SliderConstraint> lift_;
     State state_{};
     float lift_target_ = 0.0F;
+    float lift_rate_ = 0.0F;   // the forks' speed as the valve drives it, + up
 };
 
 } // namespace scraperx::sim

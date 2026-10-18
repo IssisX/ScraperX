@@ -61,9 +61,19 @@ std::array<double, 6> fork_the_pallet(Simulation &s, const int pallet) {
     }
     (void)s.set_move_input(0.0, 0.0);
     (void)s.advance_frame(1.5);
+    const auto hits_before = s.impacts();
+    const std::uint64_t seen = hits_before.empty() ? 0 : hits_before.back().sequence;
     (void)s.set_forklift_lift(1.0);
     (void)s.advance_frame(1.0);
     const double raising = s.forklift_state().lift_mps;
+    // The valve opens over a fifth of a second (kLiftAccelMps2): the forks and
+    // the pallet they pick up are never jerked hard enough to be heard as a hit.
+    for (const auto &hit : s.impacts()) {
+        require(hit.sequence <= seen ||
+                    (hit.entity != Forklift::kCarriageEntity &&
+                     hit.entity != LooseStock::kFirstEntity + static_cast<std::uint64_t>(pallet)),
+                "forklift: raising the forks under the pallet jerks neither the forks nor the pallet");
+    }
     (void)s.set_forklift_lift(0.0);
     (void)s.advance_frame(0.5);
     require(std::abs(raising - Forklift::kLiftSpeedMps) < 0.05,

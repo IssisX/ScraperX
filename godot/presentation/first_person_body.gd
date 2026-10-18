@@ -148,7 +148,7 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 	# the speed asks. Each foot is down for the gait's contact time, sliding
 	# back under the hip exactly as far as the body passes over it, and the
 	# rest of the cycle swings through ahead.
-	if grounded and not sliding:
+	if grounded and not sliding and speed >= 0.2:
 		_stride += 0.5 * Gait.cadence(speed) * delta
 	var phase := _stride
 	var stance := clampf(Gait.contact_seconds(speed) * Gait.cadence(speed) * 0.5, 0.15, 0.65)
