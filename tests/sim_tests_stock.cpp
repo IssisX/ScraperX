@@ -4,6 +4,7 @@
 #include "sim/loose_stock.hpp"
 #include "sim_tests.hpp"
 
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -47,6 +48,42 @@ void run_loose_stock() {
     const int tabled = static_cast<int>(LooseStock::placements().size());
     std::cout << "  stock: " << tabled << " pieces in the table, " << pieces - tabled << " in the tower's spots\n";
     require(pieces > tabled + 60, "stock: the tower's rings are dressed");
+    // The owner's rules for what is up there (2026-10-17): every heavy piece
+    // stands on a pallet or a skid, so a forklift's forks fit under it; and
+    // what only the yard crane could have brought up stands only on the
+    // decks it lands loads on (11, 22 and 44 m), each of which has some.
+    {
+        const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
+        std::array<int, 3> crane_pieces{};
+        int heavy = 0;
+        for (int i = tabled; i < pieces; ++i) {
+            const auto kind = static_cast<LooseStock::Kind>(s.loose_stock_piece(static_cast<std::uint32_t>(i)).kind);
+            if (!LooseStock::heavy(kind)) {
+                continue;
+            }
+            ++heavy;
+            require(LooseStock::forkable(kind), "stock: every heavy piece up the tower stands on a pallet or a skid");
+            const bool crane_only = kind == LooseStock::Kind::CoilSkid || kind == LooseStock::Kind::PlateSkid ||
+                                    kind == LooseStock::Kind::BottleCage;
+            if (!crane_only) {
+                continue;
+            }
+            const double floor = piece_at(s, i).y;
+            bool on_crane_deck = false;
+            for (std::size_t d = 0; d < crane_decks.size(); ++d) {
+                if (std::abs(floor - crane_decks[d]) < 0.3) {
+                    on_crane_deck = true;
+                    ++crane_pieces[d];
+                }
+            }
+            require(on_crane_deck, "stock: the crane's loads stand only on the decks the crane serves");
+        }
+        std::cout << "  stock: " << heavy << " heavy pieces up the tower, all forkable; the crane's loads on the 11, "
+                  << "22 and 44 m decks: " << crane_pieces[0] << ", " << crane_pieces[1] << ", " << crane_pieces[2]
+                  << "\n";
+        require(crane_pieces[0] > 0 && crane_pieces[1] > 0 && crane_pieces[2] > 0,
+                "stock: each deck the crane serves has the crane's loads");
+    }
     std::vector<scraperx::sim::Vector3> placed;
     for (int i = 0; i < pieces; ++i) {
         require(s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i)) != Simulation::kKitNone,
@@ -105,8 +142,9 @@ void run_loose_stock() {
     int container = -1;
     const auto &table = LooseStock::placements();
     for (std::size_t i = 0; i < table.size(); ++i) {
-        // The lone one standing across the row at x -54.5.
-        if (table[i].kind == LooseStock::Kind::Container && table[i].x < -54.0F) {
+        // The lone one standing across the row at x -54.5 (in the yard, not
+        // the crane's laydown west of the stack).
+        if (table[i].kind == LooseStock::Kind::Container && table[i].x < -54.0F && table[i].z > 0.0F) {
             container = static_cast<int>(i);
         }
     }

@@ -1,5 +1,5 @@
 extends Node3D
-## The yard's forklift's moving parts the native does not model as bodies
+## A forklift's moving parts the native does not model as bodies
 ## (src/sim/forklift.hpp). The truck's frame, counterweight, guard, mast, ram
 ## barrel and forks are kit bodies, drawn and moved by the kit's own drawing
 ## (main_machines.gd); its wheels are the native vehicle's, so each is drawn
@@ -11,7 +11,6 @@ extends Node3D
 
 # Lugs round each tyre's face, so a rolling wheel is seen to roll.
 const LUGS := 8
-const CHASSIS_ENTITY := 2982
 # In the truck's frame (forklift.cpp): the ram's barrel stands at z 0.97, its
 # top 1.45 m up; the carriage's origin rises from 0.06 m at the forks' lowest.
 const RAM_Z := 0.97
@@ -33,24 +32,26 @@ var _crosshead: Node3D
 var _chains: Array[MeshInstance3D] = []   # per side: anchor run, carriage run
 
 
-func setup(main: Node, native: Object) -> void:
-	name = "ForkliftView"
+# The forklift `index` of the native's (0 the yard's, then the yard crane's).
+func setup(main: Node, native: Object, index: int = 0) -> void:
+	name = "ForkliftView%d" % index if index > 0 else "ForkliftView"
 	_native = native
-	_chassis_body = int(native.get_kit_body_index(CHASSIS_ENTITY))
+	var built: Dictionary = native.get_forklift_state_at(index)
+	_chassis_body = int(native.get_kit_body_index(int(built["chassis_entity"])))
 	var tyre_material: Material = main._material(Color("1a1918"), 0.0, 0.92)
 	var hub_material: Material = main._material(Color("b8901f"), 0.25, 0.6)
 	var lug_material: Material = main._material(Color("2a2826"), 0.0, 0.85)
 	var rod_material: Material = main._material(Color("d8dcdf"), 0.95, 0.12)
 	var chain_material: Material = main._material(Color("2b2a28"), 0.8, 0.45)
 	var head_material: Material = main._material(Color("3a3936"), 0.7, 0.5)
-	var state: Dictionary = native.get_forklift_state()
+	var state: Dictionary = built
 	var radii: PackedFloat32Array = state["wheel_radius"]
 	var widths: PackedFloat32Array = state["wheel_width"]
 	for wheel in radii.size():
 		var radius := radii[wheel]
 		var width := widths[wheel]
 		var node := Node3D.new()
-		node.name = "ForkliftWheel%d" % wheel
+		node.name = "ForkliftWheel%d" % wheel if index == 0 else "Forklift%dWheel%d" % [index, wheel]
 		# A cylinder along its own y: y is the axle.
 		var tyre := MeshInstance3D.new()
 		var tyre_mesh := CylinderMesh.new()

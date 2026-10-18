@@ -152,7 +152,10 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     vertical_->restore(checkpoint_.vertical);
     matron_->restore(checkpoint_.matron);
     loose_stock_->resync();
-    forklift_->restore();
+    for (const std::unique_ptr<Forklift> &truck : forklifts_) {
+        truck->restore();
+    }
+    yard_crane_->restore();
     zipline_->restore();
     zip_riding_ = false;
     restore_carry_topology(checkpoint_.carrying_entity);
@@ -175,6 +178,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     arm_broken_seconds_left_ = 0.0;
     teetering_ = false;
     flight_from_jump_ = false;
+    springboard_takeoff_ = false;
     jump_vault_ticks_left_ = 0;
     jump_buffer_ticks_ = 0;
     support_entity_id_ = 0;

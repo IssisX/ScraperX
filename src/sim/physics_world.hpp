@@ -57,6 +57,12 @@ public:
         // one-shot; the forks' buttons, held (-1 lower .. 1 raise).
         bool forklift_action = false;
         double forklift_lift = 0.0;
+        // The yard crane: Take the remote and its switch, one-shot; the
+        // hoist's buttons, held (-1 lowering .. 1 raising). Working it, the
+        // stick sends the hook.
+        bool yard_crane_take = false;
+        bool yard_crane_operate = false;
+        double yard_crane_hoist = 0.0;
         // The grappling hook: aim (a unit world vector), Fire and Release
         // one-shot, Reel held, Take one-shot.
         double hook_aim_x = 0.0;
@@ -87,12 +93,29 @@ public:
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
-    [[nodiscard]] const Forklift &forklift() const noexcept { return *forklift_; }
+    // The forklifts: the yard's first (forklift()), then the yard crane's on
+    // its laydown, then those on the 11 m and 44 m decks it serves.
+    [[nodiscard]] const Forklift &forklift() const noexcept { return *forklifts_.front(); }
+    [[nodiscard]] int forklift_count() const noexcept { return static_cast<int>(forklifts_.size()); }
+    [[nodiscard]] const Forklift &forklift(const int index) const noexcept {
+        return *forklifts_[static_cast<std::size_t>(index)];
+    }
+    // The forklift being driven, else the one at whose wheel the player
+    // stands, else -1.
+    [[nodiscard]] int active_forklift() const noexcept;
+    [[nodiscard]] const YardCrane &yard_crane() const noexcept { return *yard_crane_; }
+    // The player could work the crane's remote now: hands free, on no hold,
+    // in no seat and at no wheel, within its range.
+    [[nodiscard]] bool yard_crane_able() const noexcept;
+    // The crane's remote within the hands' reach in its cabinet.
+    [[nodiscard]] bool yard_crane_remote_in_reach() const noexcept;
     [[nodiscard]] const Zipline &zipline() const noexcept { return *zipline_; }
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
-    // On the forklift's floor within reach of its wheel.
-    [[nodiscard]] bool at_forklift_controls() const noexcept;
+    // On a forklift's floor within reach of its wheel (that forklift's, or
+    // any's).
+    [[nodiscard]] bool at_forklift_controls(int index) const noexcept;
+    [[nodiscard]] bool at_forklift_controls() const noexcept { return active_forklift() >= 0; }
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
     [[nodiscard]] std::uint64_t standing_entity() const noexcept { return grounded_ ? support_entity_id_ : 0; }
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
@@ -618,7 +641,8 @@ public:
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
     std::unique_ptr<LooseStock> loose_stock_;
-    std::unique_ptr<Forklift> forklift_;
+    std::vector<std::unique_ptr<Forklift>> forklifts_;
+    std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;
     // The bodies deaths left (Corpses); the latest death's place and speed.
     std::unique_ptr<Corpses> corpses_;
@@ -872,6 +896,10 @@ public:
     // The vault path under way is a springboard's plant (kSpringboardSpeedKept):
     // it ends in a jump off the top.
     bool traversal_springboard_ = false;
+    // A springboard's jump leaves the top at the end of a tick, the soles
+    // kLandingSkin over it (inside the contacts' speculative reach): the
+    // next tick is the jump's start, and like a jump's it reads no support.
+    bool springboard_takeoff_ = false;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
     float roll_entry_speed_ = 0.0F;
     double roll_blocked_loss_ = 0.0;

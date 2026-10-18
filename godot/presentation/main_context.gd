@@ -32,6 +32,11 @@ const INCLINE_ARMED := 0
 const INCLINE_RELEASED := 1
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
+# The yard crane's sling shackle and the forklifts' frames, whose eye on the
+# guard a crane's sling hooks (sim/yard_crane.hpp, sim/forklift.hpp).
+const YARD_CRANE_SHACKLE := 2987
+const FORKLIFT_CHASSIS := 2982
+const CRANE_FORKLIFT_CHASSIS := 2989
 # S1's cage and the scale plate in its floor (Simulation::kStackS1CageEntityId,
 # kStackS1PlateEntityId).
 const STACK_S1_CAGE := 2200
@@ -107,14 +112,30 @@ func _read_context() -> Dictionary:
 	var support := int(_native.get_support_entity_id())
 	var forklift: Dictionary = _native.get_forklift_state()
 	var forklift_driving := bool(forklift["driving"])
+	# The yard crane, worked by its remote: the stick sends the hook, Jump
+	# and Crouch held hoist.
+	var crane: Dictionary = _native.get_yard_crane_state()
+	var crane_operating := bool(crane["operating"])
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if forklift_driving:
+	if crane_operating:
+		var hook_at: Vector3 = crane["hook"]
+		var reading := "HOOK %d M  PULL %.1f T" % [roundi(hook_at.y), float(crane["hoist_n"]) / 9810.0]
+		if bool(crane["hoist_stalled"]):
+			reading = "TOO HEAVY  %.1f T" % (float(crane["hoist_n"]) / 9810.0)
+		elif bool(crane["upper_limit"]):
+			reading = "HOOK AT ITS TOP"
+		elif bool(crane["slack"]):
+			reading = "ROPE SLACK: LANDED"
+		action = {"id": &"crane", "icon": &"down", "label": "WALK", "detail": reading}
+	elif forklift_driving:
 		# At the forklift's wheel: the stick drives and steers, Jump and
 		# Crouch held raise and lower the forks, Action lets go.
 		action = {"id": &"drive", "icon": &"down", "label": "STEP OFF",
 			"detail": "FORKS %.1f M" % float(forklift["lift_m"])}
 	elif bool(forklift["at_controls"]) and carrying == 0:
 		action = {"id": &"drive", "icon": &"up", "label": "DRIVE", "detail": "THE FORKLIFT"}
+	elif bool(crane["remote_in_reach"]) and carrying == 0:
+		action = {"id": &"crane_take", "icon": &"pick_up", "label": "TAKE REMOTE", "detail": "THE YARD CRANE"}
 	elif bool(sling["can_retrieve"]) or bool(sling["recovering"]):
 		action = {"id": &"slingshot", "icon": &"up",
 			"label": "STOP REELING" if bool(sling["recovering"]) else "RETRIEVE POUCH",
@@ -277,6 +298,9 @@ func _read_context() -> Dictionary:
 		"swing_seated": swing_seated,
 		"trapeze_hanging": trapeze_hanging,
 		"forklift_driving": forklift_driving,
+		"has_remote": bool(crane["has_remote"]),
+		"crane_operating": crane_operating,
+		"crane_able": bool(crane["able"]),
 		"trapeze_pulled": bool(trapeze["pulled"]),
 		"sling_recovering": bool(sling["recovering"]),
 		"sling_flight": bool(sling["flight"]),
@@ -337,6 +361,8 @@ func _carry_half(entity: int) -> float:
 
 func _carry_name(entity: int) -> String:
 	match entity:
+		YARD_CRANE_SHACKLE:
+			return "CRANE SLING"
 		2002, 2012:
 			return "ROPE SHACKLE"
 		2004, 2014:
@@ -435,4 +461,23 @@ func _kit_anchor_name(entity: int) -> String:
 			return "CAGE EYE"
 		1007:
 			return "CLEAT"
+		FORKLIFT_CHASSIS, CRANE_FORKLIFT_CHASSIS:
+			return "FORKLIFT'S EYE"
+	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
+		_stock_name(entity)
+		match int(_stock_kinds.get(entity, -1)):
+			5:
+				return "CONTAINER'S EYE"
+			6:
+				return "BEAM"
+			9:
+				return "PLATE STACK"
+			10:
+				return "PLATE SLAB"
+			11:
+				return "PIPE"
+			12:
+				return "STILLAGE"
+			13:
+				return "COIL SKID"
 	return "ANCHOR"

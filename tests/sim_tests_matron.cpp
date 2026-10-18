@@ -173,6 +173,12 @@ bool push_toward(Simulation &s, const int piece, const double tx, const double t
         tick(s);
     }
     (void)s.set_move_input(0.0, 0.0);
+    if (std::getenv("SCRAPERX_PUSH_TRACE") != nullptr) {
+        const auto d = stock(s, piece);
+        const auto p = s.snapshot().player_position;
+        std::cout << "    push short: the piece at (" << d.x << ", " << d.y << ", " << d.z << "), the player at (" << p.x
+                  << ", " << p.y << ", " << p.z << ")\n";
+    }
     return false;
 }
 } // namespace

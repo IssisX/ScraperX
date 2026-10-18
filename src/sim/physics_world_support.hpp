@@ -20,6 +20,7 @@
 #include "sim/climb_c7.hpp"
 #include "sim/summit.hpp"
 #include "sim/forklift.hpp"
+#include "sim/yard_crane.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/zipline.hpp"
 #include "sim/corpse.hpp"

@@ -325,6 +325,33 @@ RopeIndex Kit::add_rope(const BodyIndex body1, const JPH::Vec3 point1, const JPH
     return RopeIndex{static_cast<std::uint32_t>(ropes_.size() - 1U)};
 }
 
+RopeIndex Kit::add_direct_rope(const BodyIndex body1, const JPH::Vec3 point1, const BodyIndex end_body,
+                               const JPH::Vec3 end_point, const float max_length, const float rating_newtons) {
+    Rope rope;
+    rope.body1 = body1;
+    rope.point1 = point1;
+    rope.direct = true;
+    if (bodies_[end_body.value].carry == CarryKind::Shackle) {
+        rope.shackle = end_body;
+        rope.shackle_point = end_point;
+    } else {
+        rope.fast_body = end_body;
+        rope.fast_point = end_point;
+    }
+    rope.length = max_length;
+    rope.rating = rating_newtons;
+    ropes_.push_back(rope);
+    connect_rope(ropes_.back());
+    return RopeIndex{static_cast<std::uint32_t>(ropes_.size() - 1U)};
+}
+
+float Kit::rope_span(const Rope &rope, const JPH::RVec3 first, const JPH::RVec3 end) noexcept {
+    if (rope.direct) {
+        return JPH::Vec3(first - end).Length();
+    }
+    return JPH::Vec3(first - rope.fixed1).Length() + rope.ratio * JPH::Vec3(end - rope.fixed2).Length();
+}
+
 void Kit::set_wound(const RopeIndex rope) {
     ropes_[rope.value].wound = true;
     wound_.push_back(rope);
@@ -669,8 +696,7 @@ void Kit::pre_step(const float delta_seconds) {
             // The dogs mesh: the rope holds from its length as it is now.
             rope.clutch_engaged = true;
             const BodyIndex end = rope_end_body(rope);
-            rope.length = JPH::Vec3(world_point(rope.body1, rope.point1) - rope.fixed1).Length() +
-                          rope.ratio * JPH::Vec3(world_point(end, rope_end_point(rope)) - rope.fixed2).Length();
+            rope.length = rope_span(rope, world_point(rope.body1, rope.point1), world_point(end, rope_end_point(rope)));
             connect_rope(rope);
         }
     }
@@ -1280,12 +1306,11 @@ void Kit::connect_rope(Rope &rope) {
     settings.mMaxLength = rope.length;
     if (rope.strut) {
         // Coupled, the line holds whatever fluid it holds now, and pushes.
-        rope.length = JPH::Vec3(settings.mBodyPoint1 - rope.fixed1).Length() +
-                      rope.ratio * JPH::Vec3(settings.mBodyPoint2 - rope.fixed2).Length();
+        rope.length = rope_span(rope, settings.mBodyPoint1, settings.mBodyPoint2);
         settings.mMinLength = rope.length;
         settings.mMaxLength = rope.length + 1.0e4F;
     }
-    rope.constraint = new RopeConstraint(jolt_body(rope.body1), jolt_body(end), settings);
+    rope.constraint = new RopeConstraint(jolt_body(rope.body1), jolt_body(end), settings, rope.direct);
     system_.AddConstraint(rope.constraint);
     auto &bodies = system_.GetBodyInterface();
     bodies.ActivateBody(bodies_[rope.body1.value].id);
@@ -1389,7 +1414,6 @@ AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity) const noexcept 
     }
     const JPH::RVec3 at = world_point(shackle, rope->shackle_point);
     const JPH::RVec3 first = world_point(rope->body1, rope->point1);
-    const float first_leg = JPH::Vec3(first - rope->fixed1).Length();
     AnchorIndex best;
     float best_distance = 0.0F;
     for (std::uint32_t index = 0; index < anchors_.size(); ++index) {
@@ -1402,8 +1426,7 @@ AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity) const noexcept 
         if (distance > anchor.reach || (best.valid() && distance >= best_distance)) {
             continue;
         }
-        const float needed =
-            first_leg + rope->ratio * JPH::Vec3(point - rope->fixed2).Length();
+        const float needed = rope_span(*rope, first, point);
         if (!rope->strut && needed > rope->length + kHookLengthTolerance) {
             continue;
         }
@@ -1727,11 +1750,17 @@ void Kit::rope_polyline(const RopeIndex rope_index, std::vector<JPH::RVec3> &out
         return;
     }
     if (rope->parted) {
-        out.push_back(rope->fixed2);
-        out.push_back(world_point(rope_end_body(*rope), rope_end_point(*rope)));
+        if (!rope->direct) {
+            out.push_back(rope->fixed2);
+            out.push_back(world_point(rope_end_body(*rope), rope_end_point(*rope)));
+        }
         return;
     }
     out.push_back(world_point(rope->body1, rope->point1));
+    if (rope->direct) {
+        out.push_back(world_point(rope_end_body(*rope), rope_end_point(*rope)));
+        return;
+    }
     out.push_back(rope->fixed1);
     if (rope->wound) {
         return;

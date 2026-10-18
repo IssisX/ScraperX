@@ -200,6 +200,12 @@ public:
     [[nodiscard]] bool request_forklift_action();
     [[nodiscard]] bool set_forklift_lift(double lift);
     [[nodiscard]] godot::Dictionary get_forklift_state() const;
+    [[nodiscard]] std::int64_t get_forklift_count() const;
+    [[nodiscard]] godot::Dictionary get_forklift_state_at(std::int64_t index) const;
+    [[nodiscard]] bool request_yard_crane_take();
+    [[nodiscard]] bool request_yard_crane_operate();
+    [[nodiscard]] bool set_yard_crane_hoist(double hoist);
+    [[nodiscard]] godot::Dictionary get_yard_crane_state() const;
     [[nodiscard]] godot::Array get_zipline_lines() const;
     [[nodiscard]] godot::PackedFloat32Array get_zipline_trolleys() const;
     [[nodiscard]] godot::Dictionary get_zipline_state() const;

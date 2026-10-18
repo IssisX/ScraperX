@@ -137,6 +137,14 @@ var _fork_pump: AudioStreamPlayer3D
 var _fork_valve: AudioStreamPlayer3D
 var _zip_roll: AudioStreamPlayer3D
 var _zip_brake: AudioStreamPlayer3D
+# The yard crane, heard from its parts 60 m up: the slew drive at the ring,
+# the trolley's wheels on the jib's chords, the hoist winch's drum on the
+# counter-jib and, at its full pull with nothing rising, its motor stalling.
+var _crane_slew: AudioStreamPlayer3D
+var _crane_trolley: AudioStreamPlayer3D
+var _crane_hoist: AudioStreamPlayer3D
+var _crane_stall: AudioStreamPlayer3D
+var crane_cues := {}
 var _fork_rpm := 0.0
 var forklift_cues := {}
 var pours_heard := 0
@@ -214,6 +222,10 @@ func _ready() -> void:
 	_fork_valve = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	_zip_roll = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
 	_zip_brake = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
+	_crane_slew = _positional_player(BUS_EFFECTS, Vector3.ZERO, 12.0, 260.0)
+	_crane_trolley = _positional_player(BUS_EFFECTS, Vector3.ZERO, 10.0, 220.0)
+	_crane_hoist = _positional_player(BUS_EFFECTS, Vector3.ZERO, 14.0, 280.0)
+	_crane_stall = _positional_player(BUS_EFFECTS, Vector3.ZERO, 12.0, 240.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -724,6 +736,40 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, -lever * (0.15 + 0.5 * held), 0.62, -8.0)
 	else:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, 0.0, 1.0, 0.0)
+
+
+# The yard crane (sim/yard_crane.hpp), from where its drives are: each loop
+# as loud and as high as its drive runs, the winch heavier under load.
+func update_crane(state: Dictionary, jib: Transform3D) -> void:
+	if not _bank_ready or _silent:
+		return
+	var slew := clampf(absf(float(state["slew_rate"])) / 0.08, 0.0, 1.0)
+	var trolley := clampf(absf(float(state["trolley_rate"])) / 1.2, 0.0, 1.0)
+	var hoist := absf(float(state["hoist"]))
+	var load := clampf(float(state["hoist_n"]) / float(state["hoist_max_n"]), 0.0, 1.0)
+	var stalled := bool(state["hoist_stalled"])
+	var ring := jib * Vector3(0.0, 0.4, 0.0)
+	var drum := jib * Vector3(-6.0, 2.65, 0.0)
+	_loop_level(_crane_slew, &"pump_loop", ring, 0.75 * slew, 0.42 + 0.3 * slew, -2.0)
+	_loop_level(_crane_trolley, &"zip_loop", state["rope_top"], 0.8 * trolley, 0.35 + 0.35 * trolley, -3.0)
+	_loop_level(_crane_hoist, &"engine_loop", drum, (0.45 + 0.5 * load) * hoist if not stalled else 0.0,
+		0.5 + 0.35 * hoist - 0.15 * load, -1.0)
+	_loop_level(_crane_stall, &"relief_loop", drum, 1.0 if stalled else 0.0, 0.5, -2.0)
+
+
+# A crane's brake taking hold as a drive stops, or the hook block coming to
+# its upper limit: a heavy clank where it happens.
+func crane_cue(name: StringName, at: Vector3, strength: float) -> void:
+	crane_cues[name] = int(crane_cues.get(name, 0)) + 1
+	var db := linear_to_db(clampf(strength, 0.25, 1.0))
+	match name:
+		&"brake":
+			_play_at(&"clang", at, db + 1.0, randf_range(0.36, 0.42))
+		&"limit":
+			_play_at(&"clang", at, db + 3.0, randf_range(0.3, 0.34))
+			_play_at(&"creak", at, db - 3.0, randf_range(0.5, 0.6))
+		&"landed":
+			_play_at(&"land_hard", at, db + 2.0, randf_range(0.5, 0.6))
 
 
 # A zipline ride (sim/zipline.hpp), heard at the trolley over the rider's

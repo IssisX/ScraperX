@@ -28,6 +28,11 @@ struct Spec {
     float half_height = 0.0F;   // from its origin to its underside
     bool carried = false;
     Vec3 handle = Vec3::sZero();
+    // A lifting eye over its centre of mass, for a crane's sling (the yard
+    // crane's): where, and how near the shackle must come to hook on.
+    bool eye = false;
+    Vec3 eye_at = Vec3::sZero();
+    float eye_reach = 1.2F;
 };
 
 // A cylinder lying along x (a cylinder part runs along its local y).
@@ -40,6 +45,28 @@ Part box(const Vec3 half, const Vec3 offset, const Material material, const floa
 Part cylinder(const float radius, const float half_length, const Vec3 offset, const Quat rotation,
               const Material material, const float mass_kg) {
     return {Vec3(radius, half_length, 0.0F), offset, rotation, material, Part::Shape::Cylinder, mass_kg};
+}
+
+// A pallet's parts with its underside at `base` (its origin's height): three
+// stringers along z under five deck boards, its top 0.14 m up. The forks go
+// in from either end between the stringers.
+void add_pallet(std::vector<Part> &parts, const float base) {
+    for (const float x : {-0.55F, 0.0F, 0.55F}) {
+        parts.push_back(box(Vec3(0.05F, 0.06F, 0.5F), Vec3(x, base + 0.06F, 0.0F), Material::Timber, 4.0F));
+    }
+    for (int k = 0; k < 5; ++k) {
+        parts.push_back(box(Vec3(0.6F, 0.01F, 0.06F), Vec3(0.0F, base + 0.13F, -0.44F + 0.22F * static_cast<float>(k)),
+                            Material::Timber, 2.0F));
+    }
+}
+
+// A skid's two runners and its deck, its origin on the ground: the forks go in
+// between the runners, under the deck, from either end.
+void add_skid(std::vector<Part> &parts) {
+    for (const float x : {-0.55F, 0.55F}) {
+        parts.push_back(box(Vec3(0.06F, 0.06F, 0.62F), Vec3(x, 0.06F, 0.0F), Material::Timber, 20.0F));
+    }
+    parts.push_back(box(Vec3(0.66F, 0.02F, 0.62F), Vec3(0.0F, 0.14F, 0.0F), Material::Steel, 60.0F));
 }
 
 Spec make_spec(const K kind) {
@@ -114,11 +141,17 @@ Spec make_spec(const K kind) {
         s.parts = {box(Vec3(6.095F, 1.295F, 1.22F), Vec3::sZero(), Material::Rust, 3750.0F)};
         s.half_height = 1.295F;
         s.friction = 0.6F;
+        // Its four corner castings slung to one ring over its roof.
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 1.32F, 0.0F);
+        s.eye_reach = 1.5F;
         break;
     case K::SteelBeam:
         s.parts = {box(Vec3(5.0F, 0.15F, 0.15F), Vec3::sZero(), Material::Steel, 600.0F)};
         s.half_height = 0.15F;
         s.friction = 0.5F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 0.17F, 0.0F);
         break;
     case K::Sleeper:
         s.parts = {box(Vec3(0.125F, 0.075F, 1.5F), Vec3::sZero(), Material::Timber, 90.0F)};
@@ -138,19 +171,25 @@ Spec make_spec(const K kind) {
         s.friction = 0.7F;
         break;
     case K::PlateStack:
-        s.parts = {box(Vec3(1.5F, 0.4F, 0.75F), Vec3::sZero(), Material::Steel, 8000.0F)};
-        s.half_height = 0.4F;
+        s.parts = {box(Vec3(1.5F, 0.325F, 0.75F), Vec3::sZero(), Material::Steel, 8000.0F)};
+        s.half_height = 0.325F;
         s.friction = 0.5F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 0.345F, 0.0F);
         break;
     case K::PlateSlab:
         s.parts = {box(Vec3(1.2F, 0.15F, 0.6F), Vec3::sZero(), Material::Rust, 2000.0F)};
         s.half_height = 0.15F;
         s.friction = 0.5F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 0.17F, 0.0F);
         break;
     case K::Pipe:
         s.parts = {cylinder(0.3F, 4.0F, Vec3::sZero(), kAlongX, Material::Steel, 700.0F)};
         s.half_height = 0.3F;
         s.friction = 0.5F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 0.32F, 0.0F);
         break;
     case K::GasBottle:
         // A welding gas bottle on end: its shoulder, its valve under a cap,
@@ -193,6 +232,92 @@ Spec make_spec(const K kind) {
         s.half_height = 0.12F;
         s.friction = 0.8F;
         break;
+    case K::SkidCrate: {
+        // A crate built on its own skids: three runners under its floor, the
+        // two outer ones flush with its sides, leaving a forklift's forks
+        // (0.25 to 0.35 m either side of its middle) their lanes in from
+        // either end. Its origin on the ground.
+        constexpr float kMass = 145.0F;
+        for (const float x : {-0.43F, 0.0F, 0.43F}) {
+            s.parts.push_back(box(Vec3(0.05F, 0.06F, 0.48F), Vec3(x, 0.06F, 0.0F), Material::Timber, 5.0F));
+        }
+        const Vec3 h(0.48F, 0.44F, 0.48F);
+        const float y = 0.12F + h.GetY();
+        s.parts.push_back(box(h, Vec3(0.0F, y, 0.0F), Material::Timber, kMass * 0.8F));
+        for (const float dy : {-0.28F, 0.0F, 0.28F}) {
+            s.parts.push_back(box(Vec3(h.GetX() + 0.012F, 0.05F, h.GetZ() + 0.012F), Vec3(0.0F, y + dy, 0.0F),
+                                  Material::Timber, kMass * 0.05F));
+        }
+        for (const float x : {-1.0F, 1.0F}) {
+            for (const float z : {-1.0F, 1.0F}) {
+                s.parts.push_back(box(Vec3(0.03F, h.GetY() + 0.005F, 0.03F),
+                                      Vec3(x * (h.GetX() - 0.015F), y, z * (h.GetZ() - 0.015F)), Material::Rust,
+                                      kMass * 0.0125F));
+            }
+        }
+        s.half_height = 0.0F;
+        // Timber runners on a steel deck slide easier than the crate's boards.
+        s.friction = 0.75F;
+        break;
+    }
+    case K::PalletReel: {
+        // The reel lying on a flange on its pallet, strapped to it: forked
+        // by the pallet. Its origin on the ground.
+        add_pallet(s.parts, 0.0F);
+        for (const float y : {0.17F, 0.73F}) {
+            s.parts.push_back(cylinder(0.5F, 0.03F, Vec3(0.0F, y, 0.0F), Quat::sIdentity(), Material::Timber, 35.0F));
+        }
+        s.parts.push_back(cylinder(0.34F, 0.25F, Vec3(0.0F, 0.45F, 0.0F), Quat::sIdentity(), Material::Rubble, 110.0F));
+        for (const float z : {-0.2F, 0.2F}) {
+            s.parts.push_back(box(Vec3(0.51F, 0.3F, 0.012F), Vec3(0.0F, 0.45F, z), Material::Rust, 0.5F));
+        }
+        s.half_height = 0.0F;
+        s.friction = 0.8F;
+        break;
+    }
+    case K::PlateSkid:
+        // A slab of plate laid across two runners, a lug at each corner
+        // slung to one ring over its middle for a crane.
+        add_skid(s.parts);
+        s.parts.push_back(box(Vec3(1.2F, 0.15F, 0.6F), Vec3(0.0F, 0.31F, 0.0F), Material::Rust, 1920.0F));
+        s.half_height = 0.0F;
+        s.friction = 0.6F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 0.48F, 0.0F);
+        break;
+    case K::BottleCage: {
+        // A crane's lifting cage for gas bottles: a steel frame on runners,
+        // its posts and rails round nine bottles strapped in three rows, and a
+        // lifting ring on its top frame.
+        add_skid(s.parts);
+        for (const float x : {-0.62F, 0.62F}) {
+            for (const float z : {-0.58F, 0.58F}) {
+                s.parts.push_back(box(Vec3(0.03F, 0.75F, 0.03F), Vec3(x, 0.91F, z), Material::Yellow, 12.0F));
+            }
+        }
+        for (const float y : {0.6F, 1.64F}) {
+            for (const float z : {-0.58F, 0.58F}) {
+                s.parts.push_back(box(Vec3(0.62F, 0.025F, 0.025F), Vec3(0.0F, y, z), Material::Yellow, 6.0F));
+            }
+            for (const float x : {-0.62F, 0.62F}) {
+                s.parts.push_back(box(Vec3(0.025F, 0.025F, 0.58F), Vec3(x, y, 0.0F), Material::Yellow, 6.0F));
+            }
+        }
+        for (int row = 0; row < 3; ++row) {
+            for (int column = 0; column < 3; ++column) {
+                s.parts.push_back(cylinder(0.115F, 0.55F,
+                                           Vec3(-0.38F + 0.38F * static_cast<float>(column), 0.71F,
+                                                -0.36F + 0.36F * static_cast<float>(row)),
+                                           Quat::sIdentity(), Material::Galvanised, 56.0F));
+            }
+        }
+        s.parts.push_back(box(Vec3(0.04F, 0.08F, 0.04F), Vec3(0.0F, 1.74F, 0.0F), Material::Steel, 4.0F));
+        s.half_height = 0.0F;
+        s.friction = 0.6F;
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, 1.8F, 0.0F);
+        break;
+    }
     case K::BilletStillage:
     case K::CoilSkid: {
         // On two runners 0.55 m either side of its middle, its deck 12 cm up:
@@ -220,6 +345,10 @@ Spec make_spec(const K kind) {
         }
         s.half_height = 0.0F;
         s.friction = 0.6F;
+        // Lifting lugs on its frame (the coil's eye takes a C-hook; slung, as
+        // one ring over its middle).
+        s.eye = true;
+        s.eye_at = Vec3(0.0F, kind == K::BilletStillage ? 0.86F : 1.3F, 0.0F);
         break;
     }
     }
@@ -267,8 +396,12 @@ void add_stock_yard(std::vector<LooseStock::Placement> &t) {
                          10.5F + 0.55F * static_cast<float>(j), 0.0F});
         }
     }
-    // Plate, stacked.
-    t.push_back({K::PlateStack, 0, 47.0F, 0.0F, 12.0F, 0.0F});
+    // Plate, stacked on two sleepers (dunnage: the forks, or a sling, go in
+    // under it); its slab's top 1.1 m up, a springboard's height.
+    for (const float x : {46.0F, 48.0F}) {
+        t.push_back({K::Sleeper, 0, x, 0.0F, 12.0F, 0.0F});
+    }
+    t.push_back({K::PlateStack, 0, 47.0F, 0.15F, 12.0F, 0.0F});
     t.push_back({K::PlateSlab, 0, 47.3F, 0.8F, 12.1F, 0.0F});
     // Drums on pallets, four to a pallet, 2 cm apart (paint 0 blue, 1 ochre,
     // 2 oxide red).
@@ -297,6 +430,30 @@ void add_stock_yard(std::vector<LooseStock::Placement> &t) {
     }
 }
 
+// The yard crane's laydown (yard_crane.hpp), on the ground south of its
+// mast within its hook's reach: two containers lying along z (as the high
+// dock takes one), the steel the forklift cannot lift, and a stack of plate
+// the crane cannot either.
+void add_crane_laydown(std::vector<LooseStock::Placement> &t) {
+    t.push_back({K::Container, 2, -76.0F, 0.0F, -113.0F, 0.5F * JPH_PI});
+    t.push_back({K::Container, 4, -80.5F, 0.0F, -113.0F, 0.5F * JPH_PI});
+    t.push_back({K::BilletStillage, 0, -58.0F, 0.0F, -113.0F, 0.0F});
+    t.push_back({K::CoilSkid, 0, -55.0F, 0.0F, -113.0F, 0.0F});
+    for (const float x : {-59.0F, -57.0F}) {
+        t.push_back({K::Sleeper, 0, x, 0.0F, -121.0F, 0.0F});
+    }
+    t.push_back({K::PlateStack, 0, -58.0F, 0.15F, -121.0F, 0.0F});
+}
+
+// On the decks the crane serves, before each deck's forklift (forklift.hpp),
+// the load it last brought in off the dock: a skid crate on the 44 m deck,
+// a reel on its pallet on the 11 m deck, each a metre and a quarter past its
+// fork tips.
+void add_deck_loads(std::vector<LooseStock::Placement> &t) {
+    t.push_back({K::SkidCrate, 1, -21.5F, 44.0F, -151.6F, 0.0F});
+    t.push_back({K::PalletReel, 0, -21.5F, 11.0F, -135.4F, 0.0F});
+}
+
 } // namespace
 
 const std::vector<LooseStock::Placement> &LooseStock::placements() {
@@ -305,13 +462,14 @@ const std::vector<LooseStock::Placement> &LooseStock::placements() {
     static const std::vector<Placement> table = [] {
         std::vector<Placement> t{
             // By the south band's outer rail, east, far from her locker: two
-            // crates side by side and one on the eastern one, like a step.
-            {K::Crate, 0, 14.4F, kDeck154, -174.6F, 0.0F},
-            {K::Crate, 0, 15.4F, kDeck154, -174.6F, 0.03F},
-            {K::Crate, 0, 15.45F, kDeck154 + 0.884F, -174.6F, -0.05F},
+            // skid crates side by side and one on the eastern one, like a
+            // step.
+            {K::SkidCrate, 0, 14.4F, kDeck154, -174.6F, 0.0F},
+            {K::SkidCrate, 0, 15.4F, kDeck154, -174.6F, 0.03F},
+            {K::SkidCrate, 0, 15.45F, kDeck154 + 1.004F, -174.6F, -0.05F},
             // Either side of the catwalk's east end, by the east band's rail.
-            {K::Crate, 0, 24.6F, kDeck154, -145.5F, 0.3F},
-            {K::Crate, 0, 24.5F, kDeck154, -155.0F, -0.2F},
+            {K::SkidCrate, 0, 24.6F, kDeck154, -145.5F, 0.3F},
+            {K::SkidCrate, 0, 24.5F, kDeck154, -155.0F, -0.2F},
             // The ingot dolly against the shaft's rail just north of the
             // catwalk's east end: shoved south into line and then west, out
             // onto the plates.
@@ -320,9 +478,36 @@ const std::vector<LooseStock::Placement> &LooseStock::placements() {
             {K::TimberBeam, 0, 2.0F, kDeck154, -174.4F, 0.0F},
         };
         add_stock_yard(t);
+        add_crane_laydown(t);
+        add_deck_loads(t);
         return t;
     }();
     return table;
+}
+
+namespace {
+// The most the carry's grip takes (physics_world_tuning.hpp: about 70 kg),
+// and a little over: anything heavier is a machine's to move.
+constexpr float kHandledKg = 80.0F;
+} // namespace
+
+bool LooseStock::heavy(const Kind kind) noexcept {
+    return make_spec(kind).mass_kg > kHandledKg;
+}
+
+bool LooseStock::forkable(const Kind kind) noexcept {
+    switch (kind) {
+    case K::Pallet:
+    case K::SkidCrate:
+    case K::PalletReel:
+    case K::PlateSkid:
+    case K::BottleCage:
+    case K::BilletStillage:
+    case K::CoilSkid:
+        return true;
+    default:
+        return false;
+    }
 }
 
 LooseStock::LooseStock(PhysicsSystem &physics, kit::Kit &kit) : physics_(physics), kit_(kit) {
@@ -347,6 +532,9 @@ void LooseStock::add_piece(const Placement &p) {
     if (spec.carried) {
         kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
     }
+    if (spec.eye) {
+        (void)kit_.add_anchor(body, spec.eye_at, spec.eye_reach);
+    }
     kit_.allow_sleeping(body);
     pieces_.push_back(body);
     placed_.push_back(p);
@@ -369,24 +557,27 @@ struct SpotTemplate {
     std::vector<SpotPiece> pieces;
 };
 
+// The stock any deck has: what people bring up by hand or on the tower's
+// lifts. Its heavy pieces stand on pallets (the forks go in from the
+// walkway, between the stringers).
 const std::vector<SpotTemplate> &spot_templates() {
     static const std::vector<SpotTemplate> templates = {
-        // A step of crates: two side by side, the right-hand one with a
-        // third square on it (turned on it, its battens never settled).
-        {2.3F, 1.2F,
-         {{K::Crate, 0, -0.52F, 0.6F, 0.0F, 0.02F},
-          {K::Crate, 0, 0.5F, 0.6F, 0.0F, -0.03F},
-          {K::Crate, 0, 0.5F, 0.6F, 0.884F, -0.03F}}},
+        // A step of skid crates: two side by side, the right-hand one with a
+        // third on it (turned on it, never squared).
+        {2.3F, 1.0F,
+         {{K::SkidCrate, 0, -0.52F, 0.5F, 0.0F, 0.02F},
+          {K::SkidCrate, 0, 0.5F, 0.5F, 0.0F, -0.03F},
+          {K::SkidCrate, 0, 0.5F, 0.5F, 1.004F, 0.01F}}},
         // Welding gas bottles stood against the rail, a toolbox by them.
         {2.0F, 0.9F,
          {{K::GasBottle, 0, -0.75F, 0.25F, 0.0F, 0.0F},
           {K::GasBottle, 1, -0.45F, 0.3F, 0.0F, 0.0F},
           {K::GasBottle, 0, -0.15F, 0.25F, 0.0F, 0.0F},
           {K::Toolbox, 0, 0.55F, 0.45F, 0.0F, 0.3F}}},
-        // A reel of cable on its rims, and a bundle of planks.
-        {3.4F, 1.3F,
-         {{K::CableReel, 0, -1.0F, 0.65F, 0.0F, 0.0F},
-          {K::PlankBundle, 0, 0.65F, 0.45F, 0.0F, 0.0F}}},
+        // A reel of cable on its pallet, and a bundle of planks.
+        {3.0F, 1.1F,
+         {{K::PalletReel, 0, -0.8F, 0.55F, 0.0F, 0.0F},
+          {K::PlankBundle, 0, 0.75F, 0.45F, 0.0F, 0.0F}}},
         // A pallet of three drums, a fourth stood beside it.
         {2.4F, 1.3F,
          {{K::Pallet, 0, -0.3F, 0.65F, 0.0F, 0.0F},
@@ -394,6 +585,23 @@ const std::vector<SpotTemplate> &spot_templates() {
           {K::Drum, 1, 0.0F, 0.4F, 0.14F, 0.0F},
           {K::Drum, 2, -0.3F, 0.9F, 0.14F, 0.0F},
           {K::Drum, 0, 0.8F, 0.5F, 0.0F, 0.0F}}},
+    };
+    return templates;
+}
+
+// What only the yard crane could have brought up (onto a dock, and in off it
+// by a forklift): the decks it serves have these as well.
+const std::vector<SpotTemplate> &crane_spot_templates() {
+    static const std::vector<SpotTemplate> templates = {
+        // A coil of strip on its skid and a slab of plate on its runners.
+        {3.9F, 1.3F,
+         {{K::CoilSkid, 0, -1.25F, 0.65F, 0.0F, 0.0F},
+          {K::PlateSkid, 0, 0.75F, 0.65F, 0.0F, 0.0F}}},
+        // A cage of gas bottles as the crane set it down, and a skid crate
+        // beside it.
+        {2.8F, 1.3F,
+         {{K::BottleCage, 0, -0.7F, 0.65F, 0.0F, 0.0F},
+          {K::SkidCrate, 1, 0.75F, 0.5F, 0.0F, 0.04F}}},
     };
     return templates;
 }
@@ -417,6 +625,10 @@ constexpr float kRingCentreZ = -150.0F;
 constexpr float kSpotSpacing = 9.0F;
 constexpr int kSpotsPerStackRing = 3;
 constexpr int kSpotsPerUpperRing = 2;
+// The decks the yard crane lands loads on (yard_crane.hpp), and their spots:
+// more of them, every other one what only the crane could have brought.
+constexpr std::array<float, 3> kCraneDecks{11.0F, 22.0F, 44.0F};
+constexpr int kSpotsPerCraneRing = 5;
 // Clear of every machine and every other spot by this much, and of every place
 // the player is put down by kKeepClear; the walkway left past a spot.
 constexpr float kMachineClear = 3.0F;
@@ -459,7 +671,8 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     int taken = 0;
     for (std::size_t ring = 0; ring < tops.size(); ++ring) {
         const float top = tops[ring];
-        const int most = ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
+        const bool crane_deck = std::find(kCraneDecks.begin(), kCraneDecks.end(), top) != kCraneDecks.end();
+        const int most = crane_deck ? kSpotsPerCraneRing : ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
         std::vector<RVec3> spots;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
@@ -490,8 +703,10 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             }
             const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
             for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
+                const bool crane_spot = crane_deck && spots.size() % 2 == 0;
+                const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
                 const SpotTemplate &spot =
-                    spot_templates()[static_cast<std::size_t>(taken + static_cast<int>(ring)) % spot_templates().size()];
+                    kinds[static_cast<std::size_t>(taken + static_cast<int>(ring)) % kinds.size()];
                 const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
                                    kRingCentreZ + out.GetZ() * edge + along.GetZ() * a);
                 const auto at = [&](const float u, const float v) {

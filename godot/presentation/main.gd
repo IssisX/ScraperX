@@ -28,6 +28,7 @@ const SummitView := preload("res://presentation/summit_view.gd")
 const MatronView := preload("res://presentation/life/matron_view.gd")
 const StockView := preload("res://presentation/stock_view.gd")
 const ForkliftView := preload("res://presentation/forklift_view.gd")
+const CraneView := preload("res://presentation/crane_view.gd")
 const ZiplineView := preload("res://presentation/zipline_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
@@ -183,9 +184,15 @@ func _ready() -> void:
 	var stock_view := StockView.new()
 	add_child(stock_view)
 	stock_view.setup(self, _native, _kit_root)
-	_forklift_view = ForkliftView.new()
-	add_child(_forklift_view)
-	_forklift_view.setup(self, _native)
+	for index in int(_native.get_forklift_count()):
+		var view := ForkliftView.new()
+		add_child(view)
+		view.setup(self, _native, index)
+		_forklift_views.append(view)
+	_forklift_view = _forklift_views[0]
+	_crane_view = CraneView.new()
+	add_child(_crane_view)
+	_crane_view.setup(self, _native)
 	_works = Works.new()
 	add_child(_works)
 	_clouds = CloudLayer.new()
@@ -325,6 +332,13 @@ func _process(delta: float) -> void:
 		forks = (1.0 if bool(intent.get("raise_held", false)) else 0.0) - \
 			(1.0 if bool(intent.get("lower_held", false)) else 0.0)
 	_native.set_forklift_lift(forks)
+	# The yard crane's hoist, while it is worked: Jump held raises the hook,
+	# Crouch held lowers it.
+	var hoist := 0.0
+	if bool(_ctx.get("crane_operating", false)):
+		hoist = (1.0 if bool(intent.get("raise_held", false)) else 0.0) - \
+			(1.0 if bool(intent.get("lower_held", false)) else 0.0)
+	_native.set_yard_crane_hoist(hoist)
 	# The hook: aimed with the view; its reel turns while the button is held.
 	if bool(_ctx.get("has_hook", false)):
 		_native.set_hook_aim(-_camera.global_transform.basis.z)
@@ -653,7 +667,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 	for verb in verbs:
 		# At the forklift's wheel Jump and Crouch are its forks' buttons, held
 		# (_process): pressed, they neither jump nor crouch.
-		if bool(_ctx.get("forklift_driving", false)) and verb in [&"jump", &"crouch"]:
+		if (bool(_ctx.get("forklift_driving", false)) or bool(_ctx.get("crane_operating", false))) and \
+				verb in [&"jump", &"crouch"]:
 			continue
 		match verb:
 			&"jump":
@@ -698,6 +713,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_native.request_release()
 			&"chute":
 				_native.request_parachute()
+			&"crane":
+				_native.request_yard_crane_operate()
 			&"hook":
 				if bool(_ctx.get("has_hook", false)) and int(_ctx.get("hook_state", 0)) == 0:
 					_native.set_hook_aim(-_camera.global_transform.basis.z)
@@ -768,6 +785,10 @@ func _perform_action() -> void:
 			_native.request_lift_action()
 		&"drive":
 			_native.request_forklift_action()
+		&"crane":
+			_native.request_yard_crane_operate()
+		&"crane_take":
+			_native.request_yard_crane_take()
 		&"s1", &"incline", &"tram", &"derrick":
 			# S1 and the slab incline are worked by standing on their plates;
 			# Action only reads them out.

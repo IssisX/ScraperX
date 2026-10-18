@@ -306,6 +306,15 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_forklift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_lift", "lift"), &ScraperXSimulation::set_forklift_lift);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_count"), &ScraperXSimulation::get_forklift_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state_at", "index"),
+                                &ScraperXSimulation::get_forklift_state_at);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_take"), &ScraperXSimulation::request_yard_crane_take);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_yard_crane_operate"),
+                                &ScraperXSimulation::request_yard_crane_operate);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_yard_crane_hoist", "hoist"),
+                                &ScraperXSimulation::set_yard_crane_hoist);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_yard_crane_state"), &ScraperXSimulation::get_yard_crane_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_lines"), &ScraperXSimulation::get_zipline_lines);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_trolleys"), &ScraperXSimulation::get_zipline_trolleys);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_state"), &ScraperXSimulation::get_zipline_state);
@@ -1241,11 +1250,14 @@ bool ScraperXSimulation::set_forklift_lift(const double lift) {
     return simulation_->set_forklift_lift(lift);
 }
 
-// The forklift: driving and offered, the forks' height, speed and steering,
+namespace {
+
+// A forklift: driving and offered, the forks' height, speed and steering,
 // and each wheel as drawn (a cylinder along its own y, the axle).
-godot::Dictionary ScraperXSimulation::get_forklift_state() const {
-    const sim::ForkliftSnapshot state = simulation_->forklift_state();
+godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     godot::Dictionary out;
+    out["index"] = static_cast<std::int64_t>(state.index);
+    out["chassis_entity"] = static_cast<std::int64_t>(state.chassis_entity);
     out["driving"] = state.driving;
     out["at_controls"] = state.at_controls;
     out["lift_m"] = state.lift_m;
@@ -1276,6 +1288,64 @@ godot::Dictionary ScraperXSimulation::get_forklift_state() const {
     out["wheels"] = wheels;
     out["wheel_radius"] = radii;
     out["wheel_width"] = widths;
+    return out;
+}
+
+} // namespace
+
+// The forklift being driven, else the one at whose wheel the player stands,
+// else the yard's.
+godot::Dictionary ScraperXSimulation::get_forklift_state() const {
+    return forklift_dictionary(simulation_->forklift_state());
+}
+
+std::int64_t ScraperXSimulation::get_forklift_count() const {
+    return static_cast<std::int64_t>(simulation_->forklift_count());
+}
+
+godot::Dictionary ScraperXSimulation::get_forklift_state_at(const std::int64_t index) const {
+    if (index < 0) {
+        return {};
+    }
+    return forklift_dictionary(simulation_->forklift_state(static_cast<std::uint32_t>(index)));
+}
+
+bool ScraperXSimulation::request_yard_crane_take() {
+    return simulation_->request_yard_crane_take();
+}
+
+bool ScraperXSimulation::request_yard_crane_operate() {
+    return simulation_->request_yard_crane_operate();
+}
+
+bool ScraperXSimulation::set_yard_crane_hoist(const double hoist) {
+    return simulation_->set_yard_crane_hoist(hoist);
+}
+
+// The yard crane: its remote and whether it is being worked, its drives as
+// they go, the hoist's pull, and the hoist rope's ends and the hook as drawn.
+godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
+    const sim::YardCraneSnapshot state = simulation_->yard_crane_state();
+    godot::Dictionary out;
+    out["has_remote"] = state.has_remote;
+    out["remote_in_reach"] = state.remote_in_reach;
+    out["able"] = state.able;
+    out["operating"] = state.operating;
+    out["slew_rad"] = state.slew_rad;
+    out["slew_rate"] = state.slew_rate;
+    out["trolley_m"] = state.trolley_m;
+    out["trolley_rate"] = state.trolley_rate;
+    out["hoist_m"] = state.hoist_m;
+    out["hoist"] = state.hoist;
+    out["hoist_n"] = state.hoist_n;
+    out["hoist_max_n"] = state.hoist_max_n;
+    out["hoist_stalled"] = state.hoist_stalled;
+    out["upper_limit"] = state.upper_limit;
+    out["slack"] = state.slack;
+    out["load_entity"] = static_cast<std::int64_t>(state.load_entity);
+    out["rope_top"] = to_godot(state.rope_top);
+    out["rope_bottom"] = to_godot(state.rope_bottom);
+    out["hook"] = to_godot(state.hook);
     return out;
 }
 

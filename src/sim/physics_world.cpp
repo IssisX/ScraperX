@@ -257,7 +257,22 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     loose_stock_ = std::make_unique<LooseStock>(physics_system_, *kit_);
     // The yard's forklift, north of the drums: after the stock, so older saves
     // line up.
-    forklift_ = std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_);
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_));
+    // The yard crane's, on its laydown facing east.
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
+                                                    Forklift::kCraneChassisEntity, Forklift::kCraneCarriageEntity,
+                                                    Forklift::kCraneParkX, Forklift::kCraneParkZ, 0.5F * JPH::JPH_PI));
+    // The yard crane west of the stack and its docks on the stack's west
+    // face: before the ziplines and the tower's stock, which keep clear of
+    // them.
+    yard_crane_ = std::make_unique<YardCrane>(physics_system_, *kit_);
+    // Forklifts the crane put on the decks it serves, by their docks.
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
+                                                    Forklift::kDeck11ChassisEntity, Forklift::kDeck11CarriageEntity,
+                                                    -21.5F, -139.5F, 0.0F, 11.0F));
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
+                                                    Forklift::kDeck44ChassisEntity, Forklift::kDeck44CarriageEntity,
+                                                    -21.5F, -147.5F, JPH::JPH_PI, 44.0F));
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
@@ -349,7 +364,8 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
     summit_.reset();
-    forklift_.reset();
+    yard_crane_.reset();
+    forklifts_.clear();
     loose_stock_.reset();
     vertical_.reset();
     trapeze_.reset();
@@ -380,14 +396,48 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     remove_and_destroy(bodies, deck_id_);
 }
 
-bool Simulation::PhysicsWorld::at_forklift_controls() const noexcept {
-    if (!grounded_ || support_entity_id_ != Forklift::kChassisEntity) {
+// The remote's dead man is under the thumb, not the feet: a rider swaying on
+// a load keeps it worked; hands full, on a hold, in a seat or at a wheel let
+// it go.
+bool Simulation::PhysicsWorld::yard_crane_able() const noexcept {
+    if (carry_constraint_ != nullptr || traversal_state_ != TraversalState::None ||
+        (active_forklift() >= 0 && forklifts_[static_cast<std::size_t>(active_forklift())]->driving()) ||
+        slingshot_->controls_player() || swing_->controls_player() ||
+        trapeze_->controls_player() || zip_riding_) {
         return false;
     }
     const JPH::RVec3 at = physics_system_.GetBodyInterfaceNoLock().GetPosition(player_id_);
-    const JPH::RVec3 station = forklift_->station();
+    return std::hypot(static_cast<float>(at.GetX()) - YardCrane::kMastX, static_cast<float>(at.GetZ()) - YardCrane::kMastZ) <=
+           YardCrane::kRadioRangeM;
+}
+
+bool Simulation::PhysicsWorld::yard_crane_remote_in_reach() const noexcept {
+    return yard_crane_->remote_in_reach(physics_system_.GetBodyInterfaceNoLock().GetPosition(player_id_));
+}
+
+bool Simulation::PhysicsWorld::at_forklift_controls(const int index) const noexcept {
+    const Forklift &truck = *forklifts_[static_cast<std::size_t>(index)];
+    if (!grounded_ || support_entity_id_ != truck.chassis_entity()) {
+        return false;
+    }
+    const JPH::RVec3 at = physics_system_.GetBodyInterfaceNoLock().GetPosition(player_id_);
+    const JPH::RVec3 station = truck.station();
     return std::hypot(static_cast<float>(at.GetX() - station.GetX()), static_cast<float>(at.GetZ() - station.GetZ())) <=
            Forklift::kStationReachM;
+}
+
+int Simulation::PhysicsWorld::active_forklift() const noexcept {
+    for (int index = 0; index < forklift_count(); ++index) {
+        if (forklifts_[static_cast<std::size_t>(index)]->driving()) {
+            return index;
+        }
+    }
+    for (int index = 0; index < forklift_count(); ++index) {
+        if (at_forklift_controls(index)) {
+            return index;
+        }
+    }
+    return -1;
 }
 
 void Simulation::PhysicsWorld::step(const StepCommands &requested,
@@ -420,10 +470,37 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         const JPH::Vec3 right(-facing_.GetZ(), 0.0F, facing_.GetX());
         const double stick_forward = commands.move_input_x * facing_.GetX() + commands.move_input_z * facing_.GetZ();
         const double stick_right = commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
-        forklift_->pre_step(delta_seconds, commands.forklift_action, at_forklift_controls(),
-                            static_cast<float>(stick_forward), static_cast<float>(stick_right),
-                            static_cast<float>(commands.forklift_lift));
-        if (forklift_->driving()) {
+        bool driving = false;
+        for (int index = 0; index < forklift_count(); ++index) {
+            Forklift &truck = *forklifts_[static_cast<std::size_t>(index)];
+            const bool at = at_forklift_controls(index);
+            truck.pre_step(delta_seconds, commands.forklift_action && (truck.driving() || at), at,
+                           static_cast<float>(stick_forward), static_cast<float>(stick_right),
+                           static_cast<float>(commands.forklift_lift));
+            driving = driving || truck.driving();
+        }
+        if (driving) {
+            commands.move_input_x = 0.0;
+            commands.move_input_z = 0.0;
+            commands.jump_requested = false;
+            commands.traversal_requested = false;
+            commands.crouch_held = false;
+            commands.sprint_held = false;
+            commands.pick_up_requested = false;
+        }
+    }
+
+    // The yard crane, by its remote: working it, the stick (a world
+    // direction already) sends the hook and the hoist's buttons are held;
+    // the body stands where it is.
+    {
+        if (commands.yard_crane_take) {
+            (void)yard_crane_->take_remote(bodies.GetPosition(player_id_));
+        }
+        yard_crane_->pre_step(delta_seconds, commands.yard_crane_operate, yard_crane_able(),
+                         static_cast<float>(commands.move_input_x), static_cast<float>(commands.move_input_z),
+                         static_cast<float>(commands.yard_crane_hoist));
+        if (yard_crane_->operating()) {
             commands.move_input_x = 0.0;
             commands.move_input_z = 0.0;
             commands.jump_requested = false;
@@ -549,7 +626,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     loose_stock_->post_step();
-    forklift_->post_step(delta_seconds);
+    for (const std::unique_ptr<Forklift> &truck : forklifts_) {
+        truck->post_step(delta_seconds);
+    }
+    yard_crane_->post_step(delta_seconds);
     zipline_->post_step(delta_seconds);
     if (zip_riding_) {
         // The hands on a zipline's bar hold what a ledge's grip holds: the
@@ -590,7 +670,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     struck_closing_mps_ = contact_listener_.struck_closing();
     hit_closing_mps_ = contact_listener_.hit_closing();
     hit_toward_ = contact_listener_.hit_toward();
-    if (jump_started || traversal_state_ != TraversalState::None) {
+    const bool takeoff = jump_started || springboard_takeoff_;
+    springboard_takeoff_ = false;
+    if (takeoff || traversal_state_ != TraversalState::None) {
         support = {};
     }
     support_sample_ = support;
@@ -603,8 +685,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // always sets a support-relative landing velocity first -- so no
     // separate traversal exemption is needed.
     bool died_this_tick = false;
-    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
-        !jump_started) {
+    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None && !takeoff) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.

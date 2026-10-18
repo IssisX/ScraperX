@@ -18,10 +18,18 @@
 // the stack and the upper rings, places against the shaft's railed edge with
 // room to stand the work there and a walkway past it (back from the edge
 // where it has no rail), and leaves a little
-// spot of stock in each -- a step of crates, gas bottles and a toolbox, a
-// cable reel and planks, a pallet of drums. A place is taken only where the
-// world says it fits: a flat, level floor under every corner, nothing in the
-// way above it, no machine near it and the next spot well along the ring.
+// spot of stock in each -- a step of skid crates, gas bottles and a toolbox,
+// a reel of cable on its pallet and planks, a pallet of drums. A
+// place is taken only where the world says it fits: a flat, level floor under
+// every corner, nothing in the way above it, no machine near it and the next
+// spot well along the ring.
+//
+// Every heavy piece (more than the hands carry) sits on a pallet or on skid
+// runners, so a forklift's forks fit under it wherever it is. And nothing a
+// forklift or a crane had to put in place is set where neither could have
+// (the owner, 2026-10-17): the steel, the plate and the crane's cages stand
+// only on the decks the yard crane lands loads on (yard_crane.hpp: 11, 22 and
+// 44 m), which also have the most spots.
 //
 // A sudden blow to a piece (a change of velocity of kImpactMps or more in one
 // tick) is a crash, reported with its loudness for whoever listens (the
@@ -62,8 +70,19 @@ public:
         CableReel = 15,       // a wooden reel of cable on its rims, 180 kg: rolls
         Toolbox = 16,         // a steel toolbox, 18 kg: carried
         PlankBundle = 17,     // 1.8 m planks strapped in a bundle, 60 kg
+        // Up the tower (the owner, 2026-10-17: every heavy piece on a pallet,
+        // a skid or dunnage, so a forklift's forks fit under it anywhere):
+        SkidCrate = 18,       // a timber crate built on its own skids, 160 kg: shoved
+        PalletReel = 19,      // a reel of cable lying strapped to a pallet, 202 kg
+        PlateSkid = 20,       // a 2 t slab of plate on two skid runners, lugged for a crane
+        BottleCage = 21,      // a crane's lifting cage of nine gas bottles on runners, 690 kg
     };
-    static constexpr int kKinds = 18;
+    static constexpr int kKinds = 22;
+    // Heavier than the hands carry (the carry's grip holds about 70 kg): a
+    // forklift's or a crane's to move, set where one of them could have put it.
+    [[nodiscard]] static bool heavy(Kind kind) noexcept;
+    // A forklift's forks fit under it: a pallet, a skid's runners, dunnage.
+    [[nodiscard]] static bool forkable(Kind kind) noexcept;
 
     struct Placement {
         Kind kind;

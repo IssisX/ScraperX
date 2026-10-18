@@ -77,6 +77,10 @@ int main() {
         run_forklift_strain();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "crane") {
+        run_yard_crane();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -342,6 +346,7 @@ int main() {
     run_loose_stock();
     run_forklift();
     run_forklift_strain();
+    run_yard_crane();
     run_ascent();
 
     return EXIT_SUCCESS;

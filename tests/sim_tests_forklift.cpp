@@ -271,10 +271,11 @@ void run_forklift_strain() {
     const auto &table = LooseStock::placements();
     std::uint64_t stillage = 0;
     std::uint64_t coil = 0;
+    // The yard's, the first of each (the crane's laydown has its own).
     for (std::size_t i = 0; i < table.size(); ++i) {
-        if (table[i].kind == LooseStock::Kind::BilletStillage) {
+        if (table[i].kind == LooseStock::Kind::BilletStillage && stillage == 0) {
             stillage = LooseStock::kFirstEntity + i;
-        } else if (table[i].kind == LooseStock::Kind::CoilSkid) {
+        } else if (table[i].kind == LooseStock::Kind::CoilSkid && coil == 0) {
             coil = LooseStock::kFirstEntity + i;
         }
     }

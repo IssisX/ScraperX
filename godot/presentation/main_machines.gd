@@ -92,6 +92,10 @@ const KIT_CABLE_RANGE := 200.0
 # authored twice. Kit bodies live outside $TowerPresentation: they are native
 # collision already, never part of the exported solid dressing.
 const SUMMIT_FRAME_ENTITY := 1900
+# The yard crane's static bodies (sim/yard_crane.hpp): its mast, its remote's
+# cabinet and the three docks on the stack's west face.
+const YARD_CRANE_STATIC_FIRST := 1700
+const YARD_CRANE_STATIC_LAST := 1704
 
 func _build_kit() -> void:
 	_kit_root = Node3D.new()
@@ -122,7 +126,10 @@ func _build_kit() -> void:
 		# The summit's frame (pylon, deck, arm) is the thing to see from the
 		# ground: drawn like a moving body's parts, one mesh per material, and at
 		# any distance, not batched into the statics' near-only batches.
-		var far_visible := int(_native.get_kit_body_entity_id(body)) == SUMMIT_FRAME_ENTITY
+		var body_entity := int(_native.get_kit_body_entity_id(body))
+		# So is the yard crane's mast, and the docks it lands loads on.
+		var far_visible := body_entity == SUMMIT_FRAME_ENTITY or \
+			(body_entity >= YARD_CRANE_STATIC_FIRST and body_entity <= YARD_CRANE_STATIC_LAST)
 		var body_groups := {}
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 			var mesh: PrimitiveMesh

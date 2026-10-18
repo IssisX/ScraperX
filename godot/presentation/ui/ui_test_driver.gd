@@ -123,6 +123,10 @@ const SCENARIOS := {
 	"touch_stock": 8,
 	"touch_forklift": 8,
 	"touch_forklift_strain": 8,
+	# The yard crane west of the stack: its remote taken, worked, let go
+	# (look_yard_crane: renders only, not in CI).
+	"touch_yard_crane": 8,
+	"look_yard_crane": 8,
 	"look_stock_yard": 8,
 	"look_tower_stock_deck2": 25,
 	"look_tower_stock_176": 14,
@@ -387,6 +391,10 @@ func _run() -> void:
 			ok = await _forklift_touch(InputRouter.Device.TOUCH)
 		"touch_forklift_strain":
 			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
+		"touch_yard_crane":
+			ok = await _yard_crane_touch(InputRouter.Device.TOUCH)
+		"look_yard_crane":
+			ok = await _look_yard_crane()
 		"look_stock_yard":
 			ok = await _look_stock_yard()
 		"look_tower_stock_deck2":

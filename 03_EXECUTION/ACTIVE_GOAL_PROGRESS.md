@@ -1242,6 +1242,60 @@ right arm (`run_core_traversal`); touch `touch_arm_break` (new, in CI: on the st
 locker, named, cried once, one arm held to the body, the ladder at 0.45 m/s); `fall_voice` (the
 ankle's break cried once, its own line).
 
+**The yard crane (2026-10-18; to-do 3, the owner: a big crane that lifts the forklift, the
+containers and the stock onto the structure).** A hammerhead tower crane stands west of the stack
+(`src/sim/yard_crane.cpp`): a lattice mast 58 m tall on its foundation, and on its slewing ring the
+jib reaching 38.5 m toward the stack, a 14 m counter-jib with four slabs of counterweight, the tower
+head with its pendant bars, the cab, red lamps at the head and the jib's tip. A trolley runs along
+the jib's bottom chords; from it the hoist rope (drawn as the reeving's four falls) carries a hook
+block, and from the hook hangs a chain sling with a shackle. It is worked by radio: the remote
+hangs in a cabinet at the mast's foot, TAKE REMOTE, and the CRANE button puts the stick and Jump
+and Crouch on it: the stick sends the hook the way it points in the view (the slew and the trolley
+share the move), Jump and Crouch held hoist; WALK lets go and every drive holds. Loads are rigged
+by hand with the rigging the tower's machines use: the shackle carried to a lifting eye (on the
+containers, the steel, the plate, the stillages, the coil, the crane cages, and each forklift's
+guard) and HOOKed on, UNHOOKed once landed. Nothing is scripted: the slewing assembly is one body on
+the mast's bearing, turned by a slew drive of finite torque to 0.08 rad/s at 0.06 rad/s/s; the
+trolley a body on the jib, its drive of finite force; the hoist a winch on the rope (75 kN at the
+hook, 1 m/s): the forklift with its driver lifts, the 8 t plate stack stalls it on the ground.
+Loads hang on their rope and swing; the winch stops at its upper limit and pays out only while the
+rope is loaded (a slack-rope switch). It lands loads on three steel docks cantilevered out of the
+stack's west face at 11, 22 and 44 m, placed so that none hangs over another and each meets its
+deck where the face's diamond bracing leaves room to drive in (the 11 m one a pier on legs past the
+machine hall that overhangs its inner end). Judged and changed while building it: the footbridge's
+104 m pylon stands inside the jib's circle, so the crane has a slewing limiter (a crane's zoning)
+that brakes the jib to rest short of it, and its counter-jib is short enough to pass it; the hook
+block hangs plumb under its swivel and its four falls keep it from rocking (declared as damping of
+its turn); the remote's dead man is under the thumb, not the feet, so a rider swaying on a load
+keeps working it. On its laydown south of the mast: two containers, a stillage, a coil, an 8 t
+plate stack on sleepers and the crane's own forklift. Proof: native `crane` (parked 10 s it stands still; the
+remote taken, the stick slews and runs the trolley, RAISE hoists, let go every drive stops; a
+container rigged from its roof, ridden up to 50 m, slewed and landed on the 44 m dock, twice to the
+bit; then off the dock onto the 44 m deck to the forklift parked there, driven, a skid crate
+forked and lifted 0.35 m; the crane's forklift hooked by its guard's eye with its driver at the
+wheel, ridden up to 24.7 m, landed on the 22 m dock and driven in onto the deck; the plate stack
+hooked, the hoist stalls at its full pull and the plates stay down); touch `touch_yard_crane` (new,
+in CI: from the start to the cabinet, TAKE REMOTE, CRANE, the stick sends the hook 9.5 m east,
+Jump held hoists 4.2 m, Crouch held lowers 1.9 m, both hands on the remote, WALK).
+
+**Stock up the tower by the owner's rules (2026-10-18; to-do 3).** Every heavy piece (more than the
+hands carry) now stands on a pallet or a skid so a forklift's forks fit under it anywhere: the
+tower's crates are skid crates (a crate built on its own skids, one load), its cable reels lie
+strapped on pallets, the Matron's deck's crates are skid crates too, and the plate stacks in the
+yard and on the crane's laydown lie on sleepers (the stack is 0.65 m of plate, so the yard's slab
+on it is still 1.1 m up, the springboard's top). Found by it and fixed: a springboard's plant
+leaves the soles 2 cm over the top, inside the contacts' speculative reach, so its first tick in
+the air could read the top it had left as ground; that tick is now a jump's start, which reads
+no support, as a jump from the ground always did. What only the yard
+crane could have brought up (a coil of strip on its skid, a 2 t slab of plate on runners, a
+crane's lifting cage of nine gas bottles) stands only on the three decks the crane serves, which
+have five spots a ring instead of three, every other one the crane's. Two more forklifts stand up
+there, as the crane would have left them: on the 11 m deck by the low dock and on the 44 m deck by
+the high one, each with the load it last brought in before its forks. Proof: native `stock` (317
+pieces settle within 1.6 cm and sleep; the 52 heavy pieces up the tower are all on pallets or
+skids; the crane's loads stand only on the 11, 22 and 44 m decks, 6, 4 and 3 of them) and `crane`
+(the 44 m deck's forklift forks its skid crate).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1255,7 +1309,8 @@ fill in after).**
    broken arm (a blow or a wrenched catch; 30 s one-armed) and a cry for each break.
 3. Route-building's reach: richer spots, heavy stock up the tower only where the crane or a
    forklift could really have put it (the owner, 2026-10-17), the big yard crane, forklifts up
-   there.
+   there. Done 2026-10-18: the yard crane, its three docks, forkable heavy stock by the rules,
+   forklifts on the 11 m and 44 m decks.
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint.
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and

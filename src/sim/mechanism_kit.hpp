@@ -198,6 +198,11 @@ public:
     RopeIndex add_rope(BodyIndex body1, JPH::Vec3 point1, JPH::RVec3 fixed1, BodyIndex end_body,
                        JPH::Vec3 end_point, JPH::RVec3 fixed2, float ratio, float max_length,
                        float rating_newtons);
+    // A rope straight from body1's point to its end, over no sheave (a
+    // crane's sling, hung from a hook that moves): |p1 - end| <= max_length.
+    // Hooked and unhooked as any rope.
+    RopeIndex add_direct_rope(BodyIndex body1, JPH::Vec3 point1, BodyIndex end_body, JPH::Vec3 end_point,
+                              float max_length, float rating_newtons);
 
     // A rope wound on two drums on one axle (declared, AS-010 O): it leaves
     // one drum at fixed1 and the other at fixed2, so the stretch between them
@@ -577,6 +582,7 @@ private:
         std::uint32_t over_rating_steps = 0;
         bool parted = false;
         bool strut = false;
+        bool direct = false;        // over no sheave (add_direct_rope)
         bool wound = false;         // drawn as two cables (set_wound)
         LeverIndex clutch;          // invalid: no clutch
         float clutch_angle = 0.0F;
@@ -742,6 +748,9 @@ private:
     void disconnect_rope(Rope &rope);
     [[nodiscard]] BodyIndex rope_end_body(const Rope &rope) const noexcept;
     [[nodiscard]] JPH::Vec3 rope_end_point(const Rope &rope) const noexcept;
+    // The rope's length as it lies now, from its first end's point `first`
+    // to its other end's point `end`: over its sheaves, or straight.
+    [[nodiscard]] static float rope_span(const Rope &rope, JPH::RVec3 first, JPH::RVec3 end) noexcept;
     void set_enabled(BodyIndex body, bool enabled);
     void latch(Catch &catch_record);
     void unlatch(Catch &catch_record);

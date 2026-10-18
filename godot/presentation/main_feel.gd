@@ -128,7 +128,11 @@ var _zipline_view: Node3D
 var _corpse_view: Node3D
 var _summit_view: Node3D
 var _matron_view: Node3D
+# Each forklift's view (the yard's first, then the yard crane's), and the one
+# being driven or stood at, else the yard's.
+var _forklift_views: Array[Node3D] = []
 var _forklift_view: Node3D
+var _crane_view: Node3D
 var _sling_prediction := PackedVector3Array()
 var _sling_preview_clock := 0.0
 # Pigeons on the structure near the player; gulls at height.
@@ -589,6 +593,11 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
 		"broken_arm": _arm_broken_side,
+		# The yard crane's remote held out in both hands while it is worked,
+		# its joysticks pressed the way the stick and the hoist go.
+		"operating": &"crane" if bool(_ctx.get("crane_operating", false)) else &"",
+		"pendant": Vector2(Vector2(intent["move"]).x,
+			(1.0 if bool(intent.get("raise_held", false)) else 0.0) - (1.0 if bool(intent.get("lower_held", false)) else 0.0)),
 	}
 
 # --- telemetry overlay, sized to the bounds the device actually gives us ------
@@ -853,6 +862,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_matron_view.update_view(_native.get_matron_state(), delta, _camera.global_position, position)
 	if _forklift_view != null:
 		_feel_forklift(delta)
+	if _crane_view != null:
+		_feel_crane(delta)
 	_sample_machines(delta)
 
 
@@ -1002,9 +1013,58 @@ var _fork_rear_off := 0.0
 var _fork_strain_clock := 0.0
 var _fork_groan_clock := 0.0
 
+# The yard crane: its rope and lamps drawn, its drives heard; a drive coming
+# to rest brakes with a clank, the block striking its upper limit with a
+# harder one, and a load set down with the rope going slack lands; the
+# remote's thumb feels each.
+var _crane_slewing := false
+var _crane_trolleying := false
+var _crane_at_limit := false
+var _crane_slack := false
+var _crane_had_remote := false
+
+func _feel_crane(delta: float) -> void:
+	var state: Dictionary = _native.get_yard_crane_state()
+	_crane_view.update_view(state)
+	if delta <= 0.0:
+		return
+	var has_remote := bool(state["has_remote"])
+	if has_remote and not _crane_had_remote:
+		_hud.toast("THE CRANE'S REMOTE", "CRANE: THE STICK SENDS THE HOOK, JUMP AND CROUCH HOIST", UiStyle.AMBER, 6.0)
+		_haptic(&"press", 0.6)
+	_crane_had_remote = has_remote
+	var jib: Transform3D = _crane_view.jib_transform()
+	_audio.update_crane(state, jib)
+	var operating := bool(state["operating"])
+	var slewing := absf(float(state["slew_rate"])) > 0.002
+	var trolleying := absf(float(state["trolley_rate"])) > 0.02
+	if _crane_slewing and not slewing:
+		_audio.crane_cue(&"brake", jib * Vector3(0.0, 0.4, 0.0), 0.8)
+		if operating:
+			_haptic(&"press", 0.4)
+	if _crane_trolleying and not trolleying:
+		_audio.crane_cue(&"brake", state["rope_top"], 0.6)
+	var at_limit := bool(state["upper_limit"])
+	if at_limit and not _crane_at_limit:
+		_audio.crane_cue(&"limit", state["rope_bottom"], 1.0)
+		if operating:
+			_haptic(&"press", 0.8)
+	var slack := bool(state["slack"])
+	if slack and not _crane_slack and int(state["load_entity"]) != 0:
+		_audio.crane_cue(&"landed", state["hook"], 1.0)
+		if operating:
+			_haptic(&"land", 0.6)
+	_crane_slewing = slewing
+	_crane_trolleying = trolleying
+	_crane_at_limit = at_limit
+	_crane_slack = slack
+
 func _feel_forklift(delta: float) -> void:
 	var state: Dictionary = _native.get_forklift_state()
-	_forklift_view.update_view(state)
+	var active := int(state["index"])
+	_forklift_view = _forklift_views[active]
+	for index in _forklift_views.size():
+		_forklift_views[index].update_view(state if index == active else _native.get_forklift_state_at(index))
 	if delta <= 0.0:
 		return
 	var body: Transform3D = _forklift_view.body_transform()

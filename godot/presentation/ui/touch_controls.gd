@@ -27,6 +27,9 @@ const B_PAUSE := &"pause"
 const B_HOOK := &"hook"
 # The quickturn (Mirror's Edge's): half a turn of the view in one tap.
 const B_TURN := &"turn"
+# The yard crane's remote, once taken: its switch puts the stick and the two
+# held buttons on the crane, and takes them back.
+const B_CRANE := &"crane"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -72,7 +75,7 @@ var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK, B_TURN]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK, B_TURN, B_CRANE]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -99,6 +102,7 @@ func _ready() -> void:
 	_buttons[B_DROP].label = "DROP"
 	_buttons[B_TURN].icon = &"turn"
 	_buttons[B_TURN].label = "TURN"
+	_buttons[B_CRANE].icon = &"hook"
 	resized.connect(_layout)
 	_layout()
 
@@ -147,6 +151,8 @@ func _layout() -> void:
 	_place(B_HOOK, jump + Vector2(-236.0, -370.0) * _u, 86.0)
 	# Over Crouch, the same thumb on up: the turn is a move of the run's.
 	_place(B_TURN, jump + Vector2(40.0, -430.0) * _u, 64.0)
+	# Inboard of Action, clear of the stick: the remote's switch.
+	_place(B_CRANE, jump + Vector2(-470.0, -110.0) * _u, 80.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
@@ -178,6 +184,8 @@ func _verb_for(id: StringName) -> StringName:
 			return &"hook"
 		B_TURN:
 			return &"turn"
+		B_CRANE:
+			return &"crane"
 	return &""
 
 
@@ -320,7 +328,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing or swinging else "JUMP")
 	jump.tone = TONE_PRIMARY
 	var driving: bool = ctx.get("forklift_driving", false)
-	if driving:
+	var craning: bool = ctx.get("crane_operating", false)
+	if driving or craning:
 		jump.icon = &"up"
 		jump.label = "RAISE"
 		jump.dimmed = false
@@ -363,14 +372,19 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	# The quickturn: on foot, in the air and on a wall; not with the hands on
 	# something, nor in a seat or at the forklift's wheel.
-	_buttons[B_TURN].shown = not (hanging or climbing or swinging or driving or ctx.get("sling_seated", false) or
+	var crane_button: TouchButton = _buttons[B_CRANE]
+	crane_button.shown = ctx.get("has_remote", false)
+	crane_button.enabled = craning or ctx.get("crane_able", false)
+	crane_button.label = "WALK" if craning else "CRANE"
+	crane_button.tone = TONE_PRIMARY if craning else TONE_NORMAL
+	_buttons[B_TURN].shown = not (hanging or climbing or swinging or driving or craning or ctx.get("sling_seated", false) or
 		ctx.get("sling_recovering", false) or ctx.get("swing_seated", false) or ctx.get("trapeze_hanging", false))
 	var crouch: TouchButton = _buttons[B_CROUCH]
 	crouch.shown = not hanging and not climbing
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
-	if driving:
+	if driving or craning:
 		crouch.icon = &"down"
 		crouch.label = "LOWER"
 		crouch.tone = TONE_NORMAL

@@ -13,6 +13,8 @@ const KIND_STEEL_BEAM := 6
 const KIND_GAS_BOTTLE := 14
 const KIND_CABLE_REEL := 15
 const KIND_TOOLBOX := 16
+const KIND_PALLET_REEL := 19
+const KIND_BOTTLE_CAGE := 21
 # A container's half size along its own x, y, z, its doors at +x.
 const CONTAINER_HALF := Vector3(6.095, 1.295, 1.22)
 
@@ -81,6 +83,13 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 				_paint_mesh(body, 0, bottle_paint[variant % bottle_paint.size()])
 			KIND_CABLE_REEL:
 				_paint_mesh(body, 1, cable_paint)
+			# The reel strapped to its pallet: the pallet's and flanges' timber,
+			# then its cable. The crane's bottle cage: its runners, its deck,
+			# its yellow frame, then its nine bottles, all of one gas.
+			KIND_PALLET_REEL:
+				_paint_mesh(body, 1, cable_paint)
+			KIND_BOTTLE_CAGE:
+				_paint_mesh(body, 3, bottle_paint[variant % bottle_paint.size()])
 			KIND_TOOLBOX:
 				_paint_mesh(body, 0, toolbox_paint[variant % toolbox_paint.size()])
 

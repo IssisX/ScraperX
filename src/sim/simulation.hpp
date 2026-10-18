@@ -247,8 +247,10 @@ struct SwingSnapshot final {
     Vector3 ram_pin{};
 };
 
-// The yard's forklift (src/sim/forklift.hpp).
+// A forklift (src/sim/forklift.hpp): the yard's, or the yard crane's.
 struct ForkliftSnapshot final {
+    int index = 0;                   // 0 the yard's, then the yard crane's
+    std::uint64_t chassis_entity = 0;
     bool driving = false;
     bool at_controls = false;        // on its floor at the wheel: DRIVE offered
     double lift_m = 0.0;             // the forks above their lowest
@@ -267,6 +269,29 @@ struct ForkliftSnapshot final {
     std::array<Quaternion, 4> wheel_rotation{};
     std::array<double, 4> wheel_radius{};
     std::array<double, 4> wheel_width{};
+};
+
+// The yard crane (src/sim/yard_crane.hpp).
+struct YardCraneSnapshot final {
+    bool has_remote = false;
+    bool remote_in_reach = false;   // the remote in its cabinet, within the hands' reach: TAKE offered
+    bool able = false;              // had, and the body could work it now
+    bool operating = false;
+    double slew_rad = 0.0;          // the jib's heading: 0 along +x, + toward -z
+    double slew_rate = 0.0;
+    double trolley_m = 0.0;         // out from the mast
+    double trolley_rate = 0.0;
+    double hoist_m = 0.0;           // the hoist rope as it lies
+    double hoist = 0.0;             // as worked: + raising, - lowering
+    double hoist_n = 0.0;           // the rope's pull this tick
+    double hoist_max_n = 0.0;       // the winch's most
+    bool hoist_stalled = false;
+    bool upper_limit = false;
+    bool slack = false;
+    std::uint64_t load_entity = 0;  // what the sling is hooked onto, 0 for none
+    Vector3 rope_top{};             // the hoist rope's ends: the trolley's sheaves
+    Vector3 rope_bottom{};          // and the hook block's
+    Vector3 hook{};                 // the hook's throat
 };
 
 // Phase 3: the trapeze in the yard (src/sim/trapeze.hpp).
@@ -1124,7 +1149,20 @@ public:
     // steers and the forks' buttons, held, raise (1) and lower (-1) them.
     [[nodiscard]] bool request_forklift_action() noexcept;
     [[nodiscard]] bool set_forklift_lift(double lift) noexcept;
+    // The forklift being driven, else the one at whose wheel the player
+    // stands, else the yard's; or forklift `index` of forklift_count().
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
+    [[nodiscard]] std::uint32_t forklift_count() const noexcept;
+    [[nodiscard]] ForkliftSnapshot forklift_state(std::uint32_t index) const noexcept;
+    // The yard crane: by its cabinet, Take takes its remote (refused out of
+    // reach); with the remote, the switch starts and stops working it
+    // (refused where it cannot be worked: hands full, on a hold, in a seat).
+    // Working it, the stick sends the hook and the hoist's buttons, held,
+    // raise (1) and lower (-1) it.
+    [[nodiscard]] bool request_yard_crane_take() noexcept;
+    [[nodiscard]] bool request_yard_crane_operate() noexcept;
+    [[nodiscard]] bool set_yard_crane_hoist(double hoist) noexcept;
+    [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
     // The ziplines (sim/zipline.hpp): each line's anchors, where its trolley
     // and its brake block are down it, and the trolley's bar while held.
     struct ZiplineLine {
@@ -1210,6 +1248,9 @@ private:
     bool lift_haul_ = false;
     bool forklift_action_ = false;
     double forklift_lift_ = 0.0;
+    bool yard_crane_take_ = false;
+    bool yard_crane_operate_ = false;
+    double yard_crane_hoist_ = 0.0;
     double hook_aim_x_ = 0.0;
     double hook_aim_y_ = 0.0;
     double hook_aim_z_ = -1.0;

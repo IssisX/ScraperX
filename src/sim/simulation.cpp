@@ -480,6 +480,9 @@ void Simulation::step_fixed() noexcept {
     commands.lift_haul = lift_haul_;
     commands.forklift_action = forklift_action_;
     commands.forklift_lift = forklift_lift_;
+    commands.yard_crane_take = yard_crane_take_;
+    commands.yard_crane_operate = yard_crane_operate_;
+    commands.yard_crane_hoist = yard_crane_hoist_;
     commands.hook_aim_x = hook_aim_x_;
     commands.hook_aim_y = hook_aim_y_;
     commands.hook_aim_z = hook_aim_z_;
@@ -497,6 +500,8 @@ void Simulation::step_fixed() noexcept {
     trapeze_drop_ = false;
     lift_action_ = false;
     forklift_action_ = false;
+    yard_crane_take_ = false;
+    yard_crane_operate_ = false;
     hook_fire_ = false;
     hook_release_ = false;
     hook_take_ = false;
@@ -732,7 +737,7 @@ bool Simulation::request_trapeze_drop() noexcept {
 }
 
 bool Simulation::request_forklift_action() noexcept {
-    if (!physics_world_->forklift().driving() && !physics_world_->at_forklift_controls()) {
+    if (physics_world_->active_forklift() < 0) {
         return false;
     }
     forklift_action_ = true;
@@ -748,11 +753,24 @@ bool Simulation::set_forklift_lift(const double lift) noexcept {
 }
 
 ForkliftSnapshot Simulation::forklift_state() const noexcept {
-    const Forklift &forklift = physics_world_->forklift();
+    return forklift_state(static_cast<std::uint32_t>(std::max(0, physics_world_->active_forklift())));
+}
+
+std::uint32_t Simulation::forklift_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->forklift_count());
+}
+
+ForkliftSnapshot Simulation::forklift_state(const std::uint32_t index) const noexcept {
+    if (index >= forklift_count()) {
+        return {};
+    }
+    const Forklift &forklift = physics_world_->forklift(static_cast<int>(index));
     const Forklift::State &state = forklift.state();
     ForkliftSnapshot result;
+    result.index = static_cast<int>(index);
+    result.chassis_entity = forklift.chassis_entity();
     result.driving = state.driving;
-    result.at_controls = !state.driving && physics_world_->at_forklift_controls();
+    result.at_controls = !state.driving && physics_world_->at_forklift_controls(static_cast<int>(index));
     result.lift_m = state.lift_m;
     result.speed_mps = state.speed_mps;
     result.steer = state.steer;
@@ -773,6 +791,57 @@ ForkliftSnapshot Simulation::forklift_state() const noexcept {
         result.wheel_radius[index] = forklift.wheel_radius(wheel);
         result.wheel_width[index] = forklift.wheel_width(wheel);
     }
+    return result;
+}
+
+bool Simulation::request_yard_crane_take() noexcept {
+    if (!physics_world_->yard_crane_remote_in_reach()) {
+        return false;
+    }
+    yard_crane_take_ = true;
+    return true;
+}
+
+bool Simulation::request_yard_crane_operate() noexcept {
+    if (!physics_world_->yard_crane().operating() &&
+        !(physics_world_->yard_crane().has_remote() && physics_world_->yard_crane_able())) {
+        return false;
+    }
+    yard_crane_operate_ = true;
+    return true;
+}
+
+bool Simulation::set_yard_crane_hoist(const double hoist) noexcept {
+    if (!std::isfinite(hoist)) {
+        return false;
+    }
+    yard_crane_hoist_ = std::clamp(hoist, -1.0, 1.0);
+    return true;
+}
+
+YardCraneSnapshot Simulation::yard_crane_state() const noexcept {
+    const YardCrane &crane = physics_world_->yard_crane();
+    const YardCrane::State &state = crane.state();
+    YardCraneSnapshot result;
+    result.has_remote = crane.has_remote();
+    result.remote_in_reach = physics_world_->yard_crane_remote_in_reach();
+    result.able = result.has_remote && physics_world_->yard_crane_able();
+    result.operating = state.operating;
+    result.slew_rad = state.slew_rad;
+    result.slew_rate = state.slew_rate;
+    result.trolley_m = state.trolley_m;
+    result.trolley_rate = state.trolley_rate;
+    result.hoist_m = state.hoist_m;
+    result.hoist = state.hoist;
+    result.hoist_n = state.hoist_n;
+    result.hoist_max_n = YardCrane::kHoistForceN;
+    result.hoist_stalled = state.hoist_stalled;
+    result.upper_limit = state.upper_limit;
+    result.slack = state.slack;
+    result.load_entity = state.load_entity;
+    result.rope_top = to_sim_vector(crane.rope_top());
+    result.rope_bottom = to_sim_vector(crane.rope_bottom());
+    result.hook = to_sim_vector(crane.hook_position());
     return result;
 }
 

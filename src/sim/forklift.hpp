@@ -48,6 +48,23 @@ public:
     // pallet of drums (loose_stock.cpp), its fork tips 4.6 m short of it.
     static constexpr float kParkX = 38.0F;
     static constexpr float kParkZ = 16.5F;
+    // The yard crane's (yard_crane.hpp), parked on its laydown facing east,
+    // the way it drives in off the docks onto the stack's decks.
+    static constexpr std::uint64_t kCraneChassisEntity = 2989;
+    static constexpr std::uint64_t kCraneCarriageEntity = 2990;
+    static constexpr float kCraneParkX = -66.5F;
+    static constexpr float kCraneParkZ = -113.0F;
+    // Two the crane brought up before: on the stack's west band of the 11 m
+    // deck by the low dock's inner end, nose south, and of the 44 m deck by
+    // the high dock, nose north.
+    static constexpr std::uint64_t kDeck11ChassisEntity = 2991;
+    static constexpr std::uint64_t kDeck11CarriageEntity = 2992;
+    static constexpr std::uint64_t kDeck44ChassisEntity = 2993;
+    static constexpr std::uint64_t kDeck44CarriageEntity = 2994;
+    // Its lifting eye, on the overhead guard's roof over the centre of mass,
+    // where a crane's sling hooks on: in the truck's frame.
+    static constexpr float kEyeY = 2.42F;
+    static constexpr float kEyeZ = -0.5F;
 
     // The forks: from 3.5 cm off the ground up the mast to its top (it does
     // not telescope), at kLiftSpeedMps, by a ram of at most kLiftForceN
@@ -84,7 +101,12 @@ public:
         std::array<bool, kWheels> wheel_contact{};
     };
 
-    Forklift(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::ObjectLayer moving_layer, JPH::BodyID player);
+    // Parked at (park_x, park_y, park_z) on a floor at park_y, its nose `yaw`
+    // about +y from +z, its bodies the kit's entities chassis_entity and
+    // carriage_entity.
+    Forklift(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::ObjectLayer moving_layer, JPH::BodyID player,
+             std::uint64_t chassis_entity = kChassisEntity, std::uint64_t carriage_entity = kCarriageEntity,
+             float park_x = kParkX, float park_z = kParkZ, float yaw = 0.0F, float park_y = 0.0F);
     ~Forklift();
     Forklift(const Forklift &) = delete;
     Forklift &operator=(const Forklift &) = delete;
@@ -99,6 +121,7 @@ public:
     void post_step(float delta_seconds);
 
     [[nodiscard]] bool driving() const noexcept { return state_.driving; }
+    [[nodiscard]] std::uint64_t chassis_entity() const noexcept { return chassis_entity_; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
     // Where the driver stands, in the world.
     [[nodiscard]] JPH::RVec3 station() const;
@@ -114,6 +137,7 @@ public:
 private:
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
+    std::uint64_t chassis_entity_ = kChassisEntity;
     kit::BodyIndex chassis_{};
     kit::BodyIndex carriage_{};
     JPH::IgnoreMultipleBodiesFilter wheel_filter_;

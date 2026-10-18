@@ -201,15 +201,20 @@ public:
 
 } // namespace
 
-Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer moving_layer, const BodyID player)
-    : physics_(physics), kit_(kit) {
-    const Quat facing = Quat::sIdentity();
-    const RVec3 park(kParkX, 0.0F, kParkZ);
+Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer moving_layer, const BodyID player,
+                   const std::uint64_t chassis_entity, const std::uint64_t carriage_entity, const float park_x,
+                   const float park_z, const float yaw, const float park_y)
+    : physics_(physics), kit_(kit), chassis_entity_(chassis_entity) {
+    const Quat facing = Quat::sRotation(Vec3::sAxisY(), yaw);
+    const RVec3 park(park_x, park_y, park_z);
     std::vector<Part> chassis = chassis_parts();
     add_wheel_hubs(chassis);
     const std::vector<Part> carriage = carriage_parts();
-    chassis_ = kit_.add_body(kChassisEntity, chassis, park, facing, total(chassis), 0.6F);
-    carriage_ = kit_.add_body(kCarriageEntity, carriage, park + facing * kCarriageAt, facing, total(carriage), 0.6F);
+    chassis_ = kit_.add_body(chassis_entity, chassis, park, facing, total(chassis), 0.6F);
+    carriage_ = kit_.add_body(carriage_entity, carriage, park + facing * kCarriageAt, facing, total(carriage), 0.6F);
+    // The lifting eye on the guard's roof: a crane's sling hooks on here, and
+    // the truck hangs level under it.
+    (void)kit_.add_anchor(chassis_, Vec3(0.0F, kEyeY, kEyeZ), 1.3F);
     // The carriage rides inside the uprights: the two pass through each other.
     kit_.disable_collision(chassis_, carriage_);
 

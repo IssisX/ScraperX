@@ -37,7 +37,16 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # truck's back end comes up off the ground (heard, and felt in the hands);
 # let go, the ram holds; LOWER held: the truck comes back down onto its rear
 # wheels with a slam.
+#
+# The yard crane (src/sim/yard_crane.hpp), west of the stack.
+# touch_yard_crane: from the start round to the crane's foot, TAKE REMOTE
+# from its cabinet; CRANE takes the crane (Jump and Crouch read RAISE and
+# LOWER, both hands hold the remote); the stick held right, the view north,
+# sends the hook east; Jump held hoists it, Crouch held lets it down; WALK
+# lets go and every drive stops.
 
+const YARD_CRANE_MAST_X := -66.0
+const YARD_CRANE_MAST_Z := -137.0
 const MATRON_STATE_DORMANT := 0
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
@@ -621,6 +630,27 @@ func _look_tower_stock(pose: String) -> bool:
 	return true
 
 
+# look_yard_crane: renders only (not in CI): the yard crane west of the
+# stack, from the game's start; from its laydown, the jib over it; and its
+# three docks on the stack's west face.
+func _look_yard_crane() -> bool:
+	_main._sky_cycle.set_hour(15.0)
+	var device := InputRouter.Device.TOUCH
+	await _seconds(0.5)
+	await _look_at_point(Vector3(YARD_CRANE_MAST_X, 40.0, YARD_CRANE_MAST_Z))
+	await _seconds(1.0)
+	await _pose("yard_crane_from_start")
+	for target in [Vector2(-25.0, -40.0), Vector2(-50.0, -100.0), Vector2(-62.0, -104.0)]:
+		await _go(device, target, 0.5, 50.0)
+	await _look_at_point(Vector3(YARD_CRANE_MAST_X, 52.0, YARD_CRANE_MAST_Z))
+	await _seconds(1.0)
+	await _pose("yard_crane_laydown")
+	await _look_at_point(Vector3(-30.0, 26.0, -137.0))
+	await _seconds(1.0)
+	await _pose("yard_crane_docks")
+	return true
+
+
 # The drums' first pallet: [entity, kit body].
 func _first_pallet() -> Array:
 	var stock: PackedInt32Array = _native().get_loose_stock()
@@ -704,6 +734,67 @@ func _forklift_touch(device: int) -> bool:
 	return true
 
 
+func _yard_crane_touch(device: int) -> bool:
+	# East of the laydown's plate stack on its sleepers (the native test's route).
+	for target in [Vector2(-25.0, -40.0), Vector2(-50.0, -100.0), Vector2(-50.0, -125.0)]:
+		if not await _go(device, target, 0.3, 50.0):
+			return _fail("the walk to the crane stopped short of %s" % str(target))
+	if not await _go(device, Vector2(YARD_CRANE_MAST_X + 4.2, YARD_CRANE_MAST_Z + 5.6), 0.12, 20.0):
+		return _fail("the walk to the remote's cabinet stopped short")
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"crane_take", "TAKE REMOTE", "THE YARD CRANE"):
+		return _fail("TAKE REMOTE was not offered at the cabinet")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["has_remote"]), 1.0):
+		return _fail("TAKE REMOTE did not take the remote")
+	await _seconds(0.4)
+	if not _main._touch.is_button_shown(&"crane") or _main._touch.button_label(&"crane") != "CRANE":
+		return _fail("with the remote, its CRANE button is not shown")
+	_tap(4, _center(&"crane"))
+	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("CRANE did not take the crane")
+	await _seconds(0.4)
+	if _main._touch.button_label(&"jump") != "RAISE" or _main._touch.button_label(&"crouch") != "LOWER" or \
+			_main._touch.button_label(&"crane") != "WALK":
+		return _fail("working the crane, Jump, Crouch and the remote do not read RAISE, LOWER and WALK")
+	var remote_pose: int = _main.FirstPersonArms.POSE_REMOTE
+	if _main._arms.hand_poses() != [remote_pose, remote_pose]:
+		return _fail("working the crane, the hands do not hold the remote (poses %s)" % str(_main._arms.hand_poses()))
+	var start: Dictionary = _native().get_yard_crane_state()
+	_move_dir(device, Vector2(1.0, 0.0))
+	await _seconds(6.0)
+	_move_dir(device, Vector2.ZERO)
+	var slewed: Dictionary = _native().get_yard_crane_state()
+	var east := (slewed["rope_top"] as Vector3).x - (start["rope_top"] as Vector3).x
+	if east < 2.0:
+		return _fail("the stick right did not send the hook east (%.2f m)" % east)
+	_touch(2, _center(&"jump"), true)
+	await _seconds(4.0)
+	_touch(2, _center(&"jump"), false)
+	var hoisted: Dictionary = _native().get_yard_crane_state()
+	var rose := (hoisted["hook"] as Vector3).y - (slewed["hook"] as Vector3).y
+	if rose < 3.0:
+		return _fail("RAISE held did not hoist the hook (%.2f m)" % rose)
+	_touch(3, _center(&"crouch"), true)
+	await _seconds(2.0)
+	_touch(3, _center(&"crouch"), false)
+	var lowered: Dictionary = _native().get_yard_crane_state()
+	var fell := (hoisted["hook"] as Vector3).y - (lowered["hook"] as Vector3).y
+	if fell < 1.0:
+		return _fail("LOWER held did not let the hook down (%.2f m)" % fell)
+	print("SCRAPERX_UITEST yard crane: the hook sent %.2f m east, hoisted %.2f m, let down %.2f m" % [east, rose, fell])
+	await _look_at_point(lowered["hook"])
+	await _pose("yard_crane_hook")
+	_tap(4, _center(&"crane"))
+	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
+		return _fail("WALK did not let go of the crane")
+	await _seconds(2.0)
+	var still: Dictionary = _native().get_yard_crane_state()
+	if absf(float(still["slew_rate"])) > 1.0e-4 or absf(float(still["trolley_rate"])) > 1.0e-3:
+		return _fail("let go, the crane's drives did not stop")
+	return true
+
+
 # The truck's heading as the native's yaw (0 its nose +z, turning right -).
 func _truck_yaw() -> float:
 	var nose: Vector3 = (_native().get_kit_body_transform(int(_native().get_kit_body_index(2982))) as Transform3D).basis.z
@@ -759,8 +850,9 @@ func _forklift_strain_touch(device: int) -> bool:
 	var stillage := -1
 	var stock: PackedInt32Array = _native().get_loose_stock()
 	for i in range(0, stock.size(), 3):
-		if stock[i + 1] == 12:   # LooseStock::Kind::BilletStillage
+		if stock[i + 1] == 12:   # LooseStock::Kind::BilletStillage: the yard's, first
 			stillage = stock[i]
+			break
 	if stillage < 0:
 		return _fail("no stillage of billets in the loose stock")
 	var load0: Vector3 = _native().get_kit_body_transform(stillage).origin

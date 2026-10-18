@@ -37,6 +37,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
     src/sim/forklift.cpp
+    src/sim/yard_crane.cpp
     src/sim/zipline.cpp
     src/sim/corpse.cpp
     src/sim/band_counterweight_well.cpp
@@ -123,6 +124,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_matron.cpp
         tests/sim_tests_stock.cpp
         tests/sim_tests_forklift.cpp
+        tests/sim_tests_yard_crane.cpp
         tests/sim_tests_zipline.cpp
         tests/sim_tests_corpse.cpp
     )

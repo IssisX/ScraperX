@@ -587,6 +587,7 @@ void Simulation::PhysicsWorld::complete_traversal(JPH::BodyInterface &bodies) no
     air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed, carried.Length());
     if (springboard) {
         flight_from_jump_ = true;
+        springboard_takeoff_ = true;
         jump_takeoff_feet_y_ = static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
         ++springboard_count_;
     }
