@@ -1415,9 +1415,9 @@ fill in after).**
 9. Controls for the movement, as its own goal (owner, 2026-10-18): the advanced moves worked
    through the thumbsticks or gestures, something elegant and intuitive, not on-screen buttons
    that take the player's eyes off the run. Done as one piece of work at some point, never
-   piecemeal inside other tasks. Sequenced by Claude, 2026-10-18 (the owner: "you decide"): after
-   8's machine sounds, 10's crane grips and 11's Matron hearing, and before 4's route hint and 5's
-   machine starts, so the moves those
+   piecemeal inside other tasks. Set as the owner's goal 2026-10-18, started once 8's machine
+   sounds were pushed: before 10's crane grips, 11's Matron hearing, 4's route hint and 5's machine
+   starts, so the moves those
    add (shoving, stomping, hanging the body's weight on a lever) are built into the gestures, not
    added as buttons first.
 10. The crane's end of the line (owner, 2026-10-18: "a correct end-effector like a clamp and/or grip
@@ -1425,7 +1425,7 @@ fill in after).**
    from the hook, switched from the radio remote, for every steel load (rated force, gripping only
    steel it lies flat against); the sling and shackle kept for lifting eyes; a container spreader
    locking onto the corner castings and a plate clamp where a site would use one. Sequenced next
-   after 8.
+   after 9.
 11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her
