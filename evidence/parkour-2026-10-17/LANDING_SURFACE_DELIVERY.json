@@ -1,0 +1,33 @@
+{
+  "source_commit": "23a89a9058c32621c7cbad92613cc92398ae9907",
+  "candidate": "success",
+  "candidate_run": "39158989367",
+  "apk": {
+    "source_commit": "23a89a9058c32621c7cbad92613cc92398ae9907",
+    "version_code": 214515644,
+    "tag": "chatgpt-candidate-23a89a9",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-23a89a9/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-23a89a9",
+    "asset_id": 654315799,
+    "asset_size": 36962627
+  },
+  "local_delivery": {
+    "source_commit": "23a89a9058c32621c7cbad92613cc92398ae9907",
+    "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-23a89a9.apk",
+    "bytes": 36962627,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39158989367/artifacts/12148197220"
+  },
+  "host_mcp": {
+    "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-landing-sound-20261018/mcp-receipt.json",
+    "result": "PASS checks=66 actual_steps=2 actual_landings=2",
+    "render_3d": false,
+    "heard_audio": false
+  },
+  "candidate_affected_checks": {
+    "landing_surface_audio": "LANDING_SURFACE_AUDIO PASS checks=72 native_contacts_exercised=0 heard_audio=0",
+    "shipping_main_native": "SCRAPERX_CONTACT_SOUND PASS checks=74 failures=0 actual_steps=2 actual_landings=2 staged_footing=1 heard_audio=0"
+  },
+  "full_release": "Separate39158989345; no result asserted here",
+  "phone_sound_and_feel": "UNVERIFIED; requires actual playback on matchingAPK"
+}

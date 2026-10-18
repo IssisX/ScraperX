@@ -11,6 +11,8 @@ const UPPER_GALLERY_PERCHES: Array[Vector3] = [
 	Vector3(-78.2, 3.2, -78.5),
 	Vector3(-73.8, 3.0, -89.5),
 ]
+# Top centre in this builder's local frame; worldX=-38.5 after YARD_OFFSET.
+const WALL_EXIT_TOP := Vector3(-42.5, 0.65, -40.6)
 var _g: WorldGeometry
 var _root: Node3D
 var _concrete: Material
@@ -39,11 +41,13 @@ func build() -> void:
 	_loading_apron()
 	_return_gallery()
 	_upper_gallery()
+	_wall_exit_deck()
 	# The service aisle remains an ordinary walkable recovery route.
 	for z in [-54.0, -66.0, -78.0, -90.0, -99.0]:
 		_box("ParkourPaint", Vector3(0.12, 0.003, 3.0), Vector3(-50.0, 0.004, z), _paint)
 	RouteMarkings.build(_g, _root, _paint)
 	RouteMarkings.upper_gallery(_g, _root, _paint, UPPER_GALLERY_PERCHES)
+	RouteMarkings.wall_exit(_g, _root, _paint, WALL_EXIT_TOP)
 
 func _utility_bay() -> void:
 	# Ground-bearing concrete equipment plinths: 1.6m gaps, 2.4m landings.
@@ -114,6 +118,19 @@ func _upper_gallery() -> void:
 			for end_x in [-0.5, 0.5]:
 				_strut(Vector3(post_x, 2.14, top.z + side * 1.5),
 					top + Vector3(end_x, -0.34, side * 0.58))
+
+
+func _wall_exit_deck() -> void:
+	# A receiving stand beside the existing workshop wall-run. The old straight
+	# departure stays north/east of it; the grade approach and bypass remain open.
+	var top := WALL_EXIT_TOP
+	_box("ParkourStructure", Vector3(4.0, 0.16, 2.8), top - Vector3.UP * 0.08, _steel)
+	for x in [-1.7, 1.7]:
+		for z in [-1.0, 1.0]:
+			_box("ParkourStructure", Vector3(0.16, 0.49, 0.16),
+				Vector3(top.x + x, 0.245, top.z + z), _steel)
+		_strut(Vector3(top.x + x, 0.08, top.z - 1.0),
+			Vector3(top.x + x, 0.49, top.z + 1.0))
 
 
 func _box(part: String, size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:

@@ -1,0 +1,23 @@
+{
+  "source_commit": "cf96296944bcb3ebdc0d4bddd15a413ae8ff6007",
+  "version_code": 214514943,
+  "tag": "chatgpt-candidate-cf96296",
+  "prerelease": true,
+  "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-cf96296/ScraperX-ChatGPT.apk",
+  "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-cf96296",
+  "asset_id": 654293415,
+  "asset_size": 36958348,
+  "candidate_run": 39158071237,
+  "candidate_conclusion": "success",
+  "candidate_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-cf96296/accepted-candidate.json",
+  "local_delivery": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-cf96296/local-delivery.json",
+  "ci_selection": "CONTACT_SURFACE_AUDIO PASS checks=38 native_contacts_exercised=0 heard_audio=0",
+  "ci_main_native": "SCRAPERX_CONTACT_SOUND PASS checks=54 failures=0 actual_steps=2 staged_footing=1 heard_audio=0",
+  "actual_mcp_main_native": "SCRAPERX_CONTACT_SOUND PASS checks=46 failures=0 actual_steps=2 staged_footing=1 heard_audio=0",
+  "captures_inspected": [
+    "contact-surface/steel-gallery.png",
+    "contact-surface/concrete-platform.png"
+  ],
+  "separate_full_run": 39158071261,
+  "phone_heard_audio": "Unverified"
+}

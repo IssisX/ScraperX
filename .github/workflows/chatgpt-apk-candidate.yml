@@ -83,18 +83,27 @@ jobs:
         timeout 90s build/candidate-host/scraperx_air_catch_intent_tests \
           2>&1 | tee artifacts/air-catch-intent-native.log
         grep -F 'SCRAPERX_AIR_CATCH PASS' artifacts/air-catch-intent-native.log
-    - name: Check connected upper gallery and lower recovery course
+    - name: Check connected yard, upper gallery and wall-kick receiver
       shell: bash
       run: |
         set -euo pipefail
         cmake --build build/candidate-host \
-          --target scraperx_upper_gallery_route_tests scraperx_parkour_yard_route_tests --parallel 2
+          --target scraperx_upper_gallery_route_tests scraperx_parkour_yard_route_tests \
+          scraperx_wall_exit_route_tests scraperx_physical_wall_stride_tests --parallel 2
         timeout 180s build/candidate-host/scraperx_upper_gallery_route_tests \
           2>&1 | tee artifacts/upper-gallery-native.log
         grep -F 'SCRAPERX_UPPER_GALLERY PASS' artifacts/upper-gallery-native.log
         timeout 180s build/candidate-host/scraperx_parkour_yard_route_tests \
           2>&1 | tee artifacts/parkour-yard-native.log
         grep -F 'SCRAPERX_PARKOUR_YARD PASS' artifacts/parkour-yard-native.log
+        timeout 180s build/candidate-host/scraperx_wall_exit_route_tests \
+          2>&1 | tee artifacts/wall-exit-native.log
+        grep -F 'SCRAPERX_WALL_EXIT PASS' artifacts/wall-exit-native.log
+        for mode in flow jump cancel guards; do
+          timeout 60s build/candidate-host/scraperx_physical_wall_stride_tests "$mode" \
+            2>&1 | tee -a artifacts/wall-stride-regression.log
+          grep -F "WALL_STRIDE PASS mode=$mode" artifacts/wall-stride-regression.log
+        done
     - name: Cross-compile native graph for Android arm64
       shell: bash
       run: |
@@ -378,6 +387,8 @@ jobs:
           artifacts/thumb-flow/
           artifacts/upper-gallery-native.log
           artifacts/parkour-yard-native.log
+          artifacts/wall-exit-native.log
+          artifacts/wall-stride-regression.log
           artifacts/upper-gallery-view.log
           artifacts/upper-gallery/
         if-no-files-found: error

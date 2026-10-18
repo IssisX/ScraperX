@@ -113,9 +113,26 @@ static func _corner_hang_route(geometry: WorldGeometry, root: Node3D, paint: Mat
 static func _wall_run_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
 	var offset := root.position
 	_roof_label(root, paint, "WALL RUN\nSPRINT + JUMP ALONG WALL\nLEAN INTO THE WALL\nJUMP TO KICK AWAY",
-		Vector3(-39.0, 0.009, -40.2) - offset)
+		Vector3(-46.0, 0.009, -40.2) - offset)
 	_arrow(geometry, root, paint, Vector3(-42.5, 0.0, -39.5) - offset, Vector2.RIGHT)
 	_arrow(geometry, root, paint, Vector3(-30.0, 0.0, -39.5) - offset, Vector2.RIGHT)
+
+
+static func wall_exit(geometry: WorldGeometry, root: Node3D, paint: Material, top: Vector3) -> void:
+	# Flush paint describes the tangible receiver; it creates no support.
+	_roof_label(root, paint, "SIDE EXIT\nKICK AWAY\nSTEER TO DECK",
+		top + Vector3(0.0, 0.009, 0.45))
+	for side in [-1.0, 1.0]:
+		_strip(geometry, root, paint, top + Vector3(0.0, 0.004, side * 1.15), Vector2(3.5, 0.08))
+	_arrow(geometry, root, paint, top + Vector3(0.95, 0.005, 0.0), Vector2(1.0, -1.0).normalized())
+	var offset := root.position
+	# A neutral wall departure lands east of the maintenance plinth. Return
+	# beside the wall; a south-side arrow here would point into its stairs.
+	_arrow(geometry, root, paint, Vector3(-33.0, 0.0, -38.6) - offset, Vector2.LEFT)
+	_roof_label(root, paint, "MISSED THE DECK?\nRETURN ALONG WALL",
+		Vector3(-31.0, 0.009, -40.2) - offset)
+	_roof_label(root, paint, "GROUND RETURN / RETRY",
+		Vector3(-42.5, 0.009, -44.0) - offset)
 
 
 static func _upward_wall_step_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
