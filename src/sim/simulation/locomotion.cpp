@@ -48,6 +48,7 @@ void Simulation::PhysicsWorld::update_crouch(JPH::BodyInterface &bodies, const S
 
 void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodies,
                               const StepCommands &commands) noexcept {
+    if (palm_props_active()) return;
     if (traversal_state_ != TraversalState::Hanging || !physical_hands_->compatible_hands() ||
         hands_[0].generation != hang_topout_left_generation_ ||
         hands_[1].generation != hang_topout_right_generation_ ||

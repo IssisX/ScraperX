@@ -38,6 +38,16 @@ Worldx=-57 is a clear approach through the gap between the retained partitions. 
 
 The native route uses initial grade staging only, followed by actual sprint, Jump and Crouch inputs. It reaches compact duct support at tick214, clear supported standing at215 and onward grade contact at289, without hands, traversal plans or body writes during the route. Paired ordinary-jump traces show60free-flight samples with identical center-of-mass position, velocity and actuator work through repeated tuck/release; actual grade obstruction also blocks premature airborne extension until landing permits planted standing. These are native behavior results; matching Godot/Android rendering and phone feel require their artifact/device evidence.
 
+## Passive palm rail — 2026-10-18
+
+A separate ground-bearing steel rail sits at worldx[-43.5,-40.5],z[-72.09,-71.91], top1.65m. Kit entity1461 owns the actual cap and two end posts; the same parts supply native collision and rendering. The1.53m underside leaves a real compact underpass between the posts. Existing storage, duct and old body identities remain intact.
+
+From the service aisle, approachworld(-42,-65) facing south. At ordinary5.5m/s running speed, Jump near the paintedz=-67.6 line, then hold Crouch in flight. Separately validated, reachable palms can absorb the descending load at the cap. Neither palm grips, pulls, launches or drives forward; the player's earned jump and momentum cross the obstacle. Release Crouch after actual receiving grade contact to stand and rearm. Drop or releasing Crouch cancels the current palm episode. Brief rail contact cannot renew cancelled held input. A slow or misaligned jump receives no automatic palm rescue.
+
+Alternatively, crouch and walk underneath; the real cap blocks standing until clear. After either route, the paint turns west atz=-75 and north atx=-45 through the clear aisle between rail and duct. The east side contains existing storage trays and is not the retry corridor. Walk back toworld(-42,-65) for a fresh approach, without a reset or teleport. All paint remains presentation only.
+
+The palm shoulder follows the compact posture: COM+0.15m preserves its standing shoulder-to-crown offset. Reach remains1.05m;85kg mass, jump energy, capsule clearance and existing force limits stay unchanged. The first-person palms use actual native material anchors; only solved positive load selects a contact sound. Native mechanical/public-route and Godot consumer evidence is recorded in`evidence/parkour-2026-10-17/PALM_VAULT.md`. Android artifact and phone feel remain separate observations.
+
 ## Workshop-roof branch — 2026-10-17
 
 This branch uses world coordinates directly. The existing workshop slab is at5.14m; the south wall below it stops at3.8m. A new fixed concrete service plinth supplies a1.8m running takeoff. Eight225mm risers, each400mm deep and1.6m wide, lead from actual grade to the3.2m-wide plinth. Their bounds arex[-36.8,-35.2],z[-47.4,-44.2]; the plinth occupiesx[-37.6,-34.4],z[-44.2,-41.4]. Kit entity1460 owns both native collision and rendered concrete parts. Every part bears on grade. No player actuator, gravity, force limit or collision rule changes for this branch.

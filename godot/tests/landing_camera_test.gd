@@ -5,6 +5,7 @@ const MainPresentation := preload("res://presentation/main.gd")
 const Director := preload("res://presentation/audio/audio_director.gd")
 const Settings := preload("res://presentation/ui/settings_store.gd")
 const MovementDust := preload("res://presentation/movement_dust.gd")
+const PalmPropChecks := preload("res://tests/palm_prop_feedback_checks.gd")
 
 class FootAudio extends Director:
 	var played: Array[StringName] = []
@@ -679,7 +680,7 @@ func _movement_dust_checks() -> bool:
 
 
 func _run() -> void:
-	if not _response_checks() or not _slide_checks() or not _wall_stride_checks() or not _wall_stride_audio_checks() or not _foot_transfer_checks() or not _landing_feedback_checks() or not _movement_dust_checks():
+	if not _response_checks() or not _slide_checks() or not _wall_stride_checks() or not _wall_stride_audio_checks() or not _foot_transfer_checks() or not _landing_feedback_checks() or not _movement_dust_checks() or not PalmPropChecks.run(_check, root):
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

@@ -247,6 +247,20 @@ enum class FallState : std::uint8_t {
     Parachuting = 2,
 };
 
+struct HandPropSnapshot final {
+    bool active = false;
+    std::uint8_t stop_reason = 0;
+    std::uint64_t generation = 0;
+    std::uint64_t support_entity_id = 0;
+    Vector3 anchor{}, normal{}, point_velocity{}, player_force{};
+    double elapsed_seconds = 0;
+    double yielded_normal_distance_m = 0;
+    double last_impulse_ns = 0;
+    double last_event_work_j = 0;
+    double absorbed_event_work_j = 0;
+    double command_work_j = 0;
+};
+
 struct Snapshot final {
     std::uint64_t tick_index = 0;
     double simulation_time_seconds = 0.0;
@@ -597,6 +611,8 @@ struct Snapshot final {
     std::uint64_t well_b_rope_end_entity_id = 0;
     double well_b_rope_tension_n = 0.0;
     double well_b_lever_angle = 0.0;
+    std::array<HandPropSnapshot, 2> hand_props{};
+    std::uint64_t palm_vault_count = 0;
 };
 
 struct AdvanceResult final {

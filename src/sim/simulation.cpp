@@ -226,7 +226,8 @@ bool Simulation::request_release() noexcept {
                          snapshot_.traversal_state == TraversalState::Lowering;
     const bool standing =
         snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
-    if (!holding && !standing && !snapshot_.foot_push_active) {
+    const bool propping = snapshot_.hand_props[0].active || snapshot_.hand_props[1].active;
+    if (!holding && !standing && !propping && !snapshot_.foot_push_active) {
         return false;
     }
     release_requested_ = true;
@@ -731,7 +732,9 @@ Simulation::RenderHandAnchor Simulation::traversal_hand_anchor(const bool left) 
 }
 
 Vector3 Simulation::render_traversal_hand(const bool left) const noexcept {
-    const auto current = left ? snapshot_.traversal_left_hand : snapshot_.traversal_right_hand;
+    const auto &palm = snapshot_.hand_props[left ? 0 : 1];
+    const auto current = palm.active ? palm.anchor :
+        (left ? snapshot_.traversal_left_hand : snapshot_.traversal_right_hand);
     const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
     const auto &previous_anchor = previous_hand_anchors_[left ? 0 : 1];
     const auto anchor = physics_world_->render_hand_anchor(left ? 0 : 1);

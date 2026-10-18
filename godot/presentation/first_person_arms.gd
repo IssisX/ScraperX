@@ -65,6 +65,7 @@ const POSE_ROLL := 12
 const POSE_STUMBLE := 13
 const POSE_GRAPPLE := 14
 const POSE_FORKLIFT := 15
+const POSE_PROP := 16
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -434,6 +435,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		elif not was_hanging:
 			_hang_shoulder_right = _grip_forward.cross(Vector3.UP).normalized()
 	for hand in _hands:
+		var palm_active := bool(landing.get("palm_left_active" if hand.side < 0.0 else "palm_right_active", false))
 		var attached := not single_hand or bool(landing.get(
 			"left_hand_attached" if hand.side < 0.0 else "right_hand_attached", false))
 		var raised := attached and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
@@ -449,9 +451,15 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			# crossing placements retain it independently of head rotation.
 			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
 				+ _hang_shoulder_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
+		elif palm_active:
+			# Native compact prop shoulder: .45 - (.9 - .6) m over COM.
+			shoulder = (state["render_position"] as Vector3) + Vector3.UP * 0.15 \
+				+ torso_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - forward * HANG_SHOULDER_BACK
 		var pose := POSE_REST
 		var reachable := true
-		if single_hand and not attached:
+		if palm_active:
+			pose = POSE_PROP
+		elif single_hand and not attached:
 			# An absent native attachment earns no grip target or raised shoulder.
 			pose = POSE_REST if grounded else POSE_AIR
 		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
@@ -524,8 +532,14 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var reach_step := REACH_SPEED * delta if traversal == 0 or traversal == TRAVERSAL_CLIMBING \
 			else INF
 		if anchored:
-			hand.world_wrist = world_wrist + _close(hand.world_wrist - world_wrist, blend, reach_step)
-			hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
+			if pose == POSE_PROP:
+				# An actual short-lived palm contact stays on its material
+				# point; camera-space reach blending cannot slide it behind.
+				hand.world_wrist = world_wrist
+				hand.world_rotation = target_rotation_world
+			else:
+				hand.world_wrist = world_wrist + _close(hand.world_wrist - world_wrist, blend, reach_step)
+				hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
 			if hand.world_wrist.distance_to(world_wrist) < 0.012:
 				hand.world_wrist = world_wrist
 				hand.world_rotation = target_rotation_world
@@ -581,6 +595,16 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 	var up := cam.y
 	var back := cam.z
 	match pose:
+		POSE_PROP:
+			var landing: Dictionary = state.get("landing", {})
+			var normal: Vector3 = landing.get("palm_left_normal" if side < 0.0 else "palm_right_normal", Vector3.UP)
+			normal = normal.normalized() if normal.length_squared() > 0.25 else Vector3.UP
+			var along := forward - normal * forward.dot(normal)
+			if along.length_squared() < 1.0e-6:
+				along = torso_right.cross(normal)
+			var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]
+			return [hold + normal * PALM_HALF_THICKNESS, _hand_basis(along.normalized(), normal),
+				true, 30.0, 0.10, 0.15]
 		POSE_GRIP, POSE_PLANT:
 			var ledge: Vector3 = state["ledge_point"]
 			var along := _grip_forward.cross(Vector3.UP).normalized()
@@ -747,7 +771,7 @@ func _update_remote_buttons(pendant: Vector2) -> void:
 
 func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 	match pose:
-		POSE_GRIP, POSE_PLANT, POSE_REACH, POSE_CLIMB:
+		POSE_GRIP, POSE_PLANT, POSE_REACH, POSE_CLIMB, POSE_PROP:
 			# Elbows below and behind the grip, a little out: the forearm
 			# climbs into frame from the lower corner.
 			return right * side * 0.35 - forward * 0.6 + Vector3.DOWN * 1.0

@@ -60,7 +60,25 @@ static func build(geometry: WorldGeometry, root: Node3D, paint: Material) -> voi
 	_strip(geometry, root, paint, Vector3(-50.68, 0.8, -74.0), Vector2(0.12, 2.2))
 	_strip(geometry, root, paint, Vector3(-51.68, 0.6, -90.0), Vector2(0.12, 2.2))
 	_duct_tuck_route(geometry, root, paint)
+	_palm_rail_route(geometry, root, paint)
 	_workshop_roof_route(geometry, root, paint)
+
+
+static func _palm_rail_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:
+	# Native rail and takeoff coordinates are world-space; the existing yard
+	# container supplies only translation. Paint adds no receiving surface.
+	var offset := root.position
+	_arrow(geometry, root, paint, Vector3(-46.0, 0.0, -65.0) - offset, Vector2.RIGHT)
+	_roof_label(root, paint, "RAIL CROSSING\nJUMP, THEN HOLD CROUCH",
+		Vector3(-42.0, 0.009, -65.0) - offset)
+	_arrow(geometry, root, paint, Vector3(-42.0, 0.0, -66.5) - offset, Vector2(0.0, -1.0))
+	_strip(geometry, root, paint, Vector3(-42.0, 0.0, -67.6) - offset, Vector2(1.4, 0.10))
+	# This alternative uses actual compact clearance under the same cap.
+	_roof_label(root, paint, "OR CROUCH UNDER", Vector3(-42.0, 0.009, -70.2) - offset)
+	_strip(geometry, root, paint, Vector3(-42.0, 1.65, -72.0) - offset, Vector2(1.2, 0.07))
+	# The west aisle clears both the rail and existing east storage trays.
+	_arrow(geometry, root, paint, Vector3(-42.0, 0.0, -75.0) - offset, Vector2.LEFT)
+	_arrow(geometry, root, paint, Vector3(-45.0, 0.0, -73.5) - offset, Vector2(0.0, 1.0))
 
 
 static func _duct_tuck_route(geometry: WorldGeometry, root: Node3D, paint: Material) -> void:

@@ -49,6 +49,10 @@ using namespace detail;
         // Rotate that span into the body's frame before interpolating it.
         point += bodies.GetRotation(body).Conjugated() *
             (traversal_right() * (hand == 0 ? -kHangHandSpan : kHangHandSpan));
+    } else if (physical_palms_[hand] && physical_palms_[hand]->active()) {
+        body = physical_palms_[hand]->readback().support;
+        point = physical_palms_[hand]->support_local_anchor();
+        result.generation = physical_palms_[hand]->readback().generation;
     } else return result;
     if (body.IsInvalid()) return result;
     result.support = body.GetIndexAndSequenceNumber();
@@ -504,6 +508,27 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     }
     state_.traversal_hand_constraint_count = physical_hands_ ?
         unsigned(physical_hands_->attached(0)) + unsigned(physical_hands_->attached(1)) : 0;
+    for (unsigned hand = 0; hand < 2; ++hand) {
+        auto &published = state_.hand_props[hand];
+        published = {};
+        if (!physical_palms_[hand]) continue;
+        const auto &palm = physical_palms_[hand]->readback();
+        published.active = palm.active;
+        published.stop_reason = static_cast<std::uint8_t>(palm.stop_reason);
+        published.generation = palm.generation;
+        if (palm.active) published.support_entity_id = bodies.GetUserData(palm.support);
+        published.anchor = to_vector3(palm.world_anchor);
+        published.normal = to_vector3(palm.surface_normal);
+        published.point_velocity = to_vector3(palm.point_velocity);
+        published.player_force = to_vector3(palm.player_force);
+        published.elapsed_seconds = palm.elapsed_seconds;
+        published.yielded_normal_distance_m = palm.yielded_normal_distance_m;
+        published.last_impulse_ns = palm.last_impulse_ns;
+        published.last_event_work_j = palm.last_event_work_j;
+        published.absorbed_event_work_j = palm.absorbed_event_work_j;
+        published.command_work_j = palm.command_work_j;
+    }
+    state_.palm_vault_count = palm_vault_count_;
     state_.traversal_plan_kind = static_cast<std::uint8_t>(traversal_plan_.kind);
     state_.traversal_phase = static_cast<std::uint8_t>(traversal_plan_.phase);
     state_.traversal_rejection_reason = static_cast<std::uint8_t>(traversal_plan_.rejection);

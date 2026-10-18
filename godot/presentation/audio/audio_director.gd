@@ -107,6 +107,9 @@ var _last_foot_transfer_count := -1
 var _last_foot_transfer_tick := -1
 var _last_foot_push_start_count := -1
 var _last_wall_stride_count := -1
+var _last_palm_vault_count := -1
+var _pending_palm_contact := false
+var palm_contacts := 0
 var _pending_foot_jump_count := -1
 var _pending_foot_jump_age := 0.0
 var _last_traversal := 0
@@ -287,6 +290,8 @@ func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Diction
 	_last_foot_transfer_tick = int(foot_state.get("foot_transfer_tick", -1))
 	_last_foot_push_start_count = int(foot_state.get("foot_push_start_count", -1))
 	_last_wall_stride_count = int(foot_state.get("wall_stride_count", -1))
+	_last_palm_vault_count = int(foot_state.get("palm_vault_count", -1))
+	_pending_palm_contact = false
 	_clear_foot_jump()
 	_last_deaths = deaths
 	reset_reclaim_feedback()
@@ -346,6 +351,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_last_landing_count = landing_count
 	_update_foot_transfer(landing_state, position, deaths)
 	_update_wall_stride(landing_state, position, deaths)
+	_update_palm_prop(landing_state, position, deaths)
 	var foot_jump := _consume_foot_jump(delta, landing_state, velocity, grounded,
 		traversal, deaths, crouched)
 	var climbing_jump := traversal != _last_traversal and _last_traversal == TRAVERSAL_CLIMBING \
@@ -751,6 +757,39 @@ func _update_wall_stride(state: Dictionary, position: Vector3, deaths: int) -> v
 			return
 	var weight := clampf(load / 2400.0, 0.0, 1.0)
 	_play(_surface(support, position.y), lerpf(-18.0, -10.0, weight), 1.0)
+
+
+func _update_palm_prop(state: Dictionary, position: Vector3, deaths: int) -> void:
+	var count := int(state.get("palm_vault_count", -1))
+	if _last_palm_vault_count < 0 or count < _last_palm_vault_count or deaths != _last_deaths:
+		_last_palm_vault_count = count
+		_pending_palm_contact = false
+		return
+	if count > _last_palm_vault_count:
+		_pending_palm_contact = true
+	_last_palm_vault_count = count
+	var active := false
+	var load := 0.0
+	for hand in ["left", "right"]:
+		if not bool(state.get("palm_" + hand + "_active", false)):
+			continue
+		active = true
+		var force: Variant = state.get("palm_" + hand + "_force_n", Vector3.ZERO)
+		if force is Vector3 and (force as Vector3).is_finite():
+			load += (force as Vector3).length()
+	if not active:
+		_pending_palm_contact = false
+	if not _pending_palm_contact or load <= 0.0:
+		return
+	_pending_palm_contact = false
+	palm_contacts += 1
+	# The existing bank's palm-on-steel slap is selected only after a new
+	# real contact carries solved load. Muted events are consumed quietly.
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index):
+			return
+	_play_at(&"grab", position, lerpf(-20.0, -9.0, clampf(load / 3000.0, 0.0, 1.0)), 1.0)
 
 
 func _update_foot_transfer(state: Dictionary, position: Vector3, deaths: int) -> void:

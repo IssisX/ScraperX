@@ -36,6 +36,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/legacy_traversal.cpp
     src/sim/simulation/locomotion.cpp
     src/sim/simulation/ground_slide.cpp
+    src/sim/simulation/palm_vault.cpp
     src/sim/simulation/parkour_intent.cpp
     src/sim/simulation/machine_build.cpp
     src/sim/simulation/machine_update.cpp
@@ -53,6 +54,8 @@ add_library(scraperx_sim STATIC
     src/sim/traversal_receiver.cpp
     src/sim/parkour_route.cpp
     src/sim/workshop_roof_route.cpp
+    src/sim/vault_rail_route.cpp
+    src/sim/physical_hand_prop.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
     src/sim/north_transfer_route.cpp
@@ -97,7 +100,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -279,6 +282,16 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_physical_foot_push_tests tests/physical_foot_push_tests.cpp)
         target_link_libraries(scraperx_physical_foot_push_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_foot_push COMMAND scraperx_physical_foot_push_tests)
+        add_executable(scraperx_physical_hand_prop_tests tests/physical_hand_prop_tests.cpp)
+        target_link_libraries(scraperx_physical_hand_prop_tests PRIVATE scraperx_sim)
+        foreach(mode static dynamic lifecycle)
+            add_test(NAME scraperx_sim.physical_hand_prop_${mode} COMMAND scraperx_physical_hand_prop_tests ${mode})
+        endforeach()
+        add_executable(scraperx_palm_vault_flow_tests tests/palm_vault_flow_tests.cpp)
+        target_link_libraries(scraperx_palm_vault_flow_tests PRIVATE scraperx_sim)
+        foreach(mode flow cancel under slow)
+            add_test(NAME scraperx_sim.palm_vault_${mode} COMMAND scraperx_palm_vault_flow_tests ${mode})
+        endforeach()
         add_executable(scraperx_warehouse_forklift_tests tests/warehouse_forklift_tests.cpp)
         target_link_libraries(scraperx_warehouse_forklift_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.warehouse_forklift COMMAND scraperx_warehouse_forklift_tests)

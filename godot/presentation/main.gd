@@ -1262,6 +1262,7 @@ func _read_context() -> Dictionary:
 	var grounded := bool(_native.is_player_grounded())
 	var traversal := int(_native.get_traversal_state())
 	var landing: Dictionary = _native.get_landing_state()
+	var propping := bool(landing.get("palm_left_active", false)) or bool(landing.get("palm_right_active", false))
 	var chute := bool(_native.is_parachute_deployed())
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
@@ -1446,7 +1447,7 @@ func _read_context() -> Dictionary:
 		"grapple_draw_available": grapple_draw_available,
 		"grapple_line_attached": bool(grapple.get("line_attached", false)),
 		"grapple_auto_reel": bool(grapple.get("auto_reel", false)),
-		"drop_ok": bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or (grounded and free and edge_drop and carrying == 0),
+		"drop_ok": bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),

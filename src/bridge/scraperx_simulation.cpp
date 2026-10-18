@@ -868,6 +868,15 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["actual_foot_load_n"] = s.actual_foot_load_n;
     out["actual_hand_load_fraction"] = s.actual_hand_load_fraction;
     out["actual_foot_load_fraction"] = s.actual_foot_load_fraction;
+    out["palm_left_active"] = s.hand_props[0].active;
+    out["palm_right_active"] = s.hand_props[1].active;
+    out["palm_left_normal"] = to_godot(s.hand_props[0].normal);
+    out["palm_right_normal"] = to_godot(s.hand_props[1].normal);
+    out["palm_left_force_n"] = to_godot(s.hand_props[0].player_force);
+    out["palm_right_force_n"] = to_godot(s.hand_props[1].player_force);
+    out["palm_left_generation"] = s.hand_props[0].generation;
+    out["palm_right_generation"] = s.hand_props[1].generation;
+    out["palm_vault_count"] = s.palm_vault_count;
     const bool physical_hand_state = s.traversal_hand_constraint_count > 0 &&
         (s.traversal_state == sim::TraversalState::Climbing || s.traversal_state == sim::TraversalState::Hanging);
     // Both slots are real whenever the backend reports two attachments,

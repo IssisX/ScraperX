@@ -19,6 +19,7 @@
 #include "sim/grappling_gun.hpp"
 #include "sim/cargo_net.hpp"
 #include "sim/physical_hand_climb.hpp"
+#include "sim/physical_hand_prop.hpp"
 #include "sim/physical_foot_push.hpp"
 #include "sim/traversal_plan.hpp"
 #include "sim/suspended_ladder.hpp"
@@ -775,6 +776,10 @@ private:
 
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
 
+    [[nodiscard]] bool palm_props_active() const noexcept;
+    void clear_palm_props(PhysicalHandProp::StopReason reason = PhysicalHandProp::StopReason::Cleared) noexcept;
+    void update_palm_vault(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+
     [[nodiscard]] bool try_begin_ground_traversal(JPH::BodyInterface &bodies) noexcept;
 
     // Real support under the capsule's axis at `centre`: walkable ground no
@@ -1356,6 +1361,9 @@ private:
     std::uint32_t hang_topout_ticks_left_ = 0;
     std::uint64_t hang_topout_left_generation_ = 0;
     std::uint64_t hang_topout_right_generation_ = 0;
+    std::array<std::unique_ptr<PhysicalHandProp>, 2> physical_palms_;
+    bool palm_vault_used_ = false;
+    std::uint64_t palm_vault_count_ = 0;
 };
 
 } // namespace scraperx::sim

@@ -1,5 +1,6 @@
 #include "sim/simulation/world.hpp"
 #include "sim/workshop_roof_route.hpp"
+#include "sim/vault_rail_route.hpp"
 
 namespace scraperx::sim {
 using namespace detail;
@@ -239,10 +240,16 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
     physics_system_.SetSoftBodyContactListener(&soft_contact_listener_);
     physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_, cargo_net_.get());
     physical_foot_push_ = std::make_unique<PhysicalFootPush>(physics_system_, player_id_);
+    for (auto &palm : physical_palms_)
+        palm = std::make_unique<PhysicalHandProp>(physics_system_, player_id_,
+            // Keep the standing shoulder-to-crown distance in the compact
+            // torso pose. Arm length and every gripping hand law stay fixed.
+            kClimbHandMid-kCrouchDrop, kTransferShoulderReachM);
     if (content == WorldContent::Slingshot) {
         grappling_gun_ = std::make_unique<GrapplingGun>(physics_system_, player_id_, object_layers::kMoving);
         // Append after all retained physics bodies, including the hook.
         build_workshop_roof_route(*kit_);
+        build_vault_rail_route(*kit_);
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
@@ -261,6 +268,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     if (cargo_net_) cargo_net_->set_contact_friction_callback(nullptr, nullptr);
     if (catch_net_) catch_net_->set_contact_friction_callback(nullptr, nullptr);
     physical_foot_push_.reset();
+    for (auto &palm : physical_palms_) palm.reset();
     physical_hands_.reset();
     physics_system_.SetContactListener(nullptr);
     physics_system_.SetSoftBodyContactListener(nullptr);

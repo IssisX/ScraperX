@@ -13,6 +13,7 @@ void Simulation::PhysicsWorld::OnStep(const JPH::PhysicsStepListenerContext &con
     if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
     if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
     physical_hands_->pre_step(context.mDeltaTime, true);
+    for (auto &palm : physical_palms_) if (palm) palm->pre_step(context.mDeltaTime);
     if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
     pre_step_physical_foot(context.mDeltaTime);
     slingshot_->collision_step(context);
@@ -133,6 +134,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         update_crouch(bodies, posture_commands);
         update_rig(bodies, commands);
         update_carry(bodies, commands, delta_seconds);
+        update_palm_vault(bodies, commands);
         apply_traversal_commands(bodies, commands);
         sync_radial_profile(bodies, commands);
         if ((traversal_state_ != TraversalState::Climbing && traversal_state_ != TraversalState::Hanging) ||
@@ -198,7 +200,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 physical_step_pending_ = false;
             }
         }
-        if (!jump_started) {
+        if (!jump_started && !palm_props_active()) {
             try_begin_hang(bodies, commands);
         }
         if (!was_grounded_before_tick) {
@@ -325,7 +327,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         receiver_body = step_receiver_;
     }
     contact_listener_.set_transfer_receiver(receiver_body,receiver_patch);
-    if (!slingshot_) pre_step_physical_foot(delta_seconds);
+    if (!slingshot_) {
+        pre_step_physical_foot(delta_seconds);
+        for (auto &palm : physical_palms_) if (palm) palm->pre_step(delta_seconds);
+    }
     physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
     if (grappling_gun_) grappling_gun_->post_step();
     if (cargo_net_) cargo_net_->refresh();
@@ -341,6 +346,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
          !deformable_plank_->fragment_supported(physical_foot_push_->readback().support)))
         physical_foot_push_->clear(PhysicalFootPush::StopReason::MaterialFaceLost);
     physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+    for (auto &palm : physical_palms_)
+        if (palm) palm->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
     if (physical_hands_->active() && physical_foot_push_->active() && foot_overlap_is_legal()) {
         const bool receiver_transfer = foot_push_purpose_ == FootPushPurpose::RigidTransfer;
         // An entry push acts on its original timber, not the receiver.

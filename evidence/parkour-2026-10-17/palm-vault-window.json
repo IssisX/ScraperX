@@ -1,0 +1,260 @@
+{
+  "base_source": "cba3675941b96eb9ccf4bbdcf38e6eab331d1522",
+  "scope": "Native passive palm vault, isolated mechanics and synthetic Godot arms/audio consumers; no device feel/FPS/full-release claim.",
+  "source_sha256": {
+    "src/sim/physical_hand_prop.cpp": "6e9d0ad47b7301028da512239c761c40d9b935f62fd74bcc4142277e39712523",
+    "src/sim/physical_hand_prop.hpp": "21895ea7c4a0641291674fd7934d15595f7d1247f886f14140077de01b555b56",
+    "src/sim/simulation/palm_vault.cpp": "cda1bb007cc36ba1422d03a5397f84135198d413bbec6fe36b0fbdbd14537f6c",
+    "src/sim/simulation/world.cpp": "3002a16cf0102db45ebbb02afe464f7dc4b87ead59b49197a94f5adcfaaba1db",
+    "src/sim/simulation/world.hpp": "eb68a556cfd5c048f31e0744b260fd49e47994a486aabd9f0e9dab6033e9fdff",
+    "src/sim/vault_rail_route.cpp": "8b05725eb163ad743cbf5dddfe7e08aa0031391a9b8f005297be27ab20d9ee29",
+    "tests/palm_vault_flow_tests.cpp": "8805bb8a8825a76d73becfbd51682e2b6dcf896a82963c4002bf12eefa503536"
+  },
+  "coherent_native_build": {
+    "commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/build-commands.json",
+    "result": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/build-result.json",
+    "translation_units": 76,
+    "compact_shoulder_correction": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/compact-results.json",
+    "public_release_and_rearm_changes": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-commands.json"
+  },
+  "public_results": [
+    {
+      "operation": "compile",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src/sim/simulation/palm_vault.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/objects/src_sim_simulation_palm_vault.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-compile.log"
+    },
+    {
+      "operation": "archive",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/ar",
+        "r",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/libscraperx_palm_vault_compact.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/objects/src_sim_simulation_palm_vault.cpp.o"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-archive.log"
+    },
+    {
+      "operation": "link",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/palm_vault_flow_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/libscraperx_palm_vault_compact.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_vault_flow_compact_tests"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-link.log"
+    },
+    {
+      "operation": "flow",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_vault_flow_compact_tests",
+        "flow"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-flow.log"
+    },
+    {
+      "operation": "cancel",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_vault_flow_compact_tests",
+        "cancel"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-cancel.log"
+    },
+    {
+      "operation": "slow",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_vault_flow_compact_tests",
+        "slow"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/public-rearm-slow.log"
+    }
+  ],
+  "unchanged_underpass_result": {
+    "operation": "under",
+    "argv": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/palm_vault_flow_tests",
+      "under"
+    ],
+    "exit": 0,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/under.log"
+  },
+  "duct_interaction_results": [
+    {
+      "operation": "link",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/source/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/air_tuck_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/libscraperx_palm_vault_compact.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/air_tuck_palm_route"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/air-tuck-interaction-link.log"
+    },
+    {
+      "operation": "run",
+      "argv": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/air_tuck_palm_route",
+        "route"
+      ],
+      "exit": 0,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/air-tuck-interaction-run.log"
+    }
+  ],
+  "isolated_mechanics": {
+    "commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-prop-47jh2qi4/test-commands.json",
+    "logs": [
+      "/data/data/com.termux/files/usr/tmp/scraperx-palm-prop-47jh2qi4/test-static.log",
+      "/data/data/com.termux/files/usr/tmp/scraperx-palm-prop-47jh2qi4/test-dynamic.log"
+    ],
+    "active_separation_lifecycle_commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-prop-47jh2qi4/lifecycle-final-commands.json",
+    "boundary": "Collision/gravity-free isolation proves row reciprocity/passivity, not the public game route. Later getters are read-only; compact shoulder configuration is exercised by public route."
+  },
+  "godot_consumer": {
+    "commands": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/feedback-commands.json",
+    "result": "/data/data/com.termux/files/usr/tmp/scraperx-palm-vault-6lyfscq6/feedback-result.json",
+    "output": "PALM_FEEDBACK checks=13 failures=0 consumer_only=1",
+    "boundary": "Actual Godot4.7 headless consumers; no native bridge library on this local linux.arm64 environment. Touch visibility/import/Android path require matching CI."
+  },
+  "outputs": {
+    "flow": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "PALM_CROSS cancel=0 peak_load_n=3000 loaded_ticks=17 grade_tick=267 z=-75.8319",
+      "PALM_CROSS cancel=0 peak_load_n=3000 loaded_ticks=17 grade_tick=1318 z=-75.7971",
+      "PASS PALM_VAULT_FLOW mode=flow"
+    ],
+    "cancel": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "PALM_CROSS cancel=1 peak_load_n=3000 loaded_ticks=1 grade_tick=261 z=-75.3616",
+      "PASS PALM_VAULT_FLOW mode=cancel"
+    ],
+    "slow": [
+      "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+      "PALM_SLOW approach_mps=1.375 palm_count=0",
+      "PASS PALM_VAULT_FLOW mode=slow"
+    ]
+  },
+  "corrections": [
+    "Standing shoulder offset during real compact posture put the minimum palm at capsule soles. Preserved shoulder-to-crown distance gives compact COM+.15m with unchanged1.05m reach/body/force laws.",
+    "Public Release omitted actual palm ownership; it now accepts and clears palms. Touch Drop availability consumes actual palm-active readback.",
+    "Transient rail capsule contact renewed cancelled held Crouch. Rearm now requires receiving feet plus released Crouch.",
+    "East retry path hit existing storage trays. Actual walking retry uses clear west aisle atx=-45; no geometry removed."
+  ],
+  "delivery": "Source/APK publication follows this local acceptance; matching candidate receipts are separate. Prior wider CI failures are not counted as green."
+}

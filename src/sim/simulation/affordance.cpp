@@ -70,6 +70,8 @@ using namespace detail;
 }
 
 void Simulation::PhysicsWorld::clear_traversal(bool preserve_valid_foot) noexcept {
+    clear_palm_props();
+    palm_vault_used_ = false;
     hang_topout_ticks_left_ = 0;
     hang_topout_left_generation_ = hang_topout_right_generation_ = 0;
     second_hand_added_this_tick_ = false;
