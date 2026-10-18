@@ -611,6 +611,19 @@ void sprint_keeps_jump_momentum() {
     require(sprint_jump >= walk_jump + 2.0,
             "a sprinting jump must carry at least 2 m past a walking one");
     require(!walk_flag && walk_peak <= 5.55, "without sprint held the body walks at 5.5 m/s");
+    // Crouching directly from the moving landing deliberately starts a slide.
+    // Establish slow supported footing before testing ordinary crouch walking.
+    (void)sprint.set_move_input(0.0, 0.0);
+    bool ready_for_crouch_walk = false;
+    for (std::uint32_t tick = 0; tick < 2U * Simulation::kTickRateHz; ++tick) {
+        (void)sprint.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = sprint.snapshot();
+        if (state.player_grounded && !state.player_sliding && horizontal_speed(state) < 0.3) {
+            ready_for_crouch_walk = true;
+            break;
+        }
+    }
+    require(ready_for_crouch_walk, "crouch-walk eligibility starts from actual slow footing without a slide");
     (void)sprint.set_sprint_input(true);
     (void)sprint.set_crouch_input(true);
     (void)sprint.advance_frame(0.3);
@@ -620,6 +633,7 @@ void sprint_keeps_jump_momentum() {
         (void)sprint.set_move_input(-1.0, 0.0);
         (void)sprint.set_facing(-1.0, 0.0);
         (void)sprint.advance_frame(Simulation::kFixedStepSeconds);
+        require(!sprint.snapshot().player_sliding, "slow crouch walking does not silently become the slide case");
         if (tick > 45U) {
             crouched_peak = std::max(crouched_peak, horizontal_speed(sprint.snapshot()));
         }

@@ -1,0 +1,30 @@
+{
+  "source_commit": "ac4dc6d78baf7d2a8847b12d056cce4ea8a6ef02",
+  "candidate_run": "39166581985",
+  "candidate_result": "success",
+  "direct_apk": {
+    "source_commit": "ac4dc6d78baf7d2a8847b12d056cce4ea8a6ef02",
+    "version_code": 214521475,
+    "tag": "chatgpt-candidate-ac4dc6d",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-ac4dc6d/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-ac4dc6d",
+    "asset_id": 654512002,
+    "asset_size": 36979377
+  },
+  "local_delivery": {
+    "source_commit": "ac4dc6d78baf7d2a8847b12d056cce4ea8a6ef02",
+    "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-ac4dc6d.apk",
+    "bytes": 36979377,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39166581985/artifacts/12150649190"
+  },
+  "actual_CI_results": [
+    "SLIDE_FRICTION_AUDIO PASS checks=48 failures=0 native_contacts_exercised=0 heard_audio=0",
+    "SCRAPERX_THUMB_FLOW_INPUT PASS checks=303 native=1",
+    "Check native-driven landing and slide camera feedback: completed success; its command rejects script errors"
+  ],
+  "local_lifecycle": "SCRAPERX_LANDING_CAMERA_UNIT PASS checks=107; P/lifecycle-repair.json",
+  "direct_MCP": "P/mcp-receipt.json actual real Main/native295PASS, normal ready-player path before lifecycle-only guard; runtime stopped",
+  "full_release": "Separate39166581982; broader native failures known from preceding source; no full-green claim",
+  "phone_play": "UNVERIFIED; needs actual audio/feel on matchingAPK"
+}

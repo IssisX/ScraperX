@@ -49,10 +49,14 @@ void expired_plant_rejects() {
 }
 void drop_cancels() {
     Simulation s;leave_stock(s);tick(s,2);
+    const auto plant=s.snapshot();
+    require(!plant.player_grounded && plant.traversal_hand_constraint_count==0 &&
+            plant.foot_push_active && plant.foot_push_support_entity_id==Simulation::kWorldSolidEntityId &&
+            plant.foot_push_source_contact_tick>0,"Drop fixture retains an actual trailing foot without hand support");
     require(s.request_jump(),"late Jump queued before explicit Drop");
-    // No held attachment makes Release return false; it still queues native
-    // cancellation. Its effect, rather than attachment availability, is tested.
-    require(!s.request_release(),"empty-handed Drop reports no held attachment");
+    // The remaining physical foot is a real attachment even without hands.
+    // Drop accepts its release and cancels the queued jump in the same tick.
+    require(s.request_release(),"Drop accepts release of the actual trailing foot");
     double rise=-100;for(unsigned i=0;i<10;++i){tick(s);rise=std::max(rise,s.snapshot().player_linear_velocity.y);}
     require(rise<=0 && !s.snapshot().foot_push_active,"Drop cancels trailing plant and queued takeoff");
 }
