@@ -852,6 +852,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.catwalk_allowed = view.catwalk_allowed;
     result.turn = static_cast<std::uint8_t>(view.turn);
     result.turn_s = view.turn_s;
+    result.fooled = view.fooled;
+    result.wary = view.wary;
+    result.vaults = view.vaults;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

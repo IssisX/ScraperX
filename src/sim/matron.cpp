@@ -262,7 +262,24 @@ void Matron::route_toward(const float fx, const float fz, const float tx, const 
     }
 }
 
-void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed, const float foot_accel) {
+void Matron::take_lead(const float x, const float z, const float loudness, const bool seen) {
+    noise_heard_ = loudness;
+    heard_x_ = x;
+    heard_z_ = z;
+    since_heard_s_ = 0.0F;
+    lead_seen_ = seen;
+}
+
+void Matron::stand_down() {
+    turn_ = Turn::None;
+    turn_s_ = 0.0F;
+    wary_ = false;
+    peer_s_ = 0.0F;
+    state_ = way_out_ ? State::Guarding : State::Shuffling;
+}
+
+void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed, const float foot_accel,
+                         const bool vault) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     target_x_ = wx;
@@ -303,6 +320,32 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
             delta = delta.Normalized() * (foot_accel * dt);
         }
         velocity = Vec3(velocity.GetX() + delta.GetX(), velocity.GetY(), velocity.GetZ() + delta.GetZ());
+        // The Turn's vault: something lower than her chest close ahead in
+        // her way (not the player), and nothing at her head: she jumps it.
+        if (vault && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
+            const Vec3 ahead(dx / length * 1.1F, 0.0F, dz / length * 1.1F);
+            IgnoreMultipleBodiesFilter not_us;
+            not_us.Reserve(2);
+            not_us.IgnoreBody(body_);
+            not_us.IgnoreBody(player_);
+            RayCastResult knee;
+            RayCastResult head;
+            const bool low = physics_.GetNarrowPhaseQuery().CastRay(
+                RRayCast(at + Vec3(0.0F, 0.45F - kStandCentre, 0.0F), ahead), knee, {}, {}, not_us);
+            const bool high = physics_.GetNarrowPhaseQuery().CastRay(
+                RRayCast(at + Vec3(0.0F, 1.6F - kStandCentre, 0.0F), ahead), head, {}, {}, not_us);
+            // And floor where she would come down (about 3 m on): she does not
+            // vault a crate stood against the rail into the drop beyond it.
+            RayCastResult landing;
+            const bool lands = physics_.GetNarrowPhaseQuery().CastRay(
+                RRayCast(at + ahead * 2.7F + Vec3(0.0F, 0.5F, 0.0F), Vec3(0.0F, -(kStandCentre + 1.2F), 0.0F)), landing,
+                {}, {}, not_us);
+            if (low && !high && lands) {
+                velocity = Vec3(dx / length * kVaultForwardMps, kVaultUpMps, dz / length * kVaultForwardMps);
+                vault_cooldown_s_ = kVaultCooldownS;
+                ++vaults_;
+            }
+        }
         bodies.SetLinearVelocity(body_, velocity);
     }
     speed_ = std::hypot(velocity.GetX(), velocity.GetZ());
@@ -400,6 +443,8 @@ int Matron::planks_fallen() const noexcept {
 
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
     step_planks(dt);
+    vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
+    look_s_ = std::max(0.0F, look_s_ - dt);
     sees_player_ = false;
     sees_far_ = false;
     noise_heard_ = 0.0F;
@@ -450,7 +495,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         break;
     case State::Hunting:
     case State::Searching:
-    case State::Shuffling: {
+    case State::Shuffling:
+    case State::Guarding:
+    case State::Peering: {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         const float ax = float(at.GetX());
         const float az = float(at.GetZ());
@@ -467,18 +514,33 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     (saw || sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0)));
         // A crash on the deck louder than the player draws her to it instead.
         const bool crash_heard = crash_on_deck && crash.loudness * kFullHearingM >= distance_xz(ax, az, crash.x, crash.z);
-        if (crash_heard && !saw && (!heard || crash.loudness > loudness)) {
-            noise_heard_ = crash.loudness;
-            heard_x_ = crash.x;
-            heard_z_ = crash.z;
-            since_heard_s_ = 0.0F;
+        if (saw) {
+            // In sight: no doubt where the player is.
+            take_lead(px, pz, heard ? loudness : 0.3F, true);
+            wary_ = false;
             state_ = State::Hunting;
-        } else if (heard || saw) {
-            noise_heard_ = heard ? loudness : 0.3F;
-            heard_x_ = px;
-            heard_z_ = pz;
-            since_heard_s_ = 0.0F;
-            if (state_ != State::Hunting) {
+        } else if (crash_heard || heard) {
+            // The louder sound: a crash, or the player.
+            const bool crash_first = crash_heard && (!heard || crash.loudness > loudness);
+            const float sx = crash_first ? crash.x : px;
+            const float sz = crash_first ? crash.z : pz;
+            const float loud = crash_first ? crash.loudness : loudness;
+            const bool close = distance_xz(ax, az, sx, sz) <= kWaryNoiseM;
+            if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
+                // The chase goes on by ear: the same lead, moved on.
+                take_lead(sx, sz, loud, lead_seen_);
+                wary_ = wary_ && !close;
+            } else if (state_ == State::Guarding && fooled_ >= 2 && !close) {
+                // Fooled twice: a far noise only turns her head.
+                noise_heard_ = loud;
+                look_x_ = sx;
+                look_z_ = sz;
+                look_s_ = 3.0F;
+            } else {
+                // A fresh lead: once fooled, checked from a vantage first.
+                take_lead(sx, sz, loud, false);
+                wary_ = fooled_ >= 1 && !close;
+                peer_s_ = 0.0F;
                 state_ = State::Hunting;
             }
         } else {
@@ -505,11 +567,23 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         float wx = ax;
         float wz = az;
         if (state_ == State::Hunting) {
-            if (since_heard_s_ > kLoseTrackSeconds) {
+            // Going to look from a vantage is not losing track: she goes on to it.
+            if (!wary_ && since_heard_s_ > kLoseTrackSeconds) {
                 turn_ = Turn::None;
                 turn_s_ = 0.0F;
                 state_ = State::Searching;
                 search_s_ = 0.0F;
+            } else if (wary_) {
+                // Wary: up to where she can see the place, then she looks.
+                if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
+                    sees(at + RVec3(0.0, -0.5, 0.0), RVec3(heard_x_, at.GetY() - 0.5, heard_z_))) {
+                    state_ = State::Peering;
+                    peer_s_ = 0.0F;
+                } else {
+                    route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz);
+                    walk_toward(dt, wx, wz, kSearchMps);
+                    break;
+                }
             } else {
                 route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz);
                 step_turn(dt, d, loudness);
@@ -517,12 +591,23 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, 0.0F, kTurnFootAccel);
                 } else if (turn_ == Turn::Lunge) {
                     const bool burst = std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
-                    walk_toward(dt, wx, wz, burst ? kTurnBurstMps : kTurnPauseMps, kTurnFootAccel);
+                    walk_toward(dt, wx, wz, burst ? kTurnBurstMps : kTurnPauseMps, kTurnFootAccel, true);
                 } else {
                     walk_toward(dt, wx, wz, kHuntMps);
                 }
                 break;
             }
+        }
+        if (state_ == State::Peering) {
+            // Still, looking at the place the noise came from.
+            peer_s_ += dt;
+            walk_toward(dt, ax, az, 0.0F);
+            yaw_ = turn_toward(yaw_, std::atan2(heard_x_ - ax, heard_z_ - az), kTurnRate, dt);
+            if (peer_s_ >= kPeerSeconds) {
+                ++fooled_;   // nobody there: another noise that lied
+                stand_down();
+            }
+            break;
         }
         if (state_ == State::Searching) {
             if (distance_xz(ax, az, heard_x_, heard_z_) > 1.5F) {
@@ -532,10 +617,31 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 search_s_ += dt;
                 walk_toward(dt, ax, az, 0.0F);
                 if (search_s_ >= kSearchSeconds) {
-                    state_ = State::Shuffling;
+                    // Ran to a sound and found nobody: she will not be had so easily again.
+                    if (!lead_seen_) {
+                        ++fooled_;
+                    }
+                    stand_down();
                 }
             }
             break;
+        }
+        if (state_ == State::Guarding) {
+            if (!way_out_) {
+                state_ = State::Shuffling;
+            } else {
+                if (distance_xz(ax, az, kPostX, kPostZ) > 0.5F) {
+                    route_toward(ax, az, kPostX, kPostZ, on_catwalk, wx, wz);
+                    walk_toward(dt, wx, wz, kSearchMps);
+                } else {
+                    // In the mouth of the way out, still and silent: facing out
+                    // over the band, or toward a far noise she let go.
+                    walk_toward(dt, ax, az, 0.0F);
+                    const float want = look_s_ > 0.0F ? std::atan2(look_x_ - ax, look_z_ - az) : 0.0F;
+                    yaw_ = turn_toward(yaw_, want, 2.0F, dt);
+                }
+                break;
+            }
         }
         // Shuffling: the stooped patrol round the loop.
         const Node &next = nodes_[static_cast<std::size_t>(patrol_node_)];
@@ -566,7 +672,9 @@ void Matron::post_step(const float dt) {
 }
 
 bool Matron::caught(const RVec3 player) const noexcept {
-    if (!body_in_world_ || dead_ || (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling)) {
+    if (!body_in_world_ || dead_ ||
+        (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
+         state_ != State::Guarding && state_ != State::Peering)) {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -585,8 +693,16 @@ void Matron::restore(const Saved &saved) {
         turn_s_ = 0.0F;
         turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
         sight_far_s_ = 0.0F;
+        // A new run: what she learned of the player's tricks is forgotten.
+        fooled_ = 0;
+        wary_ = false;
+        lead_seen_ = false;
+        peer_s_ = 0.0F;
+        look_s_ = 0.0F;
+        vault_cooldown_s_ = 0.0F;
+        vaults_ = 0;
         if (state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
-            state_ == State::Shuffling) {
+            state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering) {
             // Back at her locker, as she burst out of it.
             spawn_body();
             state_ = State::Emerging;
@@ -601,7 +717,10 @@ void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
     view_.released = state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
-                     state_ == State::Shuffling;
+                     state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering;
+    view_.fooled = fooled_;
+    view_.wary = wary_ || state_ == State::Peering;
+    view_.vaults = vaults_;
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;

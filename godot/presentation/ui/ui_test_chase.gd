@@ -188,6 +188,10 @@ func _look_matron_gallery() -> bool:
 		["turn_lunge_a", {"state": 3, "speed": 9.0, "stride": 0.3, "turn": 2}],
 		["turn_lunge_b", {"state": 3, "speed": 9.0, "stride": 0.9, "turn": 2}],
 		["emerge", {"state": 2, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		["guard", {"state": 7, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		["peer", {"state": 8, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		# Rising (0.15 m a frame): the vault.
+		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
 	]
 	var t := 0.0
 	for entry in poses:
@@ -199,8 +203,10 @@ func _look_matron_gallery() -> bool:
 		for key in entry[1]:
 			data[key] = entry[1][key]
 		# Settle the pose a few frames (the state's own clock runs).
+		var rise := float(entry[2]) if entry.size() > 2 else 0.0
 		for k in 6:
 			t += 0.04 + 0.013 * float(k)
+			data["position"] = data["position"] + Vector3(0.0, rise, 0.0)
 			view.preview(data, 0.04 + 0.013 * float(k), _main._camera.global_position, here)
 			await _frames(1)
 		await _look_at_point(view.head_world_position() - Vector3(0.0, 0.5, 0.0))

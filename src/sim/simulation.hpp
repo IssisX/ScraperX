@@ -197,6 +197,11 @@ struct MatronSnapshot final {
     bool catwalk_allowed = false;
     std::uint8_t turn = 0;            // Matron::Turn: 1 the wind-up, 2 the lunges
     double turn_s = 0.0;
+    // Her mind: noises she ran to and found nobody at this run, whether she
+    // is checking the present one from a vantage, and what she has vaulted.
+    std::uint32_t fooled = 0;
+    bool wary = false;
+    std::uint32_t vaults = 0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

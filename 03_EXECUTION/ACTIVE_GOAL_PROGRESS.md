@@ -1121,6 +1121,22 @@ unbraked zipline now kills at its post. Proof: `run_zipline` (flat out: torn off
 side-on, dead, the body by the post), `touch_zipline_slam` (new: ridden flat out on touch, the
 death named a hit, the body by the post).
 
+**The Matron's mind, on her deck (2026-10-18; decision 9, first piece).** Losing her used to end
+in her shuffling about. Now she has somewhere to be and learns from being had. Lose her, and once
+her search finds nobody she walks to the mouth of Stage A's cage (the deck's way down, while the
+cage is down) and stands there, upright, silent, the music box still, the head holding one way and
+snapping to another: only her eyes give her away, or her breath from 6 m. A noise she runs to and
+finds nobody at counts as a trick; after one, she stops short of the next (6 m, where she can see
+the spot), cranes toward it holding her breath for 2.5 s, and only then comes on. After two, a far
+noise only turns her head at her post; it takes one within 12 m to draw her. A death wipes what
+she learned. In the Turn she uses the moves: something below her chest in her way, nothing at her
+head and floor beyond, she vaults it (her feet 1.4 m up, hands slammed down on it); frail, she
+shoves it. Proof: native `matron` (mind: at her post 0.39 m off it, peered from 5.8 m, fooled
+twice she strayed 0.57 m for a far sprint and came for a near one, the catch forgot it all;
+vault: led round three bands she comes up the east band, snaps, the player steps in behind the
+crate in her wind-up, she clears it 2.0 m past its middle, the crate unmoved); the poses render in
+`look_matron_gallery` (guard, peer, vault).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1138,7 +1154,10 @@ fill in after).**
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint.
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
-   her extras; her mind decided 2026-10-18 (decision 9: A + B + C).
+   her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
+   2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Next:
+   she follows you off the deck (the cage, the zipline, the stairs) and hunts other levels; then
+   lift meddling you can undo.
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
 

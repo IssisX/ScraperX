@@ -18,6 +18,8 @@ constexpr int kStateStraining = static_cast<int>(Matron::State::Straining);
 constexpr int kStateEmerging = static_cast<int>(Matron::State::Emerging);
 constexpr int kStateHunting = static_cast<int>(Matron::State::Hunting);
 constexpr int kStateDead = static_cast<int>(Matron::State::Dead);
+constexpr int kStateGuarding = static_cast<int>(Matron::State::Guarding);
+constexpr int kStatePeering = static_cast<int>(Matron::State::Peering);
 
 // One tick of a stick held toward (x, z); true once within `tolerance` of it.
 bool steer(Simulation &s, const double x, const double z, const bool sprint, const double tolerance = 0.4) {
@@ -412,6 +414,190 @@ void run_matron() {
                 "matron: the ingot dolly brings a plate down and falls through");
         require(m.alive && m.state != kStateDead && s.snapshot().death_count == 0,
                 "matron: a plate down under the dolly kills no one");
+    }
+    // ---- her mind (the owner, 2026-10-18: B and C): she guards the way out
+    // when she loses the player; a noise that led to nobody makes her wary,
+    // the next checked from a vantage; fooled twice, a far noise does not draw
+    // her off her post, a close one does; a death forgets it all ------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const auto post_distance = [&s] {
+            const auto m = s.matron_state();
+            return std::hypot(m.position.x - Matron::kPostX, m.position.z - Matron::kPostZ);
+        };
+        const auto run_until = [&s](const double seconds, const auto &done) {
+            const auto ticks = static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz));
+            for (int i = 0; i < ticks; ++i) {
+                tick(s);
+                if (done()) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        require(s.advance_frame(1.0).accepted, "matron mind: settle");
+        // Wake her by her locker, then creep off round the west band to its far corner.
+        require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron mind: a sprint toward her locker");
+        (void)s.set_crouch_input(true);
+        require(go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 40.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0),
+                "matron mind: a crouched walk round to the south-west corner");
+        stand_still(s, 0.2);
+        // She runs to where she last heard the player, finds nobody, searches, and
+        // goes to stand in the mouth of Stage A's cage.
+        const bool guarding = run_until(60.0, [&] {
+            return s.matron_state().state == kStateGuarding && post_distance() < 0.6 && s.matron_state().speed < 0.2;
+        });
+        const auto at_post = s.matron_state();
+        std::cout << "  matron mind: lost the player, at her post " << post_distance() << " m off it, fooled "
+                  << at_post.fooled << ", state " << int(at_post.state) << "\n";
+        require(guarding && at_post.fooled == 1 && s.snapshot().death_count == 0,
+                "matron mind: losing the player, she goes to stand in the way out's mouth");
+        stand_still(s, 3.0);
+        require(s.matron_state().state == kStateGuarding && post_distance() < 0.6,
+                "matron mind: she waits there, still");
+
+        // A second noise: a sprint up the west band, then a creep back to the corner.
+        (void)s.set_crouch_input(false);
+        require(go(s, -Matron::kBandX, -152.0, true, 6.0, 0.6), "matron mind: a sprint up the west band");
+        const double noise_x = s.snapshot().player_position.x;
+        const double noise_z = s.snapshot().player_position.z;
+        (void)s.set_crouch_input(true);
+        double closest = 1.0e9;
+        bool peered = false;
+        const auto watch = [&] {
+            const auto m = s.matron_state();
+            closest = std::min(closest, std::hypot(m.position.x - noise_x, m.position.z - noise_z));
+            peered = peered || m.state == kStatePeering;
+        };
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            if (steer(s, -Matron::kBandX, Matron::kBandSouthZ, false, 0.4)) {
+                break;
+            }
+            tick(s);
+            watch();
+        }
+        stand_still(s, 0.2);
+        const bool back = run_until(60.0, [&] {
+            watch();
+            return s.matron_state().state == kStateGuarding && post_distance() < 0.6;
+        });
+        std::cout << "  matron mind: wary of the second noise: peered " << peered << ", came within " << closest
+                  << " m of it, fooled " << s.matron_state().fooled << "\n";
+        require(peered && closest > 4.0 && back && s.matron_state().fooled == 2 && s.snapshot().death_count == 0,
+                "matron mind: the second noise she checks from a vantage, then goes back to her post");
+
+        // Fooled twice: a sprint far off does not draw her off her post.
+        (void)s.set_crouch_input(false);
+        double farthest = 0.0;
+        for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            if (steer(s, -Matron::kBandX, -158.0, true, 0.6)) {
+                (void)s.set_sprint_input(false);
+            }
+            tick(s);
+            farthest = std::max(farthest, post_distance());
+        }
+        std::cout << "  matron mind: a far sprint: she strayed " << farthest << " m from her post, state "
+                  << int(s.matron_state().state) << "\n";
+        require(farthest < 1.0 && s.matron_state().state == kStateGuarding,
+                "matron mind: fooled twice, a far noise does not draw her off her post");
+
+        // A close one does: up the band toward her, loud, and she comes.
+        bool hunted = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !hunted; ++i) {
+            (void)steer(s, -Matron::kBandX, Matron::kBandNorthZ, true, 0.6);
+            tick(s);
+            hunted = s.matron_state().state == kStateHunting;
+        }
+        require(hunted, "matron mind: a noise close to her post draws her");
+        const auto deaths = s.snapshot().death_count;
+        stand_still(s, 0.0);
+        const bool caught = run_until(20.0, [&] { return s.snapshot().death_count > deaths; });
+        require(caught, "matron mind: standing still, the player is caught");
+        tick(s);
+        std::cout << "  matron mind: after the catch, fooled " << s.matron_state().fooled << "\n";
+        require(s.matron_state().fooled == 0, "matron mind: a death forgets what she learned");
+        std::cout << "PASS scraperx_sim matron mind: guarded at " << at_post.position.x << "," << at_post.position.z
+                  << " peered_short_m=" << closest << " fooled_twice_stayed_m=" << farthest << "\n";
+    }
+    // ---- A: in the Turn she vaults what blocks her way; frail, she shoves it -------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron vault: settle");
+        // Quietly round to the east band's south crate and shove it into the band's middle.
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0) && go(s, Matron::kBandX, -150.5, false, 40.0),
+                "matron vault: a crouched walk to the east band");
+        (void)s.set_crouch_input(false);
+        // Shoved off the rail into the band's middle, then 5 m down it.
+        require(push_toward(s, LooseStock::kDeckCrateSouth, Matron::kBandX, -155.0, 20.0,
+                            [](const scraperx::sim::Vector3 &c) { return c.x < Matron::kBandX + 0.3; }) &&
+                    push_toward(s, LooseStock::kDeckCrateSouth, Matron::kBandX, -163.0, 20.0,
+                                [](const scraperx::sim::Vector3 &c) { return c.z < -160.0; }),
+                "matron vault: the crate shoved into the middle of the east band");
+        // Wake her with a sprint up the band, then walk off west along the north
+        // band and wait there for her.
+        require(go(s, Matron::kBandX, -133.0, true, 8.0, 0.8), "matron vault: a sprint up the band, near her locker");
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 1.0) &&
+                    go(s, -10.0, Matron::kBandNorthZ, false, 15.0),
+                "matron vault: a walk off west along the north band");
+        (void)s.set_crouch_input(true);
+        require(wait_for_her(s, 18.0, 40.0), "matron vault: she comes along the north band");
+        (void)s.set_crouch_input(false);
+        // Led the long way round, past the crate, she comes up the east band
+        // after the player with her first quiet spell long over.
+        require(go(s, -Matron::kBandX, Matron::kBandNorthZ, true, 8.0, 1.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, 24.4, -167.0, true, 4.0, 0.8) && go(s, 24.4, -157.5, true, 4.0),
+                "matron vault: a run round the west and south bands and up the east band past the crate");
+        (void)s.set_move_input(0.0, 0.0);
+        bool winding = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !winding; ++i) {
+            tick(s);
+            winding = s.matron_state().turn == static_cast<std::uint8_t>(Matron::Turn::Windup);
+        }
+        require(winding, "matron vault: in plain sight up the band she snaps");
+        // In her wind-up the player steps in behind the crate, on her line.
+        const auto m = s.matron_state().position;
+        const auto c = stock(s, LooseStock::kDeckCrateSouth);
+        const double run = std::hypot(c.x - m.x, c.z - m.z);
+        const double ux = (c.x - m.x) / run;
+        const double uz = (c.z - m.z) / run;
+        (void)go(s, c.x + ux * 1.6, c.z + uz * 1.6, false, 3.0, 0.3);
+        (void)s.set_move_input(0.0, 0.0);
+        bool vaulted = false;
+        for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !vaulted; ++i) {
+            tick(s);
+            vaulted = s.matron_state().vaults > 0;
+        }
+        require(vaulted, "matron vault: in the Turn she vaults the crate in her way");
+        // Over it, not through it: she comes down beyond its far face, the
+        // crate where it stood (until the catch puts her back in her locker).
+        const auto before = stock(s, LooseStock::kDeckCrateSouth);
+        const auto deaths = s.snapshot().death_count;
+        double beyond = -1.0e9;
+        double peak_y = 0.0;
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            if (s.snapshot().death_count != deaths) {
+                break;
+            }
+            const auto at = s.matron_state().position;
+            beyond = std::max(beyond, (at.x - before.x) * ux + (at.z - before.z) * uz);
+            peak_y = std::max(peak_y, at.y);
+        }
+        const auto after = stock(s, LooseStock::kDeckCrateSouth);
+        const double shoved = std::hypot(after.x - before.x, after.z - before.z);
+        std::cout << "  matron vault: over the crate at (" << before.x << ", " << before.z << "): her feet "
+                  << peak_y - Matron::kStandCentre - Matron::kDeckTop << " m up, " << beyond
+                  << " m past its middle; the crate moved " << shoved << " m\n";
+        require(peak_y - Matron::kStandCentre - Matron::kDeckTop > 0.88 && beyond > 0.8,
+                "matron vault: she clears the crate and comes down beyond it");
+        require(shoved < 0.3, "matron vault: vaulted, the crate is not shoved");
+        require(s.matron_state().alive, "matron vault: she lands on the deck, alive");
+        std::cout << "PASS scraperx_sim matron vault: feet_up_m=" << peak_y - Matron::kStandCentre - Matron::kDeckTop
+                  << " past_m=" << beyond << " crate_moved_m=" << shoved << "\n";
     }
     // ---- the same start and inputs give the same chase ------------------------------
     {

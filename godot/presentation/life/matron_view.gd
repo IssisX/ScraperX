@@ -26,6 +26,8 @@ const STATE_HUNTING := 3
 const STATE_SEARCHING := 4
 const STATE_SHUFFLING := 5
 const STATE_DEAD := 6
+const STATE_GUARDING := 7   # at her post in the mouth of the way out
+const STATE_PEERING := 8    # stopped short of a noise, looking
 const BOLT_COUNT := 4
 const STEP_M := 0.7
 const HEARD_MUSIC_M := 55.0
@@ -53,6 +55,7 @@ var _fall_speed := 0.0
 var _was_seen := false
 var _last_turn := 0
 var _cry_fall := false
+var _vaults_seen := -1
 var _planks: Array[MeshInstance3D] = []
 var _plank_bolted: Array[bool] = []
 # The locker.
@@ -671,6 +674,12 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var wide := 0.0
 	var tick := int(floorf(_clock * 14.0))
 	var turn := int(data.get("turn", 0))
+	# Wary of a noise, she comes on as she searches: upright, slow, head snapping.
+	if state == STATE_HUNTING and turn == 0 and bool(data.get("wary", false)):
+		state = STATE_SEARCHING
+	var still_on_post := state == STATE_GUARDING and speed < 0.3
+	# Rising off the floor in the Turn: a vault.
+	var vaulting := turn == 2 and _fall_speed > 1.0
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -745,6 +754,33 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = 0.15
 		head_roll = 0.3
 		jaw_open = 0.2 + 0.15 * sin(_clock * 11.0)
+	elif still_on_post:
+		# At her post in the mouth of the way out: upright and still as a
+		# post, the head holding one way, then snapping round to another.
+		var look := _hash(int(floorf(_clock / 2.6)) + 31)
+		_head_yaw = lerpf(_head_yaw, (look - 0.5) * 2.4, 1.0 - exp(-30.0 * delta))
+		pitch = 0.18
+		hip_y = 1.0
+		knees = 0.05
+		arms_fwd = 0.08
+		arms_bend = 0.1
+		arms_splay = 0.05
+		head_pitch = 0.05
+		jaw_open = 0.04
+	elif state == STATE_PEERING:
+		# Stopped short of a noise, craning toward it: leant out from the
+		# hips, the neck stretched, the head tilting, her breath held.
+		pitch = 1.0
+		hip_y = 0.9
+		knees = 0.4
+		legs_fwd = 0.3
+		legs_back = -0.1
+		arms_fwd = 0.55
+		arms_bend = 0.6
+		arms_splay = 0.25
+		head_pitch = -0.75
+		head_roll = 0.55 * sin(_clock * 0.9)
+		jaw_open = 0.28
 	else:
 		# Shuffling: stooped, dragging, a head that lolls and twitches.
 		var step := stride / 0.42 * PI
@@ -800,6 +836,17 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			arms_fwd = 1.1 + r1
 			arms_splay = 1.0
 			knees = 1.6 + r3
+			if vaulting:
+				# Over what was in her way: knees tucked up under her, both
+				# hands planted down ahead on it.
+				pitch = 1.15
+				knees = 2.3
+				knee_flip = 1.0
+				legs_fwd = 1.7
+				legs_back = 1.7
+				arms_fwd = 1.9
+				arms_bend = 0.2
+				arms_splay = 0.35
 	body.position.y = hip_y
 	body.position += jolt
 	(_p["torso"] as Node3D).rotation.y = twist
@@ -810,7 +857,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	torso.rotation.x = pitch
 	neck.rotation = Vector3(head_pitch * 0.4, head_back, head_roll * 0.3)
-	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING else yaw_to_player * (0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
+	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING or still_on_post else yaw_to_player * (0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
 	jaw.rotation.x = jaw_open
 	_limb(_p["hp_l"], _p["kn_l"], legs_fwd, knees * knee_flip)
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
@@ -895,7 +942,18 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		if turn > 0:
 			# The music box warps and stutters while she is broken.
 			pitch = 0.55 + 0.25 * _hash(int(floorf(_clock * 12.0)))
+		# At her post the music box is still: she is only seen, or heard
+		# breathing from close by.
+		var still_on_post := state == STATE_GUARDING and float(data["speed"]) < 0.3
+		if still_on_post:
+			volume = -80.0
 		_audio.matron_music(_hip_world(), volume, pitch)
+		# A vault: her hands slamming down on what she goes over.
+		var vaults := int(data.get("vaults", 0))
+		if _vaults_seen >= 0 and vaults > _vaults_seen:
+			_audio.matron_cue(&"matron_step", _hip_world(), 2.0, 0.7)
+			_audio.matron_cue(&"bone_crack", _hip_world(), -4.0, randf_range(1.2, 1.35))
+		_vaults_seen = vaults
 		if turn != _last_turn:
 			if turn == 1:
 				_audio.matron_cue(&"bone_crack", _hip_world(), 1.0, randf_range(0.9, 1.1))
@@ -905,7 +963,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			_last_turn = turn
 		# Her breath, closer and quicker the nearer she is.
 		_breath_in -= delta
-		if _breath_in <= 0.0 and d < 24.0:
+		if _breath_in <= 0.0 and d < (6.0 if still_on_post else 24.0) and state != STATE_PEERING:
 			_breath_in = lerpf(0.7, 2.0, clampf(d / 24.0, 0.0, 1.0))
 			_audio.matron_cue(&"matron_breath", _hip_world(), lerpf(-1.0, -14.0, clampf(d / 24.0, 0.0, 1.0)), randf_range(0.9, 1.05))
 		# Steps: a dragged slipper, or on the hunt hands and feet slapping.

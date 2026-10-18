@@ -26,6 +26,17 @@
 // the one at the release is where a death returns the player, to a Matron
 // reset at her locker.
 //
+// Her mind (the owner, 2026-10-18: A two tiers, B meddling that can be
+// undone, C tricks learned within a run). She knows the deck's way out: Stage
+// A's cage. Losing the player, she goes and stands in its mouth, silent
+// (Guarding): the player must draw her off it. A noise she ran to and found
+// nobody at makes her wary: the next she checks from where she can see the
+// place, kVantageM short of it (Peering), before going on; once fooled twice,
+// a noise farther than kWaryNoiseM from her post does not draw her off it at
+// all, she only turns to it. Sight, or a noise close by, always does. What
+// she learns lasts the run: a restore (a death, a load) forgets it. In the
+// Turn she vaults what blocks her way (kVaultUpMps); frail, she shoves it.
+//
 // Only simulation state decides anything here (no clock, no randomness): the
 // same start and inputs give the same chase.
 
@@ -51,6 +62,8 @@ public:
         Searching = 4, // lost the player: to the last sound, then about
         Shuffling = 5, // unaware: the stooped patrol
         Dead = 6,      // fell
+        Guarding = 7,  // standing in the way out's mouth, silent, listening
+        Peering = 8,   // stopped short of a noise, looking for the player there
     };
 
     static constexpr std::uint64_t kEntity = 3200;
@@ -118,6 +131,22 @@ public:
     // Below this she is gone (fell): a fall of 12 m from the deck.
     static constexpr float kFallenBelowM = 12.0F;
 
+    // The way out she guards: the mouth of Stage A's cage (its open north
+    // side; the deck's spawn is just north of it), while the cage is down.
+    static constexpr float kPostX = -10.3F;
+    static constexpr float kPostZ = -129.0F;
+    // Wary: how far short of a noise she stops to look, how long she looks,
+    // and how close a noise must be to draw her off her post once she has
+    // been fooled twice (a sprint is heard 44 m off, a walk 16 m).
+    static constexpr float kVantageM = 6.0F;
+    static constexpr float kPeerSeconds = 2.5F;
+    static constexpr float kWaryNoiseM = 12.0F;
+    // The Turn's vault: blocked by something lower than her chest, she jumps
+    // it (a 1.4 m rise) rather than shoving it.
+    static constexpr float kVaultUpMps = 5.2F;
+    static constexpr float kVaultForwardMps = 4.0F;
+    static constexpr float kVaultCooldownS = 0.8F;
+
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
     // one warning), then lunges in jerks, bursts faster than a sprint and
@@ -166,6 +195,9 @@ public:
         bool catwalk_allowed = false;
         Turn turn = Turn::None;
         float turn_s = 0.0F;        // seconds into the Turn
+        std::uint32_t fooled = 0;   // noises she went to and found nobody at, this run
+        bool wary = false;          // checking the present noise from a vantage first
+        std::uint32_t vaults = 0;   // things vaulted in the Turn, this run
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -183,6 +215,9 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // Whether the way out (Stage A's cage) is down at her deck: given before
+    // pre_step. Gone up, there is nothing to guard.
+    void set_way_out(const bool down) noexcept { way_out_ = down; }
     // A blow on the deck she can hear like the player's noise (a crate
     // crashing down): given before pre_step, heard in it.
     void hear(float x, float y, float z, float loudness) noexcept {
@@ -240,7 +275,11 @@ private:
     // The next point to walk to, along the cheapest path to (tx, tz), with
     // the catwalk allowed or not.
     void route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz) const;
-    void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel);
+    void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel, bool vault = false);
+    // A lead: a place she heard (or saw) the player, or a crash, at that loudness.
+    void take_lead(float x, float z, float loudness, bool seen);
+    // Back to her post if there is a way out to guard, else the patrol.
+    void stand_down();
     void step_turn(float dt, float distance_to_player, float loudness);
     void step_planks(float dt);
     void restore_planks();
@@ -287,6 +326,17 @@ private:
     };
     Crash crash_{};
     bool dead_ = false;
+    // Her mind (see above): what she has learned this run.
+    bool way_out_ = true;
+    bool lead_seen_ = false;
+    bool wary_ = false;
+    float peer_s_ = 0.0F;
+    std::uint32_t fooled_ = 0;
+    float vault_cooldown_s_ = 0.0F;
+    std::uint32_t vaults_ = 0;
+    // A far noise she let go while guarding: she turns to it a moment.
+    float look_x_ = 0.0F, look_z_ = 0.0F;
+    float look_s_ = 0.0F;
     std::uint64_t catches_ = 0;
     float plank_peak_n_ = 0.0F;
     float planks_clock_ = 0.0F;

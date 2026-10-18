@@ -527,6 +527,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     if (const LooseStock::Crash crash = loose_stock_->take_crash(); crash.heard) {
         matron_->hear(crash.x, crash.y, crash.z, crash.loudness);
     }
+    // Her way out to guard: Stage A's cage, while it is down at her deck.
+    matron_->set_way_out(kit_->guide_travel(well_.a_cage_guide) < 0.5F);
     matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
     kit_->pre_step(delta_seconds);
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
