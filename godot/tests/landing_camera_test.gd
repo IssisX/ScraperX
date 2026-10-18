@@ -181,6 +181,191 @@ func _slide_checks() -> bool:
 	return true
 
 
+func _wall_stride_checks() -> bool:
+	# Actual bridge fields drive only a lens roll; these samples do not prove
+	# native wall support or device comfort.
+	var baseline := {"landing_count": 0, "wall_stride_active": false,
+		"wall_stride_pushing_off": false, "wall_stride_count": 0,
+		"wall_stride_normal": Vector3.ZERO, "actual_foot_load_n": 0.0}
+	var active := baseline.duplicate()
+	active.merge({"wall_stride_active": true, "wall_stride_count": 1,
+		"wall_stride_normal": Vector3.RIGHT, "actual_foot_load_n": 2400.0}, true)
+	var unchanged := active.duplicate(true)
+	var one := Response.new()
+	var divided := Response.new()
+	var opposite := Response.new()
+	for lens in [one, divided, opposite]:
+		lens.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	one.update(active, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	for i in 4:
+		divided.update(active, 0.02, true, Vector3.RIGHT, Vector3.FORWARD)
+	var other_side := active.duplicate()
+	other_side.wall_stride_normal = Vector3.LEFT
+	opposite.update(other_side, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(one.rotation.y < 0.0 and opposite.rotation.y > 0.0
+			and absf(one.rotation.y + opposite.rotation.y) < 0.000001
+			and one.rotation.distance_to(divided.rotation) < 0.000001
+			and absf(one.rotation.y) <= 0.045 and one.rotation.x == 0.0
+			and one.translation == Vector3.ZERO and one.foot_settle == Vector2.ZERO
+			and active == unchanged,
+			"loaded opposite wall normals give opposite bounded, subdivision-stable lens bank"):
+		return false
+	var push_off := Response.new()
+	push_off.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	var push_sample := active.duplicate()
+	push_sample.wall_stride_pushing_off = true
+	push_off.update(push_sample, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(push_off.rotation == one.rotation,
+			"loaded push-off retains bank from the same actual planted foot"):
+		return false
+	var plain := Response.new()
+	var combined := Response.new()
+	var combined_baseline := baseline.duplicate()
+	combined_baseline.merge({"player_sliding": false, "slide_speed_mps": 0.0, "slide_count": 0})
+	plain.update(combined_baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	combined.update(combined_baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	var landing := {"landing_count": 1, "landing_normal_speed_mps": 5.0,
+		"landing_slip_velocity": Vector3(2.0, 0.0, -1.0), "landing_tangent_energy_j": 200.0,
+		"player_sliding": true, "slide_speed_mps": 8.0, "slide_count": 1}
+	var combined_sample := active.duplicate()
+	combined_sample.merge(landing, true)
+	plain.update(landing, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	combined.update(combined_sample, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(combined.translation == plain.translation and combined.foot_settle == plain.foot_settle
+			and combined.rotation.x == plain.rotation.x
+			and absf(combined.rotation.y - plain.rotation.y - one.rotation.y) < 0.000001,
+			"wall bank adds to existing landing roll and slide pitch without changing either response"):
+		return false
+	var light := Response.new()
+	light.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	var light_state := active.duplicate()
+	light_state.actual_foot_load_n = 600.0
+	light.update(light_state, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(absf(light.rotation.y * 4.0 - one.rotation.y) < 0.000001,
+			"actual measured load scales wall bank without a minimum synthetic load"):
+		return false
+	var facing := Response.new()
+	facing.update(baseline, 0.0, true, Vector3.FORWARD, Vector3.LEFT)
+	facing.update(active, 0.08, true, Vector3.FORWARD, Vector3.LEFT)
+	if not _check(facing.rotation == Vector2.ZERO,
+			"free-look right axis determines bank; a directly faced wall adds no roll"):
+		return false
+	active.actual_foot_load_n = 1000000.0
+	for i in 120:
+		one.update(active, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	if not _check(is_finite(one.rotation.y) and absf(one.rotation.y) <= 0.045,
+			"extreme finite foot load stays within the wall bank limit"):
+		return false
+	for release in [{"actual_foot_load_n": 0.0}, {"wall_stride_active": false}]:
+		var released := active.duplicate()
+		released.merge(release, true)
+		for i in 120:
+			one.update(active, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		var before: float = one.rotation.y
+		one.update(released, 0.016, true, Vector3.RIGHT, Vector3.FORWARD)
+		if not _check(one.rotation.y > before and one.rotation.y < 0.0,
+				"unloaded and inactive wall states release bank smoothly"):
+			return false
+		for i in 180:
+			one.update(released, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		if not _check(one.rotation == Vector2.ZERO,
+				"released wall bank settles exactly to neutral"):
+			return false
+	for reset_kind in ["first", "restart", "disabled", "rewind", "death"]:
+		var lens := Response.new()
+		if reset_kind != "first":
+			lens.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+			lens.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		var sample := active.duplicate()
+		var deaths := 0
+		if reset_kind == "restart":
+			lens.reset()
+		elif reset_kind == "disabled":
+			lens.update(sample, 0.1, false, Vector3.RIGHT, Vector3.FORWARD)
+		elif reset_kind == "rewind":
+			sample.wall_stride_count = 0
+		elif reset_kind == "death":
+			deaths = 1
+		lens.update(sample, 0.1, true, Vector3.RIGHT, Vector3.FORWARD, deaths)
+		if not _check(lens.rotation == Vector2.ZERO and lens._wall_velocity == 0.0,
+				"%s seeds wall state without retaining or replaying bank" % reset_kind):
+			return false
+		lens.update(sample, 0.1, true, Vector3.RIGHT, Vector3.FORWARD, deaths)
+		if not _check(lens.rotation.y < 0.0,
+				"fresh loaded samples after %s still provide continuous bank" % reset_kind):
+			return false
+	for field in ["wall_stride_active", "wall_stride_pushing_off", "wall_stride_count",
+			"wall_stride_normal", "actual_foot_load_n"]:
+		var missing := active.duplicate()
+		missing.erase(field)
+		one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		one.update(missing, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		one.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		if not _check(one.rotation == Vector2.ZERO and one._wall_velocity == 0.0,
+				"missing %s clears wall state and reappearance seeds quietly" % field):
+			return false
+	for invalid in [{"wall_stride_active": "true"}, {"wall_stride_pushing_off": 1},
+			{"wall_stride_count": -1}, {"wall_stride_count": 1.0},
+			{"wall_stride_normal": Vector3(NAN, 0.0, 0.0)},
+			{"wall_stride_normal": Vector3(INF, 0.0, 0.0)}, {"wall_stride_normal": "right"},
+			{"actual_foot_load_n": NAN}, {"actual_foot_load_n": INF},
+			{"actual_foot_load_n": -1.0}, {"actual_foot_load_n": "2400"}]:
+		var plain_invalid := Response.new()
+		var combined_invalid := Response.new()
+		plain_invalid.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined_invalid.update(baseline, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined_invalid.update(active, 0.1, true, Vector3.RIGHT, Vector3.FORWARD)
+		var invalid_landing := {"landing_count": 1, "landing_normal_speed_mps": 5.0}
+		var sample := active.duplicate()
+		sample.merge(invalid_landing, true)
+		sample.merge(invalid, true)
+		plain_invalid.update(invalid_landing, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+		combined_invalid.update(sample, 0.08, true, Vector3.RIGHT, Vector3.FORWARD)
+		if not _check(combined_invalid.translation == plain_invalid.translation and combined_invalid.rotation == plain_invalid.rotation
+				and combined_invalid.foot_settle == plain_invalid.foot_settle,
+				"malformed wall fields clear only wall bank and preserve actual landing response"):
+			return false
+	return true
+
+
+func _wall_stride_audio_checks() -> bool:
+	var audio := FootAudio.new()
+	root.add_child(audio)
+	var state := {"wall_stride_count": 0, "wall_stride_active": false,
+		"foot_push_support_entity_id": 51, "foot_push_peak_load_n": 0.0}
+	audio.reset_landing_feedback(0, 0, state)
+	state.merge({"wall_stride_count": 1, "wall_stride_active": true,
+		"foot_push_peak_load_n": 1500.0, "foot_push_command_work_bound_j": 0.0}, true)
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	if not _check(audio.wall_steps == 1 and audio.played == [&"step_concrete"],
+			"one actual loaded wall step cues its surface once, including fall absorption"):
+		return false
+	state.wall_stride_count = 2
+	state.wall_stride_active = false
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	state.wall_stride_count = 3
+	state.wall_stride_active = true
+	state.foot_push_peak_load_n = 0.0
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	if not _check(audio.wall_steps == 1 and audio.played.size() == 1,
+			"inactive or unloaded wall-step counts cannot fabricate a shoe impact"):
+		return false
+	state.wall_stride_count = 4
+	state.foot_push_peak_load_n = 1500.0
+	audio.reset_landing_feedback(0, 0, state)
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	state.wall_stride_count = 5
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 1)
+	state.wall_stride_count = 0
+	audio._update_wall_stride(state, Vector3(0, 2, 0), 0)
+	if not _check(audio.wall_steps == 1 and audio.played.size() == 1,
+			"restart, death and native rewind do not replay historical wall audio"):
+		return false
+	audio.queue_free()
+	return true
+
+
 func _foot_transfer_checks() -> bool:
 	# Scripted receipts exercise presentation only; no native completion or
 	# device sound/vibration is claimed by these consumer checks.
@@ -452,7 +637,7 @@ func _drop(height: float, move_x: float) -> Dictionary:
 
 
 func _run() -> void:
-	if not _response_checks() or not _slide_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
+	if not _response_checks() or not _slide_checks() or not _wall_stride_checks() or not _wall_stride_audio_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

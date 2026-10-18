@@ -916,6 +916,10 @@ private:
     void retain_trailing_plant(const StepCommands &commands, bool jump_started) noexcept;
     [[nodiscard]] bool try_begin_coyote_push(JPH::BodyInterface &bodies) noexcept;
     [[nodiscard]] bool try_begin_wall_kick(JPH::BodyInterface &bodies) noexcept;
+    [[nodiscard]] bool try_begin_wall_stride(JPH::BodyInterface &bodies,
+                                             const StepCommands &commands) noexcept;
+    [[nodiscard]] bool begin_wall_foot(JPH::BodyInterface &bodies, bool stride,
+                                       JPH::Vec3 direction = JPH::Vec3::sZero()) noexcept;
 
     void pre_step_physical_foot(float delta_seconds) noexcept;
 
@@ -1103,12 +1107,15 @@ private:
     bool grapple_acquired_ = false, grapple_equipped_ = false;
     bool foot_push_started_this_tick_ = false;
     enum class FootPushPurpose { None, PlankJump, RigidTransfer, TrailingPlant, CoyotePush,
-                                WallKick, WalkingStep };
+                                WallKick, WalkingStep, WallStride };
     std::uint64_t trailing_foot_contact_tick_ = 0;
     FootPushPurpose foot_push_purpose_ = FootPushPurpose::None;
     FootContactSample foot_contact_{}, foot_push_contact_{};
     FootContactSample wall_contact_{};
     JPH::BodyID wall_kick_consumed_body_;
+    // One automatic wall step per real takeoff; another wall body cannot refill it.
+    bool wall_stride_available_ = false;
+    std::uint64_t wall_stride_count_ = 0;
     JPH::BodyID step_receiver_;
     JPH::SubShapeID step_receiver_subshape_;
     JPH::Vec3 step_receiver_local_point_ = JPH::Vec3::sZero();

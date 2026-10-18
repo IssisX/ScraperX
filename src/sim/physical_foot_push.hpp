@@ -82,6 +82,10 @@ public:
     // motor rows have no warm start; holding stops drive without adding a spring.
     // A refused activation leaves the row unchanged.
     bool activate_planted_push();
+    // Switch an existing approach-phased step to full finite push-off.
+    // The material anchor, age, stroke and admitted-work ledger are retained.
+    // Failed or repeated transitions leave the current row unchanged.
+    bool push_off_existing_step();
     // A single finite walking stroke from a solved foot contact. The damped
     // compression motor shares the jump motor's force/power/work/reach limits,
     // and phases lift with measured approach instead of launching a free hop.

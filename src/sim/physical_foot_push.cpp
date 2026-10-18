@@ -299,6 +299,7 @@ public:
         last_motor_work_ = 0;
     }
     void hold_motor() noexcept { motor_drive_ = false; }
+    void push_off_step() noexcept { walking_ = false; }
     bool motor_profile() const noexcept { return force_motor_; }
     double motor_positive_work() const noexcept { return motor_positive_work_; }
     double motor_absorbed_work() const noexcept { return motor_absorbed_work_; }
@@ -492,6 +493,23 @@ bool PhysicalFootPush::activate_planted_push() {
     owner.row->activate_motor();
     owner.state.planted_motor_profile = true;
     owner.sample_geometry();
+    return true;
+}
+
+bool PhysicalFootPush::push_off_existing_step() {
+    auto &owner = *impl_;
+    const auto &state = owner.state;
+    if (!owner.row || !state.active || state.stop_requested || !state.walking_step ||
+        state.target_held || state.elapsed_seconds >= duration_seconds()) return false;
+    const JPH::BodyID ids[]{state.support, owner.player};
+    JPH::BodyLockMultiRead lock(owner.system.GetBodyLockInterface(), ids, 2);
+    if (!lock.GetBody(0) || !lock.GetBody(1) ||
+        !owner.row->valid_for_activation(state.initial_distance_m)) return false;
+    // Only the effort profile changes. No begin, activation, warm-start reset
+    // or ledger reset is allowed at this phase boundary.
+    owner.row->push_off_step();
+    owner.state.walking_step = false;
+    owner.state.planted_motor_profile = true;
     return true;
 }
 

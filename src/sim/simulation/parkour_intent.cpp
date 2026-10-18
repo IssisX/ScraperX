@@ -15,7 +15,8 @@ void Simulation::PhysicsWorld::prepare_trailing_plant(const StepCommands &comman
     const bool trailing = foot_push_purpose_ == FootPushPurpose::TrailingPlant;
     const bool commanded = foot_push_purpose_ == FootPushPurpose::CoyotePush;
     const bool wall_kick = foot_push_purpose_ == FootPushPurpose::WallKick;
-    if (!trailing && !commanded && !wall_kick) return;
+    const bool wall_stride = foot_push_purpose_ == FootPushPurpose::WallStride;
+    if (!trailing && !commanded && !wall_kick && !wall_stride) return;
     const bool cancelled = commands.cancel_jump_requested || commands.release_requested ||
         commands.set_down_requested || commands.sling_drop || commands.crouch_held ||
         traversal_state_ != TraversalState::None || physical_hands_->active() ||
@@ -46,7 +47,22 @@ void Simulation::PhysicsWorld::prepare_trailing_plant(const StepCommands &comman
     // input its compression can instead lift the capsule off a rounded edge
     // before ordinary traction/stepping recovers. Release only this passive
     // grounded topology; neutral/airborne plants and commanded pushes remain.
-    if (cancelled || (trailing && (expired || ordinary_jump || returning_on_contact ||
+    bool stride_cancelled = wall_stride && grounded_;
+    if (wall_stride && physical_foot_push_->active() &&
+        physical_foot_push_->readback().walking_step && !commands.jump_requested) {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), foot_push_contact_.body);
+        if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase()) stride_cancelled = true;
+        else {
+            const auto &wall = lock.GetBody();
+            const auto anchor = wall.GetCenterOfMassTransform()*foot_push_contact_.local_point;
+            const auto relative = physics_system_.GetBodyInterface().GetLinearVelocity(player_id_) -
+                wall.GetPointVelocity(anchor);
+            stride_cancelled = stride_cancelled || !commands.sprint_held ||
+                std::hypot(commands.move_input_x, commands.move_input_z) < kSprintMinimumInput ||
+                commands.move_input_x*relative.GetX() + commands.move_input_z*relative.GetZ() <= 0;
+        }
+    }
+    if (cancelled || stride_cancelled || (trailing && (expired || ordinary_jump || returning_on_contact ||
                                   (grounded_ && !same_contact)))) {
         physical_foot_push_->clear();
         foot_push_purpose_ = FootPushPurpose::None;
@@ -112,9 +128,50 @@ bool Simulation::PhysicsWorld::try_begin_coyote_push(JPH::BodyInterface &bodies)
 }
 
 bool Simulation::PhysicsWorld::try_begin_wall_kick(JPH::BodyInterface &bodies) noexcept {
-    if (grounded_ || ordinary_jump_ticks_left_ == 0 || crouched_ ||
-        physical_foot_push_->active() || physical_hands_->active() || carry_constraint_ ||
-        traversal_state_ != TraversalState::None ||
+    if (grounded_ || ordinary_jump_ticks_left_ == 0 || crouched_ || physical_hands_->active() ||
+        carry_constraint_ || traversal_state_ != TraversalState::None ||
+        (slingshot_ && slingshot_->controls_player())) return false;
+    if (foot_push_purpose_ == FootPushPurpose::WallStride && physical_foot_push_->active()) {
+        if (!physical_foot_push_->push_off_existing_step()) return false;
+        ordinary_jump_ticks_left_ = 0;
+        clear_landing_recovery();
+        return true;
+    }
+    return begin_wall_foot(bodies, false);
+}
+
+bool Simulation::PhysicsWorld::try_begin_wall_stride(JPH::BodyInterface &bodies,
+                                                     const StepCommands &commands) noexcept {
+    if (!wall_stride_available_ || grounded_ || !sprint_is_eligible(commands) ||
+        !wall_contact_.valid || wall_contact_.solved_tick != contact_solve_serial_) return false;
+    JPH::Vec3 normal, relative;
+    {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), wall_contact_.body);
+        if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() || lock.GetBody().IsSensor() ||
+            !lock.GetBody().IsRigidBody() || lock.GetBody().GetShape() != wall_contact_.shape_identity ||
+            lock.GetBody().GetUserData() != wall_contact_.entity_id) return false;
+        const auto &wall = lock.GetBody();
+        const auto anchor = wall.GetCenterOfMassTransform()*wall_contact_.local_point;
+        normal = wall.GetRotation()*wall_contact_.local_normal;
+        relative = bodies.GetLinearVelocity(player_id_)-wall.GetPointVelocity(anchor);
+    }
+    // Let the earned takeoff rise normally. At its apex the real wall foot can
+    // supply a finite step; upward body speed is never replaced or clamped.
+    if (relative.GetY() > 0) return false;
+    const auto horizontal_normal = JPH::Vec3(normal.GetX(),0,normal.GetZ()).NormalizedOr(JPH::Vec3::sZero());
+    const JPH::Vec3 horizontal(relative.GetX(),0,relative.GetZ());
+    const auto tangent = horizontal-horizontal_normal*horizontal.Dot(horizontal_normal);
+    const double speed = tangent.Length();
+    if (speed < kPlayerMaximumRelativeSpeed ||
+        tangent.GetX()*commands.move_input_x + tangent.GetZ()*commands.move_input_z <
+            kSprintMaximumAngleCos*speed) return false;
+    return begin_wall_foot(bodies, true, tangent/float(speed));
+}
+
+bool Simulation::PhysicsWorld::begin_wall_foot(JPH::BodyInterface &bodies, const bool stride,
+                                              const JPH::Vec3 direction) noexcept {
+    if (grounded_ || crouched_ || physical_foot_push_->active() || physical_hands_->active() ||
+        carry_constraint_ || traversal_state_ != TraversalState::None ||
         (slingshot_ && slingshot_->controls_player()) || !wall_contact_.valid ||
         wall_contact_.solved_tick != contact_solve_serial_ ||
         wall_contact_.body == wall_kick_consumed_body_) return false;
@@ -132,20 +189,27 @@ bool Simulation::PhysicsWorld::try_begin_wall_kick(JPH::BodyInterface &bodies) n
     const float contact_depth = kPlayerRadius+
         (kPlayerHalfHeight-kPlayerRadius)*std::abs(normal.GetY())+kLandingSkin;
     if (std::abs(normal.GetY()) > .2F || delta.GetY() < .05F || height <= 0 ||
-        height > contact_depth ||
-        tangent > PhysicalFootPush::lateral_reach_m() ||
-        tangent > wall_contact_.friction*height ||
-        !physical_foot_push_->begin_passive_plant(wall_contact_.body,anchor,normal,
-                                                wall_contact_.friction)) return false;
-    if (!physical_foot_push_->activate_planted_push()) {
-        physical_foot_push_->clear();
-        return false;
+        height > contact_depth || tangent > PhysicalFootPush::lateral_reach_m() ||
+        tangent > wall_contact_.friction*height) return false;
+    if (stride) {
+        if (!physical_foot_push_->begin_walking_step(wall_contact_.body,anchor,normal,
+                wall_contact_.friction,PhysicalFootPush::maximum_stroke_m(),direction,
+                PhysicalFootPush::maximum_stroke_m())) return false;
+    } else {
+        if (!physical_foot_push_->begin_passive_plant(wall_contact_.body,anchor,normal,
+                                                    wall_contact_.friction)) return false;
+        if (!physical_foot_push_->activate_planted_push()) {
+            physical_foot_push_->clear();
+            return false;
+        }
     }
     foot_push_contact_ = wall_contact_;
     foot_push_contact_.world_point = anchor;
     foot_push_contact_.world_normal = normal;
-    foot_push_purpose_ = FootPushPurpose::WallKick;
+    foot_push_purpose_ = stride ? FootPushPurpose::WallStride : FootPushPurpose::WallKick;
     wall_kick_consumed_body_ = wall_contact_.body;
+    wall_stride_available_ = false;
+    if (stride) ++wall_stride_count_;
     ordinary_jump_ticks_left_ = 0;
     foot_push_started_this_tick_ = true;
     ++foot_push_start_count_;

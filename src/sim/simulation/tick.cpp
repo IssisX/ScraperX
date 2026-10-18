@@ -26,7 +26,8 @@ void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds)
     // single-step worlds invoke it after lifecycle/face validation below.
     const bool rigid_foot = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
         foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
-        foot_push_purpose_ == FootPushPurpose::WallKick || foot_push_purpose_ == FootPushPurpose::WalkingStep;
+        foot_push_purpose_ == FootPushPurpose::WallKick || foot_push_purpose_ == FootPushPurpose::WallStride ||
+        foot_push_purpose_ == FootPushPurpose::WalkingStep;
     const bool face_valid = rigid_foot
         ? rigid_transfer_foot_valid_ : deformable_plank_ && !crouched_ &&
             deformable_plank_->fragment_supported(physical_foot_push_->readback().support);
@@ -45,8 +46,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     const auto traversal_before_commands = traversal_state_;
     apply_grapple_commands(commands);
     foot_push_started_this_tick_ = false;
+    if (grounded_) wall_stride_available_ = false;
     const bool jump_cancelled = commands.cancel_jump_requested ||
         commands.release_requested || commands.set_down_requested || commands.sling_drop;
+    if (jump_cancelled || commands.crouch_held || physical_hands_->active() ||
+        traversal_state_ != TraversalState::None || carry_constraint_ ||
+        (slingshot_ && slingshot_->controls_player())) wall_stride_available_ = false;
     prepare_trailing_plant(commands);
     if (foot_push_purpose_ == FootPushPurpose::WalkingStep && physical_foot_push_->active() &&
         (jump_cancelled || commands.jump_requested || commands.crouch_held ||
@@ -65,6 +70,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         (traversal_state_ != TraversalState::None && !foot_overlap_is_legal()))
         physical_foot_push_->clear();
     const bool passive_trailing_foot = foot_push_purpose_ == FootPushPurpose::TrailingPlant;
+    const bool active_wall_stride = foot_push_purpose_ == FootPushPurpose::WallStride &&
+        physical_foot_push_->active();
     const bool finishing_transfer_foot = traversal_before_commands == TraversalState::None &&
         foot_push_purpose_ == FootPushPurpose::RigidTransfer && physical_foot_push_->active();
     // Crouch cancels prior intent rather than deferring a surprise landing
@@ -72,7 +79,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (jump_cancelled || (commands.crouch_held && !commands.jump_requested) ||
         traversal_before_commands != TraversalState::None ||
         (slingshot_ && slingshot_->controls_player()) ||
-        (physical_foot_push_->active() && !finishing_transfer_foot && !passive_trailing_foot)) {
+        (physical_foot_push_->active() && !finishing_transfer_foot && !passive_trailing_foot &&
+         !active_wall_stride)) {
         ordinary_jump_ticks_left_ = 0;
     } else if (commands.jump_requested) {
         ordinary_jump_ticks_left_ = kOrdinaryJumpIntentTicks;
@@ -173,6 +181,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         } else {
             jump_started = try_begin_coyote_push(bodies);
             if (!jump_started) jump_started = try_begin_wall_kick(bodies);
+            const bool wall_jump_started = jump_started &&
+                (foot_push_purpose_ == FootPushPurpose::WallKick ||
+                 foot_push_purpose_ == FootPushPurpose::WallStride);
+            if (!jump_started) (void)try_begin_wall_stride(bodies, commands);
             if (jump_started) physical_step_pending_ = false;
             auto locomotion_commands = commands;
             locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
@@ -180,6 +192,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
                 !physical_foot_push_->active();
             const bool ordinary_jump_requested = locomotion_commands.jump_requested;
             jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds) || jump_started;
+            if (jump_started && !wall_jump_started) wall_stride_available_ = true;
             if (ordinary_jump_requested && jump_started) {
                 ordinary_jump_ticks_left_ = 0;
                 physical_step_pending_ = false;

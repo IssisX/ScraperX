@@ -86,6 +86,7 @@ void Simulation::PhysicsWorld::refresh_rigid_transfer_foot() noexcept {
          foot_push_purpose_ != FootPushPurpose::TrailingPlant &&
          foot_push_purpose_ != FootPushPurpose::CoyotePush &&
          foot_push_purpose_ != FootPushPurpose::WallKick &&
+         foot_push_purpose_ != FootPushPurpose::WallStride &&
          foot_push_purpose_ != FootPushPurpose::WalkingStep) || !physical_foot_push_->active() ||
         crouched_ || !foot_push_contact_.valid) return;
     JPH::Vec3 walking_normal = JPH::Vec3::sZero();

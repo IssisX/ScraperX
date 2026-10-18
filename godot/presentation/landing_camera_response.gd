@@ -6,7 +6,11 @@ var translation := Vector3.ZERO # Camera right, up, forward, in metres.
 var _landing_rotation := Vector2.ZERO
 var rotation: Vector2: # Additive pitch and roll, in radians.
 	get:
-		return _landing_rotation + Vector2(_slide_pitch, 0.0)
+		return _landing_rotation + Vector2(_slide_pitch, _wall_bank)
+var _wall_bank := 0.0
+var _wall_velocity := 0.0
+var _last_wall_stride_count := -1
+var _wall_deaths := -1
 var _slide_pitch := 0.0
 var _slide_velocity := 0.0
 var _last_slide_count := -1
@@ -33,6 +37,7 @@ func reset() -> void:
 	_last_foot_transfer_tick = -1
 	_foot_deaths = -1
 	_reset_slide()
+	_reset_wall_stride()
 
 
 func update(state: Dictionary, delta: float, enabled: bool,
@@ -53,6 +58,7 @@ func update(state: Dictionary, delta: float, enabled: bool,
 		_last_landing_count = count
 	_update_foot_transfer(state, delta, deaths)
 	_update_slide(state, delta, deaths)
+	_update_wall_stride(state, delta, right, deaths)
 	var normal_speed := maxf(float(state.get("landing_normal_speed_mps", 0.0)), 0.0)
 	var tangent_energy := maxf(float(state.get("landing_tangent_energy_j", 0.0)), 0.0)
 	var normal_energy := maxf(float(state.get("landing_approach_energy_j", 0.0)), 0.0)
@@ -117,6 +123,53 @@ func update(state: Dictionary, delta: float, enabled: bool,
 		_landing_rotation = Vector2.ZERO
 		_translation_velocity = Vector3.ZERO
 		_rotation_velocity = Vector2.ZERO
+
+
+func _reset_wall_stride() -> void:
+	_wall_bank = 0.0
+	_wall_velocity = 0.0
+	_last_wall_stride_count = -1
+	_wall_deaths = -1
+
+
+func _update_wall_stride(state: Dictionary, delta: float, right: Vector3, deaths: int) -> void:
+	var active: Variant = state.get("wall_stride_active")
+	var pushing_off: Variant = state.get("wall_stride_pushing_off")
+	var count: Variant = state.get("wall_stride_count")
+	var normal: Variant = state.get("wall_stride_normal")
+	var load: Variant = state.get("actual_foot_load_n")
+	if not active is bool or not pushing_off is bool or not count is int \
+			or not normal is Vector3 or not (load is float or load is int):
+		_reset_wall_stride()
+		return
+	var foot_load := float(load)
+	var stride_count := int(count)
+	var wall_normal: Vector3 = normal
+	if stride_count < 0 or not is_finite(foot_load) or foot_load < 0.0 \
+			or not wall_normal.is_finite() or not right.is_finite():
+		_reset_wall_stride()
+		return
+	var baseline := _last_wall_stride_count < 0 or stride_count < _last_wall_stride_count \
+		or deaths != _wall_deaths
+	if baseline:
+		_wall_bank = 0.0
+		_wall_velocity = 0.0
+	_last_wall_stride_count = stride_count
+	_wall_deaths = deaths
+	if baseline:
+		return
+	# Native outward contact normal supplies the side; actual foot load
+	# supplies strength, including loaded push-off on the same planted foot.
+	var target := 0.0
+	if active and foot_load > 0.0:
+		var side := wall_normal.normalized().dot(right.normalized())
+		target = -0.045 * clampf(side, -1.0, 1.0) * clampf(foot_load / 2400.0, 0.0, 1.0)
+	var response := _step(_wall_bank, _wall_velocity, target, 12.0, maxf(delta, 0.0))
+	_wall_bank = clampf(response.x, -0.045, 0.045)
+	_wall_velocity = response.y
+	if target == 0.0 and absf(_wall_bank) < 0.000001 and absf(_wall_velocity) < 0.000001:
+		_wall_bank = 0.0
+		_wall_velocity = 0.0
 
 
 func _reset_slide() -> void:

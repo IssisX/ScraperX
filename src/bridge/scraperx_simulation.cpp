@@ -917,6 +917,10 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["player_sliding"] = s.player_sliding;
     out["slide_speed_mps"] = s.slide_speed_mps;
     out["slide_count"] = s.slide_count;
+    out["wall_stride_active"] = s.wall_stride_active;
+    out["wall_stride_pushing_off"] = s.wall_stride_pushing_off;
+    out["wall_stride_count"] = s.wall_stride_count;
+    out["wall_stride_normal"] = to_godot(s.wall_stride_normal);
     out["landing_recovery_progress"] = s.landing_recovery_progress;
     out["landing_count"] = s.landing_count;
     out["landing_support_entity_id"] = s.landing_support_entity_id;

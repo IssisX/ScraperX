@@ -512,7 +512,8 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.foot_contact_tick = foot_contact_.valid ? foot_contact_.solved_tick : 0;
     const bool rigid_foot_source = foot_push_purpose_ == FootPushPurpose::RigidTransfer ||
         foot_push_purpose_ == FootPushPurpose::TrailingPlant || foot_push_purpose_ == FootPushPurpose::CoyotePush ||
-        foot_push_purpose_ == FootPushPurpose::WalkingStep || foot_push_purpose_ == FootPushPurpose::WallKick;
+        foot_push_purpose_ == FootPushPurpose::WalkingStep || foot_push_purpose_ == FootPushPurpose::WallKick ||
+        foot_push_purpose_ == FootPushPurpose::WallStride;
     state_.foot_push_source_contact_tick = rigid_foot_source && foot_push_contact_.valid
         ? foot_push_contact_.solved_tick : 0;
     state_.hand_foot_overlap_active = physical_hands_->active() && physical_foot_push_->active();
@@ -573,6 +574,17 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.player_sliding = ground_sliding_ && grounded_ && crouched_ &&
         !support_sample_.body_id.IsInvalid();
     state_.slide_count = ground_slide_count_;
+    state_.wall_stride_count = wall_stride_count_;
+    state_.wall_stride_active = !grounded_ && physical_foot_push_->active() &&
+        foot_push_purpose_ == FootPushPurpose::WallStride && rigid_transfer_foot_valid_;
+    state_.wall_stride_pushing_off = state_.wall_stride_active &&
+        !physical_foot_push_->readback().walking_step;
+    state_.wall_stride_normal = {};
+    if (state_.wall_stride_active) {
+        const auto &bodies = physics_system_.GetBodyInterface();
+        state_.wall_stride_normal = to_vector3(bodies.GetRotation(foot_push_contact_.body) *
+                                              foot_push_contact_.local_normal);
+    }
     state_.slide_speed_mps = 0.0;
     if (state_.player_sliding) {
         const auto &bodies = physics_system_.GetBodyInterface();

@@ -17,6 +17,8 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     causal_airborne_ = false;
     physical_step_pending_ = false;
     wall_contact_ = {};
+    wall_stride_available_ = false;
+    wall_stride_count_ = 0;
     wall_kick_consumed_body_ = JPH::BodyID();
     step_receiver_ = JPH::BodyID();
     release_carry();
@@ -175,6 +177,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     causal_airborne_ = false;
     physical_step_pending_ = false;
     wall_contact_ = {};
+    wall_stride_available_ = false;
+    wall_stride_count_ = 0;
     wall_kick_consumed_body_ = JPH::BodyID();
     step_receiver_ = JPH::BodyID();
     // The capsule the checkpoint was committed in: a crouched commit's

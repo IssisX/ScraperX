@@ -184,10 +184,71 @@ void contacts_and_reaction() {
     }
     UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;
 }
+void stride_takeover() {
+    using namespace JPH;
+    RegisterDefaultAllocator(); Factory::sInstance=new Factory; RegisterTypes();
+    {
+        Fixture f(true); auto &bodies=f.system.GetBodyInterface();
+        bodies.SetLinearVelocity(f.player,Vec3(-1,0,5.5F)); f.step();
+        const auto contact=f.contacts.wall_sample();
+        require(contact.valid,"actual wall manifold supplies step contact");
+        PhysicalFootPush push(f.system,f.player); PushStep step(push);
+        f.system.AddStepListener(&step);
+        require(push.begin_walking_step(contact.body,contact.world_point,contact.world_normal,
+            contact.friction,PhysicalFootPush::maximum_stroke_m(),Vec3::sAxisZ(),
+            PhysicalFootPush::maximum_stroke_m()),"existing phased foot motor accepts real wall patch");
+        const auto initial_player=bodies.GetLinearVelocity(f.player);
+        const auto initial_wall=bodies.GetLinearVelocity(f.wall);
+        const auto initial_momentum=85*initial_player+400*initial_wall;
+        double elapsed=0; bool loaded=false;
+        for(int i=0;i<4;++i) {
+            f.step(); push.post_step(1.0F/360); elapsed+=1.0/360;
+            loaded|=push.readback().last_load_n>0;
+        }
+        const auto before=push.readback();
+        const auto velocity_before=bodies.GetLinearVelocity(f.player);
+        require(loaded&&before.active&&before.walking_step,"one full90Hz tick has an actual loaded wall step");
+        require(push.push_off_existing_step(),"Jump takes over the existing finite step");
+        const auto after=push.readback();
+        require(after.active&&!after.walking_step&&after.planted_motor_profile&&
+            after.elapsed_seconds==before.elapsed_seconds&&
+            after.command_work_bound_j==before.command_work_bound_j&&
+            after.initial_distance_m==before.initial_distance_m&&
+            after.world_anchor==before.world_anchor&&
+            bodies.GetLinearVelocity(f.player)==velocity_before,
+            "takeover only changes effort profile, retaining time anchor work stroke and solved momentum");
+        require(!push.push_off_existing_step(),"repeated takeover cannot refill effort");
+        for(int i=0;i<100;++i) {
+            f.step(); push.post_step(1.0F/360); elapsed+=1.0/360;
+            const auto &v=push.readback();
+            require(v.peak_load_n<=3500.01F&&v.command_work_bound_j<=1285.62501&&
+                v.last_command_work_bound_j<=5000.0/360+.0001&&v.elapsed_seconds<=.250001,
+                "wall step and takeover share unchanged finite caps");
+        }
+        const auto final_player=bodies.GetLinearVelocity(f.player);
+        const auto final_wall=bodies.GetLinearVelocity(f.wall);
+        const auto residual=85*final_player+400*final_wall-initial_momentum-
+            Vec3(0,float(-9.81*485*elapsed),0);
+        require(!push.active()&&final_wall.GetX()<initial_wall.GetX()-.05F&&
+            final_player.GetX()>initial_player.GetX()+.3F&&
+            final_player.GetY()>initial_player.GetY()-9.81*elapsed+.05&&
+            final_player.GetZ()>=initial_player.GetZ()-.001F&&residual.Length()<.03F,
+            "one real finite step expires, retains tangent motion and transfers reciprocal load");
+        f.system.RemoveStepListener(&step);
+        std::cout<<"PASS WALL_STRIDE_PRIMITIVE before_jump_age_s="<<before.elapsed_seconds
+            <<" before_jump_work_j="<<before.command_work_bound_j
+            <<" total_work_j="<<push.readback().command_work_bound_j
+            <<" outward_gain_mps="<<final_player.GetX()-initial_player.GetX()
+            <<" tangent_mps="<<final_player.GetZ()
+            <<" reciprocal_residual_ns="<<residual.Length()<<'\n';
+    }
+    UnregisterTypes(); delete Factory::sInstance; Factory::sInstance=nullptr;
+}
 }
 int main(int argc,char **argv) {
     const std::string mode=argc>1?argv[1]:"public";
-    if(mode=="contacts")contacts_and_reaction();
+    if(mode=="stride")stride_takeover();
+    else if(mode=="contacts")contacts_and_reaction();
     else if(mode=="no-wall")no_wall(false);
     else if(mode=="expired")no_wall(true);
     else if(mode=="cancel")cancel();

@@ -60,6 +60,7 @@ var steps := 0
 var jumps := 0
 var landings := 0
 var foot_plants := 0
+var wall_steps := 0
 var grabs := 0
 var rustles := 0
 var clangs := 0
@@ -105,6 +106,7 @@ var _last_landing_count := -1
 var _last_foot_transfer_count := -1
 var _last_foot_transfer_tick := -1
 var _last_foot_push_start_count := -1
+var _last_wall_stride_count := -1
 var _pending_foot_jump_count := -1
 var _pending_foot_jump_age := 0.0
 var _last_traversal := 0
@@ -284,6 +286,7 @@ func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Diction
 	_last_foot_transfer_count = int(foot_state.get("foot_transfer_count", -1))
 	_last_foot_transfer_tick = int(foot_state.get("foot_transfer_tick", -1))
 	_last_foot_push_start_count = int(foot_state.get("foot_push_start_count", -1))
+	_last_wall_stride_count = int(foot_state.get("wall_stride_count", -1))
 	_clear_foot_jump()
 	_last_deaths = deaths
 	reset_reclaim_feedback()
@@ -342,6 +345,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 			linear_to_db(clampf(impact / 12.0, 0.3, 1.0)), randf_range(0.95, 1.05))
 	_last_landing_count = landing_count
 	_update_foot_transfer(landing_state, position, deaths)
+	_update_wall_stride(landing_state, position, deaths)
 	var foot_jump := _consume_foot_jump(delta, landing_state, velocity, grounded,
 		traversal, deaths, crouched)
 	var climbing_jump := traversal != _last_traversal and _last_traversal == TRAVERSAL_CLIMBING \
@@ -725,6 +729,28 @@ func _consume_foot_jump(delta: float, state: Dictionary, velocity: Vector3,
 		return false
 	_clear_foot_jump()
 	return true
+
+
+func _update_wall_stride(state: Dictionary, position: Vector3, deaths: int) -> void:
+	var count := int(state.get("wall_stride_count", -1))
+	var previous := _last_wall_stride_count
+	_last_wall_stride_count = count
+	var support := int(state.get("foot_push_support_entity_id", 0))
+	var load := float(state.get("foot_push_peak_load_n", 0.0))
+	# Count alone cannot play a shoe impact: the sampled native wall foot
+	# must actually be active and loaded. Absorbing a fall is still a plant,
+	# even before that step admits any positive motor work.
+	if previous < 0 or count <= previous or deaths != _last_deaths \
+			or not bool(state.get("wall_stride_active", false)) or support <= 0 \
+			or not is_finite(load) or load <= 0.0:
+		return
+	wall_steps += 1
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index):
+			return
+	var weight := clampf(load / 2400.0, 0.0, 1.0)
+	_play(_surface(support, position.y), lerpf(-18.0, -10.0, weight), 1.0)
 
 
 func _update_foot_transfer(state: Dictionary, position: Vector3, deaths: int) -> void:
