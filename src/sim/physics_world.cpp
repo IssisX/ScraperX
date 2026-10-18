@@ -619,8 +619,18 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
     summit_->pre_step();
-    if (const ImpactLedger::Loudest hit = impacts_->take_loudest(); hit.heard) {
-        matron_->hear(hit.x, hit.y, hit.z, hit.loudness);
+    // What the Matron can hear besides the player (matron.hpp hear): the last
+    // step's hits, hardest first, then the yard crane's drives while they run.
+    for (const ImpactSnapshot &hit : impacts_->tick()) {
+        const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
+        if (loud > 0.0F) {
+            matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
+        }
+    }
+    for (const YardCrane::Noise &noise : yard_crane_->noises()) {
+        if (noise.loudness > 0.0F) {
+            matron_->hear(noise.x, noise.y, noise.z, noise.loudness);
+        }
     }
     // Her ways out to guard: Stage A's cage, while it is down at her deck;
     // B's, while it is down at the 176 ring.

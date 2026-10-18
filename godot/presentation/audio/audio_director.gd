@@ -158,6 +158,9 @@ var matron_cues := {}
 var _fork_engine: AudioStreamPlayer3D
 var _fork_pump: AudioStreamPlayer3D
 var _fork_valve: AudioStreamPlayer3D
+var _fork_tires: AudioStreamPlayer3D
+var _fork_scrape: AudioStreamPlayer3D
+var _fork_chain: AudioStreamPlayer3D
 var _zip_roll: AudioStreamPlayer3D
 var _zip_brake: AudioStreamPlayer3D
 # The yard crane, heard from its parts 60 m up: the slew drive at the ring,
@@ -168,7 +171,6 @@ var _crane_trolley: AudioStreamPlayer3D
 var _crane_hoist: AudioStreamPlayer3D
 var _crane_stall: AudioStreamPlayer3D
 var crane_cues := {}
-var _fork_rpm := 0.0
 var forklift_cues := {}
 var pours_heard := 0
 var _voice: AudioStreamPlayer
@@ -255,6 +257,9 @@ func _ready() -> void:
 	_fork_engine = _positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 120.0)
 	_fork_pump = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	_fork_valve = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
+	_fork_tires = _positional_player(BUS_EFFECTS, Vector3.ZERO, 4.0, 80.0)
+	_fork_scrape = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 100.0)
+	_fork_chain = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
 	_zip_roll = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
 	_zip_brake = _positional_player(BUS_EFFECTS, Vector3.ZERO, 3.0, 60.0)
 	_crane_slew = _positional_player(BUS_EFFECTS, Vector3.ZERO, 12.0, 260.0)
@@ -443,6 +448,8 @@ func _update_breath(delta: float, grounded: bool, foot_speed: float, traversal: 
 func update_machines(delta: float, machines: Array) -> void:
 	var moving: Array = []
 	for machine in machines:
+		if not bool(machine.get("heard", true)):
+			continue   # sounded by its own parts (the forklifts, the yard crane)
 		var body: int = machine["body"]
 		var speed: float = machine["speed"]
 		var state: Dictionary = _machine_state.get(body, {"peak": 0.0, "creak": 0.0})
@@ -804,34 +811,88 @@ func matron_music(at: Vector3, volume_db: float, pitch: float) -> void:
 	_matron_loop.pitch_scale = pitch
 
 
-# One of her sounds (locker_knock, bolt_pop, locker_burst, matron_breath,
-# matron_step, matron_shriek, plank_crack), from `at`.
 # The forklift this frame (sim/forklift.hpp, its state as the native gives
-# it; `body` its frame in the world). Its engine runs while it is driven:
-# idling, it climbs with the throttle and with the lever, and lugs down as
-# the pump's pressure rises; the pump whines while it lifts, higher in pitch
-# with the engine, harder with the pressure; at the relief valve's pressure
-# the valve screams; letting a load down, the lowering valve hisses with its
-# weight.
+# it; `body` its frame in the world), every part heard from what the native
+# measured it doing:
+# - the engine at the native's own rpm (ticking over at FORK_IDLE_RPM while
+#   driven: the native's engine has no idle), working with the throttle and
+#   lugging down as the pump's pressure rises;
+# - the tyres rolling at the front wheels' spin, on concrete or steel by what
+#   they roll on;
+# - the blades scraping only while the native finds them on what is under
+#   them and sliding over it;
+# - the mast's chains running at the forks' measured speed (silent stalled,
+#   whatever the lever asks);
+# - the pump whining while it lifts, the relief valve screaming at its
+#   pressure, the lowering valve hissing with the weight let down;
+# - backing, its reverse alarm, a beep every FORK_BEEP_SECONDS.
+const FORK_IDLE_RPM := 750.0
+const FORK_BEEP_SECONDS := 0.9
+const FORK_TOP_MPS := 3.2
+const FORK_LIFT_MPS := 0.4
+var _fork_beep_clock := 0.0
+# What was heard, counted whether or not the bank plays, for the scripted
+# runs: frames each part was heard running, and beeps.
+var forklift_heard := {}
+var crane_heard := {}
+
+
+func _count(heard: Dictionary, part: StringName) -> void:
+	heard[part] = int(heard.get(part, 0)) + 1
+
+
 func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain: float) -> void:
 	var driving := bool(state["driving"])
 	var lever := float(state["lift"])
 	var raising := driving and lever > 0.05
 	var lowering := driving and lever < -0.05
-	var demand := maxf(absf(float(state["drive"])), lever if raising else 0.0) if driving else 0.0
-	var target := 0.0
-	if driving:
-		target = 750.0 + 1650.0 * demand - 650.0 * strain * demand
-	var rate := 2.5 if target > _fork_rpm else 4.0
-	_fork_rpm += (target - _fork_rpm) * minf(1.0, rate * delta)
+	var rpm := maxf(float(state["engine_rpm"]), FORK_IDLE_RPM) if driving else 0.0
+	var throttle := float(state["throttle"])
+	var spins: PackedFloat32Array = state["wheel_spin_rad_s"]
+	var radii: PackedFloat32Array = state["wheel_radius"]
+	var grounds: PackedInt64Array = state["wheel_ground"]
+	var roll := 0.5 * (absf(spins[0]) * radii[0] + absf(spins[1]) * radii[1])
+	var scraping := float(state["fork_gap_m"]) <= FORK_TOUCH_M and float(state["fork_drag_mps"]) > 0.05
+	var chain := absf(float(state["lift_mps"]))
+	var backing := driving and int(state["gear"]) < 0
+	if rpm > 0.0:
+		_count(forklift_heard, &"engine")
+	if roll > 0.1:
+		_count(forklift_heard, &"tires")
+	if scraping:
+		_count(forklift_heard, &"scrape")
+	if chain > 0.02:
+		_count(forklift_heard, &"chain")
+	var beep := false
+	if backing:
+		_fork_beep_clock -= delta
+		if _fork_beep_clock <= 0.0:
+			_fork_beep_clock += FORK_BEEP_SECONDS
+			beep = true
+			_count(forklift_heard, &"beep")
+	else:
+		_fork_beep_clock = 0.0
 	if not _bank_ready or _silent:
 		return
+	var wheels: Array = state["wheels"]
+	var front := ((wheels[0] as Transform3D).origin + (wheels[1] as Transform3D).origin) * 0.5
+	var lift_m := float(state["lift_m"])
 	var engine_at := body * Vector3(0.0, 0.5, -0.4)
 	var pump_at := body * Vector3(0.0, 0.4, 0.9)
+	var tips_at := body * Vector3(0.0, 0.1 + lift_m, 2.2)
+	var mast_at := body * Vector3(0.0, 1.4 + 0.5 * lift_m, 1.0)
 	_loop_level(_fork_engine, &"engine_loop", engine_at,
-		0.35 + 0.55 * demand + 0.2 * strain if _fork_rpm > 100.0 else 0.0, maxf(_fork_rpm, 300.0) / 1500.0, -4.0)
+		0.3 + 0.45 * throttle + 0.2 * strain if rpm > 0.0 else 0.0, rpm / 1500.0 * (1.0 - 0.06 * strain), -4.0)
+	_loop_level(_fork_tires, &"tire_concrete_loop" if _floor_is_concrete(int(grounds[0])) else &"tire_steel_loop",
+		front, clampf(roll / FORK_TOP_MPS, 0.0, 1.0) if roll > 0.1 else 0.0,
+		0.6 + 0.5 * clampf(roll / FORK_TOP_MPS, 0.0, 1.5), -5.0)
+	_loop_level(_fork_scrape, &"fork_scrape_loop", tips_at,
+		clampf(float(state["fork_drag_mps"]) / 1.2, 0.2, 1.0) if scraping else 0.0,
+		0.8 + 0.3 * clampf(float(state["fork_drag_mps"]) / 2.0, 0.0, 1.0), -3.0)
+	_loop_level(_fork_chain, &"lift_chain_loop", mast_at, clampf(chain / FORK_LIFT_MPS, 0.0, 1.0) if chain > 0.02 else 0.0,
+		0.5 + 0.5 * clampf(chain / FORK_LIFT_MPS, 0.0, 1.5), -7.0)
 	_loop_level(_fork_pump, &"pump_loop", pump_at,
-		lever * (0.4 + 0.6 * strain) if raising else 0.0, maxf(_fork_rpm, 300.0) / 1500.0 * (1.0 - 0.08 * strain), -6.0)
+		lever * (0.4 + 0.6 * strain) if raising else 0.0, maxf(rpm, 300.0) / 1500.0 * (1.0 - 0.08 * strain), -6.0)
 	var held := clampf(float(state["lift_n"]) / float(state["lift_max_n"]), 0.0, 1.0)
 	if raising and strain > 0.97:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, 1.0, 1.0, -3.0)
@@ -839,25 +900,66 @@ func update_forklift(delta: float, state: Dictionary, body: Transform3D, strain:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, -lever * (0.15 + 0.5 * held), 0.62, -8.0)
 	else:
 		_loop_level(_fork_valve, &"relief_loop", pump_at, 0.0, 1.0, 0.0)
+	if beep:
+		_play_at(&"beep", body * Vector3(0.0, 1.0, -1.45), -2.0, 1.0)
 
 
-# The yard crane (sim/yard_crane.hpp), from where its drives are: each loop
-# as loud and as high as its drive runs, the winch heavier under load.
-func update_crane(state: Dictionary, jib: Transform3D) -> void:
+# The yard crane (sim/yard_crane.hpp), each part heard from where it is and
+# from what the native measured it doing: the slewing ring's motors and gears
+# as the jib turns; the trolley's wheels as it runs; the hoist's winch as the
+# rope comes in or pays out, deeper under load, groaning stalled. The rope
+# creaks as its pull changes fast (a load taken up, a swing); the hook's
+# chain jingles as the block is jerked.
+const CRANE_CREAK_NPS := 25000.0
+const CRANE_JINGLE_MPS2 := 0.8
+var _crane_last_n := -1.0
+var _crane_last_hook := 0.0
+var _crane_creak_clock := 0.0
+var _crane_jingle_clock := 0.0
+
+
+func update_crane(delta: float, state: Dictionary, jib: Transform3D) -> void:
+	var slew := clampf(absf(float(state["slew_measured"])) / 0.08, 0.0, 1.0)
+	var trolley := clampf(absf(float(state["trolley_mps"])) / 1.2, 0.0, 1.0)
+	var rope := clampf(absf(float(state["rope_mps"])) / 1.0, 0.0, 1.0)
+	var hoist_n := float(state["hoist_n"])
+	var load := clampf(hoist_n / float(state["hoist_max_n"]), 0.0, 1.0)
+	var stalled := bool(state["hoist_stalled"])
+	var hook_mps := float(state["hook_mps"])
+	if slew > 0.02:
+		_count(crane_heard, &"slew")
+	if trolley > 0.02:
+		_count(crane_heard, &"trolley")
+	if rope > 0.02 or stalled:
+		_count(crane_heard, &"winch")
+	var creak := false
+	var jingle := false
+	_crane_creak_clock = maxf(0.0, _crane_creak_clock - delta)
+	_crane_jingle_clock = maxf(0.0, _crane_jingle_clock - delta)
+	if delta > 0.0 and _crane_last_n >= 0.0:
+		if absf(hoist_n - _crane_last_n) / delta > CRANE_CREAK_NPS and _crane_creak_clock <= 0.0:
+			creak = true
+			_crane_creak_clock = 0.4
+			_count(crane_heard, &"creak")
+		if absf(hook_mps - _crane_last_hook) / delta > CRANE_JINGLE_MPS2 and _crane_jingle_clock <= 0.0:
+			jingle = true
+			_crane_jingle_clock = 0.18
+			_count(crane_heard, &"jingle")
+	_crane_last_n = hoist_n
+	_crane_last_hook = hook_mps
 	if not _bank_ready or _silent:
 		return
-	var slew := clampf(absf(float(state["slew_rate"])) / 0.08, 0.0, 1.0)
-	var trolley := clampf(absf(float(state["trolley_rate"])) / 1.2, 0.0, 1.0)
-	var hoist := absf(float(state["hoist"]))
-	var load := clampf(float(state["hoist_n"]) / float(state["hoist_max_n"]), 0.0, 1.0)
-	var stalled := bool(state["hoist_stalled"])
 	var ring := jib * Vector3(0.0, 0.4, 0.0)
 	var drum := jib * Vector3(-6.0, 2.65, 0.0)
-	_loop_level(_crane_slew, &"pump_loop", ring, 0.75 * slew, 0.42 + 0.3 * slew, -2.0)
-	_loop_level(_crane_trolley, &"zip_loop", state["rope_top"], 0.8 * trolley, 0.35 + 0.35 * trolley, -3.0)
-	_loop_level(_crane_hoist, &"engine_loop", drum, (0.45 + 0.5 * load) * hoist if not stalled else 0.0,
-		0.5 + 0.35 * hoist - 0.15 * load, -1.0)
-	_loop_level(_crane_stall, &"relief_loop", drum, 1.0 if stalled else 0.0, 0.5, -2.0)
+	_loop_level(_crane_slew, &"slew_loop", ring, 0.85 * slew, 0.6 + 0.4 * slew, -2.0)
+	_loop_level(_crane_trolley, &"trolley_loop", state["rope_top"], 0.85 * trolley, 0.55 + 0.6 * trolley, -3.0)
+	_loop_level(_crane_hoist, &"winch_loop", drum, (0.4 + 0.5 * load) * rope if not stalled else 0.0,
+		0.55 + 0.45 * rope - 0.15 * load, -1.0)
+	_loop_level(_crane_stall, &"winch_loop", drum, 1.0 if stalled else 0.0, 0.32, -1.0)
+	if creak:
+		_play_at(&"creak", drum, linear_to_db(clampf(0.4 + load, 0.4, 1.0)) - 2.0, randf_range(0.45, 0.6))
+	if jingle:
+		_play_at(&"jingle", state["hook"], linear_to_db(clampf(hook_mps / 1.5, 0.3, 1.0)) - 4.0, randf_range(0.9, 1.1))
 
 
 # A crane's brake taking hold as a drive stops, or the hook block coming to
@@ -896,8 +998,10 @@ func _loop_level(player: AudioStreamPlayer3D, clip: StringName, at: Vector3, lev
 	if level <= 0.01:
 		player.volume_db = -80.0
 		return
-	if player.stream == null:
+	if player.stream == null or player.get_meta(&"clip", &"") != clip:
 		player.stream = _bank.pick(clip)
+		player.set_meta(&"clip", clip)
+		player.play()
 	if not player.playing:
 		player.play()
 	player.volume_db = linear_to_db(clampf(level, 0.0, 1.0)) + trim_db
@@ -920,6 +1024,8 @@ func forklift_cue(name: StringName, at: Vector3, strength: float) -> void:
 			_play_at(&"creak", at, db - 3.0, randf_range(0.6, 0.72))
 
 
+# One of her sounds (locker_knock, bolt_pop, locker_burst, matron_breath,
+# matron_step, matron_shriek, plank_crack), from `at`.
 func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> void:
 	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
 	_play_at(name, at, volume_db, pitch)
@@ -928,6 +1034,17 @@ func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 
 # A flock flushed at `at`: its wings, heard from where it rose.
 func flutter(at: Vector3) -> void:
 	_play_at(&"flutter", at, -4.0, randf_range(0.9, 1.1), BUS_AMBIENCE)
+
+
+# The forklift's blades touch what is under them at this clearance or less
+# (sim/forklift.hpp kForkTouchM).
+const FORK_TOUCH_M := 0.004
+
+
+# Whether a floor entity is concrete (the grade, the apron, the bay, the
+# handoff deck, the valley floor), as the footsteps take it; else steel.
+func _floor_is_concrete(entity: int) -> bool:
+	return entity in [1, 35, 43, 45, 51]
 
 
 func _surface(entity: int, height: float) -> StringName:

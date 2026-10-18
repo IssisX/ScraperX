@@ -1344,6 +1344,39 @@ above 1.5 kHz, 50-60 ms long; a run's footfalls land up to 14% deeper than a wal
 `audio_mix` (a 1.4 s walk plays 4 steps, was 10; steps -15.3 dBFS above 300 Hz over a -21.8 bed);
 `touch_body` (the boots stride 0.9 m); `touch_flow`, `touch_move_look`.
 
+**The machines heard from their parts, and the Matron's ears (2026-10-18; to-do 8, its second
+step).** The forklift and the yard crane now sound from what the native measures them doing.
+Native: each forklift reports the gear selected, the throttle, the engine's own rpm, the forks'
+speed up the mast, each wheel's spin and what it rolls on, and its blades' clearance over what is
+under them with their scrape speed (a short ray under each blade's heel and tip, after the step);
+the crane reports its jib's measured turn and the slewing torque, the trolley's run and its drive's
+pull, the rope coming in or paying out, the hook block's speed and the sling's pull. Found and fixed:
+the hoist started and stopped in one tick, jerking the 770 kg block by 1 m/s (a 352 J hit in the
+impact ledger, heard by the Matron) and, held at the upper limit, switching on and off every few
+ticks; the drum now runs up at 2 m/s^2 and stops at 3 m/s^2 (CHOSEN), easing to rest at the upper
+limit. Its test now lands the forklift as an operator does (lowered until the load's weight is off
+the rope); lowered on to the slack-rope switch, the block came to rest on the truck's guard, and a
+gentle hoist then lifted the truck by it. Sounds: the engine at the native's rpm (ticking over at
+750 driven), the tires by the front wheels' spin on concrete or steel, the blades' scrape only
+while touching and sliding, the mast's chains at the forks' measured speed, the pump and valves, and
+backing, a reverse alarm every 0.9 s; the crane's slewing motors, trolley wheels and winch from
+their measured motion, the rope creaking as its pull changes fast and the hook's chain jingling as
+the block is jerked. The generic machine groan no longer plays for the forklifts and the crane (their
+beacons stay). The forklift's pump is noise through resonances, no longer held sines. The Matron:
+her hearing takes the tick's list of sounds (the hits, the crane's drives while they run) and picks
+the loudest on her level, within its reach, and not her own (her own blows within 1.5 m were heard as
+leads); driving a forklift, its engine (0.2 to 0.5) and backing its alarm (0.6) are the driver's
+noise, where a driven truck was silent to her. Proof: native `forklift` (parked: engine still,
+blades 3.4 cm clear; driven: forward gear, 2,550 rpm, wheels rolling on the grade; forks rising at
+0.39 m/s; backing in reverse), `crane` (the drum at 1 m/s, then at rest; no hit on the hook block
+started or stopped), `matron crash` (new: lost by her, the player shoves crate S into crate N 17 m
+from her, out of her earshot and sight; she hears the 250 J hit, goes to it, finds nobody, and is the
+warier), and `stock`, `save`, `determinism`, every `matron` test; `touch_forklift` (heard: engine,
+tires, chain, six beeps backing), `touch_yard_crane` (heard: slew, trolley, winch, rope creaks, chain
+jingles), `touch_forklift_strain`, `touch_stock`, `touch_machines`, `touch_matron`; `audio_mix`,
+`audio_fall`. Not proven: the Matron hearing a forklift or the crane, which work at or below 58 m
+while she keeps to 154 m and up (see to-do 11).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1377,14 +1410,27 @@ fill in after).**
    the forklift, crane, and everything else", and sound is linked to the Matron). Proposed: every
    real collision reported by the native (where, its energy, its material) is heard by its material
    and heard by the Matron too; then the forklift's and the crane's own sounds from their parts.
-   Decided 2026-10-18: hits first; loud machines draw the Matron too. Done 2026-10-18: the hits.
+   Decided 2026-10-18: hits first; loud machines draw the Matron too. Done 2026-10-18: the hits;
+   the forklift's and the crane's sounds from their parts, and her ears taking machines and hits.
 9. Controls for the movement, as its own goal (owner, 2026-10-18): the advanced moves worked
    through the thumbsticks or gestures, something elegant and intuitive, not on-screen buttons
    that take the player's eyes off the run. Done as one piece of work at some point, never
-   piecemeal inside other tasks. Sequenced by Claude, 2026-10-18 (the owner: "you decide"): next
-   after 8's machine sounds and before 4's route hint and 5's machine starts, so the moves those
+   piecemeal inside other tasks. Sequenced by Claude, 2026-10-18 (the owner: "you decide"): after
+   8's machine sounds, 10's crane grips and 11's Matron hearing, and before 4's route hint and 5's
+   machine starts, so the moves those
    add (shoving, stomping, hanging the body's weight on a lever) are built into the gestures, not
    added as buttons first.
+10. The crane's end of the line (owner, 2026-10-18: "a correct end-effector like a clamp and/or grip
+   ... and that we can control them easily"; "multiple ways to grip things"): a lifting magnet hung
+   from the hook, switched from the radio remote, for every steel load (rated force, gripping only
+   steel it lies flat against); the sling and shackle kept for lifting eyes; a container spreader
+   locking onto the corner castings and a plate clamp where a site would use one. Sequenced next
+   after 8.
+11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
+   2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
+   shaft and stairwells and muffled by each deck between; what she hears on another level sends her
+   there by the routes she can use (a lift she calls and rides, the ladder, a line down), a route
+   planner over the tower's levels. Sequenced after 10 and before 9.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

@@ -1297,6 +1297,21 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     out["wheels"] = wheels;
     out["wheel_radius"] = radii;
     out["wheel_width"] = widths;
+    godot::PackedFloat32Array spins;
+    godot::PackedInt64Array grounds;
+    for (std::size_t wheel = 0; wheel < state.wheel_spin_rad_s.size(); ++wheel) {
+        spins.push_back(static_cast<float>(state.wheel_spin_rad_s[wheel]));
+        grounds.push_back(static_cast<std::int64_t>(state.wheel_ground[wheel]));
+    }
+    out["wheel_spin_rad_s"] = spins;
+    out["wheel_ground"] = grounds;
+    out["gear"] = static_cast<std::int64_t>(state.gear);
+    out["throttle"] = state.throttle;
+    out["engine_rpm"] = state.engine_rpm;
+    out["lift_mps"] = state.lift_mps;
+    out["fork_gap_m"] = state.fork_gap_m;
+    out["fork_drag_mps"] = state.fork_drag_mps;
+    out["fork_ground"] = static_cast<std::int64_t>(state.fork_ground);
     return out;
 }
 
@@ -1355,6 +1370,14 @@ godot::Dictionary ScraperXSimulation::get_yard_crane_state() const {
     out["rope_top"] = to_godot(state.rope_top);
     out["rope_bottom"] = to_godot(state.rope_bottom);
     out["hook"] = to_godot(state.hook);
+    out["hoist_rate"] = state.hoist_rate;
+    out["slew_measured"] = state.slew_measured;
+    out["slew_torque_nm"] = state.slew_torque_nm;
+    out["trolley_mps"] = state.trolley_mps;
+    out["trolley_force_n"] = state.trolley_force_n;
+    out["rope_mps"] = state.rope_mps;
+    out["hook_mps"] = state.hook_mps;
+    out["sling_n"] = state.sling_n;
     return out;
 }
 

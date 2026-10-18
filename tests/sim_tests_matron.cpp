@@ -3,10 +3,12 @@
 // the rotten catwalk. Every leg is on player inputs from the deck spawn.
 #include "sim_tests.hpp"
 
+#include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
 
 namespace {
+using scraperx::sim::ImpactLedger;
 using scraperx::sim::LooseStock;
 using scraperx::sim::InitialSpawn;
 using scraperx::sim::Matron;
@@ -20,6 +22,7 @@ constexpr int kStateHunting = static_cast<int>(Matron::State::Hunting);
 constexpr int kStateDead = static_cast<int>(Matron::State::Dead);
 constexpr int kStateGuarding = static_cast<int>(Matron::State::Guarding);
 constexpr int kStatePeering = static_cast<int>(Matron::State::Peering);
+constexpr int kStateSearching = static_cast<int>(Matron::State::Searching);
 
 // One tick of a stick held toward (x, z); true once within `tolerance` of it.
 bool steer(Simulation &s, const double x, const double z, const bool sprint, const double tolerance = 0.4) {
@@ -525,6 +528,106 @@ void run_matron() {
         require(s.matron_state().fooled == 0, "matron mind: a death forgets what she learned");
         std::cout << "PASS scraperx_sim matron mind: guarded at " << at_post.position.x << "," << at_post.position.z
                   << " peered_short_m=" << closest << " fooled_twice_stayed_m=" << farthest << "\n";
+    }
+    // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
+    //      hunts). She searches where she lost the player; out of her earshot
+    //      and her sight, the player shoves crate S into crate N; she hears the
+    //      hit and goes to it, not wary, finds nobody, and is the warier ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron crash: settle");
+        require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron crash: a sprint toward her locker");
+        require(s.matron_state().state == kStateStraining, "matron crash: the sprint woke her");
+        // Straining, and then emerging, she hears nothing: to the north-east
+        // corner to be there as she bursts out, then off down the east band.
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 0.3), "matron crash: to the north-east corner");
+        bool out = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
+            tick(s);
+            out = s.matron_state().state == kStateEmerging;
+        }
+        require(out, "matron crash: she bursts out");
+        const auto burst = s.snapshot().player_position;
+        require(go(s, Matron::kBandX, -143.0, true, 3.0, 0.6) && s.matron_state().state == kStateEmerging,
+                "matron crash: a sprint down the east band while she is still emerging");
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, -157.6, false, 10.0, 0.3) && go(s, 24.5, -156.2, false, 6.0, 0.15),
+                "matron crash: a creep round behind crate S");
+        bool searching = false;
+        bool heard_early = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !searching; ++i) {
+            tick(s);
+            heard_early = heard_early || s.matron_state().noise_heard > 0.0 || s.matron_state().sees_player;
+            searching = s.matron_state().state == kStateSearching;
+        }
+        stand_still(s, 2.0);
+        const auto lost = s.matron_state();
+        std::cout << "  matron crash: burst with the player at (" << burst.x << ", " << burst.z << "); she searches at ("
+                  << lost.position.x << ", " << lost.position.z << "), fooled " << lost.fooled << "\n";
+        require(searching && !heard_early && lost.state == kStateSearching && lost.fooled == 0 &&
+                    std::hypot(lost.position.x - burst.x, lost.position.z - burst.z) < 1.5,
+                "matron crash: she ran to where the player was at her burst, and searches there");
+        // Up, and crate S shoved north into crate N.
+        (void)s.set_crouch_input(false);
+        std::uint64_t seen = s.last_impact_sequence();
+        scraperx::sim::ImpactSnapshot last_tick_loudest{};
+        scraperx::sim::ImpactSnapshot crash{};
+        bool heard = false;
+        double player_from_her = 0.0;
+        for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !heard; ++i) {
+            (void)s.set_move_input(0.0, 1.0);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            const auto m = s.matron_state();
+            const auto p = s.snapshot();
+            if (m.noise_heard > 0.0) {
+                heard = true;
+                crash = last_tick_loudest;
+                player_from_her = std::hypot(p.player_position.x - m.position.x, p.player_position.z - m.position.z);
+                break;
+            }
+            // This tick's hits: she hears them next tick.
+            last_tick_loudest = {};
+            for (const auto &hit : s.impacts()) {
+                if (hit.sequence > seen) {
+                    if (hit.energy_j > last_tick_loudest.energy_j) {
+                        last_tick_loudest = hit;
+                    }
+                    seen = hit.sequence;
+                }
+            }
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        const auto drawn = s.matron_state();
+        const double loud = ImpactLedger::loudness(static_cast<float>(crash.energy_j));
+        const double crash_d = std::hypot(crash.at.x - drawn.position.x, crash.at.z - drawn.position.z);
+        std::cout << "  matron crash: heard the hit on crate N (" << crash.energy_j << " J, loudness " << loud << ") "
+                  << crash_d << " m off; the player " << player_from_her << " m off\n";
+        require(heard && crash.entity == LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateNorth),
+                "matron crash: she hears crate S strike crate N");
+        require(drawn.noise_heard == loud, "matron crash: what she heard is the hit, at its loudness");
+        require(player_from_her > 0.30 * 55.0 && !drawn.sees_player,
+                "matron crash: the player is out of her earshot and her sight");
+        require(drawn.state == kStateHunting && !drawn.wary &&
+                    std::hypot(drawn.target_x - crash.at.x, drawn.target_z - crash.at.z) < 0.01,
+                "matron crash: the hit draws her: she goes for it, not wary");
+        // Away south, crouched; she goes to the hit, searches it, finds nobody.
+        (void)s.set_crouch_input(true);
+        double closest = 1.0e9;
+        bool stood_down = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
+            (void)steer(s, 24.5, Matron::kBandSouthZ, false);
+            tick(s);
+            const auto m = s.matron_state();
+            closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
+            stood_down = m.state == kStateGuarding;
+        }
+        std::cout << "  matron crash: she came within " << closest << " m of the hit; fooled " << s.matron_state().fooled
+                  << ", deaths " << s.snapshot().death_count << "\n";
+        require(closest < 1.5 && stood_down && s.matron_state().fooled == 1 && s.snapshot().death_count == 0,
+                "matron crash: she went to the hit, found nobody, and is the warier for it");
+        std::cout << "PASS scraperx_sim matron crash: heard_m=" << crash_d << " loudness=" << loud << " closest_m=" << closest
+                  << "\n";
     }
     // ---- A: in the Turn she vaults what blocks her way; frail, she shoves it -------
     {

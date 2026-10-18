@@ -494,31 +494,45 @@ void YardCrane::pre_step(const float delta_seconds, const bool toggle, const boo
     slew_->SetTargetAngularVelocity(state_.slew_rate);
     trolley_drive_->SetTargetVelocity(state_.trolley_rate);
 
-    // The hoist. Raising, the winch takes the rope in with at most its pull
-    // (the rope's length follows it in); at the upper limit it stops.
-    // Lowering, the drum pays out at the hoist's speed while the rope is
-    // loaded; slack, the switch stops it. Let go, the brake holds the rope.
+    // The hoist. The drum runs up to the rate asked at kHoistAccelMps2, slows
+    // at kHoistDecelMps2, and never runs faster than it can stop in the rope
+    // left before the upper limit (raising) or the drum's end (lowering). Raising, the winch takes the
+    // rope in with at most its pull (the rope's length follows it in); at the
+    // upper limit it stands. Lowering, the drum pays out while the rope is
+    // loaded; slack, the switch stops it. At rest, the brake holds the rope.
     const float lies = rope_length_now();
-    state_.upper_limit = false;
+    const float now = hoist_->GetMaxLength();
+    float want_rate = std::abs(want_hoist) > 0.05F ? want_hoist * kHoistMps : 0.0F;
+    const float room_up = std::max(0.0F, lies - kHoistMinM);
+    const float room_down = std::max(0.0F, kHoistMaxM - now);
+    want_rate = std::clamp(want_rate, -std::sqrt(2.0F * kHoistDecelMps2 * room_down),
+                           std::sqrt(2.0F * kHoistDecelMps2 * room_up));
+    // Speeding up (the same way, faster) at the drive's acceleration; slowing
+    // or reversing at its deceleration.
+    const bool speeding_up = want_rate * state_.hoist_rate >= 0.0F && std::abs(want_rate) > std::abs(state_.hoist_rate);
+    const float hoist_step = (speeding_up ? kHoistAccelMps2 : kHoistDecelMps2) * delta_seconds;
+    state_.hoist_rate += std::clamp(want_rate - state_.hoist_rate, -hoist_step, hoist_step);
+    if (std::abs(state_.hoist_rate) < 1.0e-4F && want_rate == 0.0F) {
+        state_.hoist_rate = 0.0F;
+    }
+    state_.upper_limit = want_hoist > 0.05F && room_up <= 0.01F;
     state_.slack = false;
-    if (want_hoist > 0.05F) {
-        if (lies > kHoistMinM) {
-            hoist_->SetMaxLength(std::max(kHoistMinM, std::min(hoist_->GetMaxLength(), lies)));
-            hoist_->SetMotor(want_hoist * kHoistMps, kHoistForceN);
-        } else {
-            hoist_->SetMotor(0.0F, 0.0F);
-            state_.upper_limit = true;
-        }
-    } else if (want_hoist < -0.05F) {
+    if (state_.hoist_rate > 0.0F && room_up > 0.0F) {
+        hoist_->SetMaxLength(std::max(kHoistMinM, std::min(now, lies)));
+        hoist_->SetMotor(state_.hoist_rate, kHoistForceN);
+    } else if (state_.hoist_rate < 0.0F) {
         hoist_->SetMotor(0.0F, 0.0F);
-        const float now = hoist_->GetMaxLength();
-        const float next = std::min({now - want_hoist * kHoistMps * delta_seconds, lies + kSlackPayOutM, kHoistMaxM});
+        const float next = std::min({now - state_.hoist_rate * delta_seconds, lies + kSlackPayOutM, kHoistMaxM});
         if (next > now) {
             hoist_->SetMaxLength(next);
         } else {
+            // Paying out no further: slack (the switch), or the drum's end.
             state_.slack = lies + kSlackPayOutM <= now;
+            state_.hoist_rate = 0.0F;
         }
     } else {
+        // At rest, or arrived at the upper limit: the brake holds.
+        state_.hoist_rate = 0.0F;
         hoist_->SetMotor(0.0F, 0.0F);
     }
     state_.hoist = want_hoist;
@@ -538,12 +552,42 @@ void YardCrane::post_step(const float delta_seconds) {
         // of the speed asked (a load snatched up off slack is at full pull
         // for a moment, and rising).
         const float coming_in = (was - state_.hoist_m) / delta_seconds;
-        state_.hoist_stalled = state_.hoist > 0.05F &&
+        state_.hoist_stalled = state_.hoist_rate > 0.05F &&
                                -hoist_->GetMotorLambda() >= kHoistForceN * delta_seconds * 0.999F &&
-                               coming_in < 0.1F * state_.hoist * kHoistMps;
+                               coming_in < 0.1F * state_.hoist_rate;
+        state_.rope_mps = coming_in;
+        state_.slew_torque_nm = std::abs(slew_->GetTotalLambdaMotor()) / delta_seconds;
+        state_.trolley_force_n = std::abs(trolley_drive_->GetTotalLambdaMotor()) / delta_seconds;
     }
+    state_.slew_measured = bodies.GetAngularVelocity(kit_.body_id(jib_)).GetY();
+    const Vec3 along = Vec3(out.GetX(), 0.0F, out.GetZ()).NormalizedOr(Vec3::sAxisX());
+    state_.trolley_mps = (bodies.GetLinearVelocity(kit_.body_id(trolley_)) -
+                          bodies.GetPointVelocity(kit_.body_id(jib_), trolley))
+                             .Dot(along);
+    state_.hook_mps = bodies.GetLinearVelocity(kit_.body_id(hook_)).Length();
+    state_.sling_n = kit_.rope_tension(sling_);
     const std::uint64_t end = kit_.rope_end_entity(sling_);
     state_.load_entity = end == kShackleEntity ? 0 : end;
+}
+
+std::array<YardCrane::Noise, 3> YardCrane::noises() const {
+    // CHOSEN loudness (a sound of 1 carries 55 m): geared electric drives,
+    // the hoist's the loudest and louder with what it lifts.
+    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+    std::array<Noise, 3> out{};
+    out[0] = {kMastX, kSlewY, kMastZ, 0.4F * std::min(1.0F, std::abs(state_.slew_measured) / kSlewMaxRadS)};
+    const RVec3 drum = bodies.GetWorldTransform(kit_.body_id(jib_)) * Vec3(-6.0F, 2.65F, 0.0F);
+    float hoist = 0.0F;
+    if (state_.hoist_stalled) {
+        hoist = 0.7F;
+    } else if (std::abs(state_.rope_mps) > 0.02F) {
+        hoist = 0.35F + 0.25F * std::min(1.0F, state_.hoist_n / kHoistForceN);
+    }
+    out[1] = {float(drum.GetX()), float(drum.GetY()), float(drum.GetZ()), hoist};
+    const RVec3 top = rope_top();
+    out[2] = {float(top.GetX()), float(top.GetY()), float(top.GetZ()),
+              0.3F * std::min(1.0F, std::abs(state_.trolley_mps) / kTrolleyMaxMps)};
+    return out;
 }
 
 void YardCrane::restore() {

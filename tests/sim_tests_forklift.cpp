@@ -63,13 +63,18 @@ std::array<double, 6> fork_the_pallet(Simulation &s, const int pallet) {
     (void)s.advance_frame(1.5);
     (void)s.set_forklift_lift(1.0);
     (void)s.advance_frame(1.0);
+    const double raising = s.forklift_state().lift_mps;
     (void)s.set_forklift_lift(0.0);
     (void)s.advance_frame(0.5);
+    require(std::abs(raising - Forklift::kLiftSpeedMps) < 0.05,
+            "forklift: raised with the pallet on them, the forks run up the mast at the lift's speed");
     const auto lifted = body_at(s, LooseStock::kFirstEntity + static_cast<std::uint64_t>(pallet));
     std::cout << "  forklift: the pallet lifted to y " << lifted.y << ", the forks " << s.forklift_state().lift_m
               << " m up\n";
     require(lifted.y > 0.3, "forklift: the forks under the pallet lift it, its drums on it");
     hold(s, 0.0, -0.4, 2.5);
+    require(s.forklift_state().gear == -1 && s.forklift_state().speed_mps < -0.1,
+            "forklift: backing out with the pallet, in reverse");
     (void)s.advance_frame(1.5);
     (void)s.set_forklift_lift(-1.0);
     (void)s.advance_frame(1.5);
@@ -94,6 +99,14 @@ void run_forklift() {
         const double crept = std::hypot(after.x - parked.x, after.z - parked.z);
         std::cout << "  forklift: parked 10 s, it moved " << crept << " m, its frame at y " << after.y << "\n";
         require(crept < 0.01 && std::abs(after.y) < 0.05, "forklift: parked, it stands on its wheels and stays put");
+        // Parked, the engine is still and the blades stand clear of the
+        // ground (3.5 cm, a little more at the tips), not scraping it.
+        const auto still = s.forklift_state(0);
+        std::cout << "  forklift: parked, the engine at " << still.engine_rpm << " rpm, the blades " << still.fork_gap_m
+                  << " m over the ground\n";
+        require(still.engine_rpm < 1.0 && still.gear == 0 && still.fork_gap_m > 0.02 && still.fork_gap_m < 0.08 &&
+                    still.fork_drag_mps == 0.0 && still.fork_ground == Simulation::kStaticDeckEntityId,
+                "forklift: parked, the engine still and the blades clear of the ground under them");
         require(!s.forklift_state().at_controls && !s.request_forklift_action(),
                 "forklift: off the truck, its controls are not offered");
     }
@@ -109,6 +122,16 @@ void run_forklift() {
         hold(s, 0.0, 1.0, 2.0);
         const auto ahead = body_at(s, Forklift::kChassisEntity);
         const double peak = s.forklift_state().speed_mps;
+        // Driven forward: in forward gear, the engine turning the front
+        // wheels through the transmission, the tyres rolling on the grade.
+        const auto driven = s.forklift_state();
+        std::cout << "  forklift: driving, gear " << driven.gear << ", the engine at " << driven.engine_rpm
+                  << " rpm, the front wheels at " << driven.wheel_spin_rad_s[0] << " rad/s on entity "
+                  << driven.wheel_ground[0] << "\n";
+        require(driven.gear == 1 && driven.engine_rpm > 500.0 && std::abs(driven.wheel_spin_rad_s[0]) > 1.0 &&
+                    driven.wheel_ground[0] == Simulation::kStaticDeckEntityId &&
+                    driven.wheel_ground[2] == Simulation::kStaticDeckEntityId,
+                "forklift: driven, forward gear, the engine turning, the wheels rolling on the grade");
         // Facing +z, the view's right is -x.
         hold(s, -0.6, 0.8, 2.0);
         const double yaw = truck_yaw(s);
@@ -216,6 +239,7 @@ struct LiftTry {
     double held_rise_m = 0.0;           // a second after RAISE is let go
     double lowered_rear_n = 0.0;        // the forks let down again
     double lowered_pitch_rad = 0.0;
+    double least_fork_gap_m = 1.0;      // the blades' least clearance over what is under them
 };
 
 // From the start: aboard, the controls taken, into the load's lane, forks in
@@ -242,6 +266,7 @@ LiftTry try_lift(const std::uint64_t load_entity, const double lane_x, const dou
         result.least_rear_n = std::min(result.least_rear_n, rear);
         result.peak_pitch_rad = std::max(result.peak_pitch_rad, f.pitch_rad);
         result.load_rise_m = std::max(result.load_rise_m, rise);
+        result.least_fork_gap_m = std::min(result.least_fork_gap_m, f.fork_gap_m);
         if (result.rise_at_rear_off_m < 0.0 && rear < 0.05 * result.parked_rear_n) {
             result.rise_at_rear_off_m = rise;
         }
@@ -289,7 +314,8 @@ void run_forklift_strain() {
               << " m when the rear wheels left the ground, the lift at " << heavy.peak_lift_n << " N, the rear axle "
               << heavy.parked_rear_n << " -> " << heavy.least_rear_n << " N, nose down "
               << heavy.peak_pitch_rad * 57.2958 << " deg; let down, the rear axle " << heavy.lowered_rear_n
-              << " N, pitch " << heavy.lowered_pitch_rad * 57.2958 << " deg\n";
+              << " N, pitch " << heavy.lowered_pitch_rad * 57.2958 << " deg; the blades' least clearance "
+              << heavy.least_fork_gap_m << " m\n";
     // The lift carries the coil's 2.7 t of steel, and holds it; at the
     // stillage it pushes past 4 t's weight and the truck, not the load,
     // gives. Let down, each stands back on its rear wheels.

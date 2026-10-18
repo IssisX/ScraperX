@@ -731,6 +731,14 @@ func _forklift_touch(device: int) -> bool:
 	print("SCRAPERX_UITEST forklift: the pallet carried %.2f m, set down at y %.2f" % [before.z - set_down.z, set_down.y])
 	if before.z - set_down.z < 3.0 or set_down.y > 0.2:
 		return _fail("the pallet was not carried off and set down")
+	# Heard from its parts as the native ran them: the engine while driven, the
+	# tyres rolling, the mast's chains as the forks rose and fell, and the
+	# reverse alarm backing off with the pallet.
+	var heard: Dictionary = _main._audio.forklift_heard
+	print("SCRAPERX_UITEST forklift: heard %s" % str(heard))
+	for part in [&"engine", &"tires", &"chain", &"beep"]:
+		if int(heard.get(part, 0)) < 1:
+			return _fail("the forklift's %s was not heard (%s)" % [part, str(heard)])
 	if not await _offered(&"drive", "STEP OFF"):
 		return _fail("STEP OFF was not offered while driving")
 	_act(device)
@@ -790,6 +798,13 @@ func _yard_crane_touch(device: int) -> bool:
 	if fell < 1.0:
 		return _fail("LOWER held did not let the hook down (%.2f m)" % fell)
 	print("SCRAPERX_UITEST yard crane: the hook sent %.2f m east, hoisted %.2f m, let down %.2f m" % [east, rose, fell])
+	# Heard from its parts as the native measured them: the slewing motors, the
+	# trolley's wheels and the hoist's winch.
+	var heard: Dictionary = _main._audio.crane_heard
+	print("SCRAPERX_UITEST yard crane: heard %s" % str(heard))
+	for part in [&"slew", &"trolley", &"winch"]:
+		if int(heard.get(part, 0)) < 1:
+			return _fail("the crane's %s was not heard (%s)" % [part, str(heard)])
 	await _look_at_point(lowered["hook"])
 	await _pose("yard_crane_hook")
 	_tap(4, _center(&"crane"))

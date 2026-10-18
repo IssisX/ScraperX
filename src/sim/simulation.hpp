@@ -269,6 +269,19 @@ struct ForkliftSnapshot final {
     std::array<Quaternion, 4> wheel_rotation{};
     std::array<double, 4> wheel_radius{};
     std::array<double, 4> wheel_width{};
+    // What its parts are doing (forklift.hpp State): the gear selected (+1,
+    // -1, 0), the throttle, the engine's rpm, the forks' speed up the mast,
+    // each wheel's spin (rad/s) and what it rolls on (an entity, 0 none), and
+    // the blades' clearance over what is under them and their scrape speed.
+    int gear = 0;
+    double throttle = 0.0;
+    double engine_rpm = 0.0;
+    double lift_mps = 0.0;
+    std::array<double, 4> wheel_spin_rad_s{};
+    std::array<std::uint64_t, 4> wheel_ground{};
+    double fork_gap_m = 1.0;
+    double fork_drag_mps = 0.0;
+    std::uint64_t fork_ground = 0;
 };
 
 // The yard crane (src/sim/yard_crane.hpp).
@@ -292,6 +305,18 @@ struct YardCraneSnapshot final {
     Vector3 rope_top{};             // the hoist rope's ends: the trolley's sheaves
     Vector3 rope_bottom{};          // and the hook block's
     Vector3 hook{};                 // the hook's throat
+    // The hoist's drum as driven and what the parts measure after the step
+    // (yard_crane.hpp State): m/s of rope (+ in), the jib's turn (rad/s), the
+    // slewing torque, the trolley's run along the jib (+ out) and its drive's
+    // pull, the rope coming in (+), the hook block's speed, the sling's pull.
+    double hoist_rate = 0.0;
+    double slew_measured = 0.0;
+    double slew_torque_nm = 0.0;
+    double trolley_mps = 0.0;
+    double trolley_force_n = 0.0;
+    double rope_mps = 0.0;
+    double hook_mps = 0.0;
+    double sling_n = 0.0;
 };
 
 // What a struck body sounds like (src/sim/impacts.hpp), by what it is made

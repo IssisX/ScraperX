@@ -85,6 +85,17 @@ func build() -> void:
 	clips[&"hit_heavy"] = _variants(3, _hit_heavy)
 	clips[&"hit_container"] = _variants(3, _hit_container)
 	clips[&"hit_machine"] = _variants(3, _hit_machine)
+	# The forklift's and the yard crane's own parts (sim/forklift.hpp,
+	# sim/yard_crane.hpp), after everything else for the same reason.
+	clips[&"tire_concrete_loop"] = [_loop(_tire(1.6, false), 0.3)]
+	clips[&"tire_steel_loop"] = [_loop(_tire(1.6, true), 0.3)]
+	clips[&"fork_scrape_loop"] = [_loop(_fork_scrape(1.4), 0.25)]
+	clips[&"lift_chain_loop"] = [_loop(_lift_chain(1.25), 0.2)]
+	clips[&"beep"] = [_wav(_beep())]
+	clips[&"slew_loop"] = [_loop(_slew_motor(2.0), 0.3)]
+	clips[&"trolley_loop"] = [_loop(_trolley_run(1.6), 0.3)]
+	clips[&"winch_loop"] = [_loop(_winch(2.0), 0.3)]
+	clips[&"jingle"] = _variants(3, _jingle)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -741,13 +752,18 @@ func _engine(length: float) -> PackedFloat32Array:
 
 # Its hydraulic pump, driven off the engine: the whine of its gear teeth
 # meshing (12 teeth at 1500 rpm, 300 Hz, and the harmonics that carry on a
-# small speaker) over the rush of oil through its ports.
+# small speaker) over the rush of oil through its ports. The whine is noise
+# through narrow resonances that wander a little, as a loaded pump's does,
+# not held sines (the bank's rule; the first pump was pure partials).
 func _pump(length: float) -> PackedFloat32Array:
 	var out := _silence(length)
-	for pair in [[300.0, 0.12], [600.0, 0.10], [900.0, 0.05], [1500.0, 0.04], [2100.0, 0.02]]:
-		_add_tone(out, pair[0], 0.0, length, pair[1], 0.0)
-	var flow := _band_noise_buffer(out.size(), 700.0, 3000.0)
-	for i in out.size():
+	var n := out.size()
+	for pair in [[300.0, 2.2], [600.0, 1.8], [900.0, 0.9], [1500.0, 0.7]]:
+		var whine := _resonant_noise_buffer(n, pair[0], 0.01, 2.0)
+		for i in n:
+			out[i] += whine[i] * pair[1]
+	var flow := _band_noise_buffer(n, 700.0, 3000.0)
+	for i in n:
 		out[i] += flow[i] * 0.3
 	return out
 
@@ -762,6 +778,137 @@ func _relief(length: float) -> PackedFloat32Array:
 	for i in n:
 		var chatter := 0.6 + 0.4 * sin(TAU * 38.0 * float(i) / float(MIX_RATE))
 		out[i] = (whistle[i] * 3.0 + rush[i] * 0.8) * chatter
+	return out
+
+
+# --- the forklift's and the yard crane's parts ---------------------------------
+
+
+# A solid tyre rolling at about 3 m/s (played faster or slower for the speed).
+# On concrete, the rumble of the tread and the grit it crushes, tick by tick;
+# on steel deck plate, the plate drumming under it and the seams it crosses.
+func _tire(length: float, steel: bool) -> PackedFloat32Array:
+	var out := _silence(length)
+	_add_band_noise(out, 0.0, length, 0.55, 0.0, 120.0, 600.0)
+	_add_band_noise(out, 0.0, length, 0.12, 0.0, 900.0, 3200.0)
+	if steel:
+		var n := out.size()
+		for pair in [[190.0, 1.4], [420.0, 0.9], [760.0, 0.5]]:
+			var drum := _resonant_noise_buffer(n, pair[0], 0.03, 1.0)
+			for i in n:
+				out[i] += drum[i] * pair[1]
+		var at := 0.2
+		while at < length - 0.1:
+			_add_band_noise(out, at, 0.04, 0.6, 0.012, 300.0, 2500.0)
+			at += 0.4
+	else:
+		for i in 48:
+			_add_band_noise(out, _rng.randf_range(0.0, length - 0.01), 0.005, _rng.randf_range(0.08, 0.25),
+				0.0015, 1500.0, 5500.0)
+	return out
+
+
+# A fork blade dragged over a floor: steel grinding on it, a harsh squeal
+# that wanders as the blade sticks and slips, and grit torn up under it.
+func _fork_scrape(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var squeal := _resonant_noise_buffer(n, 2300.0, 0.12, 3.0)
+	var grind := _band_noise_buffer(n, 900.0, 5000.0)
+	var slip := 0.0
+	for i in n:
+		if i % 400 == 0:
+			slip = _rng.randf_range(0.45, 1.0)
+		out[i] = (squeal[i] * 2.5 + grind[i] * 0.9) * slip
+	for i in 30:
+		_add_band_noise(out, _rng.randf_range(0.0, length - 0.01), 0.006, 0.3, 0.002, 2000.0, 6500.0)
+	return out
+
+
+# The mast's lift chains running over their sheaves at the lift's speed:
+# the links clicking over the sheave teeth, twenty-four a second, and the
+# carriage's rollers rumbling up the channels.
+func _lift_chain(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	_add_band_noise(out, 0.0, length, 0.35, 0.0, 300.0, 900.0)
+	var at := 0.0
+	while at < length - 0.02:
+		_add_band_noise(out, at + _rng.randf_range(0.0, 0.004), 0.012, _rng.randf_range(0.35, 0.55), 0.003,
+			2200.0, 6000.0)
+		at += 1.0 / 24.0
+	return out
+
+
+# A reverse alarm: an electronic beeper, so a tone (the bank's rule against
+# held partials is for struck metal, which this is not): a square-ish note
+# at 1.15 kHz, its odd harmonics, eased on and off, a half-second beep.
+func _beep() -> PackedFloat32Array:
+	var out := _silence(0.5)
+	_add_tone(out, 1150.0, 0.0, 0.45, 0.5, 0.0)
+	_add_tone(out, 3450.0, 0.0, 0.45, 0.16, 0.0)
+	_add_tone(out, 5750.0, 0.0, 0.45, 0.08, 0.0)
+	var edge := int(0.012 * MIX_RATE)
+	var end := int(0.45 * MIX_RATE)
+	for i in edge:
+		var w := float(i) / float(edge)
+		out[i] *= w
+		out[end - 1 - i] *= w
+	for i in range(end, out.size()):
+		out[i] = 0.0
+	return out
+
+
+# The slewing ring's drives turning the jib: the electric motors' hum and
+# whine and the planetary gears' mesh above them, over the ring's grind.
+func _slew_motor(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	for pair in [[100.0, 1.6], [700.0, 1.8], [1400.0, 0.9], [2100.0, 0.4]]:
+		var tone := _resonant_noise_buffer(n, pair[0], 0.005, 1.0)
+		for i in n:
+			out[i] += tone[i] * pair[1]
+	_add_band_noise(out, 0.0, length, 0.25, 0.0, 300.0, 1800.0)
+	return out
+
+
+# The trolley's steel wheels running along the jib's chords: a rolling
+# rumble, and the wheels knocking over the chords' joints in pairs.
+func _trolley_run(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	_add_band_noise(out, 0.0, length, 0.5, 0.0, 150.0, 700.0)
+	_add_band_noise(out, 0.0, length, 0.08, 0.0, 2500.0, 4500.0)
+	var at := 0.3
+	while at < length - 0.2:
+		for k in 2:
+			_add_band_noise(out, at + 0.12 * k, 0.03, 0.55, 0.01, 600.0, 3000.0)
+			_add_mode(out, _rng.randf_range(380.0, 460.0), at + 0.12 * k, 0.08, 0.4, 0.02, 6.0)
+		at += 0.8
+	return out
+
+
+# The hoist's winch hauling: its motor's whine rising through the gears,
+# and the rope throbbing as each wrap lays onto the drum.
+func _winch(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var whine := _resonant_noise_buffer(n, 520.0, 0.008, 1.0)
+	var whine2 := _resonant_noise_buffer(n, 1040.0, 0.008, 1.0)
+	var gears := _band_noise_buffer(n, 150.0, 650.0)
+	for i in n:
+		var wrap := 0.75 + 0.25 * sin(TAU * 6.0 * float(i) / float(MIX_RATE))
+		out[i] = (whine[i] * 2.0 + whine2[i] * 1.0 + gears[i] * 0.5) * wrap
+	return out
+
+
+# The hook's chain sling and its master ring jingling as the block swings
+# or is jerked: a few small links knocking, each choked at once.
+func _jingle() -> PackedFloat32Array:
+	var out := _silence(0.25)
+	var at := 0.0
+	for i in _rng.randi_range(4, 7):
+		_add_mode(out, _rng.randf_range(2800.0, 6500.0), at, 0.08, _rng.randf_range(0.3, 0.6), 0.015, 10.0)
+		_add_band_noise(out, at, 0.006, 0.25, 0.002, 2500.0, 7000.0)
+		at += _rng.randf_range(0.015, 0.04)
 	return out
 
 

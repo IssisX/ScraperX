@@ -339,10 +339,19 @@ public:
         unrig_way_ = -1;
         return way;
     }
-    // A blow on the deck she can hear like the player's noise (a crate
-    // crashing down): given before pre_step, heard in it.
+    // A sound in the world she can hear like the player's noise (a hit: a
+    // crate crashing down; a machine running), at its loudness (0..1, a sound
+    // of 1 carries kFullHearingM): given before pre_step, heard in it. She
+    // takes the loudest of a tick's that is on her level, not her own (within
+    // kOwnSoundM of her body: what she strikes herself), and within its reach.
+    // Past kMaxSounds in a tick the rest are not heard (the world gives the
+    // hardest hits first).
+    static constexpr std::size_t kMaxSounds = 16;
+    static constexpr float kOwnSoundM = 1.5F;
     void hear(float x, float y, float z, float loudness) noexcept {
-        crash_ = {true, x, y, z, loudness};
+        if (sound_count_ < kMaxSounds) {
+            sounds_[sound_count_++] = {true, x, y, z, loudness};
+        }
     }
     void post_step(float dt);
 
@@ -496,12 +505,13 @@ private:
     float sight_far_s_ = 0.0F;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
-    struct Crash {
+    struct Sound {
         bool heard = false;
         float x = 0.0F, y = 0.0F, z = 0.0F;
         float loudness = 0.0F;
     };
-    Crash crash_{};
+    std::array<Sound, kMaxSounds> sounds_{};
+    std::size_t sound_count_ = 0;
     bool dead_ = false;
     // Her floor (feel_floor): its top under her, and riding it.
     float feet_y_ = kDeckTop;

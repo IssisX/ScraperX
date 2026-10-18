@@ -866,6 +866,9 @@ int Matron::planks_fallen() const noexcept {
 }
 
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
+    // This tick's sounds, taken now whatever she does with them.
+    const std::size_t sound_count = sound_count_;
+    sound_count_ = 0;
     step_planks(dt);
     vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
     look_s_ = std::max(0.0F, look_s_ - dt);
@@ -899,14 +902,36 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
     }
     player_on_deck_ = on_deck || player_climb >= 0;
-    const Crash crash = crash_;
-    crash_ = {};
-    const bool crash_on_deck = crash.heard && crash.y > feet_y_ - 1.0F && crash.y < feet_y_ + 6.0F;
+    // The loudest of the tick's sounds she can hear from (fx, fz) (her locker
+    // while she sleeps, her body awake): on her level, not her own, within
+    // `within` and within its own reach.
+    const RVec3 body_at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : RVec3::sZero();
+    const auto pick = [&](const float fx, const float fz, const float within) {
+        Sound best{};
+        for (std::size_t i = 0; i < sound_count; ++i) {
+            const Sound &s = sounds_[i];
+            if (s.y <= feet_y_ - 1.0F || s.y >= feet_y_ + 6.0F) {
+                continue;
+            }
+            const float d = distance_xz(fx, fz, s.x, s.z);
+            if (d > within || s.loudness * kFullHearingM < d) {
+                continue;
+            }
+            if (body_in_world_ && distance_xz(float(body_at.GetX()), float(body_at.GetZ()), s.x, s.z) < kOwnSoundM &&
+                std::abs(s.y - float(body_at.GetY())) < 2.0F) {
+                continue;
+            }
+            if (!best.heard || s.loudness > best.loudness) {
+                best = s;
+            }
+        }
+        return best;
+    };
     switch (state_) {
     case State::Dormant: {
         const float d = distance_xz(px, pz, kLockerX, kLockerZ);
-        const float crash_d = distance_xz(crash.x, crash.z, kLockerX, kLockerZ);
-        if (crash_on_deck && crash_d <= kWakeNoiseM && crash.loudness * kFullHearingM >= crash_d) {
+        const Sound crash = pick(kLockerX, kLockerZ, kWakeNoiseM);
+        if (crash.heard) {
             noise_heard_ = crash.loudness;
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -958,8 +983,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // (Low rays: a guard rail is bars, not a wall.)
         sees_far_ = perceivable && reach <= kCommitSightM &&
                     (saw || sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0)));
-        // A crash on the deck louder than the player draws her to it instead.
-        const bool crash_heard = crash_on_deck && crash.loudness * kFullHearingM >= distance_xz(ax, az, crash.x, crash.z);
+        // A sound on her level louder than the player draws her to it instead.
+        const Sound crash = pick(ax, az, std::numeric_limits<float>::max());
+        const bool crash_heard = crash.heard;
         if (saw) {
             // In sight: no doubt where the player is.
             take_lead(px, pz, heard ? loudness : 0.3F, true);

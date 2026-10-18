@@ -147,6 +147,27 @@ bool lower_to_rest(Simulation &s, const double budget) {
     return false;
 }
 
+// Lowers until the load's weight is off the rope (the hoist pulling no more
+// than half again the empty hook block's and shackle's own 782 kg): the load
+// has landed, and the block still hangs on its rope above it, as an operator
+// stops it. Lowered on to the slack-rope switch instead, the block comes to
+// rest on the load, where it can foul it.
+bool lower_until_landed(Simulation &s, const double budget) {
+    constexpr double kEmptyHookN = 782.0 * 9.81;
+    const auto ticks = static_cast<int>(budget * static_cast<double>(Simulation::kTickRateHz));
+    for (int tick = 0; tick < ticks; ++tick) {
+        (void)s.set_yard_crane_hoist(-0.3);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        if (tick > 10 && s.yard_crane_state().hoist_n < 1.5 * kEmptyHookN) {
+            (void)s.set_yard_crane_hoist(0.0);
+            (void)s.advance_frame(0.5);
+            return true;
+        }
+    }
+    (void)s.set_yard_crane_hoist(0.0);
+    return false;
+}
+
 // The rigger steps to the sling's shackle where it dangles and takes it.
 bool take_shackle(Simulation &s, const double budget) {
     const auto ticks = static_cast<int>(budget * static_cast<double>(Simulation::kTickRateHz));
@@ -301,11 +322,25 @@ void run_yard_crane() {
         stick_for(s, 0.0, -1.0, 6.0);
         const auto run_in = s.yard_crane_state();
         (void)s.set_yard_crane_hoist(1.0);
+        const auto hits_before = s.impacts();
+        const std::uint64_t seen = hits_before.empty() ? 0 : hits_before.back().sequence;
         (void)s.advance_frame(5.0);
+        const double running = s.yard_crane_state().hoist_rate;
         (void)s.set_yard_crane_hoist(0.0);
         const auto hoisted = s.yard_crane_state();
         (void)s.advance_frame(3.0);
         const auto still = s.yard_crane_state();
+        // The drum spools up and down (kHoistAccelMps2): started and stopped,
+        // the hook block is never jerked hard enough to be heard as a hit.
+        int hook_hits = 0;
+        for (const auto &hit : s.impacts()) {
+            hook_hits += hit.sequence > seen && hit.entity == YardCrane::kHookEntity ? 1 : 0;
+        }
+        std::cout << "  crane: the drum at " << running << " m/s after 5 s, " << still.hoist_rate << " stopped; "
+                  << hook_hits << " hits on the hook block\n";
+        require(std::abs(running - YardCrane::kHoistMps) < 1.0e-3 && still.hoist_rate == 0.0,
+                "crane: the drum runs up to the hoist's speed and comes to rest when let go");
+        require(hook_hits == 0, "crane: starting and stopping the hoist does not jerk the hook block");
         std::cout << "  crane: slewed " << slewed.slew_rad - start.slew_rad << " rad (the trolley "
                   << slewed.rope_top.x - start.rope_top.x << " m east), then the trolley "
                   << slewed.rope_top.z - run_in.rope_top.z << " m north (" << slewed.trolley_m - run_in.trolley_m
@@ -405,7 +440,7 @@ void run_yard_crane() {
         const auto high = s.snapshot();
         require(high.support_entity_id == Forklift::kCraneChassisEntity, "crane: the driver rides the forklift up");
         require(hook_over(s, -31.3, 0.5 * (dock.z_min + dock.z_max), 180.0), "crane: the forklift over the dock");
-        require(lower_to_rest(s, 90.0), "crane: the forklift let down until the rope slackens");
+        require(lower_until_landed(s, 90.0), "crane: the forklift let down until its weight is off the rope");
         const auto landed = body_at(s, Forklift::kCraneChassisEntity);
         std::cout << "  crane: the forklift ridden up to y " << high.player_position.y << " and landed at (" << landed.x
                   << ", " << landed.y << ", " << landed.z << ")\n";

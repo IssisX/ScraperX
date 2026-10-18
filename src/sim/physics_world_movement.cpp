@@ -1155,6 +1155,21 @@ float Simulation::PhysicsWorld::matron_loudness(JPH::BodyInterface &bodies) noex
         // Boots and hands on steel rungs, going up or down them.
         loud = std::max(loud, 0.25F);
     }
+    // Driving a forklift, its noise is the driver's (CHOSEN): the engine from
+    // a tick-over (0.2, 11 m) to flat out (0.5, 27 m), more with the pump
+    // working the forks; backing, its reverse alarm (0.6, 33 m).
+    const int truck = active_forklift();
+    if (truck >= 0 && forklifts_[static_cast<std::size_t>(truck)]->driving()) {
+        const Forklift::State &f = forklifts_[static_cast<std::size_t>(truck)]->state();
+        float engine = 0.2F + 0.3F * std::min(1.0F, f.engine_rpm / 3000.0F);
+        if (f.lift > 0.05F) {
+            engine += 0.15F * std::min(1.0F, f.lift_n / Forklift::kLiftForceN);
+        }
+        loud = std::max(loud, engine);
+        if (f.gear < 0) {
+            loud = std::max(loud, 0.6F);
+        }
+    }
     return loud;
 }
 

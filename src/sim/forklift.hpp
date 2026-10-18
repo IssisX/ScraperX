@@ -99,7 +99,24 @@ public:
         // front left, front right, rear left, rear right.
         std::array<float, kWheels> wheel_load_n{};
         std::array<bool, kWheels> wheel_contact{};
+        // What its parts are doing, for what they sound like: the gear
+        // selected (+1 forward, -1 reverse, 0 none) and the throttle; the
+        // engine's speed; the forks running up (+) or down the mast; each
+        // wheel's spin and what it rolls on (0 for nothing); and the fork
+        // blades' lowest clearance over what is under them and how fast they
+        // slide over it while touching it (a scrape).
+        int gear = 0;
+        float throttle = 0.0F;
+        float engine_rpm = 0.0F;
+        float lift_mps = 0.0F;
+        std::array<float, kWheels> wheel_spin_rad_s{};
+        std::array<std::uint64_t, kWheels> wheel_ground{};
+        float fork_gap_m = 1.0F;
+        float fork_drag_mps = 0.0F;
+        std::uint64_t fork_ground = 0;
     };
+    // The blades are touching what is under them at this clearance or less.
+    static constexpr float kForkTouchM = 0.004F;
 
     // Parked at (park_x, park_y, park_z) on a floor at park_y, its nose `yaw`
     // about +y from +z, its bodies the kit's entities chassis_entity and

@@ -90,6 +90,15 @@ public:
     static constexpr float kTrolleyAccelMps2 = 0.6F;
     static constexpr float kTrolleyForceN = 40000.0F;
     static constexpr float kHoistMps = 1.0F;
+    // The hoist's drive spools up at kHoistAccelMps2 and stops at
+    // kHoistDecelMps2 (CHOSEN: to full speed in half a second, to rest in a
+    // third), as a real winch's does: started or stopped in one tick, the
+    // 770 kg block was jerked by 1 m/s (a 352 J hit in the impact ledger,
+    // heard by the Matron), and held at the upper limit it switched on and
+    // off every few ticks. Raising, it eases to rest at the upper limit;
+    // lowering, at the drum's last turns.
+    static constexpr float kHoistAccelMps2 = 2.0F;
+    static constexpr float kHoistDecelMps2 = 3.0F;
     static constexpr float kHoistForceN = 75000.0F;
     static constexpr float kHookMps = 2.5F;
     // The slack-rope switch: lowering pays out no further than this past
@@ -134,11 +143,23 @@ public:
         float trolley_rate = 0.0F;    // as driven, m/s (+ out)
         float hoist_m = 0.0F;         // the rope as it lies, trolley to hook block
         float hoist = 0.0F;           // the hoist as worked: + raising, - lowering
+        float hoist_rate = 0.0F;      // the drum as driven, m/s of rope: + in, - out
         float hoist_n = 0.0F;         // the rope's pull this tick
         bool hoist_stalled = false;   // raising, at the winch's full pull, and not rising
         bool upper_limit = false;     // the hook block at its upper limit
         bool slack = false;           // lowering stopped by the slack-rope switch
         std::uint64_t load_entity = 0;   // what the sling is hooked onto, 0 for none
+        // What the parts are doing, measured after the step (for what they
+        // sound like): the jib's turn and the slewing drive's torque; the
+        // trolley's run along the jib and its drive's pull; the rope coming
+        // in (+) or paying out; the hook block's speed; the sling's pull.
+        float slew_measured = 0.0F;   // rad/s about +y
+        float slew_torque_nm = 0.0F;
+        float trolley_mps = 0.0F;     // + out
+        float trolley_force_n = 0.0F;
+        float rope_mps = 0.0F;        // + coming in
+        float hook_mps = 0.0F;
+        float sling_n = 0.0F;
     };
 
     YardCrane(JPH::PhysicsSystem &physics, kit::Kit &kit);
@@ -163,6 +184,15 @@ public:
     [[nodiscard]] const State &state() const noexcept { return state_; }
     // The hook block, as a kit body.
     [[nodiscard]] kit::BodyIndex hook_body() const noexcept { return hook_; }
+    // Its drives as heard (for the Matron's hearing, matron.hpp hear): where
+    // each is and how loud while it runs, 0 when it does not. The slewing
+    // ring's motors; the hoist's drum on the counter-jib (louder under load,
+    // loudest stalled); the trolley's wheels at the rope's top.
+    struct Noise {
+        float x = 0.0F, y = 0.0F, z = 0.0F;
+        float loudness = 0.0F;
+    };
+    [[nodiscard]] std::array<Noise, 3> noises() const;
     // The hoist rope's ends, on the trolley and on the hook block.
     [[nodiscard]] JPH::RVec3 rope_top() const;
     [[nodiscard]] JPH::RVec3 rope_bottom() const;

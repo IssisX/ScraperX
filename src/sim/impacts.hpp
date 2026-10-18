@@ -36,18 +36,12 @@ public:
     static constexpr std::size_t kMaxPerTick = 8;
     // The list read: when full, the oldest goes.
     static constexpr std::size_t kKept = 32;
-    // How loud a hit is to the Matron, 0..1 (matron.cpp: a sound of 1 carries
-    // 55 m): nothing at kSilentJ, full at kFullJ, by the log between. A 55 kg
+    // How loud a hit is to the Matron, 0..1 (matron.hpp hear: a sound of 1
+    // carries 55 m): nothing at kSilentJ, full at kFullJ, by the log between. A 55 kg
     // drum dropped 1 m (~540 J) is 0.68, an 18 kg toolbox set down hard
     // (~36 J) 0.29, a walk's own noise.
     static constexpr float kSilentJ = 5.0F;
     static constexpr float kFullJ = 5000.0F;
-
-    struct Loudest {
-        bool heard = false;
-        float x = 0.0F, y = 0.0F, z = 0.0F;
-        float loudness = 0.0F;
-    };
 
     explicit ImpactLedger(JPH::PhysicsSystem &physics) : physics_(physics) {}
 
@@ -59,12 +53,8 @@ public:
     // now are, so the jump is not heard as a hit.
     void resync();
 
-    // The loudest hit since it was last taken (taken once).
-    [[nodiscard]] Loudest take_loudest() noexcept {
-        const Loudest result = loudest_;
-        loudest_ = {};
-        return result;
-    }
+    // The last step's hits, hardest first (what the Matron hears).
+    [[nodiscard]] const std::vector<ImpactSnapshot> &tick() const noexcept { return tick_; }
     // The kept hits, oldest first.
     [[nodiscard]] std::vector<ImpactSnapshot> kept() const;
     // The newest hit's sequence, 0 before the first.
@@ -90,7 +80,6 @@ private:
     std::size_t ring_next_ = 0;
     std::size_t ring_count_ = 0;
     std::uint64_t sequence_ = 0;
-    Loudest loudest_{};
 };
 
 } // namespace scraperx::sim

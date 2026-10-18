@@ -1074,7 +1074,7 @@ func _feel_crane(delta: float) -> void:
 		_haptic(&"press", 0.6)
 	_crane_had_remote = has_remote
 	var jib: Transform3D = _crane_view.jib_transform()
-	_audio.update_crane(state, jib)
+	_audio.update_crane(delta, state, jib)
 	var operating := bool(state["operating"])
 	var slewing := absf(float(state["slew_rate"])) > 0.002
 	var trolleying := absf(float(state["trolley_rate"])) > 0.02

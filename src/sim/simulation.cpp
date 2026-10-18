@@ -798,7 +798,16 @@ ForkliftSnapshot Simulation::forklift_state(const std::uint32_t index) const noe
         result.wheel_rotation[index] = to_sim_quaternion(at.GetQuaternion());
         result.wheel_radius[index] = forklift.wheel_radius(wheel);
         result.wheel_width[index] = forklift.wheel_width(wheel);
+        result.wheel_spin_rad_s[index] = state.wheel_spin_rad_s[index];
+        result.wheel_ground[index] = state.wheel_ground[index];
     }
+    result.gear = state.gear;
+    result.throttle = state.throttle;
+    result.engine_rpm = state.engine_rpm;
+    result.lift_mps = state.lift_mps;
+    result.fork_gap_m = state.fork_gap_m;
+    result.fork_drag_mps = state.fork_drag_mps;
+    result.fork_ground = state.fork_ground;
     return result;
 }
 
@@ -850,6 +859,14 @@ YardCraneSnapshot Simulation::yard_crane_state() const noexcept {
     result.rope_top = to_sim_vector(crane.rope_top());
     result.rope_bottom = to_sim_vector(crane.rope_bottom());
     result.hook = to_sim_vector(crane.hook_position());
+    result.hoist_rate = state.hoist_rate;
+    result.slew_measured = state.slew_measured;
+    result.slew_torque_nm = state.slew_torque_nm;
+    result.trolley_mps = state.trolley_mps;
+    result.trolley_force_n = state.trolley_force_n;
+    result.rope_mps = state.rope_mps;
+    result.hook_mps = state.hook_mps;
+    result.sling_n = state.sling_n;
     return result;
 }
 

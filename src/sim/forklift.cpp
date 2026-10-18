@@ -3,6 +3,8 @@
 
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Constraints/MotorSettings.h>
 #include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
@@ -390,6 +392,8 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     controller.GetTransmission().Set(gear, gear != 0 ? 1.0F : 0.0F);
     controller.SetDriverInput(throttle, -state_.steer, brake, 0.0F);
     state_.drive = static_cast<float>(gear) * throttle;
+    state_.gear = gear;
+    state_.throttle = throttle;
     state_.speed_mps = speed;
     state_.lift_m = at;
     state_.lift = want_lift;
@@ -400,15 +404,52 @@ void Forklift::post_step(const float delta_seconds) {
         return;
     }
     state_.lift_n = std::abs(lift_->GetTotalLambdaMotor()) / delta_seconds;
+    state_.lift_mps = (lift_->GetCurrentPosition() - state_.lift_m) / delta_seconds;
+    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
     for (int index = 0; index < kWheels; ++index) {
         const Wheel *wheel = vehicle_->GetWheel(static_cast<uint>(index));
         const auto i = static_cast<std::size_t>(index);
         state_.wheel_contact[i] = wheel->HasContact();
         state_.wheel_load_n[i] = wheel->HasContact() ? std::max(0.0F, wheel->GetSuspensionLambda()) / delta_seconds : 0.0F;
+        state_.wheel_spin_rad_s[i] = wheel->GetAngularVelocity();
+        state_.wheel_ground[i] = wheel->HasContact() ? bodies.GetUserData(wheel->GetContactBodyID()) : 0;
     }
-    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+    state_.engine_rpm = controller_of(*vehicle_).GetEngine().GetCurrentRPM();
     const Vec3 forward = bodies.GetRotation(kit_.body_id(chassis_)) * Vec3::sAxisZ();
     state_.pitch_rad = -std::asin(std::clamp(forward.GetY(), -1.0F, 1.0F));
+
+    // The blades: a short ray down from just inside each one's underside, at
+    // its heel and its tip, finds what is under it and how far; touching it,
+    // the blade slides over it at their points' difference in speed (a load
+    // carried on the forks moves with them and does not scrape).
+    const BodyID carriage = kit_.body_id(carriage_);
+    const RMat44 frame = bodies.GetWorldTransform(carriage);
+    constexpr float kInside = 0.005F;
+    constexpr float kReach = 0.12F;
+    state_.fork_gap_m = 1.0F;
+    state_.fork_drag_mps = 0.0F;
+    state_.fork_ground = 0;
+    for (const float x : {-0.30F, 0.30F}) {
+        for (const float z : {0.11F, 1.21F}) {
+            const RVec3 from = frame * Vec3(x, -0.025F + kInside, z);
+            const RRayCast ray{from, Vec3(0.0F, -kReach, 0.0F)};
+            RayCastResult hit;
+            if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, wheel_filter_)) {
+                continue;
+            }
+            const float gap = hit.mFraction * kReach - kInside;
+            if (gap < state_.fork_gap_m) {
+                state_.fork_gap_m = gap;
+                state_.fork_ground = bodies.GetUserData(hit.mBodyID);
+            }
+            if (gap <= kForkTouchM) {
+                const RVec3 at = ray.GetPointOnRay(hit.mFraction);
+                Vec3 slide = bodies.GetPointVelocity(carriage, at) - bodies.GetPointVelocity(hit.mBodyID, at);
+                slide.SetY(0.0F);
+                state_.fork_drag_mps = std::max(state_.fork_drag_mps, slide.Length());
+            }
+        }
+    }
 }
 
 void Forklift::restore() {

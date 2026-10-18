@@ -70,12 +70,6 @@ void ImpactLedger::post_step(const std::uint64_t carried) {
     if (tick_.size() > kMaxPerTick) {
         tick_.resize(kMaxPerTick);
     }
-    const ImpactSnapshot &hardest = tick_.front();
-    const float loud = loudness(static_cast<float>(hardest.energy_j));
-    if (loud > 0.0F && (!loudest_.heard || loud > loudest_.loudness)) {
-        loudest_ = {true, static_cast<float>(hardest.at.x), static_cast<float>(hardest.at.y),
-                    static_cast<float>(hardest.at.z), loud};
-    }
     for (ImpactSnapshot &hit : tick_) {
         hit.sequence = ++sequence_;
         ring_[ring_next_] = hit;
@@ -91,7 +85,7 @@ void ImpactLedger::resync() {
         t.quiet_ticks = 0;
         t.last_energy_j = 0.0F;
     }
-    loudest_ = {};
+    tick_.clear();
 }
 
 std::vector<ImpactSnapshot> ImpactLedger::kept() const {

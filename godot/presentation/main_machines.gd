@@ -42,6 +42,11 @@ var _kit_dynamic: Array[bool] = []
 # more, with the point of it farthest from its origin, whose speed is how fast
 # the machine moves.
 const MACHINE_MIN_KG := 40.0
+# The kit bodies sounded by their own parts: each forklift's frame and fork
+# carriage (sim/forklift.hpp: the yard's, the crane's, the 11 m and 44 m
+# decks') and the yard crane's jib, trolley, hook block and shackle
+# (sim/yard_crane.hpp).
+const OWN_SOUND_ENTITIES := [2982, 2983, 2989, 2990, 2991, 2992, 2993, 2994, 2984, 2985, 2986, 2987]
 # Loose stock (kit entities from here, src/sim/loose_stock.hpp) is not a
 # machine: crates and drums lying about neither hum nor carry beacons.
 const STOCK_FIRST_ENTITY := 5000
@@ -182,7 +187,10 @@ func _build_kit() -> void:
 		var stock := entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT
 		if bool(_native.is_kit_body_dynamic(body)) and not stock and \
 				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
-			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
+			# The forklifts and the yard crane are heard from their own parts
+			# (audio_director update_forklift, update_crane), not as a groan.
+			_machines.append({"heard": not (entity in OWN_SOUND_ENTITIES), "body": body,
+				"tip": _farthest_corner(parts), "last_tip": Vector3.INF,
 				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
 				"tip_at": Vector3.ZERO, "mass": float(_native.get_kit_body_mass(body)),
 				"top": _beacon_seat(parts)})
