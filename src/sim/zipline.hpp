@@ -25,7 +25,13 @@
 //
 // The trolley and the block stay where the ride left them: a ridden line has
 // no trolley at its top, and is not ridden again until a death or a load
-// (restore()) parks the trolley and sets the block back. They are the sim's
+// (restore()) parks the trolley and sets the block back.
+//
+// A second rider, not the player, rides the same way (clip_other): the
+// Matron, her hands on a parked trolley's bar, squeezing its brake herself.
+// One rider a trolley: whoever takes it first takes it down. Or with no
+// trolley (on_cable): her forearms hooked over the bare cable from the park
+// down, the trolley left where it is, her own drag on the cable her brake. They are the sim's
 // positions, drawn by the presentation; the body never reaches them but by
 // the hands (parked over a jump's height, ridden over the head).
 //
@@ -100,6 +106,10 @@ public:
     struct Line {
         JPH::RVec3 top;        // the top anchor
         JPH::RVec3 bottom;     // the bottom anchor
+        JPH::RVec3 top_floor;  // the floor under the top anchor
+        JPH::RVec3 bottom_floor;
+        JPH::RVec3 stand;      // the stand's top, under the parked bar
+        JPH::RVec3 ramp_foot;  // the foot of the ramp up to it
         JPH::Vec3 direction;   // unit, top to bottom
         float length = 0.0F;
         float brake_m = 0.0F;    // the buffer's travel, its rest to the stop (kStopMarginM short of the end)
@@ -144,6 +154,15 @@ public:
     void unclip();
     // The hand brake squeezed 0..1 (the stick held back).
     void set_hand_brake(float squeeze) noexcept;
+    // The other rider: `body`'s hands, at `hands_offset` from its centre,
+    // take `line`'s parked trolley (or, on_cable, the cable itself at the
+    // park); let go; the brake it squeezes.
+    void clip_other(int line, JPH::BodyID body, JPH::Vec3 hands_offset, bool on_cable);
+    void unclip_other();
+    void set_other_brake(float squeeze) noexcept;
+    [[nodiscard]] const State &other_state() const noexcept { return other_state_; }
+    // Where a line's parked bar hangs.
+    [[nodiscard]] JPH::RVec3 parked_bar(int line) const;
     // After the physics step: where the trolley is and how fast, the brakes,
     // and the load on the hands.
     void post_step(float delta_seconds);
@@ -177,9 +196,20 @@ private:
     std::vector<JPH::AABox> worked_;
     std::vector<JPH::AABox> reserved_;
     std::vector<Line> lines_;
+    // A rider's hold on a line (see clip), its following of the trolley and
+    // the brakes on it (see post_step), and its letting go.
+    void attach(int index, JPH::BodyID body, JPH::Vec3 hands_offset, bool on_cable,
+                JPH::Ref<JPH::SliderConstraint> &slider, State &state);
+    void detach(JPH::Ref<JPH::SliderConstraint> &slider, State &state);
+    void track(const JPH::Ref<JPH::SliderConstraint> &slider, State &state, JPH::BodyID body, bool on_cable,
+               float delta_seconds);
     JPH::Ref<JPH::SliderConstraint> slider_;
     JPH::Vec3 hands_offset_ = JPH::Vec3::sZero();
     State state_{};
+    JPH::BodyID other_{};
+    JPH::Ref<JPH::SliderConstraint> other_slider_;
+    State other_state_{};
+    bool other_on_cable_ = false;
 };
 
 } // namespace scraperx::sim

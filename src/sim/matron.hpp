@@ -46,6 +46,20 @@
 // In the Turn she leaps a gap (kLeapUpMps) as she vaults a crate. Each level
 // has the way up she guards: A's cage on her deck, B's on the 176 ring.
 //
+// Lines: a line's one trolley leaves with its rider, and from her deck the
+// only other way down (the riser ladder) is not taken from the top, so frail
+// she never rides a line after the player. Seeing the player ride one, she
+// guesses where they are going: its far end. In the Turn she goes after
+// them: up the stand, a jump for the cable, and down it on her forearms
+// (Zipline::clip_other, on the bare cable, kCableFriction her drag on it), to
+// let go over the far band and hunt the deck below.
+//
+// Meddling that can be undone (decision 9's B): a way up the player has
+// rigged (its rope's end on the cage's eye) and left, she goes into the cage
+// at her post and takes the rope off the eye (Unrigging): kUnrigSeconds of her
+// hands at it, and the shackle hangs at the eye on its rope. Hooked on again,
+// the cage rides as before. She never sends a cage away.
+//
 // Only simulation state decides anything here (no clock, no randomness): the
 // same start and inputs give the same chase.
 
@@ -61,6 +75,8 @@
 
 namespace scraperx::sim {
 
+class Zipline;
+
 class Matron final {
 public:
     enum class State : std::uint8_t {
@@ -73,6 +89,7 @@ public:
         Dead = 6,      // fell
         Guarding = 7,  // standing in the way out's mouth, silent, listening
         Peering = 8,   // stopped short of a noise, looking for the player there
+        Unrigging = 9, // at the way out's eye, taking the player's rope off it
     };
 
     static constexpr std::uint64_t kEntity = 3200;
@@ -171,11 +188,33 @@ public:
     static constexpr float kEdgeMarginM = 0.25F;
     // A gap no wider than this (the 0.3 m between two cages) she steps over.
     static constexpr float kStepOverM = 0.45F;
+    // The cable: her hands over her head (her centre to them), how near the
+    // cable they take it, her jump for it off a line's stand, and her
+    // forearms' friction on it going down (cloth and skin on steel, on her
+    // weight across the cable): about half a metre a second gained each
+    // second down the steepest line, where a trolley gains three.
+    static constexpr float kHandsAboveCentre = 1.55F;
+    static constexpr float kCableReachM = 0.6F;
+    static constexpr float kCableJumpMps = 3.9F;
+    static constexpr float kCableFriction = 0.3F;
+    // Letting go of a cable at its end, she swings on this fast over the band.
+    static constexpr float kLetGoSwingMps = 1.6F;
+    // How long her hands are at a rigged cage's eye before the rope is off it.
+    static constexpr float kUnrigSeconds = 2.0F;
     // The 176 ring (world_solids.inc, UpperDeck): its band's middle line, and
     // the cages at its north edge: Stage A's at the top of its travel, B's at
     // the bottom of its, their open north sides 1.09 m off the ring's edge.
     static constexpr float kRingFloor = 176.25F;
     static constexpr float kRingX = 23.09F;
+    // The rings above it: one every kRingPitch, each band's middle line
+    // kRingStepIn nearer the shaft's than the last, up to the tenth.
+    static constexpr float kRingPitch = 22.0F;
+    static constexpr float kRingStepIn = 0.91F;
+    static constexpr int kUpperRings = 10;
+    // The stack's decks under hers: one every kStackPitch from the first,
+    // their bands laid out as hers.
+    static constexpr float kStackPitch = 11.0F;
+    static constexpr int kStackDecks = 13;
     static constexpr float kRingNorthZ = -126.91F;
     static constexpr float kRingSouthZ = -173.09F;
     static constexpr float kCageACenterX = -10.5F;
@@ -235,6 +274,9 @@ public:
         bool wary = false;          // checking the present noise from a vantage first
         std::uint32_t vaults = 0;   // things vaulted in the Turn, this run
         std::uint32_t leaps = 0;    // gaps leapt in the Turn, this run
+        std::uint32_t unrigs = 0;   // ropes she took off a way out's eye, this run
+        bool on_line = false;       // going down a line's bare cable
+        std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
     };
@@ -259,6 +301,18 @@ public:
     // there is nothing to guard.
     void set_ways_out(const bool a_down, const bool b_down) noexcept {
         ways_out_ = {a_down, b_down};
+    }
+    // Whether each way up is rigged to ride (its rope's end on its cage's
+    // eye): given before pre_step.
+    void set_rigged(const bool a_rigged, const bool b_rigged) noexcept { rigged_ = {a_rigged, b_rigged}; }
+    // The lines (and whether the player rides one): given once they are built.
+    void set_zipline(Zipline *zipline) noexcept { zipline_ = zipline; }
+    // Reports (once) the way up whose rope she has just taken off its eye
+    // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
+    [[nodiscard]] int take_unrig() noexcept {
+        const int way = unrig_way_;
+        unrig_way_ = -1;
+        return way;
     }
     // A blow on the deck she can hear like the player's noise (a crate
     // crashing down): given before pre_step, heard in it.
@@ -313,8 +367,9 @@ private:
         float x, z, yaw;
     };
     // A level she can hunt: its floor, its walking lines, the loops she
-    // patrols, and the posts by its way up (guarded while ways_out_[way]):
-    // the first she can walk to is hers.
+    // patrols, the posts by its way up (guarded while ways_out_[way]: the
+    // first she can walk to is hers; -1, none), and where she stands to
+    // reach that cage's eye.
     struct Level {
         float floor_y;
         std::vector<Node> nodes;
@@ -322,6 +377,7 @@ private:
         std::vector<std::vector<int>> patrols;
         std::vector<Post> posts;
         int way;
+        Post eye;
     };
     struct Plank {
         JPH::BodyID body;
@@ -353,6 +409,11 @@ private:
     // Of her level's patrol loops, the one she can walk onto from here, and
     // its node nearest her.
     void pick_patrol(float ax, float az);
+    // After a lead on another level, down the line that goes there: to its
+    // stand, and in the Turn onto its cable. False when no line does.
+    bool follow_line(float dt, JPH::RVec3 at);
+    // On a line's cable: her drag on it, and letting go at its end.
+    void ride_line();
     // A lead: a place she heard (or saw) the player, or a crash, at that loudness.
     void take_lead(float x, float z, float loudness, bool seen);
     // Back to her post if there is a way out to guard, else the patrol.
@@ -409,8 +470,19 @@ private:
     bool riding_ = false;
     float let_go_s_ = 0.0F;
     std::uint32_t leaps_ = 0;
+    // Lines: the lines, the one whose far end she guessed, the floor of her
+    // lead (another level's, guessed down a line), and her going down one.
+    Zipline *zipline_ = nullptr;
+    int guess_line_ = -1;
+    float lead_floor_ = kDeckTop;
+    bool on_line_ = false;
+    std::uint32_t cable_slides_ = 0;
     // Her mind (see above): what she has learned this run.
     std::array<bool, 2> ways_out_{true, true};
+    std::array<bool, 2> rigged_{false, false};
+    float unrig_s_ = 0.0F;
+    int unrig_way_ = -1;
+    std::uint32_t unrigs_ = 0;
     bool lead_seen_ = false;
     bool wary_ = false;
     float peer_s_ = 0.0F;

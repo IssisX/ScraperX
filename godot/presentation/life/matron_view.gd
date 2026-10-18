@@ -28,6 +28,7 @@ const STATE_SHUFFLING := 5
 const STATE_DEAD := 6
 const STATE_GUARDING := 7   # at her post in the mouth of the way out
 const STATE_PEERING := 8    # stopped short of a noise, looking
+const STATE_UNRIGGING := 9  # at the way out's eye, taking the player's rope off it
 const BOLT_COUNT := 4
 const STEP_M := 0.7
 const HEARD_MUSIC_M := 55.0
@@ -57,6 +58,11 @@ var _last_turn := 0
 var _cry_fall := false
 var _vaults_seen := -1
 var _leaps_seen := -1
+var _unrigs_seen := -1
+var _rattle_in := 0.0
+# Going down a line's bare cable: the sparks off her forearms and the screech.
+var _sparks: CPUParticles3D
+var _screech_in := 0.0
 var _planks: Array[MeshInstance3D] = []
 var _plank_bolted: Array[bool] = []
 # The locker.
@@ -93,6 +99,35 @@ func setup(native: Object, audio: Object = null) -> void:
 	_build_figure()
 	_build_planks()
 	_build_stencils()
+	_build_sparks()
+
+
+# Sparks off a steel cable where her forearms ride it: hot, short, falling.
+func _build_sparks() -> void:
+	var hot := StandardMaterial3D.new()
+	hot.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hot.albedo_color = Color(1.0, 0.62, 0.22)
+	hot.emission_enabled = true
+	hot.emission = Color(1.0, 0.55, 0.15)
+	hot.emission_energy_multiplier = 3.0
+	var spark := BoxMesh.new()
+	spark.size = Vector3(0.012, 0.012, 0.07)
+	spark.material = hot
+	_sparks = CPUParticles3D.new()
+	_sparks.mesh = spark
+	_sparks.amount = 48
+	_sparks.lifetime = 0.45
+	_sparks.local_coords = false
+	_sparks.emitting = false
+	_sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	_sparks.emission_sphere_radius = 0.12
+	_sparks.direction = Vector3.DOWN
+	_sparks.spread = 65.0
+	_sparks.initial_velocity_min = 1.5
+	_sparks.initial_velocity_max = 4.5
+	_sparks.gravity = Vector3(0.0, -9.81, 0.0)
+	_sparks.particle_flag_align_y = true
+	add_child(_sparks)
 
 
 # --- the locker -------------------------------------------------------------
@@ -683,6 +718,8 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var vaulting := turn == 2 and _fall_speed > 1.0
 	# Holding on to a floor that moves (a cage she stepped into as it left).
 	var clinging := bool(data.get("clinging", false))
+	# Going down a line's bare cable on her forearms.
+	var on_line := bool(data.get("on_line", false))
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -694,6 +731,20 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		legs_fwd = sin(_clock * 27.0) * 0.8
 		legs_back = -sin(_clock * 27.0) * 0.8
 		knees = 0.5
+	elif on_line:
+		# Hung from the cable by her forearms hooked over it, the body
+		# swinging under, legs trailing, the head craned down the line.
+		pitch = 0.15
+		hip_y = 1.0
+		arms_fwd = 2.95
+		arms_bend = 1.25
+		arms_splay = 0.25
+		legs_fwd = 0.35 + 0.25 * sin(_clock * 2.2)
+		legs_back = 0.1 - 0.2 * sin(_clock * 2.2 + 0.8)
+		knees = 0.5
+		head_pitch = -0.9
+		head_roll = 0.3 * sin(_clock * 1.3)
+		jaw_open = 0.95
 	elif clinging:
 		# Down on her haunches with a hand locked on the cage's frame either
 		# side, rocking with it, the head never off the player.
@@ -702,9 +753,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		knees = 1.9
 		legs_fwd = 1.1
 		legs_back = 1.1
-		arms_fwd = 0.5
-		arms_bend = 0.4
-		arms_splay = 1.45
+		arms_fwd = 0.35
+		arms_bend = 1.1
+		arms_splay = 0.95
 		head_pitch = -0.85
 		head_roll = 0.25 * sin(_clock * 1.7)
 		jaw_open = 0.55
@@ -784,6 +835,20 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_splay = 0.05
 		head_pitch = 0.05
 		jaw_open = 0.04
+	elif state == STATE_UNRIGGING and speed < 0.3:
+		# Bent to the cage's eye at her knee, both hands at the shackle,
+		# working it, her head down over them.
+		pitch = 1.25
+		hip_y = 0.85
+		knees = 0.6
+		legs_fwd = 0.25
+		legs_back = 0.1
+		arms_fwd = 1.15 + 0.12 * sin(_clock * 13.0)
+		arms_bend = 0.9 + 0.15 * sin(_clock * 9.0 + 1.0)
+		arms_splay = 0.12
+		head_pitch = 0.5
+		head_roll = 0.2 * sin(_clock * 2.3)
+		jaw_open = 0.2
 	elif state == STATE_PEERING:
 		# Stopped short of a noise, craning toward it: leant out from the
 		# hips, the neck stretched, the head tilting, her breath held.
@@ -941,6 +1006,10 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_fall_speed = (centre.y - _last_pos.y) / maxf(delta, 0.0001) if delta > 0.0 else 0.0
 	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
 	_last_pos = centre
+	var on_line := bool(data.get("on_line", false))
+	_sparks.emitting = out and on_line
+	if on_line:
+		_sparks.global_position = centre + Vector3(0.0, 1.55, 0.0)
 	if not out or centre.distance_to(camera_position) > DRAW_RANGE_M:
 		_figure.visible = false
 		return
@@ -976,6 +1045,22 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		if _leaps_seen >= 0 and leaps > _leaps_seen:
 			_audio.matron_cue(&"matron_shriek", _hip_world(), 0.0, randf_range(0.75, 0.9))
 		_leaps_seen = leaps
+		# At a rigged cage's eye: the shackle rattled, then its clang off.
+		if state == STATE_UNRIGGING and float(data["speed"]) < 0.3:
+			_rattle_in -= delta
+			if _rattle_in <= 0.0:
+				_rattle_in = randf_range(0.35, 0.55)
+				_audio.matron_cue(&"scrape", _hip_world(), -10.0, randf_range(1.3, 1.6))
+		var unrigs := int(data.get("unrigs", 0))
+		if _unrigs_seen >= 0 and unrigs > _unrigs_seen:
+			_audio.matron_cue(&"clang", _hip_world(), -2.0, randf_range(1.1, 1.25))
+		_unrigs_seen = unrigs
+		# Down a cable on her forearms: steel shrieking under them.
+		if on_line:
+			_screech_in -= delta
+			if _screech_in <= 0.0:
+				_screech_in = randf_range(0.1, 0.16)
+				_audio.matron_cue(&"scrape", centre + Vector3(0.0, 1.55, 0.0), -3.0, randf_range(1.7, 2.0))
 		if turn != _last_turn:
 			if turn == 1:
 				_audio.matron_cue(&"bone_crack", _hip_world(), 1.0, randf_range(0.9, 1.1))

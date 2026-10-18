@@ -323,6 +323,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
         const double top_y = 176.25 + 22.0 * ring;
         across_well(top_y, top_y - 22.0, 21.1 - 0.9 * ring, 21.1 - 0.9 * (ring - 1), ring % 2 == 0);
     }
+    // The Matron knows the lines (and goes down one after the player in the Turn).
+    matron_->set_zipline(zipline_.get());
     // The tower's lived-in spots of loose stock: after every other body, so
     // each place is tested against all of them, and clear by kKeepClearM of
     // every place the player is put down and of every lane the crew walk.
@@ -531,7 +533,15 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // B's, while it is down at the 176 ring.
     matron_->set_ways_out(kit_->guide_travel(well_.a_cage_guide) < 0.5F,
                           kit_->guide_travel(well_.b_cage_guide) < 0.5F);
+    // And whether the player has rigged them to ride: she undoes that.
+    matron_->set_rigged(kit_->rope_end_entity(well_.a_rope) == kWellACageEntityId,
+                        kit_->rope_end_entity(well_.b_rope) == kWellBCageEntityId);
     matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
+    if (const int way = matron_->take_unrig(); way >= 0) {
+        // Her hands have the rope's end off the cage's eye: it hangs there on
+        // its shackle, to be hooked on again.
+        (void)kit_->unhook(way == 0 ? well_.a_rope : well_.b_rope);
+    }
     kit_->pre_step(delta_seconds);
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
                     grounded_);

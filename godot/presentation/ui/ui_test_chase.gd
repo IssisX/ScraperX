@@ -11,6 +11,10 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # leaves and rides it up holding on, taking nobody. At the top a hop over the
 # 1.09 m to the 176 ring and away along it: frail, she stays on the cages;
 # back within her reach, the Turn takes her over the gap.
+# touch_matron_line: woken, she is led round the deck to the 154 m line's
+# stand; with her near, a JUMP takes the bar and the ride down (braked) to
+# 143 m; in the Turn she goes after the player down the bare cable, sparks
+# off her forearms, and lets go over 143's south band.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
 #
@@ -218,6 +222,120 @@ func _matron_ride_touch(device: int) -> bool:
 	return true
 
 
+# A sprint to `target`: the stick pushed past its ring toward it and held,
+# the view kept on it, let go within `tolerance`.
+func _sprint_to(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
+	var at := _position()
+	await _face(target - Vector2(at.x, at.z))
+	if not _stick_sprint():
+		return false
+	var waited := 0.0
+	while waited < budget:
+		at = _position()
+		var to := target - Vector2(at.x, at.z)
+		if to.length() <= tolerance:
+			_move(device, 0.0)
+			return true
+		var turn := 4.0 * get_process_delta_time()
+		_main._yaw = float(_main._yaw) + clampf(wrapf(atan2(-to.x, -to.y) - float(_main._yaw), -PI, PI), -turn, turn)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move(device, 0.0)
+	return false
+
+
+func _matron_line_touch(device: int) -> bool:
+	if not await _wake_matron(device):
+		return false
+	# Quietly to the catwalk's east end to wait for her.
+	if not await _crouch_on(device, true):
+		return _fail("CROUCH did not crouch the climber")
+	if not (await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0) and \
+			await _go(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), 0.5, 40.0)):
+		return _fail("the crouched walk to the catwalk's east end stalled at %s" % str(_position()))
+	var coming: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 16.0, 45.0)
+	if not coming:
+		return _fail("she did not come for the player at the catwalk's east end")
+	await _crouch_on(device, false)
+	# The long way round ahead of her, back along the north band to the line's ramp.
+	for leg in [Vector2(MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, MATRON_NORTH_Z),
+			Vector2(1.0, MATRON_NORTH_Z)]:
+		if not await _sprint_to(device, leg, 1.0, 12.0):
+			return _fail("the sprint round the deck stalled at %s" % str(_position()))
+	if not (await _walk_to(device, Vector2(3.0, -132.36), 0.3, 4.0, true) and \
+			await _walk_to(device, Vector2(6.0, -132.36), 0.15, 6.0, true)) or _position().y < 155.0:
+		return _fail("up the ramp onto the line's stand stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	var near: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 11.0, 20.0)
+	if not near or int(_native().get_death_count()) != 0:
+		return _fail("she did not come for the player on the stand (deaths %d)" % int(_native().get_death_count()))
+	await _face(Vector2(0.0, -1.0))
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5):
+		return _fail("the jump from the stand never took the trolley's bar (at %s)" % str(_position()))
+	# Down the line, braked over the last stretch; she comes after.
+	var line := int(_native().get_zipline_state()["line"])
+	var length := float(_native().get_zipline_lines()[line]["length"])
+	var seen := {"cable": false, "shot": false}
+	var holding_back := false
+	var stopped := false
+	var waited := 0.0
+	while waited < 16.0 and not stopped:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		var zip: Dictionary = _native().get_zipline_state()
+		if not bool(zip["riding"]):
+			return _fail("the hands came off the bar mid-ride (at %s)" % str(_position()))
+		var speed := absf(float(zip["speed_mps"]))
+		# Braked to 6 m/s: slower, the buffer stops the trolley short of the
+		# stop, over the shaft; at 6 it rides on to the stop over the band.
+		var brake := float(zip["along_m"]) > length - 12.0 and speed > 6.0
+		if brake and not holding_back:
+			_stick_push(Vector2(0.0, 1.0))
+		elif not brake and holding_back:
+			_move_dir(device, Vector2.ZERO)
+		holding_back = brake
+		seen["cable"] = bool(seen["cable"]) or bool(_matron_state()["on_line"])
+		# Into the buffer at the end, over the far band, before letting go.
+		stopped = float(zip["along_m"]) > length - 1.5 and speed < 0.3
+	_move_dir(device, Vector2.ZERO)
+	if not stopped:
+		return _fail("the ride never stopped at the bottom")
+	await _frames(2)
+	_tap(1, _center(&"drop"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()) and _position().y < 145.0, 2.5):
+		return _fail("DROP at the bottom did not put the body down on 143 m (at %s)" % str(_position()))
+	# Away along 143's south band, then a look back up the line at her
+	# coming down it.
+	if not await _sprint_to(device, Vector2(-12.0, -171.5), 1.0, 8.0):
+		return _fail("away along 143's south band stalled at %s" % str(_position()))
+	var on_cable: bool = await _wait_until(func() -> bool: return bool(_matron_state()["on_line"]), 4.0) or bool(seen["cable"])
+	if not on_cable:
+		return _fail("in the Turn she never went onto the cable (state %d, turn %d, at %s)" % [
+			int(_matron_state()["state"]), int(_matron_state()["turn"]), str(_matron_state()["position"])])
+	if bool(_matron_state()["on_line"]):
+		var her: Vector3 = _matron_state()["position"]
+		await _face(Vector2(her.x - _position().x, her.z - _position().z))
+		await _tilt(0.25)
+		await _pose("matron_line_cable")
+		await _tilt(0.0)
+	var down: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		return not bool(m["on_line"]) and bool(m["alive"]) and absf(float(m["floor_y"]) - 143.0) < 0.1, 30.0)
+	if not down:
+		return _fail("she never let go over 143's band (on line %s, at %s, level %.2f)" % [
+			str(_matron_state()["on_line"]), str(_matron_state()["position"]), float(_matron_state()["floor_y"])])
+	_detail = "slides=%d she_at=%s deaths=%d" % [int(_matron_state()["cable_slides"]), str(_matron_state()["position"]),
+		int(_native().get_death_count())]
+	return true
+
+
 # Renders only: the locker straining at three points of the climb, then her
 # bursting out and the hunt, from where the player stands.
 func _look_matron(stage: String) -> bool:
@@ -299,6 +417,8 @@ func _look_matron_gallery() -> bool:
 		["guard", {"state": 7, "speed": 0.0, "stride": 0.0, "turn": 0}],
 		["peer", {"state": 8, "speed": 0.0, "stride": 0.0, "turn": 0}],
 		["cling", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "clinging": true}],
+		["unrig", {"state": 9, "speed": 0.0, "stride": 0.0, "turn": 0}],
+		["on_line", {"state": 3, "speed": 4.0, "stride": 0.0, "turn": 0, "clinging": true, "on_line": true}],
 		# Rising (0.15 m a frame): the vault.
 		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
 	]

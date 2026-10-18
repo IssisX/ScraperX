@@ -1158,6 +1158,33 @@ with the player on the ring, then the leap, down on the ring standing; every ear
 proof unchanged); touch `touch_matron_ride` (new, in CI: rigged on touch, the handle tripped as
 she nears, the ride, the hop to the ring, her leap and landing); `look_matron_gallery` (cling).
 
+**The Matron's meddling, first: she undoes your rigging (2026-10-18; decision 9, third piece).**
+B: she meddles only in ways you can undo, never sending a lift away. Rig a way up (the rope's end
+off the bollard and onto the cage's eye) and leave it, and when her hunt comes back to her post she
+walks into the cage, stands at the eye with her hands at the shackle for 2 s, and the rope's end is
+off it: the shackle hangs at the eye on its rope. Pick it up and hook it on again and the cage rides
+as before. The same rule covers B's cage at the 176 ring (written, not yet proven there). So a rig
+is only worth making when you can ride it before she is back. Proof: native `matron` (unrig: rigged, woken, lost; she unhooks it
+once, back to her post; drawn over the catwalk to her death; the shackle in reach at the eye, picked
+up, HOOK offered and taken, the cage rides the player to the top).
+
+**The Matron and the lines: down the bare cable after you (2026-10-18; decision 9, A's lines).**
+Frail, she can never ride a line after you: a line's one trolley leaves with its rider, and from
+her deck the only other way down (the riser ladder to 143) is not taken from the top. So the lines
+are hers in the Turn. Seen or heard riding a line, you are where it ends (her guess where you are
+going). In the Turn she goes after you: to the line's stand and up its ramp, a jump for the cable,
+and down it on her forearms, sparks off them and the steel shrieking, with friction 0.3 on her
+weight across the cable: about half a metre a second gained each second down the deck's line,
+where a trolley gains three, so a rider braked to 6 m/s has some 12 s on her at the bottom. At the
+end she lets go swinging on over the far band, and hunts the deck she lands on: the stack's decks
+under hers and the rings above 176 are now levels she knows (her deck's walking lines; the rings'
+band middles). Frail, she goes to the stand and looks down the line, then gives up and searches
+its top. Proof: native `matron` (line: led round her deck, the player rides the 154 m line down
+braked; she goes onto the cable in the Turn, comes down it, lets go over 143's band and hunts
+there; every earlier proof unchanged); touch `touch_matron_line` (new, in CI); her pose on the
+cable in `look_matron_gallery`. The zipline takes a second rider for her (the trolley's or the
+bare cable), the player's ride unchanged (touch_zipline, touch_zipline_slam).
+
 **Running to-do (owner, 2026-10-17; sequenced by Claude: quicker, broader, prototype first and
 fill in after).**
 1. The zipline's hand brake: done 2026-10-17. Stick back squeezes it (900 N); the end's buffer
@@ -1178,8 +1205,11 @@ fill in after).**
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
    2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Off
    it: done 2026-10-18 for Stage A's cage to the 176 ring (she rides it with you, clinging,
-   hunts the ring, leaps its gap in the Turn). Next: the rings above as levels and B's and C's
-   rides; then lift meddling you can undo.
+   hunts the ring, leaps its gap in the Turn). Meddling: done 2026-10-18 for a rig left
+   unridden (she takes the rope off the eye; you hook it on again). Lines: done 2026-10-18 (in
+   the Turn she goes down a line's bare cable after you; the stack's decks and the rings above
+   are levels she hunts). Next: her parkour beyond the vault and the leap (the climb, a ladder
+   in the Turn), B's and C's rides with her proven.
 7. Open, asked 2026-10-17: diegetic machine controls (grab the forklift's real lift lever and
    the forks rise); judged feasible, 5 for the forklift alone, about 8 for every machine.
 

@@ -1392,6 +1392,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["wary"] = state.wary;
     out["vaults"] = static_cast<std::int64_t>(state.vaults);
     out["leaps"] = static_cast<std::int64_t>(state.leaps);
+    out["unrigs"] = static_cast<std::int64_t>(state.unrigs);
+    out["on_line"] = state.on_line;
+    out["cable_slides"] = static_cast<std::int64_t>(state.cable_slides);
     out["clinging"] = state.clinging;
     out["floor_y"] = state.floor_y;
     out["catches"] = static_cast<std::int64_t>(state.catches);

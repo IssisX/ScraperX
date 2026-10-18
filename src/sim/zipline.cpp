@@ -56,6 +56,7 @@ Zipline::Zipline(PhysicsSystem &physics, kit::Kit &kit, const BodyID player, std
 
 Zipline::~Zipline() {
     unclip();
+    unclip_other();
 }
 
 bool Zipline::floor_under(const RVec3 at) const {
@@ -202,6 +203,10 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
     Line line;
     line.top = top;
     line.bottom = bottom;
+    line.top_floor = top_floor;
+    line.bottom_floor = bottom_floor;
+    line.stand = top_floor + stand_at + Vec3(0.0F, kStandM, 0.0F);
+    line.ramp_foot = top_floor + ramp_foot;
     line.direction = direction;
     line.length = length;
     line.brake_m = travel;
@@ -222,12 +227,12 @@ int Zipline::at_hand(const RVec3 hands, const float reach, RVec3 &bar) const {
         if (!line.parked) {
             continue;
         }
-        const RVec3 parked_bar = line.top + line.direction * line.trolley_m - Vec3(0.0F, kBarDropM, 0.0F);
-        const float distance = Vec3(parked_bar - hands).Length();
+        const RVec3 hanging = parked_bar(static_cast<int>(i));
+        const float distance = Vec3(hanging - hands).Length();
         if (distance <= best_distance) {
             best = static_cast<int>(i);
             best_distance = distance;
-            bar = parked_bar;
+            bar = hanging;
         }
     }
     return best;
@@ -235,37 +240,57 @@ int Zipline::at_hand(const RVec3 hands, const float reach, RVec3 &bar) const {
 
 BodyID Zipline::clip(const int index, const Vec3 hands_offset) {
     unclip();
-    Line &line = lines_[static_cast<std::size_t>(index)];
     hands_offset_ = hands_offset;
+    attach(index, player_, hands_offset, false, slider_, state_);
+    return kit_.body_id(lines_[static_cast<std::size_t>(index)].body);
+}
+
+void Zipline::clip_other(const int index, const BodyID body, const Vec3 hands_offset, const bool on_cable) {
+    unclip_other();
+    other_ = body;
+    other_on_cable_ = on_cable;
+    attach(index, body, hands_offset, on_cable, other_slider_, other_state_);
+}
+
+RVec3 Zipline::parked_bar(const int index) const {
+    const Line &line = lines_[static_cast<std::size_t>(index)];
+    return line.top + line.direction * line.trolley_m - Vec3(0.0F, kBarDropM, 0.0F);
+}
+
+void Zipline::attach(const int index, const BodyID body, const Vec3 hands_offset, const bool on_cable,
+                     Ref<SliderConstraint> &slider, State &state) {
+    Line &line = lines_[static_cast<std::size_t>(index)];
+    // On the bare cable the hold starts at the park, whatever the trolley.
+    const float start_m = on_cable ? kParkM : line.trolley_m;
     // The hands' hold: the rider slides along the cable with the trolley,
     // held under it at the arms' length (the hands pulled onto the bar over
     // the first ticks, from wherever the catch reached from). The slide runs
     // from the park (the stop there: the trolley cannot ride up past its
     // hook) to the stop short of the bottom post.
-    const RVec3 parked_bar = line.top + line.direction * line.trolley_m - Vec3(0.0F, kBarDropM, 0.0F);
     const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
     SliderConstraintSettings slide;
     slide.mSpace = EConstraintSpace::WorldSpace;
     slide.mAutoDetectPoint = false;
-    slide.mPoint1 = parked_bar;
-    slide.mPoint2 = bodies.GetPosition(player_) + hands_offset;
+    slide.mPoint1 = line.top + line.direction * start_m - Vec3(0.0F, on_cable ? 0.0F : kBarDropM, 0.0F);
+    slide.mPoint2 = bodies.GetPosition(body) + hands_offset;
     slide.SetSliderAxis(line.direction);
     slide.mLimitsMin = 0.0F;
-    slide.mLimitsMax = line.length - line.trolley_m - kStopMarginM;
+    slide.mLimitsMax = line.length - start_m - kStopMarginM;
     slide.mLimitsSpringSettings = SpringSettings(ESpringMode::FrequencyAndDamping, 4.0F, 1.0F);
     slide.mMaxFrictionForce = kTrolleyDragN;
-    const BodyID ids[2] = {kit_.body_id(line.body), player_};
+    const BodyID ids[2] = {kit_.body_id(line.body), body};
     BodyLockMultiWrite lock(physics_.GetBodyLockInterface(), ids, 2);
-    slider_ = static_cast<SliderConstraint *>(slide.Create(*lock.GetBody(0), *lock.GetBody(1)));
-    physics_.AddConstraint(slider_);
-    line.parked = false;
-    state_.riding = true;
-    state_.line = index;
-    state_.along_m = line.trolley_m;
-    state_.speed_mps = 0.0F;
-    state_.braking = false;
-    ++state_.rides;
-    return kit_.body_id(line.body);
+    slider = static_cast<SliderConstraint *>(slide.Create(*lock.GetBody(0), *lock.GetBody(1)));
+    physics_.AddConstraint(slider);
+    if (!on_cable) {
+        line.parked = false;
+    }
+    state.riding = true;
+    state.line = index;
+    state.along_m = start_m;
+    state.speed_mps = 0.0F;
+    state.braking = false;
+    ++state.rides;
 }
 
 RVec3 Zipline::bar() const {
@@ -276,45 +301,70 @@ RVec3 Zipline::bar() const {
 }
 
 void Zipline::unclip() {
-    if (slider_ != nullptr) {
-        physics_.RemoveConstraint(slider_);
-        slider_ = nullptr;
+    detach(slider_, state_);
+}
+
+void Zipline::unclip_other() {
+    detach(other_slider_, other_state_);
+}
+
+void Zipline::detach(Ref<SliderConstraint> &slider, State &state) {
+    if (slider != nullptr) {
+        physics_.RemoveConstraint(slider);
+        slider = nullptr;
     }
-    state_.riding = false;
-    state_.line = -1;
-    state_.along_m = 0.0F;
-    state_.speed_mps = 0.0F;
-    state_.braking = false;
-    state_.hand_brake = 0.0F;
-    state_.hands_load_n = 0.0F;
+    state.riding = false;
+    state.line = -1;
+    state.along_m = 0.0F;
+    state.speed_mps = 0.0F;
+    state.braking = false;
+    state.hand_brake = 0.0F;
+    state.hands_load_n = 0.0F;
 }
 
 void Zipline::set_hand_brake(const float squeeze) noexcept {
     state_.hand_brake = slider_ == nullptr ? 0.0F : std::clamp(squeeze, 0.0F, 1.0F);
 }
 
+void Zipline::set_other_brake(const float squeeze) noexcept {
+    other_state_.hand_brake = other_slider_ == nullptr ? 0.0F : std::clamp(squeeze, 0.0F, 1.0F);
+}
+
 void Zipline::post_step(const float delta_seconds) {
-    if (slider_ == nullptr) {
+    track(slider_, state_, player_, false, delta_seconds);
+    track(other_slider_, other_state_, other_, other_on_cable_, delta_seconds);
+}
+
+void Zipline::track(const Ref<SliderConstraint> &slider, State &state, const BodyID body, const bool on_cable,
+                    const float delta_seconds) {
+    if (slider == nullptr) {
         return;
     }
-    Line &line = lines_[static_cast<std::size_t>(state_.line)];
+    Line &line = lines_[static_cast<std::size_t>(state.line)];
     // What the bar put on the hands this step: the stop and the drags along
     // the cable, and the body's weight and swing across it.
-    const auto across = slider_->GetTotalLambdaPosition();
-    const float along = std::abs(slider_->GetTotalLambdaPositionLimits()) + std::abs(slider_->GetTotalLambdaMotor());
-    state_.hands_load_n = std::sqrt(along * along + across[0] * across[0] + across[1] * across[1]) / delta_seconds;
-    state_.along_m = kParkM + slider_->GetCurrentPosition();
-    state_.speed_mps = physics_.GetBodyInterfaceNoLock().GetLinearVelocity(player_).Dot(line.direction);
-    // The buffer, run into, goes down the cable ahead of the trolley.
-    line.trolley_m = state_.along_m;
-    line.block_m = std::max(line.block_m, state_.along_m);
-    const bool buffering = state_.along_m > line.length - kStopMarginM - line.brake_m;
-    state_.braking = buffering || state_.hand_brake > 0.05F;
-    slider_->SetMaxFrictionForce(kTrolleyDragN + state_.hand_brake * kHandBrakeMaxN + (buffering ? line.brake_n : 0.0F));
+    const auto across = slider->GetTotalLambdaPosition();
+    const float along = std::abs(slider->GetTotalLambdaPositionLimits()) + std::abs(slider->GetTotalLambdaMotor());
+    state.hands_load_n = std::sqrt(along * along + across[0] * across[0] + across[1] * across[1]) / delta_seconds;
+    state.along_m = kParkM + slider->GetCurrentPosition();
+    state.speed_mps = physics_.GetBodyInterfaceNoLock().GetLinearVelocity(body).Dot(line.direction);
+    // The buffer, run into, goes down the cable ahead of the trolley (a
+    // body on the bare cable moves neither).
+    if (!on_cable) {
+        line.trolley_m = state.along_m;
+        line.block_m = std::max(line.block_m, state.along_m);
+    }
+    // A trolley meets the buffer at its rest; a body on the bare cable meets
+    // the block where a trolley left it (at the stop, after a ride).
+    const bool buffering = on_cable ? state.along_m > line.block_m - 0.3F
+                                    : state.along_m > line.length - kStopMarginM - line.brake_m;
+    state.braking = buffering || state.hand_brake > 0.05F;
+    slider->SetMaxFrictionForce(kTrolleyDragN + state.hand_brake * kHandBrakeMaxN + (buffering ? line.brake_n : 0.0F));
 }
 
 void Zipline::restore() {
     unclip();
+    unclip_other();
     for (Line &line : lines_) {
         line.trolley_m = kParkM;
         line.block_m = line.length - kStopMarginM - line.brake_m;

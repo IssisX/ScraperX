@@ -205,6 +205,9 @@ struct MatronSnapshot final {
     // Off her deck: gaps leapt in the Turn, holding on to a floor that moves,
     // and the level she hunts (its floor's top).
     std::uint32_t leaps = 0;
+    std::uint32_t unrigs = 0;   // ropes she took off a way out's eye
+    bool on_line = false;       // going down a line's bare cable after the player
+    std::uint32_t cable_slides = 0;
     bool clinging = false;
     double floor_y = 154.0;
     static constexpr int kPlanks = 11;

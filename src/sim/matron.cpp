@@ -2,6 +2,8 @@
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
 
+#include "sim/zipline.hpp"
+
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -51,8 +53,9 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     : physics_(physics), moving_layer_(moving_layer), player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     // Her deck: down the middle of each band, the catwalk across; her post in
-    // the mouth of Stage A's cage, facing out over the band.
-    Level deck{kDeckTop, {}, {}, {}, {}, 0};
+    // the mouth of Stage A's cage, facing out over the band; the cage's eye on
+    // its west face, reached from inside it facing west.
+    Level deck{kDeckTop, {}, {}, {}, {}, 0, {-11.35F, kCagesCenterZ, -0.5F * kPi}};
     deck.nodes = {{-kBandX, kBandNorthZ}, {0.0F, kBandNorthZ}, {kBandX, kBandNorthZ}, {kBandX, kMidZ},
                   {kBandX, kBandSouthZ},  {0.0F, kBandSouthZ}, {-kBandX, kBandSouthZ}, {-kBandX, kMidZ}};
     deck.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor}, {3, 4, Link::Floor},
@@ -65,8 +68,8 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     // air from the west half of A's mouth (the cascade striker's post stands
     // on the ring's edge before its middle; B's gantry and its gear hang over
     // B's). Its post is by B's cage, its way up: on the ring facing the cage,
-    // or in the cage's mouth.
-    Level ring{kRingFloor, {}, {}, {}, {}, 1};
+    // or in the cage's mouth; B's eye is on its east face.
+    Level ring{kRingFloor, {}, {}, {}, {}, 1, {-6.35F, kCagesCenterZ, 0.5F * kPi}};
     ring.nodes = {{-kRingX, kRingNorthZ},       {kLeapX, kRingNorthZ},        {kCageBCenterX, kRingNorthZ},
                   {kRingX, kRingNorthZ},        {kRingX, kMidZ},              {kRingX, kRingSouthZ},
                   {-kRingX, kRingSouthZ},       {-kRingX, kMidZ},             {kCageACenterX, kCagesCenterZ},
@@ -77,6 +80,24 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     ring.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}, {8, 9}};
     ring.posts = {{kCageBCenterX, kRingNorthZ - 1.2F, kPi}, {kCageBCenterX, kCagesCenterZ + 0.9F, 0.0F}};
     levels_ = {deck, ring};
+    // The rings above: each down the middle of its band (the bands' inner
+    // edges close in 0.91 m a ring going up), with no way up of hers known.
+    for (int k = 1; k <= kUpperRings; ++k) {
+        const float half = kRingX - kRingStepIn * static_cast<float>(k);
+        Level upper{kRingFloor + kRingPitch * static_cast<float>(k), {}, {}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
+        upper.nodes = {{-half, kMidZ + half}, {0.0F, kMidZ + half}, {half, kMidZ + half}, {half, kMidZ},
+                       {half, kMidZ - half},  {0.0F, kMidZ - half}, {-half, kMidZ - half}, {-half, kMidZ}};
+        upper.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor}, {3, 4, Link::Floor},
+                       {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor}, {7, 0, Link::Floor}};
+        upper.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}};
+        levels_.push_back(upper);
+    }
+    // The stack's decks under hers, laid out as hers without the catwalk.
+    for (int k = 1; k <= kStackDecks; ++k) {
+        Level stack{kStackPitch * static_cast<float>(k), deck.nodes, {}, deck.patrols, {}, -1, {0.0F, 0.0F, 0.0F}};
+        stack.edges.assign(deck.edges.begin(), deck.edges.end() - 1);
+        levels_.push_back(stack);
+    }
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -295,6 +316,8 @@ void Matron::take_lead(const float x, const float z, const float loudness, const
     noise_heard_ = loudness;
     heard_x_ = x;
     heard_z_ = z;
+    lead_floor_ = levels_[static_cast<std::size_t>(level_)].floor_y;
+    guess_line_ = -1;
     since_heard_s_ = 0.0F;
     lead_seen_ = seen;
 }
@@ -315,7 +338,7 @@ void Matron::stand_down() {
 
 const Matron::Post *Matron::reachable_post(const float ax, const float az) const {
     const Level &level = levels_[static_cast<std::size_t>(level_)];
-    if (!ways_out_[static_cast<std::size_t>(level.way)]) {
+    if (level.way < 0 || !ways_out_[static_cast<std::size_t>(level.way)]) {
         return nullptr;
     }
     for (const Post &post : level.posts) {
@@ -353,6 +376,12 @@ void Matron::pick_patrol(const float ax, const float az) {
 }
 
 void Matron::feel_floor(const float dt) {
+    if (on_line_) {
+        // Hanging from a cable: held until she lets go of it.
+        riding_ = true;
+        let_go_s_ = kLetGoSeconds;
+        return;
+    }
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     RayCastResult hit;
@@ -392,6 +421,104 @@ void Matron::settle_level() {
             pick_patrol(float(at.GetX()), float(at.GetZ()));
             return;
         }
+    }
+}
+
+bool Matron::follow_line(const float dt, const RVec3 at) {
+    if (zipline_ == nullptr) {
+        return false;
+    }
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    // The line from her level down to her lead's: the one she saw taken, or
+    // the nearest.
+    const std::vector<Zipline::Line> &lines = zipline_->lines();
+    int best = -1;
+    float best_d = std::numeric_limits<float>::max();
+    for (std::size_t i = 0; i < lines.size(); ++i) {
+        const Zipline::Line &line = lines[i];
+        if (std::abs(float(line.top_floor.GetY()) - floor_y) > 0.6F ||
+            std::abs(float(line.bottom_floor.GetY()) - lead_floor_) > 0.6F) {
+            continue;
+        }
+        const float d = static_cast<int>(i) == guess_line_
+                            ? -1.0F
+                            : distance_xz(ax, az, float(line.stand.GetX()), float(line.stand.GetZ()));
+        if (d < best_d) {
+            best_d = d;
+            best = static_cast<int>(i);
+        }
+    }
+    if (best < 0) {
+        return false;
+    }
+    const Zipline::Line &line = lines[static_cast<std::size_t>(best)];
+    const float sx = float(line.stand.GetX());
+    const float sz = float(line.stand.GetZ());
+    const float stand_y = float(line.stand.GetY());
+    const float feet = float(at.GetY()) - kStandCentre;
+    if (feet < stand_y - 0.3F || distance_xz(ax, az, sx, sz) > 0.6F) {
+        // To the ramp's foot along her lines, then up the ramp to the stand.
+        float wx = sx;
+        float wz = sz;
+        const float fx = float(line.ramp_foot.GetX());
+        const float fz = float(line.ramp_foot.GetZ());
+        if (feet < floor_y + 0.15F && distance_xz(ax, az, fx, fz) > 0.5F) {
+            route_toward(ax, az, fx, fz, false, wx, wz);
+        }
+        walk_toward(dt, wx, wz, kHuntMps, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
+        return true;
+    }
+    // On the stand under the cable, looking down the line. Frail, she cannot
+    // follow. In the Turn she jumps for the cable and goes.
+    walk_toward(dt, ax, az, 0.0F);
+    yaw_ = turn_toward(yaw_, std::atan2(line.direction.GetX(), line.direction.GetZ()), kTurnRate, dt);
+    if (turn_ == Turn::None) {
+        return true;
+    }
+    const RVec3 cable = line.top + line.direction * Zipline::kParkM;
+    const RVec3 hands = at + Vec3(0.0F, kHandsAboveCentre, 0.0F);
+    if (Vec3(cable - hands).Length() < kCableReachM) {
+        zipline_->clip_other(best, body_, Vec3(0.0F, kHandsAboveCentre, 0.0F), true);
+        on_line_ = true;
+        riding_ = true;
+        let_go_s_ = kLetGoSeconds;
+        ++cable_slides_;
+        return true;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    if (feet < stand_y + 0.08F && std::abs(velocity.GetY()) < 0.2F) {
+        // Standing on it: the jump for the cable.
+        bodies.SetLinearVelocity(body_, Vec3(velocity.GetX(), kCableJumpMps, velocity.GetZ()));
+    }
+    return true;
+}
+
+void Matron::ride_line() {
+    if (!on_line_ || zipline_ == nullptr) {
+        return;
+    }
+    const Zipline::State &ride = zipline_->other_state();
+    if (!ride.riding) {
+        on_line_ = false;   // taken off it (a restore)
+        return;
+    }
+    // Her forearms' drag: friction on her weight across the cable, as a
+    // squeeze of the line's brake.
+    const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(ride.line)];
+    const float across = std::sqrt(std::max(0.0F, 1.0F - line.direction.GetY() * line.direction.GetY()));
+    const float gravity = -physics_.GetGravity().GetY();
+    zipline_->set_other_brake(kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
+    // Down at the end (at the stop, or against the trolley there) and
+    // still: she lets go, swinging on over the far band as she does.
+    if (ride.along_m > line.length - Zipline::kStopMarginM - Zipline::kBufferM && std::abs(ride.speed_mps) < 0.3F) {
+        zipline_->unclip_other();
+        on_line_ = false;
+        BodyInterface &bodies = physics_.GetBodyInterface();
+        const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
+        bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * kLetGoSwingMps);
     }
 }
 
@@ -646,6 +773,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         return;
     }
     if (body_in_world_) {
+        ride_line();
         feel_floor(dt);
         settle_level();
     }
@@ -697,7 +825,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Searching:
     case State::Shuffling:
     case State::Guarding:
-    case State::Peering: {
+    case State::Peering:
+    case State::Unrigging: {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         const float ax = float(at.GetX());
         const float az = float(at.GetZ());
@@ -730,7 +859,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 // The chase goes on by ear: the same lead, moved on.
                 take_lead(sx, sz, loud, lead_seen_);
                 wary_ = wary_ && !close;
-            } else if (state_ == State::Guarding && fooled_ >= 2 && !close) {
+            } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
                 noise_heard_ = loud;
                 look_x_ = sx;
@@ -745,6 +874,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             }
         } else {
             since_heard_s_ += dt;
+        }
+        // A guess where the player is going: seen or heard riding a line, to
+        // its far end.
+        if (zipline_ != nullptr && (saw || heard) && zipline_->riding()) {
+            const int line = zipline_->state().line;
+            const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
+            heard_x_ = float(end.GetX());
+            heard_z_ = float(end.GetZ());
+            lead_floor_ = float(end.GetY());
+            guess_line_ = line;
         }
         // Holding on to a floor that moves (or has only just stopped): she
         // keeps her eyes on the player and does nothing else.
@@ -780,7 +919,20 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         float wz = az;
         if (state_ == State::Hunting) {
             // Going to look from a vantage is not losing track: she goes on to it.
+            const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             if (!wary_ && since_heard_s_ > kLoseTrackSeconds) {
+                if (elsewhere) {
+                    // Gone down a line she could not follow: she searches
+                    // where she lost them, at its top.
+                    if (guess_line_ >= 0 && zipline_ != nullptr) {
+                        const RVec3 top = zipline_->lines()[static_cast<std::size_t>(guess_line_)].stand;
+                        heard_x_ = float(top.GetX());
+                        heard_z_ = float(top.GetZ());
+                    }
+                    lead_floor_ = floor_y;
+                    guess_line_ = -1;
+                }
                 turn_ = Turn::None;
                 turn_s_ = 0.0F;
                 state_ = State::Searching;
@@ -796,6 +948,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
+            } else if (elsewhere && follow_line(dt, at)) {
+                // After the lead down a line: its stand, its cable.
+                step_turn(dt, d, loudness);
+                break;
             } else {
                 // In the Turn a gap is no bar: she leaps it.
                 route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz, turn_ != Turn::None);
@@ -839,6 +995,36 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             }
             break;
         }
+        const Level &here = levels_[static_cast<std::size_t>(level_)];
+        const bool has_way = here.way >= 0;
+        const std::size_t way = has_way ? static_cast<std::size_t>(here.way) : 0;
+        if (state_ == State::Guarding && has_way && rigged_[way] && ways_out_[way] &&
+            route_toward(ax, az, here.eye.x, here.eye.z, on_catwalk, wx, wz)) {
+            // The way out rigged to ride, and the player not here: she goes
+            // to undo it.
+            state_ = State::Unrigging;
+            unrig_s_ = 0.0F;
+        }
+        if (state_ == State::Unrigging) {
+            if (!has_way || !rigged_[way] || !ways_out_[way] ||
+                !route_toward(ax, az, here.eye.x, here.eye.z, on_catwalk, wx, wz)) {
+                state_ = State::Guarding;
+            } else if (distance_xz(ax, az, here.eye.x, here.eye.z) > 0.35F) {
+                walk_toward(dt, wx, wz, kSearchMps);
+                break;
+            } else {
+                // Her hands at the eye, at the shackle, till it is off.
+                walk_toward(dt, ax, az, 0.0F);
+                yaw_ = turn_toward(yaw_, here.eye.yaw, kTurnRate, dt);
+                unrig_s_ += dt;
+                if (unrig_s_ >= kUnrigSeconds) {
+                    unrig_way_ = here.way;
+                    ++unrigs_;
+                    state_ = State::Guarding;
+                }
+                break;
+            }
+        }
         if (state_ == State::Guarding) {
             const Post *post = reachable_post(ax, az);
             if (post == nullptr) {
@@ -859,13 +1045,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             }
         }
         // Shuffling: the stooped patrol round her level's loop.
-        const Level &level = levels_[static_cast<std::size_t>(level_)];
-        const std::vector<int> &loop = level.patrols[static_cast<std::size_t>(patrol_)];
-        const Node &next = level.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
+        const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
+        const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
             patrol_node_ = (patrol_node_ + 1) % static_cast<int>(loop.size());
         }
-        const Node &goal = level.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
+        const Node &goal = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         route_toward(ax, az, goal.x, goal.z, on_catwalk, wx, wz);
         walk_toward(dt, wx, wz, kShuffleMps);
         break;
@@ -892,7 +1077,7 @@ bool Matron::caught(const RVec3 player) const noexcept {
     // Clinging to a moving floor, her hands are on the rail.
     if (!body_in_world_ || dead_ || riding_ ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
-         state_ != State::Guarding && state_ != State::Peering)) {
+         state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -920,6 +1105,13 @@ void Matron::restore(const Saved &saved) {
         vault_cooldown_s_ = 0.0F;
         vaults_ = 0;
         leaps_ = 0;
+        unrigs_ = 0;
+        guess_line_ = -1;
+        lead_floor_ = kDeckTop;
+        on_line_ = false;
+        cable_slides_ = 0;
+        unrig_s_ = 0.0F;
+        unrig_way_ = -1;
         // Back on her deck, off whatever she rode.
         level_ = 0;
         patrol_ = 0;
@@ -928,7 +1120,8 @@ void Matron::restore(const Saved &saved) {
         riding_ = false;
         let_go_s_ = 0.0F;
         if (state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
-            state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering) {
+            state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering ||
+            state_ == State::Unrigging) {
             // Back at her locker, as she burst out of it.
             spawn_body();
             state_ = State::Emerging;
@@ -943,11 +1136,15 @@ void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
     view_.released = state_ == State::Emerging || state_ == State::Hunting || state_ == State::Searching ||
-                     state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering;
+                     state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Peering ||
+                     state_ == State::Unrigging;
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
     view_.leaps = leaps_;
+    view_.unrigs = unrigs_;
+    view_.on_line = on_line_;
+    view_.cable_slides = cable_slides_;
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);

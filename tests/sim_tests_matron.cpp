@@ -734,6 +734,151 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron ride: with_her_s=" << with_her_s << " alone_s=" << alone_s
                   << " island_s=" << island_s << " leaps=" << over.leaps << "\n";
     }
+    // ---- B: a way out rigged and left, she takes the rope off its eye; hooked on again,
+    //      it rides ---------------------------------------------------------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron unrig: settle");
+        require(board_well_a(s) && rig_well_a(s), "matron unrig: Stage A's cage rigged");
+        require(s.matron_state().state == kStateDormant, "matron unrig: rigging the cage did not wake her");
+        require(go(s, -10.0, -129.2, false, 6.0) && go(s, 0.0, -128.6, true, 4.0, 0.8),
+                "matron unrig: out of the cage, a sprint toward her locker");
+        require(s.matron_state().state == kStateStraining, "matron unrig: the sprint woke her");
+        // Away, crouched, round to the south band, where she will not find the player.
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0) && go(s, Matron::kBandX, Matron::kBandSouthZ, false, 40.0) &&
+                    go(s, 0.0, Matron::kBandSouthZ, false, 40.0),
+                "matron unrig: a crouched walk round to the south band");
+        (void)s.set_move_input(0.0, 0.0);
+        bool unrigged = false;
+        for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !unrigged; ++i) {
+            tick(s);
+            unrigged = s.matron_state().unrigs > 0;
+        }
+        const auto after_unrig = s.snapshot();
+        std::cout << "  matron unrig: unrigs " << s.matron_state().unrigs << ", the rope's end on "
+                  << after_unrig.well_a_rope_end_entity_id << ", she at (" << s.matron_state().position.x << ", "
+                  << s.matron_state().position.z << ") state " << int(s.matron_state().state) << ", deaths "
+                  << after_unrig.death_count << "\n";
+        require(unrigged && after_unrig.well_a_rope_end_entity_id == Simulation::kWellAShackleEntityId &&
+                    after_unrig.death_count == 0,
+                "matron unrig: guarding the cage, she took the player's rope off its eye");
+        stand_still(s, 3.0);
+        require(s.matron_state().state == kStateGuarding && s.matron_state().unrigs == 1,
+                "matron unrig: then back to her post, once");
+        // Draw her: a sprint along the south band and up the west band to the
+        // catwalk's west end; then over the catwalk, and she follows to her death.
+        (void)s.set_crouch_input(false);
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) && go(s, -Matron::kBandX, Matron::kMidZ, true, 8.0, 0.6) &&
+                    walk_to(s, -Matron::kBandX + 1.5, Matron::kMidZ, 4.0, 0.1),
+                "matron unrig: a sprint to the catwalk's west end");
+        (void)s.set_move_input(0.0, 0.0);
+        // Wary of the noise she comes to look; in sight of the player, she hunts.
+        bool hunting = false;
+        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !hunting; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            hunting = m.state == kStateHunting && !m.wary && matron_player_distance(s) < 12.0;
+        }
+        require(hunting, "matron unrig: she comes for the noise, sees the player and hunts");
+        bool dead = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !dead; ++i) {
+            (void)steer(s, Matron::kBandX, Matron::kMidZ, true, 0.6);
+            tick(s);
+            dead = s.matron_state().state == kStateDead;
+        }
+        require(dead && s.snapshot().death_count == 0, "matron unrig: over the catwalk after the player, she falls");
+        // Back to the cage: the shackle hangs at its eye; take it and hook it on.
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 1.0) && go(s, -10.0, -128.4, false, 10.0) &&
+                    board_well_a(s) && walk_to(s, -11.35, -131.40, 3.0, 0.08),
+                "matron unrig: back in the cage at its eye");
+        (void)s.set_facing(-1.0, 0.0);
+        (void)s.advance_frame(0.5);
+        std::cout << "  matron unrig: at the eye: carry target " << s.snapshot().carry_target_entity_id << " kind "
+                  << int(s.snapshot().carry_target_kind) << ", rig " << int(s.snapshot().rig_action) << "\n";
+        require(s.snapshot().carry_target_entity_id == Simulation::kWellAShackleEntityId && s.snapshot().carry_target_kind == 1,
+                "matron unrig: the shackle she took off hangs within reach at the eye");
+        (void)s.request_pick_up();
+        (void)s.advance_frame(0.3);
+        (void)s.set_facing(-1.0, 0.0);
+        (void)s.advance_frame(0.5);
+        require(s.snapshot().carrying_entity_id == Simulation::kWellAShackleEntityId && s.snapshot().rig_action == 1 &&
+                    s.snapshot().rig_target_entity_id == Simulation::kWellACageEntityId,
+                "matron unrig: in hand, HOOK onto the cage's eye is offered");
+        (void)s.request_rig();
+        (void)s.advance_frame(0.3);
+        require(s.snapshot().well_a_rope_end_entity_id == Simulation::kWellACageEntityId, "matron unrig: hooked on again");
+        require(pull_well_a(s, 0.5, 3.0), "matron unrig: the handle trips the catch");
+        bool rode = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !rode; ++i) {
+            tick(s);
+            rode = s.snapshot().well_a_cage_travel >= 21.99;
+        }
+        require(rode && s.snapshot().player_position.y > 177.0, "matron unrig: undone, the cage rides the player up");
+        std::cout << "PASS scraperx_sim matron unrig: unrigs=1 rehooked=1 rode=1\n";
+    }
+    // ---- lines: seen riding a line away, in the Turn she goes down its cable after ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        wake_and_wait_east(s);
+        require(wait_for_her(s, 14.0, 40.0), "matron line: she comes");
+        (void)s.set_crouch_input(false);
+        // A long run round ahead of her (her first quiet spell over), back
+        // along the north band to the 154 m line's ramp.
+        require(go(s, Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 10.0, 1.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandNorthZ, true, 10.0, 1.0) && go(s, 1.0, Matron::kBandNorthZ, true, 6.0, 0.8) &&
+                    walk_to(s, 3.0, -132.36, 4.0, 0.3),
+                "matron line: round the deck to the line's ramp");
+        require(walk_to(s, 6.0, -132.36, 6.0, 0.12), "matron line: up the ramp onto the stand");
+        (void)s.set_move_input(0.0, 0.0);
+        // With her near, the jump for the bar, and away down the line.
+        bool near = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !near; ++i) {
+            tick(s);
+            near = s.matron_state().state == kStateHunting && matron_player_distance(s) < 11.0;
+        }
+        require(near && s.snapshot().death_count == 0, "matron line: she comes for the player on the stand");
+        (void)s.set_facing(0.0, -1.0);
+        require(s.request_jump() && advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2),
+                "matron line: the player takes the line");
+        const int line = s.snapshot().zipline_line;
+        const double length = s.zipline_line(static_cast<std::uint32_t>(line)).length;
+        bool on_cable = false;
+        bool player_off = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !(on_cable && player_off); ++i) {
+            const auto n = s.snapshot();
+            const bool braking = n.zipline_riding && n.zipline_along_m > length - 12.0 && n.zipline_speed_mps > 4.0;
+            (void)s.set_move_input(0.0, braking ? 1.0 : 0.0);
+            tick(s);
+            on_cable = on_cable || s.matron_state().on_line;
+            const auto m = s.snapshot();
+            if (m.zipline_riding && m.zipline_along_m > length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
+                (void)s.request_release();
+            }
+            player_off = player_off || (!m.zipline_riding && m.player_grounded && m.player_position.y < 150.0);
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        std::cout << "  matron line: the player down " << player_off << ", she on the cable " << on_cable << ", deaths "
+                  << s.snapshot().death_count << "\n";
+        require(player_off && s.snapshot().death_count == 0, "matron line: the player rode the line down to 143 m");
+        require(on_cable, "matron line: in the Turn she went onto the cable after the player");
+        // Away from the line's end along the south band; she comes down the
+        // cable, lets go over the band and hunts there.
+        require(go(s, -12.0, Matron::kBandSouthZ, true, 6.0, 1.0), "matron line: away along 143's south band");
+        (void)s.set_move_input(0.0, 0.0);
+        bool landed = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            landed = !m.on_line && m.alive && std::abs(m.floor_y - 143.0) < 0.1 && m.position.y < 145.0;
+        }
+        const auto down = s.matron_state();
+        std::cout << "  matron line: she let go at (" << down.position.x << ", " << down.position.y << ", " << down.position.z
+                  << "), level " << down.floor_y << ", slides " << down.cable_slides << ", alive " << down.alive << "\n";
+        require(landed && down.cable_slides == 1, "matron line: down the cable, she let go over 143's band and hunts there");
+        std::cout << "PASS scraperx_sim matron line: slides=" << down.cable_slides << " level=" << down.floor_y << "\n";
+    }
     // ---- the same start and inputs give the same chase ------------------------------
     {
         const auto run = [] {
