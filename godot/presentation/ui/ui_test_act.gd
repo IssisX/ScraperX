@@ -38,11 +38,15 @@ const ACT_RIM := Vector2(18.0, -139.0)
 const ACT_LAP_NORTH := Vector2(20.6, -134.5)
 const ACT_LAP_SOUTH := Vector2(20.6, -143.5)
 const WELL_A_CAGE_ENTITY := 2000
+# Frames a screenshot holds the simulation still: enough to draw a few after
+# drawing comes back on.
+const ACT_POSE_FRAMES := 5
 
 var _act_box := 0
 var _act_stages_seen := {}
 var _act_drawing := true
-var _act_pitch_back := NAN   # the view's pitch before a screenshot aimed it
+var _act_view_back := Vector2(NAN, NAN)   # the view's yaw and pitch before a screenshot aimed it
+var _act_running := false   # screenshots are the act's own while it plays
 # Deaths the act means at this point (her fully changed hands: one).
 var _act_deaths_allowed := 0
 
@@ -57,45 +61,56 @@ func _act_draw(on: bool) -> void:
 		RenderingServer.render_loop_enabled = on
 
 
-# Every screenshot (the act's, and those the routes it reuses take) with the
-# drawing on for it, and as it was after: a screenshot waits on a drawn frame.
+# Every screenshot the act takes (its own, and those of the routes it reuses)
+# holds the simulation still for the same few frames, headless or drawn, so
+# the run played is the same frame for frame with or without pictures: the
+# frames a screenshot spends still run the touch router and the view's
+# smoothing. Only a capture run draws them and writes the last one. Outside
+# the act, screenshots are the base's.
 func _pose(pose: String) -> void:
+	if not _act_running:
+		await super._pose(pose)
+		return
 	var was := _act_drawing
+	_main.freeze_sim = true
+	_act_draw(true)
+	await _frames(ACT_POSE_FRAMES)
 	if _act_capturing():
-		_main.freeze_sim = true
-	if not was:
-		_act_draw(true)
-		await _frames(3)
-	await super._pose(pose)
+		var path := "%s_%s.png" % [_capture_prefix, pose]
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		if get_viewport().get_texture().get_image().save_png(path) == OK:
+			print("SCRAPERX_UITEST_SCREENSHOT %s" % path)
+		else:
+			push_error("SCRAPERX_UITEST_SCREENSHOT_FAILED %s" % path)
 	_act_draw(was)
 	_main.freeze_sim = false
 
 
 func _act_pose(pose: String) -> void:
 	await _pose(pose)
-	if not is_nan(_act_pitch_back):
-		_main._pitch = _act_pitch_back
-		_act_pitch_back = NAN
+	if not is_nan(_act_view_back.x):
+		_main._yaw = _act_view_back.x
+		_main._pitch = _act_view_back.y
+		_act_view_back = Vector2(NAN, NAN)
 
 
-# The eyes on her head for a screenshot (capture runs only, with the
-# simulation held still till the screenshot is taken, so the played run is
-# the same with or without them); the view's pitch goes back after.
+# The eyes on her head for a screenshot, with the simulation held still till
+# it is taken (headless too, for the same frames); the view's yaw and pitch go
+# back after.
 func _act_frame_her() -> void:
-	if _act_capturing():
-		_main.freeze_sim = true
-		var pitch := float(_main._pitch)
-		await _look_at_point(_main._matron_view.head_world_position() - Vector3(0.0, 0.25, 0.0))
-		_act_pitch_back = pitch
+	_main.freeze_sim = true
+	var view := Vector2(float(_main._yaw), float(_main._pitch))
+	await _look_at_point(_main._matron_view.head_world_position() - Vector3(0.0, 0.25, 0.0))
+	_act_view_back = view
 
 
 # The eyes on the toolbox in the air.
 func _act_frame_box() -> void:
-	if _act_capturing() and _act_box != 0:
+	if _act_box != 0:
 		_main.freeze_sim = true
-		var pitch := float(_main._pitch)
+		var view := Vector2(float(_main._yaw), float(_main._pitch))
 		await _look_at_point(_native().get_kit_body_transform(_native().get_kit_body_index(_act_box)).origin)
-		_act_pitch_back = pitch
+		_act_view_back = view
 
 
 func _act_log(tag: String) -> void:
@@ -202,7 +217,15 @@ func _act_laps(device: int, a: Vector2, b: Vector2, done: Callable, budget: floa
 
 
 func _matron_act_touch(device: int) -> bool:
+	_act_running = true
 	_act_draw(false)
+	var played: bool = await _act_play(device)
+	_act_draw(true)
+	_act_running = false
+	return played
+
+
+func _act_play(device: int) -> bool:
 	if not await _act_asleep(device):
 		return false
 	if not await _act_wake_and_go_below(device):
@@ -217,7 +240,6 @@ func _matron_act_touch(device: int) -> bool:
 		return false
 	if not await _act_way_up(device):
 		return false
-	_act_draw(true)
 	_detail = "stages_seen=%s deaths=%d she_at=%s" % [str(_act_stages_seen.keys()), int(_native().get_death_count()),
 		str(_matron_state()["position"])]
 	return true
@@ -537,9 +559,9 @@ func _act_way_up(device: int) -> bool:
 			_position().y, int(_native().get_death_count()), str(_matron_state()["climbing"])])
 	_act_log("on_176")
 	# A look back down the ladder: in her Turn she took hold, and comes up it.
-	if _act_her_xz().distance_to(Vector2(5.0, -129.55)) < 2.5 and _act_capturing():
+	if _act_her_xz().distance_to(Vector2(5.0, -129.55)) < 2.5:
 		await _face(Vector2(0.0, -1.0))
-		await _tilt(-1.35)
+		await _tilt(-1.2)
 		await _act_pose("act_up_the_ladder_after_you")
 		await _tilt(0.0)
 	# On by the climbing route, no lift: the boards out from the ring to the

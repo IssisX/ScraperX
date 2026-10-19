@@ -1453,7 +1453,10 @@ Tools that work in this container:
 - One touch playthrough: `tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=touch_wet`.
 - Pictures from a scenario: start `Xvfb :0 -screen 0 1296x1114x24 &`, then
   `DISPLAY=:0 tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 -- --uitest=look_matron_gallery --capture=<dir>/<prefix>`
-  (each `_pose("name")` in the scenario writes a PNG).
+  (each `_pose("name")` in the scenario writes a PNG). For a touch playthrough's pictures, add
+  `--resolution 1080x1080` and the scenario's own `--fixed-fps 60`: the touch controls lay out by
+  the viewport, and only a square window gives the headless run's 2160x2160 (the log's
+  `SCRAPERX_VIEWPORT` line), so the same scripted touches play the same run.
 - The Godot MCP tool (the owner installed it; use it to look at and drive the live game): its
   `run_project` asks for a confirmation this client cancels, so use `attach_project` and launch the
   game about 8 seconds after it starts, so the bridge is written into `project.godot` first:
@@ -1523,6 +1526,15 @@ three), `save`, `determinism`, and 117 passes of the full suite with none failin
 change); `touch_matron_act` (new, 108 s headless, about 380 s of
 play), `touch_matron`, `touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`, `touch_stock`,
 `touch_radio`. CI plays `touch_matron_act`.
+
+Its screenshots (`--capture=`, a square window: see the tools below) are taken at the same frames as
+the headless run plays, with the simulation held still for each: the cage rigged, the rope off its
+eye, her coming dangerous, her shove at the rail, the look back down her ladder, the 220 ring. The
+picture run's log matches the headless run's line for line. Getting there: the act's screenshots
+now spend the same five still frames headless as drawn, because the frames a screenshot spends
+still run the touch router and the view's smoothing. A screenshot that aimed the view at her now
+puts the yaw back as well as the pitch. The look down the ladder tilted past the view's limit and
+waited forever.
 
 **Her hands by stage (2026-10-19; the goal's item 3, its first part).** Her hands on the player were
 always a death. Now they follow her stage: fully changed, still a death; before that a shove, once
