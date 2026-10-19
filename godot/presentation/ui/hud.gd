@@ -200,6 +200,9 @@ func _draw() -> void:
 		_draw_altimeter()
 	if _precision_cue > 0.01:
 		_draw_precision()
+	route_marks = 0
+	if not route_points.is_empty():
+		_draw_route_hint()
 	if not _toasts.is_empty():
 		_draw_toasts()
 	if not caption.is_empty():
@@ -464,6 +467,32 @@ func _draw_caption() -> void:
 	UiStyle.text(self, UiStyle.font_label(), caption, Vector2(cx, rect.position.y + 41.0 * u), font_size,
 		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
 
+
+
+# The faint route hint (a setting): what the hands could take ahead, each a
+# short, faint red stroke along the lip or hold, smaller the farther it is.
+# Counted as drawn for the tests.
+var route_points := PackedVector3Array()
+var route_marks := 0
+
+func _draw_route_hint() -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var u := _u
+	# A soft red glow under a brighter core: faint, but legible over the dark
+	# steel of a rung or a lip.
+	var glow := UiStyle.with_alpha(UiStyle.HAZARD, 0.18)
+	var core := UiStyle.with_alpha(UiStyle.HAZARD.lightened(0.2), 0.62)
+	for point in route_points:
+		if camera.is_position_behind(point):
+			continue
+		var at := camera.unproject_position(point)
+		var far := maxf(1.0, camera.global_position.distance_to(point))
+		var half := clampf(90.0 / far, 14.0, 40.0) * u
+		draw_line(at - Vector2(half, 0.0), at + Vector2(half, 0.0), glow, 11.0 * u, true)
+		draw_line(at - Vector2(half, 0.0), at + Vector2(half, 0.0), core, 3.0 * u, true)
+		route_marks += 1
 
 
 # The precision jump's sighted landing: a small ring laid on the surface the

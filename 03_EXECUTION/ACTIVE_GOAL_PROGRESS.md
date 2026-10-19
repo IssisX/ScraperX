@@ -1404,6 +1404,20 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The faint route hint (2026-10-19; to-do 4, Mirror's Edge's last).** A setting, ROUTE HINT, off by
+default (Settings page): what the hands could take ahead is marked by a short, faint red stroke
+(a soft glow under a brighter core, so it reads over dark steel), smaller the farther it is, as
+its runner vision picks out its red in a whisper. Nothing is marked
+by hand: the native asks the moves' own probes (the mantle's lip, the hold a hand closes round)
+from the body and from points a stride apart ahead along the facing, 7.5 m in all, as far as the
+way there is clear, four at most; on a hold, in the air or off the setting, nothing. Read only:
+the world is not changed by it. Proof: native `up` (new: 3 m short of the 154 m deck's ladder and
+facing it, no hold in reach yet, a hold on its rungs is picked out; turned away, not; in the air,
+nothing); `touch_route_hint` (new: off by default and nothing marked; on, the ladder's hold
+marked; off again, nothing; rendered under a virtual display, the stroke reads on the rung, where
+a first, plainer one over the black steel did not); `touch_pause`, `pad_core`, `keyboard_core` (the
+settings page, a row longer, still fits).
+
 **The Matron after a lead more than a level away (2026-10-19; to-do 11, its second half).** A
 sound two decks under her (heard up the shaft) sends her the way down toward it a level at a time:
 the line from her deck to the deck between, then on from there; the same for climbs up. Frail she
@@ -1594,6 +1608,7 @@ fill in after).**
    forklifts on the 11 m and 44 m decks.
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint. Done 2026-10-18: the
    body felt at speed (breath with the effort, a tremor at flow, the wall run's lean off the wall).
+   Done 2026-10-19: the faint route hint (a setting, off by default).
 5. Every machine its own start: S3 and the rest.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done

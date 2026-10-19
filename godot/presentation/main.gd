@@ -377,6 +377,8 @@ func _process(delta: float) -> void:
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.caption = _audio.caption if _settings.captions else ""
+	# The faint route hint, asked of the native only while it is on.
+	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
 	_hud.update_hud(_ctx, delta)
 
 	var proof_ready := (

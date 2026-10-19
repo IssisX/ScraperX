@@ -395,6 +395,35 @@ void up_trapeze() {
 
 }   // namespace
 
+// The faint route hint (route_ahead): 3 m short of the 154 m deck's ladder
+// and facing it, out of the hands' reach (no hold offered), it picks out a
+// hold on the ladder ahead; turned away from it, not; in the air, nothing.
+void up_route_hint() {
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(1.0).accepted, "route hint: settle");
+    require(walk_to(s, 3.5, -128.2, 16.0) && walk_to(s, 3.5, -132.4, 6.0) && walk_to(s, 5.0, -132.4, 4.0, 0.08),
+            "route hint: 3 m short of the ladder");
+    require(s.set_facing(0.0, 1.0) && s.advance_frame(0.4).accepted, "route hint: facing the ladder");
+    const auto ahead = s.route_ahead();
+    bool on_ladder = false;
+    for (const auto &point : ahead) {
+        on_ladder = on_ladder || (std::abs(point.x - 5.0) < 0.35 && std::abs(point.z - -129.05) < 0.2 &&
+                                  point.y > 154.5 && point.y < 157.5);
+    }
+    std::cout << "  route hint: facing the ladder from 3 m, " << ahead.size() << " picked out, one on its rungs "
+              << on_ladder << ", a hold in reach " << s.snapshot().grip_available << "\n";
+    require(!s.snapshot().grip_available && on_ladder, "route hint: the ladder's hold ahead, out of reach, picked out");
+    require(s.set_facing(-1.0, 0.0) && s.advance_frame(0.4).accepted, "route hint: turned west");
+    for (const auto &point : s.route_ahead()) {
+        require(!(std::abs(point.x - 5.0) < 0.35 && std::abs(point.z - -129.05) < 0.2),
+                "route hint: turned away, the ladder is not picked out");
+    }
+    require(s.set_facing(0.0, 1.0) && s.request_jump() && s.advance_frame(0.15).accepted && !s.snapshot().player_grounded,
+            "route hint: a jump");
+    require(s.route_ahead().empty(), "route hint: in the air, nothing picked out");
+    std::cout << "  route hint: picked out ahead, not behind, not in the air\n";
+}
+
 void run_up_controls() {
     up_springboard();
     up_vault();
@@ -406,10 +435,11 @@ void run_up_controls() {
     up_from_crouch();
     up_at_the_wheel();
     up_trapeze();
+    up_route_hint();
     const auto first = wall_kick_run();
     const auto second = wall_kick_run();
     require(first == second, "up again: the same input, the same world");
     std::cout << "PASS scraperx_sim up controls: springboard, vault, speed vault, mantle, climb up, ladder, "
                  "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze; none under a beam or "
-                 "at the wheel; the coyote jump; no kick off an ended wall run; deterministic\n";
+                 "at the wheel; the coyote jump; no kick off an ended wall run; the route hint; deterministic\n";
 }

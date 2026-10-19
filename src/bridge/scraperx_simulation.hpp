@@ -193,6 +193,8 @@ public:
     [[nodiscard]] bool request_slingshot_drop();
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] godot::PackedVector3Array get_slingshot_prediction() const;
+    // The faint route hint: what the hands could take ahead.
+    [[nodiscard]] godot::PackedVector3Array get_route_ahead() const;
     // AS-012, the swing: one-shot Action (strap in, kick, unbuckle) and Drop.
     [[nodiscard]] bool request_swing_action();
     [[nodiscard]] bool request_swing_drop();

@@ -641,6 +641,14 @@ constexpr float kClimbMoveAim = 0.50F;
 constexpr float kClimbHandMid = 0.45F;
 constexpr float kClimbHandLow = 0.20F;
 constexpr float kClimbHandReach = 0.40F;
+// The faint route hint (route_ahead): the hands' probes from the body and
+// from up to kRouteHintSteps points a stride apart ahead of it (7.5 m in
+// all: what a run takes in a second); at most kRouteHintMax picked out, none
+// within kRouteHintApartM of another.
+constexpr int kRouteHintSteps = 5;
+constexpr float kRouteHintStrideM = 1.5F;
+constexpr int kRouteHintMax = 4;
+constexpr float kRouteHintApartM = 0.6F;
 constexpr float kClimbHandSpan = 0.20F;
 constexpr float kClimbSideLead = 0.35F;
 constexpr std::uint32_t kClimbRegripTicks = 18;

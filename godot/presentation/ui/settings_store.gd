@@ -70,6 +70,9 @@ var show_fps := false
 var fov := 82.0
 var brightness := 1.0
 var head_bob := true
+# Off unless the player asks: what the hands could take ahead, picked out
+# faintly (Mirror's Edge's runner vision, in a whisper).
+var route_hint := false
 var speed_fov := true
 # Turns down what moves the view by itself: no roll turnover, no head bob or
 # speed FOV kick, and a quarter of the stagger, sway and body dips.
@@ -126,6 +129,7 @@ func load_from_disk() -> void:
 	fov = _read_range(file, "fov", fov, FOV_RANGE)
 	brightness = _read_range(file, "brightness", brightness, BRIGHTNESS_RANGE)
 	head_bob = _read_bool(file, "head_bob", head_bob)
+	route_hint = _read_bool(file, "route_hint", route_hint)
 	speed_fov = _read_bool(file, "speed_fov", speed_fov)
 	reduced_motion = _read_bool(file, "reduced_motion", reduced_motion)
 	time_of_day = _read_index(file, "time_of_day", time_of_day, TIME_OF_DAY_NAMES.size())
@@ -153,7 +157,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "vibration", vibration)
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
-			"fov", "brightness", "head_bob", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
+			"fov", "brightness", "head_bob", "route_hint", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
 			"captions", "start_at"]:
 		file.set_value(SECTION, key, get(key))

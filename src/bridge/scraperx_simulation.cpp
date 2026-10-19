@@ -301,6 +301,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_prediction"),
                                 &ScraperXSimulation::get_slingshot_prediction);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_route_ahead"), &ScraperXSimulation::get_route_ahead);
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_action"), &ScraperXSimulation::request_swing_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
@@ -1152,6 +1153,14 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
 godot::PackedVector3Array ScraperXSimulation::get_slingshot_prediction() const {
     godot::PackedVector3Array out;
     for (const sim::Vector3 &point : simulation_->slingshot_prediction()) {
+        out.push_back(to_godot(point));
+    }
+    return out;
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_route_ahead() const {
+    godot::PackedVector3Array out;
+    for (const sim::Vector3 &point : simulation_->route_ahead()) {
         out.push_back(to_godot(point));
     }
     return out;

@@ -676,6 +676,38 @@ func _touch_ladder() -> bool:
 		return _fail("ladder: died")
 	return true
 
+# The faint route hint (a setting, off by default): 3 m short of the 154 m
+# deck's ladder and facing it, nothing is marked while it is off; turned on,
+# the ladder's hold ahead is marked (out of the hands' reach); off again,
+# nothing.
+func _touch_route_hint() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if bool(_main._settings.route_hint):
+		return _fail("route hint: on by default")
+	if not (await _go(device, Vector2(3.5, -128.2), 0.15, 20.0) and await _go(device, Vector2(3.5, -132.4), 0.15, 6.0) and
+			await _go(device, Vector2(5.0, -132.4), 0.08, 6.0)):
+		return _fail("route hint: the walk short of the ladder stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	await _seconds(0.3)
+	if int(_main._hud.route_marks) != 0:
+		return _fail("route hint: off, yet %d marked" % int(_main._hud.route_marks))
+	_main._settings.route_hint = true
+	await _seconds(0.3)
+	var marked := int(_main._hud.route_marks)
+	var on_ladder := false
+	for point in _native().get_route_ahead():
+		on_ladder = on_ladder or (absf(point.x - 5.0) < 0.35 and absf(point.z + 129.05) < 0.2)
+	if marked < 1 or not on_ladder:
+		return _fail("route hint: on, %d marked, the ladder's hold among them %s" % [marked, str(on_ladder)])
+	await _pose("route_hint_ladder")
+	_main._settings.route_hint = false
+	await _seconds(0.3)
+	if int(_main._hud.route_marks) != 0:
+		return _fail("route hint: off again, yet %d marked" % int(_main._hud.route_marks))
+	_detail = "marked=%d" % marked
+	return true
+
 # The crawl beam beside the dock has its underside 1.45 m up. Standing, the
 # walk stops at its face; CROUCH crouches the native body and the same walk
 # passes under; STAND raises it again in the open. The eye follows the body.

@@ -717,6 +717,10 @@ std::vector<Vector3> Simulation::slingshot_prediction() const {
     return physics_world_->slingshot_prediction();
 }
 
+std::vector<Vector3> Simulation::route_ahead() const {
+    return physics_world_->route_ahead();
+}
+
 bool Simulation::request_swing_action() noexcept {
     swing_action_ = true;
     return true;

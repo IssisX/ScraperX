@@ -127,6 +127,12 @@ public:
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
 
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
+    // The faint route hint (the owner's to-do 4): what the hands could take
+    // ahead along the facing, standing: from the body and from points a
+    // stride apart ahead of it, as far as the way there is clear, the lip a
+    // mantle would take and the hold a hand would close round. The probes
+    // the moves themselves use; read only.
+    [[nodiscard]] std::vector<Vector3> route_ahead() const;
 
     [[nodiscard]] const scraperx::sim::kit::Kit &kit() const noexcept {
         return *kit_;

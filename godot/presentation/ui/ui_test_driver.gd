@@ -50,6 +50,8 @@ const SCENARIOS := {
 	# A broken arm: flat out into the Matron's locker, then the ladder one-armed.
 	"touch_arm_break": 11,
 	"touch_ladder": 11,
+	# The faint route hint: off by default, the ladder's hold marked when on.
+	"touch_route_hint": 11,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"keyboard_core": 8,
@@ -260,6 +262,8 @@ func _run() -> void:
 			ok = await _touch_wall_kick()
 		"touch_ladder":
 			ok = await _touch_ladder()
+		"touch_route_hint":
+			ok = await _touch_route_hint()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":

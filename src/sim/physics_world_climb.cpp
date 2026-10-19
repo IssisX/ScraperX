@@ -246,6 +246,54 @@ void Simulation::PhysicsWorld::begin_climb(JPH::BodyInterface &bodies, const Gri
     ++climb_count_;
 }
 
+std::vector<Vector3> Simulation::PhysicsWorld::route_ahead() const {
+    std::vector<Vector3> out;
+    if (!grounded_ || traversal_state_ != TraversalState::None || facing_.IsNearZero()) {
+        return out;
+    }
+    const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+    const JPH::Vec3 ahead = JPH::Vec3(facing_.GetX(), 0.0F, facing_.GetZ()).NormalizedOr(JPH::Vec3::sZero());
+    if (ahead.IsNearZero()) {
+        return out;
+    }
+    const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+    const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+    const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
+    std::vector<JPH::RVec3> found;
+    const auto take = [&found](const JPH::RVec3 point) {
+        for (const JPH::RVec3 &seen : found) {
+            if (JPH::Vec3(point - seen).Length() < kRouteHintApartM) {
+                return;
+            }
+        }
+        found.push_back(point);
+    };
+    for (int step = 0; step <= kRouteHintSteps && static_cast<int>(found.size()) < kRouteHintMax; ++step) {
+        const JPH::RVec3 from = origin + ahead * (kRouteHintStrideM * static_cast<float>(step));
+        if (step > 0) {
+            // The way there, at the body's middle, clear of everything.
+            JPH::RayCastResult hit;
+            if (physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(origin, JPH::Vec3(from - origin)), hit,
+                                                                {}, {}, filter)) {
+                break;
+            }
+        }
+        const LedgeProbe lip = probe_ledge(from, ahead, kMantleMinimumRise, kMantleMaximumRise, true);
+        if (lip.valid) {
+            take(lip.ledge_point);
+        }
+        const Grip hold = find_grip(from, from + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + ahead * kClimbHandReach, ahead);
+        if (hold.valid) {
+            take(hold.point);
+        }
+    }
+    out.reserve(found.size());
+    for (const JPH::RVec3 &point : found) {
+        out.push_back(to_vector3(point));
+    }
+    return out;
+}
+
 // From the ground, a hold faced at hand height.
 Grip Simulation::PhysicsWorld::grip_in_front(const JPH::BodyInterface &bodies) const noexcept {
     const JPH::RVec3 centre = bodies.GetPosition(player_id_);

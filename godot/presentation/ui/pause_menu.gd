@@ -553,8 +553,10 @@ func _build_settings_page() -> void:
 	_choice_row("TOUCH CONTROLS", &"touch_scheme", SettingsStore.TOUCH_SCHEME_NAMES,
 		func() -> void: _controls_view.queue_redraw())
 	_toggle_row("VIBRATION", &"vibration")
+	_toggle_row("ROUTE HINT", &"route_hint")
 	_toggle_row("TELEMETRY OVERLAY", &"telemetry")
-	_end_page(PAGE_SETTINGS, _first_setting, "Settings are saved on this device when you resume.")
+	_end_page(PAGE_SETTINGS, _first_setting,
+		"Route hint marks faintly what your hands could take ahead. Settings are saved on this device when you resume.")
 
 
 # The preset writes the four rows under it; touching any of them makes it

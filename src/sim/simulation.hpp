@@ -1314,6 +1314,9 @@ public:
     // The shot as it would fly from the pouch now, cut where it would first
     // hit something; empty unless a rider is seated.
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
+    // The faint route hint: what the hands could take ahead (each a lip's or
+    // a hold's point), nearest first; empty off the ground or on a hold.
+    [[nodiscard]] std::vector<Vector3> route_ahead() const;
 
 private:
     class PhysicsWorld;

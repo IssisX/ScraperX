@@ -306,6 +306,8 @@ jobs:
           # buttons not drawn, and every swipe and flick made recognized,
           # no more and no fewer. The wall kicks (touch_wall_kick) and a
           # ladder slid down, held and jumped off (touch_ladder) by them.
+          # The faint route hint, off by default, marking the ladder's hold
+          # ahead when on (touch_route_hint).
           # Thirteen play again on the BUTTONS layout (a name ending
           # _buttons): jump, vault, the double tap, crouch, the quickturn,
           # the climb up and the drop from a hang, the slide, the roll, the
@@ -314,7 +316,7 @@ jobs:
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_body touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_monkey_bars touch_swing_launch touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause pad_core keyboard_core \
-              touch_wall_kick touch_ladder \
+              touch_wall_kick touch_ladder touch_route_hint \
               touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons \
               touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons touch_wall_kick_buttons touch_ladder_buttons \
               touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
