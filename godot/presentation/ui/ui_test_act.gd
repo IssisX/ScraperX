@@ -136,26 +136,37 @@ func _act_me_xz() -> Vector2:
 
 
 # Sprints back and forth between `a` and `b` until `done` holds or `budget`
-# seconds pass; the stick let go at the end.
+# seconds pass, checking every frame; the stick let go at the end.
 func _act_laps(device: int, a: Vector2, b: Vector2, done: Callable, budget: float, tag: String) -> bool:
-	var waited := 0.0
-	var leg := 0
 	var start := Engine.get_process_frames()
-	while waited < budget:
-		_act_stages_seen[int(_matron_state()["stage"])] = true
-		if bool(done.call()):
-			_move(device, 0.0)
-			return true
-		if int(_native().get_death_count()) > _act_deaths_allowed:
-			_move(device, 0.0)
-			_act_log(tag + "_died")
-			print("SCRAPERX_ACT death %s" % str(_native().get_death_state()))
-			return false
+	var leg := 0
+	while float(Engine.get_process_frames() - start) / 60.0 < budget:
 		var target := a if leg % 2 == 0 else b
-		await _sprint_to(device, target, 1.2, 6.0)
+		await _face(target - _act_me_xz())
+		if not _stick_sprint():
+			_move(device, 0.0)
+			return _fail("the stick pushed past its ring did not latch sprint")
+		var on_leg := 0.0
+		while on_leg < 6.0:
+			_act_stages_seen[int(_matron_state()["stage"])] = true
+			if bool(done.call()):
+				_move(device, 0.0)
+				return true
+			if int(_native().get_death_count()) > _act_deaths_allowed:
+				_move(device, 0.0)
+				_act_log(tag + "_died")
+				print("SCRAPERX_ACT death %s" % str(_native().get_death_state()))
+				return false
+			var to := target - _act_me_xz()
+			if to.length() <= 1.2:
+				break
+			var turn := 4.0 * get_process_delta_time()
+			_main._yaw = float(_main._yaw) + clampf(wrapf(atan2(-to.x, -to.y) - float(_main._yaw), -PI, PI), -turn, turn)
+			await get_tree().process_frame
+			on_leg += get_process_delta_time()
+		_move(device, 0.0)
 		leg += 1
 		_act_log(tag)
-		waited = float(Engine.get_process_frames() - start) / 60.0
 	_move(device, 0.0)
 	_act_log(tag + "_timeout")
 	return bool(done.call())
@@ -431,17 +442,26 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if float(watch["nearest"]) > x0 - 0.3:
 		return _fail("dangerous, her shove did not throw the climber at the shaft (dx %.2f)" % (
 			float(watch["nearest"]) - x0))
+	# Fully changed, her hands kill: the one death the act means. It can come
+	# in the same stride she changes.
+	_act_deaths_allowed = 1
+	var catches := int(_matron_state()["catches"])
 	var raged_more: bool = await _act_laps(device, ACT_LAP_SOUTH, ACT_LAP_NORTH,
-		func() -> bool: return int(_matron_state()["stage"]) == STAGE_CHANGED, 150.0, "chase_to_changed")
+		func() -> bool: return int(_matron_state()["stage"]) == STAGE_CHANGED or int(_native().get_death_count()) >= 1,
+		150.0, "chase_to_changed")
 	if not raged_more:
 		return _fail("the chase never changed her fully (rage %.3f)" % float(_matron_state()["rage"]))
+	if int(_native().get_death_count()) >= 1:
+		if int(_matron_state()["catches"]) <= catches:
+			return _fail("the climber died in the chase, not in her hands (%s)" % str(_native().get_death_state()))
+		# Only fully changed are her hands a death.
+		_act_stages_seen[STAGE_CHANGED] = true
 	_act_log("changed")
-	_act_deaths_allowed = 1
 	var killed: bool = await _act_watch_her(func() -> bool: return int(_native().get_death_count()) >= 1, 30.0,
 		"changed_kill", "act_changed_coming", 3.0)
 	if not killed:
 		return _fail("fully changed, she never caught the climber")
-	if int(_matron_state()["catches"]) < 1:
+	if int(_matron_state()["catches"]) <= catches:
 		return _fail("the climber died, but not in her hands (%s)" % str(_native().get_death_state()))
 	await _seconds(0.5)
 	_act_log("killed")
