@@ -1418,6 +1418,33 @@ marked; off again, nothing; rendered under a virtual display, the stroke reads o
 a first, plainer one over the black steel did not); `touch_pause`, `pad_core`, `keyboard_core` (the
 settings page, a row longer, still fits).
 
+**The Matron's hearing reviewed (2026-10-19; to-do 11's closing review).** One reviewer with a
+skeptic's pass, probing with programs run against the built world; five findings held, one
+serious, all fixed:
+- A sound on another level she had no way to sent her to the place over or under it on her own
+  level, which can be out over the shaft: off the riser's bridge the player drops to 143's plate,
+  she hears it, and then stood searching at the shaft's edge for good (or, under the catwalk's
+  line, walked out on the catwalk and fell). She goes now to the place on her own walking lines
+  nearest over or under it, never the catwalk's; and only prey on her own level draws her onto
+  the catwalk.
+- In the Turn she could go down a line nobody had ridden (its trolley still parked at its top),
+  stop on its buffer's block at rest, far short of the end, and let go over the shaft. She does
+  not take such a line.
+- The catwalk's end: the half-metre rule left a metre of band beside the catwalk where she was
+  still put on its line, and lost her way to her post (Shuffling instead of Guarding). She is put
+  on the catwalk's line now only when she stands on it.
+- Any flat static face counted as a deck (the riser's bridge steps, a line's stand and ramp, the
+  shaft rail's underside): one same-deck line in fifty went round by the shaft, a sprint 29 m
+  across her deck unheard. A deck now is a level's floor, a face within 0.6 m under its top.
+- The shaft's comment claimed it the tower's narrowest; the rings above 264 m close in narrower.
+Proof: native `matron` (new "no way": the player drops off the bridge to 143's plate, she hears it
+on 143, never goes out over the shaft or onto the catwalk, and goes back to guard her post; with
+the code before the fixes the test fails there, she standing at (-5.0, -132.7) on the shaft's edge;
+new "beside": the player beside the catwalk's east end at her burst, she searches there and goes
+back to her post; then a sprint along the east band by the shaft, 29 m from her post, is heard at
+0.8), the full native suite; `touch_matron`, `touch_matron_ride`, `touch_matron_line`,
+`touch_matron_climb`.
+
 **The Matron after a lead more than a level away (2026-10-19; to-do 11, its second half).** A
 sound two decks under her (heard up the shaft) sends her the way down toward it a level at a time:
 the line from her deck to the deck between, then on from there; the same for climbs up. Frail she

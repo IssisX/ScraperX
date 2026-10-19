@@ -1221,6 +1221,113 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron two below: sprint_heard=" << heard << " lead_floor=" << lead_floor
                   << " stand_off_m=" << stand_off << "\n";
     }
+    // ---- heard where she has no way to: off the riser's bridge the player drops
+    //      to 143's plate out over the shaft; she hears the landing up the shaft,
+    //      and with no way there she searches at the place on her own lines over
+    //      it, never out over the shaft (where she would stand stuck) nor on the
+    //      catwalk, and goes back to guard her post. (A line nobody has ridden
+    //      she does not take even in the Turn: she would let go short of its
+    //      end, over the shaft.) ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron no way: settle");
+        require(go(s, 10.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron no way: a sprint toward her locker");
+        (void)s.set_crouch_input(true);
+        require(go(s, -6.0, Matron::kBandNorthZ, false, 30.0, 0.4) && go(s, -6.62, -133.0, false, 10.0, 0.15),
+                "matron no way: crouched to the riser's bridge and up its steps");
+        (void)s.set_move_input(0.0, 0.0);
+        require(wait_for_her(s, 10.0, 60.0), "matron no way: she comes");
+        (void)s.set_crouch_input(false);
+        const auto deaths = s.snapshot().death_count;
+        bool landed = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++i) {
+            const auto p = s.snapshot();
+            if (p.player_position.z > -133.55 && p.player_position.y > 155.0) {
+                (void)s.set_move_input(0.0, -0.5);
+                (void)s.set_facing(0.0, -1.0);
+                if (p.traversal_state != scraperx::sim::TraversalState::None) {
+                    (void)s.request_release();
+                }
+            } else {
+                (void)s.set_move_input(0.0, 0.0);
+            }
+            tick(s);
+            landed = s.snapshot().player_grounded && s.snapshot().player_position.y < 146.0;
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        require(landed && s.snapshot().death_count == deaths, "matron no way: the player drops to 143's plate, alive");
+        bool heard_below = false;
+        bool over_shaft = false;
+        bool guarding = false;
+        for (int i = 0; i < 150 * static_cast<int>(Simulation::kTickRateHz) && !guarding; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            heard_below = heard_below || (m.noise_heard > 0.0 && std::abs(m.lead_floor_y - 143.0) < 0.1);
+            over_shaft = over_shaft || (m.alive && !m.on_line && std::abs(m.position.y - (Matron::kDeckTop + Matron::kStandCentre)) < 0.2 &&
+                                        std::abs(m.position.x) < 16.5 && std::abs(m.position.z - Matron::kMidZ) < 16.5 &&
+                                        std::abs(m.position.z - Matron::kMidZ) > 1.4);
+            guarding = m.state == kStateGuarding && std::hypot(m.position.x - -10.3, m.position.z - -129.0) < 0.6;
+        }
+        const auto end = s.matron_state();
+        std::cout << "  matron no way: heard the landing on 143 " << heard_below << "; out over the shaft " << over_shaft
+                  << "; guarding " << guarding << " at (" << end.position.x << ", " << end.position.z << "), alive "
+                  << end.alive << ", plates down " << end.planks_fallen << ", fooled " << end.fooled << "\n";
+        require(heard_below, "matron no way: she hears the landing on 143 up the shaft, a lead there");
+        require(!over_shaft && end.alive && end.planks_fallen == 0 && s.snapshot().death_count == deaths,
+                "matron no way: she never goes out over the shaft or onto the catwalk after it");
+        require(guarding, "matron no way: finding nobody, she goes back to guard her post");
+        std::cout << "PASS scraperx_sim matron no way: fooled=" << end.fooled << "\n";
+    }
+    // ---- beside the catwalk on the band: the player stood there as she burst
+    //      out; she searches there and then finds her way back to her post
+    //      (put on the band's line, not the catwalk's she may not take). Then a
+    //      sprint along the east band, past the riser's bridge steps from her
+    //      post: the straight line is open air (the steps' flat treads are not
+    //      a deck), and she hears it ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron beside: settle");
+        require(go(s, 10.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron beside: a sprint toward her locker");
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0, 0.8) &&
+                    go(s, Matron::kBandX, -148.0, false, 40.0, 0.5) && go(s, 19.5, Matron::kMidZ, false, 10.0, 0.3),
+                "matron beside: crouched to the band beside the catwalk's east end");
+        (void)s.set_move_input(0.0, 0.0);
+        bool out = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
+            tick(s);
+            out = s.matron_state().state == kStateEmerging;
+        }
+        require(out, "matron beside: she bursts out");
+        require(go(s, Matron::kBandX, -152.0, false, 20.0, 0.6) && go(s, Matron::kBandX, Matron::kBandSouthZ, false, 60.0, 0.6) &&
+                    go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 60.0, 0.6),
+                "matron beside: crouched away round the south band");
+        (void)s.set_move_input(0.0, 0.0);
+        require(until_guarding(s, 90.0) && s.matron_state().alive, "matron beside: she finds her way back to guard her post");
+        // Crouched round to the east band's shaft side, then a sprint along it.
+        require(go(s, Matron::kBandX, Matron::kBandSouthZ, false, 60.0, 0.6) && go(s, Matron::kBandX, -137.0, false, 60.0, 0.6) &&
+                    go(s, 17.5, -137.0, false, 10.0, 0.3),
+                "matron beside: crouched round to the east band");
+        require(s.matron_state().noise_heard == 0.0, "matron beside: crouched, unheard");
+        (void)s.set_crouch_input(false);
+        double heard = 0.0;
+        for (int leg = 0; leg < 4 && heard == 0.0; ++leg) {
+            const double z = leg % 2 == 0 ? -134.0 : -137.0;
+            for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && heard == 0.0; ++i) {
+                const bool there = steer(s, 17.5, z, true, 0.3);
+                tick(s);
+                heard = s.matron_state().noise_heard;
+                if (there) {
+                    break;
+                }
+            }
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        std::cout << "  matron beside: back at her post; a sprint on the east band by the shaft heard at " << heard << "\n";
+        require(heard > 0.75, "matron beside: a sprint 29 m across her deck, past the steps' treads, is heard");
+        std::cout << "PASS scraperx_sim matron beside: sprint_heard=" << heard << "\n";
+    }
     // ---- climbs: frail, she stands at the ladder's foot looking up; in the Turn she takes
     //      hold and comes up it after the player, and over its head onto the ring --------
     {

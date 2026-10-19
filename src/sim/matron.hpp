@@ -140,11 +140,15 @@ public:
     // Sound through the tower (above). CHOSEN: a steel deck takes 20 dB off
     // a sound (as ten times the distance would); turning round the shaft's
     // edge, the low thuds she hears take 3 dB (1.4 times the distance). The
-    // shaft is the stack's (x +-17 m, z -133 / -167), the narrowest of the
-    // tower's: the rings above leave a wider one round it.
+    // shaft is the stack's (x +-17 m, z -133 / -167): the rings up to 264 m
+    // leave a wider one round it; above them their openings close in (to
+    // +-12 m at 396 m), where the way round the shaft would pass through
+    // their decks unmuffled (she has no way of her own up there). A deck is
+    // a level's floor: a flat face met within kDeckDepthM under its top.
     static constexpr float kDeckMuffle = 10.0F;
     static constexpr float kBendMuffle = 1.4F;
     static constexpr float kShaftHalfM = 17.0F;
+    static constexpr float kDeckDepthM = 0.6F;
 
     // The build-up.
     static constexpr float kWakeNoiseM = 30.0F;     // a loud noise carrying this far to the locker wakes her
@@ -463,6 +467,9 @@ private:
     // The floor of the level a sound at height y is on (the highest under
     // it, within a storey), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
+    // (x, z) put on the nearest of her level's floor lines (not the
+    // catwalk's, not a gap's): somewhere on her level she can stand.
+    void onto_floor_lines(float &x, float &z) const;
     [[nodiscard]] static bool on_catwalk_line(float x, float z, float margin);
     // The next point to walk to, along the cheapest path on her level to
     // (tx, tz), with the catwalk allowed or not and gaps (leapt) or not;

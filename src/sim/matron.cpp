@@ -229,17 +229,26 @@ int Matron::decks_between(const RVec3 from, const RVec3 to) const {
     const RRayCast ray(from, run);
     AllHitCollisionCollector<CastRayCollector> hits;
     physics_.GetNarrowPhaseQuery().CastRay(ray, RayCastSettings(), hits, {}, {}, not_hers);
-    // A deck is met through its top or its underside; a column's side, a
-    // rail or anything that moves is not one.
+    // A deck is a level's floor, met through its top or its underside: not
+    // a column's side, nor a rail's, a stand's or a ramp's flat face, nor
+    // anything that moves.
     int decks = 0;
     for (const RayCastResult &hit : hits.mHits) {
         const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
         if (!lock.Succeeded() || !lock.GetBody().IsStatic() || lock.GetBody().IsSensor()) {
             continue;
         }
-        const Vec3 normal =
-            lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction));
-        decks += std::abs(normal.GetY()) > 0.7F ? 1 : 0;
+        const RVec3 point = ray.GetPointOnRay(hit.mFraction);
+        if (std::abs(lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY()) <= 0.7F) {
+            continue;
+        }
+        const float y = float(point.GetY());
+        for (const Level &level : levels_) {
+            if (y > level.floor_y - kDeckDepthM && y < level.floor_y + 0.05F) {
+                ++decks;
+                break;
+            }
+        }
     }
     return decks;
 }
@@ -269,6 +278,32 @@ float Matron::carry_m(const RVec3 from, const RVec3 to) const {
     return std::min(through, round);
 }
 
+void Matron::onto_floor_lines(float &x, float &z) const {
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    float best = std::numeric_limits<float>::max();
+    float bx = x;
+    float bz = z;
+    for (const Edge &e : level.edges) {
+        if (e.link != Link::Floor) {
+            continue;
+        }
+        const Node &a = level.nodes[static_cast<std::size_t>(e.a)];
+        const Node &b = level.nodes[static_cast<std::size_t>(e.b)];
+        float px = 0.0F;
+        float pz = 0.0F;
+        float t = 0.0F;
+        project(a.x, a.z, b.x, b.z, x, z, px, pz, t);
+        const float d = distance_xz(px, pz, x, z);
+        if (d < best) {
+            best = d;
+            bx = px;
+            bz = pz;
+        }
+    }
+    x = bx;
+    z = bz;
+}
+
 float Matron::floor_of(const float y) const {
     float best = levels_[static_cast<std::size_t>(level_)].floor_y;
     float best_above = std::numeric_limits<float>::max();
@@ -294,17 +329,17 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     const auto allowed = [&](const Edge &e) {
         return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps);
     };
-    // She stands on a line she may take (the catwalk under her counts, once
-    // she is out on it: at its end, on the band, the band's line is hers),
-    // and the place she heads for is put on one.
-    constexpr float kOnItM = 0.5F;
+    // She stands on a line she may take (the catwalk under her counts, but
+    // only once she is out on it: beside it on the band, the band's line is
+    // hers), and the place she heads for is put on one.
     const auto insert = [&](const float x, const float z, const bool loop_only) {
         int best = -1;
         float best_d = std::numeric_limits<float>::max();
         float bx = 0.0F;
         float bz = 0.0F;
         for (std::size_t e = 0; e < edges.size(); ++e) {
-            if ((loop_only && !allowed(edges[e])) || (edges[e].link == Link::Gap && !allow_gaps)) {
+            if ((loop_only && !allowed(edges[e])) || (edges[e].link == Link::Gap && !allow_gaps) ||
+                (!allowed(edges[e]) && !on_catwalk_line(x, z, 0.0F))) {
                 continue;
             }
             float px = 0.0F;
@@ -313,8 +348,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
             const Node &a = nodes[static_cast<std::size_t>(edges[e].a)];
             const Node &b = nodes[static_cast<std::size_t>(edges[e].b)];
             project(a.x, a.z, b.x, b.z, x, z, px, pz, t);
-            // A line she may not take only wins when she is clearly on it.
-            const float d = distance_xz(px, pz, x, z) + (allowed(edges[e]) ? 0.0F : kOnItM);
+            const float d = distance_xz(px, pz, x, z);
             if (d < best_d) {
                 best_d = d;
                 best = static_cast<int>(e);
@@ -559,10 +593,13 @@ bool Matron::follow_line(const float dt, const RVec3 at) {
         return true;
     }
     // On the stand under the cable, looking down the line. Frail, she cannot
-    // follow. In the Turn she jumps for the cable and goes.
+    // follow. In the Turn she jumps for the cable and goes; but not down a
+    // line nobody has ridden (its trolley still parked at the top): its
+    // buffer's block at rest far short of the end, she would stop on it and
+    // let go over the shaft.
     walk_toward(dt, ax, az, 0.0F);
     yaw_ = turn_toward(yaw_, std::atan2(line.direction.GetX(), line.direction.GetZ()), kTurnRate, dt);
-    if (turn_ == Turn::None) {
+    if (turn_ == Turn::None || line.parked) {
         return true;
     }
     const RVec3 cable = line.top + line.direction * Zipline::kParkM;
@@ -1156,8 +1193,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const bool deck = level_ == 0;
         const bool on_catwalk = deck && on_catwalk_line(ax, az, 0.4F);
         const bool prey_at_catwalk =
-            deck && (on_catwalk_line(px, pz, 0.0F) || distance_xz(px, pz, -kBandX, kMidZ) < kEndM ||
-                     distance_xz(px, pz, kBandX, kMidZ) < kEndM);
+            deck && on_deck && (on_catwalk_line(px, pz, 0.0F) || distance_xz(px, pz, -kBandX, kMidZ) < kEndM ||
+                                distance_xz(px, pz, kBandX, kMidZ) < kEndM);
         // Once she has decided for the catwalk she keeps to it a moment.
         // At the catwalk's end she is off its axis as often as on it, and a rail
         // post can hide the prey on the plates: a sound a moment ago counts as sight there.
@@ -1191,6 +1228,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         heard_x_ = c.x;
                         heard_z_ = c.z;
                     }
+                    // Heard on another level she has no way to: at the place
+                    // on her own lines over or under it (not out over the
+                    // shaft, nor on the catwalk).
+                    if (guess_line_ < 0 && guess_climb_ < 0) {
+                        onto_floor_lines(heard_x_, heard_z_);
+                    }
                     lead_floor_ = floor_y;
                     guess_line_ = -1;
                     guess_climb_ = -1;
@@ -1216,8 +1259,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 step_turn(dt, d, loudness, player_carry);
                 break;
             } else {
-                // In the Turn a gap is no bar: she leaps it.
-                route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz, turn_ != Turn::None);
+                // In the Turn a gap is no bar: she leaps it. A lead on
+                // another level she has no way to: the place on her own lines
+                // over or under it.
+                float tx = heard_x_;
+                float tz = heard_z_;
+                if (elsewhere) {
+                    onto_floor_lines(tx, tz);
+                }
+                route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 step_turn(dt, d, loudness, player_carry);
                 if (turn_ == Turn::Windup) {
                     walk_toward(dt, wx, wz, 0.0F, kTurnFootAccel);
