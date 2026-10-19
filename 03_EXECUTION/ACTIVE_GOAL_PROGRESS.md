@@ -1435,7 +1435,8 @@ How the owner wants to work now (2026-10-19, night, on top of the evening's): ex
 wow-factor experiences first; the Matron roams the whole tower; a fun way to keep her at bay that
 does not kill her; her face realistic and uncanny, adult-scary; add stock freely; run multi-agent
 workflows for substantive work (ultracode); one branch, `ScraperX-Claude`; full test runs only when
-warranted; no on-screen label for every object. And the evening's (`00_START_HERE.md`'s directives): push to
+warranted (run the native groups a change touches; CI runs the whole suite on every push); no
+on-screen label for every object. And the evening's (`00_START_HERE.md`'s directives): push to
 `ScraperX-Claude` at will, run local checks and CI at will, start workflows when they help, don't
 get lost in invisible detail, and talk in plain words (the float lift at 220 m, not "D"; the
 automated touch playthrough, not "touch_wet"). Rule 5 is now "the parachute is the way back", and
@@ -1447,7 +1448,8 @@ Tools that work in this container:
   GDExtension lands in `godot/addons/scraperx_native/bin/linux/`).
 - One native test: `SCRAPERX_ONLY=matron ./build/host/scraperx_sim_tests` (names in
   `tests/simulation_tests.cpp`; AS-007, stack, ascent, save, determinism, ...); the whole suite with
-  no variable (about 25 minutes, 135+ passes).
+  no variable (about 25 minutes, 135+ passes), only when a change reaches widely: CI runs it on every
+  push, and the owner wants no redundant runs.
 - One touch playthrough: `tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=touch_wet`.
 - Pictures from a scenario: start `Xvfb :0 -screen 0 1296x1114x24 &`, then
   `DISPLAY=:0 tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 -- --uitest=look_matron_gallery --capture=<dir>/<prefix>`
@@ -1516,7 +1518,9 @@ had no way back up. World solids regenerated.
 
 Proof: native `matron` (every section, with the new "mischief" and "hoard"), `matron-mischief`,
 `stock`, `magnet` and `stack` (they find pieces by the end of the stock list, which now ends with her
-three), `save`, `determinism`, the full suite; `touch_matron_act` (new, 108 s headless, about 380 s of
+three), `save`, `determinism`, and 117 passes of the full suite with none failing before it was stopped
+(CI runs it whole); new "matron collision" (head-on into her at 15 m/s, no death; a death without the
+change); `touch_matron_act` (new, 108 s headless, about 380 s of
 play), `touch_matron`, `touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`, `touch_stock`,
 `touch_radio`. CI plays `touch_matron_act`.
 
