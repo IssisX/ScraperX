@@ -54,14 +54,19 @@ func _act_draw(on: bool) -> void:
 		RenderingServer.render_loop_enabled = on
 
 
-# A screenshot with the drawing on for it, and off again after.
+# Every screenshot (the act's, and those the routes it reuses take) with the
+# drawing on for it, and as it was after: a screenshot waits on a drawn frame.
+func _pose(pose: String) -> void:
+	var was := _act_drawing
+	if not was:
+		_act_draw(true)
+		await _frames(3)
+	await super._pose(pose)
+	_act_draw(was)
+
+
 func _act_pose(pose: String) -> void:
-	if not _act_capturing():
-		return
-	_act_draw(true)
-	await _frames(3)
 	await _pose(pose)
-	_act_draw(false)
 
 
 func _act_log(tag: String) -> void:
