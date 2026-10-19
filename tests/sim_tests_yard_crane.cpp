@@ -609,12 +609,37 @@ std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
     return 0;
 }
 
-// The save as a build with only its first `keep` grips wrote it (0: from
-// before the grips).
-std::vector<std::uint8_t> with_grips(const std::vector<std::uint8_t> &bytes, const std::size_t keep) {
+// The save as an older build wrote it: without the world's last `drop` kit
+// bodies (their entities and states) and with only its first `keep` grips (0:
+// from before the grips, its lists ending at the lifts' targets). The layout
+// is Simulation::save_game's: the format key, the tick, the checkpoint's
+// position, crouch, commits, deaths and carried entity, then the bodies'
+// entities and states.
+std::vector<std::uint8_t> older_save(const std::vector<std::uint8_t> &bytes, const std::size_t drop,
+                                     const std::size_t keep) {
     const std::size_t n = saved_grips(bytes);
     const std::size_t section = bytes.size() - (8 + 8 * n);
-    std::vector<std::uint8_t> out(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(section));
+    const std::size_t at = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
+    std::uint32_t entities = 0;
+    std::memcpy(&entities, bytes.data() + at, 4);
+    const std::size_t states_at = at + 4 + 8 * std::size_t{entities};
+    std::uint32_t states = 0;
+    std::memcpy(&states, bytes.data() + states_at, 4);
+    const std::size_t rest_at = states_at + 4 + sizeof(scraperx::sim::kit::Kit::BodyState) * std::size_t{states};
+    require(n > 0 && states == entities && drop <= entities && rest_at <= section,
+            "saves: the save's body lists read as the writer lays them out");
+    const auto fewer = static_cast<std::uint32_t>(entities - drop);
+    const auto *bytes_of_fewer = reinterpret_cast<const std::uint8_t *>(&fewer);
+    std::vector<std::uint8_t> out(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(at));
+    out.insert(out.end(), bytes_of_fewer, bytes_of_fewer + 4);
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(at + 4),
+               bytes.begin() + static_cast<std::ptrdiff_t>(at + 4 + 8 * std::size_t{fewer}));
+    out.insert(out.end(), bytes_of_fewer, bytes_of_fewer + 4);
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(states_at + 4),
+               bytes.begin() + static_cast<std::ptrdiff_t>(states_at + 4 + sizeof(scraperx::sim::kit::Kit::BodyState) *
+                                                                                  std::size_t{fewer}));
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(rest_at),
+               bytes.begin() + static_cast<std::ptrdiff_t>(section));
     if (keep == 0 || keep > n) {
         return out;
     }
@@ -648,6 +673,17 @@ void run_yard_crane_magnet() {
     require(top != 0 && bottom != 0 && beam != 0 && plates != 0, "magnet: the slabs, the beam and the plate stack");
     const auto at = body_at(s, YardCrane::kMagnetEntity);
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
+    // The last six kit bodies are the crane's steel and its two devices
+    // (built last, so saves from before them line up).
+    const auto count = s.kit_body_count();
+    require(count > 6 && s.kit_body_entity(count - 1) == YardCrane::kSpreaderEntity &&
+                s.kit_body_entity(count - 2) == YardCrane::kMagnetEntity &&
+                scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 6)),
+            "magnet: the crane's steel, the magnet and the spreader are the kit's last bodies");
+    // As the world began: a build from before the grips saved it so, without
+    // those six bodies.
+    const std::vector<std::uint8_t> as_begun = s.save_game();
+    const auto spreader0 = body_at(s, YardCrane::kSpreaderEntity);
     require(take_remote(s), "magnet: the remote taken");
     // The hook let down over the magnet until its shackle lies on the bail;
     // the shackle taken from beside it, and HOOKed on the bail's eye.
@@ -694,18 +730,31 @@ void run_yard_crane_magnet() {
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
         require(saved_grips(bytes) == 2, "magnet: the save ends in its two grips (the magnet's, the spreader's)");
-        const std::vector<std::uint8_t> one = with_grips(bytes, 1);
+        // As the magnet's build saved it: no spreader, one grip. Loaded, the
+        // slab still hangs on the magnet and the spreader lies as built.
+        const std::vector<std::uint8_t> one = older_save(bytes, 1, 1);
         Simulation magnet_build(scraperx::sim::InitialSpawn::ExteriorGrade);
         require(magnet_build.load_game(one.data(), one.size()), "magnet: a save from before the spreader loads");
         (void)magnet_build.advance_frame(2.0);
-        require(magnet_build.yard_crane_state().holding_entity == top && std::abs(body_at(magnet_build, top).y - here.y) < 0.05,
-                "magnet: loaded from a save from before the spreader, it holds the slab");
-        const std::vector<std::uint8_t> before = with_grips(bytes, 0);
+        const auto spreader = body_at(magnet_build, YardCrane::kSpreaderEntity);
+        require(magnet_build.yard_crane_state().holding_entity == top &&
+                    std::abs(body_at(magnet_build, top).y - here.y) < 0.05 &&
+                    std::hypot(spreader.x - spreader0.x, spreader.z - spreader0.z) < 0.05 &&
+                    std::abs(spreader.y - spreader0.y) < 0.05,
+                "magnet: loaded from a save from before the spreader, it holds the slab, the spreader as built");
+        // As a build from before the grips saved the world as it began: none
+        // of the six bodies, no grips. Loaded, they lie as built, held by
+        // nothing.
+        const std::vector<std::uint8_t> before = older_save(as_begun, 6, 0);
         Simulation older(scraperx::sim::InitialSpawn::ExteriorGrade);
-        require(older.load_game(before.data(), before.size()), "magnet: a save without the grips loads");
+        require(older.load_game(before.data(), before.size()), "magnet: a save from before the grips loads");
         (void)older.advance_frame(2.0);
-        require(older.yard_crane_state().holding_entity == 0 && body_at(older, top).y < lifted.y - 0.5,
-                "magnet: loaded from a save without the grips, it holds nothing and the slab falls");
+        const auto laid = body_at(older, top);
+        const auto lying = body_at(older, YardCrane::kMagnetEntity);
+        require(older.yard_crane_state().holding_entity == 0 && std::abs(laid.y - slab0.y) < 0.02 &&
+                    std::hypot(laid.x - slab0.x, laid.z - slab0.z) < 0.02 && std::abs(lying.y - at.y) < 0.02 &&
+                    std::hypot(lying.x - at.x, lying.z - at.z) < 0.02,
+                "magnet: loaded from a save from before the grips, the slabs and the magnet lie as built");
     }
     // Off: the slab falls where it hangs.
     require(magnet(s, false), "magnet: MAGNET OFF");

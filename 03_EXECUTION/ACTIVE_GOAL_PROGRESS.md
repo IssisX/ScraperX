@@ -1422,8 +1422,13 @@ down, UNLOCK, and the frame raised leaves the box where it was set), `magnet` (n
 roof held at a tenth and torn off; saves from before the spreader, and from before the grips, still
 load), `crane`, `stock`, `save`, `determinism`, `forklift`; `touch_crane_spreader` (new: by touch,
 rigged, landed, LOCK, lifted, set down, UNLOCK, heard), `touch_crane_magnet`, `pad_crane_magnet`,
-`keyboard_crane_magnet`, `touch_yard_crane`, `touch_c4`, `touch_stock`. Next: the closing review of
-to-do 10; the plate clamp waits for thin plates in a rack.
+`keyboard_crane_magnet`, `touch_yard_crane`, `touch_c4`, `touch_stock`. Reviewed (the closing review
+of to-do 10, four reviewers each checked by a skeptic): on touch the crane's readout (what it holds,
+why LOCK is not offered) was never drawn and now is, beside its button, as `touch_crane_spreader`
+checks; the magnet test's older saves are now truly older ones (one from before the spreader
+without its body, one from before the grips without the crane's six bodies), and it fails when the
+reader's path for such saves is broken; two comments corrected. The plate clamp waits for thin
+plates in a rack.
 
 **The derrick's cradle seated at the top (2026-10-18).** Stepping off at 802.64 m was a game of
 timing. The cradle hangs free on its hanger: the two pigs left at its south end lean it 5.5 degrees,
@@ -1592,8 +1597,8 @@ fill in after).**
    slabs and beams are laid down in reach; the containers get corner castings for the spreader; the
    plate clamp waits for thin plates in a rack. Saves: the devices built last, their grips kept in
    their own record and rebuilt on a restore, older saves still loading.
-   Done 2026-10-18: the grips, the magnet (CRANE on R and LB) and the container spreader. Next: the
-   closing review; the plate clamp waits for thin plates in a rack.
+   Done 2026-10-18: the grips, the magnet (CRANE on R and LB) and the container spreader, reviewed.
+   The plate clamp waits for thin plates in a rack.
 11. The Matron's hearing in three dimensions, and crossing levels to what she hears (owner,
    2026-10-18: "I'm not sure matron should be level dependent"): sound carried through the open
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her

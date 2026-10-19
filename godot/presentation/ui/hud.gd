@@ -128,7 +128,8 @@ func _prompt(verb: StringName, text: String, detail: String = "", tone: int = TO
 
 # What the player can do right now, in the order a hand would reach for it.
 # On touch the buttons themselves carry the verbs, so only what no button
-# says -- the grab gesture and a lethal-fall warning -- is repeated here.
+# says -- the grab gesture, a lethal-fall warning, the yard crane's readout --
+# is repeated here.
 func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var danger := float(ctx["danger"]) >= 0.6 and not bool(ctx["chute"])
@@ -137,6 +138,11 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			out.append(_prompt(&"grab", "PUSH FORWARD TO GRAB"))
 		if ctx["chute_ok"] and danger:
 			out.append(_prompt(&"chute", "OPEN THE CHUTE", "", TONE_DANGER))
+		# Working the crane: what its hook or the device on it reads (how hard
+		# it holds, why LOCK is not offered), beside the button it is about.
+		var act: Dictionary = ctx["action"]
+		if bool(ctx.get("crane_operating", false)) and String(act["detail"]) != "":
+			out.append(_prompt(&"crane" if act["id"] == &"crane" else &"action", act["label"], act["detail"]))
 		return out
 	if ctx["hanging"]:
 		out.append(_prompt(&"jump", "CLIMB UP"))

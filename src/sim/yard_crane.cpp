@@ -251,7 +251,7 @@ bool magnetic(const Material material) {
 // the head block across its middle and the lug on it, the eye at the lug's top.
 const Vec3 kSpreaderEye(0.0F, 0.9F, 0.0F);
 // Where it lies in the yard, on its pockets, before it is rigged: west of the
-// laydown's containers and lying the way they do (along z), 22 m out from
+// laydown's containers and lying the way they do (along z), 24.5 m out from
 // the mast.
 constexpr float kSpreaderParkX = -84.5F;
 constexpr float kSpreaderParkZ = -121.0F;

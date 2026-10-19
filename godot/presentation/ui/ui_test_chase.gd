@@ -911,8 +911,8 @@ func _crane_hoist_until(device: int, way: int, done: Callable, timeout: float) -
 	return ok
 
 # The magnet's job on the device under test: the remote taken, the hook sent
-# over the magnet and let down until its shackle lies on the bail; the shackle
-# taken and HOOKed on; worked, MAGNET ON (the remote's device switch is
+# just north of the magnet and let down until its shackle lies on the ground
+# by it; the shackle taken and HOOKed on; worked, MAGNET ON (the remote's device switch is
 # Action), up, over the slabs and down: it takes the top one; up with it;
 # MAGNET OFF, and the slab falls. Heard: the coil humming while on, the steel
 # taken against the face and let go. CRANE (the button, R, LB) works the
@@ -1137,7 +1137,7 @@ func _crane_spreader(device: int) -> bool:
 	_crane_switch(device)
 	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
 		return _fail("spreader: CRANE did not let go of the crane")
-	# Round the slabs, the magnet and the beams, north of them, to the frame.
+	# Round the slabs, the magnet and the beams, south of them, to the frame.
 	for target in [Vector2(-60.5, -126.0), Vector2(-60.5, -119.5), Vector2(-80.0, -119.5),
 			Vector2(frame.x + 2.4, frame.z - 1.0)]:
 		if not await _go(device, target, 0.2, 40.0):
@@ -1187,10 +1187,19 @@ func _crane_spreader(device: int) -> bool:
 		return _fail("spreader: RAISE did not lift the box on the spreader")
 	await _seconds(1.0)
 	var high := _kit_origin(box).y
-	# In the air: Action is the crane's WALK again, the hold read beside it.
+	# In the air: Action is the crane's WALK again, the hold read beside it,
+	# and on touch drawn by the button.
 	var held_read := String(_ctx()["action"]["detail"])
 	if _ctx()["action"]["id"] == &"crane_device" or not held_read.begins_with("LOCKED"):
 		return _fail("spreader: the box in the air, Action read '%s %s'" % [_action_label(), held_read])
+	var drawn := false
+	for prompt in _main._hud._prompts:
+		drawn = drawn or String(prompt["detail"]) == held_read
+	if not drawn:
+		return _fail("spreader: the box in the air, the hold '%s' is not drawn (prompts %s)" % [held_read,
+			str(_main._hud._prompts)])
+	await _look_at_point(_kit_origin(box))
+	await _pose("crane_spreader_lifted")
 	if not await _crane_hoist_until(device, -1,
 			func() -> bool: return bool(_native().get_yard_crane_state()["spreader_landed"]), 40.0):
 		return _fail("spreader: the box was not set down")
