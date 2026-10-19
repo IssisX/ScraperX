@@ -898,6 +898,9 @@ func _take_crane_sling(device: int, beside: int = YARD_CRANE_MAGNET) -> bool:
 		var me := _position()
 		var out := Vector2(shackle.x - magnet.x, shackle.z - magnet.z)
 		var side := out.normalized() if out.length() > 0.3 else Vector2(me.x - shackle.x, me.z - shackle.z).normalized()
+		# Round it a sixth of a turn each try: the sling hanging from the hook
+		# can stand between the rigger and the shackle on one side.
+		side = side.rotated(float(attempt) * PI / 3.0)
 		# 0.6 m off, give or take 0.2: within the hands' 1.2 m of the body's
 		# middle even on the ground.
 		await _go(device, Vector2(shackle.x, shackle.z) + side * 0.6, 0.2, 6.0)
@@ -905,7 +908,8 @@ func _take_crane_sling(device: int, beside: int = YARD_CRANE_MAGNET) -> bool:
 		await _face(Vector2(shackle.x - at.x, shackle.z - at.z))
 		if await _offered(&"pick_up", "TAKE", "CRANE SLING"):
 			_act(device)
-			return await _wait_until(func() -> bool: return int(_ctx()["carrying"]) == YARD_CRANE_SLING_SHACKLE, 1.0)
+			if await _wait_until(func() -> bool: return int(_ctx()["carrying"]) == YARD_CRANE_SLING_SHACKLE, 1.0):
+				return true
 	return false
 
 # The hoist held one way until `done`, or `timeout`.
@@ -940,12 +944,13 @@ func _crane_magnet(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
 		return _fail("magnet: CRANE did not take the crane")
 	# The hook just north of the magnet, on the rigger's side, let down until
-	# its shackle lies on the ground there (the throat 3.5 m up: the sling
-	# reaches the bail with 0.3 m to spare).
+	# its shackle lies on the ground there with slack in the sling (the throat
+	# 3.3 m up; at 3.5 m the sling only just reaches the bail, and a hair's
+	# difference in how the hook stops leaves it too short).
 	if not await _crane_hook_over(device, Vector2(magnet.x, magnet.z - 0.9), 0.3, 120.0):
 		return _fail("magnet: the hook was not sent by the magnet")
 	if not await _crane_hoist_until(device, -1,
-			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.5, 60.0):
+			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.3, 60.0):
 		return _fail("magnet: LOWER did not let the hook down by the magnet")
 	_crane_switch(device)
 	if not await _wait_until(func() -> bool: return not bool(_native().get_yard_crane_state()["operating"]), 1.0):
