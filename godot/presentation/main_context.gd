@@ -463,8 +463,6 @@ func _carry_name(entity: int) -> String:
 			return "LATCH HANDLE"
 		2031:
 			return "PIPE SPOOL"
-		2033:
-			return "FILL VALVE"
 		2035:
 			return "DRAIN HANDLE"
 		2042:

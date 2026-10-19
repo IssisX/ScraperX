@@ -242,8 +242,8 @@ func _debris(device: int) -> bool:
 	return true
 
 # AS-007, Wet Isolation, the way its native band test runs it: from the 220
-# ring, D's spool carried into its gap and its fill valve thrown, a ride on
-# the float's platform to 256 m; E's door drawn shut and its chiller tripped,
+# ring, D's spool carried through its gap onto the platform and set down in
+# the gap behind, a ride on the float's platform to 256 m; E's door drawn shut and its chiller tripped,
 # a ride in the cab on the chiller's air to 298 m; F's hose hooked onto the
 # ram's inlet and its stop valve thrown, a ride on the accumulator's platform,
 # and off onto TP-340.
@@ -307,20 +307,23 @@ func _wet_d(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2031, 0.5):
 		return _fail("PICK UP did not lift D's spool")
-	# Carried north into the gap as the native test carries it, at 0.35 of
-	# full throw to z -128.25 and a coast; a key, with no throw, walks it
-	# there and stops.
-	var carried := false
-	if device == InputRouter.Device.KEYBOARD_MOUSE:
-		carried = await _walk_to(device, Vector2(9.5, -128.17), 0.05, 6.0)
-	else:
-		_move(device, 0.35)
-		carried = await _wait_until(func() -> bool: return _position().z >= -128.25, 6.0)
-		_move(device, 0.0)
-	if not carried:
-		return _fail("carrying D's spool to its gap stalled at %s" % str(_position()))
+	# Carried east along the ring to the walkway, south through the gap in
+	# the fill line where it crosses the walkway's foot, and onto the
+	# platform, as the native test carries it.
+	if not (await _go(device, Vector2(13.0, -130.2), 0.15, 8.0) and \
+			await _go(device, Vector2(13.0, -133.4), 0.15, 6.0)):
+		return _fail("carrying D's spool onto its platform stalled at %s" % str(_position()))
+	# Turned round on the platform to face the gap it came through, and a
+	# step toward it to 0.1 m inside the platform's north edge, so the spool,
+	# hanging 0.6 m ahead, is over the gap's line: the stick eased off and let
+	# go within 5 cm.
+	await _face(Vector2(0.0, 1.0))
+	if not await _walk_to(device, Vector2(13.0, -132.4), 0.05, 6.0):
+		return _fail("the step back to D's gap with the spool stalled at %s" % str(_position()))
 	# Steadied before it is set down, as a player does with a swinging load.
 	await _seconds(0.6)
+	if bool(_wet_state()["d_pipe_whole"]):
+		return _fail("D's fill line closed before the spool was let go of")
 	var spool := int(_native().get_kit_body_index(2031))
 	var spool_last := (_native().get_kit_body_transform(spool) as Transform3D).origin
 	for frame in 180:
@@ -334,13 +337,12 @@ func _wet_d(device: int) -> bool:
 		return _fail("LET GO did not set D's spool down")
 	await _seconds(1.5)
 	if not bool(_wet_state()["d_pipe_whole"]):
-		return _fail("set down, D's spool did not close the fill line's gap")
-	if not (await _go(device, Vector2(13.4, -129.6), 0.15, 8.0) and \
-			await _go(device, Vector2(13.4, -132.7), 0.15, 6.0)):
-		return _fail("the walk onto D's platform stalled at %s" % str(_position()))
-	if not await _pull_handle(device, Vector2(12.3, -132.7), Vector2(0.0, 1.0), 2033, "FILL VALVE",
-			func() -> bool: return float(_wet_state()["d_valve_angle"]) > 1.8):
-		return false
+		var rest := (_native().get_kit_body_transform(spool) as Transform3D).origin
+		return _fail("set down, D's spool did not close the fill line's gap (it lies at %s, its seat (13.0, 220.47, -131.8); the rider at %s)" % [
+			str(rest), str(_position())])
+	if int(_native().get_support_entity_id()) != 2030:
+		return _fail("the rider is not aboard D's platform as the water runs (support %d at %s)" % [
+			int(_native().get_support_entity_id()), str(_position())])
 	var arrived: bool = await _wait_until(
 		func() -> bool: return float(_wet_state()["d_platform_travel"]) >= 35.95, 120.0)
 	if not arrived:

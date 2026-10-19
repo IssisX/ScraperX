@@ -27,27 +27,23 @@ bool seat_wet_spool(scraperx::sim::Simulation &simulation) {
         !board_wet_d(simulation)) {
         return false;
     }
+    // Turned to face the gap, and a step toward it to 0.1 m inside the
+    // platform's north edge, so the spool, hanging 0.6 m ahead, is over the
+    // gap's line. The walk steers the facing at its target to the last
+    // tick, so it is faced north again after it and the hands given the
+    // second they take to swing round (kCarryTurnRadiansPerSecond).
     (void)simulation.set_facing(0.0, 1.0);
     (void)simulation.advance_frame(0.8);
-    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
-        if (simulation.snapshot().player_position.z >= -132.6) {
-            break;
-        }
-        (void)simulation.set_move_input(0.0, 0.25);
-        (void)simulation.set_facing(0.0, 1.0);
-        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    if (!walk_to(simulation, 13.0, -132.4, 4.0, 0.12)) {
+        return false;
     }
-    (void)simulation.set_move_input(0.0, 0.0);
-    (void)simulation.advance_frame(0.6);
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(1.2);
     if (simulation.wet_state().d_pipe_whole) {
         return false;   // seated before it was let go of
     }
     (void)simulation.request_set_down();
     (void)simulation.advance_frame(1.5);
-    std::cout << "TRACE D seat travel=" << simulation.wet_state().d_platform_travel
-              << " whole=" << simulation.wet_state().d_pipe_whole
-              << " sup=" << simulation.snapshot().support_entity_id
-              << " z=" << simulation.snapshot().player_position.z << '\n';
     return simulation.wet_state().d_pipe_whole &&
            on_support(simulation.snapshot(), Simulation::kWetDPlatformEntityId);
 }
@@ -146,6 +142,7 @@ bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation) {
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity) {
     return state.player_grounded && state.support_entity_id == entity;
 }
+
 
 void run_wet_isolation() {
     using scraperx::sim::InitialSpawn;

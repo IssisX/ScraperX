@@ -65,13 +65,21 @@ Plan view, north up. Column x ranges are the shafts' outer faces.
 
 - **Found:** a platform on a mast, flush with the 220 ring's walkway. The mast runs down through a
   gland in the lid of a sealed tube (181–220) to a float resting on the tube's floor. A pipe runs from
-  the head tank (hung under the 242 ring) along the 220 ring and down into the tube's foot. One spool
-  of it lies on the ring beside its gap. The fill valve's lever stands beside the platform.
-- **Link:** carry the spool into its saddles. The pipe carries water only while the spool is seated
-  (axis within 0.08 m and 0.15 rad of the gap's).
-- **Set off:** from the platform, throw the fill valve over. Water runs tank → tube; the float rises
-  and pushes the platform 36 m to its stop. An overflow at 219.0 keeps the tube below its lid.
-- **No link:** throw the valve with the spool on the deck: nothing flows, nothing moves.
+  the head tank (hung under the 242 ring) along the 220 ring, turns south off the ring east of the
+  walkway, crosses the walkway's foot and drops into the tube west of it. Where it crosses the walkway
+  one spool of it is out: the gap is the way onto the platform, and the spool (a length of pipe with a
+  round flange at each end, 50 kg) lies on the ring west of the walkway. The pipe has no valve; its two
+  ends at the gap are self-sealing couplings, shut until a spool's flange seats against them.
+- **Link and set off, one act (2026-10-19; rule 11):** pick the spool up, carry it through the gap
+  onto the platform, turn, and set it down in the gap behind you. A cradle of two rails across the
+  gap takes its flanges: set down anywhere over them within a quarter metre, it rolls to the middle
+  and lies in line with the pipe (seated within 0.28 m and 0.35 rad). Seated, it opens both couplings:
+  water runs tank → tube, and within a second the float rises and pushes the platform, rider aboard,
+  36 m to its stop. An overflow at 219.0 keeps the tube below its lid. (Until 2026-10-19 the spool was
+  seated on the ring and the fill started by a valve bar thrown from a hanging handle on the
+  platform; the bar's and handle's bodies are kept parked, so older saves still line up.)
+- **No link:** walk through the gap with the spool left on the deck: the couplings hold the water,
+  nothing flows, nothing moves.
 - **Re-arm:** the drain lever on the walkway empties the tube (the platform sinks back); the cascade
   refills the head tank.
 

@@ -749,6 +749,7 @@ public:
     JPH::Vec3 traversal_entry_offset_{JPH::Vec3::sZero()};
     // What is left of a taken handle's pull-in (see kCarryPullInSpeed).
     JPH::Vec3 carry_entry_offset_{JPH::Vec3::sZero()};
+    JPH::Vec3 carry_offset_last_{JPH::Vec3::sZero()};   // the hand point's offset last tick: its velocity
     // A free load's turn about the vertical as the hands took it (see
     // hold_load_yaw).
     float carry_yaw_ = 0.0F;

@@ -761,6 +761,12 @@ constexpr float kCarryGripShare = 0.80F;
 // far out from its middle, with the grip, and settling at this rate.
 constexpr float kCarryFlankArm = 0.30F;
 constexpr float kCarryYawRate = 8.0F;
+// The same hands steady a free load's swing: its motion relative to the hand
+// point is taken down at this rate (near critical for a load hung 0.22 m
+// under the hands). Hung from one point, D's 50 kg spool swung for a minute
+// after every stop, and let go mid-swing it landed on a flange's edge and
+// tumbled out of its gap.
+constexpr float kCarrySwingRate = 12.0F;
 // A taken handle or load is drawn in to the hands at this speed, never in
 // one tick: taken where it is, E's door handle was pulled to the hands and
 // the 60 kg leaf swung open at 6 m/s.

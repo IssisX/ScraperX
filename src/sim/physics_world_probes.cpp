@@ -336,6 +336,7 @@ void Simulation::PhysicsWorld::attach_carry(const JPH::BodyID id, const std::uin
     carried_id_ = id;
     carried_entity_ = entity;
     grip_over_seconds_ = 0.0F;
+    carry_offset_last_ = offset + carry_entry_offset_;
     carry_yaw_ = load_yaw(bodies);
     contact_listener_.set_carried_entity(entity);
 }
@@ -466,8 +467,27 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
             grip_over_seconds_ = pull > kGripNewtons ? grip_over_seconds_ + delta_seconds : 0.0F;
             if (grip_over_seconds_ >= kGripSeconds) {
                 release_carry();
+                return;
             }
         }
+        // Both hands steady a free load's swing: hung from one point 0.22 m
+        // under them, D's 50 kg spool swung for a minute after every stop,
+        // and let go mid-swing it landed on a flange's edge and tumbled out
+        // of its gap. Its motion relative to the hand point (the pendulum's,
+        // and its turning) is taken down at kCarrySwingRate, as velocity and
+        // not force: a torque on it went through the hold and shoved the
+        // carrier a metre sideways. Not while a load just taken is still
+        // being drawn in to the hands: that is the hold's own motion, and
+        // taking it down each tick read as a pull past the grip, which let go.
+        if (carried_load_mass() > 0.0F && carry_entry_offset_.IsNearZero()) {
+            const float damp = std::min(1.0F, kCarrySwingRate * delta_seconds);
+            const JPH::Vec3 hand_velocity =
+                bodies.GetLinearVelocity(player_id_) + (offset - carry_offset_last_) / delta_seconds;
+            const JPH::Vec3 relative = bodies.GetLinearVelocity(carried_id_) - hand_velocity;
+            bodies.SetLinearVelocity(carried_id_, hand_velocity + relative * (1.0F - damp));
+            bodies.SetAngularVelocity(carried_id_, bodies.GetAngularVelocity(carried_id_) * (1.0F - damp));
+        }
+        carry_offset_last_ = offset;
         hold_load_yaw(bodies);
         return;
     }

@@ -450,7 +450,7 @@ Elev. (m)   Band / Section                      Coupling Mechanism / Challenge
 | Field | Contract Specification |
 |---|---|
 | **Objective** | Connect Ring 220 into AS-007 (Wet Isolation) to achieve a continuous ascent from Grade (0 m) to Transfer Plate 340 (TP-340, +340 m) |
-| **Mechanisms** | 1. Stage D (220 → 256 m): seat D's pipe spool, throw hydraulic fill valve.<br>2. Stage E (256 → 298 m): shut cab door, trip air reservoir, ride pressurized cab.<br>3. Stage F (298 → 340 m): open main accumulator, ride hydraulic ram platform to TP-340. |
+| **Mechanisms** | 1. Stage D (220 → 256 m): carry D's pipe spool through its gap onto the platform and set it in the cradle behind you (no valve, 2026-10-19).<br>2. Stage E (256 → 298 m): shut cab door, trip air reservoir, ride pressurized cab.<br>3. Stage F (298 → 340 m): open main accumulator, ride hydraulic ram platform to TP-340. |
 | **Acceptance Criteria** | 1. Grade to TP-340 in one unbroken physical simulation.<br>2. Complete execution across all three macro systems: Freight (S1/S2/S3/A/B/C), Traversal (C1/C2/C3/spine), and Process/Flow (D/E/F).<br>3. Rider arrives at TP-340 (y = 340.0 m) with 0 deaths. |
 | **Verification Gate** | `PASS scraperx_sim mega_ascent_grade_to_tp340` emitted and asserted in CI workflow. |
 

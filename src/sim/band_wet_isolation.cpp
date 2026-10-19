@@ -76,6 +76,12 @@ constexpr float kCrossZ = -131.8F;
 constexpr float kGapWest = 12.2F;
 constexpr float kGapEast = 13.8F;
 constexpr float kDownX = 11.2F;
+// The spool's square end flanges, which it lies on: 0.25 m, so that hung 0.6 m
+// ahead of the body (kCarryHandForward) they clear its 0.3 m capsule and the
+// spool hangs level instead of leaning back on the chest (at 0.3 m it did,
+// rolled 40 degrees, and dropped from there it landed a flange on whatever
+// lay under it). Square, it never rolls off where it is set down.
+constexpr float kSpoolFlange = 0.25F;
 const JPH::RVec3 kSpoolSeat(13.0, 220.47, kCrossZ);
 // Where the fill valve's bar and its handle were (D was started by a pull
 // until 2026-10-19). Their bodies are kept, parked, for the save's order.
@@ -273,17 +279,14 @@ void build_stage_d(kit::Kit &kit, WetIsolation &wet, std::vector<Part> &frame) {
                          {kGapWest, kPipeY + kPipeHalf, kCrossZ + kPipeHalf}, Material::Galvanised));
     frame.push_back(span({kDownX - kPipeHalf, 214.0F, kCrossZ - kPipeHalf},
                          {kDownX + kPipeHalf, kPipeY - kPipeHalf, kCrossZ + kPipeHalf}, Material::Galvanised));
-    // The couplings' flanges either side of the gap, and two low guides on
-    // the walkway between them: a spool set down between the guides lies
-    // across the gap. Open, the gap is the way onto the platform.
+    // The couplings' flanges either side of the gap. Nothing lies on the
+    // walkway between them: a spool set down flat across the gap, within
+    // 0.28 m of its line, is seated, and guides there only caught a flange
+    // dropped a hand's width off and tipped it. Open, the gap is the way
+    // onto the platform.
     for (const float x : {kGapWest, kGapEast}) {
         frame.push_back(span({x - 0.03F, kDDeckTop, kCrossZ - 0.28F}, {x + 0.03F, kPipeY + 0.3F, kCrossZ + 0.28F},
                              Material::Rust));
-    }
-    for (const float side : {-1.0F, 1.0F}) {
-        frame.push_back(span({kGapWest + 0.05F, kDDeckTop, kCrossZ + side * 0.36F - 0.03F},
-                             {kGapEast - 0.05F, kDDeckTop + 0.06F, kCrossZ + side * 0.36F + 0.03F},
-                             Material::Steel));
     }
     // The drain lever's bracket.
     frame.push_back(span({kDDrainPivot.GetX() - 0.05F, 220.25F, -131.05F},
@@ -319,13 +322,13 @@ void build_stage_d(kit::Kit &kit, WetIsolation &wet, std::vector<Part> &frame) {
     wet.d_fill = kit.add_pipe(wet.d_tank, kTankMin.GetY(), wet.d_tube, kTubeFloor, JPH::RVec3::sZero(),
                               kFillArea, kit::LeverIndex{}, 0.0F, 0.0F);
 
-    // The spool lies on the ring west of the walkway.
+    // The spool lies on the ring west of the walkway, on its flanges.
     wet.d_spool = kit.add_body(
         Sim::kWetDSpoolEntityId,
         {box(JPH::Vec3(0.6F, kPipeHalf, kPipeHalf), JPH::Vec3::sZero(), Material::Galvanised),
-         box(JPH::Vec3(0.03F, 0.3F, 0.3F), JPH::Vec3(-0.57F, 0.0F, 0.0F), Material::Rust),
-         box(JPH::Vec3(0.03F, 0.3F, 0.3F), JPH::Vec3(0.57F, 0.0F, 0.0F), Material::Rust)},
-        JPH::RVec3(9.5, 220.25 + 0.3, -129.8), JPH::Quat::sIdentity(), 50.0F, 0.7F);
+         box(JPH::Vec3(0.03F, kSpoolFlange, kSpoolFlange), JPH::Vec3(-0.57F, 0.0F, 0.0F), Material::Rust),
+         box(JPH::Vec3(0.03F, kSpoolFlange, kSpoolFlange), JPH::Vec3(0.57F, 0.0F, 0.0F), Material::Rust)},
+        JPH::RVec3(9.5, 220.25 + kSpoolFlange, -129.8), JPH::Quat::sIdentity(), 50.0F, 0.7F);
     kit.set_carry(wet.d_spool, kit::CarryKind::Load, JPH::Vec3(0.0F, kPipeHalf, 0.0F));
     kit.set_pipe_spool(wet.d_fill, wet.d_spool, kSpoolSeat, JPH::Vec3::sAxisX(), 0.28F, 0.35F);
 

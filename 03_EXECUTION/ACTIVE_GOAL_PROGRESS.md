@@ -1404,6 +1404,57 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**Stage D started by its own spool (2026-10-19; to-do 5, the first above 220 m).** D was the
+first stage above 220 m still started by a pull: with the spool seated on the ring, a hanging handle
+on the platform threw the fill valve's bar (rule 11). The valve is gone. The fill line now turns
+south off the 220 ring east of the walkway, crosses the walkway's foot and drops into the tube west
+of it, and where it crosses one spool is out: the gap is the way onto the platform, and the pipe's
+two ends at it are self-sealing couplings, shut until a spool's flange seats against them. The rider
+picks the spool up from the ring (PICK UP, PIPE SPOOL; 50 kg, the carry slows), carries it through
+the gap onto the platform, turns, and sets it down in the gap behind (LET GO). Seated, within 0.28 m
+and 0.35 rad of the pipe's line, it opens both couplings: the water runs and within a second the
+float lifts the platform with the rider aboard. (In the old place on the ring the platform left
+before a rider could reach it.) The bar's and handle's bodies are kept, static and parked, so older
+saves line up; FILL VALVE is no longer a name the hands can read. Found on the way: the spool's end
+flanges were 0.3 m square and hung 0.6 m ahead of a 0.3 m body, zero clearance, so a stopped
+carrier had the spool leaning back on the chest, rolled 40 degrees, and dropped from there a flange
+landed on whatever lay under it; two low guides narrowed to the gap (6 cm of slop a side) caught
+that flange and tipped the spool every time. The flanges are 0.25 m now, the spool hangs level and
+clear, and the guides are gone: set down flat anywhere within 0.28 m of the line, it is seated.
+Tried and dropped: round flanges on a cradle of two rails (a spool the rider brushes against rolls
+away along the ring, rule 5; and a rail tall enough to be a cradle needs a step up, and the 50 kg on
+the hands hauls the body straight back off the step). Seen, not chased: a load wide enough to hang
+within 0.1 m of the body's front reads as a wall to the step-up's raised sweep, so D's spool's
+carrier steps up nothing over about 0.06 m; made to ignore the load, the step-up fires and the
+load's constraint drags the body back off the step each tick (the real fix lifts the load with the
+hands as the body is set up the step). The owner, 2026-10-19: this device only, no mouse, keyboard
+or gamepad work (`00_START_HERE.md`'s directives). The wet band's test step is one function shared
+by touch, pad and keyboard, and its device branch is gone. Proof: native `AS-007 D` (the rider
+aboard as the water runs, to 257.15 m; walked through the gap with the spool left on the deck, the
+couplings hold and the platform stays down), `E`, `F`, `band` (104.1 s to TP-340), `route`,
+`stack` (grade to TP-340 in 335.8 s), `ascent 154 to TP-640` (372.5 s), `save`, `determinism`, and
+the whole native suite (135 passes); `touch_wet` (114.7 s to TP-340), `touch_stack` (grade to
+803.54 m in 821.5 s of play, no deaths), and the shared step once each on `pad_wet` (115.9 s) and
+`keyboard_wet` (115.2 s), not worked on. Also found and fixed on the way, in the hands: a free load
+hung from one point under them swung for a minute after every stop (the spool, 0.22 m under the
+hands, next to undamped), and let go mid-swing it landed on a flange's edge and tumbled out of its
+gap; both hands now steady a carried load's motion relative to the hand point at 12 per second
+(kCarrySwingRate), as velocity and not force (a torque went through the hold and shoved the carrier
+a metre sideways), and only once the load is drawn in to the hands (taking down the pull-in's own
+speed read as a pull past the grip, which let go). Proof of that: the carries played through,
+`touch_shop`, `touch_crane`, `touch_stock`, `touch_wheel`, `touch_high`, `touch_machines`,
+`touch_stack_upper`, and the native suite above. Next: E to O (all but N), each its own way.
+
+**The Matron's stages decided (2026-10-19, the owner's answers; nothing built yet).** Her rage is
+one number fed only by sound that reaches her ear; quiet lowers it, and after a quiet stretch she
+drops a stage. No floor rises with time: a silent climber can keep her a pest to the top (the
+owner's choice, told that the ending's hunt may then not come). What she does follows her rage
+both ways; her look follows the exposure and only worsens over the day. The player is never told
+the rule: they read her (her look, her breathing, the music box's tempo and pitch, how she moves,
+what she does to their work) and the foreman's hints over the radio ("She's quiet. Keep it that
+way."), never a meter or a caption. Build order 1 of the handoff starts next, local until the owner
+says push.
+
 **The story and the game's spine (2026-10-19, the owner's answers; nothing built yet).** The owner
 set one story to tie the built game together, answering simple questions. The full record (the
 spine band by band, the Matron's stages, the foreman's radio beats, proposed names, an opening and
@@ -1683,7 +1734,8 @@ fill in after).**
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint. Done 2026-10-18: the
    body felt at speed (breath with the effort, a tremor at flow, the wall run's lean off the wall).
    Done 2026-10-19: the faint route hint (a setting, off by default).
-5. Every machine its own start: S3 and the rest. Done 2026-10-19: S3 (an iron pig let go into the pan
+5. Every machine its own start: S3 and the rest. Done 2026-10-19: D (its spool carried through the
+   fill line's gap onto the platform and set down behind the rider; no valve). Done 2026-10-19: S3 (an iron pig let go into the pan
    on its brake's trip line). Next: D to O (all but N), each its own way.
 6. The Matron's AI (she uses the lifts, ziplines and moves, and carries and throws stock (the
    owner, 2026-10-19); not the forklift) and
@@ -1792,3 +1844,6 @@ that is otherwise ready. A letter is enough to answer.
    Changed 2026-10-19 (the owner): she carries things and throws things; the old "never carrying"
    is dropped, as it was never meant. B's "can be undone" is for her meddling with the route: the
    deaths she causes are not undone unless that is intentionally wanted.
+   Decided 2026-10-19 (the owner): her three stages (pest, dangerous, fully changed) move both ways
+   on her rage, which only sound reaching her ear feeds and quiet lowers; no floor; her look only
+   worsens; the player reads her and the foreman's hints, never a meter.
