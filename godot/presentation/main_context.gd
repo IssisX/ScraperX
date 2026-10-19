@@ -339,7 +339,8 @@ func _read_context() -> Dictionary:
 			"detail": "ONTO " + _kit_anchor_name(rig_target)}
 	elif carrying != 0:
 		# Both hands are on it: letting go is the only thing Action can do.
-		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down", "detail": _carry_name(carrying)}
+		var held := "INTO THE PAN" if _over_s3_pan(carrying) else _carry_name(carrying)
+		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down", "detail": held}
 	elif grounded and carry_target != 0:
 		# Ahead of CLIMB: whatever a load rests on may itself be a mantle
 		# ledge, and whoever faces the load means the load.
@@ -512,6 +513,14 @@ func _carry_name(entity: int) -> String:
 		return _stock_name(entity)
 	return "ROPE END" if _is_kit(entity) else ""
 
+# S3's pan (band_stack.cpp: its brake's trip line ends in it) under a load
+# held over it: letting go drops the load in, and its weight trips the brake.
+const STACK_S3_PAN := 2223
+func _over_s3_pan(carrying: int) -> bool:
+	var load: Vector3 = _native.get_kit_body_transform(_native.get_kit_body_index(carrying)).origin
+	var pan: Vector3 = _native.get_kit_body_transform(_native.get_kit_body_index(STACK_S3_PAN)).origin
+	return Vector2(load.x - pan.x, load.z - pan.z).length() < 0.25 and load.y > pan.y and load.y < pan.y + 0.8
+
 # Loose stock that is carried (src/sim/loose_stock.cpp), by its kind.
 var _stock_kinds := {}
 func _stock_name(entity: int) -> String:
@@ -526,6 +535,8 @@ func _stock_name(entity: int) -> String:
 			return "OIL DRUM"
 		4:
 			return "PALLET"
+		22:
+			return "IRON PIG"
 	return ""
 
 func _is_kit(entity: int) -> bool:

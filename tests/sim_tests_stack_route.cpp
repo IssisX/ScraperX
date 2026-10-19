@@ -2,6 +2,8 @@
 
 #include "sim_tests.hpp"
 
+#include "sim/loose_stock.hpp"
+
 // ---- The mechanism ascent in one run ---------------------------------------------
 
 // Fails the run with where it stopped: the leg, the height and the time.
@@ -554,41 +556,65 @@ constexpr double kS3CageMassKg = 400.0;
 constexpr double kS3CarMassKg = 3500.0;
 constexpr double kS3Travel = 44.0;
 
-bool take_s3_handle(scraperx::sim::Simulation &simulation) {
+// From deck 8's gangway into S3's cage with the pig of iron lying beside the
+// way in (LooseStock::lay_machine_weights), set in the pan its brake's trip
+// line ends in: true once the brake has tripped.
+bool load_s3_pan(scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
-    if (!walk_to(simulation, -8.0, -170.0, 20.0)) {
+    const auto at = [&simulation](const char *where) {
         const auto p = simulation.snapshot().player_position;
-        std::cout << "DEBUG take_s3_handle failed walk to (-8, -170), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
+        std::cout << "DEBUG load_s3_pan short of " << where << ", pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
         return false;
+    };
+    if (!walk_to(simulation, -8.0, -170.0, 20.0)) {
+        return at("(-8, -170)");
     }
     if (!walk_to(simulation, -8.0, -164.0, 10.0)) {
-        const auto p = simulation.snapshot().player_position;
-        std::cout << "DEBUG take_s3_handle failed walk to (-8, -164), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
-        return false;
+        return at("(-8, -164)");
     }
-    if (!walk_to(simulation, -8.0, -157.6, 10.0, 0.08)) {
-        const auto p = simulation.snapshot().player_position;
-        std::cout << "DEBUG take_s3_handle failed walk to (-8, -157.6), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
-        return false;
+    if (!walk_to(simulation, -8.35, -161.8, 6.0, 0.06)) {
+        return at("the pig");
     }
-    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.set_facing(-1.0, 0.0);
     (void)simulation.advance_frame(0.5);
-    const auto facing = simulation.snapshot();
-    if (facing.carry_target_entity_id != Simulation::kStackS3HandleEntityId || facing.carry_target_kind != 2) {
-        std::cout << "DEBUG take_s3_handle target_id=" << facing.carry_target_entity_id
-                  << " kind=" << facing.carry_target_kind << "\n";
+    const std::uint64_t pig = scraperx::sim::LooseStock::kFirstEntity + simulation.loose_stock_count() - 1;
+    if (simulation.snapshot().carry_target_entity_id != pig) {
+        std::cout << "DEBUG load_s3_pan target_id=" << simulation.snapshot().carry_target_entity_id << " not the pig "
+                  << pig << "\n";
         return false;
     }
     (void)simulation.request_pick_up();
-    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
-    return simulation.snapshot().carrying_entity_id == Simulation::kStackS3HandleEntityId;
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().carrying_entity_id != pig) {
+        return at("the pig taken");
+    }
+    // In, short of the pan in the cage's middle, facing it; still a moment
+    // for the pig to stop swinging in the hands; and set down into it.
+    if (!walk_to(simulation, -8.0, -158.75, 12.0, 0.06)) {
+        return at("the pan");
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(1.0);
+    (void)simulation.request_set_down();
+    for (int tick = 0; tick < 2 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        if (!simulation.stack_state().s3_brake_latched) {
+            return true;
+        }
+    }
+    const auto in = simulation.kit_body_position(simulation.kit_body_index(pig));
+    std::cout << "DEBUG load_s3_pan the brake held, the pig at (" << in.x << "," << in.y << "," << in.z << ")\n";
+    return false;
 }
 
-bool s3_handle_at_rest(const scraperx::sim::Simulation &simulation) {
+// S3's pan hanging empty and level in the cage's middle, where it was built.
+bool s3_pan_at_rest(const scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
-    const auto at = simulation.kit_body_position(simulation.kit_body_index(Simulation::kStackS3HandleEntityId));
-    return std::abs(at.x - (-8.00)) <= 0.15 && std::abs(at.y - (88.05 + 1.95)) <= 0.10 &&
-           std::abs(at.z - (-158.00)) <= 0.15 && simulation.snapshot().carrying_entity_id == 0;
+    const auto body = simulation.kit_body_index(Simulation::kStackS3HandleEntityId);
+    const auto at = simulation.kit_body_position(body);
+    const auto turn = simulation.kit_body_rotation(body);
+    return std::abs(at.x - (-8.00)) <= 0.05 && std::abs(at.y - (88.05 + 0.75 - 0.012)) <= 0.05 &&
+           std::abs(at.z - (-158.00)) <= 0.05 && std::abs(turn.w) > std::cos(0.5 * 0.05);
 }
 
 S3Ride ride_s3(scraperx::sim::Simulation &simulation, const double seconds) {

@@ -499,29 +499,39 @@ func _stack_c2(device: int) -> bool:
 	await _pose("stack_deck8")
 	return true
 
+# S3 (band_stack.cpp): the iron pig lying beside the way in to its cage is
+# taken, carried in and let go over the pan its brake's trip line ends in;
+# its weight trips the brake, and the cage rides up.
 func _stack_s3(device: int) -> bool:
 	if not (await _go(device, Vector2(-8.0, -170.0), 0.15, 20.0) and \
 			await _go(device, Vector2(-8.0, -164.0), 0.1, 10.0) and \
-			await _go(device, Vector2(-8.0, -157.6), 0.08, 10.0)):
-		return _fail("the walk to S3 cage stalled at %s" % str(_position()))
-	await _face(Vector2(0.0, -1.0))
-	if not await _offered(&"pick_up", "GRAB"):
-		return _fail("Action read '%s' facing S3 handle, not GRAB (at %s)" % [_action_label(), str(_position())])
+			await _go(device, Vector2(-8.35, -161.8), 0.06, 10.0)):
+		return _fail("the walk to S3's iron pig stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	var pig := 5000 + stock.size() / 3 - 1
+	if not await _offered(&"pick_up", "PICK UP", "IRON PIG"):
+		return _fail("Action read '%s %s' facing S3's iron pig, not PICK UP IRON PIG (at %s)" % [_action_label(),
+			String(_ctx()["action"]["detail"]), str(_position())])
 	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2223, 0.5):
-		return _fail("GRAB did not take S3 handle")
-	_move(device, 0.4)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == pig, 1.0):
+		return _fail("PICK UP did not take S3's iron pig")
+	if not await _go(device, Vector2(-8.0, -158.75), 0.06, 14.0):
+		return _fail("the carry into S3's cage stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	await _seconds(1.0)
+	if not await _offered(&"set_down", "LET GO", "INTO THE PAN"):
+		return _fail("Action read '%s %s' with the pig over S3's pan, not LET GO INTO THE PAN" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
 	var s3_tripped: bool = await _wait_until(
 		func() -> bool: return not bool(_native().is_stack_s3_brake_latched()), 2.0)
-	_move(device, 0.0)
 	if not s3_tripped:
-		return _fail("pulling S3 handle did not trip brake")
+		return _fail("the iron pig in S3's pan did not trip its brake")
 	var s3_arrived: bool = await _wait_until(
 		func() -> bool: return float(_native().get_stack_s3_cage_travel()) >= 43.8, 25.0)
 	if not s3_arrived:
 		return _fail("S3 cage never reached Deck 12 (travel %.2f m)" % float(_native().get_stack_s3_cage_travel()))
-	if not await _let_go_if_held(device):
-		return _fail("LET GO did not release S3 handle")
 	await _face(Vector2(0.0, -1.0))
 	if not (await _walk_to(device, Vector2(-8.0, -164.0), 0.1, 6.0) and \
 			await _walk_to(device, Vector2(-8.0, -171.2), 0.1, 6.0)):

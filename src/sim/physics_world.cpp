@@ -349,6 +349,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // tower's stock, so saves made before them line up too.
     loose_stock_->lay_crane_steel();
     yard_crane_->build_devices();
+    // The weights machines are started with: after the devices, so saves made
+    // before them line up too.
+    loose_stock_->lay_machine_weights();
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.

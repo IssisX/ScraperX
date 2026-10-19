@@ -226,6 +226,16 @@ Spec make_spec(const K kind) {
         s.carried = true;
         s.handle = Vec3(0.0F, 0.17F, 0.0F);
         break;
+    case K::Pig:
+        // A pig of cast iron: a bar 0.56 m long, its lifting lug cast on its
+        // top; carried by the lug.
+        s.parts = {box(Vec3(0.28F, 0.06F, 0.065F), Vec3::sZero(), Material::Rust, 49.5F),
+                   box(Vec3(0.03F, 0.02F, 0.012F), Vec3(0.0F, 0.08F, 0.0F), Material::Steel, 0.5F)};
+        s.half_height = 0.06F;
+        s.friction = 0.7F;
+        s.carried = true;
+        s.handle = Vec3(0.0F, 0.1F, 0.0F);
+        break;
     case K::PlankBundle:
         // Planks 1.8 m long stacked in a bundle under two steel straps.
         s.parts = {box(Vec3(0.9F, 0.12F, 0.25F), Vec3::sZero(), Material::Timber, 58.0F)};
@@ -512,6 +522,7 @@ ImpactSound LooseStock::sound(const Kind kind) noexcept {
     case K::BilletStillage:
     case K::CoilSkid:
     case K::PlateSkid:
+    case K::Pig:
         return ImpactSound::HeavySteel;
     case K::Crate:
     case K::TimberBeam:
@@ -558,6 +569,11 @@ void LooseStock::lay_crane_steel() {
     add_piece({K::PlateSlab, 0, -64.0F, 0.304F, -124.0F, 0.0F});
     add_piece({K::SteelBeam, 0, -72.0F, 0.0F, -126.5F, 0.5F * JPH_PI});
     add_piece({K::SteelBeam, 0, -73.0F, 0.0F, -126.5F, 0.5F * JPH_PI});
+}
+
+void LooseStock::lay_machine_weights() {
+    // On deck 8's gangway to S3's cage, beside the way in, along it.
+    add_piece({K::Pig, 0, -8.9F, 88.0F, -161.8F, 0.5F * JPH_PI});
 }
 
 void LooseStock::add_piece(const Placement &p) {

@@ -493,19 +493,20 @@ void run_stack() {
     const auto s3_idle_state = s3_idle.stack_state();
     std::cout << "S3 idle: travel=" << s3_idle_state.s3_cage_travel
               << " latched=" << s3_idle_state.s3_brake_latched
-              << " handle=" << s3_handle_at_rest(s3_idle) << "\n";
+              << " pan=" << s3_pan_at_rest(s3_idle) << "\n";
     require(std::abs(s3_idle_state.s3_cage_travel) <= 0.08 && s3_idle_state.s3_brake_latched &&
-                s3_handle_at_rest(s3_idle),
-            "left alone, S3 must wait as found with brake latched");
+                s3_pan_at_rest(s3_idle),
+            "left alone, S3 must wait as found with brake latched and its pan hanging empty");
     std::cout << "PASS scraperx_sim S3 at rest: cage_travel=" << s3_idle_state.s3_cage_travel
               << " brake_latched=" << s3_idle_state.s3_brake_latched << "\n";
 
-    // S3 ride: board cage at deck 8, pull brake handle, ride 44 m to deck 12
+    // S3 ride: the pig of iron from the gangway set in the pan in the cage at
+    // deck 8, the brake trips, ride 44 m to deck 12
     Simulation s3_sim(InitialSpawn::Deck8North);
     require(s3_sim.advance_frame(0.5).accepted, "S3 settle interval must be accepted");
-    require(take_s3_handle(s3_sim), "the player must walk from deck 8 into S3's cage and take hold of its trip handle");
+    require(load_s3_pan(s3_sim), "the pig of iron from deck 8's gangway, set in S3's pan, must trip its brake");
     const auto s3_rode = ride_s3(s3_sim, 25.0);
-    require(s3_rode.reached_top, "pulling S3's handle must carry the rider to deck 12");
+    require(s3_rode.reached_top, "the pig in S3's pan must carry the rider to deck 12");
     require(s3_rode.rode_on_cage, "the rider must stand on S3's cage for the whole ride");
     const auto s3_top_state = s3_sim.stack_state();
     require(s3_top_state.s3_cage_peak_speed <= 2.6, "S3's governor must hold the cage to 2.5 m/s");
@@ -545,7 +546,7 @@ void run_stack() {
     g_path_watch = PathWatch{};
     g_path_watch.armed = true;
     require(climb_c2(band), "the Stack: up C2 to deck 8");
-    require(take_s3_handle(band), "the Stack: from deck 8 into S3's cage and take hold of its trip handle");
+    require(load_s3_pan(band), "the Stack: from deck 8 into S3's cage with the pig, set in its pan");
     const auto band_s3_rode = ride_s3(band, 25.0);
     require(band_s3_rode.reached_top, "the Stack: S3 carries the rider to deck 12");
     require(walk_to(band, -8.0, -164.0, 6.0) && walk_to(band, -8.0, -171.2, 6.0),

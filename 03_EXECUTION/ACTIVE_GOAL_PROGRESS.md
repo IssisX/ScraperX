@@ -1404,6 +1404,26 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**S3 started by an iron pig in a pan (2026-10-19; to-do 5, the first of the machines' own starts).**
+The owner, 2026-10-06: lifts that need a pull of something are boring (rule 11). S3 was the last
+lift under 220 m still started by a pull: its brake's trip line ended in a hanging handle. It ends
+in a pan now, 8.9 kg, hung level in the cage's middle at the rider's waist (its rim 0.87 m up) by an
+arm from its far rim, so the near half is open from above; too light to lift the brake's lever. A
+50 kg iron pig lies on deck 8's gangway beside the way in. The rider picks it up (IRON PIG), carries
+it in (a 50 kg load slows the carry), and with it held over the pan Action reads LET GO, INTO THE
+PAN; let go, it drops in, its weight lifts the lever 44 m up past release, the caliper trips and
+the 3.5 t car drops, the cage rising with the rider and the pan. It is the derrick's way at the top
+the other way round (there the rider takes weights off). The pan is the handle's body in the same
+place in the kit's order and the pig is laid last, so older saves line up. N's flap chain now
+carries the test that a handle over the hands is drawn down, not snapped (S3's handle did).
+Proof: native `stack` (S3 at rest: brake latched, the pan hanging empty and level; the pig taken
+from the gangway and let go over the pan trips the brake, an 18.0 s ride to 132.04 m, the governor
+at 2.52 m/s; the whole Stack from grade, and on to TP-340), `wet` (N's chain), `stock` (the pig
+after the crane's steel), `magnet` (a save from before the pig loads, and the older ones still), the
+full native suite (135 passes); `touch_stack`, `pad_stack`, `keyboard_stack` (from
+grade up the whole route), `touch_stack_upper`, `pad_stack_upper`, `keyboard_stack_upper`. Next:
+the stages above 220 m that start on a pulled handle (D to O, all but N), each its own way.
+
 **The faint route hint (2026-10-19; to-do 4, Mirror's Edge's last).** A setting, ROUTE HINT, off by
 default (Settings page): what the hands could take ahead is marked by a short, faint red stroke
 (a soft glow under a brighter core, so it reads over dark steel), smaller the farther it is, as
@@ -1636,7 +1656,8 @@ fill in after).**
 4. Mirror's Edge's last two: the body felt at speed, the faint route hint. Done 2026-10-18: the
    body felt at speed (breath with the effort, a tremor at flow, the wall run's lean off the wall).
    Done 2026-10-19: the faint route hint (a setting, off by default).
-5. Every machine its own start: S3 and the rest.
+5. Every machine its own start: S3 and the rest. Done 2026-10-19: S3 (an iron pig let go into the pan
+   on its brake's trip line). Next: D to O (all but N), each its own way.
 6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
    2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Off

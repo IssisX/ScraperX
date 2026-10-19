@@ -66,8 +66,9 @@ void run_loose_stock() {
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
     const int pieces = static_cast<int>(s.loose_stock_count());
     const int tabled = static_cast<int>(LooseStock::placements().size());
-    // The tower's spots end where the yard crane's steel begins.
-    const int towered = pieces - LooseStock::kCraneSteelPieces;
+    // The tower's spots end where the yard crane's steel begins (and the
+    // machines' weights after it).
+    const int towered = pieces - LooseStock::kCraneSteelPieces - LooseStock::kMachineWeights;
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece

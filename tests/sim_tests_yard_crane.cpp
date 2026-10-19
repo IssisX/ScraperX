@@ -673,15 +673,18 @@ void run_yard_crane_magnet() {
     require(top != 0 && bottom != 0 && beam != 0 && plates != 0, "magnet: the slabs, the beam and the plate stack");
     const auto at = body_at(s, YardCrane::kMagnetEntity);
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
-    // The last six kit bodies are the crane's steel and its two devices
-    // (built last, so saves from before them line up).
+    // The crane's steel and its two devices are the kit's last six bodies
+    // but the machines' weights after them (each built after what was
+    // before it, so saves from before them line up).
     const auto count = s.kit_body_count();
-    require(count > 6 && s.kit_body_entity(count - 1) == YardCrane::kSpreaderEntity &&
-                s.kit_body_entity(count - 2) == YardCrane::kMagnetEntity &&
-                scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 6)),
-            "magnet: the crane's steel, the magnet and the spreader are the kit's last bodies");
+    const auto weights = static_cast<std::uint32_t>(LooseStock::kMachineWeights);
+    require(count > 6 + weights && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 1)) &&
+                s.kit_body_entity(count - 1 - weights) == YardCrane::kSpreaderEntity &&
+                s.kit_body_entity(count - 2 - weights) == YardCrane::kMagnetEntity &&
+                scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 6 - weights)),
+            "magnet: the crane's steel, the magnet and the spreader, then the machines' weights, are the kit's last bodies");
     // As the world began: a build from before the grips saved it so, without
-    // those six bodies.
+    // those six bodies and the weights after them.
     const std::vector<std::uint8_t> as_begun = s.save_game();
     const auto spreader0 = body_at(s, YardCrane::kSpreaderEntity);
     require(take_remote(s), "magnet: the remote taken");
@@ -730,9 +733,18 @@ void run_yard_crane_magnet() {
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
         require(saved_grips(bytes) == 2, "magnet: the save ends in its two grips (the magnet's, the spreader's)");
+        // As the spreader's build saved it: no machines' weights. Loaded, the
+        // slab still hangs on the magnet.
+        const std::vector<std::uint8_t> two = older_save(bytes, LooseStock::kMachineWeights, 2);
+        Simulation spreader_build(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(spreader_build.load_game(two.data(), two.size()), "magnet: a save from before the machines' weights loads");
+        (void)spreader_build.advance_frame(2.0);
+        require(spreader_build.yard_crane_state().holding_entity == top &&
+                    std::abs(body_at(spreader_build, top).y - here.y) < 0.05,
+                "magnet: loaded from a save from before the machines' weights, it holds the slab");
         // As the magnet's build saved it: no spreader, one grip. Loaded, the
         // slab still hangs on the magnet and the spreader lies as built.
-        const std::vector<std::uint8_t> one = older_save(bytes, 1, 1);
+        const std::vector<std::uint8_t> one = older_save(bytes, 1 + LooseStock::kMachineWeights, 1);
         Simulation magnet_build(scraperx::sim::InitialSpawn::ExteriorGrade);
         require(magnet_build.load_game(one.data(), one.size()), "magnet: a save from before the spreader loads");
         (void)magnet_build.advance_frame(2.0);
@@ -745,7 +757,7 @@ void run_yard_crane_magnet() {
         // As a build from before the grips saved the world as it began: none
         // of the six bodies, no grips. Loaded, they lie as built, held by
         // nothing.
-        const std::vector<std::uint8_t> before = older_save(as_begun, 6, 0);
+        const std::vector<std::uint8_t> before = older_save(as_begun, 6 + LooseStock::kMachineWeights, 0);
         Simulation older(scraperx::sim::InitialSpawn::ExteriorGrade);
         require(older.load_game(before.data(), before.size()), "magnet: a save from before the grips loads");
         (void)older.advance_frame(2.0);

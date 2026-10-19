@@ -76,8 +76,10 @@ public:
         PalletReel = 19,      // a reel of cable lying strapped to a pallet, 202 kg
         PlateSkid = 20,       // a 2 t slab of plate on two skid runners, lugged for a crane
         BottleCage = 21,      // a crane's lifting cage of nine gas bottles on runners, 690 kg
+        // A machine's weight (lay_machine_weights):
+        Pig = 22,             // a pig of iron with a lifting lug, 50 kg: carried
     };
-    static constexpr int kKinds = 22;
+    static constexpr int kKinds = 23;
     // Heavier than the hands carry (the carry's grip holds about 70 kg): a
     // forklift's or a crane's to move, set where one of them could have put it.
     [[nodiscard]] static bool heavy(Kind kind) noexcept;
@@ -107,6 +109,12 @@ public:
     // last kCraneSteelPieces pieces.
     void lay_crane_steel();
     static constexpr int kCraneSteelPieces = 4;
+    // The weights machines are started with, laid after the crane's devices
+    // (yard_crane.hpp), so saves made before them line up: the pig of iron
+    // on deck 8 by S3's cage, for the pan on its brake's trip line
+    // (band_stack.cpp). The last kMachineWeights pieces.
+    void lay_machine_weights();
+    static constexpr int kMachineWeights = 1;
 
     [[nodiscard]] int count() const noexcept { return static_cast<int>(pieces_.size()); }
     // Every piece as placed, the table's and then the tower's.

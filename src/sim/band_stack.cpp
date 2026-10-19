@@ -204,20 +204,6 @@ constexpr float kGangwaySouthZ = -122.30F;
 }
 
 
-// A handle hanging with its top at `top` on a chain from above: a bar along
-// z, both hands close on it; hazard-striped. S3's trip still hangs
-// from these (plan rule 11: each to be replaced in its turn).
-constexpr float kHandleHalfY = 0.04F;
-
-kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top) {
-    const kit::BodyIndex handle = kit.add_body(
-        entity, {box(JPH::Vec3(0.04F, kHandleHalfY, 0.22F), JPH::Vec3::sZero(), Material::Hazard)},
-        top - JPH::RVec3(0.0, kHandleHalfY, 0.0), JPH::Quat::sIdentity(), 3.0F, 0.9F);
-    kit.set_carry(handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
-    kit.set_damping(handle, 1.5F, 1.5F);
-    return handle;
-}
-
 // The scale plate about its centre: a yellow tread with an eye at its
 // north-east corner where the line is made fast.
 [[nodiscard]] std::vector<Part> plate_parts() {
@@ -1324,9 +1310,12 @@ void build_c2(std::vector<Part> &route) {
 //
 // Bridges Deck 8 (88.0 m) to Deck 12 (132.0 m) in the North central shaft.
 // An overloaded 3,500 kg freight car at Deck 12 is held by a brake caliper /
-// crowbar catch; the rider boards a 400 kg counterweight carriage at Deck 8,
-// pulls the trip handle, the brake trips, and the car falls 44 m under governor
-// (<= 2.6 m/s), hoisting the player carriage 44 m up to Deck 12!
+// crowbar catch; the rider boards a 400 kg counterweight carriage at Deck 8
+// with the pig of iron lying on the way in, sets it in the pan the brake's
+// trip line ends in, the brake trips, and the car falls 44 m under governor
+// (<= 2.6 m/s), hoisting the player carriage 44 m up to Deck 12! (To-do 5:
+// every machine its own start; S3's was the hanging handle the stages above
+// it start on.)
 
 constexpr float kDeck12Top = 132.00F;
 constexpr float kS3Travel = 44.00F;
@@ -1360,6 +1349,16 @@ constexpr float kS3BrakeArm = 1.80F;
 constexpr float kS3BrakeMassKg = 40.0F;
 constexpr float kS3BrakeTravel = 0.60F;
 constexpr float kS3BrakeRelease = 0.15F;
+// The pan: 0.6 m square, its floor's top 0.75 m over the cage's floor (its
+// rim's at 0.87: a load held at the hands' 1.25 m clears it by a fifth of a
+// metre and drops in), hung by an arm from its far rim to over its middle,
+// so it hangs level and the near half is open from above. 8.9 kg: the
+// brake's lever does not lift for it, and does for the pig in it.
+constexpr float kS3PanHalf = 0.30F;
+constexpr float kS3PanFloorHalfY = 0.012F;
+constexpr float kS3PanFloorUp = 0.75F;
+constexpr float kS3PanMassKg = 8.9F;
+const JPH::Vec3 kS3PanHang(0.0F, 0.595F, 0.0F);
 
 void build_north_crossover_gangway(std::vector<Part> &frame, const float deck_top, const float center_x) {
     const float half_x = 1.40F;
@@ -1419,6 +1418,25 @@ void build_north_crossover_gangway(std::vector<Part> &frame, const float deck_to
                        JPH::Vec3(-(kS3CageHalfX + 0.06F), kS3CageEyeLocal.GetY(), 0.0F),
                        Material::Hazard));
     return cage;
+}
+
+// The pan about its floor's middle: the floor, its rim, and the arm it hangs
+// by, up from the far rim (+z, the cage's back) and over to its middle.
+[[nodiscard]] std::vector<Part> s3_pan_parts() {
+    constexpr float kRim = 0.012F;
+    std::vector<Part> pan{
+        box(JPH::Vec3(kS3PanHalf, kS3PanFloorHalfY, kS3PanHalf), JPH::Vec3::sZero(), Material::Steel),
+    };
+    for (const float side : {-1.0F, 1.0F}) {
+        pan.push_back(box(JPH::Vec3(kRim, 0.06F, kS3PanHalf), JPH::Vec3(side * (kS3PanHalf - kRim), 0.06F, 0.0F),
+                          Material::Steel));
+        pan.push_back(box(JPH::Vec3(kS3PanHalf, 0.06F, kRim), JPH::Vec3(0.0F, 0.06F, side * (kS3PanHalf - kRim)),
+                          Material::Steel));
+    }
+    pan.push_back(box(JPH::Vec3(0.015F, 0.26F, 0.015F), JPH::Vec3(0.0F, 0.32F, kS3PanHalf - kRim), Material::Hazard));
+    pan.push_back(box(JPH::Vec3(0.015F, 0.015F, 0.5F * (kS3PanHalf - kRim)),
+                      JPH::Vec3(0.0F, kS3PanHang.GetY() - 0.015F, 0.5F * (kS3PanHalf - kRim)), Material::Hazard));
+    return pan;
 }
 
 [[nodiscard]] std::vector<Part> s3_car_parts() {
@@ -1510,7 +1528,7 @@ void build_s3(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     stack.s3_rope = kit.add_rope(stack.s3_car, kS3CarEyeLocal, car_sheave,
                                  stack.s3_cage, kS3CageEyeLocal, cage_sheave, 1.0F, rope_length, 0.0F);
 
-    // ---- The brake lever, catch, trip line, and lanyard handle -------------
+    // ---- The brake lever, catch, trip line, and its pan ---------------------
     stack.s3_brake_body = kit.add_body(
         Sim::kStackS3BrakeEntityId,
         {box(JPH::Vec3(0.5F * kS3BrakeArm, 0.06F, 0.05F), JPH::Vec3(0.5F * kS3BrakeArm, 0.0F, 0.0F),
@@ -1522,15 +1540,19 @@ void build_s3(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     stack.s3_catch = kit.add_catch(stack.s3_car, stack.s3_brake_lever, kS3BrakeRelease, 0.05F, true);
     stack.s3_cage_catch = kit.add_catch(stack.s3_cage, stack.s3_brake_lever, kS3BrakeRelease, 0.05F, true);
 
-    const JPH::RVec3 handle_top(kS3CageX, kS3CageFloorTop + 1.95F, kS3CageZ);
-    stack.s3_handle = add_chain_handle(kit, Sim::kStackS3HandleEntityId, handle_top);
-    kit.set_damping(stack.s3_handle, 8.0F, 8.0F);
+    // The pan (its body was the trip's hanging handle, in the same place in
+    // the kit's order, so saves line up).
+    stack.s3_handle = kit.add_body(
+        Sim::kStackS3HandleEntityId, s3_pan_parts(),
+        JPH::RVec3(kS3CageX, kS3CageFloorTop + kS3PanFloorUp - kS3PanFloorHalfY, kS3CageZ), JPH::Quat::sIdentity(),
+        kS3PanMassKg, 0.9F);
+    kit.set_damping(stack.s3_handle, 1.0F, 3.0F);
 
     const JPH::RVec3 trip_sheave1(kS3BrakePivot.GetX() + kS3BrakeArm, kS3BrakePivot.GetY() + 0.60,
                                   kS3BrakePivot.GetZ());
     const JPH::RVec3 trip_sheave2(kS3CageX, kDeck12Top + 3.00, kS3CageZ);
-    (void)kit.add_trip_line(stack.s3_brake_body, JPH::Vec3(kS3BrakeArm, 0.0F, 0.0F), stack.s3_handle,
-                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), trip_sheave1, trip_sheave2);
+    (void)kit.add_trip_line(stack.s3_brake_body, JPH::Vec3(kS3BrakeArm, 0.0F, 0.0F), stack.s3_handle, kS3PanHang,
+                            trip_sheave1, trip_sheave2);
 
     build_s3_frame(frame);
 }

@@ -1093,6 +1093,8 @@ public:
     static constexpr std::uint64_t kStackS3CageEntityId = 2220;
     static constexpr std::uint64_t kStackS3CarEntityId = 2221;
     static constexpr std::uint64_t kStackS3BrakeEntityId = 2222;
+    // The pan its brake's trip line ends in (once a hanging handle: the id
+    // kept, so saves line up).
     static constexpr std::uint64_t kStackS3HandleEntityId = 2223;
 
     // Height of the tower mass, metres. The crown is far past anything the
