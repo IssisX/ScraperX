@@ -164,6 +164,7 @@ public:
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
     static constexpr float kSightM = 9.0F;
+    static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
     static constexpr float kLoseTrackSeconds = 9.0F;
     static constexpr float kSearchSeconds = 8.0F;
 
@@ -218,6 +219,7 @@ public:
     // keeps kEdgeMarginM from one.
     static constexpr float kEdgeDropM = 1.2F;
     static constexpr float kEdgeMarginM = 0.25F;
+    static constexpr float kFootSpanM = 0.24F;   // floor she stands on runs this far either side of her middle
     // A gap no wider than this (the 0.3 m between two cages) she steps over.
     static constexpr float kStepOverM = 0.45F;
     // The cable: her hands over her head (her centre to them), how near the
@@ -357,6 +359,10 @@ public:
     static constexpr float kThrowWindupSeconds = 0.35F;
     static constexpr float kThrowCooldownSeconds = 6.0F;
     static constexpr float kThrowQuietSeconds = 2.5F;
+    // A piece she gets no nearer to (it lies where her feet cannot take her:
+    // past a rail, in a cage's back) she gives up on, and leaves a while.
+    static constexpr float kFetchStallSeconds = 1.5F;
+    static constexpr float kFetchRetrySeconds = 12.0F;
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -584,6 +590,9 @@ private:
     // false when no such path reaches it (she then heads straight for it).
     bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
                       bool allow_gaps = false) const;
+    // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
+    // her width, on her floor (a post, a frame): she could walk it straight.
+    [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
@@ -676,6 +685,10 @@ private:
     std::uint32_t handled_ = 0;
     std::uint64_t player_holding_ = 0;
     int fetch_ = -1;
+    float fetch_best_m_ = 0.0F;        // the nearest she has come to it on this fetch
+    float fetch_stall_s_ = 0.0F;       // since she last came nearer
+    std::uint32_t fetch_refused_ = 0;  // the pieces she gave up on, a bit each
+    float fetch_refused_s_ = 0.0F;     // till she tries them again
     int held_ = -1;
     JPH::Ref<JPH::PointConstraint> hold_;
     JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in

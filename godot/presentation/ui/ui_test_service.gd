@@ -508,8 +508,12 @@ func _stack_s3(device: int) -> bool:
 			await _go(device, Vector2(-8.35, -161.8), 0.06, 10.0)):
 		return _fail("the walk to S3's iron pig stalled at %s" % str(_position()))
 	await _face(Vector2(-1.0, 0.0))
+	# The machines' one weight in the loose stock (its kind, an iron pig: 22).
 	var stock: PackedInt32Array = _native().get_loose_stock()
-	var pig := 5000 + stock.size() / 3 - 1
+	var pig := 0
+	for i in range(0, stock.size() - 2, 3):
+		if stock[i + 1] == 22:
+			pig = 5000 + i / 3
 	if not await _offered(&"pick_up", "PICK UP", "IRON PIG"):
 		return _fail("Action read '%s %s' facing S3's iron pig, not PICK UP IRON PIG (at %s)" % [_action_label(),
 			String(_ctx()["action"]["detail"]), str(_position())])

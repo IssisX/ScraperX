@@ -76,6 +76,12 @@ func _build_world() -> void:
 # be seen from within as well as from the yard.
 const MATRON_DECK_LEVEL := 14
 const MATRON_GATE_WIDTH := 3.0
+# Deck 13's walkway plate to the riser up to the 154 m deck (C3,
+# src/sim/band_stack.cpp) meets the deck's north band at the shaft: the rail
+# there is open from its post at x -8.5 to the plate's east end.
+const DECK13_LEVEL := 13
+const DECK13_GATE_WEST := -8.4
+const DECK13_GATE_EAST := -5.1
 
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
@@ -111,6 +117,11 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 
 		# Handrails around the open shaft -- the safety line you walk beside.
 		for sz in [1.0, -1.0]:
+			if level == DECK13_LEVEL and sz > 0.0:
+				for run in [[cx - inner_half, DECK13_GATE_WEST], [DECK13_GATE_EAST, cx + inner_half]]:
+					_add_box("ShaftRail", Vector3(float(run[1]) - float(run[0]), 0.08, 0.08),
+						Vector3((float(run[0]) + float(run[1])) * 0.5, deck_y + 1.05, cz + sz * inner_half), galvanised)
+				continue
 			_add_box("ShaftRail", Vector3(inner_half * 2.0, 0.08, 0.08),
 				Vector3(cx, deck_y + 1.05, cz + sz * inner_half), galvanised)
 		for sx in [1.0, -1.0]:

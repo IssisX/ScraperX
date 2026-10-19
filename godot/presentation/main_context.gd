@@ -533,6 +533,8 @@ func _stock_name(entity: int) -> String:
 			return "OIL DRUM"
 		4:
 			return "PALLET"
+		16:
+			return "TOOLBOX"
 		22:
 			return "IRON PIG"
 	return ""

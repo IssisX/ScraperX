@@ -297,7 +297,10 @@ private:
         const JPH::Body &player = player_first ? first : second;
         const JPH::Body &other = player_first ? second : first;
         const std::uint64_t entity = other.GetUserData();
-        if (other.IsSensor() || (entity >= kCorpseEntityBase && entity < kCorpseEntityBase + 0x10000)) {
+        // Her body is not a blow: what her hands do decides (matron.hpp, the
+        // stages), a shove before she is fully changed.
+        if (other.IsSensor() || (entity >= kCorpseEntityBase && entity < kCorpseEntityBase + 0x10000) ||
+            entity == Matron::kEntity) {
             return;
         }
         // The normal points from body 1 to body 2: here from the player to

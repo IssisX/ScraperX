@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_chase.gd"
+extends "res://presentation/ui/ui_test_act.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -12,7 +12,7 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # --capture=<prefix> under a real renderer, each scenario also saves the
 # screen at its most telling moment as <prefix>_<pose>.png.
 
-# (Scenarios: ui_test_base.gd .. ui_test_stack.gd, one family per file.)
+# (Scenarios: ui_test_base.gd .. ui_test_act.gd, one family per file.)
 
 const SCENARIOS := {
 	"touch_jump": 8,
@@ -117,6 +117,9 @@ const SCENARIOS := {
 	"touch_matron_ride": 11,
 	"touch_matron_line": 11,
 	"touch_matron_climb": 11,
+	# Her first act on touch, from the 154 m deck to the 220 m ring: a pest,
+	# dangerous, fully changed and back (ui_test_act.gd).
+	"touch_matron_act": 11,
 	"look_matron_locker": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
@@ -398,6 +401,8 @@ func _run() -> void:
 			ok = await _summit(InputRouter.Device.TOUCH)
 		"touch_matron":
 			ok = await _matron_touch(InputRouter.Device.TOUCH)
+		"touch_matron_act":
+			ok = await _matron_act_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":
 			ok = await _matron_ride_touch(InputRouter.Device.TOUCH)
 		"touch_matron_line":

@@ -1415,15 +1415,16 @@ character.* Where each part stands:
    blistered, then grey); the music box by stage, done (fast when dangerous, warped when fully
    changed). Not done: her breathing and footfalls by stage.
 3. Her stage changes what she does: her hands, done (a pest shoves you away, dangerous she shoves
-   you at the shaft's rim, fully changed her catch is a death). Not done, and the owner asked for it
-   (2026-10-19): she carries things off and throws or drops them at you, shoves stock you placed off
-   edges, resets or jams machines you set; more of it the higher her stage. Her unrigging (built
-   2026-10-18) is the pattern to follow. The rage numbers are CHOSEN, to be tuned once she follows
-   up the tower.
+   you at the shaft's rim, fully changed her catch is a death). A pest's mischief, done: the stock
+   you have handled she takes, throws at you or carries off to her post, and she undoes your
+   rigging. Not done, and the owner asked for it (2026-10-19): she shoves stock you placed off
+   edges, resets or jams machines you set; more of it the higher her stage. The rage numbers are
+   CHOSEN, to be tuned once she follows up the tower.
 4. The foreman's radio: Act 1's four lines, done. The fifth (the first hard hat) waits for the
    crew's signs (a dropped hard hat, a radio still talking) in the Counterweight Well.
-5. Proof: a touch playthrough from 154 m to 220 m that meets her in each stage. Not built. The
-   screenshots of her looks are made by `look_matron_gallery` (see below).
+5. Proof: a touch playthrough from 154 m to 220 m that meets her in each stage: done,
+   `touch_matron_act` (entry below), with screenshots of each stage by `--capture`. Her looks
+   are rendered by `look_matron_gallery`.
 
 After that, in the handoff document's build order: her reach up the tower band by band (XL), then
 Act 1's yard (badge-in, the crane's dropped load), the crew, day to night, the harpoon, the ending.
@@ -1461,6 +1462,59 @@ Tools that work in this container:
 
 Leftover: the branch `claude/stage-d-spool-start-wip` is superseded by the float lift's commit on
 `ScraperX-Claude` and can be deleted.
+
+**Her first act, played by touch (2026-10-19; the goal's items 3 and 5).** One automated touch
+playthrough, `touch_matron_act` (`godot/presentation/ui/ui_test_act.gd`), plays her whole first act
+from the 154 m deck to the 220 m ring, and fails if any beat does not happen in the simulation:
+- Asleep: Stage A's cage rigged, and a toolbox from the north band's rail carried to her locker
+  door. Set down there, its clank wakes her (the player's noise).
+- While she strains, the line down to 143 m and crouched round under her post. Out, a pest and
+  unseen, she takes the toolbox from her door, carries it off, and at her post undoes the cage's
+  rope.
+- Sprints along 143's shaft edge, heard up the shaft, make her dangerous (about 50 s). Crouched and
+  still, she is a pest again (about 55 s): her stage comes back down.
+- Through a gate in 143's rail and up the riser to her deck: heard on the rungs, she has the
+  toolbox, throws it at the climber, and her hands shove them away.
+- A chase up and down her east band makes her dangerous. By the rail, her shove throws the climber
+  at the shaft (0.6 m, into the rail). More noise and she is fully changed (rage 0.9), and her hands
+  kill.
+- Back at the riser's foot (the checkpoint, her a pest again), up again while she looks for the
+  climber where she killed them, quietly to her ladder and up it. In her Turn she comes up after;
+  on the ring the climber goes on by the climbing route (boards and standpipe, catwalk and scaffold
+  panel) to the 220 ring, where she cannot follow. One death in the run, hers to give.
+
+Her pest mischief (native): two toolboxes and an oil drum lie by the outer rail of her deck's north
+band. What the player picks up becomes theirs to her. Hunting, a pest goes for one within 5 m while
+the player is still a throw away, takes it in both hands, and throws it on a low arc at their chest
+from 2.5 to 6 m (7.5 m/s: a hit the body feels, never a death). Unseen, she carries it off to her
+post and drops it there. In the Turn, on a climb, out of the pest stage or at the player, she lets
+go. Her rage now cools at 0.003 a second (a quiet minute drops her a stage).
+
+Found and fixed in her on the way, each seen in the playthrough:
+- She undid the cage's rope walking straight at its eye from wherever she stood down, and from the
+  west pressed into the cage's back for good. Now she unrigs from her post in its mouth.
+- She walked straight at points near her line, and posts beside it held her: the cage's trip-line
+  gantry, the tip-out lever's post, the ladder's rail. Now, with something built in the straight
+  way, she takes the nearest earlier point on her path she can walk to straight, or steps back
+  onto her line.
+- One line of sight from her middle: a 12 cm lever post hid a climber 3 m away. Now two lines a
+  head's width apart.
+- A toolbox she could not get to (past a rail) she walked at for good. Now she gives up a fetch she
+  gets no nearer to in 1.5 s, and leaves that piece 12 s.
+- She followed the climber out onto the scaffold boards off the 176 ring and fell to her death. Floor
+  narrower than she is (0.48 m) is no floor to her.
+- Running into her at a sprint counted as a lethal blow, so a pest could kill by collision. Her body
+  is no longer a blow: her hands decide by stage.
+
+The world: 143's north rail is now open (3.3 m) where deck 13's walkway plate, the riser's foot,
+meets its band, as her deck's rail is open at the catwalk's ends. Without it the line down to 143
+had no way back up. World solids regenerated.
+
+Proof: native `matron` (every section, with the new "mischief" and "hoard"), `matron-mischief`,
+`stock`, `magnet` and `stack` (they find pieces by the end of the stock list, which now ends with her
+three), `save`, `determinism`, the full suite; `touch_matron_act` (new, 108 s headless, about 380 s of
+play), `touch_matron`, `touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`, `touch_stock`,
+`touch_radio`. CI plays `touch_matron_act`.
 
 **Her hands by stage (2026-10-19; the goal's item 3, its first part).** Her hands on the player were
 always a death. Now they follow her stage: fully changed, still a death; before that a shove, once

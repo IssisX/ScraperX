@@ -1,8 +1,8 @@
 # SCRAPERX — AS-006 COUNTERWEIGHT WELL (B02, 154 → 220 m)
 
 **Ascent Slice:** `AS-006`
-**Lifecycle:** `IN PROGRESS` — Stages A, B and C and the band's one-run test built and tested; the
-climbing route waits on Step 2's movement
+**Lifecycle:** `IN PROGRESS` — Stages A, B and C, the band's one-run test and the climbing route
+built and tested; the Matron's first act played through the band on touch
 **Provenance:** re-derived here, against `77a4364`, under
 `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the plan imported from `ScraperX-Grok`
 (their `WO-014_CW_PIN`), whose geometry, ids and persist versions describe a world that does not
@@ -413,4 +413,13 @@ Found and fixed on the way (each by the probe named):
   A's tip-out, source inspected). Not changed here; every held linkage keeps 0.2 m or more of
   stroke inside its open band instead of the 3 cm the first tip-out had.
 
-The climbing route (Step 2): pending.
+**The climbing route (Step 2) — built, tested.** As built it stands east of the machines, not on
+the west half the table above planned: a rung ladder from the 154 m deck to the 176 ring; scaffold
+boards out from the ring to a standpipe up to 198; a catwalk under a scaffold panel hung off the 220
+ring, caught with a jump (`build_climbing_route` in `src/sim/band_counterweight_well.cpp`). Native
+`AS-006 route`: from the 154 m deck to standing on the 220 ring with every lift left as found.
+
+**The Matron's first act (2026-10-19).** `touch_matron_act` plays the band from the 154 m deck to
+the 220 ring with her in each of her three stages and back, by touch; its ladder and climbing route
+are the way on after her (`03_EXECUTION/ACTIVE_GOAL_PROGRESS.md`, "Her first act, played by
+touch").

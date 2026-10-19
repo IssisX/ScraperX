@@ -279,7 +279,13 @@ jobs:
           # over 143's band (touch_matron_line); up the ladder from her deck
           # as she bursts out, frail she stands at its foot, in the Turn she
           # comes up it after and over its head onto the 176 ring
-          # (touch_matron_climb). A drum of the yard's loose stock, taken off its
+          # (touch_matron_climb). Her first act, 154 m to the 220 ring: woken
+          # by a toolbox set down at her door, a pest she carries it off and
+          # undoes the cage's rope, throws it at the climber and shoves;
+          # noise makes her dangerous and quiet a pest again; dangerous her
+          # shove throws the climber at the shaft's rail; fully changed her
+          # hands kill; from the checkpoint up her ladder and the climbing
+          # route to 220 (touch_matron_act). A drum of the yard's loose stock, taken off its
           # pallet, carried 3 m and set down (touch_stock). The yard's forklift
           # driven in under a pallet of drums, raised, carried off, set down
           # (touch_forklift); in under the 5 t stillage, RAISE tips its back
@@ -323,7 +329,7 @@ jobs:
               touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
-              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet pad_crane_magnet keyboard_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
+              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet pad_crane_magnet keyboard_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

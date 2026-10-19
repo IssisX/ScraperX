@@ -201,18 +201,28 @@ void Matron::remove_body() {
 }
 
 bool Matron::sees(const RVec3 from, const RVec3 to) const {
-    RayCastResult hit;
     const Vec3 run(to - from);
     const float length = run.Length();
     if (length < 0.5F) {
         return true;
     }
     const IgnoreSingleBodyFilter self(body_);
-    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, run), hit, {}, {}, self)) {
-        return true;
+    // Two lines a head's width apart: a post narrower than that (a lever's,
+    // a gantry's) hides nobody from her.
+    const Vec3 flat(run.GetX(), 0.0F, run.GetZ());
+    const Vec3 across = flat.LengthSq() > 1.0e-6F ? Vec3(-flat.GetZ(), 0.0F, flat.GetX()).Normalized() * kEyesHalfM
+                                                  : Vec3::sZero();
+    for (const float side : {-1.0F, 1.0F}) {
+        RayCastResult hit;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from + across * side, run), hit, {}, {}, self)) {
+            return true;
+        }
+        // A hit on the player (or just short of them) is the line reaching them.
+        if (hit.mFraction >= 1.0F - 0.7F / length) {
+            return true;
+        }
     }
-    // A hit on the player (or just short of them) is the line reaching them.
-    return hit.mFraction >= 1.0F - 0.7F / length;
+    return false;
 }
 
 int Matron::decks_between(const RVec3 from, const RVec3 to) const {
@@ -421,17 +431,77 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     for (int at = to; at >= 0 && at != from; at = prev[static_cast<std::size_t>(at)]) {
         path.push_back(at);
     }
+    std::reverse(path.begin(), path.end());
     constexpr float kReachM = 1.2F;
+    const auto point = [&](const int i, float &x, float &z) {
+        if (path[static_cast<std::size_t>(i)] == to) {
+            x = tx;
+            z = tz;
+        } else {
+            const Node &node = nodes[static_cast<std::size_t>(path[static_cast<std::size_t>(i)])];
+            x = node.x;
+            z = node.z;
+        }
+    };
     wx = tx;
     wz = tz;
-    for (auto it = path.rbegin(); it != path.rend(); ++it) {
-        const Node &node = nodes[static_cast<std::size_t>(*it)];
-        if (*it == to || distance_xz(fx, fz, node.x, node.z) > kReachM) {
-            if (*it != to) {
-                wx = node.x;
-                wz = node.z;
+    int pick = static_cast<int>(path.size()) - 1;
+    for (int i = 0; i < static_cast<int>(path.size()); ++i) {
+        const Node &node = nodes[static_cast<std::size_t>(path[static_cast<std::size_t>(i)])];
+        if (path[static_cast<std::size_t>(i)] == to || distance_xz(fx, fz, node.x, node.z) > kReachM) {
+            pick = i;
+            break;
+        }
+    }
+    if (pick >= 0) {
+        point(pick, wx, wz);
+    }
+    // Something built in the straight way (a post, a ladder's rail, a cage's
+    // corner by her post): the nearest point before it on her path she can
+    // walk to straight; failing that, back onto her line, which runs clear.
+    if (!way_clear(fx, fz, wx, wz)) {
+        bool found = false;
+        for (int i = pick - 1; i >= 0 && !found; --i) {
+            float x = 0.0F;
+            float z = 0.0F;
+            point(i, x, z);
+            if (way_clear(fx, fz, x, z)) {
+                wx = x;
+                wz = z;
+                found = true;
             }
-            return true;
+        }
+        const Node &on_line = nodes[static_cast<std::size_t>(from)];
+        if (!found && distance_xz(fx, fz, on_line.x, on_line.z) > 0.15F) {
+            wx = on_line.x;
+            wz = on_line.z;
+        }
+    }
+    return true;
+}
+
+bool Matron::way_clear(const float fx, const float fz, const float tx, const float tz) const {
+    const float dx = tx - fx;
+    const float dz = tz - fz;
+    const float length = std::hypot(dx, dz);
+    if (length < 0.05F) {
+        return true;
+    }
+    const Vec3 dir(dx / length, 0.0F, dz / length);
+    const Vec3 across(-dir.GetZ(), 0.0F, dir.GetX());
+    // Only what is built in: a hanging handle or a loose crate swings or
+    // slides aside; a post does not.
+    class BuiltOnly final : public BodyFilter {
+    public:
+        bool ShouldCollideLocked(const Body &body) const override { return body.IsStatic(); }
+    };
+    const BuiltOnly built;
+    const float hips = feet_y_ + 0.9F;
+    for (const float side : {-kRadius, 0.0F, kRadius}) {
+        RayCastResult hit;
+        const RVec3 start(fx + across.GetX() * side, hips, fz + across.GetZ() * side);
+        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(start, dir * length), hit, {}, {}, built)) {
+            return false;
         }
     }
     return true;
@@ -796,16 +866,24 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
         // Floor `ahead_m` along `dir`, looked for from `above` her feet down
         // `depth`: its top, if there is one.
         const float feet = float(at.GetY()) - kStandCentre;
-        const auto floor_at = [&](const Vec3 &dir, const float ahead_m, const float above, const float depth,
-                                  float &top) {
+        const auto floor_under = [&](const RVec3 &from, const float depth, float &top) {
             RayCastResult down;
-            const RVec3 from = at + dir * ahead_m + Vec3(0.0F, above - kStandCentre, 0.0F);
             if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), down, {}, {},
                                                         not_us)) {
                 return false;
             }
             top = float(from.GetY()) - depth * down.mFraction;
             return true;
+        };
+        // Floor she can stand on: under her middle and across her width (a
+        // board or a beam narrower than she is is no floor to her).
+        const auto floor_at = [&](const Vec3 &dir, const float ahead_m, const float above, const float depth,
+                                  float &top) {
+            const RVec3 from = at + dir * ahead_m + Vec3(0.0F, above - kStandCentre, 0.0F);
+            const Vec3 across(-dir.GetZ(), 0.0F, dir.GetX());
+            float side = 0.0F;
+            return floor_under(from, depth, top) && floor_under(from + across * kFootSpanM, depth, side) &&
+                   floor_under(from - across * kFootSpanM, depth, side);
         };
         // An edge `ahead_m` along `dir`: no floor within kEdgeDropM below her
         // feet there, nor for kStepOverM on (a crack between plates, or the
@@ -1045,6 +1123,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
     shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
     throw_cooldown_s_ = std::max(0.0F, throw_cooldown_s_ - dt);
+    fetch_refused_s_ = std::max(0.0F, fetch_refused_s_ - dt);
+    if (fetch_refused_s_ <= 0.0F) {
+        fetch_refused_ = 0;
+    }
     thrown_s_ = std::max(0.0F, thrown_s_ - dt);
     // What the player handles is theirs to her.
     for (std::size_t i = 0; i < throwables_.size(); ++i) {
@@ -1409,10 +1491,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const Level &here = levels_[static_cast<std::size_t>(level_)];
         const bool has_way = here.way >= 0;
         const std::size_t way = has_way ? static_cast<std::size_t>(here.way) : 0;
-        if (state_ == State::Guarding && has_way && rigged_[way] && ways_out_[way] &&
+        const Post *guarded = state_ == State::Guarding ? reachable_post(ax, az) : nullptr;
+        const bool at_post = guarded != nullptr && distance_xz(ax, az, guarded->x, guarded->z) <= 0.6F;
+        if (at_post && has_way && rigged_[way] && ways_out_[way] &&
             route_toward(ax, az, here.eye.x, here.eye.z, on_catwalk, wx, wz)) {
-            // The way out rigged to ride, and the player not here: she goes
-            // to undo it.
+            // The way out rigged to ride, and the player not here: from her
+            // post in its mouth (the eye is inside; from anywhere else the
+            // straight way to it can run into the cage's back) she goes to
+            // undo it.
             state_ = State::Unrigging;
             unrig_s_ = 0.0F;
         }
@@ -1543,7 +1629,7 @@ int Matron::stock_to_fetch(const float ax, const float az) const {
     float best_m = kSeekStockM;
     for (std::size_t i = 0; i < throwables_.size(); ++i) {
         const Throwable &t = throwables_[i];
-        if ((handled_ & (1U << i)) == 0U || t.entity == player_holding_) {
+        if ((handled_ & (1U << i)) == 0U || (fetch_refused_ & (1U << i)) != 0U || t.entity == player_holding_) {
             continue;
         }
         const RVec3 p = bodies.GetPosition(t.body);
@@ -1567,6 +1653,8 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
     }
     if (fetch_ < 0) {
         fetch_ = stock_to_fetch(ax, az);
+        fetch_best_m_ = std::numeric_limits<float>::max();
+        fetch_stall_s_ = 0.0F;
     }
     if (fetch_ < 0) {
         return false;
@@ -1578,6 +1666,20 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
     const float pz = float(p.GetZ());
     if (t.entity == player_holding_ || distance_xz(ax, az, px, pz) > kSeekStockM + 1.0F ||
         bodies.GetLinearVelocity(t.body).Length() > 0.5F) {
+        fetch_ = -1;
+        return false;
+    }
+    // Getting no nearer to it, she gives it up for a while.
+    const float m = distance_xz(ax, az, px, pz);
+    if (m < fetch_best_m_ - 0.1F) {
+        fetch_best_m_ = m;
+        fetch_stall_s_ = 0.0F;
+    } else {
+        fetch_stall_s_ += dt;
+    }
+    if (fetch_stall_s_ >= kFetchStallSeconds) {
+        fetch_refused_ |= 1U << static_cast<unsigned>(fetch_);
+        fetch_refused_s_ = kFetchRetrySeconds;
         fetch_ = -1;
         return false;
     }
@@ -1756,6 +1858,9 @@ void Matron::restore(const Saved &saved) {
         drop_stock();
         handled_ = saved.handled;
         throw_cooldown_s_ = 0.0F;
+        fetch_ = -1;
+        fetch_refused_ = 0;
+        fetch_refused_s_ = 0.0F;
         thrown_ = -1;
         thrown_s_ = 0.0F;
         takes_ = 0;
