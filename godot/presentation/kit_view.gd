@@ -791,6 +791,14 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_inspection_practicals(node)
 		if entity in [1935, 1936, 1938, 1939, 2935]:
 			_junction_markings(node, entity)
+		if entity == 1490:
+			_junction_stencil(node, "BUILD A CROSSING\nLOOSE TIMBER", Vector3(-3.1, 0.362, 0),
+				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
+			_junction_stencil(node, "RECEIVING", Vector3(3.1, 0.362, -1.65),
+				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
+		elif entity == 2490:
+			_junction_stencil(node, "GRIP", Vector3(0, 0.079, 0),
+				0.004, Vector3(-PI / 2.0, 0, 0), Color("e2cc8d"))
 		# Signs stay on the native landing/deck bodies, including the moving
 		# pendant. They label the real stations without owning machine state.
 		if entity == 1981:

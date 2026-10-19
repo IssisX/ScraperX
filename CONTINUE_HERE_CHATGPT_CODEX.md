@@ -1,5 +1,13 @@
 <!-- ANDROID_COMPATIBILITY_LIVE_START -->
-## Live GAME work — walking-step repair delivered
+## Live GAME work — player-built loose-object routes
+
+ACTIVE OWNER PRIORITY20261019: build routes the player creates by moving real objects; loose or balanced cargo must tip/slide/fall from real contact. Root is implementing a loose staging-board crossing beside the workshop: approach from grade, grasp/move/place a free board over actual loading plinths, cross, continue onto the receiving perch, and recover/rebuild after a bad placement. No sockets, placement teleport, welded props or completion flags. Kit owns collision/rendering/checkpoint state; existing carry owns input and its physical point constraint. New owner files: src/sim/loose_gangway_route.{hpp,cpp}; world.cpp appends the encounter after retained builders. Source base904ddb07. Implementation is in progress; no new gameplay proof or APK yet. Preserve unrelated dirty/untracked grapple/Main/bridge/CMake work.
+
+OWNER FEEL NOTE20261019: real consequences do not require every detail to be a laboratory simulation. Controls, timing and feedback may be arcade-like when useful. Do not spend hours on tiny/invisible/offscreen accuracy. Existing physical contracts cannot change silently. This is saved in AGENTS.md as ongoing guidance.
+
+The earlier separate-beam hand-transfer goal remains paused after the owner rejected that direction; do not resume it or call it completed. Latest scope supersedes that selection, not the preserved canonical backlog. Current bottleneck: make an ordinary pickup/place/cross path work with the real free body, then use Godot MCP on the actual encounter and deliver matching GitHub APK. Prior accepted walking/sound/body/MCP evidence below remains valid and must not be rerun by habit.
+
+## Previous accepted deliveries
 
 COMPLETED R19 FIRST-PERSON WORKWEAR: Sourcea28937b8f6c966d415517467cba24021b59018a6 actually pushed. Candidate39156155944 fullyGREEN; build214513419/36,941,349bytes delivered at https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-a28937b/ScraperX-ChatGPT.apk . CI unit61/native-contact860/body-motion68PASS; five body and two native-contact captures inspected. Final actual MCP standing inspected, motion follow-ups timed out10/20s, runtime stopped; same-source CI completed remaining full motion. B=/data/data/com.termux/files/usr/tmp/scraperx-body-workwear-20261018/source-receipt.json and evidence/parkour-2026-10-17/FIRST_PERSON_WORKWEAR{.md,_DELIVERY.json} own proof. Native physics/world geometry unchanged. No further R19 verification goal or APK audit; phone feel/performance unverified. Ordinary A/candidate-policy-a28937b receipts own delivery; separate full39156155948 is distinct.
 

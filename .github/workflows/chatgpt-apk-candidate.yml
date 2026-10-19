@@ -208,6 +208,27 @@ jobs:
           2>&1 | tee artifacts/thumb-flow-input.log
         grep -F 'SCRAPERX_THUMB_FLOW_INPUT PASS' artifacts/thumb-flow-input.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-flow-input.log; then exit 1; fi
+    - name: Check player-built loose gangway and real tipping
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host \
+          --target scraperx_loose_gangway_mechanics_tests scraperx_loose_gangway_route_tests --parallel 2
+        timeout 60s build/candidate-host/scraperx_loose_gangway_mechanics_tests \
+          2>&1 | tee artifacts/loose-gangway-mechanics.log
+        grep -F 'PASS LOOSE_GANGWAY_MECHANICS two-supports' artifacts/loose-gangway-mechanics.log
+        timeout 180s build/candidate-host/scraperx_loose_gangway_route_tests \
+          2>&1 | tee artifacts/loose-gangway-native.log
+        grep -F 'SCRAPERX_LOOSE_GANGWAY PASS' artifacts/loose-gangway-native.log
+        mkdir -p artifacts/loose-gangway
+        timeout 90s xvfb-run -a -s '-screen 0 960x540x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --resolution 960x540 \
+          res://tests/loose_gangway_view_test.tscn -- --quit-after-loose-gangway-check \
+          --capture-dir="${GITHUB_WORKSPACE}/artifacts/loose-gangway" \
+          2>&1 | tee artifacts/loose-gangway-view.log
+        grep -F 'SCRAPERX_LOOSE_GANGWAY_VIEW PASS' artifacts/loose-gangway-view.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/loose-gangway-view.log; then exit 1; fi
     - name: Check upper-gallery collision and controls in the shipping view
       shell: bash
       run: |
@@ -396,6 +417,10 @@ jobs:
           artifacts/wall-exit-native.log
           artifacts/wall-stride-regression.log
           artifacts/upper-gallery-view.log
+          artifacts/loose-gangway-mechanics.log
+          artifacts/loose-gangway-native.log
+          artifacts/loose-gangway-view.log
+          artifacts/loose-gangway/
           artifacts/upper-gallery/
         if-no-files-found: error
         retention-days: 30

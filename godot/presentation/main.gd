@@ -1519,6 +1519,10 @@ func _carry_name(entity: int) -> String:
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
 	match entity:
+		2490:
+			return "LOOSE GANGWAY"
+		2491, 2492:
+			return "TIMBER SUPPORT BLOCK"
 		1902:
 			return "BALANCE BLOCK · 25 kg"
 		2505:

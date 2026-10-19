@@ -56,6 +56,7 @@ add_library(scraperx_sim STATIC
     src/sim/traversal_receiver.cpp
     src/sim/parkour_route.cpp
     src/sim/ground_swing_route.cpp
+    src/sim/loose_gangway_route.cpp
     src/sim/workshop_roof_route.cpp
     src/sim/vault_rail_route.cpp
     src/sim/physical_hand_prop.cpp
@@ -241,6 +242,16 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_workshop_roof_route_tests tests/workshop_roof_route_tests.cpp)
     target_link_libraries(scraperx_workshop_roof_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.workshop_roof_route COMMAND scraperx_workshop_roof_route_tests)
+
+    add_executable(scraperx_loose_gangway_mechanics_tests tests/loose_gangway_mechanics_tests.cpp)
+    target_compile_options(scraperx_loose_gangway_mechanics_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti> $<$<CXX_COMPILER_ID:MSVC>:/GR->)
+    target_link_libraries(scraperx_loose_gangway_mechanics_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.loose_gangway_mechanics COMMAND scraperx_loose_gangway_mechanics_tests)
+
+    add_executable(scraperx_loose_gangway_route_tests tests/loose_gangway_route_tests.cpp)
+    target_link_libraries(scraperx_loose_gangway_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.loose_gangway_route COMMAND scraperx_loose_gangway_route_tests)
 
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)
