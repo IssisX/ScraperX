@@ -42,6 +42,10 @@ var _blood_age := 0.0
 var _flash_color := UiStyle.HAZARD
 # The climber's line, printed while it is said (empty: none, or captions off).
 var caption := ""
+# The foreman's line over the radio and who it is from (life/foreman_radio.gd),
+# shown whatever the captions setting: no voice is recorded for him yet.
+var radio_text := ""
+var radio_who := ""
 
 
 func _ready() -> void:
@@ -207,6 +211,8 @@ func _draw() -> void:
 		_draw_toasts()
 	if not caption.is_empty():
 		_draw_caption()
+	if not radio_text.is_empty():
+		_draw_radio()
 
 
 func _draw_lens_blood() -> void:
@@ -467,6 +473,24 @@ func _draw_caption() -> void:
 	UiStyle.text(self, UiStyle.font_label(), caption, Vector2(cx, rect.position.y + 41.0 * u), font_size,
 		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
 
+
+
+# The foreman's radio: above the caption's place, a plate with who it is
+# from in small heavy type over his line.
+func _draw_radio() -> void:
+	var u := _u
+	var who_size := int(roundf(20.0 * u))
+	var line_size := int(roundf(32.0 * u))
+	var cx := _safe.position.x + _safe.size.x * 0.5
+	var width := maxf(UiStyle.text_width(UiStyle.font_heavy(), radio_who, who_size),
+		UiStyle.text_width(UiStyle.font_label(), radio_text, line_size)) + 56.0 * u
+	var rect := Rect2(Vector2(cx - width * 0.5, _safe.end.y - 430.0 * u), Vector2(width, 96.0 * u))
+	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.82), UiStyle.with_alpha(UiStyle.HAZARD, 0.9),
+		3.0 * u, 10.0 * u)
+	UiStyle.text(self, UiStyle.font_heavy(), radio_who, Vector2(cx, rect.position.y + 30.0 * u), who_size,
+		UiStyle.HAZARD, HORIZONTAL_ALIGNMENT_CENTER)
+	UiStyle.text(self, UiStyle.font_label(), radio_text, Vector2(cx, rect.position.y + 74.0 * u), line_size,
+		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 # The faint route hint (a setting): what the hands could take ahead, each a

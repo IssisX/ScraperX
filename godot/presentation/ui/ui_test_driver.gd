@@ -201,6 +201,8 @@ const SCENARIOS := {
 	"keyboard_stack_upper": 26,
 	# The continuous ascent from the game's start at grade through the upper machines to +221 m receiver.
 	"touch_stack": 8,
+	# The foreman's radio: his first line as the climber steps into S1's cage.
+	"touch_radio": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
 	# The fear voice on a ~12 m drop lived through: a yelp, then the cry for
@@ -474,6 +476,8 @@ func _run() -> void:
 			ok = await _stack_upper(InputRouter.Device.GAMEPAD)
 		"keyboard_stack_upper":
 			ok = await _stack_upper(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_radio":
+			ok = await _touch_radio(InputRouter.Device.TOUCH)
 		"touch_stack":
 			ok = await _stack(InputRouter.Device.TOUCH)
 		"pad_stack":

@@ -147,6 +147,7 @@ var _sling_preview_clock := 0.0
 var _birds: Node3D
 # The yard crew, drawn from the native's workers.
 var _crew: Node3D
+var _radio: Node   # the foreman's radio (life/foreman_radio.gd)
 @onready var _status: Label = $HUD/TopLeft/Status
 @onready var _position_value: Label = $HUD/TopLeft/Position
 @onready var _velocity_value: Label = $HUD/TopLeft/Velocity

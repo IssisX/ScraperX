@@ -152,6 +152,7 @@ var welds_heard := 0
 # name for the scripted runs.
 var _matron_loop: AudioStreamPlayer3D
 var matron_cues := {}
+var radio_cues := 0      # the foreman's radio opened or closed, counted for the tests
 # The forklift, heard where it stands: its engine, its pump and its valve
 # (the relief blowing off, or the lowering valve letting the load down), each
 # a loop; its one-shots, counted by name for the scripted runs.
@@ -342,6 +343,22 @@ func set_volumes(master: float, effects: float, ambience: float, interface: floa
 		var level: float = pair[1]
 		AudioServer.set_bus_mute(index, level <= 0.001)
 		AudioServer.set_bus_volume_db(index, linear_to_db(maxf(level, 0.001)))
+
+
+# The foreman's radio (life/foreman_radio.gd): its squelch opening a line and
+# the channel's click closing it, on the interface bus. A machine's sound; his
+# voice, a person's, waits to be recorded.
+func radio(open: bool) -> void:
+	radio_cues += 1
+	if not _bank_ready or _silent:
+		return
+	var voice := AudioStreamPlayer.new()
+	voice.bus = BUS_INTERFACE
+	voice.stream = _bank.pick(&"radio_open" if open else &"radio_close")
+	voice.volume_db = -6.0
+	add_child(voice)
+	voice.finished.connect(voice.queue_free)
+	voice.play()
 
 
 func ui_tap(back: bool = false) -> void:

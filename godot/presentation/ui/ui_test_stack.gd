@@ -290,6 +290,36 @@ func _save(device: int) -> bool:
 # well's stages A, B and C to the 220 m ring. Every verb is the one the HUD
 # offers at that moment, pressed on the device; every leg is proven by the
 # native state it changed.
+# The foreman's radio (the story): his first line comes as the climber steps
+# into S1's cage, opened by the radio's squelch, shows a while and closes;
+# nothing is said before a machine is touched.
+func _touch_radio(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
+		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
+	if int(_main._radio.lines_said) != 0 or not String(_main._hud.radio_text).is_empty():
+		return _fail("the foreman spoke before the climber touched a machine: '%s'" % String(_main._hud.radio_text))
+	if not await _go(device, Vector2(10.0, -120.8), 0.1, 6.0):
+		return _fail("the step into S1's cage stalled at %s" % str(_position()))
+	var spoke: bool = await _wait_until(
+		func() -> bool: return String(_main._hud.radio_text).contains("Saturday"), 2.0)
+	if not spoke:
+		return _fail("stepping into S1's cage did not bring the foreman's first line (the radio read '%s')" %
+			String(_main._hud.radio_text))
+	if int(_main._audio.radio_cues) < 1:
+		return _fail("the radio's squelch was not heard with the line")
+	if String(_main._hud.radio_who).is_empty():
+		return _fail("the line shows with nobody named as its speaker")
+	await _pose("radio_first_line")
+	var closed: bool = await _wait_until(func() -> bool: return String(_main._hud.radio_text).is_empty(), 12.0)
+	if not closed:
+		return _fail("the foreman's line never closed")
+	if int(_main._audio.radio_cues) < 2:
+		return _fail("the channel's click was not heard as the line closed")
+	_detail = "lines=%d cues=%d" % [int(_main._radio.lines_said), int(_main._audio.radio_cues)]
+	return true
+
+
 func _stack(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var body := _watch_body()

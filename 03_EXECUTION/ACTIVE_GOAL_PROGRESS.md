@@ -1404,6 +1404,27 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The foreman's radio, Act 1 (2026-10-19; the goal's item 4).** Walt Brenner speaks from the yard,
+the story's one human voice, over a handheld radio: each line is set off by a place or an event in
+the native's state, never a timer, and comes once a launch, one at a time, on a HUD plate that
+names him (BRENNER, ON THE RADIO) over the line, opened by the radio's squelch and closed by the
+channel's click (two new clips in the bank, on the interface bus; a machine's sound). The lines
+are captions until a person records them, and show whatever the captions setting. Act 1's four:
+stepping into S1's cage ("Navarro? It's Saturday. What are you doing on my tower?"); the Stack
+from deck 4 up ("Get down before somebody sees you."); her locker bursting at 154 m ("What was
+that? Navarro, get away from that locker."); the 220 ring with her out ("Don't come down. She's
+below you. The only way off is the top."). The first hard hat's line waits for the crew's signs.
+The names are the handoff's proposals and one table to change. Proof: `touch_radio` (new: from
+grade, nothing said across the yard; the step into S1's cage brings the first line on a squelch,
+named; it closes on a click). Code: `godot/presentation/life/foreman_radio.gd`.
+
+**Her look follows the exposure (2026-10-19; the goal's item 2).** She is the site's first-aid
+attendant now: pale, tired skin, a white tunic and cap, a dark cardigan. The exposure (the native's,
+her time out over ten minutes) recolors her one way, whatever her rage does: skin to flushed and
+blistered by the half, then grey; the tunic stained, then filthy; the eyes bloodshot; the hair thinned
+to a third. The pose gallery renders the three (`look_matron_gallery`: tunic, blistered, grey, face
+and figure). Her broken movement stays the Turn's.
+
 **The Matron's rage and her three stages (2026-10-19; the spine's build order 1).** She has a
 rage now, one number in the simulation, 0 to 1, that only sound reaching her ear feeds: each tick
 the louder at her ear of the player and the sounds that carry to her (a sound's loudness less the

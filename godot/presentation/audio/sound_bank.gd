@@ -42,6 +42,8 @@ func build() -> void:
 	clips[&"chute"] = [_wav(_chute())]
 	clips[&"impact_lethal"] = [_wav(_impact_lethal())]
 	clips[&"ui_tap"] = [_wav(_tick(1.0))]
+	clips[&"radio_open"] = [_wav(_radio_open())]
+	clips[&"radio_close"] = [_wav(_radio_close())]
 	clips[&"ui_back"] = [_wav(_tick(0.7))]
 	clips[&"clang"] = _variants(3, _clang)
 	clips[&"creak"] = _variants(2, _creak)
@@ -256,6 +258,24 @@ func _tick(pitch: float) -> PackedFloat32Array:
 	var out := _silence(0.05)
 	_add_band_noise(out, 0.0, 0.01, 0.8, 0.0015, 1800.0 * pitch, 6000.0 * pitch)
 	_add_mode(out, 900.0 * pitch, 0.0, 0.04, 0.5, 0.006, 2.0)
+	return out
+
+
+# A handheld radio's squelch opening: the channel's click, then a burst of
+# band-limited hiss that dies down as the carrier takes hold.
+func _radio_open() -> PackedFloat32Array:
+	var out := _silence(0.45)
+	_add_band_noise(out, 0.0, 0.015, 0.9, 0.003, 900.0, 6000.0)
+	_add_mode(out, 1500.0, 0.0, 0.03, 0.35, 0.004, 2.0)
+	_add_band_noise(out, 0.01, 0.4, 0.55, 0.11, 1200.0, 3800.0)
+	return out
+
+
+# The channel closing: a short click with a wisp of hiss after it.
+func _radio_close() -> PackedFloat32Array:
+	var out := _silence(0.18)
+	_add_band_noise(out, 0.0, 0.012, 0.8, 0.0025, 900.0, 5000.0)
+	_add_band_noise(out, 0.01, 0.15, 0.25, 0.04, 1500.0, 3500.0)
 	return out
 
 

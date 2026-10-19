@@ -151,6 +151,10 @@ func _ready() -> void:
 	_crew = CrewView.new()
 	add_child(_crew)
 	_crew.setup(_native, _audio)
+	_radio = preload("res://presentation/life/foreman_radio.gd").new()
+	_radio.name = "ForemanRadio"
+	add_child(_radio)
+	_radio.setup(_audio)
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.
@@ -377,6 +381,16 @@ func _process(delta: float) -> void:
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.caption = _audio.caption if _settings.captions else ""
+	# The foreman's radio, from the native's state; his lines show whatever
+	# the captions setting, having no voice yet.
+	var climber: Vector3 = _native.get_player_position()
+	_radio.update(delta, {
+		"y": climber.y,
+		"support": int(_native.get_support_entity_id()),
+		"matron_released": bool(_native.get_matron_state()["released"]),
+	})
+	_hud.radio_text = _radio.text
+	_hud.radio_who = _radio.who
 	# The faint route hint, asked of the native only while it is on.
 	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
 	_hud.update_hud(_ctx, delta)
