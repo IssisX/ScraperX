@@ -1404,6 +1404,24 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The Matron after a lead more than a level away (2026-10-19; to-do 11, its second half).** A
+sound two decks under her (heard up the shaft) sends her the way down toward it a level at a time:
+the line from her deck to the deck between, then on from there; the same for climbs up. Frail she
+stands at its top looking down, as for one level. She is no longer counted as fallen while she
+rides (a moving floor, a line's cable) or climbs: the fall check measured from the level she
+left, so any ride down past 12 m (a ring's 22 m line, A's cage brought down by C's cascade)
+would have killed her. Not taken: the riser from 143 up to her deck, which this half meant to
+give her; its foot is on a plate out over the shaft behind 143's rail, reached only from the
+ladder up from 132, so it is the player's way and not hers. And riding a line's trolley frail
+(the kit already lets her) has no case yet: the only way down from her deck is her deck's line,
+whose trolley leaves with the player. The line's snapshot now carries its stand and ramp foot.
+Proof: native `matron` (new "two below": down her deck's line and the next to 132 while she
+strains and stands guard; a walk two decks down unheard; a sprint at 132's edge of the shaft
+heard at 0.8, a lead on 132, and frail she goes to her deck's line, the first way down, and
+stands on it; with the old one-level rule the test fails there, she going instead to the edge
+above the sound), `determinism`; `touch_matron`, `touch_matron_ride`, `touch_matron_line`,
+`touch_matron_climb`, `touch_stack_upper`, `pad_stack_upper`, `keyboard_stack_upper`.
+
 **The Matron hears through the tower (2026-10-18; to-do 11, its first half).** She was deaf to
 anything not within a 6 m band of her own floor. The tower is an open frame, every level a deck
 band 9 m deep round a 34 m open shaft, and a sound now reaches her the way it would: the shorter
@@ -1629,8 +1647,10 @@ fill in after).**
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her
    there by the routes she can use (a lift she calls and rides, the ladder, a line down), a route
    planner over the tower's levels. Sequenced after 10 and before 4's route hint.
-   Done 2026-10-18: her hearing through the tower, and one level's way after a lead. Next:
-   leads more than a level away, and the riser ladder up from 143.
+   Done 2026-10-18: her hearing through the tower, and one level's way after a lead. Done
+   2026-10-19: leads more than a level away, a level at a time. (The riser from 143 is not hers:
+   behind 143's rail. A lift she calls waits for one near her levels: today's are rigged and
+   tripped by the player, or far below.)
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the

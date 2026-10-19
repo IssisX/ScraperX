@@ -184,6 +184,75 @@ bool push_toward(Simulation &s, const int piece, const double tx, const double t
     }
     return false;
 }
+// Rides line `line` down from its stand: the jump for its bar, braked to come
+// into the end's buffer at 5 m/s (it stops 5.4: it takes the rider to the
+// stop, over the far band), and letting go there. True once down on the far
+// band, alive.
+bool ride_line_down(Simulation &s, const scraperx::sim::Simulation::ZiplineLine &line) {
+    const double run = std::hypot(line.bottom.x - line.top.x, line.bottom.z - line.top.z);
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    (void)s.advance_frame(0.5);
+    (void)s.set_facing((line.bottom.x - line.top.x) / run, (line.bottom.z - line.top.z) / run);
+    (void)s.advance_frame(0.2);
+    if (!(s.request_jump() &&
+          advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2))) {
+        return false;
+    }
+    const auto deaths = s.snapshot().death_count;
+    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        const auto n = s.snapshot();
+        const bool braking = n.zipline_riding && n.zipline_along_m > line.length - 12.0 && n.zipline_speed_mps > 5.0;
+        (void)s.set_move_input(0.0, braking ? 1.0 : 0.0);
+        tick(s);
+        const auto m = s.snapshot();
+        if (m.zipline_riding && m.zipline_along_m > line.length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
+            (void)s.request_release();
+        }
+        if (!m.zipline_riding && m.player_grounded && m.player_position.y < line.top.y - 6.0) {
+            (void)s.set_move_input(0.0, 0.0);
+            return m.death_count == deaths;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+// Waits (still) until she stands guard at her post on her deck; with
+// SCRAPERX_MATRON_TRACE set, her states on the way.
+bool until_guarding(Simulation &s, const double seconds) {
+    constexpr double kPostX = -10.3;
+    constexpr double kPostZ = -129.0;
+    int was = -1;
+    for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        if (std::getenv("SCRAPERX_MATRON_TRACE") != nullptr && (m.state != was || i % 450 == 0)) {
+            const auto p = s.snapshot().player_position;
+            std::cout << "    t " << i / 90.0 << " state " << int(m.state) << " at (" << m.position.x << ", "
+                      << m.position.y << ", " << m.position.z << ") floor " << m.floor_y << " lead " << m.lead_floor_y
+                      << " target (" << m.target_x << ", " << m.target_z << ") heard " << m.noise_heard << " fooled "
+                      << m.fooled << " wary " << m.wary << "; player (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+            was = m.state;
+        }
+        if (m.state == kStateGuarding && std::hypot(m.position.x - kPostX, m.position.z - kPostZ) < 0.6) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The line whose top stands on the floor at `floor` (another level's below it).
+std::uint32_t line_from(const Simulation &s, const double floor) {
+    for (std::uint32_t i = 0; i < s.zipline_count(); ++i) {
+        const auto line = s.zipline_line(i);
+        if (std::abs(line.ramp_foot.y - floor) < 0.3 && line.bottom.y < line.top.y - 6.0) {
+            return i;
+        }
+    }
+    return s.zipline_count();
+}
+
 } // namespace
 
 void run_matron() {
@@ -998,41 +1067,10 @@ void run_matron() {
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
                 "matron below: a sprint toward her locker wakes her");
         // Down the 154 m line to 143 while she strains (and hears nothing).
-        require(walk_to(s, 3.0, -132.36, 6.0, 0.3) && walk_to(s, 6.0, -132.36, 6.0, 0.12),
+        const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+        require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) && walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
                 "matron below: up the line's ramp onto its stand");
-        stand_still(s, 0.5);
-        (void)s.set_facing(0.0, -1.0);
-        (void)s.advance_frame(0.2);
-        const auto on_stand = s.snapshot().player_position;
-        std::cout << "  matron below: on the stand at (" << on_stand.x << ", " << on_stand.y << ", " << on_stand.z
-                  << "), she " << int(s.matron_state().state) << "\n";
-        require(s.request_jump() && advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2),
-                "matron below: the line taken");
-        const int line = s.snapshot().zipline_line;
-        const double length = s.zipline_line(static_cast<std::uint32_t>(line)).length;
-        // Braked to come into the end's buffer at 5 m/s (it stops 5.4): it
-        // takes the rider to the stop, over the far band.
-        bool down = false;
-        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !down; ++i) {
-            const auto n = s.snapshot();
-            const bool braking = n.zipline_riding && n.zipline_along_m > length - 12.0 && n.zipline_speed_mps > 5.0;
-            (void)s.set_move_input(0.0, braking ? 1.0 : 0.0);
-            tick(s);
-            const auto m = s.snapshot();
-            if (m.zipline_riding && m.zipline_along_m > length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
-                (void)s.request_release();
-            }
-            down = !m.zipline_riding && m.player_grounded && m.player_position.y < 150.0;
-        }
-        (void)s.set_move_input(0.0, 0.0);
-        {
-            const auto n = s.snapshot();
-            std::cout << "  matron below: off the line at (" << n.player_position.x << ", " << n.player_position.y << ", "
-                      << n.player_position.z << "), riding " << n.zipline_riding << ", along " << n.zipline_along_m
-                      << " of " << length << ", grounded " << n.player_grounded << ", deaths " << n.death_count
-                      << ", she " << int(s.matron_state().state) << "\n";
-        }
-        require(down && s.snapshot().death_count == 0, "matron below: down the line to 143 m");
+        require(ride_line_down(s, line), "matron below: down the line to 143 m");
         // Crouched (quiet), round 143's west band to its north band's shaft
         // edge, under her post on the deck above.
         (void)s.set_crouch_input(true);
@@ -1042,25 +1080,7 @@ void run_matron() {
                 "matron below: crouched round to 143's north edge of the shaft");
         // She bursts out, runs to where the player was then, finds nobody,
         // and goes to stand guard at her post above.
-        constexpr double kPostX = -10.3;
-        constexpr double kPostZ = -129.0;
-        bool guarding = false;
-        int was = -1;
-        for (int i = 0; i < 120 * static_cast<int>(Simulation::kTickRateHz) && !guarding; ++i) {
-            tick(s);
-            const auto m = s.matron_state();
-            guarding = m.state == kStateGuarding && std::hypot(m.position.x - kPostX, m.position.z - kPostZ) < 0.6;
-            if (std::getenv("SCRAPERX_MATRON_TRACE") != nullptr && (m.state != was || i % 450 == 0)) {
-                const auto p = s.snapshot().player_position;
-                std::cout << "    t " << i / 90.0 << " state " << int(m.state) << " at (" << m.position.x << ", "
-                          << m.position.y << ", " << m.position.z << ") floor " << m.floor_y << " lead " << m.lead_floor_y
-                          << " target (" << m.target_x << ", " << m.target_z << ") heard " << m.noise_heard
-                          << " fooled " << m.fooled << " wary " << m.wary << "; player (" << p.x << ", " << p.y
-                          << ", " << p.z << ")\n";
-                was = m.state;
-            }
-        }
-        require(guarding && s.snapshot().death_count == 0, "matron below: she stands guard at her post");
+        require(until_guarding(s, 120.0) && s.snapshot().death_count == 0, "matron below: she stands guard at her post");
         // A walk along the shaft's edge on 143, under her post: 12 m from her
         // in a straight line (in a walk's earshot), but through the deck.
         (void)s.set_crouch_input(false);
@@ -1101,7 +1121,7 @@ void run_matron() {
                     lead_floor = m.lead_floor_y;
                 }
                 frail = frail && m.turn == 0 && !m.on_line;
-                stand_off = std::hypot(m.position.x - 6.0, m.position.z - -132.36);
+                stand_off = std::hypot(m.position.x - line.stand.x, m.position.z - line.stand.z);
                 at_stand = stand_off < 0.6 && m.position.y > Matron::kDeckTop;
                 if (there) {
                     break;
@@ -1120,6 +1140,86 @@ void run_matron() {
                 "matron below: frail, she goes to the line down to 143 and stands on it");
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
+    }
+    // ---- two levels down: a sprint on the deck two under hers carries up the
+    //      shaft to her, and frail she goes to the way down toward it (the line
+    //      to the deck between) and stands on it ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron two below: settle");
+        require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+                "matron two below: a sprint toward her locker wakes her");
+        const auto first = s.zipline_line(line_from(s, Matron::kDeckTop));
+        require(walk_to(s, first.ramp_foot.x, first.ramp_foot.z, 6.0, 0.3) &&
+                    walk_to(s, first.stand.x, first.stand.z, 6.0, 0.12) && ride_line_down(s, first),
+                "matron two below: down the line from her deck to 143");
+        // Crouched, round 143's south and west bands to the line down to 132.
+        const auto second = s.zipline_line(line_from(s, 143.0));
+        (void)s.set_crouch_input(true);
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                    go(s, -Matron::kBandX, second.ramp_foot.z, false, 30.0, 0.5) &&
+                    walk_to(s, second.ramp_foot.x, second.ramp_foot.z, 10.0, 0.3),
+                "matron two below: crouched round to the line from 143 down to 132");
+        require(until_guarding(s, 120.0) && s.snapshot().death_count == 0,
+                "matron two below: she stands guard at her post");
+        (void)s.set_crouch_input(false);
+        require(walk_to(s, second.stand.x, second.stand.z, 6.0, 0.12) && ride_line_down(s, second),
+                "matron two below: down the line from 143 to 132");
+        // To 132's edge of the shaft under her post (round the line's bottom
+        // post), walking (out of her earshot two decks down), then a sprint
+        // along it.
+        const auto landed = s.snapshot().player_position;
+        bool round = true;
+        for (const auto &[x, z, seconds, tolerance] :
+             {std::array<double, 4>{landed.x, landed.z + 3.0, 6.0, 0.6},
+              std::array<double, 4>{Matron::kBandX, landed.z + 3.0, 6.0, 0.6},
+              std::array<double, 4>{Matron::kBandX, Matron::kBandNorthZ, 20.0, 0.6},
+              std::array<double, 4>{-4.0, Matron::kBandNorthZ, 20.0, 0.6}, std::array<double, 4>{-4.0, -132.6, 6.0, 0.3}}) {
+            if (round && !go(s, x, z, false, seconds, tolerance)) {
+                const auto p = s.snapshot().player_position;
+                std::cout << "  matron two below: short of (" << x << ", " << z << "), at (" << p.x << ", " << p.y << ", "
+                          << p.z << ")\n";
+                round = false;
+            }
+        }
+        require(round, "matron two below: round 132's bands to its north edge of the shaft");
+        require(s.matron_state().state == kStateGuarding && s.matron_state().noise_heard == 0.0,
+                "matron two below: a walk two decks down is not heard");
+        double heard = 0.0;
+        double lead_floor = 0.0;
+        double stand_off = 1.0e9;
+        bool at_stand = false;
+        bool frail = true;
+        for (int leg = 0; leg < 6 && !at_stand; ++leg) {
+            const double x = leg % 2 == 0 ? -16.0 : -4.0;
+            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !at_stand; ++i) {
+                const bool there = steer(s, x, -132.6, true, 0.6);
+                tick(s);
+                const auto m = s.matron_state();
+                if (m.noise_heard > 0.0 && heard == 0.0) {
+                    heard = m.noise_heard;
+                    lead_floor = m.lead_floor_y;
+                }
+                frail = frail && m.turn == 0 && !m.on_line;
+                stand_off = std::hypot(m.position.x - first.stand.x, m.position.z - first.stand.z);
+                at_stand = stand_off < 0.6 && m.position.y > Matron::kDeckTop;
+                if (there) {
+                    break;
+                }
+            }
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        const auto drawn = s.matron_state();
+        std::cout << "  matron two below: a sprint on 132 heard at loudness " << heard << ", her lead on the level at "
+                  << lead_floor << "; she at (" << drawn.position.x << ", " << drawn.position.y << ", "
+                  << drawn.position.z << "), " << stand_off << " m off her deck's line's stand, frail " << frail << "\n";
+        require(heard > 0.75 && std::abs(lead_floor - 132.0) < 0.1,
+                "matron two below: a sprint two decks down carries up the shaft to her, a lead on 132");
+        require(at_stand && frail && s.snapshot().death_count == 0,
+                "matron two below: frail, she goes to the way down toward it (her deck's line) and stands on it");
+        std::cout << "PASS scraperx_sim matron two below: sprint_heard=" << heard << " lead_floor=" << lead_floor
+                  << " stand_off_m=" << stand_off << "\n";
     }
     // ---- climbs: frail, she stands at the ladder's foot looking up; in the Turn she takes
     //      hold and comes up it after the player, and over its head onto the ring --------

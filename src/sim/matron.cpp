@@ -518,15 +518,16 @@ bool Matron::follow_line(const float dt, const RVec3 at) {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    // The line from her level down to her lead's: the one she saw taken, or
-    // the nearest.
+    // A line from her level down toward her lead's (to it, or to a level
+    // on the way): the one she saw taken, or the nearest.
     const std::vector<Zipline::Line> &lines = zipline_->lines();
     int best = -1;
     float best_d = std::numeric_limits<float>::max();
     for (std::size_t i = 0; i < lines.size(); ++i) {
         const Zipline::Line &line = lines[i];
-        if (std::abs(float(line.top_floor.GetY()) - floor_y) > 0.6F ||
-            std::abs(float(line.bottom_floor.GetY()) - lead_floor_) > 0.6F) {
+        const float bottom = float(line.bottom_floor.GetY());
+        if (std::abs(float(line.top_floor.GetY()) - floor_y) > 0.6F || bottom < lead_floor_ - 0.6F ||
+            bottom > floor_y - 0.6F) {
             continue;
         }
         const float d = static_cast<int>(i) == guess_line_
@@ -613,13 +614,14 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
-    // The climb from her level up to her lead's: the one she saw taken, or
-    // the nearest.
+    // A climb from her level up toward her lead's (to it, or to a level on
+    // the way): the one she saw taken, or the nearest.
     int best = -1;
     float best_d = std::numeric_limits<float>::max();
     for (std::size_t i = 0; i < climbs_.size(); ++i) {
         const Climb &c = climbs_[i];
-        if (std::abs(c.foot_y - level_floor) > 0.6F || std::abs(c.head_y - lead_floor_) > 0.6F) {
+        if (std::abs(c.foot_y - level_floor) > 0.6F || c.head_y > lead_floor_ + 0.6F ||
+            c.head_y < level_floor + 0.6F) {
             continue;
         }
         const float d = static_cast<int>(i) == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
@@ -1323,7 +1325,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 
 void Matron::post_step(const float dt) {
     (void)dt;
-    if (body_in_world_ && !dead_) {
+    if (body_in_world_ && !dead_ && !riding_ && !on_line_ && climb_ < 0) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         if (at.GetY() < levels_[static_cast<std::size_t>(level_)].floor_y - kFallenBelowM) {
             dead_ = true;

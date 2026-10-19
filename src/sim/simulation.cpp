@@ -912,7 +912,7 @@ Simulation::ZiplineLine Simulation::zipline_line(const std::uint32_t index) cons
     }
     const auto &line = lines[index];
     return {to_sim_vector(line.top), to_sim_vector(line.bottom), line.length, line.brake_m, line.trolley_m,
-            line.block_m, line.parked};
+            line.block_m, line.parked, to_sim_vector(line.stand), to_sim_vector(line.ramp_foot)};
 }
 
 Vector3 Simulation::zipline_bar() const noexcept {

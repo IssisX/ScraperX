@@ -26,7 +26,8 @@
 // straight line, kDeckMuffle times as far for each deck it passes through; or
 // out into the shaft, along it and in again, kBendMuffle times as far for each
 // end that is not in the shaft. Where it comes from is a lead on that level
-// (the deck under it), not hers.
+// (the deck under it), not hers; one more than a level away she goes after a
+// level at a time, by the next way toward it (a line down, a climb up).
 //
 // A catch (her hands within kCatchM of the player) is a death, restoring the
 // last checkpoint like a lethal fall. The checkpoint stops being renewed once
@@ -179,7 +180,8 @@ public:
     static constexpr float kCommitSightM = 50.0F;
     static constexpr float kEndM = 5.0F;
     static constexpr float kCommitHoldSeconds = 2.5F;
-    // Below this she is gone (fell): a fall of 12 m from the deck.
+    // Below this she is gone (fell): a fall of 12 m from the deck. Riding
+    // (a moving floor, a line's cable) or on a climb she is not falling.
     static constexpr float kFallenBelowM = 12.0F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
@@ -434,7 +436,9 @@ private:
     };
     // A climb she knows (a ladder): where she hangs on it (her middle's
     // line, on the climber's side, a node of its foot's level), the floor it
-    // stands on and the one it tops out onto, and the way off its head.
+    // stands on and the one it tops out onto, and the way off its head. (The
+    // riser from 143 to her deck is not one: its foot is on a plate out over
+    // the shaft behind 143's rail, reached only from the ladder from 132.)
     struct Climb {
         float x, z;
         float foot_y, head_y;
@@ -477,13 +481,15 @@ private:
     // Of her level's patrol loops, the one she can walk onto from here, and
     // its node nearest her.
     void pick_patrol(float ax, float az);
-    // After a lead on another level, down the line that goes there: to its
-    // stand, and in the Turn onto its cable. False when no line does.
+    // After a lead on a level below, down a line toward it (to it, or to a
+    // level between): to its stand, and in the Turn onto its cable. False
+    // when no line does.
     bool follow_line(float dt, JPH::RVec3 at);
     // On a line's cable: her drag on it, and letting go at its end.
     void ride_line();
-    // After a lead on the level above, up the climb that goes there: to its
-    // foot, and in the Turn onto it. False when no climb does.
+    // After a lead on a level above, up a climb toward it (to it, or to a
+    // level between): to its foot, and in the Turn onto it. False when no
+    // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);

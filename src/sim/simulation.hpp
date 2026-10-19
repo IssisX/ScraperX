@@ -1273,6 +1273,8 @@ public:
         double trolley_m = 0.0;   // from the top anchor
         double block_m = 0.0;
         bool parked = false;
+        Vector3 stand{};          // the stand's top, under the parked bar
+        Vector3 ramp_foot{};      // the foot of the ramp up to it
     };
     [[nodiscard]] std::uint32_t zipline_count() const noexcept;
     [[nodiscard]] ZiplineLine zipline_line(std::uint32_t index) const noexcept;
