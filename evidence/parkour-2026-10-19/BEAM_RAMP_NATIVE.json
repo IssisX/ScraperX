@@ -1,5 +1,103 @@
 {
-  "source_base": "5582917a601bce859baddcbbb81919d68a8ac2ad",
+  "source_base": "b6c6dc1efe5a72e18430873e388b2c54a8c67816",
+  "production_build": {
+    "exit": 0,
+    "commands": [
+      {
+        "name": "beam-ramp",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fno-rtti",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/include",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-loose-gangway-20261019/include",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-hall-arrival-20261018/blocked-step/source",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-landing-sound-20261018/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/simulation",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/beam_ramp_route.cpp",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/src_sim_beam_ramp_route.cpp.o"
+        ],
+        "exit": 0,
+        "source": "src/sim/beam_ramp_route.cpp",
+        "source_sha256": "93384747d5e3708d3c6033c62aad1c439668613712a04a32be4dd6886515a177"
+      },
+      {
+        "name": "world",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fno-rtti",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/include",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-loose-gangway-20261019/include",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-hall-arrival-20261018/blocked-step/source",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-landing-sound-20261018/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/simulation",
+          "-c",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation/world.cpp",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/src_sim_simulation_world.cpp.o"
+        ],
+        "exit": 0,
+        "source": "src/sim/simulation/world.cpp",
+        "source_sha256": "29516f7131b8973058f9e885b0c5d94c2a6dd4e4cf01a74cfe1ead2af1d8d6c9"
+      },
+      {
+        "name": "archive",
+        "command": [
+          "llvm-ar",
+          "rcs",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/src_sim_beam_ramp_route.cpp.o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/src_sim_simulation_world.cpp.o"
+        ],
+        "exit": 0
+      }
+    ],
+    "archive": "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a",
+    "archive_sha256": "0ec1e265a0a7e85cafec43291a1005f018a22c8edff93f3bbba41b7b389f61b2"
+  },
   "build": {
     "command": [
       "proot-distro",
@@ -35,11 +133,11 @@
       "/data/data/com.termux/files/usr/tmp/scraperx-beam-driver-20261019/route"
     ],
     "exit": 0,
-    "archive_sha256": "ac1bca41428711879301575a63eb4d70164ab44700b6c1fdccb58e80b68de13a",
+    "archive_sha256": "0ec1e265a0a7e85cafec43291a1005f018a22c8edff93f3bbba41b7b389f61b2",
     "test_sha256": "60a3ddb330482bd25c84ce4de2289f4ab8b01c43ba12aea54e379925c2f84eac"
   },
   "execution": {
-    "stage": "complete-public-route",
+    "stage": "underpass-complete-public-route",
     "command": [
       "proot-distro",
       "login",
@@ -48,21 +146,93 @@
       "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
       "--",
       "/usr/bin/timeout",
-      "240",
+      "300",
       "/data/data/com.termux/files/usr/tmp/scraperx-beam-driver-20261019/route"
     ],
     "sources": {
       "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/beam_ramp_route_tests.cpp": "60a3ddb330482bd25c84ce4de2289f4ab8b01c43ba12aea54e379925c2f84eac",
-      "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a": "ac1bca41428711879301575a63eb4d70164ab44700b6c1fdccb58e80b68de13a"
+      "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/beam_ramp_route.cpp": "93384747d5e3708d3c6033c62aad1c439668613712a04a32be4dd6886515a177",
+      "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a": "0ec1e265a0a7e85cafec43291a1005f018a22c8edff93f3bbba41b7b389f61b2"
     },
-    "started": 1792452376.110161,
-    "log": "/data/data/com.termux/files/usr/tmp/scraperx-beam-driver-20261019/beam-window.trial-6.log",
+    "started": 1792452950.3646445,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-beam-driver-20261019/beam-window.trial-7.log",
     "exit": 0,
-    "finished": 1792452508.0174353
+    "finished": 1792453078.9684498
   },
   "observed_result": "SCRAPERX_BEAM_RAMP PASS",
-  "scope": "Normal FreightYardArrival through actual forklift pickup and independent beam placement, player beam/1491 footing, onward walk and ground recovery",
-  "root_review": "Final source, compile receipt and actual trial6 output inspected; no duplicate native run",
-  "render_and_android": "Assigned to matching-source candidate CI; not proved by this native execution",
+  "affected_regression": {
+    "source_base": "b6c6dc1efe5a72e18430873e388b2c54a8c67816",
+    "source": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/upper_gallery_route_tests.cpp",
+    "source_sha256": "90eb43d7296a3e647185f52e593e1c766bda2bbbb6ec2818642d4d5d385d9eb1",
+    "archive_sha256": "0ec1e265a0a7e85cafec43291a1005f018a22c8edff93f3bbba41b7b389f61b2",
+    "reason": "New trestle blocked unchanged upper-gallery arrival; physical side openings/footings changed to preserve that established route",
+    "commands": [
+      {
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/c++",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fno-rtti",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/include",
+          "-pthread",
+          "-fPIC",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+          "-DSCRAPERX_HAS_JOLT=1",
+          "-DJPH_DEBUG_RENDERER",
+          "-DJPH_OBJECT_STREAM",
+          "-DJPH_PROFILE_ENABLED",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-loose-gangway-20261019/include",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-hall-arrival-20261018/blocked-step/source",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-landing-sound-20261018/source/src",
+          "-isystem",
+          "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+          "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/simulation",
+          "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/upper_gallery_route_tests.cpp",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a",
+          "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+          "-o",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/upper-gallery-underpass"
+        ],
+        "exit": 0
+      },
+      {
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--bind",
+          "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+          "--",
+          "/usr/bin/timeout",
+          "180",
+          "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/upper-gallery-underpass"
+        ],
+        "exit": 0,
+        "seconds": 95.70007746299962,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/upper-gallery-underpass.log"
+      }
+    ]
+  },
+  "introduced_failure": {
+    "run_id": "39341915297",
+    "source_commit": "b6c6dc1efe5a72e18430873e388b2c54a8c67816",
+    "command": "timeout 180s build/candidate-host/scraperx_upper_gallery_route_tests",
+    "output": "FAIL UPPER_GALLERY stage=arrival_stock_clearance operation=bounded route reaches stable actual footing tick=1890 p=-91.131,0.9,-43.6526",
+    "cause": "New trestle braces/footpads obstructed established standing approach",
+    "repair": "Widen post/footing spacing and keep X-side openings clear beneath unchanged deck; retain end-face braces"
+  },
+  "scope": "Normal FreightYardArrival through actual forklift pickup and independent beam placement, player beam/1491 footing, onward walk and ground recovery; unchanged complete upper-gallery route",
+  "root_review": "Final source, actual compile receipts and outputs inspected; worker native replay not duplicated",
+  "render_and_android": "Assigned to matching-source candidate CI; not proved by native execution",
   "device_play": "Not run"
 }

@@ -48,7 +48,7 @@ dunnage and lifted the truck. A low-carry shallow S maneuver and sufficient
 empty-fork clearance address those hazards through ordinary controls.
 Trial5 reached a freely resting ramp near(-93.64,1.53,-44.06), about24.6degrees,
 and withdrew the forks. Its walking approach then hit existing dunnage.
-Trial6 completed the entire public path with exit0 in131.91seconds. It
+Trial6 completed the initial public path with exit0 in131.91seconds. It
 acquired real beam2446 footing, walked to receiver1491, held actual firm
 receiver footing for90native ticks, continued across the deck, dropped to
 grade and returned to the ramp approach without a reset or death. The exact
@@ -62,4 +62,20 @@ its output. The existing rendered Main check separately stages the receiving
 deck to prove real1491 contact and capture the native-driven view. Staging
 that view does not prove pickup, transport or beam crossing.
 
-No matching beam-ramp APK or device play is claimed yet.
+Candidate39341915297 on published sourceb6c6dc1 exposed an introduced
+layout regression: the unchanged upper-gallery arrival hit the new trestle
+near(-91.131,0.9,-43.653). The deck height and footprint remain unchanged;
+post/footing spacing is widened and side diagonals are removed to preserve
+a real2.22m-high east-west standing opening. End-face diagonals remain.
+No existing route test or physics law was changed.
+
+The unchanged complete upper-gallery program now exits0 and prints
+`SCRAPERX_UPPER_GALLERY PASS perches=3 miss_recovery=1 retry=1 deaths=0
+public_input=1 no_reset=1 tick=8100`. The unchanged beam route was replayed
+because its physical receiver changed: trial7 exits0 in128.60seconds,
+including independent placement/withdrawal, actual beam/receiver footing,
+onward play and grade recovery. Exact commands and source identities are
+saved in `BEAM_RAMP_NATIVE.json`; root reused the worker's actual replay.
+
+Matching-source CI/render/Android delivery remains next. No beam-ramp APK
+or device play is claimed yet.

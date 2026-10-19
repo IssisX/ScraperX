@@ -27,14 +27,16 @@ void build_beam_ramp_route(kit::Kit &kit) {
     using namespace JPH;
     std::vector<Part> frame;
     for (float x : {-1.25F, 1.25F}) {
-        for (float z : {-.95F, .95F}) {
+        for (float z : {-1.15F, 1.15F}) {
             frame.push_back(member({.3F, .1F, .3F}, {x, .1F, z}, Material::Concrete));
             frame.push_back(member({.08F, 1.025F, .08F}, {x, 1.225F, z}, Material::Rust));
         }
-        frame.push_back(member({.10F, .08F, 1.1F}, {x, 2.3F, 0}, Material::Steel));
-        frame.push_back(brace({x, .25F, -.95F}, {x, 2.25F, .95F}));
+        frame.push_back(member({.10F, .08F, 1.3F}, {x, 2.3F, 0}, Material::Steel));
     }
-    for (float z : {-.95F, .95F}) {
+    // Preserve the established east-west yard approach beneath the deck.
+    // The two end faces carry the diagonals; side openings remain clear
+    // for the standing capsule, with 2.22m under the top rails.
+    for (float z : {-1.15F, 1.15F}) {
         frame.push_back(member({1.4F, .08F, .10F}, {0, 2.3F, z}, Material::Steel));
         frame.push_back(brace({-1.25F, .25F, z}, {1.25F, 2.25F, z}));
     }
