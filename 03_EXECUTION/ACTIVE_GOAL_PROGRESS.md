@@ -1451,6 +1451,8 @@ Tools that work in this container:
   no variable (about 25 minutes, 135+ passes), only when a change reaches widely: CI runs it on every
   push, and the owner wants no redundant runs.
 - One touch playthrough: `tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=touch_wet`.
+  Run only the playthroughs a change touches; never CI's list, or the rest of it, wholesale (CI
+  plays them all on every push). The climber's fall voice is finished: leave it and its test alone.
 - Pictures from a scenario: start `Xvfb :0 -screen 0 1296x1114x24 &`, then
   `DISPLAY=:0 tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 -- --uitest=look_matron_gallery --capture=<dir>/<prefix>`
   (each `_pose("name")` in the scenario writes a PNG). For a touch playthrough's pictures, add
