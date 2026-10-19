@@ -233,6 +233,23 @@
   },
   "scope": "Normal FreightYardArrival through actual forklift pickup and independent beam placement, player beam/1491 footing, onward walk and ground recovery; unchanged complete upper-gallery route",
   "root_review": "Final source, actual compile receipts and outputs inspected; worker native replay not duplicated",
-  "render_and_android": "Assigned to matching-source candidate CI; not proved by native execution",
-  "device_play": "Not run"
+  "render_and_android": "Exact-source candidate39342866519 completed success; matching signed APK collected/published by ordinary workers.",
+  "device_play": "Not run",
+  "exact_source_ci": {
+    "source_commit": "d90ef067112fbb17244f92d9c2e2963716b9f4ab",
+    "run_id": "39342866519",
+    "conclusion": "success",
+    "native_command": "timeout 180s build/candidate-host/scraperx_beam_ramp_route_tests",
+    "native_output": "SCRAPERX_BEAM_RAMP PASS normal arrival, ordinary600kg pickup, low transport, settled ramp, fork withdrawal, actual beam/trestle footing, onward walk and grade recovery",
+    "render_command": "timeout 90s xvfb-run -a -s \"-screen 0 960x540x24\" tools/godot/godot --path godot --audio-driver Dummy --rendering-method gl_compatibility --resolution 960x540 res://tests/loose_gangway_view_test.tscn -- --quit-after-loose-gangway-check --capture-dir=${GITHUB_WORKSPACE}/artifacts/loose-gangway",
+    "render_output": "SCRAPERX_LOOSE_GANGWAY_VIEW PASS checks=29 failures=0 staged_initial_footing=1 staged_beam_landing=1",
+    "capture": "loose-gangway/beam-landing.png inspected by root; receiver view staged, no claim this capture proves full beam placement",
+    "version_code": 214616926,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-d90ef06/ScraperX-ChatGPT.apk",
+    "local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-d90ef06.apk",
+    "bytes": 36996177,
+    "receipt_owner": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-d90ef06",
+    "full_suite": "Separate full-source workflow still pending at handoff",
+    "phone_play": "Not run"
+  }
 }

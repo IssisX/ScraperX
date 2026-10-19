@@ -77,5 +77,21 @@ including independent placement/withdrawal, actual beam/receiver footing,
 onward play and grade recovery. Exact commands and source identities are
 saved in `BEAM_RAMP_NATIVE.json`; root reused the worker's actual replay.
 
-Matching-source CI/render/Android delivery remains next. No beam-ramp APK
-or device play is claimed yet.
+Published repair source `d90ef067112fbb17244f92d9c2e2963716b9f4ab` was
+actually pushed to GitHub ChatGPT. Candidate39342866519 completedGREEN,
+including the unchanged upper-gallery regression, complete native beam
+route and29 rendered Main checks. Root inspected the actual command outputs
+and captured receiving-deck view. That view stages receiver footing; the
+separate public native program proves the complete beam route.
+
+Signed build214616926 is available at
+https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-d90ef06/ScraperX-ChatGPT.apk
+and `/storage/emulated/0/Download/ScraperX-ChatGPT-d90ef06.apk`.
+Only the APK was copied to Download. Ordinary worker receipts/artifacts are
+under `/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-d90ef06`.
+No local APK re-audit duplicated the CI producer checks.
+
+The optional local MCP launch on the new isolated project was rejected with
+approval-policy-never. No safeguards changed and no local beam MCP-runtime
+pass is claimed; the matching CI render supplied the observable result.
+Separate full-source workflow acceptance and phone play remain unclaimed.
