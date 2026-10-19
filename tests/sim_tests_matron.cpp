@@ -255,6 +255,65 @@ std::uint32_t line_from(const Simulation &s, const double floor) {
 
 } // namespace
 
+// Her body is not a blow (the owner, 2026-10-19: no death colliding with her
+// at full speed): a sprint head-on into her as she comes, closing far past a
+// lethal hit's speed, is no death; her hands decide, a pest's shove.
+void run_matron_collision() {
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(1.0).accepted, "matron collision: settle");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron collision: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, -12.0, Matron::kBandNorthZ, false, 30.0, 0.3), "matron collision: back west along the band, crouched");
+    (void)s.set_crouch_input(false);
+    stand_still(s, 0.2);
+    require(wait_for_her(s, 18.0, 60.0), "matron collision: out, she comes along the band");
+    // Her hands held off, so it is her body the sprint meets (a shove would
+    // throw the climber back first: her hands reach 0.85 m, her body 0.65 m).
+    s.debug_hold_matron_hands(4.0);
+    const auto deaths = s.snapshot().death_count;
+    constexpr double kLethalHitMps = 10.0;   // kHitLethalSpeed
+    const double hz = static_cast<double>(Simulation::kTickRateHz);
+    auto last = s.matron_state().position;
+    double closing_peak = 0.0;
+    double nearest = 1.0e9;
+    int after_contact = -1;
+    for (int i = 0; i < 6 * static_cast<int>(Simulation::kTickRateHz) && after_contact < static_cast<int>(hz); ++i) {
+        const auto her = s.matron_state().position;
+        (void)steer(s, her.x, her.z, true, 0.0);
+        tick(s);
+        const auto m = s.matron_state();
+        const auto p = s.snapshot();
+        const double dx = m.position.x - p.player_position.x;
+        const double dz = m.position.z - p.player_position.z;
+        const double d = std::hypot(dx, dz);
+        if (after_contact < 0 && d < 1.5) {
+            // Closing speed along the line between them, his velocity less hers.
+            const double vx = p.player_linear_velocity.x - (m.position.x - last.x) * hz;
+            const double vz = p.player_linear_velocity.z - (m.position.z - last.z) * hz;
+            closing_peak = std::max(closing_peak, (vx * dx + vz * dz) / std::max(d, 1.0e-3));
+        }
+        last = m.position;
+        nearest = std::min(nearest, d);
+        if (after_contact < 0 && (d < 0.7 || p.death_count != deaths)) {
+            after_contact = 0;
+        } else if (after_contact >= 0) {
+            ++after_contact;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    const auto m = s.matron_state();
+    std::cout << "  matron collision: closing " << closing_peak << " m/s at contact, nearest " << nearest
+              << " m, shoves " << m.shoves << ", deaths " << s.snapshot().death_count - deaths << ", stage "
+              << static_cast<int>(m.stage) << "\n";
+    require(after_contact >= 0 && closing_peak > kLethalHitMps,
+            "matron collision: the sprint met her head-on, closing past a lethal hit's speed");
+    require(s.snapshot().death_count == deaths && m.stage == 0 && m.shoves == 0,
+            "matron collision: running into her body, a pest, at full speed is no death");
+    std::cout << "PASS scraperx_sim matron collision: closing_mps=" << closing_peak << " shoves=" << m.shoves << "\n";
+}
+
 // A pest's mischief: the player's toolbox taken and thrown, or carried off.
 void run_matron_mischief() {
     // ---- a pest's mischief (the owner, 2026-10-19): a toolbox the player has
@@ -1312,6 +1371,7 @@ void run_matron() {
                   << after.player_position.z - before.player_position.z << "\n";
     }
     run_matron_mischief();
+    run_matron_collision();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

@@ -510,6 +510,9 @@ public:
     [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     void set_stage_for_test(Stage stage) noexcept;
+    // Tests only: her hands held off the player for `seconds` (no shove), so
+    // a test can meet her body alone.
+    void hold_hands_for_test(const float seconds) noexcept { shove_cooldown_s_ = seconds; }
     [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_, handled_}; }
     void restore(const Saved &saved);
 

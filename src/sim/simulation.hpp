@@ -1243,6 +1243,9 @@ public:
     // Tests only (never bound to the bridge): the Matron's stage, with the
     // rage it takes, so a test can meet what each stage does to the player.
     void debug_set_matron_stage(std::uint8_t stage) noexcept;
+    // Tests only (never bound to the bridge): her hands held off the player
+    // for `seconds`, so a test can meet her body alone.
+    void debug_hold_matron_hands(double seconds) noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

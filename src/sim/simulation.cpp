@@ -964,6 +964,10 @@ void Simulation::debug_set_matron_stage(const std::uint8_t stage) noexcept {
     physics_world_->matron().set_stage_for_test(static_cast<Matron::Stage>(std::min<std::uint8_t>(stage, 2)));
 }
 
+void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
+    physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();
