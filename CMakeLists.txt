@@ -57,6 +57,7 @@ add_library(scraperx_sim STATIC
     src/sim/parkour_route.cpp
     src/sim/ground_swing_route.cpp
     src/sim/loose_gangway_route.cpp
+    src/sim/beam_ramp_route.cpp
     src/sim/workshop_roof_route.cpp
     src/sim/vault_rail_route.cpp
     src/sim/physical_hand_prop.cpp
@@ -252,6 +253,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_loose_gangway_route_tests tests/loose_gangway_route_tests.cpp)
     target_link_libraries(scraperx_loose_gangway_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.loose_gangway_route COMMAND scraperx_loose_gangway_route_tests)
+
+    add_executable(scraperx_beam_ramp_route_tests tests/beam_ramp_route_tests.cpp)
+    target_link_libraries(scraperx_beam_ramp_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.beam_ramp_route COMMAND scraperx_beam_ramp_route_tests)
 
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)

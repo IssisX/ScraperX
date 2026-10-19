@@ -1,7 +1,7 @@
 extends Node
 
-# Only initial grade footing is staged. The native public-route program
-# separately proves approach, placement, crossing and onward play.
+# Initial grade footing and the separate beam-landing view are staged.
+# Native public-route programs prove approach, placement and crossing.
 const STEP := 1.0 / 90.0
 var main: Node
 var native: Object
@@ -101,12 +101,32 @@ func _run() -> void:
 		check(picture != null and not picture.is_empty(), "actual rendered gangway view")
 		if picture != null and not picture.is_empty():
 			check(picture.save_png(capture_dir.path_join("loose-gangway.png")) == OK, "save actual view")
+	main._router.clear_held()
+	main._yaw = PI / 2.0
+	main._pitch = -0.4
+	check(native.debug_restart_at(Vector3(-89.5, 3.3, -44)), "stage separate beam-landing view")
+	step(45)
+	check(native.is_player_grounded() and native.get_support_entity_id() == 1491,
+		"new beam landing supplies actual native footing")
+	var landing: Node3D = main._kit_view.get_node_or_null("KitBody1491")
+	check(landing != null, "receiving trestle appears in shipping view")
+	if landing != null:
+		var landing_index: int = native.get_kit_body_index(1491)
+		check(landing.transform.is_equal_approx(native.get_kit_body_render_transform(landing_index)),
+			"receiving trestle view follows native geometry")
+	if not capture_dir.is_empty() and DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+		var landing_picture := get_viewport().get_texture().get_image()
+		check(landing_picture != null and not landing_picture.is_empty(), "actual rendered beam landing")
+		if landing_picture != null and not landing_picture.is_empty():
+			check(landing_picture.save_png(capture_dir.path_join("beam-landing.png")) == OK,
+				"save beam landing view")
 	_finish()
 
 
 func _finish() -> void:
 	finished = true
-	print("SCRAPERX_LOOSE_GANGWAY_VIEW %s checks=%d failures=%d staged_initial_footing=1" % [
+	print("SCRAPERX_LOOSE_GANGWAY_VIEW %s checks=%d failures=%d staged_initial_footing=1 staged_beam_landing=1" % [
 		"PASS" if failures == 0 else "FAIL", checks, failures])
 	if "--quit-after-loose-gangway-check" in OS.get_cmdline_user_args():
 		get_tree().quit(1 if failures else 0)

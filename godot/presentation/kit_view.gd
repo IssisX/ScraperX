@@ -796,6 +796,11 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
 			_junction_stencil(node, "RECEIVING", Vector3(3.1, 0.362, -1.65),
 				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
+		elif entity == 1491:
+			_junction_stencil(node, "MAKE A RAMP\nLIFT THE YARD BEAM", Vector3(-1.5, 0.003, -3.0),
+				0.006, Vector3(-PI / 2.0, 0, 0), Color("d6b45f"))
+			_junction_stencil(node, "BEAM LANDING\nLIFT · PLACE · CLIMB", Vector3(0, 2.402, 0),
+				0.005, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
 		elif entity == 2490:
 			_junction_stencil(node, "GRIP", Vector3(0, 0.079, 0),
 				0.004, Vector3(-PI / 2.0, 0, 0), Color("e2cc8d"))

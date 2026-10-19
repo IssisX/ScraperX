@@ -2,6 +2,7 @@
 #include "sim/workshop_roof_route.hpp"
 #include "sim/vault_rail_route.hpp"
 #include "sim/loose_gangway_route.hpp"
+#include "sim/beam_ramp_route.hpp"
 
 namespace scraperx::sim {
 using namespace detail;
@@ -253,6 +254,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         build_vault_rail_route(*kit_);
         build_ground_swing_route(*kit_);
         build_loose_gangway_route(*kit_);
+        build_beam_ramp_route(*kit_);
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());

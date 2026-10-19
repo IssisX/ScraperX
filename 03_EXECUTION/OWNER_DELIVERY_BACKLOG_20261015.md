@@ -6,6 +6,8 @@ Owner work window: up to5hours from the fixed start/deadline in `OWNER_WORK_WIND
 
 ## Execution order and honest current state
 
+Current owner priority2026-10-19 is player-built loose-object routes, stated in the active section below. The numbered2026-10-17 queue that follows is retained history; it must not restart closed lag/compatibility/catch work or block the current game implementation.
+
 1. **Restore playable speed and usable controls, then deliver the matching APK.** The owner reports severe lag throughout play on a Fold6 at LOW and supplied a screenshot of controls covering the forklift windshield. These block enjoying the game and outrank optional expansion. Source `1338fb41ff99e6f1a686c33f0f6c289d05dab91b` is actually published: controls are grouped at the edges; a scoped native idle-physics correction preserves physical laws and quality. Host mean native step time improved 9.49294→7.38421 ms in the recorded paired run; this is not evidence of phone FPS. Required release acceptance and actual phone responsiveness remain open. Finish this result before opening another feature.
 2. **Continue the remaining parkour/climbing phases once the playability delivery permits it.** The bounded held-inward top-out is accepted natively; predictive/degraded/moving/material/corner transfers and the rest of phases2–8 remain. Selected ground forklift handling, original-fork exchange and first11m crane transfer are already completed slices, not the next assignment. Preserve their evidence and the pending higher freight/modular tools.
 3. **Expand purposeful ground/ring/rooftop places, atmosphere and living industrial motion** with connected approach, interaction, onward play and recovery. No randomized filler or more large-wheel gameplay.

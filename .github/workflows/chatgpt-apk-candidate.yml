@@ -229,6 +229,14 @@ jobs:
           2>&1 | tee artifacts/loose-gangway-view.log
         grep -F 'SCRAPERX_LOOSE_GANGWAY_VIEW PASS' artifacts/loose-gangway-view.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/loose-gangway-view.log; then exit 1; fi
+    - name: Check forklift-built beam ramp and independent load support
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host --target scraperx_beam_ramp_route_tests --parallel 2
+        timeout 180s build/candidate-host/scraperx_beam_ramp_route_tests \
+          2>&1 | tee artifacts/beam-ramp-native.log
+        grep -F 'SCRAPERX_BEAM_RAMP PASS' artifacts/beam-ramp-native.log
     - name: Check upper-gallery collision and controls in the shipping view
       shell: bash
       run: |
@@ -421,6 +429,7 @@ jobs:
           artifacts/loose-gangway-native.log
           artifacts/loose-gangway-view.log
           artifacts/loose-gangway/
+          artifacts/beam-ramp-native.log
           artifacts/upper-gallery/
         if-no-files-found: error
         retention-days: 30

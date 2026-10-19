@@ -66,7 +66,10 @@ Local command/result receipts are in
   `MCP tool call requires approval, but approval policy is never`. No security
   setting was changed. The screenshot with3D still disabled is not visual
   evidence. The candidate workflow renders/captures the actual interaction.
-  Runtime cleanup remains explicitly pending until a supported stop succeeds.
+  Authorized, narrowly scoped process cleanup subsequently verified the exact
+  owned Godot executable/project/PID26633 and sent SIGTERM. The receipt
+  `runtime-cleanup.json` records `process_gone=true`; MCP stop itself did not
+  succeed.
 
 ## Causal decisions retained
 
@@ -82,5 +85,17 @@ the same persistent mechanics/encounter windows.
 
 The candidate workflow now builds/runs both new native programs and the
 rendered Main interaction before APK acceptance. Existing gates remain.
-Publication, terminal CI result and the matching APK are pending at this
-source boundary. Phone feel and performance require playing that APK.
+Published source `5582917a601bce859baddcbbb81919d68a8ac2ad` was actually pushed
+to GitHub `ChatGPT`. Candidate run39339485700 completed successfully. Its
+native route command printed `SCRAPERX_LOOSE_GANGWAY PASS` with341 real
+board-footing ticks, onward/ground recovery, zero resets and zero deaths.
+The rendered Main command printed `SCRAPERX_LOOSE_GANGWAY_VIEW PASS checks=21
+failures=0`; its captured gangway interaction was inspected.
+
+The signed build214615099 is available at
+https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-5582917/ScraperX-ChatGPT.apk
+and `/storage/emulated/0/Download/ScraperX-ChatGPT-5582917.apk`.
+Command/output logs, capture and delivery receipts are collected under
+`/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-5582917`.
+Separate full run39339485681 remains a distinct result. Phone feel and
+performance require playing that APK.
