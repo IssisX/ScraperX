@@ -912,7 +912,59 @@ void Matron::step_turn(const float dt, const float distance_to_player, const flo
     if (turn_s_ >= kTurnWindupSeconds + kTurnLungeSeconds) {
         turn_ = Turn::None;
         turn_s_ = 0.0F;
-        turn_cooldown_s_ = kTurnCooldownSeconds;
+        turn_cooldown_s_ = turn_cooldown_seconds();
+    }
+}
+
+// Her rage (matron.hpp, the stages): fed by this tick's level at her ear,
+// and by how much that level jumped (a landing, a crash: one tick's sound
+// would otherwise count for nothing), lowered by every quiet second. The
+// stage follows it with a gap between its way up and its way down. Her
+// exposure: her time out of the locker, alive.
+void Matron::step_rage(const float dt) {
+    if (state_ == State::Dormant || dead_) {
+        heard_level_last_ = 0.0F;
+        return;
+    }
+    const bool out = state_ != State::Straining;
+    if (out) {
+        exposure_s_ += dt;
+    }
+    const float spike = std::max(0.0F, heard_level_ - heard_level_last_);
+    heard_level_last_ = heard_level_;
+    rage_ = std::clamp(rage_ + heard_level_ * kRageGainPerSecond * dt + spike * kRagePerSpike -
+                           kRageDecayPerSecond * dt,
+                       0.0F, 1.0F);
+    switch (stage_) {
+    case Stage::Pest:
+        if (rage_ >= kRageDangerousUp) {
+            stage_ = Stage::Dangerous;
+        }
+        break;
+    case Stage::Dangerous:
+        if (rage_ >= kRageChangedUp) {
+            stage_ = Stage::Changed;
+        } else if (rage_ < kRageDangerousDown) {
+            stage_ = Stage::Pest;
+        }
+        break;
+    case Stage::Changed:
+        if (rage_ < kRageChangedDown) {
+            stage_ = Stage::Dangerous;
+        }
+        break;
+    }
+}
+
+float Matron::turn_cooldown_seconds() const noexcept {
+    switch (stage_) {
+    case Stage::Pest:
+        return kTurnCooldownPestSeconds;
+    case Stage::Changed:
+        return kTurnCooldownChangedSeconds;
+    case Stage::Dangerous:
+    default:
+        return kTurnCooldownSeconds;
     }
 }
 
@@ -990,6 +1042,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     sees_player_ = false;
     sees_far_ = false;
     noise_heard_ = 0.0F;
+    heard_level_ = 0.0F;
     if (dead_) {
         return;
     }
@@ -1021,9 +1074,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // locker while she sleeps, her body awake): not her own, carried within
     // `within` and within its own reach. Her lead goes to the level it is on.
     const RVec3 body_at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : RVec3::sZero();
+    float picked_level = 0.0F;   // the picked sound's level at her ear, 0..1
     const auto pick = [&](const RVec3 ear, const float within) {
         Sound best{};
         float best_share = 0.0F;
+        picked_level = 0.0F;
         for (std::size_t i = 0; i < sound_count; ++i) {
             const Sound &s = sounds_[i];
             const RVec3 at(s.x, s.y, s.z);
@@ -1045,6 +1100,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             if (!best.heard || share > best_share) {
                 best = s;
                 best_share = share;
+                picked_level = s.loudness * std::max(0.0F, 1.0F - carried / std::max(reach, 0.1F));
             }
         }
         return best;
@@ -1114,6 +1170,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // A sound louder at her ear than the player draws her to it instead.
         const Sound crash = pick(at, std::numeric_limits<float>::max());
         const bool crash_heard = crash.heard;
+        // The level at her ear this tick, for her rage: the louder there of
+        // the player and the picked sound.
+        heard_level_ = std::max(
+            crash_heard ? picked_level : 0.0F,
+            heard ? loudness * std::max(0.0F, 1.0F - player_carry / std::max(loudness * kFullHearingM, 0.1F)) : 0.0F);
         const float player_floor = floor_of(float(player.GetY()));
         if (saw) {
             // In sight: no doubt where the player is.
@@ -1371,6 +1432,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Dead:
         break;
     }
+    step_rage(dt);
 }
 
 void Matron::post_step(const float dt) {
@@ -1403,6 +1465,11 @@ void Matron::restore(const Saved &saved) {
         remove_body();
         state_ = saved.state;
         strain_s_ = saved.strain_s;
+        rage_ = saved.rage;
+        stage_ = saved.stage;
+        exposure_s_ = saved.exposure_s;
+        heard_level_ = 0.0F;
+        heard_level_last_ = 0.0F;
         speed_ = 0.0F;
         since_heard_s_ = 0.0F;
         turn_ = Turn::None;
@@ -1468,6 +1535,9 @@ void Matron::refresh_view() {
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.lead_floor_y = lead_floor_;
+    view_.rage = rage_;
+    view_.stage = stage_;
+    view_.exposure = std::min(1.0F, exposure_s_ / kExposureFullSeconds);
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;

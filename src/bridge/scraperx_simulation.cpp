@@ -1577,6 +1577,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["clinging"] = state.clinging;
     out["floor_y"] = state.floor_y;
     out["lead_floor_y"] = state.lead_floor_y;
+    out["rage"] = state.rage;
+    out["stage"] = static_cast<std::int64_t>(state.stage);
+    out["exposure"] = state.exposure;
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;

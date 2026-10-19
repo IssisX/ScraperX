@@ -1056,9 +1056,15 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		var volume := lerpf(-4.0, -42.0, clampf(d / HEARD_MUSIC_M, 0.0, 1.0))
 		var pitch := lerpf(0.84, 1.0, clampf(d / 30.0, 0.0, 1.0))
 		var turn := int(data.get("turn", 0))
-		if turn > 0:
-			# The music box warps and stutters while she is broken.
+		var stage := int(data.get("stage", 0))
+		if turn > 0 or stage >= 2:
+			# The music box warps and stutters while she is broken: in the
+			# Turn, and all the while once she is fully changed.
 			pitch = 0.55 + 0.25 * _hash(int(floorf(_clock * 12.0)))
+		elif stage == 1:
+			# Dangerous, it runs fast and a shade off, wound too tight: one
+			# of the ways the player reads her stage, never told it.
+			pitch *= 1.08
 		# At her post the music box is still: she is only seen, or heard
 		# breathing from close by.
 		var still_on_post := state == STATE_GUARDING and float(data["speed"]) < 0.3

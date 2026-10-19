@@ -294,6 +294,32 @@ public:
     static constexpr float kTurnPauseMps = 3.5F;
     static constexpr float kTurnFootAccel = 70.0F;
 
+    // Her stages (the owner, 2026-10-19): a pest, dangerous, and fully
+    // changed. Her rage moves her between them, both ways: only sound that
+    // reaches her ear feeds it (by its level there: the sound's loudness,
+    // less the way it carried over its reach), quiet lowers it, and no floor
+    // rises with time, so a silent climber keeps her a pest. A stage is left
+    // at a lower rage than it was entered at, so she never flickers on a
+    // threshold. Nothing of it is drawn: the player reads her. The numbers
+    // are CHOSEN and will be tuned once she follows up the tower: a sprint
+    // beside her for half a minute makes her dangerous; a quiet two minutes
+    // drop her a stage. A death's checkpoint keeps her rage with her state.
+    enum class Stage : std::uint8_t { Pest = 0, Dangerous = 1, Changed = 2 };
+    static constexpr float kRageGainPerSecond = 0.02F;    // per unit of level at her ear
+    static constexpr float kRagePerSpike = 0.04F;         // per unit the level jumps by: a landing, a crash
+    static constexpr float kRageDecayPerSecond = 0.0015F;
+    static constexpr float kRageDangerousUp = 0.45F;
+    static constexpr float kRageDangerousDown = 0.30F;
+    static constexpr float kRageChangedUp = 0.85F;
+    static constexpr float kRageChangedDown = 0.65F;
+    // What the stages change today: how soon the Turn can come again. A
+    // pest hardly ever snaps; fully changed, she hardly stops.
+    static constexpr float kTurnCooldownPestSeconds = 45.0F;
+    static constexpr float kTurnCooldownChangedSeconds = 4.0F;
+    // Her look follows the exposure, one way: how long she has been out,
+    // over this, is how far the source's work shows on her.
+    static constexpr float kExposureFullSeconds = 600.0F;
+
     struct PlankView {
         float x = 0.0F, y = 0.0F, z = 0.0F;
         float qx = 0.0F, qy = 0.0F, qz = 0.0F, qw = 1.0F;
@@ -329,6 +355,9 @@ public:
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
+        float rage = 0.0F;          // 0..1: fed by sound at her ear, lowered by quiet
+        Stage stage = Stage::Pest;
+        float exposure = 0.0F;      // 0..1: how far the source's work shows, by her time out
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -336,6 +365,9 @@ public:
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
+        float rage = 0.0F;
+        Stage stage = Stage::Pest;
+        float exposure_s = 0.0F;
     };
 
     Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer, JPH::BodyID player);
@@ -396,7 +428,7 @@ public:
         return edge;
     }
     void count_catch() noexcept { ++catches_; }
-    [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_}; }
+    [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_}; }
     void restore(const Saved &saved);
 
     [[nodiscard]] const View &view() const noexcept { return view_; }
@@ -508,6 +540,9 @@ private:
     // The Turn's clock: `distance_to_player` across, `carried_m` how far the
     // player's noise carried to her.
     void step_turn(float dt, float distance_to_player, float loudness, float carried_m);
+    // Her rage and stage, from the level at her ear this tick; her exposure.
+    void step_rage(float dt);
+    [[nodiscard]] float turn_cooldown_seconds() const noexcept;
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();
@@ -545,6 +580,11 @@ private:
     float turn_s_ = 0.0F;
     float turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
     float sight_far_s_ = 0.0F;
+    float rage_ = 0.0F;
+    Stage stage_ = Stage::Pest;
+    float exposure_s_ = 0.0F;         // seconds out of her locker, alive
+    float heard_level_ = 0.0F;        // this tick's loudest sound at her ear, 0..1
+    float heard_level_last_ = 0.0F;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
     struct Sound {

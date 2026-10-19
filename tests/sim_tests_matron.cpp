@@ -1141,6 +1141,74 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
     }
+    // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
+    //      moves her up a stage; quiet moves her back down, and not before her
+    //      rage is well under the mark it rose past ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron rage: settle");
+        require(s.matron_state().rage == 0.0 && s.matron_state().stage == 0, "matron rage: asleep, she has none");
+        require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+                "matron rage: a sprint toward her locker wakes her");
+        const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+        require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) &&
+                    walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12) && ride_line_down(s, line),
+                "matron rage: down the line to 143 m while she strains");
+        (void)s.set_crouch_input(true);
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                    go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) &&
+                    go(s, -16.0, -132.6, false, 20.0, 0.3),
+                "matron rage: crouched round to 143's north edge of the shaft");
+        require(until_guarding(s, 120.0) && s.snapshot().death_count == 0, "matron rage: she stands guard at her post");
+        const auto guarding = s.matron_state();
+        require(guarding.stage == 0 && guarding.rage < Matron::kRageDangerousUp,
+                "matron rage: out and guarding, she is a pest");
+        // Sprints back and forth along 143's shaft edge under her post: heard
+        // up the shaft pass after pass, where she cannot reach the player.
+        (void)s.set_crouch_input(false);
+        double sprint_s = 0.0;
+        for (int leg = 0; leg < 40 && s.matron_state().stage == 0; ++leg) {
+            const double x = leg % 2 == 0 ? -4.0 : -16.0;
+            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+                const bool there = steer(s, x, -132.6, true, 0.6);
+                tick(s);
+                sprint_s += 1.0 / static_cast<double>(Simulation::kTickRateHz);
+                if (there || s.matron_state().stage != 0) {
+                    break;
+                }
+            }
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        const auto dangerous = s.matron_state();
+        std::cout << "  matron rage: " << sprint_s << " s of sprinting under her took her rage from " << guarding.rage
+                  << " to " << dangerous.rage << ", stage " << static_cast<int>(dangerous.stage) << "\n";
+        require(dangerous.stage == 1 && dangerous.rage >= Matron::kRageDangerousUp && s.snapshot().death_count == 0,
+                "matron rage: a stretch of sprinting under her makes her dangerous");
+        require(sprint_s > 15.0 && sprint_s < 150.0, "matron rage: it takes a stretch of noise, not a footfall and not an age");
+        // Quiet: crouched and still. Her rage falls; she stays dangerous while
+        // it is above the lower mark, and is a pest again once under it.
+        (void)s.set_crouch_input(true);
+        bool held = true;
+        double pest_after_s = -1.0;
+        double rage_at_pest = 0.0;
+        for (int i = 0; i < 400 * static_cast<int>(Simulation::kTickRateHz) && pest_after_s < 0.0; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            if (m.rage >= Matron::kRageDangerousDown && m.stage != 1) {
+                held = false;
+            }
+            if (m.stage == 0) {
+                pest_after_s = i / static_cast<double>(Simulation::kTickRateHz);
+                rage_at_pest = m.rage;
+            }
+        }
+        std::cout << "  matron rage: quiet, a pest again after " << pest_after_s << " s, at rage " << rage_at_pest << "\n";
+        require(pest_after_s > 30.0 && held && rage_at_pest < Matron::kRageDangerousDown && s.snapshot().death_count == 0,
+                "matron rage: a quiet stretch drops her back to a pest, and not before her rage is under the lower mark");
+        std::cout << "PASS scraperx_sim matron rage: sprint_s=" << sprint_s << " peak=" << dangerous.rage
+                  << " pest_after_s=" << pest_after_s << "\n";
+    }
     // ---- two levels down: a sprint on the deck two under hers carries up the
     //      shaft to her, and frail she goes to the way down toward it (the line
     //      to the deck between) and stands on it ----
@@ -1408,9 +1476,9 @@ void run_matron() {
             (void)wait_for_her(s, 14.0, 40.0);
             const auto crossed = sprint_across(s, true);
             const auto p = s.snapshot().player_position;
-            return std::array<double, 6>{crossed.end.position.x, crossed.end.position.z,
+            return std::array<double, 7>{crossed.end.position.x, crossed.end.position.z,
                                          static_cast<double>(crossed.end.planks_fallen), p.x, p.z,
-                                         static_cast<double>(s.snapshot().death_count)};
+                                         static_cast<double>(s.snapshot().death_count), crossed.end.rage};
         };
         const auto a = run();
         const auto b = run();

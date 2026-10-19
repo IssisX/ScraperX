@@ -1404,6 +1404,33 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The Matron's rage and her three stages (2026-10-19; the spine's build order 1).** She has a
+rage now, one number in the simulation, 0 to 1, that only sound reaching her ear feeds: each tick
+the louder at her ear of the player and the sounds that carry to her (a sound's loudness less the
+way it carried, over its reach) adds to it at 0.02 a second per unit, a jump in that level (a
+landing, a crash, one tick's sound that would otherwise count for nothing) adds 0.04 per unit
+jumped, and every second takes 0.0015 off. Her stage follows it both ways with a gap between the
+way up and the way down: a pest until 0.45, dangerous above it and back to a pest under 0.30, fully
+changed above 0.85 and back to dangerous under 0.65. No floor rises with time: a silent climber
+keeps her a pest (the owner's choice). What the stages change today is how soon the Turn can come
+again: a pest hardly ever snaps (45 s between), dangerous as before (18 s), fully changed she hardly
+stops (4 s). Her exposure, how long she has been out of the locker, is kept for her look, which will
+only worsen (0 to 1 over ten minutes). A death's checkpoint keeps her rage, stage and exposure with
+her state, so a death takes her rage back to what it was there; a load of a saved climb still finds
+her asleep (she was never in the disk save). The presentation reads `rage`, `stage` and `exposure`
+in her state; nothing is drawn, as the owner wants: dangerous, the music box runs a shade fast
+(pitch up 8%), and fully changed it warps and stutters all the while, as it did only in the Turn.
+The numbers are CHOSEN and will be tuned once she follows up the tower (build order 2). Proof:
+native `matron` (new "rage": asleep she has none; out and guarding, a pest; 28.7 s of the player
+sprinting on the deck under her post, heard up the shaft where she cannot reach, takes her rage
+from 0 to 0.45 and makes her dangerous; crouched and still, she is a pest again after 101 s, at
+0.30, and never before her rage is under the lower mark; the Turn, the ride, the lines, the climbs,
+the mind, the crash, two below, no way, beside as before; the identical-chases check now compares
+her rage too), `determinism`, `save`, `corpse`, `stock`; `touch_matron`, `touch_matron_ride`.
+Next in the goal (the owner, 2026-10-19: her first act, 154 to 220 m, readable as a character): her
+look by exposure and stage, her sounds by stage, what each stage does to the player's work, and the
+foreman's first radio lines as captions.
+
 **Stage D started by its own spool (2026-10-19; to-do 5, the first above 220 m).** D was the
 first stage above 220 m still started by a pull: with the spool seated on the ring, a hanging handle
 on the platform threw the fill valve's bar (rule 11). The valve is gone. The fill line now turns
@@ -1739,7 +1766,8 @@ fill in after).**
    on its brake's trip line). Next: D to O (all but N), each its own way.
 6. The Matron's AI (she uses the lifts, ziplines and moves, and carries and throws stock (the
    owner, 2026-10-19); not the forklift) and
-   her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
+   her extras; her mind decided 2026-10-18 (decision 9: A + B + C). Her rage and three stages:
+   done 2026-10-19 (sound at her ear, both ways, no floor; the Turn's return by stage). On her deck: done
    2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Off
    it: done 2026-10-18 for Stage A's cage to the 176 ring (she rides it with you, clinging,
    hunts the ring, leaps its gap in the Turn). Meddling: done 2026-10-18 for a rig left

@@ -213,6 +213,11 @@ struct MatronSnapshot final {
     bool clinging = false;
     double floor_y = 154.0;
     double lead_floor_y = 154.0;   // the level of her lead: its floor's top
+    // Her stages (matron.hpp): her rage, 0..1, the stage it has her in (0 a
+    // pest, 1 dangerous, 2 fully changed), and her exposure, 0..1.
+    double rage = 0.0;
+    std::uint8_t stage = 0;
+    double exposure = 0.0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
