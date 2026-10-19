@@ -191,9 +191,8 @@ func _act_asleep(device: int) -> bool:
 	if not await _act_creep_to(device, ACT_TOOLBOX_PICK, 0.08, 10.0, 0.5):
 		return _fail("the walk to the toolbox stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
-	if not await _offered(&"pick_up", "PICK UP", "TOOLBOX"):
-		return _fail("Action read '%s %s' at the toolbox, not PICK UP TOOLBOX" % [_action_label(),
-			String(_ctx()["action"]["detail"])])
+	if not await _offered(&"pick_up", "PICK UP"):
+		return _fail("Action read '%s' at the toolbox, not PICK UP" % _action_label())
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
 		return _fail("PICK UP did not put the toolbox in the hands")

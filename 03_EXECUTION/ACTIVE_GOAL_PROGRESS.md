@@ -1431,7 +1431,11 @@ Act 1's yard (badge-in, the crane's dropped load), the crew, day to night, the h
 Alongside: each lift's own start, the wet band's E and F next, then G to O (all but N), each its own
 way (rule 11).
 
-How the owner wants to work now (2026-10-19, evening; `00_START_HERE.md`'s directives): push to
+How the owner wants to work now (2026-10-19, night, on top of the evening's): extraordinary,
+wow-factor experiences first; the Matron roams the whole tower; a fun way to keep her at bay that
+does not kill her; her face realistic and uncanny, adult-scary; add stock freely; run multi-agent
+workflows for substantive work (ultracode); one branch, `ScraperX-Claude`; full test runs only when
+warranted; no on-screen label for every object. And the evening's (`00_START_HERE.md`'s directives): push to
 `ScraperX-Claude` at will, run local checks and CI at will, start workflows when they help, don't
 get lost in invisible detail, and talk in plain words (the float lift at 220 m, not "D"; the
 automated touch playthrough, not "touch_wet"). Rule 5 is now "the parachute is the way back", and
