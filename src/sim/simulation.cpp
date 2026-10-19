@@ -988,6 +988,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.climbs = view.climbs;
     result.clinging = view.clinging;
     result.floor_y = view.floor_y;
+    result.lead_floor_y = view.lead_floor_y;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

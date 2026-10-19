@@ -15,10 +15,18 @@
 // takes the long way round.
 //
 // Senses (Hearing): how loud the player is this tick (sprinting, landing,
-// walking, creeping) against how far she is; sight at close range with a
-// clear line. She runs at kHuntMps: faster than the player walks, slower than
-// the sprint, so the sprint that outruns her is also the loud thing that
-// calls her.
+// walking, creeping) against how far it has to carry to her; sight at close
+// range with a clear line. She runs at kHuntMps: faster than the player
+// walks, slower than the sprint, so the sprint that outruns her is also the
+// loud thing that calls her.
+//
+// A sound carries through the tower as it would (the owner, 2026-10-18: she
+// is not level-bound). The tower is an open frame, each level a deck band
+// round the open shaft, so a sound reaches her the shorter of two ways: the
+// straight line, kDeckMuffle times as far for each deck it passes through; or
+// out into the shaft, along it and in again, kBendMuffle times as far for each
+// end that is not in the shaft. Where it comes from is a lead on that level
+// (the deck under it), not hers.
 //
 // A catch (her hands within kCatchM of the player) is a death, restoring the
 // last checkpoint like a lethal fall. The checkpoint stops being renewed once
@@ -128,8 +136,17 @@ public:
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
 
+    // Sound through the tower (above). CHOSEN: a steel deck takes 20 dB off
+    // a sound (as ten times the distance would); turning round the shaft's
+    // edge, the low thuds she hears take 3 dB (1.4 times the distance). The
+    // shaft is the stack's (x +-17 m, z -133 / -167), the narrowest of the
+    // tower's: the rings above leave a wider one round it.
+    static constexpr float kDeckMuffle = 10.0F;
+    static constexpr float kBendMuffle = 1.4F;
+    static constexpr float kShaftHalfM = 17.0F;
+
     // The build-up.
-    static constexpr float kWakeNoiseM = 30.0F;     // a loud noise this near the locker wakes her
+    static constexpr float kWakeNoiseM = 30.0F;     // a loud noise carrying this far to the locker wakes her
     static constexpr float kStrainSeconds = 16.0F;
     static constexpr float kEmergeSeconds = 2.2F;
 
@@ -250,7 +267,8 @@ public:
     // one warning), then lunges in jerks, bursts faster than a sprint and
     // stumbling pauses, with feet that snap rather than step. It starts when
     // she has a clear line to the player within kTurnTriggerM, or the player
-    // lands hard within kTurnNoiseM of her; then not again for a while. It
+    // lands hard with the noise carrying under kTurnNoiseM to her; then not
+    // again for a while. It
     // is no faster on the whole than her usual hunt, only harder to read.
     enum class Turn : std::uint8_t {
         None = 0,
@@ -304,6 +322,7 @@ public:
         std::uint32_t climbs = 0;   // ladders she went up after the player, this run
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
+        float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -342,8 +361,8 @@ public:
     // A sound in the world she can hear like the player's noise (a hit: a
     // crate crashing down; a machine running), at its loudness (0..1, a sound
     // of 1 carries kFullHearingM): given before pre_step, heard in it. She
-    // takes the loudest of a tick's that is on her level, not her own (within
-    // kOwnSoundM of her body: what she strikes herself), and within its reach.
+    // takes the loudest at her ear of a tick's that is not her own (within
+    // kOwnSoundM of her body: what she strikes herself) and carries to her.
     // Past kMaxSounds in a tick the rest are not heard (the world gives the
     // hardest hits first).
     static constexpr std::size_t kMaxSounds = 16;
@@ -433,6 +452,13 @@ private:
     void spawn_body();
     void remove_body();
     [[nodiscard]] bool sees(JPH::RVec3 from, JPH::RVec3 to) const;
+    // How far a sound at `from` has to carry to an ear at `to` (above); and
+    // the decks (static floors) the straight line between passes through.
+    [[nodiscard]] float carry_m(JPH::RVec3 from, JPH::RVec3 to) const;
+    [[nodiscard]] int decks_between(JPH::RVec3 from, JPH::RVec3 to) const;
+    // The floor of the level a sound at height y is on (the highest under
+    // it, within a storey), or her own when it is on none.
+    [[nodiscard]] float floor_of(float y) const;
     [[nodiscard]] static bool on_catwalk_line(float x, float z, float margin);
     // The next point to walk to, along the cheapest path on her level to
     // (tx, tz), with the catwalk allowed or not and gaps (leapt) or not;
@@ -461,11 +487,14 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
-    // A lead: a place she heard (or saw) the player, or a crash, at that loudness.
-    void take_lead(float x, float z, float loudness, bool seen);
+    // A lead: a place she heard (or saw) the player, or a crash, on the level
+    // whose floor is `floor`, at that loudness.
+    void take_lead(float x, float z, float floor, float loudness, bool seen);
     // Back to her post if there is a way out to guard, else the patrol.
     void stand_down();
-    void step_turn(float dt, float distance_to_player, float loudness);
+    // The Turn's clock: `distance_to_player` across, `carried_m` how far the
+    // player's noise carried to her.
+    void step_turn(float dt, float distance_to_player, float loudness, float carried_m);
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();

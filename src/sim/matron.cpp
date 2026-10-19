@@ -8,6 +8,7 @@
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
@@ -209,6 +210,78 @@ bool Matron::sees(const RVec3 from, const RVec3 to) const {
     return hit.mFraction >= 1.0F - 0.7F / length;
 }
 
+int Matron::decks_between(const RVec3 from, const RVec3 to) const {
+    const Vec3 run(to - from);
+    if (run.LengthSq() < 0.01F) {
+        return 0;
+    }
+    // Neither her body nor her locker: the ear is in one or the other.
+    class NotHers final : public BodyFilter {
+    public:
+        NotHers(const BodyID body, const BodyID locker) : body_(body), locker_(locker) {}
+        bool ShouldCollide(const BodyID &id) const override { return id != body_ && id != locker_; }
+
+    private:
+        BodyID body_;
+        BodyID locker_;
+    };
+    const NotHers not_hers(body_, locker_body_);
+    const RRayCast ray(from, run);
+    AllHitCollisionCollector<CastRayCollector> hits;
+    physics_.GetNarrowPhaseQuery().CastRay(ray, RayCastSettings(), hits, {}, {}, not_hers);
+    // A deck is met through its top or its underside; a column's side, a
+    // rail or anything that moves is not one.
+    int decks = 0;
+    for (const RayCastResult &hit : hits.mHits) {
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+        if (!lock.Succeeded() || !lock.GetBody().IsStatic() || lock.GetBody().IsSensor()) {
+            continue;
+        }
+        const Vec3 normal =
+            lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction));
+        decks += std::abs(normal.GetY()) > 0.7F ? 1 : 0;
+    }
+    return decks;
+}
+
+float Matron::carry_m(const RVec3 from, const RVec3 to) const {
+    const float straight = Vec3(to - from).Length();
+    const int decks = decks_between(from, to);
+    if (decks == 0) {
+        return straight;
+    }
+    float through = straight;
+    for (int i = 0; i < decks; ++i) {
+        through *= kDeckMuffle;
+    }
+    // Or round by the shaft: out to it level, along it, and in again level.
+    const auto in_shaft = [](const RVec3 p) {
+        return RVec3(std::clamp(float(p.GetX()), -kShaftHalfM, kShaftHalfM), p.GetY(),
+                     std::clamp(float(p.GetZ()), kMidZ - kShaftHalfM, kMidZ + kShaftHalfM));
+    };
+    const RVec3 out = in_shaft(from);
+    const RVec3 in = in_shaft(to);
+    const float to_shaft = Vec3(out - from).Length();
+    const float from_shaft = Vec3(to - in).Length();
+    float round = to_shaft + Vec3(in - out).Length() + from_shaft;
+    round *= to_shaft > 0.5F ? kBendMuffle : 1.0F;
+    round *= from_shaft > 0.5F ? kBendMuffle : 1.0F;
+    return std::min(through, round);
+}
+
+float Matron::floor_of(const float y) const {
+    float best = levels_[static_cast<std::size_t>(level_)].floor_y;
+    float best_above = std::numeric_limits<float>::max();
+    for (const Level &level : levels_) {
+        const float above = y - level.floor_y;
+        if (above > -0.5F && above < 8.0F && above < best_above) {
+            best_above = above;
+            best = level.floor_y;
+        }
+    }
+    return best;
+}
+
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
     return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
 }
@@ -221,8 +294,10 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     const auto allowed = [&](const Edge &e) {
         return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps);
     };
-    // She stands on a line she may take (the catwalk under her counts), and
-    // the place she heads for is put on one.
+    // She stands on a line she may take (the catwalk under her counts, once
+    // she is out on it: at its end, on the band, the band's line is hers),
+    // and the place she heads for is put on one.
+    constexpr float kOnItM = 0.5F;
     const auto insert = [&](const float x, const float z, const bool loop_only) {
         int best = -1;
         float best_d = std::numeric_limits<float>::max();
@@ -238,7 +313,8 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
             const Node &a = nodes[static_cast<std::size_t>(edges[e].a)];
             const Node &b = nodes[static_cast<std::size_t>(edges[e].b)];
             project(a.x, a.z, b.x, b.z, x, z, px, pz, t);
-            const float d = distance_xz(px, pz, x, z);
+            // A line she may not take only wins when she is clearly on it.
+            const float d = distance_xz(px, pz, x, z) + (allowed(edges[e]) ? 0.0F : kOnItM);
             if (d < best_d) {
                 best_d = d;
                 best = static_cast<int>(e);
@@ -322,11 +398,11 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     return true;
 }
 
-void Matron::take_lead(const float x, const float z, const float loudness, const bool seen) {
+void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const bool seen) {
     noise_heard_ = loudness;
     heard_x_ = x;
     heard_z_ = z;
-    lead_floor_ = levels_[static_cast<std::size_t>(level_)].floor_y;
+    lead_floor_ = floor;
     guess_line_ = -1;
     guess_climb_ = -1;
     since_heard_s_ = 0.0F;
@@ -778,12 +854,12 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
 
 // The Turn's clock and its two triggers (see matron.hpp). Only simulation
 // state decides: her distance, the line, the player's landing, the cooldown.
-void Matron::step_turn(const float dt, const float distance_to_player, const float loudness) {
+void Matron::step_turn(const float dt, const float distance_to_player, const float loudness, const float carried_m) {
     sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
     if (turn_ == Turn::None) {
         turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
         const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM;
-        const bool hard_landing = loudness >= kTurnNoiseLoudness && distance_to_player <= kTurnNoiseM;
+        const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
         if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
             turn_ = Turn::Windup;
             turn_s_ = 0.0F;
@@ -902,40 +978,52 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
     }
     player_on_deck_ = on_deck || player_climb >= 0;
-    // The loudest of the tick's sounds she can hear from (fx, fz) (her locker
-    // while she sleeps, her body awake): on her level, not her own, within
-    // `within` and within its own reach.
+    // The loudest at her ear of the tick's sounds that carry to it (her
+    // locker while she sleeps, her body awake): not her own, carried within
+    // `within` and within its own reach. Her lead goes to the level it is on.
     const RVec3 body_at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : RVec3::sZero();
-    const auto pick = [&](const float fx, const float fz, const float within) {
+    const auto pick = [&](const RVec3 ear, const float within) {
         Sound best{};
+        float best_share = 0.0F;
         for (std::size_t i = 0; i < sound_count; ++i) {
             const Sound &s = sounds_[i];
-            if (s.y <= feet_y_ - 1.0F || s.y >= feet_y_ + 6.0F) {
-                continue;
-            }
-            const float d = distance_xz(fx, fz, s.x, s.z);
-            if (d > within || s.loudness * kFullHearingM < d) {
+            const RVec3 at(s.x, s.y, s.z);
+            const float reach = s.loudness * kFullHearingM;
+            const float straight = Vec3(at - ear).Length();
+            if (straight > within || straight > reach) {
                 continue;
             }
             if (body_in_world_ && distance_xz(float(body_at.GetX()), float(body_at.GetZ()), s.x, s.z) < kOwnSoundM &&
                 std::abs(s.y - float(body_at.GetY())) < 2.0F) {
                 continue;
             }
-            if (!best.heard || s.loudness > best.loudness) {
+            const float carried = carry_m(at, ear);
+            if (carried > within || carried > reach) {
+                continue;
+            }
+            // Louder at her ear: its reach over the way it carried.
+            const float share = reach / std::max(carried, 0.1F);
+            if (!best.heard || share > best_share) {
                 best = s;
+                best_share = share;
             }
         }
         return best;
     };
+    // How far the player's noise carries to her ear this tick (none: 0 loud).
+    const RVec3 locker_ear(kLockerX, kDeckTop + kLockerHalfY, kLockerZ);
+    const RVec3 ear = body_in_world_ ? body_at : locker_ear;
+    const float player_carry = loudness > 0.0F && Vec3(player - ear).Length() <= loudness * kFullHearingM
+                                   ? carry_m(player, ear)
+                                   : std::numeric_limits<float>::max();
     switch (state_) {
     case State::Dormant: {
-        const float d = distance_xz(px, pz, kLockerX, kLockerZ);
-        const Sound crash = pick(kLockerX, kLockerZ, kWakeNoiseM);
+        const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
             noise_heard_ = crash.loudness;
             state_ = State::Straining;
             strain_s_ = 0.0F;
-        } else if (on_deck && loudness > 0.0F && d <= kWakeNoiseM && loudness * kFullHearingM >= d) {
+        } else if (player_carry <= kWakeNoiseM && loudness * kFullHearingM >= player_carry) {
             noise_heard_ = loudness;
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -970,10 +1058,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const float ax = float(at.GetX());
         const float az = float(at.GetZ());
         const float d = distance_xz(ax, az, px, pz);
-        // Up a climb, the straight line to the player is mostly up it.
+        // Seen on her level, or up a climb from it (the straight line to the
+        // player mostly up it); heard wherever the noise carries to her.
         const bool perceivable = on_deck || player_climb >= 0;
         const float reach = on_deck ? d : std::hypot(d, float(player.GetY() - at.GetY()));
-        bool heard = perceivable && loudness > 0.0F && loudness * kFullHearingM >= reach;
+        const bool heard = loudness * kFullHearingM >= player_carry;
         bool saw = false;
         if (perceivable && reach <= kSightM) {
             saw = sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0));
@@ -983,24 +1072,29 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // (Low rays: a guard rail is bars, not a wall.)
         sees_far_ = perceivable && reach <= kCommitSightM &&
                     (saw || sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0)));
-        // A sound on her level louder than the player draws her to it instead.
-        const Sound crash = pick(ax, az, std::numeric_limits<float>::max());
+        // A sound louder at her ear than the player draws her to it instead.
+        const Sound crash = pick(at, std::numeric_limits<float>::max());
         const bool crash_heard = crash.heard;
+        const float player_floor = floor_of(float(player.GetY()));
         if (saw) {
             // In sight: no doubt where the player is.
-            take_lead(px, pz, heard ? loudness : 0.3F, true);
+            take_lead(px, pz, player_floor, heard ? loudness : 0.3F, true);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
-            // The louder sound: a crash, or the player.
-            const bool crash_first = crash_heard && (!heard || crash.loudness > loudness);
+            // The louder sound at her ear: a crash, or the player.
+            const bool crash_first =
+                crash_heard && (!heard || crash.loudness / std::max(carry_m(RVec3(crash.x, crash.y, crash.z), at), 0.1F) >
+                                              loudness / std::max(player_carry, 0.1F));
             const float sx = crash_first ? crash.x : px;
+            const float sy = crash_first ? crash.y : float(player.GetY());
             const float sz = crash_first ? crash.z : pz;
+            const float sfloor = crash_first ? floor_of(crash.y) : player_floor;
             const float loud = crash_first ? crash.loudness : loudness;
-            const bool close = distance_xz(ax, az, sx, sz) <= kWaryNoiseM;
+            const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
-                take_lead(sx, sz, loud, lead_seen_);
+                take_lead(sx, sz, sfloor, loud, lead_seen_);
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -1009,9 +1103,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 look_z_ = sz;
                 look_s_ = 3.0F;
             } else {
-                // A fresh lead: once fooled, checked from a vantage first.
-                take_lead(sx, sz, loud, false);
-                wary_ = fooled_ >= 1 && !close;
+                // A fresh lead: once fooled, checked from a vantage first (on
+                // her level: another's she cannot see for its deck, she goes
+                // by the way there).
+                take_lead(sx, sz, sfloor, loud, false);
+                wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
             }
@@ -1039,7 +1135,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // On a climb she is going up it, whatever else she is about.
         if (climb_ >= 0) {
             climb(dt);
-            step_turn(dt, d, loudness);
+            step_turn(dt, d, loudness, player_carry);
             break;
         }
         // Holding on to a floor that moves (or has only just stopped): she
@@ -1115,12 +1211,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             } else if (elsewhere && (follow_line(dt, at) || follow_climb(dt, at))) {
                 // After the lead down a line (its stand, its cable) or up a
                 // climb (its foot, its rungs).
-                step_turn(dt, d, loudness);
+                step_turn(dt, d, loudness, player_carry);
                 break;
             } else {
                 // In the Turn a gap is no bar: she leaps it.
                 route_toward(ax, az, heard_x_, heard_z_, allow, wx, wz, turn_ != Turn::None);
-                step_turn(dt, d, loudness);
+                step_turn(dt, d, loudness, player_carry);
                 if (turn_ == Turn::Windup) {
                     walk_toward(dt, wx, wz, 0.0F, kTurnFootAccel);
                 } else if (turn_ == Turn::Lunge) {
@@ -1319,6 +1415,7 @@ void Matron::refresh_view() {
     view_.climbs = climbs_done_;
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    view_.lead_floor_y = lead_floor_;
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;

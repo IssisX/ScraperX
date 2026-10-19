@@ -212,6 +212,7 @@ struct MatronSnapshot final {
     std::uint32_t climbs = 0;
     bool clinging = false;
     double floor_y = 154.0;
+    double lead_floor_y = 154.0;   // the level of her lead: its floor's top
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

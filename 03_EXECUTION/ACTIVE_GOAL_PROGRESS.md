@@ -1404,6 +1404,31 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The Matron hears through the tower (2026-10-18; to-do 11, its first half).** She was deaf to
+anything not within a 6 m band of her own floor. The tower is an open frame, every level a deck
+band 9 m deep round a 34 m open shaft, and a sound now reaches her the way it would: the shorter
+of the straight line, ten times as far for each deck it passes through (CHOSEN: a steel deck takes
+about 20 dB off), or out into the shaft, along it and in again, 1.4 times as far for each end not in
+the shaft (about 3 dB for the low thuds she hears turning round its edge). Where a sound comes from
+is a lead on that level, not hers: on the deck below or above she goes by the way there she can
+use (a line down; the ladder up, in the Turn), frail standing at its top or foot looking for the
+player; with no way there, to the place above or below it on her own. A lead on another level is
+never checked from a vantage (the deck is in the way). The Turn's hard-landing trigger counts how
+far the landing carried, not the distance across. Asleep, the 30 m she wakes within is how far a
+sound carried to the locker. Found on the way: passing the catwalk's end on the band, she was
+put on the catwalk's line, which she may not take, and lost her way to her post (she gave up
+guarding); she is put on it now only once she is out on it. Proof: native `matron` (new: down a
+line to 143 while she strains, the player walks the shaft's edge under her post, 11.7 m from her
+in a straight line and within a walk's 16.5 m earshot, unheard through the deck, and the test
+fails with the decks not muffling; a sprint there is heard at 0.8, a lead on 143, and frail she
+goes to the line down and stands on it), the full native suite (132 passes); `touch_matron`,
+`touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`, `touch_arm_break`, `touch_ladder`,
+`touch_rig`, `pad_rig`, `keyboard_rig`, `touch_boom`, `pad_boom`, `keyboard_boom`,
+`touch_debris`, `pad_debris`, `keyboard_debris`, `touch_wet`, `pad_wet`, `keyboard_wet`,
+`touch_swing`, `touch_hook_rope` (every scenario from her deck to the 220 ring), `touch_stack_upper`,
+`pad_stack_upper`, `keyboard_stack_upper` (up the stack to her deck). Next: the second
+half, following across more than one level and more ways (the riser ladder up from 143).
+
 **The yard crane's container spreader (2026-10-18; to-do 10, second of its devices).** A 40 ft
 spreader frame (1,980 kg, 12 m) lies west of the laydown, its long side north to south. It is
 rigged as the magnet is: the hook let down by its side, the sling's shackle TAKEn and HOOKed on the
@@ -1427,7 +1452,7 @@ of to-do 10, four reviewers each checked by a skeptic): on touch the crane's rea
 why LOCK is not offered) was never drawn and now is, beside its button, as `touch_crane_spreader`
 checks; the magnet test's older saves are now truly older ones (one from before the spreader
 without its body, one from before the grips without the crane's six bodies), and it fails when the
-reader's path for such saves is broken; two comments corrected. The plate clamp waits for thin
+reader's path for such saves is broken; four comments corrected. The plate clamp waits for thin
 plates in a rack.
 
 **The derrick's cradle seated at the top (2026-10-18).** Stepping off at 802.64 m was a game of
@@ -1604,6 +1629,8 @@ fill in after).**
    shaft and stairwells and muffled by each deck between; what she hears on another level sends her
    there by the routes she can use (a lift she calls and rides, the ladder, a line down), a route
    planner over the tower's levels. Sequenced after 10 and before 4's route hint.
+   Done 2026-10-18: her hearing through the tower, and one level's way after a lead. Next:
+   leads more than a level away, and the riser ladder up from 143.
 
 **Ideas for pressure (two research agents, 2026-10-16; not built, the owner picks).** Ranked:
 1. Gust fronts: above about 400 m a streak of mist races across the tower before each gust; the
