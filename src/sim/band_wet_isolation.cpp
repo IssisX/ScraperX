@@ -70,17 +70,21 @@ constexpr float kFillArea = 0.5F;
 constexpr float kPipeY = 220.47F;         // lying on the ring's deck
 constexpr float kPipeZ = -127.5F;
 constexpr float kPipeHalf = 0.22F;
-constexpr float kGapWest = 8.7F;
-constexpr float kGapEast = 10.3F;
-const JPH::RVec3 kSpoolSeat(9.5, 220.47, -127.5);
-// The fill valve: a bar on a pin, thrown over by a line from its lug to a
-// handle by the platform's north-west corner. It stays where it falls.
+// Where the pipe crosses the walkway to the platform, its gap in the middle
+// and its drop into the well west of the walkway.
+constexpr float kCrossZ = -131.8F;
+constexpr float kGapWest = 12.2F;
+constexpr float kGapEast = 13.8F;
+constexpr float kDownX = 11.2F;
+const JPH::RVec3 kSpoolSeat(13.0, 220.47, kCrossZ);
+// Where the fill valve's bar and its handle were (D was started by a pull
+// until 2026-10-19). Their bodies are kept, parked, for the save's order.
 const JPH::RVec3 kDValvePivot(10.2, 221.2, -131.4);
+const JPH::RVec3 kDValveSheave2(12.3, 222.2, -131.9);
+// A throw bar (the header's dump).
 constexpr float kBarLength = 1.4F;
 constexpr float kBarLug = 0.5F;
 constexpr float kBarFarStop = 2.2F;
-const JPH::RVec3 kDValveSheave1(10.7, 223.2, -131.4);
-const JPH::RVec3 kDValveSheave2(12.3, 222.2, -131.9);
 // The drain: a counterweighted lever held open by its handle.
 const JPH::RVec3 kDDrainPivot(15.3, 223.5, -131.0);
 const JPH::RVec3 kDDrainSheave(14.3, 222.2, -131.0);
@@ -165,6 +169,13 @@ kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::
     return handle;
 }
 
+// A body a machine no longer has, kept so a save's bodies line up: static
+// and parked out of the world, so a saved state for it is not taken back.
+void add_retired(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 at) {
+    kit.park(kit.add_body(entity, {box(JPH::Vec3::sReplicate(0.05F), JPH::Vec3::sZero(), Material::Steel)},
+                          at, JPH::Quat::sIdentity(), 0.0F, 0.5F));
+}
+
 // A counterweighted trip lever about +z: its arm west, a block east, so its
 // weight holds the arm up on its stop and a pull on the arm's eye turns it.
 kit::BodyIndex add_trip_lever(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 pivot,
@@ -245,34 +256,36 @@ void build_stage_d(kit::Kit &kit, WetIsolation &wet, std::vector<Part> &frame) {
         frame.push_back(span({x - 0.06F, kTankMax.GetY() + 0.4F, -132.42F},
                              {x + 0.06F, 263.75F, -132.30F}, Material::Steel));
     }
-    // The pipe along the 220 ring, its gap and cradle, its riser to the
-    // tank, and its turn down into the well east of the walkway.
+    // The pipe along the 220 ring and its riser to the tank; its turn south
+    // off the ring east of the walkway and west across the walkway's foot,
+    // where its gap is, and down into the well west of it.
     frame.push_back(span({6.0F, kPipeY - kPipeHalf, kPipeZ - kPipeHalf},
-                         {kGapWest, kPipeY + kPipeHalf, kPipeZ + kPipeHalf}, Material::Galvanised));
-    frame.push_back(span({kGapEast, kPipeY - kPipeHalf, kPipeZ - kPipeHalf},
-                         {15.0F, kPipeY + kPipeHalf, kPipeZ + kPipeHalf}, Material::Galvanised));
-    for (const float x : {kGapWest, kGapEast}) {
-        frame.push_back(span({x - 0.03F, kDDeckTop, kPipeZ - 0.28F}, {x + 0.03F, kPipeY + 0.3F, kPipeZ + 0.28F},
-                             Material::Rust));
-    }
-    // Two low guides on the deck either side of the gap: a spool set down
-    // between them lies across it.
-    for (const float side : {-1.0F, 1.0F}) {
-        frame.push_back(span({kGapWest + 0.05F, kDDeckTop, kPipeZ + side * 0.5F - 0.03F},
-                             {kGapEast - 0.05F, kDDeckTop + 0.06F, kPipeZ + side * 0.5F + 0.03F},
-                             Material::Steel));
-    }
+                         {15.0F + kPipeHalf, kPipeY + kPipeHalf, kPipeZ + kPipeHalf}, Material::Galvanised));
     frame.push_back(span({6.0F - kPipeHalf, kPipeY, kPipeZ - kPipeHalf},
                          {6.0F + kPipeHalf, 228.2F, kPipeZ + kPipeHalf}, Material::Galvanised));
     frame.push_back(span({6.0F - kPipeHalf, 227.8F, kTankMax.GetZ() + kWall},
                          {6.0F + kPipeHalf, 228.2F, kPipeZ}, Material::Galvanised));
-    frame.push_back(span({15.0F - kPipeHalf, kPipeY - kPipeHalf, -131.2F},
-                         {15.0F + kPipeHalf, kPipeY + kPipeHalf, kPipeZ}, Material::Galvanised));
-    frame.push_back(span({15.0F - kPipeHalf, 214.0F, -131.2F - 2.0F * kPipeHalf},
-                         {15.0F + kPipeHalf, kPipeY + kPipeHalf, -131.2F}, Material::Galvanised));
-    // Brackets: the fill bar's pin off the ring's edge, the drain lever's.
-    frame.push_back(span({kDValvePivot.GetX() - 0.05F, 221.0F, -131.45F},
-                         {kDValvePivot.GetX() + 0.05F, 221.1F, -130.73F}, Material::Steel));
+    frame.push_back(span({15.0F - kPipeHalf, kPipeY - kPipeHalf, kCrossZ - kPipeHalf},
+                         {15.0F + kPipeHalf, kPipeY + kPipeHalf, kPipeZ - kPipeHalf}, Material::Galvanised));
+    frame.push_back(span({kGapEast, kPipeY - kPipeHalf, kCrossZ - kPipeHalf},
+                         {15.0F - kPipeHalf, kPipeY + kPipeHalf, kCrossZ + kPipeHalf}, Material::Galvanised));
+    frame.push_back(span({kDownX - kPipeHalf, kPipeY - kPipeHalf, kCrossZ - kPipeHalf},
+                         {kGapWest, kPipeY + kPipeHalf, kCrossZ + kPipeHalf}, Material::Galvanised));
+    frame.push_back(span({kDownX - kPipeHalf, 214.0F, kCrossZ - kPipeHalf},
+                         {kDownX + kPipeHalf, kPipeY - kPipeHalf, kCrossZ + kPipeHalf}, Material::Galvanised));
+    // The couplings' flanges either side of the gap, and two low guides on
+    // the walkway between them: a spool set down between the guides lies
+    // across the gap. Open, the gap is the way onto the platform.
+    for (const float x : {kGapWest, kGapEast}) {
+        frame.push_back(span({x - 0.03F, kDDeckTop, kCrossZ - 0.28F}, {x + 0.03F, kPipeY + 0.3F, kCrossZ + 0.28F},
+                             Material::Rust));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({kGapWest + 0.05F, kDDeckTop, kCrossZ + side * 0.36F - 0.03F},
+                             {kGapEast - 0.05F, kDDeckTop + 0.06F, kCrossZ + side * 0.36F + 0.03F},
+                             Material::Steel));
+    }
+    // The drain lever's bracket.
     frame.push_back(span({kDDrainPivot.GetX() - 0.05F, 220.25F, -131.05F},
                          {kDDrainPivot.GetX() + 0.05F, 223.3F, -130.95F}, Material::Steel));
     // The drain's basin under the tube's foot.
@@ -295,14 +308,18 @@ void build_stage_d(kit::Kit &kit, WetIsolation &wet, std::vector<Part> &frame) {
     wet.d_tube = kit.add_pool(JPH::Vec3(x0, kTubeFloor, z0), JPH::Vec3(x1, kTubeOverflow, z1), 0.0F);
     kit.add_float(wet.d_tube, wet.d_platform, kFloatHalf, kFloatHalf, kFloatBottom, kFloatHeight);
 
-    wet.d_valve_body = add_throw_bar(kit, Sim::kWetDValveEntityId, kDValvePivot, wet.d_valve);
-    wet.d_valve_handle = add_handle(kit, Sim::kWetDValveHandleEntityId, kDValveSheave2, kHandleDrop);
-    (void)kit.add_trip_line(wet.d_valve_body, JPH::Vec3(kBarLug, 0.0F, 0.0F), wet.d_valve_handle,
-                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kDValveSheave1, kDValveSheave2);
+    add_retired(kit, Sim::kWetDValveEntityId, kDValvePivot);
+    add_retired(kit, Sim::kWetDValveHandleEntityId, kDValveSheave2);
+    // The fill has no valve to throw (rule 11): the pipe's two ends at the
+    // gap are self-sealing couplings, each shut until a spool's flange seats
+    // against it, as a dry-break hose coupling is. The rider carries the
+    // spool through the gap onto the platform, turns and sets it down in the
+    // gap behind: the tank's water runs, and the float lifts the platform
+    // within a second as the tube fills.
     wet.d_fill = kit.add_pipe(wet.d_tank, kTankMin.GetY(), wet.d_tube, kTubeFloor, JPH::RVec3::sZero(),
-                              kFillArea, wet.d_valve, 0.4F, 1.8F);
+                              kFillArea, kit::LeverIndex{}, 0.0F, 0.0F);
 
-    // The spool lies on the ring south of its gap.
+    // The spool lies on the ring west of the walkway.
     wet.d_spool = kit.add_body(
         Sim::kWetDSpoolEntityId,
         {box(JPH::Vec3(0.6F, kPipeHalf, kPipeHalf), JPH::Vec3::sZero(), Material::Galvanised),

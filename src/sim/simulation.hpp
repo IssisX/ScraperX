@@ -447,7 +447,6 @@ struct WetState final {
     double d_tank_level = 0.0;
     double d_tube_level = 0.0;
     double d_platform_travel = 0.0;
-    double d_valve_angle = 0.0;
     double d_drain_angle = 0.0;
     double dump_angle = 0.0;
     bool e_door_latched = false;

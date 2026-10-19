@@ -2,8 +2,15 @@
 
 #include "sim_tests.hpp"
 
-// D's spool, from where it lies on the 220 ring, carried north and set down
-// between the guides across its gap.
+// Through the gap in D's fill line, where it crosses the walkway, onto the
+// platform.
+bool board_wet_d(scraperx::sim::Simulation &simulation) {
+    return walk_to(simulation, 13.0, -130.2, 8.0) && walk_to(simulation, 13.0, -133.4, 6.0);
+}
+
+// D's spool, from where it lies on the 220 ring, carried through its gap
+// onto the platform, turned round there and set down in the gap behind:
+// the rider is aboard when the water runs.
 bool seat_wet_spool(scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
     if (!walk_to(simulation, 9.5, -130.6, 8.0, 0.08)) {
@@ -16,35 +23,33 @@ bool seat_wet_spool(scraperx::sim::Simulation &simulation) {
     }
     (void)simulation.request_pick_up();
     (void)simulation.advance_frame(0.4);
-    if (simulation.snapshot().carrying_entity_id != Simulation::kWetDSpoolEntityId) {
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWetDSpoolEntityId ||
+        !board_wet_d(simulation)) {
         return false;
     }
-    for (std::uint32_t tick = 0; tick < 90 * 6; ++tick) {
-        if (simulation.snapshot().player_position.z >= -128.25) {
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.8);
+    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
+        if (simulation.snapshot().player_position.z >= -132.6) {
             break;
         }
-        (void)simulation.set_move_input(0.0, 0.35);
+        (void)simulation.set_move_input(0.0, 0.25);
         (void)simulation.set_facing(0.0, 1.0);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
     (void)simulation.set_move_input(0.0, 0.0);
     (void)simulation.advance_frame(0.6);
+    if (simulation.wet_state().d_pipe_whole) {
+        return false;   // seated before it was let go of
+    }
     (void)simulation.request_set_down();
     (void)simulation.advance_frame(1.5);
-    return simulation.wet_state().d_pipe_whole;
-}
-
-// From the 220 ring to D's platform by its walkway, east of the fill bar's
-// handle hanging over it, then throw the bar.
-bool throw_wet_fill(scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    if (!walk_to(simulation, 13.4, -129.6, 8.0) || !walk_to(simulation, 13.4, -132.7, 4.0)) {
-        return false;
-    }
-    return pull_facing(simulation, 12.3, -132.7, 0.0, 1.0, Simulation::kWetDValveHandleEntityId,
-                       0.5, 4.0, [&](const scraperx::sim::Snapshot &) {
-                           return simulation.wet_state().d_valve_angle > 1.8;
-                       });
+    std::cout << "TRACE D seat travel=" << simulation.wet_state().d_platform_travel
+              << " whole=" << simulation.wet_state().d_pipe_whole
+              << " sup=" << simulation.snapshot().support_entity_id
+              << " z=" << simulation.snapshot().player_position.z << '\n';
+    return simulation.wet_state().d_pipe_whole &&
+           on_support(simulation.snapshot(), Simulation::kWetDPlatformEntityId);
 }
 
 // Inside E's cab, east of its door (it opens into the cab): wait for the
@@ -151,17 +156,17 @@ void run_wet_isolation() {
     Simulation d_dry(InitialSpawn::Ring220North);
     (void)d_dry.advance_frame(1.0);
     require(!d_dry.wet_state().d_pipe_whole, "as found, D's spool lies off its gap");
-    require(throw_wet_fill(d_dry), "the rider must throw D's fill bar from the platform");
+    require(board_wet_d(d_dry), "the rider must walk through the gap onto D's platform");
     (void)d_dry.advance_frame(10.0);
     require(d_dry.wet_state().d_platform_travel < 0.02 && d_dry.wet_state().d_tube_kg <= 0.0,
-            "with the spool on the deck no water runs and D's platform stays down");
+            "with the spool on the deck the couplings hold the water and D's platform stays down");
 
     // ---- D: the spool seated, the ride -----------------------------------------
     Simulation d_ride(InitialSpawn::Ring220North);
     (void)d_ride.advance_frame(1.0);
-    require(seat_wet_spool(d_ride), "the rider must carry D's spool into its gap");
     const auto d_before = d_ride.wet_state();
-    require(throw_wet_fill(d_ride), "the rider must throw D's fill bar with the spool seated");
+    require(seat_wet_spool(d_ride),
+            "the rider must carry D's spool onto the platform and set it in the gap behind");
     const double d_rider_y0 = d_ride.snapshot().player_position.y;
     const bool d_arrived = wait_for(d_ride, 120.0, [&](const scraperx::sim::Snapshot &) {
         return d_ride.wet_state().d_platform_travel >= 35.95;
@@ -269,8 +274,7 @@ void run_wet_band() {
     Simulation band(InitialSpawn::Ring220North);
     (void)band.advance_frame(1.0);
     const double start = band.snapshot().simulation_time_seconds;
-    require(seat_wet_spool(band), "band: the spool into its gap");
-    require(throw_wet_fill(band), "band: D's fill bar thrown from the platform");
+    require(seat_wet_spool(band), "band: the spool carried aboard and set in its gap");
     require(wait_for(band, 120.0,
                      [&](const scraperx::sim::Snapshot &) {
                          return band.wet_state().d_platform_travel >= 35.95;

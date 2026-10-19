@@ -636,13 +636,12 @@ void run_stack() {
               << " rearmed=1\n";
 
     // On in the same run, cycle 10: along the 220 ring to AS-007 and up its
-    // three machines -- D's spool and fill, E's door and chiller, F's hose and
-    // stop valve -- onto TP-340.
+    // three machines -- D's spool, E's door and chiller, F's hose and stop
+    // valve -- onto TP-340.
     g_path_watch = PathWatch{};
     g_path_watch.armed = true;
-    require(walk_to(band, 2.5, -129.6, 8.0) && walk_to(band, 4.0, -129.2, 6.0) && seat_wet_spool(band) &&
-                throw_wet_fill(band),
-            "along the 220 ring, D's spool seated and its fill thrown");
+    require(walk_to(band, 2.5, -129.6, 8.0) && walk_to(band, 4.0, -129.2, 6.0) && seat_wet_spool(band),
+            "along the 220 ring, D's spool carried aboard and seated");
     require(wait_for(band, 120.0, [&](const Snapshot &) { return band.wet_state().d_platform_travel >= 35.95; }),
             "D must carry the rider to 256.25");
     require(walk_to(band, 13.2, -134.5, 6.0) && walk_to(band, 13.2, -135.8, 6.0) && shut_wet_door(band) &&
