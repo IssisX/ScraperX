@@ -40,6 +40,7 @@ const WELL_A_CAGE_ENTITY := 2000
 var _act_box := 0
 var _act_stages_seen := {}
 var _act_drawing := true
+var _act_pitch_back := NAN   # the view's pitch before a screenshot aimed it
 # Deaths the act means at this point (her fully changed hands: one).
 var _act_deaths_allowed := 0
 
@@ -67,6 +68,26 @@ func _pose(pose: String) -> void:
 
 func _act_pose(pose: String) -> void:
 	await _pose(pose)
+	if not is_nan(_act_pitch_back):
+		_main._pitch = _act_pitch_back
+		_act_pitch_back = NAN
+
+
+# The eyes on her head for a screenshot (capture runs only, so the played
+# run is the same with or without them); the view's pitch goes back after.
+func _act_frame_her() -> void:
+	if _act_capturing():
+		var pitch := float(_main._pitch)
+		await _look_at_point(_main._matron_view.head_world_position() - Vector3(0.0, 0.25, 0.0))
+		_act_pitch_back = pitch
+
+
+# The eyes on the toolbox in the air.
+func _act_frame_box() -> void:
+	if _act_capturing() and _act_box != 0:
+		var pitch := float(_main._pitch)
+		await _look_at_point(_native().get_kit_body_transform(_native().get_kit_body_index(_act_box)).origin)
+		_act_pitch_back = pitch
 
 
 func _act_log(tag: String) -> void:
@@ -371,13 +392,16 @@ func _act_watch_her(condition: Callable, timeout: float, tag: String, near_pose 
 			_main._yaw = float(_main._yaw) + clampf(off, -turn, turn)
 		if not near_posed and to.length() < near_m and absf(off) < 0.3:
 			near_posed = true
+			await _act_frame_her()
 			await _act_pose(near_pose)
 		if not carried and int(m["carrying"]) == _act_box and absf(off) < 0.25:
 			carried = true
+			await _act_frame_her()
 			await _act_pose("act_pest_carrying")
 		if int(m["throws"]) > throws:
 			throws = int(m["throws"])
 			await _seconds(0.15)
+			await _act_frame_box()
 			await _act_pose("act_pest_throw")
 		await get_tree().process_frame
 		waited += get_process_delta_time()
@@ -437,6 +461,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	await _act_wait(func() -> bool:
 		watch["nearest"] = minf(float(watch["nearest"]), _position().x)
 		return false, 0.6, "rail")
+	await _act_frame_her()
 	await _act_pose("act_dangerous_shove")
 	_act_log("rail_shove dx=%.2f" % (float(watch["nearest"]) - x0))
 	if float(watch["nearest"]) > x0 - 0.3:
