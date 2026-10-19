@@ -508,6 +508,11 @@ func _look_matron_gallery() -> bool:
 		["climb", {"state": 3, "speed": 0.0, "stride": 0.45, "turn": 0, "climbing": true}],
 		# Rising (0.15 m a frame): the vault.
 		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
+		# The exposure's work on her look, one way: the attendant in her white
+		# tunic; blistered and stained; grey and filthy.
+		["tunic", {"state": 7, "speed": 0.0, "stride": 0.0, "turn": 0, "exposure": 0.0}],
+		["blistered", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "sees_player": true, "exposure": 0.5}],
+		["grey", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "sees_player": true, "exposure": 1.0}],
 	]
 	var t := 0.0
 	for entry in poses:
@@ -527,7 +532,7 @@ func _look_matron_gallery() -> bool:
 			await _frames(1)
 		await _look_at_point(view.head_world_position() - Vector3(0.0, 0.5, 0.0))
 		await _pose("matron_pose_%s" % entry[0])
-		if entry[0] in ["shuffle", "hunt_a", "turn_windup", "turn_lunge_a"]:
+		if entry[0] in ["shuffle", "hunt_a", "turn_windup", "turn_lunge_a", "tunic", "blistered", "grey"]:
 			# Close on the face: she stands 1.3 m from the player's eyes.
 			var near := here + forward * 1.3
 			data["position"] = Vector3(near.x, here.y - 0.9 + 1.05, near.z)

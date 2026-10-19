@@ -495,15 +495,25 @@ func _merge(parts: Array) -> ArrayMesh:
 
 
 func _build_figure() -> void:
-	var skin := _textured(Color("8f8a7a"), 0.85, 11, 0.012, 12.0, 2.5)
-	var dress := _textured(Color("5a4e3e"), 0.96, 23, 0.03, 14.0, 3.0)
-	var shawl := _textured(Color("2e2822"), 0.98, 37, 0.05, 16.0, 3.0)
-	var rag := _textured(Color("5a4e3e"), 0.97, 29, 0.05, 14.0, 2.5, false)
+	# The site's first-aid attendant (the story, 2026-10-19): her skin pale and
+	# tired, her tunic and cap white, a dark cardigan over them. The exposure
+	# recolors the skin, the tunic and the eyes, and thins the hair, one way
+	# (_apply_exposure).
+	var skin := _textured(SKIN_FRESH, 0.85, 11, 0.012, 12.0, 2.5)
+	var dress := _textured(TUNIC_FRESH, 0.9, 23, 0.03, 14.0, 3.0)
+	var shawl := _textured(Color("3a3430"), 0.98, 37, 0.05, 16.0, 3.0)
+	var rag := _textured(TUNIC_FRESH, 0.97, 29, 0.05, 14.0, 2.5, false)
 	var sock := _textured(Color("8a847a"), 0.9, 41, 0.03, 8.0, 3.0)
 	var hair_material := _material(Color("a8a59a"), 1.0)
 	hair_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	hair_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_skin_mat = skin
+	_tunic_mat = dress
+	_rag_mat = rag
+	_hair_mat = hair_material
 	var slipper := _material(Color("2a1f24"), 0.85)
-	var eye_ball := _material(Color("8f8767"), 0.3)
+	var eye_ball := _material(EYE_FRESH, 0.3)
+	_eye_mat = eye_ball
 	var eye_glow := _material(Color("120d0a"), 0.3, 0.0, Color("ffc04a"), 2.2)
 	var dark_skin := _material(Color("48403a"), 0.9)
 	var mouth_dark := _material(Color("080303"), 1.0)
@@ -667,6 +677,26 @@ func _build_figure() -> void:
 	_eye_light.omni_range = 5.0
 	_eye_light.position = Vector3(0.0, 1.5, 1.4)
 	_figure.add_child(_eye_light)
+
+
+# The exposure's work on her, applied when it has moved: two steps each, the
+# first half to blistered and stained, the second to grey and filthy.
+func _apply_exposure(exposure: float) -> void:
+	var e := clampf(exposure, 0.0, 1.0)
+	if absf(e - _applied_exposure) < 0.01:
+		return
+	_applied_exposure = e
+	var first := clampf(e * 2.0, 0.0, 1.0)
+	var second := clampf((e - 0.5) * 2.0, 0.0, 1.0)
+	_skin_mat.albedo_color = SKIN_FRESH.lerp(SKIN_BLISTERED, first).lerp(SKIN_GREY, second)
+	_skin_mat.roughness = lerpf(0.85, 0.55, first)   # blistered skin shines
+	var tunic := TUNIC_FRESH.lerp(TUNIC_STAINED, first).lerp(TUNIC_FILTHY, second)
+	_tunic_mat.albedo_color = tunic
+	_rag_mat.albedo_color = tunic
+	_eye_mat.albedo_color = EYE_FRESH.lerp(EYE_BLOODSHOT, e)
+	var hair := _hair_mat.albedo_color
+	hair.a = lerpf(1.0, 0.3, e)
+	_hair_mat.albedo_color = hair
 
 
 func _limb(up: Node3D, low: Node3D, fwd: float, bend: float, splay := 0.0) -> void:
@@ -1046,6 +1076,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		return
 	_figure.visible = true
 	figure_frames += 1
+	_apply_exposure(float(data.get("exposure", 0.0)))
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
 	_figure.rotation.y = float(data["yaw"])
 	_pose(data, delta, player_position, falling)
@@ -1157,6 +1188,25 @@ func figure_shown() -> bool:
 
 # For the look scenes: the figure posed from made-up data, the native's own
 # frames ignored while this is on.
+# Her look follows the exposure (the native's, 0..1 over her time out), one
+# way: pale and tired in a white tunic, then flushed and blistered with the
+# tunic stained and the eyes bloodshot, then grey and filthy, the hair gone
+# thin. What she does follows her rage instead (matron.hpp, the stages).
+const SKIN_FRESH := Color("c9ad94")
+const SKIN_BLISTERED := Color("c4705a")
+const SKIN_GREY := Color("6b5e58")
+const TUNIC_FRESH := Color("e9e5dc")
+const TUNIC_STAINED := Color("c9b39c")
+const TUNIC_FILTHY := Color("7a6657")
+const EYE_FRESH := Color("8f8767")
+const EYE_BLOODSHOT := Color("b0463a")
+var _skin_mat: StandardMaterial3D
+var _tunic_mat: StandardMaterial3D
+var _rag_mat: StandardMaterial3D
+var _hair_mat: StandardMaterial3D
+var _eye_mat: StandardMaterial3D
+var _applied_exposure := -1.0
+
 var previewing := false
 
 
