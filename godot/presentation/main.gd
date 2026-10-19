@@ -351,7 +351,7 @@ func _process(delta: float) -> void:
 	# The launch shot's slow time: fewer native ticks this frame, each the
 	# same 90 Hz step. Heard too: the mix slows with it.
 	AudioServer.playback_speed_scale = time_scale
-	var steps_advanced := int(_native.advance_frame(minf(delta * time_scale, MAX_SIM_FRAME_DELTA)))
+	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * time_scale, MAX_SIM_FRAME_DELTA)))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return

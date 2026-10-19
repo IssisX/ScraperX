@@ -33,8 +33,10 @@ const ACT_GATE := Vector2(-6.8, -132.2)
 const ACT_PLATE := Vector2(-6.8, -134.1)
 const ACT_RISER_FOOT := Vector2(-6.0, -133.85)
 const ACT_RIM := Vector2(18.0, -139.0)
-const ACT_LAP_NORTH := Vector2(18.4, -134.5)
-const ACT_LAP_SOUTH := Vector2(18.4, -143.5)
+# The chase up and down the east band, 3.6 m from the shaft's rim: past the
+# 3 m within which, dangerous, she aims her shove at it.
+const ACT_LAP_NORTH := Vector2(20.6, -134.5)
+const ACT_LAP_SOUTH := Vector2(20.6, -143.5)
 const WELL_A_CAGE_ENTITY := 2000
 
 var _act_box := 0
@@ -59,11 +61,14 @@ func _act_draw(on: bool) -> void:
 # drawing on for it, and as it was after: a screenshot waits on a drawn frame.
 func _pose(pose: String) -> void:
 	var was := _act_drawing
+	if _act_capturing():
+		_main.freeze_sim = true
 	if not was:
 		_act_draw(true)
 		await _frames(3)
 	await super._pose(pose)
 	_act_draw(was)
+	_main.freeze_sim = false
 
 
 func _act_pose(pose: String) -> void:
@@ -73,10 +78,12 @@ func _act_pose(pose: String) -> void:
 		_act_pitch_back = NAN
 
 
-# The eyes on her head for a screenshot (capture runs only, so the played
-# run is the same with or without them); the view's pitch goes back after.
+# The eyes on her head for a screenshot (capture runs only, with the
+# simulation held still till the screenshot is taken, so the played run is
+# the same with or without them); the view's pitch goes back after.
 func _act_frame_her() -> void:
 	if _act_capturing():
+		_main.freeze_sim = true
 		var pitch := float(_main._pitch)
 		await _look_at_point(_main._matron_view.head_world_position() - Vector3(0.0, 0.25, 0.0))
 		_act_pitch_back = pitch
@@ -85,6 +92,7 @@ func _act_frame_her() -> void:
 # The eyes on the toolbox in the air.
 func _act_frame_box() -> void:
 	if _act_capturing() and _act_box != 0:
+		_main.freeze_sim = true
 		var pitch := float(_main._pitch)
 		await _look_at_point(_native().get_kit_body_transform(_native().get_kit_body_index(_act_box)).origin)
 		_act_pitch_back = pitch
@@ -412,16 +420,20 @@ func _act_up_riser(device: int, off_its_head := true) -> bool:
 	await _crouch_on(device, false)
 	# From 143's band through the gate in the shaft's rail onto deck 13's
 	# walkway plate, to the riser's foot.
-	if not (await _go(device, ACT_GATE, 0.2, 12.0) and await _walk_to(device, ACT_PLATE, 0.15, 4.0)):
+	# (Put back at the riser's foot by a death, the climber is on the plate.)
+	var on_plate := _position().z < -133.2
+	if not on_plate and not (await _go(device, ACT_GATE, 0.2, 12.0) and await _walk_to(device, ACT_PLATE, 0.15, 4.0)):
 		return _fail("through the rail's gate onto the plate stalled at %s" % str(_position()))
-	if not await _walk_to(device, ACT_RISER_FOOT, 0.08, 6.0):
+	if _act_me_xz().distance_to(ACT_RISER_FOOT) > 0.25 and not await _walk_to(device, ACT_RISER_FOOT, 0.08, 6.0):
 		return _fail("the step to the riser's foot stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
-	if not await _offered(&"climb", "CLIMB"):
-		return _fail("Action read '%s' facing the riser, not CLIMB" % _action_label())
-	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
-		return _fail("CLIMB did not take hold of the riser")
+	# A step into its rungs from the plate already takes hold of it.
+	if int(_native().get_traversal_state()) != TRAVERSAL_CLIMBING:
+		if not await _offered(&"climb", "CLIMB"):
+			return _fail("Action read '%s' facing the riser, not CLIMB" % _action_label())
+		_act(device)
+		if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+			return _fail("CLIMB did not take hold of the riser")
 	_move(device, 1.0)
 	var up: bool = await _act_wait(func() -> bool: return _standing_above(154.5), 30.0, "riser")
 	_move(device, 0.0)
@@ -467,6 +479,10 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if float(watch["nearest"]) > x0 - 0.3:
 		return _fail("dangerous, her shove did not throw the climber at the shaft (dx %.2f)" % (
 			float(watch["nearest"]) - x0))
+	# Away from the rail before her next shove: the next could put the climber
+	# over it.
+	if not await _sprint_to(device, Vector2(22.6, _position().z), 0.8, 4.0):
+		return _fail("the break away from the rail stalled at %s" % str(_position()))
 	# Fully changed, her hands kill: the one death the act means. It can come
 	# in the same stride she changes.
 	_act_deaths_allowed = 1

@@ -77,6 +77,10 @@ const FALL_AIRBORNE := 1
 const FALL_PARACHUTING := 2
 var _summit_announced := false
 var _ci_mode := false
+# Tests only: the simulation held still while frames are still drawn and the
+# camera still turns (a capture run's screenshot, so that its frames do not
+# move the run it pictures away from the headless one).
+var freeze_sim := false
 var _yaw := 0.0
 var _pitch := -0.02
 var _cam_was_grounded := true

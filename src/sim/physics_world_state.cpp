@@ -224,6 +224,10 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         bodies.SetGravityFactor(player_id_, 1.0F);
         clear_traversal();
     }
+    // Back on the feet before the hands reach for anything: put back beside a
+    // ladder with the stick still held (as it was at the death), the first
+    // tick, not yet grounded, would catch it and hang the body there.
+    regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
     slingshot_flight_ = false;
     // The capsule the checkpoint was committed in: a crouched commit's
     // centre is a crouched centre, and may sit under a low ceiling.
