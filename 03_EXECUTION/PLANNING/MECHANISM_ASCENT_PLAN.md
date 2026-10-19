@@ -117,8 +117,14 @@ own gate.
 3. **Every link is physical:** contact, constraint or force; a simplified model (water, rubble)
    is declared in the stage record.
 4. **Rides are moving supports.** The rider inherits the payload's motion.
-5. **Nothing strands.** Dying restores the last commit, machines included; a machine that can be
-   spent without the player riding it returns by itself or leaves another way on.
+5. **The parachute is the way back** (the owner, 2026-10-19, replacing "nothing strands"). The
+   player can step off the structure anywhere and open the canopy, so no stage is designed around
+   keeping them from being stuck, and nothing is pinned or simplified to that end. Dying restores
+   the last commit, machines included. What the owner still wants: a player who spends or wrecks a
+   machine has some way to fix it or to go on (a re-arm, another route, or the canopy down to try
+   again), never a dead save. And the world is causal (the owner, 2026-10-19): most things can be
+   used, moved, bumped and knocked about, and something that rolls or slides off when hit is the
+   physics working, not a fault to design out.
 6. **Built to be read.** Every part is held by visible structure; what the player handles is
    marked (hazard or yellow).
 7. **Climbs are designed, not free**, and a climb never lets the player bypass the machine below it.
@@ -260,7 +266,7 @@ spec and falsifiers stay in this file's history at `19e04ba` (§6 there).
 **Decision record.** The first build of S1 was a skip of scrap with the rope's end found on a
 bollard (the AS-006 A pattern). Two moves spent it for good: a trip pulled from the yard sends
 the cage up empty, and a trip with the rope's end dropped loose lets the skip drag it up to the
-head. Either strands the ascent at its first stage (rule 5). The water balance keeps the same
+head. Either strands the ascent at its first stage (the old rule 5, before 2026-10-19). The water balance keeps the same
 counter-mass principle but returns itself: the counter-mass is let go at the bottom. The kit
 already carried every part of it (pools, pipes, water bins, strikers: AS-007 E).
 

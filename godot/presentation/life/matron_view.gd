@@ -57,6 +57,7 @@ var _was_seen := false
 var _last_turn := 0
 var _cry_fall := false
 var _vaults_seen := -1
+var _shoves_seen := -1
 var _leaps_seen := -1
 var _unrigs_seen := -1
 var _climbs_seen := -1
@@ -1108,6 +1109,13 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			_audio.matron_cue(&"matron_step", _hip_world(), 2.0, 0.7)
 			_audio.matron_cue(&"bone_crack", _hip_world(), -4.0, randf_range(1.2, 1.35))
 		_vaults_seen = vaults
+		# Her hands on the player before she is a killer: a shove, with a
+		# cry as she throws her weight in and the thud of it landing.
+		var shoves := int(data.get("shoves", 0))
+		if _shoves_seen >= 0 and shoves > _shoves_seen:
+			_audio.matron_cue(&"matron_shriek", _hip_world(), -2.0, randf_range(0.6, 0.72))
+			_audio.matron_cue(&"matron_step", _hip_world(), 3.0, 0.6)
+		_shoves_seen = shoves
 		# A leap over a gap: the shriek as she goes.
 		var leaps := int(data.get("leaps", 0))
 		if _leaps_seen >= 0 and leaps > _leaps_seen:

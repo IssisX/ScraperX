@@ -303,16 +303,32 @@ void run_matron() {
                     s.matron_state().state == static_cast<int>(Matron::State::Shuffling),
                 "matron: after the burst she is out and about");
     }
-    // ---- the hunt: she runs faster than a walk, slower than a sprint, and catches a still player ----
+    // ---- the hunt: she runs faster than a walk, slower than a sprint; a pest's hands
+    //      shove a still player off their feet, and only fully changed is a catch a death ----
     {
         Simulation s(InitialSpawn::Deck154);
         wake_and_wait_east(s);
         require(wait_for_her(s, 14.0, 40.0), "matron: she comes for a player waiting in the east band");
+        const auto met = s.snapshot();
+        stand_still(s, 2.5);
+        const auto shoved = s.snapshot();
+        const auto pest = s.matron_state();
+        std::cout << "  matron: a pest's hands: shoves=" << pest.shoves << " catches=" << pest.catches << " moved="
+                  << std::hypot(shoved.player_position.x - met.player_position.x, shoved.player_position.z - met.player_position.z)
+                  << " m, deaths " << met.death_count << " -> " << shoved.death_count << "\n";
+        require(pest.stage == 0 && pest.shoves >= 1 && pest.catches == 0 && shoved.death_count == met.death_count,
+                "matron: a pest who reaches a player standing still shoves them, and it is no death");
+        require(std::hypot(shoved.player_position.x - met.player_position.x,
+                           shoved.player_position.z - met.player_position.z) > 0.8,
+                "matron: the shove throws the player off their feet and away");
+        require(shoved.stumble_count > met.stumble_count && shoved.hit_count > met.hit_count,
+                "matron: the shove is a stumble and a hit the body feels");
+        s.debug_set_matron_stage(2);
         const auto start = s.snapshot();
         stand_still(s, 12.0);
         const auto after = s.snapshot();
         require(s.matron_state().catches > 0 && after.death_count > start.death_count,
-                "matron: a player who just stands there is caught, which is a death");
+                "matron: fully changed, a player who just stands there is caught, which is a death");
         const auto m = s.matron_state();
         require(m.alive && (m.state == kStateEmerging || m.state == kStateHunting),
                 "matron: after a catch she is back at her locker, out again");
@@ -333,7 +349,9 @@ void run_matron() {
         require(go(s, 0.0, Matron::kBandSouthZ, true, 8.0, 1.0), "matron: a run along the south band");
         const auto far = s.snapshot().player_position;
         const auto deaths_before = s.snapshot().death_count;
-        // Stand and let her take the player.
+        // Fully changed (a pest or a dangerous one would only shove), stand
+        // and let her take the player.
+        s.debug_set_matron_stage(2);
         stand_still(s, 30.0);
         const auto back = s.snapshot();
         require(back.death_count > deaths_before, "matron: standing still on the loop gets the player caught");
@@ -589,6 +607,7 @@ void run_matron() {
         }
         require(hunted, "matron mind: a noise close to her post draws her");
         const auto deaths = s.snapshot().death_count;
+        s.debug_set_matron_stage(2);   // a catch is a death only fully changed
         stand_still(s, 0.0);
         const bool caught = run_until(20.0, [&] { return s.snapshot().death_count > deaths; });
         require(caught, "matron mind: standing still, the player is caught");
@@ -1140,6 +1159,39 @@ void run_matron() {
                 "matron below: frail, she goes to the line down to 143 and stands on it");
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
+    }
+    // ---- dangerous, her hands aim you at the shaft: a player standing by its
+    //      rim is shoved toward it, where a pest would only shove them away ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron shove: settle");
+        require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+                "matron shove: a sprint toward her locker wakes her");
+        // Crouched, to 1.5 m north of the shaft's north rim in the north band,
+        // in plain sight of her locker's door.
+        (void)s.set_crouch_input(true);
+        require(go(s, 0.0, Matron::kMidZ + Matron::kShaftHalfM + 1.5, false, 20.0, 0.3),
+                "matron shove: a crouched walk to the shaft's north rim");
+        (void)s.set_crouch_input(false);
+        s.debug_set_matron_stage(1);
+        require(wait_for_her(s, 14.0, 40.0), "matron shove: out and dangerous, she comes for the player at the rim");
+        const auto before = s.snapshot();
+        double nearest_z = before.player_position.z;
+        bool shoved = false;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !shoved; ++i) {
+            tick(s);
+            nearest_z = std::min(nearest_z, s.snapshot().player_position.z);
+            shoved = s.matron_state().shoves >= 1 && (s.snapshot().player_position.z < before.player_position.z - 0.6 ||
+                                                      s.snapshot().death_count > before.death_count);
+        }
+        const auto after = s.snapshot();
+        std::cout << "  matron shove: dangerous, shoves=" << s.matron_state().shoves << " player z " << before.player_position.z
+                  << " -> " << after.player_position.z << " (nearest " << nearest_z << "), deaths " << before.death_count
+                  << " -> " << after.death_count << "\n";
+        require(shoved, "matron shove: dangerous, her shove throws the player toward the shaft's rim");
+        require(s.matron_state().catches == 0, "matron shove: dangerous, her hands are not yet a death");
+        std::cout << "PASS scraperx_sim matron shove: shoves=" << s.matron_state().shoves << " dz="
+                  << after.player_position.z - before.player_position.z << "\n";
     }
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her

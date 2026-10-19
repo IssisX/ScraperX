@@ -95,6 +95,7 @@ public:
     [[nodiscard]] bool surface_below(const JPH::RVec3 from, const float reach, JPH::RVec3 &point) const noexcept;
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
+    [[nodiscard]] Matron &matron() noexcept { return *matron_; }
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -294,6 +295,7 @@ private:
     [[nodiscard]] float load_yaw(const JPH::BodyInterface &bodies) const noexcept;
 
     void hold_load_yaw(JPH::BodyInterface &bodies) noexcept;
+    void shove_player(JPH::BodyInterface &bodies, JPH::Vec3 direction) noexcept;
 
     [[nodiscard]] float carried_load_mass() const noexcept;
 

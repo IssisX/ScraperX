@@ -1038,6 +1038,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     sound_count_ = 0;
     step_planks(dt);
     vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
+    shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
     look_s_ = std::max(0.0F, look_s_ - dt);
     sees_player_ = false;
     sees_far_ = false;
@@ -1460,6 +1461,46 @@ bool Matron::caught(const RVec3 player) const noexcept {
            std::abs(at.GetY() - player.GetY()) < 1.4;
 }
 
+Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
+    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : player;
+    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+    if (away.LengthSq() < 1.0e-4F) {
+        away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    }
+    away = away.Normalized();
+    if (stage_ != Stage::Dangerous) {
+        return away;
+    }
+    // Dangerous: at the shaft's rim nearest the player (the point of its box
+    // nearest them), when it is within reach; over the shaft already (the
+    // catwalk), or far from its rim, away from her as a pest would.
+    const float px = float(player.GetX());
+    const float pz = float(player.GetZ());
+    const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
+                      std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
+    const float reach = to_rim.Length();
+    if (reach < 0.05F || reach > kShoveEdgeReachM) {
+        return away;
+    }
+    return to_rim / reach;
+}
+
+void Matron::set_stage_for_test(const Stage stage) noexcept {
+    stage_ = stage;
+    switch (stage) {
+    case Stage::Pest:
+        rage_ = 0.0F;
+        break;
+    case Stage::Dangerous:
+        rage_ = kRageDangerousUp + 0.05F;
+        break;
+    case Stage::Changed:
+        rage_ = kRageChangedUp + 0.05F;
+        break;
+    }
+    refresh_view();
+}
+
 void Matron::restore(const Saved &saved) {
     if (!dead_) {
         remove_body();
@@ -1470,6 +1511,8 @@ void Matron::restore(const Saved &saved) {
         exposure_s_ = saved.exposure_s;
         heard_level_ = 0.0F;
         heard_level_last_ = 0.0F;
+        shove_cooldown_s_ = 0.0F;
+        shoves_ = 0;
         speed_ = 0.0F;
         since_heard_s_ = 0.0F;
         turn_ = Turn::None;
@@ -1538,6 +1581,7 @@ void Matron::refresh_view() {
     view_.rage = rage_;
     view_.stage = stage_;
     view_.exposure = std::min(1.0F, exposure_s_ / kExposureFullSeconds);
+    view_.shoves = shoves_;
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;

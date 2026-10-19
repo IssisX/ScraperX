@@ -218,6 +218,7 @@ struct MatronSnapshot final {
     double rage = 0.0;
     std::uint8_t stage = 0;
     double exposure = 0.0;
+    std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
@@ -1236,6 +1237,9 @@ public:
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
     [[nodiscard]] SummitSnapshot summit_state() const noexcept;
     [[nodiscard]] MatronSnapshot matron_state() const noexcept;
+    // Tests only (never bound to the bridge): the Matron's stage, with the
+    // rage it takes, so a test can meet what each stage does to the player.
+    void debug_set_matron_stage(std::uint8_t stage) noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

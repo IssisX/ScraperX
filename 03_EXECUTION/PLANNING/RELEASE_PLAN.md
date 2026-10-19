@@ -48,7 +48,7 @@ Each item is one complete, verifiable unit, proven through the touch path on the
    which skips most of the tower and is there for fun. Still open: `touch_summit` plays from grade to 802.64 m with no spawn
    in between, plus a matching native chain. It becomes a CI gate. A second run takes the canonical
    branch through TP-340 and on into AS-008.
-2. **Nothing strands** (M).
+2. **Every machine can be fixed or gone on from** (M; the owner, 2026-10-19, replacing "nothing strands": the parachute is the way back from anywhere, plan §2.6 rule 5).
    - A mid-ride death-and-restore falsifier for every machine.
    - The incline, wheel and tram exits joined to the next stage on touch.
    - The stone wheel's rides per hopper counted.

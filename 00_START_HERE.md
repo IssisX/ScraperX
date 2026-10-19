@@ -12,10 +12,13 @@ every request is checked against this list, and a repeat or a contradiction is p
 
 | Date | Directive | Status here |
 |---|---|---|
+| 2026-10-19 | How Claude works now: *"you CAN start workflows"*, push to the branch at will (*"You can push and should push at will"*), run local checks and CI at will, and optimize its own way of working rather than follow earlier process rules that get in the way. Supersedes the same day's "never start a session or workflow unasked, ask before anything large, keep work local until told to push" and the 2026-10-18 rows on local checks and on workflow prompts | in force |
+| 2026-10-19 | A causal physics world: most things can be used, moved, bumped and knocked about; a thing that moves when hit is the physics working. Rule 5 "nothing strands" is dropped: the parachute is the way back from anywhere; a spent or wrecked machine must still leave some way to fix it or go on | in force (plan §2.6 rule 5) |
+| 2026-10-19 | Talk in plain words: name things by what they are (the float lift at 220 m), not by internal labels (D, touch_wet) | in force |
 | 2026-10-19 | This device only: the game is made for the phone it is played on, by touch. No time on mouse, keyboard or gamepad work: *"We're not particularly supporting PC, that's wasteful. Just target this device"* | in force; the pad and keyboard scenarios already in CI stay until the owner retires them and no new one is written; a test step shared by the three devices is kept device-neutral |
 | 2026-10-18 | American spelling everywhere Claude writes (chat, commits, comments, docs): meter, center, color, tire, curb | in force; older British spellings are converted as each file is touched |
 | 2026-10-18 | Claude has every permission: never ask the owner for permission to act; decide, act and report. Machines make sounds; only people have voices | in force; the project settings allow every tool the sessions use |
-| 2026-10-18 | No waste: run locally only the checks for what a change touches; CI plays every scenario | in force |
+| 2026-10-18 | No waste: run locally only the checks for what a change touches; CI plays every scenario | superseded 2026-10-19: checks local and in CI at will |
 | 2026-10-18 | The owner is on US Central time: give every time in Central (e.g. "2:33 pm Central"), not UTC | in force |
 | 2026-10-18 | A prompt the app itself raises is acceptable now and then, never over and over: the multi-agent workflow (which always asks) at most once per big feature, for its closing review; everything routine on tools that do not ask | in force |
 | 2026-10-06 | Not "3D chutes and ladders": *"I didn't ask you to make me a game of 3D chutes and ladders … There's lifts that need a pull of something, and fucking ladders throughout the whole damn game. So boring"* | in the plan (§2.6 rule 11): no new ladder on the route and no lift started by pulling something; each stage is a different physical experience (launch, swing, ride what falls or tips, momentum). Built: the ground slingshot (`AS-011`), from `ChatGPT`'s working bands; and up from the +221 m ring, the swing (`AS-012`: a ram strikes the rider's seat, which swings up to the 242 ring; the rider kicks the trip), then C6, a climb with no ladder to the 264 ring (a running leap caught by the hands; girders walked on the balance out over the void and up at 24°). Replaced so far below 221 m: S1, the first lift, now goes on the rider's weight on a scale plate in its cage (2026-10-07); S2 on the rider shoving a shoot bolt out with the body (2026-10-17); S3 on an iron pig the rider carries into its cage and lets go of into the pan its brake's trip line ends in (2026-10-19); and above 220 m, D on its own spool, carried through the fill line's gap onto the platform and set in the cradle behind the rider, no valve (2026-10-19). Next: E to O (all but N), still started by a pull, and the climbs' ladders, one at a time; above the 264 ring, the next machine. Dropped: importing `ChatGPT`'s teeter and swinging ladder above 221 m (both end in ladder climbs), and a counterweighted boom from the 220 ring (S2's walking beam again, rule 9) |
@@ -44,7 +47,9 @@ camera, HUD and Android delivery, and decides nothing.
 
 The climb is won by operating real machines under finite limits. A route opens because a load
 moved, not because a predicate flipped. Nothing teleports, nothing has unlimited force, nothing
-bypasses collision, and no mechanism may strand the player without a legal recovery path.
+bypasses collision. Most things can be used, moved and knocked about: it is a causal physics world
+(the owner, 2026-10-19). The parachute is the player's way back from anywhere on the structure, so
+the old "no mechanism may strand the player" is not a design rule here (plan §2.6 rule 5).
 
 ---
 

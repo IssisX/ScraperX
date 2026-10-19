@@ -960,6 +960,10 @@ TrapezeSnapshot Simulation::trapeze_state() const noexcept {
     return result;
 }
 
+void Simulation::debug_set_matron_stage(const std::uint8_t stage) noexcept {
+    physics_world_->matron().set_stage_for_test(static_cast<Matron::Stage>(std::min<std::uint8_t>(stage, 2)));
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();
@@ -995,6 +999,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.rage = view.rage;
     result.stage = static_cast<std::uint8_t>(view.stage);
     result.exposure = view.exposure;
+    result.shoves = view.shoves;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

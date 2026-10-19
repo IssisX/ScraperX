@@ -319,6 +319,16 @@ public:
     // Her look follows the exposure, one way: how long she has been out,
     // over this, is how far the source's work shows on her.
     static constexpr float kExposureFullSeconds = 600.0F;
+    // What her hands on the player are, by stage (physics_world.cpp): fully
+    // changed, a death; before that a shove, kShoveMps along the floor and
+    // kShoveUpMps up, once in kShoveCooldownSeconds. A pest's shove is away
+    // from her; dangerous, she aims it at the shaft's rim when the player is
+    // within kShoveEdgeReachM of it (the owner: she tries to nudge him off a
+    // band).
+    static constexpr float kShoveMps = 5.5F;
+    static constexpr float kShoveUpMps = 2.0F;
+    static constexpr float kShoveCooldownSeconds = 1.5F;
+    static constexpr float kShoveEdgeReachM = 3.0F;
 
     struct PlankView {
         float x = 0.0F, y = 0.0F, z = 0.0F;
@@ -358,6 +368,7 @@ public:
         float rage = 0.0F;          // 0..1: fed by sound at her ear, lowered by quiet
         Stage stage = Stage::Pest;
         float exposure = 0.0F;      // 0..1: how far the source's work shows, by her time out
+        std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -428,6 +439,17 @@ public:
         return edge;
     }
     void count_catch() noexcept { ++catches_; }
+    // Her hands on the player, by stage: a death only fully changed; else a
+    // shove, once in its cooldown, along shove_direction.
+    [[nodiscard]] bool kills() const noexcept { return stage_ == Stage::Changed; }
+    [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F; }
+    void count_shove() noexcept {
+        ++shoves_;
+        shove_cooldown_s_ = kShoveCooldownSeconds;
+    }
+    [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    // Tests only (never bound to the bridge): her stage, and the rage it takes.
+    void set_stage_for_test(Stage stage) noexcept;
     [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_}; }
     void restore(const Saved &saved);
 
@@ -585,6 +607,8 @@ private:
     float exposure_s_ = 0.0F;         // seconds out of her locker, alive
     float heard_level_ = 0.0F;        // this tick's loudest sound at her ear, 0..1
     float heard_level_last_ = 0.0F;
+    float shove_cooldown_s_ = 0.0F;
+    std::uint32_t shoves_ = 0;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
     struct Sound {

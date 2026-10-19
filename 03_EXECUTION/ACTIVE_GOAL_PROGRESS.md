@@ -1404,6 +1404,78 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**Handoff for the next session (2026-10-19, evening).** Read this entry first, then the four below
+it, then the handoff document linked in "The story and the game's spine".
+
+The goal the owner set this session (Claude proposed it, the owner said to keep going): *her first
+act, from the top of the Stack (154 m) to the 220 m ring, played by touch, with her readable as a
+character.* Where each part stands:
+1. Her rage and three stages, moved by sound alone, both ways, no floor: done (entry below).
+2. You can read her stage without being told: her look by exposure, done (white tunic, then
+   blistered, then grey); the music box by stage, done (fast when dangerous, warped when fully
+   changed). Not done: her breathing and footfalls by stage.
+3. Her stage changes what she does: her hands, done (a pest shoves you away, dangerous she shoves
+   you at the shaft's rim, fully changed her catch is a death). Not done, and the owner asked for it
+   (2026-10-19): she carries things off and throws or drops them at you, shoves stock you placed off
+   edges, resets or jams machines you set; more of it the higher her stage. Her unrigging (built
+   2026-10-18) is the pattern to follow. The rage numbers are CHOSEN, to be tuned once she follows
+   up the tower.
+4. The foreman's radio: Act 1's four lines, done. The fifth (the first hard hat) waits for the
+   crew's signs (a dropped hard hat, a radio still talking) in the Counterweight Well.
+5. Proof: a touch playthrough from 154 m to 220 m that meets her in each stage. Not built. The
+   screenshots of her looks are made by `look_matron_gallery` (see below).
+
+After that, in the handoff document's build order: her reach up the tower band by band (XL), then
+Act 1's yard (badge-in, the crane's dropped load), the crew, day to night, the harpoon, the ending.
+Alongside: each lift's own start, the wet band's E and F next, then G to O (all but N), each its own
+way (rule 11).
+
+How the owner wants to work now (2026-10-19, evening; `00_START_HERE.md`'s directives): push to
+`ScraperX-Claude` at will, run local checks and CI at will, start workflows when they help, don't
+get lost in invisible detail, and talk in plain words (the float lift at 220 m, not "D"; the
+automated touch playthrough, not "touch_wet"). Rule 5 is now "the parachute is the way back", and
+the world is causal: things move when hit, and that is fine. This device only: no mouse, keyboard
+or gamepad work.
+
+Tools that work in this container:
+- Build: `cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 4` (the
+  GDExtension lands in `godot/addons/scraperx_native/bin/linux/`).
+- One native test: `SCRAPERX_ONLY=matron ./build/host/scraperx_sim_tests` (names in
+  `tests/simulation_tests.cpp`; AS-007, stack, ascent, save, determinism, ...); the whole suite with
+  no variable (about 25 minutes, 135+ passes).
+- One touch playthrough: `tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=touch_wet`.
+- Pictures from a scenario: start `Xvfb :0 -screen 0 1296x1114x24 &`, then
+  `DISPLAY=:0 tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 -- --uitest=look_matron_gallery --capture=<dir>/<prefix>`
+  (each `_pose("name")` in the scenario writes a PNG).
+- The Godot MCP tool (the owner installed it; use it to look at and drive the live game): its
+  `run_project` asks for a confirmation this client cancels, so use `attach_project` and launch the
+  game about 8 seconds after it starts, so the bridge is written into `project.godot` first:
+  `(sleep 8; DISPLAY=:0 SCRAPERX_PREVIEW=1 exec tools/godot/godot --path godot) &`, then
+  attach_project, then take_screenshot, simulate_input, run_script. To start somewhere other than
+  the ground: run_script reloading the scene paused (`scene_tree.paused = true;
+  reload_current_scene()`), then on the reloaded `TowerApproach` call
+  `_native.configure_initial_spawn(16)` (16 is the 220 ring; the list is `START_SPAWNS` in
+  `ui/settings_store.gd` against `InitialSpawn` in `src/sim/simulation.hpp`) and unpause; the camera
+  turns with `_yaw` and `_pitch`. Settings do not persist under SCRAPERX_PREVIEW. Detach when done:
+  the tool restores `project.godot`.
+
+Leftover: the branch `claude/stage-d-spool-start-wip` is superseded by the float lift's commit on
+`ScraperX-Claude` and can be deleted.
+
+**Her hands by stage (2026-10-19; the goal's item 3, its first part).** Her hands on the player were
+always a death. Now they follow her stage: fully changed, still a death; before that a shove, once
+in 1.5 s, 5.5 m/s along the floor and 2 m/s up, a stumble to recover from and a hit the body feels.
+A pest shoves away from herself; dangerous, when the player is within 3 m of the shaft's rim she
+aims the shove at the rim (the owner: she tries to nudge him off a band), else away. Heard: a cry
+and the thud of it. Not handled yet: a shove while the player hangs from a ledge or holds a ladder
+sets the body's speed against the hold, untested; a shove that should break the grip is next. The snapshot and the bridge carry `shoves`. For tests only, the simulation can
+set her stage (`debug_set_matron_stage`, never bound to the bridge). Proof: native `matron` (the
+hunt: a pest reaching a still player shoves them 3.6 m, no death, a stumble and a hit; set fully
+changed, the same stand is a death; new "shove": dangerous, a player 1.5 m from the shaft's north
+rim is shoved 0.6 m toward it; the checkpoint and the mind sections set her fully changed where
+they need a death; every other section as before), `determinism`, `save`; `touch_matron`,
+`touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`, `touch_radio`.
+
 **The foreman's radio, Act 1 (2026-10-19; the goal's item 4).** Walt Brenner speaks from the yard,
 the story's one human voice, over a handheld radio: each line is set off by a place or an event in
 the native's state, never a timer, and comes once a launch, one at a time, on a HUD plate that
@@ -1469,9 +1541,8 @@ carrier had the spool leaning back on the chest, rolled 40 degrees, and dropped 
 landed on whatever lay under it; two low guides narrowed to the gap (6 cm of slop a side) caught
 that flange and tipped the spool every time. The flanges are 0.25 m now, the spool hangs level and
 clear, and the guides are gone: set down flat anywhere within 0.28 m of the line, it is seated.
-Tried and dropped: round flanges on a cradle of two rails (a spool the rider brushes against rolls
-away along the ring, rule 5; and a rail tall enough to be a cradle needs a step up, and the 50 kg on
-the hands hauls the body straight back off the step). Seen, not chased: a load wide enough to hang
+Tried and dropped: round flanges on a cradle of two rails (a rail tall enough to be a cradle needs a
+step up, and the 50 kg on the hands hauls the body straight back off the step). Seen, not chased: a load wide enough to hang
 within 0.1 m of the body's front reads as a wall to the step-up's raised sweep, so D's spool's
 carrier steps up nothing over about 0.06 m; made to ignore the load, the step-up fires and the
 load's constraint drags the body back off the step each tick (the real fix lifts the load with the
@@ -1525,10 +1596,10 @@ In short:
   radiation gameplay.
 - Decision 9's "never carrying" is dropped (see decision 9 below).
 
-How we work now (the owner, 2026-10-19): never start a session or a workflow unasked; ask simple
-questions before anything large; custom work stays local until the owner says to push. Stage D's
-own start is half done on the branch `claude/stage-d-spool-start-wip`; its commit message lists what
-is left.
+How we work now (the owner, 2026-10-19, later the same day, replacing the morning's "never start a
+workflow unasked, ask before anything large, keep work local"): Claude may start workflows, pushes at
+will, runs local checks and CI at will, and optimizes its own way of working. Stage D's own start,
+then half done, is finished (below).
 
 **S3 started by an iron pig in a pan (2026-10-19; to-do 5, the first of the machines' own starts).**
 The owner, 2026-10-06: lifts that need a pull of something are boring (rule 11). S3 was the last

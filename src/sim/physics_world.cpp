@@ -747,12 +747,20 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
         precision_target_valid_ = false;
     }
-    // Her hands on the player: a death like a lethal fall.
+    // Her hands on the player. Fully changed, a death like a lethal fall;
+    // before that a shove (matron.hpp, the stages): a pest's away from her, a
+    // dangerous one's at the shaft's rim when it is near.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
-        matron_->count_catch();
-        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), bodies.GetLinearVelocity(player_id_).Length(), false);
-        restore_from_checkpoint(bodies);
-        died_this_tick = true;
+        if (matron_->kills()) {
+            matron_->count_catch();
+            leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), bodies.GetLinearVelocity(player_id_).Length(),
+                         false);
+            restore_from_checkpoint(bodies);
+            died_this_tick = true;
+        } else if (matron_->shove_ready()) {
+            matron_->count_shove();
+            shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
+        }
     }
     // Run into something (or run into) hard enough (kHitLethalSpeed): a
     // death side-on. Softer, a hit the body feels.
@@ -1188,6 +1196,21 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
                        : soles;
     death_speed_mps_ = impact_mps;
     death_side_on_ = side_on;
+}
+
+// Her hands on the player before she is fully changed: thrown off the feet
+// along `direction` (Matron::kShoveMps, and kShoveUpMps up), a stumble to
+// recover from, and a hit the body feels, on the side she came from.
+void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JPH::Vec3 direction) noexcept {
+    const JPH::Vec3 velocity = direction * Matron::kShoveMps + JPH::Vec3(0.0F, Matron::kShoveUpMps, 0.0F);
+    bodies.SetLinearVelocity(player_id_, velocity);
+    ++stumble_count_;
+    landing_response_ = LandingResponse::Stumble;
+    landing_loss_ = 0.6 * kLandingMaxLoss;
+    recovery_duration_ = recovery_seconds_left_ = 1.0;
+    ++hit_count_;
+    hit_speed_mps_ = Matron::kShoveMps;
+    hit_toward_ = -direction;
 }
 
 } // namespace scraperx::sim
