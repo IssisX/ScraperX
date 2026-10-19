@@ -58,6 +58,7 @@ var _last_turn := 0
 var _cry_fall := false
 var _vaults_seen := -1
 var _shoves_seen := -1
+var _throws_seen := -1
 var _leaps_seen := -1
 var _unrigs_seen := -1
 var _climbs_seen := -1
@@ -1007,6 +1008,14 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
 	_p["an_l"].rotation.x = -0.2
 	_p["an_r"].rotation.x = -0.2
+	# A piece of the player's stock in her hands (her mischief): both arms out
+	# before her chest under it, elbows bent, whatever her legs are doing.
+	if int(data.get("carrying", 0)) != 0:
+		arms_fwd = 1.35
+		arms_bend = 0.55
+		arms_splay = 0.08
+		arms_alt = 0.0
+		bend_alt = 0.0
 	_limb(_p["sh_l"], _p["el_l"], arms_fwd + arms_alt + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -(arms_bend + bend_alt) * elbow_flip, -arms_splay)
 	_limb(_p["sh_r"], _p["el_r"], arms_fwd - arms_alt, -(arms_bend - bend_alt) * elbow_flip, arms_splay)
 	if state == STATE_SEARCHING and turn == 0:
@@ -1116,6 +1125,11 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			_audio.matron_cue(&"matron_shriek", _hip_world(), -2.0, randf_range(0.6, 0.72))
 			_audio.matron_cue(&"matron_step", _hip_world(), 3.0, 0.6)
 		_shoves_seen = shoves
+		# A throw: her shriek as it leaves her hands.
+		var throws := int(data.get("throws", 0))
+		if _throws_seen >= 0 and throws > _throws_seen:
+			_audio.matron_cue(&"matron_shriek", _hip_world(), 0.0, randf_range(0.9, 1.05))
+		_throws_seen = throws
 		# A leap over a gap: the shriek as she goes.
 		var leaps := int(data.get("leaps", 0))
 		if _leaps_seen >= 0 and leaps > _leaps_seen:

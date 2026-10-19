@@ -294,7 +294,11 @@ JPH::BodyID Simulation::PhysicsWorld::carry_candidate(const JPH::BodyInterface &
     }
     const JPH::RVec3 at = bodies.GetPosition(player_id_);
     float best_distance = kCarryReach;
+    const JPH::BodyID hers = matron_->held_body();
     const auto consider = [&](const JPH::BodyID id, const std::uint64_t candidate_entity) {
+        if (id == hers) {
+            return;   // in the Matron's hands
+        }
         const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
         const float distance = to_body.Length();
         if (distance > best_distance ||

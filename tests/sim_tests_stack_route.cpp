@@ -576,7 +576,9 @@ bool load_s3_pan(scraperx::sim::Simulation &simulation) {
     }
     (void)simulation.set_facing(-1.0, 0.0);
     (void)simulation.advance_frame(0.5);
-    const std::uint64_t pig = scraperx::sim::LooseStock::kFirstEntity + simulation.loose_stock_count() - 1;
+    // The machines' weights end where the Matron's throwables begin.
+    const std::uint64_t pig = scraperx::sim::LooseStock::kFirstEntity + simulation.loose_stock_count() - 1 -
+                              scraperx::sim::LooseStock::kMatronThrowables;
     if (simulation.snapshot().carry_target_entity_id != pig) {
         std::cout << "DEBUG load_s3_pan target_id=" << simulation.snapshot().carry_target_entity_id << " not the pig "
                   << pig << "\n";

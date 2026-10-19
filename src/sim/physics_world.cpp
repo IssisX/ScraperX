@@ -352,6 +352,18 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     // The weights machines are started with: after the devices, so saves made
     // before them line up too.
     loose_stock_->lay_machine_weights();
+    // What the Matron takes and throws as a pest (matron.hpp): after the
+    // weights, so saves made before them line up too.
+    loose_stock_->lay_matron_throwables();
+    {
+        std::vector<Matron::Throwable> throwables;
+        for (int i = loose_stock_->count() - LooseStock::kMatronThrowables; i < loose_stock_->count(); ++i) {
+            const kit::BodyIndex body = loose_stock_->body(i);
+            throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
+                                  LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
+        }
+        matron_->set_throwables(std::move(throwables));
+    }
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.
@@ -637,7 +649,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // step's hits, hardest first, then the yard crane's drives while they run.
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
-        if (loud > 0.0F) {
+        // Her own throw coming down is not a sound to her (matron.hpp).
+        if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }
@@ -653,6 +666,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // And whether the player has rigged them to ride: she undoes that.
     matron_->set_rigged(kit_->rope_end_entity(well_.a_rope) == kWellACageEntityId,
                         kit_->rope_end_entity(well_.b_rope) == kWellBCageEntityId);
+    matron_->set_player_holding(carried_entity_);
     matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
     if (const int way = matron_->take_unrig(); way >= 0) {
         // Her hands have the rope's end off the cage's eye: it hangs there on

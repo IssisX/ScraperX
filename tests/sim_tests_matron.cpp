@@ -255,6 +255,124 @@ std::uint32_t line_from(const Simulation &s, const double floor) {
 
 } // namespace
 
+// A pest's mischief: the player's toolbox taken and thrown, or carried off.
+void run_matron_mischief() {
+    // ---- a pest's mischief (the owner, 2026-10-19): a toolbox the player has
+    //      handled is theirs to her; she goes for it, takes it and throws it at
+    //      them; then her hands shove them ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron mischief: settle");
+        // The toolbox by the north band's outer rail, picked up and set down
+        // on the band east of the way out.
+        require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "matron mischief: to the toolbox");
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.advance_frame(0.4);
+        const std::uint64_t box = s.snapshot().carry_target_entity_id;
+        require(box != 0, "matron mischief: the toolbox is in the hands' reach");
+        (void)s.request_pick_up();
+        (void)s.advance_frame(0.4);
+        require(s.snapshot().carrying_entity_id == box, "matron mischief: picked up");
+        require(go(s, 2.0, -126.6, false, 12.0, 0.2), "matron mischief: carried east along the band");
+        (void)s.request_set_down();
+        (void)s.advance_frame(1.0);
+        const std::uint32_t box_body = s.kit_body_index(box);
+        const auto set_at = s.kit_body_position(box_body);
+        require(s.snapshot().carrying_entity_id == 0, "matron mischief: set down on the band");
+        // Woken by a sprint toward her locker; back west to wait, crouched.
+        require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+                "matron mischief: a sprint toward her locker wakes her");
+        (void)s.set_crouch_input(true);
+        require(go(s, -6.0, Matron::kBandNorthZ, false, 30.0, 0.3), "matron mischief: back west, crouched");
+        (void)s.set_crouch_input(false);
+        stand_still(s, 0.2);
+        // She bursts out, comes west along the band, takes the toolbox in
+        // passing and throws it at the player standing there.
+        const auto before = s.snapshot();
+        double nearest = 1.0e9;
+        bool thrown = false;
+        double took_at = -1.0;
+        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            if (took_at < 0.0 && m.carrying == box) {
+                took_at = i / static_cast<double>(Simulation::kTickRateHz);
+            }
+            if (m.throws > 0) {
+                thrown = true;
+                const auto b = s.kit_body_position(box_body);
+                const auto p = s.snapshot().player_position;
+                nearest = std::min(nearest, std::hypot(std::hypot(b.x - p.x, b.z - p.z), b.y - p.y));
+            }
+            if (thrown && s.snapshot().hit_count > before.hit_count) {
+                break;
+            }
+            if (thrown && i % 9 == 0 && s.kit_body_velocity(box_body).y == 0.0 && nearest < 1.2) {
+                break;
+            }
+        }
+        const auto m = s.matron_state();
+        std::cout << "  matron mischief: set down at (" << set_at.x << ", " << set_at.z << "), taken " << took_at
+                  << " s after the wait began, takes " << m.takes << " throws " << m.throws << ", it came within "
+                  << nearest << " m of the player, felt hits " << s.snapshot().hit_count - before.hit_count
+                  << ", deaths " << s.snapshot().death_count << ", stage " << int(m.stage) << "\n";
+        require(m.takes >= 1 && took_at > 0.0, "matron mischief: a pest takes the toolbox the player handled");
+        require(m.throws >= 1 && (nearest < 1.2 || s.snapshot().hit_count > before.hit_count),
+                "matron mischief: and throws it at the player");
+        require(s.snapshot().death_count == 0 && m.stage == 0, "matron mischief: a pest's throw is no death");
+        // Then at the player: her hands shove them.
+        bool shoved = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !shoved; ++i) {
+            tick(s);
+            shoved = s.matron_state().shoves > 0;
+        }
+        require(shoved && s.snapshot().death_count == 0, "matron mischief: then her hands shove the player, no death");
+        std::cout << "PASS scraperx_sim matron mischief: took_s=" << took_at << " throws=" << m.throws
+                  << " nearest_m=" << nearest << "\n";
+    }
+    // ---- a pest's mischief, unseen: never getting the throw, she carries the
+    //      player's toolbox off to her post and drops it there ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron hoard: settle");
+        require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "matron hoard: to the toolbox");
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.advance_frame(0.4);
+        const std::uint64_t box = s.snapshot().carry_target_entity_id;
+        (void)s.request_pick_up();
+        (void)s.advance_frame(0.4);
+        require(box != 0 && s.snapshot().carrying_entity_id == box, "matron hoard: picked up");
+        require(go(s, 6.0, -126.4, false, 14.0, 0.2), "matron hoard: carried east toward her locker");
+        (void)s.request_set_down();
+        (void)s.advance_frame(1.0);
+        const std::uint32_t box_body = s.kit_body_index(box);
+        // A sprint past her locker wakes her; on east and round to the south
+        // band, crouched, out of her sight.
+        require(go(s, 14.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+                "matron hoard: a sprint past her locker wakes her");
+        (void)s.set_crouch_input(true);
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 30.0) && go(s, Matron::kBandX, Matron::kBandSouthZ, false, 40.0),
+                "matron hoard: crouched away round to the south band");
+        (void)s.set_move_input(0.0, 0.0);
+        bool took = false;
+        bool guarding_with_it_down = false;
+        for (int i = 0; i < 120 * static_cast<int>(Simulation::kTickRateHz) && !guarding_with_it_down; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            took = took || m.carrying == box;
+            guarding_with_it_down = took && m.state == kStateGuarding && m.carrying == 0 && m.speed < 0.3;
+        }
+        const auto b = s.kit_body_position(box_body);
+        const double from_post = std::hypot(b.x - Matron::kPostX, b.z - Matron::kPostZ);
+        std::cout << "  matron hoard: took " << took << ", the toolbox down " << from_post << " m from her post, throws "
+                  << s.matron_state().throws << ", deaths " << s.snapshot().death_count << "\n";
+        require(took && guarding_with_it_down && from_post < 2.5 && s.matron_state().throws == 0 &&
+                    s.snapshot().death_count == 0,
+                "matron hoard: unseen, she carries the player's toolbox off to her post and drops it there");
+        std::cout << "PASS scraperx_sim matron hoard: from_post_m=" << from_post << "\n";
+    }
+}
+
 void run_matron() {
     // ---- asleep: quiet or alone, she stays sealed ------------------------------
     {
@@ -1193,6 +1311,7 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron shove: shoves=" << s.matron_state().shoves << " dz="
                   << after.player_position.z - before.player_position.z << "\n";
     }
+    run_matron_mischief();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

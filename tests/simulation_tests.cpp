@@ -97,6 +97,10 @@ int main() {
         run_matron();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-mischief") {
+        run_matron_mischief();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
         run_summit();
         run_summit_arm();

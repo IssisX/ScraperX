@@ -576,6 +576,18 @@ void LooseStock::lay_machine_weights() {
     add_piece({K::Pig, 0, -8.9F, 88.0F, -161.8F, 0.5F * JPH_PI});
 }
 
+void LooseStock::lay_matron_throwables() {
+    // By the north band's outer rail, east and west of the way out and of
+    // where a climber arrives up the high riser.
+    add_piece({K::Toolbox, 0, -6.5F, kDeck154, -125.0F, 0.2F});
+    add_piece({K::Toolbox, 0, -4.4F, kDeck154, -125.1F, -0.3F});
+    add_piece({K::Drum, 1, -15.0F, kDeck154, -125.2F, 0.0F});
+}
+
+Vec3 LooseStock::carry_handle(const Kind kind) noexcept {
+    return make_spec(kind).handle;
+}
+
 void LooseStock::add_piece(const Placement &p) {
     static const std::array<Spec, kKinds> specs = [] {
         std::array<Spec, kKinds> all;

@@ -214,7 +214,9 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
     // Out of the slingshot's harness, and the hands off whatever they hold
     // (a ledge, a climb's holds, a bar, a zipline's trolley), before the body
-    // moves: the checkpoint is a standing one.
+    // moves: the checkpoint is a standing one. The Matron's hands too, before
+    // any stock is put back.
+    matron_->drop_stock();
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();

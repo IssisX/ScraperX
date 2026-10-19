@@ -84,6 +84,7 @@
 
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include <array>
@@ -302,12 +303,12 @@ public:
     // at a lower rage than it was entered at, so she never flickers on a
     // threshold. Nothing of it is drawn: the player reads her. The numbers
     // are CHOSEN and will be tuned once she follows up the tower: a sprint
-    // beside her for half a minute makes her dangerous; a quiet two minutes
-    // drop her a stage. A death's checkpoint keeps her rage with her state.
+    // beside her for half a minute makes her dangerous; a quiet minute drops
+    // her a stage. A death's checkpoint keeps her rage with her state.
     enum class Stage : std::uint8_t { Pest = 0, Dangerous = 1, Changed = 2 };
     static constexpr float kRageGainPerSecond = 0.02F;    // per unit of level at her ear
     static constexpr float kRagePerSpike = 0.04F;         // per unit the level jumps by: a landing, a crash
-    static constexpr float kRageDecayPerSecond = 0.0015F;
+    static constexpr float kRageDecayPerSecond = 0.003F;
     static constexpr float kRageDangerousUp = 0.45F;
     static constexpr float kRageDangerousDown = 0.30F;
     static constexpr float kRageChangedUp = 0.85F;
@@ -329,6 +330,38 @@ public:
     static constexpr float kShoveUpMps = 2.0F;
     static constexpr float kShoveCooldownSeconds = 1.5F;
     static constexpr float kShoveEdgeReachM = 3.0F;
+    // Her mischief as a pest (the owner, 2026-10-19: she carries things off
+    // and throws them at you): light stock the player has handled is theirs
+    // to her. Hunting as a pest, with the player more than kThrowMinM off,
+    // she goes for such a piece within kSeekStockM of her on her floor and
+    // takes it in her hands (a point at kHandsOutM ahead of her chest, drawn
+    // in at kHandsPullMps). Holding it, with the player in sight and in a
+    // throw's reach, she rears back for kThrowWindupSeconds and throws it at
+    // them at kThrowMps (CHOSEN: a hit the body feels, short of an arm broken
+    // or a death: physics_world_tuning.hpp kHitFeltSpeed, kArmBreakHitSpeed);
+    // then not again for kThrowCooldownSeconds. Never getting the throw, she
+    // carries it off to her post and drops it there. She lets it go when she
+    // is no longer a pest, in the Turn, on a climb, a line or a moving floor,
+    // or at the player. The landing of her own throw is not a sound to her
+    // (physics_world.cpp): her wrecking the player's work does not feed her
+    // own rage.
+    static constexpr float kSeekStockM = 5.0F;
+    static constexpr float kTakeM = 0.85F;
+    static constexpr float kHandsUpM = 0.25F;
+    static constexpr float kHandsOutM = 0.55F;
+    static constexpr float kHandsPullMps = 3.0F;
+    static constexpr float kHandsSlipM = 1.0F;
+    static constexpr float kThrowMps = 7.5F;
+    static constexpr float kThrowMinM = 2.5F;
+    static constexpr float kThrowMaxM = 6.0F;
+    static constexpr float kThrowWindupSeconds = 0.35F;
+    static constexpr float kThrowCooldownSeconds = 6.0F;
+    static constexpr float kThrowQuietSeconds = 2.5F;
+    struct Throwable {
+        JPH::BodyID body;
+        std::uint64_t entity = 0;
+        JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
+    };
 
     struct PlankView {
         float x = 0.0F, y = 0.0F, z = 0.0F;
@@ -369,6 +402,9 @@ public:
         Stage stage = Stage::Pest;
         float exposure = 0.0F;      // 0..1: how far the source's work shows, by her time out
         std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
+        std::uint64_t carrying = 0; // the entity of the stock in her hands, 0 for none
+        std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
+        std::uint32_t throws = 0;   // and threw at the player, this run
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -379,6 +415,7 @@ public:
         float rage = 0.0F;
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
+        std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
     };
 
     Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer, JPH::BodyID player);
@@ -400,6 +437,23 @@ public:
     void set_rigged(const bool a_rigged, const bool b_rigged) noexcept { rigged_ = {a_rigged, b_rigged}; }
     // The lines (and whether the player rides one): given once they are built.
     void set_zipline(Zipline *zipline) noexcept { zipline_ = zipline; }
+    // The stock she may take and throw (at most 32 pieces): given once it is laid.
+    void set_throwables(std::vector<Throwable> throwables);
+    // The entity in the player's hands this tick, 0 for none: given before
+    // pre_step. A throwable they hold becomes theirs to her, and she never
+    // takes it out of their hands.
+    void set_player_holding(std::uint64_t entity) noexcept { player_holding_ = entity; }
+    // Whatever is in her hands let go where it is, and no piece gone for: a
+    // checkpoint's restore does this before any body is put back.
+    void drop_stock();
+    // The stock in her hands (an invalid id for none): not the player's to take.
+    [[nodiscard]] JPH::BodyID held_body() const noexcept {
+        return held_ >= 0 ? throwables_[static_cast<std::size_t>(held_)].body : JPH::BodyID();
+    }
+    // Her last throw's entity while it is still in the air and landing, else 0.
+    [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
+        return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
+    }
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
     [[nodiscard]] int take_unrig() noexcept {
@@ -450,7 +504,7 @@ public:
     [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     void set_stage_for_test(Stage stage) noexcept;
-    [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_}; }
+    [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_, handled_}; }
     void restore(const Saved &saved);
 
     [[nodiscard]] const View &view() const noexcept { return view_; }
@@ -565,6 +619,15 @@ private:
     // Her rage and stage, from the level at her ear this tick; her exposure.
     void step_rage(float dt);
     [[nodiscard]] float turn_cooldown_seconds() const noexcept;
+    // Her mischief (above): the piece she would go for, or -1; going for it
+    // (true while she walks to it or takes it); holding and throwing it.
+    [[nodiscard]] int stock_to_fetch(float ax, float az) const;
+    bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
+    bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
+    void take_stock(int index);
+    void hold_stock(float dt);
+    void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
+    [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();
@@ -609,6 +672,19 @@ private:
     float heard_level_last_ = 0.0F;
     float shove_cooldown_s_ = 0.0F;
     std::uint32_t shoves_ = 0;
+    std::vector<Throwable> throwables_;
+    std::uint32_t handled_ = 0;
+    std::uint64_t player_holding_ = 0;
+    int fetch_ = -1;
+    int held_ = -1;
+    JPH::Ref<JPH::PointConstraint> hold_;
+    JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
+    float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
+    float throw_cooldown_s_ = 0.0F;
+    int thrown_ = -1;
+    float thrown_s_ = 0.0F;
+    std::uint32_t takes_ = 0;
+    std::uint32_t throws_ = 0;
     bool released_edge_ = false;
     bool player_on_deck_ = false;
     struct Sound {

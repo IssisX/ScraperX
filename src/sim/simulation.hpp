@@ -219,6 +219,9 @@ struct MatronSnapshot final {
     std::uint8_t stage = 0;
     double exposure = 0.0;
     std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
+    std::uint64_t carrying = 0; // the stock in her hands (its entity), 0 for none
+    std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
+    std::uint32_t throws = 0;   // and threw at the player
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

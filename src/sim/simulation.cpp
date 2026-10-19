@@ -1000,6 +1000,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stage = static_cast<std::uint8_t>(view.stage);
     result.exposure = view.exposure;
     result.shoves = view.shoves;
+    result.carrying = view.carrying;
+    result.takes = view.takes;
+    result.throws = view.throws;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

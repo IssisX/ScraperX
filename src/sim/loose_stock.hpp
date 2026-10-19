@@ -115,6 +115,14 @@ public:
     // (band_stack.cpp). The last kMachineWeights pieces.
     void lay_machine_weights();
     static constexpr int kMachineWeights = 1;
+    // What the Matron takes and throws as a pest (matron.hpp, her mischief):
+    // two toolboxes and an oil drum by the outer rail of her deck's north
+    // band, near the way out. Laid after the machine weights, so saves made
+    // before them line up. The last kMatronThrowables pieces.
+    void lay_matron_throwables();
+    static constexpr int kMatronThrowables = 3;
+    // Where a hand takes a carried piece of this kind, in its own frame.
+    [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
     [[nodiscard]] int count() const noexcept { return static_cast<int>(pieces_.size()); }
     // Every piece as placed, the table's and then the tower's.
