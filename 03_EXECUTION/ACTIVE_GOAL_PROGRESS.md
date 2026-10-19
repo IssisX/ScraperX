@@ -1404,6 +1404,33 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The story and the game's spine (2026-10-19, the owner's answers; nothing built yet).** The owner
+set one story to tie the built game together, answering simple questions. The full record (the
+spine band by band, the Matron's stages, the foreman's radio beats, proposed names, an opening and
+an ending, a build order) is the handoff document
+[ScraperX Handoff: Story, Spine and Next Steps](https://claude.ai/code/artifact/b4f0a0b1-184f-4d10-b743-4b80bf0daf9c).
+In short:
+- A Kellerworks worker sneaks onto his own site on a weekend to do parkour (badging in at the gate,
+  which logs him) and wakes the Matron: a coworker exposed by a lost weld-inspection X-ray source.
+  She is between him and the gate, so the only way off is up, and he ends by seating the overtime
+  crew's last beam (topping out). Fun turns to horror.
+- She changes in three stages, driven by what the climber does (noise, machines started, loads
+  placed): a pest who unrigs, resets, shoves, carries off and throws things; then dangerous, trying
+  to nudge him off a band; then fully changed as the exposure sets in. She kills the overtime crew:
+  signs first, bodies higher up.
+- The foreman speaks on the radio from the yard (a human voice): furious, then the lifeline, then
+  admitting he covered up her accident.
+- The yard crane, the forklifts and the grappling hook join the main climb; a line-throwing harpoon,
+  found partway up, gives the high ground against her. Morning to night with playing time, and the
+  night must be readable (floodlights, a helmet lamp, rings lit behind you, moon and city glow). No
+  radiation gameplay.
+- Decision 9's "never carrying" is dropped (see decision 9 below).
+
+How we work now (the owner, 2026-10-19): never start a session or a workflow unasked; ask simple
+questions before anything large; custom work stays local until the owner says to push. Stage D's
+own start is half done on the branch `claude/stage-d-spool-start-wip`; its commit message lists what
+is left.
+
 **S3 started by an iron pig in a pan (2026-10-19; to-do 5, the first of the machines' own starts).**
 The owner, 2026-10-06: lifts that need a pull of something are boring (rule 11). S3 was the last
 lift under 220 m still started by a pull: its brake's trip line ended in a hanging handle. It ends
@@ -1658,7 +1685,8 @@ fill in after).**
    Done 2026-10-19: the faint route hint (a setting, off by default).
 5. Every machine its own start: S3 and the rest. Done 2026-10-19: S3 (an iron pig let go into the pan
    on its brake's trip line). Next: D to O (all but N), each its own way.
-6. The Matron's AI (she uses the lifts, ziplines and moves, not the forklift or the stock) and
+6. The Matron's AI (she uses the lifts, ziplines and moves, and carries and throws stock (the
+   owner, 2026-10-19); not the forklift) and
    her extras; her mind decided 2026-10-18 (decision 9: A + B + C). On her deck: done
    2026-10-18 (she guards the way out, peers, learns two tricks a run, vaults in the Turn). Off
    it: done 2026-10-18 for Stage A's cage to the 176 ring (she rides it with you, clinging,
@@ -1760,4 +1788,7 @@ that is otherwise ready. A letter is enough to answer.
    your route only in ways that can be undone (sends a lift away, waits quiet at a choke point,
    boards the lift you called), never making the summit impossible. C: she learns a trick you
    repeat within a run and forgets it when the run ends. Her senses stay honest: hearing and
-   sight, a last-known place and a guess where you are going; never the forklift or carrying.
+   sight, a last-known place and a guess where you are going; never the forklift.
+   Changed 2026-10-19 (the owner): she carries things and throws things; the old "never carrying"
+   is dropped, as it was never meant. B's "can be undone" is for her meddling with the route: the
+   deaths she causes are not undone unless that is intentionally wanted.
