@@ -59,9 +59,8 @@ void run_ascent() {
     const double at_220 = run.snapshot().simulation_time_seconds - start;
 
     // B03, Wet Isolation: D, E, F to TP-340.
-    require_leg(run, walk_to(run, 2.5, -129.6, 8.0) && walk_to(run, 4.0, -129.2, 6.0) && seat_wet_spool(run) &&
-                         throw_wet_fill(run),
-                "along the 220 ring, D's spool seated and its fill thrown");
+    require_leg(run, walk_to(run, 2.5, -129.6, 8.0) && walk_to(run, 4.0, -129.2, 6.0) && seat_wet_spool(run),
+                "along the 220 ring, D's spool carried aboard and seated");
     require_leg(run,
                 wait_for(run, 120.0,
                          [&](const Snapshot &) { return run.wet_state().d_platform_travel >= 35.95; }),

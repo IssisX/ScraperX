@@ -320,7 +320,6 @@ WetState Simulation::wet_state() const noexcept {
     out.d_tank_level = kit.pool_level(wet.d_tank);
     out.d_tube_level = kit.pool_level(wet.d_tube);
     out.d_platform_travel = kit.guide_travel(wet.d_guide);
-    out.d_valve_angle = kit.lever_angle(wet.d_valve);
     out.d_drain_angle = kit.lever_angle(wet.d_drain);
     out.dump_angle = kit.lever_angle(wet.header_dump);
     out.e_door_latched = kit.catch_latched(wet.e_door_catch);

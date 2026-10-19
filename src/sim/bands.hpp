@@ -74,12 +74,9 @@ struct WetIsolation final {
     // Stage D, the float ram.
     kit::BodyIndex d_platform;       // platform, mast and float: one body
     kit::BodyIndex d_spool;
-    kit::BodyIndex d_valve_body;
-    kit::BodyIndex d_valve_handle;
     kit::BodyIndex d_drain_body;
     kit::BodyIndex d_drain_handle;
     kit::GuideIndex d_guide;
-    kit::LeverIndex d_valve;
     kit::LeverIndex d_drain;
     kit::PoolIndex d_tank;
     kit::PoolIndex d_tube;

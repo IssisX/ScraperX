@@ -728,7 +728,6 @@ constexpr double kDeck14Top = 154.0;
 // ---- Shared stage helpers, defined in their stage's file ---------------------
 
 bool seat_wet_spool(scraperx::sim::Simulation &simulation);
-bool throw_wet_fill(scraperx::sim::Simulation &simulation);
 bool shut_wet_door(scraperx::sim::Simulation &simulation);
 bool pull_wet_trip(scraperx::sim::Simulation &simulation);
 bool couple_wet_hose(scraperx::sim::Simulation &simulation);

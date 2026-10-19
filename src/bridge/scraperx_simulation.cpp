@@ -1012,7 +1012,6 @@ godot::Dictionary ScraperXSimulation::get_wet_state() const {
     out["d_tank_level"] = state.d_tank_level;
     out["d_tube_level"] = state.d_tube_level;
     out["d_platform_travel"] = state.d_platform_travel;
-    out["d_valve_angle"] = state.d_valve_angle;
     out["d_drain_angle"] = state.d_drain_angle;
     out["dump_angle"] = state.dump_angle;
     out["e_door_latched"] = state.e_door_latched;
