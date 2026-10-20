@@ -1790,7 +1790,8 @@ In short:
 - The foreman speaks on the radio from the yard (a human voice): furious, then the lifeline, then
   admitting he covered up her accident.
 - The yard crane, the forklifts and the grappling hook join the main climb; a line-throwing harpoon,
-  found partway up, gives the high ground against her. Morning to night with playing time, and the
+  found partway up, gives the high ground against her (replaced 2026-10-20 by the owner's laser
+  welder and nail gun; 00_START_HERE.md directives). Morning to night with playing time, and the
   night must be readable (floodlights, a helmet lamp, rings lit behind you, moon and city glow). No
   radiation gameplay.
 - Decision 9's "never carrying" is dropped (see decision 9 below).
