@@ -12,10 +12,10 @@ void Simulation::PhysicsWorld::OnStep(const JPH::PhysicsStepListenerContext &con
     soft_contact_listener_.begin_collision_step();
     if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
     if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
+    if (traversal_line_) traversal_line_->collision_step(context.mDeltaTime);
     physical_hands_->pre_step(context.mDeltaTime, true);
     for (auto &palm : physical_palms_) if (palm) palm->pre_step(context.mDeltaTime);
     if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
-    if (traversal_line_) traversal_line_->collision_step(context.mDeltaTime);
     pre_step_physical_foot(context.mDeltaTime);
     slingshot_->collision_step(context);
     if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
@@ -282,7 +282,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
         pre_contact_fall_speed_mps_ = std::max(0.0F, -bodies.GetLinearVelocity(player_id_).GetY());
         fall_peak_speed_mps_ = std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
     }
-    if (!slingshot_) physical_hands_->pre_step(delta_seconds);
+    if (!slingshot_) {
+        if (traversal_line_) traversal_line_->collision_step(delta_seconds);
+        physical_hands_->pre_step(delta_seconds);
+    }
     if (supplied_ascent_) {
         const auto selection=supplied_machine_station(bodies);
         if (!gravity_reclaim_retry_available_ && !jump_started &&
@@ -360,7 +363,6 @@ void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
     }
     contact_listener_.set_transfer_receiver(receiver_body,receiver_patch);
     if (!slingshot_) {
-        if (traversal_line_) traversal_line_->collision_step(delta_seconds);
         pre_step_physical_foot(delta_seconds);
         for (auto &palm : physical_palms_) if (palm) palm->pre_step(delta_seconds);
     }

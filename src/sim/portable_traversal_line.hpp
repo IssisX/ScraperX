@@ -2,6 +2,7 @@
 
 #include "sim/portable_line_path.hpp"
 #include "sim/physical_hand_climb.hpp"
+#include "sim/material_traversal_line.hpp"
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <cstdint>
 
@@ -35,6 +36,8 @@ public:
     struct Checkpoint {
         bool installed = false, broken = false;
         Anchor anchor{};
+        Anchor second_anchor{};
+        MaterialTraversalLine::Checkpoint crossing{};
         PortableLinePath::State path{};
         float paid_length_m = 0;
         JPH::RVec3 fitting_position = JPH::RVec3::sZero();
@@ -46,6 +49,8 @@ public:
     struct Readback {
         bool equipped = false, installed = false, broken = false, gripping = false;
         bool target_valid = false, can_grab = false, can_recover = false;
+        bool two_ended = false, can_pin_end = false;
+        unsigned regrip_count = 0;
         unsigned available_spools = 1;
         std::uint64_t target = 0, generation = 0, event_serial = 0;
         Failure failure = Failure::None;
@@ -73,6 +78,9 @@ public:
     void aim(JPH::RVec3 hand, JPH::Vec3 direction, bool allowed);
     bool install(std::uint64_t shown_target);
     bool grab();
+    bool pin_second_end(std::uint64_t shown_target);
+    void traverse(JPH::Vec3 world_stick, float dt);
+    [[nodiscard]] bool two_ended() const { return material_line_.installed(); }
     void release(); // Removes only this fitting's hand rows; leaves world line.
     bool recover(); // Reachable, unloaded and slow; a settled hand grip is legal.
     void set_reel_input(float);
@@ -89,10 +97,17 @@ private:
     JPH::BodyID player_, fitting_;
     PhysicalHandClimb &hands_;
     const RiggingSystem *eyes_;
+    MaterialTraversalLine material_line_;
     JPH::Ref<FiniteCableConstraint> rope_;
     PortableLinePath::State path_state_{};
     PortableLinePath::Result path_{};
     Anchor anchor_{}, candidate_{};
+    Anchor second_anchor_{};
+    std::array<float, 2> hand_coordinates_{};
+    unsigned next_hand_ = 0, regrip_count_ = 0;
+    float traverse_stroke_ = 0;
+    float hang_drop_m_ = 0;
+    bool regrip_solved_ = false;
     JPH::RVec3 hand_ = JPH::RVec3::sZero();
     JPH::Vec3 aim_ = -JPH::Vec3::sAxisZ();
     std::uint64_t epoch_ = 1, target_ = 0, generation_ = 0, event_serial_ = 0;
@@ -114,6 +129,7 @@ private:
     [[nodiscard]] bool deployment_clear() const;
     [[nodiscard]] PortableLinePath::Input path_input() const;
     bool connect();
+    bool grab_material();
     void disconnect();
     void remove_fitting();
 };

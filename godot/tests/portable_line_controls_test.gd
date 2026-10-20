@@ -83,6 +83,12 @@ func _run() -> void:
 	finger(router, touch.stick_home(), false, 8)
 	finger(router, touch.button_center(&"pendant_up"), false, 7, true)
 	check(router.frame(.016).pendant == Vector2.ZERO, "touch cancellation clears reel")
+	ctx.traversal_line_two_ended = true
+	touch.update_context(ctx, 1.0)
+	check(not touch._movement_blocked, "two-ended crossing retains movement stick")
+	check(not touch.is_button_shown(&"pendant_up") and not touch.is_button_shown(&"pendant_down"), "fixed crossing hides inapplicable reel controls")
+	ctx.traversal_line_two_ended = false
+	touch.update_context(ctx, 1.0)
 	finger(router, touch.button_center(&"drop"), true)
 	finger(router, touch.button_center(&"drop"), false)
 	check(router.frame(.016).verbs == [&"drop"], "ordinary Drop emits only release verb")

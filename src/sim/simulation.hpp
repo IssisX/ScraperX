@@ -77,6 +77,8 @@ struct TraversalLineCommand final {
 struct TraversalLineSnapshot final {
     bool available = false, equipped = false, installed = false, broken = false, gripping = false;
     bool target_valid = false, can_grab = false, can_recover = false;
+    bool two_ended = false, can_pin_end = false;
+    unsigned regrip_count = 0;
     unsigned available_spools = 1, failure = 0;
     std::uint64_t target = 0, generation = 0, event_serial = 0;
     std::uint32_t support_body = ~std::uint32_t{0}, fitting_body = ~std::uint32_t{0};

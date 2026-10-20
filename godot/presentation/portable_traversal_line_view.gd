@@ -95,7 +95,7 @@ func update_state(state: Dictionary, audio: Node) -> void:
 	var grip: Vector3 = state.get("grip_point", Vector3.ZERO)
 	if is_instance_valid(_carried):
 		_carried.visible = bool(state.get("equipped", false)) and not installed and int(state.get("available_spools", 0)) > 0
-	_fitting.visible = installed
+	_fitting.visible = installed and not bool(state.get("two_ended", false))
 	_line.clear_surfaces()
 	if installed:
 		var rotation: Quaternion = state.get("fitting_rotation", Quaternion.IDENTITY)
@@ -109,7 +109,7 @@ func update_state(state: Dictionary, audio: Node) -> void:
 				_line.surface_add_vertex(points[i - 1])
 				_line.surface_add_vertex(points[i])
 			_line.surface_end()
-	_target.visible = bool(state.get("equipped", false)) and not installed and bool(state.get("target_valid", false))
+	_target.visible = bool(state.get("equipped", false)) and not bool(state.get("two_ended", false)) and bool(state.get("target_valid", false))
 	if _target.visible:
 		_target.global_position = state.get("target_point", Vector3.ZERO)
 	var serial := int(state.get("event_serial", 0))

@@ -9,6 +9,8 @@
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 #include <cmath>
@@ -127,6 +129,55 @@ void anchor_compound_and_decorators() {
     const Vec3 aggregate=result.participants[1].linear+result.participants[2].linear;
     near((aggregate+result.participants[0].linear).Length(),0,2e-6,"same-body aggregate reaction");
 }
+void two_mounts_and_material_points() {
+    World s;
+    auto *a=s.add(new OffsetCenterOfMassShape(new BoxShape(Vec3(.3F,.3F,.3F)),Vec3(.2F,.1F,0)),RVec3(-4,0,-.7F));
+    auto *b=s.add(new BoxShape(Vec3(.4F,.2F,.2F)),RVec3(4,0,.8F));
+    Path::SpanInput input;
+    input.a={a->GetID(),a->GetShape(),Vec3(1,.25F,.1F)};
+    input.b={b->GetID(),b->GetShape(),Vec3(-1,.1F,0)};
+    Path::State state;
+    const auto base=Path::evaluate_span(s.world,input,state); valid(base,false);
+    const auto com=a->GetCenterOfMassPosition(),origin=a->GetPosition();
+    const auto rotation=a->GetRotation();
+    constexpr float step=.002F;
+    for(int axis=0;axis<3;++axis) {
+        Vec3 unit=Vec3::sZero(); unit.SetComponent(axis,1);
+        const auto low=Quat::sRotation(unit,-step)*rotation,high=Quat::sRotation(unit,step)*rotation;
+        s.move(a,com-low*a->GetShape()->GetCenterOfMass(),low);
+        auto tmp=state; const auto minus=Path::evaluate_span(s.world,input,tmp); valid(minus,false);
+        s.move(a,com-high*a->GetShape()->GetCenterOfMass(),high);
+        tmp=state; const auto plus=Path::evaluate_span(s.world,input,tmp); valid(plus,false);
+        near((plus.length_m-minus.length_m)/(2*step),base.participants[0].angular[axis],2e-4,
+            "first real mounting point has its actual COM-relative torque derivative");
+        s.move(a,origin,rotation);
+    }
+    // The first mount's other leaves remain solid, unlike the legacy tiny
+    // fitting-COM query. A second leaf on A must earn a real contact reaction.
+    StaticCompoundShapeSettings shape;
+    shape.AddShape(Vec3::sZero(),Quat::sIdentity(),new BoxShape(Vec3(.3F,.3F,.3F)));
+    shape.AddShape(Vec3(4,0,.7F),Quat::sIdentity(),new BoxShape(Vec3(.5F,1,4),0));
+    const auto compound=shape.Create(); check(!compound.HasError(),"first mounting compound creates");
+    s.world.GetBodyInterface().SetShape(a->GetID(),compound.Get(),true,EActivation::Activate);
+    input.a.shape_identity=a->GetShape(); state={};
+    const auto wrapped=Path::evaluate_span(s.world,input,state); valid(wrapped,true);
+    check(wrapped.contact.body==a->GetID() && wrapped.participants[0].body==wrapped.participants[2].body,
+        "first mounting body's other leaf participates as a real obstacle");
+    // Point masses are real dynamic bodies with no collision surface. They
+    // neither block their own endpoint nor a cable's curved boundary envelope.
+    auto *point=s.add(new EmptyShape,wrapped.visual_points[wrapped.visual_point_count/2]);
+    valid(Path::evaluate_span(s.world,input,state),true);
+    s.move(a,origin+Vec3(0,6,0),rotation);
+    Path::SpanInput point_span;
+    point_span.a={point->GetID(),point->GetShape(),Vec3::sZero()};
+    point_span.b=input.b; state={};
+    const auto from_point=Path::evaluate_span(s.world,point_span,state); valid(from_point,false);
+    near(from_point.participants[0].angular.Length(),0,0,"point node has no fabricated moment arm");
+    s.world.GetBodyInterface().RemoveBody(point->GetID());
+    const auto missing=Path::evaluate_span(s.world,point_span,state);
+    check(!missing.valid && missing.participant_count==0 && missing.reason==Path::Reason::EndpointMissing,
+        "removed material endpoint cannot retain a force row");
+}
 void rounded_outer_ray_false_positive() {
     World s;
     auto *fitting=s.add(new BoxShape(Vec3(.1F,.1F,.1F)),RVec3(-4,0,0));
@@ -181,6 +232,7 @@ int main() {
         const std::pair<const char *,void (*)()> checks[]={
             {"discover_move_slide_release",discover_move_slide_release},{"obstacle_derivatives",obstacle_derivatives},
             {"anchor_compound_and_decorators",anchor_compound_and_decorators},{"rounded_outer_ray_false_positive",rounded_outer_ray_false_positive},
+            {"two_mounts_and_material_points",two_mounts_and_material_points},
             {"invalidation_and_limits",invalidation_and_limits},{"query_overflow",query_overflow}};
         for(const auto &test:checks) { std::cout<<"RUN "<<test.first<<std::endl; test.second(); }
         std::cout<<"maximum_translation_gradient_error="<<maximum_translation_error<<" maximum_rotation_gradient_error_m="<<maximum_rotation_error<<'\n';

@@ -100,7 +100,12 @@ void Simulation::PhysicsWorld::apply_traversal_line_commands(const StepCommands 
             break;
         case TraversalLineCommandKind::Action: {
             if (commands.release_requested) break;
-            if (!traversal_line_->readback().installed && !traversal_line_->install(command.target)) break;
+            const auto current = traversal_line_->readback();
+            if (!current.installed && !traversal_line_->install(command.target)) break;
+            if (current.installed && command.target && !current.two_ended) {
+                if (traversal_line_->pin_second_end(command.target)) finish_release();
+                break;
+            }
             const bool held = traversal_line_gripping();
             if (traversal_line_->grab()) {
                 traversal_state_ = TraversalState::LineSwing;
@@ -120,6 +125,11 @@ void Simulation::PhysicsWorld::apply_traversal_line_commands(const StepCommands 
     }
     traversal_line_->set_reel_input(float(commands.traversal_line_reel));
     if (traversal_line_gripping()) {
+        if (traversal_line_->two_ended()) {
+            traversal_line_->traverse(JPH::Vec3(float(commands.move_input_x), 0, float(commands.move_input_z)), dt);
+            physics_system_.GetBodyInterface().ActivateBody(player_id_);
+            return;
+        }
         // The movement stick commands a bounded human lean through the current
         // hand owner (500W/0.6m/s swing profile), never a capsule velocity.
         // 0.32m is a posture tuning bound, not a source of support or energy.
@@ -137,6 +147,7 @@ TraversalLineSnapshot Simulation::PhysicsWorld::traversal_line_state() const noe
     out.available = true; out.equipped = r.equipped; out.installed = r.installed;
     out.broken = r.broken; out.gripping = r.gripping; out.target_valid = r.target_valid;
     out.can_grab = r.can_grab; out.can_recover = r.can_recover;
+    out.two_ended = r.two_ended; out.can_pin_end = r.can_pin_end; out.regrip_count = r.regrip_count;
     out.available_spools = r.available_spools; out.failure = unsigned(r.failure);
     out.target = r.target; out.generation = r.generation; out.event_serial = r.event_serial;
     out.support_body = r.support.GetIndexAndSequenceNumber(); out.fitting_body = r.fitting.GetIndexAndSequenceNumber();

@@ -38,6 +38,13 @@ using namespace detail;
     JPH::Vec3 point = JPH::Vec3::sZero();
     if (traversal_state_ == TraversalState::LineSwing && physical_hands_->attached(hand)) {
         const auto grip = physical_hands_->grip_readback(hand);
+        if (grip.distributed) {
+            // Distributed material has no single rigid support. Interpolate
+            // this native solved world point on the existing render clock.
+            result.valid = grip.attached; result.generation = grip.generation;
+            result.origin = to_vector3(grip.world_anchor);
+            return result;
+        }
         body = grip.support; result.generation = grip.generation;
         point = JPH::Vec3(bodies.GetCenterOfMassTransform(body).Inversed() * grip.world_anchor);
     } else if ((traversal_state_ == TraversalState::Climbing ||

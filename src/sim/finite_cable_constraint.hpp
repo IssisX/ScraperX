@@ -22,6 +22,9 @@ public:
     };
     enum class Admission { Accepted, InvalidGeometry, CapacityExceeded, NoDynamicBody };
     explicit FiniteCableConstraint(float rest_length_m);
+    // Subdivision retains the whole line's axial rigidity: a material element
+    // of length l in a line L uses k*L/l and c*L/l. Strength is unchanged.
+    FiniteCableConstraint(float rest_length_m, float stiffness_n_per_m, float damping_ns_per_m);
     // Repeated bodies are combined before inverse mass/inertia. Any rejection
     // clears geometry, preventing a stale row; it never marks the line broken.
     // Call at the serialized collision OnStep boundary, before islands. Cold
@@ -63,7 +66,7 @@ private:
     std::array<Reaction,capacity> reactions_{};
     std::size_t count_ = 0;
     double length_ = 0, lambda_ = 0, gamma_ = 0, bias_ = 0, effective_mass_ = 0, cap_ = 0;
-    float rest_, dt_ = 0;
+    float rest_, stiffness_, damping_, dt_ = 0;
     bool geometry_valid_ = false, solving_ = false, broken_ = false, drive_limited_ = false;
 };
 } // namespace scraperx::sim

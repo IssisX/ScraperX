@@ -19,7 +19,11 @@ template<class V> bool finite(const V &v) { return std::isfinite(v.GetX()) && st
 struct Filter final:BodyFilter {
     BodyID player,fitting;
     bool ShouldCollide(const BodyID &id) const override { return id!=player && id!=fitting; }
-    bool ShouldCollideLocked(const Body &body) const override { return body.IsRigidBody() && !body.IsSensor(); }
+    bool ShouldCollideLocked(const Body &body) const override {
+        // Empty material point masses have no collision surface. Their
+        // zero-volume broadphase bounds must not become rope obstructions.
+        return body.IsRigidBody() && !body.IsSensor() && body.GetShape()->GetType()!=EShapeType::Empty;
+    }
 };
 struct Hits final:CastRayCollector {
     std::array<RayCastResult,Path::query_capacity> hits{};
@@ -120,19 +124,12 @@ Path::Reason boundary_clear(PhysicsSystem &world,const Filter &filter,const Path
 }
 } // namespace
 
-PortableLinePath::Result PortableLinePath::evaluate(JPH::PhysicsSystem &world,const Input &input,State &state) {
+PortableLinePath::Result PortableLinePath::evaluate_world(JPH::PhysicsSystem &world,
+        JPH::Body *fitting,JPH::Body *anchor,JPH::RVec3Arg a,JPH::RVec3Arg b,
+        JPH::BodyID player,JPH::BodyID ignored,State &state) {
     using namespace JPH;
-    if(!finite(input.endpoint_a) || !finite(input.anchor_shape_local_point) || input.fitting.IsInvalid() ||
-       input.anchor_body.IsInvalid() || input.fitting==input.anchor_body) return failure(Reason::InvalidInput,state);
-    auto *fitting=world.GetBodyLockInterfaceNoLock().TryGetBody(input.fitting);
-    auto *anchor=world.GetBodyLockInterfaceNoLock().TryGetBody(input.anchor_body);
-    if(!fitting || !fitting->IsInBroadPhase() || !fitting->IsRigidBody() || fitting->IsSensor()) return failure(Reason::EndpointMissing,state);
-    if(!anchor || !anchor->IsInBroadPhase() || !anchor->IsRigidBody() || anchor->IsSensor() ||
-       anchor->GetShape()!=input.anchor_shape_identity.GetPtr()) { release(state); return failure(Reason::AnchorChanged,state); }
-    if(Vec3(input.endpoint_a-fitting->GetCenterOfMassPosition()).LengthSq()>1.0e-12F) return failure(Reason::InvalidInput,state);
-    const RVec3 a=input.endpoint_a,b=anchor->GetWorldTransform()*input.anchor_shape_local_point;
-    if(!finite(b) || Vec3(b-a).LengthSq()<1e-12F) return failure(Reason::InvalidInput,state);
-    Filter filter; filter.player=input.player; filter.fitting=input.fitting;
+    if(!finite(a) || !finite(b) || Vec3(b-a).LengthSq()<1e-12F) return failure(Reason::InvalidInput,state);
+    Filter filter; filter.player=player; filter.fitting=ignored;
     RoundedBoxLineResult path;
     Body *obstacle=nullptr;
     Contact selected;
@@ -187,7 +184,7 @@ PortableLinePath::Result PortableLinePath::evaluate(JPH::PhysicsSystem &world,co
         result.length_m=std::sqrt(x*x+y*y+z*z);
         gb=Vec3(float(x/result.length_m),float(y/result.length_m),float(z/result.length_m)); ga=-gb;
     }
-    result.participants[0]={fitting,ga,Vec3::sZero()};
+    result.participants[0]={fitting,ga,Vec3(a-fitting->GetCenterOfMassPosition()).Cross(ga)};
     result.participants[1]={anchor,gb,Vec3(b-anchor->GetCenterOfMassPosition()).Cross(gb)};
     result.participant_count=2;
     if(wrapped) {
@@ -198,5 +195,34 @@ PortableLinePath::Result PortableLinePath::evaluate(JPH::PhysicsSystem &world,co
     if(wrapped) for(std::uint32_t i=0;i<path.surface_point_count;++i) result.visual_points[result.visual_point_count++]=path.surface_points[i];
     result.visual_points[result.visual_point_count++]=b;
     return result;
+}
+PortableLinePath::Result PortableLinePath::evaluate(JPH::PhysicsSystem &world,const Input &input,State &state) {
+    using namespace JPH;
+    if(!finite(input.endpoint_a) || !finite(input.anchor_shape_local_point) || input.fitting.IsInvalid() ||
+       input.anchor_body.IsInvalid() || input.fitting==input.anchor_body) return failure(Reason::InvalidInput,state);
+    auto *fitting=world.GetBodyLockInterfaceNoLock().TryGetBody(input.fitting);
+    auto *anchor=world.GetBodyLockInterfaceNoLock().TryGetBody(input.anchor_body);
+    if(!fitting || !fitting->IsInBroadPhase() || !fitting->IsRigidBody() || fitting->IsSensor()) return failure(Reason::EndpointMissing,state);
+    if(!anchor || !anchor->IsInBroadPhase() || !anchor->IsRigidBody() || anchor->IsSensor() ||
+       anchor->GetShape()!=input.anchor_shape_identity.GetPtr()) { release(state); return failure(Reason::AnchorChanged,state); }
+    if(Vec3(input.endpoint_a-fitting->GetCenterOfMassPosition()).LengthSq()>1.0e-12F) return failure(Reason::InvalidInput,state);
+    return evaluate_world(world,fitting,anchor,input.endpoint_a,
+        anchor->GetWorldTransform()*input.anchor_shape_local_point,input.player,input.fitting,state);
+}
+PortableLinePath::Result PortableLinePath::evaluate_span(JPH::PhysicsSystem &world,const SpanInput &input,State &state) {
+    using namespace JPH;
+    if(input.a.body.IsInvalid() || input.b.body.IsInvalid() ||
+       !finite(input.a.shape_local_point) || !finite(input.b.shape_local_point)) return failure(Reason::InvalidInput,state);
+    auto *a=world.GetBodyLockInterfaceNoLock().TryGetBody(input.a.body);
+    auto *b=world.GetBodyLockInterfaceNoLock().TryGetBody(input.b.body);
+    if(!a || !b || !a->IsInBroadPhase() || !b->IsInBroadPhase() ||
+       !a->IsRigidBody() || !b->IsRigidBody() || a->IsSensor() || b->IsSensor()) {
+        release(state); return failure(Reason::EndpointMissing,state);
+    }
+    if(a->GetShape()!=input.a.shape_identity.GetPtr() || b->GetShape()!=input.b.shape_identity.GetPtr()) {
+        release(state); return failure(Reason::AnchorChanged,state);
+    }
+    return evaluate_world(world,a,b,a->GetWorldTransform()*input.a.shape_local_point,
+        b->GetWorldTransform()*input.b.shape_local_point,input.player,BodyID(),state);
 }
 } // namespace scraperx::sim

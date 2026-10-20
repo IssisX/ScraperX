@@ -71,6 +71,8 @@ add_library(scraperx_sim STATIC
     src/sim/grappling_gun.cpp
     src/sim/grapple_rope_constraint.cpp
     src/sim/finite_cable_constraint.cpp
+    src/sim/line_material_hand_constraint.cpp
+    src/sim/material_traversal_line.cpp
     src/sim/rounded_box_line_path.cpp
     src/sim/portable_line_path.cpp
     src/sim/portable_traversal_line.cpp
@@ -118,7 +120,7 @@ add_library(scraperx_sim STATIC
 target_include_directories(scraperx_sim PUBLIC src)
 set_source_files_properties(src/sim/rigging_system.cpp src/sim/routed_cable.cpp src/sim/portable_traversal_line.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/grapple_rope_constraint.cpp src/sim/finite_cable_constraint.cpp src/sim/rounded_box_line_path.cpp src/sim/portable_line_path.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/grapple_rope_constraint.cpp src/sim/finite_cable_constraint.cpp src/sim/line_material_hand_constraint.cpp src/sim/material_traversal_line.cpp src/sim/rounded_box_line_path.cpp src/sim/portable_line_path.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -298,7 +300,7 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_portable_line_input_tests tests/portable_line_input_tests.cpp)
     target_link_libraries(scraperx_portable_line_input_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.portable_line_input COMMAND scraperx_portable_line_input_tests)
-    foreach(cable_check IN ITEMS rounded_box_line_path finite_cable_constraint portable_line_path portable_line_public_route)
+    foreach(cable_check IN ITEMS rounded_box_line_path finite_cable_constraint portable_line_path portable_line_public_route material_traversal_line line_material_hand material_line_crossing portable_line_crossing_public)
         add_executable(scraperx_${cable_check}_tests tests/${cable_check}_tests.cpp)
         target_link_libraries(scraperx_${cable_check}_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.${cable_check} COMMAND scraperx_${cable_check}_tests)

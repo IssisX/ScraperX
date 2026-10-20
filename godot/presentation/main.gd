@@ -1445,7 +1445,7 @@ func _read_context() -> Dictionary:
 			var swinging := bool(landing.get("player_swinging", false))
 			action = {"id": &"climb_up", "label": "REACH BAR" if swinging else "CLIMB UP",
 				"icon": &"climb", "detail": "LEAN TOWARD THE NEXT BAR" if swinging else ""}
-	elif not free:
+	elif not free and not (tool_active and station == &"traversal_line"):
 		pass
 	elif carrying != 0 and rig == RIG_HOOK:
 		action = {"id": &"hook", "label": "HOOK", "icon": &"hook",
@@ -1456,10 +1456,12 @@ func _read_context() -> Dictionary:
 			"icon": &"set_down", "detail": _carry_name(carrying)}
 	elif tool_active and station == &"traversal_line":
 		var installed := bool(traversal_line.get("installed", false))
-		var ready := bool(traversal_line.get("can_grab", false)) if installed else bool(traversal_line.get("target_valid", false))
-		action = {"id": &"traversal_line_action" if ready and not line_gripping else &"",
-			"label": "GRAB LINE" if installed else "INSTALL LINE",
-			"icon": &"hook", "detail": "DROP: LET GO / LINE STAYS" if line_gripping else ("REACH THE FITTING" if installed else "AIM AT SOLID SUPPORT")}
+		var crossing := bool(traversal_line.get("two_ended", false))
+		var pin_end := bool(traversal_line.get("can_pin_end", false))
+		var ready := pin_end or (bool(traversal_line.get("can_grab", false)) if installed else bool(traversal_line.get("target_valid", false)))
+		action = {"id": &"traversal_line_action" if ready and (not line_gripping or pin_end) else &"",
+			"label": "CLAMP OTHER END" if pin_end else ("GRAB LINE" if installed else "INSTALL LINE"),
+			"icon": &"hook", "detail": "STICK: HAND OVER HAND / DROP: LET GO" if crossing else ("DROP: LET GO / LINE STAYS" if line_gripping else ("BRING FITTING TO ANOTHER SUPPORT" if installed else "AIM AT SOLID SUPPORT"))}
 	elif tool_active and station == &"rigging":
 		var target := int(rigging.get("target", 0))
 		var label := "THREAD GUIDE" if int(rigging.get("target_kind", 0)) == 1 else ("CONNECT LINE" if bool(rigging.get("draft", false)) else "CLIP FIRST END")
@@ -1554,6 +1556,8 @@ func _read_context() -> Dictionary:
 		"traversal_line_available": bool(traversal_line.get("available", false)) and free and carrying == 0 and not sling_seated and _operating not in [&"forklift", &"yard_crane"],
 		"traversal_line_equipped": bool(traversal_line.get("equipped", false)),
 		"traversal_line_gripping": line_gripping,
+		"traversal_line_two_ended": bool(traversal_line.get("two_ended", false)),
+		"traversal_line_can_pin_end": bool(traversal_line.get("can_pin_end", false)),
 		"traversal_line_target": int(traversal_line.get("target", 0)),
 		"traversal_line_can_recover": bool(traversal_line.get("can_recover", false)),
 		"rigging_available": bool(rigging.get("available", false)) and free and carrying == 0 and not sling_seated and _operating not in [&"forklift", &"yard_crane"],
@@ -1675,7 +1679,7 @@ func _station_panel() -> Dictionary:
 			var failures := ["", "HANDS BUSY", "AIM AT SUPPORT", "TARGET CHANGED", "UNSUITABLE SUPPORT", "MOVE CLOSER", "LINE BLOCKED", "ALREADY INSTALLED", "NO LINE", "UNLOAD BEFORE PACKING", "FITTING MOVING", "LINE BROKEN", "SUPPORT CHANGED", "HANDS BUSY"]
 			var failure := clampi(int(line.get("failure", 0)), 0, failures.size() - 1)
 			var status := "BROKEN" if bool(line.get("broken", false)) else ("HELD" if bool(line.get("gripping", false)) else ("INSTALLED" if bool(line.get("installed", false)) else "CARRIED"))
-			return {"title": "PORTABLE LINE", "subtitle": "UP: TAKE UP / DOWN: PAY OUT / DROP: LET GO",
+			return {"title": "PORTABLE LINE", "subtitle": "STICK: HAND OVER HAND / DROP: LET GO" if bool(line.get("two_ended", false)) else "UP: TAKE UP / DOWN: PAY OUT / DROP: LET GO",
 				"rows": [["STATE", status, 2 if bool(line.get("broken", false)) else 0],
 					["SPOOLS", str(int(line.get("available_spools", 1))), 0],
 					["TENSION", "%d N" % int(line.get("tension_n", 0.0)), 0],

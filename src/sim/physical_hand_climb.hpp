@@ -1,5 +1,6 @@
 #pragma once
 #include <Jolt/Jolt.h>
+#include "sim/line_material_hand_constraint.hpp"
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <array>
@@ -16,6 +17,10 @@ public:
     struct GripReadback final {
         bool attached = false;
         bool material = false;
+        // Distributed line grips have no single support BodyID.
+        bool distributed = false;
+        float coordinate_m = 0;
+        std::uint64_t source_generation = 0;
         JPH::BodyID support;
         JPH::RVec3 world_anchor = JPH::RVec3::sZero();
         JPH::Vec3 point_velocity = JPH::Vec3::sZero();
@@ -31,6 +36,10 @@ public:
     ~PhysicalHandClimb();
     PhysicalHandClimb(const PhysicalHandClimb &) = delete;
     PhysicalHandClimb &operator=(const PhysicalHandClimb &) = delete;
+    // Zero-preload acquisition/regrip of one fixed material coordinate.
+    // Source outlives this attachment; detach before destroying its bodies.
+    bool attach_line_material(unsigned hand, LineMaterialSource &, LineMaterialHandle);
+    [[nodiscard]] bool attached_to_line(unsigned hand, const LineMaterialSource &) const noexcept;
     bool attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip);
     // Owner thread, outside Update: add only a missing rigid radial hand.
     // Retains the planted row/rest/cache/identity and all actuator ledgers;
@@ -72,7 +81,8 @@ public:
     [[nodiscard]] JPH::RVec3 radial_grip_centroid() const;
     // Neutral actuator position from current anchors/targets; not actual pose.
     [[nodiscard]] JPH::RVec3 commanded_position() const;
-    // pre_step applies only the soft material adapter; rigid radial rows solve
+    // pre_step refreshes distributed material row geometry before islands and
+    // applies the soft material adapter; rigid radial rows solve
     // inside Jolt's ordinary joint/contact island. The production listener owns
     // body locks already: it must pass bodies_locked=true, outside Update false.
     void pre_step(float dt, bool bodies_locked = false);
@@ -111,6 +121,13 @@ private:
         JPH::Vec3 rest_offset=JPH::Vec3::sZero();
     };
     std::array<SoftHand, 2> soft_;
+    struct LineHand {
+        LineMaterialSource *source=nullptr;
+        LineMaterialHandle handle{};
+        JPH::Vec3 rest_offset=JPH::Vec3::sZero();
+        JPH::Ref<LineMaterialHandConstraint> row;
+    };
+    std::array<LineHand,2> line_;
     std::array<std::uint64_t, 2> grip_generations_{};
     // In radial mode these SixDOFs are dormant anchor/profile readback only.
     // Exactly one backend is registered per rigid hand. Private User2 radial

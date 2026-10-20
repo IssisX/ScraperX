@@ -195,13 +195,40 @@ JPH::TwoBodyConstraint *RadialHandConstraintSettings::Create(JPH::Body &player,J
 PhysicalHandClimb::PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player, CargoNet *net)
     : system_(system), player_(player), net_(net) {}
 PhysicalHandClimb::~PhysicalHandClimb() { clear(); }
+bool PhysicalHandClimb::attach_line_material(unsigned hand,LineMaterialSource &source,LineMaterialHandle handle) {
+    using namespace JPH;
+    if(hand>=line_.size() || radial_profile_ || !std::isfinite(handle.coordinate_m) || handle.coordinate_m<0) return false;
+    LineMaterialSample sample;
+    if(!source.sample_material(handle,sample)) return false;
+    Ref<LineMaterialHandConstraint> row=new LineMaterialHandConstraint;
+    Vec3 offset;
+    {
+        BodyLockWrite lock(system_.GetBodyLockInterface(),player_);
+        if(!lock.Succeeded()) return false;
+        offset=Vec3(lock.GetBody().GetCenterOfMassPosition()-sample.world_point);
+        // Admission checks the real player DOFs, source bodies and weights.
+        if(!row->set_geometry(lock.GetBody(),sample,offset)) return false;
+    }
+    const auto generation=grip_generations_[hand];
+    detach(hand);
+    line_[hand]={&source,handle,offset,row};
+    grip_generations_[hand]=generation+1;
+    system_.AddConstraint(row.GetPtr());
+    auto &bodies=system_.GetBodyInterface();bodies.ActivateBody(player_);
+    for(const auto &endpoint:sample.endpoints) if(endpoint.weight>0 && endpoint.body->IsDynamic())
+        bodies.ActivateBody(endpoint.body->GetID());
+    return true;
+}
+bool PhysicalHandClimb::attached_to_line(unsigned hand,const LineMaterialSource &source) const noexcept {
+    return hand<line_.size() && line_[hand].source==&source;
+}
 bool PhysicalHandClimb::attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
     return replace(hand, support, actual_grip, false);
 }
 bool PhysicalHandClimb::attach_radial_hand(unsigned missing,JPH::BodyID support,JPH::RVec3 actual_grip) {
     using namespace JPH;
     if(missing>=hands_.size() || !radial_profile_ || attached_count()!=1 || attached(missing) ||
-       soft_[0].attached || soft_[1].attached || player_.IsInvalid() || support.IsInvalid() ||
+       soft_[0].attached || soft_[1].attached || line_[0].source || line_[1].source || player_.IsInvalid() || support.IsInvalid() ||
        support==player_ || (net_ && support==net_->body()) || !finite(actual_grip))return false;
     const unsigned planted=1-missing;
     if(!hands_[planted] || !radial_hands_[planted] || radial_hands_[missing])return false;
@@ -332,6 +359,8 @@ void PhysicalHandClimb::detach(unsigned hand) {
     if (radial_profile_ && !set_radial_profile(false)) { clear(); return; }
     ++grip_generations_[hand];
     soft_[hand].attached=false;
+    if(line_[hand].row) system_.RemoveConstraint(line_[hand].row.GetPtr());
+    line_[hand]={};
     if (hands_[hand]) system_.RemoveConstraint(hands_[hand].GetPtr());
     hands_[hand] = nullptr;
     forces_[hand] = JPH::Vec3::sZero();
@@ -345,6 +374,8 @@ void PhysicalHandClimb::clear() {
     }
     for (unsigned i=0;i<hands_.size();++i) {
         if (attached(i)) ++grip_generations_[i];
+        if(line_[i].row) system_.RemoveConstraint(line_[i].row.GetPtr());
+        line_[i]={};
         if (hands_[i] && !radial_profile_) system_.RemoveConstraint(hands_[i].GetPtr());
         hands_[i]=nullptr;
         soft_[i].attached=false;
@@ -376,6 +407,7 @@ void PhysicalHandClimb::set_transfer_profile(float rigid_hand_damping) {
 bool PhysicalHandClimb::set_radial_profile(bool enabled) {
     using namespace JPH;
     if (enabled==radial_profile_) return true;
+    if (enabled && (line_[0].source || line_[1].source)) return false;
     if (enabled && (!radial_compatible_hands() || transfer_profile_)) return false;
     const BodyID ids[]{player_, hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
                        hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
@@ -558,13 +590,24 @@ float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
 }
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
-    return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached);
+    return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached || line_[hand].source);
 }
 PhysicalHandClimb::GripReadback PhysicalHandClimb::grip_readback(unsigned hand) const {
     GripReadback result;
     if (hand>=hands_.size()) return result;
     result.generation=grip_generations_[hand];
     if (!attached(hand)) return result;
+    if(line_[hand].source) {
+        const auto &line=line_[hand];
+        result.material=true;result.distributed=true;
+        result.coordinate_m=line.handle.coordinate_m;result.source_generation=line.handle.generation;
+        LineMaterialSample sample;
+        if(!line.source->sample_material(line.handle,sample)) return result;
+        result.attached=true;result.world_anchor=sample.world_point;
+        result.point_velocity=sample.point_velocity;result.player_force=forces_[hand];
+        // No single support BodyID represents this distributed material point.
+        return result;
+    }
     const bool material=soft_[hand].attached;
     const auto *constraint=radial_hands_[hand] ? radial_hands_[hand].GetPtr() : hands_[hand].GetPtr();
     if (material && !net_) return result;
@@ -588,6 +631,7 @@ PhysicalHandClimb::GripReadback PhysicalHandClimb::grip_readback(unsigned hand) 
 }
 bool PhysicalHandClimb::attached_to(unsigned hand, JPH::BodyID support) const noexcept {
     if (hand >= hands_.size() || !attached(hand)) return false;
+    if (line_[hand].source) return false;
     if (soft_[hand].attached) return net_ && net_->body() == support;
     const auto *constraint = radial_hands_[hand] ? radial_hands_[hand].GetPtr() : hands_[hand].GetPtr();
     return constraint && constraint->GetBody2()->GetID() == support;
@@ -617,7 +661,11 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
     double scale = bounded_posture_stroke ? std::min(1.0, .6 * dt / distance) :
         std::min(1.0, budget / (double(count) * force_bound_n() * distance));
     std::array<Vec3, 2> extensions;
-    for (unsigned i=0;i<hands_.size();++i) if(attached(i)) extensions[i]=spring_extension(i);
+    for (unsigned i=0;i<hands_.size();++i) if(attached(i)) {
+        if(line_[i].source) { LineMaterialSample sample;
+            if(!line_[i].source->sample_material(line_[i].handle,sample)) return Vec3::sZero(); }
+        extensions[i]=spring_extension(i);
+    }
     const auto work_for_delta = [&](unsigned i, Vec3 delta) {
         // Both rigid p2-p1-target and soft target-player gain the commanded
         // player displacement. Use double products to resolve small work.
@@ -648,12 +696,25 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
                          float(double(desired_player_displacement.GetZ()) * scale));
         debit = supplied = absorbed = max_stroke = 0.0;
         for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
-            const auto previous = soft_[i].attached ? soft_[i].rest_offset : hands_[i]->GetTargetPositionCS();
+            const bool offset_target=soft_[i].attached || line_[i].source;
+            const auto previous = line_[i].source ? line_[i].rest_offset : soft_[i].attached ? soft_[i].rest_offset : hands_[i]->GetTargetPositionCS();
             // Jolt's separation is p2-p1. Positive player motion reduces it.
-            targets[i] = soft_[i].attached ? previous + delta : previous - delta;
+            const Vec3 intended = offset_target ? delta : -delta;
+            const Vec3 candidate = previous + intended;
+            // Float addition may round a rest-target component farther than
+            // the requested stroke. Round that component toward its old value
+            // before checking the unchanged work/speed bounds. Otherwise a
+            // valid combined-axis command at the limit can be rejected forever.
+            const auto bounded_component = [](float before, float after, float request) {
+                return std::abs(double(after) - before) > std::abs(double(request)) ?
+                    std::nextafter(after, before) : after;
+            };
+            targets[i] = Vec3(bounded_component(previous.GetX(), candidate.GetX(), intended.GetX()),
+                              bounded_component(previous.GetY(), candidate.GetY(), intended.GetY()),
+                              bounded_component(previous.GetZ(), candidate.GetZ(), intended.GetZ()));
             if (!finite(targets[i])) return Vec3::sZero();
             debit += force_bound_n() * length(targets[i] - previous);
-            const auto actual_delta=soft_[i].attached ? targets[i]-previous : previous-targets[i];
+            const auto actual_delta=offset_target ? targets[i]-previous : previous-targets[i];
             max_stroke=std::max(max_stroke,length(actual_delta));
             const double work=work_for_delta(i,actual_delta);
             supplied+=std::max(0.0,work);
@@ -670,6 +731,14 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
         (command_power_cap_w && max_stroke > .6 * dt)) return Vec3::sZero();
     Vec3 delivered = Vec3::sZero();
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        if(line_[i].source) {
+            delivered+=targets[i]-line_[i].rest_offset;line_[i].rest_offset=targets[i];
+            LineMaterialSample sample;
+            if(line_[i].source->sample_material(line_[i].handle,sample))
+                for(const auto &endpoint:sample.endpoints) if(endpoint.weight>0 && endpoint.body->IsDynamic())
+                    system_.GetBodyInterface().ActivateBody(endpoint.body->GetID());
+            continue;
+        }
         delivered += soft_[i].attached ? targets[i] - soft_[i].rest_offset :
                                          hands_[i]->GetTargetPositionCS() - targets[i];
         if (soft_[i].attached) { soft_[i].rest_offset=targets[i]; continue; }
@@ -686,9 +755,12 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
     return delivered / float(count);
 }
 bool PhysicalHandClimb::compatible_hands() const noexcept {
+    if(line_[0].source || line_[1].source)
+        return line_[0].source && line_[0].source==line_[1].source;
     return attached(0) && attached(1) && soft_[0].attached == soft_[1].attached;
 }
 bool PhysicalHandClimb::radial_compatible_hands() const noexcept {
+    if(line_[0].source || line_[1].source) return false;
     return compatible_hands() || (attached_count()==1 && !soft_[0].attached && !soft_[1].attached);
 }
 JPH::RVec3 PhysicalHandClimb::radial_grip_centroid() const {
@@ -703,6 +775,12 @@ JPH::RVec3 PhysicalHandClimb::radial_grip_centroid() const {
 JPH::RVec3 PhysicalHandClimb::grip_midpoint() const {
     using namespace JPH;
     if (!compatible_hands()) return RVec3::sZero();
+    if(line_[0].source) {
+        LineMaterialSample a,b;
+        return line_[0].source->sample_material(line_[0].handle,a) &&
+               line_[1].source->sample_material(line_[1].handle,b) ?
+               .5F*(a.world_point+b.world_point) : RVec3::sZero();
+    }
     if (soft_[0].attached)
         return .5F * (net_->world_point(soft_[0].material) + net_->world_point(soft_[1].material));
     const BodyID ids[] { hands_[0]->GetBody2()->GetID(), hands_[1]->GetBody2()->GetID() };
@@ -713,6 +791,11 @@ JPH::RVec3 PhysicalHandClimb::grip_midpoint() const {
 }
 JPH::Vec3 PhysicalHandClimb::spring_extension(unsigned hand) const {
     using namespace JPH;
+    if(line_[hand].source) {
+        LineMaterialSample sample;
+        if(!line_[hand].source->sample_material(line_[hand].handle,sample)) return Vec3::sZero();
+        return Vec3(sample.world_point-system_.GetBodyInterface().GetCenterOfMassPosition(player_))+line_[hand].rest_offset;
+    }
     if(soft_[hand].attached) {
         const auto target=net_->world_point(soft_[hand].material)+RVec3(soft_[hand].rest_offset);
         return Vec3(target-system_.GetBodyInterface().GetPosition(player_));
@@ -736,6 +819,14 @@ JPH::RVec3 PhysicalHandClimb::commanded_position() const {
     RVec3 sum = RVec3::sZero();
     unsigned count = 0;
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        if(line_[i].source) {
+            LineMaterialSample sample;
+            if(line_[i].source->sample_material(line_[i].handle,sample)) {
+                sum+=sample.world_point+RVec3(line_[i].rest_offset)+
+                    Vec3(player->GetPosition()-player->GetCenterOfMassPosition());++count;
+            }
+            continue;
+        }
         if (radial_profile_) {
             const Body *hold=lock.GetBody(i+1);
             if (!soft_[i].attached && !hold) continue;
@@ -761,6 +852,12 @@ JPH::RVec3 PhysicalHandClimb::commanded_position() const {
 void PhysicalHandClimb::pre_step(float dt, bool bodies_locked) {
     using namespace JPH;
     if (!std::isfinite(dt) || dt<=0) return;
+    for(auto &line:line_) if(line.source) {
+        LineMaterialSample sample;
+        auto *player=system_.GetBodyLockInterfaceNoLock().TryGetBody(player_);
+        if(!player || !line.source->sample_material(line.handle,sample) ||
+           !line.row->set_geometry(*player,sample,line.rest_offset)) line.row->invalidate();
+    }
     if (radial_profile_) {
         // Standalone calls may wake here. Shipping calls wake outside Update;
         // never acquire locks or add/remove constraints in OnStep.
@@ -831,6 +928,9 @@ void PhysicalHandClimb::pre_step(float dt, bool bodies_locked) {
     }
 }
 void PhysicalHandClimb::post_step(float collision_dt) {
+    for(unsigned i=0;i<line_.size();++i) if(line_[i].row) {
+        forces_[i]=line_[i].row->player_force();peak_force_=std::max(peak_force_,forces_[i].Length());
+    }
     if (radial_profile_) {
         for (unsigned i=0;i<hands_.size();++i) {
             if (radial_hands_[i]) {

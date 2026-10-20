@@ -33,6 +33,15 @@ public:
         JPH::RVec3 endpoint_a=JPH::RVec3::sZero(); // actual fitting COM
         JPH::Vec3 anchor_shape_local_point=JPH::Vec3::sZero();
     };
+    struct Endpoint {
+        JPH::BodyID body;
+        JPH::RefConst<JPH::Shape> shape_identity;
+        JPH::Vec3 shape_local_point=JPH::Vec3::sZero();
+    };
+    struct SpanInput {
+        JPH::BodyID player;
+        Endpoint a, b;
+    };
     enum class Reason : std::uint8_t {
         None, InvalidInput, EndpointMissing, AnchorChanged, ContactChanged,
         UnsupportedShape, InvalidLeaf, UnsupportedGeometry, AdditionalContact,
@@ -57,5 +66,12 @@ public:
     // rejected explicitly. Multiple contacts/endcaps are unsupported, never
     // approximated as pins or chord lengths. Samples are presentation only.
     static Result evaluate(JPH::PhysicsSystem &,const Input &,State &);
+    // Two real mounts or material-node endpoints. Both angular derivatives
+    // use their actual attachment arms; neither support body is ignored by
+    // collision queries, including other leaves of a mounting compound.
+    static Result evaluate_span(JPH::PhysicsSystem &,const SpanInput &,State &);
+private:
+    static Result evaluate_world(JPH::PhysicsSystem &,JPH::Body *,JPH::Body *,
+        JPH::RVec3Arg a,JPH::RVec3Arg b,JPH::BodyID player,JPH::BodyID ignored,State &);
 };
 } // namespace scraperx::sim

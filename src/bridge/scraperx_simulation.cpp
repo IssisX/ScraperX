@@ -746,6 +746,9 @@ godot::Dictionary traversal_line_dictionary(const sim::TraversalLineSnapshot &st
     out["target_valid"] = state.target_valid;
     out["can_grab"] = state.can_grab;
     out["can_recover"] = state.can_recover;
+    out["two_ended"] = state.two_ended;
+    out["can_pin_end"] = state.can_pin_end;
+    out["regrip_count"] = state.regrip_count;
     out["available_spools"] = state.available_spools;
     out["failure"] = state.failure;
     out["paid_length_m"] = state.paid_length_m;

@@ -576,7 +576,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var hanging: bool = ctx["hanging"]
 	var climbing: bool = ctx.get("climbing", false)
 	var swinging: bool = ctx.get("swinging", false)
-	var passive_release := swinging or bool(ctx.get("single_hand_hold", false))
+	var passive_release := swinging or bool(ctx.get("single_hand_hold", false)) or bool(ctx.get("traversal_line_gripping", false))
 	var jump: TouchButton = _buttons[B_JUMP]
 	jump.shown = true
 	# Pressable while airborne on purpose: main.gd buffers a press made just
@@ -591,11 +591,12 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
 	var reach_hand: bool = act["id"] == &"reach_hand"
+	var line_pin := bool(ctx.get("traversal_line_can_pin_end", false))
 	# A solo hold offers an explicit second hand independently of its release
 	# buttons. Keep the blocked offer visible while native reports no grip.
-	action.shown = reach_hand or not passive_release
+	action.shown = line_pin or reach_hand or not passive_release
 	# Ordinary two-hand hanging already has CLIMB UP on Jump.
-	action.enabled = (bool(ctx.get("missing_hand_grip_available", false)) if reach_hand
+	action.enabled = line_pin or (bool(ctx.get("missing_hand_grip_available", false)) if reach_hand
 		else act["id"] != &"" and not hanging and not passive_release)
 	action.icon = act["icon"]
 	action.label = act["label"]
@@ -663,7 +664,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_buttons[B_UP].shown = _operating and station != &"rigging"
 	_buttons[B_DOWN].shown = _operating and station != &"rigging"
 	if station == &"traversal_line":
-		_buttons[B_UP].shown = bool(ctx.get("traversal_line_gripping", false))
+		_buttons[B_UP].shown = bool(ctx.get("traversal_line_gripping", false)) and not bool(ctx.get("traversal_line_two_ended", false))
 		_buttons[B_DOWN].shown = _buttons[B_UP].shown
 	_buttons[B_LEFT].shown = _operating and has_x
 	_buttons[B_RIGHT].shown = _operating and has_x

@@ -12,8 +12,13 @@ namespace {
 bool finite(JPH::Vec3Arg v) { return std::isfinite(v.GetX()) && std::isfinite(v.GetY()) && std::isfinite(v.GetZ()); }
 }
 FiniteCableConstraint::FiniteCableConstraint(float rest_length_m)
-    : Constraint(JPH::DistanceConstraintSettings()),rest_(rest_length_m) {
+    : FiniteCableConstraint(rest_length_m, GrappleRopeSettings::stiffness_n_per_m,
+                            GrappleRopeSettings::damping_ns_per_m) {}
+FiniteCableConstraint::FiniteCableConstraint(float rest_length_m, float stiffness, float damping)
+    : Constraint(JPH::DistanceConstraintSettings()),rest_(rest_length_m), stiffness_(stiffness), damping_(damping) {
     if(!std::isfinite(rest_) || rest_<=0) throw std::invalid_argument("FiniteCableConstraint: rest length must be finite and positive");
+    if(!std::isfinite(stiffness_) || stiffness_<=0 || !std::isfinite(damping_) || damping_<0)
+        throw std::invalid_argument("FiniteCableConstraint: expected positive stiffness N/m and nonnegative damping Ns/m");
 }
 bool FiniteCableConstraint::set_rest(float value) {
     if(!std::isfinite(value) || value<=0) return false;
@@ -74,8 +79,8 @@ double FiniteCableConstraint::prospective_tension(float rest,float h) const {
     if(!geometry_valid_ || !std::isfinite(rest) || rest<=0 || !std::isfinite(h) || h<=0)
         return std::numeric_limits<double>::quiet_NaN();
     if(length_<rest) return 0;
-    const double d=GrappleRopeSettings::damping_ns_per_m+double(h)*GrappleRopeSettings::stiffness_n_per_m;
-    const double demand=(GrappleRopeSettings::stiffness_n_per_m*(length_-rest)+d*speed())/(1+double(h)*d*inverse_mass());
+    const double d=damping_+double(h)*stiffness_;
+    const double demand=(stiffness_*(length_-rest)+d*speed())/(1+double(h)*d*inverse_mass());
     return std::isfinite(demand) ? std::max(0.0,demand):demand;
 }
 void FiniteCableConstraint::SetupVelocityConstraint(float h) {
@@ -83,10 +88,10 @@ void FiniteCableConstraint::SetupVelocityConstraint(float h) {
     if(!GetEnabled() || !geometry_valid_ || broken_ || !std::isfinite(h) || h<=0 || length_<rest_) return;
     const double extension=length_-rest_;
     const double demand=prospective_tension(rest_,h);
-    if(!std::isfinite(demand) || extension>GrappleRopeSettings::strength_n/GrappleRopeSettings::stiffness_n_per_m ||
+    if(!std::isfinite(demand) || extension>GrappleRopeSettings::strength_n/stiffness_ ||
        demand>GrappleRopeSettings::strength_n) { broken_=true; return; }
-    const double d=GrappleRopeSettings::damping_ns_per_m+double(h)*GrappleRopeSettings::stiffness_n_per_m;
-    gamma_=1/(double(h)*d); bias_=GrappleRopeSettings::stiffness_n_per_m*extension/d;
+    const double d=damping_+double(h)*stiffness_;
+    gamma_=1/(double(h)*d); bias_=stiffness_*extension/d;
     effective_mass_=1/(inverse_mass()+gamma_);
     const float limit=drive_limited_ ? GrappleRopeSettings::reel_force_n:GrappleRopeSettings::strength_n;
     float cap=limit*h;
