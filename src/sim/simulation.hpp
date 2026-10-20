@@ -95,10 +95,10 @@ enum class InitialSpawn : std::uint8_t {
     Ring264West = 36,
     // On the 750 deck, where stage O's rider steps off.
     Deck750 = 37,
-    // Six metres above the hang ledge, off its face: a catch from here
+    // Six meters above the hang ledge, off its face: a catch from here
     // tears the grip (a falsifier for the physical hang).
     HangHighDrop = 38,
-    // On the deck a metre short of the first monkey bar, facing along them.
+    // On the deck a meter short of the first monkey bar, facing along them.
     SwingApproach = 39,
     // On the pipe gallery's start stand in the yard, facing along its pipes.
     PipeGallery = 40,
@@ -132,7 +132,7 @@ struct KitPart final {
 
 // The ground slingshot (sim/slingshot.hpp) as the presentation reads it:
 // what the rider can do there now, how far the pouch is drawn, where the
-// bands run, and the aim. World metres, radians; yaw 0 points toward -Z.
+// bands run, and the aim. World meters, radians; yaw 0 points toward -Z.
 struct SlingshotSnapshot final {
     bool station_available = false;  // ENTER POUCH (or, after a shot, RETRIEVE) offered
     bool seated = false;             // harnessed into the pouch
@@ -186,7 +186,7 @@ struct MatronSnapshot final {
     Vector3 position{};
     double yaw = 0.0;
     double speed = 0.0;
-    double stride = 0.0;              // metres walked: the gait's phase
+    double stride = 0.0;              // meters walked: the gait's phase
     double strain = 0.0;              // 0..1, the gauge
     double bolts_popped = 0.0;        // of the locker's four
     double noise_heard = 0.0;
@@ -208,7 +208,7 @@ struct MatronSnapshot final {
     std::uint32_t unrigs = 0;   // ropes she took off a way out's eye
     bool on_line = false;       // going down a line's bare cable after the player
     std::uint32_t cable_slides = 0;
-    bool climbing = false;      // going up a ladder after the player (stride: metres climbed)
+    bool climbing = false;      // going up a ladder after the player (stride: meters climbed)
     std::uint32_t climbs = 0;
     bool clinging = false;
     double floor_y = 154.0;
@@ -234,7 +234,7 @@ struct MatronSnapshot final {
     double down_left_s = 0.0;   // of the time she lies there (0 and still down: pinned)
     // The shaft's corner pipe (matron.hpp): on it (getting on, on it, getting
     // off), head first, torn off and sliding, slammed onto a flange; the
-    // storeys she set out along it, her hands' holds (knocks), flanges passed
+    // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
     bool pipe_head_down = false;
@@ -297,7 +297,7 @@ struct ForkliftSnapshot final {
     double pitch_rad = 0.0;          // nose down, + (on its front wheels)
     std::array<double, 4> wheel_load_n{};
     std::array<bool, 4> wheel_contact{};
-    // Each wheel: its centre and its turn, a cylinder along its own y (the
+    // Each wheel: its center and its turn, a cylinder along its own y (the
     // axle), and its size. Front left, front right, rear left, rear right.
     std::array<Vector3, 4> wheel_position{};
     std::array<Quaternion, 4> wheel_rotation{};
@@ -655,11 +655,11 @@ enum class FallState : std::uint8_t {
 
 // One of the yard crew (Life L2, sim/crew.hpp), as the presentation needs it.
 struct WorkerView final {
-    Vector3 position{};       // the capsule's centre
+    Vector3 position{};       // the capsule's center
     double yaw = 0.0;         // radians; 0 faces +z
     std::uint8_t state = 0;   // 0 walking, 1 working, 2 yielding, 3 startled, 4 stumbling
     double speed = 0.0;       // horizontal, m/s
-    double stride = 0.0;      // metres walked
+    double stride = 0.0;      // meters walked
     bool grounded = true;
 };
 
@@ -863,7 +863,7 @@ struct Snapshot final {
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
-    // On a beam: the XCoM across it as a fraction of the centre of
+    // On a beam: the XCoM across it as a fraction of the center of
     // pressure's reach (see kBalanceHipMargin); past +-1 it cannot come back.
     double beam_xcom = 0.0;
     // The same, as a horizontal world vector toward the side it is on.
@@ -969,7 +969,7 @@ public:
     // Crouch fixture beside the WO-003 traversal fixtures: a beam and its two
     // posts, the beam's underside 1.45 m over the deck.
     static constexpr std::uint64_t kCrawlBeamEntityId = 52;
-    // Brachiation fixture: six bars a metre apart, 3.1 m up, between two
+    // Brachiation fixture: six bars a meter apart, 3.1 m up, between two
     // beams on four posts, and a landing block past the last.
     static constexpr std::uint64_t kMonkeyBarsEntityId = 53;
     // Wall-run fixture: a wall 12 m long and 4 m tall, its face at z = -26.75.
@@ -1131,7 +1131,7 @@ public:
     // kept, so saves line up).
     static constexpr std::uint64_t kStackS3HandleEntityId = 2223;
 
-    // Height of the tower mass, metres. The crown is far past anything the
+    // Height of the tower mass, meters. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
     // The top of the route as built: the floor of the luffing derrick's upper
@@ -1141,6 +1141,28 @@ public:
     static constexpr std::uint64_t kRouteTopEntityId = 1978;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade);
+    // Tests only (never bound to the bridge): a static box built into the
+    // world over and above its own solids, where the world builds the boxes
+    // of the 22 m band its y falls in (before the first of them, in the
+    // order of world_solids.inc), or after every body the world builds when
+    // at_end. The body-order falsifier builds the world with and without
+    // them and requires every simulation elsewhere unchanged, bit for bit
+    // (03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md).
+    struct TestExtraSolid final {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        float half_x = 0.5F;
+        float half_y = 0.5F;
+        float half_z = 0.5F;
+        bool at_end = false;
+    };
+    Simulation(InitialSpawn initial_spawn, std::vector<TestExtraSolid> test_extra_solids);
+    // Tests only: the extra solids every world built with the one-argument
+    // constructor gets from now on, so a whole test run can be played in a
+    // world with a body added in one band and compared with the run as
+    // built (the test binary reads SCRAPERX_EXTRA_SOLID_Y for this).
+    static void set_test_extra_solids_for_every_world(std::vector<TestExtraSolid> test_extra_solids);
     ~Simulation();
 
     Simulation(const Simulation &) = delete;

@@ -4,6 +4,17 @@
 #include "sim_tests.hpp"
 
 int main() {
+    // SCRAPERX_EXTRA_SOLID_Y=<meters>: every world this run builds gets one
+    // half-meter static box 300 m east and south of the tower, built with the
+    // solids of the 22 m band at that height, touching nothing. The run's
+    // every line must then read as the run without it
+    // (03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md).
+    if (const char *extra_y = std::getenv("SCRAPERX_EXTRA_SOLID_Y"); extra_y != nullptr) {
+        const double y = std::strtod(extra_y, nullptr);
+        scraperx::sim::Simulation::set_test_extra_solids_for_every_world(
+            {{300.0, y, 300.0, 0.5F, 0.5F, 0.5F, false}});
+        std::cout << "  every world of this run: one extra solid in the band at " << y << " m\n";
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour") {
         run_parkour_seams();
         return EXIT_SUCCESS;
@@ -42,6 +53,10 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "stock") {
         run_loose_stock();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "body-order") {
+        run_body_order();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "climb") {
@@ -377,6 +392,7 @@ int main() {
     run_summit_arm();
     run_matron();
     run_loose_stock();
+    run_body_order();
     run_forklift();
     run_forklift_strain();
     run_yard_crane();

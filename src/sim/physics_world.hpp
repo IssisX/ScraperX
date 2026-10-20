@@ -8,6 +8,7 @@
 #include "sim/physics_world_support.hpp"
 
 #include <array>
+#include <set>
 
 namespace scraperx::sim {
 
@@ -16,7 +17,7 @@ using namespace scraperx::sim::detail;
 class Simulation::PhysicsWorld final {
 public:
     // (Defined in physics_world.cpp.)
-    explicit PhysicsWorld(const InitialSpawn initial_spawn);
+    PhysicsWorld(const InitialSpawn initial_spawn, std::vector<Simulation::TestExtraSolid> test_extra_solids);
 
     ~PhysicsWorld();
 
@@ -193,6 +194,10 @@ private:
     [[nodiscard]] JPH::BodyID body_id_for_entity(const std::uint64_t entity_id) const noexcept;
 
     void build_world_solids(JPH::BodyInterface &bodies);
+    // The test-only extra solids whose band holds the box at `band_y`, or
+    // every one still unbuilt when `band_y` is NaN (the end of the table), or
+    // the at_end ones; each once.
+    void build_test_extra_solids(JPH::BodyInterface &bodies, double band_y, bool at_end);
 
     [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const;
 
@@ -277,7 +282,7 @@ private:
 
     // ---- AS-003 carry ---------------------------------------------------------
     // Where the carried body's handle is held, relative to the player's
-    // centre: forward along a horizontal bearing, a little above the centre.
+    // center: forward along a horizontal bearing, a little above the center.
     [[nodiscard]] static JPH::Vec3 carry_hand_offset(const JPH::Vec3 bearing) noexcept {
         return bearing * kCarryHandForward + JPH::Vec3(0.0F, kCarryHandUp, 0.0F);
     }
@@ -635,6 +640,9 @@ public:
     JoltRuntimeLease runtime_;
     JPH::TempAllocatorImpl temp_allocator_;
     JPH::JobSystemThreadPool job_system_;
+    // Tests only: see Simulation::TestExtraSolid, and which of them are built.
+    const std::vector<Simulation::TestExtraSolid> test_extra_solids_;
+    std::set<std::size_t> test_extra_built_;
     BroadPhaseLayerInterface broadphase_layer_interface_;
     ObjectVsBroadPhaseFilter object_vs_broadphase_filter_;
     ObjectLayerPairFilter object_layer_pair_filter_;
@@ -805,7 +813,7 @@ public:
     Lip edge_affordance_{};
     bool sprinting_ = false;
     bool balancing_ = false;
-    // The XCoM across a beam, as a fraction of the centre of pressure's reach.
+    // The XCoM across a beam, as a fraction of the center of pressure's reach.
     float beam_xcom_ = 0.0F;
     JPH::Vec3 beam_lean_{JPH::Vec3::sZero()};
     // The pendulum's velocity across the beam (relative to it), and whether

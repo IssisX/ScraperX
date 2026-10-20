@@ -25,8 +25,22 @@ std::uint64_t save_format_key() noexcept {
 
 } // namespace
 
+namespace {
+std::vector<Simulation::TestExtraSolid> &test_extra_solids_for_every_world() {
+    static std::vector<Simulation::TestExtraSolid> extras;
+    return extras;
+}
+} // namespace
+
+void Simulation::set_test_extra_solids_for_every_world(std::vector<TestExtraSolid> test_extra_solids) {
+    test_extra_solids_for_every_world() = std::move(test_extra_solids);
+}
+
 Simulation::Simulation(const InitialSpawn initial_spawn)
-    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn)) {
+    : Simulation(initial_spawn, test_extra_solids_for_every_world()) {}
+
+Simulation::Simulation(const InitialSpawn initial_spawn, std::vector<TestExtraSolid> test_extra_solids)
+    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn, std::move(test_extra_solids))) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
     previous_player_position_ = snapshot_.player_position;

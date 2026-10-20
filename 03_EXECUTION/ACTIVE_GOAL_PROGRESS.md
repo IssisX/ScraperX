@@ -22,10 +22,21 @@ has not been checked against its scope here.
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
 | 10 Paid-release readiness | ~30% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). The title over the live tower is done (`touch_title`), and the START list is development-only. The top of the route is a native latch with an arrival beat, and the altimeter is scaled to it (what stands there is the owner's). The pause menu carries the licences the build ships under (`touch_pause`). The launcher icon and boot splash are the game's own, no engine branding (placeholder icon, owner may replace). The ending beyond the arrival, the release build, store identity, credits, the voice's clearance and device measurement are open (`RELEASE_PLAN.md`). |
 
+**A body added in one band no longer moves the rest of the world (2026-10-20).** Jolt sorted each
+island's contacts for its solver by a hash of the bodies' ids, so one body created anywhere shifted
+every later id and re-ordered the solve of islands it never touched; runs far away drifted until
+tests failed (the yard crane's dock drive after the torn rail at 143 m). The pinned Jolt is patched
+to key that sort on the bodies' entity ids and sub-shapes (`third_party/jolt_patch.cmake`); saves and
+body creation are untouched. The native falsifier `body order` builds five worlds (a box in the yard's
+band, the 143 m band, the crane band, after every body) and requires a drive at grade and a walk on the
+706 m deck to end bit for bit the same: it fails on the pinned engine and passes patched. The full
+native suite passes on the patched build (149 PASS, no FAIL, 18.8 min); the diagnosis and evidence are
+in `03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md`.
+
 **Where the work stood when effort was lowered (2026-10-20).** The owner lowered effort to stay in
 the usage limits; nothing was lost. Each piece of unfinished work is on its own branch:
-- `claude/body-order-stability`: the body-order fix (from a planning session). Its full native suite
-  was running; then record it, push the branch, merge into ScraperX-Claude and run CI.
+- `claude/body-order-stability`: the body-order fix, merged into ScraperX-Claude the same day (the
+  entry above).
 - `claude/wip-bump-smooth` (b34fe3f): smooth parts get a faint bump, rough parts keep theirs. Done,
   not yet checked by a second pair of eyes.
 - `claude/wip-edge-slide` (ceccb6b): the player sliding off near edges; an edge-drift test and a
