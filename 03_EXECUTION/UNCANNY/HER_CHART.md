@@ -125,3 +125,13 @@ is played through those senses, not only shown them.
 
 Claude's order: her hearing from the room (after the microphone lands), flinches in the chart (no
 permission), the foreman live (after the server).
+
+## The owner's picks (2026-10-20)
+
+- Yes: her hearing from the real room; the foreman live; spoken requisitions; the room behind the badge
+  photo, once, with explicit consent.
+- Motion sensing only if unmistakable: a flinch counts only when it lines up with a named scare, and the
+  chart quotes it with its time and the event (*"21:47:12. Jumped when the pipe banged behind him."*);
+  anything less clear is not written.
+- No: night notifications, the fold, other players' bodies.
+- The server's daily budget: Claude sets it from measured cost and reports it.
