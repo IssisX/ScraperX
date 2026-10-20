@@ -448,9 +448,7 @@ public:
     // them falls past them onto her, with room for the way a throw carries it
     // on (in the corner by the shaft's east edge the flange under the deck
     // takes any drum: no room past it). She gets on and off over the north
-    // edge from the band, kPipeOverRailM over the deck, where the rail is torn
-    // away on the two decks her pipe meets (143 and 154: main_world.gd
-    // PIPE_GAP_*), so a climber with a drum can stand at the edge over her. On
+    // edge from the band, kPipeOverRailM over the deck, over the rail. On
     // it she is on the steel (object_layers::kOnSteel): what moves meets her,
     // the steel she wraps round does not. Frail, she cannot take hold of it
     // (as her ladder); dangerous she slides down it held by her forearms and

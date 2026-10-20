@@ -1433,10 +1433,11 @@ the Steel" (the corner pipe first), and the face and figure workflow.
 
 **She comes down the shaft after you, and the act staged round it (2026-10-20; the goal's part 2).**
 Her corner pipe is the shaft's north-east riser, from 132 m up to her deck at 154 m. Her line on it
-is the riser's north-west corner, and she gets on and off it over the deck's north edge. The shaft's
-rail is torn away where her pipe comes up, on 143 and 154 (2.5 m of it, between two short stubs
-bent down into the shaft), so she climbs over nothing there and a player can stand at the edge
-over her. Dangerous or fully changed, she takes it down after a climber on the deck below,
+is the riser's north-west corner, and she gets on and off it over the deck's north edge, over the
+shaft's rail. (A gap torn in the rail there, on 143 and 154, was taken out again the same day: its
+extra pieces shifted the order of every later body in the world, and the crane's forklift test
+drifted and failed. The pipe's own playthrough that wanted the gap was dropped with the rest of the
+Matron work, on the owner's word.) Dangerous or fully changed, she takes it down after a climber on the deck below,
 knocking at every hold. Each flange she passes rings.
 - Just off the pipe she stands for 2.5 s and listens. Every sound carries twice as far to her while
   she does.

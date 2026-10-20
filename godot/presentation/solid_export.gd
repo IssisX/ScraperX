@@ -258,7 +258,7 @@ static func _f(value: float) -> String:
 
 const SOLID := [
 	# Stack frame dressing and its halls, gearing, lifts, jibs, bridges.
-	"ShaftEdgeBeam", "OuterEdgeBeam", "ShaftRail", "ShaftRailStub", "ShaftPost", "StackBrace", "StairStringer",
+	"ShaftEdgeBeam", "OuterEdgeBeam", "ShaftRail", "ShaftPost", "StackBrace", "StairStringer",
 	"Buttress", "ButtressFoot", "ButtressTie", "MachineHall", "HallCapping", "HallSill",
 	"HallWindow", "HallWindowFront", "HallRib", "GearShaft", "WinchDrum", "DrumCable",
 	"DrumHousing", "CageRoof", "CagePost", "CageLamp", "CageFloor", "CageBack", "LiftGuide",
