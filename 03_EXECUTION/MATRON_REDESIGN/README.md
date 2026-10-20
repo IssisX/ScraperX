@@ -34,6 +34,11 @@ shipped code: nothing under this folder is loaded by the game or built by CI.
   `probe2/`), with its render sheets.
 - `prototypes/fear/` is the partial scares track: a fear director probe, its
   bench, and look renders from the pipe and the ladder.
+- `prototypes/face_feel/` is the first face check: MakeHuman's head, young and
+  aged by its CC0 caucasian-female-old target, rendered side by side
+  (`compare.png`) with a pre-integrated skin LUT (`face_feel_lut.py`).
+- The shared MakeHuman machinery the in-game bodies are built with is
+  `tools/body/` (fetch pinned and checked, rig, GLB writer).
 
 ## Left out, and why
 

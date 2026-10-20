@@ -1035,6 +1035,7 @@ void Matron::ride_pipe(const float dt) {
         } else {
             bodies.SetLinearVelocity(body_, Vec3::sZero());
             get_off_pipe();
+            pipe_listen_s_ = kPipeListenSeconds;
         }
         break;
     default:
@@ -1593,6 +1594,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             if (saw) {
                 yaw_ = turn_toward(yaw_, std::atan2(px - ax, pz - az), kTurnRate, dt);
             }
+            break;
+        }
+        // Off the corner pipe she stands a moment and listens, toward where
+        // she last had the player, before she goes on.
+        if (pipe_listen_s_ > 0.0F) {
+            pipe_listen_s_ -= dt;
+            walk_toward(dt, ax, az, 0.0F);
+            yaw_ = turn_toward(yaw_, std::atan2(heard_x_ - ax, heard_z_ - az), kTurnRate, dt);
             break;
         }
         // The catwalk (her deck's) is only ever taken in plain sight of prey
@@ -2169,6 +2178,7 @@ void Matron::restore(const Saved &saved) {
         pipe_slams_ = 0;
         pipe_slam_mps_ = 0.0F;
         pipe_stun_s_ = 0.0F;
+        pipe_listen_s_ = 0.0F;
         // On her feet, whatever had her down.
         if (lying_) {
             BodyInterface &bodies = physics_.GetBodyInterface();
@@ -2712,6 +2722,7 @@ void Matron::refresh_view() {
     view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
     view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
     view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;
+    view_.pipe_listening = pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F;
     view_.pipe_links = pipe_links_;
     view_.pipe_holds = pipe_holds_;
     view_.pipe_flanges = pipe_flanges_;

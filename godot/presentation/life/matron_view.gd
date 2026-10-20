@@ -765,6 +765,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var pipe_sliding := bool(data.get("pipe_sliding", false))
 	var pipe_stunned := bool(data.get("pipe_stunned", false))
+	var pipe_listening := bool(data.get("pipe_listening", false))
 	# Rising off the floor in the Turn: a vault, or a leap over a gap.
 	var vaulting := turn == 2 and _fall_speed > 1.0 and not climbing
 	# Holding on to a floor that moves (a cage she stepped into as it left).
@@ -869,6 +870,17 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -1.0
 		head_roll = 0.2 * sin(_clock * 23.0)
 		jaw_open = 1.0
+	elif pipe_listening:
+		# Just off the pipe: stock still, her head tipped right over onto
+		# her shoulder, listening for where the climber went.
+		pitch = 0.2
+		hip_y = 1.0
+		arms_fwd = 0.3
+		arms_bend = 0.7
+		arms_splay = 0.2
+		head_pitch = 0.15
+		head_roll = 0.75
+		jaw_open = 0.2
 	elif climbing:
 		# Up the ladder after the player, hand over hand: the higher hand
 		# reaching for the next rung while the lower one hauls, the other

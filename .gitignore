@@ -1,6 +1,6 @@
 /build/
 /artifacts/
-/tools/
+/tools/godot/
 /.cache/
 /godot/.godot/
 /godot/addons/scraperx_native/bin/**/*.so

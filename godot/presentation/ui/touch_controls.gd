@@ -7,13 +7,16 @@ extends Control
 # permanent buttons because they are locomotion, not interactions; Crouch is
 # a toggle that reads STAND while the native reports the body crouched.
 #
-# GESTURES (the default, settings_store TOUCH_SCHEME_GESTURES) takes the run's
-# moves off the glass: a right thumb that sets down and flicks up or down is a
+# GESTURES (the default, settings_store TOUCH_SCHEME_GESTURES) adds the run's
+# moves to the glass: a right thumb that sets down and flicks up or down is a
 # swipe (the verbs up and down, which the native resolves into the move ahead
-# of the body), the stick pulled back hard turns about, and Jump, Crouch, Drop
-# and Turn are not drawn. A thumb that drags is look, as ever: a drag that
-# goes across is look from its first movement; one that goes up or down is
-# held back for at most SWIPE_SECONDS, until it is known not to be a swipe.
+# of the body), and the stick pulled back hard turns about. The buttons stay
+# drawn all the same (the owner, 2026-10-20: "I still need SOME on-screen
+# controls"): Jump, Crouch, Action and Drop work as on BUTTONS, the swipes are
+# shortcuts over them, and only Turn is left to the stick. A thumb that drags
+# is look, as ever: a drag that goes across is look from its first movement;
+# one that goes up or down is held back for at most SWIPE_SECONDS, until it is
+# known not to be a swipe.
 #
 # Every touch index is owned by exactly one thing -- a button, the stick, or
 # look -- from press to release, so two thumbs never fight over a control.
@@ -534,7 +537,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		ctx.get("swing_seated", false)
 	_gestures_live = gestures and not (driving or craning or seated)
 	var jump: TouchButton = _buttons[B_JUMP]
-	jump.shown = not _gestures_live
+	jump.shown = true
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
@@ -553,10 +556,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
-	# Swiped, the climbs and the letting go are the swipes': Action is drawn
-	# only for what it alone does.
-	action.shown = not _gestures_live or (act["id"] != &"" and
-		not act["id"] in [&"climb", &"climb_up", &"let_go", &"trapeze"])
+	action.shown = true
 	# While hanging, Jump already reads CLIMB UP (the same native mantle);
 	# a second identical button beside it is noise, so Action rests.
 	action.enabled = act["id"] != &"" and not hanging
@@ -567,7 +567,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
 	# body lowers it over into a hang.
 	var drop: TouchButton = _buttons[B_DROP]
-	drop.shown = ctx.get("drop_ok", hanging) and not _gestures_live
+	drop.shown = ctx.get("drop_ok", hanging)
 	if ctx.get("sling_seated", false) or ctx.get("sling_recovering", false) or ctx.get("swing_seated", false):
 		drop.label = "LEAVE"
 	else:
@@ -601,7 +601,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		ctx.get("trapeze_hanging", false))
 	_buttons[B_TURN].shown = _turn_allowed and not gestures
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not hanging and not _gestures_live
+	crouch.shown = not hanging
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
@@ -734,10 +734,18 @@ func _draw_gesture_hints() -> void:
 		if button.appear > 0.01 and absf(button.center.x - at.x) < button.radius + 190.0 * _u:
 			down_y = minf(down_y, button.center.y - button.radius - 44.0 * _u)
 	down_y = maxf(down_y, _safe.position.y + 200.0 * _u)
-	if up_hint_special and not up_hint.is_empty():
+	if up_hint_special and not up_hint.is_empty() and not _read_on_a_button(up_hint):
 		_draw_gesture_hint(up_hint, &"up", Vector2(at.x, down_y - 128.0 * _u))
-	if down_hint_special and not down_hint.is_empty():
+	if down_hint_special and not down_hint.is_empty() and not _read_on_a_button(down_hint):
 		_draw_gesture_hint(down_hint, &"down", Vector2(at.x, down_y))
+
+
+# A drawn button already reads `label`: its swipe needs no plate of its own.
+func _read_on_a_button(label: String) -> bool:
+	for button: TouchButton in _buttons.values():
+		if button.shown and button.label == label:
+			return true
+	return false
 
 
 # One hint on a dark plate, so it reads over a bright sky as over steel:

@@ -12,8 +12,8 @@ func _touch_jump() -> bool:
 	var settled: bool = await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not settled:
 		return _fail("never grounded at spawn")
-	if _gestures and _main._touch.is_button_shown(&"jump"):
-		return _fail("JUMP is drawn on the gestures")
+	if not _main._touch.is_button_shown(&"jump"):
+		return _fail("JUMP is not drawn on the glass")
 	_press(&"jump", 0)
 	var peak := [0.0]
 	var airborne_and_rising := func() -> bool:
@@ -171,8 +171,8 @@ func _touch_climb(expected: StringName, expected_state: int) -> bool:
 		return _fail("ACTION never offered %s (got %s)" % [expected, _ctx()["action"]["id"]])
 	if _reads(&"action") != "CLIMB":
 		return _fail("ACTION read '%s'" % _reads(&"action"))
-	if _gestures and _main._touch.is_button_shown(&"action"):
-		return _fail("ACTION is drawn for a climb on the gestures")
+	if not _main._touch.is_button_shown(&"action"):
+		return _fail("ACTION is not drawn for a climb")
 	await _pose("climb_prompt")
 	var start_y := _position().y
 	_press(&"action", 0)
@@ -808,7 +808,7 @@ func _touch_body() -> bool:
 
 func _touch_crouch() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	if _main._touch.is_button_shown(&"crouch") == _gestures or _reads(&"crouch") != "CROUCH":
+	if not _main._touch.is_button_shown(&"crouch") or _reads(&"crouch") != "CROUCH":
 		return _fail("CROUCH was not offered standing on the deck")
 	_stick_push(Vector2(0.0, -1.0))
 	await _seconds(1.6)

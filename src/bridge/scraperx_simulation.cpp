@@ -1610,6 +1610,7 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["pipe_head_down"] = state.pipe_head_down;
     out["pipe_sliding"] = state.pipe_sliding;
     out["pipe_stunned"] = state.pipe_stunned;
+    out["pipe_listening"] = state.pipe_listening;
     out["pipe_links"] = static_cast<std::int64_t>(state.pipe_links);
     out["pipe_holds"] = static_cast<std::int64_t>(state.pipe_holds);
     out["pipe_flanges"] = static_cast<std::int64_t>(state.pipe_flanges);

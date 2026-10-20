@@ -432,9 +432,13 @@ public:
     // The shaft's corner pipe (the owner, 2026-10-19: "She comes down the
     // shaft after you. One shaft pipe becomes hers to climb."): the north-east
     // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, a flange
-    // 1.4 m under every deck), too thick for the climber's hands. Her line is
-    // in the corner between it and the shaft's corner; she gets on and off
-    // over the rail's corner from the band, kPipeOverRailM over the deck. On
+    // 1.4 m under every deck), too thick for the climber's hands. Her line
+    // hugs its north-west corner from the open shaft, west of the flanges
+    // (theirs reach x 15.25): a drum shoved off the north band west of them
+    // falls past them onto her, with room for the way a shove carries it on
+    // (in the corner by the shaft's east edge the flange under the deck takes
+    // any drum: no room past it). She gets on and off over the north rail from
+    // the band, kPipeOverRailM over the deck. On
     // it she is on the steel (object_layers::kOnSteel): what moves meets her,
     // the steel she wraps round does not. Frail, she cannot take hold of it
     // (as her ladder); dangerous she slides down it held by her forearms and
@@ -445,9 +449,9 @@ public:
     // opens her hands: her legs slide her down to the flange under her
     // (kPipeSlideAccel, her squeeze against her weight) and she slams onto it,
     // stunned a while by how hard, alive; then she goes on.
-    static constexpr float kPipeLineX = 16.37F;
-    static constexpr float kPipeLineZ = -133.63F;
-    static constexpr float kPipeDeckX = 17.75F;
+    static constexpr float kPipeLineX = 15.15F;
+    static constexpr float kPipeLineZ = -133.75F;
+    static constexpr float kPipeDeckX = 15.95F;
     static constexpr float kPipeDeckZ = -132.25F;
     static constexpr float kPipeOverRailM = 1.35F;
     static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
@@ -469,6 +473,10 @@ public:
     // heard the climber, fully changed this long.
     static constexpr float kPipeChaseDangerousSeconds = 40.0F;
     static constexpr float kPipeChaseChangedSeconds = 150.0F;
+    // Off the pipe onto a deck she stands this long, listening, before she
+    // goes on (CHOSEN: the climber who heard her coming gets a moment: up
+    // and away, or to the drum over her pipe).
+    static constexpr float kPipeListenSeconds = 2.5F;
     // The moving bodies near her a blow can come from: within this, at most
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;
@@ -533,6 +541,7 @@ public:
         bool pipe_head_down = false;    // coming down it head first (fully changed)
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
+        bool pipe_listening = false;    // just off it, still, listening
         std::uint32_t pipe_links = 0;   // storeys she set out along it, this run
         std::uint32_t pipe_holds = 0;   // her hands' holds on it (each a knock)
         std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
@@ -953,6 +962,7 @@ private:
     float pipe_slide_mps_ = 0.0F;
     float pipe_stop_y_ = 0.0F; // the flange top she slides to
     float pipe_stun_s_ = 0.0F;
+    float pipe_listen_s_ = 0.0F; // off the pipe, still and listening
     float pipe_slam_mps_ = 0.0F;
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;

@@ -233,11 +233,11 @@ func _reads(verb: StringName) -> String:
 	return _main._touch.button_label(verb)
 
 # Drop is offered: its button drawn; swiped, down reads `label` (LET GO, DROP
-# DOWN) and the button is not drawn.
+# DOWN) as well.
 func _offers_drop(label: String) -> bool:
 	if not _gestures:
 		return _main._touch.is_button_shown(&"drop")
-	return not _main._touch.is_button_shown(&"drop") and _main._touch.gesture_hint(&"down") == label
+	return _main._touch.gesture_hint(&"down") == label
 
 func _gesturing(device: int) -> bool:
 	return device == InputRouter.Device.TOUCH and _gestures

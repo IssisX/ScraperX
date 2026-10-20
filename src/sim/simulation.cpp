@@ -1029,6 +1029,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
+    result.pipe_listening = view.pipe_listening;
     result.pipe_links = view.pipe_links;
     result.pipe_holds = view.pipe_holds;
     result.pipe_flanges = view.pipe_flanges;
