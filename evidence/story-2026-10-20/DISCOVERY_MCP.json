@@ -1,0 +1,274 @@
+{
+  "begin": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":3,\"done\":false,\"failures\":[],\"phase\":\"inspect\",\"staged_gallery_only\":true,\"tick\":100,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 4: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 11: load - load() with a literal path can run _init code in the loaded resource\"]}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 3,
+        "done": false,
+        "failures": [],
+        "phase": "inspect",
+        "staged_gallery_only": true,
+        "tick": 100,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 4: load - load() with a literal path can run _init code in the loaded resource",
+        "Warning line 11: load - load() with a literal path can run _init code in the loaded resource"
+      ]
+    }
+  },
+  "inspect": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":7,\"done\":false,\"failures\":[],\"phase\":\"reply\",\"staged_gallery_only\":true,\"tick\":190,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 7,
+        "done": false,
+        "failures": [],
+        "phase": "reply",
+        "staged_gallery_only": true,
+        "tick": 190,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+    }
+  },
+  "reply": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":7,\"done\":false,\"failures\":[],\"phase\":\"reply\",\"staged_gallery_only\":true,\"tick\":280,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 7,
+          "done": false,
+          "failures": [],
+          "phase": "reply",
+          "staged_gallery_only": true,
+          "tick": 280,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":7,\"done\":false,\"failures\":[],\"phase\":\"reply\",\"staged_gallery_only\":true,\"tick\":370,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 7,
+          "done": false,
+          "failures": [],
+          "phase": "reply",
+          "staged_gallery_only": true,
+          "tick": 370,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":7,\"done\":false,\"failures\":[],\"phase\":\"reply\",\"staged_gallery_only\":true,\"tick\":460,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 7,
+          "done": false,
+          "failures": [],
+          "phase": "reply",
+          "staged_gallery_only": true,
+          "tick": 460,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"finish\",\"staged_gallery_only\":true,\"tick\":550,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "finish",
+          "staged_gallery_only": true,
+          "tick": 550,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    }
+  ],
+  "finish": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"finish\",\"staged_gallery_only\":true,\"tick\":640,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "finish",
+          "staged_gallery_only": true,
+          "tick": 640,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"finish\",\"staged_gallery_only\":true,\"tick\":730,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "finish",
+          "staged_gallery_only": true,
+          "tick": 730,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"finish\",\"staged_gallery_only\":true,\"tick\":820,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "finish",
+          "staged_gallery_only": true,
+          "tick": 820,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"finish\",\"staged_gallery_only\":true,\"tick\":910,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "finish",
+          "staged_gallery_only": true,
+          "tick": 910,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":10,\"done\":false,\"failures\":[],\"phase\":\"onward\",\"staged_gallery_only\":true,\"tick\":1000,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 10,
+          "done": false,
+          "failures": [],
+          "phase": "onward",
+          "staged_gallery_only": true,
+          "tick": 1000,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":13,\"done\":true,\"failures\":[],\"phase\":\"complete\",\"staged_gallery_only\":true,\"tick\":1090,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "actual_native": true,
+          "checks": 13,
+          "done": true,
+          "failures": [],
+          "phase": "complete",
+          "staged_gallery_only": true,
+          "tick": 1090,
+          "touch": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+      }
+    }
+  ]
+}

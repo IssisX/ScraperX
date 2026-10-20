@@ -1,0 +1,40 @@
+[
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/presentation-check/project",
+      "--script",
+      "res://tests/story_guidance_test.gd"
+    ],
+    "returncode": 0,
+    "stdout": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSTORY_GUIDANCE PASS checks=26 failures=0 supplied_native_facts_only=1\n",
+    "stderr": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+  },
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/presentation-check/project",
+      "--script",
+      "res://tests/story_discovery_test.gd"
+    ],
+    "returncode": 127,
+    "stdout": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\n",
+    "stderr": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\nSCRIPT ERROR: Parse Error: Cannot infer the type of \"eligible\" variable because the value doesn't have a set type.\n          at: GDScript::reload (res://presentation/story_discovery.gd:70)\nSCRIPT ERROR: Compile Error: Failed to compile depended scripts.\n          at: GDScript::reload (res://tests/story_discovery_test.gd:0)\nERROR: Failed to load script \"res://tests/story_discovery_test.gd\" with error \"Compilation failed\".\n   at: load (modules/gdscript/gdscript_resource_format.cpp:46)\nSCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.\n          at: _run (res://tests/story_discovery_test.gd:17)\n          GDScript backtrace (most recent call first):\n              [0] _run (res://tests/story_discovery_test.gd:17)\nproot info: vpid 1: terminated with signal 15\n"
+  }
+]

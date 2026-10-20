@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "voices": {
+    "IONA": {
+      "generation": {
+        "model": "hexgrad/Kokoro-82M",
+        "host": "https://pendrokar-kokoro-tts.hf.space",
+        "api": "https://pendrokar-kokoro-tts.hf.space/gradio_api/call/predict",
+        "voice_id": "af_heart",
+        "speed": 0.9,
+        "device": "CPU",
+        "language": "American English",
+        "reference_audio": null,
+        "radio_filter": "highpass=f=180,lowpass=f=4800,loudnorm=I=-18:TP=-2:LRA=9",
+        "sample_rate_hz": 24000
+      },
+      "provenance": {
+        "space_owner": "Pendrokar (third-party public deployment)",
+        "space_revision": "412be8aecb86220093fbccd9b4ce2ced5308568f",
+        "model_card_revision_observed": "f3ff3571791e39611d31c381e3a41a3af07b4987",
+        "hosted_weights_revision": "Not exposed by hosted API",
+        "generated_utc_date": "2026-10-20",
+        "clean_sources": "source/*.wav (excluded from Godot import)",
+        "receipt": "generation_receipt.json",
+        "listening_review": "Not performed; ffprobe confirms audio properties only"
+      },
+      "license": {
+        "model": "Apache-2.0",
+        "notice": "KOKORO_LICENSE.txt",
+        "commercial_use": "The official Kokoro-82M model card declares Apache-2.0 and expressly welcomes commercial deployments. Bundled af_heart voice is selected by ID; no custom voice clone or uploaded reference. Dialogue is original project text. No exclusive rights or clearance beyond published model terms are asserted."
+      },
+      "source": [
+        "https://huggingface.co/hexgrad/Kokoro-82M",
+        "https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md",
+        "https://huggingface.co/spaces/Pendrokar/Kokoro-TTS/blob/412be8aecb86220093fbccd9b4ce2ced5308568f/app.py",
+        "https://www.gradio.app/guides/querying-gradio-apps-with-curl"
+      ]
+    },
+    "RO": {
+      "generation": {
+        "model": "hexgrad/Kokoro-82M",
+        "host": "https://pendrokar-kokoro-tts.hf.space",
+        "api": "https://pendrokar-kokoro-tts.hf.space/gradio_api/call/predict",
+        "voice_id": "am_michael",
+        "speed": 0.9,
+        "device": "CPU",
+        "language": "American English",
+        "reference_audio": null,
+        "radio_filter": "highpass=f=180,lowpass=f=4800,loudnorm=I=-18:TP=-2:LRA=9",
+        "sample_rate_hz": 24000
+      },
+      "provenance": {
+        "space_owner": "Pendrokar (third-party public deployment)",
+        "space_revision": "412be8aecb86220093fbccd9b4ce2ced5308568f",
+        "model_card_revision_observed": "f3ff3571791e39611d31c381e3a41a3af07b4987",
+        "hosted_weights_revision": "Not exposed by hosted API",
+        "generated_utc_date": "2026-10-20",
+        "clean_sources": "source/*.wav (excluded from Godot import)",
+        "receipt": "generation_receipt.json",
+        "listening_review": "Not performed; ffprobe confirms audio properties only"
+      },
+      "license": {
+        "model": "Apache-2.0",
+        "notice": "KOKORO_LICENSE.txt",
+        "commercial_use": "The official Kokoro-82M model card declares Apache-2.0 and expressly welcomes commercial deployments. Bundled am_michael voice is selected by ID; no custom voice clone or uploaded reference. Dialogue is original project text. No exclusive rights or clearance beyond published model terms are asserted."
+      },
+      "source": [
+        "https://huggingface.co/hexgrad/Kokoro-82M",
+        "https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md",
+        "https://huggingface.co/spaces/Pendrokar/Kokoro-TTS/blob/412be8aecb86220093fbccd9b4ce2ced5308568f/app.py",
+        "https://www.gradio.app/guides/querying-gradio-apps-with-curl"
+      ]
+    }
+  },
+  "cues": {
+    "receiving_iona_come_look": {
+      "file": "res://audio/story_radio/receiving_iona_come_look.ogg",
+      "speaker": "IONA",
+      "text": "Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.",
+      "duration_s": 6.0
+    },
+    "receiving_iona_freight_one": {
+      "file": "res://audio/story_radio/receiving_iona_freight_one.ogg",
+      "speaker": "IONA",
+      "text": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
+      "duration_s": 5.8
+    },
+    "freight_one_iona_crown": {
+      "file": "res://audio/story_radio/freight_one_iona_crown.ogg",
+      "speaker": "IONA",
+      "text": "Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.",
+      "duration_s": 8.4
+    },
+    "receiving_iona_keep_the_height": {
+      "file": "res://audio/story_radio/receiving_iona_keep_the_height.ogg",
+      "speaker": "IONA",
+      "text": "You’ve found your way up. Keep the height. The Crown is still above you.",
+      "duration_s": 4.5
+    },
+    "receiving_iona_recovery": {
+      "file": "res://audio/story_radio/receiving_iona_recovery.ogg",
+      "speaker": "IONA",
+      "text": "Find your footing. You can try another way up.",
+      "duration_s": 3.335667
+    },
+    "vale_contact_ro": {
+      "file": "res://audio/story_radio/vale_contact_ro.ogg",
+      "speaker": "RO",
+      "text": "You kept me as your emergency contact?",
+      "duration_s": 3.485667
+    },
+    "vale_contact_iona": {
+      "file": "res://audio/story_radio/vale_contact_iona.ogg",
+      "speaker": "IONA",
+      "text": "They asked for next of kin. Not a fucking recommendation.",
+      "duration_s": 4.2
+    }
+  }
+}

@@ -235,6 +235,8 @@ func _exit_tree() -> void:
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
 			child.stream = null
+		elif child.has_method("quiesce"):
+			child.quiesce()
 	_bank.clips.clear()
 
 
@@ -256,6 +258,8 @@ func quiesce() -> void:
 	for child in get_children():
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
+		elif child.has_method("quiesce"):
+			child.quiesce()
 
 
 func _build_bank() -> void:

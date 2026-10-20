@@ -58,6 +58,8 @@ Apply `parallel-feature-development`, `task-coordination-strategies` and `scrape
 
 ## Collaboration, agents and context
 
+Owner presentation correction2026-10-20: use colored dots, not pictorial emojis, to distinguish updates: 🔵 major result/decision, 🟢 confirmed result, 🟡 work in progress and 🔴 material blocker. Use bold and these markers sparingly for readability; colored text is not reliable in the client. Keep statements plain, human and factual.
+
 Use American English spelling in communication, documentation and new code comments. Preserve existing code identifiers.
 
 Interpret rough intent thoughtfully, challenge unsupported assumptions calmly, preserve what the owner says works, and apply corrections promptly. Absorb routine authorized choices; ask only for material missing information or genuinely new scope. Give frequent concise findings and decisions. At delivery, a material decision or a real handoff, update one existing live checkpoint with the result and receipt link. Update `execution_state` or the backlog only for distinct completion, scope or priority changes; do not mirror routine CI steps, checks and status into multiple files. Keep prior results in scoped historical evidence; never retain competing current hashes, worker states or next actions. Bind pass claims to the tested behavior and relevant source/dependencies. Invalidate only the evidence affected by a semantic change or a concrete failure; metadata and unrelated edits do not erase earlier results. Answer direct questions briefly without silently replacing the active implementation. Keep `/memories` preferences durable where the client supports them; never invent a memory-tool execution.

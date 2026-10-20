@@ -1,0 +1,18 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/presentation-check/project",
+    "--script",
+    "res://tests/story_discovery_test.gd"
+  ],
+  "returncode": 0,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/discovery-unit-final.log"
+}

@@ -1,0 +1,94 @@
+{
+  "begin": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":5,\"done\":false,\"failures\":[],\"phase\":\"moving\",\"receiver_stages_only\":true,\"tick\":2,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 4: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 11: load - load() with a literal path can run _init code in the loaded resource\"]}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 5,
+        "done": false,
+        "failures": [],
+        "phase": "moving",
+        "receiver_stages_only": true,
+        "tick": 2,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 4: load - load() with a literal path can run _init code in the loaded resource",
+        "Warning line 11: load - load() with a literal path can run _init code in the loaded resource"
+      ]
+    }
+  },
+  "movement": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":8,\"done\":false,\"failures\":[],\"phase\":\"dock\",\"receiver_stages_only\":true,\"tick\":72,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 8,
+        "done": false,
+        "failures": [],
+        "phase": "dock",
+        "receiver_stages_only": true,
+        "tick": 72,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+    }
+  },
+  "dock": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":15,\"done\":false,\"failures\":[],\"phase\":\"net\",\"receiver_stages_only\":true,\"tick\":172,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 15,
+        "done": false,
+        "failures": [],
+        "phase": "net",
+        "receiver_stages_only": true,
+        "tick": 172,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+    }
+  },
+  "complete": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"actual_native\":true,\"checks\":19,\"done\":true,\"failures\":[],\"phase\":\"complete\",\"receiver_stages_only\":true,\"tick\":272,\"touch\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "actual_native": true,
+        "checks": 19,
+        "done": true,
+        "failures": [],
+        "phase": "complete",
+        "receiver_stages_only": true,
+        "tick": 272,
+        "touch": true
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+    }
+  }
+}

@@ -71,6 +71,10 @@ const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const KitView := preload("res://presentation/kit_view.gd")
 const GrapplingGunViewScript := preload("res://presentation/grappling_gun_view.gd")
 const GrappleFeedbackModel := preload("res://presentation/grapple_feedback_model.gd")
+const StoryGuidance := preload("res://presentation/story_guidance.gd")
+const StoryPresenter := preload("res://presentation/story_presenter.gd")
+const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
+const StoryDiscovery := preload("res://presentation/story_discovery.gd")
 const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
 const MovementDust := preload("res://presentation/movement_dust.gd")
 var _movement_dust: MovementDust
@@ -281,6 +285,10 @@ var _rigging_view: RiggingView
 const PortableLineView := preload("res://presentation/portable_traversal_line_view.gd")
 var _portable_line_view: PortableLineView
 var _grapple_feedback := GrappleFeedbackModel.new()
+var _story_guidance := StoryGuidance.new()
+var _story_presenter: Control
+var _story_radio: Node
+var _story_discovery: Node3D
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
 
@@ -670,6 +678,7 @@ func _process(delta: float) -> void:
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.update_hud(_ctx, delta)
+	_update_story(delta)
 	_ambient_clock += delta
 	_machine_view.update_ambient_dressing(_native, _ambient_clock)
 	if _inspection_worksite_life != null:
@@ -734,6 +743,16 @@ func _build_interface() -> void:
 	_hud = Hud.new()
 	_hud.name = "Hud"
 	hud_layer.add_child(_hud)
+	_story_presenter = StoryPresenter.new()
+	_story_presenter.name = "StoryDirection"
+	hud_layer.add_child(_story_presenter)
+	_story_radio = StoryRadioPlayer.new()
+	_story_radio.name = "StoryRadio"
+	_audio.add_child(_story_radio)
+	_story_guidance.configure_voice_lengths(_story_radio.cue_durations())
+	_story_discovery = StoryDiscovery.new()
+	_story_discovery.name = "ReceivingDispatch"
+	add_child(_story_discovery)
 	_touch = TouchControls.new()
 	_touch.name = "TouchControls"
 	hud_layer.add_child(_touch)
@@ -890,6 +909,8 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	if _story_radio != null:
+		_story_radio.cancel()
 	_native.request_rigging(7, 0)
 	_native.set_rigging_power_input(0.0)
 	_rigging_view.stop_power_feedback()
@@ -1577,6 +1598,7 @@ func _read_context() -> Dictionary:
 		"velocity": velocity,
 		"grounded": grounded,
 		"support_entity": int(_native.get_support_entity_id()),
+		"checkpoint_footing_valid": bool(landing.get("checkpoint_footing_valid", false)),
 		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
@@ -2501,6 +2523,25 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _grapple_view != null:
 		_update_grapple_feedback(delta)
 		_grapple_view.update_state(_native.get_grapple_gun_render_state())
+
+
+func _update_story(delta: float) -> void:
+	if _story_presenter == null:
+		return
+	if _native == null or _regression_scene or _ci_mode or not _uitest_scenario.is_empty():
+		_story_discovery.visible = false
+		_story_presenter.present({}, delta)
+		if _story_radio != null:
+			_story_radio.present({}, delta)
+		return
+	var tick := int(_native.get_tick_index())
+	_ctx["story_discovery"] = _story_discovery.observe(_camera.global_transform, _ctx, tick)
+	var state: Dictionary = _story_guidance.sample(_ctx, tick)
+	_story_presenter.present(state, delta)
+	if _story_radio != null:
+		var velocity: Vector3 = _ctx.get("velocity", Vector3.ZERO)
+		state["suppress_voice"] = _paused or (not bool(_ctx.get("grounded", false)) and velocity.y < -7.0)
+		_story_radio.present(state, delta)
 
 
 func _reset_grapple_feedback() -> void:

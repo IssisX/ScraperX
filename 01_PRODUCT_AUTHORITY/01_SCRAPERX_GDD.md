@@ -94,7 +94,7 @@ Façades, open frames, cranes, exterior machinery, exposed structure, and long d
 
 The campaign has a concrete summit objective. The main ascent is complete when the player **physically reaches the summit**.
 
-The exact narrative reason the summit matters is not defined by the current authority set and is therefore intentionally not invented here.
+The authored campaign is **The Common Way**, defined in [Story and Player Direction](03_STORY_AND_PLAYER_DIRECTION.md). Ro Vale returns to the Exchange and climbs toward the Crown to separate the residents' retained common freight system from retired construction plant. The summit intervention and complete upper route remain future content until actually implemented; narrative authorship alone does not establish physical completion.
 
 ## 4.2 Self-directed ascent
 
@@ -463,7 +463,7 @@ Meaning should emerge primarily from places, people, systems, consequences, and 
 
 The player character has **contextual personality** rather than constant chatter. Short remarks, frustration, observations, fear responses, and situational reactions may characterize the player without turning traversal into a continuous monologue.
 
-The exact biography, origin, and broader fiction are not defined by the current authority set and are intentionally not invented here.
+[Story and Player Direction](03_STORY_AND_PLAYER_DIRECTION.md) defines Ro Vale, Iona, Nadi and Dev; the Exchange's failed handover; the complete campaign arc; and the playable opening. Story guidance follows actual native position, supported arrivals and machine receipts, accepts alternate physical routes, and distinguishes personal access from delivered freight. The authored fiction is broader than the currently implemented characters, voices, districts and ascent; delivery records identify what is actually playable.
 
 ---
 

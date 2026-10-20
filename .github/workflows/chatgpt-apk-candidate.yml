@@ -227,6 +227,19 @@ jobs:
           2>&1 | tee artifacts/grapple-trip-input.log
         grep -F 'SCRAPERX_GRAPPLE_TRIP_INPUT PASS' artifacts/grapple-trip-input.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-trip-input.log; then exit 1; fi
+    - name: Check story opening, actual arrivals and voiced discovery
+      shell: bash
+      run: |
+        set -euo pipefail
+        for entry in story_guidance:STORY_GUIDANCE story_presenter:STORY_PRESENTER story_radio_player:STORY_RADIO story_discovery:STORY_DISCOVERY story_opening_input:SCRAPERX_STORY_OPENING story_discovery_input:SCRAPERX_STORY_DISCOVERY; do
+          check="${entry%%:*}"
+          marker="${entry#*:}"
+          timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
+            --script "res://tests/${check}_test.gd" \
+            2>&1 | tee "artifacts/story-${check}.log"
+          grep -F "${marker} PASS" "artifacts/story-${check}.log"
+          if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/story-${check}.log"; then exit 1; fi
+        done
     - name: Check rigging touch controls and actual shipping native view
       shell: bash
       run: |
@@ -522,6 +535,7 @@ jobs:
       with:
         name: ScraperX-opening-${{ github.sha }}
         path: |
+          artifacts/story-*.log
           artifacts/freight-arrival.png
           artifacts/freight-arrival-render.log
           artifacts/operator-layout.log
@@ -622,6 +636,8 @@ jobs:
 
         unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
         grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+        python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}" \
+          | tee artifacts/story-radio-package.log
 
         AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
         test -x "${AAPT}"

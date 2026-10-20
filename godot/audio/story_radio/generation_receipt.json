@@ -1,0 +1,48 @@
+{
+  "receiving_iona_recovery": {
+    "event_id": "7091093bee394cb986ba493394e1d02a",
+    "text": "Find your footing. You can try another way up.",
+    "clean_sha256": "893de819779b4e91e8b2020b61c38f3b7dba660ecdcb4b378c4854eb0136594b",
+    "radio_sha256": "05a2689a99c45ab03f3784d35682c6e441e929c09233fe559817bfc493ce3d02"
+  },
+  "receiving_iona_come_look": {
+    "event_id": "04b69063058f479eb84a77048211a2dc",
+    "text": "Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.",
+    "clean_sha256": "c506c71b8393e414e3bf06124fa75d78b0477708d4fd46025d242302b6485395",
+    "radio_sha256": "164710bf0c9f48c9999b0ce30723968fd0815c4814599dbf94122c377c767ecc"
+  },
+  "receiving_iona_freight_one": {
+    "event_id": "4a14f252b17e4d3882974b44836af064",
+    "text": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
+    "clean_sha256": "4e19bad3520cd95e6de493c4f36b9bb74a62a81951a8373ce5066b12cf8fc5ed",
+    "radio_sha256": "d0c60e870ebf7c7d1d84f08e35f8103ba8a98eef62fe1ac14ce8f72e9ca29238"
+  },
+  "freight_one_iona_crown": {
+    "event_id": "58489907625b4939832b162455975b0e",
+    "text": "Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.",
+    "clean_sha256": "018af133095f8ca2c09bdd1661dce322e3d810e3907c436cc713f90115159388",
+    "radio_sha256": "404e1a6c2d183ec4cadb5485d467f344fbbde7253ea2df4bfe7b24a3077faa18"
+  },
+  "receiving_iona_keep_the_height": {
+    "event_id": "47f31830c98b4793b027acc7e72c9f9e",
+    "text": "You’ve found your way up. Keep the height. The Crown is still above you.",
+    "clean_sha256": "cc7f00a79f8372944d43f969976e565c3b766763248b82a3824073e023ce7adc",
+    "radio_sha256": "85212339e91d3ab045ca71b3c364ba6651d7edcf49c06bdce73e99bf8ac2a8ad"
+  },
+  "vale_contact_ro": {
+    "event_id": "2e1369c8a58044e2982b8b91ae968464",
+    "text": "You kept me as your emergency contact?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "357aad5a55c7e796fed5ebaa4e71d2ca68d071632fc6335ba1c8f0b22e6b98b0",
+    "radio_sha256": "96d3ffd245d6ef2bdd17aa282bc2cacf231c3051d5ade45a250660196812f800"
+  },
+  "vale_contact_iona": {
+    "event_id": "98cf40085ed942c3af939e8b0ba171c5",
+    "text": "They asked for next of kin. Not a fucking recommendation.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "37ed4b1a540162dd6a4296353aec4ddc5c1377225f2a468c5c36175690fb2a26",
+    "radio_sha256": "4c272fa671b274ea6d1771d6f4f18b1ed6a5d36627fbff4f74d297f94720efa3"
+  }
+}
