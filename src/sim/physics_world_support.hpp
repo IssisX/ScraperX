@@ -400,8 +400,13 @@ private:
             support_normal_y < kSupportNormalThreshold || support_rank(support_entity) == 0) {
             return;
         }
-        // Stood on: planted feet grip it (set_planted_grip).
-        settings.mCombinedFriction = planted_grip_.load(std::memory_order_relaxed);
+        // Stood on: planted feet grip it (set_planted_grip), where the contact
+        // tilts (the rim on an edge, a slope). Flat under the feet, the
+        // reaction is straight up and needs no grip: a flat deck that is struck
+        // or stops dead throws the rider as it always did.
+        if (support_normal_y < kPlantedGripFlatNormalY) {
+            settings.mCombinedFriction = planted_grip_.load(std::memory_order_relaxed);
+        }
 
         const JPH::Vec3 point_velocity = support_body->GetPointVelocity(support_contact_point);
         const SupportSample candidate{
@@ -462,6 +467,9 @@ private:
     // Corpses' bodies (Corpses: kUserDataBase on).
     static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};
+    // A contact flatter than this (about 2.6 degrees) is level ground to the
+    // planted grip.
+    static constexpr float kPlantedGripFlatNormalY = 0.999F;
     std::atomic<float> planted_grip_{0.0F};
 };
 
