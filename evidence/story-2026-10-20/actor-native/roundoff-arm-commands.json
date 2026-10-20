@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-fno-rtti",
+      "-O2",
+      "-DNDEBUG",
+      "-pthread",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src/sim/physical_story_actor.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tests/physical_story_actor_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-actor-native/roundoff/physical_story_actor_tests"
+    ],
+    "exit": 0,
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  },
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-actor-native/roundoff/physical_story_actor_tests"
+    ],
+    "exit": 0,
+    "output": "PASS PHYSICAL_STORY_ACTOR real_jolt=1 cases=8 final_substep=1 roundoff_and_gap_boundary=1 simulation_integration=unverified\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  }
+]

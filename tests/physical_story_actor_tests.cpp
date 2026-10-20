@@ -5,12 +5,15 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/PhysicsStepListener.h>
 #include <Jolt/RegisterTypes.h>
 #include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 namespace {
@@ -65,7 +68,7 @@ struct Listener final : ContactListener {
         observe(a, b, m);
     }
 };
-struct World final {
+struct World final : PhysicsStepListener {
     BroadPhase broad;
     BroadFilter broad_filter;
     PairFilter pair_filter;
@@ -78,13 +81,21 @@ struct World final {
     World() {
         system.Init(64, 0, 128, 256, broad, broad_filter, pair_filter);
         system.SetContactListener(&listener);
+        system.AddStepListener(this);
     }
     ~World() {
+        system.RemoveStepListener(this);
         system.SetContactListener(nullptr);
         for (const auto body : owned) {
             system.GetBodyInterface().RemoveBody(body);
             system.GetBodyInterface().DestroyBody(body);
         }
+    }
+    void OnStep(const PhysicsStepListenerContext &) override {
+        // Match production: only the final collision substep can supply the
+        // next tick's contact receipt; an earlier transient is not support.
+        listener.count = 0;
+        listener.raw_count = 0;
     }
     BodyID box(Vec3 half, RVec3 position, EMotionType motion = EMotionType::Static,
                float friction = .7F, float mass = 300, Vec3 velocity = Vec3::sZero(),
@@ -280,6 +291,33 @@ void sensor_and_traction_negatives() {
     }
     w.tick(actor, Vec3(1.4F,0,0));
 }
+void contact_roundoff_boundary() {
+    scenario = "contact_roundoff_boundary";
+    for (const auto origin : {RVec3(0,0,0), RVec3(-26.75,253,-143.2), RVec3(1000,1024,-2000)}) {
+        for (const float gap : {std::numeric_limits<float>::epsilon()/2, .0001F}) {
+            World w;
+            const auto floor = w.box(Vec3(2,.5F,2), origin-RVec3(0,.5,0));
+            PhysicalStoryActor actor(w.system, 1, 9001);
+            require(actor.spawn(origin+RVec3(0,PhysicalStoryActor::half_height_m()+gap,0)), "boundary actor created");
+            const BodyID ids[] = {actor.body_id(), floor};
+            BodyLockMultiRead locks(w.system.GetBodyLockInterface(), ids, 2);
+            require(locks.GetBody(0) && locks.GetBody(1), "boundary bodies locked");
+            // Unit-check the capture boundary in its shared frame. These
+            // constructed inputs are never submitted as solved support.
+            ContactManifold manifold;
+            manifold.mBaseOffset = locks.GetBody(0)->GetPosition();
+            manifold.mWorldSpaceNormal = -Vec3::sAxisY();
+            manifold.mPenetrationDepth = -gap;
+            manifold.mRelativeContactPointsOn1.push_back(Vec3(0,-PhysicalStoryActor::half_height_m(),0));
+            manifold.mRelativeContactPointsOn2.push_back(Vec3(0,-PhysicalStoryActor::half_height_m()-gap,0));
+            PhysicalStoryActor::Contact contact;
+            const bool accepted = PhysicalStoryActor::capture_contact(actor.body_id(), *locks.GetBody(0), *locks.GetBody(1), manifold, 1, contact);
+            require(accepted == (gap < .0001F), "roundoff boundary admits one ULP and rejects actual0.1mm gap at grade,253m and translated origin");
+            manifold.mPenetrationDepth = std::numeric_limits<float>::quiet_NaN();
+            require(!PhysicalStoryActor::capture_contact(actor.body_id(), *locks.GetBody(0), *locks.GetBody(1), manifold, 1, contact), "nonfinite penetration cannot grant support");
+        }
+    }
+}
 }
 int main() {
     RegisterDefaultAllocator();
@@ -291,9 +329,10 @@ int main() {
     dynamic_receiver_reaction();
     rotating_support_point_velocity();
     sensor_and_traction_negatives();
+    contact_roundoff_boundary();
     UnregisterTypes();
     delete Factory::sInstance;
     Factory::sInstance = nullptr;
-    std::cout << "PASS PHYSICAL_STORY_ACTOR real_jolt=1 cases=7 simulation_integration=unverified\n";
+    std::cout << "PASS PHYSICAL_STORY_ACTOR real_jolt=1 cases=8 final_substep=1 roundoff_and_gap_boundary=1 simulation_integration=unverified\n";
     return EXIT_SUCCESS;
 }

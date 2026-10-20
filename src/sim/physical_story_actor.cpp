@@ -6,6 +6,7 @@
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <tuple>
 
 namespace scraperx::sim {
@@ -18,6 +19,29 @@ bool bottom_point(JPH::RVec3 center, JPH::RVec3 point) {
     return d.GetY() >= PhysicalStoryActor::half_height_m() - .035F &&
            d.GetY() <= PhysicalStoryActor::half_height_m() + .035F &&
            d.GetX()*d.GetX() + d.GetZ()*d.GetZ() <= .13F*.13F;
+}
+double spacing(float value) {
+    const float infinity = std::numeric_limits<float>::infinity();
+    return std::max(double(std::nextafter(value, infinity))-value,
+                    double(value)-std::nextafter(value, -infinity));
+}
+bool touching_with_roundoff(const JPH::Vec3 &actor_point, const JPH::Vec3 &support_point,
+                           const JPH::Vec3 &normal, float depth) {
+    if (!finite(actor_point) || !finite(support_point) || !std::isfinite(depth)) return false;
+    // Use the shared manifold frame: adding world height before subtracting
+    // the points would make a local contact threshold depend on tower height.
+    double gap = 0;
+    double error = spacing(PhysicalStoryActor::half_height_m()) + spacing(PhysicalStoryActor::radius_m());
+    for (unsigned axis=0; axis<3; ++axis) {
+        const double delta = double(actor_point[axis])-support_point[axis];
+        gap += delta*normal[axis];
+        error += std::abs(double(normal[axis]))*(spacing(actor_point[axis])+spacing(support_point[axis]))
+            + std::abs(delta)*spacing(normal[axis]);
+    }
+    // Two endpoint construction/projection roundings, not a speculative
+    // contact-shell allowance. The x86 stationary trace is one float ULP.
+    error *= 2;
+    return std::isfinite(gap) && std::isfinite(error) && depth >= -error && gap <= error;
 }
 }
 
@@ -70,10 +94,13 @@ bool PhysicalStoryActor::capture_contact(JPH::BodyID actor_id, const JPH::Body &
     const auto &actor = actor_first ? first : second;
     const auto &support = actor_first ? second : first;
     if (!actor.IsRigidBody() || !support.IsRigidBody() || actor.IsSensor() ||
-        support.IsSensor() || manifold.mPenetrationDepth < 0 ||
+        support.IsSensor() ||
         manifold.mRelativeContactPointsOn1.empty() || manifold.mRelativeContactPointsOn2.empty()) return false;
     const auto normal = actor_first ? -manifold.mWorldSpaceNormal : manifold.mWorldSpaceNormal;
     if (!finite(normal) || normal.GetY() < .7F) return false;
+    const auto &actor_point = actor_first ? manifold.mRelativeContactPointsOn1[0] : manifold.mRelativeContactPointsOn2[0];
+    const auto &support_point = actor_first ? manifold.mRelativeContactPointsOn2[0] : manifold.mRelativeContactPointsOn1[0];
+    if (!touching_with_roundoff(actor_point, support_point, normal, manifold.mPenetrationDepth)) return false;
     const auto point = actor_first ? manifold.GetWorldSpaceContactPointOn2(0) :
                                     manifold.GetWorldSpaceContactPointOn1(0);
     if (!finite(point) || !bottom_point(actor.GetPosition(), point)) return false;

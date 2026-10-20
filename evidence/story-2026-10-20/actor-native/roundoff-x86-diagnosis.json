@@ -1,0 +1,13 @@
+{
+  "source_commit": "6efd8d2148bbf814b2c0ffcc0df5a61d44176663",
+  "run_id": "39512452816",
+  "conclusion": "failure",
+  "trace": [
+    "STORY_ACTOR_CONTACT_TRACE tick=180 supported=0 y=0.9 vx=0 vy=0 vz=0 accepted=0 raw=4 depth=-5.96046e-08 normal_y=1 callback_center_y=0.9 support_point=0,0,0",
+    "FAIL PHYSICAL_STORY_ACTOR scenario=stationary_advance_obstruction_push reason=actual contact supports stationary adult capsule",
+    "PASS STORY_ACTOR_PUBLIC actor63200 support1993 stable_walk approach_face player_push checkpoint_momentum episode death no_leak"
+  ],
+  "repair": "Admit float-representation error using both points in their shared manifold frame; retain real gap, sensor, normal, bottom, freshness and force/work gates. Fixture now retains final substep only.",
+  "arm_result": "PASS PHYSICAL_STORY_ACTOR real_jolt=1 cases=8 final_substep=1 roundoff_and_gap_boundary=1; roundoff-arm-commands.json contains actual commands/output.",
+  "x86_repair_result": "Pending next candidate; prior public-world check passed."
+}

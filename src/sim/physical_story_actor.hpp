@@ -48,7 +48,8 @@ public:
     [[nodiscard]] JPH::BodyID body_id() const noexcept { return body_; }
 
     // Read-only callback helper: accepts actual rigid, non-sensor bottom
-    // manifolds, never a speculative gap or ray. Safe while callback bodies
+    // manifolds with representation-roundoff admission, never a separated
+    // speculative shell or ray. Safe while callback bodies
     // are locked. Buffer the result in the existing listener, then submit it
     // only AFTER that tick's successful Update. Do not call submit in callbacks.
     static bool capture_contact(JPH::BodyID actor, const JPH::Body &first,
