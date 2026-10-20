@@ -343,12 +343,23 @@ func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Mate
 		var to := from + Vector3(sx * length, -3.0, 0.0)
 
 		_add_box("BridgeDeck", Vector3(length, 0.4, 4.4), (from + to) * 0.5, mill_scale)
+		# The posts' solid boxes stand where the sloped deck began, 1.3 m over
+		# the level one and over the rail: each is carried down to the deck by
+		# a foot, drawn only (the native world's solids stay as they are), and
+		# a wire runs along their tops.
+		var deck_top := (from.y + to.y) * 0.5 + 0.2
+		var posts := int(length / 4.0)
 		for rail_z in [-2.1, 2.1]:
 			_add_box("BridgeRail", Vector3(length, 0.1, 0.1),
 				(from + to) * 0.5 + Vector3(0.0, 1.15, rail_z), faded)
-			for post in range(int(length / 4.0)):
+			for post in range(posts):
 				_add_box("BridgePost", Vector3(0.12, 1.2, 0.12),
 					from + Vector3(sx * (2.0 + float(post) * 4.0), 0.6, rail_z), galvanised)
+				_add_box("BridgePostFoot", Vector3(0.12, from.y - deck_top, 0.12),
+					Vector3(from.x + sx * (2.0 + float(post) * 4.0), (from.y + deck_top) * 0.5, from.z + rail_z),
+					galvanised)
+			_add_box("BridgeLine", Vector3(float(posts - 1) * 4.0, 0.04, 0.04),
+				from + Vector3(sx * (2.0 + float(posts - 1) * 2.0), 1.18, rail_z), galvanised)
 		# Under-truss, so the span looks like it could carry itself: level under
 		# the level deck. (Its line once fell 3 m along the span with from-to,
 		# so near the tower the webs stood 1.2 m up through the deck.)
@@ -365,6 +376,19 @@ func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Mate
 		# A pylon out at the far end, implying the span lands somewhere.
 		_add_box("BridgePylon", Vector3(3.0, y * 0.94, 3.0),
 			to + Vector3(sx * 2.0, -y * 0.5, 0.0), rust_deep)
+		# Its solid box stops short of the deck (by 3.3 m east, 4.6 m west)
+		# and, the west one, 0.3 m short of the ground: a trestle carries the
+		# deck's end down onto it and a foot sets it on the ground, both drawn
+		# only.
+		var pylon_top := to.y - y * 0.5 + y * 0.47
+		var pylon_bottom := to.y - y * 0.5 - y * 0.47
+		var deck_bottom := deck_top - 0.4
+		for side in [-1.2, 1.2]:
+			_add_strut("BridgeTrestle", Vector3(to.x + sx * 0.8, pylon_top, to.z + side),
+				Vector3(to.x - sx * 0.3, deck_bottom, to.z + side), 0.25, rust_deep)
+		if pylon_bottom > 0.0:
+			_add_box("BridgePylonFoot", Vector3(3.0, pylon_bottom + 0.5, 3.0),
+				Vector3(to.x + sx * 2.0, (pylon_bottom - 0.5) * 0.5, to.z), rust_deep)
 
 # Colour that isn't rust: verdigris copper pipe runs and lichen staining low on the columns where damp and shade let something
 # green actually take hold. A decades-old working plant is never one colour.
@@ -401,6 +425,10 @@ func _build_stack_accents(verdigris: Material, lichen: Material) -> void:
 # Pipework, gearing, vents and lamps hung on the frame. None of this is
 # collision or authority -- it is what makes the frame read as a working
 # plant rather than a jungle gym.
+# A stack lamp's arm, over its fitting (whose top is 2.75 m up), on its
+# standard: heights above the deck.
+const LAMP_ARM_TOP := 2.83
+
 func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material) -> void:
 	var cx := STACK_CENTER.x
@@ -420,7 +448,9 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 					Vector3(cx + sx * (inner_half - 1.2), float(level) * STACK_LEVEL_HEIGHT - 1.4,
 						cz + sz * (inner_half - 1.2)), mill_scale)
 
-	# Vent stacks, and lamp fittings throwing warm light into the frame.
+	# Vent stacks, and lamp fittings throwing warm light into the frame. Each
+	# fitting hangs off an arm from a standard on the deck in the shaft rail's
+	# line, 0.6 m out over the shaft (it once hung there on nothing).
 	var lamp_material := _material(Color("4a3a24"), 0.3, 0.7, Color("ffb04d"), 3.0)
 	for level in range(1, STACK_LEVEL_COUNT + 1):
 		var y := float(level) * STACK_LEVEL_HEIGHT
@@ -434,6 +464,10 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 				cz - STACK_HALF_EXTENT + 2.2))
 			_add_box("LampFitting", Vector3(0.5, 0.3, 0.7),
 				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), lamp_material)
+			_add_box("LampStandard", Vector3(0.09, LAMP_ARM_TOP, 0.09),
+				Vector3(cx + sx * inner_half, y + LAMP_ARM_TOP * 0.5, cz), galvanised)
+			_add_box("LampArm", Vector3(0.75, 0.08, 0.08),
+				Vector3(cx + sx * (inner_half - 0.375), y + LAMP_ARM_TOP - 0.04, cz), galvanised)
 			var lamp := OmniLight3D.new()
 			lamp.name = "StackLamp"
 			lamp.position = Vector3(cx + sx * (inner_half - 0.6), y + 2.4, cz)
@@ -559,13 +593,24 @@ func _build_walkway(paint: Material) -> void:
 				bar.rotation.y = side * 0.75
 			z -= 9.0
 
+const LAMP_MASTS := [Vector3(-10.0, 0.0, -24.0), Vector3(-10.0, 0.0, -62.0),
+	Vector3(-10.0, 0.0, -100.0), Vector3(22.0, 0.0, -44.0),
+	Vector3(22.0, 0.0, -82.0), Vector3(40.0, 0.0, -104.0)]
+const LAMP_MAST_SIZE := Vector3(0.38, 11.0, 0.38)
+const LAMP_MAST_COLOR := Color("3a3835")
+# The floods at the tower's foot, 15 m up. They were set out for the old
+# tower, whose face stood at z -145 and spanned 120 m, and were left in the
+# air with no fitting when the stack took its place: now each is clamped
+# to the stack nearest where it was -- the inner pair to the shaft's south
+# corner risers, the outer pair to the outer faces of the front corner
+# columns -- with a flood fitting, the light just in front of its glass.
+const TOWER_FOOT_FLOOD_Y := 15.0
+
 func _build_lighting() -> void:
 	# Sodium vapour: warm, low, and sourced from actual fittings on masts.
-	for mast in [Vector3(-10.0, 0.0, -24.0), Vector3(-10.0, 0.0, -62.0),
-			Vector3(-10.0, 0.0, -100.0), Vector3(22.0, 0.0, -44.0),
-			Vector3(22.0, 0.0, -82.0), Vector3(40.0, 0.0, -104.0)]:
-		_add_box("LampMast", Vector3(0.38, 11.0, 0.38), mast + Vector3(0.0, 5.5, 0.0),
-			_material(Color("3a3835"), 0.7, 0.62))
+	for mast: Vector3 in LAMP_MASTS:
+		_add_box("LampMast", LAMP_MAST_SIZE, mast + Vector3(0.0, 5.5, 0.0),
+			_material(LAMP_MAST_COLOR, 0.7, 0.62))
 		_add_box("LampHead", Vector3(1.5, 0.4, 0.8), mast + Vector3(0.6, 10.9, 0.0),
 			_material(Color("5a4b2c"), 0.4, 0.7, Color("b06a1c"), 1.4))
 		var lamp := OmniLight3D.new()
@@ -577,15 +622,30 @@ func _build_lighting() -> void:
 		lamp.omni_attenuation = 1.6
 		_light_rig.add_child(lamp)
 
-	for base_x in [-46.0, -16.0, 16.0, 46.0]:
-		var base_flood := OmniLight3D.new()
-		base_flood.name = "TowerFootFlood"
-		base_flood.position = Vector3(base_x, 15.0, -132.0)
-		base_flood.light_color = Color(1.0, 0.7, 0.42)
-		base_flood.light_energy = 4.0
-		base_flood.omni_range = 48.0
-		base_flood.omni_attenuation = 1.3
-		_light_rig.add_child(base_flood)
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var riser_offset := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH - 1.2
+	var column_face := STACK_HALF_EXTENT + STACK_COLUMN_SIZE * 0.5
+	var flood_fitting := _material(Color("5a4b2c"), 0.4, 0.7, Color("b06a1c"), 1.4)
+	for sx in [-1.0, 1.0]:
+		# [fitting centre, its size, the way its glass faces]
+		var riser_face := Vector3(cx + sx * riser_offset, TOWER_FOOT_FLOOD_Y, cz + riser_offset + 0.35)
+		var corner_face := Vector3(cx + sx * column_face, TOWER_FOOT_FLOOD_Y, cz + STACK_HALF_EXTENT)
+		for mount in [[riser_face + Vector3(0.0, 0.0, 0.15), Vector3(0.6, 0.4, 0.3), Vector3.BACK],
+				[corner_face + Vector3(sx * 0.15, 0.0, 0.0), Vector3(0.3, 0.4, 0.6), Vector3(sx, 0.0, 0.0)]]:
+			_add_box("FloodFitting", mount[1], mount[0], flood_fitting)
+			_tower_foot_flood(mount[0] + (mount[2] as Vector3) * 0.4)
+
+# One of the floods at the tower's foot (TOWER_FOOT_FLOOD_Y).
+func _tower_foot_flood(at: Vector3) -> void:
+	var base_flood := OmniLight3D.new()
+	base_flood.name = "TowerFootFlood"
+	base_flood.position = at
+	base_flood.light_color = Color(1.0, 0.7, 0.42)
+	base_flood.light_energy = 4.0
+	base_flood.omni_range = 48.0
+	base_flood.omni_attenuation = 1.3
+	_light_rig.add_child(base_flood)
 
 func _build_mountains_and_waterfall() -> void:
 	# Non-collidable alpine backdrop (identity doc item 2). Peaks are cheap
@@ -796,11 +856,14 @@ func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
 		["PEOPLE  POWER", "PROGRESS"],
 	]
 	var banner_spots := [Vector3(-9.4, 0.0, -22.0), Vector3(21.4, 0.0, -42.0), Vector3(26.5, 0.0, -90.5)]
+	var steel := _material(LAMP_MAST_COLOR, 0.7, 0.62)
 	for index in banner_spots.size():
 		_add_banner(banner_spots[index], slogans[index], backing)
+		_hang_banner(banner_spots[index], steel)
 
 	# Tower-face wordmark: bigger backing, bigger text, high enough to be read
-	# from the approach.
+	# from the approach. Set out on the old tower's face (z -143), it now hangs
+	# in the stack's shaft, its back against S2's trunnion frame.
 	_add_box("WordmarkBacking", Vector3(20.0, 5.0, 0.4), Vector3(0.0, 46.0, -142.3), backing)
 	var wordmark := Label3D.new()
 	wordmark.name = "KellerworksWordmark"
@@ -811,4 +874,35 @@ func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
 	wordmark.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 	wordmark.position = Vector3(0.0, 46.0, -142.05)
 	$TowerPresentation.add_child(wordmark)
-	_add_chevron_mark(Vector3(0.0, 52.6, -142.1), 1.4, faded)
+	var mark_at := Vector3(0.0, 52.6, -142.1)
+	_add_chevron_mark(mark_at, 1.4, faded)
+	# The mark was painted on that face, 4 m over the board's top: it has a
+	# crest of its own now, rising from the board behind it. Drawn only.
+	var board_top := 46.0 + 2.5
+	var crest_top := mark_at.y + 1.0
+	_add_box("WordmarkCrest", Vector3(2.2, crest_top - board_top, 0.12),
+		Vector3(mark_at.x, (board_top + crest_top) * 0.5, mark_at.z - 0.035 - 0.06), backing)
+
+# A banner's board hangs on two arms from the lamp mast behind it, over head
+# height; with no mast within BANNER_MAST_REACH it stands on two posts of its
+# own. (Set out along the approach, the boards were left 2.3 m up in the air.)
+# Drawn only: the board is the solid part.
+const BANNER_MAST_REACH := 3.0
+
+func _hang_banner(at: Vector3, steel: Material) -> void:
+	var back_z := at.z - BANNER_BOARD.z * 0.5
+	var bottom := at.y + BANNER_BOARD_Y - BANNER_BOARD.y * 0.5
+	var top := bottom + BANNER_BOARD.y
+	var nearest := Vector3.INF
+	for mast: Vector3 in LAMP_MASTS:
+		if Vector2(mast.x - at.x, mast.z - at.z).length() < Vector2(nearest.x - at.x, nearest.z - at.z).length():
+			nearest = mast
+	if Vector2(nearest.x - at.x, nearest.z - at.z).length() <= BANNER_MAST_REACH and nearest.z < back_z:
+		var mast_front := nearest.z + LAMP_MAST_SIZE.z * 0.5
+		for arm_y in [bottom + 0.3, top - 0.3]:
+			_add_box("BannerArm", Vector3(0.08, 0.08, back_z - mast_front),
+				Vector3(nearest.x, arm_y, (back_z + mast_front) * 0.5), steel)
+		return
+	for side in [-1.0, 1.0]:
+		_add_box("BannerPost", Vector3(0.12, top, 0.12),
+			Vector3(at.x + side * (BANNER_BOARD.x * 0.5 - 0.1), top * 0.5, back_z - 0.06), steel)

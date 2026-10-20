@@ -72,7 +72,11 @@ func _add_tree(at: Vector3, height: float, rng: RandomNumberGenerator) -> void:
 			Vector3(0.0, tier_y + tier_height * 0.5, 0.0), canopy, tree)
 
 # Low scrub and ground bushes: irregular clusters of squashed spheres, no
-# trunk, filling the gap between bare grade and full trees.
+# trunk, filling the gap between bare grade and full trees. A lobe rests on
+# the ground or on a lobe laid before it; one that would float clear of both
+# is set down on the ground.
+const SCRUB_SQUASH := 0.72
+
 func _add_bush(at: Vector3, spread: float, rng: RandomNumberGenerator) -> void:
 	var hue_jitter := rng.randf_range(-0.04, 0.04)
 	var bush_material := _material(Color(0.2 + hue_jitter, 0.3 + hue_jitter, 0.15, 1.0), 0.0, 0.94)
@@ -80,12 +84,25 @@ func _add_bush(at: Vector3, spread: float, rng: RandomNumberGenerator) -> void:
 	bush.name = "Scrub"
 	bush.position = at
 	$TowerPresentation.add_child(bush)
+	var laid: Array[Vector4] = []   # each lobe laid: its middle and radius
 	for _lobe in range(rng.randi_range(3, 5)):
 		var lobe_at := Vector3(rng.randf_range(-spread, spread), rng.randf_range(0.1, spread * 0.5),
 			rng.randf_range(-spread, spread))
-		var lobe := _add_sphere("ScrubLobe", rng.randf_range(spread * 0.45, spread * 0.75),
-			lobe_at, bush_material, bush)
-		lobe.scale.y = 0.72
+		var radius := rng.randf_range(spread * 0.45, spread * 0.75)
+		if lobe_at.y > radius * SCRUB_SQUASH and not _lobe_rests(lobe_at, radius, laid):
+			lobe_at.y = radius * SCRUB_SQUASH
+		laid.append(Vector4(lobe_at.x, lobe_at.y, lobe_at.z, radius))
+		var lobe := _add_sphere("ScrubLobe", radius, lobe_at, bush_material, bush)
+		lobe.scale.y = SCRUB_SQUASH
+
+# Whether a squashed lobe touches one already laid: in the space where both
+# are round again (heights over SCRUB_SQUASH).
+static func _lobe_rests(at: Vector3, radius: float, laid: Array[Vector4]) -> bool:
+	for other in laid:
+		var apart := Vector3(at.x - other.x, (at.y - other.y) / SCRUB_SQUASH, at.z - other.z)
+		if apart.length() < radius + other.w:
+			return true
+	return false
 
 func _add_sphere(node_name: String, radius: float, at: Vector3,
 		material: Material, parent: Node3D = null) -> MeshInstance3D:
@@ -104,8 +121,12 @@ func _add_sphere(node_name: String, radius: float, at: Vector3,
 	host.add_child(instance)
 	return instance
 
+# A banner's board: its size, and how high its middle stands over its spot.
+const BANNER_BOARD := Vector3(3.2, 4.6, 0.12)
+const BANNER_BOARD_Y := 4.6
+
 func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
-	_add_box("BannerBacking", Vector3(3.2, 4.6, 0.12), at + Vector3(0.0, 4.6, 0.0), backing)
+	_add_box("BannerBacking", BANNER_BOARD, at + Vector3(0.0, BANNER_BOARD_Y, 0.0), backing)
 	var label := Label3D.new()
 	label.name = "BannerCopy"
 	label.text = "\n".join(lines)
@@ -113,7 +134,7 @@ func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
 	label.pixel_size = 0.0095
 	label.modulate = Color(0.92, 0.88, 0.8)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = at + Vector3(0.0, 4.6, 0.07)
+	label.position = at + Vector3(0.0, BANNER_BOARD_Y, 0.07)
 	$TowerPresentation.add_child(label)
 	_add_chevron_mark(at + Vector3(0.0, 6.7, 0.07), 0.55, backing)
 

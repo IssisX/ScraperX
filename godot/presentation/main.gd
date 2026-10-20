@@ -15,6 +15,8 @@ const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const TitleScreen := preload("res://presentation/ui/title_screen.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
+# Loaded only for --audit-floating runs: dressing nothing holds up.
+const FLOATING_AUDIT_PATH := "res://presentation/floating_audit.gd"
 const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
 const CanopyView := preload("res://presentation/canopy_view.gd")
@@ -100,6 +102,9 @@ var _ci_proof_printed := false
 var _sky_cycle: Node
 
 var _export_solids_path := ""
+# Tool mode: the audit of floating dressing (floating_audit.gd), which needs
+# every part as its own node, so the dressing is not batched.
+var _audit: RefCounted
 
 func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
@@ -113,13 +118,18 @@ func _ready() -> void:
 			_uitest_scenario = argument.trim_prefix("--uitest=")
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
+		elif argument.begins_with("--audit-floating="):
+			_audit = (load(FLOATING_AUDIT_PATH) as GDScript).new()
+			_audit.report_path = argument.trim_prefix("--audit-floating=")
+			_audit.watch(get_tree())
 
 	RenderingServer.set_default_clear_color(Color("0e0d0c"))
 	_build_world()
 	if _export_solids_path != "":
 		_export_solids()
 		return
-	_batch_static_dressing($TowerPresentation)
+	if _audit == null:
+		_batch_static_dressing($TowerPresentation)
 	for lamp in _light_rig.get_children():
 		if lamp is OmniLight3D:
 			(lamp as OmniLight3D).light_cull_mask = ~BATCH_FAR_LAYER
@@ -161,7 +171,7 @@ func _ready() -> void:
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.
-	_save_enabled = _uitest_scenario.is_empty() and not _ci_mode
+	_save_enabled = _uitest_scenario.is_empty() and not _ci_mode and _audit == null
 	var continued := _save_enabled and load_saved_climb()
 	_continued_from_save = continued
 	# The START list is a development tool: release builds always start at grade.
@@ -252,7 +262,8 @@ func _ready() -> void:
 	_fb_grounded = bool(_ctx["grounded"])
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
-	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode) or _uitest_scenario == "touch_title"):
+	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode and _audit == null) or
+			_uitest_scenario == "touch_title"):
 		_show_title()
 
 func _process(delta: float) -> void:
@@ -404,6 +415,9 @@ func _process(delta: float) -> void:
 	# The faint route hint, asked of the native only while it is on.
 	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
 	_hud.update_hud(_ctx, delta)
+	if _audit != null and _audit.frame(self):
+		get_tree().quit(_audit.exit_code)
+		return
 
 	var proof_ready := (
 		_ci_proof_tick >= 0

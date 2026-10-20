@@ -44,6 +44,19 @@ const NON_SOLID := [
 	"RopeCradleSide", "ScrubLobe", "Waterfall",
 	# A container's door bars: 5 cm, on its own end.
 	"ContainerBar",
+	# What holds up dressing that was left in the air when the structure it
+	# was set on moved (floating_audit.gd): the stack lamps' standards and
+	# arms, in the shaft rail's line and over head height; the tower-foot
+	# floods' fittings, 15 m up; the yard banners' arms, over head height;
+	# the wordmark's crest, in the shaft. And, under solid parts that stop
+	# short of what carries them, the bridges' post feet (the posts' solid
+	# tops stop a walker first), the wire on the posts, the trestles on the
+	# pylons, and the west pylon's foot (in its own footprint, under its
+	# solid box). Drawn only, so that the native world's bodies stay where
+	# they are. A banner with no mast near stands on two posts of its own,
+	# drawn only for the same reason: walked into, they do not stop a body.
+	"LampStandard", "LampArm", "FloodFitting", "BannerArm", "BannerPost", "WordmarkCrest",
+	"BridgePostFoot", "BridgeLine", "BridgeTrestle", "BridgePylonFoot",
 ]
 
 # Native bodies drawn one-for-one. Listed so the exporter never relies on
