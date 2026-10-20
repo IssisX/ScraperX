@@ -30,6 +30,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/fixture_build.cpp
     src/sim/simulation/geometry.cpp
     src/sim/simulation/grapple.cpp
+    src/sim/simulation/rigging.cpp
     src/sim/simulation/forklift.cpp
     src/sim/simulation/yard_crane_control.cpp
     src/sim/simulation/hand_transfer.cpp
@@ -250,7 +251,7 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     target_link_libraries(scraperx_workshop_roof_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.workshop_roof_route COMMAND scraperx_workshop_roof_route_tests)
 
-    foreach(rigging_check IN ITEMS rigging_system routed_cable)
+    foreach(rigging_check IN ITEMS rigging_system routed_cable rigging_bay rigging_public_route)
         add_executable(scraperx_${rigging_check}_tests tests/${rigging_check}_tests.cpp)
         target_compile_options(scraperx_${rigging_check}_tests PRIVATE
             $<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti> $<$<CXX_COMPILER_ID:MSVC>:/GR->)

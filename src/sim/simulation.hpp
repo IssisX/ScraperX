@@ -19,6 +19,26 @@ struct Vector3 final {
     double z = 0.0;
 };
 
+// Ordered rigging commands carry the exact target shown when input occurred.
+enum class RiggingCommandKind : std::uint8_t {
+    Equip, Unequip, Action, Undo, Select, Unclip, BeginCut, EndCut
+};
+struct RiggingCommand final {
+    RiggingCommandKind kind = RiggingCommandKind::Undo;
+    std::uint64_t target = 0;
+};
+struct RiggingSnapshot final {
+    bool available = false, equipped = false, suspended = false;
+    bool draft = false, guide_threaded = false;
+    std::uint64_t target = 0, selected = 0, event_serial = 0;
+    unsigned target_kind = 0, failure = 0, installed_count = 0;
+    Vector3 target_point{};
+    double tension_n = 0, slack_m = 0, cut_progress = 0;
+    std::array<std::uint64_t, 8> lines{};
+    std::array<Vector3, 4> preview{};
+    std::size_t preview_count = 0;
+};
+
 // Native readback. Specific load is TOTAL (delta velocity / dt - gravity),
 // including other contacts and actuators; Jolt exposes no solved soft impulse.
 struct CatchNetSnapshot final {
@@ -827,6 +847,10 @@ public:
     [[nodiscard]] double slingshot_ratchet_draw_m() const noexcept;
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
 
+    [[nodiscard]] bool set_rigging_aim(double x, double y, double z) noexcept;
+    // False means rejected at the input boundary; queued is not installed.
+    [[nodiscard]] bool request_rigging(RiggingCommandKind, std::uint64_t target = 0) noexcept;
+    [[nodiscard]] RiggingSnapshot rigging_state() const noexcept;
     [[nodiscard]] bool set_grapple_aim(double x, double y, double z) noexcept;
     [[nodiscard]] bool set_grapple_equipped(bool equipped) noexcept;
     [[nodiscard]] bool set_grapple_reel_input(double input) noexcept;
@@ -1070,6 +1094,11 @@ private:
     SlingshotSnapshot previous_slingshot_state_{};
     GrappleGunSnapshot previous_grapple_gun_state_{};
     ForkliftSnapshot previous_forklift_state_{};
+    Vector3 rigging_aim_{0, 0, -1};
+    std::array<RiggingCommand, 8> rigging_commands_{};
+    std::size_t rigging_command_count_ = 0;
+    bool rigging_cut_held_ = false;
+    std::array<std::uint64_t, 8> previous_rigging_handles_{};
     Vector3 grapple_aim_{0, 0, -1};
     double grapple_reel_input_ = 0;
     bool grapple_equipped_input_ = false, grapple_equip_requested_ = false;

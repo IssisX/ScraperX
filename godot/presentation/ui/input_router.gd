@@ -11,7 +11,8 @@ extends Node
 # Verbs: jump, action, drop, chute, back (pad B: drop / leave controls),
 # alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
 # crouch (a toggle: C, right-stick click, the touch button), toggle_grapple,
-# auto_reel, pause, telemetry. Tool controls do not replace contextual Action.
+# auto_reel, toggle_rigging, rigging_undo, rigging_unclip,
+# rigging_cut_start/stop, pause, telemetry. Tool controls keep contextual Action.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 # Sprint is held too: Shift; a left-stick click, latched until the stick comes
 # back to rest; the touch stick pushed on past its ring. frame() reports it
@@ -73,6 +74,8 @@ var _mouse_look := Vector2.ZERO
 var _verbs: Array[StringName] = []
 var _boost_timer := 0.0
 var _pad_sprint := false
+var rigging_mode := false
+var _rigging_cut_sources := {}
 
 
 func _ready() -> void:
@@ -118,8 +121,31 @@ func set_yard_crane_mode(value: bool) -> void:
 	clear_held()
 
 
+func set_rigging_mode(value: bool) -> void:
+	rigging_mode = value
+	if not value:
+		_cancel_rigging_cut()
+
+
+func set_rigging_cut(source: StringName, pressed: bool) -> void:
+	var was_held := not _rigging_cut_sources.is_empty()
+	if pressed and rigging_mode and gameplay_active and not forklift_mode and not yard_crane_mode:
+		_rigging_cut_sources[source] = true
+	else:
+		_rigging_cut_sources.erase(source)
+	var held := not _rigging_cut_sources.is_empty()
+	if held != was_held:
+		push_verb(&"rigging_cut_start" if held else &"rigging_cut_stop")
+
+
+func _cancel_rigging_cut() -> void:
+	if not _rigging_cut_sources.is_empty():
+		_rigging_cut_sources.clear()
+		push_verb(&"rigging_cut_stop")
+
+
 func push_verb(verb: StringName) -> void:
-	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel"]:
+	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel", &"toggle_rigging", &"rigging_undo", &"rigging_unclip", &"rigging_cut_start"]:
 		return
 	if gameplay_active:
 		_verbs.append(verb)
@@ -127,6 +153,7 @@ func push_verb(verb: StringName) -> void:
 
 func clear_held() -> void:
 	_verbs.clear()
+	_cancel_rigging_cut()
 	_keys.clear()
 	_buttons.clear()
 	_axes.fill(0.0)

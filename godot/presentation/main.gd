@@ -276,6 +276,8 @@ var _view_pitch_offset := 0.0
 
 var _kit_view: KitView
 var _grapple_view: GrapplingGunViewScript
+const RiggingView := preload("res://presentation/rigging_view.gd")
+var _rigging_view: RiggingView
 var _grapple_feedback := GrappleFeedbackModel.new()
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
@@ -479,6 +481,9 @@ func _finish_native_setup() -> void:
 	_grapple_view.configure_hook_geometry(_native.get_grapple_hook_geometry())
 	add_child(_grapple_view)
 	_grapple_view.configure(_camera)
+	_rigging_view = RiggingView.new()
+	_rigging_view.name = "RiggingPresentation"
+	add_child(_rigging_view)
 	if bool(_native.get_slingshot_state().get("available", false)):
 		_slingshot_view = SlingshotView.new()
 		add_child(_slingshot_view)
@@ -587,6 +592,7 @@ func _process(delta: float) -> void:
 		return
 	_native.set_facing(facing.x, facing.y)
 	_native.set_grapple_aim(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
+	_native.set_rigging_aim(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
 	_native.set_sprint_input(bool(intent["sprint_held"]))
@@ -628,6 +634,8 @@ func _process(delta: float) -> void:
 		int(_native.get_last_advance_process_cpu_usec()))
 	_render_snapshot(delta)
 	_ctx = _read_context()
+	_router.set_rigging_mode(bool(_ctx.get("rigging_equipped", false)))
+	_rigging_view.update_state(_native.get_rigging_state(), _audio)
 	# Attachment ownership can end natively without a presentation release verb.
 	# Clear only the posture toggle; held Ctrl and ordinary ground crouch retain
 	# their own intent. Temporary posture ineligibility with hands stays intact.
@@ -845,6 +853,8 @@ func _set_telemetry_visible(on: bool) -> void:
 
 
 func _exit_tree() -> void:
+	if _native != null:
+		_native.request_rigging(7, 0)
 	_android_activity = null
 	if _startup_preparation != null:
 		get_viewport().disable_3d = _startup_previous_disable_3d
@@ -872,6 +882,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_native.request_rigging(7, 0)
 	_performance_report.set_paused(true)
 	if _freight_activity != null:
 		_freight_activity.reset()
@@ -994,6 +1005,33 @@ func _resume() -> void:
 # which request the other contextual verbs mean; native authority accepts it.
 func _dispatch(verbs: Array, _delta: float) -> void:
 	for verb in verbs:
+		if verb == &"rigging_cut_stop":
+			_native.request_rigging(7, 0)
+			continue
+		if verb == &"toggle_rigging" and _operating not in [&"forklift", &"yard_crane"]:
+			var rigging: Dictionary = _native.get_rigging_state()
+			if bool(rigging.get("equipped", false)):
+				_native.request_rigging(1, 0)
+			else:
+				_end_operation()
+				_native.set_grapple_equipped(false)
+				_native.request_rigging(0, 0)
+			continue
+		if bool(_ctx.get("rigging_equipped", false)):
+			var selected := int(_ctx.get("rigging_selected", 0))
+			match verb:
+				&"rigging_undo":
+					_native.request_rigging(3, 0)
+					continue
+				&"rigging_unclip":
+					_native.request_rigging(5, selected)
+					continue
+				&"rigging_cut_start":
+					_native.request_rigging(6, selected)
+					continue
+				&"back", &"drop":
+					_native.request_rigging(3 if bool(_ctx.get("rigging_draft", false)) else 1, 0)
+					continue
 		if _operating == &"yard_crane":
 			if verb in [&"action", &"back", &"drop"]:
 				_end_operation()
@@ -1120,6 +1158,8 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"rigging_action":
+			_native.request_rigging(2, int(_ctx.get("rigging_target", 0)))
 		&"equip_grapple":
 			_native.set_grapple_equipped(true)
 		&"grapple_action":
@@ -1233,6 +1273,9 @@ func _update_forklift_view_heading() -> void:
 
 
 func _end_operation() -> void:
+	_native.request_rigging(7, 0)
+	if _operating == &"rigging":
+		_native.request_rigging(1, 0)
 	_native.cancel_forklift_tool_request()
 	if _operating == &"yard_crane":
 		_zero_yard_crane_input()
@@ -1277,6 +1320,7 @@ func _read_context() -> Dictionary:
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
 	var grapple: Dictionary = _native.get_grapple_gun_state()
+	var rigging: Dictionary = _native.get_rigging_state()
 	var service_lift: Dictionary = _native.get_service_lift_state()
 	var balance: Dictionary = _native.get_supplied_machine_state()
 	var crane := _yard_crane_state()
@@ -1284,7 +1328,10 @@ func _read_context() -> Dictionary:
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
-	if bool(grapple.get("equipped", false)):
+	if bool(rigging.get("equipped", false)):
+		station = &"rigging"
+		_operating = &"rigging"
+	elif bool(grapple.get("equipped", false)):
 		station = &"grappling_gun"
 		# Native acknowledgment owns acquisition. A rendering frame before the
 		# next90Hz tick cannot cancel a still-pending equip command.
@@ -1325,7 +1372,7 @@ func _read_context() -> Dictionary:
 		or (_operating == &"forklift" and bool(forklift.get("controls_reachable", false))) \
 		or (_operating == &"yard_crane" and bool(crane.get("controls_reachable", false)))) \
 		and free and int(_native.get_carrying_entity_id()) == 0
-	var tool_active := station == &"grappling_gun" and free
+	var tool_active := station in [&"grappling_gun", &"rigging"] and free
 	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable and not tool_active) or not free \
 			or (_operating in [&"service_lift", &"supplied_machine", &"forklift", &"yard_crane"] and not lift_reachable)):
 		_end_operation()
@@ -1370,6 +1417,11 @@ func _read_context() -> Dictionary:
 		# Both hands are on it: letting go is the only thing Action can do.
 		action = {"id": &"set_down", "label": "LET GO" if _is_kit(carrying) else "SET DOWN",
 			"icon": &"set_down", "detail": _carry_name(carrying)}
+	elif tool_active and station == &"rigging":
+		var target := int(rigging.get("target", 0))
+		var label := "THREAD GUIDE" if int(rigging.get("target_kind", 0)) == 1 else ("CONNECT LINE" if bool(rigging.get("draft", false)) else "CLIP FIRST END")
+		action = {"id": &"rigging_action" if target != 0 else &"", "label": label if target != 0 else "AIM AT AN EYE",
+			"icon": &"hook", "detail": "PREVIEW ONLY" if bool(rigging.get("draft", false)) else "INSTALLED LINES STAY WHEN STOWED"}
 	elif tool_active:
 		var line_state := int(grapple.get("state", 0))
 		action = {"id": &"grapple_action", "label": "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(grapple.get("action_recovers_hook", line_state == 2)) else "FIRE HOOK"),
@@ -1456,6 +1508,13 @@ func _read_context() -> Dictionary:
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
 		"slingshot_seated": sling_seated,
 		"slingshot_recovering": bool(sling.get("recovering", false)),
+		"rigging_available": bool(rigging.get("available", false)) and free and carrying == 0 and not sling_seated and _operating not in [&"forklift", &"yard_crane"],
+		"rigging_equipped": bool(rigging.get("equipped", false)),
+		"rigging_draft": bool(rigging.get("draft", false)),
+		"rigging_selected": int(rigging.get("selected", 0)),
+		"rigging_target": int(rigging.get("target", 0)),
+		"rigging_tension_n": float(rigging.get("tension_n", 0.0)),
+		"rigging_cut_progress": float(rigging.get("cut_progress", 0.0)),
 		"grapple_equipped": bool(grapple.get("equipped", false)),
 		"grapple_draw_available": grapple_draw_available,
 		"grapple_line_attached": bool(grapple.get("line_attached", false)),
@@ -1521,6 +1580,10 @@ func _carry_name(entity: int) -> String:
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
 	match entity:
+		2495:
+			return "LIFT RELEASE / RETURN LEVER"
+		2496, 2497, 2498:
+			return "COUNTERWEIGHT BALLAST · 25 kg"
 		2490:
 			return "LOOSE GANGWAY"
 		2491, 2492:
@@ -1559,6 +1622,15 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"rigging":
+			var rigging: Dictionary = _native.get_rigging_state()
+			var failures := ["", "TARGET CHANGED", "MOVE CLOSER", "CABLE PATH BLOCKED", "CHOOSE AN END EYE", "THREAD A GUIDE FIRST", "INVALID CONNECTION", "NO FREE LINE", "UNLOAD BEFORE UNCLIPPING", "HANDS BUSY", "LINE OVERLOADED"]
+			var failure := clampi(int(rigging.get("failure", 0)), 0, failures.size() - 1)
+			return {"title": "RIGGING TOOL", "subtitle": "CLIP AN END / THREAD GUIDE / CONNECT OTHER END",
+				"rows": [["LINES", str(int(rigging.get("installed_count", 0))), 0],
+					["TENSION", "%d N" % int(rigging.get("tension_n", 0.0)), 0],
+					["SLACK", "%.2f M" % float(rigging.get("slack_m", 0.0)), 0],
+					["STATUS", failures[failure], 2 if failure else 0]], "verbs": []}
 		&"yard_crane":
 			return YardCranePanel.describe(_yard_crane_state(), _router.device)
 		&"forklift":

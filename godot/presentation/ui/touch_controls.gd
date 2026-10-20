@@ -33,6 +33,10 @@ const B_SLING := &"sling"
 const B_REEL := &"slingshot_reel"
 const B_AUTO_REEL := &"auto_reel"
 const B_GRAPPLE := &"grapple"
+const B_RIGGING := &"toggle_rigging"
+const B_UNDO := &"rigging_undo"
+const B_UNCLIP := &"rigging_unclip"
+const B_CUT := &"rigging_cut"
 const B_FORWARD := &"forklift_forward"
 const B_NEUTRAL := &"forklift_neutral"
 const B_REVERSE := &"forklift_reverse"
@@ -96,7 +100,8 @@ var _u := 1.0
 var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
 	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE,
-	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL, B_RIG, B_UNRIG]
+	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL, B_RIG, B_UNRIG,
+	B_RIGGING, B_UNDO, B_UNCLIP, B_CUT]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -126,6 +131,7 @@ var _thumb_notice := ""
 var _thumb_notice_left := 0.0
 var _stick_tap_age := 0.0
 var _stick_tap_candidate := false
+var _cut_progress := 0.0
 
 
 func _ready() -> void:
@@ -134,7 +140,7 @@ func _ready() -> void:
 	for id in _order:
 		var button := TouchButton.new()
 		button.id = id
-		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT, B_REEL, B_INCH, B_HORN]
+		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT, B_REEL, B_INCH, B_HORN, B_CUT]
 		_buttons[id] = button
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
@@ -170,7 +176,8 @@ func set_control_profile(value: int) -> void:
 		return
 	control_profile = profile
 	reset_touches()
-	_thumb_active = profile == SettingsStore.TouchProfile.THUMB_FLOW and not _operating \
+	_thumb_active = profile == SettingsStore.TouchProfile.THUMB_FLOW \
+		and (not _operating or _thumb_ctx.get("operating", &"") == &"rigging") \
 		and not _retrieving and not bool(_thumb_ctx.get("slingshot_seated", false))
 	_hint_clock = 0.0
 	_moved = false
@@ -226,6 +233,8 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	# equipment circle keeps a 66-unit gap even when touch size changes.
 	var grapple_x := corner.x - 394.0 * UiStyle.unit(self) - 126.0 * _u
 	_place(B_GRAPPLE, Vector2(grapple_x, _safe.position.y + 108.0 * _u), 60.0)
+	for entry in [[B_RIGGING, 300.0], [B_UNDO, 480.0], [B_UNCLIP, 660.0], [B_CUT, 840.0]]:
+		_place(entry[0], Vector2(grapple_x, _safe.position.y + entry[1] * _u), 60.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
@@ -301,7 +310,7 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 
 
 func _verb_for(id: StringName) -> StringName:
-	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG]:
+	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG, B_RIGGING, B_UNDO, B_UNCLIP]:
 		return id
 	match id:
 		B_JUMP:
@@ -326,6 +335,8 @@ func _verb_for(id: StringName) -> StringName:
 
 
 func reset_touches() -> void:
+	if router != null:
+		router.set_rigging_cut(&"touch", false)
 	_thumb.reset()
 	_thumb_reach_owned = false
 	_thumb_drop_identity.clear()
@@ -388,6 +399,8 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		if at.distance_to(button.center) > button.radius * HIT_SLOP:
 			continue
 		button.index = index
+		if id == B_CUT and router != null:
+			router.set_rigging_cut(&"touch", true)
 		button.press_position = at
 		_refresh_held_controls()
 		button.flash = 1.0
@@ -444,6 +457,9 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	for button in _buttons.values():
 		if button.index != index:
 			continue
+		if button.id == B_CUT and at.distance_to(button.center) > button.radius * HIT_SLOP:
+			_touch_up(index, true)
+			return true
 		if not button.hold and _look_index == -1 \
 				and at.distance_to(button.press_position) > LOOK_SLOP * _u:
 			button.index = -1
@@ -482,6 +498,8 @@ func _touch_up(index: int, cancelled: bool = false) -> bool:
 		released = true
 	for button in _buttons.values():
 		if button.index == index:
+			if button.id == B_CUT and router != null:
+				router.set_rigging_cut(&"touch", false)
 			button.index = -1
 			released = true
 	if released:
@@ -616,7 +634,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	set_yard_crane_mode(station == &"yard_crane")
 	_operating = station != &""
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
-	var portable_tool := station in [&"grappling_gun", &"forklift", &"yard_crane"]
+	var portable_tool := station in [&"grappling_gun", &"rigging", &"forklift", &"yard_crane"]
 	if _portable_tool != portable_tool:
 		_portable_tool = portable_tool
 		_layout()
@@ -636,8 +654,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	crouch.label = ("EXTEND" if folded else "TUCK") if tuck_available else ("STAND" if folded else "CROUCH")
 	crouch.tone = TONE_SAFE if folded else TONE_NORMAL
 	var has_x := station in [&"jib", &"intake", &"forklift"]
-	_buttons[B_UP].shown = _operating
-	_buttons[B_DOWN].shown = _operating
+	_buttons[B_UP].shown = _operating and station != &"rigging"
+	_buttons[B_DOWN].shown = _operating and station != &"rigging"
 	_buttons[B_LEFT].shown = _operating and has_x
 	_buttons[B_RIGHT].shown = _operating and has_x
 	var sling: TouchButton = _buttons[B_SLING]
@@ -690,12 +708,30 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		_buttons[B_RIG].label = "RIG"
 		_buttons[B_UNRIG].label = "UNRIG"
 		_axis_names = ["HOIST", ""]
+	var rigging := bool(ctx.get("rigging_equipped", false))
+	var rigging_allowed := station in [&"", &"rigging"] and not hanging and not climbing
+	_buttons[B_RIGGING].shown = rigging_allowed and (rigging or bool(ctx.get("rigging_available", false)))
+	_buttons[B_RIGGING].enabled = _buttons[B_RIGGING].shown
+	_buttons[B_RIGGING].label = "STOW RIG" if rigging else "RIG"
+	_buttons[B_RIGGING].tone = TONE_SAFE if rigging else TONE_PRIMARY
+	_buttons[B_UNDO].shown = rigging_allowed and rigging and bool(ctx.get("rigging_draft", false))
+	_buttons[B_UNDO].label = "UNDO"
+	var selected := int(ctx.get("rigging_selected", 0)) != 0
+	_buttons[B_UNCLIP].shown = rigging_allowed and rigging and selected
+	_buttons[B_UNCLIP].label = "UNCLIP"
+	_buttons[B_UNCLIP].dimmed = float(ctx.get("rigging_tension_n", 0.0)) > 60.0
+	_buttons[B_CUT].shown = rigging_allowed and rigging and selected
+	_buttons[B_CUT].label = "HOLD CUT"
+	_buttons[B_CUT].tone = TONE_DANGER
+	_cut_progress = clampf(float(ctx.get("rigging_cut_progress", 0.0)), 0.0, 1.0)
 	if _movement_blocked and _stick_index != -1:
 		_touch_up(_stick_index)
 	_update_thumb_context(ctx)
 
 	for button in _buttons.values():
 		if (not button.shown or not button.enabled) and button.index != -1:
+			if button.id == B_CUT and router != null:
+				router.set_rigging_cut(&"touch", false)
 			button.index = -1
 		button.appear = move_toward(button.appear, 1.0 if button.shown else 0.0, APPEAR_RATE * delta)
 		button.flash = maxf(0.0, button.flash - delta * 3.5)
@@ -705,7 +741,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 
 func _update_thumb_context(ctx: Dictionary) -> void:
-	var active := control_profile == SettingsStore.TouchProfile.THUMB_FLOW and not _operating \
+	var active: bool = control_profile == SettingsStore.TouchProfile.THUMB_FLOW \
+		and (not _operating or ctx.get("operating", &"") == &"rigging") \
 		and not _retrieving and not bool(ctx.get("slingshot_seated", false))
 	if active != _thumb_active:
 		reset_touches()
@@ -825,6 +862,15 @@ func _draw_button(button: TouchButton) -> void:
 			UiStyle.with_alpha(accent, button.flash * 0.55 * alpha), 3.0 * _u)
 	var icon_color := UiStyle.INK if pressed else UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
 	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
+	if button.id == B_CUT and _cut_progress > 0.0:
+		draw_arc(button.center, radius + 8.0 * _u, -PI * .5,
+			-PI * .5 + TAU * _cut_progress, 32, UiStyle.HAZARD, 5.0 * _u, true)
+	if button.id in [B_RIGGING, B_UNDO, B_UNCLIP, B_CUT]:
+		var pixels := maxi(1, int(roundf(22.0 * _u)))
+		while pixels > 1 and UiStyle.text_width(UiStyle.font_label(), button.label, pixels) > radius * 1.8:
+			pixels -= 1
+		UiStyle.text_centered(self, UiStyle.font_label(), button.label, button.center, pixels, icon_color)
+		return
 	if not button.label.is_empty():
 		if forklift_mode and button.id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL]:
 			# Text-only controls carry their name inside, not beneath an empty disc.

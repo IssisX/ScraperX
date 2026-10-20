@@ -123,6 +123,17 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 		if ctx["chute_ok"] and danger:
 			out.append(_prompt(&"chute", "OPEN THE CHUTE", "", TONE_DANGER))
 		return out
+	if bool(ctx.get("rigging_equipped", false)) and ctx.get("operating", &"") in [&"", &"rigging"] \
+			and not bool(ctx.get("hanging", false)) and not bool(ctx.get("climbing", false)):
+		var rig_action: Dictionary = ctx["action"]
+		out.append(_prompt(&"action", rig_action.get("label", "AIM AT AN EYE")))
+		if bool(ctx.get("rigging_draft", false)):
+			out.append(_prompt(&"rigging_undo", "UNDO LAST STEP", "PAD UP"))
+		if int(ctx.get("rigging_selected", 0)) != 0:
+			out.append(_prompt(&"rigging_unclip", "UNCLIP", "PAD RIGHT · %.0f N" % float(ctx.get("rigging_tension_n", 0.0))))
+			out.append(_prompt(&"rigging_cut_start", "HOLD TO CUT", "PAD DOWN · %d%%" % int(100.0 * float(ctx.get("rigging_cut_progress", 0.0))), TONE_DANGER))
+		out.append(_prompt(&"toggle_rigging", "STOW RIG", "PAD LEFT"))
+		return out
 	if bool(ctx.get("grapple_equipped", false)):
 		var gun_action: Dictionary = ctx["action"]
 		out.append(_prompt(&"action", gun_action["label"]))
@@ -181,6 +192,8 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 		out.append(_prompt(&"drop", "DROP DOWN", "OVER THE EDGE"))
 	if bool(ctx.get("grapple_draw_available", false)):
 		out.append(_prompt(&"toggle_grapple", "DRAW GRAPPLE"))
+	if bool(ctx.get("rigging_available", false)):
+		out.append(_prompt(&"toggle_rigging", "DRAW RIG", "PAD LEFT"))
 	return out
 
 

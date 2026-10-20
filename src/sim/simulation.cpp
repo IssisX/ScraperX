@@ -115,6 +115,8 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     intake_sling_release_requested_ = intake_sling_attach_requested_ = false;
     sling_draw_ = 0.0;
     sling_action_ = sling_drop_ = false;
+    rigging_command_count_ = 0;
+    rigging_cut_held_ = false;
     snapshot_ = physics_world_->state();
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
@@ -155,6 +157,8 @@ bool Simulation::restart_checkpoint() noexcept {
     intake_sling_release_requested_ = intake_sling_attach_requested_ = false;
     sling_draw_ = 0.0;
     sling_action_ = sling_drop_ = false;
+    rigging_command_count_ = 0;
+    rigging_cut_held_ = false;
     snapshot_ = physics_world_->state();
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
@@ -422,13 +426,23 @@ std::uint32_t Simulation::kit_body_index(const std::uint64_t entity) const noexc
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {
-    return physics_world_->kit().cable_count();
+    return physics_world_->kit().cable_count() +
+        (physics_world_->rigging() ? std::uint32_t(RiggingSystem::kCapacity) : 0);
 }
 
 std::uint32_t Simulation::kit_cable_points(const std::uint32_t cable, Vector3 *out,
                                            const std::uint32_t capacity) const noexcept {
     if (out == nullptr) {
         return 0;
+    }
+    const auto base = physics_world_->kit().cable_count();
+    if (const auto *rig = physics_world_->rigging(); rig && cable >= base) {
+        std::array<JPH::RVec3, 4> points;
+        const auto index = cable - base;
+        const auto count = std::uint32_t(std::min<std::size_t>(capacity,
+            rig->polyline(index, points)));
+        for (std::uint32_t i = 0; i < count; ++i) out[i] = to_sim_vector(points[i]);
+        return count;
     }
     std::vector<JPH::RVec3> points;
     physics_world_->kit().cable_polyline(cable, points);
@@ -630,6 +644,9 @@ void Simulation::step_fixed() noexcept {
     commands.sling_elevation = sling_elevation_;
     commands.sling_action = sling_action_;
     commands.sling_drop = sling_drop_;
+    commands.rigging_aim = rigging_aim_;
+    commands.rigging_commands = rigging_commands_;
+    commands.rigging_command_count = rigging_command_count_;
     commands.grapple_aim = grapple_aim_;
     commands.grapple_reel = grapple_reel_input_;
     commands.grapple_equip_requested = grapple_equip_requested_;
@@ -638,8 +655,10 @@ void Simulation::step_fixed() noexcept {
     commands.grapple_release = grapple_release_requested_;
     commands.grapple_auto_reel = grapple_auto_reel_input_;
     commands.grapple_auto_reel_requested = grapple_auto_reel_requested_;
+    commands.rigging_cut_held = rigging_cut_held_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = sling_drop_ = false;
+    rigging_command_count_ = 0;
     grapple_equip_requested_ = grapple_action_requested_ = grapple_release_requested_ = false;
     grapple_auto_reel_requested_ = false;
     jump_requested_ = jump_cancel_requested_ = false;
@@ -835,6 +854,9 @@ void Simulation::capture_render_history() noexcept {
     previous_slingshot_state_ = slingshot_state();
     previous_grapple_gun_state_ = grapple_gun_state();
     previous_forklift_state_ = forklift_state();
+    if (const auto *rig = physics_world_->rigging())
+        for (std::size_t i = 0; i < previous_rigging_handles_.size(); ++i)
+            previous_rigging_handles_[i] = rig->line_handle(i);
     previous_cable_points_.resize(kit_cable_count());
     for (std::uint32_t cable = 0; cable < previous_cable_points_.size(); ++cable) {
         auto &points = previous_cable_points_[cable];
@@ -848,6 +870,12 @@ std::uint32_t Simulation::render_kit_cable_points(const std::uint32_t cable, Vec
     const auto count = kit_cable_points(cable, out, capacity);
     // Rehooking or parting changes topology. Interpolating across that event
     // could draw a rope that does not exist, so display the actual new shape.
+    const auto base = physics_world_->kit().cable_count();
+    if (const auto *rig = physics_world_->rigging(); rig && cable >= base) {
+        const auto slot = cable - base;
+        if (slot >= previous_rigging_handles_.size() ||
+            rig->line_handle(slot) != previous_rigging_handles_[slot]) return count;
+    }
     if (cable >= previous_cable_points_.size() || previous_cable_points_[cable].size() != count)
         return count;
     const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);

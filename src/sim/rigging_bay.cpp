@@ -22,7 +22,7 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
     }
     for (float z : {-1.8F,1.8F})
         frame.push_back(box({4.1F,.12F,.12F}, {0,4.55F,z}, Material::Steel));
-    for (float x : {-3.5F,2.5F}) {
+    for (float x : {-3.5F,3.44F}) {
         frame.push_back(box({.12F,.10F,1.9F}, {x,4.55F,0}, Material::Steel));
         // Visible sheave cheeks flank the admitted fixed cable corridor.
         for (float z : {.78F,1.02F})
@@ -30,7 +30,7 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
     }
     // The low pilot's overhead travel stop has a real frame reaction.
     for (float x : {-3.6F,-1.4F}) {
-        frame.push_back(box({.12F,.1F,.25F}, {x,2.43F,-.95F}, Material::Steel));
+        frame.push_back(box({.12F,.1F,.25F}, {x,2.53F,-.95F}, Material::Steel));
         frame.push_back(box({.12F,.035F,.25F}, {x,.035F,-.95F}, Material::Steel));
     }
     frame.push_back(box({.5F,.245F,.5F}, {2.5F,.245F,0}, Material::Concrete));
@@ -48,12 +48,21 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
     kit.add_guide(platform, Vec3::sAxisY(), 0, 2.1F, .7F, 3000, .8F);
     kit.set_continuous_collision(platform);
 
+    // A two-metre loading opening gives the three loose blocks room to
+    // settle without precision packing around the operator or rigging eye.
     const auto weight = body(kRiggingWeightEntity, {
-        box({.65F,.06F,.65F}, {0,0,0}, Material::Steel),
-        box({.06F,.35F,.65F}, {-.59F,.35F,0}, Material::Yellow),
-        box({.06F,.35F,.65F}, {.59F,.35F,0}, Material::Yellow),
-        box({.53F,.35F,.06F}, {0,.35F,-.59F}, Material::Rust),
-        box({.045F,.3F,.045F}, {0,.4F,.9F}, Material::Yellow),
+        box({1.0F,.06F,.65F}, {0,0,0}, Material::Steel),
+        box({.06F,.35F,.65F}, {-.94F,.35F,0}, Material::Yellow),
+        box({.06F,.35F,.65F}, {.94F,.35F,0}, Material::Yellow),
+        box({.88F,.35F,.06F}, {0,.35F,-.59F}, Material::Rust),
+        // Eight-centimetre front rim retains the real loose ballast while
+        // leaving clearance beneath the shelf-height carried load.
+        box({.88F,.04F,.06F}, {0,.10F,.59F}, Material::Yellow),
+        // Side-mounted eye leaves the full open front available for ballast.
+        // Its bracket overlaps the real side wall; the fixed sheave above
+        // follows this eye so both loaded cable legs remain vertical.
+        box({.045F,.035F,.2F}, {.94F,.08F,.75F}, Material::Yellow),
+        box({.045F,.3F,.045F}, {.94F,.4F,.9F}, Material::Yellow),
     }, {2.5F,2.65F,0}, 120);
     kit.add_guide(weight, Vec3::sAxisY(), -2.1F, 0, .7F, 3000, .8F);
     kit.set_continuous_collision(weight);
@@ -74,11 +83,15 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
     // Service access is separate from the receiving deck. It puts the real
     // counterweight eye and fixed guide within the assisted tool's reach.
     std::vector<Part> service;
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 10; ++i) {
         const float top = .2F * float(i + 1);
-        service.push_back(box({.85F,top*.5F,.3F}, {2.5F,top*.5F,6.8F-.6F*float(i)}, Material::Concrete));
+        service.push_back(box({.85F,top*.5F,.3F}, {2.5F,top*.5F,6.8F-(4.8F/9.F)*float(i)}, Material::Concrete));
     }
-    service.push_back(box({1.0F,.08F,.7F}, {2.5F,1.72F,1.1F}, Material::Steel));
+    // The final .2m riser puts an upright carried ballast block .34m above
+    // the tray floor. Rotation and grip deflection still leave clearance
+    // over the front retaining rim. Keep the shelf beyond the tray and its
+    // eye stanchion's full swept solid, exposing the last stair tread.
+    service.push_back(box({1.0F,.08F,.5F}, {2.5F,2.12F,1.6F}, Material::Steel));
     (void)body(1496, service, Vec3::sZero(), 0);
     // Three separate reusable25kg blocks. Nothing counts ballast by flag:
     // its actual contact with the tray transfers its full weight.
@@ -98,7 +111,7 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
         box({1.0F,.08F,.9F}, {-.25F,2.35F,-2.0F}, Material::Steel),
     }, Vec3::sZero(), 0);
     rig.add_eye(platform, {-1,.48F,.9F});
-    rig.add_eye(weight, {0,.7F,.9F});
-    rig.add_fixed_guide(fixed, {2.5F,4.3F,.9F}, {-3.5F,4.3F,.9F}, {2.5F,4.3F,.9F});
+    rig.add_eye(weight, {.94F,.7F,.9F});
+    rig.add_fixed_guide(fixed, {3.44F,4.3F,.9F}, {-3.5F,4.3F,.9F}, {3.44F,4.3F,.9F});
 }
 } // namespace scraperx::sim

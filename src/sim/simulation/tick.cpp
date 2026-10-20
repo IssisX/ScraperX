@@ -46,6 +46,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     const auto foot_transfers_before_tick = state_.foot_transfer_count;
     const auto traversal_before_commands = traversal_state_;
     apply_grapple_commands(commands);
+    if (commands.grapple_equip_requested && grapple_equipped_) clear_rigging_input();
+    apply_rigging_commands(commands, delta_seconds);
     // Drop cancels held automatic reach across every nearby body. A new
     // deliberate action, neutral stick or real footing rearms that intent.
     if (commands.release_requested) automatic_grip_cancelled_ = true;
@@ -390,6 +392,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (yard_crane_) yard_crane_->post_step();
     if (supplied_ascent_) supplied_ascent_->post_step();
     kit_->post_step(delta_seconds);
+    if (rigging_) rigging_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
     if (slingshot_) slingshot_->post_step(delta_seconds);
 
     const auto reclaim=contact_listener_.reclaim_impact();

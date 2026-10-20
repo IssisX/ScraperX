@@ -1,4 +1,5 @@
 #include "sim/simulation/world.hpp"
+#include "sim/rigging_bay.hpp"
 #include "sim/workshop_roof_route.hpp"
 #include "sim/vault_rail_route.hpp"
 #include "sim/loose_gangway_route.hpp"
@@ -255,6 +256,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         build_ground_swing_route(*kit_);
         build_loose_gangway_route(*kit_);
         build_beam_ramp_route(*kit_);
+        rigging_ = std::make_unique<RiggingSystem>(physics_system_, *kit_);
+        build_rigging_bay(*kit_, *rigging_);
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
@@ -308,6 +311,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     yard_crane_.reset();
     warehouse_forklift_.reset();
     deformable_plank_.reset();
+    rigging_.reset();
     kit_.reset();
     for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
         if (constraint != nullptr) {

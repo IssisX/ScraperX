@@ -13,6 +13,7 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     if (slingshot_) slingshot_->cancel_player_interaction();
     if (grappling_gun_) grappling_gun_->clear_transients();
     grapple_equipped_ = false;
+    clear_rigging_input();
     slingshot_flight_ = false;
     causal_airborne_ = false;
     physical_step_pending_ = false;
@@ -90,6 +91,7 @@ bool Simulation::PhysicsWorld::restart_checkpoint() noexcept {
 
 void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterface &bodies,
                                 MachineCheckpoint &checkpoint) const noexcept {
+    if (rigging_) checkpoint.rigging = rigging_->capture();
     checkpoint.support_body = JPH::BodyID();
     checkpoint.support_entity = 0;
     checkpoint.support_local_contact = JPH::Vec3::sZero();
@@ -174,6 +176,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     clear_forklift_commands();
     if (grappling_gun_) grappling_gun_->clear_transients();
     grapple_equipped_ = false;
+    clear_rigging_input();
     clear_traversal();
     if (slingshot_) slingshot_->detach();
     slingshot_flight_ = false;
@@ -228,7 +231,9 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         scraperx::sim::kit::is_kit_entity(carried_entity_)) {
         release_carry();
     }
+    if (rigging_) rigging_->detach_for_restore();
     kit_->restore(checkpoint_.kit);
+    if (rigging_) rigging_->restore(checkpoint_.rigging);
     if (deformable_plank_) deformable_plank_->restore(checkpoint_.deformable_plank);
     // Restoring topology is not a new fracture. Preserve the event high
     // water immediately, including callers reading before the next tick.

@@ -60,6 +60,9 @@ public:
     [[nodiscard]] bool request_slingshot_drop();
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] godot::Dictionary get_slingshot_render_state() const;
+    [[nodiscard]] bool set_rigging_aim(double x, double y, double z);
+    [[nodiscard]] bool request_rigging(std::int64_t command, std::int64_t target);
+    [[nodiscard]] godot::Dictionary get_rigging_state() const;
     [[nodiscard]] bool set_grapple_aim(double x, double y, double z);
     [[nodiscard]] bool set_grapple_equipped(bool equipped);
     [[nodiscard]] bool set_grapple_reel_input(double input);

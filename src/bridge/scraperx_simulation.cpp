@@ -61,6 +61,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"), &ScraperXSimulation::request_slingshot_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_rigging_aim", "x", "y", "z"), &ScraperXSimulation::set_rigging_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_rigging", "command", "target"), &ScraperXSimulation::request_rigging);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_rigging_state"), &ScraperXSimulation::get_rigging_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_aim", "x", "y", "z"), &ScraperXSimulation::set_grapple_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_equipped", "equipped"), &ScraperXSimulation::set_grapple_equipped);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_reel_input", "input"), &ScraperXSimulation::set_grapple_reel_input);
@@ -682,6 +685,42 @@ bool ScraperXSimulation::request_slingshot_action() {
 }
 bool ScraperXSimulation::request_slingshot_drop() {
     return simulation_->request_slingshot_drop();
+}
+bool ScraperXSimulation::set_rigging_aim(double x, double y, double z) {
+    return simulation_->set_rigging_aim(x, y, z);
+}
+bool ScraperXSimulation::request_rigging(std::int64_t command, std::int64_t target) {
+    if (command < 0 || command > std::int64_t(scraperx::sim::RiggingCommandKind::EndCut) || target < 0)
+        return false;
+    return simulation_->request_rigging(static_cast<scraperx::sim::RiggingCommandKind>(command),
+        static_cast<std::uint64_t>(target));
+}
+godot::Dictionary ScraperXSimulation::get_rigging_state() const {
+    const auto state = simulation_->rigging_state();
+    godot::Dictionary out;
+    out["available"] = state.available;
+    out["equipped"] = state.equipped;
+    out["suspended"] = state.suspended;
+    out["draft"] = state.draft;
+    out["guide_threaded"] = state.guide_threaded;
+    out["target"] = std::int64_t(state.target);
+    out["selected"] = std::int64_t(state.selected);
+    out["event_serial"] = std::int64_t(state.event_serial);
+    out["target_kind"] = state.target_kind;
+    out["target_point"] = godot::Vector3(state.target_point.x, state.target_point.y, state.target_point.z);
+    out["failure"] = state.failure;
+    out["installed_count"] = state.installed_count;
+    out["tension_n"] = state.tension_n;
+    out["slack_m"] = state.slack_m;
+    out["cut_progress"] = state.cut_progress;
+    godot::Array lines;
+    for (auto line : state.lines) if (line) lines.push_back(std::int64_t(line));
+    out["lines"] = lines;
+    godot::PackedVector3Array preview;
+    for (std::size_t i = 0; i < state.preview_count; ++i)
+        preview.push_back(godot::Vector3(state.preview[i].x, state.preview[i].y, state.preview[i].z));
+    out["preview"] = preview;
+    return out;
 }
 bool ScraperXSimulation::set_grapple_aim(double x, double y, double z) {
     return simulation_->set_grapple_aim(x, y, z);
