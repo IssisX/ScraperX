@@ -3,6 +3,7 @@ extends Control
 # Presentation only: the story owner supplies every fact and every lifetime.
 # No process/input callback, timer, persistence, or mission state lives here.
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
+const CachedStoryText := preload("res://presentation/ui/cached_story_text.gd")
 const FADE_SECONDS := 0.35
 const RADIO_ACCENT_SECONDS := 0.6
 
@@ -36,21 +37,28 @@ func _build() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	focus_mode = Control.FOCUS_NONE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_intro = _group("Opening")
-	_intro_title = _label(_intro, "Title", UiStyle.font_heavy(), UiStyle.PAPER)
-	_intro_subtitle = _label(_intro, "Purpose", UiStyle.font_label(), UiStyle.PAPER_DIM)
+	_intro = _cached_group("Opening")
+	_intro_title = _label(_intro.content, "Title", UiStyle.font_heavy(), UiStyle.PAPER)
+	_intro_subtitle = _label(_intro.content, "Purpose", UiStyle.font_label(), UiStyle.PAPER_DIM)
 	_intro_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_intro_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_objective = _group("Objective")
-	_chapter = _label(_objective, "Chapter", UiStyle.font_label(), UiStyle.AMBER)
-	_objective_text = _label(_objective, "Direction", UiStyle.font_heavy(), UiStyle.PAPER)
-	_detail = _label(_objective, "Detail", UiStyle.font_label(), UiStyle.PAPER_DIM)
+	_objective = _cached_group("Objective")
+	_chapter = _label(_objective.content, "Chapter", UiStyle.font_label(), UiStyle.AMBER)
+	_objective_text = _label(_objective.content, "Direction", UiStyle.font_heavy(), UiStyle.PAPER)
+	_detail = _label(_objective.content, "Detail", UiStyle.font_label(), UiStyle.PAPER_DIM)
 	_radio = _group("Radio")
 	_speaker = _label(_radio, "Speaker", UiStyle.font_label(), UiStyle.SAFE)
 	_transmission = _label(_radio, "Transmission", UiStyle.font_label(), UiStyle.PAPER)
 	_intro.hide()
 	_objective.hide()
 	_radio.hide()
+
+
+func _cached_group(node_name: String) -> Control:
+	var group := CachedStoryText.new()
+	group.name = node_name
+	add_child(group)
+	return group
 
 
 func _group(node_name: String) -> Control:
@@ -84,6 +92,8 @@ func _copy(state: Dictionary, key: String) -> String:
 
 func present(state: Dictionary, delta: float) -> void:
 	_build()
+	var intro_changed := _intro_title.text != _copy(state, "intro_title") or _intro_subtitle.text != _copy(state, "intro_subtitle")
+	var objective_changed := _chapter.text != _copy(state, "chapter") or _objective_text.text != _copy(state, "objective") or _detail.text != _copy(state, "detail")
 	var step := maxf(delta, 0.0) if is_finite(delta) else 0.0
 	_intro_title.text = _copy(state, "intro_title")
 	_intro_subtitle.text = _copy(state, "intro_subtitle")
@@ -126,6 +136,10 @@ func present(state: Dictionary, delta: float) -> void:
 	if safe != _last_safe:
 		_last_safe = safe
 		_layout(safe)
+		intro_changed = true
+		objective_changed = true
+	_intro.refresh(intro_changed)
+	_objective.refresh(objective_changed)
 	queue_redraw()
 
 
@@ -149,6 +163,8 @@ func _layout(safe: Rect2) -> void:
 	_intro.position = Vector2(safe.get_center().x - _intro.size.x * 0.5, safe.position.y + safe.size.y * 0.36)
 	_place_label(_intro_title, Rect2(0.0, 0.0, _intro.size.x, 88.0 * u), 54.0 * u)
 	_place_label(_intro_subtitle, Rect2(0.0, 94.0 * u, _intro.size.x, 86.0 * u), 28.0 * u)
+	_intro.refresh(true)
+	_objective.refresh(true)
 
 
 func _place_label(label: Label, rect: Rect2, font_size: float) -> void:

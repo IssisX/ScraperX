@@ -79,9 +79,20 @@ func _run() -> void:
 		for group in [presenter._intro, presenter._objective, presenter._radio]:
 			check(safe.encloses(Rect2(group.position, group.size)), "story group fits safe bounds " + str(dimensions))
 			check(group.position.y + group.size.y < safe.position.y + safe.size.y * 0.55, "story group clears lower thumb decks " + str(dimensions))
-			for child in group.get_children():
+			for child in (group.content.get_children() if group is Presenter.CachedStoryText else group.get_children()):
 				check(child.size.x > 0 and child.size.y > 0 and child.get_theme_font_size("font_size") >= 10, "readable positive label bounds " + str(dimensions))
 	check(presenter.get_child_count() == node_count, "repeated samples allocate no additional groups")
+	presenter.present(state(), 1.0)
+	for group in [presenter._intro, presenter._objective]:
+		group._viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	presenter.present(state(), 0.0)
+	check(presenter._intro._viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED and presenter._objective._viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "unchanged copy and fade opacity reuse text rasters")
+	var replacement := state()
+	replacement.objective = "Take another physical route"
+	presenter.present(replacement, 0.0)
+	check(presenter._objective._viewport.render_target_update_mode == SubViewport.UPDATE_ONCE and presenter._intro._viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "changed objective redraws only its text cache")
+	check(presenter._intro._viewport.gui_disable_input and presenter._objective._viewport.gui_disable_input, "cached text viewports cannot capture touch")
+
 	presenter.free()
 	print("STORY_PRESENTER %s checks=%d failures=%d supplied_state=1 input_transparent=1 layouts=5 world_physics=0" % ["PASS" if failures == 0 else "FAIL", checks, failures])
 	quit(0 if failures == 0 else 1)

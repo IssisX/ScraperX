@@ -16,6 +16,8 @@ The player is **Rowan “Ro” Vale**, an access rigger raised around Receiving.
 
 Ro once signed a survey withdrawing temporary construction access above occupied work areas. The survey described where a contractor could safely send a crew. During the failed handover, its blank areas became “unoccupied” on the closure map. The latest dismantling notice carries Ro's signature beside places where people still live. Ro did not knowingly sign away a city. Ro did stop looking at what happened after the paperwork left their hands.
 
+The reuse did not stop at the signature. A company continuity program later supplied the handover with a living representative who looks like Ro. Meeting that person is the campaign's early human mystery, developed in §9. It reveals a deliberate attempt to make the false record look witnessed; it does not turn Ro into its knowing author.
+
 Iona sends the notice with one sentence: **“Come look at what you signed.”** Ro returns expecting an argument, a correction, and a short paid job.
 
 The immediate problem is physical. The residents' common freight spine still shares its return assembly with the abandoned construction plant at the Crown. The final dismantling pass would remove the construction equipment and strand the retained service system. Local machinery can still work on its own supply; there is no magical tower-wide blackout. What the city lacks is a dependable shared way to move people, food, tools, and heavy repair stock between its separated districts.
@@ -44,6 +46,7 @@ Getting higher is always a valid player choice. Restoring useful access for othe
 | **Iona Vale — Receiving forewoman** | Keep supplies moving and stop the people above being treated as scrap left inside a frame. Her job is the yard; she does not abandon it to become a following companion. | Ro's older sister. Precise about loads, impatient with excuses, protective without being gentle. “You don't get to call a place empty because you stopped coming home.” |
 | **Nadi Rahman — route keeper** | Keep the actual connections between districts usable. Once Ro's apprentice, now the better-informed climber. Maintains route annotations and knows which supposed shortcuts end in space. | Warm, practical, amused by Ro's outdated knowledge. Does not exist to be rescued or to praise the player. “That landing's gone. The name stuck.” |
 | **Dev Arlen — Crown commissioning engineer** | Retire the unsafe construction leg without creating a new uncontrolled load path. Has remained at the upper service works, maintaining a held condition rather than finishing a dangerous paper handover. | Initially appears to be the person blocking the job. He is right that an unknown loaded system cannot simply be switched back on. His mistake is accepting a drawing's silence as evidence that nothing useful remains below. |
+| **Ari Ward — continuity representative** | A real adult hired to represent the Ro Vale work identity, with their appearance remade for the role. Wants the handover corrected without being erased from the evidence or left carrying all its blame. | Looks like Ro and has a distinct life, manner, and will. Initially defensive about having read approved statements. Eventually insists on giving their own account under their own name. Not an evil double, secret twin, or digital version of Ro. |
 
 None is an omniscient dispatcher. A person knows their work area and what others have actually told them. Remote dialogue must have a plausible sender and connection. A message can remain available as a dispatch note when live communication is unavailable; it must not impersonate a conversation that occurred.
 
@@ -79,6 +82,8 @@ Nadi initially expects Ro to disappear after the paid bit. Trust grows through o
 
 **Dramatic turn:** the tower was not secretly finished and then ruined. Its people have been completing a different tower inside the unfinished one.
 
+During the first fifth of the authored game, an archived Ro statement is followed by the actual meeting with Ari. This is part of Act II's discovery that the record and the place disagree, not a late-game twist replacing the ascent. §9 specifies the pacing, encounter, and continued payoff.
+
 ### Act III — The City in the Gaps
 
 **Place:** an authored inhabited district where industrial scale and everyday use occupy the same space. This is future content, not a claim about current NPCs or housing.
@@ -88,6 +93,8 @@ This is the emotional center, with room to breathe after exposed ascent. A marke
 Nadi calls the district **the Seam**: the line where the company's finished drawing and everyone's unfinished lives failed to meet. The name belongs to this place; it does not rename an existing source encounter or reserve an arbitrary altitude.
 
 Ro finds successive handover sheets using the same survey outline. Each later revision removed uncertainty without anyone inspecting the missing places. Ro's signature was reused; Iona did not forge the problem to bring them home. There is no single concealed saboteur to defeat. The tower accumulated decisions whose consequences someone else was expected to own.
+
+Ari's account exposes the later deliberate step: a presentation of the source survey became a purported first-person inspection. They offer evidence of the work identity and of a life before it, on their own terms. Ro can confront the person wearing their face without pretending that Ari invented the closure plan or that being employed excuses repeating it.
 
 Contact with Dev produces the apparent setback. He will not reconnect the shared plant just because Ro has found residents. He asks the correct question: “What is the return carrying now?” Ro cannot yet answer. The next work is to establish and alter real load paths, not to win an argument on the radio.
 
@@ -315,7 +322,147 @@ Iona remains a competent forewoman. Her safety instructions are brief and seriou
 
 Do not diagnose a failing cable from a quiet scene, a near-tip from one missing wheel contact, or a loaded detach refusal from proximity to a coupling. Existing native facts can support warnings; missing facts require observation or instrumentation, not ominous delivery. Useful instructions and real machine sounds take priority over banter. The earlier generic action-comment bank is retired rather than retained as filler.
 
-## 9. The feeling to preserve
+## 9. The person wearing your face
+
+**Status:** selected narrative design, unimplemented. Optional photo personalization, facial likeness, the archive scene, Ari's full body and face, animation/rigging, NPC behavior, encounters, and their later consequences are not established by the current opening. The existing intro and contact-card scene remain their own implemented slice. This section does not replace them or claim a complete route to the Crown.
+
+**Required finish:** the human player encounters a recognizable likeness of themselves as an actual embodied character in the world. Ari has a normal-looking human face, full body, movement, responses, and independent purpose. A portrait, recorded video, speaking screen, billboard, face texture on a static object, or camera trick cannot fulfill that requirement. Those can prepare the encounter.
+
+### The selected conceit: continuity staffing
+
+The company made the Ro Vale work identity into something it could continue to employ after Ro left. Ari Ward is a real person whose appearance was physically remade to match that identity. They were hired as a continuity representative: someone who could present the inherited record, conduct handover visits, and give a familiar face to the contractor's assurances. The company did not merely want a convincing film. It wanted someone present when a witness was requested.
+
+**Why a living double:** under the inherited handover arrangement, retaining Ro as the named survey contact allowed the contractor to close successive work packages against the original scope. Replacing that person honestly would require reopening the disputed boundary and obtaining an independent inspection of what was actually retained. Physical walk-throughs and witnessed removals still required someone to attend; a fabricated video could not stand beside an operator and approve a local handover. Ari supplied that presence under the inherited identity, in contractor-side rooms where staff knew Ro from the work record rather than from family life. There is no magic face scanner or appearance-based machine power. The fraud exploits people trusting the continuity of a named witness. Its value is avoiding a reopened handover, not saving the price of a video.
+
+This is a limited speculative fiction premise, openly introduced by this design. The means of remaking the likeness are not explained in the first meeting. Later records and Ari's own account establish that this was an employment arrangement, not a removable disguise, secret family relationship, transferred mind, time loop, or supernatural arrival. Do not stage a mask peel or a laboratory lecture. The exact procedure remains secondary to what was bought and what it cost the person doing the work.
+
+Ari is neither Ro's biological copy nor a mind made from the player's photograph. They have their own memories, habits, judgment, and needs. They accepted the role for stable work and a place to live, believing that the representation would be disclosed. Approved presentation text gradually became testimony attributed to a person who had personally inspected the tower. Ari repeated assurances about places they had never entered. They now know that “I only read what they gave me” is not enough.
+
+The bargain was a permanent room and a continuing post in a place full of temporary contracts. Ari knowingly accepted the likeness assignment; they did not knowingly volunteer to impersonate Ro in undisclosed safety testimony. Once their identity and housing were tied to the job, rejecting the new use meant losing more than a day's pay. That pressure explains their compromise without excusing it. The human cost must be visible in what Ari chooses now, not supplied by an unrelated family tragedy.
+
+Their present room and employment entry are still assigned to **Vale, continuity representative**. Ari initially wants to correct the dangerous boundary while keeping that role intact. This is an understandable, dishonest compromise. They learned the occupancy assurance was false before their last recorded statement and delivered it anyway. That admission must occur in the scene; the sympathetic bargain cannot do all the moral work.
+
+**Why Iona does not explain the double at the start:** she has the dismantling notice and Ro's reused signature, not the contractor archive or a sighting of Ari. She summons Ro to a real discrepancy she can show. Ari's work has stayed on the contractor side; their first shared-route encounter follows the disruption of that access. Iona is running Receiving, not withholding a secret for dramatic effect. When Ro reports the meeting, she learns it then. If later authorship gives her earlier evidence, her opening must change to disclose what she actually knows.
+
+Ro has a different version of the same defense: “I only signed an access survey.” The two situations are not morally identical. Their relationship becomes interesting when both stop using the limits of their original job to avoid the consequences of their actual involvement.
+
+**Authoring hypothesis to validate:** a living worker remade as a company identity produces the intended recognition, curiosity, and human discomfort without turning the game into a science-fiction horror story. Validate that through a normal-looking face, convincing acting, and a playable conversation. If the scene needs distorted anatomy, flickering eyes, a jump scare, or an explanation dump to work, the scene is failing. Physics authority does not change: Ari cannot teleport, walk through an obstruction, stand without support, or move a machine through dialogue.
+
+### Early setup: an ordinary work ID, chosen honestly
+
+Offer work-record personalization early, after the player has control and a natural opportunity to deal with dispatch. It is optional and never blocks walking, machinery, Freight One, or the contact-card exchange. Use an existing picture or the authored default Ro. Do not force a camera, selfie, face scan, account, network connection, or biometric identification.
+
+**Proposed player-facing copy:**
+
+**WORK ID**  
+“Use a picture as Ro's appearance in work IDs, records, and character scenes. Optional. Processing and storage stay on this device.”
+
+**Choices:** `Choose picture` · `Use default Ro` · `Later`
+
+This describes the real intended use without spoiling the encounter. Do not claim the picture is only for a badge and then secretly use it as a character. The player's picture establishes Ro's fictional appearance; it does not assert that the real player has Ro's history, personality, family, name, or voice. The double's shared appearance must remain recognizable without inventing personal facts from the picture.
+
+The proposed data contract is local-only processing and private local storage, including any cropped image or derived likeness assets. No provider upload, backend recognition, hosted face service, or automatic cloud backup. Let the player replace or remove the picture and derived assets, reverting all personalized appearances to default Ro without resetting progress. A picture change changes the character presentation; it is not a new event in the fiction and does not rewrite the handover chronology. This is a requirement for future implementation, not a claim about currently shipped storage.
+
+Default Ro receives the same story, conversations, mystery, and decisions. Personalization changes recognition, not access or the quality of the ending. No voice cloning is implied: an existing photograph cannot supply the player's voice, and no voice sample is requested by this feature.
+
+### The first clues: a record more certain than its author
+
+Give the chosen face a few ordinary appearances before making it unsettling: the ID, a dispatch personnel entry, the actual source-survey attribution. Do not repeatedly spotlight it with ominous music. Ro's existing absence and Iona's contact card provide the emotional investment; the photograph does not have to do that work alone.
+
+At a later working terminal, an old handover extract shows a composed, recognizable Ro saying: **“No occupied areas remain within the handover boundary.”** Its certainty matters more than its age or damage. Use restrained wear appropriate to the actual screen, not artificial glitches that hide an inadequate likeness.
+
+**Ro:** “I didn't record that.”
+
+That is a statement, not the start of an amnesia plot. The player can inspect the original scope: temporary construction access was withdrawn; occupancy was not assessed. A visible version change connects that limited source to the later closure assurance. The exact historical origin of the recording is still unresolved, but the contradiction is concrete. It is not a fake scanner minigame, a biometric puzzle, or a collectible set.
+
+The extract can be replayed and questioned through a small set of authored record queries. It knows only its stored material. It does not know the player's current route, thoughts, photograph settings, or private life. It cannot move machinery or remotely discover a newly occupied room. This screen is foreshadowing; the next required revelation is a person.
+
+### The first meeting: roughly the first fifth of the game
+
+Target **about 15–20% of the authored game's played experience**, after enough exploration and character contact for recognition to matter. Do not equate 253 or 286 metres with a measured campaign percentage. The existing +253–286 m service-route area is one spatial candidate because it already contains substantial machinery and receivers; it has not established the needed pacing, encounter space, NPC path, or alternate approach. The Atlas and actual integration must select the final site.
+
+The site needs a stable place to talk beside a real access problem, reachable from the local route braid. Gun use, the slingshot, and other genuine bypasses must remain valid. A fast arrival can receive the essential source-record contradiction in an adjacent optional record view or the conversation itself. No missing ID setup, earlier radio line, ladder visit, or archive flag can make Ari refuse to exist.
+
+Ro first sees a worker handling their own ordinary task at a receiving platform. Ari is already heading to the retained-service office to change the false boundary, carrying the conversion record that identifies it. They intend to make the correction as Vale and keep the room and post. Ro has interrupted an adult with a flawed plan, not activated a waiting courier mission. The case is Ari's working material, not a key the player must collect to power the tower.
+
+The disrupted connection permits a small, real piece of cooperation: Ro can reach a control from the approach side; Ari can reach the receiving-side stop and see its footing. Ari refuses to cross while the actual receiver is obstructed or unsupported, even if that delays their own job and Ro insists. They indicate the problem and continue working from firm ground. The player can help, challenge the plan, decline partnership, or continue climbing. Ari can look for another real route and use it when feasible; declining does not make them helpless, teleport them forward, or kill them off-screen. Machinery and receiving geometry, rather than conversation flags, determine when either person can cross.
+
+The player notices the face during this ordinary exchange. Keep the camera under player control. Let Ari look at the speaker, reconsider a question, and finish a practical thought. Their face is normal; meeting it on someone else is the strange part. Avoid mirroring every player movement, synchronized blinking, identical poses, theatrical face hiding, or a musical sting instructing the player to be frightened.
+
+**Ro:** “Who the fuck are you?”  
+**Ari:** “Ari Ward.”
+
+Let recognition sit inside ordinary face-to-face work. Ari does not smile like a villain or explain their medical history. Their stance, attention to the receiver, and willingness to contradict Ro establish another person before the conversation supplies an origin.
+
+When Ro raises the occupancy statement, Ari first calls it the approved handover text. Ro can press past that defense:
+
+**Ro:** “When did you find out it wasn't true?”  
+**Ari:** “Before the last one.”
+
+Do not follow this admission with absolution, a tragic speech, or a joke. Ari knowingly continued. Their next action, rather than an explanation of how sad they are, must address that fact.
+
+Their proposed repair exposes the remaining evasion:
+
+**Ari:** “I can get the boundary changed. They still take my signature.”  
+**Ro:** “Mine.”
+
+Ro can challenge the plan, ask what it would cost Ari to correct it under their own name, or refuse to work alongside them. Ari can answer back and refuse an unsafe action. These are responses to a live disagreement, not three information buttons standing in for a character. None changes the physical receiver state or obliges the player to forgive them.
+
+The first call to Iona grounds Ro instead of cashing the encounter in for another absence joke:
+
+**Ro:** “There's someone here with my face.”  
+**Iona:** “I'm listening. Tell me what happened.”
+
+She knows only what Ro reports. She gives them attention before analysis or humor. The absurdity can become funny later, once both have acknowledged the violation and Ari has become a person to them. Do not reuse the discarded phone-answer gag as the first family reaction.
+
+Another exchange belongs after Ro understands that Ari's face is not a costume:
+
+**Ro:** “Stop using my name.”  
+**Ari:** “Yes.”  
+**Ro:** “And the face?”  
+**Ari:** “That's not something I can hand back.”
+
+Ro can demand an end to the impersonation. They cannot demand another violation of Ari's body as restitution. Ari accepting responsibility for the fraud does not make their bodily autonomy conditional on Ro's forgiveness. Keep this plain and brief; the strange experience of looking at a familiar face is already doing the work.
+
+### The investigation does useful work
+
+The next question is not “Which Ro is real?” It is **“Who turned an access limit into an occupancy assurance, and what are people about to remove because they believe it?”** Original scope, changed assertion, and present physical use form one causal account. Nobody needs six data fragments or a face-recognition percentage.
+
+Ari's conversion record identifies the particular retained service branch that the handover classified as redundant construction equipment. Investigating it leads to the common freight return, keeping the mystery attached to the Crown job. Existing load handling, parkour, line work, and machine access supply the verbs: get to the original record's physical location, reach an inspection position, expose the actual connection, and leave useful receiving access. There is no scanner that declares a whole district safe from a convenient lookout.
+
+The player makes two meaningful decisions within this one story:
+
+- **How to challenge the assurance.** Bring the original scope to Ari first, or take the contradiction directly to Dev while continuing upward. This changes who knows what and the next conversation. It does not create two mandatory fetch routes, block a genuine bypass, or require agreement with Ari before reaching the summit. A player who skipped the paper trail can establish the same material facts at the actual upper connection.
+- **What to do with the false witness.** Ro can demand removal of the public assurance, or ask that the false assurance remain visibly attached to its correction. Ari insists that an original copy be preserved as evidence of what they were told and what they agreed to. The choice affects the presentation of the final work record and their relationship; it does not silently erase history, publish real player data outside the device, or change the physical configuration of the freight system.
+
+Ari's agency includes an uncomfortable refusal:
+
+**Ro:** “Take it down.”  
+**Ari:** “The public one, yes. Not the original. It proves what they asked for. And what I agreed to.”
+
+Later, Ari can choose to show an earlier personal record with a different face and their own name. They are offering something private to make their account verifiable. Ro does not win it through a charm meter or obtain it by scanning them. Their motive is to correct the work under their own name, not to steal Ro's family, become the player, or seek revenge for being a copy.
+
+### Payoff over the remaining ascent
+
+Ari remains a person with a location and unfinished work after the surprise. At the retained-service office, the conflict becomes an action they must take. They can quietly amend a boundary as Vale and preserve the role, or withdraw the personal inspection claim as **Ari Ward**, naming what they actually saw, what they knowingly repeated, and who supplied the instruction. They choose the second. The player may be present or learn the supported result later; Ro does not select an eviction option on Ari's behalf.
+
+Make the cost visible and specific. The correction closes the Vale continuity assignment; its employment entry and assigned room no longer cover Ari. They hand back the Vale credential and pack their actual things. No instant locked door, disappearing furniture, or melodramatic security squad is needed. Ari has lost the promised permanent place and has to arrange somewhere else to sleep. Iona can offer a temporary Receiving bunk, not a replacement life or automatic absolution. If Ari accepts, getting them and their belongings there is real movement through an available route, not an epilogue teleport. They can keep working on the corrected handover under their own name.
+
+Any later relocation needs a real traversable route and actual NPC movement; a story chapter cannot teleport Ari to the Crown or Receiving. Do not imply they repaired a route, moved freight, or interviewed residents without implementing that behavior or explicitly authored, supported evidence. If those actions are not built, show the office decision and leave the onward practical problem honestly present.
+
+Dev must separate two conclusions: the closure assurance is untrustworthy, and the retained connection still needs a safe configuration. Discrediting the face does not complete the mechanical job. Ari's statement can expose the false boundary; only the actual work can establish what is now supported and operational.
+
+At the ending, the corrected record distinguishes Ro Vale's real access/rigging work from Ari Ward's representation and witnessed limits. No familiar face is permitted to certify unseen safety again. Ari gives their own account under their own name. Ro's chosen appearance remains part of Ro's character; its misuse no longer gets the last word. The final retained freight movement is still the decisive result.
+
+This adds a second meaning to Ro's existing final line, **“Put that on the drawing.”** They have not merely proved which face is authentic. They have made a record answer to people and work it previously erased.
+
+### Implementation boundary and usable next slice
+
+The next bounded personalization slice can implement the optional local work-ID flow and a physically reachable, voiced handover extract with its source-scope comparison. It has a concrete finish: choose a picture or default Ro, see the corresponding identity in a later false work record, discover what the source actually said, and retain the ability to remove the picture without losing story progress. That is **setup and foreshadowing only**.
+
+The owner-requested experience remains incomplete until a later accepted slice delivers the actual full-body Ari encounter, normal and recognizable player likeness, convincing facial/body performance, reciprocal dialogue, and consequential behavior in the native physical world. A still picture moving its mouth is not a completed human NPC. Facial reconstruction/likeness assets, expressions, body rig, locomotion and collision ownership, supported actions, cancellation, dialogue staging, and mobile performance all require real implementation and observation. No claim about those is supplied by this document.
+
+## 10. The feeling to preserve
 
 ScraperX should feel like coming to understand a huge working place with your whole body. The story gives a reason to care about what its machines can carry and who can use the routes you leave behind. Industrial work, exposed movement, fear, relief, humor, and beauty belong to the same adventure.
 
