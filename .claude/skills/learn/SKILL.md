@@ -9,6 +9,15 @@ Do all the work the owner would otherwise do by saying "learn this, learn that".
 sentence is a lesson: decipher what the owner meant and what will change how the next session
 works, and leave the rest.
 
+**It always says that it ran.** The proposal opens with this line, filled in from what was
+gathered, and nothing comes before it:
+
+> 🧠 **/learn ran:** studied N of your messages (first to last, Central) and M commits.
+
+The run ends with one line:
+
+> ✅ **/learn done:** what was written and where, the commit, pushed (or: nothing written).
+
 ## 1. Gather
 
 - **The owner's words:** `python3 -I .claude/skills/learn/owner_messages.py --since <last>` (from
@@ -21,6 +30,8 @@ works, and leave the rest.
   working branch. Commit messages here record root causes; a fix after a failed attempt (a red CI
   run, a test that relied on a bug, a wrong reading of the owner) is a lesson candidate.
 - **Text after /learn:** that is the lesson, first in line; still check it as below.
+- **The opening line's facts:** the script's message count, its first and last timestamps in
+  Central (`TZ=America/Chicago date -d <timestamp>`), and the number of commits.
 - When the gathered text is long, hand the reading to one subagent with this file's step 2 as its
   brief and take back its candidate list; do not read tool output wholesale.
 
@@ -41,9 +52,17 @@ Then:
 - **Drop** one-off task requests already done, chatter, and anything that changes nothing next
   session.
 - **Quote** the owner's exact words for each owner lesson (italics), never a paraphrase passed
-  off as a quote. If a lesson can be read two ways, ask one short question.
+  off as a quote. If a lesson can be read two ways, or reaches past his words (what he said of
+  one thing applied to everything), say so and ask one short question.
 - **Classify** each as a **rule** (a guardrail or constraint) or a **skill** (a reusable procedure
   of several steps).
+- **No target count.** The list is as long as the material makes it: never aim for, round to or
+  pad to a number, and never cut a real lesson to keep it short. Merging true repeats is the only
+  way two lessons become one.
+- **Check it both ways** before proposing: read the gathered messages once more, first to last,
+  against the draft. Every correction, standing direction, approval and refusal must be in the
+  draft, already in force (name the row), or a one-off; nothing in the draft may be padding (a
+  one-off, a duplicate of a row, or a lesson that changes nothing next session).
 
 ## 3. Place, without duplicates
 
@@ -55,14 +74,20 @@ Then:
   (for example `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` section 2.6 for the climb).
 - **Skills:** `.claude/skills/<name>/SKILL.md` (a short frontmatter `name` and `description`, then
   the steps). Update an existing skill that was used and fell short instead of adding another.
+- **Fixes in code** a lesson calls for (a CI check, a test, a script): proposed like any lesson,
+  then built as ordinary work in their own commit so CI runs them, never in the documents'
+  `[skip ci]` commit.
 
 ## 4. Propose, then write
 
-Show the owner a concise numbered list, grouped (corrections, preferences, product, engineering,
-skills), each item one or two lines: the lesson, its quote, and where it goes (new or updated).
-Ask one question: apply all, or which numbers. Write only what is approved. Then:
+Under the opening line, a concise numbered list, grouped (corrections, preferences, product,
+engineering, skills), each item one or two lines: the lesson, its quote, and where it goes (new or
+updated). Then two short lines so nothing is dropped silently: **already in force** (what the
+owner said again that a row already holds, by short name) and **left out** (one-offs done, and
+questions answered). Ask one question: apply all, or which numbers. Write only what is approved.
+Then:
 
 - set `learned_through` in `.claude/skills/learn/state.json` to the newest gathered timestamp;
 - commit the documents alone (subject ending `[skip ci]`), with the repository's commit trailer,
   and push to `ScraperX-Claude`;
-- confirm in one line: what was written, and the commit.
+- close with the done line.
