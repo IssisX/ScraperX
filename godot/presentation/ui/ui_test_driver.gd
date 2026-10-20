@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_act.gd"
+extends "res://presentation/ui/ui_test_uncanny.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -223,6 +223,16 @@ const SCENARIOS := {
 	# Need a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 	"audio_fall": 9,
+	# Her chart (ui_test_uncanny.gd): a long look at the Matron's drum written
+	# into the page in her locker, late; the START list's fast playtest of it;
+	# the microphone's consent and its setting; a voice echoed back, late,
+	# faint, uncaptioned.
+	"touch_her_chart": 11,
+	"touch_her_chart_fast": 11,
+	"touch_mic_consent": 8,
+	"touch_voice_echo": 11,
+	# Renders only, not in CI: one of her pages read at the feet.
+	"look_her_chart": 11,
 }
 var _scenario := ""
 # The name run, as the result line prints it: a touch scenario's name with
@@ -241,6 +251,11 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	main._settings.touch_scheme = SettingsStore.TOUCH_SCHEME_GESTURES if _gestures else SettingsStore.TOUCH_SCHEME_BUTTONS
 	main._apply_settings()
+	# The START list's HER CHART (FAST), chosen as a player chooses it: its
+	# spawn is the scenario's, its profile the one main.gd maps it to.
+	if played == "touch_her_chart_fast":
+		main._settings.start_at = SettingsStore.START_NAMES.find(SettingsStore.START_HER_CHART_FAST)
+		main.uncanny_profile_override = main.uncanny_profile_for_start(main._settings.start_at)
 	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[played]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
@@ -510,6 +525,16 @@ func _run() -> void:
 			ok = await _audio_mix()
 		"audio_fall":
 			ok = await _audio_fall()
+		"touch_her_chart":
+			ok = await _touch_her_chart()
+		"touch_her_chart_fast":
+			ok = await _touch_her_chart_fast()
+		"touch_mic_consent":
+			ok = await _touch_mic_consent()
+		"touch_voice_echo":
+			ok = await _touch_voice_echo()
+		"look_her_chart":
+			ok = await _look_her_chart()
 	if _scenario.begins_with("touch_"):
 		var counts: Dictionary = _main._touch.gesture_counts
 		_detail += " scheme=%s swipes_up=%d swipes_down=%d flicks=%d" % ["gestures" if _gestures else "buttons",

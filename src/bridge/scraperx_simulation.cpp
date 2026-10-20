@@ -344,6 +344,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_worker_counts"), &ScraperXSimulation::get_worker_counts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_surface_below", "from", "reach"),
                                 &ScraperXSimulation::get_surface_below);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_look_target", "from", "direction", "reach"),
+                                &ScraperXSimulation::get_look_target);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hook_fire"), &ScraperXSimulation::request_hook_fire);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_reel", "held"), &ScraperXSimulation::set_hook_reel);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hook_release"), &ScraperXSimulation::request_hook_release);
@@ -1254,6 +1256,20 @@ double ScraperXSimulation::get_surface_below(const godot::Vector3 from, const do
         return std::numeric_limits<double>::quiet_NaN();
     }
     return hit_y;
+}
+
+godot::Dictionary ScraperXSimulation::get_look_target(const godot::Vector3 from, const godot::Vector3 direction,
+                                                      const double reach) const {
+    godot::Dictionary out;
+    sim::Simulation::LookHit hit;
+    const bool met = simulation_->look_target(from.x, from.y, from.z, direction.x, direction.y, direction.z, reach,
+                                              hit);
+    out["hit"] = met;
+    out["entity"] = met ? static_cast<std::int64_t>(hit.entity) : static_cast<std::int64_t>(0);
+    out["point"] = met ? to_godot(hit.point) : godot::Vector3();
+    out["normal"] = met ? to_godot(hit.normal) : godot::Vector3();
+    out["distance"] = met ? hit.distance : reach;
+    return out;
 }
 
 bool ScraperXSimulation::set_hook_aim(const godot::Vector3 direction) {

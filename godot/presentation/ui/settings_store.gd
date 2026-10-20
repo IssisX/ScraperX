@@ -36,18 +36,21 @@ const TIME_OF_DAY_NAMES := ["CYCLE", "DAWN", "NOON", "DUSK", "NIGHT"]
 const TIME_OF_DAY_HOURS := [10.5, 6.4, 12.5, 18.3, 23.5]
 # Where a (re)start puts the player: the native's InitialSpawn for each, -1
 # for its default at grade. A playtest shortcut, not a save: every start is a
-# fresh world.
+# fresh world. HER CHART (FAST) is the owner's playtest of her chart: the
+# 154 m deck by her locker, and the uncanny timings on their short clock
+# (uncanny/uncanny_profile.gd FAST) for as long as it is the START chosen.
+const START_HER_CHART_FAST := "HER CHART (FAST)"
 const START_NAMES := ["GROUND", "22 M DECK", "44 M DECK", "66 M DECK", "88 M DECK", "132 M DECK",
 	"154 M DECK", "176 M RING", "198 M RING", "220 M RING", "340 M PLATE",
 	"374 M RING", "418 M CAGE", "484 M RING", "528 M CRANE CAGE", "572 M WINCH CAB", "640 M PLATE", "662 M DECK",
-	"684 M DECK", "706 M DECK", "728 M DECK"]
+	"684 M DECK", "706 M DECK", "728 M DECK", START_HER_CHART_FAST]
 # How the touch screen moves the body. GESTURES: the right thumb swipes up or
 # down and the game picks the move from what is ahead; the stick pulled back
 # hard turns about. BUTTONS: Jump, Crouch, Drop and Turn on the glass.
 const TOUCH_SCHEME_NAMES := ["GESTURES", "BUTTONS"]
 const TOUCH_SCHEME_GESTURES := 0
 const TOUCH_SCHEME_BUTTONS := 1
-const START_SPAWNS := [-1, 25, 26, 27, 28, 29, 11, 12, 13, 16, 19, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34]
+const START_SPAWNS := [-1, 25, 26, 27, 28, 29, 11, 12, 13, 16, 19, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 11]
 
 var look_sensitivity := 1.0
 var stick_sensitivity := 1.0
@@ -89,6 +92,11 @@ var interface_volume := 0.7
 var voice_volume := 1.0
 # The climber's lines printed as spoken, uncensored, while they are said.
 var captions := false
+# The microphone (her chart's echoes, uncanny/voice_keeper.gd): off until the
+# player allows it on the consent screen, which is shown once
+# (microphone_asked); the AUDIO page's MICROPHONE turns it on or off after.
+var microphone := false
+var microphone_asked := false
 var start_at := 0
 var persistent := true
 # Where they are kept. A scripted run proving the round trip keeps its own
@@ -147,6 +155,8 @@ func load_from_disk() -> void:
 	interface_volume = _read_range(file, "interface_volume", interface_volume, VOLUME_RANGE)
 	voice_volume = _read_range(file, "voice_volume", voice_volume, VOLUME_RANGE)
 	captions = _read_bool(file, "captions", captions)
+	microphone = _read_bool(file, "microphone", microphone)
+	microphone_asked = _read_bool(file, "microphone_asked", microphone_asked)
 	start_at = _read_index(file, "start_at", start_at, START_NAMES.size())
 
 
@@ -166,7 +176,7 @@ func save_to_disk() -> void:
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "vsync", "show_fps",
 			"fov", "brightness", "head_bob", "route_hint", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
-			"captions", "start_at"]:
+			"captions", "microphone", "microphone_asked", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(path)
 	if error != OK:

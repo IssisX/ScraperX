@@ -17,6 +17,13 @@ const STACK_LEVEL_COUNT := 14
 const STACK_DECK_THICKNESS := 0.5
 const STACK_DECK_BAND_DEPTH := 9.0
 const STACK_COLUMN_SIZE := 1.6
+# The timber planks laid over each deck's north and south walking bands
+# (paint on the native deck, solid_export.gd's NON_SOLID): five across a
+# band at this pitch, this wide, their tops this far above the deck. Her
+# chart's pages lie on them (uncanny/chart_pages.gd).
+const DECK_PLANK_PITCH := 1.35
+const DECK_PLANK_WIDTH := 1.1
+const DECK_PLANK_TOP := 0.09
 var _vent_tops := PackedVector3Array()
 @onready var _light_rig: Node3D = $LightRig
 
@@ -145,9 +152,9 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		# Timber decking planks laid over the walking band, warm against iron.
 		for plank in range(-2, 3):
 			for sz in [1.0, -1.0]:
-				var plank_z := band_center + float(plank) * 1.35
-				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
-					Vector3(cx, deck_y + 0.05, cz + sz * plank_z), timber)
+				var plank_z := band_center + float(plank) * DECK_PLANK_PITCH
+				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, DECK_PLANK_WIDTH),
+					Vector3(cx, deck_y + DECK_PLANK_TOP - 0.04, cz + sz * plank_z), timber)
 
 	# Columns, and the diagonal bracing that makes a frame a frame.
 	for level in range(0, STACK_LEVEL_COUNT):

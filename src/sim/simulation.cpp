@@ -665,6 +665,37 @@ bool Simulation::surface_below(const double x, const double y, const double z, c
     return true;
 }
 
+bool Simulation::look_target(const double x, const double y, const double z, const double dx, const double dy,
+                             const double dz, const double reach, LookHit &hit) const noexcept {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || !std::isfinite(dx) || !std::isfinite(dy) ||
+        !std::isfinite(dz) || !(reach > 0.0) || reach > 2000.0) {
+        return false;
+    }
+    const double length = std::sqrt(dx * dx + dy * dy + dz * dz);
+    if (!(length > 1.0e-6)) {
+        return false;
+    }
+    const double scale = reach / length;
+    const JPH::RVec3 from(x, y, z);
+    std::uint64_t entity = 0;
+    JPH::RVec3 point;
+    JPH::Vec3 normal;
+    if (!physics_world_->look_hit(from,
+                                  JPH::Vec3(static_cast<float>(dx * scale), static_cast<float>(dy * scale),
+                                            static_cast<float>(dz * scale)),
+                                  entity, point, normal)) {
+        return false;
+    }
+    hit.entity = entity;
+    hit.point = {static_cast<double>(point.GetX()), static_cast<double>(point.GetY()),
+                 static_cast<double>(point.GetZ())};
+    hit.normal = {static_cast<double>(normal.GetX()), static_cast<double>(normal.GetY()),
+                  static_cast<double>(normal.GetZ())};
+    hit.distance = std::sqrt((hit.point.x - x) * (hit.point.x - x) + (hit.point.y - y) * (hit.point.y - y) +
+                             (hit.point.z - z) * (hit.point.z - z));
+    return true;
+}
+
 bool Simulation::request_hook_take() noexcept {
     if (snapshot_.has_hook) {
         return false;

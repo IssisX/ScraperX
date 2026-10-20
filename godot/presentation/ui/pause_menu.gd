@@ -539,6 +539,13 @@ func _end_page(page: StringName, first: Control, note: String) -> void:
 		_building.add_child(_label(note, 21.0, UiStyle.PAPER_FAINT, UiStyle.font_label()))
 
 
+# Redraws a setting's row from `settings` (main.gd, when the game changes a
+# setting itself: the phone refused the microphone).
+func refresh_setting(key: StringName) -> void:
+	if _refreshers.has(key):
+		_refreshers[key].call()
+
+
 func _build_settings_page() -> void:
 	_settings_page = _begin_page(PAGE_SETTINGS)
 	_first_setting = _slider_row("LOOK SENSITIVITY", &"look_sensitivity",
@@ -605,8 +612,12 @@ func _build_audio_page() -> void:
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("VOICE", &"voice_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_toggle_row("CAPTIONS", &"captions")
+	_toggle_row("MICROPHONE", &"microphone")
 	_end_page(PAGE_AUDIO, first,
-		"Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience; Voice is the climber's. Captions print the climber's lines as said.")
+		"Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience; Voice is the climber's.\n" +
+		"Captions print the climber's lines as said.\n" +
+		"Microphone: short clips of what it hears stay on this phone, deleted within 7 days;\n" +
+		"one may be played back now and then. Nothing is uploaded. Off deletes them.")
 
 
 func _row(title: String) -> HBoxContainer:
