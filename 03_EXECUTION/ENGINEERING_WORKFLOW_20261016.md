@@ -1,5 +1,11 @@
 # Engineering workflow revision — 2026-10-16
 
+## Current ScraperX application — 2026-10-20
+
+The owner's permanent intelligent-progress directive is binding in [AGENTS](../AGENTS.md#permanent-owner-directive--intelligent-progress-2026-10-20) and detailed once in [Execution Protocol §12.1](../02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md#121-intelligent-progress-and-stagnation-awareness). At meaningful development checkpoints, assess actual gameplay gain, new evidence, stagnation, opportunity cost, neglected authorized scope and the best next action. Persist, change method, defer or advance by impact/dependencies/expected value, without arbitrary time/retry quotas or mechanical switching. Preserve essential blockers, honest acceptance, useful running work and the existing single checkpoint/backlog. Report the decision briefly; do not turn this into another recurring audit or task register.
+
+This later project rule overrides conflicting fixed diagnostic windows and retry counts in older prompts/skill workflow defaults. The optional mechanics runner itself is unchanged and retains its executable process limits; no runtime setting, safeguard, product contract or release gate changed. The dated workflow study and validation below remain historical evidence, not a requirement to repeat that study or a claim of improved gameplay/productivity.
+
 The owner requested critical study of the Claude conversation and a persistent general execution change, then explicitly authorized repairing the related task skills themselves. This is a cross-project workflow, with ScraperX constraints isolated in a project profile.
 
 ## Installed result

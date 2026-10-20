@@ -328,9 +328,31 @@ Stop adding to a bounded slice when its completion condition is proven. If the o
 
 Do not continue adding polish, adjacent systems, cleanup, architecture, or speculative improvements unless they are required to make the current capability correct.
 
-If a newly discovered defect blocks the objective, repair it.
+If a newly discovered defect blocks the objective, resolve it before claiming that objective complete. Choose the next action under §12.1; this does not require endless use of a failing method.
 
 If it does not block the objective, record it separately and keep it outside the current slice. Continue any remaining authorized objective under the first paragraph of this section.
+
+### 12.1 Intelligent progress and stagnation awareness
+
+Permanent owner directive, 2026-10-20: maximize meaningful, verified progress toward a finished ScraperX. The goal is a complete, cohesive, playable game. Activity, technical refinement, more agents and passing isolated checks do not automatically improve gameplay.
+
+At meaningful checkpoints—such as an integrated result, evidence that changes a hypothesis, repeated lack of useful evidence, a delivery blocker or a priority change—make an independent judgment:
+
+- **Progress:** What demonstrably improved in actual play? Distinguish source/component progress from an exercised player experience and a delivered APK.
+- **Stagnation:** Did the latest attempt provide evidence that changes the next action, or repeat an established failure? Productive persistence learns or implements; fixation repeats without proportional gain.
+- **Value:** What can another focused effort realistically unlock, with what uncertainty and opportunity cost? Depth is justified by its expected consequence, not by time already spent.
+- **Perspective:** Which important, already-authorized machinery, traversal, connected environment, interaction or progression work is being neglected? Consider dependencies and player impact rather than the newest topic or easiest test.
+- **Direction:** Is the best next action to finish, diagnose, defer or advance elsewhere? Choose from evidence, impact, dependencies and expected value, not arbitrary time limits, retry counts, task quotas or mechanical switching.
+
+Continue a critical dependency when a focused investigation or different supported approach can materially change the outcome. Name the actual blocker and discriminating observation; stop rejected hypotheses and repeated uninformative checks. A difficult problem, long duration or failed subprocess is not by itself grounds to abandon the deliverable. Accepted evidence stays valid until a relevant change or concrete observation invalidates it.
+
+If continued effort is unlikely to justify its cost, preserve the verified findings, exact unresolved behavior, affected source/evidence, dependency and concrete resumption condition in the existing live checkpoint/backlog. Redirect effort to the highest-value actionable authorized gameplay outcome and state why it outranks further local refinement. Keep essential blockers visible and owned: useful independent work may continue while their resolution depends on an unavailable observation or external change. A blocker on the critical path must still be resolved for that dependent slice to ship. Never hide defects, weaken verification, mark deferred work complete, shrink the promised result or switch merely to manufacture visible activity. If no authorized useful work is available, report the precise blocker rather than inventing scope.
+
+Favor integrated, playable slices: approach, functional mechanism/traversal, meaningful interaction and feedback, supported onward movement and feasible recovery. Verify each substantial slice against its actual requirements, then advance when further refinement offers little material benefit. Preserve foundational correctness and the whole game's quality; incidental polish must not become an indefinite prerequisite to developing the rest of the game.
+
+Apply these decisions without owner intervention. At those development checkpoints, briefly report actual advancement, what the evidence proves and does not prove, what remains blocked/deferred, and why the selected next action has priority. Use the existing checkpoint/task record; this rule adds no recurring audit, score, mandatory template or duplicate bookkeeping. Root remains accountable for implementation, integration and delivery, with the smallest useful team.
+
+This directive supersedes conflicting time/retry quotas in older project execution prompts and workflow defaults. It does not waive product/physics contracts, required release gates, truthful completion evidence, preservation of existing work or host security/permission boundaries. Optional subprocess budgets and `ci/mechanics_trial.py` still behave as implemented; they supervise experiments, not project priorities. Preserve their history and use supported reassessment when helpful rather than silently resetting an issue. No passing gameplay or future autonomous behavior is implied by editing these instructions.
 
 ---
 
@@ -420,7 +442,7 @@ Therefore:
 - every APK build runs through GitHub Actions (TDD §20.3); local native checks remain useful evidence within their stated platform limits;
 - “open these eight markdown files and paste them” is a protocol defect, not a user defect.
 
-Use an agent-owned clone of `IssisX/ScraperX` on `ChatGPT`, in temporary storage outside personal folders; verify its path, remote, branch, head and working tree before writes, and preserve others’ changes. A starting cwd does not identify the project. Do not use the owner’s original files or Android Downloads as a development tree or artifact destination. If an operation genuinely needs another location, explain that reason first. Follow the current environment’s permissions. Keep one implementation slice active while preserving the authorized larger objective.
+Use an agent-owned clone of `IssisX/ScraperX` on `ChatGPT`, in temporary storage outside personal folders; verify its path, remote, branch, head and working tree before writes, and preserve others’ changes. A starting cwd does not identify the project. Do not use the owner’s original files or Android Downloads as a development tree or artifact destination. If an operation genuinely needs another location, explain that reason first. Follow the current environment’s permissions. Keep one implementation slice active while preserving the authorized larger objective. Apply §12.1 when evidence justifies reprioritizing an unfinished slice; preserve its ownership, blocker, findings and resumption condition without counting it complete.
 
 ## 17. Candidate and documentation publication
 
