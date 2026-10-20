@@ -354,45 +354,69 @@ func _wet_d(device: int) -> bool:
 	return true
 
 func _wet_e(device: int) -> bool:
-	if not (await _go(device, Vector2(13.2, -134.5), 0.15, 6.0) and \
-			await _walk_to(device, Vector2(13.2, -135.8), 0.15, 6.0) and \
-			await _walk_to(device, Vector2(13.05, -136.4), 0.08, 6.0)):
-		return _fail("the walk through E's door into its cab stalled at %s" % str(_position()))
-	var leaf := int(_native().get_kit_body_index(2042))
-	var last := (_native().get_kit_body_transform(leaf) as Transform3D).origin
-	for frame in 240:
-		await get_tree().process_frame
-		var now := (_native().get_kit_body_transform(leaf) as Transform3D).origin
-		var moved := Vector2(now.x - last.x, now.z - last.z).length() / get_process_delta_time()
-		last = now
-		if moved < 0.2:
-			break
-	var at := _position()
-	await _face(Vector2(last.x - at.x, last.z - at.z))
-	if not await _offered(&"pick_up", "GRAB", "DOOR"):
-		return _fail("Action read '%s %s' facing E's door, not GRAB DOOR" % [_action_label(),
-			String(_ctx()["action"]["detail"])])
-	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2042, 0.5):
-		return _fail("GRAB did not take E's door")
-	_move_world(device, Vector2(0.4, 0.0))
-	var latched: bool = await _wait_until(func() -> bool: return bool(_wet_state()["e_door_latched"]), 6.0)
+	# From D's platform at the top, through the doors onto no floor: walk
+	# off the sill, drop onto the deck, and ride. Nothing is offered to the
+	# hands on the way.
+	if not await _go(device, Vector2(13.2, -134.5), 0.15, 6.0):
+		return _fail("the walk to E's doors stalled at %s" % str(_position()))
+	await _pose("wet_e_brink")
+	var deaths := int(_native().get_death_count())
+	# Nothing in E is to be taken, pulled, hooked or rigged: no such Action is
+	# offered from the brink until the car is still. (Climbing out over the
+	# shaft's rim as the car nears the top is a climb, and is allowed.)
+	var offered := [""]
+	var climbs := [""]
+	var watch := func(condition: Callable) -> Callable:
+		return func() -> bool:
+			var id := String(_ctx()["action"]["id"])
+			if climbs[0] == "" and id in ["climb", "climb_up"]:
+				climbs[0] = "%s %s at y %.2f" % [_action_label(), String(_ctx()["action"]["detail"]), _position().y]
+			elif offered[0] == "" and _action_label() != "" and not id in ["climb", "climb_up"]:
+				offered[0] = "%s %s (id %s) at %s, car %.2f m up" % [_action_label(), String(_ctx()["action"]["detail"]),
+					String(_ctx()["action"]["id"]), str(_position()), float(_wet_state()["e_cab_travel"])]
+			return bool(condition.call())
+	_move_world(device, Vector2(0.0, -1.0))
+	var off: bool = await _wait_until(watch.call(func() -> bool:
+		return not bool(_native().is_player_grounded()) and _position().y < 257.0), 4.0)
 	_move_dir(device, Vector2.ZERO)
-	if not latched:
-		return _fail("drawing E's door east never latched it")
-	if not await _let_go_if_held(device):
-		return _fail("LET GO did not take E's door out of the hands")
-	if not await _pull_handle(device, Vector2(13.4, -136.65), Vector2(1.0, 0.0), 2045, "CHILLER TRIP",
-			func() -> bool: return not bool(_wet_state()["e_catch_latched"])):
-		return false
-	var arrived: bool = await _wait_until(
-		func() -> bool: return float(_wet_state()["e_cab_travel"]) >= 41.95, 90.0)
-	if not arrived:
-		return _fail("E's cab never reached 298 m (travel %.2f m)" % float(_wet_state()["e_cab_travel"]))
-	await _seconds(1.0)
+	if not off:
+		return _fail("walking south through E's doors never left the sill (at %s)" % str(_position()))
+	if not await _wait_until(watch.call(func() -> bool: return int(_native().get_support_entity_id()) == 2045), 2.0):
+		return _fail("the drop through E's doors did not land on its deck (support %d at %s)" % [
+			int(_native().get_support_entity_id()), str(_position())])
+	if not await _wait_until(watch.call(func() -> bool: return not bool(_wet_state()["e_catch_latched"])), 1.5):
+		return _fail("landing on E's deck did not trip the chiller (deck drop %.3f m)" % float(_wet_state()["e_deck_drop"]))
+	if not await _wait_until(watch.call(func() -> bool: return bool(_wet_state()["e_door_shut"])), 3.0):
+		return _fail("E's leaves never swung shut (%.2f rad)" % float(_wet_state()["e_door_angle"]))
+	if not await _wait_until(watch.call(func() -> bool: return float(_wet_state()["e_chiller_travel"]) <= -24.0), 15.0):
+		return _fail("E's chiller never fell past the rider (travel %.2f m)" % float(_wet_state()["e_chiller_travel"]))
+	await _pose("wet_e_pass")
+	var still := [0.0]
+	var stopped: bool = await _wait_until(watch.call(func() -> bool:
+		var w := _wet_state()
+		if float(w["e_cab_travel"]) >= 44.6 and absf(float(w["e_cab_speed"])) < 0.05:
+			still[0] += get_process_delta_time()
+		else:
+			still[0] = 0.0
+		return still[0] >= 2.0), 30.0)
+	if not stopped:
+		return _fail("E's car never came to rest at the top (travel %.2f m, speed %.2f m/s)" % [
+			float(_wet_state()["e_cab_travel"]), float(_wet_state()["e_cab_speed"])])
+	if offered[0] != "":
+		return _fail("E offered '%s' on the way: nothing in it is to be taken or pulled" % offered[0])
+	var feet := _position().y - 0.9
+	if int(_native().get_support_entity_id()) != 2045 or absf(feet - 298.25) > 0.15:
+		return _fail("not standing on E's deck level with F at the top (support %d, feet %.2f)" % [
+			int(_native().get_support_entity_id()), feet])
+	if int(_main._audio.air_heard) <= 0:
+		return _fail("E's air was never heard roaring under the car")
+	if _felt(&"heave") <= 0 or _felt(&"rumble") <= 0:
+		return _fail("E's car was not felt in the hands (heave %d, rumble %d)" % [_felt(&"heave"), _felt(&"rumble")])
+	if int(_native().get_death_count()) != deaths:
+		return _fail("the climber died in E's shaft")
 	await _pose("wet_e_top")
-	if int(_native().get_support_entity_id()) != 2040:
-		return _fail("the rider is not in E's cab at the top (y %.2f)" % _position().y)
+	print("SCRAPERX_WET_E feet=%.2f heave=%d rumble=%d air_heard=%d climb_offered='%s'" % [feet, _felt(&"heave"),
+		_felt(&"rumble"), int(_main._audio.air_heard), climbs[0]])
 	return true
 
 func _wet_f(device: int) -> bool:

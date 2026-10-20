@@ -1197,3 +1197,58 @@ func _positional_player(bus: StringName, at: Vector3, unit_size: float,
 	player.max_distance = max_distance
 	add_child(player)
 	return player
+
+
+# The chiller drop (AS-007 E), machines only, from get_wet_state(): the air
+# roaring through the throttle under the car's floor, louder with its flow
+# and higher with the duct's pressure; the collar's blast at the shaft's mouth
+# with the vent's flow; a bang at the trip lever when the chiller's catch lets
+# go; a deep thump when the chiller seats on its stop. (The leaves banging
+# shut and the deck's slam are update_machines' clangs.) Counted for the
+# scripted runs: air_heard each frame the roar plays above WET_E_HEARD_DB.
+const WET_E_ROAR_FULL_M3S := 20.0
+const WET_E_BLAST_FULL_M3S := 12.0
+const WET_E_DUCT_FULL_PA := 7000.0
+const WET_E_HEARD_DB := -30.0
+# Where the chiller comes to rest on its stop, its middle.
+const WET_E_CHILLER_SEAT := Vector3(10.0, 252.75, -136.65)
+const WET_E_ROAR_TRIM_DB := -2.0
+var air_heard := 0
+var wet_e_cues := {}
+var _wet_e_roar: AudioStreamPlayer3D
+var _wet_e_blast: AudioStreamPlayer3D
+var _wet_e_latched := true
+var _wet_e_seated := false
+
+func update_wet_e(_delta: float, state: Dictionary, floor_at: Vector3, mouth: Vector3, lever: Vector3) -> void:
+	if state.is_empty():
+		return
+	if _wet_e_roar == null:
+		_wet_e_roar = _positional_player(BUS_EFFECTS, floor_at, 6.0, 120.0)
+		_wet_e_blast = _positional_player(BUS_EFFECTS, mouth, 10.0, 220.0)
+	var flow := maxf(0.0, float(state.get("e_throttle_m3s", 0.0)))
+	var roar := clampf(flow / WET_E_ROAR_FULL_M3S, 0.0, 1.0)
+	if roar > 0.01 and linear_to_db(roar) + WET_E_ROAR_TRIM_DB > WET_E_HEARD_DB:
+		air_heard += 1
+	var duct := clampf((float(state.get("e_duct_pa", 101325.0)) - 101325.0) / WET_E_DUCT_FULL_PA, 0.0, 1.5)
+	var vent := clampf(absf(float(state.get("e_vent_m3s", 0.0))) / WET_E_BLAST_FULL_M3S, 0.0, 1.0)
+	if vent > 0.01:
+		_count(wet_e_cues, &"blast")
+	var latched := bool(state.get("e_catch_latched", true))
+	var bang := _wet_e_latched and not latched
+	_wet_e_latched = latched
+	if bang:
+		_count(wet_e_cues, &"catch")
+	var seated := float(state.get("e_chiller_travel", 0.0)) <= -50.0 + 0.02
+	var thump := seated and not _wet_e_seated
+	_wet_e_seated = seated
+	if thump:
+		_count(wet_e_cues, &"seat")
+	if not _bank_ready or _silent:
+		return
+	_loop_level(_wet_e_roar, &"air_roar_loop", floor_at, roar, 0.7 + 0.6 * duct, WET_E_ROAR_TRIM_DB)
+	_loop_level(_wet_e_blast, &"vent_blast_loop", mouth, vent, 0.85 + 0.3 * vent, 0.0)
+	if bang:
+		_play_at(&"catch_bang", lever, 0.0, randf_range(0.95, 1.05))
+	if thump:
+		_play_at(&"seat_thump", WET_E_CHILLER_SEAT, 0.0, 1.0)

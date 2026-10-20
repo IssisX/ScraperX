@@ -254,6 +254,8 @@ const HAPTICS := {
 	&"death": [150, 1.0],
 	&"break": [55, 1.0],
 	&"her": [18, 0.5],   # her hands on the steel you are on or beside
+	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
+	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -922,6 +924,9 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _crane_view != null:
 		_feel_crane(delta)
 	_sample_machines(delta)
+	_sample_wet_e(delta)
+	if delta > 0.0:
+		_feel_wet_e(delta)
 
 
 # Deaths (sim/corpse.hpp): the body a death leaves is drawn where it lies.
@@ -1306,3 +1311,40 @@ func _ledge_affordance_text() -> String:
 	if not bool(_native.is_ledge_available()):
 		return "  --"
 	return "E%04d +%4.2fm" % [int(_native.get_ledge_entity_id()), float(_native.get_ledge_rise_meters())]
+
+
+# The chiller drop's car in the hands (AS-007 E): while the feet are on its
+# deck or its cab, a heave each time it surges up (the launch, each bob at
+# the top: its acceleration past WET_E_HEAVE_MPS2) and a rumble every
+# WET_E_RUMBLE_S while it runs faster than WET_E_RUMBLE_MPS. From the
+# native's own car speed; gated by the vibration setting like every pulse.
+const WET_E_HEAVE_MPS2 := 5.0
+const WET_E_RUMBLE_MPS := 1.0
+const WET_E_RUMBLE_S := 0.25
+var _fb_wet_e_speed := 0.0
+var _fb_wet_e_heaving := false
+var _fb_wet_e_rumble_s := 0.0
+
+func _feel_wet_e(delta: float) -> void:
+	if _wet_e.is_empty():
+		_fb_wet_e_heaving = false
+		return
+	var speed := float(_wet_e.get("e_cab_speed", 0.0))
+	var accel := (speed - _fb_wet_e_speed) / delta
+	_fb_wet_e_speed = speed
+	var support := int(_native.get_support_entity_id())
+	if support != WET_E_DECK_ENTITY and support != WET_E_CAB_ENTITY:
+		_fb_wet_e_heaving = false
+		_fb_wet_e_rumble_s = 0.0
+		return
+	var heaving := accel > WET_E_HEAVE_MPS2
+	if heaving and not _fb_wet_e_heaving:
+		_haptic(&"heave", clampf(accel / 12.0, 0.5, 1.0))
+	_fb_wet_e_heaving = heaving
+	if absf(speed) > WET_E_RUMBLE_MPS:
+		_fb_wet_e_rumble_s -= delta
+		if _fb_wet_e_rumble_s <= 0.0:
+			_fb_wet_e_rumble_s = WET_E_RUMBLE_S
+			_haptic(&"rumble", clampf(absf(speed) / 3.5, 0.4, 1.0))
+	else:
+		_fb_wet_e_rumble_s = 0.0

@@ -83,20 +83,22 @@ struct WetIsolation final {
     kit::PipeIndex d_fill;
     kit::PipeIndex d_drain_pipe;
 
-    // Stage E, the chiller drop.
+    // Stage E, the chiller drop: the rider drops onto the deck, which trips
+    // the chiller, whose air blows the cab up the shaft.
     kit::BodyIndex e_cab;
     kit::BodyIndex e_chiller;
-    kit::BodyIndex e_door;
-    kit::BodyIndex e_latch_body;
+    kit::BodyIndex e_door;           // the west leaf
+    kit::BodyIndex e_leaf_east;
     kit::BodyIndex e_lever_body;
-    kit::BodyIndex e_handle;
+    kit::BodyIndex e_deck;
     kit::BodyIndex e_bucket;
     kit::BodyIndex e_striker_body;
     kit::GuideIndex e_cab_guide;
     kit::GuideIndex e_chiller_guide;
     kit::GuideIndex e_bucket_guide;
-    kit::LeverIndex e_door_hinge;
-    kit::LeverIndex e_latch;
+    kit::GuideIndex e_deck_guide;
+    kit::LeverIndex e_door_hinge;    // the west leaf's hinge
+    kit::LeverIndex e_latch;         // the east leaf's hinge
     kit::LeverIndex e_lever;
     kit::LeverIndex e_striker;
     kit::CatchIndex e_door_catch;
@@ -105,6 +107,7 @@ struct WetIsolation final {
     kit::CellIndex e_cab_cell;
     kit::RopeIndex e_rope;
     kit::BinIndex e_bucket_bin;
+    kit::VentIndex e_vent;
 
     // Stage F, the accumulator.
     kit::BodyIndex f_platform;

@@ -471,6 +471,14 @@ struct KitSpout final {
     Vector3 to{};
 };
 
+// A vent collar (AS-007 E): where it stands, low to high, and the air it let
+// out last step, m^3/s at atmospheric pressure.
+struct KitVent final {
+    Vector3 low{};
+    Vector3 high{};
+    double flow_m3s = 0.0;
+};
+
 // AS-007's machine state, for the falsifiers.
 struct WetState final {
     bool d_pipe_whole = false;
@@ -482,8 +490,18 @@ struct WetState final {
     double d_platform_travel = 0.0;
     double d_drain_angle = 0.0;
     double dump_angle = 0.0;
-    bool e_door_latched = false;
+    // E: both leaves under 0.05 rad; the wider-open leaf's angle; how far
+    // the deck stands below where it hangs (0 hung, 0.15 on the cab's
+    // plate); the trip lever's angle; the cab's speed up its shaft; the air
+    // through the throttle into the cab's cell and out of the vent collar,
+    // m^3/s at atmospheric pressure.
+    bool e_door_shut = false;
     double e_door_angle = 0.0;
+    double e_deck_drop = 0.0;
+    double e_lever_angle = 0.0;
+    double e_cab_speed = 0.0;
+    double e_throttle_m3s = 0.0;
+    double e_vent_m3s = 0.0;
     bool e_catch_latched = false;
     double e_duct_pa = 0.0;
     double e_cab_pa = 0.0;
@@ -1021,10 +1039,10 @@ public:
     static constexpr std::uint64_t kWetDDrainHandleEntityId = 2035;
     static constexpr std::uint64_t kWetECabEntityId = 2040;
     static constexpr std::uint64_t kWetEChillerEntityId = 2041;
-    static constexpr std::uint64_t kWetEDoorEntityId = 2042;
-    static constexpr std::uint64_t kWetELatchEntityId = 2043;
+    static constexpr std::uint64_t kWetEDoorEntityId = 2042;       // the west leaf
+    static constexpr std::uint64_t kWetEEastLeafEntityId = 2043;
     static constexpr std::uint64_t kWetELeverEntityId = 2044;
-    static constexpr std::uint64_t kWetEHandleEntityId = 2045;
+    static constexpr std::uint64_t kWetEDeckEntityId = 2045;
     static constexpr std::uint64_t kWetEBucketEntityId = 2046;
     static constexpr std::uint64_t kWetEStrikerEntityId = 2047;
     static constexpr std::uint64_t kWetFPlatformEntityId = 2050;
@@ -1233,6 +1251,9 @@ public:
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] std::uint64_t kit_body_entity(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_dynamic(std::uint32_t body) const noexcept;
+    // What the hands would take the body as (kit::CarryKind: 0 nothing it is
+    // taken by, 1 a load, 2 a rope's shackle, 3 a handle).
+    [[nodiscard]] std::uint8_t kit_body_carry_kind(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_enabled(std::uint32_t body) const noexcept;
     [[nodiscard]] std::uint32_t kit_body_part_count(std::uint32_t body) const noexcept;
     [[nodiscard]] KitPart kit_body_part(std::uint32_t body, std::uint32_t part) const noexcept;
@@ -1267,6 +1288,8 @@ public:
     [[nodiscard]] KitPool kit_pool(std::uint32_t pool) const noexcept;
     [[nodiscard]] std::uint32_t kit_spout_count() const noexcept;
     [[nodiscard]] KitSpout kit_spout(std::uint32_t spout) const noexcept;
+    [[nodiscard]] std::uint32_t kit_vent_count() const noexcept;
+    [[nodiscard]] KitVent kit_vent(std::uint32_t vent) const noexcept;
     [[nodiscard]] WetState wet_state() const noexcept;
     [[nodiscard]] ShopState shop_state() const noexcept;
     [[nodiscard]] CraneState crane_state() const noexcept;

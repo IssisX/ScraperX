@@ -140,9 +140,15 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
+        run_wet_e();
         run_wet_handling();
         run_wet_band();
         run_wet_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-007-E") {
+        run_wet_e();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -337,6 +343,7 @@ int main() {
     run_step2_movement();
     run_stack();
     run_wet_isolation();
+    run_wet_e();
     run_wet_handling();
     run_wet_band();
     run_wet_route();

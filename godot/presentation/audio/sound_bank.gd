@@ -99,6 +99,11 @@ func build() -> void:
 	clips[&"winch_loop"] = [_loop(_winch(2.0), 0.3)]
 	clips[&"jingle"] = _variants(3, _jingle)
 	clips[&"magnet_loop"] = [_loop(_magnet_hum(1.6), 0.3)]
+	# The chiller drop (AS-007 E), made last so every clip before it is as it was.
+	clips[&"air_roar_loop"] = [_loop(_air_roar(1.8), 0.3)]
+	clips[&"vent_blast_loop"] = [_loop(_vent_blast(1.6), 0.3)]
+	clips[&"catch_bang"] = [_wav(_catch_bang())]
+	clips[&"seat_thump"] = [_wav(_seat_thump())]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -401,6 +406,59 @@ func _wind(length: float) -> PackedFloat32Array:
 			gust_target = _rng.randf_range(0.35, 1.0)
 		gust += 0.0004 * (gust_target - gust)
 		out[i] = (air[i] * 2.2 + whistle[i] * 0.5 * gust) * gust
+	return out
+
+
+# Air driven through the chiller drop's throttle under the car's floor: a
+# low roar with a throaty band where a phone's speaker carries it, the rush of
+# the stream over it, beating as the flow tears at the orifice's edge.
+func _air_roar(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var throat := _band_noise_buffer(n, 220.0, 900.0)
+	var rush := _band_noise_buffer(n, 900.0, 3200.0)
+	for i in n:
+		var beat := 0.8 + 0.2 * sin(TAU * 11.0 * float(i) / float(MIX_RATE))
+		out[i] = (throat[i] * 2.0 + rush[i] * 0.7) * beat
+	_add_tone(out, 70.0, 0.0, length, 0.15, 0.0)
+	return out
+
+
+# The vent collar's blast at the shaft's mouth: broadband hiss of air leaving
+# the slots, spitting water.
+func _vent_blast(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var hiss := _band_noise_buffer(n, 1200.0, 8000.0)
+	var body := _band_noise_buffer(n, 300.0, 1400.0)
+	for i in n:
+		out[i] = hiss[i] * 1.8 + body[i] * 0.9
+	for c in int(length * 40.0):
+		_add_band_noise(out, _rng.randf_range(0.0, length - 0.02), 0.01, _rng.randf_range(0.1, 0.35), 0.003,
+			2500.0, 7000.0)
+	return out
+
+
+# The chiller's catch letting go overhead: a heavy pin snapping out of its
+# keeper, a bang through the frame, and the frame ringing dully after it.
+func _catch_bang() -> PackedFloat32Array:
+	var out := _silence(0.8)
+	_add_band_noise(out, 0.0, 0.03, 1.0, 0.006, 700.0, 5000.0)
+	_add_tone(out, 55.0, 0.0, 0.5, 0.8, 0.12)
+	var base := _rng.randf_range(150.0, 180.0)
+	for mode in [[1.0, 1.0, 0.18, 4.0], [2.2, 0.6, 0.12, 4.0], [3.7, 0.35, 0.07, 3.5]]:
+		_add_mode(out, base * mode[0], 0.0, 0.7, mode[1], mode[2], mode[3])
+	_add_band_noise(out, 0.01, 0.3, 0.4, 0.08, 400.0, 2500.0)
+	return out
+
+
+# The 5 t chiller eased onto its stop: a deep, soft thump and the duct
+# booming low around it.
+func _seat_thump() -> PackedFloat32Array:
+	var out := _silence(1.2)
+	_add_tone(out, 42.0, 0.0, 0.9, 1.0, 0.25)
+	_add_mode(out, _rng.randf_range(90.0, 110.0), 0.0, 1.1, 0.7, 0.35, 5.0)
+	_add_band_noise(out, 0.0, 0.4, 0.5, 0.12, 250.0, 1200.0)
 	return out
 
 

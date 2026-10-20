@@ -85,16 +85,32 @@ Plan view, north up. Column x ranges are the shafts' outer faces.
 
 ## Stage E — chiller drop (256.25 → 298.25)
 
-- **Found:** a cab in a sealed shaft, its floor a piston, its door hooked open toward D's platform. A
-  5 t chiller hangs at the top of a sealed duct beside it on a catch; the ducts' plenums meet at the
-  bottom through a throttle. A trip handle from the chiller's catch hangs in the cab.
-- **Link:** shut the door behind you. It swings to and its spring latch drops. Open, it leaks the
-  whole doorway; the cab needs 1.4 kPa and an open door holds under 0.1 kPa.
-- **Set off:** pull the handle. The chiller falls; the air it pushes through the throttle lifts the
-  cab 42 m to its stop, where the pressure holds it.
-- **No link:** pull the handle with the door open: the chiller falls, the air leaves by the door, the
-  cab stays on its stop. The chiller then waits for the cascade.
-- **Re-arm:** the cascade's bucket hoists the chiller back; the vacuum breaker lets air in behind it.
+Rebuilt on 2026-10-20 to `03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md` (the owner's design 1,
+with the glass, the self-closing leaves, the lamps, the drips and the float at the top). Nothing is
+pulled and nothing is taken in the hands: the rider walks in, drops and rides.
+
+- **Found:** at D's top, a pair of hazard-striped leaves in the shaft's north wall, shut, on hinges
+  leaning 8° top outward. Behind them is no floor: the car is 3 m down the shaft, a skirted cab
+  whose skirt seals on the walls, and on its plate a 60 kg deck hung 0.15 m proud on the chiller's
+  trip line. Beside it, the 5 t chiller hangs at the top of its sealed duct on a catch; the two
+  cells meet at the bottom through a throttle. Glass from 258 to 296 m in the shaft's west and east
+  walls and the duct's east wall.
+- **Link:** none to make. Walking in pushes the leaves open; they swing shut on their own weight
+  about a second after the body leaves them.
+- **Set off:** the drop. Walking off the sill (2.85 m), the rider lands on the deck at 7.4 m/s; the
+  blow carries the deck onto the plate and turns the trip lever past its release (0.12 m of deck)
+  0.11 s after the landing. Standing on the deck, or a toolbox dropped on it, never does: the
+  lever's counterweight holds the line to about 2 kN. A 55 kg drum dropped on it does.
+- **The ride:** the chiller falls; its air drives the car up the shaft at 3 to 3.5 m/s after a heave
+  of about 1 g. Through the glass the chiller rushes down past the rider at about 277.7 m. At the
+  shaft's mouth the skirt rises into the slotted vent collar, the cell vents, the car floats a
+  moment, bobs and comes to rest on its trapped air, held by its seal, level with F's platform:
+  still about 22 s after the landing, the deck at 298.28 m.
+- **No link:** a rider holding the leaves open while a load is thrown in: the door interlock stops
+  the car with its deck 0.1 m under the sill, and it stays stopped until it is back on its bottom
+  stop. The chiller hangs on the air it has trapped until the cascade.
+- **Re-arm:** the cascade's bucket hoists the chiller back; the cab sinks onto its stop, the breaker
+  lets air in behind it, and the deck's line goes taut again, leaving the deck hung proud.
 
 ## Stage F — accumulator (298.25 → 340.25)
 
@@ -116,8 +132,22 @@ Plan view, north up. Column x ranges are the shafts' outer faces.
 - **Buoyancy.** `ρ g A d` on a float, `d` its submerged depth clamped to its height, applied at its
   centre of mass, with water drag on its vertical speed.
 - **Air.** Each cell is an isothermal ideal gas. A piston feels `(P − P_atm) A`. A throttle passes
-  `0.6 A √(2 ρ ΔP)` (linear under 50 Pa). An open door leaks its area times its opening. A vacuum
-  breaker admits air below `P_atm − 100 Pa`. Pistons are sealed to their shafts.
+  `0.6 A √(2 ρ ΔP)` (linear under 50 Pa). An open door leaks its area times its opening (a door
+  pressed onto its frame past its shut stop is shut). A vacuum breaker admits air below
+  `P_atm − 100 Pa`. Pistons are sealed to their shafts.
+- **Door exposure (E).** A doorway in a shaft whose piston rides past it leaks, and its leaves are
+  pressed, only by the share of its height below the piston's sealing edge; above the edge the
+  skirt covers it.
+- **Vent collar (E).** Once the skirt's sealing edge rises past the collar's lower edge (296.85 m),
+  the cell leaks through 3.0 m² of slot for every meter of edge above it, up to the rim (298.0 m).
+  The lower edge sets where the car comes to rest; the area, how far it overshoots.
+- **Seal friction (E).** The skirt's seal drags on the shaft's walls with 2.5 kN (the guide's
+  friction): it holds the car still on its trapped air while a 0.0005 m² bleed lets it sink a few
+  millimeters a minute.
+- **Door interlock (E, the spec's declared fallback for its risk 3).** While a leaf stands open more
+  than 0.05 rad with the car at or below that stop, the car's guide stops with its deck 0.1 m under
+  the sill; a car that reaches that stop with a leaf open stays there until it is back at rest on its
+  bottom stop.
 - **Hydraulics.** Incompressible and push-only: a pulley constraint with a minimum length, ratio the
   area ratio. Coupling takes whatever fluid the line holds then. The charge line pushes
   `ρ g Δh A` up the accumulator while the dump is open.
@@ -136,7 +166,18 @@ facing south.
 
 1. `AS-007 D` — no spool: valve thrown, platform still after 20 s; spool seated: platform to 256.25,
    rider's gain ≤ the water's released head.
-2. `AS-007 E` — door open: handle pulled, cab still; door shut: cab to 298.25, gain ≤ chiller's drop.
+2. `AS-007 E` (`SCRAPERX_ONLY=AS-007-E`, also in `AS-007`) — as found nothing hung, shut or
+   takeable; 10 s standing in the doorway sets nothing off and offers nothing; the walk off the
+   sill lands under 8 m/s, trips the chiller within 1 s, the leaves shut before the deck reaches the
+   doorway, no leaf touches the rider, launch at most 12 m/s², the top at most 16 m/s², the deck
+   peaks at most 299.65 m, still within 25 s with the deck within 0.10 m of 298.25 and within
+   0.12 m 30 s and 60 s later, gain ≤ chiller's drop, then onto F; hanging from the sill and letting
+   go does the same; a toolbox dropped on the deck sets nothing off, a drum sends the car up empty to
+   within 0.15 m of the ride's rest; leaves held open and a drum thrown in: the car jams under the
+   doors (cab, deck, leaves and lever under 0.2 m/s from 3 s to 18 s), the rider untouched, and the
+   chiller's bounce on its trapped air stays in its travel and dies away; saved 8 s into the ride
+   and loaded, every body within 1 mm and the ride ending within 0.02 m; the world guard (kit bodies,
+   ziplines and stock where they were, none in E's shaft, duct or bucket column).
 3. `AS-007 F` — hose free: valve thrown, platform still; hose coupled: platform to 340.25, gain ≤
    accumulator's drop.
 4. `AS-007 band` — one run from the 220 ring to standing on TP-340 on player inputs, then the dump:
@@ -156,7 +197,7 @@ Built on `ScraperX-Claude` after `573dd84`. Native falsifiers, all on player inp
 | Group | Result |
 |---|---|
 | `AS-007 D` | spool off: valve thrown, platform still 10 s, tube dry. Spool in: platform to 256.25 with the rider on it; gain 29.8 kJ against 74.6 MJ of water head released |
-| `AS-007 E` | door open: trip pulled, chiller falls 10 m+, cab still. Door shut: cab to 298.25 in about 28 s at 1.55 m/s on 1.3 kPa; gain 35.0 kJ against 2.07 MJ of chiller drop |
+| `AS-007 E` | rebuilt 2026-10-20 (`claude/chiller-drop`): landing 7.40 m/s (heavy), catch released 0.11 s after it, leaves shut 1.0 s before the deck reached the doorway, launch 11.1 m/s², top 13.2 m/s², deck peak 299.56, the chiller past the rider's eye at 277.7 m closing at 6.1 m/s, still 21.8 s after the landing with the deck at 298.284 (298.281 60 s later); hang and let go: landing 4.1 m/s, released 0.24 s after it, rest 298.287; toolbox: deck 0.02 m down, nothing released; drum: empty rest 298.333; jammed: deck at most 256.37 m, the car still (0.03 m/s), the chiller bouncing ±2.26 m with a 3.74 s period, each swing slower (3.80 to 2.86 m/s), never onto a stop; save loaded exactly, rest 298.287; gain 35.0 kJ against 2.31 MJ |
 | `AS-007 F` | hose free: valve thrown, accumulator dumps 3 m, platform still. Coupled: platform to 340.25; gain 35.0 kJ against 588.6 kJ of accumulator drop |
 | `AS-007 route` | 220 ring to standing on TP-340 in 139.8 s with no lift: boards, ladder, beam, panel, drop, shimmy under the bulkhead, standpipe, ladder, panel, the plate's ladder. Every lift in the band where it was found |
 | `AS-007 band` | 220 ring to standing on TP-340 in 102.8 s of sim time; the dump then hoists the chiller back into its catch (the cab sinks to its stop), recharges the accumulator (F's platform returns to 298.25) and refills D's tank (253 t) |
@@ -179,3 +220,36 @@ Changed on the way:
 - **A shimmy passes under something standing back from the lip** (Step 2's shimmy had required the
   climb-up landing clear at every step; only the climb up needs it). The route's bulkhead is the
   case: it stands 0.15 m back from the 264 ring's edge.
+
+Changed in E's rebuild (2026-10-20), against the spec:
+
+- **The landing's blow reaches the deck** (the spec's risk 1, measured first): the deck went the
+  full 0.15 m within 0.25 s of the landing and the catch let go 0.11 s after it, so the fallback
+  (an impulse handed to the support) was not needed.
+- **The bucket's striker lies 3 cm lower** (252.73 m, not 252.76): level with the bucket floor's
+  middle, its arm sat inside the floor with the push-out a tie, and 5 m lower than first built the
+  tie went the wrong way: the floor was pushed down onto the arm's stop and the bucket, and the
+  chiller hung on it, could not move.
+- **The leaves pass through the frame and each other.** On hinges leaning 8°, their hinged edges'
+  corners sweep a few centimeters into the jambs as they open, and their lower free corners a
+  centimeter or two past each other as they close; with those contacts the pair jammed at 0.6 rad.
+- **The deck is 2.46 m square**, not 2.5: the cab's corner posts stand 1.24 m out from its middle.
+- **A door pressed past its shut stop is shut:** the cell's air held the leaves a third of a
+  milliradian past their stops, and the old rule (any turn either way opens it) leaked six times the
+  bleed and let the car sink 0.6 m a minute.
+- **The deck's guide is built in E's own place**, not after every other band: the solver orders an
+  island's constraints by their place in its list, and one built last would be the one swapped into
+  the first hole a constraint taken away leaves, moving another island's order. Built in the
+  middle, it moves every later constraint along by one, keeping their order.
+- **Seal friction 2.5 kN**, not 3 (the declared knob): with the guide in E's place the launch peaked
+  at 12.4 m/s² (the trip lever's return lifting deck and rider off the plate just as the car
+  starts), over the 12 bound; 2.5 kN gives 11.1 m/s² and a rest of 298.28 m.
+- **The door interlock is built** (the spec's declared fallback for its risk 3): pressed against the
+  open leaves the car's deck went 4 mm past the 256.40 bound and wobbled with the air's pressure.
+- **Check 6 holds the car, not every body, still** (ruled with the owner's session, 2026-10-20): the
+  5 t chiller cannot be still within 3 s of a jam; hung on the air it has trapped it bounces on it as
+  on a spring (about 13.7 kN/m). The check holds the jammed car (cab, deck, leaves, lever) under
+  0.2 m/s, and the chiller to staying in its travel, never onto a stop faster than 0.5 m/s, its
+  bounce dying away swing by swing.
+- **The touch scenario's "nothing offered" allows a climb:** near the top the shaft's south rim comes
+  within mantle reach and CLIMB +1.1 M is offered; nothing to take, pull, hook or rig ever is.

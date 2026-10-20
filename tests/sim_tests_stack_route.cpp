@@ -65,13 +65,8 @@ void run_ascent() {
                 wait_for(run, 120.0,
                          [&](const Snapshot &) { return run.wet_state().d_platform_travel >= 35.95; }),
                 "D to 256.25");
-    require_leg(run,
-                walk_to(run, 13.2, -134.5, 6.0) && walk_to(run, 13.2, -135.8, 6.0) && shut_wet_door(run) &&
-                    pull_wet_trip(run),
-                "into E's cab, its door shut and the chiller tripped");
-    require_leg(run,
-                wait_for(run, 90.0, [&](const Snapshot &) { return run.wet_state().e_cab_travel >= 41.95; }),
-                "E to 298.25");
+    require_leg(run, drop_into_wet_e(run) && wait_wet_e_top(run, 60.0),
+                "through E's doors onto its deck, blown up to 298.25");
     require_leg(run,
                 walk_to(run, 13.4, -137.2, 4.0) && walk_to(run, 13.4, -139.9, 6.0) && couple_wet_hose(run) &&
                     pull_wet_stop_valve(run),

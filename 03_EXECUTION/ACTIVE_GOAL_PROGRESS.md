@@ -22,6 +22,25 @@ has not been checked against its scope here.
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
 | 10 Paid-release readiness | ~30% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). The title over the live tower is done (`touch_title`), and the START list is development-only. The top of the route is a native latch with an arrival beat, and the altimeter is scaled to it (what stands there is the owner's). The pause menu carries the licences the build ships under (`touch_pause`). The launcher icon and boot splash are the game's own, no engine branding (placeholder icon, owner may replace). The ending beyond the arrival, the release build, store identity, credits, the voice's clearance and device measurement are open (`RELEASE_PLAN.md`). |
 
+**The chiller drop rebuilt: walk in, drop, get blown out of the shaft (2026-10-20, `claude/chiller-drop`).**
+Stage E (256.25 to 298.25 m) is no longer a door shut and a handle pulled. From D's top the rider
+walks through a pair of self-closing leaves onto no floor and drops 2.85 m onto the car's deck; the
+landing carries the deck 0.15 m onto the plate and the trip lever past its release 0.11 s later; the
+5 t chiller falls in its duct and its air heaves the car up at about 1 g, then 3 to 3.5 m/s, past glass
+through which the chiller rushes down past the rider at 277.7 m; at the mouth the skirt rises into the
+vent collar, the car floats a moment, bobs, and rests on its trapped air level with F (deck 298.28 m,
+22 s after the landing, 37 s before). Seen and felt: two work lamps and drips riding with the car, a
+blast of spray, mist and grit from the collar's slots when the seal breaks, then mist hanging over the
+mouth; the throttle's roar under the floor, the collar's blast, a bang at the catch and a thump as
+the chiller seats; a heave in the hands at the launch and each bob, a rumble while it runs. Native
+`AS-007 E` (`SCRAPERX_ONLY=AS-007-E`): the brink, the drop and ride, hang and let go, loads, the doors
+held open, a save mid-ride, and a world guard (bodies, ziplines and stock where they were); `touch_wet`
+and `touch_stack` play it. Changes against the spec, each in `AS-007_WET_ISOLATION.md`: the bucket's
+striker 3 cm lower (a contact tie had jammed the bucket), leaves passing through the frame and each
+other (leaning hinges), a 2.46 m deck, a door pressed past its stop counted shut, the deck's guide
+built in E's own place, seal friction 2.5 kN, the declared door interlock, and the jam check holding
+the car (not the bouncing chiller) still. Old saves are refused, as the owner accepted.
+
 **A body added in one band no longer moves the rest of the world (2026-10-20).** Jolt sorted each
 island's contacts for its solver by a hash of the bodies' ids, so one body created anywhere shifted
 every later id and re-ordered the solve of islands it never touched; runs far away drifted until

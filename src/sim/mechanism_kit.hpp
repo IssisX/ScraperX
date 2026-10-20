@@ -64,6 +64,9 @@ enum class Material : std::uint8_t {
     Galvanised = 5,
     Rubble = 6,
     Yellow = 7,
+    // See-through (AS-007 E's shaft): the same steel plate's thickness and
+    // collision, drawn as glass.
+    Glass = 8,
 };
 
 // One part of a body, in the body's own frame. A body is the union of its
@@ -125,6 +128,7 @@ using ReelIndex = Index<struct ReelTag>;
 using ChainIndex = Index<struct ChainTag>;
 using WheelIndex = Index<struct WheelTag>;
 using GripIndex = Index<struct GripTag>;
+using VentIndex = Index<struct VentTag>;
 
 class Kit final {
 public:
@@ -181,6 +185,15 @@ public:
     // Guide shoe friction: static and dynamic friction along the guide axis
     // when not actively driven by the governor motor.
     void set_guide_friction(GuideIndex guide, float max_friction_force);
+
+    // A door interlock (declared, AS-007 E): while either door lever stands
+    // open past open_angle with the body at or below stop_travel, the
+    // guide's travel stops at stop_travel, so the body never rises into an
+    // open door. A body that reaches that stop with a door open stays
+    // stopped there, doors open or shut, until it is back at rest on the
+    // bottom of its travel, as a lift's car does.
+    void set_interlock(GuideIndex guide, LeverIndex door_a, LeverIndex door_b, float open_angle,
+                       float stop_travel);
 
     // A rail joint missing from a guide (declared, AS-009): the body's
     // rollers cannot pass the gap, so its travel stops at gap_travel until
@@ -351,9 +364,23 @@ public:
     // 50 Pa.
     void add_throttle(CellIndex a, CellIndex b, float area);
     // A door in the cell's wall: it leaks area times its opening (its angle
-    // over full_angle), and the cell presses it outward along normal.
+    // over full_angle; shut at 0, opening the positive way), and the cell
+    // presses it outward along normal.
     void add_door(CellIndex cell, LeverIndex door, float area, float full_angle,
                   JPH::Vec3 normal);
+    // The same door in a shaft whose piston rides past it (declared, AS-007
+    // E): only the part of the doorway, sill_y to top_y, below the piston's
+    // sealing edge (edge_local_y on the piston body) is open to the cell, so
+    // the door leaks, and is pressed, by that fraction of its height; above
+    // the edge the piston's skirt covers it.
+    void add_door(CellIndex cell, LeverIndex door, float area, float full_angle, JPH::Vec3 normal,
+                  BodyIndex piston, float edge_local_y, float sill_y, float top_y);
+    // A slotted vent collar at a shaft's mouth (declared, AS-007 E): once the
+    // piston's sealing edge (edge_local_y on its body) rises past low's y,
+    // the cell leaks through area_per_m of slot for every meter of edge
+    // above it, up to high's y. The box, low to high, is where it stands.
+    VentIndex add_vent(CellIndex cell, BodyIndex piston, float edge_local_y, JPH::Vec3 low,
+                       JPH::Vec3 high, float area_per_m);
     // A vacuum breaker: admits air through area below P_atm - 100 Pa.
     void add_breaker(CellIndex cell, float area);
     // A bleed: a small opening to the air, always open, either way.
@@ -550,6 +577,15 @@ public:
     [[nodiscard]] float pipe_flow(PipeIndex pipe) const noexcept;
     [[nodiscard]] bool pipe_whole(PipeIndex pipe) const noexcept;
     [[nodiscard]] float cell_pressure(CellIndex cell) const noexcept;
+    // Read back each step, never saved: the air the cell's throttles took in
+    // last step (out of it, negative), m^3/s at atmospheric pressure; the
+    // vents, their boxes and the air each let out last step, the same way.
+    [[nodiscard]] float cell_inflow(CellIndex cell) const noexcept;
+    [[nodiscard]] std::uint32_t vent_count() const noexcept {
+        return static_cast<std::uint32_t>(vents_.size());
+    }
+    [[nodiscard]] float vent_flow(VentIndex vent) const noexcept;
+    void vent_box(VentIndex vent, JPH::Vec3 &low, JPH::Vec3 &high) const noexcept;
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] bool latch_set(LatchIndex latch) const noexcept;
@@ -599,6 +635,12 @@ private:
         float gap_angle = 0.0F;
         float limit_low = 0.0F;     // the slider's limits as last set
         float limit_high = 0.0F;
+        LeverIndex interlock_a;     // invalid: no interlock
+        LeverIndex interlock_b;
+        float interlock_open = 0.0F;
+        float interlock_stop = 0.0F;
+        bool interlock_active = false;
+        bool interlock_latched = false;
     };
     struct Rope final {
         BodyIndex body1;
@@ -727,6 +769,10 @@ private:
         float area = 0.0F;
         float full_angle = 1.0F;
         JPH::Vec3 normal = JPH::Vec3::sAxisZ();
+        BodyIndex piston;          // invalid: open to the cell whole
+        float edge_local_y = 0.0F;
+        float sill_y = 0.0F;
+        float top_y = 0.0F;
     };
     struct Cell final {
         float volume0 = 0.0F;
@@ -735,6 +781,16 @@ private:
         std::vector<Door> doors;
         float breaker = 0.0F;
         float bleed = 0.0F;
+        float inflow = 0.0F;   // m^3/s at P_atm through its throttles, last step
+    };
+    struct Vent final {
+        CellIndex cell;
+        BodyIndex piston;
+        float edge_local_y = 0.0F;
+        JPH::Vec3 low = JPH::Vec3::sZero();
+        JPH::Vec3 high = JPH::Vec3::sZero();
+        float area_per_m = 0.0F;
+        float flow = 0.0F;     // m^3/s at P_atm out through it, last step
     };
     struct Throttle final {
         CellIndex a;
@@ -801,6 +857,7 @@ private:
     void unweld(Grip &grip);
     void set_latch(Latch &latch, bool set);
     void govern(Guide &guide) noexcept;
+    void update_interlock(Guide &guide);
     void engage_dogs(Guide &guide);
     [[nodiscard]] bool gap_closed(const Guide &guide) const;
     void apply_limits(Guide &guide);
@@ -824,6 +881,12 @@ private:
     [[nodiscard]] float pool_volume_at(const Pool &pool, float level) const;
     [[nodiscard]] float pipe_opening(const Pipe &pipe) const;
     [[nodiscard]] float cell_volume(const Cell &cell) const;
+    // How far a door stands open (0 shut, 1 at full_angle or more), the
+    // share of its height open to its cell (1 for a door with no piston
+    // riding past it), and a vent's open slot area, now.
+    [[nodiscard]] float door_opening(const Door &door) const;
+    [[nodiscard]] float door_exposure(const Door &door) const;
+    [[nodiscard]] float vent_area(const Vent &vent) const;
 
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
@@ -845,6 +908,7 @@ private:
     std::vector<Charge> charges_;
     std::vector<Cell> cells_;
     std::vector<Throttle> throttles_;
+    std::vector<Vent> vents_;
     std::vector<Reel> reels_;
     std::vector<Chain> chains_;
     std::vector<Wheel> wheels_;

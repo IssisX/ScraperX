@@ -728,8 +728,9 @@ constexpr double kDeck14Top = 154.0;
 // ---- Shared stage helpers, defined in their stage's file ---------------------
 
 bool seat_wet_spool(scraperx::sim::Simulation &simulation);
-bool shut_wet_door(scraperx::sim::Simulation &simulation);
-bool pull_wet_trip(scraperx::sim::Simulation &simulation);
+bool drop_into_wet_e(scraperx::sim::Simulation &simulation);
+bool hang_drop_into_wet_e(scraperx::sim::Simulation &simulation, double hang_seconds);
+bool wait_wet_e_top(scraperx::sim::Simulation &simulation, double budget_seconds);
 bool couple_wet_hose(scraperx::sim::Simulation &simulation);
 bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation);
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity);
@@ -741,6 +742,8 @@ void run_yard_crane();
 void run_yard_crane_magnet();
 void run_yard_crane_spreader();
 void run_wet_isolation();
+void run_wet_e_guard(bool expect);
+void run_wet_e();
 void run_wet_band();
 bool climb_wet_hold(scraperx::sim::Simulation &simulation, const double x, const double z,
                     const double fx, const double fz, const bool jump, const double top);
