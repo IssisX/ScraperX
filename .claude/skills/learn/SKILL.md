@@ -18,26 +18,31 @@ gathered, and nothing comes before it:
 
 > 🧠 **/learn ran:** studied N of your messages (first to last, Central) and M commits.
 
-It ends with one line:
+(Where no session record can be read: "studied this conversation as it stands (no session record
+could be read)".) It ends with one line:
 
 > ✅ **/learn done:** what was written and where, the commit, pushed (and what waits on the owner).
 
 ## 1. Gather
 
-- **The owner's words:** `python3 -I .claude/skills/learn/owner_messages.py --since <last>` (from
-  the repository root), where `<last>` is the `learned_through` timestamp in
-  `.claude/skills/learn/state.json`; omit `--since` for the whole session, or when the owner says
-  `/learn all`. It prints only what the human typed, in order (tool output, reminders, hook and
-  agent messages, compaction summaries and pictures are left out; a picture shows as
-  "[a picture]").
+- **The owner's words:** `python3 -I .claude/skills/learn/owner_messages.py` from the repository
+  root (`python` where `python3` is missing). It works in any session: it finds this session's own
+  record and prints what the owner typed since this session's last /learn. What was learned is
+  kept per session in `learned/<session id>`, so sessions side by side never overwrite each
+  other; `--all` reads the whole session, as when the owner says `/learn all`. Only the owner's
+  typing comes out, slash commands with their text included (tool output, reminders, hook and
+  agent messages, compaction summaries and the skills Claude loads are left out; a picture shows
+  as "[a picture]"). Its summary on stderr gives the count, the span in Central, the since and
+  the newest timestamp. If it exits 2 (no record) or 3 (a record it cannot read), study the
+  conversation as it stands and say so in the opening line.
 - **Pasted text** (a handoff or prompt another session wrote, pasted by the owner) is what the
   owner chose to pass on, not the owner's own words: a lesson from it is credited as pasted.
-- **What was learned the hard way:** `git log --since=<last> --format='%h %s%n%b'` on the
-  working branch. Commit messages here record root causes; a fix after a failed attempt (a red CI
+- **What was learned the hard way:** `git log --since=<the summary's since, or the first
+  message's time> --format='%h %s%n%b'` on the branch this session works on. Commit messages here record root causes; a fix after a failed attempt (a red CI
   run, a test that relied on a bug, a wrong reading of the owner) is a lesson candidate.
 - **Text after /learn:** that is the lesson, first in line; still check it as below.
-- **The opening line's facts:** the script's message count, its first and last timestamps in
-  Central (`TZ=America/Chicago date -d <timestamp>`), and the number of commits.
+- **The opening line's facts:** the summary's count and span (already in Central), and the number
+  of commits.
 - When the gathered text is long, hand the reading to one subagent with this file's step 2 as its
   brief and take back its candidate list; do not read tool output wholesale.
 
@@ -91,9 +96,12 @@ Then:
 ## 4. Write, then report
 
 - Write every sure lesson where step 3 places it.
-- Set `learned_through` in `.claude/skills/learn/state.json` to the newest gathered timestamp.
-- Commit the documents alone (subject ending `[skip ci]`), with the repository's commit trailer,
-  and push to `ScraperX-Claude`; then build the code fixes.
+- Record what was studied: `python3 -I .claude/skills/learn/owner_messages.py --mark <the
+  summary's newest timestamp>`, which writes `learned/<session id>`.
+- Commit the documents and that file alone (subject ending `[skip ci]`), with this session's
+  commit trailer, and push to the branch this session writes to (`ScraperX-Claude` unless the
+  session's brief names another; the lessons reach every session once it is in `ScraperX-Claude`);
+  then build the code fixes.
 - Report, concisely: the opening line; **written**, a numbered list grouped as corrections,
   preferences, product, engineering and skills, each item one or two lines (the lesson, its quote,
   where it went); **bringing up**, each unsure point as a one-line question; **already in force**
