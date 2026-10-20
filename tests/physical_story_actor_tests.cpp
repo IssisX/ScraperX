@@ -40,7 +40,19 @@ struct Listener final : ContactListener {
     std::array<PhysicalStoryActor::Contact, 32> contacts{};
     size_t count = 0;
     bool overflow = false;
+    size_t raw_count = 0;
+    float raw_depth = 0, raw_normal_y = 0;
+    RVec3 raw_center = RVec3::sZero(), raw_point = RVec3::sZero();
     void observe(const Body &a, const Body &b, const ContactManifold &m) {
+        if (a.GetID() == actor || b.GetID() == actor) {
+            ++raw_count;
+            const bool actor_first = a.GetID() == actor;
+            raw_center = (actor_first ? a : b).GetPosition();
+            raw_depth = m.mPenetrationDepth;
+            raw_normal_y = (actor_first ? -m.mWorldSpaceNormal : m.mWorldSpaceNormal).GetY();
+            if (!m.mRelativeContactPointsOn1.empty() && !m.mRelativeContactPointsOn2.empty())
+                raw_point = actor_first ? m.GetWorldSpaceContactPointOn2(0) : m.GetWorldSpaceContactPointOn1(0);
+        }
         PhysicalStoryActor::Contact contact;
         if (!PhysicalStoryActor::capture_contact(actor, a, b, m, tick, contact)) return;
         if (count == contacts.size()) { overflow = true; return; }
@@ -107,6 +119,7 @@ struct World final {
         listener.tick = serial;
         listener.count = 0;
         listener.overflow = false;
+        listener.raw_count = 0;
         require(system.Update(dt, 4, &allocator, &jobs) == EPhysicsUpdateError::None,
                 "actual Jolt update succeeds");
         require(!listener.overflow, "contact buffer never silently truncates");
@@ -149,6 +162,16 @@ void stationary_advance_obstruction_push() {
     require(actor.spawn(RVec3(0,1.1,0)), "actor spawns above actual floor");
     w.ticks(actor, 180);
     auto state = actor.readback();
+    if (!(state.supported && std::abs(state.position.GetY()-.9) < .04 && state.velocity.Length() < .02)) {
+        std::cerr << "STORY_ACTOR_CONTACT_TRACE tick=" << w.serial << " supported=" << state.supported
+            << " y=" << state.position.GetY() << " vx=" << state.velocity.GetX()
+            << " vy=" << state.velocity.GetY() << " vz=" << state.velocity.GetZ()
+            << " accepted=" << w.listener.count << " raw=" << w.listener.raw_count
+            << " depth=" << w.listener.raw_depth << " normal_y=" << w.listener.raw_normal_y
+            << " callback_center_y=" << w.listener.raw_center.GetY()
+            << " support_point=" << w.listener.raw_point.GetX() << ',' << w.listener.raw_point.GetY()
+            << ',' << w.listener.raw_point.GetZ() << '\n';
+    }
     require(state.supported && std::abs(state.position.GetY()-.9) < .04 && state.velocity.Length() < .02,
             "actual contact supports stationary adult capsule");
     w.ticks(actor, 90, Vec3(1.4F,0,0));

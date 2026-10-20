@@ -1,7 +1,7 @@
 {
-  "reason": "Preserve real gravity fracture and recovery while distinguishing a fresh unloaded passive steel-contact plant from an uncommanded powered foot push. Retain zero command/work/stroke/force/impulse and actual receiving footing, damage and elevation checks. Both cases use the same native archive.",
+  "reason": "Capture raw native actor contact evidence for the x86-only stationary-support failure from candidate39511351962. Keep every assertion and actuator limit unchanged; compare module callbacks and public-world actual footing.",
   "checks": [
-    "deformable_plank_player",
-    "wood_foot_push_player"
+    "physical_story_actor",
+    "story_actor_public"
   ]
 }

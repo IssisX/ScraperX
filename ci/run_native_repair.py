@@ -7,6 +7,8 @@ import subprocess
 
 
 OWNERS = {
+    "physical_story_actor": "scraperx_physical_story_actor_tests",
+    "story_actor_public": "scraperx_story_actor_public_tests",
     "deformable_plank_player": "scraperx_deformable_plank_player_tests",
     "wood_foot_push_player": "scraperx_wood_foot_push_player_tests",
     "west_brace_bay_route": "scraperx_west_brace_bay_route_tests",
