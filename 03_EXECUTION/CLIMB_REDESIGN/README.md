@@ -34,4 +34,7 @@ Ideas from designs 2 and 3, and whether the spec takes them:
 ## The glass spares tube, 484 to 640 m
 
 In place of the crane band's backup ladders; the runaway wagon, crane jib and kinetic winch stay
-as built. Design under way.
+as built. The design workflow was stopped on 2026-10-20 when the owner lowered effort, with both maps
+(the ladder route and the tower around it; what the engine can do) and one of its three designs
+finished: `panel_results/wf_047fa3a0-b28_partial.json`. Left to do: the other two designs (the
+machine-first and the build-first angles), then the options listed for the owner to pick from.

@@ -22,6 +22,21 @@ has not been checked against its scope here.
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
 | 10 Paid-release readiness | ~30% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). The title over the live tower is done (`touch_title`), and the START list is development-only. The top of the route is a native latch with an arrival beat, and the altimeter is scaled to it (what stands there is the owner's). The pause menu carries the licences the build ships under (`touch_pause`). The launcher icon and boot splash are the game's own, no engine branding (placeholder icon, owner may replace). The ending beyond the arrival, the release build, store identity, credits, the voice's clearance and device measurement are open (`RELEASE_PLAN.md`). |
 
+**Where the work stood when effort was lowered (2026-10-20).** The owner lowered effort to stay in
+the usage limits; nothing was lost. Each piece of unfinished work is on its own branch:
+- `claude/body-order-stability`: the body-order fix (from a planning session). Its full native suite
+  was running; then record it, push the branch, merge into ScraperX-Claude and run CI.
+- `claude/wip-bump-smooth` (b34fe3f): smooth parts get a faint bump, rough parts keep theirs. Done,
+  not yet checked by a second pair of eyes.
+- `claude/wip-edge-slide` (ceccb6b): the player sliding off near edges; an edge-drift test and a
+  movement change, unproven. Needs the edge test, the movement groups and the full native suite.
+- `claude/wip-floating-dressing` (649879c): lights and signs floating in midair; an audit and placement
+  changes, unproven. Needs the audit's count, a parse check, the solids table byte-identical.
+- `claude/wip-sky-vsync` (d2d52b3): a VSync setting and test changes; the sky-over-things fix may not
+  be in yet. Needs a parse check, the settings scenario, pictures at the 700 m spawns.
+- The glass spares tube's design: two maps and one design, `03_EXECUTION/CLIMB_REDESIGN/`.
+- The chiller drop's spec is ready for the owner's picks (`03_EXECUTION/CLIMB_REDESIGN/README.md`).
+
 **Frontier (2026-10-13): Phase 6, the remaining RAISE machines.** The incline, tram and derrick are worked with the body (row 6). Next: the cascade mast, pitman lift, barrel helix and crown gondola, each by a decision not used yet (alignment, route, or the rider's own work), then the places around them.
 continue, the title, the top and the licences are done (see the rows). The landing, roll and edge code was
 reviewed and repaired, and beams now balance by the pendulum. Next: stumbles from support acceleration and
