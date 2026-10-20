@@ -335,7 +335,7 @@ def skin_maps(out, UV, T, regions):
     Image.fromarray((hgt * 255).astype(np.uint8), "L").save(os.path.join(out, "skin_h.png"))
 
 
-HAIR_CLUMPS = 300
+HAIR_CLUMPS = 210
 STRANDS_PER_CLUMP = (4, 7)
 HAIR_LENGTH_M = (0.26, 0.55)
 HAIR_STEP_M = 0.04
@@ -925,7 +925,7 @@ def build():
     legs &= is_body
     legs &= arm_up + arm_low < 0.05
     top_y = y_waist - 0.005
-    nring, nseg = 48, 160
+    nring, nseg = 40, 128
     ts = np.linspace(0.0, 1.0, nring)
     th = np.linspace(0, 2 * math.pi, nseg, endpoint=False)
     U = np.stack([np.sin(th), np.zeros(nseg), np.cos(th)], 1)

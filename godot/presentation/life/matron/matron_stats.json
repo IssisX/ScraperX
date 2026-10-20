@@ -23,7 +23,7 @@
  "eye_y": 1.6943522750498436,
  "cornea_triangles": 980,
  "teeth_on_jaw": 2288,
- "hair_strands": 1467,
+ "hair_strands": 1058,
  "triangles": {
   "tunic": 2434,
   "collar": 376,
@@ -31,8 +31,8 @@
   "penlight": 52,
   "placket": 34,
   "buttons": 120,
-  "skirt_cloth": 15904,
-  "belt": 640,
+  "skirt_cloth": 10784,
+  "belt": 512,
   "buckle": 12,
   "shoes": 1333,
   "music_box": 36,
@@ -44,8 +44,8 @@
   "mouth": 224,
   "brows": 192,
   "lashes": 368,
-  "hair": 27220
+  "hair": 19618
  },
- "triangles_total": 79370,
+ "triangles_total": 66520,
  "bones": 101
 }
