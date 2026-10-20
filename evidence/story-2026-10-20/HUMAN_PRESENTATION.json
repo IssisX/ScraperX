@@ -1,0 +1,246 @@
+{
+  "photoFit": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"fit_error\":\"\",\"save\":0,\"tint\":{\"x\":0.581432461738586,\"y\":0.502627372741699,\"z\":0.576231837272644}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 9: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 18: save_png - Image.save_png writes an image file to disk\"]}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "fit_error": "",
+        "save": 0,
+        "tint": {
+          "x": 0.581432461738586,
+          "y": 0.502627372741699,
+          "z": 0.576231837272644
+        }
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 9: load - load() with a literal path can run _init code in the loaded resource",
+        "Warning line 18: save_png - Image.save_png writes an image file to disk"
+      ]
+    }
+  },
+  "view": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"blink_at_tick9\":1,\"bones\":163,\"head_changed\":true,\"idle_saved\":0,\"last_error\":\"\",\"model_built\":true,\"scope\":\"presentation module, no native actor/gameplay proof\"},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 33: save_png - Image.save_png writes an image file to disk\"]}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "blink_at_tick9": 1,
+        "bones": 163,
+        "head_changed": true,
+        "idle_saved": 0,
+        "last_error": "",
+        "model_built": true,
+        "scope": "presentation module, no native actor/gameplay proof"
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 33: save_png - Image.save_png writes an image file to disk"
+      ]
+    }
+  },
+  "identity": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"result\":{\"default_restores_original\":true,\"image_saved\":0,\"invalid_fit_preserves_identity\":true,\"photo_applied\":true,\"repeated_tick_same_pose\":true,\"scope\":\"actual imported presentation and photo mapping; no complete NPC encounter claim\"},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 12: save_png - Image.save_png writes an image file to disk\",\"Warning line 20: load - load() with a literal path can run _init code in the loaded resource\"]}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "result": {
+        "default_restores_original": true,
+        "image_saved": 0,
+        "invalid_fit_preserves_identity": true,
+        "photo_applied": true,
+        "repeated_tick_same_pose": true,
+        "scope": "actual imported presentation and photo mapping; no complete NPC encounter claim"
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 5: load - load() with a literal path can run _init code in the loaded resource",
+        "Warning line 12: save_png - Image.save_png writes an image file to disk",
+        "Warning line 20: load - load() with a literal path can run _init code in the loaded resource"
+      ]
+    }
+  },
+  "workID": {
+    "script": "extends RefCounted\nfunc tap(tree:SceneTree,at:Vector2)->void:\n\tvar event=InputEventScreenTouch.new()\n\tevent.position=at\n\tevent.pressed=true\n\tInput.parse_input_event(event)\n\tawait tree.process_frame\n\tevent=InputEventScreenTouch.new()\n\tevent.position=at\n\tevent.pressed=false\n\tInput.parse_input_event(event)\n\tawait tree.process_frame\nfunc execute(tree:SceneTree)->Variant:\n\tvar menu=tree.current_scene.get_meta(\"identity_menu\")\n\tvar page=menu._identity_page\n\tawait tap(tree,page._align_button.get_global_rect().get_center())\n\tawait tree.process_frame\n\tvar entered=page._portrait._placing\n\tvar rect=page._portrait.image_rect()\n\tvar normalized=PackedVector2Array([Vector2(.391,.387),Vector2(.574,.354),Vector2(.504,.578)])\n\tfor point in normalized:\n\t\tawait tap(tree,page._portrait.get_global_transform()*(rect.position+point*rect.size))\n\tvar saved=tree.current_scene.get_meta(\"identity_fixture\").accepted\n\tvar matches=saved.size()==3\n\tif matches:\n\t\tfor i in saved.size():matches=matches and saved[i].is_equal_approx(normalized[i])\n\treturn {\"entered_by_real_touch\":entered,\"three_points_match\":matches,\"status\":page._status.text,\"complete\":not page._portrait._placing,\"save\":tree.root.get_texture().get_image().save_png(\"/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/work-id-touch.png\"),\"scope\":\"engine-routed touch through Work ID UI with memory fixture, not native OS photo picker\"}\n",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true,\"result\":{\"complete\":true,\"entered_by_real_touch\":true,\"save\":0,\"scope\":\"engine-routed touch through Work ID UI with memory fixture, not native OS photo picker\",\"status\":\"FACE ALIGNMENT SAVED ON THIS DEVICE\",\"three_points_match\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 27: save_png - Image.save_png writes an image file to disk\"]}"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "result": {
+          "complete": true,
+          "entered_by_real_touch": true,
+          "save": 0,
+          "scope": "engine-routed touch through Work ID UI with memory fixture, not native OS photo picker",
+          "status": "FACE ALIGNMENT SAVED ON THIS DEVICE",
+          "three_points_match": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 27: save_png - Image.save_png writes an image file to disk"
+        ]
+      }
+    }
+  },
+  "combined_native_mcp_encounter": {
+    "actual_native": true,
+    "checks": 81,
+    "done": true,
+    "failures": [],
+    "heard": [
+      "double_ro_who",
+      "double_ari_name",
+      "double_ro_face",
+      "double_ari_job",
+      "double_ro_empty",
+      "double_ari_told",
+      "double_ro_when",
+      "double_ari_before",
+      "double_ro_name",
+      "double_ari_will",
+      "double_ro_and_face",
+      "double_ari_cannot",
+      "double_iona_here"
+    ],
+    "phase": "complete",
+    "staged_receiver_only": true,
+    "tick": 4183,
+    "touch": true
+  },
+  "integrated_grounded_gait": {
+    "integration": {
+      "script": "extends RefCounted\nfunc execute(tree: SceneTree) -> Variant:\n\tvar main: Node = load(\"res://main.tscn\").instantiate()\n\tmain.prepare_initial_world = false\n\tmain._settings_persistent = false\n\tmain._force_touch = true\n\ttree.root.add_child(main)\n\tmain.set_process(false)\n\tvar actor: Dictionary = main._native.get_story_actor_state()\n\tvar staged: bool = main._native.debug_restart_at(actor.position + Vector3(0,0,.95))\n\tfor i in 60:\n\t\tmain._process(1.0/90.0)\n\tactor = main._native.get_story_actor_state()\n\ttree.set_meta(\"actor_main\", main)\n\treturn {\"staged\":staged,\"supported\":actor.supported,\"visible\":main._story_human.visible,\"gait_ready\":main._story_human._gait.last_error.is_empty(),\"episode\":actor.episode,\"soles_error_m\":main._story_human.global_position.distance_to(actor.position-Vector3(0,.9,0))}\n",
+      "result": {
+        "success": true,
+        "result": {
+          "episode": 1,
+          "gait_ready": true,
+          "soles_error_m": 0,
+          "staged": true,
+          "supported": true,
+          "visible": true
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 3: load - load() with a literal path can run _init code in the loaded resource"
+        ]
+      }
+    },
+    "capture": {
+      "success": true,
+      "result": {
+        "actor": {
+          "drive_force_n": {
+            "x": 0,
+            "y": 0,
+            "z": 2.67592787742615
+          },
+          "entity_id": 63200,
+          "episode": 1,
+          "heading_radians": -3.14159274101257,
+          "position": {
+            "x": -26.75,
+            "y": 253.899978637695,
+            "z": -142.857574462891
+          },
+          "present": true,
+          "support_entity_id": 1993,
+          "supported": true,
+          "velocity": {
+            "x": 0,
+            "y": 0,
+            "z": 0.442479372024536
+          }
+        },
+        "before": {
+          "drive_force_n": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "entity_id": 63200,
+          "episode": 1,
+          "heading_radians": -3.14159274101257,
+          "position": {
+            "x": -26.75,
+            "y": 253.899978637695,
+            "z": -143.199996948242
+          },
+          "present": true,
+          "support_entity_id": 1993,
+          "supported": true,
+          "velocity": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "capture": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/human-native-gait.png",
+        "gait_phase": 0.370070266723633,
+        "gait_weight": 1,
+        "player": {
+          "x": 0,
+          "y": 15.0813808441162,
+          "z": 0
+        },
+        "save_error": 0,
+        "stage_accepted": true,
+        "steps": 90
+      },
+      "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+      "warnings": [
+        "Warning line 15: save_png - Image.save_png writes an image file to disk"
+      ]
+    },
+    "initial_capture": {
+      "script": "extends RefCounted\nfunc execute(tree: SceneTree) -> Variant:\n\tvar main: Node = tree.get_meta(\"actor_main\")\n\tvar vp := SubViewport.new()\n\tvp.size = Vector2i(480,640)\n\tvp.own_world_3d = true\n\tvp.render_target_update_mode = SubViewport.UPDATE_ALWAYS\n\ttree.root.add_child(vp)\n\tmain._story_human.reparent(vp)\n\tvar env := WorldEnvironment.new()\n\tenv.environment = Environment.new()\n\tenv.environment.background_mode = Environment.BG_COLOR\n\tenv.environment.background_color = Color(.09,.105,.12)\n\tenv.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR\n\tenv.environment.ambient_light_color = Color(.8,.86,1)\n\tenv.environment.ambient_light_energy = .7\n\tvp.add_child(env)\n\tvar light := DirectionalLight3D.new()\n\tlight.rotation_degrees = Vector3(-35,-35,0)\n\tlight.light_energy = 1.4\n\tvp.add_child(light)\n\tvar camera := Camera3D.new()\n\tvp.add_child(camera)\n\tcamera.current = true\n\tcamera.fov = 38\n\tmain._native.debug_restart_at(Vector3(-94,1.2,-44))\n\tfor i in 110:\n\t\tmain._native.advance_frame(1.0/90.0)\n\t\tmain._ctx = main._read_context()\n\t\tmain._update_story_human(main._native.get_tick_index())\n\tvar actor: Dictionary = main._native.get_story_actor_state()\n\tcamera.global_position = actor.position + Vector3(.7,.25,3.0)\n\tcamera.look_at(actor.position-Vector3(0,.05,0))\n\tawait RenderingServer.frame_post_draw\n\tawait RenderingServer.frame_post_draw\n\tvar path := \"/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/human-native-gait.png\"\n\tvar error := vp.get_texture().get_image().save_png(path)\n\ttree.set_meta(\"gait_vp\",vp)\n\treturn {\"capture\":path,\"save_error\":error,\"native_supported\":actor.supported,\"native_velocity\":actor.velocity,\"gait_weight\":main._story_human._gait._weight,\"gait_phase\":main._story_human._gait._phase,\"gait_error\":main._story_human._gait.last_error}\n",
+      "result": {
+        "success": true,
+        "result": {
+          "capture": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/human-native-gait.png",
+          "gait_error": "",
+          "gait_phase": 0.3,
+          "gait_weight": 0,
+          "native_supported": true,
+          "native_velocity": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "save_error": 0
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 37: save_png - Image.save_png writes an image file to disk"
+        ]
+      }
+    },
+    "limits": "Isolated SubViewport capture of the production human driven by actual native actor motion. No device performance, final likeness quality, continuous ascent or audible playback claim."
+  },
+  "source_hashes": {
+    "godot/presentation/main.gd": "80e9ae54cab58386452cd00196cccbeac2d96505ba856dfa314d0a6e20cb30a7",
+    "godot/presentation/story_human_view.gd": "cf80d2d838a7ff883bad23deee5cbca8f640b7eeeeaf42de4f89c645864557d5",
+    "godot/presentation/story_human_gait.gd": "e508298ecedd9dcd73fab0cbcfbaa3bb6ff21122ade350f891772563e3f7396c",
+    "godot/presentation/story_double_encounter.gd": "ade5e4e024e1031cea2d8f0339fafa1e0665de8e3a937bc4a6b6db1d4756614d",
+    "godot/presentation/audio/story_radio_player.gd": "04609ee63f68cd52bb7392d61a21ee2606675beeee783482353d02048a5dc96d",
+    "godot/tests/story_actor_input_case.gd": "7e3aa83190fb400bdfc9d465d9552af01606ce1944d3b153dcb27b7acfe87080",
+    "godot/audio/story_radio/manifest.json": "6b464350b1a350dc484b2297b7b1b563f8dfca4344fb68049dead83e62c46edf"
+  }
+}

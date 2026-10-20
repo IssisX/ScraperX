@@ -1,0 +1,42 @@
+{
+  "workspace": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo",
+  "head": "0f22cd757744294dfa7f6ec1c1c2ac9994fc3350",
+  "delivered_native_baseline": "3ac80ad59678e5eb72fb9d1751bde82e0b58b0f9",
+  "baseline_archive": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-trip/libgrapple.a",
+  "baseline_receipts": [
+    "../grapple-trip/build-commands.json",
+    "../grapple-trip/grapple_practice_route-commands.json"
+  ],
+  "abi": "GNU/Linux AArch64, C++17, PIC, -O2 -DNDEBUG -fno-rtti, pinned Jolt e77f175595e64cb44218cc9d9d56fc365ad0e36a with existing patches",
+  "files": {
+    "CMakeLists.txt": "894b13476e6abd72425aca08d764e56d134c332280b7a90a231ec3a559d71380",
+    "src/sim/physical_story_actor.hpp": "fa17edf0dcf4e372b5e278d12e2d187d4ede78066db4a034fbcb60ca6cf65504",
+    "src/sim/physical_story_actor.cpp": "bccfb868e84a4c734e71bed491dadcbaf974084f4714fab992a81fc132578f12",
+    "tests/physical_story_actor_tests.cpp": "758f2ebe139384f23354b65d7419fc8cde8286be1e698c083c29274d2b4a4728",
+    "src/sim/simulation.hpp": "03de8d4a26691f7561fd5064467de6d0494f93f05bf6cbe2f484161b0e706e36",
+    "src/sim/simulation.cpp": "f7589d1793aae9c035167a2367c0fb1910051381c70021a477a70b218ba80b6d",
+    "src/sim/simulation/world.hpp": "2415c12b257e7b56098724ecdab914e14c5242a93870e229ac4c462599c05275",
+    "src/sim/simulation/world.cpp": "c3e8f266f44e1eb8f25b5f066da4602741555ffc72cab7a639631e9f6008b6f0",
+    "src/sim/simulation/tick.cpp": "aeec95c94f78f888eae4fbab78bff11ec4d51adc5bf2556055dac0ced7957c75",
+    "src/sim/simulation/contacts.hpp": "f76860216af300a49b91b58f27c580c75603bf0ce5ada1ae22758510092b76c6",
+    "src/sim/simulation/checkpoint.cpp": "c9f055f05d80d8699d1b7371046a7128dbecc9d18337af1e1e199871fff3041a",
+    "src/sim/simulation/story_actor.cpp": "8c51e169290540166d82b9da36a49755aefecc2ce2630c466fa3b690164e7519",
+    "tests/story_actor_public_tests.cpp": "4267c5e781b42a2ae7a372e0a72f28c5e69c376d5fa4bc36b2bcc431ceff8aa7"
+  },
+  "artifacts": {
+    "libstory.a": "e79d2b9e777ace12b1a1f8364f46b745ecba219af8679ff43ebba6eceee60e1b",
+    "story_actor_public_tests": "a0fd6694b20be45cd1d122c7cc304db055b867706933bcd98c04e7edfca64d7d",
+    "physical_story_actor_tests": "dfc8351e09d26f0a6f9c6a3fc27084825a13a81814408d504949234e7c6788d1"
+  },
+  "checks": {
+    "world_closure": "31 translation units compiled with -Wall -Wextra -Wpedantic -Werror; all exit0",
+    "public": "PASS STORY_ACTOR_PUBLIC actor63200 support1993 stable_walk approach_face player_push checkpoint_momentum episode death no_leak; clear/blocked/far/NaN native visibility assertions passed",
+    "module": "PASS PHYSICAL_STORY_ACTOR real_jolt=1 cases=7; actual85kg dynamic body mass checked",
+    "diff_check": "exit0"
+  },
+  "commands": [
+    "integration-commands.json",
+    "module-final-commands.json"
+  ],
+  "remaining": "Godot/bridge/encounter integration owned by parent; no APK or device claim"
+}

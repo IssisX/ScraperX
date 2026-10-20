@@ -1,0 +1,541 @@
+{
+  "file": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/asset-work/ro-human-prototype.glb",
+  "sha256": "6acb509f8909aadd82107de19ab66c92b8708b664d7776c680c2d2e527ccf21f",
+  "bytes": 21099352,
+  "generator": "Khronos glTF Blender I/O v5.0.21",
+  "meshes": [
+    {
+      "name": "base.001",
+      "morph_names": [
+        "eyeBlinkLeft",
+        "eyeBlinkRight",
+        "jawOpen",
+        "browInnerUp",
+        "browDownLeft",
+        "browDownRight",
+        "mouthSmileLeft",
+        "mouthSmileRight"
+      ],
+      "triangles": 15500,
+      "vertices": 8456,
+      "morph_nonzero": {
+        "eyeBlinkLeft": 747,
+        "eyeBlinkRight": 747,
+        "jawOpen": 2329,
+        "browInnerUp": 575,
+        "browDownLeft": 516,
+        "browDownRight": 516,
+        "mouthSmileLeft": 1685,
+        "mouthSmileRight": 1686
+      },
+      "positions_bounds": [
+        {
+          "min": [
+            -0.56489098072052,
+            0.9235033988952637,
+            -0.0554024763405323
+          ],
+          "max": [
+            0.56489098072052,
+            1.7291079759597778,
+            0.37613800168037415
+          ]
+        }
+      ]
+    },
+    {
+      "name": "eyebrow001",
+      "morph_names": [
+        "eyeBlinkLeft",
+        "eyeBlinkRight",
+        "jawOpen",
+        "browInnerUp",
+        "browDownLeft",
+        "browDownRight",
+        "mouthSmileLeft",
+        "mouthSmileRight"
+      ],
+      "triangles": 192,
+      "vertices": 124,
+      "morph_nonzero": {
+        "eyeBlinkLeft": 23,
+        "eyeBlinkRight": 23,
+        "jawOpen": 14,
+        "browInnerUp": 98,
+        "browDownLeft": 72,
+        "browDownRight": 72,
+        "mouthSmileLeft": 9,
+        "mouthSmileRight": 9
+      },
+      "positions_bounds": [
+        {
+          "min": [
+            -0.05893243849277496,
+            1.6239577531814575,
+            0.12130354344844818
+          ],
+          "max": [
+            0.05893243849277496,
+            1.6333401203155518,
+            0.15105612576007843
+          ]
+        }
+      ]
+    },
+    {
+      "name": "low-poly",
+      "morph_names": [],
+      "triangles": 172,
+      "vertices": 96,
+      "morph_nonzero": {},
+      "positions_bounds": [
+        {
+          "min": [
+            -0.0441325418651104,
+            1.6065375804901123,
+            0.11848320066928864
+          ],
+          "max": [
+            0.0441325418651104,
+            1.6344616413116455,
+            0.14217354357242584
+          ]
+        }
+      ]
+    },
+    {
+      "name": "male_casualsuit01",
+      "morph_names": [],
+      "triangles": 16672,
+      "vertices": 8864,
+      "morph_nonzero": {},
+      "positions_bounds": [
+        {
+          "min": [
+            -0.5187675952911377,
+            0.07224227488040924,
+            -0.12391755729913712
+          ],
+          "max": [
+            0.5152305364608765,
+            1.5243757963180542,
+            0.23887154459953308
+          ]
+        }
+      ]
+    },
+    {
+      "name": "shoes01",
+      "morph_names": [],
+      "triangles": 3320,
+      "vertices": 1846,
+      "morph_nonzero": {},
+      "positions_bounds": [
+        {
+          "min": [
+            -0.2546083331108093,
+            -0.002608649432659149,
+            -0.058069050312042236
+          ],
+          "max": [
+            0.2546083331108093,
+            0.21140243113040924,
+            0.21241678297519684
+          ]
+        }
+      ]
+    },
+    {
+      "name": "short01",
+      "morph_names": [
+        "jawOpen",
+        "browDownLeft",
+        "browDownRight",
+        "mouthSmileLeft",
+        "mouthSmileRight"
+      ],
+      "triangles": 3678,
+      "vertices": 3050,
+      "morph_nonzero": {
+        "jawOpen": 17,
+        "browDownLeft": 152,
+        "browDownRight": 161,
+        "mouthSmileLeft": 5,
+        "mouthSmileRight": 3
+      },
+      "positions_bounds": [
+        {
+          "min": [
+            -0.07738638669252396,
+            1.5353450775146484,
+            -0.062317393720149994
+          ],
+          "max": [
+            0.07638534903526306,
+            1.7459800243377686,
+            0.14377228915691376
+          ]
+        }
+      ]
+    },
+    {
+      "name": "teeth_base",
+      "morph_names": [
+        "jawOpen"
+      ],
+      "triangles": 7120,
+      "vertices": 4494,
+      "morph_nonzero": {
+        "jawOpen": 2180
+      },
+      "positions_bounds": [
+        {
+          "min": [
+            -0.030522208660840988,
+            1.5174999237060547,
+            0.0726710632443428
+          ],
+          "max": [
+            0.03052188828587532,
+            1.5675575733184814,
+            0.14716915786266327
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tongue01",
+      "morph_names": [
+        "jawOpen"
+      ],
+      "triangles": 448,
+      "vertices": 253,
+      "morph_nonzero": {
+        "jawOpen": 253
+      },
+      "positions_bounds": [
+        {
+          "min": [
+            -0.022155622020363808,
+            1.5318329334259033,
+            0.06783413887023926
+          ],
+          "max": [
+            0.022155622020363808,
+            1.5584990978240967,
+            0.13798293471336365
+          ]
+        }
+      ]
+    }
+  ],
+  "triangles": 47102,
+  "materials": [
+    "RoPrototype.Body.body",
+    "RoPrototype.eyebrow001",
+    "RoPrototype.low-poly",
+    "RoPrototype.male_casualsuit01",
+    "RoPrototype.shoes01",
+    "RoPrototype.short01",
+    "RoPrototype.teeth_base",
+    "RoPrototype.tongue01"
+  ],
+  "embedded_images": 10,
+  "skins": [
+    {
+      "name": "RoPrototype.Skeleton",
+      "bones": [
+        "root",
+        "pelvis.L",
+        "upperleg01.L",
+        "upperleg02.L",
+        "lowerleg01.L",
+        "lowerleg02.L",
+        "foot.L",
+        "toe1-1.L",
+        "toe1-2.L",
+        "toe2-1.L",
+        "toe2-2.L",
+        "toe2-3.L",
+        "toe3-1.L",
+        "toe3-2.L",
+        "toe3-3.L",
+        "toe4-1.L",
+        "toe4-2.L",
+        "toe4-3.L",
+        "toe5-1.L",
+        "toe5-2.L",
+        "toe5-3.L",
+        "pelvis.R",
+        "upperleg01.R",
+        "upperleg02.R",
+        "lowerleg01.R",
+        "lowerleg02.R",
+        "foot.R",
+        "toe1-1.R",
+        "toe1-2.R",
+        "toe2-1.R",
+        "toe2-2.R",
+        "toe2-3.R",
+        "toe3-1.R",
+        "toe3-2.R",
+        "toe3-3.R",
+        "toe4-1.R",
+        "toe4-2.R",
+        "toe4-3.R",
+        "toe5-1.R",
+        "toe5-2.R",
+        "toe5-3.R",
+        "spine05",
+        "spine04",
+        "spine03",
+        "spine02",
+        "breast.L",
+        "breast.R",
+        "spine01",
+        "clavicle.L",
+        "shoulder01.L",
+        "upperarm01.L",
+        "upperarm02.L",
+        "lowerarm01.L",
+        "lowerarm02.L",
+        "wrist.L",
+        "finger1-1.L",
+        "finger1-2.L",
+        "finger1-3.L",
+        "metacarpal1.L",
+        "finger2-1.L",
+        "finger2-2.L",
+        "finger2-3.L",
+        "metacarpal2.L",
+        "finger3-1.L",
+        "finger3-2.L",
+        "finger3-3.L",
+        "metacarpal3.L",
+        "finger4-1.L",
+        "finger4-2.L",
+        "finger4-3.L",
+        "metacarpal4.L",
+        "finger5-1.L",
+        "finger5-2.L",
+        "finger5-3.L",
+        "clavicle.R",
+        "shoulder01.R",
+        "upperarm01.R",
+        "upperarm02.R",
+        "lowerarm01.R",
+        "lowerarm02.R",
+        "wrist.R",
+        "finger1-1.R",
+        "finger1-2.R",
+        "finger1-3.R",
+        "metacarpal1.R",
+        "finger2-1.R",
+        "finger2-2.R",
+        "finger2-3.R",
+        "metacarpal2.R",
+        "finger3-1.R",
+        "finger3-2.R",
+        "finger3-3.R",
+        "metacarpal3.R",
+        "finger4-1.R",
+        "finger4-2.R",
+        "finger4-3.R",
+        "metacarpal4.R",
+        "finger5-1.R",
+        "finger5-2.R",
+        "finger5-3.R",
+        "neck01",
+        "neck02",
+        "neck03",
+        "head",
+        "jaw",
+        "special04",
+        "oris02",
+        "oris01",
+        "oris06.L",
+        "oris07.L",
+        "oris06.R",
+        "oris07.R",
+        "tongue00",
+        "tongue01",
+        "tongue02",
+        "tongue03",
+        "tongue04",
+        "tongue07.L",
+        "tongue07.R",
+        "tongue06.L",
+        "tongue06.R",
+        "tongue05.L",
+        "tongue05.R",
+        "levator02.L",
+        "levator03.L",
+        "levator04.L",
+        "levator05.L",
+        "levator02.R",
+        "levator03.R",
+        "levator04.R",
+        "levator05.R",
+        "special01",
+        "oris04.L",
+        "oris03.L",
+        "oris04.R",
+        "oris03.R",
+        "oris06",
+        "oris05",
+        "special03",
+        "levator06.L",
+        "levator06.R",
+        "special06.L",
+        "special05.L",
+        "eye.L",
+        "orbicularis03.L",
+        "orbicularis04.L",
+        "special06.R",
+        "special05.R",
+        "eye.R",
+        "orbicularis03.R",
+        "orbicularis04.R",
+        "temporalis01.L",
+        "oculi02.L",
+        "oculi01.L",
+        "temporalis01.R",
+        "oculi02.R",
+        "oculi01.R",
+        "temporalis02.L",
+        "risorius02.L",
+        "risorius03.L",
+        "temporalis02.R",
+        "risorius02.R",
+        "risorius03.R"
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "PrototypeTurn",
+      "channels": 490,
+      "paths": [
+        "rotation",
+        "scale",
+        "translation"
+      ],
+      "seconds": [
+        0.041666666666666664,
+        2.0416666666666665
+      ]
+    }
+  ],
+  "joint_landmarks_gltf_world_m": {
+    "jaw": [
+      2.9391975871287396e-09,
+      1.5871436653596618,
+      0.05885156891430698
+    ],
+    "eye.L": [
+      0.029386258121497276,
+      1.620421807167584,
+      0.12634880661704276
+    ],
+    "eye.R": [
+      -0.02938629629953724,
+      1.6204217934927077,
+      0.12634871671964457
+    ],
+    "head": [
+      3.164791526498945e-09,
+      1.5793515558119566,
+      0.04699541088538951
+    ],
+    "neck03": [
+      0.0022462921011356506,
+      1.543862185624261,
+      0.03072050126674941
+    ],
+    "neck02": [
+      0.0001899977852727026,
+      1.5043707578749175,
+      0.015895125092212962
+    ],
+    "neck01": [
+      0.0,
+      1.4824818881895252,
+      0.011453382039241863
+    ]
+  },
+  "mesh_nodes": [
+    {
+      "node": "RoPrototype.Body",
+      "mesh": "base.001",
+      "materials": [
+        "RoPrototype.Body.body"
+      ]
+    },
+    {
+      "node": "RoPrototype.eyebrow001",
+      "mesh": "eyebrow001",
+      "materials": [
+        "RoPrototype.eyebrow001"
+      ]
+    },
+    {
+      "node": "RoPrototype.low-poly",
+      "mesh": "low-poly",
+      "materials": [
+        "RoPrototype.low-poly"
+      ]
+    },
+    {
+      "node": "RoPrototype.male_casualsuit01",
+      "mesh": "male_casualsuit01",
+      "materials": [
+        "RoPrototype.male_casualsuit01"
+      ]
+    },
+    {
+      "node": "RoPrototype.shoes01",
+      "mesh": "shoes01",
+      "materials": [
+        "RoPrototype.shoes01"
+      ]
+    },
+    {
+      "node": "RoPrototype.short01",
+      "mesh": "short01",
+      "materials": [
+        "RoPrototype.short01"
+      ]
+    },
+    {
+      "node": "RoPrototype.teeth_base",
+      "mesh": "teeth_base",
+      "materials": [
+        "RoPrototype.teeth_base"
+      ]
+    },
+    {
+      "node": "RoPrototype.tongue01",
+      "mesh": "tongue01",
+      "materials": [
+        "RoPrototype.tongue01"
+      ]
+    }
+  ],
+  "gltf_world_bounds_m": {
+    "min": [
+      -0.56489098072052,
+      -0.002608649432659149,
+      -0.12391755729913712
+    ],
+    "max": [
+      0.56489098072052,
+      1.7459800243377686,
+      0.37613800168037415
+    ],
+    "height": 1.7485886737704277
+  },
+  "body_materials": [
+    "RoPrototype.Body.body"
+  ],
+  "face_and_body_share_material": true
+}

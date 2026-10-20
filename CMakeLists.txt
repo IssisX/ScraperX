@@ -49,10 +49,12 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/slingshot_audio.cpp
     src/sim/simulation/support.cpp
     src/sim/simulation/tick.cpp
+    src/sim/simulation/story_actor.cpp
     src/sim/simulation/world.cpp
     src/sim/simulation/world_geometry.cpp
     src/sim/physical_hand_climb.cpp
     src/sim/physical_foot_push.cpp
+    src/sim/physical_story_actor.cpp
     src/sim/traversal_affordance.cpp
     src/sim/traversal_plan.cpp
     src/sim/traversal_receiver.cpp
@@ -375,6 +377,12 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_physical_foot_push_tests tests/physical_foot_push_tests.cpp)
         target_link_libraries(scraperx_physical_foot_push_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_foot_push COMMAND scraperx_physical_foot_push_tests)
+        add_executable(scraperx_story_actor_public_tests tests/story_actor_public_tests.cpp)
+        target_link_libraries(scraperx_story_actor_public_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.story_actor_public COMMAND scraperx_story_actor_public_tests)
+        add_executable(scraperx_physical_story_actor_tests tests/physical_story_actor_tests.cpp)
+        target_link_libraries(scraperx_physical_story_actor_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.physical_story_actor COMMAND scraperx_physical_story_actor_tests)
         add_executable(scraperx_physical_hand_prop_tests tests/physical_hand_prop_tests.cpp)
         target_link_libraries(scraperx_physical_hand_prop_tests PRIVATE scraperx_sim)
         foreach(mode static dynamic lifecycle)
@@ -650,6 +658,7 @@ if(SCRAPERX_BUILD_BRIDGE)
         src/bridge/register_types.cpp
         src/bridge/scraperx_simulation.cpp
         src/bridge/yard_crane_bridge.cpp
+        src/bridge/story_actor_bridge.cpp
     )
     target_link_libraries(scraperx_native PRIVATE scraperx_sim godot::cpp)
     target_include_directories(scraperx_native PRIVATE src)

@@ -1,0 +1,10 @@
+{
+  "asset": "iona_dispatch_portrait.png",
+  "character": "Iona Vale",
+  "method": "built-in image_gen; original fictional adult; no reference supplied",
+  "width": 1254,
+  "height": 1254,
+  "sha256": "56493421d282538624c8a43b48b3585755dc545d5cada5ab756ba56c4f5ef25c",
+  "bytes": 2268354,
+  "not_implemented": "player selfie import, face reconstruction, animated embodied player double"
+}

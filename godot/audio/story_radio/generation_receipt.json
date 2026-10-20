@@ -44,5 +44,109 @@
     "voice_id": "af_heart",
     "clean_sha256": "37ed4b1a540162dd6a4296353aec4ddc5c1377225f2a468c5c36175690fb2a26",
     "radio_sha256": "4c272fa671b274ea6d1771d6f4f18b1ed6a5d36627fbff4f74d297f94720efa3"
+  },
+  "double_ro_who": {
+    "event_id": "5623dc7d390b4facb7aaf0522b464d04",
+    "text": "Who the fuck are you?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "fb957bee47bb77e3bce2f8b8aaf1f586c68e3c718ff07cde0f86e93921544be9",
+    "radio_sha256": "73bc1a423ddc34def9464798ba8e1f7f974038ad603e74f57d5024e63c859114"
+  },
+  "double_ari_name": {
+    "event_id": "c1d1ce333da249ea98b993d5b1769db6",
+    "text": "Ari Ward.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "43fa14145410219f47dd758934d8a6ed2133aa981824a7e9987c1e462e1d7002",
+    "radio_sha256": "0aec53e44783d1db06a65a562f64ded55ec274235fd8e97797a3afcaf1530e30"
+  },
+  "double_ro_face": {
+    "event_id": "54d63f99e38340af965fd8860711b2c7",
+    "text": "That's my face.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "2ce66115bfb3b68c705b48cc4ade153ba58ab5e2c74de946b028cc8ce371a048",
+    "radio_sha256": "a435cbfcd05acaaa8b7806ef4e41b64f5ca90e84eae0e113886729e1752cc77a"
+  },
+  "double_ari_job": {
+    "event_id": "c0203df1e8e84bd699e7547d0704bf3e",
+    "text": "I was hired to attend your handovers.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "fadbba9b9f1e3546c4c946f7d022a59e5d348d4d583471d451d76536e6cf4198",
+    "radio_sha256": "e1f0793ed195cf8a518be3441a709f9ced7d2149f08af2b2036ba4b0b204a349"
+  },
+  "double_ro_empty": {
+    "event_id": "6fdd10cd53e34b23a29bd51f7d9ac01f",
+    "text": "You told them the rooms were empty.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "73d7cecb480ebf8a902277c7221af7444325170b660151f5e6cdd4033f8b4205",
+    "radio_sha256": "336873ecde0e6c4cfeaf84b2d11e789e843d38384987475489d4d3af57fe465b"
+  },
+  "double_ari_told": {
+    "event_id": "ca0ee742ad5a4e7889db52aad26c2b01",
+    "text": "I was told they were.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "f4bdb0669be8e2fd87f4fd47e5d56b99619057d0eeb99b4ff2a2d2455947e182",
+    "radio_sha256": "dd46250c0df1afc31bbbe2576d4b7b990f47ccb3faf3dc26aba04a64420f232c"
+  },
+  "double_ro_when": {
+    "event_id": "78cb483af1494a8aa4e001c07c8b8e1b",
+    "text": "When did you find out?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "68ae6c8570c809250e3e33b91380a5ed0c7085d2df1f2de41ad5e6d467597621",
+    "radio_sha256": "a2d56ff6acc2eddbd3173477260b5de93a5eda60c60fe86d647c0308b0c03c80"
+  },
+  "double_ari_before": {
+    "event_id": "ad1eecebf8414bd68c50393dbdd4417f",
+    "text": "Before the last recording.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "7d2f61c175ddc189e944adfd5e1b1622f9cc9c8f447118e9e28f63b5d9533b9a",
+    "radio_sha256": "f5eac9d91afbbe414116b834884d788a4592ae467e3f663d59c5bf241f82ca23"
+  },
+  "double_ro_name": {
+    "event_id": "48d259ba7df74a569303279674dff5c6",
+    "text": "Stop using my name.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "edc6506719cff904b5864a7bec7875351b15651906b847ea6d94cff0457e8083",
+    "radio_sha256": "d865265bae3c7b99a6750bac10fdae1f9fe175afef86437e3a5af1a41a144e06"
+  },
+  "double_ari_will": {
+    "event_id": "3773e2998367422baaa33a9801052e2a",
+    "text": "I will.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "edee4ec593266e7ae3cc40ba1cdb1604be1f99a80f7ea00e926eaa2370ddfa61",
+    "radio_sha256": "a256380002dfc6cbd73b2a826c68c96c5645351680439ec2a6b7a489a1338bc4"
+  },
+  "double_ro_and_face": {
+    "event_id": "05639078c4c14d21bcf902b71dd3223e",
+    "text": "And the face?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "2e66b5c998f1db33c85de41bcce0a79b297496fbb19276bc0994575fa86b09ef",
+    "radio_sha256": "8c212de6acf728481d3b1712fd8c127f3ce98ab723c42741395d188aa7e842a9"
+  },
+  "double_ari_cannot": {
+    "event_id": "250d08534c584998962cfe3cc72c6181",
+    "text": "That's not something I can hand back.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "2289f2f1a8141ef3582331597cec67aa2f144dab5f82963fe80416a5a7cff9ab",
+    "radio_sha256": "97328416987751fab15ea074bdd6b2176819222356eda31798e87926eb928a6b"
+  },
+  "double_iona_here": {
+    "event_id": "4fc4e8c02aa34eb7917516de55341598",
+    "text": "Ro. I'm here.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "ceee657b5989991c9dc3ed18ce1539580087b221bed5c20d702d37d7261c71cc",
+    "radio_sha256": "e96fbbde7e4342cf15d76442a246a1f47acb93bfbe9f60378529c5de0ca50d79"
   }
 }

@@ -13,10 +13,13 @@ signal checkpoint_restart_requested
 signal lift_attempt_restart_requested
 signal reclaim_attempt_restart_requested
 signal restart_requested(position: Vector3)
+signal identity_changed
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const BuildInfo := preload("res://presentation/ui/build_info.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
+const IdentityStore := preload("res://presentation/identity/player_identity_store.gd")
+const WorkIdPage := preload("res://presentation/identity/work_id_page.gd")
 
 const PAGE_NONE := &""
 const PAGE_CONTROLS := &"controls"
@@ -25,9 +28,12 @@ const PAGE_GRAPHICS := &"graphics"
 const PAGE_DISPLAY := &"display"
 const PAGE_AUDIO := &"audio"
 const PAGE_RESTART := &"restart"
+const PAGE_WORK_ID := &"work_id"
 const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO, PAGE_RESTART]
 
 var settings: SettingsStore
+var identity_store: RefCounted
+var _identity_page: Control
 var family := UiStyle.Family.KEYBOARD
 var summary := ""
 var performance_report: Dictionary = {}
@@ -108,6 +114,8 @@ func open(_current_family: int, current_summary: String) -> void:
 
 
 func close() -> void:
+	if is_instance_valid(_identity_page):
+		_identity_page.cancel_photo()
 	if is_instance_valid(_save_timer):
 		_save_timer.stop()
 	settings.save_to_disk()
@@ -205,6 +213,11 @@ func back() -> void:
 
 
 func _show_page(page: StringName) -> void:
+	if is_instance_valid(_identity_page):
+		if page == PAGE_WORK_ID:
+			_identity_page.refresh()
+		else:
+			_identity_page.cancel_photo()
 	_page = page
 	_plate.visible = page != PAGE_NONE
 	_controls_page.visible = page == PAGE_CONTROLS
@@ -276,7 +289,7 @@ func _build(viewport_size: Vector2) -> void:
 	column.add_theme_constant_override("separation", int(14.0 * _u))
 	side_scroll.add_child(column)
 
-	var brand := _label("SCRAPERX  /  KELLERWORKS TOWER", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	var brand := _label("SCRAPERX  /  THE EXCHANGE", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
 	brand.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(brand)
 	var build_info := _label(BuildInfo.label(), 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
@@ -297,7 +310,7 @@ func _build(viewport_size: Vector2) -> void:
 
 	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
 		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"],
-		[PAGE_RESTART, "RESTART / SPAWN"]]
+		[PAGE_WORK_ID, "WORK ID"], [PAGE_RESTART, "RESTART / SPAWN"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -306,6 +319,7 @@ func _build(viewport_size: Vector2) -> void:
 		_side_buttons[entry[0]] = button
 	(_side_buttons[&"resume"] as Button).pressed.connect(func() -> void: resume_requested.emit())
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
+	(_side_buttons[PAGE_WORK_ID] as Button).pressed.connect(_show_page.bind(PAGE_WORK_ID))
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
 	if _side_buttons.has(&"quit"):
@@ -344,6 +358,19 @@ func _build(viewport_size: Vector2) -> void:
 	_build_display_page()
 	_build_audio_page()
 	_build_restart_page()
+	_build_work_id_page()
+
+
+func _build_work_id_page() -> void:
+	var page := _begin_page(PAGE_WORK_ID)
+	(page.get_child(0) as Label).text = "WORK ID"
+	if identity_store == null:
+		identity_store = IdentityStore.new()
+	_identity_page = WorkIdPage.new()
+	_identity_page.configure(identity_store, _u)
+	page.add_child(_identity_page)
+	_identity_page.photo_changed.connect(func() -> void: identity_changed.emit())
+	_end_page(PAGE_WORK_ID, _identity_page.choose_button, "")
 
 
 func _make_theme() -> Theme:

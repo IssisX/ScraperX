@@ -135,6 +135,10 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_last_advance_process_cpu_usec);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"),
                                 &ScraperXSimulation::get_tick_index);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_story_actor_state"),
+                                &ScraperXSimulation::get_story_actor_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_story_actor_visible", "eye"),
+                                &ScraperXSimulation::is_story_actor_visible);
     godot::ClassDB::bind_method(godot::D_METHOD("get_simulation_time_seconds"),
                                 &ScraperXSimulation::get_simulation_time_seconds);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fixed_step_seconds"),

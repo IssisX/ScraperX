@@ -317,6 +317,14 @@ struct HandPropSnapshot final {
     double command_work_j = 0;
 };
 
+// Native actor receipt, separate from Snapshot to preserve its existing layout.
+struct StoryActorSnapshot final {
+    bool present = false, supported = false;
+    std::uint64_t entity_id = 0, support_entity_id = 0, episode = 0;
+    Vector3 position{}, velocity{}, drive_force_n{};
+    double heading_radians = 0; // Yaw: zero faces world -Z, positive turns left.
+};
+
 struct Snapshot final {
     std::uint64_t tick_index = 0;
     double simulation_time_seconds = 0.0;
@@ -724,6 +732,7 @@ public:
     static constexpr double kLethalImpactSpeedMps = 18.0;
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
+    static constexpr std::uint64_t kStoryActorEntityId = 63200;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
     static constexpr std::uint64_t kVaultRailEntityId = 5;
@@ -909,6 +918,8 @@ public:
     [[nodiscard]] bool request_yard_crane_attach() noexcept;
     [[nodiscard]] bool request_yard_crane_detach() noexcept;
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
+    [[nodiscard]] StoryActorSnapshot story_actor_state() const noexcept;
+    [[nodiscard]] bool story_actor_line_of_sight(Vector3 eye) const noexcept;
 
 
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,

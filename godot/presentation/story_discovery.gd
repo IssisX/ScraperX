@@ -6,6 +6,7 @@ const CARD_POSITION := Vector3(-102.0, 5.922, -95.5)
 const DISCOVERY := &"vale_emergency_contact"
 const FOCUS_TICKS := 81 # A readable glance:0.9seconds at the native90Hz.
 const MAX_OBSERVATION_GAP := 9
+const IONA_PORTRAIT := preload("res://assets/story/iona_dispatch_portrait.png")
 var _last_tick := -1
 var _focus_ticks := 0
 var _read := false
@@ -15,7 +16,7 @@ func _ready() -> void:
 	position = CARD_POSITION
 	var board := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(.78, .018, .59)
+	box.size = Vector3(1.0, .018, .59)
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color("343d3d")
 	material.roughness = .86
@@ -23,6 +24,20 @@ func _ready() -> void:
 	board.mesh = box
 	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(board)
+	var photo := MeshInstance3D.new()
+	photo.name = "IonaDispatchPhoto"
+	var photo_mesh := QuadMesh.new()
+	photo_mesh.size = Vector2(.27, .29)
+	var photo_material := StandardMaterial3D.new()
+	photo_material.albedo_texture = IONA_PORTRAIT
+	photo_material.roughness = .78
+	photo_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	photo_mesh.material = photo_material
+	photo.mesh = photo_mesh
+	photo.position = Vector3(-.32, .012, 0)
+	photo.rotation.x = -PI * .5
+	photo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(photo)
 	_print = Label3D.new()
 	_print.name = "RetainedContactCard"
 	_print.text = "THE EXCHANGE / RECEIVING\nDISPATCH FILE: IONA VALE\n\nEMERGENCY CONTACT\nROWAN \"RO\" VALE\nNEXT OF KIN / RETAINED"
@@ -31,7 +46,7 @@ func _ready() -> void:
 	_print.pixel_size = .0011
 	_print.modulate = Color("e9e3ce")
 	_print.outline_size = 0
-	_print.position.y = .012
+	_print.position = Vector3(.13, .012, 0)
 	_print.rotation.x = -PI * .5
 	_print.no_depth_test = false
 	_print.shaded = true

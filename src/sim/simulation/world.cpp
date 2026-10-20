@@ -1,4 +1,5 @@
 #include "sim/simulation/world.hpp"
+#include <stdexcept>
 #include "sim/rigging_bay.hpp"
 #include "sim/mounted_winch_bay.hpp"
 #include "sim/workshop_roof_route.hpp"
@@ -266,6 +267,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         traversal_line_ = std::make_unique<PortableTraversalLine>(physics_system_, player_id_,
             object_layers::kMoving, *physical_hands_, rigging_.get());
     }
+    if (content == WorldContent::Slingshot) {
+        story_actor_ = std::make_unique<PhysicalStoryActor>(physics_system_,
+            object_layers::kMoving, Simulation::kStoryActorEntityId);
+        if (!story_actor_->spawn(JPH::RVec3(-26.75, 253.9, -143.2)))
+            throw std::runtime_error("Unable to create native story actor on barrel exit");
+    }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
     physics_system_.OptimizeBroadPhase();
@@ -278,6 +285,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
 }
 
 Simulation::PhysicsWorld::~PhysicsWorld() {
+    contact_listener_.set_story_actor(JPH::BodyID(), 0);
+    story_actor_.reset();
     if (slingshot_) physics_system_.RemoveStepListener(this);
     grappling_gun_.reset();
     traversal_line_.reset();

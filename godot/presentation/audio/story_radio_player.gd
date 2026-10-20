@@ -5,6 +5,9 @@ const MANIFEST_PATH := "res://audio/story_radio/manifest.json"
 const RADIO_DIRECTORY := "res://audio/story_radio/"
 const BUS := &"Effects"
 
+var _scene_voice: AudioStreamPlayer3D
+var _scene_position := Vector3.ZERO
+var _has_scene_position := false
 var _voice: AudioStreamPlayer
 var _configured := false
 var _cues: Dictionary = {}
@@ -38,6 +41,53 @@ func _build_voice() -> void:
 	_voice.finished.connect(_on_finished)
 
 
+func set_scene_voice_position(world_position: Vector3) -> void:
+	_has_scene_position = world_position.is_finite()
+	if not _has_scene_position:
+		return
+	_scene_position = world_position
+	if is_instance_valid(_scene_voice):
+		_scene_voice.global_position = world_position
+
+func clear_scene_voice_position() -> void:
+	_has_scene_position = false
+	if is_instance_valid(_scene_voice) and _scene_voice.playing:
+		_stop_voice()
+
+func _build_scene_voice() -> void:
+	if is_instance_valid(_scene_voice):
+		return
+	_scene_voice = AudioStreamPlayer3D.new()
+	_scene_voice.name = "StoryActorVoice"
+	_scene_voice.bus = BUS
+	_scene_voice.max_polyphony = 1
+	_scene_voice.volume_db = -3
+	_scene_voice.unit_size = 4
+	_scene_voice.max_distance = 20
+	_scene_voice.attenuation_filter_cutoff_hz = 12000
+	_scene_voice.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(_scene_voice)
+	_scene_voice.global_position = _scene_position
+	_scene_voice.finished.connect(_on_finished)
+
+func _playing_voice() -> Node:
+	if _cues.has(String(_active_key)) and _cues[String(_active_key)].speaker == "ARI":
+		return _scene_voice
+	return _voice
+
+func speech_level_for(speaker: StringName) -> float:
+	var cue: Dictionary = _cues.get(String(_active_key), {})
+	var player := _playing_voice()
+	if String(cue.get("speaker", "")) != String(speaker) or not is_instance_valid(player) or not player.playing:
+		return 0
+	var envelope: Array = cue.get("rms_30hz", [])
+	if envelope.is_empty():
+		return 0
+	var at: float = maxf(0, player.get_playback_position() * 30)
+	var index := mini(int(at), envelope.size() - 1)
+	return lerpf(float(envelope[index]), float(envelope[mini(index + 1, envelope.size() - 1)]), at - floorf(at))
+
+
 # Reload is explicit so missing resources are retryable without disk work in
 # present(). Already started IDs remain consumed across configuration changes.
 func configure(manifest_path: String = MANIFEST_PATH) -> bool:
@@ -67,6 +117,17 @@ func configure(manifest_path: String = MANIFEST_PATH) -> bool:
 		if not (duration is float or duration is int) or not is_finite(float(duration)) or float(duration) <= 0.0:
 			_missing_keys[key] = "invalid duration_s"
 			continue
+		if cue.has("rms_30hz"):
+			var envelope: Variant = cue.rms_30hz
+			var valid := envelope is Array
+			if valid:
+				valid = not envelope.is_empty() and envelope.size() <= ceili(float(duration) * 30) + 2
+				for value: Variant in envelope:
+					if not (value is float or value is int) or not is_finite(float(value)) or float(value) < 0 or float(value) > 1:
+						valid = false
+			if not valid:
+				_missing_keys[key] = "invalid recording speech envelope"
+				continue
 		_cues[key] = cue.duplicate(true)
 		var stream := _load_voice_stream(path)
 		if stream == null:
@@ -123,8 +184,16 @@ func present(state: Dictionary, _delta: float) -> void:
 		_missing_keys[key] = "recording unavailable; configure again after assets are supplied"
 		_status = "missing_stream"
 		return
-	_voice.stream = _streams[key]
-	_voice.play()
+	if speaker == "ARI":
+		if not _has_scene_position:
+			_status = "scene_position_unavailable"
+			return
+		_build_scene_voice()
+		_scene_voice.stream = _streams[key]
+		_scene_voice.play()
+	else:
+		_voice.stream = _streams[key]
+		_voice.play()
 	_played_ids[id] = true
 	_active_id = id
 	_active_key = StringName(key)
@@ -150,6 +219,9 @@ func _stop_voice() -> void:
 	if is_instance_valid(_voice):
 		_voice.stop()
 		_voice.stream = null
+	if is_instance_valid(_scene_voice):
+		_scene_voice.stop()
+		_scene_voice.stream = null
 	_active_id = null
 	_active_key = &""
 
@@ -165,9 +237,11 @@ func _exit_tree() -> void:
 
 
 func readback() -> Dictionary:
+	var player := _playing_voice()
 	return {"active_id": _active_id, "active_key": _active_key,
-		"stream": _voice.stream if is_instance_valid(_voice) else null,
-		"playing": _voice.playing if is_instance_valid(_voice) else false,
+		"stream": player.stream if is_instance_valid(player) else null,
+		"playing": player.playing if is_instance_valid(player) else false,
+		"spatial": player == _scene_voice and is_instance_valid(_scene_voice),
 		"scheduled_plays": _scheduled_plays, "missing_keys": _missing_keys.duplicate(),
 		"manifest_error": _manifest_error, "status": _status, "quiesced": _quiesced}
 

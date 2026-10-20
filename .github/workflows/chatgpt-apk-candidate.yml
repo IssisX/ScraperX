@@ -150,6 +150,17 @@ jobs:
             2>&1 | tee -a artifacts/wall-stride-regression.log
           grep -F "WALL_STRIDE PASS mode=$mode" artifacts/wall-stride-regression.log
         done
+    - name: Check physical story actor and public encounter state
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host --target scraperx_physical_story_actor_tests scraperx_story_actor_public_tests --parallel 2
+        timeout 120s build/candidate-host/scraperx_physical_story_actor_tests \
+          2>&1 | tee artifacts/story-physical-actor-native.log
+        grep -F 'PASS PHYSICAL_STORY_ACTOR' artifacts/story-physical-actor-native.log
+        timeout 180s build/candidate-host/scraperx_story_actor_public_tests \
+          2>&1 | tee artifacts/story-actor-public-native.log
+        grep -F 'PASS STORY_ACTOR_PUBLIC' artifacts/story-actor-public-native.log
     - name: Cross-compile native graph for Android arm64
       shell: bash
       run: |
@@ -238,6 +249,19 @@ jobs:
             --script "res://tests/${check}_test.gd" \
             2>&1 | tee "artifacts/story-${check}.log"
           grep -F "${marker} PASS" "artifacts/story-${check}.log"
+          if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/story-${check}.log"; then exit 1; fi
+        done
+    - name: Check optional local portrait and voiced double encounter
+      shell: bash
+      run: |
+        set -euo pipefail
+        for entry in 'player_identity:PLAYER_IDENTITY failures=0' 'work_id_page:WORK_ID_PAGE PASS' 'portrait_calibration:PORTRAIT_CALIBRATION PASS' 'portrait_face_fit:PORTRAIT_FACE_FIT PASS' 'story_human_gait:STORY_HUMAN_GAIT PASS' 'story_double_encounter:STORY_DOUBLE PASS' 'story_actor_voice:STORY_ACTOR_VOICE PASS' 'story_actor_input:SCRAPERX_STORY_ACTOR_INPUT PASS'; do
+          check="${entry%%:*}"
+          marker="${entry#*:}"
+          timeout 180s tools/godot/godot --headless --path godot --audio-driver Dummy \
+            --script "res://tests/${check}_test.gd" \
+            2>&1 | tee "artifacts/story-${check}.log"
+          grep -F "${marker}" "artifacts/story-${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/story-${check}.log"; then exit 1; fi
         done
     - name: Check rigging touch controls and actual shipping native view

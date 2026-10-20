@@ -87,6 +87,8 @@ public:
     // microseconds, or -1 when the host clock cannot provide a valid sample.
     [[nodiscard]] std::int64_t get_last_advance_process_cpu_usec() const;
     [[nodiscard]] std::int64_t get_tick_index() const;
+    [[nodiscard]] godot::Dictionary get_story_actor_state() const;
+    [[nodiscard]] bool is_story_actor_visible(godot::Vector3 eye) const;
     [[nodiscard]] double get_simulation_time_seconds() const;
     [[nodiscard]] double get_fixed_step_seconds() const;
     [[nodiscard]] bool is_initial_world_settled() const;

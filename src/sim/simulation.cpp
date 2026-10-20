@@ -12,6 +12,14 @@ Simulation::Simulation(const InitialSpawn initial_spawn, const WorldContent cont
 
 Simulation::~Simulation() = default;
 
+StoryActorSnapshot Simulation::story_actor_state() const noexcept {
+    return physics_world_->story_actor_state();
+}
+
+bool Simulation::story_actor_line_of_sight(Vector3 eye) const noexcept {
+    return physics_world_->story_actor_line_of_sight(eye);
+}
+
 bool Simulation::set_slingshot_input(double draw, double yaw, double elevation) noexcept {
     if (!std::isfinite(draw) || !std::isfinite(yaw) || !std::isfinite(elevation)) return false;
     sling_draw_ = std::clamp(draw, 0.0, 1.0);

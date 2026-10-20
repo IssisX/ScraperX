@@ -23,6 +23,7 @@
 #include "sim/physical_hand_climb.hpp"
 #include "sim/physical_hand_prop.hpp"
 #include "sim/physical_foot_push.hpp"
+#include "sim/physical_story_actor.hpp"
 #include "sim/traversal_plan.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
@@ -162,6 +163,10 @@ public:
     [[nodiscard]] std::uint8_t forklift_exchange_refusal(const JPH::BodyInterface &bodies) const noexcept;
     void refresh_forklift_snapshot(const JPH::BodyInterface &bodies);
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
+    [[nodiscard]] StoryActorSnapshot story_actor_state() const noexcept;
+    [[nodiscard]] bool story_actor_line_of_sight(Vector3 eye) const noexcept;
+    void prepare_story_actor(float delta_seconds) noexcept;
+    void finish_story_actor(bool solved) noexcept;
     [[nodiscard]] bool yard_crane_controls_reachable(const JPH::BodyInterface &) const noexcept;
     [[nodiscard]] int nearby_yard_crane_leg(const JPH::BodyInterface &) const noexcept;
     void prepare_yard_crane(const StepCommands &, const JPH::BodyInterface &);
@@ -1385,6 +1390,9 @@ private:
         YardCrane::State yard_crane{};
         SuppliedAscent::Checkpoint supplied_ascent{};
         DeformablePlank::State deformable_plank{};
+        BodyCheckpoint story_actor{};
+        int story_actor_leg = 1;
+        double story_actor_heading = 0;
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -1437,6 +1445,12 @@ private:
     std::array<std::unique_ptr<PhysicalHandProp>, 2> physical_palms_;
     bool palm_vault_used_ = false;
     std::uint64_t palm_vault_count_ = 0;
+    std::unique_ptr<PhysicalStoryActor> story_actor_;
+    std::uint64_t story_actor_tick_ = 0, story_actor_episode_ = 1;
+    int story_actor_leg_ = 1;
+    double story_actor_heading_ = 0;
+    bool story_actor_supported_ = false;
+    std::uint64_t story_actor_support_entity_ = 0;
 };
 
 } // namespace scraperx::sim

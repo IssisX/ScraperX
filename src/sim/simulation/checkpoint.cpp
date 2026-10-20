@@ -92,6 +92,11 @@ bool Simulation::PhysicsWorld::restart_checkpoint() noexcept {
 
 void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterface &bodies,
                                 MachineCheckpoint &checkpoint) const noexcept {
+    if (story_actor_) {
+        checkpoint.story_actor = capture_body(bodies, story_actor_->body_id());
+        checkpoint.story_actor_leg = story_actor_leg_;
+        checkpoint.story_actor_heading = story_actor_heading_;
+    }
     if (rigging_) checkpoint.rigging = rigging_->capture();
     if (traversal_line_) checkpoint.traversal_line = traversal_line_->capture();
     checkpoint.support_body = JPH::BodyID();
@@ -254,6 +259,16 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     if (warehouse_forklift_) warehouse_forklift_->restore(checkpoint_.forklift);
     if (yard_crane_) yard_crane_->restore(checkpoint_.yard_crane);
     if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
+    if (story_actor_) {
+        restore_body(bodies, story_actor_->body_id(), checkpoint_.story_actor);
+        story_actor_->clear_contact();
+        contact_listener_.set_story_actor(story_actor_->body_id(), story_actor_tick_);
+        story_actor_leg_ = checkpoint_.story_actor_leg;
+        story_actor_heading_ = checkpoint_.story_actor_heading;
+        story_actor_supported_ = false;
+        story_actor_support_entity_ = 0;
+        ++story_actor_episode_;
+    }
     JPH::Vec3 restored_transport = JPH::Vec3::sZero();
     const auto saved_support = kit_->body_for_entity(checkpoint_.support_entity);
     if (saved_support.valid() && saved_support.value < checkpoint_.kit.bodies.size() &&

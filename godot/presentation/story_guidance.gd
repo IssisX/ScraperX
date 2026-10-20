@@ -2,6 +2,7 @@ extends RefCounted
 
 # Narrative observation only. Native contacts, machinery and checkpoints remain
 # authoritative. Heard lines are session presentation history, not saved progress.
+const DoubleEncounter := preload("res://presentation/story_double_encounter.gd")
 const TICKS_PER_SECOND := 90
 const INTRO_TICKS := 7 * TICKS_PER_SECOND
 const TRANSMISSION_TICKS := 11 * TICKS_PER_SECOND
@@ -65,6 +66,7 @@ var _cue_key := &""
 var _voice_lengths: Dictionary = {}
 var _contact_pending := false
 var _contact_phase := 0
+var _double_encounter := DoubleEncounter.new()
 
 func configure_voice_lengths(lengths: Dictionary) -> void:
 	_voice_lengths = lengths.duplicate()
@@ -85,20 +87,22 @@ func reset() -> void:
 	_cue_key = &""
 	_contact_pending = false
 	_contact_phase = 0
+	_double_encounter.reset()
 
-func _say(key: StringName, tick: int) -> void:
-	if _heard.has(key):
-		return
+func _say(key: StringName, tick: int) -> bool:
+	if _heard.has(key) or (not CUES.has(key) and not DoubleEncounter.CUES.has(key)):
+		return false
 	_heard[key] = true
 	_transmission_id += 1
 	var voice_seconds := float(_voice_lengths.get(key, 0.0))
 	var duration := maxi(TRANSMISSION_TICKS, ceili((voice_seconds + .75) * TICKS_PER_SECOND)) if is_finite(voice_seconds) else TRANSMISSION_TICKS
-	if key == &"vale_contact_ro" or key == &"vale_contact_iona":
+	if key == &"vale_contact_ro" or key == &"vale_contact_iona" or DoubleEncounter.CUES.has(key):
 		duration = ceili((voice_seconds + .35) * TICKS_PER_SECOND) if is_finite(voice_seconds) and voice_seconds > 0.0 else TRANSMISSION_TICKS
 	_transmission_until = tick + duration
-	_speaker = "RO" if key == &"vale_contact_ro" else "IONA"
-	_line = String(CUES[key])
+	_speaker = String(DoubleEncounter.SPEAKERS.get(key, "RO" if key == &"vale_contact_ro" else "IONA"))
+	_line = String(CUES.get(key, DoubleEncounter.CUES.get(key, "")))
 	_cue_key = key
+	return true
 
 func _on_tower_access() -> bool:
 	var p := _observation.position
@@ -117,6 +121,7 @@ func _on_tower_access() -> bool:
 
 func sample(context: Dictionary, tick: int) -> Dictionary:
 	if tick < 0 or not _observation.read(context):
+		_double_encounter.cancel_attention()
 		return {}
 	if _last_tick >= 0 and tick < _last_tick:
 		reset()
@@ -130,6 +135,7 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			_say(&"receiving_iona_come_look", tick)
 	if fresh and _observation.deaths != _last_deaths:
 		_last_deaths = _observation.deaths
+		_double_encounter.cancel_attention()
 		_transmission_until = -1
 		_say(&"receiving_iona_recovery", tick)
 	if fresh and _on_tower_access():
@@ -149,6 +155,10 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			_say(&"vale_contact_iona", tick)
 			_contact_phase = 2
 			_contact_pending = false
+	var double_key: StringName = _double_encounter.observe(context, tick)
+	if fresh and not double_key.is_empty() and tick > _transmission_until:
+		if _say(double_key, tick):
+			_double_encounter.accept(double_key)
 	_last_tick = tick
 
 	var objective_id := &"freight_one"

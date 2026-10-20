@@ -1,0 +1,9 @@
+# Human character template
+
+Default clothed adult generated with pinned MakeHuman Community MPFB2 b1a2dc98776da9d1eea751b159d42cf61778fe2e (2.0.18), Blender5.0.1. Original core human/rig, system-assets male_casualsuit01/shoes01/short01/eyebrow001/low-poly eyes/teeth_base/tongue01/young_caucasian_male skin and Faceunits01 expression targets use CC0. Source https://github.com/makehumancommunity/mpfb2 and official assets https://static.makehumancommunity.org/assets/assetpacks.html ; attached upstream asset/application licenses distinguish CC0 art from GPL application code. No application code is included here.
+
+Actual Blender/export/GLB inventory completed successfully; source/CRC/hash/license receipts, reproducible export_human.py/run_export.sh/inspect_glb.py and editable scene remain in the authoring workspace P/character-prototype/asset-work. Final GLB SHA2566acb509f8909aadd82107de19ab66c92b8708b664d7776c680c2d2e527ccf21f,21,099,352bytes. Eight meshes/47,102triangles/163bones/eight facial morphs. Child brows/hair/teeth/tongue receive applicable expression deformation. Default appearance is an authored template, not the owner's supplied likeness.
+
+PrototypeTurn is an original two-second object-turn test, not a walk or NPC locomotion owner. The player photo is optional local data, never a bundled asset. It maps to the real facial surface; normal template ears and unseen anatomy complete the head. Consequential actor motion remains native-owned; Godot only presents its readback.
+
+Runtime presentation now uses the actual imported split leg chains for distance-driven foot placement, bounded head gaze/blinks, and jaw motion sampled from each recorded voice envelope. The native actor alone owns COM travel, support and collision. The gait helper owns only leg/foot bone poses and is checked against this actual GLB; the object-turn authoring clip is unused by production movement.

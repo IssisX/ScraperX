@@ -75,6 +75,8 @@ const StoryGuidance := preload("res://presentation/story_guidance.gd")
 const StoryPresenter := preload("res://presentation/story_presenter.gd")
 const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
 const StoryDiscovery := preload("res://presentation/story_discovery.gd")
+const StoryHumanView := preload("res://presentation/story_human_view.gd")
+const PlayerIdentityStore := preload("res://presentation/identity/player_identity_store.gd")
 const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
 const MovementDust := preload("res://presentation/movement_dust.gd")
 var _movement_dust: MovementDust
@@ -289,6 +291,9 @@ var _story_guidance := StoryGuidance.new()
 var _story_presenter: Control
 var _story_radio: Node
 var _story_discovery: Node3D
+var _player_identity := PlayerIdentityStore.new()
+var _story_human: Node3D
+var _story_identity_dirty := true
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
 
@@ -781,6 +786,7 @@ func _build_interface() -> void:
 	_pause_menu = PauseMenu.new()
 	_pause_menu.name = "PauseMenu"
 	_pause_menu.settings = _settings
+	_pause_menu.identity_store = _player_identity
 	pause_layer.add_child(_pause_menu)
 
 	_router.device_changed.connect(_on_device_changed)
@@ -789,6 +795,7 @@ func _build_interface() -> void:
 	_pause_menu.resume_requested.connect(_resume)
 	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
 	_pause_menu.settings_changed.connect(_apply_settings)
+	_pause_menu.identity_changed.connect(func() -> void: _story_identity_dirty = true)
 	_pause_menu.restart_requested.connect(_restart_at)
 	_pause_menu.checkpoint_restart_requested.connect(_restart_checkpoint)
 	_pause_menu.lift_attempt_restart_requested.connect(_restart_lift_attempt)
@@ -2530,11 +2537,14 @@ func _update_story(delta: float) -> void:
 		return
 	if _native == null or _regression_scene or _ci_mode or not _uitest_scenario.is_empty():
 		_story_discovery.visible = false
+		if _story_human != null:
+			_story_human.hide()
 		_story_presenter.present({}, delta)
 		if _story_radio != null:
 			_story_radio.present({}, delta)
 		return
 	var tick := int(_native.get_tick_index())
+	_update_story_human(tick)
 	_ctx["story_discovery"] = _story_discovery.observe(_camera.global_transform, _ctx, tick)
 	var state: Dictionary = _story_guidance.sample(_ctx, tick)
 	_story_presenter.present(state, delta)
@@ -2542,6 +2552,42 @@ func _update_story(delta: float) -> void:
 		var velocity: Vector3 = _ctx.get("velocity", Vector3.ZERO)
 		state["suppress_voice"] = _paused or (not bool(_ctx.get("grounded", false)) and velocity.y < -7.0)
 		_story_radio.present(state, delta)
+
+
+func _update_story_human(tick: int) -> void:
+	var actor: Dictionary = _native.get_story_actor_state()
+	_ctx["story_actor"] = actor
+	_ctx["story_camera_transform"] = _camera.global_transform
+	_ctx["story_actor_line_of_sight"] = false
+	if not bool(actor.get("present", false)):
+		if _story_human != null:
+			_story_human.hide()
+		_story_radio.clear_scene_voice_position()
+		return
+	var center: Vector3 = actor.position
+	var distance := _camera.global_position.distance_to(center)
+	if distance < 6.0:
+		_ctx["story_actor_line_of_sight"] = _native.is_story_actor_visible(_camera.global_position)
+	_story_radio.set_scene_voice_position(center + Vector3(0, .72, 0))
+	# Keep this asset off the startup path and out of unrelated ground views.
+	# The native actor remains real regardless of presentation distance.
+	if distance > 32.0:
+		if _story_human != null:
+			_story_human.hide()
+		return
+	if _story_human == null:
+		_story_human = StoryHumanView.new()
+		_story_human.name = "AriWard"
+		add_child(_story_human)
+		_story_identity_dirty = true
+	if _story_identity_dirty:
+		_story_identity_dirty = false
+		if not _story_human.apply_portrait(_player_identity.photo_texture(), _player_identity.face_landmarks()):
+			push_warning("Could not fit local work-ID portrait: " + _story_human.last_error)
+	# Native heading uses Godot -Z forward; this imported human faces +Z.
+	var pose := Transform3D(Basis(Vector3.UP, float(actor.heading_radians) + PI), center - Vector3(0, .9, 0))
+	_story_human.present(pose, tick, _story_radio.speech_level_for(&"ARI"), _camera.global_position,
+		bool(actor.supported), int(actor.episode))
 
 
 func _reset_grapple_feedback() -> void:

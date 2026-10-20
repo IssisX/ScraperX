@@ -21,10 +21,24 @@ CUES = {
     'receiving_iona_recovery': 'Find your footing. You can try another way up.',
     'vale_contact_ro': 'You kept me as your emergency contact?',
     'vale_contact_iona': 'They asked for next of kin. Not a fucking recommendation.',
+    'double_ro_who': 'Who the fuck are you?',
+    'double_ari_name': 'Ari Ward.',
+    'double_ro_face': "That's my face.",
+    'double_ari_job': 'I was hired to attend your handovers.',
+    'double_ro_empty': 'You told them the rooms were empty.',
+    'double_ari_told': 'I was told they were.',
+    'double_ro_when': 'When did you find out?',
+    'double_ari_before': 'Before the last recording.',
+    'double_ro_name': 'Stop using my name.',
+    'double_ari_will': 'I will.',
+    'double_ro_and_face': 'And the face?',
+    'double_ari_cannot': "That's not something I can hand back.",
+    'double_iona_here': "Ro. I'm here.",
 }
-CUE_SPEAKERS = {'vale_contact_ro': 'RO'}
-VOICE_IDS = {'IONA': 'af_heart', 'RO': 'am_michael'}
+CUE_SPEAKERS = {'vale_contact_ro': 'RO', 'double_ro_who': 'RO', 'double_ari_name': 'ARI', 'double_ro_face': 'RO', 'double_ari_job': 'ARI', 'double_ro_empty': 'RO', 'double_ari_told': 'ARI', 'double_ro_when': 'RO', 'double_ari_before': 'ARI', 'double_ro_name': 'RO', 'double_ari_will': 'ARI', 'double_ro_and_face': 'RO', 'double_ari_cannot': 'ARI', 'double_iona_here': 'IONA'}
+VOICE_IDS = {'IONA': 'af_heart', 'RO': 'am_michael', 'ARI': 'am_adam'}
 FILTER = 'highpass=f=180,lowpass=f=4800,loudnorm=I=-18:TP=-2:LRA=9'
+DIRECT_FILTER = 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=9'
 
 
 def fetch(url):
@@ -94,7 +108,7 @@ def main():
             print(cue_id, 'reused accepted audio', flush=True)
             continue
         subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
-                        '-i', str(clean), '-af', FILTER, '-ar', '24000', '-ac', '1',
+                        '-i', str(clean), '-af', DIRECT_FILTER if speaker == 'ARI' else FILTER, '-ar', '24000', '-ac', '1',
                         '-c:a', 'libvorbis', '-q:a', '5', str(target)], check=True)
         duration = float(subprocess.check_output(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -131,11 +145,32 @@ def main():
     }
     import copy
     manifest['voices'].update(existing_manifest.get('voices', {}))
-    if any(cue['speaker'] == 'RO' for cue in cues.values()):
-        ro = copy.deepcopy(manifest['voices']['IONA'])
-        ro['generation']['voice_id'] = VOICE_IDS['RO']
-        ro['license']['commercial_use'] = ro['license']['commercial_use'].replace('af_heart', VOICE_IDS['RO'])
-        manifest['voices']['RO'] = ro
+    for speaker in ['RO', 'ARI']:
+        if not any(cue['speaker'] == speaker for cue in cues.values()):
+            continue
+        voice = copy.deepcopy(manifest['voices']['IONA'])
+        voice['generation']['voice_id'] = VOICE_IDS[speaker]
+        voice['generation']['radio_filter'] = DIRECT_FILTER if speaker == 'ARI' else FILTER
+        voice['generation']['placement'] = 'native actor head / spatial' if speaker == 'ARI' else 'player radio'
+        voice['license']['commercial_use'] = voice['license']['commercial_use'].replace('af_heart', VOICE_IDS[speaker])
+        manifest['voices'][speaker] = voice
+    # Analyze the actual shipped recording. Mouth motion samples this envelope
+    # by the active stream's playback position; no invented speech oscillator.
+    import struct, math
+    for cue_id, cue in cues.items():
+        target = directory / (cue_id + '.ogg')
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        if cue.get('rms_audio_sha256') == digest and isinstance(cue.get('rms_30hz'), list):
+            continue
+        pcm = subprocess.check_output(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-i', str(target), '-f', 'f32le', '-ar', '24000', '-ac', '1', '-'])
+        samples = [item[0] for item in struct.iter_unpack('<f', pcm)]
+        envelope = []
+        for start in range(0, len(samples), 800):
+            window = samples[start:start + 800]
+            rms = math.sqrt(sum(value * value for value in window) / len(window))
+            envelope.append(round(min(1.0, rms * 5.0), 6))
+        cue['rms_30hz'] = envelope
+        cue['rms_audio_sha256'] = digest
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n')
 
 
