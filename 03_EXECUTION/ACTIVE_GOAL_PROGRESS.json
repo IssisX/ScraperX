@@ -27,7 +27,7 @@
   ],
   "overall_estimate_percent": 61,
   "limits": "Overall61% retained: worldwide carried grapple, feedback, alternating shimmy and native-aligned gun delivered; broad canonical scope remains. No full GREEN/device-ready claim.",
-  "evidence_frontier": "Selected857281inputdebugAPKaa8c772a...; gunstatusactualMain21PASS; secondhandnativepublic/Android+Mainphone28PASS; nativebyteidentityfa826... . All prior850–856 progression/evidence preserved. Deviceplay remains unobserved.",
+  "evidence_frontier": "Selected857281inputdebugAPKaa8c772a...; gunstatusactualMain21PASS; secondhandnativepublic/Android+Mainphone28PASS; nativebyteidentityfa826... . All prior850\u2013856 progression/evidence preserved. Deviceplay remains unobserved.",
   "queued_movement_update": {
     "source": "ScraperX_Primate_Traversal_Research_Bundle.zip",
     "sha256": "b04ff9315aabebf7da3e55b728fed239041f2d715ad3151d5bcf10267f19164f",
@@ -46,7 +46,7 @@
     "publication": "local only; no push/build",
     "scope_unchanged": true
   },
-  "owner_movement_intent": "Expert contact-rich parkour with physical causality, extraordinary motion and presentation. Latest owner priority: carried grappling gun usable throughout the world with automatic reel; delivered850–855. Then useful complete canonical movement slices, now explicit same-rigid-support second-hand recovery.",
+  "owner_movement_intent": "Expert contact-rich parkour with physical causality, extraordinary motion and presentation. Latest owner priority: carried grappling gun usable throughout the world with automatic reel; delivered850\u2013855. Then useful complete canonical movement slices, now explicit same-rigid-support second-hand recovery.",
   "agent_reasoning_policy": {
     "owner": "/storage/emulated/0/Download/Agent_Reasoning_Policy.md",
     "supported_installed_sol_levels": [
@@ -105,12 +105,12 @@
         "integration and documentation"
       ],
       "worker_results": [
-        "Main4920→2347, bodyequivalence56moved/60retained",
-        "UIdriver5564→297,142bodies/66scenarios preserved"
+        "Main4920\u21922347, bodyequivalence56moved/60retained",
+        "UIdriver5564\u2192297,142bodies/66scenarios preserved"
       ],
       "next": "Publish coherent repair slices; finish actual hook hardware/ladder and West handoffs/catch rebound, then full GREEN delivery",
       "full_canonical_scope_preserved": true,
-      "native_test_runner": "4365→22;12compiledsuites;fullrunnerPASS182.55s",
+      "native_test_runner": "4365\u219222;12compiledsuites;fullrunnerPASS182.55s",
       "native_acceptance": "14focusedcasesPASS;allmodulescompile",
       "godot_acceptance": "import/keyboard/secondhandPASS;normal+fixturecollisionbyteidentical",
       "ci_repair_authorization": "Owner2026-10-15 requires actual Actions failures repaired in depth, no flattening or weakened checks",
@@ -135,9 +135,9 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-20T21:26:34.415492+00:00",
-    "published_head": "23215a2",
-    "active_behavior": "Deliver combined Receiving story opening, native-state guidance and recorded gallery discovery",
+    "as_of": "2026-10-20T22:26:24.466821+00:00",
+    "published_head": "c299ae41c3276cf8b4a9bd0a3ce06bc51b570927",
+    "active_behavior": "Meet a physical, voiced photo-fitted double at the253m gallery; preserve touch and retries; one combined green APK",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
       "actual GitHub publication and matching83bAPK214279695 candidate38838367126 artifact12020128011 delivered",
@@ -146,20 +146,21 @@
       "Normal reachable freight arrival1022ticks, rendered Main, exact pause/Android identity and matching cf87c80 APK214320678 delivered",
       "Shared static shadow geometry and dynamic freight finishes: native-visible high-shadow881/827/948 budgetPASS, exact b6b34df APK214322899 delivered",
       "Receiving story intro and real-arrival guidance: actual MCP19checks accepted",
-      "Readable gallery contact discovery, two real recorded speakers and onward touch: actual MCP13checks accepted"
+      "Readable gallery contact discovery, two real recorded speakers and onward touch: actual MCP13checks accepted",
+      "CombinedReceivingopening/guidance/voiceddiscovery exactc299 GREENcandidate39505154801 APK214698123delivered"
     ],
-    "frontier": "Opening19 and discovery13 actual Main/native MCP checks pass; guide26/discovery11 supplied-fact tests pass. Combined source publication and matching green candidate pending. Wider campaign and hosted narrator unfinished.",
+    "frontier": "Storycandidate39505154801fullyGREEN/APK214698123delivered. Double components implemented; actual native/bridge/voice/encounter integration ongoing.",
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
-    "next_implementation_packet": "Scope commit and actual GitHub push of Android repairs, ordinary worker matrix/candidate/full collection; retain full acceptance and no physics/quality degradation.",
-    "current_candidate": "UIforegroundreport andstrictvalidatedidentity, no nativechange",
-    "last_delivered_game_source": "3ac80ad59678e5eb72fb9d1751bde82e0b58b0f9",
-    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-3ac80ad/ScraperX-ChatGPT.apk",
-    "evidence": "evidence/story-2026-10-20/OPENING.md"
+    "next_implementation_packet": "Join nativeactor63200/actualreceiver1993+visibility with local photo-fit human and exact13-lineGuide. Matching GNUarchive/bridge/MCP proof, then one acceptedcandidateAPK.",
+    "current_candidate": "c299ae4 delivered story; embodieddouble WIP unpublished",
+    "last_delivered_game_source": "c299ae41c3276cf8b4a9bd0a3ce06bc51b570927",
+    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-c299ae4/ScraperX-ChatGPT.apk",
+    "evidence": "evidence/story-2026-10-20/OPENING.md; RENDER_CACHE.md; A/candidate-policy-c299ae4/accepted-candidate.json"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",
-    "status": "to-do after current462–484m parkour connection",
+    "status": "to-do after current462\u2013484m parkour connection",
     "implemented": false,
     "scope": "03_EXECUTION/PLANNING/VISIBLE_PLAYER_VALUE_NEXT_SLICE.md#owner-added-later-encounter--physical-trapeze",
     "acceptance": "Actual catch, manually timed finite-work swing/pumping, momentum-preserving release to realhold/ledge, stableexit and feasiblemiss/retry. Placement notselected; no catch-netdependency."
@@ -185,7 +186,7 @@
   },
   "later_throwing_and_grappling_hook": {
     "owner_requested": "2026-10-13",
-    "status": "Physically causal gun/worldwidecarriedcontrols/autoreel/nativefeedback/nativealignedtool delivered850–856; additionalcanonicalthrowing/encounters remain deferred",
+    "status": "Physically causal gun/worldwidecarriedcontrols/autoreel/nativefeedback/nativealignedtool delivered850\u2013856; additionalcanonicalthrowing/encounters remain deferred",
     "implemented": true,
     "scope": "03_EXECUTION/PLANNING/SELECTED_WORLD_DYNAMICS.md#owner-requested-later-throwing-and-grappling-hook",
     "limits": "Finite4cartridge/hookinventory,18mline,realgeometry/collision/traction/momentum/failure; no fakeanchors/elevationgrants. Independent407 demonstrates loadedrise/exit, not407platformtoparrival. No installedGodotAndroiddevicefeel proof."
@@ -245,7 +246,7 @@
     "later_scope": [
       "broader entry/material/cargo-transfer overlap",
       "materialcache adapter",
-      "462–484 genuinecatch path beyond accepted currentconnections",
+      "462\u2013484 genuinecatch path beyond accepted currentconnections",
       "corner/crossbody/material shimmy beyond accepted alternatingrigidshimmy",
       "swing/brachiation",
       "palmpropvault",
@@ -269,7 +270,7 @@
     "apk_sha256": "aa8c772ade3c46a59ae26361c7d33b6cae2448085bc67336e47dabb4dca8e856",
     "native_sha256": "fa826e7aa7c44451d24dd042710acedf40bea2d389d15f658e7e9658603d95d1",
     "identity": "PASS expectedpackage/version/label/signature/nativebytes/16Kalignment",
-    "prior_delivery_preserved": "848–856 retained;853/854 rejectedvisualintermediates retained with exact source/evidence"
+    "prior_delivery_preserved": "848\u2013856 retained;853/854 rejectedvisualintermediates retained with exact source/evidence"
   },
   "worldwide_grapple_20261014": {
     "status": "complete",
@@ -334,7 +335,7 @@
   "github_apk_delivery_20261015": {
     "status": "complete: source published and actual downloadable GitHub APK candidate delivered",
     "objective": "Recent downloadable ChatGPT-branch APK with exact-source provenance; retain separate full gameplay release gates",
-    "cause": "Recent APK850–857 remained local; last full GitHub proof failed deferred catch-net and skipped export",
+    "cause": "Recent APK850\u2013857 remained local; last full GitHub proof failed deferred catch-net and skipped export",
     "delivery_guide": "ci/APK_DELIVERY.md",
     "scope_unchanged": true,
     "local_commit": "f6ac5c4",
