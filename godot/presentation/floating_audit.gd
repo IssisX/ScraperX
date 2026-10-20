@@ -191,7 +191,16 @@ func _gather_views(main: Node) -> void:
 				_add(child, str(child.name), "lamp" if lamp else "dressing", "any")
 	var matron: Node = main.get("_matron_view")
 	if matron != null:
+		# Drawn only near her locker or her (matron_view.gd DRAW_RANGE_M), and
+		# the audit's camera is at the start: seen as it stands when near, so
+		# what hangs on her locker is checked against it.
+		(matron as Node3D).visible = true
 		_gather_meshes(matron, "MatronView")
+	# The uncanny view's own fixtures (uncanny/uncanny.gd): the clipboard in
+	# her locker and the tower's clocks, each on what it hangs on.
+	var uncanny: Node = main.get("_uncanny")
+	if uncanny != null:
+		_gather_meshes(uncanny, "Uncanny")
 	var works: Node = main.get("_works")
 	if works != null:
 		var nodes: Array = works.get("_beacon_nodes")

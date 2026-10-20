@@ -395,6 +395,18 @@ jobs:
           grep -F "SCRAPERX_SOLIDS boxes=" artifacts/world-solids-export.log
           diff -u src/sim/world_solids.inc artifacts/world_solids.regenerated.inc
 
+      - name: Nothing floats
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Every light, lamp, sign and piece of dressing is held up by what
+          # it hangs on (godot/presentation/floating_audit.gd; the owner,
+          # 2026-10-20: "we should just not have floating shit").
+          timeout 300s tools/godot/godot --headless --path godot \
+            -- "--audit-floating=${GITHUB_WORKSPACE}/artifacts/floating.txt" \
+            2>&1 | tee artifacts/floating-audit.log
+          grep -F "SCRAPERX_FLOATING floating=0 " artifacts/floating-audit.log
+
       - name: Footsteps follow the floor, not the world
         shell: bash
         run: |
