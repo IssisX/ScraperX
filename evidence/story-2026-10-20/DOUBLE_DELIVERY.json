@@ -1,0 +1,25 @@
+{
+  "source_commit": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
+  "run_id": "39513436973",
+  "ci_conclusion": "success",
+  "version_code": 214702401,
+  "version_name": "0.1.0-chatgpt.64d21f13b107.39513436973.1",
+  "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-64d21f1/ScraperX-ChatGPT.apk",
+  "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-64d21f1",
+  "asset_id": 660789509,
+  "artifact_id": 12308126611,
+  "native_matches_build": true,
+  "verification_owner": "Candidate CI signing and producer-provenance stages",
+  "reused_receipts": [
+    "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-64d21f1/result.json",
+    "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-64d21f1/accepted-candidate.json",
+    "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-64d21f1/direct-apk.json"
+  ],
+  "local_apk_checks_repeated": false,
+  "limits": [
+    "separate full-release proof remains distinct",
+    "no installed Android/photo-picker/phone sound or performance observation",
+    "253m placement is not measured campaign pacing",
+    "later Ari agency and full campaign remain unfinished"
+  ]
+}

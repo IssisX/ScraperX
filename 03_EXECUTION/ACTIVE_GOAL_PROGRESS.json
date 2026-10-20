@@ -135,9 +135,9 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-20T22:26:24.466821+00:00",
-    "published_head": "c299ae41c3276cf8b4a9bd0a3ce06bc51b570927",
-    "active_behavior": "Meet a physical, voiced photo-fitted double at the253m gallery; preserve touch and retries; one combined green APK",
+    "as_of": "2026-10-20T23:37:40.390924+00:00",
+    "published_head": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
+    "active_behavior": "Reach and compare the false handover recording with the original access-only survey before Ari; preserve optional local likeness/default and live touch",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
       "actual GitHub publication and matching83bAPK214279695 candidate38838367126 artifact12020128011 delivered",
@@ -147,16 +147,17 @@
       "Shared static shadow geometry and dynamic freight finishes: native-visible high-shadow881/827/948 budgetPASS, exact b6b34df APK214322899 delivered",
       "Receiving story intro and real-arrival guidance: actual MCP19checks accepted",
       "Readable gallery contact discovery, two real recorded speakers and onward touch: actual MCP13checks accepted",
-      "CombinedReceivingopening/guidance/voiceddiscovery exactc299 GREENcandidate39505154801 APK214698123delivered"
+      "CombinedReceivingopening/guidance/voiceddiscovery exactc299 GREENcandidate39505154801 APK214698123delivered",
+      "PhysicalAri253m/optionalpersistentphoto/13spatial-radio dialogue/free touch/cleanretry delivered64d21f1 GREEN39513436973 APK214702401"
     ],
-    "frontier": "Storycandidate39505154801fullyGREEN/APK214698123delivered. Double components implemented; actual native/bridge/voice/encounter integration ongoing.",
+    "frontier": "EmbodiedAri/photo/13newvoices delivered in fullyGREEN64d21f1/APK214702401. Next authored handover-record setup selected; full campaign remains incomplete.",
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
-    "next_implementation_packet": "Join nativeactor63200/actualreceiver1993+visibility with local photo-fit human and exact13-lineGuide. Matching GNUarchive/bridge/MCP proof, then one acceptedcandidateAPK.",
-    "current_candidate": "c299ae4 delivered story; embodieddouble WIP unpublished",
-    "last_delivered_game_source": "c299ae41c3276cf8b4a9bd0a3ce06bc51b570927",
-    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-c299ae4/ScraperX-ChatGPT.apk",
-    "evidence": "evidence/story-2026-10-20/OPENING.md; RENDER_CACHE.md; A/candidate-policy-c299ae4/accepted-candidate.json"
+    "next_implementation_packet": "Reuse shared local identity/human/voice/Guide owners for a reachable pre-Ari recording and readable original-source comparison. Establish actual receiver/clear attention facts, implement the playable scene and useful witness direction. Batch its eventual APK with coherent completed work.",
+    "current_candidate": "64d21f1 fullyGREEN and delivered",
+    "last_delivered_game_source": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
+    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-64d21f1/ScraperX-ChatGPT.apk",
+    "evidence": "evidence/story-2026-10-20/DOUBLE_DELIVERY.json; HUMAN_PRESENTATION.json; actor-native/roundoff-*.json"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",
