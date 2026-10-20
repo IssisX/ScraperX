@@ -1,11 +1,12 @@
 extends Node3D
 ## The Matron, drawn (src/sim/matron.hpp): her locker on the 154 m deck, the
 ## gauge that climbs while she strains, the bolts that pop and the door that
-## tears off; her figure, a hooded, stooped old woman with arms to her knees,
-## and the way she moves; and the rotten catwalk's plates. Every position and
-## every state is the native's, and nothing here moves anything: she is a
-## capsule that walks, and the pose is only what her state and the metres she
-## has walked make of it.
+## tears off; her figure, a real old woman built from MakeHuman's scanned body
+## (life/matron/, tools/body/build_matron_body.py) in the first-aid
+## attendant's uniform gone foul, and the way she moves; and the rotten
+## catwalk's plates. Every position and every state is the native's, and
+## nothing here moves anything: she is a capsule that walks, and the pose is
+## only what her state and the metres she has walked make of it.
 ##
 ## Her gaits: stooped and dragging when unaware, snapping her head about when
 ## she has lost the player, and on the hunt down on all fours in a stuttering
@@ -447,240 +448,24 @@ func _update_planks(data: Dictionary) -> void:
 # --- her ---------------------------------------------------------------------
 
 
-const Body := preload("res://presentation/life/matron_body.gd")
-
-
-# A cloth, skin or wool: a noise-mottled colour and a noise normal map, laid on
-# in object space (no UVs needed), so every sculpted piece takes it alike.
-func _textured(color: Color, rough: float, noise_seed: int, freq: float, scale_per_m: float, bump: float, cull := true) -> StandardMaterial3D:
-	var noise := FastNoiseLite.new()
-	noise.seed = noise_seed
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = freq
-	noise.fractal_octaves = 4
-	var tex := NoiseTexture2D.new()
-	tex.noise = noise
-	tex.width = 256
-	tex.height = 256
-	tex.seamless = true
-	var ramp := Gradient.new()
-	ramp.colors = PackedColorArray([color.darkened(0.3), color, color.lightened(0.14)])
-	ramp.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
-	tex.color_ramp = ramp
-	var nrm := NoiseTexture2D.new()
-	nrm.noise = noise
-	nrm.width = 256
-	nrm.height = 256
-	nrm.seamless = true
-	nrm.as_normal_map = true
-	nrm.bump_strength = bump
-	var m := StandardMaterial3D.new()
-	m.albedo_texture = tex
-	m.normal_enabled = true
-	m.normal_texture = nrm
-	m.roughness = rough
-	m.uv1_triplanar = true
-	m.uv1_scale = Vector3.ONE * scale_per_m
-	if not cull:
-		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	return m
-
-
-func _mesh(mesh: Mesh, material: Material, parent: Node3D, at := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
-	var node := MeshInstance3D.new()
-	node.mesh = mesh
-	node.material_override = material
-	node.position = at
-	node.rotation = rot
-	parent.add_child(node)
-	return node
-
-
-# Many small meshes folded into one (hair, rags).
-func _merge(parts: Array) -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for part in parts:
-		st.append_from(part[0], 0, part[1])
-	return st.commit()
+const MatronRig := preload("res://presentation/life/matron_rig.gd")
+const MatronLook := preload("res://presentation/life/matron_look.gd")
+const BODY_FILE := "res://presentation/life/matron/matron.glb"
+const RIG_FILE := "res://presentation/life/matron/matron_rig.json"
+var _rig: RefCounted     # matron_rig.gd: pivots to bones, contact, eyes, hair
+var _look: RefCounted    # matron_look.gd: her materials and the exposure on them
 
 
 func _build_figure() -> void:
-	# The site's first-aid attendant (the story, 2026-10-19): her skin pale and
-	# tired, her tunic and cap white, a dark cardigan over them. The exposure
-	# recolors the skin, the tunic and the eyes, and thins the hair, one way
-	# (_apply_exposure).
-	var skin := _textured(SKIN_FRESH, 0.85, 11, 0.012, 12.0, 2.5)
-	var dress := _textured(TUNIC_FRESH, 0.9, 23, 0.03, 14.0, 3.0)
-	var shawl := _textured(Color("3a3430"), 0.98, 37, 0.05, 16.0, 3.0)
-	var rag := _textured(TUNIC_FRESH, 0.97, 29, 0.05, 14.0, 2.5, false)
-	var sock := _textured(Color("8a847a"), 0.9, 41, 0.03, 8.0, 3.0)
-	var hair_material := _material(Color("a8a59a"), 1.0)
-	hair_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	hair_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_skin_mat = skin
-	_tunic_mat = dress
-	_rag_mat = rag
-	_hair_mat = hair_material
-	var slipper := _material(Color("2a1f24"), 0.85)
-	var eye_ball := _material(EYE_FRESH, 0.3)
-	_eye_mat = eye_ball
-	var eye_glow := _material(Color("120d0a"), 0.3, 0.0, Color("ffc04a"), 2.2)
-	var dark_skin := _material(Color("48403a"), 0.9)
-	var mouth_dark := _material(Color("080303"), 1.0)
-	var tooth := _material(Color("b8aa7e"), 0.6)
-	var wood := _material(Color("6a4a2a"), 0.7)
-	var brass := _material(Color("a79a62"), 0.5, 0.8)
+	# The site's first-aid attendant (the story, 2026-10-19), redesigned from
+	# scratch (the owner, 2026-10-20): a real old woman, heavy in the old way,
+	# pale and wrinkled, big knuckled hands, her uniform torn and foul, long
+	# thin grey hair that swings, eyes that find you. _pose() turns the pivots
+	# below; matron_rig.gd copies them to her skeleton's bones.
 	_figure = _pivot(self)
 	_figure.visible = false
-	var body := _pivot(_figure, Vector3(0.0, 1.0, 0.0))
-	_p["body"] = body
-	_mesh(Body.blob(0.15, 0.1, 0.1), dress, body, Vector3(0.0, -0.04, 0.0))
-	# The skirt, with ragged strips hanging from its hem.
-	var skirt := _mesh(Body.skirt(), dress, body, Vector3(0.0, 0.0, 0.0))
-	_p["skirt"] = skirt
-	var rags := _pivot(skirt, Vector3(0.0, -0.58, 0.0))
-	_p["rags"] = rags
-	var rag_parts := []
-	for k in 17:
-		var a := TAU * float(k) / 17.0
-		var length := 0.12 + 0.2 * _hash(k * 5 + 1)
-		var strip := Body.ribbon(length, 0.085 + 0.05 * _hash(k * 5 + 2), 0.02, 0.15 + 0.3 * _hash(k * 5 + 3))
-		var xf := Transform3D(Basis(Vector3.UP, -a + PI * 0.5), Vector3(cos(a) * 0.255, 0.02, sin(a) * 0.22))
-		rag_parts.append([strip, xf])
-	_mesh(_merge(rag_parts), rag, rags)
-	# The torso, its dress and the shawl; a hump and a ridge of spine under the cloth.
-	var torso := _pivot(body, Vector3(0.0, 0.08, 0.0))
-	_p["torso"] = torso
-	_mesh(Body.torso(), skin, torso)
-	_mesh(Body.bodice(), dress, torso)
-	var cape := _pivot(torso, Vector3(0.0, 0.6, -0.05))
-	_p["cape"] = cape
-	_mesh(Body.shawl(), shawl, cape)
-	var hump := _mesh(Body.blob(0.105, 0.11, 0.075), shawl, torso, Vector3(0.0, 0.52, -0.15))
-	_p["hump"] = hump
-	var bumps := []
-	var bump_at := [[0.22, -0.118], [0.3, -0.135], [0.38, -0.152], [0.46, -0.172], [0.53, -0.186], [0.59, -0.19]]
-	for entry in bump_at:
-		var knob := _mesh(Body.blob(0.02, 0.022, 0.02), skin, torso, Vector3(0.0, entry[0], entry[1]))
-		knob.scale = Vector3.ZERO
-		bumps.append(knob)
-	_p["vertebrae"] = bumps
-	# Neck and the sculpted head.
-	var neck := _pivot(torso, Vector3(0.0, 0.62, -0.075))
-	_p["neck"] = neck
-	_mesh(Body.tube([[0.0, 0.04, 0.036, 0.0, 0.0, 0.0], [0.07, 0.03, 0.028, 0.0, 0.01, 0.0], [0.16, 0.03, 0.03, 0.0, 0.03, 0.0],
-		[0.175, 0.012, 0.012, 0.0, 0.03, 0.0]], 10), skin, neck)
-	var head := _pivot(neck, Vector3(0.0, NECK, 0.03))
-	_p["head"] = head
-	var centre := _pivot(head, Vector3(0.0, 0.1, 0.0))
-	var parts := Body.head()
-	_mesh(parts["skull"], skin, centre)
-	_mesh(Body.blob(0.062, 0.095, 0.078), mouth_dark, centre, Vector3(0.0, -0.002, -0.004))
-	var hinge := Vector3(0.0, -0.03, -0.02)
-	var jaw := _pivot(centre, hinge)
-	_p["jaw"] = jaw
-	_mesh(parts["jaw"], skin, jaw, -hinge)
-	# Teeth, uneven, on both jaws.
-	for k in 9:
-		var x := -0.028 + 0.007 * float(k)
-		var z := 0.083 - 0.0008 * pow(x * 100.0, 2.0) * 0.1
-		var upper := _mesh(Body.blob(0.0034, 0.0105, 0.0034, 6), tooth, centre,
-			Vector3(x, -0.046 - 0.002 * _hash(k + 60), z), Vector3(0.0, 0.0, (_hash(k + 70) - 0.5) * 0.4))
-		upper.scale = Vector3(1.0, 1.0 + 0.5 * _hash(k + 80), 1.0)
-		_mesh(Body.blob(0.003, 0.009, 0.003, 6), tooth, jaw,
-			Vector3(x, -0.052 + 0.012 + 0.003 * _hash(k + 90), z - 0.002) - hinge, Vector3((_hash(k + 100) - 0.5) * 0.3, 0.0, (_hash(k + 110) - 0.5) * 0.4))
-	# Eyes sunk in their sockets, dark rings under them, ears.
-	for side in [-1.0, 1.0]:
-		_mesh(Body.blob(0.0115, 0.0115, 0.0115), eye_ball, centre, Vector3(side * 0.032, 0.022, 0.064))
-		var iris := _mesh(Body.blob(0.0075, 0.0075, 0.004, 8), eye_glow, centre, Vector3(side * 0.032, 0.022, 0.0765))
-		_p["eye%d" % int(side)] = iris
-		var bag := _mesh(Body.blob(0.024, 0.012, 0.006, 8), dark_skin, centre, Vector3(side * 0.032, 0.004, 0.079))
-		bag.rotation.z = side * 0.25
-		_mesh(Body.blob(0.007, 0.022, 0.016, 8), skin, centre, Vector3(side * 0.07, -0.002, -0.006))
-	# Stringy hair from under a headscarf, hanging long; a few strands across the face.
-	var hair := _pivot(centre)
-	_p["hair"] = hair
-	var strands := []
-	for k in 40:
-		var theta := PI + TAU * (float(k) + 0.4 * _hash(k + 3)) / 40.0 + PI * 0.0
-		var phi := 0.55 + 0.7 * _hash(k + 7)
-		var dir := Vector3(sin(phi) * sin(theta), cos(phi), sin(phi) * cos(theta))
-		if dir.z > 0.1:
-			continue
-		var root := Vector3(dir.x * 0.073, dir.y * 0.104, dir.z * 0.09)
-		var lock := Body.ribbon(0.4 + 0.4 * _hash(k + 11), 0.02, 0.004, 0.0, 6)
-		strands.append([lock, Transform3D(Basis(Vector3.UP, theta + PI) * Basis(Vector3.RIGHT, -0.15), root)])
-	# A few lank strands fallen across the face.
-	for k in 5:
-		var x := -0.045 + 0.022 * float(k)
-		var lock := Body.ribbon(0.26 + 0.1 * _hash(k + 21), 0.005, 0.0015, 0.2, 5)
-		strands.append([lock, Transform3D(Basis(Vector3.UP, PI), Vector3(x, 0.098, 0.082))])
-	_mesh(_merge(strands), hair_material, hair)
-	var scarf := _mesh(Body.blob(0.076, 0.07, 0.09), dress, centre, Vector3(0.0, 0.052, -0.02))
-	scarf.rotation.x = -0.25
-	var knot := _mesh(Body.blob(0.03, 0.026, 0.03), shawl, centre, Vector3(0.0, 0.05, -0.098))
-	# Arms to her knees, with long hooked hands.
-	_p["fingers_l"] = []
-	_p["fingers_r"] = []
-	for side in [-1.0, 1.0]:
-		var key := "l" if side < 0.0 else "r"
-		var shoulder := _pivot(torso, Vector3(side * 0.19, 0.55, -0.06))
-		_p["sh_" + key] = shoulder
-		_mesh(Body.blob(0.04, 0.042, 0.04), skin, shoulder)
-		_mesh(Body.limb(UPPER_ARM, 0.042, 0.03, 0.004, 0.3), skin, shoulder)
-		var elbow := _pivot(shoulder, Vector3(0.0, -UPPER_ARM, 0.0))
-		_p["el_" + key] = elbow
-		_mesh(Body.blob(0.032, 0.03, 0.032), skin, elbow)
-		_mesh(Body.limb(FOREARM, 0.03, 0.019, 0.006, 0.25), skin, elbow)
-		var wrist := _pivot(elbow, Vector3(0.0, -FOREARM, 0.0))
-		_p["wr_" + key] = wrist
-		_mesh(Body.blob(0.03, 0.05, 0.011), skin, wrist, Vector3(0.0, -0.05, 0.0))
-		var curls := []
-		var lengths := [[0.05, 0.035, 0.03], [0.057, 0.04, 0.032], [0.054, 0.038, 0.03], [0.046, 0.032, 0.026]]
-		for f in 4:
-			var base := _pivot(wrist, Vector3(-0.0225 + 0.015 * float(f), -0.092, 0.0))
-			var chain := []
-			var parent: Node3D = base
-			for seg in 3:
-				_mesh(Body.finger(float(lengths[f][seg]), 0.0075 - 0.0012 * float(seg), 0.0062 - 0.0013 * float(seg)), skin, parent)
-				chain.append(parent)
-				var next := _pivot(parent, Vector3(0.0, -float(lengths[f][seg]), 0.0))
-				parent = next
-			curls.append(chain)
-		var thumb_base := _pivot(wrist, Vector3(side * 0.03, -0.045, 0.0))
-		thumb_base.rotation.z = side * 0.6
-		var thumb_chain := []
-		var tparent: Node3D = thumb_base
-		for seg in 2:
-			var tl := 0.04 - 0.008 * float(seg)
-			_mesh(Body.finger(tl, 0.0082 - 0.0014 * float(seg), 0.0068 - 0.0014 * float(seg)), skin, tparent)
-			thumb_chain.append(tparent)
-			var tnext := _pivot(tparent, Vector3(0.0, -tl, 0.0))
-			tparent = tnext
-		curls.append(thumb_chain)
-		_p["fingers_" + key] = curls
-	# Legs: thin, grey-stockinged, in old slippers.
-	for side in [-1.0, 1.0]:
-		var key := "l" if side < 0.0 else "r"
-		var hip := _pivot(body, Vector3(side * 0.085, -0.08, 0.0))
-		_p["hp_" + key] = hip
-		_mesh(Body.limb(THIGH, 0.062, 0.042), sock, hip)
-		var knee := _pivot(hip, Vector3(0.0, -THIGH, 0.0))
-		_p["kn_" + key] = knee
-		_mesh(Body.blob(0.043, 0.04, 0.045), sock, knee)
-		_mesh(Body.limb(SHIN, 0.042, 0.026, 0.012, 0.22), sock, knee)
-		var ankle := _pivot(knee, Vector3(0.0, -SHIN, 0.0))
-		_p["an_" + key] = ankle
-		_mesh(Body.tube([[-0.04, 0.012, 0.012, 0.0, 0.0, 0.0], [-0.02, 0.034, 0.03, 0.0, 0.0, 0.0], [0.04, 0.046, 0.03, 0.0, 0.0, 0.0],
-			[0.14, 0.048, 0.027, 0.0, 0.0, 0.0], [0.22, 0.036, 0.02, 0.0, 0.0, 0.0], [0.255, 0.012, 0.01, 0.0, 0.0, 0.0]], 10),
-			slipper, ankle, Vector3(0.0, -0.03, -0.075), Vector3(PI * 0.5, 0.0, 0.0))
-	# The music box on its cord at her hip.
-	var cord := _pivot(body, Vector3(-0.2, -0.05, 0.0))
-	_p["box_cord"] = cord
-	_mesh(Body.limb(0.3, 0.004, 0.004), _material(Color("3a2f26"), 0.9), cord)
-	_mesh(Body.blob(0.065, 0.05, 0.05, 8), wood, cord, Vector3(0.0, -0.33, 0.0))
-	_mesh(Body.blob(0.05, 0.006, 0.04, 8), brass, cord, Vector3(0.0, -0.285, 0.0))
+	_build_pivots()
+	_load_body()
 	# A cold glimmer to be seen by in the dark.
 	_eye_light = OmniLight3D.new()
 	_eye_light.light_color = Color("d4e4c4")
@@ -690,24 +475,124 @@ func _build_figure() -> void:
 	_figure.add_child(_eye_light)
 
 
-# The exposure's work on her, applied when it has moved: two steps each, the
-# first half to blistered and stained, the second to grey and filthy.
-func _apply_exposure(exposure: float) -> void:
-	var e := clampf(exposure, 0.0, 1.0)
-	if absf(e - _applied_exposure) < 0.01:
+# The joints _pose() works on, named as it names them. matron_rig.gd moves
+# each to her body's own joint.
+func _build_pivots() -> void:
+	var body := _pivot(_figure, Vector3(0.0, 1.0, 0.0))
+	_p["body"] = body
+	var skirt := _pivot(body)
+	_p["skirt"] = skirt
+	_p["rags"] = _pivot(skirt, Vector3(0.0, -0.58, 0.0))
+	var torso := _pivot(body, Vector3(0.0, 0.08, 0.0))
+	_p["torso"] = torso
+	_p["cape"] = _pivot(torso, Vector3(0.0, 0.6, -0.05))
+	_p["hump"] = _pivot(torso, Vector3(0.0, 0.52, -0.15))
+	_p["vertebrae"] = []
+	var neck := _pivot(torso, Vector3(0.0, 0.62, -0.075))
+	_p["neck"] = neck
+	var head := _pivot(neck, Vector3(0.0, NECK, 0.03))
+	_p["head"] = head
+	var centre := _pivot(head, Vector3(0.0, 0.1, 0.0))
+	_p["jaw"] = _pivot(centre, Vector3(0.0, -0.03, -0.02))
+	_p["hair"] = _pivot(centre)
+	for side in [-1.0, 1.0]:
+		var key := "l" if side < 0.0 else "r"
+		var shoulder := _pivot(torso, Vector3(side * 0.19, 0.55, -0.06))
+		_p["sh_" + key] = shoulder
+		var elbow := _pivot(shoulder, Vector3(0.0, -UPPER_ARM, 0.0))
+		_p["el_" + key] = elbow
+		var wrist := _pivot(elbow, Vector3(0.0, -FOREARM, 0.0))
+		_p["wr_" + key] = wrist
+		# Four fingers of three joints and a thumb of two, each joint a pivot.
+		var curls := []
+		for f in 4:
+			var joint: Node3D = _pivot(wrist, Vector3(-0.0225 + 0.015 * float(f), -0.092, 0.0))
+			var chain := []
+			for seg in 3:
+				chain.append(joint)
+				joint = _pivot(joint, Vector3(0.0, -0.04, 0.0))
+			curls.append(chain)
+		var thumb_joint: Node3D = _pivot(wrist, Vector3(side * 0.03, -0.045, 0.0))
+		thumb_joint.rotation.z = side * 0.6
+		var thumb := []
+		for seg in 2:
+			thumb.append(thumb_joint)
+			thumb_joint = _pivot(thumb_joint, Vector3(0.0, -0.035, 0.0))
+		curls.append(thumb)
+		_p["fingers_" + key] = curls
+	for side in [-1.0, 1.0]:
+		var key := "l" if side < 0.0 else "r"
+		var hip := _pivot(body, Vector3(side * 0.085, -0.08, 0.0))
+		_p["hp_" + key] = hip
+		var knee := _pivot(hip, Vector3(0.0, -THIGH, 0.0))
+		_p["kn_" + key] = knee
+		_p["an_" + key] = _pivot(knee, Vector3(0.0, -SHIN, 0.0))
+	_p["box_cord"] = _pivot(body, Vector3(-0.2, -0.05, 0.0))
+
+
+# Her body: the skinned glTF read at runtime (kept as it is by its .import),
+# dressed by matron_look.gd and driven by matron_rig.gd.
+func _load_body() -> void:
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	var err := doc.append_from_file(BODY_FILE, state)
+	if err != OK:
+		push_error("matron: cannot read her body %s (%s)" % [BODY_FILE, error_string(err)])
 		return
-	_applied_exposure = e
-	var first := clampf(e * 2.0, 0.0, 1.0)
-	var second := clampf((e - 0.5) * 2.0, 0.0, 1.0)
-	_skin_mat.albedo_color = SKIN_FRESH.lerp(SKIN_BLISTERED, first).lerp(SKIN_GREY, second)
-	_skin_mat.roughness = lerpf(0.85, 0.55, first)   # blistered skin shines
-	var tunic := TUNIC_FRESH.lerp(TUNIC_STAINED, first).lerp(TUNIC_FILTHY, second)
-	_tunic_mat.albedo_color = tunic
-	_rag_mat.albedo_color = tunic
-	_eye_mat.albedo_color = EYE_FRESH.lerp(EYE_BLOODSHOT, e)
-	var hair := _hair_mat.albedo_color
-	hair.a = lerpf(1.0, 0.3, e)
-	_hair_mat.albedo_color = hair
+	var root := doc.generate_scene(state) as Node3D
+	if root == null:
+		push_error("matron: her body %s made no scene" % BODY_FILE)
+		return
+	var skeletons := root.find_children("*", "Skeleton3D", true, false)
+	var rig_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(RIG_FILE))
+	if skeletons.is_empty() or not (rig_data is Dictionary):
+		push_error("matron: her body has no skeleton, or %s is not her rig" % RIG_FILE)
+		root.free()
+		return
+	_figure.add_child(root)
+	_look = MatronLook.new()
+	_look.build()
+	_look.dress(root)
+	_rig = MatronRig.new()
+	_rig.setup(skeletons[0] as Skeleton3D, rig_data, self)
+
+
+# The exposure's work on her look (matron_look.gd), one way.
+func _apply_exposure(exposure: float) -> void:
+	if _look != null:
+		_look.apply_exposure(exposure)
+
+
+# Her real arms are shorter than her old figure's: on all fours her chest
+# comes down to arm's length (a head-down bear crawl, hips high), the arms and
+# the head keeping their angle in the world, so her palms reach the deck.
+func _crawl_retune(data: Dictionary, falling: bool) -> void:
+	var turn := int(data.get("turn", 0))
+	if int(data["state"]) != STATE_HUNTING or falling or _fall_speed > 1.0:
+		return
+	if bool(data.get("clinging", false)) or bool(data.get("climbing", false)) or bool(data.get("on_pipe", false)) \
+			or bool(data.get("on_line", false)) or (turn == 0 and bool(data.get("wary", false))):
+		return
+	if not ((float(data["speed"]) > 1.0 and int(data.get("stage", 0)) > 0) or turn == 2):
+		return
+	(_p["torso"] as Node3D).rotation.x += 0.75
+	for s in ["l", "r"]:
+		(_p["sh_" + s] as Node3D).rotation.x -= 0.75
+	(_p["head"] as Node3D).rotation.x -= 0.55
+	(_p["neck"] as Node3D).rotation.x -= 0.2
+
+
+# After the pose and wherever the figure was laid (toppled, head down): the
+# pivots onto the bones, her feet and hands onto what is there, her eyes on
+# the player's, her hair swung.
+func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falling: bool) -> void:
+	if _rig == null:
+		return
+	_crawl_retune(data, falling)
+	_rig.apply()
+	_rig.contact(data, falling)
+	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
+	_rig.step_hair(delta)
 
 
 func _limb(up: Node3D, low: Node3D, fwd: float, bend: float, splay := 0.0) -> void:
@@ -1242,6 +1127,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_pose(data, delta, player_position, falling)
 	_topple(data, centre)
 	_pipe_head_down(data, centre)
+	_drive_body(data, delta, camera_position, falling)
 	var feet := _figure.global_position
 	var d := feet.distance_to(player_position)
 	# Her music box: heard from far off, slowing as she nears.
@@ -1386,6 +1272,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 # For a test and the look scenes: where her head is, and how far gone the
 # locker is.
 func head_world_position() -> Vector3:
+	if _rig != null:
+		return _rig.bone_world("head") * Vector3(0.0, 0.09, 0.03)
 	return (_p["head"] as Node3D).global_position + Vector3(0.0, 0.1, 0.0)
 
 
@@ -1398,26 +1286,9 @@ func figure_shown() -> bool:
 
 
 # For the look scenes: the figure posed from made-up data, the native's own
-# frames ignored while this is on.
-# Her look follows the exposure (the native's, 0..1 over her time out), one
-# way: pale and tired in a white tunic, then flushed and blistered with the
-# tunic stained and the eyes bloodshot, then grey and filthy, the hair gone
-# thin. What she does follows her rage instead (matron.hpp, the stages).
-const SKIN_FRESH := Color("c9ad94")
-const SKIN_BLISTERED := Color("c4705a")
-const SKIN_GREY := Color("6b5e58")
-const TUNIC_FRESH := Color("e9e5dc")
-const TUNIC_STAINED := Color("c9b39c")
-const TUNIC_FILTHY := Color("7a6657")
-const EYE_FRESH := Color("8f8767")
-const EYE_BLOODSHOT := Color("b0463a")
-var _skin_mat: StandardMaterial3D
-var _tunic_mat: StandardMaterial3D
-var _rag_mat: StandardMaterial3D
-var _hair_mat: StandardMaterial3D
-var _eye_mat: StandardMaterial3D
-var _applied_exposure := -1.0
-
+# frames ignored while this is on. Her look follows the exposure (the
+# native's, 0..1 over her time out, matron_look.gd); what she does follows her
+# rage instead (matron.hpp, the stages).
 var previewing := false
 
 

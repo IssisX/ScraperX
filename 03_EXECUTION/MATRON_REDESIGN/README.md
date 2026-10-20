@@ -1,5 +1,38 @@
 # The Matron's redesign: prototypes and panel results
 
+## In the game now (2026-10-20)
+
+Her figure in the game is built from this work by
+`tools/body/build_matron_body.py` (run `tools/body/fetch_makehuman.py` first;
+every input is CC0 and pinned by SHA-256 in `tools/body/sources.json`). It
+writes `godot/presentation/life/matron/`, which the game reads at runtime:
+
+- MakeHuman's scanned body at 77 years, 1.80 m and 81 kg (BMI 25): a soft
+  low belly, a heavy low bust, thick upper arms, big hands (23 cm) with
+  swollen knuckles.
+- Skin from MakeHuman's CC0 old woman, regraded pale and bloodless, with age
+  spots, veins on the hands and temples, grime in the hands' creases,
+  yellowed nails with dirt under them, and wrinkle relief from the skin's own
+  creases.
+- The uniform made from the body, gone foul: stains (old blood spattered
+  down the front, tea-colored fades, grime, sweat at the armpits, her hands'
+  smears down her thighs), soot up from a torn hem with threads hanging, a
+  ragged sleeve torn half up one arm, two buttons gone, and dark stockings
+  laddered and holed to the skin.
+- Long, thin, grey hair grown from her scalp as about 1,500 lank strands in
+  greasy clumps, combed back toward her nape with loose locks by her face,
+  hung on ten chains of bones that swing with her (`matron_rig.gd`).
+- Real eyes (MakeHuman's CC0 high-poly eyes, a washed-out grey iris, a
+  yellowed bloodshot white, a clear cornea) on their own bones that turn
+  onto the player's eyes, darting until she has found you.
+- Teeth on her head and jaw, a dark mouth behind them, brows and lashes.
+
+`godot/tests/matron_figure_test.gd` checks that she loads and is dressed,
+that her soles stand on the floor, that her eyes meet a viewer within 5
+degrees, and that her hair hangs and swings; with `--out=<dir>` it saves a
+studio render of every pose. The nurse's cap is left off for now (it read as
+a slab over her hair).
+
 Kept here so none of it is lost when a session's scratch space goes away
 (the owner, 2026-10-20: "PLEASE DON'T LOSE THAT"). This is design work, not
 shipped code: nothing under this folder is loaded by the game or built by CI.
