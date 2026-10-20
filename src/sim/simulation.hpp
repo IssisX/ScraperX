@@ -34,6 +34,9 @@ struct RiggingSnapshot final {
     unsigned target_kind = 0, failure = 0, installed_count = 0;
     Vector3 target_point{};
     double tension_n = 0, slack_m = 0, cut_progress = 0;
+    bool power_selected = false, power_operable = false, braking = true, energy_cutoff = false;
+    double rest_length_m = 0, actual_length_m = 0, target_speed_mps = 0;
+    double energy_j = 0, capacity_j = 0, source_energy_used_j = 0, motor_work_j = 0, heat_j = 0;
     std::array<std::uint64_t, 8> lines{};
     std::array<Vector3, 4> preview{};
     std::size_t preview_count = 0;
@@ -877,6 +880,8 @@ public:
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
 
     [[nodiscard]] bool set_rigging_aim(double x, double y, double z) noexcept;
+    // Held effort: +take up, -pay out, zero engages the finite cable brake.
+    [[nodiscard]] bool set_rigging_power_input(double effort) noexcept;
     // False means rejected at the input boundary; queued is not installed.
     [[nodiscard]] bool request_rigging(RiggingCommandKind, std::uint64_t target = 0) noexcept;
     [[nodiscard]] RiggingSnapshot rigging_state() const noexcept;
@@ -1133,6 +1138,7 @@ private:
     std::array<RiggingCommand, 8> rigging_commands_{};
     std::size_t rigging_command_count_ = 0;
     bool rigging_cut_held_ = false;
+    double rigging_power_input_ = 0;
     std::array<TraversalLineCommand, 8> traversal_line_commands_{};
     std::size_t traversal_line_command_count_ = 0;
     double traversal_line_reel_input_ = 0;

@@ -1,5 +1,6 @@
 #include "sim/simulation/world.hpp"
 #include "sim/rigging_bay.hpp"
+#include "sim/mounted_winch_bay.hpp"
 #include "sim/workshop_roof_route.hpp"
 #include "sim/vault_rail_route.hpp"
 #include "sim/loose_gangway_route.hpp"
@@ -258,6 +259,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         build_beam_ramp_route(*kit_);
         rigging_ = std::make_unique<RiggingSystem>(physics_system_, *kit_);
         build_rigging_bay(*kit_, *rigging_);
+        build_mounted_winch_bay(*kit_, *rigging_);
         traversal_line_ = std::make_unique<PortableTraversalLine>(physics_system_, player_id_,
             object_layers::kMoving, *physical_hands_, rigging_.get());
     }

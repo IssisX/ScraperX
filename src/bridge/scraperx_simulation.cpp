@@ -62,6 +62,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"), &ScraperXSimulation::request_slingshot_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_rigging_aim", "x", "y", "z"), &ScraperXSimulation::set_rigging_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_rigging_power_input", "effort"), &ScraperXSimulation::set_rigging_power_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_rigging", "command", "target"), &ScraperXSimulation::request_rigging);
     godot::ClassDB::bind_method(godot::D_METHOD("get_rigging_state"), &ScraperXSimulation::get_rigging_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_traversal_line", "command", "target"), &ScraperXSimulation::request_traversal_line);
@@ -693,6 +694,9 @@ bool ScraperXSimulation::request_slingshot_drop() {
 bool ScraperXSimulation::set_rigging_aim(double x, double y, double z) {
     return simulation_->set_rigging_aim(x, y, z);
 }
+bool ScraperXSimulation::set_rigging_power_input(double effort) {
+    return simulation_->set_rigging_power_input(effort);
+}
 bool ScraperXSimulation::request_rigging(std::int64_t command, std::int64_t target) {
     if (command < 0 || command > std::int64_t(scraperx::sim::RiggingCommandKind::EndCut) || target < 0)
         return false;
@@ -716,6 +720,27 @@ godot::Dictionary ScraperXSimulation::get_rigging_state() const {
     out["installed_count"] = state.installed_count;
     out["tension_n"] = state.tension_n;
     out["slack_m"] = state.slack_m;
+    out["power_selected"] = state.power_selected;
+    out["power_operable"] = state.power_operable;
+    out["braking"] = state.braking;
+    out["energy_cutoff"] = state.energy_cutoff;
+    out["rest_length_m"] = state.rest_length_m;
+    out["actual_length_m"] = state.actual_length_m;
+    out["target_speed_mps"] = state.target_speed_mps;
+    out["energy_j"] = state.energy_j;
+    out["capacity_j"] = state.capacity_j;
+    out["source_energy_used_j"] = state.source_energy_used_j;
+    out["motor_work_j"] = state.motor_work_j;
+    out["heat_j"] = state.heat_j;
+    if (state.power_selected) {
+        const auto base = simulation_->kit_cable_count() - std::uint32_t(state.lines.size());
+        for (std::uint32_t i = 0; i < state.lines.size(); ++i) if (state.lines[i] == state.selected) {
+            std::array<scraperx::sim::Vector3, 4> points{};
+            if (simulation_->kit_cable_points(base + i, points.data(), points.size()) >= 2)
+                out["power_point"] = godot::Vector3(points[0].x, points[0].y, points[0].z);
+            break;
+        }
+    }
     out["cut_progress"] = state.cut_progress;
     godot::Array lines;
     for (auto line : state.lines) if (line) lines.push_back(std::int64_t(line));

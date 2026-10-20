@@ -142,6 +142,7 @@ public:
         std::array<RiggingCommand, 8> rigging_commands{};
         std::size_t rigging_command_count = 0;
         bool rigging_cut_held = false;
+        double rigging_power = 0;
         std::array<TraversalLineCommand, 8> traversal_line_commands{};
         std::size_t traversal_line_command_count = 0;
         double traversal_line_reel = 0;

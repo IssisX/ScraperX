@@ -13,6 +13,7 @@ void Simulation::PhysicsWorld::OnStep(const JPH::PhysicsStepListenerContext &con
     if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
     if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
     if (traversal_line_) traversal_line_->collision_step(context.mDeltaTime);
+    if (rigging_) rigging_->collision_step(context.mDeltaTime);
     physical_hands_->pre_step(context.mDeltaTime, true);
     for (auto &palm : physical_palms_) if (palm) palm->pre_step(context.mDeltaTime);
     if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
@@ -284,6 +285,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
     }
     if (!slingshot_) {
         if (traversal_line_) traversal_line_->collision_step(delta_seconds);
+        if (rigging_) rigging_->collision_step(delta_seconds);
         physical_hands_->pre_step(delta_seconds);
     }
     if (supplied_ascent_) {

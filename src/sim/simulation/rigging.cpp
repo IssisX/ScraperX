@@ -21,7 +21,15 @@ bool Simulation::request_rigging(RiggingCommandKind kind, std::uint64_t target) 
         rigging_command_count_ == rigging_commands_.size()) return false;
     rigging_commands_[rigging_command_count_++] = {kind, target};
     if (kind == RiggingCommandKind::BeginCut) rigging_cut_held_ = true;
-    if (kind == RiggingCommandKind::Unequip) rigging_cut_held_ = false;
+    if (kind == RiggingCommandKind::Unequip) {
+        rigging_cut_held_ = false;
+        rigging_power_input_ = 0;
+    }
+    return true;
+}
+bool Simulation::set_rigging_power_input(double effort) noexcept {
+    if (!std::isfinite(effort)) return false;
+    rigging_power_input_ = std::clamp(effort, -1.0, 1.0);
     return true;
 }
 RiggingSnapshot Simulation::rigging_state() const noexcept { return physics_world_->rigging_state(); }
@@ -93,6 +101,7 @@ void Simulation::PhysicsWorld::apply_rigging_commands(const StepCommands &comman
             rigging_cut_seconds_ = 0;
         }
     }
+    rigging_->set_power_input(static_cast<float>(commands.rigging_power));
 }
 RiggingSnapshot Simulation::PhysicsWorld::rigging_state() const noexcept {
     RiggingSnapshot out;
@@ -106,6 +115,13 @@ RiggingSnapshot Simulation::PhysicsWorld::rigging_state() const noexcept {
     out.installed_count = state.installed_count;
     out.target_point = detail::to_vector3(state.target_point);
     out.tension_n = state.tension_n; out.slack_m = state.slack_m;
+    out.power_selected = state.power_selected; out.power_operable = state.power_operable;
+    out.braking = state.braking; out.energy_cutoff = state.energy_cutoff;
+    out.rest_length_m = state.rest_length_m; out.actual_length_m = state.actual_length_m;
+    out.target_speed_mps = state.target_speed_mps;
+    out.energy_j = state.energy_j; out.capacity_j = state.capacity_j;
+    out.source_energy_used_j = state.source_energy_used_j;
+    out.motor_work_j = state.motor_work_j; out.heat_j = state.heat_j;
     std::array<JPH::RVec3, 4> preview;
     out.preview_count = rigging_->preview(preview);
     for (std::size_t i = 0; i < out.preview_count; ++i)

@@ -663,6 +663,9 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var has_x := station in [&"jib", &"intake", &"forklift"]
 	_buttons[B_UP].shown = _operating and station != &"rigging"
 	_buttons[B_DOWN].shown = _operating and station != &"rigging"
+	if station == &"rigging":
+		_buttons[B_UP].shown = bool(ctx.get("rigging_power_operable", false))
+		_buttons[B_DOWN].shown = _buttons[B_UP].shown
 	if station == &"traversal_line":
 		_buttons[B_UP].shown = bool(ctx.get("traversal_line_gripping", false)) and not bool(ctx.get("traversal_line_two_ended", false))
 		_buttons[B_DOWN].shown = _buttons[B_UP].shown
@@ -685,6 +688,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 			_axis_names = ["HOIST", "SLEW"]
 		&"needle":
 			_axis_names = ["RAISE / LOWER", ""]
+		&"rigging":
+			_axis_names = ["LIFT / LOWER", ""]
 		_:
 			_axis_names = ["", ""]
 	for id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN]:

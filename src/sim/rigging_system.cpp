@@ -5,6 +5,7 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace scraperx::sim {
@@ -53,6 +54,45 @@ std::uint16_t RiggingSystem::add_fixed_guide(kit::BodyIndex index, JPH::Vec3 loc
     eye.guide_in = incoming; eye.guide_out = outgoing;
     return id;
 }
+std::uint16_t RiggingSystem::add_powered_mount(kit::BodyIndex index, JPH::Vec3 local,
+        const PoweredCable::Config &profile, float rating) {
+    // Endpoints and initial rest length belong to the accepted installation.
+    if (!(std::isfinite(profile.min_length_m) && profile.min_length_m > 0 &&
+          std::isfinite(profile.max_length_m) && profile.max_length_m >= profile.min_length_m &&
+          std::isfinite(profile.max_speed_mps) && profile.max_speed_mps > 0 &&
+          std::isfinite(profile.pull_force_n) && profile.pull_force_n > 0 &&
+          std::isfinite(profile.brake_force_n) && profile.brake_force_n > 0 &&
+          std::isfinite(profile.electrical_power_w) && profile.electrical_power_w > 0 &&
+          std::isfinite(profile.efficiency) && profile.efficiency > 0 && profile.efficiency <= 1 &&
+          std::isfinite(profile.capacity_j) && profile.capacity_j >= 0))
+        throw std::invalid_argument("Rigging powered mount requires finite actuator limits and source capacity");
+    const auto id = add_eye(index, local, rating);
+    eyes_[id - 1].kind = Kind::PoweredMount;
+    auto &source = power_sources_[id - 1]; source.profile = profile;
+    source.state.energy_j = profile.capacity_j;
+    return id;
+}
+bool RiggingSystem::power_operable(const Slot &slot) const {
+    if (!equipped_ || !allowed_ || !slot.powered || !valid_record(slot.record)) return false;
+    const auto &mount = eyes_[slot.record.first - 1];
+    const auto at = point(slot.record.first, mount.local);
+    return (at - hand_).Length() <= kInstallReachM && clear_span(hand_, at, player_, mount.identity);
+}
+void RiggingSystem::stop_power() {
+    for (auto &slot : slots_) if (slot.powered) slot.powered->pre_step(0);
+}
+void RiggingSystem::set_power_input(float effort) {
+    stop_power();
+    if (!std::isfinite(effort) || selected_ < 0) return;
+    auto &slot = slots_[std::size_t(selected_)];
+    if (power_operable(slot)) slot.powered->pre_step(std::clamp(effort, -1.F, 1.F));
+}
+void RiggingSystem::collision_step(float dt) {
+    if (!std::isfinite(dt) || dt <= 0) return;
+    for (auto &slot : slots_) if (slot.powered) {
+        slot.powered->collision_step(dt); slot.collision_pending = true;
+    }
+}
 std::uint64_t RiggingSystem::eye_token(std::size_t i) const { return (std::uint64_t(epoch_) << 32) | (i + 1); }
 std::uint64_t RiggingSystem::line_token(std::size_t i) const {
     return (std::uint64_t(epoch_) << 32) | (std::uint64_t(slots_[i].record.generation) << 8) | (i + 1);
@@ -63,7 +103,7 @@ int RiggingSystem::line_index(std::uint64_t token) const {
     return int(index - 1);
 }
 bool RiggingSystem::reject(Failure reason) { failure_ = reason; ++serial_; return false; }
-void RiggingSystem::equip(bool value) { equipped_ = value; target_ = 0; allowed_ = false; }
+void RiggingSystem::equip(bool value) { stop_power(); equipped_ = value; target_ = 0; allowed_ = false; }
 bool RiggingSystem::clear_span(JPH::RVec3 from, JPH::RVec3 to, JPH::BodyID first, JPH::BodyID second) const {
     const JPH::Vec3 delta(to - from);
     if (delta.LengthSq() < 1.e-8F) return true;
@@ -76,6 +116,7 @@ void RiggingSystem::aim(JPH::RVec3 hand, JPH::Vec3 direction, JPH::BodyID player
     allowed_ = allowed && equipped_ && finite_vector(hand) && finite_vector(direction);
     target_ = 0;
     aim_ = direction.NormalizedOr(-JPH::Vec3::sAxisZ());
+    if (selected_ >= 0 && !power_operable(slots_[std::size_t(selected_)])) stop_power();
     if (!allowed_) return;
     float best = -1;
     for (std::size_t i = 0; i < eye_count_; ++i) {
@@ -91,13 +132,19 @@ void RiggingSystem::aim(JPH::RVec3 hand, JPH::Vec3 direction, JPH::BodyID player
     }
 }
 bool RiggingSystem::valid_record(const Record &r) const {
-    if (!r.first || !r.second || !r.guide || r.first > eye_count_ ||
-        r.second > eye_count_ || r.guide > eye_count_ || r.first == r.second ||
-        !std::isfinite(r.paid_length_m) || r.paid_length_m <= 0 ||
+    if (!r.first || !r.second || r.first > eye_count_ || r.second > eye_count_ ||
+        r.first == r.second || !std::isfinite(r.paid_length_m) || r.paid_length_m <= 0 ||
         !std::isfinite(r.rating_n) || r.rating_n <= 0) return false;
-    const auto &a = eyes_[r.first - 1], &b = eyes_[r.second - 1], &g = eyes_[r.guide - 1];
-    return body(a) && body(b) && body(g) && a.kind == Kind::End && b.kind == Kind::End &&
-        g.kind == Kind::FixedGuide && !body(g)->IsDynamic() && a.identity != b.identity &&
+    const auto &a = eyes_[r.first - 1], &b = eyes_[r.second - 1];
+    if (!body(a) || !body(b) || b.kind != Kind::End || a.identity == b.identity) return false;
+    if (a.kind == Kind::PoweredMount) {
+        const auto &p = power_sources_[r.first - 1].profile;
+        return !r.guide && body(b)->IsDynamic() && r.paid_length_m >= p.min_length_m &&
+               r.paid_length_m <= p.max_length_m;
+    }
+    if (!r.guide || r.guide > eye_count_ || a.kind != Kind::End) return false;
+    const auto &g = eyes_[r.guide - 1];
+    return body(g) && g.kind == Kind::FixedGuide && !body(g)->IsDynamic() &&
         (body(a)->IsDynamic() || body(b)->IsDynamic());
 }
 bool RiggingSystem::reachable(const Record &r) const {
@@ -112,6 +159,11 @@ std::size_t RiggingSystem::polyline(std::size_t index, std::array<JPH::RVec3, 4>
     if (index >= kCapacity) return 0;
     const auto &r = slots_[index].record;
     if (!r.occupied || r.broken || !valid_record(r)) return 0;
+    if (eyes_[r.first - 1].kind == Kind::PoweredMount) {
+        out[0] = point(r.first, eyes_[r.first - 1].local);
+        out[1] = point(r.second, eyes_[r.second - 1].local);
+        return 2;
+    }
     const auto &g = eyes_[r.guide - 1];
     out = {point(r.first, eyes_[r.first - 1].local),
            point(r.guide, r.reversed ? g.guide_out : g.guide_in),
@@ -124,6 +176,22 @@ void RiggingSystem::connect(Slot &slot) {
     const auto index = std::size_t(&slot - slots_.data());
     std::array<JPH::RVec3, 4> p;
     if (!polyline(index, p)) return;
+    if (eyes_[slot.record.first - 1].kind == Kind::PoweredMount) {
+        auto &source = power_sources_[slot.record.first - 1];
+        auto config = source.profile;
+        config.support = eyes_[slot.record.first - 1].identity;
+        config.load = eyes_[slot.record.second - 1].identity;
+        config.support_eye = eyes_[slot.record.first - 1].local;
+        config.load_eye = eyes_[slot.record.second - 1].local;
+        config.initial_length_m = slot.record.paid_length_m;
+        slot.powered = std::make_unique<PoweredCable>(world_, config);
+        auto state = source.state; state.rest_length_m = config.initial_length_m;
+        slot.powered->restore(state);
+        for (auto id : {config.support, config.load})
+            if (world_.GetBodyLockInterfaceNoLock().TryGetBody(id)->IsDynamic())
+                world_.GetBodyInterface().ActivateBody(id);
+        return;
+    }
     const float legs = slot.record.paid_length_m - float((p[2] - p[1]).Length());
     if (legs <= .01F) { slot.record.broken = true; return; }
     slot.constraint = make_fixed_guide_cable(*body(eyes_[slot.record.first - 1]), p[0], p[1],
@@ -134,6 +202,16 @@ void RiggingSystem::connect(Slot &slot) {
     bodies.ActivateBody(eyes_[slot.record.second - 1].identity);
 }
 void RiggingSystem::disconnect(Slot &slot) {
+    if (slot.powered) {
+        const auto state = slot.powered->state();
+        power_sources_[slot.record.first - 1].state = state;
+        slot.record.paid_length_m = state.rest_length_m;
+        slot.powered.reset();
+        for (const auto id : {slot.record.first, slot.record.second}) {
+            auto *end = body(eyes_[id - 1]);
+            if (end && end->IsDynamic()) world_.GetBodyInterface().ActivateBody(end->GetID());
+        }
+    }
     if (slot.constraint) {
         world_.RemoveConstraint(slot.constraint);
         slot.constraint = nullptr;
@@ -143,7 +221,7 @@ void RiggingSystem::disconnect(Slot &slot) {
             if (end && end->IsDynamic()) world_.GetBodyInterface().ActivateBody(end->GetID());
         }
     }
-    slot.tension_n = 0; slot.overload_ticks = 0; slot.solved = false;
+    slot.tension_n = 0; slot.overload_ticks = 0; slot.solved = false; slot.collision_pending = false;
 }
 bool RiggingSystem::action(std::uint64_t token) {
     if (!allowed_) return reject(Failure::UnsafeContext);
@@ -154,30 +232,46 @@ bool RiggingSystem::action(std::uint64_t token) {
     if (!body(eye)) return reject(Failure::StaleTarget);
     if ((point(id, eye.local) - hand_).Length() > kInstallReachM) return reject(Failure::OutOfReach);
     if (!first_) {
-        if (eye.kind != Kind::End) return reject(Failure::WrongTarget);
+        if (eye.kind != Kind::End && eye.kind != Kind::PoweredMount) return reject(Failure::WrongTarget);
+        if (eye.kind == Kind::PoweredMount)
+            for (const auto &slot : slots_)
+                if (slot.record.occupied && slot.record.first == id) return reject(Failure::Capacity);
         first_ = id; failure_ = Failure::None; ++serial_; return true;
     }
+    const bool powered = eyes_[first_ - 1].kind == Kind::PoweredMount;
+    if (powered && eye.kind != Kind::End) return reject(Failure::WrongTarget);
     if (eye.kind == Kind::FixedGuide) { guide_ = id; failure_ = Failure::None; ++serial_; return true; }
-    if (!guide_) return reject(Failure::MissingGuide);
+    if (!powered && !guide_) return reject(Failure::MissingGuide);
     auto free = std::find_if(slots_.begin(), slots_.end(), [](const Slot &s) { return !s.record.occupied; });
     if (free == slots_.end()) return reject(Failure::Capacity);
     Record r; r.first = first_; r.second = id; r.guide = guide_; r.occupied = true;
-    r.paid_length_m = 1; // Validation precedes geometry; final length is measured below.
-    r.rating_n = std::min({eyes_[first_ - 1].rating_n, eye.rating_n, eyes_[guide_ - 1].rating_n});
-    if (!valid_record(r)) return reject(Failure::Degenerate);
-    const auto &g = eyes_[guide_ - 1];
     const auto start = point(first_, eyes_[first_ - 1].local), end = point(id, eye.local);
-    auto a = point(guide_, g.guide_in), b = point(guide_, g.guide_out);
-    r.reversed = (start - b).LengthSq() + (end - a).LengthSq() <
-                 (start - a).LengthSq() + (end - b).LengthSq();
-    if (r.reversed) std::swap(a, b);
-    if ((start - a).Length() < .05F || (end - b).Length() < .05F) return reject(Failure::Degenerate);
-    if (!clear_span(start, a, eyes_[first_ - 1].identity, g.identity) ||
-        !clear_span(a, b, g.identity, g.identity) || !clear_span(b, end, g.identity, eye.identity))
-        return reject(Failure::Obstructed);
-    r.paid_length_m = float((start - a).Length() + (a - b).Length() + (b - end).Length()) + kInitialSlackM;
+    r.paid_length_m = powered ? float((end - start).Length()) + kInitialSlackM : 1;
+    if (powered) r.paid_length_m = std::max(r.paid_length_m, power_sources_[first_ - 1].profile.min_length_m);
+    r.rating_n = std::min(eyes_[first_ - 1].rating_n, eye.rating_n);
+    if (!powered) r.rating_n = std::min(r.rating_n, eyes_[guide_ - 1].rating_n);
+    if (!valid_record(r)) return reject(Failure::Degenerate);
+    if (powered) {
+        if ((end - start).Length() < .05F) return reject(Failure::Degenerate);
+        if (!clear_span(start, end, eyes_[first_ - 1].identity, eye.identity)) return reject(Failure::Obstructed);
+    } else {
+        const auto &g = eyes_[guide_ - 1];
+        auto a = point(guide_, g.guide_in), b = point(guide_, g.guide_out);
+        r.reversed = (start - b).LengthSq() + (end - a).LengthSq() <
+                     (start - a).LengthSq() + (end - b).LengthSq();
+        if (r.reversed) std::swap(a, b);
+        if ((start - a).Length() < .05F || (end - b).Length() < .05F) return reject(Failure::Degenerate);
+        if (!clear_span(start, a, eyes_[first_ - 1].identity, g.identity) ||
+            !clear_span(a, b, g.identity, g.identity) || !clear_span(b, end, g.identity, eye.identity))
+            return reject(Failure::Obstructed);
+        r.paid_length_m = float((start - a).Length() + (a - b).Length() + (b - end).Length()) + kInitialSlackM;
+    }
+    stop_power();
     r.generation = free->record.generation + 1;
     free->record = r; connect(*free);
+    if (!free->constraint && !free->powered) {
+        free->record.occupied = false; return reject(Failure::Degenerate);
+    }
     selected_ = int(free - slots_.begin()); first_ = guide_ = 0; failure_ = Failure::None; ++serial_;
     return true;
 }
@@ -193,6 +287,7 @@ bool RiggingSystem::select(std::uint64_t token) {
     const int i = line_index(token);
     if (i < 0) return reject(Failure::StaleTarget);
     if (!reachable(slots_[std::size_t(i)].record)) return reject(Failure::OutOfReach);
+    if (selected_ != i) stop_power();
     selected_ = i; failure_ = Failure::None; ++serial_; return true;
 }
 bool RiggingSystem::unclip(std::uint64_t token) {
@@ -200,7 +295,7 @@ bool RiggingSystem::unclip(std::uint64_t token) {
     const int i = line_index(token);
     if (i < 0) return reject(Failure::StaleTarget);
     auto &slot = slots_[std::size_t(i)];
-    if ((slot.constraint && !slot.solved) || slot.tension_n > kUnloadedN) return reject(Failure::Loaded);
+    if (((slot.constraint || slot.powered) && !slot.solved) || slot.tension_n > kUnloadedN) return reject(Failure::Loaded);
     const auto &r = slot.record;
     if (!reachable(r))
         return reject(Failure::OutOfReach);
@@ -219,15 +314,28 @@ bool RiggingSystem::cut(std::uint64_t token) {
     disconnect(slot); slot.record.broken = true; failure_ = Failure::None; ++serial_; return true;
 }
 void RiggingSystem::post_step(float dt) {
-    if (!(dt > 0)) return;
+    if (!std::isfinite(dt) || !(dt > 0)) return;
     for (auto &slot : slots_) {
-        if (!slot.constraint) continue;
+        if (!slot.constraint && !slot.powered) continue;
         if (!valid_record(slot.record)) {
             disconnect(slot); slot.record.broken = true; reject(Failure::StaleTarget); continue;
         }
-        slot.tension_n = std::abs(slot.constraint->GetTotalLambdaPosition()) / dt;
+        if (slot.powered) {
+            slot.powered->post_step();
+            const auto state = slot.powered->state();
+            power_sources_[slot.record.first - 1].state = state;
+            slot.record.paid_length_m = state.rest_length_m;
+            slot.tension_n = state.tensile_force_n;
+            if (!power_operable(slot) || selected_ != int(&slot - slots_.data())) slot.powered->pre_step(0);
+            if (!slot.collision_pending || !(state.last_collision_dt > 0)) continue;
+            slot.collision_pending = false;
+        } else slot.tension_n = std::abs(slot.constraint->GetTotalLambdaPosition()) / dt;
         slot.solved = true;
-        slot.overload_ticks = slot.tension_n > slot.record.rating_n ? slot.overload_ticks + 1 : 0;
+        // The powered row publishes float impulse / float interval. At its
+        // exact rated force this can round one ULP above the rating.
+        const float limit = slot.powered ? std::nextafter(slot.record.rating_n,
+            std::numeric_limits<float>::infinity()) : slot.record.rating_n;
+        slot.overload_ticks = slot.tension_n > limit ? slot.overload_ticks + 1 : 0;
         if (slot.overload_ticks >= 3) {
             disconnect(slot); slot.record.broken = true; reject(Failure::Overload);
         }
@@ -246,7 +354,16 @@ RiggingSystem::Readback RiggingSystem::readback() const {
         const auto i = std::size_t(selected_); out.selected = line_token(i);
         out.tension_n = slots_[i].tension_n;
         std::array<JPH::RVec3, 4> p;
-        if (polyline(i, p)) out.slack_m = std::max(0.F, slots_[i].record.paid_length_m -
+        if (slots_[i].powered) {
+            const auto state = slots_[i].powered->state();
+            out.power_selected = true; out.power_operable = power_operable(slots_[i]);
+            out.braking = state.braking; out.energy_cutoff = state.energy_cutoff;
+            out.rest_length_m = state.rest_length_m; out.actual_length_m = state.actual_length_m;
+            out.target_speed_mps = state.target_speed_mps; out.energy_j = state.energy_j;
+            out.capacity_j = power_sources_[slots_[i].record.first - 1].profile.capacity_j;
+            out.source_energy_used_j = state.source_energy_used_j; out.motor_work_j = state.positive_motor_work_j;
+            out.heat_j = state.heat_j; out.slack_m = std::max(0.F, state.rest_length_m - state.actual_length_m);
+        } else if (polyline(i, p)) out.slack_m = std::max(0.F, slots_[i].record.paid_length_m -
             float((p[1] - p[0]).Length() + (p[2] - p[1]).Length() + (p[3] - p[2]).Length()));
     }
     return out;
@@ -263,7 +380,15 @@ std::size_t RiggingSystem::preview(std::array<JPH::RVec3, 4> &out) const {
 }
 RiggingSystem::Checkpoint RiggingSystem::capture() const {
     Checkpoint out;
-    for (std::size_t i = 0; i < kCapacity; ++i) out.lines[i] = slots_[i].record;
+    for (std::size_t i = 0; i < kEyeCapacity; ++i) out.power_sources[i] = power_sources_[i].state;
+    for (std::size_t i = 0; i < kCapacity; ++i) {
+        out.lines[i] = slots_[i].record;
+        if (slots_[i].powered) {
+            const auto state = slots_[i].powered->state();
+            out.powered_lines[i] = state; out.lines[i].paid_length_m = state.rest_length_m;
+            out.power_sources[slots_[i].record.first - 1] = state;
+        }
+    }
     return out;
 }
 void RiggingSystem::detach_for_restore() {
@@ -273,12 +398,32 @@ void RiggingSystem::detach_for_restore() {
 }
 void RiggingSystem::restore(const Checkpoint &state) {
     detach_for_restore();
+    for (std::size_t i = 0; i < eye_count_; ++i)
+        if (eyes_[i].kind == Kind::PoweredMount) power_sources_[i].state = state.power_sources[i];
+    std::array<bool, kEyeCapacity> mounted{};
     for (std::size_t i = 0; i < kCapacity; ++i) {
         auto &slot = slots_[i]; slot.record = state.lines[i];
         if (slot.record.occupied && !valid_record(slot.record)) {
             slot.record.broken = true; reject(Failure::StaleTarget);
         }
+        if (slot.record.occupied && !slot.record.broken && eyes_[slot.record.first - 1].kind == Kind::PoweredMount) {
+            if (mounted[slot.record.first - 1]) { slot.record.broken = true; reject(Failure::Capacity); }
+            mounted[slot.record.first - 1] = true;
+        }
         connect(slot);
+        if (slot.powered) {
+            auto saved = state.powered_lines[i];
+            // Device inventory is authoritative; cable owns only its paid rest length.
+            const auto &source = power_sources_[slot.record.first - 1].state;
+            saved.energy_j = source.energy_j;
+            saved.source_energy_used_j = source.source_energy_used_j;
+            saved.positive_motor_work_j = source.positive_motor_work_j;
+            saved.absorbed_work_j = source.absorbed_work_j;
+            saved.command_work_bound_j = source.command_work_bound_j;
+            saved.heat_j = source.heat_j;
+            saved.rest_length_m = slot.record.paid_length_m;
+            slot.powered->restore(saved);
+        }
         if (slot.record.occupied && selected_ < 0) selected_ = int(i);
     }
 }

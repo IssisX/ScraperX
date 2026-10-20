@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/mechanism_kit.hpp"
+#include "sim/powered_cable.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -14,7 +15,7 @@ public:
     static constexpr std::size_t kCapacity = 8;
     static constexpr std::size_t kEyeCapacity = 32;
     static constexpr float kInstallReachM = 1.8F; // Chosen assisted tool reach.
-    enum class Kind : std::uint8_t { End, FixedGuide };
+    enum class Kind : std::uint8_t { End = 0, FixedGuide = 1, PoweredMount = 2 };
     enum class Failure : std::uint8_t {
         None, StaleTarget, OutOfReach, Obstructed, WrongTarget, MissingGuide,
         Degenerate, Capacity, Loaded, UnsafeContext, Overload
@@ -33,7 +34,11 @@ public:
         std::uint32_t generation = 0;
         bool occupied = false, broken = false, reversed = false;
     };
-    struct Checkpoint { std::array<Record, kCapacity> lines{}; };
+    struct Checkpoint {
+        std::array<Record, kCapacity> lines{};
+        std::array<PoweredCable::State, kCapacity> powered_lines{};
+        std::array<PoweredCable::State, kEyeCapacity> power_sources{};
+    };
     struct Readback {
         bool equipped = false, suspended = false, draft = false, guide_threaded = false;
         std::uint64_t target = 0, selected = 0, event_serial = 0;
@@ -41,6 +46,9 @@ public:
         Failure failure = Failure::None;
         JPH::RVec3 target_point = JPH::RVec3::sZero();
         float tension_n = 0, slack_m = 0;
+        bool power_selected = false, power_operable = false, braking = true, energy_cutoff = false;
+        float rest_length_m = 0, actual_length_m = 0, target_speed_mps = 0;
+        double energy_j = 0, capacity_j = 0, source_energy_used_j = 0, motor_work_j = 0, heat_j = 0;
         std::uint32_t installed_count = 0;
     };
 
@@ -56,6 +64,11 @@ public:
     [[nodiscard]] const Eye *available_eye(std::size_t index) const;
     std::uint16_t add_fixed_guide(kit::BodyIndex, JPH::Vec3 reachable_threading_eye,
                                 JPH::Vec3 incoming, JPH::Vec3 outgoing, float rating_n = 8000);
+    std::uint16_t add_powered_mount(kit::BodyIndex, JPH::Vec3 local,
+                                   const PoweredCable::Config &profile, float rating_n = 6000);
+    void set_power_input(float signed_effort);
+    // Called once per serialized native collision step; lifecycle stays outside Update.
+    void collision_step(float collision_dt);
     void equip(bool);
     void aim(JPH::RVec3 hand, JPH::Vec3 direction, JPH::BodyID player, bool allowed);
     bool action(std::uint64_t target);
@@ -76,13 +89,16 @@ private:
     struct Slot {
         Record record;
         JPH::Ref<JPH::PulleyConstraint> constraint;
+        std::unique_ptr<PoweredCable> powered;
         float tension_n = 0;
         unsigned overload_ticks = 0;
-        bool solved = false;
+        bool solved = false, collision_pending = false;
     };
     JPH::PhysicsSystem &world_;
     kit::Kit &kit_;
+    struct PowerSource { PoweredCable::Config profile; PoweredCable::State state; };
     std::array<Eye, kEyeCapacity> eyes_{};
+    std::array<PowerSource, kEyeCapacity> power_sources_{};
     std::array<Slot, kCapacity> slots_{};
     std::size_t eye_count_ = 0;
     std::uint32_t epoch_ = 1, serial_ = 0;
@@ -104,6 +120,8 @@ private:
     std::uint64_t eye_token(std::size_t) const;
     std::uint64_t line_token(std::size_t) const;
     int line_index(std::uint64_t) const;
+    bool power_operable(const Slot &) const;
+    void stop_power();
     bool reject(Failure);
 };
 

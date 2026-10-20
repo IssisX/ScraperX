@@ -606,9 +606,8 @@ func _process(delta: float) -> void:
 	_deliver_forklift_input(intent)
 	_deliver_yard_crane_input(intent)
 	var pendant_input: Vector2 = intent["pendant"]
-	_native.set_grapple_reel_input(pendant_input.y if _operating == &"grappling_gun" else 0.0)
-	_native.set_traversal_line_reel_input(pendant_input.y if _operating == &"traversal_line" and bool(_ctx.get("traversal_line_gripping", false)) else 0.0)
-	var jib_input := Vector2.ZERO if _operating in [&"grappling_gun", &"traversal_line", &"forklift", &"yard_crane"] else pendant_input
+	_deliver_tool_pendant_input(pendant_input)
+	var jib_input := Vector2.ZERO if _operating in [&"grappling_gun", &"traversal_line", &"rigging", &"forklift", &"yard_crane"] else pendant_input
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
 	# The B00 yard jib shares the same pendant axes. Both are station-gated
@@ -863,6 +862,7 @@ func _exit_tree() -> void:
 	if _native != null:
 		_native.request_rigging(7, 0)
 		_native.set_traversal_line_reel_input(0.0)
+		_native.set_rigging_power_input(0.0)
 	_android_activity = null
 	if _startup_preparation != null:
 		get_viewport().disable_3d = _startup_previous_disable_3d
@@ -891,6 +891,8 @@ func _open_pause(from_system: bool = false) -> void:
 		return
 	_paused = true
 	_native.request_rigging(7, 0)
+	_native.set_rigging_power_input(0.0)
+	_rigging_view.stop_power_feedback()
 	_native.set_traversal_line_reel_input(0.0)
 	_performance_report.set_paused(true)
 	if _freight_activity != null:
@@ -1301,12 +1303,19 @@ func _update_forklift_view_heading() -> void:
 	_forklift_view_heading_valid = true
 
 
+func _deliver_tool_pendant_input(pendant_input: Vector2) -> void:
+	_native.set_grapple_reel_input(pendant_input.y if _operating == &"grappling_gun" else 0.0)
+	_native.set_traversal_line_reel_input(pendant_input.y if _operating == &"traversal_line" and bool(_ctx.get("traversal_line_gripping", false)) else 0.0)
+	_native.set_rigging_power_input(pendant_input.y if _operating == &"rigging" and bool(_ctx.get("rigging_power_operable", false)) else 0.0)
+
+
 func _end_operation() -> void:
 	if _operating == &"traversal_line":
 		_native.set_traversal_line_reel_input(0.0)
 		_native.request_traversal_line(1, 0)
 	_native.request_rigging(7, 0)
 	if _operating == &"rigging":
+		_native.set_rigging_power_input(0.0)
 		_native.request_rigging(1, 0)
 	_native.cancel_forklift_tool_request()
 	if _operating == &"yard_crane":
@@ -1465,8 +1474,10 @@ func _read_context() -> Dictionary:
 	elif tool_active and station == &"rigging":
 		var target := int(rigging.get("target", 0))
 		var label := "THREAD GUIDE" if int(rigging.get("target_kind", 0)) == 1 else ("CONNECT LINE" if bool(rigging.get("draft", false)) else "CLIP FIRST END")
+		if int(rigging.get("target_kind", 0)) == 2:
+			label = "CLIP WINCH"
 		action = {"id": &"rigging_action" if target != 0 else &"", "label": label if target != 0 else "AIM AT AN EYE",
-			"icon": &"hook", "detail": "PREVIEW ONLY" if bool(rigging.get("draft", false)) else "INSTALLED LINES STAY WHEN STOWED"}
+			"icon": &"hook", "detail": "UP: LIFT / DOWN: LOWER / RELEASE: BRAKE" if bool(rigging.get("power_operable", false)) else ("PREVIEW ONLY" if bool(rigging.get("draft", false)) else "INSTALLED LINES STAY WHEN STOWED")}
 	elif tool_active:
 		var line_state := int(grapple.get("state", 0))
 		action = {"id": &"grapple_action", "label": "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(grapple.get("action_recovers_hook", line_state == 2)) else "FIRE HOOK"),
@@ -1566,6 +1577,8 @@ func _read_context() -> Dictionary:
 		"rigging_selected": int(rigging.get("selected", 0)),
 		"rigging_target": int(rigging.get("target", 0)),
 		"rigging_tension_n": float(rigging.get("tension_n", 0.0)),
+		"rigging_power_selected": bool(rigging.get("power_selected", false)),
+		"rigging_power_operable": bool(rigging.get("power_operable", false)),
 		"rigging_cut_progress": float(rigging.get("cut_progress", 0.0)),
 		"grapple_equipped": bool(grapple.get("equipped", false)),
 		"grapple_draw_available": grapple_draw_available,
@@ -1688,6 +1701,17 @@ func _station_panel() -> Dictionary:
 			var rigging: Dictionary = _native.get_rigging_state()
 			var failures := ["", "TARGET CHANGED", "MOVE CLOSER", "CABLE PATH BLOCKED", "CHOOSE AN END EYE", "THREAD A GUIDE FIRST", "INVALID CONNECTION", "NO FREE LINE", "UNLOAD BEFORE UNCLIPPING", "HANDS BUSY", "LINE OVERLOADED"]
 			var failure := clampi(int(rigging.get("failure", 0)), 0, failures.size() - 1)
+			if bool(rigging.get("power_selected", false)):
+				var winch_status := "BRAKE HOLDING" if bool(rigging.get("braking", true)) else ("LIFTING" if float(rigging.get("target_speed_mps", 0.0)) < 0.0 else "LOWERING")
+				if bool(rigging.get("energy_cutoff", false)):
+					winch_status = "SOURCE EMPTY / BRAKE HOLDING"
+				elif not bool(rigging.get("power_operable", false)):
+					winch_status = "MOVE CLOSER TO WINCH"
+				return {"title": "MOUNTED WINCH", "subtitle": "HOLD UP: LIFT / DOWN: LOWER / LET GO: BRAKE",
+					"rows": [["LINE", "%.2f M" % float(rigging.get("rest_length_m", 0.0)), 0],
+						["TENSION", "%d N" % int(rigging.get("tension_n", 0.0)), 0],
+						["SOURCE", "%d%%" % int(100.0 * float(rigging.get("energy_j", 0.0)) / maxf(float(rigging.get("capacity_j", 0.0)), 1.0)), 0],
+						["STATUS", failures[failure] if failure else winch_status, 2 if failure else 0]], "verbs": []}
 			return {"title": "RIGGING TOOL", "subtitle": "CLIP AN END / THREAD GUIDE / CONNECT OTHER END",
 				"rows": [["LINES", str(int(rigging.get("installed_count", 0))), 0],
 					["TENSION", "%d N" % int(rigging.get("tension_n", 0.0)), 0],

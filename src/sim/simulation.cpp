@@ -117,6 +117,7 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     sling_action_ = sling_drop_ = false;
     rigging_command_count_ = 0;
     rigging_cut_held_ = false;
+    rigging_power_input_ = 0;
     traversal_line_command_count_ = 0;
     traversal_line_reel_input_ = 0;
     snapshot_ = physics_world_->state();
@@ -161,6 +162,7 @@ bool Simulation::restart_checkpoint() noexcept {
     sling_action_ = sling_drop_ = false;
     rigging_command_count_ = 0;
     rigging_cut_held_ = false;
+    rigging_power_input_ = 0;
     traversal_line_command_count_ = 0;
     traversal_line_reel_input_ = 0;
     snapshot_ = physics_world_->state();
@@ -664,6 +666,7 @@ void Simulation::step_fixed() noexcept {
     commands.grapple_auto_reel = grapple_auto_reel_input_;
     commands.grapple_auto_reel_requested = grapple_auto_reel_requested_;
     commands.rigging_cut_held = rigging_cut_held_;
+    commands.rigging_power = rigging_power_input_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     traversal_line_command_count_ = 0;
     sling_action_ = sling_drop_ = false;

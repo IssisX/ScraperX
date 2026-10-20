@@ -61,6 +61,7 @@ public:
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] godot::Dictionary get_slingshot_render_state() const;
     [[nodiscard]] bool set_rigging_aim(double x, double y, double z);
+    [[nodiscard]] bool set_rigging_power_input(double effort);
     [[nodiscard]] bool request_rigging(std::int64_t command, std::int64_t target);
     [[nodiscard]] godot::Dictionary get_rigging_state() const;
     [[nodiscard]] bool request_traversal_line(std::int64_t command, std::int64_t target);

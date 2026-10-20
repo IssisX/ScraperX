@@ -79,7 +79,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        cmake --build build/candidate-host --target scraperx_rigging_system_tests scraperx_routed_cable_tests scraperx_rigging_bay_tests scraperx_rigging_public_route_tests --parallel 2
+        cmake --build build/candidate-host --target scraperx_rigging_system_tests scraperx_routed_cable_tests scraperx_rigging_bay_tests scraperx_rigging_public_route_tests scraperx_rigging_powered_tests scraperx_mounted_winch_public_tests --parallel 2
         timeout 60s build/candidate-host/scraperx_rigging_system_tests \
           2>&1 | tee artifacts/rigging-system-native.log
         timeout 60s build/candidate-host/scraperx_routed_cable_tests \
@@ -90,6 +90,11 @@ jobs:
         timeout 300s build/candidate-host/scraperx_rigging_public_route_tests \
           2>&1 | tee artifacts/rigging-public-route.log
         grep -F 'PASS RIGGING_PUBLIC' artifacts/rigging-public-route.log
+        timeout 60s build/candidate-host/scraperx_rigging_powered_tests \
+          2>&1 | tee artifacts/rigging-powered-native.log
+        timeout 300s build/candidate-host/scraperx_mounted_winch_public_tests \
+          2>&1 | tee artifacts/mounted-winch-public.log
+        grep -F 'PASS MOUNTED_WINCH_PUBLIC' artifacts/mounted-winch-public.log
     - name: Check reusable portable line, actual contacts and public swing/crossing
       shell: bash
       run: |
@@ -242,6 +247,13 @@ jobs:
           2>&1 | tee artifacts/rigging-native-input.log
         grep -F 'SCRAPERX_RIGGING_NATIVE_INPUT PASS' artifacts/rigging-native-input.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/rigging-native-input.log; then exit 1; fi
+        timeout 180s xvfb-run -a -s '-screen 0 1280x900x24' \
+          tools/godot/godot --path godot --audio-driver Dummy \
+          --rendering-method gl_compatibility --script res://tests/mounted_winch_input_test.gd \
+          -- --mounted-winch-capture-dir="${GITHUB_WORKSPACE}/artifacts/rigging" \
+          2>&1 | tee artifacts/mounted-winch-input.log
+        grep -F 'SCRAPERX_MOUNTED_WINCH_INPUT PASS' artifacts/mounted-winch-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/mounted-winch-input.log; then exit 1; fi
     - name: Check footsteps against actual steel and concrete contacts
       shell: bash
       run: |
@@ -533,6 +545,9 @@ jobs:
           artifacts/rigging-native-input.log
           artifacts/rigging/
           artifacts/rigging-system-native.log
+          artifacts/rigging-powered-native.log
+          artifacts/mounted-winch-public.log
+          artifacts/mounted-winch-input.log
           artifacts/routed-cable-native.log
           artifacts/upper-gallery/
         if-no-files-found: error
