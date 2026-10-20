@@ -242,6 +242,9 @@ void Simulation::PhysicsWorld::resolve_up(StepCommands &commands) noexcept {
     case UpMove::LetGo:
         commands.trapeze_drop = true;
         break;
+    case UpMove::Throw:
+        commands.throw_requested = true;
+        break;
     }
     up_resolved_ = up_move_;
     ++up_count_;

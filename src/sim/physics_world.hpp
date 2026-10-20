@@ -37,6 +37,7 @@ public:
         bool sprint_held = false;
         bool pick_up_requested = false;
         bool set_down_requested = false;
+        bool throw_requested = false;   // UpMove::Throw, resolved from the up gesture
         bool rig_requested = false;
         bool parachute_toggle_requested = false;
         // The ground slingshot: draw effort and aim, held; Action and Drop,
@@ -96,6 +97,9 @@ public:
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }
+    // Tests only (never bound to the bridge): a kit body put at `at` moving at
+    // `velocity`, not heard as a hit where it was put.
+    void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -128,6 +132,8 @@ public:
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
 
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
+    // The throw's path from the hands now (physics_world_probes.cpp).
+    [[nodiscard]] std::vector<Vector3> throw_prediction() const;
     // The faint route hint (the owner's to-do 4): what the hands could take
     // ahead along the facing, standing: from the body and from points a
     // stride apart ahead of it, as far as the way there is clear, the lip a
@@ -298,6 +304,12 @@ private:
     void shove_player(JPH::BodyInterface &bodies, JPH::Vec3 direction) noexcept;
 
     [[nodiscard]] float carried_load_mass() const noexcept;
+    // The throw (UpMove::Throw): a piece of the tower's loose stock in the
+    // hands (route parts, a spool or a pin, are set down, never thrown away);
+    // the velocity the arms would send it off at now; sending it.
+    [[nodiscard]] bool holding_throwable() const noexcept;
+    [[nodiscard]] JPH::Vec3 throw_velocity(const JPH::BodyInterface &bodies) const noexcept;
+    void throw_carry(JPH::BodyInterface &bodies) noexcept;
 
     [[nodiscard]] float carry_speed_scale() const noexcept;
 
@@ -725,6 +737,7 @@ public:
     bool tucked_ = false;
     std::uint64_t tuck_count_ = 0;
     std::uint64_t springboard_count_ = 0;
+    std::uint64_t throw_count_ = 0;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;

@@ -882,6 +882,15 @@ std::vector<Vector3> Simulation::PhysicsWorld::slingshot_prediction() const {
     return result;
 }
 
+void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body, const JPH::RVec3 at,
+                                                       const JPH::Vec3 velocity) {
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
+    bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
+    impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+}
+
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
     // A proving-ground fixture is never built in the game's world.
     if (body_id.IsInvalid()) {

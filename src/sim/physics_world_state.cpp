@@ -164,6 +164,11 @@ void Simulation::PhysicsWorld::update_up_move(const JPH::BodyInterface &bodies) 
         }
         return;
     }
+    if (holding_throwable()) {
+        // With a piece of loose stock in the hands, up throws it.
+        up_move_ = UpMove::Throw;
+        return;
+    }
     if (precision_sighted_) {
         up_move_ = UpMove::Precision;
         return;
@@ -474,6 +479,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.player_tucked = tucked_;
     state_.tuck_count = tuck_count_;
     state_.springboard_count = springboard_count_;
+    state_.throw_count = throw_count_;
     state_.player_springboarding = traversal_springboard_;
     state_.player_sliding = sliding_;
     state_.slide_count = slide_count_;

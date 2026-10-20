@@ -94,6 +94,7 @@ var _cam_bank := 0.0
 var _fb_sliding := false
 var _fb_wall_steps := 0
 var _fb_springboards := 0
+var _fb_throws := 0
 var _crouch_eye := 0.0
 var _step_eye_lag := 0.0
 var _step_meters_seen := 0.0
@@ -431,6 +432,10 @@ func _update_feedback(delta: float) -> void:
 	if springboards > _fb_springboards:
 		_haptic(&"vault")   # the foot's push off the top
 	_fb_springboards = springboards
+	var throws: int = _ctx.get("throws", 0)
+	if throws > _fb_throws:
+		_haptic(&"vault")   # the arms' heave as the load leaves the hands
+	_fb_throws = throws
 	_update_body_feedback(delta)
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]

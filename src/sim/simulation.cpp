@@ -712,6 +712,10 @@ SlingshotSnapshot Simulation::slingshot_state() const noexcept {
     return result;
 }
 
+std::vector<Vector3> Simulation::throw_prediction() const {
+    return physics_world_->throw_prediction();
+}
+
 std::vector<Vector3> Simulation::slingshot_prediction() const {
     return physics_world_->slingshot_prediction();
 }
@@ -968,6 +972,12 @@ void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
 
+void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 at, const Vector3 velocity) noexcept {
+    physics_world_->launch_kit_body_for_test(
+        body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
+        JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();
@@ -1007,6 +1017,13 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.carrying = view.carrying;
     result.takes = view.takes;
     result.throws = view.throws;
+    result.staggers = view.staggers;
+    result.knockdowns = view.knockdowns;
+    result.blow_mps = view.blow_mps;
+    result.fall_x = view.fall_x;
+    result.fall_z = view.fall_z;
+    result.kneeling = view.kneeling;
+    result.down_s = view.down_s;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();

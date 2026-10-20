@@ -299,6 +299,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"),
                                 &ScraperXSimulation::request_slingshot_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_throw_prediction"), &ScraperXSimulation::get_throw_prediction);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_throw_count"), &ScraperXSimulation::get_throw_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_prediction"),
                                 &ScraperXSimulation::get_slingshot_prediction);
     godot::ClassDB::bind_method(godot::D_METHOD("get_route_ahead"), &ScraperXSimulation::get_route_ahead);
@@ -1149,6 +1151,19 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     return out;
 }
 
+godot::PackedVector3Array ScraperXSimulation::get_throw_prediction() const {
+    godot::PackedVector3Array result;
+    for (const sim::Vector3 &point : simulation_->throw_prediction()) {
+        result.push_back(godot::Vector3(static_cast<real_t>(point.x), static_cast<real_t>(point.y),
+                                        static_cast<real_t>(point.z)));
+    }
+    return result;
+}
+
+std::int64_t ScraperXSimulation::get_throw_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().throw_count);
+}
+
 godot::PackedVector3Array ScraperXSimulation::get_slingshot_prediction() const {
     godot::PackedVector3Array out;
     for (const sim::Vector3 &point : simulation_->slingshot_prediction()) {
@@ -1584,6 +1599,12 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["carrying"] = static_cast<std::int64_t>(state.carrying);
     out["takes"] = static_cast<std::int64_t>(state.takes);
     out["throws"] = static_cast<std::int64_t>(state.throws);
+    out["staggers"] = static_cast<std::int64_t>(state.staggers);
+    out["knockdowns"] = static_cast<std::int64_t>(state.knockdowns);
+    out["blow_mps"] = state.blow_mps;
+    out["fall"] = godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
+    out["kneeling"] = state.kneeling;
+    out["down_s"] = state.down_s;
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;

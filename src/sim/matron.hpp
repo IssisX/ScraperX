@@ -108,7 +108,15 @@ public:
         Guarding = 7,  // standing in the way out's mouth, silent, listening
         Peering = 8,   // stopped short of a noise, looking for the player there
         Unrigging = 9, // at the way out's eye, taking the player's rope off it
+        Staggering = 10, // a blow took her balance: her feet catching her up, no hands
+        Down = 11,     // a blow took her off her feet: on the steel, no hands, no eyes
     };
+    // Out of her locker and about the world, alive (whatever she is doing).
+    [[nodiscard]] static constexpr bool out(const State state) noexcept {
+        return state == State::Emerging || state == State::Hunting || state == State::Searching ||
+               state == State::Shuffling || state == State::Guarding || state == State::Peering ||
+               state == State::Unrigging || state == State::Staggering || state == State::Down;
+    }
 
     static constexpr std::uint64_t kEntity = 3200;
     static constexpr std::uint64_t kPlankEntityBase = 3210;
@@ -363,6 +371,65 @@ public:
     // past a rail, in a cage's back) she gives up on, and leaves a while.
     static constexpr float kFetchStallSeconds = 1.5F;
     static constexpr float kFetchRetrySeconds = 12.0F;
+    // Her balance (the owner, 2026-10-19: knock her down, never dead). A blow
+    // is the change in her speed across a step that her own feet did not
+    // make, counted only when something moving was closing on her before it
+    // (a thrown or dropped piece, a rolled drum, a machine): never her own
+    // steps into a rail, a floor or a crate at rest, nor the player's body.
+    // Against it a declared reduced-order balance, w (b + r) with w =
+    // sqrt(g / h): h her stance's height, b her base, r the step her stage
+    // can still take. Under w b she takes it; under w (b + r) she staggers;
+    // past it she goes down. Stance: upright, or on all fours hunting at a
+    // run once dangerous (a pest hurries after the player upright, an old
+    // woman's hobble: so a heave can put a pest down) and in the Turn's
+    // lunges. CHOSEN so a toolbox heaved from the hands
+    // fells an upright pest, a drum only staggers a dangerous Matron, and
+    // fully changed only real mass fells her (measured: a toolbox heaved at
+    // 5.8 m/s from 2 m gives her about 0.37 m/s, a share of its momentum). No step in the Turn's wind-up
+    // (r 0, the one warning is the one opening); twice the step in a lunge's
+    // burst, braced against a blow she faces, and just after rising; half
+    // with stock in her hands; none against a blow at her shins (low, under
+    // kLowBlowM) or a weight coming down on her.
+    static constexpr float kUprightHeightM = 1.05F;
+    static constexpr float kUprightBaseM = 0.08F;     // frail on her feet: an old woman's narrow, shuffling base
+    static constexpr float kCrouchHeightM = 0.55F;
+    static constexpr float kCrouchBaseM = 0.45F;
+    static constexpr float kPestStepM = 0.02F;
+    static constexpr float kDangerousStepM = 0.30F;
+    static constexpr float kChangedStepM = 0.75F;
+    static constexpr float kLowBlowM = 0.5F;          // a striker's middle under her knees
+    static constexpr float kAboveMassKg = 40.0F;      // a weight coming down on her:
+    static constexpr float kAboveMps = 4.0F;          //   this heavy, this fast
+    static constexpr float kBraceCos = 0.643F;        // facing it within 50 degrees
+    static constexpr float kStrikerClosingMps = 0.5F; // the striker's own speed at her
+    // A blow is read over the whole contact: Jolt spreads a hit over a few
+    // steps, and her feet take back each step's share before the next. The
+    // ticks a striker is against her add up (her change, and the impulse the
+    // striker gave up, which is hers), till kBlowQuietTicks without one.
+    static constexpr int kBlowQuietTicks = 6;
+    // Staggering, her feet catch her (stopping her) at her stage's recovery,
+    // for a time by how far past w b the blow went. Down, she lies for her
+    // stage's time on the steel (a lying capsule, or kneeling where that
+    // does not fit), sliding on it, and stands where she has room (else
+    // crawls out to room first); then her step is doubled a while.
+    static constexpr float kStaggerMinSeconds = 0.4F;
+    static constexpr float kStaggerMaxSeconds = 1.2F;
+    static constexpr float kPestRecoverAccel = 4.0F;
+    static constexpr float kDangerousRecoverAccel = 9.0F;
+    static constexpr float kChangedRecoverAccel = 16.0F;
+    static constexpr float kPestDownSeconds = 4.0F;
+    static constexpr float kDangerousDownSeconds = 2.5F;
+    static constexpr float kChangedDownSeconds = 1.2F;
+    static constexpr float kDownFriction = 0.6F;
+    static constexpr float kSetSeconds = 1.5F;
+    static constexpr float kCrawlMps = 0.8F;
+    // Pain is borrowed rage: a knockdown adds this, a stagger this.
+    static constexpr float kKnockdownRage = 0.08F;
+    static constexpr float kStaggerRage = 0.02F;
+    // The moving bodies near her a blow can come from: within this, at most
+    // kMaxNear of the nearest.
+    static constexpr float kNearM = 3.0F;
+    static constexpr std::size_t kMaxNear = 8;
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -411,6 +478,12 @@ public:
         std::uint64_t carrying = 0; // the entity of the stock in her hands, 0 for none
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
+        std::uint32_t staggers = 0;     // blows that took her balance, this run
+        std::uint32_t knockdowns = 0;   // and that took her off her feet
+        float blow_mps = 0.0F;          // the last blow: the change in her speed it made
+        float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
+        bool kneeling = false;          // down where lying did not fit: crumpled on her knees
+        float down_s = 0.0F;            // seconds on the steel
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -643,6 +716,23 @@ private:
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();
+    // Her balance (above): the moving bodies near her and the velocity her
+    // feet set, taken after she moves (sense_near); the blow they deal her,
+    // read after the step (take_blow); and her staggering and lying there
+    // (step_knocked), down onto the steel and up off it.
+    void sense_near();
+    void take_blow();
+    void step_knocked(float dt, JPH::RVec3 player);
+    void lie_down(float fall_x, float fall_z);
+    void stand_up();
+    [[nodiscard]] bool room_to_stand(JPH::RVec3 at) const;
+    [[nodiscard]] bool shape_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
+    // Off an edge she will not go, staggering or sliding on the steel: her
+    // feet and hands take her at it (no floor within a step's drop ahead).
+    void brace_at_edges(float dt);
+    [[nodiscard]] float step_reach() const noexcept;
+    [[nodiscard]] float recover_accel() const noexcept;
+    [[nodiscard]] float down_seconds() const noexcept;
 
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;
@@ -748,6 +838,42 @@ private:
     std::uint64_t catches_ = 0;
     float plank_peak_n_ = 0.0F;
     float planks_clock_ = 0.0F;
+    // Her balance (above).
+    struct Near {
+        JPH::BodyID body;
+        JPH::Vec3 velocity = JPH::Vec3::sZero();
+        JPH::RVec3 at = JPH::RVec3::sZero();
+        float mass_kg = 0.0F;
+        float radius = 0.0F;
+    };
+    std::array<Near, kMaxNear> near_{};
+    std::size_t near_count_ = 0;
+    JPH::Vec3 set_velocity_ = JPH::Vec3::sZero();   // hers after she moved, before the step
+    // The blow being dealt (above): her change, the strikers' impulse on her
+    // mass (horizontal), and a weight's come down on her; since the last
+    // tick a striker was against her; what kind of blow it is.
+    JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
+    JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();
+    float blow_above_ = 0.0F;
+    int blow_quiet_ = kBlowQuietTicks;
+    bool blow_low_ = false;
+    bool blow_from_above_ = false;
+    bool blow_faced_ = false;
+    bool blow_staggered_ = false;   // this blow has already staggered her (and may yet put her down)
+    JPH::Vec3 blow_from_ = JPH::Vec3::sZero();
+    bool sensed_ = false;                           // near_ and set_velocity_ are this tick's
+    State resume_state_ = State::Hunting;           // what she was about when a blow staggered her
+    float stagger_s_ = 0.0F;
+    float down_s_ = 0.0F;          // left to lie there
+    float down_for_s_ = 0.0F;      // seconds on the steel
+    float set_s_ = 0.0F;           // just risen: her step doubled
+    float fall_x_ = 0.0F, fall_z_ = 1.0F;
+    bool lying_ = false;           // her shape is a lying (or kneeling) one
+    bool kneeling_ = false;
+    JPH::Ref<JPH::Shape> down_shape_;
+    std::uint32_t staggers_ = 0;
+    std::uint32_t knockdowns_ = 0;
+    float blow_mps_ = 0.0F;
     View view_{};
 };
 

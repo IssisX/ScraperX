@@ -65,8 +65,9 @@ const UP_PRECISION := 2
 const UP_JUMP_OFF := 10
 const UP_LAUNCH := 11
 const UP_LET_GO := 14
+const UP_THROW := 15
 const UP_HINTS := ["", "JUMP", "JUMP", "SPRINGBOARD", "VAULT", "CLIMB", "GRAB", "STAND", "CLIMB UP",
-	"CLIMB OVER", "JUMP OFF", "JUMP OFF", "KICK", "GRAB", "LET GO"]
+	"CLIMB OVER", "JUMP OFF", "JUMP OFF", "KICK", "GRAB", "LET GO", "THROW"]
 const DOWN_HINTS := {&"hook_release": "LET GO", &"pull": "HOLD: PULL", &"let_go": "LET GO",
 	&"slide_down": "SLIDE DOWN", &"set_down": "PUT DOWN", &"drop_down": "DROP DOWN", &"slide": "SLIDE",
 	&"crouch": "CROUCH", &"tuck": "TUCK"}
@@ -369,6 +370,7 @@ func _read_context() -> Dictionary:
 		"wall_steps": int(_native.get_wall_step_count()),
 		"springboarding": springboarding,
 		"springboards": int(_native.get_springboard_count()),
+		"throws": int(_native.get_throw_count()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,

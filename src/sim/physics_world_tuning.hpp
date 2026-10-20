@@ -771,6 +771,23 @@ constexpr float kCarrySwingRate = 12.0F;
 // one tick: taken where it is, E's door handle was pulled to the hands and
 // the 60 kg leaf swung open at 6 m/s.
 constexpr float kCarryPullInSpeed = 3.0F;
+// The throw (the owner, 2026-10-19: knock her down, then throw what you
+// carry): the arms put up to kThrowEnergyJ into the load, at most
+// kThrowMaxMps, along the view raised kThrowRaiseRad, on top of the body's own
+// speed: an 18 kg toolbox goes at 5.8 m/s, a 55 kg drum at 3.3. A heave of
+// more than kThrowFreeImpulseNs pushes the thrower back with the rest.
+constexpr float kThrowEnergyJ = 300.0F;
+constexpr float kThrowMaxMps = 7.0F;
+constexpr float kThrowRaiseRad = 0.14F;
+constexpr float kThrowFreeImpulseNs = 150.0F;
+constexpr float kThrowSpinRadS = 4.0F;   // end over end
+// The hands throw at what the eyes are on: the first thing along the view
+// within kThrowAimM (else the point that far along it).
+constexpr float kThrowAimM = 8.0F;
+// Its path drawn ahead while the thumb swipes: this far ahead in time, at
+// this step.
+constexpr float kThrowPreviewSeconds = 2.5F;
+constexpr float kThrowPreviewStep = 1.0F / 30.0F;
 
 // WO-008 fall / parachute / checkpoint. A 12 m unassisted fall (~15.3 m/s
 // impact) must stay survivable per GDD 8.2; a genuine

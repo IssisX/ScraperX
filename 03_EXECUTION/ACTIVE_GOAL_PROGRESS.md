@@ -1404,8 +1404,79 @@ the crane's steel begins), `save`, `determinism`, `forklift`, `corpse`, `teeter`
 `look_yard_crane`, `touch_stock`, `touch_forklift`, `touch_forklift_strain`, `touch_workers`,
 `perf_grade`, `touch_pause`. Next: the container spreader (LOCK / UNLOCK on the corner castings).
 
+**The goal set 2026-10-19 night (the owner's words):** *"She's redesigned from scratch as a real
+ragged rough foul old woman with a body that isn't too thin (not fat either, but "old-woman fat"),
+pale, wrinkly aged skin, detailed hands (not nubs or pegs), working individual fingers (will add to
+creepiness to see), a cloth dirty uniform and actual 'working' hair. Her eyes track you, and all her
+current moves still play. She comes down the shaft after you. One shaft pipe becomes hers to climb.
+You hear her at least 4 seconds before she arrives, and a drum dropped on her knocks her off without
+killing her. Knock her down, then throw what you carry. A hard enough blow puts her down for a few
+seconds, and swiping up while carrying something throws (a quick appearing throw-arc helper non
+obstructive overlay would be nice -if you agree)"*. Claude agrees with the arc: it shows only while
+the thumb swipes with a load, thin and faint, and is gone on release. Its three parts and their proof:
+1. **Her figure, from scratch.** A real old woman's body (CC0 human-model data, aged), heavy in the
+   way old women are, neither thin nor fat; pale, wrinkled skin; hands with separate fingers that
+   move on their own; a dirty cloth uniform that moves; hair that moves. Her eyes track the climber.
+   Proof: a test of the eyes' aim and the phone budget; gallery screenshots at named poses and stages;
+   `touch_matron`, `_ride`, `_line`, `_climb` and `_act` still pass.
+2. **She comes down the shaft after you.** One corner pipe of the shaft is hers to climb, up and
+   down. Before she reaches your level you hear her for at least 4 s. A drum dropped on her tears
+   her off; she falls a storey and lands alive. Proof: a native group and a touch playthrough that
+   counts the warning time, the tear-off and her deaths at 0.
+3. **Knock her down, then throw.** A hard enough blow (measured as the change in her speed, against
+   her balance by stance and stage) puts her down for a few seconds: no hands, no eyes, no Turn.
+   Swiping up while carrying throws the load with the arms' real force, with the arc shown while
+   swiping. Proof: a native group (a heave fells a pest, a drum only staggers a dangerous Matron, no
+   death) and a touch playthrough (THROW offered, the throw lands, she goes down).
+The designs come from the 2026-10-19 panels: "Off Her Feet" (balance, knockdown, throw), "She Knows
+the Steel" (the corner pipe first), and the face and figure workflow.
+
+**Knock her down, then throw what you carry (2026-10-19 night; the goal's part 3).** From the
+"Off Her Feet" design. Her balance (`src/sim/matron.{hpp,cpp}`): a blow is the change in her speed
+that her own feet did not make, read over the whole contact (Jolt spreads a hit over a few steps
+and her feet take back each step's share before the next: per step, a heaved toolbox read 0.11 m/s;
+over the contact, 0.37), as the larger of her own change and the impulse the striker gave up. It
+counts only when a moving body was closing on her of its own motion and met her: never her steps
+into a rail, a crate at rest, her own stock, the catwalk's plates or the player's body. Against it,
+w (b + r), w = sqrt(g / h): upright h 1.05 m, b 0.08 m (frail; CHOSEN from the measured 0.37 m/s of a
+heaved toolbox, the design's 0.12 let it through); on all fours h 0.55, b 0.45; her step r by stage
+0.02 / 0.30 / 0.75 m, none in the Turn's wind-up, against a blow at her shins or a weight from above,
+doubled in a lunge's burst, just after rising and (dangerous) braced against a blow she faces;
+halved with stock in her hands. Fully changed, a blow she faces only staggers her. Under w b she
+takes it, under w (b + r) she staggers (0.4 to 1.2 s, her feet stopping her at 4 / 9 / 16 m/s^2),
+past it she is down: a lying capsule along the fall (kneeling where that does not fit), friction 0.6,
+4.0 / 2.5 / 1.2 s by stage, no hands, no eyes, the Turn ended and its cooldown restarted, her stock let
+go; she stands where her standing body fits (else crawls out to room first) and is set for 1.5 s.
+Staggering or down she braces at edges: no knockdown slides her into the shaft. A knockdown adds 0.08
+to her rage, a stagger 0.02. A pest now hunts upright, an old woman's hobble (all fours from
+dangerous): with sight to 9 m all round and a throw's reach of about 4 m, a pest on all fours could
+never be felled by anything a climber carries. The view: staggering, flung arms and stamping feet;
+down, her whole figure toppled from her feet the way she was sent (on her back, her face, her side),
+or crumpled kneeling; a boom of her body on the steel.
+
+The throw (UpMove::Throw = 15): with a piece of the tower's loose stock in the hands (never a route
+part), up throws it. The arms put up to 300 J into it, at most 7 m/s, toward what the eyes are on
+(the first thing along the view within 8 m, from the load in the hands) raised 8 degrees, on top of
+the body's speed: a toolbox 5.76 m/s, a drum 3.42. A heave past 150 N s pushes the thrower back with
+the rest. The ledger takes the piece's new velocity, so the throw is not heard at the hands; its
+landing is heard (she hears it: a decoy). By touch, THROW is made as the flick lifts; while the thumb
+is still down the throw's path is drawn, faint beads to a ring where it comes down
+(`throw_arc_view.gd`, from the native's own prediction cut at the first hit), gone with the thumb.
+The phone pulses with the heave.
+
+Proof: native `matron-balance` (new: a heaved toolbox puts an upright pest down and she is up within
+her time, on her deck; dangerous, the toolbox and a chest-high drum stagger her and a drum at her
+shins takes her feet; fully changed, a 7 m/s drum in her face only staggers her; and the goal's beat,
+a toolbox thrown by the up gesture at a pest coming for the climber puts her down, blow 0.65 m/s;
+no death anywhere), `up-throw` (new, in `up`: THROW offered, the toolbox and drum leave at their
+speeds, unheard at the hands, landing within 0.42 m of their drawn paths), `matron` (every section),
+`up`, `stock`, `determinism`; touch: `touch_matron_heave` (new: blow 0.755 m/s, down, up, no death;
+the path drawn while the thumb swiped), `touch_matron`, `_ride`, `_line`, `_climb`, `_act`,
+`touch_stock`, `touch_jump`. CI plays `touch_matron_heave`.
+
 **Handoff for the next session (2026-10-19, evening).** Read this entry first, then the four below
-it, then the handoff document linked in "The story and the game's spine".
+it, then the handoff document linked in "The story and the game's spine". (Its goal, her first act,
+is done; CI confirming.)
 
 The goal the owner set this session (Claude proposed it, the owner said to keep going): *her first
 act, from the top of the Stack (154 m) to the 220 m ring, played by touch, with her readable as a

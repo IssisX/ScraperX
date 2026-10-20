@@ -29,6 +29,11 @@ const STATE_DEAD := 6
 const STATE_GUARDING := 7   # at her post in the mouth of the way out
 const STATE_PEERING := 8    # stopped short of a noise, looking
 const STATE_UNRIGGING := 9  # at the way out's eye, taking the player's rope off it
+const STATE_STAGGERING := 10  # a blow took her balance
+const STATE_DOWN := 11        # a blow took her off her feet
+# How long each stage lies on the steel (matron.hpp kPestDownSeconds...).
+const DOWN_SECONDS := [4.0, 2.5, 1.2]
+const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
 const STEP_M := 0.7
 const HEARD_MUSIC_M := 55.0
@@ -57,6 +62,8 @@ var _was_seen := false
 var _last_turn := 0
 var _cry_fall := false
 var _vaults_seen := -1
+var _knockdowns_seen := -1
+var _staggers_seen := -1
 var _shoves_seen := -1
 var _throws_seen := -1
 var _leaps_seen := -1
@@ -771,6 +778,51 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		legs_fwd = sin(_clock * 27.0) * 0.8
 		legs_back = -sin(_clock * 27.0) * 0.8
 		knees = 0.5
+	elif state == STATE_DOWN and bool(data.get("kneeling", false)):
+		# No room to lie: crumpled on her knees, slumped over them, the head
+		# hung, the arms dropped.
+		pitch = 0.95
+		hip_y = 0.42
+		knees = 2.3
+		legs_fwd = 1.55
+		legs_back = 1.55
+		arms_fwd = 0.35
+		arms_bend = 0.4
+		arms_splay = 0.2
+		head_pitch = 0.65
+		head_roll = 0.35
+		jaw_open = 0.35
+	elif state == STATE_DOWN:
+		# Flat on the steel (the figure toppled in _topple): limbs flung loose
+		# as she landed, one knee drawn up, fingers crawling.
+		pitch = 0.0
+		hip_y = 0.98
+		arms_fwd = 0.6
+		arms_splay = 1.15
+		arms_bend = 0.35
+		arms_alt = 0.5
+		legs_fwd = 0.25
+		legs_back = -0.15
+		knees = 0.45
+		head_roll = 0.4
+		jaw_open = 0.6
+	elif state == STATE_STAGGERING:
+		# Thrown off her balance: her trunk taken the way the blow went, arms
+		# flung out to catch it, feet stamping to get under her again.
+		var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
+		var face := Vector2(sin(figure_yaw), cos(figure_yaw))
+		var ahead := fall_v.dot(face)
+		pitch = 0.7 + 0.55 * ahead
+		hip_y = 0.95
+		arms_fwd = 1.9 - 0.6 * ahead
+		arms_splay = 1.1
+		arms_bend = 0.25
+		legs_fwd = 0.55 * sin(_clock * 15.0)
+		legs_back = -0.55 * sin(_clock * 15.0)
+		knees = 0.6
+		head_pitch = -0.55 * ahead
+		head_roll = 0.3 * sin(_clock * 9.0)
+		jaw_open = 0.75
 	elif on_line:
 		# Hung from the cable by her forearms hooked over it, the body
 		# swinging under, legs trailing, the head craned down the line.
@@ -818,8 +870,25 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.85
 		head_roll = 0.25 * sin(_clock * 1.7)
 		jaw_open = 0.55
+	elif state == STATE_HUNTING and speed > 1.0 and int(data.get("stage", 0)) == 0:
+		# A pest hurries after you upright: an old woman's hobble at a speed
+		# no old woman has, trunk tipped forward, both arms out stiff for
+		# you, one leg dragging a beat behind the other, the head craned
+		# forward and cocked, the mouth hanging.
+		var ph := _stutter(stride, 3.2) / 0.62 * PI
+		pitch = 0.55 + 0.05 * sin(ph * 2.0)
+		hip_y = 0.95 + 0.04 * sin(ph * 2.0)
+		legs_fwd = 0.55 * sin(ph)
+		legs_back = -0.35 * sin(ph - 0.6)
+		knees = 0.35 + 0.35 * maxf(0.0, cos(ph))
+		arms_fwd = 1.35 + 0.08 * sin(ph * 2.0 + 1.0)
+		arms_bend = 0.2
+		arms_splay = 0.12
+		head_pitch = -0.55
+		head_roll = 0.45 + 0.1 * sin(_clock * 2.6)
+		jaw_open = 0.6 if sees else 0.35
 	elif state == STATE_HUNTING and speed > 1.0:
-		# All fours: hips high, chest low, arms reaching and elbows out, a
+		# All fours (dangerous and fully changed): hips high, chest low, arms reaching and elbows out, a
 		# stuttering scuttle, the head up and cocked and always on you.
 		var ph := _stutter(stride, 2.6) / 0.42 * PI
 		pitch = 1.38 + 0.06 * sin(ph * 2.0)
@@ -1063,6 +1132,28 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_eye_light.light_energy = (0.5 if turn > 0 else 0.3) * eyes_on
 
 
+# Down on the steel (not kneeling): her whole figure toppled from her feet the
+# way the blow sent her (on her back, her face, her side, as she was facing),
+# laid over the lying body the simulation has under her middle; over
+# TOPPLE_S going down, and back up over the last of her time there.
+func _topple(data: Dictionary, centre: Vector3) -> void:
+	if int(data["state"]) != STATE_DOWN or bool(data.get("kneeling", false)):
+		return
+	var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
+	var fall := Vector3(fall_v.x, 0.0, fall_v.y)
+	if fall.length_squared() < 1.0e-6:
+		return
+	fall = fall.normalized()
+	var down_s := float(data.get("down_s", 0.0))
+	var lie_s: float = DOWN_SECONDS[clampi(int(data.get("stage", 0)), 0, 2)]
+	var k := clampf(down_s / TOPPLE_S, 0.0, 1.0) * clampf((lie_s - down_s) / TOPPLE_S, 0.0, 1.0)
+	k = k * k * (3.0 - 2.0 * k)
+	var axis := Vector3.UP.cross(fall).normalized()
+	_figure.global_basis = Basis(axis, 0.5 * PI * k) * Basis(Vector3.UP, float(data["yaw"]))
+	var floor_y := centre.y - STAND_CENTRE
+	_figure.global_position = Vector3(centre.x, floor_y, centre.z) - fall * (1.0 * k) + Vector3(0.0, 0.18 * k, 0.0)
+
+
 func _hip_world() -> Vector3:
 	return (_p["body"] as Node3D).global_position
 
@@ -1088,8 +1179,9 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	figure_frames += 1
 	_apply_exposure(float(data.get("exposure", 0.0)))
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
-	_figure.rotation.y = float(data["yaw"])
+	_figure.rotation = Vector3(0.0, float(data["yaw"]), 0.0)
 	_pose(data, delta, player_position, falling)
+	_topple(data, centre)
 	var feet := _figure.global_position
 	var d := feet.distance_to(player_position)
 	# Her music box: heard from far off, slowing as she nears.
@@ -1118,6 +1210,19 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			_audio.matron_cue(&"matron_step", _hip_world(), 2.0, 0.7)
 			_audio.matron_cue(&"bone_crack", _hip_world(), -4.0, randf_range(1.2, 1.35))
 		_vaults_seen = vaults
+		# A blow off her feet: her body booming onto the steel and the breath
+		# knocked out of her; off her balance, her feet stamping and slewing.
+		var knockdowns := int(data.get("knockdowns", 0))
+		if _knockdowns_seen >= 0 and knockdowns > _knockdowns_seen:
+			_audio.matron_cue(&"hit_heavy", _hip_world(), 4.0, randf_range(0.55, 0.65))
+			_audio.matron_cue(&"bone_crack", _hip_world(), -3.0, randf_range(0.8, 0.95))
+			_audio.matron_cue(&"matron_breath", _hip_world(), 2.0, randf_range(0.7, 0.8))
+		_knockdowns_seen = knockdowns
+		var staggers := int(data.get("staggers", 0))
+		if _staggers_seen >= 0 and staggers > _staggers_seen:
+			_audio.matron_cue(&"matron_step", feet, 3.0, randf_range(0.6, 0.7))
+			_audio.matron_cue(&"scrape", feet, -4.0, randf_range(0.9, 1.1))
+		_staggers_seen = staggers
 		# Her hands on the player before she is a killer: a shove, with a
 		# cry as she throws her weight in and the thud of it landing.
 		var shoves := int(data.get("shoves", 0))

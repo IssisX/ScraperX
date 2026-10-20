@@ -120,6 +120,9 @@ const SCENARIOS := {
 	# Her first act on touch, from the 154 m deck to the 220 m ring: a pest,
 	# dangerous, fully changed and back (ui_test_act.gd).
 	"touch_matron_act": 11,
+	# Knock her down, then throw what you carry: a toolbox thrown at a pest
+	# coming for the climber puts her down (ui_test_act.gd).
+	"touch_matron_heave": 11,
 	"look_matron_locker": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
@@ -403,6 +406,8 @@ func _run() -> void:
 			ok = await _matron_touch(InputRouter.Device.TOUCH)
 		"touch_matron_act":
 			ok = await _matron_act_touch(InputRouter.Device.TOUCH)
+		"touch_matron_heave":
+			ok = await _matron_heave_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":
 			ok = await _matron_ride_touch(InputRouter.Device.TOUCH)
 		"touch_matron_line":

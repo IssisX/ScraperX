@@ -443,6 +443,10 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
             release_carry();
             return;
         }
+        if (commands.throw_requested && holding_throwable()) {
+            throw_carry(bodies);
+            return;
+        }
         // The hands swing round to the facing, drawing a handle just taken
         // in to them at kCarryPullInSpeed.
         const float pull_in = kCarryPullInSpeed * delta_seconds;
@@ -502,6 +506,94 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
             attach_carry(id, entity);
         }
     }
+}
+
+bool Simulation::PhysicsWorld::holding_throwable() const noexcept {
+    return carried_load_mass() > 0.0F && carried_entity_ >= LooseStock::kFirstEntity &&
+           carried_entity_ < LooseStock::kFirstEntity + static_cast<std::uint64_t>(loose_stock_->count());
+}
+
+JPH::Vec3 Simulation::PhysicsWorld::throw_velocity(const JPH::BodyInterface &bodies) const noexcept {
+    const float mass = carried_load_mass();
+    if (mass <= 0.0F) {
+        return JPH::Vec3::sZero();
+    }
+    const float speed = std::min(kThrowMaxMps, std::sqrt(2.0F * kThrowEnergyJ / mass));
+    // Toward what the eyes are on (from the load in the hands, not along
+    // the view from wherever the hands are), raised for the arc.
+    const JPH::Vec3 facing = JPH::Vec3(facing_.GetX(), 0.0F, facing_.GetZ()).NormalizedOr(JPH::Vec3::sAxisZ());
+    const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+    const JPH::RVec3 eye(centre.GetX(), centre.GetY() + kPlayerHalfHeight - 0.15F, centre.GetZ());
+    const float cos_p = std::cos(look_pitch_);
+    const JPH::Vec3 look(facing.GetX() * cos_p, std::sin(look_pitch_), facing.GetZ() * cos_p);
+    JPH::IgnoreMultipleBodiesFilter filter;
+    filter.Reserve(2);
+    filter.IgnoreBody(player_id_);
+    filter.IgnoreBody(carried_id_);
+    const JPH::RRayCast sight(eye, look * kThrowAimM);
+    JPH::RayCastResult hit;
+    const JPH::RVec3 aim =
+        physics_system_.GetNarrowPhaseQuery().CastRay(sight, hit, {}, {}, filter) ? sight.GetPointOnRay(hit.mFraction)
+                                                                                 : eye + look * kThrowAimM;
+    const JPH::Vec3 to_aim(aim - bodies.GetCenterOfMassPosition(carried_id_));
+    const JPH::Vec3 flat = JPH::Vec3(to_aim.GetX(), 0.0F, to_aim.GetZ()).NormalizedOr(facing);
+    const float pitch = std::clamp(look_pitch_ + kThrowRaiseRad, -0.9F, 1.2F);
+    const JPH::Vec3 along = flat * std::cos(pitch) + JPH::Vec3::sAxisY() * std::sin(pitch);
+    return bodies.GetLinearVelocity(player_id_) + along * speed;
+}
+
+// The hands open as the arms finish: the piece flies off on the throw's
+// velocity, turning end over end, and is not heard as a hit at the hands.
+void Simulation::PhysicsWorld::throw_carry(JPH::BodyInterface &bodies) noexcept {
+    const float mass = carried_load_mass();
+    const JPH::Vec3 velocity = throw_velocity(bodies);
+    const JPH::BodyID thrown = carried_id_;
+    const std::uint64_t entity = carried_entity_;
+    release_carry();
+    const JPH::Vec3 flat = JPH::Vec3(facing_.GetX(), 0.0F, facing_.GetZ()).NormalizedOr(JPH::Vec3::sAxisZ());
+    const JPH::Vec3 across(flat.GetZ(), 0.0F, -flat.GetX());
+    bodies.SetLinearAndAngularVelocity(thrown, velocity, across * kThrowSpinRadS);
+    impacts_->resync_body(entity);
+    // A heave heavier than the arms take without the feet: the rest of it
+    // pushes the thrower back.
+    const JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
+    const float impulse = mass * (velocity - player_velocity).Length();
+    if (impulse > kThrowFreeImpulseNs) {
+        bodies.SetLinearVelocity(player_id_, player_velocity - flat * ((impulse - kThrowFreeImpulseNs) / kPlayerMassKg));
+    }
+    ++throw_count_;
+}
+
+// The throw's path from the hands now, cut at the first thing it would hit.
+std::vector<Vector3> Simulation::PhysicsWorld::throw_prediction() const {
+    std::vector<Vector3> result;
+    if (!holding_throwable()) {
+        return result;
+    }
+    const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+    JPH::RVec3 at = bodies.GetCenterOfMassPosition(carried_id_);
+    JPH::Vec3 velocity = throw_velocity(bodies);
+    const JPH::Vec3 gravity = physics_system_.GetGravity();
+    JPH::IgnoreMultipleBodiesFilter filter;
+    filter.Reserve(2);
+    filter.IgnoreBody(player_id_);
+    filter.IgnoreBody(carried_id_);
+    const auto to_vector = [](const JPH::RVec3 p) {
+        return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()), static_cast<double>(p.GetZ())};
+    };
+    result.push_back(to_vector(at));
+    for (float t = 0.0F; t < kThrowPreviewSeconds; t += kThrowPreviewStep) {
+        const JPH::Vec3 step = velocity * kThrowPreviewStep + gravity * (0.5F * kThrowPreviewStep * kThrowPreviewStep);
+        JPH::RayCastResult hit;
+        if (physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(at, step), hit, {}, {}, filter)) {
+            result.push_back(to_vector(at + step * hit.mFraction));
+            break;
+        }
+        at += step;
+        velocity += gravity * kThrowPreviewStep;
+        result.push_back(to_vector(at));
+    }
+    return result;
 }
 
 // Checkpoint reconciliation: after the bodies' poses are restored, make

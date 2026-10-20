@@ -222,6 +222,15 @@ struct MatronSnapshot final {
     std::uint64_t carrying = 0; // the stock in her hands (its entity), 0 for none
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
+    // Her balance (matron.hpp): blows that took it and that took her off her
+    // feet this run, the last blow (the change in her speed it made), and
+    // down, the way she fell, kneeling where lying did not fit, and how long.
+    std::uint32_t staggers = 0;
+    std::uint32_t knockdowns = 0;
+    double blow_mps = 0.0;
+    double fall_x = 0.0, fall_z = 1.0;
+    bool kneeling = false;
+    double down_s = 0.0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
@@ -618,6 +627,7 @@ enum class UpMove : std::uint8_t {
     Kick = 12,         // running a wall: kicked off it
     Catch = 13,        // the trapeze's bar in reach: taken
     LetGo = 14,        // on the trapeze: its bar let go
+    Throw = 15,        // a piece of loose stock in the hands: thrown along the view
 };
 
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
@@ -654,6 +664,7 @@ struct Snapshot final {
     // Springboards jumped (physics_world kSpringboardMinimumSpeed), and the
     // plant under way: a foot going onto a top to jump from it.
     std::uint64_t springboard_count = 0;
+    std::uint64_t throw_count = 0;   // loose stock thrown from the hands (UpMove::Throw)
     bool player_springboarding = false;
     // Parkour step 3: crouched at a run, the body slides on (see kSlideFriction).
     bool player_sliding = false;
@@ -1240,12 +1251,19 @@ public:
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
     [[nodiscard]] SummitSnapshot summit_state() const noexcept;
     [[nodiscard]] MatronSnapshot matron_state() const noexcept;
+    // While a piece of loose stock is in the hands: the path a throw would
+    // send it on now (from the hands, cut at the first thing it would hit;
+    // empty otherwise).
+    [[nodiscard]] std::vector<Vector3> throw_prediction() const;
     // Tests only (never bound to the bridge): the Matron's stage, with the
     // rage it takes, so a test can meet what each stage does to the player.
     void debug_set_matron_stage(std::uint8_t stage) noexcept;
     // Tests only (never bound to the bridge): her hands held off the player
     // for `seconds`, so a test can meet her body alone.
     void debug_hold_matron_hands(double seconds) noexcept;
+    // Tests only (never bound to the bridge): kit body `body` put at `at` and
+    // sent off at `velocity` (a throw without the arms, to meet her balance).
+    void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

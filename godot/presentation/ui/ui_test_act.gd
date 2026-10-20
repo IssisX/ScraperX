@@ -600,3 +600,74 @@ func _act_way_up(device: int) -> bool:
 			return _fail("she never reached stage %d" % stage)
 	await _act_pose("act_220")
 	return true
+
+
+# Knock her down, then throw what you carry (the owner's goal, 2026-10-19):
+# a sprint by her locker wakes her; the toolbox by the north rail taken up;
+# as a pest comes for the climber (upright), the view kept on where she will
+# be a moment on, a swipe up held on the glass reads THROW and draws the
+# throw's path; lifted, the toolbox flies and she goes down. A few seconds on
+# the steel, up again, nobody dead.
+const HEAVE_BOX_PICK := Vector2(-4.4, -125.85)
+const MATRON_STATE_DOWN := 11
+
+func _matron_heave_touch(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _sprint_to(device, Vector2(8.0, -128.5), 1.0, 6.0):
+		return _fail("the sprint toward her locker stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_STRAINING, 3.0):
+		return _fail("the sprint by her locker did not wake her (state %d)" % int(_matron_state()["state"]))
+	if not await _walk_to(device, HEAVE_BOX_PICK, 0.08, 14.0):
+		return _fail("the walk to the toolbox stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "PICK UP"):
+		return _fail("Action read '%s' at the toolbox, not PICK UP" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
+		return _fail("PICK UP did not put the toolbox in the hands")
+	# Still, until a pest comes for the climber in sight: from 9 m the view
+	# kept level on her, leading her.
+	var last: Vector3 = _matron_state()["position"]
+	var close := false
+	var waited := 0.0
+	while waited < 90.0 and not close:
+		await get_tree().process_frame
+		var dt := maxf(get_process_delta_time(), 1.0e-4)
+		waited += dt
+		var m := _matron_state()
+		var her: Vector3 = m["position"]
+		var lead := her + (her - last) / dt * 0.22 - _position()
+		last = her
+		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
+		if int(m["state"]) == MATRON_STATE_HUNTING and int(m["stage"]) == 0 and d < 9.0:
+			_main._yaw = atan2(-lead.x, -lead.z)
+			_main._pitch = 0.0
+			close = d < 3.4
+	if not close:
+		return _fail("no pest came for the climber (state %d, stage %d)" % [int(_matron_state()["state"]),
+			int(_matron_state()["stage"])])
+	if _main._touch.gesture_hint(&"up") != "THROW":
+		return _fail("with the toolbox in the hands, up read '%s', not THROW" % _main._touch.gesture_hint(&"up"))
+	var throws := int(_native().get_throw_count())
+	var index := _swipe(-1.0, true)
+	await _frames(2)
+	var drawn: bool = _main._throw_arc.visible and _main._throw_path.size() >= 3
+	_lift(index)
+	if not drawn:
+		return _fail("the throw's path was not drawn while the thumb swiped")
+	if not await _wait_until(func() -> bool: return int(_native().get_throw_count()) == throws + 1, 0.5):
+		return _fail("the swipe up, lifted, did not throw the toolbox")
+	var deaths := int(_native().get_death_count())
+	if not await _wait_until(func() -> bool: return int(_matron_state()["knockdowns"]) >= 1, 1.5):
+		return _fail("the toolbox did not put her down (blow %.3f m/s, state %d)" % [
+			float(_matron_state()["blow_mps"]), int(_matron_state()["state"])])
+	await _pose("matron_heave_down")
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) != MATRON_STATE_DOWN, 7.0):
+		return _fail("she never got up again")
+	if int(_native().get_death_count()) != deaths or not bool(_matron_state()["alive"]):
+		return _fail("a death in the heave (deaths %d, she alive %s)" % [int(_native().get_death_count()),
+			str(_matron_state()["alive"])])
+	_detail = "blow_mps=%.3f knockdowns=%d throws=%d" % [float(_matron_state()["blow_mps"]),
+		int(_matron_state()["knockdowns"]), int(_native().get_throw_count())]
+	return true
+

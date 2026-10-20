@@ -311,7 +311,198 @@ void run_matron_collision() {
             "matron collision: the sprint met her head-on, closing past a lethal hit's speed");
     require(s.snapshot().death_count == deaths && m.stage == 0 && m.shoves == 0,
             "matron collision: running into her body, a pest, at full speed is no death");
+    require(m.knockdowns == 0 && m.staggers == 0, "matron collision: the player's own body is no blow to her balance");
     std::cout << "PASS scraperx_sim matron collision: closing_mps=" << closing_peak << " shoves=" << m.shoves << "\n";
+}
+
+// Her balance (the owner, 2026-10-19: a hard enough blow puts her down for a
+// few seconds, never dead). With the player out of her way on 143 below, she
+// stands guard at her post; stock is sent at her as a throw would send it.
+void run_matron_balance() {
+    constexpr int kStaggering = static_cast<int>(Matron::State::Staggering);
+    constexpr int kDown = static_cast<int>(Matron::State::Down);
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(1.0).accepted, "matron balance: settle");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron balance: a sprint toward her locker wakes her");
+    const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+    require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) && walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
+            "matron balance: up the line's ramp onto its stand");
+    require(ride_line_down(s, line), "matron balance: down the line to 143 m while she strains");
+    (void)s.set_crouch_input(true);
+    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) && go(s, -16.0, -132.6, false, 20.0, 0.3),
+            "matron balance: crouched round to 143's north edge of the shaft");
+    require(until_guarding(s, 120.0) && s.snapshot().death_count == 0, "matron balance: she stands guard at her post");
+    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t toolbox = s.kit_body_index(LooseStock::kFirstEntity + first);
+    const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+    const auto deaths = s.snapshot().death_count;
+    // `piece` sent at her from `ahead_m` north of her (the way she faces at
+    // her post), `rise_m` over her feet, at `mps`; the worst it does to her
+    // over the contact (Down over Staggering; -1 for neither).
+    // Her stage set as each blow comes (her rage cools while she walks back
+    // to her post, and would bring her down a stage).
+    int stage = 0;
+    const auto send = [&](const std::uint32_t piece, const double ahead_m, const double rise_m, const double mps) {
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        const auto m = s.matron_state();
+        const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+        s.debug_launch_kit_body(piece, {m.position.x, feet + rise_m, m.position.z + ahead_m}, {0.0, 0.0, -mps});
+        int knocked = -1;
+        for (int i = 0; i < static_cast<int>(0.6 * static_cast<double>(Simulation::kTickRateHz)) && knocked != kDown; ++i) {
+            tick(s);
+            if (std::getenv("SCRAPERX_BALANCE_TRACE") != nullptr) {
+                const auto h = s.matron_state();
+                const auto p = s.kit_body_position(piece);
+                const auto v = s.kit_body_velocity(piece);
+                std::cout << "    tick " << i << " her (" << h.position.x << ", " << h.position.y << ", " << h.position.z
+                          << ") speed " << h.speed << " state " << int(h.state) << " blow " << h.blow_mps << "; piece ("
+                          << p.x << ", " << p.y << ", " << p.z << ") v (" << v.x << ", " << v.y << ", " << v.z << ")\n";
+            }
+            const int state = s.matron_state().state;
+            if (state == kDown || (state == kStaggering && knocked < 0)) {
+                knocked = state;
+            }
+        }
+        return knocked;
+    };
+    // Up again within her stage's time on the steel (and room to stand), on
+    // her own deck, alive.
+    const auto rises = [&](const double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            if (m.state != kDown && m.state != kStaggering) {
+                return m.alive && std::abs(m.floor_y - static_cast<double>(Matron::kDeckTop)) < 0.1 &&
+                       std::abs(m.position.y - (static_cast<double>(Matron::kDeckTop) + Matron::kStandCentre)) < 0.2;
+            }
+        }
+        return false;
+    };
+    // A pest, upright: a toolbox heaved at her chest (5.8 m/s, an arms'
+    // throw) puts her down.
+    {
+        const int knocked = send(toolbox, 2.0, 1.3, 5.8);
+        const auto m = s.matron_state();
+        std::cout << "  matron balance: a toolbox at a pest's chest, blow " << m.blow_mps << " m/s, state " << knocked
+                  << ", knockdowns " << m.knockdowns << ", fell (" << m.fall_x << ", " << m.fall_z << ")"
+                  << (m.kneeling ? " kneeling" : " lying") << "\n";
+        require(knocked == kDown && m.knockdowns == 1 && m.staggers == 0,
+                "matron balance: a toolbox heaved at an upright pest puts her down");
+        // Down she has no hands: the rage it costs her, and up again.
+        require(m.rage >= Matron::kKnockdownRage - 0.01, "matron balance: a knockdown feeds her rage");
+        require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron balance: up again, on her deck, alive");
+        std::cout << "PASS scraperx_sim matron balance pest: blow_mps=" << m.blow_mps << "\n";
+    }
+    // Dangerous: the same toolbox, and a drum at her chest, only stagger her;
+    // the drum rolled at her shins puts her down.
+    stage = 1;
+    require(until_guarding(s, 120.0), "matron balance: dangerous, back at her post");
+    {
+        const int by_box = send(toolbox, 2.0, 1.3, 5.8);
+        const auto boxed = s.matron_state();
+        std::cout << "  matron balance: a toolbox at a dangerous chest, blow " << boxed.blow_mps << " m/s, state " << by_box
+                  << ", at (" << boxed.position.x << ", " << boxed.position.z << ") yaw " << boxed.yaw << "\n";
+        require(by_box == kStaggering && rises(2.0), "matron balance: a toolbox only staggers a dangerous Matron");
+        require(until_guarding(s, 120.0), "matron balance: dangerous, at her post again");
+        const int by_drum = send(drum, 1.25, 1.35, 3.3);
+        const auto m = s.matron_state();
+        std::cout << "  matron balance: a drum at a dangerous chest, blow " << m.blow_mps << " m/s, state " << by_drum
+                  << "\n";
+        require(by_drum == kStaggering && m.knockdowns == 1 && rises(2.0),
+                "matron balance: a drum at her chest only staggers a dangerous Matron");
+        require(until_guarding(s, 120.0), "matron balance: dangerous, at her post once more");
+        const int low = send(drum, 1.0, 0.46, 3.3);
+        const auto d = s.matron_state();
+        std::cout << "  matron balance: a drum at a dangerous Matron's shins, blow " << d.blow_mps << " m/s, state " << low
+                  << "\n";
+        require(low == kDown && d.knockdowns == 2, "matron balance: a drum rolled at her shins takes her feet");
+        require(rises(static_cast<double>(Matron::kDangerousDownSeconds) + 2.0), "matron balance: dangerous, up sooner");
+        std::cout << "PASS scraperx_sim matron balance dangerous: staggers=" << d.staggers << " knockdowns=" << d.knockdowns
+                  << "\n";
+    }
+    // Fully changed: a drum she faces only staggers her, however hard.
+    stage = 2;
+    require(until_guarding(s, 120.0), "matron balance: fully changed, at her post");
+    {
+        const auto before = s.matron_state();
+        const int braced = send(drum, 1.25, 1.35, 7.0);
+        const auto m = s.matron_state();
+        std::cout << "  matron balance: a drum at 7 m/s into a fully changed Matron's face, blow " << m.blow_mps
+                  << " m/s, state " << braced << "\n";
+        require(braced == kStaggering && m.knockdowns == before.knockdowns,
+                "matron balance: fully changed, a blow she faces only staggers her");
+        require(rises(2.0), "matron balance: fully changed, she has her feet back");
+    }
+    require(s.snapshot().death_count == deaths && s.matron_state().alive && s.matron_state().catches == 0,
+            "matron balance: no death, hers or the climber's");
+    std::cout << "PASS scraperx_sim matron balance: knockdowns=" << s.matron_state().knockdowns
+              << " staggers=" << s.matron_state().staggers << "\n";
+    // ---- the goal's own beat: a pest coming for the climber upright, and
+    //      the toolbox in their hands thrown at her (the up gesture) puts her
+    //      down; up again a few seconds later, nobody dead ----
+    {
+        Simulation h(InitialSpawn::Deck154);
+        require(h.advance_frame(1.0).accepted, "matron heave: settle");
+        require(go(h, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && h.matron_state().state == kStateStraining,
+                "matron heave: a sprint toward her locker wakes her");
+        const std::uint32_t box_piece = h.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables) + 1;
+        const std::uint64_t box = LooseStock::kFirstEntity + box_piece;
+        require(walk_to(h, -4.4, -125.85, 20.0, 0.08), "matron heave: to the toolbox by the north rail");
+        (void)h.set_facing(0.0, 1.0);
+        (void)h.advance_frame(0.3);
+        require(h.snapshot().carry_target_entity_id == box && h.request_pick_up(), "matron heave: the toolbox taken up");
+        (void)h.advance_frame(0.6);
+        require(h.snapshot().carrying_entity_id == box, "matron heave: the toolbox in the hands");
+        // Still, the toolbox held, until she comes for the climber in sight:
+        // from 9 m the view kept on her (where she will be a moment on, as a
+        // thrower leads a runner), and the throw at 3.4 m.
+        bool coming = false;
+        auto last = h.matron_state().position;
+        for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
+            tick(h);
+            const auto m = h.matron_state();
+            const auto p = h.snapshot().player_position;
+            const double hz = static_cast<double>(Simulation::kTickRateHz);
+            const double lead = 0.22;
+            const double ax = m.position.x + (m.position.x - last.x) * hz * lead - p.x;
+            const double az = m.position.z + (m.position.z - last.z) * hz * lead - p.z;
+            last = m.position;
+            const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
+            if (m.state == kStateHunting && m.stage == 0 && d < 9.0) {
+                (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                coming = d < 3.4;
+            }
+        }
+        require(coming, "matron heave: a pest comes for the climber");
+        tick(h);
+        require(h.snapshot().up_move == scraperx::sim::UpMove::Throw && h.request_up(),
+                "matron heave: up is THROW with the toolbox in the hands");
+        const auto deaths_h = h.snapshot().death_count;
+        bool downed = false;
+        for (int i = 0; i < static_cast<int>(1.2 * static_cast<double>(Simulation::kTickRateHz)) && !downed; ++i) {
+            tick(h);
+            downed = h.matron_state().state == kDown;
+            if (std::getenv("SCRAPERX_BALANCE_TRACE") != nullptr && i < 60) {
+                const auto t = h.matron_state();
+                const auto b = h.kit_body_position(h.kit_body_index(box));
+                const auto pl = h.snapshot().player_position;
+                std::cout << "    heave " << i << " her (" << t.position.x << ", " << t.position.y << ", " << t.position.z
+                          << ") speed " << t.speed << " state " << int(t.state) << " blow " << t.blow_mps << "; box (" << b.x
+                          << ", " << b.y << ", " << b.z << "); player (" << pl.x << ", " << pl.z << ")\n";
+            }
+        }
+        const auto m = h.matron_state();
+        std::cout << "  matron heave: thrown at a pest coming upright, blow " << m.blow_mps << " m/s, state " << int(m.state)
+                  << ", knockdowns " << m.knockdowns << ", throws " << h.snapshot().throw_count << "\n";
+        require(downed && m.knockdowns == 1 && h.snapshot().throw_count == 1,
+                "matron heave: the toolbox thrown at a pest puts her down");
+        stand_still(h, static_cast<double>(Matron::kPestDownSeconds) + 1.5);
+        require(h.matron_state().state != kDown && h.matron_state().alive && h.snapshot().death_count == deaths_h,
+                "matron heave: a few seconds down, then up; nobody dead");
+        std::cout << "PASS scraperx_sim matron heave: blow_mps=" << m.blow_mps << "\n";
+    }
 }
 
 // A pest's mischief: the player's toolbox taken and thrown, or carried off.
@@ -1372,6 +1563,7 @@ void run_matron() {
     }
     run_matron_mischief();
     run_matron_collision();
+    run_matron_balance();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

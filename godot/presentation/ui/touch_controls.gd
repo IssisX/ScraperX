@@ -449,6 +449,14 @@ func _touch_up(index: int) -> bool:
 	return false
 
 
+# A swipe made only as the thumb lifts, while the thumb is still down and in
+# time (&"up" or &"down"), else &"": what main.gd draws ahead of it.
+func pending_verb() -> StringName:
+	if _look_index != -1 and _look_kind == LOOK_PENDING and _clock - _look_start_clock <= LIFT_SECONDS:
+		return _pending_verb
+	return &""
+
+
 # The look touch is look after all: what was held back goes to the view.
 func _settle_look() -> void:
 	_look_kind = LOOK_DRAG

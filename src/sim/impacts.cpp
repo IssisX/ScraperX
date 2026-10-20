@@ -88,6 +88,17 @@ void ImpactLedger::resync() {
     tick_.clear();
 }
 
+void ImpactLedger::resync_body(const std::uint64_t entity) {
+    const JPH::BodyInterface &bodies = physics_.GetBodyInterface();
+    for (Tracked &t : tracked_) {
+        if (t.entity == entity) {
+            t.last_velocity = bodies.GetLinearVelocity(t.body);
+            t.quiet_ticks = 0;
+            t.last_energy_j = 0.0F;
+        }
+    }
+}
+
 std::vector<ImpactSnapshot> ImpactLedger::kept() const {
     std::vector<ImpactSnapshot> result;
     result.reserve(ring_count_);

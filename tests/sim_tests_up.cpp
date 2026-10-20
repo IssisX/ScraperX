@@ -8,6 +8,7 @@
 
 #include "sim_tests.hpp"
 #include "sim/forklift.hpp"
+#include "sim/loose_stock.hpp"
 
 namespace {
 
@@ -34,6 +35,7 @@ const char *up_name(const UpMove move) {
     case UpMove::Kick: return "kick";
     case UpMove::Catch: return "catch";
     case UpMove::LetGo: return "let go";
+    case UpMove::Throw: return "throw";
     }
     return "?";
 }
@@ -424,6 +426,75 @@ void up_route_hint() {
     std::cout << "  route hint: picked out ahead, not behind, not in the air\n";
 }
 
+// The throw (the owner, 2026-10-19: throw what you carry): a piece of loose
+// stock in the hands, up is THROW, and the arms send it along the view at
+// what 300 J gives its mass (a toolbox 5.8 m/s, a drum 3.3); it is not heard
+// as a hit at the hands, it is heard landing, and the path drawn ahead of
+// the throw comes down where the piece does.
+void up_throw() {
+    using scraperx::sim::LooseStock;
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(0.5).accepted, "up throw: settle");
+    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const auto throw_one = [&](const std::uint32_t piece, const double pick_x, const double pick_z, const double lo,
+                               const double hi, const char *what) {
+        const std::uint64_t entity = LooseStock::kFirstEntity + piece;
+        const std::uint32_t body = s.kit_body_index(entity);
+        require(walk_to(s, pick_x, pick_z, 30.0, 0.08), what);
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.advance_frame(0.3);
+        require(s.snapshot().carry_target_entity_id == entity && s.request_pick_up(), what);
+        (void)s.advance_frame(0.6);
+        require(s.snapshot().carrying_entity_id == entity, what);
+        // Turned along the band (east), the throw's way clear.
+        (void)s.set_facing(1.0, 0.0);
+        (void)s.advance_frame(0.8);
+        const auto path = s.throw_prediction();
+        require(path.size() >= 3, "up throw: the throw's path is drawn ahead while the piece is held");
+        const std::uint64_t throws = s.snapshot().throw_count;
+        std::uint64_t seen = 0;
+        for (const auto &hit : s.impacts()) {
+            seen = std::max(seen, hit.sequence);
+        }
+        up_as(s, UpMove::Throw, what);
+        const auto after = s.snapshot();
+        const auto v = s.kit_body_velocity(body);
+        const double relative = std::hypot(v.x - after.player_linear_velocity.x, v.y - after.player_linear_velocity.y,
+                                           v.z - after.player_linear_velocity.z);
+        std::cout << "  up throw: " << what << " left the hands at " << relative << " m/s relative to the thrower\n";
+        require(after.carrying_entity_id == 0 && after.throw_count == throws + 1, what);
+        require(relative > lo && relative < hi, what);
+        for (const auto &hit : s.impacts()) {
+            require(!(hit.entity == entity && hit.sequence > seen), "up throw: not heard as a hit at the hands");
+        }
+        // Down where the drawn path came down, and heard landing.
+        bool landed = false;
+        scraperx::sim::Vector3 at{};
+        for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++i) {
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            for (const auto &hit : s.impacts()) {
+                if (hit.entity == entity && hit.sequence > seen) {
+                    landed = true;
+                    at = hit.at;
+                }
+            }
+        }
+        const auto end = path.back();
+        const double off = std::hypot(at.x - end.x, at.z - end.z);
+        std::cout << "  up throw: " << what << " landed at (" << at.x << ", " << at.y << ", " << at.z
+                  << "), the drawn path ended at (" << end.x << ", " << end.y << ", " << end.z << "), " << off
+                  << " m apart\n";
+        require(landed, "up throw: the thrown piece is heard landing");
+        require(off < 1.0, "up throw: it comes down where its drawn path did");
+    };
+    // Her deck's toolbox, from the pick spot south of it; then the drum.
+    throw_one(first, -6.5, -125.75, 5.4, 6.2, "a toolbox thrown");
+    (void)s.advance_frame(1.0);
+    throw_one(first + 2, -15.0, -125.95, 2.9, 3.7, "a drum thrown");
+    std::cout << "PASS scraperx_sim up throw: toolbox and drum thrown, unheard at the hands, landing on their drawn "
+                 "paths\n";
+}
+
 void run_up_controls() {
     up_springboard();
     up_vault();
@@ -436,10 +507,15 @@ void run_up_controls() {
     up_at_the_wheel();
     up_trapeze();
     up_route_hint();
+    up_throw();
     const auto first = wall_kick_run();
     const auto second = wall_kick_run();
     require(first == second, "up again: the same input, the same world");
     std::cout << "PASS scraperx_sim up controls: springboard, vault, speed vault, mantle, climb up, ladder, "
                  "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze; none under a beam or "
                  "at the wheel; the coyote jump; no kick off an ended wall run; the route hint; deterministic\n";
+}
+
+void run_up_throw() {
+    up_throw();
 }

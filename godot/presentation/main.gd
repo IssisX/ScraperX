@@ -23,6 +23,7 @@ const CloudLayer := preload("res://presentation/cloud_layer.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
+const ThrowArcView := preload("res://presentation/throw_arc_view.gd")
 const SwingView := preload("res://presentation/swing_view.gd")
 const SummitView := preload("res://presentation/summit_view.gd")
 const MatronView := preload("res://presentation/life/matron_view.gd")
@@ -73,6 +74,8 @@ var _capture_scheduled := false
 var _fps_label: Label
 var _fps_clock := 0.0
 var _touch: Control
+var _throw_arc: Node3D
+var _throw_path := PackedVector3Array()
 var _pause_menu: Control
 var _uitest: Node
 var _force_touch := false
@@ -201,6 +204,9 @@ func _ready() -> void:
 	for m in _machines.size():
 		if float(_machines[m]["mass"]) >= Works.BEACON_MIN_KG:
 			_works.add_beacon(_kit_bodies[int(_machines[m]["body"])], _machines[m]["top"], m)
+	_throw_arc = ThrowArcView.new()
+	add_child(_throw_arc)
+	_throw_arc.setup()
 	_slingshot_view = SlingshotView.new()
 	add_child(_slingshot_view)
 	_slingshot_view.setup(self)
@@ -378,6 +384,7 @@ func _process(delta: float) -> void:
 	_canopy.update(bool(_ctx.get("chute", false)), _camera.global_position, _yaw, _arms.riser_tops, delta)
 	_update_feedback(delta)
 	_update_gesture_hints()
+	_update_throw_arc(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.caption = _audio.caption if _settings.captions else ""
@@ -866,9 +873,20 @@ func _update_gesture_hints() -> void:
 	_touch.down_hint = DOWN_HINTS.get(route, "")
 	_touch.down_hint_special = route in [&"hook_release", &"pull", &"let_go", &"slide_down", &"set_down",
 		&"drop_down"]
-	# What lets go of a hold or jumps off it is made only by a flick that lifts.
-	_touch.up_on_lift = up in [UP_JUMP_OFF, UP_LAUNCH, UP_LET_GO]
+	# What lets go of a hold or jumps off it is made only by a flick that lifts;
+	# so is a throw, its path drawn while the thumb is still on the glass.
+	_touch.up_on_lift = up in [UP_JUMP_OFF, UP_LAUNCH, UP_LET_GO, UP_THROW]
 	_touch.down_on_lift = route in [&"hook_release", &"let_go", &"slide_down"]
+
+# The throw's path, while the thumb swipes up with a throwable in the hands
+# (made as it lifts): faint, and gone with the thumb.
+func _update_throw_arc(delta: float) -> void:
+	if _throw_arc == null:
+		return
+	var aiming := bool(_touch.pending_verb() == &"up") and int(_native.get_up_move()) == UP_THROW
+	if aiming:
+		_throw_path = _native.get_throw_prediction()
+	_throw_arc.update_view(_throw_path, aiming, delta)
 
 # Contextual Action is a gateway (Governing Law 27): it climbs what the
 # native affordance reports, takes hold of what is in reach, or hooks what is

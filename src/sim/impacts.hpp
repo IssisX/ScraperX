@@ -52,6 +52,9 @@ public:
     // After a restore puts the bodies back: their velocities are taken as they
     // now are, so the jump is not heard as a hit.
     void resync();
+    // One body's velocity taken as it now is (set by hand: a throw, a launch),
+    // so the change is not heard as a hit.
+    void resync_body(std::uint64_t entity);
 
     // The last step's hits, hardest first (what the Matron hears).
     [[nodiscard]] const std::vector<ImpactSnapshot> &tick() const noexcept { return tick_; }

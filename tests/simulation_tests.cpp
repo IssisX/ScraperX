@@ -101,6 +101,14 @@ int main() {
         run_matron_collision();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "up-throw") {
+        run_up_throw();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-balance") {
+        run_matron_balance();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-mischief") {
         run_matron_mischief();
         return EXIT_SUCCESS;
