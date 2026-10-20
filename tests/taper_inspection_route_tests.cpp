@@ -68,8 +68,13 @@ void tick(Simulation &s, int count = 1) {
 void steer(Simulation &s, double x, double z, double effort_x = 0, double effort_z = 0) {
     const auto v = s.snapshot();
     const double dx = x - v.player_position.x, dz = z - v.player_position.z;
-    const double input_x = dx * 1.8 + effort_x - v.player_linear_velocity.x * .28;
-    const double input_z = dz * 1.8 + effort_z - v.player_linear_velocity.z * .28;
+    // Ease the ordinary stick before the finite contact brake runs out of
+    // apron. The old full-speed approach crossed the edge while braking.
+    const auto support = v.support_point_linear_velocity;
+    const double input_x = dx / 2.75 + effort_x -
+        (v.player_linear_velocity.x - support.x) * .12;
+    const double input_z = dz / 2.75 + effort_z -
+        (v.player_linear_velocity.z - support.z) * .12;
     const double scale = std::max(1.0, std::hypot(input_x, input_z));
     require(s.set_move_input(input_x / scale, input_z / scale),
             "velocity-aware ordinary movement input accepted", s);

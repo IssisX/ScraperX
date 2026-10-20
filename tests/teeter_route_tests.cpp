@@ -229,6 +229,9 @@ int main() {
         !walk_to(rider, 31.95, -139.45)) return 5;
     std::cout << "BALLAST_MOVED position=" << ballast_position(rider) << "\n";
     if (ballast_position(rider) < 4.15) return 26;
+    // Cross the low rail beside the displaced carriage before walking
+    // forward. A diagonal approach drives into its rotated rear face.
+    if (!walk_to(rider, 31.95, -138.58)) return 27;
     if (!walk_to(rider, 32.8, -138.58)) return 27;
     advance(rider, 4.0);
     report(rider, "FAR");
@@ -398,6 +401,7 @@ int main() {
     if (!walk_to(replay, 29.8, -139.45)) return 13;
     advance(replay, 0.5);
     if (!walk_to(replay, 31.95, -139.45) ||
+        !walk_to(replay, 31.95, -138.58) ||
         !walk_to(replay, 32.8, -138.58)) return 14;
     advance(replay, 4.0);
     const auto repeated = replay.snapshot();
