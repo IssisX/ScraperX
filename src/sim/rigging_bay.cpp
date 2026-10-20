@@ -48,20 +48,21 @@ void build_rigging_bay(kit::Kit &kit, RiggingSystem &rig) {
     kit.add_guide(platform, Vec3::sAxisY(), 0, 2.1F, .7F, 3000, .8F);
     kit.set_continuous_collision(platform);
 
-    // A two-metre loading opening gives the three loose blocks room to
-    // settle without precision packing around the operator or rigging eye.
+    // The 2.06m clear width accommodates every block rotation at these lanes.
+    // A block's .382m bounding radius plus the .52m side placement leaves
+    // .128m of clearance, rather than relying on its current carry rotation.
     const auto weight = body(kRiggingWeightEntity, {
-        box({1.0F,.06F,.65F}, {0,0,0}, Material::Steel),
-        box({.06F,.35F,.65F}, {-.94F,.35F,0}, Material::Yellow),
-        box({.06F,.35F,.65F}, {.94F,.35F,0}, Material::Yellow),
-        box({.88F,.35F,.06F}, {0,.35F,-.59F}, Material::Rust),
+        box({1.15F,.06F,.65F}, {0,0,0}, Material::Steel),
+        box({.06F,.35F,.65F}, {-1.09F,.35F,0}, Material::Yellow),
+        box({.06F,.35F,.65F}, {1.09F,.35F,0}, Material::Yellow),
+        box({1.03F,.35F,.06F}, {0,.35F,-.59F}, Material::Rust),
         // Eight-centimetre front rim retains the real loose ballast while
         // leaving clearance beneath the shelf-height carried load.
-        box({.88F,.04F,.06F}, {0,.10F,.59F}, Material::Yellow),
+        box({1.03F,.04F,.06F}, {0,.10F,.59F}, Material::Yellow),
         // Side-mounted eye leaves the full open front available for ballast.
         // Its bracket overlaps the real side wall; the fixed sheave above
         // follows this eye so both loaded cable legs remain vertical.
-        box({.045F,.035F,.2F}, {.94F,.08F,.75F}, Material::Yellow),
+        box({.12F,.035F,.2F}, {1.015F,.08F,.75F}, Material::Yellow),
         box({.045F,.3F,.045F}, {.94F,.4F,.9F}, Material::Yellow),
     }, {2.5F,2.65F,0}, 120);
     kit.add_guide(weight, Vec3::sAxisY(), -2.1F, 0, .7F, 3000, .8F);

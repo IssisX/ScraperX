@@ -1,5 +1,6 @@
 #include "sim/simulation.hpp"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -140,6 +141,20 @@ void pull_lever(Simulation &sim, bool release) {
     }
     report(release ? "lever-released" : "lever-returned",sim);
 }
+double ballast_radius(const Simulation &sim, std::uint64_t entity) {
+    const auto half = sim.kit_body_part(sim.kit_body_index(entity),0).half;
+    return std::sqrt(half.x*half.x+half.y*half.y+half.z*half.z);
+}
+void require_retained_ballast(const Simulation &sim, std::uint64_t entity) {
+    const auto b = sim.kit_body_position(sim.kit_body_index(entity));
+    const auto w = sim.kit_body_position(sim.kit_body_index(weight));
+    const auto floor = sim.kit_body_part(sim.kit_body_index(weight),0);
+    // Three real blocks may settle against the rim or each other. Their COM
+    // need not equal a flat block's height; bound the full three-block stack.
+    const double stack_height = floor.offset.y+floor.half.y+5*ballast_radius(sim,entity);
+    require(std::abs(b.x-w.x)<.8 && std::abs(b.z-w.z)<.65 && b.y>w.y+.2 && b.y<w.y+stack_height,
+        "released authored ballast remains within physical tray and stack bounds",sim);
+}
 void place_ballast(Simulation &sim, unsigned i) {
     const auto entity = std::uint64_t(2496+i);
     const auto at = sim.kit_body_position(sim.kit_body_index(entity));
@@ -155,8 +170,15 @@ void place_ballast(Simulation &sim, unsigned i) {
     require(sim.request_set_down(),"release ballast into actual tray",sim); tick(sim,180);
     const auto b = sim.kit_body_position(sim.kit_body_index(entity));
     const auto w = sim.kit_body_position(sim.kit_body_index(weight));
-    require(std::abs(b.x-w.x)<.8 && std::abs(b.z-w.z)<.65 && b.y>w.y+.2 && b.y<w.y+.4,
-        "released authored ballast rests in counterweight tray",sim);
+    const auto rotation = sim.kit_body_rotation(sim.kit_body_index(entity));
+    const auto velocity = sim.kit_body_velocity(sim.kit_body_index(entity));
+    std::cout << "RIGGING_RELEASED entity=" << entity << " tray_offset="
+        << b.x-w.x << ',' << b.y-w.y << ',' << b.z-w.z
+        << " rotation=" << rotation.x << ',' << rotation.y << ',' << rotation.z << ',' << rotation.w
+        << " velocity=" << velocity.x << ',' << velocity.y << ',' << velocity.z << '\n';
+    require_retained_ballast(sim,entity);
+    require(sim.kit_body_kinetic_energy(sim.kit_body_index(entity))<.1,
+        "released authored ballast settles without continuing to spill",sim);
     walk(sim,-117.5,-34.2,.2); walk(sim,-117.5,-28.2,.3);
 }
 }
@@ -179,6 +201,10 @@ int main() {
     command(sim,RiggingCommandKind::Unequip);
     walk(sim,-122.5,-39); walk(sim,-125.8,-39); walk(sim,-125.8,-28.2); walk(sim,-114.8,-28.2);
     for(unsigned i=0;i<3;++i) place_ballast(sim,i);
+    const double loaded_tray_y = sim.kit_body_position(sim.kit_body_index(weight)).y;
+    std::array<double,3> loaded_ballast_y{};
+    for (unsigned i=0;i<3;++i)
+        loaded_ballast_y[i]=sim.kit_body_position(sim.kit_body_index(2496+i)).y;
     walk(sim,-125.8,-28.2); walk(sim,-123.5,-32.8); install(sim); board(sim); pull_lever(sim,true);
     tick(sim,900); report("occupied-lift",sim);
     require(sim.kit_body_position(sim.kit_body_index(platform)).y > 2.25 && sim.rigging_state().tension_n > 60 &&
@@ -186,11 +212,34 @@ int main() {
     for (unsigned i = 0; i < 3; ++i) {
         const auto ballast = sim.kit_body_position(sim.kit_body_index(2496+i));
         const auto tray = sim.kit_body_position(sim.kit_body_index(weight));
-        require(std::abs(ballast.x-tray.x)<.8 && std::abs(ballast.z-tray.z)<.65 &&
-                    ballast.y>tray.y+.2 && ballast.y<tray.y+.5,
-                "all three actual ballast bodies descend with tray during occupied lift",sim);
+        require_retained_ballast(sim,2496+i);
+        const double tray_descent=loaded_tray_y-tray.y;
+        require(tray_descent>1.8 && std::abs((loaded_ballast_y[i]-ballast.y)-tray_descent)<2*ballast_radius(sim,2496+i),
+            "each actual ballast body descends with tray during occupied lift",sim);
     }
-    tick(sim,180);
+    std::array<Vector3,3> held_offsets{};
+    const auto held_tray=sim.kit_body_position(sim.kit_body_index(weight));
+    for (unsigned i=0;i<3;++i) {
+        const auto b=sim.kit_body_position(sim.kit_body_index(2496+i));
+        held_offsets[i]={b.x-held_tray.x,b.y-held_tray.y,b.z-held_tray.z};
+    }
+    for (unsigned step=0;step<180;++step) {
+        tick(sim);
+        const auto tray=sim.kit_body_position(sim.kit_body_index(weight));
+        const auto tray_velocity=sim.kit_body_velocity(sim.kit_body_index(weight));
+        for (unsigned i=0;i<3;++i) {
+            require_retained_ballast(sim,2496+i);
+            const auto b=sim.kit_body_position(sim.kit_body_index(2496+i));
+            const auto offset=held_offsets[i];
+            require(std::abs(b.x-tray.x-offset.x)<.05 && std::abs(b.y-tray.y-offset.y)<.05 &&
+                        std::abs(b.z-tray.z-offset.z)<.05,
+                "each ballast body keeps its settled tray-relative position throughout occupied hold",sim);
+            const auto velocity=sim.kit_body_velocity(sim.kit_body_index(2496+i));
+            require(std::hypot(velocity.x-tray_velocity.x,velocity.z-tray_velocity.z)<.08 &&
+                        std::abs(velocity.y-tray_velocity.y)<.08,
+                "all three ballast bodies remain settled with tray throughout occupied hold",sim);
+        }
+    }
     require(sim.kit_body_position(sim.kit_body_index(platform)).y > 2.25 &&
                 sim.snapshot().support_entity_id == platform,
             "ballasted occupied platform holds receiving height before onward movement",sim);
