@@ -38,6 +38,9 @@ the self-closing doors, the lights riding with the car, the drips, the rumble an
 top. Not taken: the throw start (the throw stays the Matron's) and the rider's weight as power. The
 deck is far enough from S1's scale plate (a fall sets it off, not weight); old saves refused is
 accepted for now. Built on `claude/chiller-drop`, then merged.
+The owner confirmed the picks, and added: *"Make sure we see a whoosh of air/wind when vacuum seal
+is broken on glass machine."* At the chiller drop's top, the seal's break is a visible blast of air
+from the collar, not only heard; the glass spares tube does the same at its stations.
 
 ## The glass spares tube, 484 to 640 m
 
