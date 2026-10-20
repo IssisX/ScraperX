@@ -77,7 +77,9 @@ Then:
 ## 3. Place, without duplicates
 
 - **Owner rules:** a row in `00_START_HERE.md`'s "Owner directives" table, newest first:
-  `| <date> | <plain words, with the owner's quote> | <status: in force, and what changes> |`.
+  `| <date> | <the lesson as a concise, well-said passage in plain words, with the owner's quote> | <status: in force, and what changes> |`
+  (the owner, 2026-10-20: *"i like when you up-interpret my rough input into beautifully said
+  concise passages"*; the passage keeps the owner's exact meaning, the quote keeps the words).
   If a row already says it, update that row's status instead of adding one.
 - **Engineering rules** that belong to a plan or a subsystem: that document's rules section
   (for example `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` section 2.6 for the climb).
