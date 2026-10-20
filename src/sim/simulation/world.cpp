@@ -251,6 +251,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
             kClimbHandMid-kCrouchDrop, kTransferShoulderReachM);
     if (content == WorldContent::Slingshot) {
         grappling_gun_ = std::make_unique<GrapplingGun>(physics_system_, player_id_, object_layers::kMoving);
+        // Starting equipment is carried throughout the world. The roof rack
+        // remains a practice station, not a prerequisite for drawing the gun.
+        grapple_acquired_ = true;
         // Append after all retained physics bodies, including the hook.
         build_workshop_roof_route(*kit_);
         build_vault_rail_route(*kit_);

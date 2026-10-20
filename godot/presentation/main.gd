@@ -1129,9 +1129,7 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 				else:
 					_native.request_release()
 			&"auto_reel":
-				var gun: Dictionary = _native.get_grapple_gun_state()
-				if bool(gun.get("equipped", false)) and bool(gun.get("line_attached", false)):
-					_native.set_grapple_auto_reel(not bool(gun.get("auto_reel", false)))
+				_toggle_grapple_auto_reel()
 			&"toggle_grapple":
 				# Equipment has its own verb: a nearby grip, load or machine
 				# must not hide a carried tool. Native hand/ownership rules
@@ -1181,6 +1179,31 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 				_set_telemetry_visible(_settings.telemetry or _ci_mode)
 
 
+# Primary touch Action follows the native line and recovery affordance.
+# Reeling only requests the existing finite native motor; it never retrieves
+# a distant hook or moves the player from presentation code.
+static func _grapple_primary_action(gun: Dictionary) -> Dictionary:
+	var line_state := int(gun.get("state", 0))
+	var action := {"id": &"grapple_action", "label": "FIRE HOOK", "icon": &"hook",
+		"detail": "ARC THE HOOK OVER THE CROSSBAR"}
+	if line_state == 1:
+		action["label"] = "LOCK LINE"
+	elif bool(gun.get("action_recovers_hook", false)):
+		action["label"] = "RECOVER HOOK"
+		action["detail"] = "HOOK WITHIN REACH"
+	elif line_state == 2 and bool(gun.get("line_attached", false)):
+		action["id"] = &"grapple_reel"
+		action["label"] = "STOP REEL" if bool(gun.get("auto_reel", false)) else "REEL IN"
+		action["detail"] = "STEER TOWARD LANDING / DROP: RELEASE"
+	return action
+
+
+func _toggle_grapple_auto_reel() -> void:
+	var gun: Dictionary = _native.get_grapple_gun_state()
+	if bool(gun.get("equipped", false)) and bool(gun.get("line_attached", false)):
+		_native.set_grapple_auto_reel(not bool(gun.get("auto_reel", false)))
+
+
 # Contextual Action is a gateway (Governing Law 27): it climbs what the
 # native affordance reports, opens a pendant's own controls, or works a
 # valve. It never operates a machine on the player's behalf.
@@ -1197,6 +1220,8 @@ func _perform_action() -> void:
 			_native.set_grapple_equipped(true)
 		&"grapple_action":
 			_native.request_grapple_action()
+		&"grapple_reel":
+			_toggle_grapple_auto_reel()
 		&"slingshot":
 			if bool(_native.get_slingshot_state().get("recovering", false)):
 				_native.request_slingshot_drop()
@@ -1484,9 +1509,7 @@ func _read_context() -> Dictionary:
 		action = {"id": (&"rigging_select" if selecting else &"rigging_action") if target != 0 else &"", "label": label if target != 0 else "AIM AT AN EYE",
 			"icon": &"hook", "detail": "UP: LIFT / DOWN: LOWER / RELEASE: BRAKE" if bool(rigging.get("power_operable", false)) else ("PREVIEW ONLY" if bool(rigging.get("draft", false)) else "INSTALLED LINES STAY WHEN STOWED")}
 	elif tool_active:
-		var line_state := int(grapple.get("state", 0))
-		action = {"id": &"grapple_action", "label": "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(grapple.get("action_recovers_hook", line_state == 2)) else "FIRE HOOK"),
-			"icon": &"hook", "detail": "TIGHTEN AT LIP, THEN STEER TOWARD LANDING" if line_state == 2 else "ARC THE HOOK OVER THE CROSSBAR"}
+		action = _grapple_primary_action(grapple)
 	elif _operating != &"":
 		action = {"id": &"done", "label": "DONE", "icon": &"done", "detail": ""}
 	elif grounded and free and bool(crane.get("rigging_reachable", false)):
@@ -1731,8 +1754,7 @@ func _station_panel() -> Dictionary:
 		&"grappling_gun":
 			var gun: Dictionary = _native.get_grapple_gun_state()
 			var drop_label := "RELEASE" if bool(gun.get("line_attached", false)) else "STOW"
-			var line_state := int(gun.get("state", 0))
-			var action_label := "LOCK LINE" if line_state == 1 else ("RECOVER HOOK" if bool(gun.get("action_recovers_hook", false)) else "FIRE HOOK")
+			var action_label: String = _grapple_primary_action(gun)["label"]
 			var failure := str(gun.get("last_failure", ""))
 			var status := failure if not failure.is_empty() else str(gun.get("state_name", "READY"))
 			var verbs := [[&"action", action_label], [&"hoist", "TIGHTEN / PAY OUT"]]

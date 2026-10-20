@@ -63,14 +63,20 @@ func _run() -> void:
 	check(native != null and not main._regression_scene and not main._ci_mode, "shipping scene and native world")
 	check(UiStyle.BINDINGS[&"toggle_grapple"][1] == "T" and UiStyle.BINDINGS[&"auto_reel"][1] == "B",
 		"controls table names actual keyboard mappings")
-	check(not bool(main._ctx["grapple_draw_available"]), "unacquired tool is unavailable away from rack")
-	key(KEY_T)
-	await step()
-	check(not bool(native.get_grapple_gun_state()["acquired"]), "tool key grants no remote equipment")
+	check(bool(native.get_grapple_gun_state()["acquired"]) and bool(main._ctx["grapple_draw_available"])
+		and not bool(native.get_grapple_gun_state()["equipped"]), "starting carried gun is drawable at ground arrival")
+	touch_button(&"grapple")
+	await step(2)
+	check(bool(native.get_grapple_gun_state()["acquired"]) and bool(native.get_grapple_gun_state()["equipped"]),
+		"dedicated touch draws carried starting gun without a rack visit")
+	touch_button(&"grapple")
+	await step(2)
+	check(not bool(native.get_grapple_gun_state()["equipped"]) and not bool(native.get_grapple_gun_state()["line_attached"]),
+		"dedicated touch stows starting gun before separate rack fixture")
 	check(native.debug_restart_at(Vector3(12, 485.15, -135.5)), "diagnostic actual rack stage")
 	await step(45)
 	check(bool(native.get_grapple_gun_state()["station_available"]) and bool(main._ctx["grapple_draw_available"]),
-		"native rack permits initial physical acquisition")
+		"native rack retains carried gun draw availability")
 	key(KEY_T)
 	var tick: int = native.get_tick_index()
 	await step(2, 0.0)
@@ -78,7 +84,7 @@ func _run() -> void:
 		"dedicated draw waits through zero-tick frames for native acknowledgement")
 	await step(2)
 	check(bool(native.get_grapple_gun_state()["acquired"]) and bool(native.get_grapple_gun_state()["equipped"]),
-		"keyboard dedicated draw acquires and equips at real rack")
+		"keyboard dedicated draw equips carried gun at real rack")
 	key(KEY_T, true)
 	await step()
 	check(bool(native.get_grapple_gun_state()["equipped"]), "keyboard echo never toggles equipment")

@@ -1,4 +1,5 @@
 #include "sim/powered_cable.hpp"
+#include "sim/finite_cable_drive.hpp"
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -17,6 +18,24 @@ using scraperx::sim::PoweredCable;
 namespace {
 constexpr float dt = 1.F / 360;
 void require(bool v, const char *why) { if (!v) { std::cerr << "FAIL POWERED_CABLE " << why << '\n'; std::exit(1); } }
+void bounded_empty_brake() {
+ using namespace scraperx::sim;
+ FiniteCableDriveConfig config;
+ FiniteCableDriveState state;
+ finite_cable_drive::Step step;
+ step.dt=1;
+ // This real float cancellation case formerly required234881025 nextafter
+ // iterations, even though the zero-work brake solution is near zero.
+ const float old=10;
+ const double speed=std::nextafter(-10.0,0.0);
+ const float next=step.project(config,state,old,speed,1);
+ require(std::isfinite(next)&&next>0&&next<.00001F,"empty brake releases excess impulse without cancellation stall");
+ const double correction=next-old;
+ const double after=speed+std::abs(correction);
+ require(after<=0&&state.positive_motor_work_j==0&&state.source_energy_used_j==0,
+     "empty brake correction cannot cross into unpaid positive work");
+ std::cout<<"HOIST_BOUNDED_BRAKE impulse="<<next<<" positive_work_j="<<state.positive_motor_work_j<<'\n';
+}
 struct BP : BroadPhaseLayerInterface {
  uint GetNumBroadPhaseLayers() const override { return 1; }
  BroadPhaseLayer GetBroadPhaseLayer(ObjectLayer) const override { return BroadPhaseLayer(0); }
@@ -140,4 +159,4 @@ void reciprocal_rotating_release_restore() {
  (void)ls;(void)ss;(void)sw;
 }
 }
-int main(){std::cout<<std::fixed<<std::setprecision(9);RegisterDefaultAllocator();Factory::sInstance=new Factory;RegisterTypes();loaded_cycle();slack_empty_overload();reciprocal_rotating_release_restore();substep_clock();articulated_spreader();UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;std::cout<<"PASS POWERED_CABLE isolated_native=1 crane_world=unverified\n";}
+int main(){std::cout<<std::fixed<<std::setprecision(9);bounded_empty_brake();RegisterDefaultAllocator();Factory::sInstance=new Factory;RegisterTypes();loaded_cycle();slack_empty_overload();reciprocal_rotating_release_restore();substep_clock();articulated_spreader();UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;std::cout<<"PASS POWERED_CABLE isolated_native=1 crane_world=unverified\n";}

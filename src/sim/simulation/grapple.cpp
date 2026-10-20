@@ -29,8 +29,10 @@ bool Simulation::PhysicsWorld::nearby_grapple_hook(const GrapplingGun::Readback 
     out.cartridges = state.cartridges;
     out.available_hooks = state.available_hooks;
     out.line_attached = grappling_gun_->line_active();
-    out.action_recovers_hook = state.state==GrapplingGun::LineState::Locked ||
-        (state.state!=GrapplingGun::LineState::PayingOut && nearby_grapple_hook(state));
+    // A locked distant line is a travel tool, not a remote pickup command.
+    // Retrieval still validates the actual grasp/clearance in its owner.
+    out.action_recovers_hook = state.state!=GrapplingGun::LineState::PayingOut &&
+        nearby_grapple_hook(state) && (!out.line_attached || state.tension_n<=1.0F);
     out.active_hook = state.hook.GetIndexAndSequenceNumber();
     out.player_endpoint = to_vector3(state.player_endpoint);
     out.hook_endpoint = to_vector3(state.hook_endpoint);

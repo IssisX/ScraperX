@@ -102,7 +102,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        checks=(grapple_rope_constraint finite_line_reel rounded_box_line_path finite_cable_constraint portable_line_path portable_line_lifecycle portable_line_input portable_line_public_route material_traversal_line line_material_hand material_line_crossing portable_line_crossing_public)
+        checks=(grappling_gun grapple_practice_route powered_cable grapple_rope_constraint finite_line_reel rounded_box_line_path finite_cable_constraint portable_line_path portable_line_lifecycle portable_line_input portable_line_public_route material_traversal_line line_material_hand material_line_crossing portable_line_crossing_public)
         targets=()
         for check in "${checks[@]}"; do targets+=("scraperx_${check}_tests"); done
         cmake --build build/candidate-host --target "${targets[@]}" --parallel 2
@@ -213,6 +213,20 @@ jobs:
           2>&1 | tee artifacts/thumb-controls.log
         grep -F 'SCRAPERX_THUMB_CONTROLS PASS' artifacts/thumb-controls.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/thumb-controls.log; then exit 1; fi
+    - name: Check carried gun touch travel through the shipping native scene
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/grapple_primary_touch_test.gd \
+          2>&1 | tee artifacts/grapple-primary-touch.log
+        grep -F 'GRAPPLE_PRIMARY_TOUCH PASS' artifacts/grapple-primary-touch.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-primary-touch.log; then exit 1; fi
+        timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/grapple_trip_input_test.gd \
+          2>&1 | tee artifacts/grapple-trip-input.log
+        grep -F 'SCRAPERX_GRAPPLE_TRIP_INPUT PASS' artifacts/grapple-trip-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-trip-input.log; then exit 1; fi
     - name: Check rigging touch controls and actual shipping native view
       shell: bash
       run: |
@@ -560,6 +574,11 @@ jobs:
           artifacts/mounted-winch-input.log
           artifacts/mounted-winch-crossing.log
           artifacts/mounted-winch-crossing-input.log
+          artifacts/grapple-primary-touch.log
+          artifacts/grapple-trip-input.log
+          artifacts/grappling_gun-native.log
+          artifacts/grapple_practice_route-native.log
+          artifacts/powered_cable-native.log
           artifacts/routed-cable-native.log
           artifacts/upper-gallery/
         if-no-files-found: error
