@@ -90,3 +90,38 @@ native world's determinism and body order are untouched.
 2. The microphone: RECORD_AUDIO and consent (step 3), and speech to text on our server (step 4).
 3. The camera for the badge photo (step 6).
 4. How often: a handful of moments an hour (recommended), escalating.
+
+## The tower's senses (the owner, 2026-10-20: *"There's so many amazing and extraordinary things that can be done, that you haven't even begun to think of"*)
+
+The step past mirroring: the tower **hears, sees, feels, remembers and reaches out**, and the game
+is played through those senses, not only shown them.
+
+**Hears**
+- **Her hearing is your room.** The native simulation already models what she hears (steps,
+  loudness, carry). The microphone's level, cut to loudness with plain signal processing, joins it
+  as an input at the boundary (recorded like a touch, so determinism holds). Stealth becomes real:
+  hold your breath; a dog barks, she turns.
+- **The foreman, live.** Speak to him on the radio; speech to text, a language model holding the
+  tower's story and the player's chart, and his voice, all on our server. He knows the canon, lies
+  about her accident, slips. Late, she takes the line and answers in the player's own words.
+- **The Stores intercom:** a requisition spoken instead of written.
+
+**Sees** (the badge photo, CAMERA, consent)
+- Her chart describes the player from the photo (a vision model on the server).
+- Once, with explicit consent and the owner's say: the room behind the player, framed in a window
+  in the tower.
+
+**Feels**
+- **Flinches and stillness** from the phone's motion sensor (no permission): *"Startles easily.
+  Holds very still when she's near."* Quiet moments are timed to the stillest stretches.
+- **The fold** (an Android add-on reads the hinge): closing the phone is closing your eyes; when it
+  opens, she is closer.
+
+**Remembers and reaches out**
+- **Time away:** the tower moves on while the game is closed; a page notes the absence exactly.
+- **Her ward round:** a night notification when the player is not playing (an Android add-on and
+  the notification permission, the owner's call).
+- **Other climbers:** anonymous bodies where real players died, through our server.
+
+Claude's order: her hearing from the room (after the microphone lands), flinches in the chart (no
+permission), the foreman live (after the server).
