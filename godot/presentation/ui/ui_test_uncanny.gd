@@ -10,7 +10,8 @@ extends "res://presentation/ui/ui_test_act.gd"
 # the phone's time. The game's own (long) timing is in force.
 # touch_her_chart_fast: the START list's HER CHART (FAST): the consent screen
 # still first, then the short clock -- the first page within two minutes of
-# play, an echo's clip old enough at one -- which no other START entry has.
+# play, an echo's clip old enough at fifteen seconds -- which no other START
+# entry has.
 # touch_mic_consent: the consent screen at first launch, saying what it must;
 # NOT NOW leaves the microphone off; AUDIO > MICROPHONE turns it on (the
 # phone asked), off again deletes every clip; refused by the phone, the
@@ -22,8 +23,9 @@ extends "res://presentation/ui/ui_test_act.gd"
 # from structure near the player out of their view, never captioned, the
 # captions on. The clip caps hold.
 # touch_room_hearing: her hearing takes the player's room. The microphone on,
-# the room's hush is not heard and she sleeps on in her locker; a bark fed
-# through the microphone's path wakes her, heard at the player.
+# the room's hush is not heard and she sleeps on in her locker; with HER
+# HEARING off a bark is not heard either; on, a bark fed through the
+# microphone's path wakes her, heard at the player.
 
 const HerChart := preload("res://presentation/uncanny/her_chart.gd")
 const UncannyProfile := preload("res://presentation/uncanny/uncanny_profile.gd")
@@ -188,7 +190,7 @@ func _touch_her_chart_fast() -> bool:
 		return _fail("the fast start is not by her locker (at %s)" % str(_position()))
 	var profile: RefCounted = uncanny.profile
 	if profile.name != UncannyProfile.FAST or float(profile.first_page_s) > 120.0 or \
-			float(profile.echo_min_age_s) != 60.0 or float(profile.look_min_s) > 5.0:
+			float(profile.echo_min_age_s) != 15.0 or float(profile.look_min_s) > 5.0:
 		return _fail("the fast profile is not in force (%s, first page %.0f s, echo %.0f s, look %.0f s)" % [
 			profile.name, float(profile.first_page_s), float(profile.echo_min_age_s), float(profile.look_min_s)])
 	# Only there: every other START entry keeps the game's own timing.
@@ -428,6 +430,17 @@ func _touch_room_hearing() -> bool:
 	if hush > 0.0 or float(quiet["noise"]) > 0.0 or int(quiet["state"]) != asleep:
 		return _fail("the hush was heard (room %.2f, she heard %.2f, state %d)" % [hush, float(quiet["noise"]),
 			int(quiet["state"])])
+	# HER HEARING off (a noisy place): a bark reaches the microphone, not her.
+	_main._settings.her_hearing = false
+	voice.feed_samples(_room_sound(32000.0, 0.5, 0.33), 32000.0)
+	var off_heard := 0.0
+	for i in 30:
+		await get_tree().physics_frame
+		off_heard = maxf(off_heard, float(_native().get_matron_state()["noise"]))
+	voice.feed_samples(_room_sound(32000.0, 0.5, 0.0), 32000.0)
+	_main._settings.her_hearing = true
+	if off_heard > 0.0 or int(_native().get_matron_state()["state"]) != asleep:
+		return _fail("with HER HEARING off the bark was heard (%.2f)" % off_heard)
 	# A bark: a third of a second of it, 46 dB over the hush.
 	voice.feed_samples(_room_sound(32000.0, 0.5, 0.33), 32000.0)
 	var bark := float(voice.room_loudness())
@@ -446,7 +459,8 @@ func _touch_room_hearing() -> bool:
 	if bark < 0.9 or heard <= 0.0 or not woke or after > 0.0:
 		return _fail("the bark (room %.2f) was not heard (she heard %.2f, woke %s; after it the room %.2f)" % [bark,
 			heard, str(woke), after])
-	_detail = "hush_room=%.2f bark_room=%.2f heard=%.2f woke=%s after_room=%.2f" % [hush, bark, heard, str(woke), after]
+	_detail = "hush_room=%.2f off_heard=%.2f bark_room=%.2f heard=%.2f woke=%s after_room=%.2f" % [hush, off_heard,
+		bark, heard, str(woke), after]
 	return true
 
 

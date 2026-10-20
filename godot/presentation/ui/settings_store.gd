@@ -97,6 +97,11 @@ var captions := false
 # (microphone_asked); the AUDIO page's MICROPHONE turns it on or off after.
 var microphone := false
 var microphone_asked := false
+# Her hearing (the room the player is in, through the microphone): on with
+# the microphone, and off on its own for a noisy place (the owner,
+# 2026-10-20: "if someone's playing in a noisy environment, then they can't
+# play").
+var her_hearing := true
 var start_at := 0
 var persistent := true
 # Where they are kept. A scripted run proving the round trip keeps its own
@@ -157,6 +162,7 @@ func load_from_disk() -> void:
 	captions = _read_bool(file, "captions", captions)
 	microphone = _read_bool(file, "microphone", microphone)
 	microphone_asked = _read_bool(file, "microphone_asked", microphone_asked)
+	her_hearing = _read_bool(file, "her_hearing", her_hearing)
 	start_at = _read_index(file, "start_at", start_at, START_NAMES.size())
 
 
@@ -176,7 +182,7 @@ func save_to_disk() -> void:
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "vsync", "show_fps",
 			"fov", "brightness", "head_bob", "route_hint", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
-			"captions", "microphone", "microphone_asked", "start_at"]:
+			"captions", "microphone", "microphone_asked", "her_hearing", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(path)
 	if error != OK:

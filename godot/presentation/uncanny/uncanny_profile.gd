@@ -43,8 +43,10 @@ func configure(profile: StringName) -> void:
 	first_page_s = 75.0
 	page_gap_s = 120.0
 	edge_samples_min = 8
-	echo_min_age_s = 60.0
-	echo_gap_s = 90.0
-	quiet_s = 6.0
+	# Say something, stand still and quiet, and it comes back within about
+	# twenty seconds (the owner, 2026-10-20: a test to quickly try in game).
+	echo_min_age_s = 15.0
+	echo_gap_s = 30.0
+	quiet_s = 4.0
 	clip_max_age_s = 86400.0
 	storage_dir = "user://her_chart_fast"

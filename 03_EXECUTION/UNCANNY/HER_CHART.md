@@ -41,6 +41,11 @@ page at a time, in her hand, and it is right.
 - **Your voice.** In a quiet stretch, something you said to yourself twenty minutes ago comes up a
   pipe or out of a dropped radio, faint, in your own voice. Never loud, never explained. Later, a
   line you said is written in her chart, word for word.
+  Where the idea came from, and where it goes (the owner, 2026-10-20): *"The game's fear-yelling
+  matched perfectly with what i said myself as i was playing once, and it felt like it heard me,
+  converted it into IT'S VOICE, and played it."* The aim is that: what you say, said back in the
+  game's own voice (speech to text and a voice on our server: build steps 4 and 7). Your own voice
+  faint from a pipe is the first step of it.
 - **Your time.** The tower's clocks keep your real time. Her chart notes when you play. If it is the
   middle of your night, the night shift is too.
 - **Your face** (only with the badge photo, the owner's call): once, on the chart's first page,

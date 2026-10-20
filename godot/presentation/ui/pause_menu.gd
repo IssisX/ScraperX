@@ -613,11 +613,13 @@ func _build_audio_page() -> void:
 	_slider_row("VOICE", &"voice_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_toggle_row("CAPTIONS", &"captions")
 	_toggle_row("MICROPHONE", &"microphone")
+	_toggle_row("HER HEARING", &"her_hearing")
 	_end_page(PAGE_AUDIO, first,
 		"Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience; Voice is the climber's.\n" +
 		"Captions print the climber's lines as said.\n" +
 		"Microphone: short clips of what it hears stay on this phone, deleted within 7 days;\n" +
-		"one may be played back now and then. Nothing is uploaded. Off deletes them.")
+		"one may be played back now and then. Nothing is uploaded. Off deletes them.\n" +
+		"Her hearing: a loud sound in your room is heard in the tower. Off for a noisy place.")
 
 
 func _row(title: String) -> HBoxContainer:
