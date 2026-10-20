@@ -12,6 +12,7 @@ every request is checked against this list, and a repeat or a contradiction is p
 
 | Date | Directive | Status here |
 |---|---|---|
+| 2026-10-20 | AI models run on servers, never on the device: *"when I am talking about using a model for anything, I am not talking about on device, ever."* | in force: a model-driven feature (a 3D object generated in play, a voice, the badge photo made 3D) is a call from the game to a server; the phone never runs a model |
 | 2026-10-20 | A status now and then, concise: *"what's going on, what's in background if any, where we're going and plans and next best move recommendation"*, then *"concise."* | in force: at milestones (a green build, a feature landing, a decision due), four short parts: now, background, where we're going, next best move |
 | 2026-10-20 | Pictures only when they decide something: *"We don't need before and after screenshots of everything ... We were using that for the Matron and such as its helpful sometimes but you can do that internally"* | in force: no before-and-after image sets by default; a render only where a look is being judged (the Matron, a new stage's look) |
 | 2026-10-20 | No harpoon; a laser welder and a nail gun instead: *"A hook on and a harpoon - maybe we could be a little more varietal."* then *"Laser welder, and nail gun too"* | in force: the hook gun stays; the planned line-throwing harpoon is dropped for a handheld laser welder and a powder-actuated nail gun, both to design with the owner. The welder welds and cuts metal too (*"Laser welder can cut metal too."*) |
