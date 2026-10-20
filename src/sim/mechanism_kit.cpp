@@ -215,7 +215,9 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
                                        dynamic ? moving_layer_ : static_layer_);
     settings.mFriction = friction;
     settings.mUserData = entity;
-    settings.mAllowSleeping = false;
+    // Keep settled mechanisms in Jolt's native sleep lifecycle. Contacts and
+    // the owning interaction/control paths activate them when work resumes.
+    settings.mAllowSleeping = true;
     settings.mCollisionGroup = JPH::CollisionGroup(collision_groups_, 0xA5016,
         static_cast<JPH::CollisionGroup::SubGroupID>(bodies_.size()));
     if (dynamic) {
@@ -640,7 +642,7 @@ void Kit::observe_weld_step() {
         if (!weld.joint->GetEnabled() || weld.state.broken) continue;
         auto &state = weld.state;
         // An inactive constraint retains old lambdas; those are not a solve
-        // receipt. Kit dynamic bodies normally have sleeping disabled.
+        // receipt; sleeping Kit bodies must not repeat an old solve receipt.
         const bool solved = weld.joint->IsActive() &&
                             bodies_[weld.first.value].enabled && bodies_[weld.second.value].enabled;
         state.force_n = solved ? weld.joint->GetTotalLambdaPosition().Length() / weld_step_dt_ : 0;
@@ -789,6 +791,11 @@ void Kit::disconnect_rope(Rope &rope) {
     if (rope.constraint != nullptr) {
         system_.RemoveConstraint(rope.constraint);
         rope.constraint = nullptr;
+        auto &bodies = system_.GetBodyInterface();
+        for (const BodyIndex end : {rope.body1, rope_end_body(rope)}) {
+            const Body &body = bodies_[end.value];
+            if (body.enabled && body.dynamic) bodies.ActivateBody(body.id);
+        }
     }
 }
 

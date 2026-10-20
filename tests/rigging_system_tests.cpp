@@ -32,11 +32,11 @@ struct Fixture {
     std::unique_ptr<kit::Kit> parts;
     std::unique_ptr<RiggingSystem> rig;
     kit::BodyIndex first, second, support;
-    Fixture() {
+    explicit Fixture(float second_mass = 200) {
         world.Init(64, 0, 128, 128, bp, bf, lf);
         parts = std::make_unique<kit::Kit>(world, 0, 1);
         first = box(2000, RVec3(-2, 0, 0), 100);
-        second = box(2001, RVec3(2, 0, 0), 200);
+        second = box(2001, RVec3(2, 0, 0), second_mass);
         support = box(1000, RVec3(0, 5, 0), 0);
         rig = std::make_unique<RiggingSystem>(world, *parts);
         rig->add_eye(first, Vec3(0, .3F, 0), 100000);
@@ -155,10 +155,32 @@ void checkpoint_replacement_and_stale_handles() {
     require(f.world.GetConstraints().size() == 1 && f.parts->body_count() == count && f.parts->rope_count() == ropes,
             "repeated restore does not duplicate rows, bodies or Kit rope inventory");
 }
+void sleeping_cut(bool kit_rope) {
+    Fixture f(100);
+    kit::RopeIndex rope;
+    if (kit_rope) {
+        rope = f.parts->add_rope(f.first, Vec3(0,.3F,0), RVec3(-2,5,0),
+            f.second, Vec3(0,.3F,0), RVec3(2,5,0), 1, 9.4F, 0);
+    } else f.install();
+    f.tick(360);
+    auto &bodies = f.world.GetBodyInterface();
+    const auto first = f.parts->body_id(f.first), second = f.parts->body_id(f.second);
+    require(!bodies.IsActive(first) && !bodies.IsActive(second),
+            "balanced suspended loads enter ordinary native sleep");
+    const auto before = f.parts->body_position(f.first).GetY();
+    if (kit_rope) f.parts->set_rope_connected(rope, false);
+    else require(f.rig->cut(f.rig->line_handle(0)), "sleeping loaded line can be cut");
+    require(bodies.IsActive(first) && bodies.IsActive(second), "cut wakes both sleeping endpoints");
+    f.tick(36);
+    require(f.parts->body_position(f.first).GetY() < before - .03F &&
+            f.parts->body_position(f.second).GetY() < before - .03F,
+            "cut sleeping loads fall under ordinary gravity");
+    std::cout << "RIGGING_SLEEP kit_rope=" << kit_rope << " native_sleep=1 cut_wake=1 gravity_fall=1\n";
+}
 }
 int main() {
     RegisterDefaultAllocator(); Factory::sInstance = new Factory; RegisterTypes();
-    draft_and_loaded_cut(); obstruction_and_capacity(); checkpoint_replacement_and_stale_handles();
+    draft_and_loaded_cut(); obstruction_and_capacity(); checkpoint_replacement_and_stale_handles(); sleeping_cut(false); sleeping_cut(true);
     UnregisterTypes(); delete Factory::sInstance; Factory::sInstance = nullptr;
     std::cout << "PASS RIGGING_SYSTEM real_jolt_kit=1 public_player_route=unverified\n";
 }

@@ -131,7 +131,15 @@ void RiggingSystem::connect(Slot &slot) {
     bodies.ActivateBody(eyes_[slot.record.second - 1].identity);
 }
 void RiggingSystem::disconnect(Slot &slot) {
-    if (slot.constraint) { world_.RemoveConstraint(slot.constraint); slot.constraint = nullptr; }
+    if (slot.constraint) {
+        world_.RemoveConstraint(slot.constraint);
+        slot.constraint = nullptr;
+        for (const auto id : {slot.record.first, slot.record.second}) {
+            if (!id || id > eye_count_) continue;
+            auto *end = body(eyes_[id - 1]);
+            if (end && end->IsDynamic()) world_.GetBodyInterface().ActivateBody(end->GetID());
+        }
+    }
     slot.tension_n = 0; slot.overload_ticks = 0; slot.solved = false;
 }
 bool RiggingSystem::action(std::uint64_t token) {

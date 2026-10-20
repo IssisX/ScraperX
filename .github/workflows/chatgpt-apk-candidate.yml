@@ -85,6 +85,15 @@ jobs:
         timeout 60s build/candidate-host/scraperx_routed_cable_tests \
           2>&1 | tee artifacts/routed-cable-native.log
         grep -F 'PASS ROUTED_CABLE' artifacts/routed-cable-native.log
+    - name: Check native sleep preserves launcher and forklift work
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build build/candidate-host --target scraperx_slingshot_machine_tests scraperx_warehouse_forklift_tests --parallel 2
+        timeout 120s build/candidate-host/scraperx_slingshot_machine_tests \
+          2>&1 | tee artifacts/slingshot-sleep-native.log
+        timeout 120s build/candidate-host/scraperx_warehouse_forklift_tests \
+          2>&1 | tee artifacts/forklift-sleep-native.log
     - name: Check real airborne Action catch, cancellation and expiry
       shell: bash
       run: |
@@ -317,6 +326,19 @@ jobs:
           2>&1 | tee artifacts/swing-bearing-candidate.log
         grep -F 'SWING_BEARING PASS' artifacts/swing-bearing-candidate.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/swing-bearing-candidate.log; then exit 1; fi
+    - name: Check grounded slingshot audio through real touch input
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 300s xvfb-run -a -s '-screen 0 432x371x24' \
+          tools/godot/godot --path godot --rendering-method gl_compatibility \
+          --fixed-fps 30 --audio-driver Dummy \
+          --write-movie "${RUNNER_TEMP}/slingshot-audio.avi" \
+          --script res://tests/slingshot_audio_test.gd \
+          2>&1 | tee artifacts/slingshot-audio-candidate.log
+        grep -F 'SCRAPERX_SLINGSHOT_AUDIO PASS' artifacts/slingshot-audio-candidate.log
+        if grep -E 'SCRIPT ERROR|Parse Error|FAIL' artifacts/slingshot-audio-candidate.log; then exit 1; fi
+        rm -f "${RUNNER_TEMP}/slingshot-audio.avi"
     - name: Check static batching and native cable rendering
       shell: bash
       run: |
@@ -416,6 +438,9 @@ jobs:
           artifacts/first-person-legs-native.log
           artifacts/contact-surface-audio.log
           artifacts/landing-surface-audio.log
+          artifacts/slingshot-audio-candidate.log
+          artifacts/slingshot-sleep-native.log
+          artifacts/forklift-sleep-native.log
           artifacts/slide-friction-audio.log
           artifacts/contact-surface-native.log
           artifacts/contact-surface/
