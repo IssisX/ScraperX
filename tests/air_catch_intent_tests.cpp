@@ -217,7 +217,16 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     }
     const auto normal = early(s, reach, 1);
-    const auto fast = early(s, reach, 4);
+    // A caught gantry retains real motion after Drop. Compare caller rates
+    // from identical world histories, rather than reusing that loaded support.
+    const auto fast = [&] {
+        Simulation same_start;
+        tick(same_start, 180);
+        const auto same_reach = find_reach(same_start);
+        require(same_reach == reach,
+                "equivalent replay starts at the same real grip reach", same_start);
+        return early(same_start, same_reach, 4);
+    }();
     require(normal.size() == fast.size(), "caller-rate traces cover the same native ticks", s);
     for (unsigned i = 0; i < normal.size(); ++i) {
         const auto a = normal[i], b = fast[i];
