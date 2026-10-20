@@ -10,6 +10,16 @@ all together into a badass integration."*
 This replaces the gore ideas in `LIVE_FABRICATION/DESIGN.md`'s horror layer (bent tools, a severed
 arm, a face mask), which the owner rejected as Halloween. Design only; nothing is built.
 
+## The five tests every idea must pass (the owner, 2026-10-20: *"What I'm looking for is very particular"*; agreed: *"That is fantastic"*)
+
+1. **About you,** not players in general.
+2. **Exactly right,** so you cannot explain it away.
+3. **Close to you:** your words, your voice, your gaze, your face, your room, your habits.
+4. **Late and quiet,** never a jump scare.
+5. **You are left unsure how it knew.**
+
+An idea that fails one of them does not go in.
+
 ## The idea in one line
 
 She was the ward's matron. Matrons keep charts. **She is keeping one on you**, and the tower is how
