@@ -1,0 +1,37 @@
+# The climb's new experiences: designs and every option found
+
+Design work for the experiences that take the place of ladders and pulled starts on the route
+(00_START_HERE.md directives, 2026-10-20). Nothing here is built until the owner has talked it
+through. Every design a workflow produces is listed with its ideas, chosen or not, so the owner
+can pick any of them (the owner, 2026-10-20: *"Maybe I'll like one that you didn't choose"*).
+
+## The chiller drop, 256 to 298 m
+
+`chiller_drop_spec.md` is the panel's one spec. `panel_results/wf_de938b84-896.json` holds the
+route map, the three designs and the judge's scores verbatim.
+
+| Design | The idea | Judge (wow / honest physics / touch / rules / buildable) |
+|---|---|---|
+| 1. Drop in, blown out (chosen) | Walk through the doors onto no floor, drop 3 m onto the car's deck; the landing trips the 5 t chiller and its air drives the car up and out of the shaft's mouth | 9 / 8 / 9 / 7 / 7 |
+| 2. The man engine | Two water-driven rods rock up and down out of step; step from one rod's step to the other's at the top of each stroke, 7 m at a time | 8 / 8 / 5 / 6 / 4 |
+| 3. The glass air tube | The same machine with glass walls to watch the chiller fall; start it by throwing an iron flange to knock a trip weight loose | 5 / 6 / 6 / 5 / 7 |
+
+Ideas from designs 2 and 3, and whether the spec takes them:
+
+| Idea | From | In the spec? |
+|---|---|---|
+| The rider's own weight is part of the water balance on every stroke | 2 | no |
+| Timed steps between two counter-moving rods | 2 | no (a 2.2 s window five times, 18 s lost per miss: the judge feared a chore; its bucket drive repeats S1's) |
+| Work lamps riding up with the car, light climbing the wet walls | 2 | yes |
+| Drips off the deck while it moves | 2 | yes |
+| A rumble felt in the phone while the car moves | 2 | yes |
+| A check that no zipline or stock piece meets any changed body | 2 | yes |
+| Glass walls to watch the chiller fall | 3 | yes, as three large spans (cheaper on the phone than 26 panes) |
+| A door on a leaning hinge that swings shut on its own weight | 3 | yes, as a pair of light leaves |
+| Start by throwing an iron flange to knock a trip weight loose | 3 | no (the fall starts it) |
+| Door held open: the machine spends itself | 3 | yes, as a test |
+
+## The glass spares tube, 484 to 640 m
+
+In place of the crane band's backup ladders; the runaway wagon, crane jib and kinetic winch stay
+as built. Design under way.
