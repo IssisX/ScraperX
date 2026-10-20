@@ -551,8 +551,8 @@ func _build_arms() -> void:
 		# this close to the lens toward pastel.
 		_arm_material(Color("1f231c"), 0.93, _bump_concrete, 9.0),
 		_arm_material(Color("b8611d"), 0.55, null, 1.0, 0.1),
-		_arm_material(Color("3b2616"), 0.72, _bump_steel, 14.0),
-		_arm_material(Color("22170e"), 0.82, _bump_steel, 14.0),
+		_arm_material(Color("3b2616"), 0.72, _bump_rust, 14.0),
+		_arm_material(Color("22170e"), 0.82, _bump_rust, 14.0),
 		_arm_material(Color("7d5806"), 0.5, null, 1.0),
 		_arm_material(Color("0c0c0d"), 0.62, null, 1.0),
 		_arm_material(Color("303033"), 0.5, null, 1.0),

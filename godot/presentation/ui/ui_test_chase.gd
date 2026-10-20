@@ -617,6 +617,84 @@ func _look_stock_yard() -> bool:
 	return true
 
 
+# look_finishes: renders only (not in CI): close up, the parts that are smooth
+# (the forklift's propane tank and its steel, a drum, gas bottles, a toolbox,
+# a galvanized deck and its rails, the copper pipe up the stack's face) and
+# rough ones beside them (a rusted beam, the stack's rusted frame). The view
+# is held at each shot, not walked there: the whole world is built from the
+# start. The HUD is hidden.
+const FINISH_STOCK_DRUM := 3
+const FINISH_STOCK_BEAM := 6
+const FINISH_STOCK_BOTTLE := 14
+const FINISH_STOCK_TOOLBOX := 16
+
+# Holds the camera at a pose and a field of view after the view's own
+# update every frame (a later process priority than the scene's).
+class HeldView extends Node:
+	var camera: Camera3D
+	var pose := Transform3D()
+	var fov := 40.0
+
+	func _init(view: Camera3D) -> void:
+		camera = view
+		process_priority = 1000
+
+	func _process(_delta: float) -> void:
+		camera.global_transform = pose
+		camera.fov = fov
+
+
+func _look_finishes() -> bool:
+	_main._sky_cycle.set_hour(14.0)
+	var truck: Transform3D = _native().get_kit_body_transform(int(_native().get_kit_body_index(2982)))
+	var shots := [
+		["finish_propane_tank", truck * Vector3(-0.85, 1.55, -2.55), truck * Vector3(0.0, 1.13, -1.4), 30.0],
+		["finish_forklift_back", truck * Vector3(2.6, 2.1, -3.8), truck * Vector3(0.0, 0.9, -0.9), 50.0],
+		# The stack's south face from the yard: its decks, rails and rusted
+		# edge beams.
+		["finish_stack", Vector3(14.0, 4.0, -98.0), Vector3(0.0, 14.0, -124.0), 50.0],
+		# The verdigris copper pipe up the face, west of the middle.
+		["finish_copper_pipe", Vector3(-19.9, 3.0, -119.9), Vector3(-21.5, 5.0, -123.1), 35.0],
+	]
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	var found := {}
+	for i in range(0, stock.size() - 2, 3):
+		var at: Vector3 = (_native().get_kit_body_transform(stock[i]) as Transform3D).origin
+		var kind := stock[i + 1]
+		if kind == FINISH_STOCK_DRUM and at.y < 2.0 and not found.has("drum"):
+			found["drum"] = at
+			shots.append(["finish_drum", at + Vector3(-1.4, 1.3, -1.6), at + Vector3(0.0, 0.2, 0.0), 32.0])
+		elif kind == FINISH_STOCK_BEAM and stock[i + 2] % 2 == 1 and at.y < 3.0 and not found.has("beam"):
+			found["beam"] = at
+			shots.append(["finish_rust_beam", at + Vector3(1.3, 1.9, 1.3), at, 32.0])
+		elif kind == FINISH_STOCK_BOTTLE and not found.has("bottle"):
+			# Stood against a ring's edge: seen from the band's middle.
+			found["bottle"] = at
+			var from := at
+			if absf(at.x) > absf(at.z + 150.0):
+				from.x = signf(at.x) * 21.5
+			else:
+				from.z = -150.0 + signf(at.z + 150.0) * 21.5
+			shots.append(["finish_gas_bottles", from + Vector3(0.0, 1.1, 0.0), at + Vector3(0.0, 0.1, 0.0), 26.0])
+			shots.append(["finish_galvanized_deck", from + Vector3(0.0, 1.7, 0.0), at + Vector3(0.0, -0.4, 0.0), 60.0])
+		elif kind == FINISH_STOCK_TOOLBOX and at.y > 150.0 and at.y < 160.0 and not found.has("toolbox"):
+			found["toolbox"] = at
+			shots.append(["finish_toolbox", at + Vector3(0.7, 1.0, -1.5), at, 30.0])
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	for shot in shots:
+		held.pose = Transform3D(Basis(), shot[1]).looking_at(shot[2], Vector3.UP)
+		held.fov = shot[3]
+		await _frames(6)
+		await _pose(shot[0])
+	held.queue_free()
+	hud.visible = true
+	_detail = "shots=%d %s" % [shots.size(), str(found)]
+	return true
+
+
 # look_tower_stock: renders only (not in CI): the lived-in spots of stock up
 # the tower (LooseStock::dress_tower), from deck 2's south band and from the
 # 176 ring: to the nearest spot on the same deck, and looked at.

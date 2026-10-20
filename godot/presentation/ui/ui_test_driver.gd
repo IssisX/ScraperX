@@ -151,6 +151,8 @@ const SCENARIOS := {
 	"touch_crane_spreader": 8,
 	"look_yard_crane": 8,
 	"look_stock_yard": 8,
+	# Close up, the smooth finishes and the rough ones (renders only, not in CI).
+	"look_finishes": 8,
 	"look_tower_stock_deck2": 25,
 	"look_tower_stock_176": 14,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
@@ -450,6 +452,8 @@ func _run() -> void:
 			ok = await _look_yard_crane()
 		"look_stock_yard":
 			ok = await _look_stock_yard()
+		"look_finishes":
+			ok = await _look_finishes()
 		"look_tower_stock_deck2":
 			ok = await _look_tower_stock("tower_stock_deck2")
 		"look_tower_stock_176":
