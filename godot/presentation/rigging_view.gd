@@ -34,14 +34,26 @@ func _ready() -> void:
 	sign.visibility_range_end = 24.0
 	add_child(sign)
 	var winch_sign := Label3D.new()
-	winch_sign.text = "LIFT THE LOOSE BEAM\nRIG: WINCH / BEAM EYE\nHOLD UP / DOWN — RELEASE TO BRAKE"
-	winch_sign.font_size = 36
-	winch_sign.pixel_size = 0.006
-	winch_sign.position = Vector3(-108, 2.85, -37.4)
+	winch_sign.text = "RIG THE CROSSING\n1  WINCH A / B > MATCHING BEAM END\n2  UP BOTH ENDS\n3  EACH SIDE: POST > GUIDE > BEAM SIDE LUG\n4  STAIRS > BEAM > FAR LANDING\nRECOVER FROM THE GROUND\nLEAVE BEAM; UP SLIGHTLY TO SLACKEN STAYS\nSELECT LINE > UNCLIP WHEN UNLOADED\nLOWER BEAM > UNCLIP WINCH LINES"
+	winch_sign.font_size = 28
+	winch_sign.pixel_size = 0.0045
+	winch_sign.position = Vector3(-112.3, 2.7, -37.4)
 	winch_sign.rotation.y = PI
 	winch_sign.modulate = Color(0.9, 0.78, 0.4)
-	winch_sign.visibility_range_end = 22.0
+	winch_sign.visibility_range_end = 18.0
+	winch_sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(winch_sign)
+	for panel in [["A", Vector3(-109.8, 1.08, -37.33)], ["B", Vector3(-106.2, 1.08, -37.33)]]:
+		var label := Label3D.new()
+		label.text = "WINCH %s\nAIM HERE / ACTION: CLIP OR CONTROL\nUP LIFT / DOWN LOWER / RELEASE BRAKE" % panel[0]
+		label.font_size = 24
+		label.pixel_size = 0.003
+		label.position = panel[1] + Vector3(0, .55, -.02)
+		label.rotation.y = PI
+		label.modulate = Color(0.9, 0.78, 0.4)
+		label.visibility_range_end = 8.0
+		label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(label)
 	_winch = AudioStreamPlayer3D.new()
 	_winch.bus = &"Effects"
 	_winch.unit_size = 4.0

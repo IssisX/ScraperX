@@ -1191,6 +1191,8 @@ func _perform_action() -> void:
 			_native.request_traversal_line(2, int(_ctx.get("traversal_line_target", 0)))
 		&"rigging_action":
 			_native.request_rigging(2, int(_ctx.get("rigging_target", 0)))
+		&"rigging_select":
+			_native.request_rigging(4, int(_ctx.get("rigging_target_line", 0)))
 		&"equip_grapple":
 			_native.set_grapple_equipped(true)
 		&"grapple_action":
@@ -1476,7 +1478,10 @@ func _read_context() -> Dictionary:
 		var label := "THREAD GUIDE" if int(rigging.get("target_kind", 0)) == 1 else ("CONNECT LINE" if bool(rigging.get("draft", false)) else "CLIP FIRST END")
 		if int(rigging.get("target_kind", 0)) == 2:
 			label = "CLIP WINCH"
-		action = {"id": &"rigging_action" if target != 0 else &"", "label": label if target != 0 else "AIM AT AN EYE",
+		var selecting := int(rigging.get("target_line", 0)) != 0 and not bool(rigging.get("draft", false))
+		if selecting:
+			label = "CONTROL WINCH" if int(rigging.get("target_kind", 0)) == 2 else "SELECT LINE"
+		action = {"id": (&"rigging_select" if selecting else &"rigging_action") if target != 0 else &"", "label": label if target != 0 else "AIM AT AN EYE",
 			"icon": &"hook", "detail": "UP: LIFT / DOWN: LOWER / RELEASE: BRAKE" if bool(rigging.get("power_operable", false)) else ("PREVIEW ONLY" if bool(rigging.get("draft", false)) else "INSTALLED LINES STAY WHEN STOWED")}
 	elif tool_active:
 		var line_state := int(grapple.get("state", 0))
@@ -1576,6 +1581,7 @@ func _read_context() -> Dictionary:
 		"rigging_draft": bool(rigging.get("draft", false)),
 		"rigging_selected": int(rigging.get("selected", 0)),
 		"rigging_target": int(rigging.get("target", 0)),
+		"rigging_target_line": int(rigging.get("target_line", 0)),
 		"rigging_tension_n": float(rigging.get("tension_n", 0.0)),
 		"rigging_power_selected": bool(rigging.get("power_selected", false)),
 		"rigging_power_operable": bool(rigging.get("power_operable", false)),
@@ -1702,7 +1708,8 @@ func _station_panel() -> Dictionary:
 			var failures := ["", "TARGET CHANGED", "MOVE CLOSER", "CABLE PATH BLOCKED", "CHOOSE AN END EYE", "THREAD A GUIDE FIRST", "INVALID CONNECTION", "NO FREE LINE", "UNLOAD BEFORE UNCLIPPING", "HANDS BUSY", "LINE OVERLOADED"]
 			var failure := clampi(int(rigging.get("failure", 0)), 0, failures.size() - 1)
 			if bool(rigging.get("power_selected", false)):
-				var winch_status := "BRAKE HOLDING" if bool(rigging.get("braking", true)) else ("LIFTING" if float(rigging.get("target_speed_mps", 0.0)) < 0.0 else "LOWERING")
+				var speed := float(rigging.get("target_speed_mps", 0.0))
+				var winch_status := "BRAKE HOLDING" if absf(speed) < .001 else ("LIFTING" if speed < 0.0 else "LOWERING")
 				if bool(rigging.get("energy_cutoff", false)):
 					winch_status = "SOURCE EMPTY / BRAKE HOLDING"
 				elif not bool(rigging.get("power_operable", false)):

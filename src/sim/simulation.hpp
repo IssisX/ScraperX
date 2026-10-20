@@ -30,7 +30,7 @@ struct RiggingCommand final {
 struct RiggingSnapshot final {
     bool available = false, equipped = false, suspended = false;
     bool draft = false, guide_threaded = false;
-    std::uint64_t target = 0, selected = 0, event_serial = 0;
+    std::uint64_t target = 0, selected = 0, event_serial = 0, target_line = 0;
     unsigned target_kind = 0, failure = 0, installed_count = 0;
     Vector3 target_point{};
     double tension_n = 0, slack_m = 0, cut_progress = 0;

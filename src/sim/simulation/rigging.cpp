@@ -111,6 +111,7 @@ RiggingSnapshot Simulation::PhysicsWorld::rigging_state() const noexcept {
     out.equipped = state.equipped; out.suspended = state.suspended;
     out.draft = state.draft; out.guide_threaded = state.guide_threaded;
     out.target = state.target; out.selected = state.selected; out.event_serial = state.event_serial;
+    out.target_line = state.target_line;
     out.target_kind = unsigned(state.target_kind); out.failure = unsigned(state.failure);
     out.installed_count = state.installed_count;
     out.target_point = detail::to_vector3(state.target_point);

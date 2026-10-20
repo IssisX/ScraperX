@@ -56,6 +56,12 @@ std::uint16_t RiggingSystem::add_fixed_guide(kit::BodyIndex index, JPH::Vec3 loc
 }
 std::uint16_t RiggingSystem::add_powered_mount(kit::BodyIndex index, JPH::Vec3 local,
         const PoweredCable::Config &profile, float rating) {
+    return add_powered_mount(index, local, local, profile, rating);
+}
+std::uint16_t RiggingSystem::add_powered_mount(kit::BodyIndex index, JPH::Vec3 local,
+        JPH::Vec3 control, const PoweredCable::Config &profile, float rating) {
+    if (!finite_vector(control))
+        throw std::invalid_argument("Rigging powered mount requires a finite shape-local control point");
     // Endpoints and initial rest length belong to the accepted installation.
     if (!(std::isfinite(profile.min_length_m) && profile.min_length_m > 0 &&
           std::isfinite(profile.max_length_m) && profile.max_length_m >= profile.min_length_m &&
@@ -68,14 +74,14 @@ std::uint16_t RiggingSystem::add_powered_mount(kit::BodyIndex index, JPH::Vec3 l
         throw std::invalid_argument("Rigging powered mount requires finite actuator limits and source capacity");
     const auto id = add_eye(index, local, rating);
     eyes_[id - 1].kind = Kind::PoweredMount;
-    auto &source = power_sources_[id - 1]; source.profile = profile;
+    auto &source = power_sources_[id - 1]; source.profile = profile; source.control_local = control;
     source.state.energy_j = profile.capacity_j;
     return id;
 }
 bool RiggingSystem::power_operable(const Slot &slot) const {
     if (!equipped_ || !allowed_ || !slot.powered || !valid_record(slot.record)) return false;
     const auto &mount = eyes_[slot.record.first - 1];
-    const auto at = point(slot.record.first, mount.local);
+    const auto at = interaction_point(slot.record.first);
     return (at - hand_).Length() <= kInstallReachM && clear_span(hand_, at, player_, mount.identity);
 }
 void RiggingSystem::stop_power() {
@@ -104,6 +110,10 @@ int RiggingSystem::line_index(std::uint64_t token) const {
 }
 bool RiggingSystem::reject(Failure reason) { failure_ = reason; ++serial_; return false; }
 void RiggingSystem::equip(bool value) { stop_power(); equipped_ = value; target_ = 0; allowed_ = false; }
+JPH::RVec3 RiggingSystem::interaction_point(std::uint16_t id) const {
+    const auto &eye = eyes_[id - 1];
+    return point(id, eye.kind == Kind::PoweredMount ? power_sources_[id - 1].control_local : eye.local);
+}
 bool RiggingSystem::clear_span(JPH::RVec3 from, JPH::RVec3 to, JPH::BodyID first, JPH::BodyID second) const {
     const JPH::Vec3 delta(to - from);
     if (delta.LengthSq() < 1.e-8F) return true;
@@ -121,7 +131,7 @@ void RiggingSystem::aim(JPH::RVec3 hand, JPH::Vec3 direction, JPH::BodyID player
     float best = -1;
     for (std::size_t i = 0; i < eye_count_; ++i) {
         if (!body(eyes_[i])) continue;
-        const auto at = point(std::uint16_t(i + 1), eyes_[i].local);
+        const auto at = interaction_point(std::uint16_t(i + 1));
         const JPH::Vec3 delta(at - hand_);
         const float distance = delta.Length();
         if (distance > kInstallReachM || distance < .02F) continue;
@@ -150,7 +160,7 @@ bool RiggingSystem::valid_record(const Record &r) const {
 bool RiggingSystem::reachable(const Record &r) const {
     for (auto id : {r.first, r.second}) {
         const auto &eye = eyes_[id - 1];
-        const auto at = point(id, eye.local);
+        const auto at = interaction_point(id);
         if ((at - hand_).Length() <= kInstallReachM && clear_span(hand_, at, player_, eye.identity)) return true;
     }
     return false;
@@ -230,7 +240,7 @@ bool RiggingSystem::action(std::uint64_t token) {
     if (!id || id > eye_count_) return reject(Failure::StaleTarget);
     const auto &eye = eyes_[id - 1];
     if (!body(eye)) return reject(Failure::StaleTarget);
-    if ((point(id, eye.local) - hand_).Length() > kInstallReachM) return reject(Failure::OutOfReach);
+    if ((interaction_point(id) - hand_).Length() > kInstallReachM) return reject(Failure::OutOfReach);
     if (!first_) {
         if (eye.kind != Kind::End && eye.kind != Kind::PoweredMount) return reject(Failure::WrongTarget);
         if (eye.kind == Kind::PoweredMount)
@@ -347,7 +357,17 @@ RiggingSystem::Readback RiggingSystem::readback() const {
     out.target = target_; out.event_serial = serial_; out.failure = failure_;
     if (target_) {
         const auto id = std::uint16_t(target_ & 0xffffffffU);
-        out.target_kind = eyes_[id - 1].kind; out.target_point = point(id, eyes_[id - 1].local);
+        out.target_kind = eyes_[id - 1].kind; out.target_point = interaction_point(id);
+        if (out.target_kind != Kind::FixedGuide) {
+            for (std::size_t i = 0; i < kCapacity; ++i) {
+                const auto &slot = slots_[i];
+                if (slot.record.occupied && !slot.record.broken && (slot.powered || slot.constraint) &&
+                    (slot.record.first == id || slot.record.second == id) && valid_record(slot.record)) {
+                    out.target_line = line_token(i);
+                    break;
+                }
+            }
+        }
     }
     for (const auto &s : slots_) if (s.record.occupied) ++out.installed_count;
     if (selected_ >= 0 && slots_[std::size_t(selected_)].record.occupied) {

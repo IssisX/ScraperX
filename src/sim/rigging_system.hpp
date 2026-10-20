@@ -41,7 +41,7 @@ public:
     };
     struct Readback {
         bool equipped = false, suspended = false, draft = false, guide_threaded = false;
-        std::uint64_t target = 0, selected = 0, event_serial = 0;
+        std::uint64_t target = 0, target_line = 0, selected = 0, event_serial = 0;
         Kind target_kind = Kind::End;
         Failure failure = Failure::None;
         JPH::RVec3 target_point = JPH::RVec3::sZero();
@@ -65,6 +65,9 @@ public:
     std::uint16_t add_fixed_guide(kit::BodyIndex, JPH::Vec3 reachable_threading_eye,
                                 JPH::Vec3 incoming, JPH::Vec3 outgoing, float rating_n = 8000);
     std::uint16_t add_powered_mount(kit::BodyIndex, JPH::Vec3 local,
+                                   const PoweredCable::Config &profile, float rating_n = 6000);
+    // Shape-origin-local panel point controls reach; cable_exit remains the load attachment.
+    std::uint16_t add_powered_mount(kit::BodyIndex, JPH::Vec3 cable_exit, JPH::Vec3 control_point,
                                    const PoweredCable::Config &profile, float rating_n = 6000);
     void set_power_input(float signed_effort);
     // Called once per serialized native collision step; lifecycle stays outside Update.
@@ -96,7 +99,7 @@ private:
     };
     JPH::PhysicsSystem &world_;
     kit::Kit &kit_;
-    struct PowerSource { PoweredCable::Config profile; PoweredCable::State state; };
+    struct PowerSource { PoweredCable::Config profile; PoweredCable::State state; JPH::Vec3 control_local = JPH::Vec3::sZero(); };
     std::array<Eye, kEyeCapacity> eyes_{};
     std::array<PowerSource, kEyeCapacity> power_sources_{};
     std::array<Slot, kCapacity> slots_{};
@@ -112,6 +115,7 @@ private:
     Failure failure_ = Failure::None;
     JPH::Body *body(const Eye &) const;
     JPH::RVec3 point(std::uint16_t eye, JPH::Vec3 local) const;
+    JPH::RVec3 interaction_point(std::uint16_t eye) const;
     bool clear_span(JPH::RVec3, JPH::RVec3, JPH::BodyID, JPH::BodyID) const;
     bool valid_record(const Record &) const;
     bool reachable(const Record &) const;

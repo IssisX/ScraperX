@@ -67,7 +67,7 @@ int main() {
     walk(sim, -80, -43.5); walk(sim, -100, -43.5); walk(sim, -108, -40.5);
     walk(sim, -109.1, -38.2); walk(sim, -109.1, -36.85);
     command(sim, RiggingCommandKind::Equip);
-    aim(sim, {-109.8, 2.70, -36});
+    aim(sim, {-109.8, 1.08, -37.33});
     require(sim.rigging_state().target && sim.rigging_state().target_kind == 2,
         "actual reachable winch eye offered", sim);
     command(sim, RiggingCommandKind::Action, sim.rigging_state().target);

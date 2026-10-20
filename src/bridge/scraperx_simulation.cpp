@@ -711,6 +711,7 @@ godot::Dictionary ScraperXSimulation::get_rigging_state() const {
     out["suspended"] = state.suspended;
     out["draft"] = state.draft;
     out["guide_threaded"] = state.guide_threaded;
+    out["target_line"] = std::int64_t(state.target_line);
     out["target"] = std::int64_t(state.target);
     out["selected"] = std::int64_t(state.selected);
     out["event_serial"] = std::int64_t(state.event_serial);
