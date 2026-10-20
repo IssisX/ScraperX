@@ -26,8 +26,9 @@ const SACCADE_YAW := 0.09
 const SACCADE_PITCH := 0.05
 # Her hair: verlet points down each chain, damped, pulled a little back toward
 # hanging from her head (the strands' own stiffness, less toward the tips),
-# kept off her skull and her upper back.
-const HAIR_DAMP := 0.9
+# kept off her skull and her upper back. Greasy, it is heavy: it swings in
+# clumps and settles without bouncing (the owner, 2026-10-20).
+const HAIR_DAMP := 0.84
 const HAIR_GRAVITY := Vector3(0.0, -9.81, 0.0)
 const HAIR_STIFFNESS := [0.22, 0.1, 0.05, 0.025]
 const HAIR_ITERATIONS := 3

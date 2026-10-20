@@ -335,7 +335,7 @@ def skin_maps(out, UV, T, regions):
     Image.fromarray((hgt * 255).astype(np.uint8), "L").save(os.path.join(out, "skin_h.png"))
 
 
-HAIR_CLUMPS = 210
+HAIR_CLUMPS = 300
 STRANDS_PER_CLUMP = (4, 7)
 HAIR_LENGTH_M = (0.26, 0.55)
 HAIR_STEP_M = 0.04
