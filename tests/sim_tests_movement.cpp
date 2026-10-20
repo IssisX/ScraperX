@@ -394,6 +394,11 @@ void run_hook() {
         worst_reel = std::max(worst_reel, (last_line - line) / dt);
         worst_tension = std::max(worst_tension, n.hook_tension_n);
         peak_y = std::max(peak_y, n.player_position.y);
+        if (std::getenv("SCRAPERX_HOOK_TRACE") != nullptr && tick % 5 == 0) {
+            std::cout << "    t" << tick << " p=(" << n.player_position.x << "," << n.player_position.y << ") v=("
+                      << n.player_linear_velocity.x << "," << n.player_linear_velocity.y << ") g=" << n.player_grounded
+                      << " T=" << n.hook_tension_n << " line=" << line << '\n';
+        }
         last_line = line;
     }
     const Snapshot reeled = s.snapshot();
