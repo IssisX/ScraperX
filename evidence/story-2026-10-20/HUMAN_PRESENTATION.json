@@ -242,5 +242,30 @@
     "godot/presentation/audio/story_radio_player.gd": "04609ee63f68cd52bb7392d61a21ee2606675beeee783482353d02048a5dc96d",
     "godot/tests/story_actor_input_case.gd": "7e3aa83190fb400bdfc9d465d9552af01606ce1944d3b153dcb27b7acfe87080",
     "godot/audio/story_radio/manifest.json": "6b464350b1a350dc484b2297b7b1b563f8dfca4344fb68049dead83e62c46edf"
+  },
+  "persistent_identity_mcp": {
+    "project": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+    "base_gameplay_commit": "105fa0b7b5541595d7daeb1cc2bfb53704f691a0",
+    "case_sha256": "59fd13d779654b0934e46a59d3592399b2a31944536726b9d59cacb6e9c5991d",
+    "execution": "Godot MCP run_script: hot-load current story_actor_input_case.gd with GDScript.reload(), set test.main to the actual Main previously initialized with the matching native bridge, call test.check_identity().",
+    "observed_result": {
+      "checks": 9,
+      "failures": [],
+      "last_face_error": "",
+      "paused": false,
+      "profile_present": false
+    },
+    "coverage": [
+      "actual lazily built pause Work ID page",
+      "shared actual identity owner",
+      "real intake decoding and atomic local storage of fictional Iona fixture",
+      "saved alignment reloaded by fresh owner",
+      "exact normalized image pixels used by live PortraitSkin shader",
+      "default button restores original imported skin and clears owned photo/alignment files",
+      "physical position, checkpoint and story serial preserved",
+      "test-owned directory removed"
+    ],
+    "initial_fixture_failure": "First probe assumed the pause page was built before opening the pause menu and failed on a nil page. Revised check enters the actual pause/Work ID path; no production behavior changed.",
+    "limits": "Host runtime with bundled fictional image selected through actual intake callback; not Android system-picker operation, owner likeness or device play."
   }
 }
