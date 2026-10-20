@@ -481,6 +481,10 @@ jobs:
           artifacts/freight-arrival.png
           artifacts/freight-arrival-render.log
           artifacts/operator-layout.log
+          artifacts/portable-line/
+          artifacts/portable-line-controls.log
+          artifacts/portable-line-native-input.log
+          artifacts/portable_line_public_route-native.log
           artifacts/forklift-operator.log
           artifacts/forklift-operator/
           artifacts/first-person-legs-native.log
