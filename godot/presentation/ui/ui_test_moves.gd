@@ -1702,7 +1702,8 @@ func _touch_pause() -> bool:
 	if _main._pause_menu.current_page() != &"licences":
 		return _fail("tapping LICENCES did not open the licences page")
 	var notices: String = (_main._pause_menu._pages[&"licences"] as RichTextLabel).get_parsed_text()
-	for owed in ["Jorrit Rouwe", "Godot Engine contributors", "Chatterbox", "LICENCE: "]:
+	for owed in ["Jorrit Rouwe", "Godot Engine contributors", "Kimberly Geswein", "SIL OPEN FONT LICENSE", "Chatterbox",
+			"LICENCE: "]:
 		if not notices.contains(owed):
 			return _fail("the licences page does not carry '%s'" % owed)
 	await _pose("pause_licences")

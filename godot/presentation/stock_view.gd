@@ -17,6 +17,13 @@ const KIND_PALLET_REEL := 19
 const KIND_BOTTLE_CAGE := 21
 # A container's half size along its own x, y, z, its doors at +x.
 const CONTAINER_HALF := Vector3(6.095, 1.295, 1.22)
+# The paints below by name, in the same order (her chart names a piece's
+# color: uncanny/her_chart.gd).
+const CONTAINER_COLOR_NAMES := ["red", "blue", "green", "gray", "orange"]
+const DRUM_COLOR_NAMES := ["blue", "yellow", "red"]
+const BEAM_COLOR_NAMES := ["black", "rusted"]
+const BOTTLE_COLOR_NAMES := ["black", "maroon", "blue"]
+const TOOLBOX_COLOR_NAMES := ["red", "blue", "yellow"]
 
 
 func setup(main: Node, native: Object, kit_root: Node3D) -> void:

@@ -172,6 +172,7 @@ jobs:
             "PASS scraperx_sim incline" \
             "PASS scraperx_sim wheel" \
             "PASS scraperx_sim tram" \
+            "PASS scraperx_sim look target" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
@@ -322,6 +323,18 @@ jobs:
           # ladder slid down, held and jumped off (touch_ladder) by them.
           # The faint route hint, off by default, marking the ladder's hold
           # ahead when on (touch_route_hint).
+          # Her chart (03_EXECUTION/UNCANNY/HER_CHART.md): a long look at the
+          # Matron's oil drum on the 154 m deck, time fast-forwarded, no page
+          # a second before the first is due and the drum in the page in her
+          # locker after, the tower's clocks on the phone's time
+          # (touch_her_chart); the START list's HER CHART (FAST): the consent
+          # screen first, then the short clock, which no other start has
+          # (touch_her_chart_fast); the microphone's consent at first launch,
+          # NOT NOW, AUDIO > MICROPHONE on and off (its clips deleted), the
+          # phone's refusal, ALLOW (touch_mic_consent); a synthetic voice cut
+          # into one clip by loudness, its echo not a second early, then once,
+          # faint, filtered, from structure near the player out of view,
+          # uncaptioned with the captions on (touch_voice_echo).
           # Thirteen play again on the BUTTONS layout (a name ending
           # _buttons): jump, vault, the double tap, crouch, the quickturn,
           # the climb up and the drop from a hang, the slide, the roll, the
@@ -337,7 +350,8 @@ jobs:
               touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper \
               touch_stack touch_wet \
               touch_shop touch_crane \
-              touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do
+              touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
+              touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

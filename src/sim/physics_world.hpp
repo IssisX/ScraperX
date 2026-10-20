@@ -95,6 +95,12 @@ public:
 
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
     [[nodiscard]] bool surface_below(const JPH::RVec3 from, const float reach, JPH::RVec3 &point) const noexcept;
+    // What a look along `run` from `from` meets first: the entity of the body
+    // it meets, the point and the surface's normal there. The player's own
+    // body, the load in the hands and sensors are seen through. Read only
+    // (physics_world_probes.cpp).
+    [[nodiscard]] bool look_hit(const JPH::RVec3 from, const JPH::Vec3 run, std::uint64_t &entity, JPH::RVec3 &point,
+                                JPH::Vec3 &normal) const noexcept;
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }

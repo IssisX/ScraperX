@@ -33,6 +33,13 @@ const StockView := preload("res://presentation/stock_view.gd")
 const ForkliftView := preload("res://presentation/forklift_view.gd")
 const CraneView := preload("res://presentation/crane_view.gd")
 const ZiplineView := preload("res://presentation/zipline_view.gd")
+# Her chart: the tower that learns the player (uncanny/uncanny.gd), and the
+# microphone's consent, asked once outside the fiction.
+const Uncanny := preload("res://presentation/uncanny/uncanny.gd")
+const UncannyProfile := preload("res://presentation/uncanny/uncanny_profile.gd")
+const ConsentScreen := preload("res://presentation/ui/consent_screen.gd")
+# Scripted runs keep her chart's clips and pages here, never in the player's.
+const UITEST_UNCANNY_STORAGE := "user://uitest_her_chart"
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -95,6 +102,12 @@ var _quickturn_left := 0.0
 var _sling_goal_yaw := 0.0
 var _sling_goal_elevation := 1.4311699866353502
 var _clouds: Node3D
+var _uncanny: Node3D
+var _consent: Control
+var _consent_open := false
+# A scripted run's choice of the uncanny profile (set by the driver before
+# the world is built); empty: the START list decides (_uncanny_profile_name).
+var uncanny_profile_override := &""
 var _ci_phase := PHASE_APPROACH
 var _ci_facing := CI_APPROACH_FACING
 var _ci_proof_tick := -1
@@ -243,6 +256,15 @@ func _ready() -> void:
 	_matron_view = MatronView.new()
 	add_child(_matron_view)
 	_matron_view.setup(_native, _audio)
+	_uncanny = Uncanny.new()
+	add_child(_uncanny)
+	# Her chart is kept from climb to climb in play; the fast playtest starts
+	# from a fresh one each time, so its first page is always the locker's.
+	var uncanny_profile := _uncanny_profile_name()
+	_uncanny.setup(_native, _audio, uncanny_profile, _save_enabled and uncanny_profile == UncannyProfile.NORMAL,
+		"" if _uitest_scenario.is_empty() and not _ci_mode and _audit == null else UITEST_UNCANNY_STORAGE)
+	_uncanny.microphone_denied.connect(_on_microphone_denied)
+	_uncanny.set_microphone(_settings.microphone)
 	# Both views are a few metres of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]
@@ -265,6 +287,10 @@ func _ready() -> void:
 	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode and _audit == null) or
 			_uitest_scenario == "touch_title"):
 		_show_title()
+	# The microphone is asked about once, before anything is heard, over the
+	# title when there is one.
+	if _should_ask_consent():
+		_show_consent()
 
 func _process(delta: float) -> void:
 	if _native == null:
@@ -414,6 +440,9 @@ func _process(delta: float) -> void:
 	_hud.radio_who = _radio.who
 	# The faint route hint, asked of the native only while it is on.
 	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
+	# Her chart: what the eyes rest on, her pages, the voice heard back.
+	if _uncanny != null:
+		_uncanny.update(delta, _ctx, _camera, _death_cam_left <= 0.0)
 	_hud.update_hud(_ctx, delta)
 	if _audit != null and _audit.frame(self):
 		get_tree().quit(_audit.exit_code)
@@ -520,6 +549,12 @@ func _build_interface() -> void:
 		else:
 			_close_title())
 	_title.quit_requested.connect(func() -> void: get_tree().quit(0))
+	# Over the title: the microphone's question comes first.
+	_consent = ConsentScreen.new()
+	_consent.name = "ConsentScreen"
+	_consent.visible = false
+	pause_layer.add_child(_consent)
+	_consent.answered.connect(_on_consent)
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
 	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
@@ -551,6 +586,8 @@ func _apply_settings() -> void:
 	# AUDIO
 	_audio.set_volumes(_settings.master_volume, _settings.effects_volume,
 		_settings.ambience_volume, _settings.interface_volume, _settings.voice_volume)
+	if _uncanny != null:
+		_uncanny.set_microphone(_settings.microphone)
 	# DISPLAY
 	_fov_base = _settings.fov
 	_reduced_motion = _settings.reduced_motion
@@ -583,7 +620,9 @@ func _notification(what: int) -> void:
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
-			if _title_open:
+			if _consent_open:
+				_on_consent(false)
+			elif _title_open:
 				get_tree().quit(0)
 			elif _paused:
 				_pause_menu.back()
@@ -658,7 +697,7 @@ func discard_saved_climb() -> void:
 # simulation is frozen, not slowed. System-initiated pauses (focus loss, app
 # backgrounded, pad unplugged) never fire in proof runs.
 func _open_pause(from_system: bool = false) -> void:
-	if _paused or _title_open or _ci_mode or _native == null:
+	if _paused or _title_open or _consent_open or _ci_mode or _native == null:
 		return
 	if from_system and not _uitest_scenario.is_empty():
 		return
@@ -697,6 +736,75 @@ func _close_title() -> void:
 	get_tree().paused = false
 	_router.clear_held()
 	_router.gameplay_active = true
+
+# --- her chart: the profile, and the microphone's consent ---------------------
+
+# FAST is the START list's HER CHART (FAST), in development builds (where
+# the START list is), for as long as it is the START chosen; anything else is
+# the game's own timing.
+static func uncanny_profile_for_start(start_at: int) -> StringName:
+	var names: Array = SettingsStore.START_NAMES
+	if start_at >= 0 and start_at < names.size() and String(names[start_at]) == SettingsStore.START_HER_CHART_FAST:
+		return UncannyProfile.FAST
+	return UncannyProfile.NORMAL
+
+
+func _uncanny_profile_name() -> StringName:
+	if uncanny_profile_override != &"":
+		return uncanny_profile_override
+	if _uitest_scenario.is_empty() and not _ci_mode and OS.is_debug_build():
+		return uncanny_profile_for_start(_settings.start_at)
+	return UncannyProfile.NORMAL
+
+
+# Asked once: in play, until it is answered; in the scripted runs, only by
+# those about it.
+func _should_ask_consent() -> bool:
+	if _settings.microphone_asked or _native == null:
+		return false
+	if _uitest_scenario.is_empty():
+		return not _ci_mode and _audit == null
+	return _uitest_scenario in ["touch_mic_consent", "touch_her_chart_fast"]
+
+
+func _show_consent() -> void:
+	_consent_open = true
+	_router.gameplay_active = false
+	_router.clear_held()
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_consent.open()
+	get_tree().paused = true
+
+
+# The answer is the MICROPHONE setting: ALLOW turns it on (and asks the
+# phone), NOT NOW leaves it off. Either way it is not asked again.
+func _on_consent(allow: bool) -> void:
+	if not _consent_open:
+		return
+	_consent.close()
+	_consent_open = false
+	_settings.microphone_asked = true
+	_settings.microphone = allow
+	_settings.save_to_disk()
+	_pause_menu.refresh_setting(&"microphone")
+	_audio.ui_tap(not allow)
+	if _uncanny != null:
+		_uncanny.set_microphone(allow)
+	if not _title_open:
+		get_tree().paused = false
+		_router.clear_held()
+		_router.gameplay_active = true
+
+
+# The phone said no: the setting goes back off, and the player is told so,
+# plainly.
+func _on_microphone_denied() -> void:
+	_settings.microphone = false
+	_settings.save_to_disk()
+	_pause_menu.refresh_setting(&"microphone")
+	_hud.toast("MICROPHONE OFF", "THIS PHONE DID NOT ALLOW IT", UiStyle.PAPER_DIM)
+
 
 func _resume() -> void:
 	if not _paused:

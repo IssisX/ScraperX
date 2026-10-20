@@ -55,6 +55,10 @@ int main() {
         run_loose_stock();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "look") {
+        run_look_target();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "body-order") {
         run_body_order();
         return EXIT_SUCCESS;
@@ -398,6 +402,7 @@ int main() {
     run_summit_arm();
     run_matron();
     run_loose_stock();
+    run_look_target();
     run_body_order();
     run_forklift();
     run_forklift_strain();

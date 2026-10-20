@@ -14,6 +14,13 @@ config/icon="res://presentation/brand/icon.png"
 boot_splash/show_image=false
 boot_splash/bg_color=Color(0.055, 0.051, 0.047, 1)
 
+[audio]
+
+; Her chart's echoes (presentation/uncanny/voice_keeper.gd): the microphone,
+; heard only once the player has allowed it in the game and Android has
+; granted RECORD_AUDIO (export_presets.cfg). Nothing opens it before that.
+driver/enable_input=true
+
 [display]
 
 ; Galaxy Z Fold 6 inner display: 2160x1856, 20.9:18, a near-square canvas.

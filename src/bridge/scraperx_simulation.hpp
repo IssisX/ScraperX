@@ -234,6 +234,10 @@ public:
     [[nodiscard]] godot::Dictionary get_worker_counts() const;
     // The height of the first surface below `from` within `reach`, or NAN.
     [[nodiscard]] double get_surface_below(godot::Vector3 from, double reach) const;
+    // What a look from `from` along `direction` meets first within `reach`:
+    // {hit, entity, point, normal, distance}. The player, the load in the
+    // hands and sensors are seen through. Read only.
+    [[nodiscard]] godot::Dictionary get_look_target(godot::Vector3 from, godot::Vector3 direction, double reach) const;
     bool set_hook_aim(godot::Vector3 direction);
     bool request_hook_fire();
     bool set_hook_reel(bool held);

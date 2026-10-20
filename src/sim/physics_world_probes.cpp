@@ -14,6 +14,44 @@ bool Simulation::PhysicsWorld::cast_ray(const JPH::RVec3 origin,
     return physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, body_filter);
 }
 
+namespace {
+
+// The eye's sight line: through the player's own body, the load in the hands
+// and sensors, which nobody sees.
+class SightPasses final : public JPH::BodyFilter {
+public:
+    SightPasses(const JPH::BodyID player, const JPH::BodyID carried) : player_(player), carried_(carried) {}
+    bool ShouldCollide(const JPH::BodyID &id) const override { return id != player_ && id != carried_; }
+    bool ShouldCollideLocked(const JPH::Body &body) const override { return !body.IsSensor(); }
+
+private:
+    JPH::BodyID player_;
+    JPH::BodyID carried_;
+};
+
+} // namespace
+
+bool Simulation::PhysicsWorld::look_hit(const JPH::RVec3 from, const JPH::Vec3 run, std::uint64_t &entity,
+                                        JPH::RVec3 &point, JPH::Vec3 &normal) const noexcept {
+    if (run.IsNearZero()) {
+        return false;
+    }
+    const JPH::RRayCast ray(from, run);
+    JPH::RayCastResult hit;
+    const SightPasses passes(player_id_, carried_id_);
+    if (!physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, passes)) {
+        return false;
+    }
+    point = ray.GetPointOnRay(hit.mFraction);
+    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
+    if (!lock.Succeeded()) {
+        return false;
+    }
+    entity = lock.GetBody().GetUserData();
+    normal = lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point);
+    return true;
+}
+
 // A ray for a wall. With see_past_holds, members a hand could close
 // round (rungs, pipes, bars) are seen through, the way a climber on a
 // ladder sees the wall behind it.

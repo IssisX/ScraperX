@@ -212,3 +212,40 @@ void run_loose_stock() {
             "stock: a container leaned on is not struck");
     std::cout << "PASS scraperx_sim stock: pieces=" << pieces << " settle_m=" << worst << " shoved_m=" << shoved << "\n";
 }
+
+// The eyes' sight line (Simulation::look_target, read by the presentation
+// for what the player's aim rests on): from the 154 m deck a look at the
+// Matron's oil drum meets the drum, by its entity; a look straight down meets
+// the deck under the feet, not the player's own body; nonsense is refused.
+void run_look_target() {
+    Simulation s(scraperx::sim::InitialSpawn::Deck154);
+    for (int i = 0; i < 30; ++i) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    const auto me = s.snapshot().player_position;
+    const double eye_x = me.x;
+    const double eye_y = me.y + 0.62;
+    const double eye_z = me.z;
+    // The Matron's throwables are the last pieces laid, the drum the last.
+    const std::uint64_t drum = LooseStock::kFirstEntity + static_cast<std::uint64_t>(s.loose_stock_count()) - 1;
+    const auto at = s.kit_body_position(s.kit_body_index(drum));
+    Simulation::LookHit hit;
+    require(s.look_target(eye_x, eye_y, eye_z, at.x - eye_x, at.y - eye_y, at.z - eye_z, 30.0, hit),
+            "look: a look at the drum meets something");
+    std::cout << "  look: at the drum meets entity " << hit.entity << " at " << hit.distance << " m\n";
+    require(hit.entity == drum, "look: a look at the drum meets the drum");
+    const double to_drum = std::sqrt((at.x - eye_x) * (at.x - eye_x) + (at.y - eye_y) * (at.y - eye_y) +
+                                     (at.z - eye_z) * (at.z - eye_z));
+    require(hit.distance > 0.0 && hit.distance < to_drum, "look: the drum is met on its near side");
+    Simulation::LookHit down;
+    require(s.look_target(eye_x, eye_y, eye_z, 0.0, -1.0, 0.0, 5.0, down), "look: a look down meets the deck");
+    require(down.entity != Simulation::kPlayerEntityId, "look: the player's own body is seen through");
+    require(std::abs(down.point.y - kDeck14Top) < 0.2 && down.normal.y > 0.9,
+            "look: a look down meets the deck's top, facing up");
+    Simulation::LookHit refused;
+    require(!s.look_target(eye_x, eye_y, eye_z, 0.0, 0.0, 0.0, 5.0, refused), "look: no direction is refused");
+    require(!s.look_target(eye_x, std::nan(""), eye_z, 0.0, -1.0, 0.0, 5.0, refused), "look: NaN is refused");
+    require(!s.look_target(eye_x, eye_y, eye_z, 0.0, -1.0, 0.0, 2500.0, refused), "look: past 2 km is refused");
+    std::cout << "PASS scraperx_sim look target: drum=" << drum << " drum_m=" << hit.distance
+              << " deck_y=" << down.point.y << "\n";
+}

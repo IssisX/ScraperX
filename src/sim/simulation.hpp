@@ -1374,6 +1374,19 @@ public:
     // The height of the first surface straight below (x, y, z) within reach
     // (at most 2 km), the player ignored; false when there is none. Read only.
     [[nodiscard]] bool surface_below(double x, double y, double z, double reach, double &hit_y) const noexcept;
+    // What a look from (x, y, z) along (dx, dy, dz) meets first within reach
+    // (at most 2 km): the entity of the body it meets, the point, the
+    // surface's normal there and how far off it is. The player's own body,
+    // the load in the hands and sensors are seen through; false when nothing
+    // is met. Read only: the presentation's attention (what the eyes rest on).
+    struct LookHit final {
+        std::uint64_t entity = 0;
+        Vector3 point{};
+        Vector3 normal{};
+        double distance = 0.0;
+    };
+    [[nodiscard]] bool look_target(double x, double y, double z, double dx, double dy, double dz, double reach,
+                                   LookHit &hit) const noexcept;
     // A saved climb: the committed checkpoint (where the player last stood
     // firm, every machine with it) and the tick, as bytes for this build.
     // load_game restores the world from one as a death would, without
