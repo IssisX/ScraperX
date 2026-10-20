@@ -1431,6 +1431,50 @@ the thumb swipes with a load, thin and faint, and is gone on release. Its three 
 The designs come from the 2026-10-19 panels: "Off Her Feet" (balance, knockdown, throw), "She Knows
 the Steel" (the corner pipe first), and the face and figure workflow.
 
+**She comes down the shaft after you, and the act staged round it (2026-10-20; the goal's part 2).**
+Her corner pipe is the shaft's north-east riser, from 132 m up to her deck at 154 m. Her line on it
+is the riser's north-west corner, and she gets on and off it over the deck's north edge. The shaft's
+rail is torn away where her pipe comes up, on 143 and 154 (2.5 m of it, between two short stubs
+bent down into the shaft), so she climbs over nothing there and a player can stand at the edge
+over her. Dangerous or fully changed, she takes it down after a climber on the deck below,
+knocking at every hold. Each flange she passes rings.
+- Just off the pipe she stands for 2.5 s and listens. Every sound carries twice as far to her while
+  she does.
+- The riser from 143 up to her deck is a climb she knows but never takes hold of herself. A climber
+  heard on it, or lost going up it, she guesses is on her deck, and she goes back up her pipe after
+  them. Before, she lost the climber: their rungs carry 14 m, the riser is 21 m from her pipe, and
+  she gave up the search and wandered off along 143's east band.
+- Blows count only by contact: only what touched her body this step is a blow.
+- Her mischief takes only light stock, 25 kg or less: a toolbox, never the drum.
+- The checkpoint: while she is out, a deck her pipe joins to hers counts as hers (once she is no
+  longer frail), and so does the deck her pipe is taking her to. Before, a climber who went up the
+  riser while she was below got a checkpoint on her deck, and a death there put them back in front
+  of her.
+- Her way, swept: she now checks that a straight way is clear by sweeping her body's width along
+  it. Three lines missed the trip gantry's 0.1 m legs by her post, and she stood against one.
+  When no earlier point of her path is clear, she tries the target's own point on her line first,
+  and never the point she is standing on.
+- On a cable she never lets go over the shaft. At a line's end over it she rides on until deck is
+  under her (she let go over 143's south rail and died).
+- With her hands on the climber she stops walking. She had pushed a climber out through the gate in
+  her east band's rail.
+- The on-screen buttons are back in the gesture scheme (the owner, 2026-10-20: *"I still need SOME
+  on-screen controls"*): Jump, Crouch, Action and Drop are drawn as on the buttons layout, and Jump
+  reads THROW with a load in the hands. The swipes are shortcuts over them, and only Turn is left to
+  the stick.
+
+The act, staged round her pipe: sprints along 143's shaft edge under her make her dangerous, and she
+comes down her pipe after the climber. Meanwhile the climber goes through the gate in 143's rail and
+up the riser to her deck. Off the pipe she listens, hears the rungs and goes back up. The climber
+sprints to the east band's rail south of its gate. She runs down the band, and her shove throws the
+climber at the rail. The climber breaks away from her and the rail. More noise and she is fully
+changed, and her hands kill. The checkpoint is on 143, where the climber stood when she turned
+dangerous. From there, up the riser, her ladder and the climbing route to the 220 ring as before.
+
+Proof: native `matron` (every section); `touch_matron_act` (112 s headless), `touch_matron_heave`,
+`touch_matron`, `touch_matron_ride`, `touch_matron_line`, `touch_matron_climb`. World solids
+regenerated.
+
 **Knock her down, then throw what you carry (2026-10-19 night; the goal's part 3).** From the
 "Off Her Feet" design. Her balance (`src/sim/matron.{hpp,cpp}`): a blow is the change in her speed
 that her own feet did not make, read over the whole contact (Jolt spreads a hit over a few steps

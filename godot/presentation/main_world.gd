@@ -82,6 +82,19 @@ const MATRON_GATE_WIDTH := 3.0
 const DECK13_LEVEL := 13
 const DECK13_GATE_WEST := -8.4
 const DECK13_GATE_EAST := -5.1
+# Where the Matron's corner pipe comes up over the shaft's north edge (her line
+# on the north-east riser's north-west corner and her point on the band:
+# kPipeLineX/Z, kPipeDeckX/Z in src/sim/matron.hpp), on the two decks it meets
+# (143 m and 154 m), the rail is torn away: her way over the edge (x 15.25 to
+# 15.85) is clear, and a climber with a drum stands in the gap west of her line.
+# Each torn end is a stub bent down and out over the shaft: PIPE_GAP_STUB_RUN
+# along the rail, PIPE_GAP_STUB_DROP down, PIPE_GAP_STUB_SPLAY out.
+const PIPE_GAP_LEVELS := [13, 14]
+const PIPE_GAP_WEST := 14.2
+const PIPE_GAP_EAST := 16.7
+const PIPE_GAP_STUB_RUN := 0.3
+const PIPE_GAP_STUB_DROP := 0.25
+const PIPE_GAP_STUB_SPLAY := 0.1
 
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
@@ -117,11 +130,19 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 
 		# Handrails around the open shaft -- the safety line you walk beside.
 		for sz in [1.0, -1.0]:
-			if level == DECK13_LEVEL and sz > 0.0:
-				for run in [[cx - inner_half, DECK13_GATE_WEST], [DECK13_GATE_EAST, cx + inner_half]]:
-					_add_box("ShaftRail", Vector3(float(run[1]) - float(run[0]), 0.08, 0.08),
-						Vector3((float(run[0]) + float(run[1])) * 0.5, deck_y + 1.05, cz + sz * inner_half), galvanised)
-				continue
+			if sz > 0.0:
+				# The north rail's openings on this deck, west to east: deck 13's
+				# gate onto the riser's plate, and the gap torn where her pipe
+				# comes up.
+				var openings: Array = []
+				if level == DECK13_LEVEL:
+					openings.append([DECK13_GATE_WEST, DECK13_GATE_EAST, false])
+				if level in PIPE_GAP_LEVELS:
+					openings.append([PIPE_GAP_WEST, PIPE_GAP_EAST, true])
+				if not openings.is_empty():
+					_build_open_rail(cx - inner_half, cx + inner_half, deck_y + 1.05, cz + sz * inner_half,
+						openings, galvanised)
+					continue
 			_add_box("ShaftRail", Vector3(inner_half * 2.0, 0.08, 0.08),
 				Vector3(cx, deck_y + 1.05, cz + sz * inner_half), galvanised)
 		for sx in [1.0, -1.0]:
@@ -197,6 +218,29 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
+
+# A shaft rail along x from x0 to x1 at (y, z), broken by `openings` ([west,
+# east, torn], west to east): a gate's ends are cut square; a torn gap's are
+# stubs bent down and out over the shaft (toward the shaft's middle, z -150).
+func _build_open_rail(x0: float, x1: float, y: float, z: float, openings: Array,
+		galvanised: Material) -> void:
+	var out := signf(STACK_CENTER.z - z)
+	var from := x0
+	for opening in openings:
+		var west: float = opening[0]
+		var east: float = opening[1]
+		var torn: bool = opening[2]
+		var run_end := west - (PIPE_GAP_STUB_RUN if torn else 0.0)
+		if run_end - from > 0.01:
+			_add_box("ShaftRail", Vector3(run_end - from, 0.08, 0.08), Vector3((from + run_end) * 0.5, y, z),
+				galvanised)
+		from = east + (PIPE_GAP_STUB_RUN if torn else 0.0)
+		if torn:
+			for end in [[run_end, west], [from, east]]:
+				_add_strut("ShaftRailStub", Vector3(float(end[0]), y, z),
+					Vector3(float(end[1]), y - PIPE_GAP_STUB_DROP, z + out * PIPE_GAP_STUB_SPLAY), 0.08, galvanised)
+	if x1 - from > 0.01:
+		_add_box("ShaftRail", Vector3(x1 - from, 0.08, 0.08), Vector3((from + x1) * 0.5, y, z), galvanised)
 
 # Everything that makes the frame read as one vast building rather than a
 # repeated scaffold: splayed footings, clad machine halls with lit windows,

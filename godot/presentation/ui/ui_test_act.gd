@@ -12,9 +12,10 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # gate in 143's rail and up the riser to her deck meanwhile; off the pipe she
 # listens, and comes back up it after them. Round on her east band by the
 # rail, her shove throws the climber at the shaft. More noise and she is
-# fully changed: her hands kill. Back at the riser's foot (the checkpoint,
-# and her a pest again), up again while she looks for the climber where she
-# killed them, quietly to her ladder and up it to the 176 ring, her Turn
+# fully changed: her hands kill. Back on 143 (the checkpoint: where the
+# climber stood as she turned dangerous over them), up the riser again
+# while she looks for the climber where she killed them, quietly to her
+# ladder and up it to the 176 ring, her Turn
 # bringing her up after; on by the climbing route (boards and standpipe,
 # catwalk and scaffold), where she cannot follow, to the 220 ring.
 #
@@ -33,7 +34,11 @@ const ACT_143_EDGE_Z := -132.6
 const ACT_GATE := Vector2(-6.8, -132.2)
 const ACT_PLATE := Vector2(-6.8, -134.1)
 const ACT_RISER_FOOT := Vector2(-6.0, -133.85)
-const ACT_RIM := Vector2(18.0, -139.0)
+# By the east band's rail, south of the gate in it where the catwalk crosses:
+# come up her pipe in the north-east corner, she runs down the band at the
+# climber and, lunging in her Turn, carries them on south along the rail, into
+# the corner and out onto the south band, not out through the gate.
+const ACT_RIM := Vector2(18.0, -158.0)
 # The chase up and down the east band, 3.6 m from the shaft's rim: past the
 # 3 m within which, dangerous, she aims her shove at it.
 const ACT_LAP_NORTH := Vector2(20.6, -134.5)
@@ -419,7 +424,7 @@ func _act_watch_her(condition: Callable, timeout: float, tag: String, near_pose 
 
 # From 143's band through the gate in the shaft's rail onto deck 13's walkway
 # plate, to the riser's foot, facing its rungs.
-# (Put back at the riser's foot by a death, the climber is on the plate.)
+# (Put back by a death the climber may be on the plate already.)
 func _act_to_riser_foot(device: int) -> bool:
 	await _crouch_on(device, false)
 	var on_plate := _position().z < -133.2
@@ -473,8 +478,9 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	_act_log("dangerous")
 	# By the rail, still: she comes (off her pipe, a listen, then on), and
 	# shoves at the shaft.
-	if not await _go(device, ACT_RIM, 0.3, 10.0):
-		return _fail("the walk to the shaft's rail stalled at %s" % str(_position()))
+	# A sprint there, heard all the way from her pipe: she knows where to come.
+	if not (await _sprint_to(device, ACT_RIM, 1.0, 8.0) and await _walk_to(device, ACT_RIM, 0.3, 3.0)):
+		return _fail("the run to the shaft's rail stalled at %s" % str(_position()))
 	var shoves := int(_matron_state()["shoves"])
 	var x0 := _position().x
 	var watch := {"nearest": x0}
@@ -493,10 +499,13 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if float(watch["nearest"]) > x0 - 0.3:
 		return _fail("dangerous, her shove did not throw the climber at the shaft (dx %.2f)" % (
 			float(watch["nearest"]) - x0))
-	# Away from the rail before her next shove: the next could put the climber
-	# over it.
-	if not await _sprint_to(device, Vector2(22.6, _position().z), 0.8, 4.0):
-		return _fail("the break away from the rail stalled at %s" % str(_position()))
+	# Away from the rail before her next shove (the next could put the climber
+	# over it), and away from her: come up her pipe north of the climber, she
+	# presses on along the rail, and straight out from it is into her.
+	var away := ((_act_me_xz() - _act_her_xz()).normalized() + Vector2(1.0, 0.0)).normalized()
+	if not await _sprint_to(device, _act_me_xz() + away * 5.0, 0.8, 4.0):
+		return _fail("the break away from the rail stalled at %s (she at %s)" % [str(_position()),
+			str(_matron_state()["position"])])
 	# Fully changed, her hands kill: the one death the act means. It can come
 	# in the same stride she changes.
 	_act_deaths_allowed = 1
@@ -523,8 +532,10 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	return true
 
 
-# Back at the riser's foot, the checkpoint: up again while she looks for the
-# climber where she killed them, quietly to her ladder and up it to the 176
+# Back on 143, the checkpoint (frozen once she turned dangerous over the
+# climber: a deck her pipe joins to hers is hers too): up the riser again
+# while she looks for the climber where she killed them, quietly to her
+# ladder and up it to the 176
 # ring; on by the climbing route, no lift, to the 220 ring (its boards are
 # narrower than she is: she stays on the ring).
 func _act_way_up(device: int) -> bool:

@@ -69,7 +69,10 @@
 // take hold of it: she stands at its foot looking up, and gives up there. In
 // the Turn she takes hold, and then does not let go: up rung by rung at
 // kClimbMps, in jerks (kClimbBurstMps) while a Turn has her, her hands
-// holding her weight, and over its head onto the floor above.
+// holding her weight, and over its head onto the floor above. The riser from
+// 143 up to her deck she knows the same way (heard or seen on it, the player
+// is going up to her deck), but never takes hold of: her way between those
+// two decks is her corner pipe.
 //
 // Meddling that can be undone (decision 9's B): a way up the player has
 // rigged (its rope's end on the cage's eye) and left, she goes into the cage
@@ -278,6 +281,13 @@ public:
     static constexpr float kLadderX = 5.0F;
     static constexpr float kLadderFootZ = -129.55F;
     static constexpr float kLadderSideX = 3.9F;
+    // The riser from 143 to her deck (band_stack.cpp C3: its rungs on x
+    // -6.00, z -133.50 from 143's walkway plate out over the shaft, its head a
+    // bridge over 154's rail and steps down onto the deck's runway): where a
+    // climber hangs on it, and the runway where it lets them off on her deck.
+    static constexpr float kRiserX = -6.0F;
+    static constexpr float kRiserFootZ = -133.85F;
+    static constexpr float kRiserTopZ = -129.5F;
 
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
@@ -434,11 +444,13 @@ public:
     // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, a flange
     // 1.4 m under every deck), too thick for the climber's hands. Her line
     // hugs its north-west corner from the open shaft, west of the flanges
-    // (theirs reach x 15.25): a drum shoved off the north band west of them
-    // falls past them onto her, with room for the way a shove carries it on
-    // (in the corner by the shaft's east edge the flange under the deck takes
-    // any drum: no room past it). She gets on and off over the north rail from
-    // the band, kPipeOverRailM over the deck. On
+    // (theirs reach x 15.25): a drum thrown down from the north band west of
+    // them falls past them onto her, with room for the way a throw carries it
+    // on (in the corner by the shaft's east edge the flange under the deck
+    // takes any drum: no room past it). She gets on and off over the north
+    // edge from the band, kPipeOverRailM over the deck, where the rail is torn
+    // away on the two decks her pipe meets (143 and 154: main_world.gd
+    // PIPE_GAP_*), so a climber with a drum can stand at the edge over her. On
     // it she is on the steel (object_layers::kOnSteel): what moves meets her,
     // the steel she wraps round does not. Frail, she cannot take hold of it
     // (as her ladder); dangerous she slides down it held by her forearms and
@@ -475,8 +487,13 @@ public:
     static constexpr float kPipeChaseChangedSeconds = 150.0F;
     // Off the pipe onto a deck she stands this long, listening, before she
     // goes on (CHOSEN: the climber who heard her coming gets a moment: up
-    // and away, or to the drum over her pipe).
+    // and away, or to the drum over her pipe). Listening is for where the
+    // climber went: stock still, her head over on her shoulder, a sound
+    // carries kListenReach times as far to her as on the move (CHOSEN: a
+    // climber on the riser's rungs, 14 m on the move, is heard from her pipe
+    // across 143's north edge, 23 m off).
     static constexpr float kPipeListenSeconds = 2.5F;
+    static constexpr float kListenReach = 2.0F;
     // The moving bodies near her a blow can come from: within this, at most
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;
@@ -623,8 +640,10 @@ public:
     // True once her hands are on the player.
     [[nodiscard]] bool caught(JPH::RVec3 player) const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
-    // alive and the player is on her deck. A player who has left the deck (up
-    // a machine) is out of her reach and checkpoints as ever.
+    // alive and the player is on her deck, up a climb from it, or on a deck
+    // her corner pipe is taking her to or (no longer frail) joins to hers. A
+    // player who has left the deck (up a machine) is out of her reach and
+    // checkpoints as ever.
     [[nodiscard]] bool freezes_checkpoint() const noexcept {
         return view_.released && view_.alive && player_on_deck_;
     }
@@ -693,14 +712,18 @@ private:
         Post eye;
     };
     // A climb she knows (a ladder): where she hangs on it (her middle's
-    // line, on the climber's side, a node of its foot's level), the floor it
-    // stands on and the one it tops out onto, and the way off its head. (The
-    // riser from 143 to her deck is not one: its foot is on a plate out over
-    // the shaft behind 143's rail, reached only from the ladder from 132.)
+    // line, on the climber's side), the floor it stands on and the one it
+    // tops out onto, the way off its head, where it lets a climber off on the
+    // floor above (her guess where they are going), and whether she takes
+    // hold of it herself. Her ladder she does (its foot a node of her deck's
+    // lines); the riser from 143 to her deck she does not (its foot is on
+    // 143's walkway plate out over the shaft, through the gate in the rail).
     struct Climb {
         float x, z;
         float foot_y, head_y;
         float out_x, out_z;
+        float top_x, top_z;
+        bool hers;
     };
     struct Plank {
         JPH::BodyID body;
@@ -732,6 +755,8 @@ private:
                       bool allow_gaps = false) const;
     // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
     // her width, on her floor (a post, a frame): she could walk it straight.
+    // Her width is swept, not sampled: a post thinner than the space between
+    // two lines (the trip gantry's 0.1 m legs by her post) still stops her.
     [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
@@ -751,8 +776,8 @@ private:
     bool follow_line(float dt, JPH::RVec3 at);
     // On a line's cable: her drag on it, and letting go at its end.
     void ride_line();
-    // After a lead on a level above, up a climb toward it (to it, or to a
-    // level between): to its foot, and in the Turn onto it. False when no
+    // After a lead on a level above, up a climb of hers toward it (to it, or
+    // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
@@ -815,6 +840,7 @@ private:
     std::uint32_t steel_layer_;
     JPH::BodyID player_;
     JPH::Ref<JPH::Shape> shape_;
+    JPH::Ref<JPH::Shape> hips_;   // way_clear's sweep: her width at her hips
     JPH::BodyID body_;
     JPH::BodyID locker_body_;
     bool body_in_world_ = false;

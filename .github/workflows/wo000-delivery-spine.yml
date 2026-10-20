@@ -282,15 +282,16 @@ jobs:
           # comes up it after and over its head onto the 176 ring
           # (touch_matron_climb). Her first act, 154 m to the 220 ring: woken
           # by a toolbox set down at her door, a pest she carries it off and
-          # undoes the cage's rope, throws it at the climber and shoves;
-          # noise makes her dangerous and quiet a pest again; dangerous her
-          # shove throws the climber at the shaft's rail; fully changed her
-          # hands kill; from the checkpoint up her ladder and the climbing
-          # route to 220 (touch_matron_act). Knock her down, then throw what
-          # you carry: a toolbox taken up, a pest coming for the climber
-          # upright, a swipe up held reads THROW and draws the throw's path,
-          # lifted it flies and she goes down, up again, nobody dead
-          # (touch_matron_heave). A drum of the yard's loose stock, taken off its
+          # undoes the cage's rope; noise on 143 makes her dangerous and she
+          # comes down her corner pipe after the climber, who goes up the
+          # riser meanwhile; she listens, hears them and goes back up it;
+          # dangerous her shove throws the climber at the shaft's rail;
+          # fully changed her hands kill; from the checkpoint on 143 up her
+          # ladder and the climbing route to 220 (touch_matron_act). Knock
+          # her down, then throw what you carry: a toolbox taken up, a pest
+          # coming for the climber upright, a swipe up held reads THROW and
+          # draws the throw's path, lifted it flies and she goes down, up
+          # again, nobody dead (touch_matron_heave). A drum of the yard's loose stock, taken off its
           # pallet, carried 3 m and set down (touch_stock). The yard's forklift
           # driven in under a pallet of drums, raised, carried off, set down
           # (touch_forklift); in under the 5 t stillage, RAISE tips its back
@@ -314,7 +315,7 @@ jobs:
           # the traction tram off the east bridge to deck 8 (touch_tram).
           # Every touch scenario plays on the gesture controls, the game's
           # default: the moves by swipes and the stick's flick, the run's
-          # buttons not drawn, and every swipe and flick made recognized,
+          # buttons drawn too, and every swipe and flick made recognized,
           # no more and no fewer. The wall kicks (touch_wall_kick) and a
           # ladder slid down, held and jumped off (touch_ladder) by them.
           # The faint route hint, off by default, marking the ladder's hold
