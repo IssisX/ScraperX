@@ -1877,8 +1877,14 @@ void run_matron() {
         bool landed = false;
         for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !landed; ++i) {
             const auto p = s.snapshot();
-            if (p.player_position.z > -133.55 && p.player_position.y > 155.0) {
-                (void)s.set_move_input(0.0, -0.5);
+            // Off the bridge's end as a player goes: up to it at a walk, then a
+            // gentle nudge until the feet leave the rim, so the body drops onto
+            // the plate below rather than out past it (planted feet no longer
+            // slide off a rim on their own).
+            if (p.player_position.y > 155.0 &&
+                (p.player_position.z > -133.55 || p.player_grounded ||
+                 p.traversal_state != scraperx::sim::TraversalState::None)) {
+                (void)s.set_move_input(0.0, p.player_position.z > -133.55 ? -0.5 : -0.08);
                 (void)s.set_facing(0.0, -1.0);
                 if (p.traversal_state != scraperx::sim::TraversalState::None) {
                     (void)s.request_release();
