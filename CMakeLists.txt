@@ -125,6 +125,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_summit.cpp
         tests/sim_tests_matron.cpp
         tests/sim_tests_stock.cpp
+        tests/sim_tests_body_order.cpp
         tests/sim_tests_forklift.cpp
         tests/sim_tests_yard_crane.cpp
         tests/sim_tests_zipline.cpp

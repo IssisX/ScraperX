@@ -29,9 +29,11 @@ struct WorldSolidHull final {
 
 } // namespace
 
-Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
+Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
+                                       std::vector<Simulation::TestExtraSolid> test_extra_solids)
     : temp_allocator_(8U * 1024U * 1024U),
-      job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
+      job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
+      test_extra_solids_(std::move(test_extra_solids)) {
     // Raised from 1024: the world's solid dressing adds ~1 600 static
     // bodies (world_solids.inc) on top of the tower's and the bands'.
     physics_system_.Init(4096,
@@ -382,6 +384,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn)
     track(yard_crane_->hook_body(), ImpactSound::Machine);
     track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
+
+    // Tests only: the extra solids built after every body the world builds.
+    build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
 
     physics_system_.OptimizeBroadPhase();
 
@@ -999,6 +1004,7 @@ JPH::BodyID Simulation::PhysicsWorld::body_id_for_entity(const std::uint64_t ent
 // coincident body would split ledge probes and support identity.
 void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
     for (const WorldSolidBox &box : kWorldSolidBoxes) {
+        build_test_extra_solids(bodies, box.py, false);
         const JPH::Vec3 half(box.hx, box.hy, box.hz);
         const JPH::RVec3 position(box.px, box.py, box.pz);
         const JPH::Quat rotation = JPH::Quat(box.qx, box.qy, box.qz, box.qw).Normalized();
@@ -1014,6 +1020,7 @@ void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
                        Simulation::kWorldSolidEntityId, 0.0F);
         ++world_solid_bodies_;
     }
+    build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), false);
     JPH::Array<JPH::Vec3> points;
     for (const WorldSolidHull &hull : kWorldSolidHulls) {
         JPH::DVec3 sum = JPH::DVec3::sZero();
@@ -1040,6 +1047,31 @@ void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
                        JPH::Quat::sIdentity(), JPH::EMotionType::Static, object_layers::kStatic,
                        kWorldSolidFriction, Simulation::kWorldSolidEntityId, 0.0F);
         ++world_solid_bodies_;
+    }
+}
+
+// Tests only (Simulation::TestExtraSolid). A box is built once: the first
+// time the table reaches a box of its 22 m band, else at the table's end;
+// an at_end box after every body the world builds. Counted as a world solid.
+void Simulation::PhysicsWorld::build_test_extra_solids(JPH::BodyInterface &bodies, const double band_y,
+                                                       const bool at_end) {
+    constexpr double kBandM = 22.0;
+    for (std::size_t index = 0; index < test_extra_solids_.size(); ++index) {
+        const Simulation::TestExtraSolid &extra = test_extra_solids_[index];
+        if (extra.at_end != at_end || test_extra_built_.count(index) != 0) {
+            continue;
+        }
+        const bool here = at_end || std::isnan(band_y) || (extra.y <= band_y && band_y < extra.y + kBandM);
+        if (!here) {
+            continue;
+        }
+        const JPH::Vec3 half(extra.half_x, extra.half_y, extra.half_z);
+        const float convex_radius = std::min(JPH::cDefaultConvexRadius, half.ReduceMin());
+        add_shape_body(bodies, new JPH::BoxShape(half, convex_radius), JPH::RVec3(extra.x, extra.y, extra.z),
+                       JPH::Quat::sIdentity(), JPH::EMotionType::Static, object_layers::kStatic,
+                       kWorldSolidFriction, Simulation::kWorldSolidEntityId, 0.0F);
+        ++world_solid_bodies_;
+        test_extra_built_.insert(index);
     }
 }
 

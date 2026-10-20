@@ -8,6 +8,7 @@
 #include "sim/physics_world_support.hpp"
 
 #include <array>
+#include <set>
 
 namespace scraperx::sim {
 
@@ -16,7 +17,7 @@ using namespace scraperx::sim::detail;
 class Simulation::PhysicsWorld final {
 public:
     // (Defined in physics_world.cpp.)
-    explicit PhysicsWorld(const InitialSpawn initial_spawn);
+    PhysicsWorld(const InitialSpawn initial_spawn, std::vector<Simulation::TestExtraSolid> test_extra_solids);
 
     ~PhysicsWorld();
 
@@ -193,6 +194,10 @@ private:
     [[nodiscard]] JPH::BodyID body_id_for_entity(const std::uint64_t entity_id) const noexcept;
 
     void build_world_solids(JPH::BodyInterface &bodies);
+    // The test-only extra solids whose band holds the box at `band_y`, or
+    // every one still unbuilt when `band_y` is NaN (the end of the table), or
+    // the at_end ones; each once.
+    void build_test_extra_solids(JPH::BodyInterface &bodies, double band_y, bool at_end);
 
     [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const;
 
@@ -635,6 +640,9 @@ public:
     JoltRuntimeLease runtime_;
     JPH::TempAllocatorImpl temp_allocator_;
     JPH::JobSystemThreadPool job_system_;
+    // Tests only: see Simulation::TestExtraSolid, and which of them are built.
+    const std::vector<Simulation::TestExtraSolid> test_extra_solids_;
+    std::set<std::size_t> test_extra_built_;
     BroadPhaseLayerInterface broadphase_layer_interface_;
     ObjectVsBroadPhaseFilter object_vs_broadphase_filter_;
     ObjectLayerPairFilter object_layer_pair_filter_;

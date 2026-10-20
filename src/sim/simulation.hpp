@@ -1141,6 +1141,28 @@ public:
     static constexpr std::uint64_t kRouteTopEntityId = 1978;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade);
+    // Tests only (never bound to the bridge): a static box built into the
+    // world over and above its own solids, where the world builds the boxes
+    // of the 22 m band its y falls in (before the first of them, in the
+    // order of world_solids.inc), or after every body the world builds when
+    // at_end. The body-order falsifier builds the world with and without
+    // them and requires every simulation elsewhere unchanged, bit for bit
+    // (03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md).
+    struct TestExtraSolid final {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        float half_x = 0.5F;
+        float half_y = 0.5F;
+        float half_z = 0.5F;
+        bool at_end = false;
+    };
+    Simulation(InitialSpawn initial_spawn, std::vector<TestExtraSolid> test_extra_solids);
+    // Tests only: the extra solids every world built with the one-argument
+    // constructor gets from now on, so a whole test run can be played in a
+    // world with a body added in one band and compared with the run as
+    // built (the test binary reads SCRAPERX_EXTRA_SOLID_Y for this).
+    static void set_test_extra_solids_for_every_world(std::vector<TestExtraSolid> test_extra_solids);
     ~Simulation();
 
     Simulation(const Simulation &) = delete;
