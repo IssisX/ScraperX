@@ -19,8 +19,8 @@ gathered, and nothing comes before it:
 
 > 🧠 **/learn ran:** studied N of your messages (first to last, Central) and M commits.
 
-(Where no session record can be read: "studied this conversation as it stands (no session record
-could be read)".) It ends with one line:
+(Where no session record can be read: "could not read this session's record; studied only your
+words still in the conversation".) It ends with one line:
 
 > ✅ **/learn done:** what was written and where, the commit, pushed (and what waits on the owner).
 
@@ -34,8 +34,9 @@ could be read)".) It ends with one line:
   typing comes out, slash commands with their text included (tool output, reminders, hook and
   agent messages, compaction summaries and the skills Claude loads are left out; a picture shows
   as "[a picture]"). Its summary on stderr gives the count, the span in Central, the since and
-  the newest timestamp. If it exits 2 (no record) or 3 (a record it cannot read), study the
-  conversation as it stands and say so in the opening line.
+  the newest timestamp. If it exits 2 (no record) or 3 (a record it cannot read), say so in the
+  opening line and learn only from the owner's words still in the conversation word for word (a
+  summary is not the owner's words); if there are none, nothing is learned.
 - **Pasted text** (a handoff or prompt another session wrote, pasted by the owner) is what the
   owner chose to pass on, not the owner's own words: a lesson from it is credited as pasted.
 - **What was learned the hard way:** `git log --since=<the summary's since, or the first
@@ -69,7 +70,8 @@ Then:
   of several steps).
 - **No target count.** The list is as long as the material makes it: never aim for, round to or
   pad to a number, and never cut a real lesson to keep it short. Merging true repeats is the only
-  way two lessons become one.
+  way two lessons become one. Nothing new is a fine answer: the report says so, and a lesson is
+  never made up or stretched to have something to show.
 - **Check it both ways:** read the gathered messages once more, first to last, against the draft.
   Every correction, standing direction, approval and refusal must be in the draft, already in
   force (name the row), or a one-off; nothing in the draft may be padding (a one-off, a duplicate
