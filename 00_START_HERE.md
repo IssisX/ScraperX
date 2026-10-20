@@ -99,7 +99,7 @@ The one block to read before doing anything. Everything below is detail behind i
 | **Next code job** | AS-010's next stage from the 750 deck, derived as M and N were (the next stage only, a machine's numbers INTEGRATED by the evaluator, played through touch): after M, C4, N, C5 and O, a climb again, as the owner laid the route out (2026-09-25: *"a couple of mechanisms can be stacked, and then a climb, and then another mechanism"*). The 750 deck is railed all round and round the well and the cab's hole but where the cab lands, on the east side of the hole; the next stage opens the way off it. The ground slingshot is built (`AS-011`). Open for the owner: the governors on every lift below TP-640 (plan §11), AS-007's fluid drives (float, air, hydraulic ram) under `MACRO-TRAVERSAL-STRICT`, and the backup path below TP-640 (rule 8), not built. |
 | **Next authoring job** | `AS-007` (220→340 m) remains a separate planned band; new height does not substitute for the missing device proof of the current route. |
 | **Authoring contract** | `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md`; for everything above the stair, `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` |
-| **Unproven** | Fold-device install, on-device execution, touch ergonomics, sustained frame rate. **No device access exists** |
+| **On the device** | The owner installs and plays the APKs on his Galaxy Fold, and his playtests are the device evidence (the owner, 2026-10-20: *"this game HAS run my device many times"*). What these sessions cannot do is run or measure it on a device themselves: no device access from here, so frame rate and touch feel are known from the owner's playtests, not measured by Claude |
 
 ---
 
