@@ -194,7 +194,10 @@ then held: every bound held, and nothing in a test was moved to make it hold.
 
 **The full native suite** on the patched build
 (`cmake --build build/host --target scraperx_sim_tests scraperx_native`, then
-`./build/host/scraperx_sim_tests`): still running when this commit was made (75 proof lines passed, none failed, at the AS-010 band); its verdict is recorded by the commit after this one.
+`./build/host/scraperx_sim_tests`): exit 0 in 1,128 s (18.8 min), 149 PASS lines, no `FAIL:` line. Every proof
+line the CI workflow requires is among them (76 of 76, `PASS scraperx_sim body order` included), and
+`./build/host/scraperx_parkour_flow_tests` prints `PASS scraperx_sim parkour flow`. No test needed a
+change.
 
 **The touch scenarios** the change plausibly reaches, played as CI plays them
 (`tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=<name>`, the patched
@@ -208,7 +211,7 @@ extension):
 | `touch_crane_magnet` | `SCRAPERX_UITEST PASS touch_crane_magnet slab=5318 lifted_to=1.46 held_read='HOLDING 2.0 T OF 5.0 T'` (40 s) |
 | `touch_crane_spreader` | `SCRAPERX_UITEST PASS touch_crane_spreader` (54 s) |
 | `touch_save` | `SCRAPERX_UITEST PASS touch_save` (5 s) |
-| `touch_stack` | still playing when this commit was made; recorded by the commit after this one |
+| `touch_stack` | `SCRAPERX_UITEST PASS touch_stack ... top_y=803.54 seconds=827.0` (247 s wall), played by the planning session |
 
 
 CI plays the whole list on the owner's push of `ScraperX-Claude`; the suite's proof lines now
