@@ -1,6 +1,7 @@
 ---
 name: learn
-description: Study the whole session (or everything since the last /learn) and turn what the owner taught, and what was learned the hard way, into lasting rules and skills, written and pushed in the same run and then reported, with anything unsure brought up instead of written. Use when the owner types /learn (with or without text), or asks to remember, keep or learn something.
+description: Study the whole session (or everything since the last /learn) and turn what the owner taught, and what was learned the hard way, into lasting rules and skills, written and pushed in the same run and then reported, with anything unsure brought up instead of written. Runs only when the owner types the /learn command.
+disable-model-invocation: true
 ---
 
 # Learn
