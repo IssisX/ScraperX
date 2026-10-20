@@ -1,0 +1,100 @@
+{
+ "note": "The test objects of live fabrication step 1 (godot/tests/fabricated/), made by tools/fab/test_objects.py from these sources: each a Poly Haven model, every file pinned to its SHA-256. Poly Haven publishes every asset under CC0 1.0 Universal (https://polyhaven.com/license). Used only in test worlds, never placed in the player's world.",
+ "license": "CC0 1.0 Universal",
+ "license_url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+ "objects": {
+  "crowbar": {
+   "title": "Crowbar 01",
+   "author": "Alexander Otterbeck",
+   "page": "https://polyhaven.com/a/crowbar_01",
+   "license": "CC0 1.0 Universal (Poly Haven)",
+   "material": "steel",
+   "size_m": 0.6,
+   "gltf": "crowbar_01_1k.gltf",
+   "files": {
+    "crowbar_01_1k.gltf": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/crowbar_01/crowbar_01_1k.gltf",
+     "sha256": "bb1d8974df16b2d75a786b2e019a0382a38aacab9850efe94df40899c7d0bab3"
+    },
+    "crowbar_01.bin": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/crowbar_01/crowbar_01.bin",
+     "sha256": "85e90d3ac56ace801b3036c806f9578aed78cce85724aa01b7c5b32e8606996d"
+    },
+    "textures/crowbar_01_diff_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/crowbar_01/crowbar_01_diff_1k.jpg",
+     "sha256": "940d6566a26806daf0e729cbe1a641a964d96a0bc073aba769973f757a92adb3"
+    },
+    "textures/crowbar_01_nor_gl_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/crowbar_01/crowbar_01_nor_gl_1k.jpg",
+     "sha256": "09689be72e5dedb35ba6be5eaca4cc7865f5fb0899d9a91f856f040adec3a31e"
+    },
+    "textures/crowbar_01_arm_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/crowbar_01/crowbar_01_arm_1k.jpg",
+     "sha256": "e6a836987045f155b6856f739369081fd0aa93578282c57723318cc834a3d739"
+    }
+   }
+  },
+  "tyre": {
+   "title": "Old Tyre",
+   "author": "MP",
+   "page": "https://polyhaven.com/a/old_tyre",
+   "license": "CC0 1.0 Universal (Poly Haven)",
+   "material": "rubber",
+   "size_m": 0.6,
+   "gltf": "old_tyre_1k.gltf",
+   "files": {
+    "old_tyre_1k.gltf": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/old_tyre/old_tyre_1k.gltf",
+     "sha256": "ba7b417eb3dc747c356ac3cd1f125754755684eb664737a9f1fc9e490c0b766e"
+    },
+    "old_tyre.bin": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/old_tyre/old_tyre.bin",
+     "sha256": "659e7982c2de92ca1d13194c97bf112b6dec22d91daecc88e3912d37ce1b7252"
+    },
+    "textures/old_tyre_diff_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_tyre/old_tyre_diff_1k.jpg",
+     "sha256": "0e34ce658c0844c0c94022233226d495930d514c917a5fa15ffee4760567439e"
+    },
+    "textures/old_tyre_nor_gl_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_tyre/old_tyre_nor_gl_1k.jpg",
+     "sha256": "34b716e140408985ddbab7d4bf1d8d430edf834cd2fd4639d82b14cb393fa73e"
+    },
+    "textures/old_tyre_arm_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_tyre/old_tyre_arm_1k.jpg",
+     "sha256": "3bcf192f5b99a7a574f9e21e75927043e6726c601a5da15e3210a31db05e12d4"
+    }
+   }
+  },
+  "keg": {
+   "title": "Wine Barrel 01",
+   "author": "James Ray Cock",
+   "page": "https://polyhaven.com/a/wine_barrel_01",
+   "license": "CC0 1.0 Universal (Poly Haven)",
+   "material": "timber",
+   "size_m": 0.45,
+   "gltf": "wine_barrel_01_1k.gltf",
+   "files": {
+    "wine_barrel_01_1k.gltf": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wine_barrel_01/wine_barrel_01_1k.gltf",
+     "sha256": "503d3339677217c3241a3cdbc1c803ed1eb82d1a48f51436d1545ec5745ae8d8"
+    },
+    "wine_barrel_01.bin": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/wine_barrel_01/wine_barrel_01.bin",
+     "sha256": "d827c31afed824b923ea9168462c93ab3ad3a88c4a68b155bd35efb1a02cbf00"
+    },
+    "textures/wine_barrel_01_diff_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wine_barrel_01/wine_barrel_01_diff_1k.jpg",
+     "sha256": "6bea25b4fadda0636b6b7e46e0cc15153eda21ef62c823d5ee2e06a5a7589214"
+    },
+    "textures/wine_barrel_01_nor_gl_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wine_barrel_01/wine_barrel_01_nor_gl_1k.jpg",
+     "sha256": "86cdb0729b44d1687c75d895e6d0ef650f7580d70f3bcb52bce6fedc5fd79b6f"
+    },
+    "textures/wine_barrel_01_arm_1k.jpg": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wine_barrel_01/wine_barrel_01_arm_1k.jpg",
+     "sha256": "be658e1389dbe8669e847b8fc7df8affdce46d6582f01ac701555b6446a40b9d"
+    }
+   }
+  }
+ }
+}

@@ -139,6 +139,8 @@ var _launch_shot := LaunchShot.new()
 var _swing_view: Node3D
 var _zipline_view: Node3D
 var _corpse_view: Node3D
+# Live fabrication's objects (fabricated_view.gd), when the world has any.
+var _fabricated_view: Node3D
 var _summit_view: Node3D
 var _matron_view: Node3D
 # Each forklift's view (the yard's first, then the yard crane's), and the one
@@ -901,6 +903,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
+	if _fabricated_view != null:
+		_fabricated_view.follow()
 	_render_hook()
 	if delta > 0.0 and _birds != null:
 		_birds.update(delta, position, velocity, grounded)

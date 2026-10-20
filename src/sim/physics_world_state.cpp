@@ -301,9 +301,11 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     ++death_count_;
 }
 
+// The kit's bodies built with the world, by entity: not the fabricated
+// objects after them, which a save carries on their own (write_fabricated).
 std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
-    std::vector<std::uint64_t> out(kit_->body_count());
-    for (std::uint32_t index = 0; index < kit_->body_count(); ++index) {
+    std::vector<std::uint64_t> out(kit_built_count());
+    for (std::uint32_t index = 0; index < out.size(); ++index) {
         out[index] = kit_->body_entity(kit::BodyIndex{index});
     }
     return out;
@@ -317,10 +319,12 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(death_count_);
     w.pod(checkpoint_.carrying_entity);
     // The world's bodies by entity, in order: a load takes the states
-    // only when this world begins with the same bodies.
+    // only when this world begins with the same bodies. The fabricated
+    // objects' come last, on their own (write_fabricated).
     w.list(body_entities());
     const auto &k = checkpoint_.kit;
-    w.list(k.bodies);
+    const std::size_t built = std::min(kit_built_count(), k.bodies.size());
+    w.list(std::vector<kit::Kit::BodyState>(k.bodies.begin(), k.bodies.begin() + static_cast<std::ptrdiff_t>(built)));
     w.list(k.rope_anchor);
     w.list(k.dog_floor);
     w.list(k.bin_contents);
@@ -345,6 +349,9 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // what each grip holds and its rating.
     w.list(k.grip_load);
     w.list(k.grip_rating);
+    // After them, the fabricated objects, when there are any (a save with
+    // none ends here, as it always has).
+    write_fabricated(w);
 }
 
 // Reads a saved checkpoint, then restores the world from it as a death
@@ -366,10 +373,11 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // one with a body removed or moved is refused.
     std::vector<std::uint64_t> entities;
     const std::vector<std::uint64_t> here = body_entities();
+    const std::size_t built = here.size();
     bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
               r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
               std::equal(entities.begin(), entities.end(), here.begin()) &&
-              r.list_up_to(k.bodies, c.bodies.size()) && k.bodies.size() == entities.size() &&
+              r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
               r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
               r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
               r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
@@ -392,16 +400,47 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     if (ok && !r.done()) {
         ok = r.list_up_to(k.grip_load, c.grip_load.size()) &&
              r.list_up_to(k.grip_rating, c.grip_rating.size()) && k.grip_rating.size() == k.grip_load.size() &&
-             std::all_of(k.grip_load.begin(), k.grip_load.end(),
-                         [&k](const std::uint32_t load) { return load == kit::kNone || load < k.bodies.size(); }) &&
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
+    // After the grips, the fabricated objects: a save of a world with none
+    // (every save made before them) ends before.
+    std::vector<SavedFabricated> saved;
+    if (ok && !r.done()) {
+        ok = read_fabricated(r, saved);
+    }
     ok = ok && r.done();
+    // A grip holds a body the save has: one built with its world, or one of
+    // its fabricated objects (the kit's last).
+    const std::size_t saved_built = entities.size();
+    ok = ok && std::all_of(k.grip_load.begin(), k.grip_load.end(), [&](const std::uint32_t load) {
+             return load == kit::kNone || load < saved_built + saved.size();
+         });
+    // The world's fabricated objects must be the save's first ones, the same
+    // entity made from the same hull file: the save's further ones are made
+    // now, if the physics has room for them; the world's further ones stay
+    // as they are, as bodies built since do. Any other is refused.
+    for (std::size_t i = 0; ok && i < std::min(fabricated_.size(), saved.size()); ++i) {
+        ok = fabricated_[i].entity == saved[i].object.entity && fabricated_[i].data == saved[i].object.data;
+    }
+    const std::size_t to_make = saved.size() > fabricated_.size() ? saved.size() - fabricated_.size() : 0;
+    ok = ok && physics_system_.GetNumBodies() + to_make <= physics_system_.GetMaxBodies();
     // Bodies added to the world since the save was written (always built
     // last, after every body before them) start as built.
-    for (std::size_t index = k.bodies.size(); ok && index < c.bodies.size(); ++index) {
+    for (std::size_t index = k.bodies.size(); ok && index < built; ++index) {
         k.bodies.push_back(c.bodies[index]);
+    }
+    // Then the fabricated objects: the save's as it has them, the world's
+    // further ones as they are.
+    for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {
+        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[built + i]);
+    }
+    // A grip on a fabricated object holds it where this world's kit has it,
+    // after any bodies built since the save.
+    for (std::uint32_t &load : k.grip_load) {
+        if (ok && load != kit::kNone && load >= saved_built) {
+            load = static_cast<std::uint32_t>(load - saved_built + built);
+        }
     }
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
         k.bin_contents.push_back(c.bin_contents[index]);
@@ -409,6 +448,24 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {
         return false;
+    }
+    // Taken: the save's fabricated objects the world lacks are made, where
+    // its checkpoint has them (the restore below sets them moving as saved).
+    for (std::size_t i = fabricated_.size(); i < saved.size(); ++i) {
+        Fabricated object = std::move(saved[i].object);
+        object.body = build_fabricated(object, saved[i].state.position, saved[i].state.rotation);
+        if (!object.body.valid()) {
+            // Not for want of room, which was checked: the world keeps a
+            // checkpoint of every body it has, and the save is refused.
+            kit::Kit::Checkpoint now;
+            kit_->capture(now);
+            checkpoint_.kit.bodies.resize(std::min(checkpoint_.kit.bodies.size(), kit_built_count() + fabricated_.size()));
+            for (std::size_t b = checkpoint_.kit.bodies.size(); b < now.bodies.size(); ++b) {
+                checkpoint_.kit.bodies.push_back(now.bodies[b]);
+            }
+            return false;
+        }
+        fabricated_.push_back(std::move(object));
     }
     checkpoint_position_ = position;
     checkpoint_crouched_ = crouched == 1;

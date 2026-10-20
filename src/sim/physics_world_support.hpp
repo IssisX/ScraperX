@@ -762,6 +762,11 @@ public:
             pod(static_cast<std::uint8_t>(value ? 1 : 0));
         }
     }
+    // Raw bytes, their count first (a fabricated object's hull file).
+    void bytes(const std::vector<std::uint8_t> &values) {
+        pod(static_cast<std::uint32_t>(values.size()));
+        out.insert(out.end(), values.begin(), values.end());
+    }
     std::vector<std::uint8_t> out;
 };
 
@@ -822,6 +827,16 @@ public:
             }
             values[i] = value == 1;
         }
+        return true;
+    }
+    // Raw bytes, their count first, from `least` to `most` of them.
+    bool bytes(std::vector<std::uint8_t> &values, std::size_t least, std::size_t most) {
+        std::uint32_t count = 0;
+        if (!pod(count) || count < least || count > most || size_ - at_ < count) {
+            return false;
+        }
+        values.assign(data_ + at_, data_ + at_ + count);
+        at_ += count;
         return true;
     }
     [[nodiscard]] bool done() const noexcept { return at_ == size_; }

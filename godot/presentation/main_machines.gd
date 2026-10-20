@@ -51,6 +51,10 @@ const OWN_SOUND_ENTITIES := [2982, 2983, 2989, 2990, 2991, 2992, 2993, 2994, 298
 # machine: crates and drums lying about neither hum nor carry beacons.
 const STOCK_FIRST_ENTITY := 5000
 const STOCK_ENTITY_LIMIT := 6000
+# Fabricated objects (src/sim/fabricated.hpp) are loose stock too, from a
+# range of their own; fabricated_view.gd draws them.
+const FABRICATED_FIRST_ENTITY := 0x20000
+const FABRICATED_ENTITY_LIMIT := 0x20000 + 32
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
 # Per bin: the dust thrown up where its stream of stone lands (null for water).
@@ -185,7 +189,8 @@ func _build_kit() -> void:
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
 		var entity := int(_native.get_kit_body_entity_id(body))
-		var stock := entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT
+		var stock := (entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT) or \
+			(entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT)
 		if bool(_native.is_kit_body_dynamic(body)) and not stock and \
 				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
 			# The forklifts and the yard crane are heard from their own parts

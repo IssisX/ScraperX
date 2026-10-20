@@ -736,6 +736,7 @@ bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity
 void run_loose_stock();
 void run_look_target();
 void run_body_order();
+void run_fabricated();
 void run_forklift();
 void run_forklift_strain();
 void run_yard_crane();

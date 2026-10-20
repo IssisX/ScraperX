@@ -211,6 +211,33 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
     return BodyIndex{static_cast<std::uint32_t>(bodies_.size() - 1U)};
 }
 
+BodyIndex Kit::add_shape_body(const std::uint64_t entity, const JPH::Shape *shape, const JPH::RVec3 position,
+                              const JPH::Quat rotation, const float friction, const float restitution) {
+    JPH::BodyCreationSettings settings(shape, position, rotation, JPH::EMotionType::Dynamic, moving_layer_);
+    settings.mFriction = friction;
+    settings.mRestitution = restitution;
+    settings.mUserData = entity;
+    settings.mAllowSleeping = false;
+    const auto sub_group = static_cast<JPH::CollisionGroup::SubGroupID>(bodies_.size());
+    if (sub_group < kCollisionSubGroups - 1U) {
+        settings.mCollisionGroup = JPH::CollisionGroup(collision_table_, 0, sub_group);
+    }
+    auto &bodies = system_.GetBodyInterface();
+    JPH::Body *body = bodies.CreateBody(settings);
+    if (body == nullptr) {
+        return {};
+    }
+    bodies.AddBody(body->GetID(), JPH::EActivation::Activate);
+    Body record;
+    record.id = body->GetID();
+    record.entity = entity;
+    record.dynamic = true;
+    record.mass = shape->GetMassProperties().mMass;
+    record.parked = position;
+    bodies_.push_back(record);
+    return BodyIndex{static_cast<std::uint32_t>(bodies_.size() - 1U)};
+}
+
 void Kit::disable_collision(const BodyIndex a, const BodyIndex b) {
     if (a.value < kCollisionSubGroups && b.value < kCollisionSubGroups) {
         collision_table_->DisableCollision(a.value, b.value);

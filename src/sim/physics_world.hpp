@@ -6,6 +6,7 @@
 // Private to the native.
 
 #include "sim/physics_world_support.hpp"
+#include "sim/fabricated.hpp"
 
 #include <array>
 #include <set>
@@ -171,6 +172,45 @@ public:
     [[nodiscard]] const scraperx::sim::bands::Stack &stack() const noexcept {
         return stack_;
     }
+
+    // ---- live fabrication (sim/fabricated.hpp) ---------------------------
+    // (Defined in physics_world_fabricated.cpp.)
+    // A fabricated object as the world holds it: its entity, its kit body,
+    // its hull file as it came (what a save carries) and as read, its shape.
+    struct Fabricated final {
+        std::uint64_t entity = 0;
+        scraperx::sim::kit::BodyIndex body;
+        std::vector<std::uint8_t> data;
+        fabricated::Spec spec;
+        JPH::RefConst<JPH::Shape> shape;
+        float mass_kg = 0.0F;
+    };
+    // Simulation::add_fabricated: 0 and why when refused, the world unchanged.
+    std::uint64_t add_fabricated(const std::uint8_t *data, std::size_t size, JPH::RVec3 at, float yaw,
+                                 FabricatedRefusal &refusal);
+    [[nodiscard]] const std::vector<Fabricated> &fabricated() const noexcept { return fabricated_; }
+    [[nodiscard]] std::vector<Vector3> fabricated_hull_triangles(std::size_t index) const;
+    [[nodiscard]] std::uint32_t bodies_with_entity_in(std::uint64_t first, std::uint64_t limit) const;
+
+private:
+    // The kit's bodies built with the world: every one before the first
+    // fabricated object (those are always the kit's last).
+    [[nodiscard]] std::size_t kit_built_count() const noexcept { return kit_->body_count() - fabricated_.size(); }
+    // The body of a fabricated object, at `origin` turned `rotation`, as
+    // loose stock: carried by the top of its box over its center of mass,
+    // swept so a throw never passes through a rail, asleep once at rest,
+    // heard when struck. Invalid when the physics has no room for a body.
+    scraperx::sim::kit::BodyIndex build_fabricated(const Fabricated &object, JPH::RVec3 origin, JPH::Quat rotation);
+    // Something solid where the shape would be put.
+    [[nodiscard]] bool fabricated_overlaps(const JPH::Shape *shape, JPH::RVec3 origin, JPH::Quat rotation) const;
+    // A save's fabricated objects (after its grips): each one's entity, hull
+    // file and body state, read and bounded; false refuses the save.
+    struct SavedFabricated final {
+        Fabricated object;
+        scraperx::sim::kit::Kit::BodyState state;
+    };
+    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out) const;
+    void write_fabricated(SaveWriter &w) const;
 
 private:
     static void remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id);
@@ -687,6 +727,9 @@ public:
     float grip_over_seconds_ = 0.0F;
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
+    // Live fabrication: the objects made at run time, in the order they were
+    // (their kit bodies the kit's last).
+    std::vector<Fabricated> fabricated_;
     std::unique_ptr<Slingshot> slingshot_;
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;

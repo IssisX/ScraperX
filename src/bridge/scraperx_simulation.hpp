@@ -4,6 +4,7 @@
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
@@ -250,11 +251,35 @@ public:
     [[nodiscard]] bool load_save_game(const godot::PackedByteArray &bytes);
     [[nodiscard]] godot::Dictionary get_lift_state() const;
 
+    // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): a delivery
+    // as received, its hull file, signature and GLB, checked here against
+    // the game's key and the GLB's hash (fabricated_delivery.hpp) before the
+    // native reads a byte of it; then the native bounds it again and builds
+    // the body, its underside's middle at `at`, turned `yaw` about +y.
+    // Returns its entity; 0 when refused, get_fabricated_refusal saying why
+    // ("signature", "model", "size", or the native's: "too heavy", ...).
+    [[nodiscard]] std::int64_t add_fabricated(const godot::PackedByteArray &hull, const godot::PackedByteArray &signature,
+                                              const godot::PackedByteArray &model, godot::Vector3 at, double yaw);
+    [[nodiscard]] godot::String get_fabricated_refusal() const;
+    // The game layer's check alone (the delivery is not added): "ok" or why not.
+    [[nodiscard]] godot::String check_fabricated_delivery(const godot::PackedByteArray &hull,
+                                                          const godot::PackedByteArray &signature,
+                                                          const godot::PackedByteArray &model) const;
+    [[nodiscard]] std::int64_t get_fabricated_count() const;
+    // One fabricated object: entity, body (its kit index), material (0 steel,
+    // 1 timber, 2 rubber, 3 concrete), mass (kg), half_extent (its box about
+    // its origin) and glb_sha512 (hex: the model it is drawn with).
+    [[nodiscard]] godot::Dictionary get_fabricated_object(std::int64_t index) const;
+    // Its hulls as triangles in its own frame: the plain crate drawn for it
+    // when its model is not to hand.
+    [[nodiscard]] godot::PackedVector3Array get_fabricated_hull_triangles(std::int64_t index) const;
+
 protected:
     static void _bind_methods();
 
 private:
     std::unique_ptr<sim::Simulation> simulation_;
+    godot::String fabricated_refusal_ = "none";
 };
 
 } // namespace scraperx::bridge

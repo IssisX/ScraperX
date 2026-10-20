@@ -1,0 +1,60 @@
+{
+ "density_kg_m3": 600.0,
+ "glb_bytes": 279836,
+ "glb_sha512": "5c6515019f3267345977554f2c04f992c361886da8c2f19d8c166e75be9ffcc9ef8794ad00ee56c60cf8a352e8a3b0ebe31a79cdb711bb360339675abb593ea6",
+ "half_extent_m": [
+  0.1916,
+  0.225,
+  0.1952
+ ],
+ "hull_bytes": 2956,
+ "hull_sha512": "742cebc1b3c7ad0b6b3a9d837c6e59aa883488673783d58440d67cbec6d01d44a2c7e25cb6f4c76151e08edb8110448c995cd0e93e60ee182ff2c481150bd604",
+ "hull_volumes_m3": [
+  0.007783,
+  0.00708,
+  0.0061559,
+  0.0048002,
+  0.0046425,
+  0.0039222,
+  0.0037897,
+  0.0037137
+ ],
+ "hulls": [
+  31,
+  32,
+  32,
+  32,
+  32,
+  21,
+  23,
+  32
+ ],
+ "mass_kg": 25.132,
+ "material": "timber",
+ "name": "keg",
+ "public_key": "8e10f29e2bdb41caaca588a9c81476c0c8de876259950026ac5e9bd7e33666ff",
+ "settings": {
+  "seed": 0,
+  "texture": 512,
+  "triangles": 4000
+ },
+ "size_m": 0.45,
+ "source": {
+  "author": "James Ray Cock",
+  "file": "keg.glb",
+  "license": "CC0 1.0 Universal (Poly Haven)",
+  "page": "https://polyhaven.com/a/wine_barrel_01",
+  "sha256": "9b6d0b8c5a01202c799e4990913592ffad0c74bcfb3d724c1f02f349dd57ea61",
+  "size_m": [
+   0.7419,
+   0.8713,
+   0.756
+  ],
+  "title": "Wine Barrel 01",
+  "triangles": 10820
+ },
+ "texture_coverage": 0.326,
+ "texture_px": 512,
+ "triangles": 3999,
+ "volume_m3": 0.0418873
+}

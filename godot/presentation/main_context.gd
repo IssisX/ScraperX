@@ -437,6 +437,12 @@ func _carry_center(entity: int) -> Vector3:
 						return at * Vector3(0.0, 0.44, 0.0)
 					4:
 						return at * Vector3(0.0, 0.07, 0.0)
+			# A fabricated object is lifted by the top of its box.
+			if entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT:
+				for index in int(_native.get_fabricated_count()):
+					var object: Dictionary = _native.get_fabricated_object(index)
+					if int(object["entity"]) == entity:
+						return at * Vector3(0.0, (object["half_extent"] as Vector3).y, 0.0)
 			return at.origin
 	return Vector3.ZERO
 
@@ -511,6 +517,8 @@ func _carry_name(entity: int) -> String:
 			return "CLUTCH HANDLE"
 	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
 		return _stock_name(entity)
+	if entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT:
+		return ""   # the Action's PICK UP says enough
 	return "ROPE END" if _is_kit(entity) else ""
 
 # S3's pan (band_stack.cpp: its brake's trip line ends in it) under a load
@@ -541,7 +549,8 @@ func _stock_name(entity: int) -> String:
 
 func _is_kit(entity: int) -> bool:
 	return (entity >= KIT_ENTITY_MIN and entity < KIT_ENTITY_MAX) or \
-		(entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT)
+		(entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT) or \
+		(entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT)
 
 func _kit_anchor_name(entity: int) -> String:
 	match entity:
