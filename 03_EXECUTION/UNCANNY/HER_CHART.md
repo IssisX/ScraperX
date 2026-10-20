@@ -101,6 +101,14 @@ faint from the structure. HER CHART (FAST) on the START list brings a page and a
 voice within about a minute (`touch_her_chart_fast`; also `touch_her_chart`, `touch_mic_consent`,
 `touch_voice_echo`).
 
+**Her hearing from the real room, built (2026-10-20):** the microphone's loudness over the room's
+own quiet goes to the simulation like a held control (`Simulation::set_room_loudness`) and she
+hears it as the player's own noise, where the player is: a hush is not heard, a mutter only close
+by, a bark as far as a hard landing, and near her on the hunt it starts her Turn (the spine
+cracking, the head turning the wrong way). The game's own sound jumping masks what the microphone
+hears for a moment. Native `matron room`; `touch_room_hearing` (a bark through the microphone's
+path wakes her). The levels are to tune on the phone.
+
 ## Decisions for the owner
 
 1. Her chart as the spine of it (recommended).

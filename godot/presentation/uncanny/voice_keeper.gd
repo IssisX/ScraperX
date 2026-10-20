@@ -69,6 +69,18 @@ const ECHO_AHEAD_DOT := 0.3
 const REACTION_S := 6.0
 const STOP_SPEED := 0.3
 const STOP_HOLD_S := 1.5
+# Her hearing (HER_CHART.md, the tower's senses): how loud the room is over
+# its own floor, for the native (Simulation::set_room_loudness). Nothing at
+# ROOM_OVER_FLOOR_DB over the floor (where the gate opens), everything (as
+# far as a hard landing carries) at ROOM_FULL_OVER_FLOOR_DB; the loudest of
+# the last ROOM_HOLD_S. The microphone also hears the game's own speaker: a
+# jump in the game's output of ROOM_MASK_JUMP_DB over its last second's mean
+# leaves the room untrusted for ROOM_MASK_S. To tune on the phone.
+const ROOM_OVER_FLOOR_DB := 14.0
+const ROOM_FULL_OVER_FLOOR_DB := 40.0
+const ROOM_HOLD_S := 0.25
+const ROOM_MASK_JUMP_DB := 6.0
+const ROOM_MASK_S := 0.35
 
 var profile: RefCounted
 var state := STATE_OFF
@@ -104,6 +116,11 @@ var _open := false
 var _open_db := 0.0
 var _floor_db := -50.0
 var _below_s := 0.0
+# Her hearing.
+var _room_loud := 0.0
+var _room_age := 0.0
+var _out_mean_db := -80.0
+var _mask_s := 0.0
 
 
 func setup(the_profile: RefCounted, storage_dir: String) -> void:
@@ -238,6 +255,9 @@ func _on_permission(permission: String, granted: bool) -> void:
 
 func _set_state(next: StringName) -> void:
 	state = next
+	if next != STATE_LISTENING and next != STATE_UNAVAILABLE:
+		_room_loud = 0.0
+		_room_age = 0.0
 
 
 func _start_capture() -> void:
@@ -295,9 +315,10 @@ func _notification(what: int) -> void:
 
 
 # One frame: what the microphone heard since the last, through the gate.
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if state != STATE_LISTENING or _capture == null:
 		return
+	_watch_output(delta)
 	var available := _capture.get_frames_available()
 	if available <= 0:
 		return
@@ -331,11 +352,39 @@ func feed_samples(mono: PackedFloat32Array, rate: float) -> void:
 			_window_done()
 
 
+# Her hearing: how loud the room is now, 0..1; 0 while the microphone is off
+# or the game's own sound has just jumped.
+func room_loudness() -> float:
+	# Unavailable (no input device) feeds nothing but what the tests feed.
+	var hearing := state == STATE_LISTENING or state == STATE_UNAVAILABLE
+	return _room_loud if hearing and _mask_s <= 0.0 else 0.0
+
+
+# The game's own output, once a frame: a jump over its last second's mean
+# (a crash, a scream, an echo played) masks what the microphone hears of it.
+func _watch_output(delta: float) -> void:
+	var out_db := maxf(AudioServer.get_bus_peak_volume_left_db(0, 0), AudioServer.get_bus_peak_volume_right_db(0, 0))
+	_mask_s = ROOM_MASK_S if out_db > _out_mean_db + ROOM_MASK_JUMP_DB else maxf(0.0, _mask_s - delta)
+	_out_mean_db = lerpf(_out_mean_db, maxf(out_db, -80.0), clampf(delta, 0.0, 1.0))
+
+
+# One window's level against the floor as it stood before it.
+func _room_window(level: float) -> void:
+	var loud := 0.0
+	if level >= GATE_FLOOR_DB:
+		loud = clampf((level - _floor_db - ROOM_OVER_FLOOR_DB) / (ROOM_FULL_OVER_FLOOR_DB - ROOM_OVER_FLOOR_DB), 0.0, 1.0)
+	_room_age += WINDOW_S
+	if loud >= _room_loud or _room_age >= ROOM_HOLD_S:
+		_room_loud = loud
+		_room_age = 0.0
+
+
 func _window_done() -> void:
 	var energy := 0.0
 	for x in _window:
 		energy += x * x
 	var level := linear_to_db(maxf(sqrt(energy / float(_window.size())), 1.0e-7))
+	_room_window(level)
 	if not _open:
 		_floor_db = level if level < _floor_db else minf(level, _floor_db + FLOOR_RISE_DB_S * WINDOW_S)
 		var open_at := maxf(GATE_FLOOR_DB, _floor_db + GATE_OVER_FLOOR_DB)

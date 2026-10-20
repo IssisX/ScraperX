@@ -21,6 +21,9 @@ extends "res://presentation/ui/ui_test_act.gd"
 # is old enough, and then it plays once: faint, through the pipe's filter,
 # from structure near the player out of their view, never captioned, the
 # captions on. The clip caps hold.
+# touch_room_hearing: her hearing takes the player's room. The microphone on,
+# the room's hush is not heard and she sleeps on in her locker; a bark fed
+# through the microphone's path wakes her, heard at the player.
 
 const HerChart := preload("res://presentation/uncanny/her_chart.gd")
 const UncannyProfile := preload("res://presentation/uncanny/uncanny_profile.gd")
@@ -405,6 +408,60 @@ func _touch_voice_echo() -> bool:
 		float(clip["seconds"]), float(clip["voiced"]), early_age, float(echo["age_s"]), float(echo["peak_db"]),
 		at_listener, float(echo["distance"]), player.bus]
 	return true
+
+
+func _touch_room_hearing() -> bool:
+	var voice: Node = _main._uncanny.voice
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	voice.permission_override = "grant"
+	_main._settings.microphone = true
+	_main._settings.microphone_asked = true
+	_main._apply_settings()
+	if not (voice.state in [VoiceKeeper.STATE_LISTENING, VoiceKeeper.STATE_UNAVAILABLE]):
+		return _fail("the microphone did not come on (state %s)" % voice.state)
+	var asleep := int(_native().get_matron_state()["state"])
+	# The room's hush, two seconds of it: nothing to hear.
+	voice.feed_samples(_room_sound(32000.0, 2.0, 0.0), 32000.0)
+	var hush := float(voice.room_loudness())
+	await _seconds(2.0)
+	var quiet: Dictionary = _native().get_matron_state()
+	if hush > 0.0 or float(quiet["noise"]) > 0.0 or int(quiet["state"]) != asleep:
+		return _fail("the hush was heard (room %.2f, she heard %.2f, state %d)" % [hush, float(quiet["noise"]),
+			int(quiet["state"])])
+	# A bark: a third of a second of it, 46 dB over the hush.
+	voice.feed_samples(_room_sound(32000.0, 0.5, 0.33), 32000.0)
+	var bark := float(voice.room_loudness())
+	var heard := 0.0
+	var woke := false
+	for i in 60:
+		await get_tree().physics_frame
+		var m: Dictionary = _native().get_matron_state()
+		heard = maxf(heard, float(m["noise"]))
+		woke = woke or int(m["state"]) != asleep
+	voice.feed_samples(_room_sound(32000.0, 0.5, 0.0), 32000.0)
+	var after := float(voice.room_loudness())
+	_main._settings.microphone = false
+	_main._apply_settings()
+	voice.permission_override = ""
+	if bark < 0.9 or heard <= 0.0 or not woke or after > 0.0:
+		return _fail("the bark (room %.2f) was not heard (she heard %.2f, woke %s; after it the room %.2f)" % [bark,
+			heard, str(woke), after])
+	_detail = "hush_room=%.2f bark_room=%.2f heard=%.2f woke=%s after_room=%.2f" % [hush, bark, heard, str(woke), after]
+	return true
+
+
+# The room as the microphone hears it at `rate`: `seconds` of hush at -62
+# dBFS, ending in `bark_s` of a broadband bark at -16 dBFS.
+func _room_sound(rate: float, seconds: float, bark_s: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 0xBA4C
+	var hush := db_to_linear(-62.0)
+	var loud := db_to_linear(-16.0) * sqrt(3.0)
+	var bark_from := roundi(rate * (seconds - bark_s))
+	for i in roundi(rate * seconds):
+		out.append(rng.randf_range(-1.0, 1.0) * (loud if i >= bark_from else hush))
+	return out
 
 
 # Renders only (not in CI): one of her exact pages lying on the 154 m deck

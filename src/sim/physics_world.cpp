@@ -674,7 +674,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_rigged(kit_->rope_end_entity(well_.a_rope) == kWellACageEntityId,
                         kit_->rope_end_entity(well_.b_rope) == kWellBCageEntityId);
     matron_->set_player_holding(carried_entity_);
-    matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_), matron_loudness(bodies));
+    matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_),
+                      std::max(matron_loudness(bodies), static_cast<float>(commands.room_loudness)));
     if (const int way = matron_->take_unrig(); way >= 0) {
         // Her hands have the rope's end off the cage's eye: it hangs there on
         // its shackle, to be hooked on again.

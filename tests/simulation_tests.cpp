@@ -132,6 +132,10 @@ int main() {
         run_matron_pipe();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-room") {
+        run_matron_room();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-balance") {
         run_matron_balance();
         return EXIT_SUCCESS;

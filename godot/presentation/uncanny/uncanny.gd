@@ -150,6 +150,12 @@ func advance(seconds: float) -> void:
 	_page_check = 0.0
 
 
+# Her hearing: how loud the player's room is, 0..1, for the native's
+# set_room_loudness (voice_keeper.gd).
+func room_loudness() -> float:
+	return voice.room_loudness() if voice != null else 0.0
+
+
 # Once a frame while playing. `attending` is false while the view rides a
 # death.
 func update(delta: float, ctx: Dictionary, camera: Camera3D, attending: bool) -> void:

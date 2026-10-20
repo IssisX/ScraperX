@@ -129,6 +129,14 @@ bool Simulation::set_crouch_input(const bool held) noexcept {
     return true;
 }
 
+bool Simulation::set_room_loudness(const double loudness) noexcept {
+    if (!std::isfinite(loudness)) {
+        return false;
+    }
+    room_loudness_ = std::clamp(loudness, 0.0, 1.0);
+    return true;
+}
+
 bool Simulation::set_sprint_input(const bool held) noexcept {
     sprint_input_ = held;
     return true;
@@ -485,6 +493,7 @@ void Simulation::step_fixed() noexcept {
     commands.release_requested = release_requested_;
     commands.crouch_held = crouch_input_;
     commands.sprint_held = sprint_input_;
+    commands.room_loudness = room_loudness_;
     commands.pick_up_requested = pick_up_requested_;
     commands.set_down_requested = set_down_requested_;
     commands.rig_requested = rig_requested_;

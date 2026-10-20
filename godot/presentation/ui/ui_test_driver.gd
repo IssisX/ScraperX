@@ -231,6 +231,8 @@ const SCENARIOS := {
 	"touch_her_chart_fast": 11,
 	"touch_mic_consent": 8,
 	"touch_voice_echo": 11,
+	# Her hearing: a bark in the player's room wakes her.
+	"touch_room_hearing": 11,
 	# Renders only, not in CI: one of her pages read at the feet.
 	"look_her_chart": 11,
 }
@@ -533,6 +535,8 @@ func _run() -> void:
 			ok = await _touch_mic_consent()
 		"touch_voice_echo":
 			ok = await _touch_voice_echo()
+		"touch_room_hearing":
+			ok = await _touch_room_hearing()
 		"look_her_chart":
 			ok = await _look_her_chart()
 	if _scenario.begins_with("touch_"):

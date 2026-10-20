@@ -394,6 +394,9 @@ func _process(delta: float) -> void:
 		_native.set_hook_aim(-_camera.global_transform.basis.z)
 		_native.set_hook_reel(bool(intent.get("hook_held", false)) and int(_ctx.get("hook_state", 0)) == 2)
 	_native.set_sprint_input(bool(intent["sprint_held"]))
+	# Her hearing: the room the player is in, through the microphone (0 while
+	# it is off or not trusted; voice_keeper.gd).
+	_native.set_room_loudness(_uncanny.room_loudness() if _uncanny != null else 0.0)
 
 	_launch_shot.update(delta, _native.get_slingshot_state())
 	var time_scale := _launch_shot.time_scale()

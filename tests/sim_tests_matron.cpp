@@ -1708,6 +1708,7 @@ void run_matron() {
     run_matron_collision();
     run_matron_balance();
     run_matron_pipe();
+    run_matron_room();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----
@@ -2058,4 +2059,71 @@ void run_matron() {
         require(std::memcmp(a.data(), b.data(), sizeof(a)) == 0,
                 "matron: two identical chases end identically, bit for bit");
     }
+}
+
+// Her hearing takes the player's real room (03_EXECUTION/UNCANNY/HER_CHART.md; the owner,
+// 2026-10-20: "if my dog barks, her head turns, that would be amazing"). The microphone's
+// loudness over the room's own quiet comes in held, like the stick, and she hears it as the
+// player's own noise, where the player is: a quiet room is not heard, a mutter only close by,
+// and a bark carries as far as a hard landing.
+void run_matron_room() {
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(1.0).accepted, "matron room: settle");
+    require(!s.set_room_loudness(std::nan("")) && s.set_room_loudness(0.0),
+            "matron room: a loudness that is not a number is refused");
+    require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron room: a sprint toward her locker");
+    require(s.matron_state().state == kStateStraining, "matron room: the sprint woke her");
+    // While she strains and bursts out: away down the east band and a creep round behind
+    // crate S, out of her sight (the crash leg's way); she searches where the player was.
+    require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 0.3), "matron room: to the north-east corner");
+    bool out = false;
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
+        tick(s);
+        out = s.matron_state().state == kStateEmerging;
+    }
+    require(out, "matron room: she bursts out");
+    require(go(s, Matron::kBandX, -143.0, true, 3.0, 0.6), "matron room: a sprint down the east band");
+    (void)s.set_crouch_input(true);
+    require(go(s, Matron::kBandX, -157.6, false, 10.0, 0.3) && go(s, 24.5, -156.2, false, 6.0, 0.15),
+            "matron room: a creep round behind crate S");
+    bool searching = false;
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !searching; ++i) {
+        tick(s);
+        searching = s.matron_state().state == kStateSearching;
+    }
+    require(searching, "matron room: she searches where she lost the player");
+    // The room at `loudness` for `seconds`, the player crouched and still: whether she heard it,
+    // and whether she ever saw the player meanwhile.
+    bool seen = false;
+    double loudest = 0.0;
+    const auto room_heard = [&](const double loudness, const double seconds) {
+        (void)s.set_room_loudness(loudness);
+        loudest = 0.0;
+        const auto ticks = static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (int i = 0; i < ticks; ++i) {
+            tick(s);
+            loudest = std::max(loudest, s.matron_state().noise_heard);
+            seen = seen || s.matron_state().sees_player;
+        }
+        (void)s.set_room_loudness(0.0);
+        return loudest > 0.0;
+    };
+    stand_still(s, 0.0);
+    require(!room_heard(0.0, 3.0) && s.matron_state().state == kStateSearching,
+            "matron room: a quiet room is not heard");
+    const double off_m = matron_player_distance(s);
+    require(off_m > 0.1 * 55.0 && !room_heard(0.1, 2.0), "matron room: a mutter farther off than it carries is not heard");
+    require(room_heard(1.0, 0.25), "matron room: a bark in the room is heard");
+    require(!seen, "matron room: she never saw the player: it was the room she heard");
+    const auto drawn = s.matron_state();
+    const double at_bark_m = matron_player_distance(s);
+    stand_still(s, 4.0);
+    const double after_m = matron_player_distance(s);
+    std::cout << "  matron room: the player " << off_m << " m off; the bark heard at " << loudest << "; state "
+              << static_cast<int>(drawn.state) << ", wary " << drawn.wary << "; she comes from " << at_bark_m
+              << " to " << after_m << " m in 4 s\n";
+    require(drawn.state == kStateHunting && after_m < at_bark_m - 5.0,
+            "matron room: the bark sends her hunting, toward the player");
+    std::cout << "PASS scraperx_sim matron room: off_m=" << off_m << " heard=" << loudest << " came_m="
+              << at_bark_m - after_m << "\n";
 }

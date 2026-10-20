@@ -37,6 +37,10 @@ public:
         bool release_requested = false;
         bool crouch_held = false;
         bool sprint_held = false;
+        // The player's real room through the microphone, 0..1 (held; see
+        // Simulation::set_room_loudness): heard by the Matron as the
+        // player's own noise.
+        double room_loudness = 0.0;
         bool pick_up_requested = false;
         bool set_down_requested = false;
         bool throw_requested = false;   // UpMove::Throw, resolved from the up gesture

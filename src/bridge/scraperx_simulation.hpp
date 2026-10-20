@@ -39,6 +39,7 @@ public:
     [[nodiscard]] bool request_release();
     [[nodiscard]] bool request_parachute();
     [[nodiscard]] bool set_crouch_input(bool held);
+    [[nodiscard]] bool set_room_loudness(double loudness);
     [[nodiscard]] bool set_sprint_input(bool held);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
     [[nodiscard]] std::int64_t get_tick_index() const;

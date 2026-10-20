@@ -852,6 +852,7 @@ void run_matron_mischief();
 void run_matron_collision();
 void run_matron_balance();
 void run_matron_pipe();
+void run_matron_room();
 void run_up_throw();
 void run_jump_buffer();
 void run_parkour_seams();

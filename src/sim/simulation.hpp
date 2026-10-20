@@ -1228,6 +1228,13 @@ public:
     // A Jump or traversal request stands the body first, and is refused
     // where it cannot stand.
     [[nodiscard]] bool set_crouch_input(bool held) noexcept;
+    // The player's real room (03_EXECUTION/UNCANNY/HER_CHART.md, her
+    // hearing): how loud it is over its own quiet, 0..1, measured from the
+    // microphone by the presentation and held like set_move_input. The
+    // Matron hears it as the player's own noise, where the player is: a
+    // sound of 1 carries as far as a hard landing. Clamped to 0..1; refused
+    // when not finite.
+    [[nodiscard]] bool set_room_loudness(double loudness) noexcept;
     // Sprint, held: the native sprints only standing, hands free, off a
     // balance beam, with the stick at least 0.7 and within 45 degrees of the
     // facing.
@@ -1477,6 +1484,7 @@ private:
     bool release_requested_ = false;
     bool crouch_input_ = false;
     bool sprint_input_ = false;
+    double room_loudness_ = 0.0;
     bool pick_up_requested_ = false;
     bool set_down_requested_ = false;
     bool rig_requested_ = false;

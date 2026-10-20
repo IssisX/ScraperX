@@ -74,6 +74,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_parachute);
     godot::ClassDB::bind_method(godot::D_METHOD("set_crouch_input", "held"),
                                 &ScraperXSimulation::set_crouch_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_room_loudness", "loudness"),
+                                &ScraperXSimulation::set_room_loudness);
     godot::ClassDB::bind_method(godot::D_METHOD("set_sprint_input", "held"),
                                 &ScraperXSimulation::set_sprint_input);
     godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_left_hand"),
@@ -450,6 +452,10 @@ bool ScraperXSimulation::request_release() {
 
 bool ScraperXSimulation::request_parachute() {
     return simulation_->request_parachute();
+}
+
+bool ScraperXSimulation::set_room_loudness(const double loudness) {
+    return simulation_->set_room_loudness(loudness);
 }
 
 bool ScraperXSimulation::set_crouch_input(const bool held) {

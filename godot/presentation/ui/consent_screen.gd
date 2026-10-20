@@ -37,6 +37,7 @@ static func explanation() -> String:
 		"WHAT IS HEARD: whatever the microphone picks up, usually your own voice. When a sound is loud enough, the game keeps a few seconds of it.",
 		"WHAT IS KEPT: those short clips, on this phone only, in the game's own storage. At most %d of them, and each is deleted within 7 days." % VoiceKeeper.MAX_CLIPS,
 		"WHAT HAPPENS TO THEM: now and then, much later, the game may play one back to you, quietly, somewhere in the tower.",
+		"WHAT ELSE: how loud your room is, moment to moment, is part of the game. A loud sound where you are can be heard in the tower. Only how loud is used for this, never what was said, and none of it is kept.",
 		"NOTHING IS UPLOADED. Nothing is sent anywhere, and nothing else on this phone is read. If that ever changes, you will be asked again first.",
 		"TO TURN IT OFF: PAUSE > AUDIO > MICROPHONE. Turning it off deletes every clip kept.",
 		"The game is complete without it. If you allow it, Android will ask you to confirm.",
