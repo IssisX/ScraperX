@@ -159,7 +159,9 @@ own gate.
     hanging mass, carried by something falling, tipping or rolling, a run and leap the
     player's momentum decides. A few ladders and pulls may stay (the owner, 2026-10-20: *"you can
     have a few of them in the game as theres many many levels/bands and a brand new experience
-    for each one isnt REALLY feasible"*). The ladders and pull-started lifts already on the route from
+    for each one isnt REALLY feasible"*). What gets replaced is ladders and the like, never a working
+    machine (the owner, 2026-10-20: *"I much much much much rather you replace stupid things like
+    ladders rather than working machines"*); a machine may at most change how it is started. The ladders and pull-started lifts already on the route from
     grade to the +221 m ring stay as they are (the owner, 2026-10-08: *"Leave S2, S3 and the
     ladders alone, just build machines"*); S1's weight start (cycle 1c) was the only one changed.
 12. **Fill the gaps with machines.** The owner (2026-10-08): *"I want you to fill empty gaps with
