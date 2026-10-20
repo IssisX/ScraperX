@@ -31,6 +31,14 @@ Ideas from designs 2 and 3, and whether the spec takes them:
 | Start by throwing an iron flange to knock a trip weight loose | 3 | no (the fall starts it) |
 | Door held open: the machine spends itself | 3 | yes, as a test |
 
+### Picked (2026-10-20)
+
+The owner asked Claude to choose as the owner would: design 1 as specified, with the glass panels,
+the self-closing doors, the lights riding with the car, the drips, the rumble and the float at the
+top. Not taken: the throw start (the throw stays the Matron's) and the rider's weight as power. The
+deck is far enough from S1's scale plate (a fall sets it off, not weight); old saves refused is
+accepted for now. Built on `claude/chiller-drop`, then merged.
+
 ## The glass spares tube, 484 to 640 m
 
 In place of the crane band's backup ladders; the runaway wagon, crane jib and kinetic winch stay
