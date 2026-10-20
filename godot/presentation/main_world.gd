@@ -41,18 +41,19 @@ func _build_world() -> void:
 	# A real value ladder: near-black iron in shadow, mid rust for the frame,
 	# brighter oxide only where light catches an edge. Bump-mapped: these
 	# cover most of the structure's surface area, so this is where per-pixel
-	# normal detail matters most.
-	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_steel)
-	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_steel)
-	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_steel)
-	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_steel)
-	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_steel)
+	# normal detail matters most -- pitted where rusted, smooth where not.
+	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_smooth)
+	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust)
+	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_rust)
+	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_rust)
+	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth)
 	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
 	var hazard := _material(Color("a04d16"), 0.18, 0.76)
 	var tar := _material(Color("0e0f11"), 0.05, 0.62)
 	var timber := _material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber)
-	# New accents: living colour against the rust.
-	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_steel)
+	# New accents: living colour against the rust. Copper pipe under a thin
+	# patina is smooth.
+	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_smooth)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.

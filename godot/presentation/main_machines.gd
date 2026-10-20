@@ -107,14 +107,15 @@ func _build_kit() -> void:
 	_kit_root.name = "KitPresentation"
 	add_child(_kit_root)
 	# Indexed by the native's Material enum: steel, rust, timber, concrete,
-	# hazard, galvanised, rubble, yellow.
+	# hazard, galvanised, rubble, yellow. The steel and the galvanized are
+	# smooth (a machine's frame, a tank, a rail); only the rust is pitted.
 	var palette: Array[Material] = [
-		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_steel),
-		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_steel),
+		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_smooth),
+		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust),
 		_material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber),
 		_material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("a04d16"), 0.18, 0.76),
-		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_steel),
+		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth),
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("c19a2a"), 0.2, 0.62),
 	]

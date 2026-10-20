@@ -35,23 +35,24 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	var bar_mesh := BoxMesh.new()
 	bar_mesh.size = Vector3(0.05, CONTAINER_HALF.y * 2.0 * 0.9, 0.05)
 	bar_mesh.material = bar_material
-	# Weathered like the rest of the steel: the bump and the streaks of rust.
+	# Weathered like the rest of the steel: grime and the streaks of rust, the
+	# paint smooth, the rusted beams pitted.
 	var drum_paint: Array[Material] = []
 	for colour in [Color("2c4a73"), Color("a9851f"), Color("7c2a1e")]:
-		drum_paint.append(main._material(colour, 0.35, 0.72, Color.BLACK, 1.0, main._bump_steel))
+		drum_paint.append(main._material(colour, 0.35, 0.72, Color.BLACK, 1.0, main._bump_smooth))
 	var beam_paint: Array[Material] = [
-		main._material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, main._bump_steel),
-		main._material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, main._bump_steel)]
+		main._material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, main._bump_smooth),
+		main._material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, main._bump_rust)]
 	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
 	# argon blue), their caps left steel; the reels' wound cable black
 	# rubber; the toolboxes red, blue or yellow enamel.
 	var bottle_paint: Array[Material] = []
 	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
-		bottle_paint.append(main._material(colour, 0.3, 0.55, Color.BLACK, 1.0, main._bump_steel))
+		bottle_paint.append(main._material(colour, 0.3, 0.55, Color.BLACK, 1.0, main._bump_smooth))
 	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
 	var toolbox_paint: Array[Material] = []
 	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
-		toolbox_paint.append(main._material(colour, 0.45, 0.45, Color.BLACK, 1.0, main._bump_steel))
+		toolbox_paint.append(main._material(colour, 0.45, 0.45, Color.BLACK, 1.0, main._bump_smooth))
 	var stock: PackedInt32Array = native.get_loose_stock()
 	for i in range(0, stock.size() - 2, 3):
 		var entity := int(native.get_kit_body_entity_id(stock[i]))

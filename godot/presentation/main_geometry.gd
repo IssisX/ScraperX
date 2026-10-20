@@ -214,13 +214,20 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 # with) has no SSAO/SSIL/SDFGI -- those are Forward+-only -- so per-pixel
 # normal perturbation is the actual lever available here for surface detail,
 # and it is a basic, renderer-agnostic feature confirmed working by direct
-# probe (NoiseTexture2D.as_normal_map). Three shared textures (steel, timber,
-# concrete), not one per material instance, since the grain frequency is what
+# probe (NoiseTexture2D.as_normal_map). One shared texture per kind of
+# surface, not one per material instance, since the grain frequency is what
 # distinguishes them and dozens of unique noise textures would cost more than
-# they are worth.
-var _bump_steel: NoiseTexture2D
+# they are worth. The relief goes with the surface, not the metal under it:
+# rust, concrete and timber are rough and pitted, a few centimeters to a pit;
+# paint, enamel, galvanizing, mill scale and copper under its patina are
+# smooth (a drum, a gas bottle, the forklift's propane tank, a machine's
+# frame, a deck plate, a rail, a pipe), and take only a sheet's slight
+# waviness, about a meter across and shallow. Pitted, a painted tank read as
+# rock (the owner's playtest, 2026-10-20).
+var _bump_rust: NoiseTexture2D
 var _bump_timber: NoiseTexture2D
 var _bump_concrete: NoiseTexture2D
+var _bump_smooth: NoiseTexture2D
 # Weathering (task 93, the look pass): every bumped surface also takes a shared
 # grime map, blotches a metre or so across that darken the base colour by up
 # to a third, and steel and concrete take rust and water streaks running down
@@ -231,9 +238,10 @@ var _streaks: ImageTexture
 var _detail_mask: ImageTexture
 
 func _build_bump_textures() -> void:
-	_bump_steel = _make_bump_texture(1, 0.5, 1.8, false)
+	_bump_rust = _make_bump_texture(1, 0.5, 1.8, false)
 	_bump_timber = _make_bump_texture(2, 0.7, 2.6, true)
 	_bump_concrete = _make_bump_texture(3, 0.7, 1.3, false)
+	_bump_smooth = _make_bump_texture(4, 0.03, 0.6, false)
 	_weathering = _make_weathering_texture()
 	_streaks = _make_streak_texture()
 	var white := Image.create(4, 4, false, Image.FORMAT_L8)
@@ -325,7 +333,7 @@ func _material(color: Color, metallic: float, roughness: float,
 		material.normal_texture = bump
 		if _weathering != null:
 			material.albedo_texture = _weathering
-		if _streaks != null and (bump == _bump_steel or bump == _bump_concrete):
+		if _streaks != null and bump != _bump_timber:
 			material.detail_enabled = true
 			material.detail_albedo = _streaks
 			material.detail_mask = _detail_mask
