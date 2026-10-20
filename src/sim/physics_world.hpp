@@ -282,7 +282,7 @@ private:
 
     // ---- AS-003 carry ---------------------------------------------------------
     // Where the carried body's handle is held, relative to the player's
-    // centre: forward along a horizontal bearing, a little above the centre.
+    // center: forward along a horizontal bearing, a little above the center.
     [[nodiscard]] static JPH::Vec3 carry_hand_offset(const JPH::Vec3 bearing) noexcept {
         return bearing * kCarryHandForward + JPH::Vec3(0.0F, kCarryHandUp, 0.0F);
     }
@@ -813,7 +813,7 @@ public:
     Lip edge_affordance_{};
     bool sprinting_ = false;
     bool balancing_ = false;
-    // The XCoM across a beam, as a fraction of the centre of pressure's reach.
+    // The XCoM across a beam, as a fraction of the center of pressure's reach.
     float beam_xcom_ = 0.0F;
     JPH::Vec3 beam_lean_{JPH::Vec3::sZero()};
     // The pendulum's velocity across the beam (relative to it), and whether

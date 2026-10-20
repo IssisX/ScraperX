@@ -644,7 +644,7 @@ struct ORide final {
     double seconds = 0.0;
     double gain = 0.0;
     double released = 0.0;
-    double min_tension = 1.0e9;     // the rope, from the cab's first metre to its last two
+    double min_tension = 1.0e9;     // the rope, from the cab's first meter to its last two
     double wheel_gap = 0.0;         // the wheel's turn against the cab's rise, rad
 };
 

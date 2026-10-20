@@ -57,7 +57,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                        0.6F,
                        Simulation::kStaticDeckEntityId);
 
-    // The neighbouring shaft: 1.6 km of unclimbable mass standing on
+    // The neighboring shaft: 1.6 km of unclimbable mass standing on
     // grade, set well back from the climbable frame. Overhead and close,
     // it read as a black void hanging over the stack; begun 159 m up
     // with nothing under it, it read as a skyscraper floating in the air.
@@ -309,7 +309,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
     // Across the well, from the band's inner edge (the top post 1.4 m in from
     // it, its stand toward the well hugging the edge, the rest of the band
-    // open; the bottom post a metre and a half in from the far band's) to the
+    // open; the bottom post a meter and a half in from the far band's) to the
     // far band of the deck below: south to north on the even decks, east to
     // west on the odd, along the band wherever it first fits; and where the
     // near band has no room, from the far band back across.
@@ -1000,7 +1000,7 @@ JPH::BodyID Simulation::PhysicsWorld::body_id_for_entity(const std::uint64_t ent
 // table is generated from the Godot builders (godot/presentation/
 // solid_export.gd), so the world these tests walk is the world that is
 // drawn. Built last, so a drawn mirror of a body already owned here is
-// recognised by its bounds and skipped rather than doubled -- a second
+// recognized by its bounds and skipped rather than doubled -- a second
 // coincident body would split ledge probes and support identity.
 void Simulation::PhysicsWorld::build_world_solids(JPH::BodyInterface &bodies) {
     for (const WorldSolidBox &box : kWorldSolidBoxes) {
@@ -1138,7 +1138,7 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
         }
     }
 
-    // Columns: corners and edge mid-spans, one run per storey.
+    // Columns: corners and edge mid-spans, one run per story.
     for (int level = 0; level < kStackLevelCount; ++level) {
         const float base_y = static_cast<float>(level) * kStackLevelHeight;
         const float column_half = kStackLevelHeight * 0.5F;
