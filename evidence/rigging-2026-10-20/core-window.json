@@ -1,0 +1,30 @@
+{
+  "objective": "Real Jolt Kit rigging owner acceptance",
+  "budget_seconds": 600.0,
+  "started": 1792499863.34813,
+  "failures": 0,
+  "trials": [
+    {
+      "stage": "core-acceptance",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/core-acceptance-build.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/rigging_system_tests.cpp": "9a68fe986d2980338ac7c221ef366a1dded992f4ca601e780a556e6cebe11062",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/rigging_system.cpp": "77a04ff79706ca324d49d2611738dad39b450c6c975324702c52bad79f5c68dc",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/rigging_system.hpp": "910cfa5fe59f5ef3f14d69645368da0ad47fe4f71a320d77b20180dd79033fe2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/fixed_guide_cable.hpp": "c4cb902454711ce416afdcfb4abe4ecfa293bc5041f6795005453e649a6b9c1b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/mechanism_kit.cpp": "a2fb5fc736fd1cbc76dac2ab20a723abef0aca5d977dea6535f06fa17df69014",
+        "/data/data/com.termux/files/usr/tmp/scraperx-beam-ramp-20261019/libbeam-ramp.a": "0ec1e265a0a7e85cafec43291a1005f018a22c8edff93f3bbba41b7b389f61b2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792499863.587219,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/core-window.trial-1.log",
+      "exit": 0,
+      "finished": 1792499891.962612
+    }
+  ],
+  "reassessments": [],
+  "pending": false
+}

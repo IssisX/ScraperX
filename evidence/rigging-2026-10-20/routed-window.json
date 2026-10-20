@@ -1,0 +1,61 @@
+{
+  "objective": "Passive shared-length moving-guide and physical sphere cable: measure drift, reciprocal torque and energy without bias",
+  "budget_seconds": 600.0,
+  "started": 1792499485.2585487,
+  "failures": 1,
+  "trials": [
+    {
+      "stage": "primitive",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-run.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.cpp": "6f8b191d40eec9ae4930182c157ce8541f4827db8469fe7ba8a76481aa6569b0",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.hpp": "494a37b7ceb2d2c17f2ad67dc1409ca48d96f4a8f225d801744dea7d60b01e64",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/routed_cable_tests.cpp": "fd7e3bd817b11217d29b968324d89f3120aa55c8d1d89f7502959fb1ab97742a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792499485.4465997,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-window.trial-1.log",
+      "exit": 0,
+      "finished": 1792499504.2624881
+    },
+    {
+      "stage": "loaded-sphere",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-run.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.cpp": "0ba23efd0c23e375a43eead3d6d558dbe4220f775601d31e84d487fc92eebbc2",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.hpp": "494a37b7ceb2d2c17f2ad67dc1409ca48d96f4a8f225d801744dea7d60b01e64",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/routed_cable_tests.cpp": "ec20c48f259f893a1272bf3a6e446cd3e140b249407b69e3a24e6158478b2bbf",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792499552.8152368,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-window.trial-2.log",
+      "exit": 1,
+      "finished": 1792499569.9260194
+    },
+    {
+      "stage": "loaded-sphere-release",
+      "command": [
+        "python",
+        "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-run.py"
+      ],
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.cpp": "d55cc03aa350c52f4c5ef7380b4d69cb41e242a58103966edee52621b02b520b",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/routed_cable.hpp": "c653a685ece61e1e5a14e9c9f57d1e633de2bc656a98539f18811ec3616ec8bd",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/routed_cable_tests.cpp": "246523f023cb05efc084edb40ec5376f628158b9bf816b5b140b6bd9853a112d",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a": "325b1ac1180b6582779412563f4dadf13742383bab663f295cd10016f13539d2"
+      },
+      "started": 1792499594.666721,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-window.trial-3.log",
+      "exit": 0,
+      "finished": 1792499609.6924853
+    }
+  ],
+  "reassessments": [],
+  "pending": false
+}

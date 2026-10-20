@@ -72,6 +72,9 @@ add_library(scraperx_sim STATIC
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
+    src/sim/rigging_system.cpp
+    src/sim/rigging_bay.cpp
+    src/sim/routed_cable.cpp
     src/sim/facade_route.cpp
     src/sim/cargo_net_route.cpp
     src/sim/cargo_net.cpp
@@ -105,6 +108,8 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
+set_source_files_properties(src/sim/rigging_system.cpp src/sim/routed_cable.cpp PROPERTIES COMPILE_OPTIONS
+    "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -243,6 +248,14 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_workshop_roof_route_tests tests/workshop_roof_route_tests.cpp)
     target_link_libraries(scraperx_workshop_roof_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.workshop_roof_route COMMAND scraperx_workshop_roof_route_tests)
+
+    foreach(rigging_check IN ITEMS rigging_system routed_cable)
+        add_executable(scraperx_${rigging_check}_tests tests/${rigging_check}_tests.cpp)
+        target_compile_options(scraperx_${rigging_check}_tests PRIVATE
+            $<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti> $<$<CXX_COMPILER_ID:MSVC>:/GR->)
+        target_link_libraries(scraperx_${rigging_check}_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.${rigging_check} COMMAND scraperx_${rigging_check}_tests)
+    endforeach()
 
     add_executable(scraperx_loose_gangway_mechanics_tests tests/loose_gangway_mechanics_tests.cpp)
     target_compile_options(scraperx_loose_gangway_mechanics_tests PRIVATE

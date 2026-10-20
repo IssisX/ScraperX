@@ -1,0 +1,5 @@
+REPEATED_GUIDE vy=-1.49012e-08 spin=0 tension_n=2250 work_j=-5
+LOADED_GUIDE duration_s=5 max_length_error_m=0.00462723 max_spin_rps=5.30617 peak_tension_n=136.164 max_mechanical_gain_j=0 row_work_j=-7.04814
+SPHERE_STRIKE contact_frames=46 peak_tension_n=688.649 max_spin_rps=1.80711 max_length_error_m=0.000970364 energy_gain_j=0 row_work_j=-7.39616
+SPHERE_RELEASE contacts=0 line_nodes=2 remaining_loaded_tension_n=490.404 sphere_reaction=0
+PASS ROUTED_CABLE 3

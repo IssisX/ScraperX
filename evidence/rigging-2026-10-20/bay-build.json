@@ -1,0 +1,32 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--bind",
+    "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+    "--",
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-fno-rtti",
+    "-O2",
+    "-DNDEBUG",
+    "-pthread",
+    "-fPIC",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+    "-c",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/rigging_bay.cpp",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/rigging_bay.o"
+  ],
+  "exit": 0
+}

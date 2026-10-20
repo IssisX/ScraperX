@@ -1,0 +1,2 @@
+RIGGING_COUNTERWEIGHT rise_m=0.394354 descent_m=-0.419354 tension_n=1308
+PASS RIGGING_SYSTEM real_jolt_kit=1 public_player_route=unverified

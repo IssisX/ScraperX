@@ -1,0 +1,11 @@
+# Rigging native foundation — 2026-10-20
+
+This increment supplies a bounded installed-line graph, shares the existing fixed-guide pulley law with Kit, and adds a multi-body routed-cable owner. It is not the completed playable M1 counterweight route. No rigging controls or encounter are yet connected to the public Simulation.
+
+At base1209b322 on Termux/Ubuntu ARM64, `python /data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/core-acceptance-build.py` compiled current Kit/rigging/test sources with warnings as errors and ran the real Jolt fixture: exit0, `PASS RIGGING_SYSTEM real_jolt_kit=1 public_player_route=unverified`. It measured rise0.394354m, descent-0.419354m and tension1308N. Draft isolation, loaded unclip rejection, cut momentum, obstruction/capacity preservation, stale handles and ordered body/graph checkpoint restore passed. The Kit fixture starts with zero ropes; this does not prove preservation of an existing Kit rope.
+
+`python /data/data/com.termux/files/usr/tmp/scraperx-rigging-20261020/routed-run.py` final trial3 exited0, `PASS ROUTED_CABLE 3`. The moving-guide fixture measured maximum length error0.00462723m over5s, reciprocal off-centre motion and no positive mechanical-energy gain; sphere strike/separation retained endpoint load and cleared sphere contact/reaction. The sphere pilot supports one actual static/dynamic sphere, not arbitrary world-mesh wrapping or high-speed CCD. Failed trial2 is retained in the experiment record; it expected an unloaded rope after obstacle separation despite a loaded endpoint, and was corrected against that physical contract.
+
+The authored bay builder compiled with warnings as errors (bay-build.json exit0). Its ballast, lever, limits, public input path, presentation, whole-source build and Android/device behavior remain unverified here. The candidate workflow now executes both native acceptance programs without removing existing gates. Actual GitHub results determine CI status; earlier d90 candidate green/full-suite red is separate evidence.
+
+Source hashes, commands and actual outputs are in the accompanying receipts. Native constraints remain separate from Kit runtime rope/body vectors and reconstruct cold after body restoration. M1 integration is next; M2–M5 remain required.

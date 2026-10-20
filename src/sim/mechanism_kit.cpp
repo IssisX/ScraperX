@@ -1,4 +1,5 @@
 #include "sim/mechanism_kit.hpp"
+#include "sim/fixed_guide_cable.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -773,17 +774,9 @@ void Kit::connect_rope(Rope &rope) {
         return;
     }
     const BodyIndex end = rope_end_body(rope);
-    JPH::PulleyConstraintSettings settings;
-    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-    settings.mBodyPoint1 = world_point(rope.body1, rope.point1);
-    settings.mBodyPoint2 = world_point(end, rope_end_point(rope));
-    settings.mFixedPoint1 = rope.fixed1;
-    settings.mFixedPoint2 = rope.fixed2;
-    settings.mRatio = rope.ratio;
-    settings.mMinLength = 0.0F;
-    settings.mMaxLength = rope.length;
-    rope.constraint = static_cast<JPH::PulleyConstraint *>(
-        settings.Create(jolt_body(rope.body1), jolt_body(end)));
+    rope.constraint = make_fixed_guide_cable(jolt_body(rope.body1),
+        world_point(rope.body1, rope.point1), rope.fixed1, jolt_body(end),
+        world_point(end, rope_end_point(rope)), rope.fixed2, rope.ratio, rope.length);
     system_.AddConstraint(rope.constraint);
     auto &bodies = system_.GetBodyInterface();
     bodies.ActivateBody(bodies_[rope.body1.value].id);
