@@ -112,7 +112,14 @@ own gate.
 
 ### 2.6 Rules kept from the first plan
 
-1. **No link, no lift.** Stored energy stays stored until the player completes the chain.
+1. **No link, no lift,** for a machine the player sets going: its stored energy stays stored until
+   the player completes the chain. Not every machine is the player's to set going (the owner,
+   2026-10-20: the machines do not all have to be man powered). A machine may run on its own power
+   (a motor, steam, water, the tower's plant, a crew working it) whether or not the player is there:
+   a paternoster that never stops, a bucket elevator, a man engine's rods rocking, a crane's hook
+   swinging past on its cycle. The player's part is to board it, time a jump onto it, ride it, hitch
+   onto it or stop it. Its power is finite and rated like any motor's, its cycle comes from its
+   physics and its start state (rule 10: no clock, no randomness), and energy still pays for height.
 2. **Energy pays for height,** checked from body states every tick.
 3. **Every link is physical:** contact, constraint or force; a simplified model (water, rubble)
    is declared in the stage record.
@@ -154,7 +161,9 @@ own gate.
     be the backup of rule 8), and no lift that starts when the player pulls something. A stage
     is a physical experience the route has not had yet: thrown by stored energy, swung on a
     hanging mass, carried by something falling, tipping or rolling, a run and leap the
-    player's momentum decides. The ladders and pull-started lifts already on the route from
+    player's momentum decides, or boarded, ridden or caught on a machine already running on its
+    own power (rule 1). A few ladders and pulls may stay: with this many bands a new experience
+    on every one is not feasible (the owner, 2026-10-20). The ladders and pull-started lifts already on the route from
     grade to the +221 m ring stay as they are (the owner, 2026-10-08: *"Leave S2, S3 and the
     ladders alone, just build machines"*); S1's weight start (cycle 1c) was the only one changed.
 12. **Fill the gaps with machines.** The owner (2026-10-08): *"I want you to fill empty gaps with
