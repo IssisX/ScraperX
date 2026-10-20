@@ -37,12 +37,20 @@ degrees, and that her hair hangs and swings; with `--out=<dir>` it saves a
 studio render of every pose. The nurse's cap is left off for now (it read as
 a slab over her hair).
 
-What works, in the owner's words (2026-10-20): the sight of her climbing,
-*"to see her ACTUALLY climbing/hanging able to do monkey bar type moves or
-other usually parkour moves I have to say that the instantaneous sight of me
-seeing the matron hanging and climbing freaked me out!"*; and of her look,
-*"you are definitely on the right track and seem to understand the type of
-scary in looking for"*. When her work resumes, her climbing stays in sight.
+What works, in the owner's words (2026-10-20): the sight of her hanging,
+grotesque. First: *"to see her ACTUALLY climbing/hanging able to do monkey bar
+type moves or other usually parkour moves I have to say that the
+instantaneous sight of me seeing the matron hanging and climbing freaked me
+out!"*. Then, correcting a reading of that as "her climbing": *"it is the
+sight of seeing a grotesque old scary lady hanging. Its not just that shes
+climbing, its mostly the way shes contorting or looking grotesque or scary
+some other way. It shocks/stuns and scares/freaks humans out to see this for
+many reasons but it also hits intelligence centers in the brain not just fear
+centers (the way we want it!)"*. Of her look: *"you are definitely on the
+right track and seem to understand the type of scary in looking for"*. When
+her work resumes, how she looks as she hangs and contorts stays central, more
+than the climbing itself: a sight that works on the mind, not only the
+nerves.
 
 Kept here so none of it is lost when a session's scratch space goes away
 (the owner, 2026-10-20: "PLEASE DON'T LOSE THAT"). This is design work, not
