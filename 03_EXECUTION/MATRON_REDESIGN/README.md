@@ -21,7 +21,11 @@ writes `godot/presentation/life/matron/`, which the game reads at runtime:
   laddered and holed to the skin.
 - Long, thin, grey hair grown from her scalp as about 1,500 lank strands in
   greasy clumps, combed back toward her nape with loose locks by her face,
-  hung on ten chains of bones that swing with her (`matron_rig.gd`).
+  hung on twenty chains of bones that swing with her (`matron_rig.gd`), each
+  lock with its own weight and give, so the hair moves in clumps, not as one
+  piece, and lifts a little in slow gusts.
+- A dull grey-green uniform, so her pale skin, her off-white collar and her
+  grey hair stand apart from it.
 - Real eyes (MakeHuman's CC0 high-poly eyes, a washed-out grey iris, a
   yellowed bloodshot white, a clear cornea) on their own bones that turn
   onto the player's eyes, darting until she has found you.

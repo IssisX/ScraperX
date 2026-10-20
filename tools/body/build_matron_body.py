@@ -63,9 +63,16 @@ BODY_AGE = [("targets/stomach/stomach-pregnant-incr.target", 0.55),   # the soft
 
 # Her hair: long01's sheet, thinned to lank strands, hung on chains of bones
 # that matron_rig.gd swings (gravity, her motion, her head and back in the way).
-HAIR_CHAINS = 10
-HAIR_SEGMENTS = 4
-HAIR_SEGMENT_M = 0.11
+HAIR_CHAINS = 20
+HAIR_SEGMENTS = 5
+HAIR_SEGMENT_M = 0.09
+
+# Her dress: a faded institutional blue-grey, so it reads apart from her pale
+# skin and grey hair (the owner, 2026-10-20: "everything is a shade of white
+# and blends into each other"); the collar, pocket and turned edges stay
+# off-white.
+DRESS = "7d8a8c"
+DRESS_DARK = "6c787a"
 
 
 def linear(hex_srgb):
@@ -268,7 +275,7 @@ def skin_maps(out, UV, T, regions):
     lum = a @ np.array([0.299, 0.587, 0.114])
     # pale and sallow: most of the pink gone, a cold yellow-grey in its place
     tint = np.array([1.0, 0.965, 0.90])
-    pale = (0.5 * a + 0.5 * lum[..., None] * tint) * 0.94
+    pale = (0.5 * a + 0.5 * lum[..., None] * tint) * 0.84
     rng = np.random.default_rng(77)
 
     def region(name, grow=0.0):
@@ -621,7 +628,7 @@ def build():
         add_bone("eye_" + s, "head", eye_centre[s], "eye")
     head_c = byname["head"]["pos"] + np.array([0.0, 0.085, 0.01])
     root_y = float(byname["head"]["pos"][1]) + 0.025
-    chain_az = np.linspace(0.42 * math.pi, 1.58 * math.pi, HAIR_CHAINS)   # 0 = her front, pi = her back
+    chain_az = np.linspace(0.36 * math.pi, 1.64 * math.pi, HAIR_CHAINS)   # 0 = her front, pi = her back
     chains = []
     for c, az in enumerate(chain_az):
         root = np.array([head_c[0] + 0.088 * math.sin(az), root_y, head_c[2] + 0.088 * math.cos(az)])
@@ -815,7 +822,7 @@ def build():
         for _ in range(3 if on_arm else 10):
             S[lp] = 0.5 * S[lp] + 0.25 * (np.roll(S[lp], 1, 0) + np.roll(S[lp], -1, 0))
     Ns = h.vertex_normals(S, Tt)
-    tunic.add(S[vi], Ns[vi], flipv(VT[ti] * 8.0), Wfull[vi], Tc, cloth_color(V[vi], "d6d3cb", hem=False))
+    tunic.add(S[vi], Ns[vi], flipv(VT[ti] * 8.0), Wfull[vi], Tc, cloth_color(V[vi], DRESS, hem=False))
     for lp in bl:
         lp = np.array(lp)
         band_part = h.Part("_band", "cloth")
@@ -823,7 +830,7 @@ def build():
         P_, N_, UV_, W_, T_, _ = band_part.arrays()
         tunic.add(P_, N_, UV_, W_, T_, cloth_color(P_, "c9c5bb", hem=False))
     parts.append(tunic)
-    mat("cloth", linear("d6d3cb"), 0.9, double=True)
+    mat("cloth", linear(DRESS), 0.9, double=True)
     # the collar
     neck_loop = max(bl, key=lambda lp: S[lp, 1].mean())
     NL = S[neck_loop]
@@ -901,7 +908,7 @@ def build():
     PL = S + Ns * 0.002
     plk = h.Part("placket", "cloth")
     vi4, ti4, Tc4 = h.split_corners(V, VT, [t for t, k2 in zip(body_tris, top_tris) if k2], pl_tris)
-    plk.add(PL[vi4], h.vertex_normals(PL, Tpl)[vi4], flipv(VT[ti4] * 8.0), Wfull[vi4], Tc4, cloth_color(V[vi4], "cfcbc1", hem=False))
+    plk.add(PL[vi4], h.vertex_normals(PL, Tpl)[vi4], flipv(VT[ti4] * 8.0), Wfull[vi4], Tc4, cloth_color(V[vi4], DRESS_DARK, hem=False))
     parts.append(plk)
     btn = h.Part("buttons", "button")
     plv = np.unique(Tpl.ravel())
@@ -1007,7 +1014,7 @@ def build():
         skirt.add(bind_pts, -nrm, np.zeros((len(pts), 2)), skirt_w(pts), np.array(tri_)[:, ::-1])
     P_all = np.concatenate(skirt.P)
     Vr_all, _ = h.skin_points(P_all, np.concatenate(skirt.W), Srest)
-    skirt.C = [cloth_color(Vr_all, "d0ccc2")]
+    skirt.C = [cloth_color(Vr_all, DRESS)]
     skirt.C = [skirt.C[0][sum(len(p) for p in skirt.P[:i]):sum(len(p) for p in skirt.P[:i + 1])] for i in range(len(skirt.P))]
     parts.append(skirt)
     # the belt over the join, and its buckle

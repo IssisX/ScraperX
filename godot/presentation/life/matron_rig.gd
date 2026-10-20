@@ -30,7 +30,13 @@ const SACCADE_PITCH := 0.05
 # clumps and settles without bouncing (the owner, 2026-10-20).
 const HAIR_DAMP := 0.84
 const HAIR_GRAVITY := Vector3(0.0, -9.81, 0.0)
-const HAIR_STIFFNESS := [0.22, 0.1, 0.05, 0.025]
+const HAIR_STIFFNESS := [0.22, 0.12, 0.07, 0.04, 0.02]
+# Each lock its own: its weight and give varied a little, so neighbors never
+# move as one piece; and the wind up on the deck in slow gusts.
+const LOCK_VARY := 0.35
+const WIND_MS2 := 0.7
+const WIND_RATE := 0.23
+const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
 const BACK_RADIUS := 0.17
@@ -47,6 +53,7 @@ var stand_body_y := 1.0
 var _chains: Array = []
 var _skull_local := Vector3.ZERO
 var _skull_radius := 0.1
+var _wind_clock := 0.0
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -67,8 +74,10 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 		var idx: Array = []
 		for n in c["bones"]:
 			idx.append(int(bone_idx[n]))
+		var n_chain := _chains.size()
 		_chains.append({"idx": idx, "root_local": _v(c["root"]) - head_at, "seg": float(c["segment_m"]),
-			"pts": [], "prev": []})
+			"pts": [], "prev": [], "damp": HAIR_DAMP + (_hash(n_chain * 3 + 1) - 0.5) * 0.08,
+			"give": 1.0 + (_hash(n_chain * 3 + 2) - 0.5) * 2.0 * LOCK_VARY, "phase": _hash(n_chain * 3 + 3) * TAU})
 	if hair.has("skull"):
 		_skull_local = _v(hair["skull"]) - head_at
 		_skull_radius = float(hair["skull_radius"])
@@ -325,6 +334,7 @@ func step_hair(delta: float) -> void:
 	if _chains.is_empty():
 		return
 	var dt := clampf(delta, 1.0 / 240.0, 1.0 / 30.0)
+	_wind_clock += dt
 	var head := bone_world("head")
 	var skull := head * _skull_local
 	var chest := bone_world("chest")
@@ -345,15 +355,22 @@ func step_hair(delta: float) -> void:
 				prev.append(root + down * seg * float(k))
 		pts[0] = root
 		prev[0] = root
+		var damp: float = ch["damp"]
+		var give: float = ch["give"]
+		# A gust rises and falls on its own, each lock catching it a little out of
+		# step with its neighbors; the tips catch the most of it.
+		var phase: float = ch["phase"]
+		var gust := maxf(0.0, sin(TAU * WIND_RATE * _wind_clock)) * (0.6 + 0.4 * sin(TAU * WIND_RATE * 3.1 * _wind_clock + phase))
+		var wind := WIND_DIR * WIND_MS2 * gust
 		for k in range(1, n + 1):
 			var cur: Vector3 = pts[k]
-			var vel: Vector3 = (cur - (prev[k] as Vector3)) * HAIR_DAMP
+			var vel: Vector3 = (cur - (prev[k] as Vector3)) * damp
 			prev[k] = cur
-			pts[k] = cur + vel + HAIR_GRAVITY * dt * dt
+			pts[k] = cur + vel + (HAIR_GRAVITY + wind * (float(k) / float(n))) * dt * dt
 		for _it in HAIR_ITERATIONS:
 			for k in range(1, n + 1):
 				var above: Vector3 = pts[k - 1]
-				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) / float(HAIR_ITERATIONS))
+				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
 				var d := q - above
 				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
 				q = _outside(q, skull, _skull_radius)
