@@ -58,6 +58,10 @@ void Simulation::PhysicsWorld::apply_rigging_commands(const StepCommands &comman
         }
         switch (command.kind) {
         case RiggingCommandKind::Equip:
+            if (traversal_line_) {
+                traversal_line_->equip(false);
+                if (traversal_state_ == TraversalState::LineSwing) traversal_state_ = TraversalState::None;
+            }
             if (allowed()) rigging_->equip(true);
             break;
         case RiggingCommandKind::Unequip: clear_rigging_input(); break;

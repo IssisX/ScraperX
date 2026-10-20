@@ -117,6 +117,8 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     sling_action_ = sling_drop_ = false;
     rigging_command_count_ = 0;
     rigging_cut_held_ = false;
+    traversal_line_command_count_ = 0;
+    traversal_line_reel_input_ = 0;
     snapshot_ = physics_world_->state();
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
@@ -159,6 +161,8 @@ bool Simulation::restart_checkpoint() noexcept {
     sling_action_ = sling_drop_ = false;
     rigging_command_count_ = 0;
     rigging_cut_held_ = false;
+    traversal_line_command_count_ = 0;
+    traversal_line_reel_input_ = 0;
     snapshot_ = physics_world_->state();
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
@@ -227,6 +231,7 @@ bool Simulation::request_release() noexcept {
     forklift_tool_request_ = ForkliftToolRequest::None;
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
                          snapshot_.traversal_state == TraversalState::Climbing ||
+                         snapshot_.traversal_state == TraversalState::LineSwing ||
                          snapshot_.traversal_state == TraversalState::Lowering;
     const bool standing =
         snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
@@ -647,6 +652,9 @@ void Simulation::step_fixed() noexcept {
     commands.rigging_aim = rigging_aim_;
     commands.rigging_commands = rigging_commands_;
     commands.rigging_command_count = rigging_command_count_;
+    commands.traversal_line_commands = traversal_line_commands_;
+    commands.traversal_line_command_count = traversal_line_command_count_;
+    commands.traversal_line_reel = traversal_line_reel_input_;
     commands.grapple_aim = grapple_aim_;
     commands.grapple_reel = grapple_reel_input_;
     commands.grapple_equip_requested = grapple_equip_requested_;
@@ -657,6 +665,7 @@ void Simulation::step_fixed() noexcept {
     commands.grapple_auto_reel_requested = grapple_auto_reel_requested_;
     commands.rigging_cut_held = rigging_cut_held_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
+    traversal_line_command_count_ = 0;
     sling_action_ = sling_drop_ = false;
     rigging_command_count_ = 0;
     grapple_equip_requested_ = grapple_action_requested_ = grapple_release_requested_ = false;
@@ -853,6 +862,7 @@ void Simulation::capture_render_history() noexcept {
     }
     previous_slingshot_state_ = slingshot_state();
     previous_grapple_gun_state_ = grapple_gun_state();
+    previous_traversal_line_state_ = traversal_line_state();
     previous_forklift_state_ = forklift_state();
     if (const auto *rig = physics_world_->rigging())
         for (std::size_t i = 0; i < previous_rigging_handles_.size(); ++i)

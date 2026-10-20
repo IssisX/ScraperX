@@ -33,6 +33,8 @@ const B_SLING := &"sling"
 const B_REEL := &"slingshot_reel"
 const B_AUTO_REEL := &"auto_reel"
 const B_GRAPPLE := &"grapple"
+const B_LINE := &"toggle_traversal_line"
+const B_PACK_LINE := &"pack_traversal_line"
 const B_RIGGING := &"toggle_rigging"
 const B_UNDO := &"rigging_undo"
 const B_UNCLIP := &"rigging_unclip"
@@ -101,7 +103,7 @@ var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
 	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE,
 	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL, B_RIG, B_UNRIG,
-	B_RIGGING, B_UNDO, B_UNCLIP, B_CUT]
+	B_RIGGING, B_UNDO, B_UNCLIP, B_CUT, B_LINE, B_PACK_LINE]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -235,6 +237,8 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	_place(B_GRAPPLE, Vector2(grapple_x, _safe.position.y + 108.0 * _u), 60.0)
 	for entry in [[B_RIGGING, 300.0], [B_UNDO, 480.0], [B_UNCLIP, 660.0], [B_CUT, 840.0]]:
 		_place(entry[0], Vector2(grapple_x, _safe.position.y + entry[1] * _u), 60.0)
+	_place(B_LINE, Vector2(grapple_x - 180.0 * _u, _safe.position.y + 108.0 * _u), 60.0)
+	_place(B_PACK_LINE, Vector2(grapple_x - 180.0 * _u, _safe.position.y + 300.0 * _u), 60.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
@@ -310,7 +314,7 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 
 
 func _verb_for(id: StringName) -> StringName:
-	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG, B_RIGGING, B_UNDO, B_UNCLIP]:
+	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG, B_RIGGING, B_UNDO, B_UNCLIP, B_LINE, B_PACK_LINE]:
 		return id
 	match id:
 		B_JUMP:
@@ -603,6 +607,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	drop.shown = ctx.get("drop_ok", hanging)
 	drop.label = ("RELEASE" if ctx.get("grapple_line_attached", false) else "STOW") \
 		if ctx.get("grapple_equipped", false) else ("LET GO" if passive_release else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN"))
+	if bool(ctx.get("traversal_line_gripping", false)):
+		drop.label = "LET GO"
 	if bool(ctx.get("air_catch_intent_pending", false)):
 		drop.label = "CANCEL"
 	var chute: TouchButton = _buttons[B_CHUTE]
@@ -634,7 +640,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	set_yard_crane_mode(station == &"yard_crane")
 	_operating = station != &""
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
-	var portable_tool := station in [&"grappling_gun", &"rigging", &"forklift", &"yard_crane"]
+	var portable_tool := station in [&"grappling_gun", &"rigging", &"traversal_line", &"forklift", &"yard_crane"]
 	if _portable_tool != portable_tool:
 		_portable_tool = portable_tool
 		_layout()
@@ -656,6 +662,9 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var has_x := station in [&"jib", &"intake", &"forklift"]
 	_buttons[B_UP].shown = _operating and station != &"rigging"
 	_buttons[B_DOWN].shown = _operating and station != &"rigging"
+	if station == &"traversal_line":
+		_buttons[B_UP].shown = bool(ctx.get("traversal_line_gripping", false))
+		_buttons[B_DOWN].shown = _buttons[B_UP].shown
 	_buttons[B_LEFT].shown = _operating and has_x
 	_buttons[B_RIGHT].shown = _operating and has_x
 	var sling: TouchButton = _buttons[B_SLING]
@@ -665,7 +674,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	match station:
 		&"forklift":
 			_axis_names = ["RAISE / LOWER", "TILT BACK / FORWARD"]
-		&"grappling_gun":
+		&"grappling_gun", &"traversal_line":
 			_axis_names = ["TIGHTEN / PAY OUT", ""]
 		&"service_lift":
 			_axis_names = ["SERVICE LIFT", ""]
@@ -708,6 +717,15 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		_buttons[B_RIG].label = "RIG"
 		_buttons[B_UNRIG].label = "UNRIG"
 		_axis_names = ["HOIST", ""]
+	var line_equipped := bool(ctx.get("traversal_line_equipped", false))
+	var line_allowed := station in [&"", &"rigging", &"grappling_gun", &"traversal_line"] and (not hanging and not climbing or line_equipped)
+	_buttons[B_LINE].shown = line_allowed and (line_equipped or bool(ctx.get("traversal_line_available", false)))
+	_buttons[B_LINE].enabled = _buttons[B_LINE].shown
+	_buttons[B_LINE].label = "STOW LINE" if line_equipped else "LINE"
+	_buttons[B_LINE].tone = TONE_SAFE if line_equipped else TONE_PRIMARY
+	_buttons[B_PACK_LINE].shown = line_equipped and bool(ctx.get("traversal_line_can_recover", false))
+	_buttons[B_PACK_LINE].enabled = _buttons[B_PACK_LINE].shown
+	_buttons[B_PACK_LINE].label = "PACK LINE"
 	var rigging := bool(ctx.get("rigging_equipped", false))
 	var rigging_allowed := station in [&"", &"rigging"] and not hanging and not climbing
 	_buttons[B_RIGGING].shown = rigging_allowed and (rigging or bool(ctx.get("rigging_available", false)))

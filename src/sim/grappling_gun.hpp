@@ -1,4 +1,5 @@
 #pragma once
+#include "sim/grapple_rope_constraint.hpp"
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <array>
@@ -14,11 +15,11 @@ public:
     static constexpr float hook_mass_kg = 2.0F;
     static constexpr float cartridge_energy_j = 180.0F;
     static constexpr float maximum_line_length_m = 18.0F;
-    static constexpr float strength_n = 3000.0F;
-    static constexpr float stiffness_n_per_m = 6000.0F;
-    static constexpr float damping_ns_per_m = 180.0F;
+    static constexpr float strength_n = GrappleRopeSettings::strength_n;
+    static constexpr float stiffness_n_per_m = GrappleRopeSettings::stiffness_n_per_m;
+    static constexpr float damping_ns_per_m = GrappleRopeSettings::damping_ns_per_m;
     static constexpr float reel_power_w = 750.0F;
-    static constexpr float reel_force_n = 1500.0F;
+    static constexpr float reel_force_n = GrappleRopeSettings::reel_force_n;
     static constexpr float reel_speed_m_per_s = 1.0F;
     static constexpr float minimum_line_length_m = .6F;
     // Prospective launch geometry shared by fire and read-only presentation.

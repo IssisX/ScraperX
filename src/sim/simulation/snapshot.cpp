@@ -36,7 +36,11 @@ using namespace detail;
     const auto &bodies = physics_system_.GetBodyInterfaceNoLock();
     JPH::BodyID body;
     JPH::Vec3 point = JPH::Vec3::sZero();
-    if ((traversal_state_ == TraversalState::Climbing ||
+    if (traversal_state_ == TraversalState::LineSwing && physical_hands_->attached(hand)) {
+        const auto grip = physical_hands_->grip_readback(hand);
+        body = grip.support; result.generation = grip.generation;
+        point = JPH::Vec3(bodies.GetCenterOfMassTransform(body).Inversed() * grip.world_anchor);
+    } else if ((traversal_state_ == TraversalState::Climbing ||
          traversal_state_ == TraversalState::Hanging) && hands_[hand].valid) {
         body = hands_[hand].body;
         point = hands_[hand].local;
@@ -481,7 +485,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     if (traversal_state_ != TraversalState::None) {
         state_.traversal_normal = {traversal_normal_.GetX(), 0.0, traversal_normal_.GetZ()};
     }
-    if (traversal_state_ == TraversalState::Climbing ||
+    if (traversal_state_ == TraversalState::LineSwing || traversal_state_ == TraversalState::Climbing ||
         traversal_state_ == TraversalState::Hanging) {
         const auto left = physical_hands_->grip_readback(0);
         const auto right = physical_hands_->grip_readback(1);

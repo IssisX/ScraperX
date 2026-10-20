@@ -5,6 +5,7 @@
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
 #include "sim/rigging_system.hpp"
+#include "sim/portable_traversal_line.hpp"
 #include "sim/pipe_bridge.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/swing_stair.hpp"
@@ -141,6 +142,9 @@ public:
         std::array<RiggingCommand, 8> rigging_commands{};
         std::size_t rigging_command_count = 0;
         bool rigging_cut_held = false;
+        std::array<TraversalLineCommand, 8> traversal_line_commands{};
+        std::size_t traversal_line_command_count = 0;
+        double traversal_line_reel = 0;
         Vector3 grapple_aim{0, 0, -1};
         double grapple_reel = 0;
         bool grapple_equip_requested = false, grapple_equipped = false;
@@ -167,6 +171,9 @@ public:
     [[nodiscard]] RiggingSnapshot rigging_state() const noexcept;
     [[nodiscard]] const RiggingSystem *rigging() const noexcept { return rigging_.get(); }
     void clear_rigging_input() noexcept;
+    void apply_traversal_line_commands(const StepCommands &, float dt);
+    [[nodiscard]] TraversalLineSnapshot traversal_line_state() const noexcept;
+    [[nodiscard]] bool traversal_line_gripping() const noexcept;
 
     void OnStep(const JPH::PhysicsStepListenerContext &context) override;
 
@@ -1112,6 +1119,8 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<RiggingSystem> rigging_;
+    std::unique_ptr<PortableTraversalLine> traversal_line_;
+    JPH::Vec3 traversal_line_lean_ = JPH::Vec3::sZero();
     std::uint64_t rigging_cut_target_ = 0;
     float rigging_cut_seconds_ = 0;
     std::unique_ptr<DeformablePlank> deformable_plank_;
@@ -1358,6 +1367,7 @@ private:
         // AS-006: every kit body, rope end, parted rope and catch.
         scraperx::sim::kit::Kit::Checkpoint kit{};
         RiggingSystem::Checkpoint rigging{};
+        PortableTraversalLine::Checkpoint traversal_line{};
         // Genuine contact on a Kit body included in this rollback. The
         // generation-bearing BodyID prevents a replaced support being used.
         JPH::BodyID support_body{};

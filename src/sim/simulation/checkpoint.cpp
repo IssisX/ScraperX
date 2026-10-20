@@ -14,6 +14,7 @@ bool Simulation::PhysicsWorld::debug_restart_at(const Vector3 centre) noexcept {
     if (grappling_gun_) grappling_gun_->clear_transients();
     grapple_equipped_ = false;
     clear_rigging_input();
+    if (traversal_line_) traversal_line_->equip(false);
     slingshot_flight_ = false;
     causal_airborne_ = false;
     physical_step_pending_ = false;
@@ -92,6 +93,7 @@ bool Simulation::PhysicsWorld::restart_checkpoint() noexcept {
 void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterface &bodies,
                                 MachineCheckpoint &checkpoint) const noexcept {
     if (rigging_) checkpoint.rigging = rigging_->capture();
+    if (traversal_line_) checkpoint.traversal_line = traversal_line_->capture();
     checkpoint.support_body = JPH::BodyID();
     checkpoint.support_entity = 0;
     checkpoint.support_local_contact = JPH::Vec3::sZero();
@@ -232,8 +234,10 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         release_carry();
     }
     if (rigging_) rigging_->detach_for_restore();
+    if (traversal_line_) traversal_line_->detach_for_restore();
     kit_->restore(checkpoint_.kit);
     if (rigging_) rigging_->restore(checkpoint_.rigging);
+    if (traversal_line_) (void)traversal_line_->restore(checkpoint_.traversal_line);
     if (deformable_plank_) deformable_plank_->restore(checkpoint_.deformable_plank);
     // Restoring topology is not a new fracture. Preserve the event high
     // water immediately, including callers reading before the next tick.

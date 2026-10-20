@@ -66,6 +66,32 @@ struct Quaternion final {
     double w = 1.0;
 };
 
+// Ordered portable tool commands. Action installs the exact displayed target
+// or grips the existing fitting; Release never uninstalls the world line.
+// Release/Unequip cancel pending portable transactions, even with a full queue.
+enum class TraversalLineCommandKind : std::uint8_t { Equip, Unequip, Action, Release, Recover };
+struct TraversalLineCommand final {
+    TraversalLineCommandKind kind = TraversalLineCommandKind::Release;
+    std::uint64_t target = 0;
+};
+struct TraversalLineSnapshot final {
+    bool available = false, equipped = false, installed = false, broken = false, gripping = false;
+    bool target_valid = false, can_grab = false, can_recover = false;
+    unsigned available_spools = 1, failure = 0;
+    std::uint64_t target = 0, generation = 0, event_serial = 0;
+    std::uint32_t support_body = ~std::uint32_t{0}, fitting_body = ~std::uint32_t{0};
+    Vector3 target_point{}, anchor_point{}, grip_point{};
+    Quaternion fitting_rotation{};
+    // Native cable route, sampled for presentation only; exact length and
+    // support reactions remain with the finite cable owner.
+    std::array<Vector3, 35> path_points{};
+    unsigned path_point_count = 0, path_reason = 0, contact_count = 0;
+    std::uint64_t path_token = 0;
+    bool path_valid = false;
+    double path_length_m = 0;
+    double paid_length_m = 0, tension_n = 0, reel_work_j = 0, spool_absorbed_j = 0, recovery_absorbed_j = 0;
+};
+
 // One ordered, consumed action; queue acceptance is not mechanical success.
 enum class ForkliftToolRequest : std::uint8_t { None, Couple, Detach };
 
@@ -261,6 +287,7 @@ enum class TraversalState : std::uint8_t {
     Vaulting = 3,
     Climbing = 4,
     Lowering = 5,
+    LineSwing = 6,
 };
 
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
@@ -851,6 +878,11 @@ public:
     // False means rejected at the input boundary; queued is not installed.
     [[nodiscard]] bool request_rigging(RiggingCommandKind, std::uint64_t target = 0) noexcept;
     [[nodiscard]] RiggingSnapshot rigging_state() const noexcept;
+    // Uses the same validated view aim as set_rigging_aim; no second aim owner.
+    [[nodiscard]] bool request_traversal_line(TraversalLineCommandKind, std::uint64_t target = 0) noexcept;
+    [[nodiscard]] bool set_traversal_line_reel_input(double input) noexcept;
+    [[nodiscard]] TraversalLineSnapshot traversal_line_state() const noexcept;
+    [[nodiscard]] TraversalLineSnapshot render_traversal_line_state() const noexcept;
     [[nodiscard]] bool set_grapple_aim(double x, double y, double z) noexcept;
     [[nodiscard]] bool set_grapple_equipped(bool equipped) noexcept;
     [[nodiscard]] bool set_grapple_reel_input(double input) noexcept;
@@ -1093,11 +1125,15 @@ private:
     std::vector<std::vector<Vector3>> previous_cable_points_;
     SlingshotSnapshot previous_slingshot_state_{};
     GrappleGunSnapshot previous_grapple_gun_state_{};
+    TraversalLineSnapshot previous_traversal_line_state_{};
     ForkliftSnapshot previous_forklift_state_{};
     Vector3 rigging_aim_{0, 0, -1};
     std::array<RiggingCommand, 8> rigging_commands_{};
     std::size_t rigging_command_count_ = 0;
     bool rigging_cut_held_ = false;
+    std::array<TraversalLineCommand, 8> traversal_line_commands_{};
+    std::size_t traversal_line_command_count_ = 0;
+    double traversal_line_reel_input_ = 0;
     std::array<std::uint64_t, 8> previous_rigging_handles_{};
     Vector3 grapple_aim_{0, 0, -1};
     double grapple_reel_input_ = 0;

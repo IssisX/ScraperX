@@ -258,6 +258,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         build_beam_ramp_route(*kit_);
         rigging_ = std::make_unique<RiggingSystem>(physics_system_, *kit_);
         build_rigging_bay(*kit_, *rigging_);
+        traversal_line_ = std::make_unique<PortableTraversalLine>(physics_system_, player_id_,
+            object_layers::kMoving, *physical_hands_, rigging_.get());
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
@@ -273,6 +275,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
 Simulation::PhysicsWorld::~PhysicsWorld() {
     if (slingshot_) physics_system_.RemoveStepListener(this);
     grappling_gun_.reset();
+    traversal_line_.reset();
     if (cargo_net_) cargo_net_->set_contact_friction_callback(nullptr, nullptr);
     if (catch_net_) catch_net_->set_contact_friction_callback(nullptr, nullptr);
     physical_foot_push_.reset();

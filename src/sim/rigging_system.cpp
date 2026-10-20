@@ -24,6 +24,9 @@ template <class V> bool finite_vector(const V &v) {
 
 RiggingSystem::RiggingSystem(JPH::PhysicsSystem &world, kit::Kit &kit) : world_(world), kit_(kit) {}
 RiggingSystem::~RiggingSystem() { for (auto &slot : slots_) disconnect(slot); }
+const RiggingSystem::Eye *RiggingSystem::available_eye(std::size_t index) const {
+    return index < eye_count_ && body(eyes_[index]) ? &eyes_[index] : nullptr;
+}
 
 JPH::Body *RiggingSystem::body(const Eye &eye) const {
     if (!eye.body.valid() || kit_.body_id(eye.body) != eye.identity || !kit_.body_enabled(eye.body)) return nullptr;

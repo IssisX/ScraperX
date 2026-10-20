@@ -50,6 +50,10 @@ public:
     RiggingSystem &operator=(const RiggingSystem &) = delete;
     // Build-time registration only. No body/constraint is created by an eye.
     std::uint16_t add_eye(kit::BodyIndex, JPH::Vec3 local, float rating_n = 8000);
+    // Read-only mounting catalogue shared with the portable carried line.
+    // Identity/enabled validation remains with this registry's Kit owner.
+    [[nodiscard]] std::size_t eye_count() const noexcept { return eye_count_; }
+    [[nodiscard]] const Eye *available_eye(std::size_t index) const;
     std::uint16_t add_fixed_guide(kit::BodyIndex, JPH::Vec3 reachable_threading_eye,
                                 JPH::Vec3 incoming, JPH::Vec3 outgoing, float rating_n = 8000);
     void equip(bool);

@@ -64,6 +64,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_rigging_aim", "x", "y", "z"), &ScraperXSimulation::set_rigging_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("request_rigging", "command", "target"), &ScraperXSimulation::request_rigging);
     godot::ClassDB::bind_method(godot::D_METHOD("get_rigging_state"), &ScraperXSimulation::get_rigging_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_traversal_line", "command", "target"), &ScraperXSimulation::request_traversal_line);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_traversal_line_reel_input", "input"), &ScraperXSimulation::set_traversal_line_reel_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_line_state"), &ScraperXSimulation::get_traversal_line_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_line_render_state"), &ScraperXSimulation::get_traversal_line_render_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_aim", "x", "y", "z"), &ScraperXSimulation::set_grapple_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_equipped", "equipped"), &ScraperXSimulation::set_grapple_equipped);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_reel_input", "input"), &ScraperXSimulation::set_grapple_reel_input);
@@ -722,6 +726,59 @@ godot::Dictionary ScraperXSimulation::get_rigging_state() const {
     out["preview"] = preview;
     return out;
 }
+bool ScraperXSimulation::request_traversal_line(std::int64_t command, std::int64_t target) {
+    if (command < 0 || command > std::int64_t(sim::TraversalLineCommandKind::Recover) || target < 0)
+        return false;
+    return simulation_->request_traversal_line(static_cast<sim::TraversalLineCommandKind>(command),
+        static_cast<std::uint64_t>(target));
+}
+bool ScraperXSimulation::set_traversal_line_reel_input(double input) {
+    return simulation_->set_traversal_line_reel_input(input);
+}
+namespace {
+godot::Dictionary traversal_line_dictionary(const sim::TraversalLineSnapshot &state) {
+    godot::Dictionary out;
+    out["available"] = state.available;
+    out["equipped"] = state.equipped;
+    out["installed"] = state.installed;
+    out["broken"] = state.broken;
+    out["gripping"] = state.gripping;
+    out["target_valid"] = state.target_valid;
+    out["can_grab"] = state.can_grab;
+    out["can_recover"] = state.can_recover;
+    out["available_spools"] = state.available_spools;
+    out["failure"] = state.failure;
+    out["paid_length_m"] = state.paid_length_m;
+    out["tension_n"] = state.tension_n;
+    out["reel_work_j"] = state.reel_work_j;
+    out["spool_absorbed_j"] = state.spool_absorbed_j;
+    out["recovery_absorbed_j"] = state.recovery_absorbed_j;
+    out["target"] = std::int64_t(state.target);
+    out["generation"] = std::int64_t(state.generation);
+    out["event_serial"] = std::int64_t(state.event_serial);
+    out["support_body"] = std::int64_t(state.support_body);
+    out["fitting_body"] = std::int64_t(state.fitting_body);
+    out["target_point"] = to_godot(state.target_point);
+    out["anchor_point"] = to_godot(state.anchor_point);
+    out["grip_point"] = to_godot(state.grip_point);
+    out["fitting_rotation"] = to_godot(state.fitting_rotation);
+    out["path_valid"] = state.path_valid;
+    out["path_reason"] = state.path_reason;
+    out["contact_count"] = state.contact_count;
+    out["path_length_m"] = state.path_length_m;
+    godot::PackedVector3Array points;
+    points.resize(state.path_point_count);
+    for (unsigned i = 0; i < state.path_point_count; ++i) points.set(i, to_godot(state.path_points[i]));
+    out["path_points"] = points;
+    return out;
+}
+} // namespace
+godot::Dictionary ScraperXSimulation::get_traversal_line_state() const {
+    return traversal_line_dictionary(simulation_->traversal_line_state());
+}
+godot::Dictionary ScraperXSimulation::get_traversal_line_render_state() const {
+    return traversal_line_dictionary(simulation_->render_traversal_line_state());
+}
 bool ScraperXSimulation::set_grapple_aim(double x, double y, double z) {
     return simulation_->set_grapple_aim(x, y, z);
 }
@@ -921,7 +978,8 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["palm_right_generation"] = s.hand_props[1].generation;
     out["palm_vault_count"] = s.palm_vault_count;
     const bool physical_hand_state = s.traversal_hand_constraint_count > 0 &&
-        (s.traversal_state == sim::TraversalState::Climbing || s.traversal_state == sim::TraversalState::Hanging);
+        (s.traversal_state == sim::TraversalState::Climbing || s.traversal_state == sim::TraversalState::Hanging ||
+         s.traversal_state == sim::TraversalState::LineSwing);
     // Both slots are real whenever the backend reports two attachments,
     // including Lowering whose legacy point presentation has no generations.
     out["left_hand_attached"] = s.traversal_hand_constraint_count == 2 ||

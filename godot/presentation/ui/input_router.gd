@@ -11,7 +11,7 @@ extends Node
 # Verbs: jump, action, drop, chute, back (pad B: drop / leave controls),
 # alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
 # crouch (a toggle: C, right-stick click, the touch button), toggle_grapple,
-# auto_reel, toggle_rigging, rigging_undo, rigging_unclip,
+# auto_reel, toggle_traversal_line, pack_traversal_line, toggle_rigging, rigging_undo, rigging_unclip,
 # rigging_cut_start/stop, pause, telemetry. Tool controls keep contextual Action.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 # Sprint is held too: Shift; a left-stick click, latched until the stick comes
@@ -145,7 +145,7 @@ func _cancel_rigging_cut() -> void:
 
 
 func push_verb(verb: StringName) -> void:
-	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel", &"toggle_rigging", &"rigging_undo", &"rigging_unclip", &"rigging_cut_start"]:
+	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel", &"toggle_rigging", &"toggle_traversal_line", &"pack_traversal_line", &"rigging_undo", &"rigging_unclip", &"rigging_cut_start"]:
 		return
 	if gameplay_active:
 		_verbs.append(verb)

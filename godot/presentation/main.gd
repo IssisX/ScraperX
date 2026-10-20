@@ -278,6 +278,8 @@ var _kit_view: KitView
 var _grapple_view: GrapplingGunViewScript
 const RiggingView := preload("res://presentation/rigging_view.gd")
 var _rigging_view: RiggingView
+const PortableLineView := preload("res://presentation/portable_traversal_line_view.gd")
+var _portable_line_view: PortableLineView
 var _grapple_feedback := GrappleFeedbackModel.new()
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
@@ -484,6 +486,10 @@ func _finish_native_setup() -> void:
 	_rigging_view = RiggingView.new()
 	_rigging_view.name = "RiggingPresentation"
 	add_child(_rigging_view)
+	_portable_line_view = PortableLineView.new()
+	_portable_line_view.name = "PortableTraversalLinePresentation"
+	add_child(_portable_line_view)
+	_portable_line_view.configure(_camera)
 	if bool(_native.get_slingshot_state().get("available", false)):
 		_slingshot_view = SlingshotView.new()
 		add_child(_slingshot_view)
@@ -564,7 +570,7 @@ func _process(delta: float) -> void:
 			_yaw -= look.x
 			# The equipped overhead tool needs an honest high shot. Other movement
 			# keeps its established look range; aim excludes all cosmetic head motion.
-			_pitch = clampf(_pitch - look.y, -1.25, PI * 0.5 - 0.001 if bool(_ctx.get("grapple_equipped", false)) else 1.35)
+			_pitch = clampf(_pitch - look.y, -1.25, PI * 0.5 - 0.001 if bool(_ctx.get("grapple_equipped", false)) or bool(_ctx.get("traversal_line_equipped", false)) else 1.35)
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
@@ -601,7 +607,8 @@ func _process(delta: float) -> void:
 	_deliver_yard_crane_input(intent)
 	var pendant_input: Vector2 = intent["pendant"]
 	_native.set_grapple_reel_input(pendant_input.y if _operating == &"grappling_gun" else 0.0)
-	var jib_input := Vector2.ZERO if _operating in [&"grappling_gun", &"forklift", &"yard_crane"] else pendant_input
+	_native.set_traversal_line_reel_input(pendant_input.y if _operating == &"traversal_line" and bool(_ctx.get("traversal_line_gripping", false)) else 0.0)
+	var jib_input := Vector2.ZERO if _operating in [&"grappling_gun", &"traversal_line", &"forklift", &"yard_crane"] else pendant_input
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
 	# The B00 yard jib shares the same pendant axes. Both are station-gated
@@ -855,6 +862,7 @@ func _set_telemetry_visible(on: bool) -> void:
 func _exit_tree() -> void:
 	if _native != null:
 		_native.request_rigging(7, 0)
+		_native.set_traversal_line_reel_input(0.0)
 	_android_activity = null
 	if _startup_preparation != null:
 		get_viewport().disable_3d = _startup_previous_disable_3d
@@ -883,6 +891,7 @@ func _open_pause(from_system: bool = false) -> void:
 		return
 	_paused = true
 	_native.request_rigging(7, 0)
+	_native.set_traversal_line_reel_input(0.0)
 	_performance_report.set_paused(true)
 	if _freight_activity != null:
 		_freight_activity.reset()
@@ -1005,6 +1014,24 @@ func _resume() -> void:
 # which request the other contextual verbs mean; native authority accepts it.
 func _dispatch(verbs: Array, _delta: float) -> void:
 	for verb in verbs:
+		if verb == &"toggle_traversal_line" and _operating not in [&"forklift", &"yard_crane"]:
+			var line: Dictionary = _native.get_traversal_line_state()
+			if bool(line.get("equipped", false)):
+				_native.set_traversal_line_reel_input(0.0)
+				_native.request_traversal_line(1, 0)
+			else:
+				_end_operation()
+				_native.request_traversal_line(0, 0)
+			continue
+		if bool(_ctx.get("traversal_line_equipped", false)):
+			if verb in [&"drop", &"back"]:
+				_native.set_traversal_line_reel_input(0.0)
+				_native.request_traversal_line(3, 0)
+				continue
+			if verb == &"pack_traversal_line":
+				if bool(_ctx.get("traversal_line_can_recover", false)):
+					_native.request_traversal_line(4, 0)
+				continue
 		if verb == &"rigging_cut_stop":
 			_native.request_rigging(7, 0)
 			continue
@@ -1158,6 +1185,8 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"traversal_line_action":
+			_native.request_traversal_line(2, int(_ctx.get("traversal_line_target", 0)))
 		&"rigging_action":
 			_native.request_rigging(2, int(_ctx.get("rigging_target", 0)))
 		&"equip_grapple":
@@ -1273,6 +1302,9 @@ func _update_forklift_view_heading() -> void:
 
 
 func _end_operation() -> void:
+	if _operating == &"traversal_line":
+		_native.set_traversal_line_reel_input(0.0)
+		_native.request_traversal_line(1, 0)
 	_native.request_rigging(7, 0)
 	if _operating == &"rigging":
 		_native.request_rigging(1, 0)
@@ -1321,6 +1353,7 @@ func _read_context() -> Dictionary:
 	var station := &""
 	var grapple: Dictionary = _native.get_grapple_gun_state()
 	var rigging: Dictionary = _native.get_rigging_state()
+	var traversal_line: Dictionary = _native.get_traversal_line_state()
 	var service_lift: Dictionary = _native.get_service_lift_state()
 	var balance: Dictionary = _native.get_supplied_machine_state()
 	var crane := _yard_crane_state()
@@ -1328,7 +1361,10 @@ func _read_context() -> Dictionary:
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
-	if bool(rigging.get("equipped", false)):
+	if bool(traversal_line.get("equipped", false)):
+		station = &"traversal_line"
+		_operating = &"traversal_line"
+	elif bool(rigging.get("equipped", false)):
 		station = &"rigging"
 		_operating = &"rigging"
 	elif bool(grapple.get("equipped", false)):
@@ -1372,8 +1408,9 @@ func _read_context() -> Dictionary:
 		or (_operating == &"forklift" and bool(forklift.get("controls_reachable", false))) \
 		or (_operating == &"yard_crane" and bool(crane.get("controls_reachable", false)))) \
 		and free and int(_native.get_carrying_entity_id()) == 0
-	var tool_active := station in [&"grappling_gun", &"rigging"] and free
-	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable and not tool_active) or not free \
+	var line_gripping := bool(traversal_line.get("gripping", false))
+	var tool_active := (station in [&"grappling_gun", &"rigging"] and free) or (station == &"traversal_line" and (free or line_gripping))
+	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable and not tool_active) or (not free and not line_gripping) \
 			or (_operating in [&"service_lift", &"supplied_machine", &"forklift", &"yard_crane"] and not lift_reachable)):
 		_end_operation()
 	var climb_ok := grounded and free and ledge
@@ -1417,6 +1454,12 @@ func _read_context() -> Dictionary:
 		# Both hands are on it: letting go is the only thing Action can do.
 		action = {"id": &"set_down", "label": "LET GO" if _is_kit(carrying) else "SET DOWN",
 			"icon": &"set_down", "detail": _carry_name(carrying)}
+	elif tool_active and station == &"traversal_line":
+		var installed := bool(traversal_line.get("installed", false))
+		var ready := bool(traversal_line.get("can_grab", false)) if installed else bool(traversal_line.get("target_valid", false))
+		action = {"id": &"traversal_line_action" if ready and not line_gripping else &"",
+			"label": "GRAB LINE" if installed else "INSTALL LINE",
+			"icon": &"hook", "detail": "DROP: LET GO / LINE STAYS" if line_gripping else ("REACH THE FITTING" if installed else "AIM AT SOLID SUPPORT")}
 	elif tool_active and station == &"rigging":
 		var target := int(rigging.get("target", 0))
 		var label := "THREAD GUIDE" if int(rigging.get("target_kind", 0)) == 1 else ("CONNECT LINE" if bool(rigging.get("draft", false)) else "CLIP FIRST END")
@@ -1508,6 +1551,11 @@ func _read_context() -> Dictionary:
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
 		"slingshot_seated": sling_seated,
 		"slingshot_recovering": bool(sling.get("recovering", false)),
+		"traversal_line_available": bool(traversal_line.get("available", false)) and free and carrying == 0 and not sling_seated and _operating not in [&"forklift", &"yard_crane"],
+		"traversal_line_equipped": bool(traversal_line.get("equipped", false)),
+		"traversal_line_gripping": line_gripping,
+		"traversal_line_target": int(traversal_line.get("target", 0)),
+		"traversal_line_can_recover": bool(traversal_line.get("can_recover", false)),
 		"rigging_available": bool(rigging.get("available", false)) and free and carrying == 0 and not sling_seated and _operating not in [&"forklift", &"yard_crane"],
 		"rigging_equipped": bool(rigging.get("equipped", false)),
 		"rigging_draft": bool(rigging.get("draft", false)),
@@ -1520,7 +1568,7 @@ func _read_context() -> Dictionary:
 		"grapple_line_attached": bool(grapple.get("line_attached", false)),
 		"grapple_auto_reel": bool(grapple.get("auto_reel", false)),
 		"air_catch_intent_pending": bool(landing.get("air_catch_intent_pending", false)),
-		"drop_ok": bool(landing.get("air_catch_intent_pending", false)) or bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
+		"drop_ok": line_gripping or bool(landing.get("air_catch_intent_pending", false)) or bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
@@ -1622,6 +1670,16 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"traversal_line":
+			var line: Dictionary = _native.get_traversal_line_state()
+			var failures := ["", "HANDS BUSY", "AIM AT SUPPORT", "TARGET CHANGED", "UNSUITABLE SUPPORT", "MOVE CLOSER", "LINE BLOCKED", "ALREADY INSTALLED", "NO LINE", "UNLOAD BEFORE PACKING", "FITTING MOVING", "LINE BROKEN", "SUPPORT CHANGED", "HANDS BUSY"]
+			var failure := clampi(int(line.get("failure", 0)), 0, failures.size() - 1)
+			var status := "BROKEN" if bool(line.get("broken", false)) else ("HELD" if bool(line.get("gripping", false)) else ("INSTALLED" if bool(line.get("installed", false)) else "CARRIED"))
+			return {"title": "PORTABLE LINE", "subtitle": "UP: TAKE UP / DOWN: PAY OUT / DROP: LET GO",
+				"rows": [["STATE", status, 2 if bool(line.get("broken", false)) else 0],
+					["SPOOLS", str(int(line.get("available_spools", 1))), 0],
+					["TENSION", "%d N" % int(line.get("tension_n", 0.0)), 0],
+					["STATUS", failures[failure], 2 if failure else 0]], "verbs": []}
 		&"rigging":
 			var rigging: Dictionary = _native.get_rigging_state()
 			var failures := ["", "TARGET CHANGED", "MOVE CLOSER", "CABLE PATH BLOCKED", "CHOOSE AN END EYE", "THREAD A GUIDE FIRST", "INVALID CONNECTION", "NO FREE LINE", "UNLOAD BEFORE UNCLIPPING", "HANDS BUSY", "LINE OVERLOADED"]
@@ -2381,12 +2439,16 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		and bool(_forklift_controls.ui_state().get("horn", false)), delta)
 	if _inspection_balance_feedback != null:
 		_inspection_balance_feedback.update_from_native(_native, delta, not _settings.launch_cinematics)
+	if _portable_line_view != null:
+		_portable_line_view.update_state(_native.get_traversal_line_render_state(), _audio)
 	if _grapple_view != null:
 		_update_grapple_feedback(delta)
 		_grapple_view.update_state(_native.get_grapple_gun_render_state())
 
 
 func _reset_grapple_feedback() -> void:
+	if _portable_line_view != null:
+		_portable_line_view.reset_feedback()
 	_grapple_feedback.reset()
 	if _grapple_view != null:
 		_grapple_view.reset_feedback()

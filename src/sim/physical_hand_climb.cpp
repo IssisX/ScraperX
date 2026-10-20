@@ -586,6 +586,12 @@ PhysicalHandClimb::GripReadback PhysicalHandClimb::grip_readback(unsigned hand) 
     result.player_force=forces_[hand];
     return result;
 }
+bool PhysicalHandClimb::attached_to(unsigned hand, JPH::BodyID support) const noexcept {
+    if (hand >= hands_.size() || !attached(hand)) return false;
+    if (soft_[hand].attached) return net_ && net_->body() == support;
+    const auto *constraint = radial_hands_[hand] ? radial_hands_[hand].GetPtr() : hands_[hand].GetPtr();
+    return constraint && constraint->GetBody2()->GetID() == support;
+}
 unsigned PhysicalHandClimb::attached_count() const noexcept {
     return unsigned(attached(0))+unsigned(attached(1));
 }

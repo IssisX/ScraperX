@@ -69,6 +69,12 @@ add_library(scraperx_sim STATIC
     src/sim/pipe_service_route.cpp
     src/sim/split_inspection_route.cpp
     src/sim/grappling_gun.cpp
+    src/sim/grapple_rope_constraint.cpp
+    src/sim/finite_cable_constraint.cpp
+    src/sim/rounded_box_line_path.cpp
+    src/sim/portable_line_path.cpp
+    src/sim/portable_traversal_line.cpp
+    src/sim/simulation/traversal_line.cpp
     src/sim/grapple_practice_route.cpp
     src/sim/deformable_plank.cpp
     src/sim/steam_plant.cpp
@@ -110,9 +116,9 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/rigging_system.cpp src/sim/routed_cable.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/rigging_system.cpp src/sim/routed_cable.cpp src/sim/portable_traversal_line.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
-set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp src/sim/physical_hand_climb.cpp src/sim/physical_hand_prop.cpp src/sim/grappling_gun.cpp src/sim/grapple_rope_constraint.cpp src/sim/finite_cable_constraint.cpp src/sim/rounded_box_line_path.cpp src/sim/portable_line_path.cpp src/sim/warehouse_forklift.cpp src/sim/powered_cable.cpp src/sim/yard_crane.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -277,6 +283,26 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_grappling_gun_tests tests/grappling_gun_tests.cpp)
     target_link_libraries(scraperx_grappling_gun_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.grappling_gun COMMAND scraperx_grappling_gun_tests)
+    add_executable(scraperx_grapple_rope_constraint_tests tests/grapple_rope_constraint_tests.cpp)
+    target_link_libraries(scraperx_grapple_rope_constraint_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.grapple_rope_constraint COMMAND scraperx_grapple_rope_constraint_tests)
+    add_executable(scraperx_portable_line_grip_tests tests/portable_line_grip_tests.cpp)
+    target_link_libraries(scraperx_portable_line_grip_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.portable_line_grip COMMAND scraperx_portable_line_grip_tests)
+    add_executable(scraperx_finite_line_reel_tests tests/finite_line_reel_tests.cpp)
+    target_link_libraries(scraperx_finite_line_reel_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.finite_line_reel COMMAND scraperx_finite_line_reel_tests)
+    add_executable(scraperx_portable_line_lifecycle_tests tests/portable_line_lifecycle_tests.cpp)
+    target_link_libraries(scraperx_portable_line_lifecycle_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.portable_line_lifecycle COMMAND scraperx_portable_line_lifecycle_tests)
+    add_executable(scraperx_portable_line_input_tests tests/portable_line_input_tests.cpp)
+    target_link_libraries(scraperx_portable_line_input_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.portable_line_input COMMAND scraperx_portable_line_input_tests)
+    foreach(cable_check IN ITEMS rounded_box_line_path finite_cable_constraint portable_line_path portable_line_public_route)
+        add_executable(scraperx_${cable_check}_tests tests/${cable_check}_tests.cpp)
+        target_link_libraries(scraperx_${cable_check}_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.${cable_check} COMMAND scraperx_${cable_check}_tests)
+    endforeach()
     add_executable(scraperx_grapple_practice_route_tests tests/grapple_practice_route_tests.cpp)
     target_link_libraries(scraperx_grapple_practice_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.grapple_practice_route COMMAND scraperx_grapple_practice_route_tests primary)

@@ -42,6 +42,10 @@ public:
     void clear();
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] bool attached(unsigned hand) const noexcept;
+    // Attachment identity only, with no body locks or pose/force readback.
+    // Safe in the serialized collision callback while Jolt owns body locks;
+    // attachment lifecycle changes still belong outside PhysicsSystem::Update.
+    [[nodiscard]] bool attached_to(unsigned hand, JPH::BodyID support) const noexcept;
     [[nodiscard]] unsigned attached_count() const noexcept;
     // Brief ledge pull-up: higher bounded command power, damped rigid hands.
     void set_transfer_profile(float rigid_hand_damping = 600.0F);

@@ -15,6 +15,7 @@ void Simulation::PhysicsWorld::OnStep(const JPH::PhysicsStepListenerContext &con
     physical_hands_->pre_step(context.mDeltaTime, true);
     for (auto &palm : physical_palms_) if (palm) palm->pre_step(context.mDeltaTime);
     if (grappling_gun_) grappling_gun_->pre_step(context.mDeltaTime);
+    if (traversal_line_) traversal_line_->collision_step(context.mDeltaTime);
     pre_step_physical_foot(context.mDeltaTime);
     slingshot_->collision_step(context);
     if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
@@ -35,9 +36,10 @@ void Simulation::PhysicsWorld::pre_step_physical_foot(const float delta_seconds)
     physical_foot_push_->pre_step(delta_seconds, face_valid);
 }
 
-void Simulation::PhysicsWorld::step(const StepCommands &commands,
+void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
           const float delta_seconds,
           const double next_time_seconds) noexcept {
+    auto commands = queued_commands;
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     second_hand_added_this_tick_ = false;
@@ -45,9 +47,16 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     const bool was_soft_grounded_before_tick = grounded_ && net_for_body(support_sample_.body_id);
     const auto foot_transfers_before_tick = state_.foot_transfer_count;
     const auto traversal_before_commands = traversal_state_;
+    if (commands.grapple_equip_requested && commands.grapple_equipped && grapple_acquired_ && traversal_line_) {
+        traversal_line_->equip(false);
+        if (traversal_state_ == TraversalState::LineSwing) traversal_state_ = TraversalState::None;
+    }
     apply_grapple_commands(commands);
     if (commands.grapple_equip_requested && grapple_equipped_) clear_rigging_input();
     apply_rigging_commands(commands, delta_seconds);
+    const bool line_release = traversal_line_gripping() && (commands.jump_requested || commands.release_requested);
+    apply_traversal_line_commands(commands, delta_seconds);
+    if (line_release) { commands.jump_requested = false; commands.traversal_requested = false; }
     // Drop cancels held automatic reach across every nearby body. A new
     // deliberate action, neutral stick or real footing rearms that intent.
     if (commands.release_requested) automatic_grip_cancelled_ = true;
@@ -145,8 +154,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         update_rig(bodies, commands);
         update_carry(bodies, commands, delta_seconds);
         update_palm_vault(bodies, commands);
-        apply_traversal_commands(bodies, commands);
-        sync_radial_profile(bodies, commands);
+        if (traversal_state_ != TraversalState::LineSwing) {
+            apply_traversal_commands(bodies, commands);
+            sync_radial_profile(bodies, commands);
+        }
         if ((traversal_state_ != TraversalState::Climbing && traversal_state_ != TraversalState::Hanging) ||
             cargo_transfer_active_ || cargo_push_seconds_ >= 0.0F || !physical_hands_->active())
             hanging_posture_offset_m_ = 0.0F;
@@ -182,6 +193,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     publish_soft_foot_policy(commands);
     update_ground_slide(bodies, commands);
     bool jump_started = false;
+    if (!sling_controlling && traversal_state_ == TraversalState::LineSwing && grounded_) {
+        auto walking = commands;
+        walking.jump_requested = false;
+        (void)apply_locomotion(bodies, walking, delta_seconds);
+    }
     if (!sling_controlling && traversal_state_ == TraversalState::None) {
         if (slingshot_flight_ && !grounded_) {
             // Air steering is a bounded force. It does not replace the
@@ -245,7 +261,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
         update_physical_lowering(bodies,delta_seconds);
 
     // A fresh airborne catch may have acquired hands later in this tick.
-    sync_radial_profile(bodies, commands);
+    if (traversal_state_ != TraversalState::LineSwing) sync_radial_profile(bodies, commands);
     if (traversal_state_ == TraversalState::Hanging && physical_hands_->active()) {
         // Request a bounded rest-target change, never the root velocity.
         // Measure commanded position rather than actual compliant sag.
@@ -344,6 +360,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     }
     contact_listener_.set_transfer_receiver(receiver_body,receiver_patch);
     if (!slingshot_) {
+        if (traversal_line_) traversal_line_->collision_step(delta_seconds);
         pre_step_physical_foot(delta_seconds);
         for (auto &palm : physical_palms_) if (palm) palm->pre_step(delta_seconds);
     }
@@ -393,6 +410,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &commands,
     if (supplied_ascent_) supplied_ascent_->post_step();
     kit_->post_step(delta_seconds);
     if (rigging_) rigging_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+    if (traversal_line_) {
+        traversal_line_->post_step();
+        if (traversal_state_ == TraversalState::LineSwing && !traversal_line_gripping()) {
+            traversal_state_ = TraversalState::None; traversal_body_ = JPH::BodyID();
+            traversal_entity_id_ = 0; traversal_line_lean_ = JPH::Vec3::sZero();
+        }
+    }
     if (slingshot_) slingshot_->post_step(delta_seconds);
 
     const auto reclaim=contact_listener_.reclaim_impact();

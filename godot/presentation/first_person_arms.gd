@@ -72,6 +72,7 @@ const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
 const TRAVERSAL_CLIMBING := 4
 const TRAVERSAL_LOWERING := 5
+const TRAVERSAL_LINE_SWING := 6
 
 const FINGER_LATERAL := [0.030, 0.010, -0.010, -0.028]
 const FINGER_LENGTHS := [
@@ -392,14 +393,14 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			_grip_forward = normal.normalized()
 		else:
 			_grip_forward = to_ledge.normalized() if to_ledge.length_squared() > 1.0e-4 else forward
-	var was_hanging := _last_traversal == TRAVERSAL_HANGING
+	var was_hanging := _last_traversal in [TRAVERSAL_HANGING, TRAVERSAL_LINE_SWING]
 	_last_traversal = traversal
 	var torso_right := forward.cross(Vector3.UP).normalized()
 	var speed := Vector2(velocity.x, velocity.z).length()
 	var grapple := bool(state.get("grapple_equipped", false))
 	# A carried gun is not the crane's handheld radio. Native equipment
 	# acknowledgement selects its pose; the presented tool supplies wrists.
-	var operating: StringName = &"" if grapple else state["operating"]
+	var operating: StringName = &"" if grapple or state["operating"] == &"traversal_line" else state["operating"]
 	var crane := operating == &"yard_crane" and bool(state.get("yard_crane_active", false))
 	var forklift := (operating == &"forklift" and bool(state.get("forklift_active", false))) or crane
 	if crane:
@@ -420,9 +421,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_remote.global_transform = remote_frame
 		_update_remote_buttons(state["pendant"])
 
-	var single_hand := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING] \
+	var single_hand := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LINE_SWING] \
 		and int(landing.get("traversal_hand_constraint_count", 0)) == 1
-	if traversal == TRAVERSAL_HANGING:
+	if traversal in [TRAVERSAL_HANGING, TRAVERSAL_LINE_SWING]:
 		var span: Vector3 = Vector3.ZERO if single_hand else state["hand_right"] - state["hand_left"]
 		if span.length_squared() > 1.0e-6:
 			var pair_right := span.normalized()
@@ -436,9 +437,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			_hang_shoulder_right = _grip_forward.cross(Vector3.UP).normalized()
 	for hand in _hands:
 		var palm_active := bool(landing.get("palm_left_active" if hand.side < 0.0 else "palm_right_active", false))
-		var attached := not single_hand or bool(landing.get(
+		var attached := (not single_hand and traversal != TRAVERSAL_LINE_SWING) or bool(landing.get(
 			"left_hand_attached" if hand.side < 0.0 else "right_hand_attached", false))
-		var raised := attached and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
+		var raised := attached and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING, TRAVERSAL_LINE_SWING]
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		if forklift and state.has("forklift_frame"):
@@ -446,7 +447,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			var cab: Transform3D = state["forklift_frame"]
 			shoulder = camera.origin + cab.basis * Vector3(-SHOULDER_LOCAL.x * hand.side,
 				SHOULDER_LOCAL.y, -SHOULDER_LOCAL.z)
-		if traversal == TRAVERSAL_HANGING and attached:
+		if traversal in [TRAVERSAL_HANGING, TRAVERSAL_LINE_SWING] and attached:
 			# Initial native pair establishes the body's handedness. Later
 			# crossing placements retain it independently of head rotation.
 			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
@@ -459,10 +460,10 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var reachable := true
 		if palm_active:
 			pose = POSE_PROP
-		elif single_hand and not attached:
+		elif (single_hand or traversal == TRAVERSAL_LINE_SWING) and not attached:
 			# An absent native attachment earns no grip target or raised shoulder.
 			pose = POSE_REST if grounded else POSE_AIR
-		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
+		elif traversal in [TRAVERSAL_HANGING, TRAVERSAL_LINE_SWING] or traversal == TRAVERSAL_LOWERING:
 			pose = POSE_GRIP
 		elif traversal == TRAVERSAL_CLIMBING:
 			pose = POSE_CLIMB
@@ -615,7 +616,7 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 				# over onto the top -- from below, knuckles on the edge.
 				var hook := lip - _grip_forward * 0.034 + Vector3.DOWN * 0.074 \
 					+ along * (GRIP_HALF_SPAN * side)
-				if int(state["traversal"]) == TRAVERSAL_HANGING:
+				if int(state["traversal"]) in [TRAVERSAL_HANGING, TRAVERSAL_LINE_SWING]:
 					# Each native hand owns its independently probed support point.
 					# Convert the inset top probe to the existing hook wrist pose.
 					var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]

@@ -90,6 +90,19 @@ jobs:
         timeout 300s build/candidate-host/scraperx_rigging_public_route_tests \
           2>&1 | tee artifacts/rigging-public-route.log
         grep -F 'PASS RIGGING_PUBLIC' artifacts/rigging-public-route.log
+    - name: Check reusable portable line, actual contacts and complete public swing
+      shell: bash
+      run: |
+        set -euo pipefail
+        checks=(grapple_rope_constraint finite_line_reel rounded_box_line_path finite_cable_constraint portable_line_path portable_line_lifecycle portable_line_input portable_line_public_route)
+        targets=()
+        for check in "${checks[@]}"; do targets+=("scraperx_${check}_tests"); done
+        cmake --build build/candidate-host --target "${targets[@]}" --parallel 2
+        for check in "${checks[@]}"; do
+          timeout 300s "build/candidate-host/scraperx_${check}_tests" \
+            2>&1 | tee "artifacts/${check}-native.log"
+        done
+        grep -F 'PASS PORTABLE_LINE_PUBLIC' artifacts/portable_line_public_route-native.log
     - name: Check native sleep preserves launcher and forklift work
       shell: bash
       run: |
@@ -200,6 +213,19 @@ jobs:
           2>&1 | tee artifacts/rigging-controls.log
         grep -F 'RIGGING_CONTROLS PASS' artifacts/rigging-controls.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/rigging-controls.log; then exit 1; fi
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/portable_line_controls_test.gd \
+          2>&1 | tee artifacts/portable-line-controls.log
+        grep -F 'PORTABLE_LINE_CONTROLS checks=' artifacts/portable-line-controls.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/portable-line-controls.log; then exit 1; fi
+        mkdir -p artifacts/portable-line
+        timeout 90s xvfb-run -a -s '-screen 0 1280x900x24' \
+          tools/godot/godot --path godot --audio-driver Dummy --rendering-method gl_compatibility \
+          --script res://tests/portable_line_native_input_test.gd \
+          -- --portable-line-capture-dir="${GITHUB_WORKSPACE}/artifacts/portable-line" \
+          2>&1 | tee artifacts/portable-line-native-input.log
+        grep -F 'SCRAPERX_PORTABLE_LINE_NATIVE_INPUT PASS' artifacts/portable-line-native-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/portable-line-native-input.log; then exit 1; fi
         mkdir -p artifacts/rigging
         timeout 90s xvfb-run -a -s '-screen 0 1280x900x24' \
           tools/godot/godot --path godot --audio-driver Dummy \
