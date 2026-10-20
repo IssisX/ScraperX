@@ -1,14 +1,17 @@
-# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND).
+# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Two patches,
+# each idempotent on its own file: a patched tree is left as it is, and a tree with neither the
+# pinned nor the patched text stops the configure, so a Jolt bump re-checks each instead of
+# silently dropping it.
 #
-# IndependentAxisConstraintPart, the pulley constraint's solver part, writes its lever-arm cross
+# 1. IndependentAxisConstraintPart, the pulley constraint's solver part, writes its lever-arm cross
 # products only for a body that is not static, yet SolveVelocityConstraint reads them for both
 # bodies (r1 x n1 . w1, with w1 = 0 for a static body). Left as allocation garbage, a NaN or Inf
 # there makes 0 * NaN = NaN: a rope made fast to the world tore its load to NaN the first time it
 # went taut, or not, depending on what the allocator's reused memory held. Zero is the value the
 # solver needs for a static body.
 #
-# Idempotent: a patched tree is left as it is. A tree with neither the pinned nor the patched text
-# stops the configure, so a Jolt bump re-checks this instead of silently dropping it.
+#
+# 2. ContactConstraintManager (below): the key an island's contacts are sorted by for the solver.
 
 if(NOT DEFINED JOLT_SOURCE_DIR)
     message(FATAL_ERROR "jolt_patch.cmake: pass -DJOLT_SOURCE_DIR=<the Jolt checkout>")
@@ -22,14 +25,56 @@ set(patched
     "\tVec3\t\t\t\t\t\tmR1xN1 = Vec3::sZero();\n\tVec3\t\t\t\t\t\tmInvI1_R1xN1 = Vec3::sZero();\n\tVec3\t\t\t\t\t\tmRatioR2xN2 = Vec3::sZero();\n\tVec3\t\t\t\t\t\tmInvI2_RatioR2xN2 = Vec3::sZero();\n")
 
 string(FIND "${text}" "${patched}" at_patched)
+if(at_patched LESS 0)
+    string(FIND "${text}" "${pinned}" at_pinned)
+    if(at_pinned LESS 0)
+        message(FATAL_ERROR "jolt_patch.cmake: ${part} no longer holds the pinned lever-arm members; "
+                            "re-check that a static body's lever arms are written before bumping Jolt")
+    endif()
+    string(REPLACE "${pinned}" "${patched}" text "${text}")
+    file(WRITE "${part}" "${text}")
+    message(STATUS "jolt_patch.cmake: IndependentAxisConstraintPart lever arms initialised")
+endif()
+
+# ---------------------------------------------------------------------------------------------
+# 2. Contact solve order independent of body ids (03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md).
+#
+# ContactConstraintManager sorts an island's contact constraints, before the solver runs them, by
+# a byte hash of (body 1 id, sub-shape 1, body 2 id, sub-shape 2). A body created anywhere in the
+# world shifts the id of every body created after it, the hashes of their contacts change, and
+# the solver runs the contacts of islands the new body never touches in another order: the same
+# physics summed in another order, different in the last bits, and from there the run drifts.
+# The key here is built from what the bodies are (their user data: the game's entity ids) and the
+# sub-shapes in contact; SortContacts already breaks ties on the body ids, whose relative order a
+# new body never changes.
+
+set(manager "${JOLT_SOURCE_DIR}/Jolt/Physics/Constraints/ContactConstraintManager.cpp")
+file(READ "${manager}" text)
+string(FIND "${text}" "sStableContactSortKey" at_patched)
 if(at_patched GREATER_EQUAL 0)
     return()
 endif()
-string(FIND "${text}" "${pinned}" at_pinned)
-if(at_pinned LESS 0)
-    message(FATAL_ERROR "jolt_patch.cmake: ${part} no longer holds the pinned lever-arm members; "
-                        "re-check that a static body's lever arms are written before bumping Jolt")
-endif()
-string(REPLACE "${pinned}" "${patched}" text "${text}")
-file(WRITE "${part}" "${text}")
-message(STATUS "jolt_patch.cmake: IndependentAxisConstraintPart lever arms initialised")
+set(pinned_namespace "JPH_NAMESPACE_BEGIN\n")
+set(patched_namespace
+    "JPH_NAMESPACE_BEGIN\n\n// ScraperX (third_party/jolt_patch.cmake): the key an island's contacts are sorted by before the\n// solver runs them. Upstream hashes the two body ids, so a body created anywhere in the world\n// reorders the solve of islands it never touches. This key is what the bodies are (their user\n// data) and the sub-shapes in contact; SortContacts breaks ties on the body ids, whose relative\n// order a new body never changes.\nstatic JPH_INLINE uint64 sStableContactSortKey(const Body &inBody1, const SubShapeID &inSubShapeID1, const Body &inBody2, const SubShapeID &inSubShapeID2)\n{\n\tconst uint64 words[4] = { inBody1.GetUserData(), uint64(inSubShapeID1.GetValue()), inBody2.GetUserData(), uint64(inSubShapeID2.GetValue()) };\n\treturn HashBytes(words, sizeof(words));\n}\n")
+set(pinned_add
+    "CreateConstraint<Type1, Type2>(ioActivateAndLinkBodies, inBody1, inBody2, key_hash, new_manifold_handle,")
+set(patched_add
+    "CreateConstraint<Type1, Type2>(ioActivateAndLinkBodies, inBody1, inBody2, sStableContactSortKey(inBody1, inManifold.mSubShapeID1, inBody2, inManifold.mSubShapeID2), new_manifold_handle,")
+set(pinned_cache
+    "CreateConstraint<Type1, Type2>(link_bodies, inBody1, inBody2, input_hash, output_handle,")
+set(patched_cache
+    "CreateConstraint<Type1, Type2>(link_bodies, inBody1, inBody2, sStableContactSortKey(inBody1, input_key.GetSubShapeID1(), inBody2, input_key.GetSubShapeID2()), output_handle,")
+
+foreach(pinned IN ITEMS pinned_namespace pinned_add pinned_cache)
+    string(FIND "${text}" "${${pinned}}" at_pinned)
+    if(at_pinned LESS 0)
+        message(FATAL_ERROR "jolt_patch.cmake: ${manager} no longer holds the pinned contact sort key text (${pinned}); "
+                            "re-check how contacts are sorted for the solver before bumping Jolt")
+    endif()
+endforeach()
+string(REPLACE "${pinned_namespace}" "${patched_namespace}" text "${text}")
+string(REPLACE "${pinned_add}" "${patched_add}" text "${text}")
+string(REPLACE "${pinned_cache}" "${patched_cache}" text "${text}")
+file(WRITE "${manager}" "${text}")
+message(STATUS "jolt_patch.cmake: contact solve order keyed on the bodies' user data, not their ids")

@@ -6,12 +6,11 @@ island's contact constraints, before its solver runs them, by a byte hash of the
 A body created anywhere shifts the id of every body created after it, the hashes change, the
 contacts of islands the new body never touches are solved in another order, and the same physics
 summed in another order differs in its last bits. From there every moving thing drifts.
-**Fix (designed here, built in the next commit):** the sort key becomes what the bodies are (their
-user data, the game's entity ids) and the sub-shapes in contact, with the body ids only breaking
-ties, whose relative order a new body never changes. One patch on the pinned Jolt
-(`third_party/jolt_patch.cmake`), and a native falsifier (`scraperx_sim body order`) that builds
-the world with a box in one band and requires every simulation elsewhere unchanged, bit for bit.
-The falsifier is in this commit and fails on the pinned engine: that failure is the measurement.
+**Fix:** the sort key is now built from what the bodies are (their user data, the game's entity
+ids) and the sub-shapes in contact, with the body ids only breaking ties, whose relative order a
+new body never changes. One patch on the pinned Jolt (`third_party/jolt_patch.cmake`), and a
+native falsifier (`scraperx_sim body order`) that builds the world with a box in one band and
+requires every simulation elsewhere unchanged, bit for bit.
 
 This document is the diagnosis, the measurements that support it, the designs weighed, and the
 evidence for the one built. Determinism stays the law (plan rule 10,
@@ -102,25 +101,25 @@ else the lower id), the island's own body order, the CCD order, and the two tie-
 already picks the support by a total order of its own (`PlayerContactListener::supports_better`),
 because Jolt's callback order was never fixed.
 
-The proof that this and nothing else is the carrier is the next commit's: the sort key changed
-and nothing else (§5), and all five worlds ending in the same words in both scenarios. With it
-unchanged, they do not (§2).
+Evidence that this and nothing else is the carrier: with the sort key changed and nothing else
+(§5), all five worlds end in the same 7792 words in both scenarios (§6). With it unchanged, they
+do not (§2).
 
 ## 4. Designs weighed
 
 | Design | What it does | Verdict |
 |---|---|---|
-| **Key the sort on what the bodies are** (chosen) | The sort key becomes a hash of (body 1's user data, sub-shape 1, body 2's user data, sub-shape 2); ties fall to the body ids, whose relative order an insertion never changes. User data here is the entity id, a constant per thing (the player 2, every world solid 51, each machine part its own). | Removes the dependency at its root: the solve order is a function of what is in contact, not of when it was made. Twelve lines in the engine, applied by the patch script the tree already has, idempotent, and the configure stops if a Jolt bump moves the pinned text. No change to body creation, saves, memory or speed (one 32-byte hash per contact per step, where one was already taken). |
+| **Key the sort on what the bodies are** (built) | The sort key becomes a hash of (body 1's user data, sub-shape 1, body 2's user data, sub-shape 2); ties fall to the body ids, whose relative order an insertion never changes. User data here is the entity id, a constant per thing (the player 2, every world solid 51, each machine part its own). | Removes the dependency at its root: the solve order is a function of what is in contact, not of when it was made. Twelve lines in the engine, applied by the patch script the tree already has, idempotent, and the configure stops if a Jolt bump moves the pinned text. No change to body creation, saves, memory or speed (one 32-byte hash per contact per step, where one was already taken). |
 | Reserved id ranges per band (`BodyInterface::CreateBodyWithID`) | Every builder takes ids from a range for its band, so an insertion shifts only its own band's later ids. | The pinned Jolt has `CreateBodyWithID` and `BodyManager::AddBodyWithCustomID`; the cost is the holes: `mBodies`, the active lists, the sequence numbers and the broad phase's tracking are sized to the highest id (about 25 bytes an id), and a body created at run time (a corpse, the hook) takes the free list's newest hole, whose place depends on how full the bands are, so those too would need a range. Every creation site (the kit, the crew, the Matron, the corpses, the hook, the player) changes, and the hash on the ids stays underneath, so the next id scheme breaks it again. Rejected: more surface, the cause left in place. |
 | Fewer, larger static bodies per region | Merge the dressing into few bodies a band so there are fewer ids to shift. | Does not touch the cause (one shifted id is enough), and merging changes contact geometry where the player stands on a seam. Rejected. |
 | Region-local build order | Build each band's statics and machines together so an insertion shifts only ids after it in its band. | Every dynamic body is created after the solids and all of them shift together whatever the order; and the save format already depends on the kit's build order. Rejected. |
 | Drift-sensitive tests driven closed-loop | A test steers for its target from where the machine is, as a player would, rather than replaying fixed inputs. | A complement, not a substitute: it hides a drift, it does not remove one, and a test must still prove what it proved. The yard crane's dock drive already steers for the dock's middle from the truck's own position; it failed because the landing itself moved 54 cm. Nothing changed in the tests for this. |
 
-## 5. The design chosen
+## 5. What was built
 
 `third_party/jolt_patch.cmake`, applied to the pinned checkout by FetchContent's `PATCH_COMMAND`
 (and by hand to an existing `build/*/_deps/jolt-src` with
-`cmake -DJOLT_SOURCE_DIR=<checkout> -P third_party/jolt_patch.cmake`), will add to
+`cmake -DJOLT_SOURCE_DIR=<checkout> -P third_party/jolt_patch.cmake`), adds to
 `Jolt/Physics/Constraints/ContactConstraintManager.cpp`:
 
 ```cpp
@@ -131,7 +130,7 @@ static JPH_INLINE uint64 sStableContactSortKey(const Body &inBody1, const SubSha
 }
 ```
 
-and pass it, in place of `key_hash` and `input_hash`, to both `CreateConstraint` calls. The
+and passes it, in place of `key_hash` and `input_hash`, to both `CreateConstraint` calls. The
 manifold cache keeps its own hash of the ids; only the solver's order changes. `SortContacts` is
 untouched: equal keys (the player on three world solids, all entity 51) still fall to the ids,
 a strict total order, so the simulation stays deterministic across runs and threads as before.
@@ -149,11 +148,79 @@ as they did, and a save whose entity list does not match is refused exactly as b
 
 **What changes once.** The solve order of every island is re-dealt by the new key, so every
 dynamic result moves in its last digits once, the way the rail moved them, and then holds. The
-yard crane, forklift, magnet, spreader, stock and determinism groups are run before and after to
-see what moves, and each is run again with an extra solid in the 143 m band
-(`SCRAPERX_EXTRA_SOLID_Y=143.5`, every world of the run) to show its every line unchanged.
+groups below were run before and after to see what moved; every bound held.
 
 ## 6. Evidence
 
-Recorded by the implementation commit: the falsifier's output on the patched build, the groups
-before and after, and each group with an extra solid in the 143 m band.
+The falsifier, `scraperx_sim body order` (`tests/sim_tests_body_order.cpp`, in the full suite
+and `SCRAPERX_ONLY=body-order`), on the patched build:
+
+```
+  body order: as built: 1633 solids; at grade the truck ends at (37.9996, -0.014769, 20.7346), the climber at (37.972, 1.20401, 20.5735); on the 706 m deck the climber ends at (-4.5, 707, -147.5)
+  body order: a box in the yard's band: 1634 solids; at grade the truck ends at (37.9996, -0.014769, 20.7346), the climber at (37.972, 1.20401, 20.5735); on the 706 m deck the climber ends at (-4.5, 707, -147.5)
+  body order: a box in the 143 m deck's band: 1634 solids; at grade the truck ends at (37.9996, -0.014769, 20.7346), the climber at (37.972, 1.20401, 20.5735); on the 706 m deck the climber ends at (-4.5, 707, -147.5)
+  body order: a box in the crane band: 1634 solids; at grade the truck ends at (37.9996, -0.014769, 20.7346), the climber at (37.972, 1.20401, 20.5735); on the 706 m deck the climber ends at (-4.5, 707, -147.5)
+  body order: a box after every body: 1634 solids; at grade the truck ends at (37.9996, -0.014769, 20.7346), the climber at (37.972, 1.20401, 20.5735); on the 706 m deck the climber ends at (-4.5, 707, -147.5)
+PASS scraperx_sim body order: worlds=5 grade_words=7792 high_words=7792 truck_x=37.9996 truck_z=20.7346
+```
+
+Every world builds its one extra solid (1633 to 1634), the truck has been driven (4.2 m from its
+park), and all five worlds end in the same 7792 words in both scenarios. The same test fails on
+the pinned code (§2), so it cannot pass vacuously.
+
+**Every affected native group, as built and with an extra solid in the 143 m band.** Each group
+was run twice on the patched build: as built, and with `SCRAPERX_EXTRA_SOLID_Y=143.5` (every
+world of the run gets the inert box, built with the 143 m deck's solids). The two runs' every
+line, numbers included, were diffed (`compare_group.sh` in the session's scratchpad: the group
+twice, `diff`):
+
+| Group (`SCRAPERX_ONLY=`) | Its proof line, as built, patched | With the extra solid |
+|---|---|---|
+| `crane` | `PASS scraperx_sim crane: forked_up_44_m=0.363091 forklift_x=-22.5477 stall_n=75000`; the forklift landed at (-30.8683, 21.9829, -127.238), driven in to (-22.5477, 21.9857, -127.186); the container ridden to 50.3909 | identical, every line |
+| `magnet` | `PASS scraperx_sim magnet: slab_held_n=49000 beam_held_n=16333.3 stack_rose_m=-0.00648805 box_held_n=4900` | identical |
+| `spreader` | `PASS scraperx_sim spreader: lifted_to_y=3.45839 set_down_y=1.29495` | identical |
+| `forklift` | `PASS scraperx_sim forklift: carried_m=3.31455`; `PASS scraperx_sim forklift strain: coil_rise_m=1.05531 stillage_pitch_deg=9.91471` | identical |
+| `stock` | `PASS scraperx_sim stock: pieces=325 settle_m=0.0153381 shoved_m=0.00119781` | identical |
+| `determinism` | `PASS scraperx_sim determinism: words=7792 ticks=4895` | identical |
+
+**What moved once, pinned to patched** (the one re-deal of the solve order, §5), from the same
+groups run on the pinned engine before the patch: the forklift landed on the dock at
+(-30.8683, 21.9829, -127.24) and now at (-30.8683, 21.9829, -127.238); driven in to x -22.558,
+now -22.5477; the container ridden to 50.3908, now 50.3909; `forked_up_44_m` 0.363388, now
+0.363091; the forklift's `carried_m` 3.25749, now 3.31455; the strain's `coil_rise_m` 1.05542 and
+`stillage_pitch_deg` 9.9545, now 1.05531 and 9.91471; the stock's settle 0.015534 m (the owner's
+figure from before the rail), now 0.0153381. The same order of change the rail made, once, and
+then held: every bound held, and nothing in a test was moved to make it hold.
+
+**The full native suite** on the patched build
+(`cmake --build build/host --target scraperx_sim_tests scraperx_native`, then
+`./build/host/scraperx_sim_tests`): still running when this commit was made (75 proof lines passed, none failed, at the AS-010 band); its verdict is recorded by the commit after this one.
+
+**The touch scenarios** the change plausibly reaches, played as CI plays them
+(`tools/godot/godot --headless --fixed-fps 60 --path godot -- --uitest=<name>`, the patched
+extension): 
+
+| Scenario | Result |
+|---|---|
+| `touch_forklift` | `SCRAPERX_UITEST PASS touch_forklift` (14 s) |
+| `touch_forklift_strain` | `SCRAPERX_UITEST PASS touch_forklift_strain` (12 s) |
+| `touch_yard_crane` | `SCRAPERX_UITEST PASS touch_yard_crane` (16 s) |
+| `touch_crane_magnet` | `SCRAPERX_UITEST PASS touch_crane_magnet slab=5318 lifted_to=1.46 held_read='HOLDING 2.0 T OF 5.0 T'` (40 s) |
+| `touch_crane_spreader` | `SCRAPERX_UITEST PASS touch_crane_spreader` (54 s) |
+| `touch_save` | `SCRAPERX_UITEST PASS touch_save` (5 s) |
+| `touch_stack` | still playing when this commit was made; recorded by the commit after this one |
+
+
+CI plays the whole list on the owner's push of `ScraperX-Claude`; the suite's proof lines now
+include `PASS scraperx_sim body order`.
+
+## 7. The rule from here
+
+- A body added, removed or split in one band changes that band's own contacts and nothing
+  else's. The falsifier holds the world to that; a change that fails it has found a second
+  carrier, to be diagnosed the same way (§2's instrument, five worlds, the first differing word).
+- A new static that takes a place a piece of stock or a zipline was to have moves that piece
+  in the kit's list: that is a real change in the band, and the save refuses as it does.
+- The patch is part of the pinned Jolt: a Jolt bump stops the configure until someone re-checks
+  how contacts are sorted for the solver (`third_party/jolt_patch.cmake`,
+  `third_party/README.md`).
