@@ -260,6 +260,19 @@ public:
         carried_entity_.store(entity, std::memory_order_relaxed);
     }
 
+    // The soles' grip, as a friction coefficient, while the feet hold the body
+    // at rest on its support (PhysicsWorld::apply_locomotion); 0 otherwise.
+    // The body's contacts are frictionless, so the feet act only through the
+    // velocity locomotion sets before the solve. Held there, the support's own
+    // reaction still moved it in the solve: along a contact normal that tilts
+    // (the capsule's rim on an edge, a slope) it pushes out and down as well
+    // as up, and nothing opposed that. Given to every contact the body stands
+    // on this tick, the grip holds it as soles do, up to the grip times the
+    // load on them.
+    void set_planted_grip(const float grip) noexcept {
+        planted_grip_.store(grip, std::memory_order_relaxed);
+    }
+
     // The player and what it carries share the carry point: contact between
     // them is never meaningful, only the constraint relates them.
     [[nodiscard]] JPH::ValidateResult OnContactValidate(
@@ -280,16 +293,16 @@ public:
     void OnContactAdded(const JPH::Body &first,
                         const JPH::Body &second,
                         const JPH::ContactManifold &manifold,
-                        JPH::ContactSettings &) override {
-        observe_support(first, second, manifold);
+                        JPH::ContactSettings &settings) override {
+        observe_support(first, second, manifold, settings);
         observe_hit(first, second, manifold);
     }
 
     void OnContactPersisted(const JPH::Body &first,
                             const JPH::Body &second,
                             const JPH::ContactManifold &manifold,
-                            JPH::ContactSettings &) override {
-        observe_support(first, second, manifold);
+                            JPH::ContactSettings &settings) override {
+        observe_support(first, second, manifold, settings);
     }
 
 private:
@@ -338,7 +351,8 @@ private:
 
     void observe_support(const JPH::Body &first,
                          const JPH::Body &second,
-                         const JPH::ContactManifold &manifold) noexcept {
+                         const JPH::ContactManifold &manifold,
+                         JPH::ContactSettings &settings) noexcept {
         if (manifold.mRelativeContactPointsOn1.size() == 0 ||
             manifold.mRelativeContactPointsOn2.size() == 0) {
             return;
@@ -386,6 +400,8 @@ private:
             support_normal_y < kSupportNormalThreshold || support_rank(support_entity) == 0) {
             return;
         }
+        // Stood on: planted feet grip it (set_planted_grip).
+        settings.mCombinedFriction = planted_grip_.load(std::memory_order_relaxed);
 
         const JPH::Vec3 point_velocity = support_body->GetPointVelocity(support_contact_point);
         const SupportSample candidate{
@@ -446,6 +462,7 @@ private:
     // Corpses' bodies (Corpses: kUserDataBase on).
     static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};
+    std::atomic<float> planted_grip_{0.0F};
 };
 
 [[nodiscard]] inline JPH::RVec3 spawn_position(const scraperx::sim::InitialSpawn spawn) noexcept {

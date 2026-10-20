@@ -261,6 +261,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "edge-stand") {
+        run_edge_stand();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "trapeze") {
         run_trapeze();
         return EXIT_SUCCESS;
@@ -365,6 +370,7 @@ int main() {
     run_jump_buffer();
     run_parkour_seams();
     run_teeter();
+    run_edge_stand();
     run_trapeze();
     run_tram();
     run_derrick();

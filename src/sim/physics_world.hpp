@@ -965,6 +965,9 @@ public:
     std::uint64_t roll_refused_count_ = 0;
     std::uint64_t roll_blocked_count_ = 0;
     std::uint64_t stumble_count_ = 0;
+    // This tick's grip for the solve (PlayerContactListener::set_planted_grip):
+    // set by apply_locomotion when the feet hold the body at rest, else 0.
+    float planted_grip_ = 0.0F;
     bool teetering_ = false;
     bool summit_reached_ = false;
     double summit_seconds_ = 0.0;

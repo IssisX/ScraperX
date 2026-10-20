@@ -799,6 +799,7 @@ void run_high();
 void run_incline();
 void run_wheel();
 void run_teeter();
+void run_edge_stand();
 void run_trapeze();
 void run_landing();
 void run_save();

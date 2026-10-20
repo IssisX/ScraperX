@@ -604,6 +604,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         --jump_buffer_ticks_;
     }
     bool jump_started = false;
+    planted_grip_ = 0.0F;
     // A teeter is ordinary locomotion's; whatever else holds the body
     // (harness, hands, a throw) ends it.
     if (sling_controlling || traversal_state_ != TraversalState::None || (slingshot_flight_ && !grounded_)) {
@@ -683,6 +684,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
                     grounded_);
     contact_listener_.begin_tick();
+    // A hang or a harness taken after the feet were planted takes the body
+    // off them.
+    contact_listener_.set_planted_grip(
+        traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     impacts_->post_step(carried_entity_);

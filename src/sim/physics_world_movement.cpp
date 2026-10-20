@@ -760,6 +760,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
     beam_xcom_ = 0.0F;
     beam_lean_ = JPH::Vec3::sZero();
     line_held_ = false;
+    float planted = 0.0F;
 
     if (grounded_ && support_entity_id_ != 0) {
         reference_velocity = current_support_point_velocity(bodies);
@@ -908,6 +909,21 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         const JPH::Vec3 relative = player_velocity - reference_velocity;
         air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
                                    JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
+        // Planted: the stick let go, no line hauling the body (taut, or its
+        // reel turning: a reel drags the soles, through `pressed` above), and
+        // the feet have brought it to rest on its support. They hold it
+        // through the solve as well (PlayerContactListener::set_planted_grip),
+        // with the grip they brake with on level ground: the load on them (a
+        // slope's share, a line's lift) is the contact's own force there, so
+        // it is not taken off twice. Never while the body moves: a stop takes
+        // as long as it did, and a stick pushed toward an edge walks off it as
+        // freely.
+        const bool hauled = hook_state_ == HookState::Bitten && (commands.hook_reel || hook_tension_n_ > 0.0F);
+        if (move_x == 0.0 && move_z == 0.0 && !rolling() && !sliding_ && !teetering_ && !hauled &&
+            JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).IsNearZero()) {
+            planted = kGroundAcceleration * static_cast<float>(0.25 + 0.75 * recovery_balance()) /
+                      -physics_system_.GetGravity().GetY();
+        }
     } else {
         teetering_ = false;
         clear_support_jolt();
@@ -1078,6 +1094,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
     bodies.SetLinearVelocity(player_id_, player_velocity);
     last_set_velocity_ = player_velocity;
     last_set_valid_ = grounded_ && !jump_started;
+    planted_grip_ = jump_started ? 0.0F : planted;
     if (!jump_started && grounded_ && support_entity_id_ != 0) {
         try_step_up(bodies, player_velocity - reference_velocity, delta_seconds);
     }
