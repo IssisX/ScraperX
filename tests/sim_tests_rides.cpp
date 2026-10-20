@@ -753,6 +753,19 @@ bool dump_iron(scraperx::sim::Simulation &s, std::uint64_t entity) {
     const auto pig = derrick_body(s, entity);
     // Stand just north of it on the cradle, face south, and pick it up.
     if (!stand_on_cradle(s, pig.x - c.x, pig.z - c.z + 0.6, 2.5)) return false;
+    // Then step in until the hands are offered it, as a player would: the
+    // cradle's floor slopes, and planted feet no longer let the body drift
+    // the last few centimetres down to it (the owner's playtest fix, the
+    // planted grip).
+    for (int i = 0; i < 180 && s.snapshot().carry_target_entity_id != entity; ++i) {
+        const auto at = derrick_body(s, entity);
+        const auto me = s.snapshot().player_position;
+        const double ex = at.x - me.x, ez = at.z + 0.45 - me.z, d = std::hypot(ex, ez);
+        (void)s.set_move_input(d > 0.02 ? 0.25 * ex / d : 0.0, d > 0.02 ? 0.25 * ez / d : 0.0);
+        (void)s.set_facing(0.0, -1.0);
+        (void)s.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
     (void)s.set_facing(0.0, -1.0);
     (void)s.advance_frame(0.2);
     if (s.snapshot().carry_target_entity_id != entity || !s.request_pick_up()) return false;
