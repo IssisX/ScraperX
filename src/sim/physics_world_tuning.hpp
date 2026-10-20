@@ -27,7 +27,11 @@ constexpr JPH::ObjectLayer kPlayer = 2;
 // Corpses (sim/corpse.hpp): they meet the static world, the climber and
 // each other, never the machines' moving bodies.
 constexpr JPH::ObjectLayer kCorpse = 3;
-constexpr JPH::ObjectLayer kCount = 4;
+// The Matron on the shaft's pipe (sim/matron.hpp): wrapped round the steel,
+// she meets what moves (a drum let go onto her, the climber) and not the
+// static steel she is wrapped round, the pipe's flanges and the rail.
+constexpr JPH::ObjectLayer kOnSteel = 4;
+constexpr JPH::ObjectLayer kCount = 5;
 } // namespace object_layers
 
 namespace broadphase_layers {
@@ -782,8 +786,13 @@ constexpr float kThrowRaiseRad = 0.14F;
 constexpr float kThrowFreeImpulseNs = 150.0F;
 constexpr float kThrowSpinRadS = 4.0F;   // end over end
 // The hands throw at what the eyes are on: the first thing along the view
-// within kThrowAimM (else the point that far along it).
+// within kThrowAimM (else the point that far along it). Only a point at least
+// kThrowAimPastM ahead of the load gives the way (looking down, the floor the
+// eyes are on can lie under or behind the hands: then straight ahead), and
+// never more than kThrowAimSpreadRad off the facing.
 constexpr float kThrowAimM = 8.0F;
+constexpr float kThrowAimPastM = 0.3F;
+constexpr float kThrowAimSpreadRad = 0.52F;   // 30 degrees
 // Its path drawn ahead while the thumb swipes: this far ahead in time, at
 // this step.
 constexpr float kThrowPreviewSeconds = 2.5F;

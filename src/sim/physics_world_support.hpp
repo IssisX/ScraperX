@@ -83,6 +83,7 @@ public:
         mapping_[object_layers::kMoving] = broadphase_layers::kMoving;
         mapping_[object_layers::kPlayer] = broadphase_layers::kMoving;
         mapping_[object_layers::kCorpse] = broadphase_layers::kMoving;
+        mapping_[object_layers::kOnSteel] = broadphase_layers::kMoving;
     }
 
     [[nodiscard]] JPH::uint GetNumBroadPhaseLayers() const override {
@@ -122,6 +123,9 @@ public:
             object_layer == object_layers::kCorpse) {
             return true;
         }
+        if (object_layer == object_layers::kOnSteel) {
+            return broadphase_layer == broadphase_layers::kMoving;
+        }
         JPH_ASSERT(false);
         return false;
     }
@@ -132,7 +136,7 @@ public:
     [[nodiscard]] bool ShouldCollide(const JPH::ObjectLayer first,
                                      const JPH::ObjectLayer second) const override {
         if (first == object_layers::kStatic) {
-            return second != object_layers::kStatic;
+            return second != object_layers::kStatic && second != object_layers::kOnSteel;
         }
         if (first == object_layers::kMoving) {
             return second != object_layers::kCorpse;
@@ -141,7 +145,11 @@ public:
             return true;
         }
         if (first == object_layers::kCorpse) {
-            return second != object_layers::kMoving;
+            return second != object_layers::kMoving && second != object_layers::kOnSteel;
+        }
+        if (first == object_layers::kOnSteel) {
+            return second == object_layers::kMoving || second == object_layers::kPlayer ||
+                   second == object_layers::kOnSteel;
         }
         JPH_ASSERT(false);
         return false;

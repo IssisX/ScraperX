@@ -253,6 +253,7 @@ const HAPTICS := {
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
 	&"break": [55, 1.0],
+	&"her": [18, 0.5],   # her hands on the steel you are on or beside
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -913,7 +914,9 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
-		_matron_view.update_view(_native.get_matron_state(), delta, _camera.global_position, position)
+		var her_state: Dictionary = _native.get_matron_state()
+		_matron_view.update_view(her_state, delta, _camera.global_position, position)
+		_feel_her(her_state, position)
 	if _forklift_view != null:
 		_feel_forklift(delta)
 	if _crane_view != null:
@@ -1203,6 +1206,24 @@ func _render_slingshot(delta: float) -> void:
 	elif not _sling_prediction.is_empty():
 		_sling_prediction = PackedVector3Array()
 	_slingshot_view.update_view(sling, _sling_prediction)
+
+# Her hands on the corner pipe come through the steel to the hand on the
+# phone: a pulse for each hold within HER_FELT_M of the climber, fading with
+# the distance; a heavy one when she slams onto a flange.
+const HER_FELT_M := 14.0
+var _her_holds_seen := -1
+var _her_slams_seen := -1
+
+func _feel_her(her: Dictionary, position: Vector3) -> void:
+	var holds := int(her.get("pipe_holds", 0))
+	var slams := int(her.get("pipe_slams", 0))
+	var near := (her["position"] as Vector3).distance_to(position)
+	if _her_holds_seen >= 0 and holds > _her_holds_seen and near < HER_FELT_M:
+		_haptic(&"her", lerpf(1.0, 0.25, near / HER_FELT_M))
+	if _her_slams_seen >= 0 and slams > _her_slams_seen and near < 2.0 * HER_FELT_M:
+		_haptic(&"land", 1.0)
+	_her_holds_seen = holds
+	_her_slams_seen = slams
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
 	var support := int(_native.get_support_entity_id())

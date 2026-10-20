@@ -116,8 +116,8 @@ public:
     void lay_machine_weights();
     static constexpr int kMachineWeights = 1;
     // What the Matron takes and throws as a pest (matron.hpp, her mischief):
-    // two toolboxes and an oil drum by the outer rail of her deck's north
-    // band, near the way out. Laid after the machine weights, so saves made
+    // two toolboxes, and an oil drum too heavy for her (the player's, to drop
+    // on her), by the outer rail of her deck's north band, near the way out. Laid after the machine weights, so saves made
     // before them line up. The last kMatronThrowables pieces.
     void lay_matron_throwables();
     static constexpr int kMatronThrowables = 3;

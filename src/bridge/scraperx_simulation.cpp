@@ -1605,6 +1605,16 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["fall"] = godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
     out["kneeling"] = state.kneeling;
     out["down_s"] = state.down_s;
+    out["down_left_s"] = state.down_left_s;
+    out["on_pipe"] = state.on_pipe;
+    out["pipe_head_down"] = state.pipe_head_down;
+    out["pipe_sliding"] = state.pipe_sliding;
+    out["pipe_stunned"] = state.pipe_stunned;
+    out["pipe_links"] = static_cast<std::int64_t>(state.pipe_links);
+    out["pipe_holds"] = static_cast<std::int64_t>(state.pipe_holds);
+    out["pipe_flanges"] = static_cast<std::int64_t>(state.pipe_flanges);
+    out["pipe_slams"] = static_cast<std::int64_t>(state.pipe_slams);
+    out["pipe_slam_mps"] = state.pipe_slam_mps;
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;

@@ -413,7 +413,10 @@ void run_matron_balance() {
         require(by_drum == kStaggering && m.knockdowns == 1 && rises(2.0),
                 "matron balance: a drum at her chest only staggers a dangerous Matron");
         require(until_guarding(s, 120.0), "matron balance: dangerous, at her post once more");
-        const int low = send(drum, 1.0, 0.46, 3.3);
+        // The toolbox lying at her feet since it struck her, put back by the
+        // rail (in the drum's way, it would take the drum's blow).
+        s.debug_launch_kit_body(toolbox, {-6.5, static_cast<double>(Matron::kDeckTop) + 0.13, -125.0}, {0.0, 0.0, 0.0});
+        const int low = send(drum, 0.8, 0.47, 3.3);
         const auto d = s.matron_state();
         std::cout << "  matron balance: a drum at a dangerous Matron's shins, blow " << d.blow_mps << " m/s, state " << low
                   << "\n";
@@ -502,6 +505,146 @@ void run_matron_balance() {
         require(h.matron_state().state != kDown && h.matron_state().alive && h.snapshot().death_count == deaths_h,
                 "matron heave: a few seconds down, then up; nobody dead");
         std::cout << "PASS scraperx_sim matron heave: blow_mps=" << m.blow_mps << "\n";
+    }
+}
+
+// The shaft's corner pipe (the owner, 2026-10-19: she comes down the shaft
+// after you; one shaft pipe is hers; you hear her at least 4 s before she
+// arrives; a drum dropped on her knocks her off without killing her). The
+// climber rides the line down to 143 while she strains and, once she is
+// out, sprints along 143's north edge: heard up the shaft. `stage` is set
+// as she comes out; `drum_at_feet` > 0 lets a drum go onto her as her feet
+// pass that height. Returns what she did.
+struct PipeRun {
+    bool took = false;        // she set out along the pipe
+    bool arrived = false;     // off it onto 143's band
+    double warned_s = 0.0;    // from her first hold on it to her feet on 143
+    bool head_down = false;   // seen coming down head first
+    std::uint32_t holds = 0;
+    std::uint32_t flanges = 0;
+    std::uint32_t slams = 0;
+    double slam_mps = 0.0;
+    bool alive = true;
+    std::uint64_t deaths = 0;
+};
+PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const double seconds) {
+    PipeRun r;
+    Simulation s(InitialSpawn::Deck154);
+    require(s.advance_frame(1.0).accepted, "matron pipe: settle");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron pipe: a sprint toward her locker wakes her");
+    const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+    require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) && walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
+            "matron pipe: up the line's ramp onto its stand");
+    require(ride_line_down(s, line), "matron pipe: down the line to 143 m while she strains");
+    (void)s.set_crouch_input(true);
+    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) && go(s, -16.0, -132.6, false, 20.0, 0.3),
+            "matron pipe: crouched round to 143's north edge");
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !s.matron_state().released; ++i) {
+        tick(s);
+    }
+    require(s.matron_state().released, "matron pipe: she is out");
+    s.debug_set_matron_stage(stage);
+    // A sprint along 143's north edge, heard up the shaft; then still.
+    (void)s.set_crouch_input(false);
+    require(go(s, -2.0, -132.6, true, 8.0, 0.4), "matron pipe: a sprint along 143's north edge");
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+    const double hz = static_cast<double>(Simulation::kTickRateHz);
+    int first_hold = -1;
+    bool dropped = false;
+    const auto deaths = s.snapshot().death_count;
+    for (int i = 0; i < static_cast<int>(seconds * hz); ++i) {
+        s.debug_set_matron_stage(stage);   // her rage held at the stage (it cools as she goes)
+        tick(s);
+        const auto m = s.matron_state();
+        r.took = r.took || m.pipe_links > 0;
+        r.head_down = r.head_down || m.pipe_head_down;
+        if (first_hold < 0 && m.pipe_holds > 0) {
+            first_hold = i;
+        }
+        const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+        const bool on_line = std::hypot(m.position.x - static_cast<double>(Matron::kPipeLineX),
+                                        m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
+        if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && feet < drum_at_feet) {
+            // Let go over the corner rail onto her, from a metre and a half up.
+            s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
+            dropped = true;
+        }
+        static int dropped_at = -1;
+        if (dropped && dropped_at < 0) {
+            dropped_at = i;
+        }
+        if (std::getenv("SCRAPERX_PIPE_DROP_TRACE") != nullptr && dropped && i - dropped_at < 70) {
+            const auto dp = s.kit_body_position(drum);
+            const auto dv = s.kit_body_velocity(drum);
+            std::cout << "    drop " << i - dropped_at << " her y " << m.position.y << " blow " << m.blow_mps << " slams "
+                      << m.pipe_slams << " sliding " << m.pipe_sliding << "; drum (" << dp.x << ", " << dp.y << ", "
+                      << dp.z << ") v (" << dv.x << ", " << dv.y << ", " << dv.z << ")\n";
+        }
+        if (std::getenv("SCRAPERX_PIPE_TRACE") != nullptr && i % 45 == 0) {
+            std::cout << "    t " << i / hz << " state " << int(m.state) << " at (" << m.position.x << ", "
+                      << m.position.y << ", " << m.position.z << ") floor " << m.floor_y << " lead " << m.lead_floor_y
+                      << " pipe " << m.on_pipe << " links " << m.pipe_links << " holds " << m.pipe_holds
+                      << " slams " << m.pipe_slams << " stage " << int(m.stage) << "\n";
+        }
+        if (r.took && !m.on_pipe && std::abs(m.floor_y - 143.0) < 0.1) {
+            r.arrived = true;
+            r.warned_s = static_cast<double>(i - first_hold) / hz;
+            break;
+        }
+        if (!m.alive) {
+            break;
+        }
+    }
+    const auto m = s.matron_state();
+    r.holds = m.pipe_holds;
+    r.flanges = m.pipe_flanges;
+    r.slams = m.pipe_slams;
+    r.slam_mps = m.pipe_slam_mps;
+    r.alive = m.alive;
+    r.deaths = s.snapshot().death_count - deaths;
+    return r;
+}
+
+void run_matron_pipe() {
+    // Frail, she cannot take hold of it.
+    {
+        const PipeRun r = pipe_run(0, 0.0, 40.0);
+        std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << "\n";
+        require(!r.took && r.alive, "matron pipe: frail, she does not take hold of the pipe");
+    }
+    // Dangerous: down it after the climber, heard all the way.
+    {
+        const PipeRun r = pipe_run(1, 0.0, 60.0);
+        std::cout << "  matron pipe: dangerous, down to 143: arrived " << r.arrived << " after " << r.warned_s
+                  << " s of holds (" << r.holds << " holds, " << r.flanges << " flanges)\n";
+        require(r.took && r.arrived && r.alive, "matron pipe: dangerous, she comes down the shaft's pipe after the climber");
+        require(r.warned_s >= 4.0, "matron pipe: heard on the pipe at least 4 s before she is on the climber's deck");
+        require(r.flanges >= 1, "matron pipe: a flange passed on the way (a bong)");
+        std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
+    }
+    // Fully changed: head first, and still heard 4 s ahead.
+    {
+        const PipeRun r = pipe_run(2, 0.0, 60.0);
+        std::cout << "  matron pipe: fully changed, down to 143: arrived " << r.arrived << " after " << r.warned_s
+                  << " s, head first " << r.head_down << "\n";
+        require(r.took && r.arrived && r.alive && r.head_down && r.warned_s >= 4.0,
+                "matron pipe: fully changed, she comes down it head first, heard 4 s ahead");
+        std::cout << "PASS scraperx_sim matron pipe changed: warned_s=" << r.warned_s << "\n";
+    }
+    // A drum let go onto her on the pipe: torn off, slammed onto the flange
+    // under her, alive, and on she goes.
+    {
+        const PipeRun r = pipe_run(1, 154.2, 70.0);
+        std::cout << "  matron pipe: a drum onto her as she starts down: slams " << r.slams << " at " << r.slam_mps
+                  << " m/s, arrived " << r.arrived << ", alive " << r.alive << ", deaths " << r.deaths << "\n";
+        require(r.slams == 1 && r.alive && r.deaths == 0, "matron pipe: a drum dropped on her knocks her off, alive");
+        require(r.arrived, "matron pipe: torn off, she goes on down to 143 after it");
+        std::cout << "PASS scraperx_sim matron pipe drum: slam_mps=" << r.slam_mps << "\n";
     }
 }
 
@@ -1564,6 +1707,7 @@ void run_matron() {
     run_matron_mischief();
     run_matron_collision();
     run_matron_balance();
+    run_matron_pipe();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

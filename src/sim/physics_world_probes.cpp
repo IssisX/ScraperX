@@ -508,10 +508,37 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
     }
 }
 
+// Loose stock in the hands, other than a machine's own weight (S3's pig: a
+// route part is set down, never thrown away).
 bool Simulation::PhysicsWorld::holding_throwable() const noexcept {
-    return carried_load_mass() > 0.0F && carried_entity_ >= LooseStock::kFirstEntity &&
-           carried_entity_ < LooseStock::kFirstEntity + static_cast<std::uint64_t>(loose_stock_->count());
+    const auto count = static_cast<std::uint64_t>(loose_stock_->count());
+    const std::uint64_t weights_end = count - static_cast<std::uint64_t>(LooseStock::kMatronThrowables);
+    const std::uint64_t weights_begin = weights_end - static_cast<std::uint64_t>(LooseStock::kMachineWeights);
+    if (carried_load_mass() <= 0.0F || carried_entity_ < LooseStock::kFirstEntity ||
+        carried_entity_ >= LooseStock::kFirstEntity + count) {
+        return false;
+    }
+    const std::uint64_t piece = carried_entity_ - LooseStock::kFirstEntity;
+    return piece < weights_begin || piece >= weights_end;
 }
+
+namespace {
+
+// What a thrown piece meets, as the aim and its drawn path see it: what a
+// moving body collides with (not a corpse's parts, not a sensor), never the
+// thrower or the piece itself.
+class ThrowMeets final : public JPH::BodyFilter {
+public:
+    ThrowMeets(const JPH::BodyID player, const JPH::BodyID load) : player_(player), load_(load) {}
+    bool ShouldCollide(const JPH::BodyID &id) const override { return id != player_ && id != load_; }
+    bool ShouldCollideLocked(const JPH::Body &body) const override { return !body.IsSensor(); }
+
+private:
+    JPH::BodyID player_;
+    JPH::BodyID load_;
+};
+
+} // namespace
 
 JPH::Vec3 Simulation::PhysicsWorld::throw_velocity(const JPH::BodyInterface &bodies) const noexcept {
     const float mass = carried_load_mass();
@@ -526,17 +553,26 @@ JPH::Vec3 Simulation::PhysicsWorld::throw_velocity(const JPH::BodyInterface &bod
     const JPH::RVec3 eye(centre.GetX(), centre.GetY() + kPlayerHalfHeight - 0.15F, centre.GetZ());
     const float cos_p = std::cos(look_pitch_);
     const JPH::Vec3 look(facing.GetX() * cos_p, std::sin(look_pitch_), facing.GetZ() * cos_p);
-    JPH::IgnoreMultipleBodiesFilter filter;
-    filter.Reserve(2);
-    filter.IgnoreBody(player_id_);
-    filter.IgnoreBody(carried_id_);
+    const ThrowMeets meets(player_id_, carried_id_);
     const JPH::RRayCast sight(eye, look * kThrowAimM);
     JPH::RayCastResult hit;
-    const JPH::RVec3 aim =
-        physics_system_.GetNarrowPhaseQuery().CastRay(sight, hit, {}, {}, filter) ? sight.GetPointOnRay(hit.mFraction)
-                                                                                 : eye + look * kThrowAimM;
+    const JPH::RVec3 aim = physics_system_.GetNarrowPhaseQuery().CastRay(
+                               sight, hit, physics_system_.GetDefaultBroadPhaseLayerFilter(object_layers::kMoving),
+                               physics_system_.GetDefaultLayerFilter(object_layers::kMoving), meets)
+                               ? sight.GetPointOnRay(hit.mFraction)
+                               : eye + look * kThrowAimM;
     const JPH::Vec3 to_aim(aim - bodies.GetCenterOfMassPosition(carried_id_));
-    const JPH::Vec3 flat = JPH::Vec3(to_aim.GetX(), 0.0F, to_aim.GetZ()).NormalizedOr(facing);
+    JPH::Vec3 flat(to_aim.GetX(), 0.0F, to_aim.GetZ());
+    const float ahead = flat.Dot(facing);
+    if (ahead < kThrowAimPastM) {
+        flat = facing;
+    } else {
+        flat = flat.Normalized();
+        if (flat.Dot(facing) < std::cos(kThrowAimSpreadRad)) {
+            const JPH::Vec3 side = (flat - facing * flat.Dot(facing)).NormalizedOr(JPH::Vec3::sZero());
+            flat = facing * std::cos(kThrowAimSpreadRad) + side * std::sin(kThrowAimSpreadRad);
+        }
+    }
     const float pitch = std::clamp(look_pitch_ + kThrowRaiseRad, -0.9F, 1.2F);
     const JPH::Vec3 along = flat * std::cos(pitch) + JPH::Vec3::sAxisY() * std::sin(pitch);
     return bodies.GetLinearVelocity(player_id_) + along * speed;
@@ -550,13 +586,16 @@ void Simulation::PhysicsWorld::throw_carry(JPH::BodyInterface &bodies) noexcept 
     const JPH::BodyID thrown = carried_id_;
     const std::uint64_t entity = carried_entity_;
     release_carry();
-    const JPH::Vec3 flat = JPH::Vec3(facing_.GetX(), 0.0F, facing_.GetZ()).NormalizedOr(JPH::Vec3::sAxisZ());
+    // Its way across the ground: end over end about the line across it, and
+    // the thrower pushed back along it.
+    const JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
+    const JPH::Vec3 flat = JPH::Vec3(velocity.GetX() - player_velocity.GetX(), 0.0F, velocity.GetZ() - player_velocity.GetZ())
+                               .NormalizedOr(JPH::Vec3(facing_.GetX(), 0.0F, facing_.GetZ()).NormalizedOr(JPH::Vec3::sAxisZ()));
     const JPH::Vec3 across(flat.GetZ(), 0.0F, -flat.GetX());
     bodies.SetLinearAndAngularVelocity(thrown, velocity, across * kThrowSpinRadS);
     impacts_->resync_body(entity);
     // A heave heavier than the arms take without the feet: the rest of it
     // pushes the thrower back.
-    const JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
     const float impulse = mass * (velocity - player_velocity).Length();
     if (impulse > kThrowFreeImpulseNs) {
         bodies.SetLinearVelocity(player_id_, player_velocity - flat * ((impulse - kThrowFreeImpulseNs) / kPlayerMassKg));
@@ -574,10 +613,9 @@ std::vector<Vector3> Simulation::PhysicsWorld::throw_prediction() const {
     JPH::RVec3 at = bodies.GetCenterOfMassPosition(carried_id_);
     JPH::Vec3 velocity = throw_velocity(bodies);
     const JPH::Vec3 gravity = physics_system_.GetGravity();
-    JPH::IgnoreMultipleBodiesFilter filter;
-    filter.Reserve(2);
-    filter.IgnoreBody(player_id_);
-    filter.IgnoreBody(carried_id_);
+    const ThrowMeets meets(player_id_, carried_id_);
+    const auto broad = physics_system_.GetDefaultBroadPhaseLayerFilter(object_layers::kMoving);
+    const auto layers = physics_system_.GetDefaultLayerFilter(object_layers::kMoving);
     const auto to_vector = [](const JPH::RVec3 p) {
         return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()), static_cast<double>(p.GetZ())};
     };
@@ -585,7 +623,7 @@ std::vector<Vector3> Simulation::PhysicsWorld::throw_prediction() const {
     for (float t = 0.0F; t < kThrowPreviewSeconds; t += kThrowPreviewStep) {
         const JPH::Vec3 step = velocity * kThrowPreviewStep + gravity * (0.5F * kThrowPreviewStep * kThrowPreviewStep);
         JPH::RayCastResult hit;
-        if (physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(at, step), hit, {}, {}, filter)) {
+        if (physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(at, step), hit, broad, layers, meets)) {
             result.push_back(to_vector(at + step * hit.mFraction));
             break;
         }

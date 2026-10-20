@@ -115,6 +115,9 @@ var up_hint := ""
 var down_hint := ""
 var up_hint_special := false
 var down_hint_special := false
+# With throwable stock in the hands the native's up move is the throw: on the
+# buttons the JUMP button reads THROW and sends it (main.gd).
+var jump_throws := false
 # The thumb that swiped down is still on the glass.
 var down_held := false
 var up_on_lift := false
@@ -258,7 +261,7 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 func _verb_for(id: StringName) -> StringName:
 	match id:
 		B_JUMP:
-			return &"jump"
+			return &"up" if jump_throws else &"jump"
 		B_ACTION:
 			return &"action"
 		B_CROUCH:
@@ -539,6 +542,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	jump.icon = &"climb" if hanging else &"jump"
 	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing or swinging else "JUMP")
 	jump.tone = TONE_PRIMARY
+	if jump_throws:
+		jump.icon = &"up"
+		jump.label = "THROW"
+		jump.dimmed = false
 	if driving or craning:
 		jump.icon = &"up"
 		jump.label = "RAISE"

@@ -123,6 +123,10 @@ const SCENARIOS := {
 	# Knock her down, then throw what you carry: a toolbox thrown at a pest
 	# coming for the climber puts her down (ui_test_act.gd).
 	"touch_matron_heave": 11,
+	# Her corner pipe: she comes down the shaft after the climber, heard on it
+	# 4 s and more before she is there; a drum shoved off the edge onto her as
+	# she climbs back up knocks her off it, alive (ui_test_act.gd).
+	"touch_matron_pipe": 11,
 	"look_matron_locker": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
@@ -408,6 +412,8 @@ func _run() -> void:
 			ok = await _matron_act_touch(InputRouter.Device.TOUCH)
 		"touch_matron_heave":
 			ok = await _matron_heave_touch(InputRouter.Device.TOUCH)
+		"touch_matron_pipe":
+			ok = await _matron_pipe_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":
 			ok = await _matron_ride_touch(InputRouter.Device.TOUCH)
 		"touch_matron_line":

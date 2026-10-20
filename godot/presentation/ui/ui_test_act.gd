@@ -671,3 +671,188 @@ func _matron_heave_touch(device: int) -> bool:
 		int(_matron_state()["knockdowns"]), int(_native().get_throw_count())]
 	return true
 
+
+
+# Her corner pipe (the owner's goal, 2026-10-19: she comes down the shaft
+# after you; one shaft pipe is hers to climb; you hear her at least 4 s before
+# she arrives; a drum dropped on her knocks her off without killing her).
+# Asleep, the drum by the north band's rail carried quietly round to the
+# shaft's north-east corner and set down by its edge; its clank (or a sprint
+# by her locker) wakes her. The line down to 143 while she strains, and
+# crouched round under her post. Out, sprints along 143's shaft edge make her
+# dangerous: she takes the corner pipe down after the climber, a knock on the
+# steel at every hold. Up the riser to her deck, and she comes back up the pipe
+# after; as she climbs, a shove sends the drum off the edge onto her: torn
+# off, she slams onto the flange below, alive, and nobody is dead.
+const PIPE_DRUM_PICK := Vector2(-15.0, -125.95)
+const PIPE_DRUM_SET_FROM := Vector2(16.4, -131.75)
+const PIPE_PUSH_FROM := Vector2(16.4, -131.2)
+const PIPE_WARNING_S := 4.0
+
+var _pipe_drum := 0
+# Her first knock on the pipe and her feet on 143 after it, in process frames
+# (-1 till then), kept by _pipe_watching while `on`.
+var _pipe_watch := {}
+
+
+func _matron_pipe_touch(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _pipe_drum_to_corner(device):
+		return false
+	if int(_matron_state()["state"]) == MATRON_STATE_DORMANT and not await _wake_matron(device):
+		return false
+	if not await _walk_to(device, Vector2(2.5, -130.4), 0.3, 10.0, true):
+		return _fail("the walk back to the line's ramp stalled at %s" % str(_position()))
+	if not await _act_wake_and_go_below(device):
+		return false
+	if not await _act_wait(func() -> bool: return bool(_matron_state()["released"]), 40.0, "pipe_out"):
+		return _fail("she never came out of her locker")
+	if not await _pipe_down_after_you(device):
+		return false
+	if not await _pipe_drum_onto_her(device):
+		return false
+	var m := _matron_state()
+	_detail = "warned_s=%.2f holds=%d flanges=%d slams=%d slam_mps=%.2f knockdowns=%d" % [
+		float(_pipe_watch["warned_s"]), int(m["pipe_holds"]), int(m["pipe_flanges"]), int(m["pipe_slams"]),
+		float(m["pipe_slam_mps"]), int(m["knockdowns"])]
+	return true
+
+
+# The drum from the north band's rail, crept with round to the shaft's
+# north-east corner (quietly: she sleeps on) and set down by its edge.
+func _pipe_drum_to_corner(device: int) -> bool:
+	if not await _act_creep_to(device, PIPE_DRUM_PICK, 0.08, 14.0, 0.5):
+		return _fail("the walk to the drum stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "PICK UP"):
+		return _fail("Action read '%s' at the drum, not PICK UP" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
+		return _fail("PICK UP did not put the drum in the hands")
+	_pipe_drum = int(_native().get_carrying_entity_id())
+	# Laden, the full walk is a slow one, its steps far under the pace that
+	# carries to her locker.
+	for leg in [Vector2(-15.0, -128.0), Vector2(15.8, -128.0), Vector2(16.4, -129.6), PIPE_DRUM_SET_FROM]:
+		if not await _act_creep_to(device, leg, 0.12 if leg == PIPE_DRUM_SET_FROM else 0.3, 60.0, 1.0):
+			return _fail("the carry round to the shaft's corner stalled at %s (%.2f m/s)" % [str(_position()),
+				Vector2(_velocity().x, _velocity().z).length()])
+	if int(_matron_state()["state"]) != MATRON_STATE_DORMANT:
+		return _fail("the carry woke her (state %d)" % int(_matron_state()["state"]))
+	await _face(Vector2(0.0, -1.0))
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set the drum down")
+	await _seconds(1.0)
+	var drum := _pipe_drum_at()
+	print("SCRAPERX_PIPE drum set down at (%.2f, %.2f, %.2f), her state %d" % [drum.x, drum.y, drum.z,
+		int(_matron_state()["state"])])
+	if drum.y < MATRON_DECK_Y or absf(drum.x - PIPE_PUSH_FROM.x) > 0.3 or drum.z > -131.9:
+		return _fail("the drum did not come to rest by the shaft's edge (at %s)" % str(drum))
+	return true
+
+
+func _pipe_drum_at() -> Vector3:
+	return _native().get_kit_body_transform(_native().get_kit_body_index(_pipe_drum)).origin
+
+
+# Kept every frame while _pipe_watch["on"]: her first knock on the pipe, and
+# her feet on 143 off it after that.
+func _pipe_watching() -> void:
+	while bool(_pipe_watch["on"]):
+		var m := _matron_state()
+		var frame := int(Engine.get_process_frames())
+		if int(_pipe_watch["first"]) < 0 and int(m["pipe_holds"]) > int(_pipe_watch["holds0"]):
+			_pipe_watch["first"] = frame
+			_pipe_watch["clangs0"] = int(_main._audio.matron_cues.get(&"clang", 0))
+		if int(_pipe_watch["first"]) >= 0 and int(_pipe_watch["arrived"]) < 0 and not bool(m["on_pipe"]) and \
+				absf(float(m["floor_y"]) - 143.0) < 0.1:
+			_pipe_watch["arrived"] = frame
+			_pipe_watch["clangs"] = int(_main._audio.matron_cues.get(&"clang", 0)) - int(_pipe_watch["clangs0"])
+		var d := _pipe_drum_at()
+		if not _pipe_watch.has("drum_off") and d.y < 154.2:
+			_pipe_watch["drum_off"] = true
+			var h: Vector3 = m["position"]
+			print("SCRAPERX_PIPE_DRUM_OFF drum (%.2f, %.2f, %.2f) her (%.2f, %.2f, %.2f) on_pipe %s me %s" % [d.x, d.y, d.z, h.x, h.y, h.z, str(m["on_pipe"]), str(_position())])
+		await get_tree().process_frame
+
+
+# Sprints along 143's shaft edge, heard up the shaft, until she takes the
+# corner pipe down after the climber; then up the riser to her deck while she
+# comes down it, knocking at every hold, 4 s and more before her feet are on
+# 143.
+func _pipe_down_after_you(device: int) -> bool:
+	await _crouch_on(device, false)
+	_pipe_watch = {"on": true, "holds0": int(_matron_state()["pipe_holds"]), "first": -1, "arrived": -1,
+		"clangs0": 0, "clangs": 0, "warned_s": 0.0}
+	_pipe_watching()
+	var links := int(_matron_state()["pipe_links"])
+	var took: bool = await _act_laps(device, Vector2(-4.0, ACT_143_EDGE_Z), Vector2(-16.0, ACT_143_EDGE_Z),
+		func() -> bool: return int(_matron_state()["pipe_links"]) > links, 200.0, "pipe_rage")
+	if not took:
+		_pipe_watch["on"] = false
+		return _fail("sprints under her never brought her down the pipe (stage %d, rage %.3f)" % [
+			int(_matron_state()["stage"]), float(_matron_state()["rage"])])
+	_act_log("pipe_taken")
+	var up: bool = await _act_up_riser(device)
+	var arrived: bool = await _act_wait(func() -> bool: return int(_pipe_watch["arrived"]) >= 0, 20.0, "pipe_down")
+	_pipe_watch["on"] = false
+	if not up:
+		return false
+	if not arrived:
+		return _fail("she never came off the pipe onto 143 (on it %s, at %s)" % [str(_matron_state()["on_pipe"]),
+			str(_matron_state()["position"])])
+	_pipe_watch["warned_s"] = float(int(_pipe_watch["arrived"]) - int(_pipe_watch["first"])) / 60.0
+	print("SCRAPERX_PIPE down: first knock to her feet on 143 %.2f s, %d knocks heard" % [
+		float(_pipe_watch["warned_s"]), int(_pipe_watch["clangs"])])
+	if float(_pipe_watch["warned_s"]) < PIPE_WARNING_S:
+		return _fail("her first knock on the pipe came only %.2f s before she was on 143" % float(_pipe_watch["warned_s"]))
+	if int(_pipe_watch["clangs"]) < 8:
+		return _fail("only %d knocks were heard from her on the pipe" % int(_pipe_watch["clangs"]))
+	return true
+
+
+# Back round to the drum by the shaft's edge while she comes up the pipe after
+# the climber; with her below the deck and climbing, a walk into the drum
+# shoves it off the edge onto her: torn off, she slams onto the flange below
+# her, alive.
+func _pipe_drum_onto_her(device: int) -> bool:
+	if not (await _sprint_to(device, Vector2(15.6, -129.0), 1.0, 10.0) and \
+			await _walk_to(device, PIPE_PUSH_FROM, 0.1, 4.0)):
+		return _fail("the run back round to the drum stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, -1.0))
+	var links := int(_matron_state()["pipe_links"])
+	var climbing: bool = await _act_wait(func() -> bool:
+		var m := _matron_state()
+		var her: Vector3 = m["position"]
+		return bool(m["on_pipe"]) and float(m["floor_y"]) < 150.0 and her.y > 148.4 and her.y < 151.0, 40.0,
+		"pipe_up")
+	if not climbing:
+		return _fail("she never came up the pipe below the drum (on it %s, at %s, links %d from %d)" % [
+			str(_matron_state()["on_pipe"]), str(_matron_state()["position"]), int(_matron_state()["pipe_links"]),
+			links])
+	_act_log("pipe_push")
+	var slams := int(_matron_state()["pipe_slams"])
+	var deaths := int(_native().get_death_count())
+	_move(device, 1.0)
+	var fell: bool = await _wait_until(func() -> bool:
+		var d := _pipe_drum_at()
+		print("SCRAPERX_PIPE_PUSH drum (%.2f, %.2f, %.2f) me (%.2f, %.2f)" % [d.x, d.y, d.z, _position().x, _position().z])
+		return d.y < MATRON_DECK_Y - 0.5, 3.0)
+	_move(device, 0.0)
+	if not fell:
+		return _fail("the shove did not send the drum off the edge (drum at %s)" % str(_pipe_drum_at()))
+	for i in 40:
+		var d := _pipe_drum_at()
+		var h: Vector3 = _matron_state()["position"]
+		print("SCRAPERX_PIPE_TRACE %d drum (%.2f, %.2f, %.2f) her (%.2f, %.2f, %.2f) blow %.3f" % [i, d.x, d.y, d.z, h.x, h.y, h.z, float(_matron_state()["blow_mps"])])
+		await get_tree().process_frame
+	var hit: bool = await _wait_until(func() -> bool: return int(_matron_state()["pipe_slams"]) > slams, 4.0)
+	_act_log("pipe_slam")
+	if not hit:
+		return _fail("the drum did not knock her off the pipe (blow %.3f m/s, drum at %s)" % [
+			float(_matron_state()["blow_mps"]), str(_pipe_drum_at())])
+	await _look_at_point(_main._matron_view.head_world_position())
+	await _pose("matron_pipe_slam")
+	if not bool(_matron_state()["alive"]) or int(_native().get_death_count()) != deaths:
+		return _fail("the drop killed someone (she alive %s, deaths %d)" % [str(_matron_state()["alive"]),
+			int(_native().get_death_count())])
+	return true

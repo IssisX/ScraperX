@@ -31,8 +31,6 @@ const STATE_PEERING := 8    # stopped short of a noise, looking
 const STATE_UNRIGGING := 9  # at the way out's eye, taking the player's rope off it
 const STATE_STAGGERING := 10  # a blow took her balance
 const STATE_DOWN := 11        # a blow took her off her feet
-# How long each stage lies on the steel (matron.hpp kPestDownSeconds...).
-const DOWN_SECONDS := [4.0, 2.5, 1.2]
 const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
 const STEP_M := 0.7
@@ -70,6 +68,10 @@ var _leaps_seen := -1
 var _unrigs_seen := -1
 var _climbs_seen := -1
 var _last_rung := 0
+var _pipe_holds_seen := -1
+var _pipe_flanges_seen := -1
+var _pipe_slams_seen := -1
+var _pipe_scrape_in := 0.0
 var _rattle_in := 0.0
 # Going down a line's bare cable: the sparks off her forearms and the screech.
 var _sparks: CPUParticles3D
@@ -760,7 +762,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		state = STATE_SEARCHING
 	var still_on_post := state == STATE_GUARDING and speed < 0.3
 	# Going up a ladder after the player.
-	var climbing := bool(data.get("climbing", false))
+	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
+	var pipe_sliding := bool(data.get("pipe_sliding", false))
+	var pipe_stunned := bool(data.get("pipe_stunned", false))
 	# Rising off the floor in the Turn: a vault, or a leap over a gap.
 	var vaulting := turn == 2 and _fall_speed > 1.0 and not climbing
 	# Holding on to a floor that moves (a cage she stepped into as it left).
@@ -837,6 +841,34 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.9
 		head_roll = 0.3 * sin(_clock * 1.3)
 		jaw_open = 0.95
+	elif pipe_stunned:
+		# Slammed onto the flange: folded over it, her arms round the pipe,
+		# her head hanging off her neck, then lifting.
+		pitch = 1.1
+		hip_y = 0.55
+		knees = 2.0
+		legs_fwd = 1.4
+		legs_back = 1.3
+		arms_fwd = 1.5
+		arms_bend = 1.4
+		arms_splay = 0.6
+		head_pitch = 0.9
+		head_roll = 0.6
+		jaw_open = 0.8
+	elif pipe_sliding:
+		# Torn off, her legs round the pipe and her arms up it, sliding, the
+		# head thrown back, screaming.
+		pitch = -0.1
+		hip_y = 1.0
+		arms_fwd = 2.9
+		arms_bend = 0.35
+		arms_splay = 0.35
+		legs_fwd = 0.9
+		legs_back = 0.9
+		knees = 1.6
+		head_pitch = -1.0
+		head_roll = 0.2 * sin(_clock * 23.0)
+		jaw_open = 1.0
 	elif climbing:
 		# Up the ladder after the player, hand over hand: the higher hand
 		# reaching for the next rung while the lower one hauls, the other
@@ -1145,13 +1177,28 @@ func _topple(data: Dictionary, centre: Vector3) -> void:
 		return
 	fall = fall.normalized()
 	var down_s := float(data.get("down_s", 0.0))
-	var lie_s: float = DOWN_SECONDS[clampi(int(data.get("stage", 0)), 0, 2)]
-	var k := clampf(down_s / TOPPLE_S, 0.0, 1.0) * clampf((lie_s - down_s) / TOPPLE_S, 0.0, 1.0)
+	# She rises on the simulation's clock: over the last TOPPLE_S of the time
+	# she lies there. None left and still down, she is pinned, crawling out
+	# flat to where she can stand.
+	var left_s := float(data.get("down_left_s", 0.0))
+	var rise := clampf(left_s / TOPPLE_S, 0.0, 1.0) if left_s > 0.0 else 1.0
+	var k := clampf(down_s / TOPPLE_S, 0.0, 1.0) * rise
 	k = k * k * (3.0 - 2.0 * k)
 	var axis := Vector3.UP.cross(fall).normalized()
 	_figure.global_basis = Basis(axis, 0.5 * PI * k) * Basis(Vector3.UP, float(data["yaw"]))
 	var floor_y := centre.y - STAND_CENTRE
 	_figure.global_position = Vector3(centre.x, floor_y, centre.z) - fall * (1.0 * k) + Vector3(0.0, 0.18 * k, 0.0)
+
+
+# Coming down the corner pipe head first (fully changed): her figure turned
+# over about her hips, her feet up the pipe and her face down it.
+func _pipe_head_down(data: Dictionary, centre: Vector3) -> void:
+	if not bool(data.get("pipe_head_down", false)):
+		return
+	var yaw := float(data["yaw"])
+	var across := Basis(Vector3.UP, yaw) * Vector3.RIGHT
+	_figure.global_basis = Basis(across, PI) * Basis(Vector3.UP, yaw)
+	_figure.global_position = Vector3(centre.x, centre.y + STAND_CENTRE, centre.z)
 
 
 func _hip_world() -> Vector3:
@@ -1182,6 +1229,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_figure.rotation = Vector3(0.0, float(data["yaw"]), 0.0)
 	_pose(data, delta, player_position, falling)
 	_topple(data, centre)
+	_pipe_head_down(data, centre)
 	var feet := _figure.global_position
 	var d := feet.distance_to(player_position)
 	# Her music box: heard from far off, slowing as she nears.
@@ -1261,6 +1309,30 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			if rung != _last_rung:
 				_last_rung = rung
 				_audio.matron_cue(&"clang", centre + Vector3(0.0, 1.2, 0.0), -9.0 if turn == 0 else -3.0, randf_range(1.35, 1.6))
+		# On the corner pipe: each hold a hollow knock up and down the riser,
+		# each flange passed a deep bong, the slam onto one a boom and her
+		# scream; torn off and sliding, her skin and cloth shrieking on it.
+		var hands := centre + Vector3(0.0, 1.0, 0.0)
+		var pipe_holds := int(data.get("pipe_holds", 0))
+		if _pipe_holds_seen >= 0 and pipe_holds > _pipe_holds_seen:
+			_audio.matron_cue(&"clang", hands, -4.0 if turn == 0 else 0.0, randf_range(0.5, 0.62))
+		_pipe_holds_seen = pipe_holds
+		var pipe_flanges := int(data.get("pipe_flanges", 0))
+		if _pipe_flanges_seen >= 0 and pipe_flanges > _pipe_flanges_seen:
+			_audio.matron_cue(&"hit_heavy", hands, 0.0, randf_range(0.42, 0.5))
+			_audio.matron_cue(&"clang", hands, -2.0, randf_range(0.36, 0.42))
+		_pipe_flanges_seen = pipe_flanges
+		var pipe_slams := int(data.get("pipe_slams", 0))
+		if _pipe_slams_seen >= 0 and pipe_slams > _pipe_slams_seen:
+			_audio.matron_cue(&"hit_heavy", hands, 5.0, randf_range(0.5, 0.58))
+			_audio.matron_cue(&"bone_crack", hands, 0.0, randf_range(0.85, 1.0))
+			_audio.matron_cue(&"matron_shriek", hands, 2.0, randf_range(0.6, 0.7))
+		_pipe_slams_seen = pipe_slams
+		if bool(data.get("pipe_sliding", false)):
+			_pipe_scrape_in -= delta
+			if _pipe_scrape_in <= 0.0:
+				_pipe_scrape_in = randf_range(0.08, 0.12)
+				_audio.matron_cue(&"scrape", hands, 0.0, randf_range(1.4, 1.8))
 		# Down a cable on her forearms: steel shrieking under them.
 		if on_line:
 			_screech_in -= delta

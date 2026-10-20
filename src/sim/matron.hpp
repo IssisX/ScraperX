@@ -358,6 +358,9 @@ public:
     static constexpr float kSeekStockM = 5.0F;
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
+    // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
+    // she leaves where the player set it.
+    static constexpr float kTakeMaxKg = 25.0F;
     static constexpr float kHandsOutM = 0.55F;
     static constexpr float kHandsPullMps = 3.0F;
     static constexpr float kHandsSlipM = 1.0F;
@@ -426,6 +429,46 @@ public:
     // Pain is borrowed rage: a knockdown adds this, a stagger this.
     static constexpr float kKnockdownRage = 0.08F;
     static constexpr float kStaggerRage = 0.02F;
+    // The shaft's corner pipe (the owner, 2026-10-19: "She comes down the
+    // shaft after you. One shaft pipe becomes hers to climb."): the north-east
+    // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, a flange
+    // 1.4 m under every deck), too thick for the climber's hands. Her line is
+    // in the corner between it and the shaft's corner; she gets on and off
+    // over the rail's corner from the band, kPipeOverRailM over the deck. On
+    // it she is on the steel (object_layers::kOnSteel): what moves meets her,
+    // the steel she wraps round does not. Frail, she cannot take hold of it
+    // (as her ladder); dangerous she slides down it held by her forearms and
+    // knees and climbs it hand over hand; fully changed she comes down it head
+    // first in jerks. Each kPipeHoldM her hands go is a knock on the pipe, each
+    // flange passed a bong: she is heard on it from the moment she takes hold
+    // (an 11 m storey takes her at least 4 s). A blow on it past kPipeTearMps
+    // opens her hands: her legs slide her down to the flange under her
+    // (kPipeSlideAccel, her squeeze against her weight) and she slams onto it,
+    // stunned a while by how hard, alive; then she goes on.
+    static constexpr float kPipeLineX = 16.37F;
+    static constexpr float kPipeLineZ = -133.63F;
+    static constexpr float kPipeDeckX = 17.75F;
+    static constexpr float kPipeDeckZ = -132.25F;
+    static constexpr float kPipeOverRailM = 1.35F;
+    static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
+    static constexpr float kPipeMountMps = 1.4F;
+    static constexpr float kPipeDownMps = 2.6F;
+    static constexpr float kPipeUpMps = 0.7F;
+    static constexpr float kPipeChangedDownBurstMps = 4.2F;
+    static constexpr float kPipeChangedUpBurstMps = 2.6F;
+    static constexpr float kPipeChangedPauseMps = 0.3F;
+    static constexpr float kPipeHoldM = 0.45F;
+    static constexpr float kPipeFlangeUnderDeckM = 1.225F;   // a flange's top, under its deck
+    static constexpr float kPipeTearMps = 1.0F;   // CHOSEN: a drum let go onto her from the rail above (1.15 m/s measured) tears her off; a thrown toolbox (0.3) does not
+    static constexpr float kPipeSlideAccel = 4.4F;
+    static constexpr float kPipeStunSeconds = 0.5F;
+    static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
+    static constexpr float kPipeStunFromMps = 5.0F;
+    // A lead a storey away by the pipe is worth chasing longer than one on her
+    // own deck: a dangerous Matron keeps after it this long since she last
+    // heard the climber, fully changed this long.
+    static constexpr float kPipeChaseDangerousSeconds = 40.0F;
+    static constexpr float kPipeChaseChangedSeconds = 150.0F;
     // The moving bodies near her a blow can come from: within this, at most
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;
@@ -434,6 +477,7 @@ public:
         JPH::BodyID body;
         std::uint64_t entity = 0;
         JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
+        float mass_kg = 0.0F;   // read from its body by set_throwables (infinite: not a moving body)
     };
 
     struct PlankView {
@@ -484,6 +528,16 @@ public:
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
         float down_s = 0.0F;            // seconds on the steel
+        float down_left_s = 0.0F;       // of the time she lies there; 0 and still down: pinned, crawling to room
+        bool on_pipe = false;           // on the shaft's corner pipe (getting on, on it, getting off)
+        bool pipe_head_down = false;    // coming down it head first (fully changed)
+        bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
+        bool pipe_stunned = false;      // slammed onto a flange
+        std::uint32_t pipe_links = 0;   // storeys she set out along it, this run
+        std::uint32_t pipe_holds = 0;   // her hands' holds on it (each a knock)
+        std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
+        std::uint32_t pipe_slams = 0;   // flanges slammed onto, torn off
+        float pipe_slam_mps = 0.0F;     // the last slam's speed
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -497,7 +551,8 @@ public:
         std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
     };
 
-    Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer, JPH::BodyID player);
+    Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer,
+           std::uint32_t steel_layer, JPH::BodyID player);
     ~Matron();
     Matron(const Matron &) = delete;
     Matron &operator=(const Matron &) = delete;
@@ -693,6 +748,18 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
+    // After a lead a storey away along the corner pipe (above): to the rail's
+    // corner on her level and onto it. False when it does not go that way, or
+    // she is frail.
+    bool follow_pipe(float dt, JPH::RVec3 at);
+    [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
+    void get_on_pipe(float from_floor, float to_floor);
+    void ride_pipe(float dt);
+    void get_off_pipe();
+    // A blow on the pipe past kPipeTearMps: her hands open, her legs slide.
+    void tear_off_pipe();
+    // Down on the steel from a blow (take_blow), the way (fall_x_, fall_z_).
+    void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
     // whose floor is `floor`, at that loudness.
     void take_lead(float x, float z, float floor, float loudness, bool seen);
@@ -721,7 +788,7 @@ private:
     // read after the step (take_blow); and her staggering and lying there
     // (step_knocked), down onto the steel and up off it.
     void sense_near();
-    void take_blow();
+    void take_blow(float dt);
     void step_knocked(float dt, JPH::RVec3 player);
     void lie_down(float fall_x, float fall_z);
     void stand_up();
@@ -736,6 +803,7 @@ private:
 
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;
+    std::uint32_t steel_layer_;
     JPH::BodyID player_;
     JPH::Ref<JPH::Shape> shape_;
     JPH::BodyID body_;
@@ -874,6 +942,22 @@ private:
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;
+    // The corner pipe (above): where she is along her way on it.
+    enum class PipePhase : std::uint8_t { Off, Mount, Climb, Dismount, Slide, Stunned };
+    PipePhase pipe_phase_ = PipePhase::Off;
+    float pipe_from_ = 0.0F;   // the floor she got on from, and the one she is going to
+    float pipe_to_ = 0.0F;
+    int pipe_waypoint_ = 0;
+    float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
+    float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
+    float pipe_slide_mps_ = 0.0F;
+    float pipe_stop_y_ = 0.0F; // the flange top she slides to
+    float pipe_stun_s_ = 0.0F;
+    float pipe_slam_mps_ = 0.0F;
+    std::uint32_t pipe_links_ = 0;
+    std::uint32_t pipe_holds_ = 0;
+    std::uint32_t pipe_flanges_ = 0;
+    std::uint32_t pipe_slams_ = 0;
     View view_{};
 };
 

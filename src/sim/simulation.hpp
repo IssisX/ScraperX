@@ -231,6 +231,20 @@ struct MatronSnapshot final {
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
     double down_s = 0.0;
+    double down_left_s = 0.0;   // of the time she lies there (0 and still down: pinned)
+    // The shaft's corner pipe (matron.hpp): on it (getting on, on it, getting
+    // off), head first, torn off and sliding, slammed onto a flange; the
+    // storeys she set out along it, her hands' holds (knocks), flanges passed
+    // (bongs) and slammed onto, and the last slam's speed.
+    bool on_pipe = false;
+    bool pipe_head_down = false;
+    bool pipe_sliding = false;
+    bool pipe_stunned = false;
+    std::uint32_t pipe_links = 0;
+    std::uint32_t pipe_holds = 0;
+    std::uint32_t pipe_flanges = 0;
+    std::uint32_t pipe_slams = 0;
+    double pipe_slam_mps = 0.0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};

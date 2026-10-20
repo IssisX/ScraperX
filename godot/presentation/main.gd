@@ -876,6 +876,7 @@ func _update_gesture_hints() -> void:
 	# What lets go of a hold or jumps off it is made only by a flick that lifts;
 	# so is a throw, its path drawn while the thumb is still on the glass.
 	_touch.up_on_lift = up in [UP_JUMP_OFF, UP_LAUNCH, UP_LET_GO, UP_THROW]
+	_touch.jump_throws = up == UP_THROW
 	_touch.down_on_lift = route in [&"hook_release", &"let_go", &"slide_down"]
 
 # The throw's path, while the thumb swipes up with a throwable in the hands

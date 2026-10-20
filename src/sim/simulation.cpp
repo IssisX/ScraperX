@@ -1024,6 +1024,16 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.fall_z = view.fall_z;
     result.kneeling = view.kneeling;
     result.down_s = view.down_s;
+    result.down_left_s = view.down_left_s;
+    result.on_pipe = view.on_pipe;
+    result.pipe_head_down = view.pipe_head_down;
+    result.pipe_sliding = view.pipe_sliding;
+    result.pipe_stunned = view.pipe_stunned;
+    result.pipe_links = view.pipe_links;
+    result.pipe_holds = view.pipe_holds;
+    result.pipe_flanges = view.pipe_flanges;
+    result.pipe_slams = view.pipe_slams;
+    result.pipe_slam_mps = view.pipe_slam_mps;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();
