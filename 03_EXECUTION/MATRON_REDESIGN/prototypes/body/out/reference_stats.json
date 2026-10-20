@@ -1,0 +1,42 @@
+{
+ "preset": "reference",
+ "params": {
+  "age": 0.5,
+  "muscle": 0.5,
+  "weight": 0.5,
+  "height": 0.5,
+  "sex": "male",
+  "body_age": false,
+  "face_age": false,
+  "stand_m": 1.75,
+  "dress": false
+ },
+ "years": 25.0,
+ "natural_height_m": 1.74813,
+ "scale_to_stand": 1.0010697144949174,
+ "stand_m": 1.75,
+ "volume_l": 65.48797481582207,
+ "mass_kg": 66.1428545639803,
+ "bmi": 21.59766679640173,
+ "waist_cm": 75.74313239831578,
+ "waist_y": 1.0983636800466783,
+ "bust_cm": 98.56744598649567,
+ "hip_cm": 98.18625019705901,
+ "upper_arm_cm": 29.60680273006026,
+ "calf_cm": 37.348918100251296,
+ "thigh_cm": 54.03082804234857,
+ "shoulder_width_cm": 37.675258705016226,
+ "arm_len_m": 0.5172266500575484,
+ "thigh_len_m": 0.4300913877226256,
+ "shin_len_m": 0.4377210360374037,
+ "hip_joint_y": 0.9343133805838237,
+ "ankle_y": 0.0724048697751311,
+ "head_joint_y": 1.6025824738434786,
+ "eye_y": 1.641494053645896,
+ "torso_len_m": 0.4783511523742512,
+ "triangles": {
+  "skin": 26756
+ },
+ "triangles_total": 26756,
+ "bones": 59
+}

@@ -1,0 +1,64 @@
+guard old  hands 0.51  feet -0.10  crown 2.06
+guard new  hands 0.78  feet 0.00  crown 1.77
+guard+contact new  hands 0.78  feet 0.00  crown 1.77
+shuffle old  hands 0.40  feet -0.11  crown 1.79
+shuffle new  hands 0.69  feet -0.03  crown 1.50
+shuffle+contact new  hands 0.72  feet -0.00  crown 1.53
+search old  hands 0.46  feet -0.15  crown 1.58
+search new  hands 0.76  feet -0.08  crown 1.32
+search+contact new  hands 0.84  feet 0.00  crown 1.41
+peer old  hands 0.29  feet -0.18  crown 1.69
+peer new  hands 0.54  feet -0.11  crown 1.40
+peer+contact new  hands 0.65  feet 0.00  crown 1.51
+hunt_a old  hands 0.51  feet -0.11  crown 1.26
+hunt_a new  hands 0.53  feet -0.06  crown 1.06
+hunt_a+contact new  hands 0.15  feet 0.00  crown 0.77
+l sh (-0.152299, 0.767456, 0.397596) wr (-0.264187, 0.414855, 0.476163) -> tgt (-0.219432, 0.075, 0.47688) got (-0.210044, 0.263639, 0.442897)
+r sh (0.152299, 0.767456, 0.397596) wr (0.264187, 0.414855, 0.476163) -> tgt (0.219432, 0.075, 0.47688) got (0.210044, 0.263639, 0.442897)
+hunt_b old  hands 0.53  feet -0.12  crown 1.35
+hunt_b new  hands 0.55  feet -0.12  crown 1.12
+hunt_b+contact new  hands 0.20  feet 0.00  crown 0.87
+l sh (-0.152299, 0.81357, 0.401204) wr (-0.2429, 0.490851, 0.43568) -> tgt (-0.20666, 0.075, 0.458442) got (-0.200989, 0.307334, 0.427626)
+r sh (0.152299, 0.81357, 0.401204) wr (0.2429, 0.490851, 0.43568) -> tgt (0.20666, 0.075, 0.458442) got (0.200989, 0.307334, 0.427626)
+hunt_still old  hands 0.38  feet -0.12  crown 1.25
+hunt_still new  hands 0.41  feet -0.13  crown 1.01
+hunt_still+contact new  hands 0.36  feet -0.00  crown 1.14
+l sh (-0.152299, 0.967152, 0.40074) wr (-0.370709, 0.623954, 0.515564) -> tgt (-0.283345, 0.075, 0.498152) got (-0.237989, 0.46583, 0.439506)
+r sh (0.152299, 0.967152, 0.40074) wr (0.370709, 0.623954, 0.515564) -> tgt (0.283345, 0.075, 0.498152) got (0.237989, 0.46583, 0.439506)
+turn_windup old  hands 1.13  feet -0.18  crown 1.04
+turn_windup new  hands 1.17  feet -0.11  crown 0.93
+turn_windup+contact new  hands 1.28  feet 0.00  crown 1.04
+turn_lunge_a old  hands 0.49  feet -0.10  crown 1.13
+turn_lunge_a new  hands 0.71  feet -0.03  crown 0.97
+turn_lunge_a+contact new  hands -0.00  feet 0.00  crown 0.72
+l sh (-0.145915, 0.779026, 0.593212) wr (-0.574381, 0.579201, 0.377008) -> tgt (-0.402994, 0.075, 0.52511) got (-0.370626, 0.157446, 0.539923)
+r sh (0.152865, 0.733395, 0.555418) wr (0.437552, 0.424656, 0.249003) -> tgt (0.323677, 0.075, 0.44221) got (0.316733, 0.101031, 0.44971)
+turn_lunge_b old  hands 0.45  feet 0.06  crown 1.06
+turn_lunge_b new  hands 0.66  feet 0.07  crown 0.91
+turn_lunge_b+contact new  hands -0.06  feet -0.00  crown 0.52
+l sh (-0.090301, 0.652541, 0.561471) wr (-0.543252, 0.420061, 0.309656) -> tgt (-0.362071, 0.075, 0.475563) got (-0.364461, 0.07084, 0.473788)
+r sh (0.213427, 0.629613, 0.563357) wr (0.629422, 0.331539, 0.316938) -> tgt (0.463024, 0.075, 0.480148) got (0.466383, 0.069812, 0.476776)
+turn_vault old  hands -0.03  feet 0.33  crown 1.13
+turn_vault new  hands 0.25  feet 0.30  crown 0.97
+turn_vault+contact new  hands 0.25  feet 0.30  crown 0.97
+emerge old  hands 0.16  feet -0.20  crown 1.04
+emerge new  hands 0.41  feet -0.18  crown 0.85
+emerge+contact new  hands 0.59  feet -0.00  crown 1.03
+cling old  hands 0.36  feet -0.10  crown 1.36
+cling new  hands 0.45  feet -0.13  crown 1.08
+cling+contact new  hands 0.58  feet 0.00  crown 1.21
+unrig old  hands 0.29  feet -0.21  crown 1.21
+unrig new  hands 0.42  feet -0.16  crown 1.03
+unrig+contact new  hands 0.58  feet 0.00  crown 1.18
+on_line old  hands 2.32  feet -0.07  crown 2.01
+on_line new  hands 1.90  feet -0.01  crown 1.75
+on_line+contact new  hands 2.56  feet 0.64  crown 2.41
+climb old  hands 2.40  feet 0.11  crown 1.97
+climb new  hands 1.84  feet 0.08  crown 1.73
+climb+contact new  hands 2.45  feet 0.69  crown 2.34
+carry old  hands 1.02  feet -0.12  crown 1.82
+carry new  hands 0.85  feet -0.04  crown 1.53
+carry+contact new  hands 0.89  feet -0.00  crown 1.57
+fall old  hands 2.42  feet -0.02  crown 2.06
+fall new  hands 1.90  feet 0.07  crown 1.78
+fall+contact new  hands 1.90  feet 0.07  crown 1.78

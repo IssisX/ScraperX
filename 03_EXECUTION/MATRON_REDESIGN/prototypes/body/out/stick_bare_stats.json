@@ -1,0 +1,42 @@
+{
+ "preset": "stick_bare",
+ "params": {
+  "age": 0.9,
+  "muscle": 0.0,
+  "weight": 0.0,
+  "height": 0.64,
+  "breast_firmness": 0.08,
+  "body_age": true,
+  "face_age": true,
+  "stand_m": 1.8,
+  "dress": false
+ },
+ "years": 77.0,
+ "natural_height_m": 1.79916,
+ "scale_to_stand": 1.0004668845461215,
+ "stand_m": 1.8,
+ "volume_l": 42.33253329232034,
+ "mass_kg": 42.75585862524354,
+ "bmi": 13.196252662112203,
+ "waist_cm": 59.666645758246815,
+ "waist_y": 1.147002509216945,
+ "bust_cm": 79.25947982916061,
+ "hip_cm": 78.77721733253796,
+ "upper_arm_cm": 15.356472655382323,
+ "calf_cm": 28.76024499383488,
+ "thigh_cm": 34.17475681158976,
+ "shoulder_width_cm": 30.804675515240454,
+ "arm_len_m": 0.5097678382085047,
+ "thigh_len_m": 0.43343533867081624,
+ "shin_len_m": 0.4345943161345405,
+ "hip_joint_y": 0.9448154138598011,
+ "ankle_y": 0.0848100780364169,
+ "head_joint_y": 1.633157139998666,
+ "eye_y": 1.683090442206363,
+ "torso_len_m": 0.4911071833522307,
+ "triangles": {
+  "skin": 26756
+ },
+ "triangles_total": 26756,
+ "bones": 59
+}

@@ -1,0 +1,34 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+FEAR_CUE t=4.02 kind=locker_plea d=2.6 state=0 stage=0 rage=0.10 line="Hello? Is someone there?" {"knocks":3,"muffled":true}
+FEAR_CUE t=24.03 kind=locker_plea d=2.6 state=0 stage=0 rage=0.10 line="I can't get the door, dear." {"knocks":3,"muffled":true}
+FEAR_CUE t=44.05 kind=locker_plea d=2.6 state=0 stage=0 rage=0.10 line="Could you fetch Walter for me?" {"knocks":3,"muffled":true}
+FEAR_TEST ok locker_plea = 3
+FEAR_CUE t=50.02 kind=name_learned d=11.1 state=2 stage=0 rage=0.10 line="What was that? Navarro, get away from that locker." 
+FEAR_TEST ok name_learned = 1
+FEAR_CUE t=60.03 kind=echo d=9.0 state=3 stage=0 rage=0.10 line="...get away from that locker..." {"from":"her mouth"}
+FEAR_TEST ok echo = 1
+FEAR_CUE t=64.02 kind=freeze d=5.0 state=3 stage=0 rage=0.10 line="" {"breath":"held","eyes":"head turn only","hold_s":1.2,"music":"cut"}
+FEAR_TEST ok freeze = 1
+FEAR_CUE t=67.52 kind=shh d=5.0 state=3 stage=0 rage=0.13 line="Shh." {"rage_3s":0.03,"rage_jump":0.03}
+FEAR_TEST ok shh = 1
+FEAR_CUE t=73.02 kind=call_name d=8.0 state=8 stage=0 rage=0.16 line="Mr. Navarro?" 
+FEAR_TEST ok call_name = 1
+FEAR_CUE t=76.12 kind=shove_line d=0.8 state=3 stage=1 rage=0.50 line="Mind the edge." {"aimed_at_rim":true,"face_px":306,"rim_m":2.0}
+FEAR_TEST ok shove_line = 1
+FEAR_TEST shove line was: { "t": 76.12, "kind": "shove_line", "line": "Mind the edge.", "d": 0.8, "state": 3, "stage": 1, "aimed_at_rim": true, "rim_m": 2.0, "face_px": 306 }
+FEAR_CUE t=76.22 kind=haptic_breath d=1.5 state=5 stage=1 rage=0.50 line="" {"amp":0.14,"n":1}
+FEAR_TEST haptic breaths in 6 s behind at 1.5 m: 2
+FEAR_CUE t=82.32 kind=pupil_check d=0.5 state=3 stage=2 rage=0.90 line="Time of death, a quarter past four." {"hour":16.3}
+FEAR_TEST ok pupil_check = 1
+FEAR_TEST pupil check said: Time of death, a quarter past four.
+FEAR_CUE t=82.42 kind=mimic_armed d=32.3 state=4 stage=1 rage=0.10 line="Help! Help me! Help!" {"clip":"terror_10.ogg"}
+FEAR_CUE t=102.43 kind=mimic d=10.9 state=4 stage=1 rage=0.10 line="Help! Help me! Help!" {"clip":"terror_10.ogg","emitter":"shaft edge","emitter_at":"(17.0, 155.3, -150.0)","pitch":0.88,"tempo":0.92}
+FEAR_CUE t=118.03 kind=call_name d=10.9 state=4 stage=1 rage=0.10 line="Eli, love. Come down now." 
+FEAR_TEST ok mimic_armed = 1
+FEAR_TEST ok mimic = 1
+FEAR_TEST mimic cue: { "t": 118.03, "kind": "call_name", "line": "Eli, love. Come down now.", "d": 10.9, "state": 4, "stage": 1 }
+FEAR_CUE t=122.52 kind=ladder_hang d=1.5 state=3 stage=2 rage=0.10 line="" {"below_m":1.5}
+FEAR_TEST ok ladder_hang = 1
+FEAR_SUMMARY t=123.5 cues=15 counts={"call_name":2,"echo":1,"freeze":1,"haptic_breath":1,"ladder_hang":1,"locker_plea":3,"mimic":1,"mimic_armed":1,"name_learned":1,"pupil_check":1,"shh":1,"shove_line":1} name_known=true first_name=true haptic_breaths=2 shoves_wordless=0
+FEAR_TEST PASS fails=0

@@ -1,0 +1,229 @@
+[
+ {
+  "agent": "ae4b194cd12684888",
+  "result": {
+   "track": "body-and-costume",
+   "summary": "I rebuilt her body from MakeHuman's free (CC0) scanned human body. She is now a 77-year-old woman, 1.80 m tall and about 67 kg: thin, with a soft belly, a sagging chest and thin arms, but not a stick. Her uniform is generated from the body itself: a white dress with collar, buttons, belt and buckle, a left breast pocket holding a penlight, dark stockings, flat black shoes, a white cap, and thin grey hair pulled into a bun. The game's existing pose code drives a 59-bone skeleton without changes, and all 18 gallery poses render. The 2.6-radian look back now twists a real neck. A new small step plants her feet; today's feet sink 10 to 21 cm into the deck. She has about 30,000 triangles in 17 parts; today's figure has 13,600 in 95.",
+   "decisions": [
+    "Base mesh: MakeHuman's hm08 base.obj with its CC0 shape files (caucasian-female-old/young, the universal muscle/weight files, height and breast firmness), pinned to commit a8bc2d54 and checked by SHA-256. I wrote my own OBJ, target and rig readers and my own blend math, so none of MakeHuman's AGPL program code is used. Why: it is a human body made from scans and carries real joints and weights, and it is the same topology the face panel's head uses, so the head and body line up.",
+    "Body settings (shown, not guessed): age 0.9 (77 years; old 0.8 / young 0.2), muscle 0.15, weight 0.50, height 0.64 (her natural height is already 1.80 m, so no scaling: scale 1.000), breast firmness 0.08, cup 0.42. Old-body extras: a soft low belly (stomach-pregnant-incr 0.22), narrow sloping shoulders (torso-vshape-decr 0.5, shoulder-dist-decr 0.25), flat buttocks (0.55), head carried forward (neck-trans-forward 0.45), thin calves (calf-circ-decr 0.7), plus face panel 3's aging preset on the head. Why: in the measured lineup the thinnest setting MakeHuman offers (muscle 0, weight 0) comes out at BMI 13.2 with a 15 cm upper arm, which is a starving corpse and exactly the Halloween look the owner rejects. 'Thin' is BMI 17.9. MakeHuman's 'average' is BMI 19.6, firm and young-looking. The pick is BMI 20.6, waist 73, hips 108, bust 86, upper arm 25 cm, calf 32 cm: real, soft and aging, with the calf just above the 31 cm frailty line used by the Mini Nutritional Assessment.",
+    "Height: 1.80 m standing, against today's 2.06 m crown in the guard pose. Today's arms are a creature's arms, 0.94 m from shoulder to wrist; hers are a real 0.51 m. In her stooped shuffle her crown is at 1.50 m. When she straightens, her eyes are at 1.70 m against the player's 1.52 m (main_feel.gd:7 plus physics_world_tuning.hpp:347), so she looks down at him. A tall but real woman is unsettling where a giant is cartoonish. The simulation capsule (matron.hpp:136-139) is not changed.",
+    "Costume made from the body, not modeled. The dress top is an offset shell that only fills hollows, so the cloth bridges the bust and falls from the bust and shoulder blades to the belt; its edges are smoothed and the sleeves stand away from the arm. The skirt is lofted in the rest pose (legs straight, from our own rest-pose skinning) and then converted back to the bind pose, with the waist seam at her narrowest girth (1.23 m). Also: Peter Pan collar, placket, 5 buttons, belt and steel buckle. The pocket is a clean patch on her LEFT breast (face panel 3's choice; panel 2 put it on the right) and sags with the pellet; a penlight is clipped in it for panel 3's pupil check. Each shoe is lofted around its foot with a flat 12 mm sole. The stockings are the leg skin with a knit material. The hair is a scalp shell whose UVs run along lines that meet at the bun, with alpha strands so the scalp shows through, plus the bun. The cap is a crown shell with an upturned front band. Skin hidden under the dress and inside the shoes is removed. MakeHuman's own clothes were not used because none is a period nurse's uniform, while generated clothes follow every body setting.",
+    "Rig: 59 bones, which are matron_view.gd's pivots plus helpers. The torso pivot's rotation is split between the pelvis 0.5, lower back 0.25, mid back 0.15 and chest 0.10, as powers of one quaternion, so the chest ends exactly where the pivot points. The split leans on the pelvis so a forward bend brings the shoulders down instead of arching them up; I measured the arched version leaving the shoulders 0.3 m too high. The neck pivot is split over two neck bones. Each long bone has a '_x' stretch bone, so the Turn's limb_scale of 1.3 lengthens the skin by sliding instead of swelling the limb. Weights: MakeHuman's CC0 default_weights.mhw mapped to our bones by name and parent (not baked), because they are hand-made weights for this exact mesh.",
+    "_pose() is unchanged. The new _build_figure only places the pivots at MakeHuman's joints and sets the extra rotation fingers and ankles need (from rig.json). rig_adapter.gd copies pivots to bones each frame and also: scales hip_y by 0.994 for the new legs; turns the arm's rest position out by 0.26 rad so hanging hands clear her hips (4 mm to spare in the rest pose); and adds a fixed 0.24 rad upper-back hunch (a dowager's hump) with the neck bent back against it.",
+    "New contact step (presentation only): her feet are placed on the deck in every ground pose; her palms are put on the deck by a two-bone reach when they are within arm's length; on ladders and cables her drawn body is raised so the hands meet the simulation's 2.6 m hand height (matron.hpp:230). Real arms cannot reach the deck from today's crawl, so I propose new crawl numbers: torso +0.75 rad (a head-down bear crawl, hips high), arms -0.75, head -0.55. With those, hands come to 0.15-0.20 m on the hunt and onto the deck in the Turn's lunges. Those are a real body's proportions doing an inhuman crawl, which is the adult-horror version.",
+    "Skin base: pale and slightly sallow (albedo 0.80/0.72/0.66) with mottling and age spots, not red. Today's exposure fades the whole skin to c4705a (matron_view.gd:1218, applied at :693), and that is the red the owner dislikes. It should become the skin track's local burn spreading from the pocket, using the same MakeHuman UV layout the dress shares.",
+    "Distance detail and draw calls: Godot's own ImporterMesh.generate_lods, measured on this mesh, cuts the skin from 18,396 to 9,198, 4,598, 2,298 and 1,148 triangles in 37 ms. The plan is to merge the 17 parts into about 7 materials: skin, stockings, white cloth, hair (alpha), dark leather, props, eyes."
+   ],
+   "prototype_files": [
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/tools/build_matron_body.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/tools/make_textures.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/tools/sources.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/probe/project.godot",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/probe/main.gd",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/probe/rig_adapter.gd",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/matron.glb",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/matron_rig.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/matron_stats.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/stick_stats.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/thin_stats.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/out/average_stats.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/views_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/view_front.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/view_side.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/view_three_quarter.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/lineup_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/compare_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/poses_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/neck_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/mood_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/detail_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/poses.log",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/renders/lod.log",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/body/current_build.png"
+   ],
+   "evidence": [
+    "Repo: today's limb lengths are matron_view.gd:36-42 (THIGH 0.46, SHIN 0.5, UPPER_ARM 0.44, FOREARM 0.5, TORSO 0.62, NECK 0.16). _build_figure is :499-681 and _pose is :719-1063. The Turn sets head_back 2.6, limb_scale 1.3 and jaw 1.35 at :959-961. hip_y is applied at :995 and the limb scale at :999-1002. Neck, head and jaw rotations are :1004-1006. The ankle is fixed at -0.2 at :1009-1010. The figure is placed at the capsule bottom at :1090. head_world_position is :1199-1200. The skin colors are :1217-1219 (c9ad94 -> c4705a -> 6b5e58) and are applied at :693.",
+    "Repo: the simulation capsule and mass are matron.hpp:136-139 (220 kg, radius 0.30, half height 0.75, so 2.1 m tall); the hand height is matron.hpp:230 (kHandsAboveCentre 1.55, i.e. 2.6 m above the soles); the player's eye is main_feel.gd:7 (EYE_OFFSET 0.62) plus physics_world_tuning.hpp:347 (kPlayerHalfHeight 0.9), so 1.52 m above the soles; crew are 1.8 m (crew.hpp:43); the 15 gallery pose dicts come from ui_test_chase.gd:494-516 (in _look_matron_gallery, :484-544), plus three the probe adds (hunt_still, carry, fall).",
+    "Ran: FACE_TARGETS=<scratchpad>/mh/t python3 -I tools/build_matron_body.py dl out matron thin stick average reference (plus *_bare variants), about 6 s. Measured: matron 1.80 m, 67 kg, BMI 20.6, waist 73, hips 108, bust 86, upper arm 25.3, calf 32.0, thigh 56.7 cm. Stick BMI 13.2, upper arm 15.4. Thin 17.9. MakeHuman average 19.6. The 1.75 m reference man BMI 21.6. Volume comes from the closed body mesh (0 open edges, checked) times 1.01 kg/L; girths are the hull of a plane cut, which is how a tape measures.",
+    "Ran the build twice into out/ and out2/: matron.glb is byte-identical (sha256 starts 9206c0eca69b1357). The tool checks every input against sources.json before building.",
+    "Godot 4.7 probe under Xvfb: DISPLAY=:0 MODE=<views|lineup|compare|poses|neck|lod|mood|detail> OUT_DIR=... godot --path probe --rendering-method gl_compatibility. glb files load at runtime through GLTFDocument (no editor import step). The probe instances a copy of the repo's matron_view.gd, calls the real _build_figure() and _pose(), and rig_adapter.gd copies the pivots to the Skeleton3D. All 18 poses render (poses_sheet.png). The look back at 2.6 rad shows a twisted real neck (neck_sheet.png).",
+    "Studio exposure calibrated with grey cards: a 0.5 card renders at 0.537 (calib.log). The first light setup was about 3x too bright and was corrected before any comparison.",
+    "poses.log, today's figure: guard crown 2.06 m; in 13 of 18 poses the feet are 10-21 cm under the deck (for example unrig -0.21, emerge -0.20, peer -0.18). On the hunt the hands stay 0.38-0.53 m above the deck, so even today they never touch it. New body with the contact step: feet within 0.03 m of the deck in every ground pose; hands on the hunt 0.15-0.20 m with the crawl retune; Turn lunges 0.00 and -0.06; climb and cable hands reach 2.47-2.54 m against the 2.6 m target.",
+    "lod.log: today's figure is 13,580 triangles in 95 mesh draws. The new one is 29,610 triangles, 18,344 vertices, 59 bones and 17 meshes (skin 18,396; tunic 2,572; skirt 2,464; stockings 2,448; shoes 1,327; hair 549; bun 320; collar 380; eyes 280; pocket 212; belt 224; buttons 200; the rest under 100 each). Godot's ImporterMesh.generate_lods builds the LODs in 37 ms.",
+    "Licenses (all CC0): MakeHuman assets per https://github.com/makehumancommunity/makehuman/blob/master/LICENSE.md section C ('base mesh and proxies, targets and modifiers ... released under CC0 1.0') and LICENSE.ASSETS.md. Each .target and base.obj header reads 'explicitly released as CC0 in september 2020'. default.mhskel and default_weights.mhw both carry \"license\": \"CC0\". The pinned URLs are https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/<path> for 60 files, each listed with its SHA-256 in tools/sources.json. No MakeHuman Python (AGPL) was read into or copied into the tools. All textures (cloth, knit, skin, hair strands) are made by code in make_textures.py.",
+    "The frailty markers come from the Mini Nutritional Assessment (Nestle Nutrition Institute, mna-elderly.com), which scores mid-upper-arm circumference under 21 cm and calf circumference under 31 cm as risk. The pick sits at 25.3 and 32.0 cm; the stick, at 15.4 cm of upper arm, is far past it.",
+    "Nothing in /home/user/ScraperX was edited by me. git status shows modified files (matron.cpp, impacts.*, scraperx_simulation.cpp, ACTIVE_GOAL_PROGRESS.md) that belong to other work, and matron_view.gd is unmodified at HEAD."
+   ],
+   "budgets": "Close-up version (under 8 m): 29,610 triangles and 18,344 skinned vertices, 59 bones with 4 weights per vertex, 17 meshes that merge into about 7 draw calls (today: 13,580 triangles in 95 draws). Mid range (8-25 m): about 7,000 triangles. Far: about 2,000 triangles. Both come from Godot's generate_lods: for the skin 9,198, 4,598, 2,298 and 1,148 triangles, and similar ratios for the cloth. Skinning is done on the GPU by Godot's GLES3 skeleton pass. The per-frame adapter sets about 60 bone poses plus at most two 2-bone reaches, an estimated 0.05 ms of script time, skipped when she is not drawn. Textures: one 1024 skin/stain atlas in MakeHuman's UV layout, shared by skin and cloth, plus a 512 cloth normal map, a 256 knit map and a 256x512 hair strand map. That is about 2 MB compressed (ASTC) or about 7 MB loaded uncompressed at runtime. Disk: the glb is 1.7 MB as float32; quantized attributes would bring it to about 0.9 MB. Build time: 6 s offline with numpy only.",
+   "risks": [
+    "The skirt is a skinned surface, not cloth. In deep crouches and on all fours it balloons and the stocking thigh pokes through at the back (hunt, cling and unrig panels in poses_sheet.png). It needs a cheap hem simulation: 8-12 hem bones on springs, pushed by the thighs.",
+    "Linear skinning thins the neck at 2.6 rad. Today it reads as a wrung neck, which suits her, but the in-between angles may need a corrective blend shape.",
+    "Real arms cannot reach where today's numbers put the hands. The crawl must be re-authored in _pose (head-down bear crawl), and ladders and cables need the drawn body raised 0.6 m, because the simulation's 2.6 m hand height (matron.hpp:230) is beyond a 1.8 m woman. Changing the simulation instead would touch gameplay and checkpoints.",
+    "Hands clear the skirt by only 4 mm in the rest pose. Poses with zero arm splay may sink the fingers into the skirt unless the 0.26 rad rest turn is kept.",
+    "The shoes read as blobby flats. Laces, a welt and a real heel need a better loft or a hand-made CC0 shoe.",
+    "The head here is MakeHuman's aged head and is only a placeholder. The face track's head must keep the same topology and head and jaw joints, or the neck seam will show.",
+    "Alpha-scissor hair shimmers on a phone at distance. Hair cards from the face track and alpha-to-coverage (with MSAA) would fix it.",
+    "CI never imports assets, so the body must load at runtime (GLTFDocument works, as shown) or from a custom .bin. Runtime-loaded textures stay uncompressed (about 7 MB) unless an import step is added.",
+    "The music box on its cord reads as a dark hole against the white skirt in some poses (turn_windup, shuffle). It needs a lighter wood or a shorter cord.",
+    "MakeHuman's macro targets for 'average' are slim by real-world standards. The BMI figures are internal comparisons; the absolute numbers assume a density of 1.01 kg/L."
+   ],
+   "milestones": [
+    {
+     "title": "Pinned body builder in the repo",
+     "what": "Move build_matron_body.py and sources.json to tools/matron_body/. It downloads the 60 pinned CC0 files by URL and SHA-256 and writes godot/presentation/life/matron_body/matron.glb, rig.json and stats.json. Add the godot/presentation/life/matron_body/* path to export_presets.cfg include_filter.",
+     "proof": "Two runs produce byte-identical files. Changing one byte of any input aborts the build with 'hash mismatch'. stats.json reports height 1.80 +/-0.01 m, BMI 20.6 +/-0.3, upper arm >= 22 cm and calf >= 31 cm."
+    },
+    {
+     "title": "Skinned body driven by the unchanged _pose",
+     "what": "The new _build_figure places the pivots from rig.json and loads the glb. matron_rig.gd (from the probe's rig_adapter.gd) copies pivots to bones after _pose, scales hip_y, applies the arm rest turn and the back hunch, and handles the stretch bones. The old primitive meshes are deleted. head_world_position() reads the head bone.",
+     "proof": "uitest look_matron_gallery captures all 18 poses with the new body. A headless test asserts that every _p pivot maps to a bone and that head_world_position is within 2 cm of the head bone plus its 0.1 m offset in every pose."
+    },
+    {
+     "title": "Contact step plus re-authored crawl and climb numbers",
+     "what": "Feet planted in ground poses, palms on the deck within reach, hands to the 2.6 m line on ladders and cables. In _pose: the crawl torso +0.75 rad, arms -0.75, head -0.55; the climb and cable body raised.",
+     "proof": "A test poses each gallery state and checks that the lowest foot point is within +/-0.01 m of the deck in ground states, the lowest hand point is within 0.05 m of the deck in hunt and Turn-lunge states, and the higher hand is within 0.10 m of 2.6 m while climbing or on a cable. Today's figure fails all three (poses.log)."
+    },
+    {
+     "title": "Hem cloth",
+     "what": "8-12 hem bones on damped springs that follow the thighs and her speed (replacing the rags pivot), timed on simulation time so captures repeat.",
+     "proof": "In the hunt, hunt_still, cling and unrig captures, a raycast from the camera finds no stocking pixel outside the skirt's outline between the hip and the hem. Two runs give identical captures."
+    },
+    {
+     "title": "Phone budget pass",
+     "what": "Merge the parts into about 7 materials, add generate_lods with switches at 8 m and 25 m, pack the skin/stain atlas, and remove the old 95-draw figure.",
+     "proof": "On the Galaxy Fold, the gallery close-up shows at most 8 draw calls for her in Godot's monitor, at most 30k triangles under 8 m, at most 8k at 15 m, and the frame-time change with her on screen is at most 0.5 ms."
+    },
+    {
+     "title": "Handoff to the face and skin tracks",
+     "what": "Put the face track's head under the head bone using the same topology. The skin track's burn mask starts at the pocket's UV center, in the atlas shared by the dress and the skin. Remove the whole-skin c4705a fade (matron_view.gd:693, :1218).",
+     "proof": "A capture at exposure 0, 0.5 and 1 shows the burn spreading from the left breast pocket. The skin away from the burn stays within 5% of the base albedo, with no whole-body red."
+    }
+   ]
+  }
+ },
+ {
+  "agent": "ac77ce62d323b8926",
+  "result": {
+   "track": "elite-tier techniques that truly run here (Godot 4.7 gl_compatibility, Matron hero head)",
+   "summary": "I built small test scenes in the game's own renderer and rendered them to see which advanced looks really work for her. Most do: wet eyes that bend light and catch a glint, real blinks and mouth shapes, a three-joint neck, a pulse in her neck and a trembling lip, soft skin lighting, lights that touch only her, thin hair fitted to her head that can fall out, and cheap contact shadows. I found and fixed two engine traps: the shading on blinks and mouth shapes, and see-through hair. The biggest gain for a real face is a photo-quality face texture laid out for her head alone. The image generator is blocked here without a Hugging Face token. I measured speed on a software graphics driver only, so it must be checked on the Fold.",
+   "decisions": [
+    "TOP 8, ranked by how much each makes her look 'real and wrong':",
+    "1. A photographic face texture on a head-only UV layout. In the MakeHuman full-body atlas her face gets only about 230-390 px of a 2048 texture (measured: about 27.5k front-facing texels at 1024, spread over several islands; renders/projection_sheet.png). At phone close-up that cannot read as real skin. Plan: repack the head UVs so the face spans 1024+ px. Then project a flat-lit frontal portrait onto them with tools/project_face.py, which uses landmark fit, a z-buffer for visibility, an N.z^2 weight, and a feathered blend into the CC0 base. The portrait comes from FLUX.1-schnell or Qwen-Image (both Apache-2.0). Until then, use the CC0 MakeHuman old_caucasian_female skin, regraded toward a sallow, bloodless tone (data/tex/head_albedo.png). Runtime cost is zero: it is a texture.",
+    "2. Wet eyes (probe/shaders/eye.gdshader). The iris is refracted under a bulged cornea (IOR 1.336), with a limbal ring, a veined, yellowed sclera, a fake reflection of the locker opening, a lid shadow, and per-eye pupil-size and milky-cloud uniforms. An eye-only glint light (light_cull_mask on layer 4) puts a catchlight in the eyes without touching the skin. The 'changed' state (one milky eye, unequal pupils, bloodshot) is the most 'wrong' single detail at close range. Proved in renders/eyes_sheet.png, including the side-on refraction comparison.",
+    "3. Blend shapes plus a 3-bone neck (neck_lo, neck_hi, head) on the code-built ArrayMesh. This drives the wrong blink (one lid late), the polite smile that never reaches the eyes, the slack shriek jaw and the Turn's look-back twist. The bones take today's _pose() values (matron_view.gd:1107 neck.rotation, :1109 jaw.rotation.x). Required: every shape must carry full normals (baked by tools/bake_bs_normals.py), because gl_compatibility blends normals as unit vectors. Zero 'delta' normals black the face out (renders/blend_sheet_zeronormals_bug.png vs renders/blend_sheet.png).",
+    "4. Vertex micro-motion in the skin vertex(), on simulation time. It includes a lub-dub pulse at the carotid (a CUSTOM0 mask), a lip and chin tremor at 8-12 Hz, breath lifting the collar, and a 'stillness' uniform that freezes everything except the pulse when she spots you. The masks read the rest position from CUSTOM0, so they stay glued through bones and shapes. There is no measurable cost. Proved in renders/micro.gif and renders/micro_diff_pulse.png.",
+    "5. A custom light() skin (probe/shaders/skin.gdshader, QUALITY 0/1/2 by #define). It uses a pre-integrated diffusion LUT with the red tail cut back for old, poorly perfused skin, a 3-tap 'blurred normal' at HIGH, two GGX lobes (0.46/0.82), light through thin parts (ears, nostrils), a sphere-light wrap, and a tiling pore normal. Exposure now drains her toward grey, with a local burn rising from the breast pocket (dusky, then wet, then grey-violet), never red all over. This answers 'I don't like the red skin' (renders/hero_sheet.png).",
+    "6. A per-character light rig. A rim SpotLight3D lights only her layer (the checker wall behind stays unlit, renders/rig_lod_sheet.png). The eye glint lights only the eyes. A cold penlight from her breast pocket lights her face from below in the dark (hero_dark). Unshadowed lights are single-pass here. Only her work bulb may cast shadows.",
+    "7. Thin grey hair: CC0 ponytail01 and eyebrow010 cards fitted to her morphed head through their .mhclo bindings (own reader). They use a hand-written hashed alpha (Wyman & McGuire 2017) plus Kajiya-Kay two-lobe strand highlights, and strands drop out as exposure rises (renders/hair_sheet.png, hash_thinned). Reason: the built-in ALPHA_HASH_SCALE and TRANSPARENCY_ALPHA_HASH render fully opaque in gl_compatibility (renders/alpha/alpha_modes.png). Use alpha scissor beyond 4 m.",
+    "8. Capsule ambient occlusion and soft capsule shadows (probe/shaders/floor_ao.gdshader). Up to 12 limb capsules are passed as uniforms to the deck and to her own skin, giving contact darkening under her slippers and hands for +1% frame time. A real shadow map costs +119% and twice the draws (renders/misc_sheet.png).",
+    "REQUIRED INFRASTRUCTURE (not ranked): LOD by visibility ranges. LOD0 is the subdivided head with HIGH skin, refracted eyes and hair (0-4 m). LOD1 is the base head with MEDIUM skin and scissor hair (4-14 m). LOD2 is a 1.9k-triangle head (14 m+). There is one shader file with QUALITY 0/1/2 #defines mapped to settings_store.gd QUALITY_PRESETS (lines 25-29).",
+    "NOT WORTH IT FOR HER (or only once): screen and depth texture reads. They work, but each frame forces a framebuffer copy (+20 ms CPU here). Keep them for one scripted Turn moment ('the air bends near her'). Built-in SSAO works in 4.7 compatibility but costs the whole screen (+54%) and draws dark outlines. Cloth sheen works but the gain is small. Use it on the white tunic only at HIGH.",
+    "PROCUREMENT: use MakeHuman CC0 data (mesh, targets, skin, hair, brows), which is verified per file header. Do not use CC-BY scans of real grandmothers: CC BY does not license publicity or personality rights. Do not use TRELLIS for her face: it makes one fused mesh with no lids or blend shapes, and its GLB export uses non-commercial dependencies. Generated portraits (FLUX.1-schnell or Qwen-Image, Apache-2.0) are the photoreal route once the owner supplies a Hugging Face token."
+   ],
+   "prototype_files": [
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/project.godot",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/main.gd",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/skin.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/eye.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/hair.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/cloth.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/haze.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/probe/shaders/floor_ao.gdshader",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/build_head.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/build_extra.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/bake_bs_normals.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/project_face.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/rangezip.py",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/flux.sh",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/tools/run.sh",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/sources.json",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/hero_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/eyes_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/blend_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/blend_sheet_zeronormals_bug.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/micro.gif",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/micro_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/skin_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/hair_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/hair_zoom.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/alpha/alpha_modes.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/misc_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/rig_lod_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/ssao_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/projection_sheet.png",
+    "/tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/elite_tech/renders/dbg_sheet.png"
+   ],
+   "evidence": [
+    "Repo facts: godot/project.godot:40-41 set gl_compatibility on desktop and mobile; :43 sets import_etc2_astc=true. matron_view.gd:506-689 builds her from primitives. :511 uses a _textured(SKIN_FRESH) skin. :518 uses alpha-blended ribbon hair. :683-688 is an OmniLight3D _eye_light with no cull mask. :693-709 has _apply_exposure tinting toward SKIN_BLISTERED c4705a (:1323), which is the red. :1107 and :1109 set the neck and jaw rotations the new bones and shapes take. :1265-1303 holds the matron_breath and matron_shriek cue points. :1304 is head_world_position(). matron_body.gd:202 is head() (a Gaussian-bumped sphere, HEAD_RADII at :186). settings_store.gd:25-29 has QUALITY_PRESETS. audio_director.gd:703-709 holds _load_voice, the runtime-load precedent. ui_test_chase.gd:484 is _look_matron_gallery. I made no edits in /home/user/ScraperX. The uncommitted changes there belong to other work.",
+    "Test machine: Godot 4.7.stable.official.5b4e0cb0f, METHOD gl_compatibility, ADAPTER llvmpipe (LLVM 20.1.2), Mesa 25.2.8, GL 4.5, under Xvfb :0. Every probe runs with tools/run.sh <probe> and saves PNGs plus 'METRIC' lines to renders/<probe>/run.log. Timings come from a software GPU and are only a relative proxy.",
+    "Skinning and blend shapes on a code-built ArrayMesh (probe/main.gd:104-153 head_mesh, :162-187 rig). The mesh holds 18,248 vertices and 35,600 triangles: positions, normals, tangents, UVs, colors (curvature, AO, thickness), CUSTOM0 RGBA float (:150), 4 bone weights, and 9 RELATIVE shapes. It renders correctly (renders/blend_sheet.png). Engine trap: with zero shape normals the face blacks out as weights rise (renders/blend_sheet_zeronormals_bug.png). The shader text embedded in the Godot binary shows why: 'vec3 normal_blend = oct_to_vec3(blend_normal) * blend_weight; ... out_normal = vec3_to_oct(normalize(normal + normal_blend))'. Normals are octahedral unit vectors summed absolutely, while positions are 'out_vertex = in_vertex + blend_vertex * blend_weight'. Fix: tools/bake_bs_normals.py writes bsn_*.f32, loaded at main.gd:127-146.",
+    "Skinning and blend shapes run as GPU transform-feedback passes in compatibility (the binary contains glBeginTransformFeedback and MODE_BLEND_PASS). Cost with all weights animated every frame (renders/tf/run.log, wall ms): LOD0 14.3 static, 14.5 with bones, 14.9 with bones + 3 shapes, 19.3 with bones + 9 shapes. LOD1: 4.4, 5.1, 5.8, 7.0.",
+    "Skin light(): skin_sheet.png and quality probe. GPU ms at 768\u00b2 with the head about 45% of the frame: StandardMaterial3D 24.9, LOW 27.1, MED 33.3, HIGH 38.5. Full-screen at 1024\u00b2: standard 43.2, LOW 43.0, MED 51.3 (+19%), HIGH 60.6 (+40%). Single draw in all cases. Ears and nostrils glow when backlit only at HIGH (skin_sheet bottom row).",
+    "Eyes: refraction keeps the pupil centred toward the viewer from the side (eyes_side_refr0 vs refr1). The cull-masked glint light changes only the eyes (eyes_refracted vs eyes_refracted_glint). Changed state is in eyes_changed_glint. Close-up: 3 draws, 39.6k primitives, 41.5 ms GPU at 768\u00b2.",
+    "Hair: ponytail01 fitted with 4,049 vertices and 5,352 triangles; brows have 126 vertices. ALPHA_HASH_SCALE and StandardMaterial3D TRANSPARENCY_ALPHA_HASH both draw solid (renders/alpha/alpha_modes.png, top-middle and bottom-left). A hand-written hash with discard works (bottom-right; hair.gdshader:61). GPU ms at 768\u00b2: scissor 29.8, hand hash 44.4, hash without Kajiya-Kay 40.2, blend + depth prepass 34.3 (5 objects), alpha-to-coverage with MSAA 4x 73.6 (llvmpipe resolves MSAA on the CPU).",
+    "Light rig at 640\u00b2: base (bulb + fill) 39.6 ms GPU with 6 draws. With the rim on her layer, 42.0. With the eye glint, 41.3. With a shadowed bulb, 48.8 (+18%). With 4 more unshadowed lights, 59.3. Draws stay at 6, which matches the Godot docs: 'Forward single-pass. Lights with shadows use a multi-pass approach'. The limit is 8 omni and spot lights per mesh by default (https://docs.godotengine.org/en/stable/tutorials/rendering/renderers.html). light_cull_mask works: the wall behind her stays unlit in rig_1.",
+    "Capsule AO: 21.35 ms off vs 21.59 ms on (+1%). A real DirectionalLight shadow map takes 46.75 ms, and draws go from 7 to 15 (renders/capsule/run.log, misc_sheet.png).",
+    "Screen and depth texture reads compile and render; the quad bends the head's outline and fades where it meets geometry (misc_sheet.png). Cost: GPU 22.5 to 28.3 ms, CPU 3.2 to 23.5 ms. The Godot docs say the screen is captured once after opaque geometry, and such materials count as transparent (https://docs.godotengine.org/en/stable/tutorials/shaders/screen-reading_shaders.html).",
+    "SSAO in 4.7 compatibility works: GPU 23.2 to 35.7 ms, CPU 7.1 to 35.7 ms, and it draws thin dark outlines (renders/ssao_sheet.png).",
+    "LOD by visibility ranges (main.gd:730-766): 0.8 m gives 5 draws and 45,144 primitives at 31.4 ms. At 4 m (inside the fade margin) both LODs draw: 9 draws and 63,396 primitives. 9 m gives 4 draws and 18,252 primitives at 17.8 ms. 20 m gives 1 draw and 1,926 primitives at 6.3 ms. I did not check whether VISIBILITY_RANGE_FADE_SELF actually dithers here; since alpha hash does not, plan on hard switches with hysteresis.",
+    "Micro-motion: across 24 frames at 12 fps, the pulse, tremor and breath frame changes 8,819 pixels. Blink frames change about 27k pixels (renders/micro.gif, micro_diff_pulse.png). No extra draws.",
+    "Projection bake (tools/project_face.py selftest): a software front render of a UV checker is projected back. 13,588 fully weighted texels at 1024 come back with a mean summed RGB error of 0.087 (about 0.03 per channel). The error is mostly checker-edge aliasing (renders/projection_sheet.png).",
+    "FLUX.1-schnell was not run. The MCP invoke is disabled ('gradio=none'). Calling the Space directly returns 'You have exceeded your ZeroGPU quota (90s requested vs. 0s left)... Authenticate with a Hugging Face token'. License checks from Hub metadata: FLUX.1-schnell apache-2.0 (gated repo), https://huggingface.co/black-forest-labs/FLUX.1-schnell. Qwen-Image apache-2.0, https://huggingface.co/Qwen/Qwen-Image. TRELLIS-image-large MIT, https://huggingface.co/microsoft/TRELLIS-image-large. The TRELLIS README says submodules carry their own licenses (https://github.com/microsoft/TRELLIS).",
+    "MakeHuman data is CC0. Every .obj, .target, .mhclo and .mhmat header says 'This asset was explicitly released as CC0 in september 2020', and makehuman_system_assets.json lists 'license': 'CC0'. cfo.target is caucasian-female-old (sha256 6560982486c4\u2026). Sources: https://github.com/makehumancommunity/makehuman and https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip. All are recorded in sources.json.",
+    "CC-BY scans exist, for example Sketchfab 'Grandmother' by edemaistre and 'Ammamma Head Scan Polycam' by Krishna.Prakash, both CC Attribution and downloadable. But the CC BY 4.0 legal code says 'publicity, privacy, and/or other similar personality rights' are not licensed (https://creativecommons.org/licenses/by/4.0/legalcode.en).",
+    "Mobile cost source for discard: the Adreno LRZ early-depth test cannot be used when late-Z is required (https://docs.mesa3d.org/drivers/freedreno/hw/lrz.html). Alpha test needs special handling (https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/5217)."
+   ],
+   "budgets": "Triangles, close-up (LOD0): head 35.6k + hair cards 5.35k + brows 0.19k + 2 eyes about 3.8k = 45.1k primitives measured. At play distance (LOD1): about 18.3k. Far (LOD2): 1.9k. Draw calls: 5 close-up (head, 2 eyes, hair, brows), 4 for LOD1, 1 for LOD2; today's primitive head is about 35 draws. Lights on her: 2 unshadowed room lights + rim + eye glint, all one pass. Only the work bulb may cast shadows (+18% here). Textures: albedo 2048\u00b2 RGBA8 with mips is about 21 MB uncompressed when loaded from PNG at runtime; as an imported ASTC 6x6 it is about 1.9 MB. Hair 2048\u00b2 RGBA should drop to 1024\u00b2 (5.6 MB raw, about 0.5 MB ASTC). The pore normal 512\u00b2 is about 1 MB raw, the LUT 128x64 is 32 KB. Vertex memory: LOD0 is about 2 MB of attributes plus 9 shapes with positions and normals at about 3.9 MB raw float32. As half floats and sparse deltas it would be under 1 MB. Disk: lod0 6.0 MB, lod1 1.6 MB, lod2 112 KB, hair 264 KB as raw float32 today (quantizing cuts these about 4x). Runtime (llvmpipe proxy; must be measured on the Fold): HIGH skin is +40% fragment time over StandardMaterial3D at full-screen. LOW costs the same as standard. Hand-hashed hair is +49% over scissor. Capsule AO is +1%. A screen-texture read adds a full framebuffer copy (+20 ms CPU here), so it is used once only. Each animated blend shape adds a transform-feedback pass over the mesh (about 0.55 ms each at 18k vertices on llvmpipe). Shapes are animated only on LOD0 and limited to those with non-zero weight.",
+   "risks": [
+    "All timings are from llvmpipe (software). Adreno costs differ, especially discard (it turns off early depth rejection), MSAA (cheap on tile GPUs) and transform feedback. No on-device numbers yet.",
+    "Engine trap: blend-shape normals in gl_compatibility are absolute unit vectors. Any future shape added without baked normals will black out the face mid-blink. A test must guard it.",
+    "Engine trap: built-in alpha hash is ignored in gl_compatibility and draws opaque. The hand-written hash uses discard, which costs overdraw on Adreno, so hair must switch to scissor at range.",
+    "Realism ceiling: the MakeHuman skin gives the face only about 230-390 px of texture, and the aggressive cheek-volume targets make hard creases (renders/dbg_sheet.png). Without a head-only UV repack, a photographic albedo, and an art pass on the targets, she will read as a good CG mannequin rather than a real woman.",
+    "Missing pieces for close-ups: no mouth interior, teeth, tongue, lashes, tear line or lid thickness. The shriek shape opens onto a pink hole (renders/blend_sheet.png, 'shriek shapes').",
+    "Photoreal source is blocked: image generation here needs a Hugging Face token (ZeroGPU quota is 0 for anonymous use from this machine). A generated face may resemble a real person, so a likeness check is needed before shipping.",
+    "Runtime-loaded PNGs are not GPU-compressed, about 21 MB per 2048 texture. The CI runs never import, so a .bin plus PNG loader keeps CI simple but costs phone memory. Imported ASTC needs an import step in CI.",
+    "The screen-texture 'wrongness' effect and SSAO are whole-frame costs. Either could blow the frame budget on the Fold if left on outside one scripted moment.",
+    "Over-tuned lights read as CG (the first rim tests blew out her cheek). The rig needs per-scene art direction, and exposure must stay grey, not red, to match the owner's note.",
+    "Integration: matron_view.gd currently has uncommitted edits from other work. The figure rebuild touches _build_figure (:506-689), _apply_exposure (:693-709) and _pose (:1107-1109), so it must be merged on top of them."
+   ],
+   "milestones": [
+    {
+     "title": "M1 Head-only UV layout and a photographic face texture",
+     "what": "Repack the head UV islands into their own 0..1 square so the face front spans at least 1024 px of a 2048 texture. Bake the CC0 old skin into it. Once the owner adds a Hugging Face token, generate a frontal flat-lit portrait (FLUX.1-schnell or Qwen-Image, Apache-2.0) and project it with tools/project_face.py using landmarks.",
+     "proof": "A texel count of front-facing face texels of at least 700k at 2048 (today about 110k). project_face.py selftest gives a mean per-channel error of 0.04 or less. A gallery close-up shows no seams at the projection border."
+    },
+    {
+     "title": "M2 Hero head with bones and shapes in the game, behind a flag",
+     "what": "Build the code-built ArrayMesh head with the 3-bone neck driven from _pose() (matron_view.gd:1107-1109), 9+ shapes with baked normals, CUSTOM0 rest position and masks, and the QUALITY-define skin shader. Loading uses the _load_voice pattern.",
+     "proof": "uitest look_matron_gallery renders neutral, blink, shriek and Turn look-back. Mean face brightness in each shape frame stays within 10% of neutral, so there is no normal black-out. A headless test asserts that every shape has a non-zero normal array."
+    },
+    {
+     "title": "M3 Wet eyes and her own light rig",
+     "what": "Add eye.gdshader eyeballs at the helper-eye centres with saccades and pupil control from the sim stage. Replace _eye_light with an eye-only glint (cull mask), add a rim light on her layer, and add the penlight in her breast pocket.",
+     "proof": "In a gallery close-up, the brightest eye pixel is above 0.9 with the glint on, while face pixels change by under 1% between glint on and off. The wall behind her stays unchanged with the rim on."
+    },
+    {
+     "title": "M4 Micro-motion and wrong blinks on simulation time",
+     "what": "Pulse, tremor, breath and the too-still freeze in vertex(), plus late-lid blinks from blend shapes, all timed by sim time and the existing _hash().",
+     "proof": "Two runs of the same scenario give byte-identical frame hashes. The difference image between pulse peak and rest is non-zero only in the neck, lips and collar masks."
+    },
+    {
+     "title": "M5 Thin hair that falls out",
+     "what": "Fit the ponytail and brow cards with the own .mhclo reader, using hand-hashed alpha with Kajiya-Kay at LOD0 and scissor beyond 4 m. Strands drop out with exposure using a per-card random value baked into vertex color, replacing the blocky UV columns.",
+     "proof": "At exposure 0 vs 1, hair-mask coverage falls by at least 40% with no rectangular blocks visible in the close-up. LOD1 uses the scissor variant (checked by shader define in the test)."
+    },
+    {
+     "title": "M6 Capsule contact shadows",
+     "what": "Pass her limb capsules (feet, shins, hands, head) to the deck material and to her own skin shader.",
+     "proof": "The render shows darkening under the slippers and hands. Measured cost is under 3% of frame time against the same scene without them."
+    },
+    {
+     "title": "M7 Galaxy Fold profile and quality fallback",
+     "what": "Profile on the device at 2160x1856 with her face filling half the screen, at HIGH, MEDIUM and LOW, and wire QUALITY_PRESETS to the skin and hair defines.",
+     "proof": "With a GPU profiler capture on the Fold, the HIGH face adds 4 ms or less over StandardMaterial3D, and LOW adds 0.5 ms or less. A frame-time log shows 60 fps held in the locker close-up."
+    }
+   ]
+  }
+ }
+]

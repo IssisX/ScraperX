@@ -1,0 +1,43 @@
+{
+ "preset": "matron_bare",
+ "params": {
+  "age": 0.9,
+  "muscle": 0.15,
+  "weight": 0.5,
+  "height": 0.64,
+  "breast_firmness": 0.08,
+  "breast_cup": 0.42,
+  "body_age": true,
+  "face_age": true,
+  "stand_m": 1.8,
+  "dress": false
+ },
+ "years": 77.0,
+ "natural_height_m": 1.7985270400000002,
+ "scale_to_stand": 1.0008189812926025,
+ "stand_m": 1.8,
+ "volume_l": 65.96288417339413,
+ "mass_kg": 66.62251301512808,
+ "bmi": 20.562504017014838,
+ "waist_cm": 73.29197316553987,
+ "waist_y": 1.2197454629892295,
+ "bust_cm": 86.33668360500563,
+ "hip_cm": 107.74744380506718,
+ "upper_arm_cm": 25.294224932836055,
+ "calf_cm": 31.97521452641419,
+ "thigh_cm": 56.6536615139837,
+ "shoulder_width_cm": 30.459841626845936,
+ "arm_len_m": 0.5119629714293922,
+ "thigh_len_m": 0.43145421885389434,
+ "shin_len_m": 0.43574978774623346,
+ "hip_joint_y": 0.9451297201514411,
+ "ankle_y": 0.08487003008862183,
+ "head_joint_y": 1.6340026825507168,
+ "eye_y": 1.683790704642394,
+ "torso_len_m": 0.4916837302596242,
+ "triangles": {
+  "skin": 26756
+ },
+ "triangles_total": 26756,
+ "bones": 59
+}
