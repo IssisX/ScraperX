@@ -3,6 +3,7 @@ extends RefCounted
 # Narrative observation only. Native contacts, machinery and checkpoints remain
 # authoritative. Heard lines are session presentation history, not saved progress.
 const DoubleEncounter := preload("res://presentation/story_double_encounter.gd")
+const Handover := preload("res://presentation/story_handover_dialogue.gd")
 const TICKS_PER_SECOND := 90
 const INTRO_TICKS := 7 * TICKS_PER_SECOND
 const TRANSMISSION_TICKS := 11 * TICKS_PER_SECOND
@@ -67,6 +68,8 @@ var _voice_lengths: Dictionary = {}
 var _contact_pending := false
 var _contact_phase := 0
 var _double_encounter := DoubleEncounter.new()
+var _record_phase := -1
+var _record_selection := &""
 
 func configure_voice_lengths(lengths: Dictionary) -> void:
 	_voice_lengths = lengths.duplicate()
@@ -88,19 +91,22 @@ func reset() -> void:
 	_contact_pending = false
 	_contact_phase = 0
 	_double_encounter.reset()
+	_record_phase = -1
+	_record_selection = &""
 
-func _say(key: StringName, tick: int) -> bool:
-	if _heard.has(key) or (not CUES.has(key) and not DoubleEncounter.CUES.has(key)):
+func _say(key: StringName, tick: int, replay: bool = false) -> bool:
+	var replayable := key == &"handover_record_assurance" or key == &"handover_source_survey"
+	if (_heard.has(key) and not (replay and replayable)) or (not CUES.has(key) and not DoubleEncounter.CUES.has(key) and not Handover.CUES.has(key)):
 		return false
 	_heard[key] = true
 	_transmission_id += 1
 	var voice_seconds := float(_voice_lengths.get(key, 0.0))
 	var duration := maxi(TRANSMISSION_TICKS, ceili((voice_seconds + .75) * TICKS_PER_SECOND)) if is_finite(voice_seconds) else TRANSMISSION_TICKS
-	if key == &"vale_contact_ro" or key == &"vale_contact_iona" or DoubleEncounter.CUES.has(key):
+	if key == &"vale_contact_ro" or key == &"vale_contact_iona" or DoubleEncounter.CUES.has(key) or Handover.CUES.has(key):
 		duration = ceili((voice_seconds + .35) * TICKS_PER_SECOND) if is_finite(voice_seconds) and voice_seconds > 0.0 else TRANSMISSION_TICKS
 	_transmission_until = tick + duration
-	_speaker = String(DoubleEncounter.SPEAKERS.get(key, "RO" if key == &"vale_contact_ro" else "IONA"))
-	_line = String(CUES.get(key, DoubleEncounter.CUES.get(key, "")))
+	_speaker = String(Handover.SPEAKERS.get(key, DoubleEncounter.SPEAKERS.get(key, "RO" if key == &"vale_contact_ro" else "IONA")))
+	_line = String(CUES.get(key, DoubleEncounter.CUES.get(key, Handover.CUES.get(key, ""))))
 	_cue_key = key
 	return true
 
@@ -114,6 +120,9 @@ func _on_tower_access() -> bool:
 		return p.x >= 17.5 and p.x <= 22.5 and p.z >= -120.8 and p.z <= -118.0
 	if _observation.support == 1451:
 		return p.x >= -36.0 and p.x <= -25.5 and p.z >= -144.0 and p.z <= -136.0
+	if _observation.support == 1960:
+		return p.y > 110.65 and p.y < 111.15 and p.x >= 3 and p.x <= 12.5 \
+			and p.z >= -184.5 and p.z <= -176.05
 	# A real player-built support or higher landing also counts as access.
 	# This does not assert that a vehicle or cargo arrived with the player.
 	return p.x >= -27.0 and p.x <= 27.0 \
@@ -155,6 +164,23 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			_say(&"vale_contact_iona", tick)
 			_contact_phase = 2
 			_contact_pending = false
+	if fresh:
+		var selection: StringName = context.get("story_handover", &"")
+		if selection == &"handover" or selection == &"source":
+			if _record_phase < 0:
+				_record_phase = 0
+			else:
+				_record_selection = selection
+		# Attention is sampled from the real terminal's clear viewing passage.
+		# Leaving pauses this exchange; it never halts movement or removes Ari.
+		if bool(context.get("story_handover_near", false)) and _observation.firm \
+				and _observation.operating.is_empty() and tick > _transmission_until:
+			if _record_phase >= 0 and _record_phase < Handover.KEYS.size():
+				if _say(Handover.KEYS[_record_phase], tick):
+					_record_phase += 1
+			elif not _record_selection.is_empty():
+				_say(&"handover_source_survey" if _record_selection == &"source" else &"handover_record_assurance", tick, true)
+				_record_selection = &""
 	var double_key: StringName = _double_encounter.observe(context, tick)
 	if fresh and not double_key.is_empty() and tick > _transmission_until:
 		if _say(double_key, tick):
@@ -176,6 +202,8 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			objective_id = &"return_to_spine"
 			objective = "RETURN TO THE FREIGHT SPINE"
 			detail = "Your route changed. Find safe footing, then choose a way back up."
+		elif _heard.has(&"handover_iona_gallery") and not _heard.has(&"double_ro_who") and _last_supported_height < 253.2:
+			detail = "WITNESS: ARI WARD  /  BARREL HELIX LANDING  /  +253 M"
 	if _observation.operating == &"forklift":
 		detail = "Move cargo to open a route. The crane can carry this truck to the tower dock."
 	elif _observation.station == &"yard_crane" or _observation.operating == &"yard_crane":

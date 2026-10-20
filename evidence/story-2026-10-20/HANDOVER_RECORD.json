@@ -1,0 +1,127 @@
+{
+  "base_game_source": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
+  "tested_source_sha256": {
+    "godot/presentation/story_handover_record.gd": "6dcf5206ff8b80dcb7357a63625916d4b98593a5a10fcac6273821b4d77ade4b",
+    "godot/presentation/story_handover_dialogue.gd": "07e9c9a5b84afa18098512108c30c5557bb4ba02dbf001147f46645af2c142a9",
+    "godot/presentation/story_guidance.gd": "6b9fa6fe156c7c55e7d80b6d388ff1132cd9b560477c2a66836ceda5d422dac6",
+    "godot/presentation/main.gd": "de86624648898e6d5023f37d278efacdc977b38eda39ff857771102c972177fc",
+    "godot/presentation/audio/story_radio_player.gd": "c023f6df4fc2182fb5b1de01e0aa6dc0db9d919e4815f6d55e17484432b2d15e",
+    "godot/tests/story_handover_test.gd": "8a43cbea3d60122f10dc978b37fa2da17db0bd102a358da8be925f13ab7992e8",
+    "godot/tests/story_handover_input_case.gd": "5e455fcf64ee10a90c97fd4eb1edc04e25d20de40e6d3e41bad39a288ad50dee",
+    "godot/tests/story_handover_input_test.gd": "40e472dc14849f1ea9890b90cd3b181abf049a713fe48dd896a4949bc4932504",
+    "godot/audio/story_radio/manifest.json": "0b62d860122f2834d6578c3eae0873f9e87911c9ed1e1df5306c3d545b120637"
+  },
+  "godot_mcp": {
+    "camera_fov": 82.0,
+    "isolated_terminal_render": true,
+    "native_library": "retained pre64 actor-roundoff bridge; handover has no native changes",
+    "render_capture": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/handover-terminal-native-view.png",
+    "render_saved": 0,
+    "result": {
+      "actual_native": true,
+      "checks": 69,
+      "done": true,
+      "failures": [],
+      "heard": [
+        "handover_record_assurance",
+        "handover_ro_denial",
+        "handover_iona_revision",
+        "handover_ro_witness",
+        "handover_iona_gallery"
+      ],
+      "phase": "complete",
+      "staged_receiver_only": true,
+      "tick": 4789,
+      "touch": true
+    }
+  },
+  "mcp_execution": "run_project(background=true), run_script: actualMain + story_handover_input_case.begin(main), repeated advance(), stop_project",
+  "standalone": {
+    "executor": "Sol/medium handover_playable_checks worker",
+    "command": "proot-distro login ubuntu --bind /data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp -- /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --path /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime --audio-driver Dummy --script res://tests/story_handover_test.gd",
+    "exit_code": 0,
+    "output": "STORY_HANDOVER PASS checks=28 failures=0 supplied_native_facts_only=1",
+    "initial_fixture_failures": "Three fixture failures corrected: north-facing away camera actually intersected display; one-shot tab selections occurred on54th sample and were discarded by the fixture before its assertion. No production requirement/check weakened."
+  },
+  "affected_regressions": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/story_guidance_test.gd"
+      ],
+      "exit_code": 0,
+      "markers": [
+        "STORY_GUIDANCE PASS checks=26 failures=0 supplied_native_facts_only=1"
+      ],
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/handover-regression-story_guidance.log"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/story_radio_player_test.gd"
+      ],
+      "exit_code": 0,
+      "markers": [
+        "STORY_RADIO PASS checks=26 failures=0 fixture_stream_only=1 audible_voice_quality=unverified"
+      ],
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/handover-regression-story_radio_player.log"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--audio-driver",
+        "Dummy",
+        "--script",
+        "res://tests/story_actor_voice_test.gd"
+      ],
+      "exit_code": 0,
+      "markers": [
+        "STORY_ACTOR_VOICE PASS checks=10 failures=0"
+      ],
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/handover-regression-story_actor_voice.log"
+    }
+  ],
+  "voice_evidence": "handover-voice.json",
+  "render": "handover-terminal-native-view.png",
+  "render_scope": "Actual terminal component, source camera height/position/FOV, isolated world under software rendering. Full-world screenshot attempt was stopped; no frame-rate or phone-render proof. Root viewed saved image.",
+  "delivery_status": "matching candidate not yet started",
+  "unverified": [
+    "Android picker and likeness on actual owner photo",
+    "Audible device playback and phone frame time",
+    "Continuous ascent to this terminal (actual receiver integration staged once)",
+    "Whole game commercial readiness"
+  ]
+}

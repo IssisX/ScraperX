@@ -10,7 +10,7 @@ import sys
 import zipfile
 
 
-# Keep the shipped opening/discovery contract while requiring the complete double.
+# Preserve opening/discovery and double dialogue; require the terminal handover recordings.
 REQUIRED_CUES = {
     'receiving_iona_come_look': 'IONA',
     'receiving_iona_freight_one': 'IONA',
@@ -32,6 +32,12 @@ REQUIRED_CUES = {
     'double_ro_and_face': 'RO',
     'double_ari_cannot': 'ARI',
     'double_iona_here': 'IONA',
+    'handover_record_assurance': 'RECORD',
+    'handover_ro_denial': 'RO',
+    'handover_iona_revision': 'IONA',
+    'handover_ro_witness': 'RO',
+    'handover_iona_gallery': 'IONA',
+    'handover_source_survey': 'SOURCE',
 }
 
 

@@ -148,5 +148,53 @@
     "voice_id": "af_heart",
     "clean_sha256": "ceee657b5989991c9dc3ed18ce1539580087b221bed5c20d702d37d7261c71cc",
     "radio_sha256": "e96fbbde7e4342cf15d76442a246a1f47acb93bfbe9f60378529c5de0ca50d79"
+  },
+  "handover_record_assurance": {
+    "event_id": "486dc26c8fd945088caafa0b9dbd0e1d",
+    "text": "No occupied areas remain within the handover boundary.",
+    "speaker": "RECORD",
+    "voice_id": "am_michael",
+    "clean_sha256": "b77c552bcdc3985c8173809dacfb644beed05d5ad7a928d292abca078fc32183",
+    "radio_sha256": "e413774fc5f0304a3ad5a06c3cc2d0ed4dc92b615711efc2e6ae2a3ecc510ce9"
+  },
+  "handover_ro_denial": {
+    "event_id": "6c19d904009946e9a864f9351f25785d",
+    "text": "I didn't record that.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "5b2c17bf02c49141c5f0ae16c2bc8068099c5c33d23c5d8d6e01e7b3f6c3ad65",
+    "radio_sha256": "b422edc99ad22389bf772d69bc2fe422cbd67308ae8c52f473b0e1c45b2d33eb"
+  },
+  "handover_iona_revision": {
+    "event_id": "f95faf3331e241cd9004759c5230cae5",
+    "text": "Your survey says access withdrawn. Occupancy not assessed. They changed the conclusion and kept your name.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "86435028075200e127dce633165dea65b11183f9ca02bc375fe60f0935e63f5f",
+    "radio_sha256": "5cfa47b25a212765608f618c19ee3b3be27fe725da55e632bac241dc8a7cdc78"
+  },
+  "handover_ro_witness": {
+    "event_id": "e1b9f21a18064e2aa06f4d5b51cee3ea",
+    "text": "Who delivered the final handover?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "becb18e17701ee3162b1516c8d753094607f9fb61bf8f44e642d0951b7677878",
+    "radio_sha256": "7c76a93712a9fa8bac5b7bbe3ca5dd24b75c42658e76c806ab6bc71bf25c3ad7"
+  },
+  "handover_iona_gallery": {
+    "event_id": "f744251a2d0246039a018ef7de5ce67a",
+    "text": "Ari Ward. Barrel Helix landing, two hundred and fifty-three metres. Find them. Ask what they were told.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "80e73cb5593c86455310b183728e6aab0308cb5118101fc971bf2d4ab1be16a2",
+    "radio_sha256": "fefeea122b20ff6bd9ecfdef41d47c4a106b364f33b27fb52877253692ec9c7d"
+  },
+  "handover_source_survey": {
+    "event_id": "ffd122b962824c55b7cf8c7fff902394",
+    "text": "Temporary construction access withdrawn. Occupancy not assessed.",
+    "speaker": "SOURCE",
+    "voice_id": "am_michael",
+    "clean_sha256": "dee276d36052a1688da786e2a98af597012f0bd585d97fd279e286865aff006d",
+    "radio_sha256": "5d4cefed9e37eedc2338e613ba935ede1a33d07841eade749c253613e30a284d"
   }
 }

@@ -8,6 +8,8 @@ const BUS := &"Effects"
 var _scene_voice: AudioStreamPlayer3D
 var _scene_position := Vector3.ZERO
 var _has_scene_position := false
+var _record_position := Vector3.ZERO
+var _has_record_position := false
 var _voice: AudioStreamPlayer
 var _configured := false
 var _cues: Dictionary = {}
@@ -46,13 +48,24 @@ func set_scene_voice_position(world_position: Vector3) -> void:
 	if not _has_scene_position:
 		return
 	_scene_position = world_position
-	if is_instance_valid(_scene_voice):
+	if is_instance_valid(_scene_voice) and _active_speaker() == "ARI":
 		_scene_voice.global_position = world_position
 
 func clear_scene_voice_position() -> void:
 	_has_scene_position = false
-	if is_instance_valid(_scene_voice) and _scene_voice.playing:
+	if is_instance_valid(_scene_voice) and _scene_voice.playing and _active_speaker() == "ARI":
 		_stop_voice()
+
+func set_record_voice_position(world_position: Vector3) -> void:
+	_has_record_position = world_position.is_finite()
+	if not _has_record_position:
+		return
+	_record_position = world_position
+	if is_instance_valid(_scene_voice) and _active_speaker() in ["RECORD", "SOURCE"]:
+		_scene_voice.global_position = world_position
+
+func _active_speaker() -> String:
+	return String(_cues.get(String(_active_key), {}).get("speaker", ""))
 
 func _build_scene_voice() -> void:
 	if is_instance_valid(_scene_voice):
@@ -71,9 +84,15 @@ func _build_scene_voice() -> void:
 	_scene_voice.finished.connect(_on_finished)
 
 func _playing_voice() -> Node:
-	if _cues.has(String(_active_key)) and _cues[String(_active_key)].speaker == "ARI":
+	if _active_speaker() in ["ARI", "RECORD", "SOURCE"]:
 		return _scene_voice
 	return _voice
+
+func playback_seconds_for(speaker: StringName) -> float:
+	var player := _playing_voice()
+	if _active_speaker() != String(speaker) or not is_instance_valid(player) or not player.playing:
+		return 0.0
+	return maxf(0, player.get_playback_position())
 
 func speech_level_for(speaker: StringName) -> float:
 	var cue: Dictionary = _cues.get(String(_active_key), {})
@@ -184,11 +203,12 @@ func present(state: Dictionary, _delta: float) -> void:
 		_missing_keys[key] = "recording unavailable; configure again after assets are supplied"
 		_status = "missing_stream"
 		return
-	if speaker == "ARI":
-		if not _has_scene_position:
+	if speaker in ["ARI", "RECORD", "SOURCE"]:
+		if not (_has_scene_position if speaker == "ARI" else _has_record_position):
 			_status = "scene_position_unavailable"
 			return
 		_build_scene_voice()
+		_scene_voice.global_position = _scene_position if speaker == "ARI" else _record_position
 		_scene_voice.stream = _streams[key]
 		_scene_voice.play()
 	else:

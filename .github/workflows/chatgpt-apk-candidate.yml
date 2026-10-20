@@ -242,7 +242,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for entry in story_guidance:STORY_GUIDANCE story_presenter:STORY_PRESENTER story_radio_player:STORY_RADIO story_discovery:STORY_DISCOVERY story_opening_input:SCRAPERX_STORY_OPENING story_discovery_input:SCRAPERX_STORY_DISCOVERY; do
+        for entry in story_guidance:STORY_GUIDANCE story_presenter:STORY_PRESENTER story_radio_player:STORY_RADIO story_discovery:STORY_DISCOVERY story_handover:STORY_HANDOVER story_handover_input:SCRAPERX_STORY_HANDOVER_INPUT story_opening_input:SCRAPERX_STORY_OPENING story_discovery_input:SCRAPERX_STORY_DISCOVERY; do
           check="${entry%%:*}"
           marker="${entry#*:}"
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \

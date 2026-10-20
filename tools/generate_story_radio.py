@@ -34,9 +34,25 @@ CUES = {
     'double_ro_and_face': 'And the face?',
     'double_ari_cannot': "That's not something I can hand back.",
     'double_iona_here': "Ro. I'm here.",
+    'handover_record_assurance': 'No occupied areas remain within the handover boundary.',
+    'handover_ro_denial': "I didn't record that.",
+    'handover_iona_revision': 'Your survey says access withdrawn. Occupancy not assessed. They changed the conclusion and kept your name.',
+    'handover_ro_witness': 'Who delivered the final handover?',
+    'handover_iona_gallery': 'Ari Ward. Barrel Helix landing, two hundred and fifty-three metres. Find them. Ask what they were told.',
+    'handover_source_survey': 'Temporary construction access withdrawn. Occupancy not assessed.',
 }
 CUE_SPEAKERS = {'vale_contact_ro': 'RO', 'double_ro_who': 'RO', 'double_ari_name': 'ARI', 'double_ro_face': 'RO', 'double_ari_job': 'ARI', 'double_ro_empty': 'RO', 'double_ari_told': 'ARI', 'double_ro_when': 'RO', 'double_ari_before': 'ARI', 'double_ro_name': 'RO', 'double_ari_will': 'ARI', 'double_ro_and_face': 'RO', 'double_ari_cannot': 'ARI', 'double_iona_here': 'IONA'}
-VOICE_IDS = {'IONA': 'af_heart', 'RO': 'am_michael', 'ARI': 'am_adam'}
+CUE_SPEAKERS.update({
+    'handover_record_assurance': 'RECORD',
+    'handover_ro_denial': 'RO',
+    'handover_iona_revision': 'IONA',
+    'handover_ro_witness': 'RO',
+    'handover_iona_gallery': 'IONA',
+    'handover_source_survey': 'SOURCE',
+})
+VOICE_IDS = {'IONA': 'af_heart', 'RO': 'am_michael', 'ARI': 'am_adam',
+             'RECORD': 'am_michael', 'SOURCE': 'am_michael'}
+DIRECT_SPEAKERS = {'ARI', 'RECORD', 'SOURCE'}
 FILTER = 'highpass=f=180,lowpass=f=4800,loudnorm=I=-18:TP=-2:LRA=9'
 DIRECT_FILTER = 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=9'
 
@@ -108,7 +124,7 @@ def main():
             print(cue_id, 'reused accepted audio', flush=True)
             continue
         subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
-                        '-i', str(clean), '-af', DIRECT_FILTER if speaker == 'ARI' else FILTER, '-ar', '24000', '-ac', '1',
+                        '-i', str(clean), '-af', DIRECT_FILTER if speaker in DIRECT_SPEAKERS else FILTER, '-ar', '24000', '-ac', '1',
                         '-c:a', 'libvorbis', '-q:a', '5', str(target)], check=True)
         duration = float(subprocess.check_output(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -145,13 +161,15 @@ def main():
     }
     import copy
     manifest['voices'].update(existing_manifest.get('voices', {}))
-    for speaker in ['RO', 'ARI']:
+    for speaker in ['RO', 'ARI', 'RECORD', 'SOURCE']:
         if not any(cue['speaker'] == speaker for cue in cues.values()):
             continue
         voice = copy.deepcopy(manifest['voices']['IONA'])
         voice['generation']['voice_id'] = VOICE_IDS[speaker]
-        voice['generation']['radio_filter'] = DIRECT_FILTER if speaker == 'ARI' else FILTER
-        voice['generation']['placement'] = 'native actor head / spatial' if speaker == 'ARI' else 'player radio'
+        voice['generation']['radio_filter'] = DIRECT_FILTER if speaker in DIRECT_SPEAKERS else FILTER
+        voice['generation']['placement'] = (
+            'handover terminal speaker / spatial' if speaker in {'RECORD', 'SOURCE'}
+            else 'native actor head / spatial' if speaker == 'ARI' else 'player radio')
         voice['license']['commercial_use'] = voice['license']['commercial_use'].replace('af_heart', VOICE_IDS[speaker])
         manifest['voices'][speaker] = voice
     # Analyze the actual shipped recording. Mouth motion samples this envelope

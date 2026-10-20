@@ -76,6 +76,7 @@ const StoryPresenter := preload("res://presentation/story_presenter.gd")
 const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
 const StoryDiscovery := preload("res://presentation/story_discovery.gd")
 const StoryHumanView := preload("res://presentation/story_human_view.gd")
+const StoryHandoverRecord := preload("res://presentation/story_handover_record.gd")
 const PlayerIdentityStore := preload("res://presentation/identity/player_identity_store.gd")
 const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
 const MovementDust := preload("res://presentation/movement_dust.gd")
@@ -293,6 +294,7 @@ var _story_radio: Node
 var _story_discovery: Node3D
 var _player_identity := PlayerIdentityStore.new()
 var _story_human: Node3D
+var _story_record: Node3D
 var _story_identity_dirty := true
 var _reclaim_dust: ReclaimDust
 var _reclaim_feedback_deaths := -1
@@ -758,6 +760,11 @@ func _build_interface() -> void:
 	_story_discovery = StoryDiscovery.new()
 	_story_discovery.name = "ReceivingDispatch"
 	add_child(_story_discovery)
+	_story_record = StoryHandoverRecord.new()
+	_story_record.name = "HandoverArchive"
+	_story_record.identity_store = _player_identity
+	add_child(_story_record)
+	_story_radio.set_record_voice_position(StoryHandoverRecord.SCREEN_POSITION)
 	_touch = TouchControls.new()
 	_touch.name = "TouchControls"
 	hud_layer.add_child(_touch)
@@ -795,7 +802,9 @@ func _build_interface() -> void:
 	_pause_menu.resume_requested.connect(_resume)
 	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
 	_pause_menu.settings_changed.connect(_apply_settings)
-	_pause_menu.identity_changed.connect(func() -> void: _story_identity_dirty = true)
+	_pause_menu.identity_changed.connect(func() -> void:
+		_story_identity_dirty = true
+		_story_record.invalidate_identity())
 	_pause_menu.restart_requested.connect(_restart_at)
 	_pause_menu.checkpoint_restart_requested.connect(_restart_checkpoint)
 	_pause_menu.lift_attempt_restart_requested.connect(_restart_lift_attempt)
@@ -2537,6 +2546,7 @@ func _update_story(delta: float) -> void:
 		return
 	if _native == null or _regression_scene or _ci_mode or not _uitest_scenario.is_empty():
 		_story_discovery.visible = false
+		_story_record.hide_record()
 		if _story_human != null:
 			_story_human.hide()
 		_story_presenter.present({}, delta)
@@ -2546,12 +2556,16 @@ func _update_story(delta: float) -> void:
 	var tick := int(_native.get_tick_index())
 	_update_story_human(tick)
 	_ctx["story_discovery"] = _story_discovery.observe(_camera.global_transform, _ctx, tick)
+	_ctx["story_handover"] = _story_record.observe(_camera.global_transform, _ctx, tick)
+	_ctx["story_handover_near"] = _story_record._near and bool(_ctx.get("grounded", false)) \
+		and int(_ctx.get("support_entity", 0)) == StoryHandoverRecord.RECEIVER_ID
 	var state: Dictionary = _story_guidance.sample(_ctx, tick)
 	_story_presenter.present(state, delta)
 	if _story_radio != null:
 		var velocity: Vector3 = _ctx.get("velocity", Vector3.ZERO)
 		state["suppress_voice"] = _paused or (not bool(_ctx.get("grounded", false)) and velocity.y < -7.0)
 		_story_radio.present(state, delta)
+		_story_record.present_record(state, _story_radio, tick)
 
 
 func _update_story_human(tick: int) -> void:

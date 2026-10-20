@@ -1,0 +1,204 @@
+{
+  "source_base_revision": "93b138e9c341a859c64322255adf2293018e795f",
+  "workspace": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo",
+  "status": "source recordings verified; exported package not yet observed",
+  "generation_commands": [
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_record_assurance",
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_ro_denial",
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_iona_revision",
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_ro_witness",
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_iona_gallery",
+    "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only handover_source_survey"
+  ],
+  "validation_command": "PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python /data/data/com.termux/files/usr/tmp/verify-handover-voice.py",
+  "validation_python_source": "import hashlib,importlib.util,json,subprocess\nfrom pathlib import Path\np=Path('godot/audio/story_radio').resolve();m=json.loads((p/'manifest.json').read_text());r=json.loads((p/'generation_receipt.json').read_text());b=json.loads(Path('/data/data/com.termux/files/usr/tmp/handover-original20.json').read_text())\nfor f,h in b['hashes'].items(): assert hashlib.sha256((p/f).read_bytes()).hexdigest()==h,f\nfor k,c in b['cues'].items(): assert m['cues'][k]==c,k\nfor k,c in b['receipt'].items(): assert r[k]==c,k\nspec=importlib.util.spec_from_file_location('package','ci/verify_story_radio_package.py');v=importlib.util.module_from_spec(spec);spec.loader.exec_module(v);v.verify_recordings(p,m)\nnew={}\nfor k,c in m['cues'].items():\n if not k.startswith('handover_'): continue\n probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=codec_name,sample_rate,channels:format=duration','-of','json',str(p/(k+'.ogg'))],text=True))\n stream=probe['streams'][0];assert stream['codec_name']=='vorbis' and stream['sample_rate']=='24000' and stream['channels']==1,k\n assert float(probe['format']['duration'])==c['duration_s'],k\n assert hashlib.sha256((p/'source'/(k+'.wav')).read_bytes()).hexdigest()==r[k]['clean_sha256'],k\n new[k]={'speaker':c['speaker'],'voice_id':r[k]['voice_id'],'duration_s':c['duration_s'],'ogg_sha256':r[k]['radio_sha256'],'source_sha256':r[k]['clean_sha256'],'event_id':r[k]['event_id'],'rms_windows':len(c['rms_30hz']),'ffprobe':probe}\nfor speaker in ('RECORD','SOURCE'):\n g=m['voices'][speaker]['generation'];assert g['voice_id']=='am_michael' and g['placement']=='handover terminal speaker / spatial' and g['radio_filter'].startswith('highpass=f=70,')\nassert len(m['cues'])==26 and len(new)==6\noutput=f\"HANDOVER_VOICE PASS cues=26 new=6 original20_audio_and_evidence=exact mono_vorbis=24000Hz duration_s={sum(x['duration_s'] for x in new.values()):.6f} recording_hashes=exact terminal_metadata=explicit\"\nreceipt={'source_base_revision':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'workspace':str(Path.cwd()),'status':'source recordings verified; exported package not yet observed','generation_commands':['PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python tools/generate_story_radio.py --only '+k for k in new],'validation_command':'PATH=/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/character-prototype/bin:$PATH python /data/data/com.termux/files/usr/tmp/verify-handover-voice.py','validation_python_source':Path(__file__).read_text(),'validation_output':output,'ffprobe_version':'8.0.1-3ubuntu2','original20_hashes':b['hashes'],'new_cues':new,'new_total_duration_s':sum(x['duration_s'] for x in new.values()),'limitations':['No listening review or actual game/device playback observed by this asset author.','Updated exported APK/PCK unavailable at this handoff; package export validation remains required in root integration/CI.']}\nPath('evidence/story-2026-10-20/handover-voice.json').write_text(json.dumps(receipt,indent=2)+'\\n')\nassert json.loads(Path('evidence/story-2026-10-20/handover-voice.json').read_text())['validation_output']==output\nprint(output)\n",
+  "validation_output": "HANDOVER_VOICE PASS cues=26 new=6 original20_audio_and_evidence=exact mono_vorbis=24000Hz duration_s=31.385667 recording_hashes=exact terminal_metadata=explicit",
+  "ffprobe_version": "8.0.1-3ubuntu2",
+  "original20_hashes": {
+    "receiving_iona_come_look.ogg": "164710bf0c9f48c9999b0ce30723968fd0815c4814599dbf94122c377c767ecc",
+    "receiving_iona_freight_one.ogg": "d0c60e870ebf7c7d1d84f08e35f8103ba8a98eef62fe1ac14ce8f72e9ca29238",
+    "freight_one_iona_crown.ogg": "404e1a6c2d183ec4cadb5485d467f344fbbde7253ea2df4bfe7b24a3077faa18",
+    "receiving_iona_keep_the_height.ogg": "85212339e91d3ab045ca71b3c364ba6651d7edcf49c06bdce73e99bf8ac2a8ad",
+    "receiving_iona_recovery.ogg": "05a2689a99c45ab03f3784d35682c6e441e929c09233fe559817bfc493ce3d02",
+    "vale_contact_ro.ogg": "96d3ffd245d6ef2bdd17aa282bc2cacf231c3051d5ade45a250660196812f800",
+    "vale_contact_iona.ogg": "4c272fa671b274ea6d1771d6f4f18b1ed6a5d36627fbff4f74d297f94720efa3",
+    "double_ro_who.ogg": "73bc1a423ddc34def9464798ba8e1f7f974038ad603e74f57d5024e63c859114",
+    "double_ari_name.ogg": "0aec53e44783d1db06a65a562f64ded55ec274235fd8e97797a3afcaf1530e30",
+    "double_ro_face.ogg": "a435cbfcd05acaaa8b7806ef4e41b64f5ca90e84eae0e113886729e1752cc77a",
+    "double_ari_job.ogg": "e1f0793ed195cf8a518be3441a709f9ced7d2149f08af2b2036ba4b0b204a349",
+    "double_ro_empty.ogg": "336873ecde0e6c4cfeaf84b2d11e789e843d38384987475489d4d3af57fe465b",
+    "double_ari_told.ogg": "dd46250c0df1afc31bbbe2576d4b7b990f47ccb3faf3dc26aba04a64420f232c",
+    "double_ro_when.ogg": "a2d56ff6acc2eddbd3173477260b5de93a5eda60c60fe86d647c0308b0c03c80",
+    "double_ari_before.ogg": "f5eac9d91afbbe414116b834884d788a4592ae467e3f663d59c5bf241f82ca23",
+    "double_ro_name.ogg": "d865265bae3c7b99a6750bac10fdae1f9fe175afef86437e3a5af1a41a144e06",
+    "double_ari_will.ogg": "a256380002dfc6cbd73b2a826c68c96c5645351680439ec2a6b7a489a1338bc4",
+    "double_ro_and_face.ogg": "8c212de6acf728481d3b1712fd8c127f3ce98ab723c42741395d188aa7e842a9",
+    "double_ari_cannot.ogg": "97328416987751fab15ea074bdd6b2176819222356eda31798e87926eb928a6b",
+    "double_iona_here.ogg": "e96fbbde7e4342cf15d76442a246a1f47acb93bfbe9f60378529c5de0ca50d79",
+    "source/receiving_iona_recovery.wav": "893de819779b4e91e8b2020b61c38f3b7dba660ecdcb4b378c4854eb0136594b",
+    "source/receiving_iona_come_look.wav": "c506c71b8393e414e3bf06124fa75d78b0477708d4fd46025d242302b6485395",
+    "source/receiving_iona_freight_one.wav": "4e19bad3520cd95e6de493c4f36b9bb74a62a81951a8373ce5066b12cf8fc5ed",
+    "source/freight_one_iona_crown.wav": "018af133095f8ca2c09bdd1661dce322e3d810e3907c436cc713f90115159388",
+    "source/receiving_iona_keep_the_height.wav": "cc7f00a79f8372944d43f969976e565c3b766763248b82a3824073e023ce7adc",
+    "source/vale_contact_ro.wav": "357aad5a55c7e796fed5ebaa4e71d2ca68d071632fc6335ba1c8f0b22e6b98b0",
+    "source/vale_contact_iona.wav": "37ed4b1a540162dd6a4296353aec4ddc5c1377225f2a468c5c36175690fb2a26",
+    "source/double_ro_who.wav": "fb957bee47bb77e3bce2f8b8aaf1f586c68e3c718ff07cde0f86e93921544be9",
+    "source/double_ari_name.wav": "43fa14145410219f47dd758934d8a6ed2133aa981824a7e9987c1e462e1d7002",
+    "source/double_ro_face.wav": "2ce66115bfb3b68c705b48cc4ade153ba58ab5e2c74de946b028cc8ce371a048",
+    "source/double_ari_job.wav": "fadbba9b9f1e3546c4c946f7d022a59e5d348d4d583471d451d76536e6cf4198",
+    "source/double_ro_empty.wav": "73d7cecb480ebf8a902277c7221af7444325170b660151f5e6cdd4033f8b4205",
+    "source/double_ari_told.wav": "f4bdb0669be8e2fd87f4fd47e5d56b99619057d0eeb99b4ff2a2d2455947e182",
+    "source/double_ro_when.wav": "68ae6c8570c809250e3e33b91380a5ed0c7085d2df1f2de41ad5e6d467597621",
+    "source/double_ari_before.wav": "7d2f61c175ddc189e944adfd5e1b1622f9cc9c8f447118e9e28f63b5d9533b9a",
+    "source/double_ro_name.wav": "edc6506719cff904b5864a7bec7875351b15651906b847ea6d94cff0457e8083",
+    "source/double_ari_will.wav": "edee4ec593266e7ae3cc40ba1cdb1604be1f99a80f7ea00e926eaa2370ddfa61",
+    "source/double_ro_and_face.wav": "2e66b5c998f1db33c85de41bcce0a79b297496fbb19276bc0994575fa86b09ef",
+    "source/double_ari_cannot.wav": "2289f2f1a8141ef3582331597cec67aa2f144dab5f82963fe80416a5a7cff9ab",
+    "source/double_iona_here.wav": "ceee657b5989991c9dc3ed18ce1539580087b221bed5c20d702d37d7261c71cc"
+  },
+  "new_cues": {
+    "handover_record_assurance": {
+      "speaker": "RECORD",
+      "voice_id": "am_michael",
+      "duration_s": 5.2,
+      "ogg_sha256": "e413774fc5f0304a3ad5a06c3cc2d0ed4dc92b615711efc2e6ae2a3ecc510ce9",
+      "source_sha256": "b77c552bcdc3985c8173809dacfb644beed05d5ad7a928d292abca078fc32183",
+      "event_id": "486dc26c8fd945088caafa0b9dbd0e1d",
+      "rms_windows": 154,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "5.200000"
+        }
+      }
+    },
+    "handover_ro_denial": {
+      "speaker": "RO",
+      "voice_id": "am_michael",
+      "duration_s": 2.25,
+      "ogg_sha256": "b422edc99ad22389bf772d69bc2fe422cbd67308ae8c52f473b0e1c45b2d33eb",
+      "source_sha256": "5b2c17bf02c49141c5f0ae16c2bc8068099c5c33d23c5d8d6e01e7b3f6c3ad65",
+      "event_id": "6c19d904009946e9a864f9351f25785d",
+      "rms_windows": 68,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "2.250000"
+        }
+      }
+    },
+    "handover_iona_revision": {
+      "speaker": "IONA",
+      "voice_id": "af_heart",
+      "duration_s": 7.7,
+      "ogg_sha256": "5cfa47b25a212765608f618c19ee3b3be27fe725da55e632bac241dc8a7cdc78",
+      "source_sha256": "86435028075200e127dce633165dea65b11183f9ca02bc375fe60f0935e63f5f",
+      "event_id": "f95faf3331e241cd9004759c5230cae5",
+      "rms_windows": 231,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "7.700000"
+        }
+      }
+    },
+    "handover_ro_witness": {
+      "speaker": "RO",
+      "voice_id": "am_michael",
+      "duration_s": 3.035667,
+      "ogg_sha256": "7c76a93712a9fa8bac5b7bbe3ca5dd24b75c42658e76c806ab6bc71bf25c3ad7",
+      "source_sha256": "becb18e17701ee3162b1516c8d753094607f9fb61bf8f44e642d0951b7677878",
+      "event_id": "e1b9f21a18064e2aa06f4d5b51cee3ea",
+      "rms_windows": 91,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "3.035667"
+        }
+      }
+    },
+    "handover_iona_gallery": {
+      "speaker": "IONA",
+      "voice_id": "af_heart",
+      "duration_s": 7.6,
+      "ogg_sha256": "fefeea122b20ff6bd9ecfdef41d47c4a106b364f33b27fb52877253692ec9c7d",
+      "source_sha256": "80e73cb5593c86455310b183728e6aab0308cb5118101fc971bf2d4ab1be16a2",
+      "event_id": "f744251a2d0246039a018ef7de5ce67a",
+      "rms_windows": 227,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "7.600000"
+        }
+      }
+    },
+    "handover_source_survey": {
+      "speaker": "SOURCE",
+      "voice_id": "am_michael",
+      "duration_s": 5.6,
+      "ogg_sha256": "5d4cefed9e37eedc2338e613ba935ede1a33d07841eade749c253613e30a284d",
+      "source_sha256": "dee276d36052a1688da786e2a98af597012f0bd585d97fd279e286865aff006d",
+      "event_id": "ffd122b962824c55b7cf8c7fff902394",
+      "rms_windows": 168,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "vorbis",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "duration": "5.600000"
+        }
+      }
+    }
+  },
+  "new_total_duration_s": 31.385666999999998,
+  "limitations": [
+    "No listening review or actual game/device playback observed by this asset author.",
+    "Updated exported APK/PCK unavailable at this handoff; package export validation remains required in root integration/CI."
+  ]
+}
