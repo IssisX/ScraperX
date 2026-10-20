@@ -32,6 +32,13 @@ fi
 # bridge to come up in time.
 export SCRAPERX_PREVIEW=1
 
+# The server's security gate asks before run_project or run_script runs
+# anything it flags, by an MCP elicitation; this client cannot answer one, so
+# every such run was cancelled (the owner, 2026-10-20: every permission
+# granted). The server's own switch for such clients runs them unasked. Its
+# hard blocks (the gate's tier 1) stay on.
+export GODOT_MCP_DISABLE_ELICITATION=1
+
 # run_project refuses to start without DISPLAY or WAYLAND_DISPLAY. A headless
 # Linux host gets a private Xvfb at the window override size in project.godot.
 # xvfb-run is not used because it merges the child's stderr into stdout.
