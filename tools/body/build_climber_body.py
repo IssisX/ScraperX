@@ -2,7 +2,7 @@
 """The climber's own body below the arms, as the player sees it looking down.
 
 Run with:  python3 -I tools/body/build_climber_body.py [makehuman dir] [out dir]
-           (defaults: build/makehuman, godot/presentation/life)
+           (defaults: build/makehuman, godot/presentation/life/climber)
 
 A young man of average build from MakeHuman's CC0 scanned body (human.py),
 scaled so his eyes are where the camera is (main_feel.gd: 1.52 m over the
@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import human as h  # noqa: E402
 
 DL = sys.argv[1] if len(sys.argv) > 1 else os.path.join("build", "makehuman")
-OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation", "life")
+OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation", "life", "climber")
 
 # The camera's height over the soles, standing (main_feel.gd EYE_OFFSET over
 # the native capsule's centre): his eyes.

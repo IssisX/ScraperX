@@ -377,6 +377,7 @@ func _process(delta: float) -> void:
 		"sliding": bool(_native.is_player_sliding()),
 		"traversal": int(_ctx.get("traversal", 0)),
 		"on_line": bool(_native.get_zipline_state()["riding"]),
+		"eye": _camera.global_position,
 	}, _yaw, delta)
 	if _canopy == null:
 		_canopy = CanopyView.new()
