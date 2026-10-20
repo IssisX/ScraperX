@@ -16,7 +16,9 @@ extends Node3D
 # and rolls heel to toe, then swings through ahead; standing, a foot left
 # behind by a turn steps back under the body. In the air, sliding, hanging
 # or climbing, the feet go where the body's state puts them. The arms are
-# the viewmodel's (first_person_arms.gd); this body shows none, and no head.
+# the viewmodel's (first_person_arms.gd); this body shows none, and no head,
+# but it casts their shadow: a head that pitches with the view and arms that
+# reach for wherever the drawn hands are, seen only in its shadow.
 
 const Gait := preload("res://presentation/gait.gd")
 const Rig := preload("res://presentation/life/climber/climber_body_rig.gd")
@@ -66,6 +68,8 @@ var _step_from := [Vector3.ZERO, Vector3.ZERO]
 var _step_left := [0.0, 0.0]
 var _roll := [0.0, 0.0]
 var _ready_feet := false
+var _upper_arm := 0.3
+var _forearm := 0.27
 # For a test: what the body last showed.
 var shown_frames := 0
 var foot_world := [Vector3.ZERO, Vector3.ZERO]
@@ -94,11 +98,14 @@ func build(jacket: Material, band: Material, trousers: Material, boots: Material
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		mesh.material_override = dress.get(String(mesh.name), jacket)
+		if String(mesh.name) == "shadow":
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
 		# Posed far from his bind pose (a squat, a slide) he reaches past the
 		# mesh's own bounds; and the lens is right over him.
 		mesh.extra_cull_margin = 1.0
-	for n in ["body", "spine_lo", "spine_mid", "chest", "neck_lo", "neck_hi", "hp_l", "hp_r", "hp_l_x", "hp_r_x",
-			"kn_l", "kn_r", "kn_l_x", "kn_r_x", "an_l", "an_r"]:
+	for n in ["body", "spine_lo", "spine_mid", "chest", "neck_lo", "neck_hi", "head", "hp_l", "hp_r", "hp_l_x", "hp_r_x",
+			"kn_l", "kn_r", "kn_l_x", "kn_r_x", "an_l", "an_r", "sh_l", "sh_r", "sh_l_x", "sh_r_x", "el_l", "el_r",
+			"el_l_x", "el_r_x", "wr_l", "wr_r"]:
 		var i := _skel.find_bone(n)
 		if i < 0:
 			push_error("first-person body: no bone %s" % n)
@@ -106,6 +113,12 @@ func build(jacket: Material, band: Material, trousers: Material, boots: Material
 			return
 		_bone[n] = i
 		_rest_basis[n] = _skel.get_bone_global_rest(i).basis
+	for s in ["l", "r"]:
+		var sh := _skel.get_bone_global_rest(int(_bone["sh_" + s])).origin
+		var el := _skel.get_bone_global_rest(int(_bone["el_" + s])).origin
+		var wr := _skel.get_bone_global_rest(int(_bone["wr_" + s])).origin
+		_upper_arm = sh.distance_to(el)
+		_forearm = el.distance_to(wr)
 
 
 # The frame tools/body/human.py gives a limb's bone: y along it, z toward `hint`.
@@ -271,6 +284,7 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 			_roll[side] = lerpf(float(_roll[side]), 0.0, 1.0 - exp(-14.0 * delta))
 		_pose_leg(side, to_model * (_foot[side] as Vector3), float(_foot_yaw[side]) - yaw, float(_roll[side]))
 	_ready_feet = true
+	_pose_shadow(state, to_model, turn)
 	pelvis_world = _root.global_transform * _global("body").origin
 	for side in 2:
 		foot_world[side] = _foot[side]
@@ -309,6 +323,39 @@ func _pose_leg(side: int, ground: Vector3, foot_yaw: float, roll: float) -> void
 	_set_local("hp_" + s, _frame(hip - knee, knee_way), "body")
 	_set_local("kn_" + s, _frame(knee - end, knee_way), "hp_%s_x" % s)
 	_set_local("an_" + s, foot_basis, "kn_%s_x" % s)
+
+
+# His shadow's head and arms (the part only the shadow shows): the head
+# pitched as the view is; each arm reaching from its shoulder for the wrist
+# the view draws (first_person_arms.gd: right hand first), the elbow down and
+# out, or hanging when there is no drawn hand.
+func _pose_shadow(state: Dictionary, to_model: Transform3D, turn: Basis) -> void:
+	var view: Basis = state.get("view", Basis())
+	var look := turn.inverse() * (-view.z)
+	var pitch := asin(clampf(look.y, -1.0, 1.0))
+	_skel.set_bone_pose_rotation(int(_bone["neck_hi"]), Quaternion(Vector3.RIGHT, -pitch * 0.4))
+	_skel.set_bone_pose_rotation(int(_bone["head"]), Quaternion(Vector3.RIGHT, -pitch * 0.6))
+	var wrists: Array = state.get("wrists", [])
+	for side in 2:
+		var s := "l" if side == 0 else "r"
+		var sh := _global("sh_" + s).origin
+		var target: Vector3
+		if wrists.size() == 2:
+			target = to_model * (wrists[side] as Vector3)
+		else:
+			target = sh + Vector3(0.0, -(_upper_arm + _forearm) * 0.98, 0.02)
+		var out := -1.0 if side == 0 else 1.0
+		var pole := Vector3(0.2 * out, -1.0, -0.7).normalized()
+		var to := target - sh
+		var reach := clampf(to.length(), absf(_upper_arm - _forearm) + 0.01, _upper_arm + _forearm - 0.002)
+		var dir := to.normalized() if to.length() > 1.0e-4 else Vector3.DOWN
+		var bend := (pole - dir * pole.dot(dir))
+		bend = bend.normalized() if bend.length() > 1.0e-4 else Vector3(out, 0.0, 0.0)
+		var cos_a := clampf((_upper_arm * _upper_arm + reach * reach - _forearm * _forearm) / (2.0 * _upper_arm * reach), -1.0, 1.0)
+		var elbow := sh + dir * (_upper_arm * cos_a) + bend * (_upper_arm * sqrt(maxf(0.0, 1.0 - cos_a * cos_a)))
+		var wrist := sh + dir * reach
+		_set_local("sh_" + s, _frame(sh - elbow, bend), "chest")
+		_set_local("el_" + s, _frame(elbow - wrist, bend), "sh_%s_x" % s)
 
 
 # For a test: the nearest the body comes to `point` (the lens), roughly: the

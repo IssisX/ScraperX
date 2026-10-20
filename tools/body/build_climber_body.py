@@ -15,7 +15,8 @@ written is his clothes, skinned to the rig's bones:
   to the collar, so looking down the eye meets a chest and shoulders (not a
   lid), the shoulders ending rounded and the collar closed over, a hi-vis
   band round it at the waist, a zip up its front;
-- ankle boots: lofted round each foot, on a rubber sole.
+- ankle boots: lofted round each foot, on a rubber sole;
+- and, for his shadow only, his head, neck, arms and hands.
 
 Writes climber_body.glb (one node per part, one skin), climber_body_rig.gd
 (the numbers first_person_body.gd poses it by: the eye, the neck's base and
@@ -40,6 +41,8 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation"
 EYE_Y = 1.52
 # The boots' rubber under the bare foot.
 SOLE_M = 0.028
+# His shadow-only parts are simplified to this grid.
+SHADOW_CELL_M = 0.015
 PRESET = {"age": 0.5, "muscle": 0.5, "weight": 0.5, "height": 0.5, "sex": "male"}
 
 def linear(hex_srgb):
@@ -59,6 +62,7 @@ MATERIALS = {
     "zip": {"color": linear("0d0d0c"), "rough": 0.5},
     "boot": {"color": linear("1c130b"), "rough": 0.82},
     "sole": {"color": linear("0d0d0c"), "rough": 0.95},
+    "shadow": {"color": linear("808080"), "rough": 1.0},
 }
 
 
@@ -384,6 +388,37 @@ def main():
         contacts["an_" + s_] = {"heel": local(heel_g), "toe": local(toe_g)}
     parts.append(boot)
     parts.append(sole)
+
+    # ---- what only his shadow shows: his head and neck, his arms and hands.
+    # The view draws its own arms (first_person_arms.gd, which cast no
+    # shadow) and no head (the eye is in it), so without these his shadow
+    # was legs and a trunk. The game sets this part to cast shadows only; it
+    # is a little fuller than the skin, for the sleeves and his hair.
+    in_shadow = is_body & ((head > 0.3) | (arm > 0.3))
+    Tsh = tris_of(in_shadow)
+    used = np.unique(Tsh.ravel())
+    remap = -np.ones(len(V), int)
+    remap[used] = np.arange(len(used))
+    SP_ = V[used] + N[used] * 0.012
+    ST_ = remap[Tsh]
+    # A shadow needs no face or fingernails: the vertices clustered on a
+    # SHADOW_CELL_M grid, each cluster at its mean with its mean weights,
+    # and the triangles that collapse dropped.
+    cell = np.floor(SP_ / SHADOW_CELL_M).astype(np.int64)
+    _, cluster, counts = np.unique(cell, axis=0, return_inverse=True, return_counts=True)
+    cluster = cluster.reshape(-1)
+    n_c = len(counts)
+    CP_ = np.zeros((n_c, 3))
+    CW_ = np.zeros((n_c, W.shape[1]))
+    np.add.at(CP_, cluster, SP_)
+    np.add.at(CW_, cluster, W[used])
+    CP_ /= counts[:, None]
+    CW_ /= counts[:, None]
+    CT_ = cluster[ST_]
+    CT_ = CT_[(CT_[:, 0] != CT_[:, 1]) & (CT_[:, 1] != CT_[:, 2]) & (CT_[:, 0] != CT_[:, 2])]
+    shadow = h.Part("shadow", "shadow")
+    shadow.add(CP_, h.vertex_normals(CP_, CT_), np.zeros((n_c, 2)), CW_, CT_)
+    parts.append(shadow)
 
     out_parts = []
     tri_counts = {}

@@ -1201,8 +1201,9 @@
    "hivis": 192,
    "zip": 46,
    "boots": 3168,
-   "soles": 216
+   "soles": 216,
+   "shadow": 5382
   },
-  "triangles_total": 9742
+  "triangles_total": 15124
  }
 }
