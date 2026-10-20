@@ -40,7 +40,7 @@ var _content: Control
 var _plate: Control
 var _controls_page: Control
 var _controls_view: Control
-var _choice_controls := {}
+var _setting_buttons := {}
 var _controls_tabs := {}
 var _controls_family := UiStyle.Family.KEYBOARD
 var _settings_page: Control
@@ -108,9 +108,10 @@ func current_page() -> StringName:
 	return _page
 
 
-# Where a choice row's button is (for the scripted runs): the settings key's.
+# Where a choice or toggle row's button is (for the scripted runs): the
+# settings key's.
 func setting_center(key: StringName) -> Vector2:
-	var control: Control = _choice_controls[key]
+	var control: Control = _setting_buttons[key]
 	return control.global_position + control.size * 0.5
 
 
@@ -578,6 +579,7 @@ func _build_graphics_page() -> void:
 	_choice_row("ANTI-ALIASING", &"msaa", SettingsStore.MSAA_NAMES, to_custom)
 	_toggle_row("BLOOM", &"bloom", to_custom)
 	_choice_row("FRAME RATE CAP", &"fps_cap", SettingsStore.FPS_CAP_NAMES)
+	_toggle_row("VSYNC", &"vsync")
 	_toggle_row("SHOW FPS", &"show_fps")
 	_end_page(PAGE_GRAPHICS, first,
 		"Lower render scale and shadows first if the device runs hot.")
@@ -656,6 +658,7 @@ func _toggle_row(title: String, key: StringName, on_change: Callable = Callable(
 	toggle.custom_minimum_size = Vector2(180.0 * _u, 0.0)
 	toggle.add_theme_font_override("font", UiStyle.font_heavy())
 	row.add_child(toggle)
+	_setting_buttons[key] = toggle
 	toggle.toggled.connect(func(on: bool) -> void:
 		settings.set(key, on)
 		toggle.text = "ON" if on else "OFF"
@@ -678,7 +681,7 @@ func _choice_row(title: String, key: StringName, names: Array, on_change: Callab
 	choice.custom_minimum_size = Vector2(300.0 * _u, 0.0)
 	choice.add_theme_font_override("font", UiStyle.font_heavy())
 	row.add_child(choice)
-	_choice_controls[key] = choice
+	_setting_buttons[key] = choice
 	choice.pressed.connect(func() -> void:
 		settings.set(key, (int(settings.get(key)) + 1) % names.size())
 		if on_change.is_valid():

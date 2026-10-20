@@ -1655,7 +1655,38 @@ func _touch_pause() -> bool:
 			or not is_equal_approx(sun.directional_shadow_max_distance, 300.0):
 		return _fail("QUALITY ULTRA did not reach the renderer (quality %d, msaa %d, shadow %.0f m)" % [
 			_main._settings.quality, get_viewport().msaa_3d, sun.directional_shadow_max_distance])
+	# VSYNC beside the frame rate cap: shown, on by default, a tap turns it off
+	# at the display (a headless run has no display to ask), and the choice
+	# comes back from the settings file.
+	var vsync: Button = _main._pause_menu._setting_buttons[&"vsync"]
+	var displayed := DisplayServer.get_name() != "headless"
+	if not vsync.is_visible_in_tree() or vsync.text != "ON" or not _main._settings.vsync \
+			or (displayed and DisplayServer.window_get_vsync_mode() != DisplayServer.VSYNC_ENABLED):
+		return _fail("VSYNC is not shown on, the display's own default (shown %s, read '%s')" % [
+			str(vsync.is_visible_in_tree()), vsync.text])
 	await _pose("pause_graphics")
+	_click(_main._pause_menu.setting_center(&"vsync"))
+	await _frames(2)
+	if _main._settings.vsync or vsync.text != "OFF" \
+			or (displayed and DisplayServer.window_get_vsync_mode() != DisplayServer.VSYNC_DISABLED):
+		return _fail("VSYNC OFF did not reach the display (setting %s, mode %d)" % [
+			str(_main._settings.vsync), DisplayServer.window_get_vsync_mode()])
+	var saved := SettingsStore.new()
+	saved.path = "user://uitest_settings.cfg"
+	saved.vsync = _main._settings.vsync
+	saved.save_to_disk()
+	var loaded := SettingsStore.new()
+	loaded.path = saved.path
+	loaded.load_from_disk()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(saved.path))
+	if loaded.vsync:
+		return _fail("VSYNC OFF did not come back from the settings file")
+	await _pose("pause_graphics_vsync_off")
+	_click(_main._pause_menu.setting_center(&"vsync"))
+	await _frames(2)
+	if not _main._settings.vsync \
+			or (displayed and DisplayServer.window_get_vsync_mode() != DisplayServer.VSYNC_ENABLED):
+		return _fail("VSYNC ON did not reach the display")
 	_click(_main._pause_menu.side_button_center(&"display"))
 	await _frames(2)
 	if _main._pause_menu.current_page() != &"display":

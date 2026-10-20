@@ -66,6 +66,9 @@ var shadow_quality := 3
 var msaa := 1
 var bloom := true
 var fps_cap := 0
+# Frames wait for the display's refresh: no tearing. Off draws as soon as a
+# frame is ready, under the FRAME RATE CAP.
+var vsync := true
 var show_fps := false
 var fov := 82.0
 var brightness := 1.0
@@ -88,6 +91,9 @@ var voice_volume := 1.0
 var captions := false
 var start_at := 0
 var persistent := true
+# Where they are kept. A scripted run proving the round trip keeps its own
+# file, never the player's.
+var path := PATH
 
 
 # Writes a preset's values; CUSTOM leaves them as they are.
@@ -108,7 +114,7 @@ func load_from_disk() -> void:
 	if not persistent:
 		return
 	var file := ConfigFile.new()
-	if file.load(PATH) != OK:
+	if file.load(path) != OK:
 		return
 	look_sensitivity = _read_range(file, "look_sensitivity", look_sensitivity, LOOK_SENSITIVITY_RANGE)
 	stick_sensitivity = _read_range(file, "stick_sensitivity", stick_sensitivity, STICK_SENSITIVITY_RANGE)
@@ -125,6 +131,7 @@ func load_from_disk() -> void:
 	msaa = _read_index(file, "msaa", msaa, MSAA_NAMES.size())
 	bloom = _read_bool(file, "bloom", bloom)
 	fps_cap = _read_index(file, "fps_cap", fps_cap, FPS_CAPS.size())
+	vsync = _read_bool(file, "vsync", vsync)
 	show_fps = _read_bool(file, "show_fps", show_fps)
 	fov = _read_range(file, "fov", fov, FOV_RANGE)
 	brightness = _read_range(file, "brightness", brightness, BRIGHTNESS_RANGE)
@@ -156,14 +163,14 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "gyro_sensitivity", gyro_sensitivity)
 	file.set_value(SECTION, "vibration", vibration)
 	file.set_value(SECTION, "telemetry", telemetry)
-	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
+	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "vsync", "show_fps",
 			"fov", "brightness", "head_bob", "route_hint", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
 			"captions", "start_at"]:
 		file.set_value(SECTION, key, get(key))
-	var error := file.save(PATH)
+	var error := file.save(path)
 	if error != OK:
-		push_warning("SCRAPERX_SETTINGS_SAVE_FAILED code=%d path=%s" % [error, PATH])
+		push_warning("SCRAPERX_SETTINGS_SAVE_FAILED code=%d path=%s" % [error, path])
 
 
 func _read_range(file: ConfigFile, key: String, fallback: float, bounds: Vector2) -> float:

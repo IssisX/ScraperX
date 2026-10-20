@@ -400,6 +400,9 @@ class Batcher:
 		var origin := Vector3.ZERO
 		var material: Material
 		var fine := false
+		# The far section this one is drawn in at a distance ("" for a fine
+		# batch, which no far section carries).
+		var far_key := ""
 
 	var near := {}
 	var far := {}
@@ -424,6 +427,9 @@ class Batcher:
 		group.fine = fine
 		Batcher.append_arrays(group, mesh, surface, at, finish[1])
 		if not fine:
+			# A near section (BATCH_CELL_*) lies inside one far section.
+			group.far_key = "%d/%d/%d" % [floorf(centre.x / BATCH_FAR_CELL), floorf(centre.y / BATCH_FAR_CELL),
+				floorf(centre.z / BATCH_FAR_CELL)]
 			if far_material == null:
 				far_material = StandardMaterial3D.new()
 				far_material.vertex_color_use_as_albedo = true
@@ -553,19 +559,10 @@ class Batcher:
 
 	# Adds the batches under `root`; returns how many.
 	func emit(root: Node3D) -> int:
-		for key in near:
-			var group: Group = near[key]
-			var instance := Batcher.commit(group)
-			if group.fine:
-				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-				instance.visibility_range_end = BATCH_FINE_RANGE
-			else:
-				instance.visibility_range_end = BATCH_NEAR_RANGE
-			instance.visibility_range_end_margin = BATCH_FADE
-			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-			root.add_child(instance)
+		var far_instances := {}
 		for key in far:
 			var instance := Batcher.commit(far[key])
+			far_instances[key] = instance
 			instance.name = "FarBatch"
 			# Out of every lamp's light: a far section spans many lamps, and
 			# each would draw it again.
@@ -578,6 +575,23 @@ class Batcher:
 			instance.visibility_range_begin_margin = BATCH_FADE
 			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			root.add_child(instance)
+		for key in near:
+			var group: Group = near[key]
+			var instance := Batcher.commit(group)
+			root.add_child(instance)
+			if group.fine:
+				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				instance.visibility_range_end = BATCH_FINE_RANGE
+				instance.visibility_range_end_margin = BATCH_FADE
+				instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			else:
+				# Drawn exactly while its far section is not. Each measured its
+				# own distance (to its own middle, 96 m and 192 m sections), so
+				# by a section's edge both were drawn, the far copy over the
+				# near, or neither (the owner's playtest, 2026-10-20: the view
+				# from about 700 m messed up). The far section's one distance now
+				# decides for both.
+				instance.visibility_parent = instance.get_path_to(far_instances[group.far_key])
 		return near.size() + far.size()
 
 func _batch_static_dressing(root: Node3D) -> void:

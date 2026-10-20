@@ -528,6 +528,8 @@ func _apply_settings() -> void:
 	viewport.scaling_3d_scale = _settings.render_scale
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][_settings.msaa]
 	Engine.max_fps = SettingsStore.FPS_CAPS[_settings.fps_cap]
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if _settings.vsync
+		else DisplayServer.VSYNC_DISABLED)
 	($Environment as WorldEnvironment).environment.glow_enabled = _settings.bloom
 	_sky_cycle.exposure_scale = _settings.brightness
 	_sky_cycle.set_shadow_level(_settings.shadow_quality)
