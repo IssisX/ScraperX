@@ -1,7 +1,7 @@
 // Live fabrication, build step 1 (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an
 // object made outside the simulation (tools/fab) becomes a real body from its
 // hull file. Its falsifiers, on the three test objects (godot/tests/fabricated:
-// a steel crowbar, a timber keg, a rubber tyre, made from CC0 models):
+// a steel crowbar, a timber keg, a rubber tire, made from CC0 models):
 //
 //  - the delivery: each one's signature verifies against the game's key, its
 //    GLB against the hash the hull file names; a byte changed anywhere, or
@@ -70,7 +70,7 @@ struct TestObject final {
 
 std::vector<TestObject> test_objects() {
     std::vector<TestObject> out;
-    for (const char *name : {"crowbar", "keg", "tyre"}) {
+    for (const char *name : {"crowbar", "keg", "tire"}) {
         const std::string stem = std::string(SCRAPERX_SOURCE_DIR) + "/godot/tests/fabricated/" + name;
         out.push_back({name, read_file(stem + ".hull"), read_file(stem + ".sig"), read_file(stem + ".glb")});
     }
@@ -216,8 +216,8 @@ std::vector<std::uint64_t> fabricated_run(const std::vector<TestObject> &objects
                                       "fabricated same data: the crowbar is taken");
     const std::uint64_t keg = add(s, object_named(objects, "keg").hull, {10.5, 2.0, -26.5}, 0.4,
                                   "fabricated same data: the keg is taken, 2 m up");
-    (void)add(s, object_named(objects, "tyre").hull, {12.5, 0.0, -25.0}, -0.8,
-              "fabricated same data: the tyre is taken");
+    (void)add(s, object_named(objects, "tire").hull, {12.5, 0.0, -25.0}, -0.8,
+              "fabricated same data: the tire is taken");
     require(crowbar == fab::kEntityBase && keg == fab::kEntityBase + 1,
             "fabricated same data: each takes the next entity of its range");
     const double keg_y = at_of(s, keg).y;
@@ -360,12 +360,12 @@ std::size_t body_order(const std::vector<TestObject> &objects) {
     const std::vector<World> worlds = {
         {"as built", {}, {}},
         {"the keg on the yard's grade, 200 m east", {}, {{"keg", {200.0, 0.0, 150.0}, 0.3}}},
-        {"the tyre in the 143 m deck's band", {slab(143.0)}, {{"tyre", {300.0, 143.0, 300.0}, 0.0}}},
+        {"the tire in the 143 m deck's band", {slab(143.0)}, {{"tire", {300.0, 143.0, 300.0}, 0.0}}},
         {"the crowbar in the crane band", {slab(500.0)}, {{"crowbar", {300.0, 500.0, 300.0}, 1.0}}},
         {"the keg in the 706 m deck's band", {slab(706.0)}, {{"keg", {300.0, 706.0, 300.0}, -0.6}}},
         {"all three on the yard's grade, made after the settle second",
          {},
-         {{"crowbar", {200.0, 0.0, 154.0}, 0.0}, {"keg", {204.0, 0.0, 150.0}, 0.0}, {"tyre", {196.0, 0.0, 150.0}, 0.0}},
+         {{"crowbar", {200.0, 0.0, 154.0}, 0.0}, {"keg", {204.0, 0.0, 150.0}, 0.0}, {"tire", {196.0, 0.0, 150.0}, 0.0}},
          true},
     };
     std::vector<End> grade;
@@ -606,7 +606,7 @@ std::size_t saved(const std::vector<TestObject> &objects) {
     // Refused, and nothing changed: a save whose objects are not the world's
     // own (another object at the same entity), or whose hull file is bad.
     Simulation g(InitialSpawn::ExteriorGrade);
-    (void)add(g, object_named(objects, "tyre").hull, {9.0, 0.0, -24.0}, 0.0, "fabricated save: another object");
+    (void)add(g, object_named(objects, "tire").hull, {9.0, 0.0, -24.0}, 0.0, "fabricated save: another object");
     const auto g_before = world_bits(g);
     require(!g.load_game(bytes.data(), bytes.size()) && world_bits(g) == g_before && g.fabricated_count() == 1,
             "fabricated save: a save whose objects are not the world's is refused and changes nothing");

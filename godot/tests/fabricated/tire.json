@@ -31,7 +31,7 @@
  ],
  "mass_kg": 30.041,
  "material": "rubber",
- "name": "tyre",
+ "name": "tire",
  "public_key": "8e10f29e2bdb41caaca588a9c81476c0c8de876259950026ac5e9bd7e33666ff",
  "settings": {
   "seed": 0,
@@ -41,7 +41,7 @@
  "size_m": 0.6,
  "source": {
   "author": "MP",
-  "file": "tyre.glb",
+  "file": "tire.glb",
   "license": "CC0 1.0 Universal (Poly Haven)",
   "page": "https://polyhaven.com/a/old_tyre",
   "sha256": "cf2372917337fb7b2dcdd2e1d6b9d30eec47bb301e3b7556d0e5d1b4f5f2cf79",
