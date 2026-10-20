@@ -49,3 +49,12 @@ as built. The design workflow was stopped on 2026-10-20 when the owner lowered e
 (the ladder route and the tower around it; what the engine can do) and one of its three designs
 finished: `panel_results/wf_047fa3a0-b28_partial.json`. Left to do: the other two designs (the
 machine-first and the build-first angles), then the options listed for the owner to pick from.
+
+### Picked (2026-10-20)
+
+The owner: *"Thrill ride and add your extras"*. Design 1 (the shove at lift-off, the surge past
+6 m/s, the 14-degree leaning elbow round the corner, the curved glass door), with: the carrier's glass
+lid, the glass misting and clearing with the whoosh, joint thuds and blower whine, NO RIDERS, torn
+padding and a rack of dented carriers, the SEND panel re-hung on a bent bracket, the old hatch plated
+over. Built after the chiller drop (it reuses its glass, vent renderer and sounds). Designs:
+`glass_tube_designs.md`.
