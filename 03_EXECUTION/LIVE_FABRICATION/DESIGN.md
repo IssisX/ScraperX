@@ -114,3 +114,23 @@ has your face on file.
    (cheaper at scale, more work). Recommended: hosted for step 3, decided again on measured cost.
 4. The permissions: INTERNET for step 3, CAMERA for step 4.
 5. A daily budget for the server.
+
+## The horror layer (the owner, 2026-10-20: *"How do you think we could use that to creep the player out even more? Not a gimmick bolted on"*)
+
+The Stores becomes hers. Personal, because the generator answers what you asked; slow, because it
+escalates. Each idea rests on something the game already has.
+
+1. **She reads your slips** (the Stores): orders arrive right, then subtly wrong (the crowbar bent
+   into a hook, the bucket half full of something dark), then as she wants them.
+2. **The printer at night** (her hoard, her mischief): slips you did not write print in her hand
+   ("1 NURSE'S CAP", "1 HAND, LEFT, SIZE 7"); the objects turn up in her hoard later.
+3. **Return to sender** (the throw, her return, torn limbs): what you throw at her comes back
+   through the Stores mended and marked; once limbs tear, the tube delivers her arm, stamped.
+4. **The dead crew's last orders** (the overtime crew she killed): their unfilled slips arrive
+   decades late, one object each; the story fixed, the objects different every playthrough.
+5. **Your face on file** (the badge photo, CAMERA): a sheet-metal mask of your face in her locker,
+   a missing-worker poster, then a body in your clothes with your face at the shaft's foot.
+6. **Heavier than it looks** (the physics): a crate far heavier than its material allows; you feel
+   it in the carry; dropped from height, it splits.
+
+Claude's picks to start: 1 and 3 (no new permission), then 5 when CAMERA is approved.
