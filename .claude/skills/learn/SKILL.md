@@ -26,25 +26,26 @@ words still in the conversation".) It ends with one line:
 
 ## 1. Gather
 
-- **The owner's words:** `python3 -I .claude/skills/learn/owner_messages.py` from the repository
-  root (`python` where `python3` is missing). It works in any session: it finds this session's own
-  record and prints what the owner typed since this session's last /learn. What was learned is
-  kept per session in `learned/<session id>`, so sessions side by side never overwrite each
-  other; `--all` reads the whole session, as when the owner says `/learn all`. Only the owner's
-  typing comes out, slash commands with their text included (tool output, reminders, hook and
-  agent messages, compaction summaries and the skills Claude loads are left out; a picture shows
-  as "[a picture]"). Its summary on stderr gives the count, the span in Central, the since and
-  the newest timestamp. If it exits 2 (no record) or 3 (a record it cannot read), say so in the
-  opening line and learn only from the owner's words still in the conversation word for word (a
-  summary is not the owner's words); if there are none, nothing is learned.
+- **The owner's words:** this conversation, as it stands; the log is not opened (the owner,
+  2026-10-20: *"it should learn the conversation - I think going to the log is wasteful"*). The
+  one exception: where the conversation was compacted since the last /learn (it opens with a
+  summary, and a summary is not the owner's words), the owner's exact words for that stretch come
+  from the log: `python3 -I .claude/skills/learn/owner_messages.py` from the repository root
+  (`python` where `python3` is missing) prints only what the owner typed since this session's
+  last /learn (`--all`: the whole session), with a summary on stderr (the count, the span in
+  Central, the since, the newest timestamp). It finds this session's own record in any session.
+  If it exits 2 (no record) or 3 (a record it cannot read), say so in the opening line and learn
+  only from what the conversation still holds word for word; if that is nothing, nothing is
+  learned.
 - **Pasted text** (a handoff or prompt another session wrote, pasted by the owner) is what the
   owner chose to pass on, not the owner's own words: a lesson from it is credited as pasted.
-- **What was learned the hard way:** `git log --since=<the summary's since, or the first
-  message's time> --format='%h %s%n%b'` on the branch this session works on. Commit messages here record root causes; a fix after a failed attempt (a red CI
+- **What was learned the hard way:** `git log --since=<this session's last /learn, the time in
+  learned/<session id>; else the session's start> --format='%h %s%n%b'` on the branch this
+  session works on. Commit messages here record root causes; a fix after a failed attempt (a red CI
   run, a test that relied on a bug, a wrong reading of the owner) is a lesson candidate.
 - **Text after /learn:** that is the lesson, first in line; still check it as below.
-- **The opening line's facts:** the summary's count and span (already in Central), and the number
-  of commits.
+- **The opening line's facts:** how many of the owner's messages were studied and their span in
+  Central, and the number of commits.
 - When the gathered text is long, hand the reading to one subagent with this file's step 2 as its
   brief and take back its candidate list; do not read tool output wholesale.
 
@@ -99,8 +100,8 @@ Then:
 ## 4. Write, then report
 
 - Write every sure lesson where step 3 places it.
-- Record what was studied: `python3 -I .claude/skills/learn/owner_messages.py --mark <the
-  summary's newest timestamp>`, which writes `learned/<session id>`.
+- Record how far this run studied: `python3 -I .claude/skills/learn/owner_messages.py --mark
+  now`, which writes `learned/<session id>`.
 - Commit the documents and that file alone (subject ending `[skip ci]`), with this session's
   commit trailer, and push to the branch this session writes to (`ScraperX-Claude` unless the
   session's brief names another; the lessons reach every session once it is in `ScraperX-Claude`);

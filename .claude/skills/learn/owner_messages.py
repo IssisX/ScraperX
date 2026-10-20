@@ -5,7 +5,7 @@ Usage, from the repository root:
   python3 -I .claude/skills/learn/owner_messages.py           what is new since this session's last /learn
   python3 -I .claude/skills/learn/owner_messages.py --all     the whole session
   python3 -I .claude/skills/learn/owner_messages.py --since ISO_TIMESTAMP
-  python3 -I .claude/skills/learn/owner_messages.py --mark ISO_TIMESTAMP
+  python3 -I .claude/skills/learn/owner_messages.py --mark ISO_TIMESTAMP|now
       records that this session is learned through that moment (in learned/<session id>)
   --session PATH reads that record instead of this session's.
 
@@ -25,7 +25,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LEARNED = os.path.join(HERE, "learned")
@@ -106,6 +106,8 @@ def learned_through(session: str) -> str:
 
 
 def mark(session: str, stamp: str) -> None:
+    if stamp == "now":
+        stamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     try:
         datetime.fromisoformat(stamp.replace("Z", "+00:00"))
     except ValueError:
