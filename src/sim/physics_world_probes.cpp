@@ -509,8 +509,12 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
 }
 
 // Loose stock in the hands, other than a machine's own weight (S3's pig: a
-// route part is set down, never thrown away).
+// route part is set down, never thrown away); a fabricated object is loose
+// stock too.
 bool Simulation::PhysicsWorld::holding_throwable() const noexcept {
+    if (scraperx::sim::kit::is_fabricated_entity(carried_entity_)) {
+        return carried_load_mass() > 0.0F;
+    }
     const auto count = static_cast<std::uint64_t>(loose_stock_->count());
     const std::uint64_t weights_end = count - static_cast<std::uint64_t>(LooseStock::kMatronThrowables);
     const std::uint64_t weights_begin = weights_end - static_cast<std::uint64_t>(LooseStock::kMachineWeights);

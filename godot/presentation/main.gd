@@ -33,6 +33,7 @@ const StockView := preload("res://presentation/stock_view.gd")
 const ForkliftView := preload("res://presentation/forklift_view.gd")
 const CraneView := preload("res://presentation/crane_view.gd")
 const ZiplineView := preload("res://presentation/zipline_view.gd")
+const FabricatedView := preload("res://presentation/fabricated_view.gd")
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -233,6 +234,11 @@ func _ready() -> void:
 	_corpse_view = CorpseView.new()
 	add_child(_corpse_view)
 	_corpse_view.setup(_native)
+	# Live fabrication's objects: none in the player's world yet (DESIGN.md,
+	# build step 1); drawn here whenever the native holds any.
+	_fabricated_view = FabricatedView.new()
+	add_child(_fabricated_view)
+	_fabricated_view.setup(_native)
 	# The summit's lamp: lit before (the profile keeps it) opens the world lit.
 	if _save_enabled and FileAccess.file_exists(SUMMIT_PROFILE_PATH):
 		_native.light_summit()

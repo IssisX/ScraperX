@@ -41,17 +41,27 @@ constexpr std::uint64_t kDynamicEntityBase = 2000;
 constexpr std::uint64_t kEntityLimit = 3000;
 constexpr std::uint64_t kStockEntityBase = 5000;
 constexpr std::uint64_t kStockEntityLimit = 6000;
+// Fabricated objects (sim/fabricated.hpp): loose stock made at run time, from
+// a range of their own above every other in the world.
+constexpr std::uint64_t kFabricatedEntityBase = 0x20000;
+constexpr std::uint64_t kFabricatedEntityLimit = kFabricatedEntityBase + 32;
 
 [[nodiscard]] constexpr bool is_stock_entity(const std::uint64_t entity) noexcept {
     return entity >= kStockEntityBase && entity < kStockEntityLimit;
 }
 
+[[nodiscard]] constexpr bool is_fabricated_entity(const std::uint64_t entity) noexcept {
+    return entity >= kFabricatedEntityBase && entity < kFabricatedEntityLimit;
+}
+
 [[nodiscard]] constexpr bool is_kit_entity(const std::uint64_t entity) noexcept {
-    return (entity >= kStaticEntityBase && entity < kEntityLimit) || is_stock_entity(entity);
+    return (entity >= kStaticEntityBase && entity < kEntityLimit) || is_stock_entity(entity) ||
+           is_fabricated_entity(entity);
 }
 
 [[nodiscard]] constexpr bool is_dynamic_entity(const std::uint64_t entity) noexcept {
-    return (entity >= kDynamicEntityBase && entity < kEntityLimit) || is_stock_entity(entity);
+    return (entity >= kDynamicEntityBase && entity < kEntityLimit) || is_stock_entity(entity) ||
+           is_fabricated_entity(entity);
 }
 
 // What a surface is made of, for the presentation's palette. Not physics.
@@ -138,6 +148,12 @@ public:
     // mass_kg == 0 makes a static body.
     BodyIndex add_body(std::uint64_t entity, const std::vector<Part> &parts,
                        JPH::RVec3 position, JPH::Quat rotation, float mass_kg, float friction);
+    // A moving body round a shape made outside the kit (a fabricated object's
+    // hulls, sim/fabricated.hpp): it has no parts (the presentation draws its
+    // own model for it), and its mass and inertia are the shape's own, from
+    // each part's density. Invalid when the physics has no room for a body.
+    BodyIndex add_shape_body(std::uint64_t entity, const JPH::Shape *shape, JPH::RVec3 position,
+                             JPH::Quat rotation, float friction, float restitution);
     void set_carry(BodyIndex body, CarryKind kind, JPH::Vec3 handle_local);
     // Lets a moving body sleep once it has come to rest, as loose stock lying
     // about does: it wakes when anything touches it or a restore moves it.

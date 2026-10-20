@@ -1,0 +1,50 @@
+{
+ "density_kg_m3": 7850.0,
+ "glb_bytes": 114244,
+ "glb_sha512": "a8aa840f592f8e6c856764f33effe7bbecb2a3194eef854b0bacc7dc4940950d11977d485d2c8d0a8e31f2fb60ea5c15f53c161b9a7b1f744538bd2981b807e3",
+ "half_extent_m": [
+  0.0218,
+  0.3,
+  0.0689
+ ],
+ "hull_bytes": 1268,
+ "hull_sha512": "8f2e4fd3f1298c6c491f2fd1b66d5f6b8cc327d305cf6b474b7544f2fc44c2ebdbfaf58e79fb50c1e462ccd6ec9a6417a3c8fc7674e66c4305d633042849f337",
+ "hull_volumes_m3": [
+  0.0002217,
+  5.26e-05,
+  5.18e-05
+ ],
+ "hulls": [
+  32,
+  32,
+  32
+ ],
+ "mass_kg": 2.56,
+ "material": "steel",
+ "name": "crowbar",
+ "public_key": "8e10f29e2bdb41caaca588a9c81476c0c8de876259950026ac5e9bd7e33666ff",
+ "settings": {
+  "seed": 0,
+  "texture": 512,
+  "triangles": 4000
+ },
+ "size_m": 0.6,
+ "source": {
+  "author": "Alexander Otterbeck",
+  "file": "crowbar.glb",
+  "license": "CC0 1.0 Universal (Poly Haven)",
+  "page": "https://polyhaven.com/a/crowbar_01",
+  "sha256": "e4994023e3648812dee09f2ee0dac5b190f99e763c692061f726601884016232",
+  "size_m": [
+   0.0404,
+   0.5554,
+   0.1276
+  ],
+  "title": "Crowbar 01",
+  "triangles": 2300
+ },
+ "texture_coverage": 0.286,
+ "texture_px": 512,
+ "triangles": 2300,
+ "volume_m3": 0.0003261
+}

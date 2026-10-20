@@ -59,6 +59,10 @@ int main() {
         run_body_order();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "fabricated") {
+        run_fabricated();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "climb") {
         run_wall_climb();
         run_tuck();
@@ -399,6 +403,7 @@ int main() {
     run_matron();
     run_loose_stock();
     run_body_order();
+    run_fabricated();
     run_forklift();
     run_forklift_strain();
     run_yard_crane();

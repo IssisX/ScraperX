@@ -1,9 +1,12 @@
 #include "bridge/scraperx_simulation.hpp"
 
+#include "bridge/fabricated_delivery.hpp"
 #include "sim/corpse.hpp"
+#include "sim/fabricated.hpp"
 
 #include <cstring>
 #include <limits>
+#include <string>
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/array.hpp>
@@ -351,6 +354,16 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
+    godot::ClassDB::bind_method(godot::D_METHOD("add_fabricated", "hull", "signature", "model", "at", "yaw"),
+                                &ScraperXSimulation::add_fabricated);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_refusal"), &ScraperXSimulation::get_fabricated_refusal);
+    godot::ClassDB::bind_method(godot::D_METHOD("check_fabricated_delivery", "hull", "signature", "model"),
+                                &ScraperXSimulation::check_fabricated_delivery);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_count"), &ScraperXSimulation::get_fabricated_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_object", "index"),
+                                &ScraperXSimulation::get_fabricated_object);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_hull_triangles", "index"),
+                                &ScraperXSimulation::get_fabricated_hull_triangles);
     godot::ClassDB::bind_method(godot::D_METHOD("get_lift_state"), &ScraperXSimulation::get_lift_state);
 }
 
@@ -1714,6 +1727,79 @@ godot::Dictionary ScraperXSimulation::get_lift_state() const {
         travels.push_back(state.travels[static_cast<std::size_t>(i)]);
     }
     out["travels"] = travels;
+    return out;
+}
+
+static_assert(kMaxHullBytes == sim::fabricated::kMaxFileBytes,
+              "the delivery check's bound on a hull file is the native's own");
+
+std::int64_t ScraperXSimulation::add_fabricated(const godot::PackedByteArray &hull,
+                                                const godot::PackedByteArray &signature,
+                                                const godot::PackedByteArray &model, const godot::Vector3 at,
+                                                const double yaw) {
+    // The game layer's check first: nothing of the delivery reaches the
+    // native unless its signature is the game's and its GLB is the one the
+    // signed hull file names.
+    const DeliveryCheck check = check_delivery(hull.ptr(), static_cast<std::size_t>(hull.size()), signature.ptr(),
+                                               static_cast<std::size_t>(signature.size()), model.ptr(),
+                                               static_cast<std::size_t>(model.size()));
+    if (check != DeliveryCheck::Ok) {
+        fabricated_refusal_ = delivery_check_name(check);
+        return 0;
+    }
+    sim::FabricatedRefusal refusal = sim::FabricatedRefusal::None;
+    const std::uint64_t entity = simulation_->add_fabricated(
+        hull.ptr(), static_cast<std::size_t>(hull.size()),
+        {static_cast<double>(at.x), static_cast<double>(at.y), static_cast<double>(at.z)}, yaw, &refusal);
+    fabricated_refusal_ = sim::fabricated::refusal_name(refusal);
+    return static_cast<std::int64_t>(entity);
+}
+
+godot::String ScraperXSimulation::get_fabricated_refusal() const {
+    return fabricated_refusal_;
+}
+
+godot::String ScraperXSimulation::check_fabricated_delivery(const godot::PackedByteArray &hull,
+                                                            const godot::PackedByteArray &signature,
+                                                            const godot::PackedByteArray &model) const {
+    return delivery_check_name(check_delivery(hull.ptr(), static_cast<std::size_t>(hull.size()), signature.ptr(),
+                                              static_cast<std::size_t>(signature.size()), model.ptr(),
+                                              static_cast<std::size_t>(model.size())));
+}
+
+std::int64_t ScraperXSimulation::get_fabricated_count() const {
+    return static_cast<std::int64_t>(simulation_->fabricated_count());
+}
+
+godot::Dictionary ScraperXSimulation::get_fabricated_object(const std::int64_t index) const {
+    godot::Dictionary out;
+    if (index < 0 || index >= static_cast<std::int64_t>(simulation_->fabricated_count())) {
+        return out;
+    }
+    const sim::FabricatedObject object = simulation_->fabricated_object(static_cast<std::uint32_t>(index));
+    static const char kHex[] = "0123456789abcdef";
+    std::string hash;
+    for (const std::uint8_t byte : object.glb_sha512) {
+        hash.push_back(kHex[byte >> 4U]);
+        hash.push_back(kHex[byte & 0x0FU]);
+    }
+    out["entity"] = static_cast<std::int64_t>(object.entity);
+    out["body"] = static_cast<std::int64_t>(object.body);
+    out["material"] = static_cast<std::int64_t>(object.material);
+    out["mass"] = object.mass_kg;
+    out["half_extent"] = to_godot(object.half_extent);
+    out["glb_sha512"] = godot::String(hash.c_str());
+    return out;
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_fabricated_hull_triangles(const std::int64_t index) const {
+    godot::PackedVector3Array out;
+    if (index < 0 || index >= static_cast<std::int64_t>(simulation_->fabricated_count())) {
+        return out;
+    }
+    for (const sim::Vector3 &point : simulation_->fabricated_hull_triangles(static_cast<std::uint32_t>(index))) {
+        out.push_back(to_godot(point));
+    }
     return out;
 }
 

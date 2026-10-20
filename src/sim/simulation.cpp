@@ -1149,6 +1149,59 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
     return true;
 }
 
+std::uint64_t Simulation::add_fabricated(const std::uint8_t *hull, const std::size_t size, const Vector3 at,
+                                         const double yaw, FabricatedRefusal *refusal) {
+    FabricatedRefusal why = FabricatedRefusal::None;
+    std::uint64_t entity = 0;
+    // A place a float holds (the physics' own precision), before it is one.
+    constexpr double kFar = 1.0e6;
+    if (!std::isfinite(at.x) || !std::isfinite(at.y) || !std::isfinite(at.z) || !std::isfinite(yaw) ||
+        std::abs(at.x) > kFar || std::abs(at.y) > kFar || std::abs(at.z) > kFar || std::abs(yaw) > kFar) {
+        why = FabricatedRefusal::Placement;
+    } else {
+        entity = physics_world_->add_fabricated(
+            hull, size, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
+            static_cast<float>(yaw), why);
+    }
+    if (refusal != nullptr) {
+        *refusal = why;
+    }
+    return entity;
+}
+
+std::uint32_t Simulation::fabricated_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->fabricated().size());
+}
+
+FabricatedObject Simulation::fabricated_object(const std::uint32_t index) const noexcept {
+    FabricatedObject out;
+    const auto &all = physics_world_->fabricated();
+    if (index >= all.size()) {
+        return out;
+    }
+    const auto &object = all[index];
+    out.entity = object.entity;
+    out.body = object.body.value;
+    out.material = static_cast<std::uint8_t>(object.spec.material);
+    out.mass_kg = object.mass_kg;
+    out.half_extent = {object.spec.half_extent[0], object.spec.half_extent[1], object.spec.half_extent[2]};
+    out.glb_sha512 = object.spec.glb_sha512;
+    return out;
+}
+
+std::vector<std::uint8_t> Simulation::fabricated_data(const std::uint32_t index) const {
+    const auto &all = physics_world_->fabricated();
+    return index < all.size() ? all[index].data : std::vector<std::uint8_t>{};
+}
+
+std::vector<Vector3> Simulation::fabricated_hull_triangles(const std::uint32_t index) const {
+    return physics_world_->fabricated_hull_triangles(index);
+}
+
+std::uint32_t Simulation::debug_bodies_with_entity_in(const std::uint64_t first, const std::uint64_t limit) const {
+    return physics_world_->bodies_with_entity_in(first, limit);
+}
+
 bool Simulation::set_lift_haul(const bool held) noexcept {
     lift_haul_ = held;
     return true;

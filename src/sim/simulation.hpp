@@ -375,6 +375,39 @@ enum class ImpactSound : std::uint8_t {
     Machine = 4,     // a forklift's frame or forks, the yard crane's hook block
 };
 
+// Why a fabricated object's data (sim/fabricated.hpp) was refused, None when
+// it was taken. Nothing in the world changes when it is refused.
+enum class FabricatedRefusal : std::uint8_t {
+    None = 0,
+    Size = 1,           // fewer or more bytes than a hull file can have
+    Format = 2,         // not a hull file: its magic, or its parts do not add up to its size
+    Version = 3,
+    Material = 4,       // a material the game does not have
+    HullCount = 5,      // no hull, or more than fabricated::kMaxHulls
+    PointCount = 6,     // a hull of fewer than 4 or more than 32 points
+    NotFinite = 7,      // a number that is NaN or infinite
+    Oversized = 8,      // a side over the dispatch carrier's bound, or a point outside its box
+    Undersized = 9,     // a side under the least an object may be
+    Degenerate = 10,    // a hull that is no solid
+    TooHeavy = 11,      // more than the hands carry
+    TooLight = 12,
+    MassMismatch = 13,  // its mass is not its material's density times its hulls' volume
+    Full = 14,          // the world holds fabricated::kMaxObjects already, or has no room for a body
+    Placement = 15,     // where it was to go is not a finite place in the world, or inside something
+};
+
+// One fabricated object as the world holds it: its entity and kit body, what
+// it is made of, its mass, its box about its origin, and the SHA-512 of the
+// model the presentation draws it with.
+struct FabricatedObject final {
+    std::uint64_t entity = 0;
+    std::uint32_t body = 0xFFFFFFFFU;
+    std::uint8_t material = 0;
+    double mass_kg = 0.0;
+    Vector3 half_extent{};
+    std::array<std::uint8_t, 64> glb_sha512{};
+};
+
 // One hit a tracked body took: its change of velocity in one tick past
 // ImpactLedger::kMinChangeMps.
 struct ImpactSnapshot final {
@@ -1381,6 +1414,29 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an object
+    // made outside the simulation, handed in between ticks as data, like a
+    // touch. `hull` is its hull file (sim/fabricated.hpp), untrusted: its
+    // signature is the game layer's to check before it gets here, and here
+    // every field is bounded again. Taken, it is a real body built from its
+    // convex hulls with the mass its material gives, after every other body
+    // in the world; its underside's middle at `at`, turned `yaw` radians about
+    // +y; loose stock from then on (carried, thrown, saved). Returns its
+    // entity, the next from fabricated::kEntityBase; 0 when it is refused,
+    // `refusal` saying why, the world unchanged.
+    [[nodiscard]] std::uint64_t add_fabricated(const std::uint8_t *hull, std::size_t size, Vector3 at, double yaw,
+                                               FabricatedRefusal *refusal = nullptr);
+    [[nodiscard]] std::uint32_t fabricated_count() const noexcept;
+    // Index past the end: entity 0.
+    [[nodiscard]] FabricatedObject fabricated_object(std::uint32_t index) const noexcept;
+    // Its hull file, as the world holds it (and a save carries it).
+    [[nodiscard]] std::vector<std::uint8_t> fabricated_data(std::uint32_t index) const;
+    // Its hulls as triangles in its own frame, three points each: what a
+    // presentation with no model for it draws (a plain crate of its hulls).
+    [[nodiscard]] std::vector<Vector3> fabricated_hull_triangles(std::uint32_t index) const;
+    // Tests only (never bound to the bridge): how many bodies in the physics
+    // system have an entity in [first, limit).
+    [[nodiscard]] std::uint32_t debug_bodies_with_entity_in(std::uint64_t first, std::uint64_t limit) const;
     [[nodiscard]] LiftSnapshot lift_state() const noexcept;
     // The shot as it would fly from the pouch now, cut where it would first
     // hit something; empty unless a rider is seated.

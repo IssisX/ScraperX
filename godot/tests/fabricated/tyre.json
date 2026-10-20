@@ -1,0 +1,60 @@
+{
+ "density_kg_m3": 1100.0,
+ "glb_bytes": 144392,
+ "glb_sha512": "c69bf605bf8bd9e96f16d929ff0671a2b3afe96b01a3ece2b057ac1642600b4cf191bea6668d4fdb06b6c763e219cfe9012ad0cacc812a5bf6ac4b61c0060743",
+ "half_extent_m": [
+  0.3,
+  0.3,
+  0.0825
+ ],
+ "hull_bytes": 3208,
+ "hull_sha512": "51e8c2bbd8493fa9908ca78a08aead8ea0c33e0ed11ef6b855dcab734745057ecf30fce82772b6fdf5c8c77f4b791c40ba683e9f723827ab13ed94644456f16d",
+ "hull_volumes_m3": [
+  0.0063739,
+  0.0060953,
+  0.0050524,
+  0.0033744,
+  0.0029034,
+  0.0012868,
+  0.001197,
+  0.0010265
+ ],
+ "hulls": [
+  32,
+  32,
+  32,
+  32,
+  32,
+  32,
+  32,
+  32
+ ],
+ "mass_kg": 30.041,
+ "material": "rubber",
+ "name": "tyre",
+ "public_key": "8e10f29e2bdb41caaca588a9c81476c0c8de876259950026ac5e9bd7e33666ff",
+ "settings": {
+  "seed": 0,
+  "texture": 512,
+  "triangles": 4000
+ },
+ "size_m": 0.6,
+ "source": {
+  "author": "MP",
+  "file": "tyre.glb",
+  "license": "CC0 1.0 Universal (Poly Haven)",
+  "page": "https://polyhaven.com/a/old_tyre",
+  "sha256": "cf2372917337fb7b2dcdd2e1d6b9d30eec47bb301e3b7556d0e5d1b4f5f2cf79",
+  "size_m": [
+   0.6,
+   0.6,
+   0.165
+  ],
+  "title": "Old Tyre",
+  "triangles": 2880
+ },
+ "texture_coverage": 0.581,
+ "texture_px": 512,
+ "triangles": 2880,
+ "volume_m3": 0.0273097
+}

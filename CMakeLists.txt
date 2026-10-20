@@ -14,6 +14,8 @@ option(SCRAPERX_WITH_JOLT "Compile the pinned Jolt substrate into the native gra
 
 set(SCRAPERX_GODOT_CPP_COMMIT "507ed9d840c01a3c5b2a39af8bb4000bfac30bf5" CACHE STRING "Pinned godot-cpp commit")
 set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING "Pinned Jolt commit")
+# Monocypher 4.0.3: Ed25519 and SHA-512 for live fabrication's delivery check.
+set(SCRAPERX_MONOCYPHER_COMMIT "ab2b16dd619ad5f6979a4fbe69cfa324a6fcc35f" CACHE STRING "Pinned Monocypher commit")
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
@@ -36,6 +38,8 @@ add_library(scraperx_sim STATIC
     src/sim/summit.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
+    src/sim/fabricated.cpp
+    src/sim/physics_world_fabricated.cpp
     src/sim/impacts.cpp
     src/sim/forklift.cpp
     src/sim/yard_crane.cpp
@@ -103,6 +107,38 @@ if(SCRAPERX_WITH_JOLT)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
 endif()
+
+# Live fabrication's delivery check (src/bridge/fabricated_delivery.hpp): the
+# game layer's Ed25519 signature and SHA-512 checks, on the pinned Monocypher
+# (C, so C is enabled for it alone), against the public key in
+# tools/fab/dev_public_key.hex, compiled in. Linked by the bridge and by the
+# native tests, which check it as the bridge runs it.
+enable_language(C)
+FetchContent_Declare(
+    monocypher
+    GIT_REPOSITORY https://github.com/LoupVaillant/Monocypher.git
+    GIT_TAG ${SCRAPERX_MONOCYPHER_COMMIT}
+    GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(monocypher)
+set(SCRAPERX_FAB_PUBLIC_KEY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/tools/fab/dev_public_key.hex")
+file(READ "${SCRAPERX_FAB_PUBLIC_KEY_FILE}" SCRAPERX_FAB_PUBLIC_KEY)
+string(STRIP "${SCRAPERX_FAB_PUBLIC_KEY}" SCRAPERX_FAB_PUBLIC_KEY)
+if(NOT SCRAPERX_FAB_PUBLIC_KEY MATCHES "^[0-9a-f]+$")
+    message(FATAL_ERROR "tools/fab/dev_public_key.hex must hold one Ed25519 public key in lowercase hex")
+endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SCRAPERX_FAB_PUBLIC_KEY_FILE}")
+add_library(scraperx_delivery STATIC
+    src/bridge/fabricated_delivery.cpp
+    ${monocypher_SOURCE_DIR}/src/monocypher.c
+    ${monocypher_SOURCE_DIR}/src/optional/monocypher-ed25519.c
+)
+target_include_directories(scraperx_delivery PUBLIC src
+    PRIVATE ${monocypher_SOURCE_DIR}/src ${monocypher_SOURCE_DIR}/src/optional)
+target_compile_definitions(scraperx_delivery PRIVATE SCRAPERX_FAB_PUBLIC_KEY="${SCRAPERX_FAB_PUBLIC_KEY}")
+set_target_properties(scraperx_delivery PROPERTIES POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
+
 option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
 if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
@@ -127,12 +163,16 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_matron.cpp
         tests/sim_tests_stock.cpp
         tests/sim_tests_body_order.cpp
+        tests/sim_tests_fabricated.cpp
         tests/sim_tests_forklift.cpp
         tests/sim_tests_yard_crane.cpp
         tests/sim_tests_zipline.cpp
         tests/sim_tests_corpse.cpp
     )
-    target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
+    target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)
+    # Where the fabricated test objects are read from (godot/tests/fabricated),
+    # whatever directory the tests run in.
+    target_compile_definitions(scraperx_sim_tests PRIVATE SCRAPERX_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_compile_options(scraperx_sim_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
@@ -169,7 +209,7 @@ if(SCRAPERX_BUILD_BRIDGE)
         src/bridge/register_types.cpp
         src/bridge/scraperx_simulation.cpp
     )
-    target_link_libraries(scraperx_native PRIVATE scraperx_sim godot::cpp)
+    target_link_libraries(scraperx_native PRIVATE scraperx_sim scraperx_delivery godot::cpp)
     target_include_directories(scraperx_native PRIVATE src)
     set_target_properties(scraperx_native PROPERTIES
         PREFIX "lib"
