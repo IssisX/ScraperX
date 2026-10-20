@@ -94,6 +94,13 @@ native world's determinism and body order are untouched.
 6. **Your face:** the badge photo, once.
 7. **The end:** she says your words.
 
+**Built (2026-10-20):** steps 1 and 3, all but your bodies tended. What the eyes rest on
+(`attention.gd`, native `look target`), the tower's clocks on the phone's own time, her chart's
+pages left late and rarely, and, with consent asked once at first launch, your voice heard back
+faint from the structure. HER CHART (FAST) on the START list brings a page and an echo of your
+voice within about a minute (`touch_her_chart_fast`; also `touch_her_chart`, `touch_mic_consent`,
+`touch_voice_echo`).
+
 ## Decisions for the owner
 
 1. Her chart as the spine of it (recommended).

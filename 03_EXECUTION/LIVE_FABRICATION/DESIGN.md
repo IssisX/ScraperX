@@ -97,6 +97,11 @@ has your face on file.
    proves the same data gives the same result and that adding one leaves other bands bit-identical.
    A few objects are made while we build (Hugging Face models, licenses checked) and tried in a test
    world. No server, no new permission.
+   **Built (2026-10-20):** `tools/fab/` (fit, decompose into hulls, weigh, sign with a development
+   key kept outside the repository), three CC0 objects made with it (a steel crowbar, a timber
+   keg, a rubber tire), runtime bodies from entity 0x20000, and the native `fabricated` falsifier:
+   the same data gives the same result, six worlds stay bit-identical with objects added, 24 bad
+   deliveries are refused, and objects save and load. Nothing appears in the player's world yet.
 2. **The Stores in the game,** working from a library of objects made in step 1: the counter, the
    slip, the wait, the carrier and the hatch, the object in the world, saved and loaded. Played by
    touch. Still no server.

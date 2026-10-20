@@ -173,6 +173,7 @@ jobs:
             "PASS scraperx_sim wheel" \
             "PASS scraperx_sim tram" \
             "PASS scraperx_sim look target" \
+            "PASS scraperx_sim fabricated" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
