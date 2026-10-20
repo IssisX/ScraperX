@@ -13,6 +13,7 @@ const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const ClimbEffort := preload("res://presentation/climb_effort_feedback.gd")
 const SwingBearing := preload("res://presentation/swing_bearing_feedback.gd")
 const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
+const SlingshotFeedback := preload("res://presentation/audio/slingshot_feedback.gd")
 const SlideFriction := preload("res://presentation/audio/slide_friction.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const RUBBLE_IMPACT := preload("res://assets/audio/rubble/concrete_break_denoised_843338_preview.wav")
@@ -138,9 +139,9 @@ var _pipe_deaths := -1
 var sling_releases := 0
 var sling_draw_cues := 0
 var sling_comedy_cues := 0
-var _sling_squeaked := false
-var _sling_launches := 0
-var _sling_draw := 0.0
+var sling_ratchet_cues := 0
+var sling_tension_creaks := 0
+var _slingshot_feedback := SlingshotFeedback.new()
 var _sling_air_speed := 0.0
 var _bullet_time: AudioStreamPlayer
 var _ladder_strain: AudioStreamPlayer3D
@@ -243,6 +244,7 @@ func _exit_tree() -> void:
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
 	_quiesced = true
+	reset_slingshot_feedback()
 	slide_friction.reset(_slide_voice)
 	_swing_bearing.reset()
 	_climb_effort.reset()
@@ -584,31 +586,42 @@ func timber_fracture(at: Vector3, strength: float) -> void:
 		-8.0 + linear_to_db(clampf(strength, 0.25, 1.0)), 1.0, BUS_EFFECTS)
 
 
+func reset_slingshot_feedback() -> void:
+	_slingshot_feedback.reset()
+	_sling_air_speed = 0.0
+	_stop_slingshot_voices()
+
+
+func _stop_slingshot_voices() -> void:
+	# Effects uses the existing fixed pool. Cut only launcher tails.
+	for voice in _voices:
+		for cue in [&"sling_release", &"sling_ratchet", &"band_stretch"]:
+			if voice.stream in _bank.clips.get(cue, []):
+				voice.stop()
+
+
 func update_slingshot(state: Dictionary, velocity: Vector3) -> void:
-	var launches := int(state.get("launch_count", 0))
-	if launches > _sling_launches:
-		sling_releases += 1
-		_play(&"sling_release", -2.0, 1.0)
-		_play(&"sling_wobble", -10.0, 1.0)
-		sling_comedy_cues += 1
-		_sling_squeaked = false
-	_sling_launches = launches
-	var draw := float(state.get("draw_m", 0.0))
-	var max_draw := maxf(0.01, float(state.get("max_draw_m", 12.0)))
-	if bool(state.get("drawing", false)) and draw > max_draw * 0.70 and not _sling_squeaked:
-		_sling_squeaked = true
-		sling_comedy_cues += 1
-		_play(&"rubber_squeak", -11.0, 1.0)
-	elif not bool(state.get("seated", false)) and not bool(state.get("released", false)):
-		_sling_squeaked = false
-	if bool(state.get("drawing", false)) and draw >= _sling_draw + 0.7:
-		_sling_draw = draw
-		sling_draw_cues += 1
-		var tension := clampf(draw / maxf(float(state.get("max_draw_m", 12.0)), 0.1), 0.0, 1.0)
-		_play(&"band_stretch", lerpf(-13.0, -5.0, tension), lerpf(0.75, 1.35, tension))
-	elif draw < _sling_draw:
-		_sling_draw = draw
-	_sling_air_speed = velocity.length() if bool(state.get("released", false)) else 0.0
+	var enabled := not _quiesced and not get_tree().paused
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index) or AudioServer.get_bus_volume_db(index) <= -60.0:
+			enabled = false
+	if not enabled:
+		_stop_slingshot_voices()
+	for cue in _slingshot_feedback.sample(state, enabled):
+		match cue:
+			&"sling_release":
+				sling_releases += 1
+				_play(cue, -2.0, 1.0)
+			&"sling_ratchet":
+				sling_ratchet_cues += 1
+				sling_draw_cues += 1
+				_play(cue, -4.0, 1.0)
+			&"band_stretch":
+				sling_tension_creaks += 1
+				var tension := clampf(float(state.draw_m) / float(state.max_draw_m), 0.0, 1.0)
+				_play(cue, lerpf(-16.0, -9.0, tension), 1.0)
+	_sling_air_speed = velocity.length() if not _quiesced and not get_tree().paused and velocity.is_finite() and bool(state.get("released", false)) else 0.0
 
 
 func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:

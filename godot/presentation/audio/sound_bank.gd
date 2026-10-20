@@ -66,10 +66,8 @@ func build() -> void:
 	clips[&"ui_back"] = [_wav(_blip(1500.0, 0.04))]
 	clips[&"clang"] = _variants(3, _clang)
 	clips[&"creak"] = _variants(2, _creak)
-	clips[&"band_stretch"] = _variants(2, _band_stretch)
-	clips[&"sling_release"] = [_wav(_sling_release())]
-	clips[&"rubber_squeak"] = [_wav(_rubber_squeak())]
-	clips[&"sling_wobble"] = [_wav(_sling_wobble())]
+	clips[&"band_stretch"] = _variants(2, _legacy_band_stretch)
+	clips[&"sling_release"] = [_wav(_legacy_sling_release())]
 	clips[&"bullet_time"] = [_wav(_bullet_time())]
 	clips[&"bird"] = _variants(3, _bird)
 	clips[&"wind_loop"] = [_loop(_wind(4.5), 0.5)]
@@ -86,6 +84,12 @@ func build() -> void:
 	var prior_rng_state := _rng.state
 	clips[&"slide_friction_loop"] = [_loop(_slide_friction(false), 0.2)]
 	clips[&"slide_metal_loop"] = [_loop(_slide_friction(true), 0.2)]
+	_rng.state = prior_rng_state
+	# Replace only launcher output after consuming the old seeded recipes.
+	# All other cues and subsequent variant selection retain their RNG state.
+	clips[&"band_stretch"] = [_wav(_tension_creak())]
+	clips[&"sling_release"] = [_wav(_band_snap())]
+	clips[&"sling_ratchet"] = [_wav(_ratchet_click())]
 	_rng.state = prior_rng_state
 	build_msec = Time.get_ticks_msec() - started
 
@@ -121,8 +125,8 @@ func _consume_legacy_step_draws(generator: Callable) -> void:
 
 # --- clips -------------------------------------------------------------------
 
-# Loaded rubber: a rising, rough resonance and short wooden grip creaks.
-func _band_stretch() -> PackedFloat32Array:
+# Legacy recipe consumes the original seeded noise draws; output is replaced.
+func _legacy_band_stretch() -> PackedFloat32Array:
 	var out := _silence(0.30)
 	_add_band_noise(out, 0.0, 0.30, 0.32, 0.12, 350.0, 1800.0)
 	var phase := 0.0
@@ -134,8 +138,8 @@ func _band_stretch() -> PackedFloat32Array:
 	return out
 
 
-# Spring release: a broad snap, falling twang and fast air displacement.
-func _sling_release() -> PackedFloat32Array:
+# Legacy release preserves subsequent seeded recipes; output is replaced.
+func _legacy_sling_release() -> PackedFloat32Array:
 	var out := _silence(0.65)
 	_add_band_noise(out, 0.0, 0.055, 1.0, 0.015, 550.0, 6500.0)
 	_add_band_noise(out, 0.035, 0.52, 0.65, 0.16, 300.0, 3800.0)
@@ -148,27 +152,34 @@ func _sling_release() -> PackedFloat32Array:
 	return out
 
 
-# Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.
-func _rubber_squeak() -> PackedFloat32Array:
-	var out := _silence(0.24)
-	var phase := 0.0
-	for i in out.size():
-		var t := float(i) / MIX_RATE
-		# A short rubber chirrup, with a deliberately anxious upward bend.
-		phase += TAU * (620.0 + 950.0 * pow(t / 0.24, 1.7)) / MIX_RATE
-		out[i] = (sin(phase) + 0.22 * sin(phase * 2.0)) * sin(PI * t / 0.24) * 0.42
+# Fixed, inharmonic frame modes under a short broadband band snap.
+# No swept oscillator, musical glide or exaggerated spring wobble.
+func _band_snap() -> PackedFloat32Array:
+	var out := _silence(0.34)
+	_add_band_noise(out, 0.0, 0.028, 0.95, 0.007, 700.0, 7200.0)
+	_add_band_noise(out, 0.008, 0.22, 0.42, 0.055, 230.0, 3200.0)
+	for mode in [Vector2(173.0, 0.24), Vector2(487.0, 0.20), Vector2(1133.0, 0.12)]:
+		_add_tone(out, mode.x, 0.0, 0.24, mode.y, 0.035)
 	return out
 
 
-func _sling_wobble() -> PackedFloat32Array:
-	var out := _silence(0.48)
-	var phase := 0.0
-	for i in out.size():
-		var t := float(i) / MIX_RATE
-		# An elastic, wobbling "boing" beneath the physical snap, never a voice.
-		var frequency := 190.0 + 310.0 * exp(-t * 7.0) + 65.0 * sin(t * 58.0) * exp(-t * 5.0)
-		phase += TAU * frequency / MIX_RATE
-		out[i] = (sin(phase) + 0.17 * sin(phase * 2.7)) * sin(minf(t / 0.025, 1.0) * PI * 0.5) * exp(-t * 8.0) * 0.5
+# Pawl striking and settling against steel: two short dry contact transients.
+func _ratchet_click() -> PackedFloat32Array:
+	var out := _silence(0.075)
+	_add_band_noise(out, 0.0, 0.014, 0.9, 0.003, 1100.0, 7000.0)
+	_add_band_noise(out, 0.018, 0.013, 0.3, 0.004, 650.0, 4200.0)
+	_add_tone(out, 1763.0, 0.0, 0.060, 0.35, 0.009)
+	_add_tone(out, 743.0, 0.0, 0.045, 0.25, 0.008)
+	return out
+
+
+# Dry load creak: friction noise and damped frame modes at fixed frequencies.
+func _tension_creak() -> PackedFloat32Array:
+	var out := _silence(0.24)
+	_add_band_noise(out, 0.0, 0.23, 0.6, 0.075, 300.0, 2400.0)
+	_add_band_noise(out, 0.045, 0.10, 0.22, 0.025, 900.0, 3600.0)
+	_add_tone(out, 319.0, 0.0, 0.18, 0.13, 0.055)
+	_add_tone(out, 857.0, 0.025, 0.12, 0.09, 0.035)
 	return out
 
 

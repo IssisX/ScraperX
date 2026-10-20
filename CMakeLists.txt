@@ -45,6 +45,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation/queries.cpp
     src/sim/simulation/runtime.cpp
     src/sim/simulation/snapshot.cpp
+    src/sim/simulation/slingshot_audio.cpp
     src/sim/simulation/support.cpp
     src/sim/simulation/tick.cpp
     src/sim/simulation/world.cpp

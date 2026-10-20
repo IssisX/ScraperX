@@ -888,6 +888,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic()
 	_audio.cancel_launch_cinematic()
+	_audio.reset_slingshot_feedback()
 	_router.gameplay_active = false
 	_router.clear_held()
 	_native.set_supplied_machine_input(0.0)
@@ -945,6 +946,7 @@ func _after_restart() -> void:
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic(true)
 	_audio.cancel_launch_cinematic()
+	_audio.reset_slingshot_feedback()
 	_sling_was_seated = false
 	_sling_preview_clock = 0.0
 	_sling_prediction = PackedVector3Array()

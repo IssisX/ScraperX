@@ -824,6 +824,7 @@ public:
     [[nodiscard]] bool request_slingshot_action() noexcept;
     [[nodiscard]] bool request_slingshot_drop() noexcept;
     [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
+    [[nodiscard]] double slingshot_ratchet_draw_m() const noexcept;
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
 
     [[nodiscard]] bool set_grapple_aim(double x, double y, double z) noexcept;

@@ -18,6 +18,7 @@ var _peak_native_speed := 0.0
 var _shot_energies: Array[float] = []
 var _played_gameplay_clips := {}
 var _touch_events := 0
+var _state_fixtures_complete := false
 
 
 func _initialize() -> void:
@@ -77,7 +78,7 @@ func _drain() -> void:
 		return
 	if is_instance_valid(_main) and _main._native != null:
 		_peak_native_speed = maxf(_peak_native_speed, _main._native.get_player_linear_velocity().length())
-		for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble", &"bullet_time"]:
+		for name in [&"band_stretch", &"sling_release", &"sling_ratchet", &"bullet_time"]:
 			for voice in _main._audio._voices + [_main._audio._bullet_time]:
 				if voice.playing and voice.stream in _main._audio._bank.clips.get(name, []):
 					_played_gameplay_clips[name] = true
@@ -162,7 +163,7 @@ func _clip_fixtures() -> void:
 	_clip_player = AudioStreamPlayer.new()
 	_clip_player.bus = &"Effects"
 	root.add_child(_clip_player)
-	for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble", &"bullet_time"]:
+	for name in [&"band_stretch", &"sling_release", &"sling_ratchet", &"bullet_time"]:
 		var variants: Array = _main._audio._bank.clips.get(name, [])
 		_check(not variants.is_empty(), "bank includes " + String(name))
 		for index in variants.size():
@@ -240,11 +241,10 @@ func _shot(name: String, fraction: float, cinematic: bool = false) -> bool:
 	_check(_main._audio.sling_draw_cues > draw_before and _main._audio.sling_releases == releases_before,
 		name + " draw cues fire before any native release")
 	_check(bool(_played_gameplay_clips.get(&"band_stretch", false)), name + " native draw plays the real stretch clip")
-	var expected_draw_comedy := 1 if float(state["draw_m"]) > max_draw * 0.70 else 0
-	_check(_main._audio.sling_comedy_cues == comedy_before + expected_draw_comedy,
-		name + " rubber squeak fires once at the actual 70-percent native draw crossing")
-	_check(bool(_played_gameplay_clips.get(&"rubber_squeak", false)) == (expected_draw_comedy == 1),
-		name + " native threshold selects the actual rubber-squeak clip")
+	_check(_main._audio.sling_comedy_cues == comedy_before,
+		name + " native draw never requests cartoon presentation")
+	_check(bool(_played_gameplay_clips.get(&"sling_ratchet", false)),
+		name + " real ratchet advance selects the steel pawl clip")
 	_receipt(name + "_native_draw")
 	var draw := float(state["draw_m"])
 	var energy := float(state["energy_j"])
@@ -257,12 +257,9 @@ func _shot(name: String, fraction: float, cinematic: bool = false) -> bool:
 	await _seconds(0.9)
 	state = native.get_slingshot_state()
 	_check(_main._audio.sling_releases == releases_before + 1, name + " one native launch produces one release cue")
-	_check(_main._audio.sling_comedy_cues == comedy_before + expected_draw_comedy + 1,
-		name + " one real native launch produces one mechanical wobble cue")
-	if fraction > 0.5:
-		_check(_main._audio.sling_comedy_cues - comedy_before == 2, "full touch draw and launch produce exactly two comedy cues")
+	_check(_main._audio.sling_comedy_cues == comedy_before,
+		name + " native launch never requests cartoon presentation")
 	_check(bool(_played_gameplay_clips.get(&"sling_release", false)), name + " native release plays actual release clip")
-	_check(bool(_played_gameplay_clips.get(&"sling_wobble", false)), name + " native release plays actual mechanical-wobble clip")
 	_check(_peak_native_speed > 3.0, name + " physical spring release accelerates native rider")
 	if fraction > 0.5:
 		_check(bool(state["released"]) and native.get_player_linear_velocity().length() > 12.0, name + " funded high draw produces sustained native flight")
@@ -340,6 +337,13 @@ func _dispose_scene() -> void:
 
 
 func _run() -> void:
+	if "--slingshot-state-only" in OS.get_cmdline_user_args():
+		await _state_fixtures()
+		_check(_state_fixtures_complete, "state fixture reaches completion without a script error")
+		print("SCRAPERX_SLINGSHOT_STATE %s checks=%d failures=%d native_input=0 heard_audio=0" % [
+			"PASS" if _failures.is_empty() else "FAIL", _checks, _failures.size()])
+		quit(0 if _failures.is_empty() else 31)
+		return
 	if not _check(not Engine.get_write_movie_path().is_empty(), "run under --write-movie for actual mixer proof"):
 		quit(31)
 		return
@@ -420,3 +424,89 @@ func _fear_mix() -> void:
 	print("SCRAPERX_FEAR_MIX voice_phone_db=%.2f bed_phone_db=%.2f peak_db=%.2f" % [
 		linear_to_db(maxf(voice_rms, 0.000001)), linear_to_db(maxf(bed_rms, 0.000001)), linear_to_db(maxf(peak, 0.000001))])
 	AudioServer.remove_bus_effect(AudioServer.get_bus_index(&"Ambience"), AudioServer.get_bus_effect_count(AudioServer.get_bus_index(&"Ambience")) - 1)
+
+
+# Native-free receipt tests exercise the exact shipping director and bank.
+# They establish scheduling and PCM output; they do not claim device listening.
+func _state_fixtures() -> void:
+	var director := preload("res://presentation/audio/audio_director.gd").new()
+	root.add_child(director)
+	director.set_process(false)
+	var state := {"launch_count": 0, "draw_m": 0.0, "max_draw_m": 12.0,
+		"ratchet_draw_m": 0.0, "seated": true, "released": false, "tick_index": 1}
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 0 and director.sling_releases == 0, "first receipt is a quiet baseline")
+	state.merge({"draw_m": 0.13, "ratchet_draw_m": 0.13, "tick_index": 2}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 1, "actual ratchet travel crosses a presentation tooth")
+	for i in 20:
+		director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 1, "duplicate render samples cannot repeat a click")
+	state.tick_index += 1
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 1, "held ratchet remains quiet on later simulation ticks")
+	state.merge({"draw_m": 0.9, "ratchet_draw_m": 0.9, "tick_index": 4}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 2 and director.sling_tension_creaks == 1,
+		"large travel coalesces to one click and one grounded tension creak")
+	state.tick_index += 1
+	state.draw_m = 1.1
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 2, "draw movement without ratchet advance cannot invent a click")
+	var effects := AudioServer.get_bus_index(&"Effects")
+	AudioServer.set_bus_mute(effects, true)
+	state.merge({"draw_m": 2.0, "ratchet_draw_m": 2.0, "tick_index": 6}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	AudioServer.set_bus_mute(effects, false)
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_ratchet_cues == 2, "muted travel is consumed without an unmute burst")
+	state.merge({"launch_count": 1, "released": true, "ratchet_draw_m": 0.0, "tick_index": 7}, true)
+	director.update_slingshot(state, Vector3(0, 20, 0))
+	director.update_slingshot(state, Vector3(0, 20, 0))
+	_check(director.sling_releases == 1 and director.sling_comedy_cues == 0,
+		"one actual launch releases once without cartoon cues even when ratchet unloads")
+	_check(director._sling_air_speed == 20.0, "real release velocity still feeds the air bed")
+	state.merge({"launch_count": 0, "released": false, "draw_m": 0.0, "ratchet_draw_m": 0.0, "tick_index": 0}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_releases == 1 and director.sling_ratchet_cues == 2, "rewind establishes a quiet baseline")
+	paused = true
+	state.merge({"launch_count": 1, "tick_index": 1}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	paused = false
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_releases == 1, "paused launch receipt is consumed without a resume burst")
+	director.reset_slingshot_feedback()
+	state.merge({"launch_count": 5, "draw_m": 4.0, "ratchet_draw_m": 4.0, "tick_index": 50}, true)
+	director.update_slingshot(state, Vector3.ZERO)
+	_check(director.sling_releases == 1 and director.sling_ratchet_cues == 2, "explicit reset never replays historical travel or launches")
+	for invalid in [{}, {"draw_m": NAN}, {"ratchet_draw_m": "4"}, {"tick_index": "50"}, {"seated": "true"}]:
+		var broken := state.duplicate()
+		if invalid.is_empty():
+			broken.clear()
+		else:
+			broken.merge(invalid, true)
+		director.update_slingshot(broken, Vector3.ZERO)
+		director.update_slingshot(state, Vector3.ZERO)
+		_check(director.sling_releases == 1 and director.sling_ratchet_cues == 2,
+			"invalid receipt and first valid recovery cannot invent historical cues")
+	var bank := preload("res://presentation/audio/sound_bank.gd").new()
+	bank.build()
+	_check(not bank.clips.has(&"rubber_squeak") and not bank.clips.has(&"sling_wobble"), "shipping bank has no cartoon launcher clips")
+	for cue in [&"band_stretch", &"sling_ratchet", &"sling_release"]:
+		var clip: AudioStreamWAV = bank.clips[cue][0]
+		var decoded := PackedFloat32Array()
+		for byte in range(0, clip.data.size(), 2):
+			decoded.append(float(clip.data.decode_s16(byte)) / 32767.0)
+		var levels := _levels(decoded)
+		_check(levels.x > 0.05 and levels.x <= 0.901 and levels.y > 0.001,
+			String(cue) + " produces finite non-silent bounded PCM")
+		var path := "user://" + String(cue) + ".wav"
+		_check(clip.save_to_wav(path) == OK, String(cue) + " writes concrete waveform evidence")
+		print("SCRAPERX_SLINGSHOT_PCM cue=%s duration_s=%.4f peak=%.5f rms=%.5f path=%s" % [
+			cue, clip.get_length(), levels.x, levels.y, ProjectSettings.globalize_path(path)])
+	bank.clips.clear()
+	director.quiesce()
+	director.queue_free()
+	for i in 3:
+		await process_frame
+	_state_fixtures_complete = true

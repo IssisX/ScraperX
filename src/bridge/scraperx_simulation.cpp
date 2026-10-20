@@ -803,6 +803,7 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     out["retrieval_source_power_w"] = s.retrieval_source_power_w;
     out["energy_residual_j"] = s.energy_residual_j;
     out["draw_m"] = s.draw_m;
+    out["ratchet_draw_m"] = simulation_->slingshot_ratchet_draw_m();
     out["energy_j"] = s.energy_j;
     out["work_j"] = s.work_j;
     out["source_power_w"] = s.source_power_w;
