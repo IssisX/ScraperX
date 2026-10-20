@@ -364,6 +364,26 @@ void run_yard_crane() {
                 "crane: off the dock, in onto the 44 m deck, aboard its forklift");
         (void)s.set_facing(0.0, -1.0);
         (void)s.advance_frame(0.5);
+        // Then, as a player does, step in toward the wheel until DRIVE is
+        // offered: the container now lands where the rider's planted feet
+        // carry it, and the walk above can end with the hands on the truck's
+        // overhead guard.
+        for (int i = 0; i < 4 * 90 && !(s.forklift_state().at_controls &&
+                                         s.forklift_state().chassis_entity == Forklift::kDeck44ChassisEntity);
+             ++i) {
+            // Hands that caught the truck's overhead guard let go first.
+            if (s.snapshot().traversal_state != scraperx::sim::TraversalState::None) {
+                (void)s.request_release();
+            }
+            const auto t = body_at(s, Forklift::kDeck44ChassisEntity);
+            const auto me = s.snapshot().player_position;
+            const double ex = t.x - me.x, ez = t.z + 0.15 - me.z, d = std::hypot(ex, ez);
+            (void)s.set_move_input(d > 0.03 ? std::min(0.3, 2.0 * d) * ex / d : 0.0,
+                                   d > 0.03 ? std::min(0.3, 2.0 * d) * ez / d : 0.0);
+            (void)s.set_facing(0.0, -1.0);
+            (void)s.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+        }
+        (void)s.set_move_input(0.0, 0.0);
         require(s.forklift_state().at_controls && s.forklift_state().chassis_entity == Forklift::kDeck44ChassisEntity &&
                     s.request_forklift_action(),
                 "crane: DRIVE the 44 m deck's forklift");
