@@ -100,6 +100,9 @@ struct Pair final {
         kit.set_damping(player, 0, 0);
         for (const auto index : {cell, player}) {
             BodyLockWrite lock(fixture.system.GetBodyLockInterface(), kit.body_id(index));
+            // Isolate actuator momentum/work from native sleep's low-speed
+            // velocity truncation, just as the fixture excludes damping.
+            lock.GetBody().SetAllowSleeping(false);
             lock.GetBody().GetMotionProperties()->SetMaxAngularVelocity(500.0F);
         }
     }

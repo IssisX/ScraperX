@@ -52,3 +52,22 @@ Candidate39435519649 on1b01132 passed the routed-cable, rigging (including sleep
 An Android diagnostic with the edited owners reproduced the failure: first compared ticks324 and410; the first failing interval had hand load2166.2007 versus2166.0464N. Keep the original0.1N/0.0001m thresholds and all attachment/negative assertions. Create the second Simulation with the same180-tick warmup and identical real reach search instead. The isolated diagnostic then produced matching native ticks and all twelve reported position/velocity/load samples matched.
 
 Final committed-test command: `/data/data/com.termux/files/usr/tmp/scraperx-touch-playability-20261020/air-replay/air-catch-final`; exit0, `SCRAPERX_AIR_CATCH PASS checks=4288`. Exact compiler/link argv and output: `air-replay/final-build.json`, `final-run.json`; reproduction and isolated diagnostic: `run.log`, `isolated-run.log`. This uses the previously identified Android APK runtime with the final Kit/RiggingSystem owner overrides; it is not exact x86 CI proof or whole-game FPS evidence. No production physics or acceptance threshold changed in this correction. A matching successful candidate is still required for the APK link; the separate full workflow remains independently authoritative for full-suite status.
+
+## Passive-owner and observation corrections
+
+Candidate39437233038 on68f8a51 completed successfully, including the original strict caller-rate check. It is not recommended for delivery: the separate1b full suite exposed additional regressions. Its19 failing checks versus five in the e9 full run include a shared pipe-bridge prefix, catch reseating, and two fixture assumptions about sleep. The direct-APK publisher for68 was stopped; CI/artifact collection remains intact. Do not claim all19 failures resolved from the focused evidence below.
+
+The complete PipeBridge moving assembly now retains its prior nonsleeping lifecycle at its existing body builder. Its passive load path crosses contact-only props and rollers, not just permanently connected constraints. In failed1b refinement the handle delivered83.520895J but the beam never rose (tip0.58587m/front0); e9 passed with83.520904J. Restoring this owner's continuous solve repairs downstream physical propagation without force, mass, friction or timing changes. A narrower wake rule would require further evidence and is not introduced. A newly added catch pin now activates its load once, allowing an off-seat sleeping load to seat; this is not a per-tick keep-awake loop.
+
+Two fixtures were corrected without weakening assertions. The zero-gravity foot-push momentum probe excludes native sleeping as well as damping, so sleep's documented velocity truncation cannot masquerade as actuator work. The forklift fixture retains its last actually solved static-ground contact while that load is asleep, requiring fresh callbacks on waking. Jolt explicitly emits `OnContactRemoved` for sleep (`Jolt/Physics/Collision/ContactListener.h:104`) and clears velocity on deactivation (`BodyManager.cpp:558`). A sleeping load without a prior solved floor contact is still not counted as grounded.
+
+Actual Android runtime plus exact updated Kit/PipeBridge owner objects, all exit0:
+
+- `wake-repair/pipe_bridge_refinement`:90Hz tip8.034832m/front0.459265m;360Hz tip8.002240m/front0.452458m; original cargo, work, clearance and settling checks retained.
+- `wake-repair/physical_foot_push_tests`: finite impulse, torque, power, stroke, duration and termination checks pass; no assertion changed.
+- `wake-repair/warehouse_forklift_load_tests`:1700kg near-load lift and far-load shedding/tip/recovery pass; final far-load ground contact remains observed through native sleep.
+- `wake-repair/counterweight-well`: original AS-006 no-link, catch reseating/rerig, occupied rides, governors, energy and checkpoint checks pass.
+- `wake-repair/gravity-cart`: complete original approach, gravity ascent, intermediate miss/recovery, paid recall, retry, onward receiver1957 and full reset pass. This Android result does not settle the x86 full-run support-selection failure.
+- `wake-repair/benchmark`: same540+180-tick native probe, `CARGO_CPU median_ms=1.966 p95_ms=4.572 max_ms=14.717`; not Godot FPS or a sustained device-play measurement.
+
+Exact build/run argv and output are in `wake-repair/commands.json`, `counterweight-well.json` and `gravity-cart.json` under the existing touch-playability evidence directory. Separate x86 CI is still required after these source corrections. No new keyboard/mouse/gamepad work is included.

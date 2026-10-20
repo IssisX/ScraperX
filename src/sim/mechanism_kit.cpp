@@ -831,6 +831,9 @@ void Kit::latch(Catch &catch_record) {
     catch_record.pin = static_cast<JPH::FixedConstraint *>(
         settings.Create(JPH::Body::sFixedToWorld, jolt_body(catch_record.body)));
     system_.AddConstraint(catch_record.pin);
+    // A newly seated pin may still need to draw a resting load onto its
+    // seat. Adding the constraint alone does not activate a sleeping body.
+    system_.GetBodyInterface().ActivateBody(bodies_[catch_record.body.value].id);
 }
 
 void Kit::unlatch(Catch &catch_record) {

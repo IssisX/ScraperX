@@ -82,6 +82,10 @@ struct Build {
       kit.set_continuous_collision(id);
     }
     Body *raw = sys.GetBodyLockInterfaceNoLock().TryGetBody(kit.body_id(id));
+    // This passive release chain crosses contact-only props and rollers.
+    // Keep its original continuous solve so a slow support withdrawal or
+    // over-centre release completes before any part can settle to sleep.
+    if (moving) raw->SetAllowSleeping(false);
     indices.emplace(raw, id);
     return raw;
   }

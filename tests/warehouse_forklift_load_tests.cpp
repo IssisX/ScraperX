@@ -72,8 +72,15 @@ struct Fixture {
     }
     ~Fixture() { truck.reset(); kit.reset(); world.SetContactListener(nullptr); }
     void tick(const WarehouseForklift::Command &command = {}) {
+        const auto previous_ground = contacts.load_ground;
+        contacts.load_ground.clear();
         kit->pre_step(dt); truck->pre_step(command);
         require(world.Update(dt, 4, &temp, &jobs) == EPhysicsUpdateError::None, "native update");
+        // Jolt also emits OnContactRemoved when a body sleeps. This fixed
+        // floor never moves: retain its last solved contact while the load
+        // is inactive, and require fresh contact again whenever it wakes.
+        if (!world.GetBodyInterface().IsActive(kit->body_id(load)) && contacts.load_ground.empty())
+            contacts.load_ground = previous_ground;
         truck->post_step(); kit->post_step(dt); kit->finish_weld_steps();
     }
     float pitch() const {
