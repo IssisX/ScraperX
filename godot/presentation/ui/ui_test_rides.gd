@@ -569,6 +569,79 @@ func _clouds() -> bool:
 	_detail = "puffs=%d nearest_to_climb_m=%.0f" % [int(clouds.puff_count()), near]
 	return true
 
+# Out from a deck high on the tower: eight headings, each down the tower,
+# level over the basin and up at the sky.
+func _look_out(deck: String) -> bool:
+	await _seconds(1.5)
+	var odd: Array = _diag_old_rule()
+	if OS.get_environment("DIAG_MAGENTA") == "1":
+		for g: MeshInstance3D in _diag_fars:
+			var m := g.mesh.surface_get_material(0) as StandardMaterial3D
+			m.vertex_color_use_as_albedo = false
+			m.albedo_color = Color(1.0, 0.0, 1.0)
+	for i in mini(odd.size(), 6):
+		await _look_at_point(odd[i])
+		await _seconds(0.3)
+		await _pose("%s_odd%d" % [deck, i])
+	for heading in 8:
+		_main._yaw = float(heading) * PI * 0.25
+		for pitch in [-0.6, -0.15, 0.3]:
+			_main._pitch = pitch
+			await _seconds(0.3)
+			await _pose("%s_h%d_p%d" % [deck, heading * 45, int(round(pitch * 100.0))])
+	_detail = "eye=%s" % str(_main._camera.global_position)
+	return true
+
+var _diag_fars := []
+func _diag_old_rule() -> Array:
+	var odd := []
+	var eye: Vector3 = _main._camera.global_position
+	var fars := []
+	var nears := []
+	var stack: Array[Node] = [_main.get_node("TowerPresentation"), _main._kit_root]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		var g := node as MeshInstance3D
+		if g == null:
+			continue
+		if g.layers == 2 and is_equal_approx(g.visibility_range_begin, 260.0):
+			fars.append(g)
+		elif is_equal_approx(g.visibility_range_end, 260.0) and g.visibility_range_begin == 0.0:
+			nears.append(g)
+	for use_aabb in [false, true]:
+		var both := 0
+		var neither := 0
+		var both_d := []
+		var neither_d := []
+		for n: MeshInstance3D in nears:
+			var cell := (n.global_position / 192.0).floor()
+			var partner: MeshInstance3D = null
+			for f: MeshInstance3D in fars:
+				if (f.global_position / 192.0).floor() == cell:
+					partner = f
+					break
+			if partner == null:
+				continue
+			var np: Vector3 = n.global_transform * n.get_aabb().get_center() if use_aabb else n.global_position
+			var fp: Vector3 = partner.global_transform * partner.get_aabb().get_center() if use_aabb else partner.global_position
+			var near_on := eye.distance_to(np) <= 280.0
+			var far_on := eye.distance_to(fp) >= 240.0
+			var d := eye.distance_to(n.global_transform * n.get_aabb().get_center())
+			if use_aabb and (near_on == far_on):
+				odd.append(n.global_transform * n.get_aabb().get_center())
+			if near_on and far_on:
+				both += 1
+				both_d.append(int(d))
+			elif not near_on and not far_on:
+				neither += 1
+				neither_d.append(int(d))
+		print("DIAG eye=%s aabb=%s nears=%d fars=%d both=%d neither=%d both_m=%s neither_m=%s" % [
+			str(eye), str(use_aabb), nears.size(), fars.size(), both, neither, str(both_d.slice(0, 30)),
+			str(neither_d.slice(0, 30))])
+	_diag_fars = fars
+	return odd
+
 func _perf_probe() -> bool:
 	await _seconds(2.0)
 	var worst := {}

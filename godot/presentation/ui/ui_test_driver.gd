@@ -170,6 +170,10 @@ const SCENARIOS := {
 	# overhead round the tower, looked at up and out in four directions.
 	"touch_clouds": 8,
 	"perf_grade": 8,
+	# Look only (renders, not in CI): from the 706 and 728 decks, the view
+	# turned through eight headings, down the tower, level and up.
+	"look_deck_706": 33,
+	"look_deck_728": 34,
 	# The owner's slab incline from the game's start: across the yard east of
 	# the slingshot, up the ramp onto its platform, onto the trolley, RAISE,
 	# 30 m up the 60-degree incline, and off onto deck 3.
@@ -464,6 +468,8 @@ func _run() -> void:
 			ok = await _high(InputRouter.Device.TOUCH)
 		"touch_clouds":
 			ok = await _clouds()
+		"look_deck_706", "look_deck_728":
+			ok = await _look_out(_scenario.trim_prefix("look_"))
 		"perf_top", "perf_grade":
 			ok = await _perf_probe()
 		"touch_incline":
