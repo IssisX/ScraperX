@@ -154,6 +154,7 @@ func _ready() -> void:
 	_sky_cycle.name = "SkyCycle"
 	add_child(_sky_cycle)
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
+	_sky_cycle.add_lamps(_light_rig)
 	_audio = AudioDirector.new()
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle

@@ -695,6 +695,51 @@ func _look_finishes() -> bool:
 	return true
 
 
+# look_night_lamps: renders only (not in CI): the lamps at night, each kind
+# near (the stack's lamps low, middle and high; the yard's sodium floods; the
+# tower foot's floods) and the stack's south face whole from the yard, to see
+# which lamps light the steel around them and whether any hangs on nothing.
+func _look_night_lamps() -> bool:
+	_main._sky_cycle.set_hour(23.5)
+	var by_kind := {}
+	for light in (_main._light_rig as Node3D).get_children():
+		if not (light is OmniLight3D):
+			continue
+		for kind in ["StackLamp", "SodiumFlood", "TowerFootFlood"]:
+			if String(light.name).contains(kind):
+				if not by_kind.has(kind):
+					by_kind[kind] = []
+				by_kind[kind].append((light as Node3D).global_position)
+	var shots := []
+	for kind in by_kind:
+		var at: Array = by_kind[kind]
+		at.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.y < b.y)
+		for i in [0, at.size() / 2, at.size() - 1]:
+			var lamp: Vector3 = at[i]
+			# Out from the tower's middle (or the mast), a little below, looking
+			# at the lamp and the floor under it.
+			var out := Vector3(lamp.x, 0.0, lamp.z + 150.0)
+			out = out.normalized() if out.length() > 1.0 else Vector3.BACK
+			var far := 12.0 if kind == "SodiumFlood" else 6.0
+			shots.append(["night_%s_%d" % [kind.to_snake_case(), i], lamp + out * far + Vector3(0.0, -0.6, 0.0),
+				lamp + Vector3(0.0, -1.6, 0.0), 60.0])
+	shots.append(["night_stack_face", Vector3(14.0, 4.0, -98.0), Vector3(0.0, 14.0, -124.0), 50.0])
+	shots.append(["night_stack_high", Vector3(30.0, 60.0, -95.0), Vector3(0.0, 90.0, -150.0), 55.0])
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	for shot in shots:
+		held.pose = Transform3D(Basis(), shot[1]).looking_at(shot[2], Vector3.UP)
+		held.fov = shot[3]
+		await _frames(8)
+		await _pose(shot[0])
+	held.queue_free()
+	hud.visible = true
+	_detail = "shots=%d lamps=%s" % [shots.size(), str(by_kind.keys().map(func(k): return "%s:%d" % [k, by_kind[k].size()]))]
+	return true
+
+
 # look_tower_stock: renders only (not in CI): the lived-in spots of stock up
 # the tower (LooseStock::dress_tower), from deck 2's south band and from the
 # 176 ring: to the nearest spot on the same deck, and looked at.

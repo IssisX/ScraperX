@@ -878,6 +878,7 @@ func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
 	wordmark.font_size = 96
 	wordmark.pixel_size = 0.018
 	wordmark.modulate = Color(0.93, 0.89, 0.82)
+	wordmark.shaded = true
 	wordmark.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 	wordmark.position = Vector3(0.0, 46.0, -142.05)
 	$TowerPresentation.add_child(wordmark)

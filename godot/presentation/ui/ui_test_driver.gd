@@ -153,6 +153,7 @@ const SCENARIOS := {
 	"look_stock_yard": 8,
 	# Close up, the smooth finishes and the rough ones (renders only, not in CI).
 	"look_finishes": 8,
+	"look_night_lamps": 8,
 	"look_tower_stock_deck2": 25,
 	"look_tower_stock_176": 14,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
@@ -471,6 +472,8 @@ func _run() -> void:
 			ok = await _look_stock_yard()
 		"look_finishes":
 			ok = await _look_finishes()
+		"look_night_lamps":
+			ok = await _look_night_lamps()
 		"look_tower_stock_deck2":
 			ok = await _look_tower_stock("tower_stock_deck2")
 		"look_tower_stock_176":

@@ -22,6 +22,12 @@ const NIGHT_EXPOSURE := 2.3
 
 # Player settings: DISPLAY > BRIGHTNESS and GRAPHICS > SHADOWS.
 var exposure_scale := 1.0
+# The site's lamps (main_world.gd's light rig): their energy is the day's, and
+# at night LAMP_NIGHT_GAIN times it, so they light what is round them under
+# the night's exposure (pictures, 2026-10-21: at the day's energy the steel
+# round a lamp stayed black and its glowing head hung in the dark).
+const LAMP_NIGHT_GAIN := 6.0
+var _lamps: Array = []   # [OmniLight3D, the day's energy]
 var _shadows_on := true
 
 var hour := 10.5
@@ -69,6 +75,13 @@ const SHADOW_LEVELS := [
 	[4096, 3, 220.0, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS],
 	[8192, 4, 300.0, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS],
 ]
+
+
+func add_lamps(rig: Node) -> void:
+	for lamp in rig.get_children():
+		if lamp is OmniLight3D:
+			_lamps.append([lamp, (lamp as OmniLight3D).light_energy])
+	_apply()
 
 
 func set_shadow_level(level: int) -> void:
@@ -127,6 +140,9 @@ func _apply() -> void:
 		_sun.light_energy = SUN_ENERGY * rise
 	_sun.shadow_enabled = _shadows_on and _sun.light_energy > 0.01
 	_fill.light_energy = lerpf(FILL_NIGHT_ENERGY, FILL_DAY_ENERGY, day)
+	var lamp_gain := lerpf(LAMP_NIGHT_GAIN, 1.0, day)
+	for entry in _lamps:
+		(entry[0] as OmniLight3D).light_energy = float(entry[1]) * lamp_gain
 	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
 	_sky_material.set_shader_parameter(&"day_factor", day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)

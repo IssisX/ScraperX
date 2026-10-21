@@ -133,6 +133,8 @@ func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
 	label.font_size = 40
 	label.pixel_size = 0.0095
 	label.modulate = Color(0.92, 0.88, 0.8)
+	# Paint on the board: lit as the board is, never glowing in the dark.
+	label.shaded = true
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.position = at + Vector3(0.0, BANNER_BOARD_Y, 0.07)
 	$TowerPresentation.add_child(label)
@@ -222,6 +224,9 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 	label.font_size = 64
 	label.pixel_size = height_meters / 64.0
 	label.modulate = color
+	# Paint: lit as what it is painted on is, never glowing in the dark (at
+	# night unlit text hung in the air over its unseen board).
+	label.shaded = true
 	label.double_sided = true
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
