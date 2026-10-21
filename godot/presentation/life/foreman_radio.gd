@@ -16,12 +16,12 @@ const GAP_SECONDS := 1.2
 const S1_CAGE_ENTITY := 2200
 const TOWER_ENTITY := 11
 
-# Act 1, in the order the climb meets them. The names are the handoff's
-# proposals (Eli Navarro the climber, Walt Brenner the foreman).
+# Act 1, in the order the climb meets them. Jack Miller the climber, Walt
+# Brenner the foreman (the owner, 2026-10-21: plain American names).
 const LINES := {
-	&"s1_cage": "Navarro? It's Saturday. What are you doing on my tower?",
+	&"s1_cage": "Miller? It's Saturday. What are you doing on my tower?",
 	&"stack": "Get down before somebody sees you.",
-	&"locker": "What was that? Navarro, get away from that locker.",
+	&"locker": "What was that? Miller, get away from that locker.",
 	&"ring_220": "Don't come down. She's below you. The only way off is the top.",
 }
 
