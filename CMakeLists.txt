@@ -171,6 +171,8 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_up.cpp
         tests/sim_tests_summit.cpp
         tests/sim_tests_matron.cpp
+        tests/sim_tests_matron_hearing.cpp
+        tests/sim_tests_matron_climb.cpp
         tests/sim_tests_twin.cpp
         tests/sim_tests_bay.cpp
         tests/sim_tests_stock.cpp
@@ -193,6 +195,10 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+    foreach(slice matron-ladder matron-hearing matron-climb-support matron-crash)
+        add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
+        set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
+    endforeach()
     add_test(NAME scraperx_sim.matron_capture COMMAND scraperx_sim_tests)
     set_tests_properties(scraperx_sim.matron_capture PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=capture")
     add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
