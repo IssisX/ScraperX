@@ -560,6 +560,13 @@ func _load_body() -> void:
 	_rig.setup(skeletons[0] as Skeleton3D, rig_data, self)
 
 
+# Blood on her (gore_view.gd decides how much; matron_look.gd lays it on).
+func apply_gore(soak: float, spatter: float, smear: float, hands: float, hand_l: Vector3, hand_r: Vector3,
+		floor_y: float = 0.0) -> void:
+	if _look != null:
+		_look.apply_gore(soak, spatter, smear, hands, hand_l, hand_r, floor_y)
+
+
 # The exposure's work on her look (matron_look.gd), one way.
 func _apply_exposure(exposure: float) -> void:
 	if _look != null:

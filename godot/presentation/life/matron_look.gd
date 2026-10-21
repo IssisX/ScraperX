@@ -16,6 +16,43 @@ var _hair: StandardMaterial3D
 var _eye: StandardMaterial3D
 var _parts := {}   # part name -> its material
 var _applied_exposure := -1.0
+# Gore (gore/): blood soaking up her uniform from the hem and on her hands,
+# overlays on the dressed meshes; off unless apply_gore() is called.
+const GoreKit := preload("res://presentation/life/gore/gore_kit.gd")
+const HANDS_BLOOD_SHADER := """
+shader_type spatial;
+render_mode blend_mix, depth_draw_never;
+uniform float amount = 0.0;
+uniform vec3 hand_l = vec3(0.0, -1000.0, 0.0);
+uniform vec3 hand_r = vec3(0.0, -1000.0, 0.0);
+uniform float reach = 0.22;
+varying vec3 wp;
+varying vec3 lp;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	lp = VERTEX;
+	VERTEX += (inverse(MODEL_MATRIX) * vec4(normalize(CAMERA_POSITION_WORLD - wp), 0.0)).xyz * 0.003;
+}
+void fragment() {
+	float d = min(distance(wp, hand_l), distance(wp, hand_r));
+	float k = 1.0 - smoothstep(reach * amount * 0.6, reach * amount * (0.9 + 0.4 * n(lp.xy * 30.0)), d);
+	k *= step(0.001, amount);
+	if (k < 0.03) { discard; }
+	ALBEDO = mix(vec3(0.45, 0.02, 0.02), vec3(0.2, 0.0, 0.0), n(lp.xz * 50.0) * 0.6);
+	ALPHA = k * 0.95;
+	ROUGHNESS = 0.1;
+	SPECULAR = 0.85;
+}
+"""
+var _apron_soak: ShaderMaterial
+var _hands_blood: ShaderMaterial
+var _gore_meshes: Array[MeshInstance3D] = []
+var _skin_meshes: Array[MeshInstance3D] = []
 
 
 static func _image(file: String) -> Image:
@@ -146,6 +183,37 @@ func dress(root: Node) -> void:
 		# Posed far from her bind pose (on all fours, the Turn's long limbs), she
 		# reaches past the mesh's own bounds.
 		mesh.extra_cull_margin = 1.5
+		if part in ["tunic", "skirt_cloth", "pocket", "placket"]:
+			_gore_meshes.append(mesh)
+		elif part == "skin":
+			_skin_meshes.append(mesh)
+
+
+## Blood on her: `soak` 0..1 up the uniform from the hem (the apron), its
+## `spatter` flecks, the Wipe's `smear` across it, and `hands` 0..1 on her
+## hands round the sim's hand points. Off (all 0) removes the overlays.
+func apply_gore(soak: float, spatter: float, smear: float, hands: float, hand_l: Vector3, hand_r: Vector3,
+		floor_y: float = 0.0) -> void:
+	var on := soak > 0.001 or spatter > 0.001 or smear > 0.001 or hands > 0.001
+	if on and _apron_soak == null:
+		_apron_soak = GoreKit.soak_material(0.3, 1.35, 3.0)
+		var sh := Shader.new()
+		sh.code = HANDS_BLOOD_SHADER
+		_hands_blood = ShaderMaterial.new()
+		_hands_blood.shader = sh
+	if _apron_soak == null:
+		return
+	for m in _gore_meshes:
+		m.material_overlay = _apron_soak if on else null
+	for m in _skin_meshes:
+		m.material_overlay = _hands_blood if on else null
+	_apron_soak.set_shader_parameter("soak", soak)
+	_apron_soak.set_shader_parameter("spatter", spatter)
+	_apron_soak.set_shader_parameter("smear", smear)
+	_apron_soak.set_shader_parameter("base_y", floor_y)
+	_hands_blood.set_shader_parameter("amount", hands)
+	_hands_blood.set_shader_parameter("hand_l", hand_l)
+	_hands_blood.set_shader_parameter("hand_r", hand_r)
 
 
 ## Her tints for an exposure (0..1), as albedo multipliers: the skin goes
