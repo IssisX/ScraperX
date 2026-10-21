@@ -2,6 +2,7 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/twin_tower.hpp"
 
 namespace scraperx::sim::detail {
 
@@ -57,14 +58,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                        0.6F,
                        Simulation::kStaticDeckEntityId);
 
-    // The neighboring shaft: 1.6 km of unclimbable mass standing on
-    // grade, set well back from the climbable frame. Overhead and close,
-    // it read as a black void hanging over the stack; begun 159 m up
-    // with nothing under it, it read as a skyscraper floating in the air.
+    // The neighboring shaft remains solid and stands on grade. Its face
+    // leaves a 48 m nominal gap to the main frame, retaining x=-30 offset.
     const float mass_half_height = static_cast<float>(Simulation::kTowerHeightMeters * 0.5);
     tower_id_ = add_box(bodies,
                         JPH::Vec3(46.0F, mass_half_height, 40.0F),
-                        JPH::RVec3(-30.0, mass_half_height, -330.0),
+                        JPH::RVec3(-30.0, mass_half_height, TwinTower::kCenterZ),
                         JPH::EMotionType::Static,
                         object_layers::kStatic,
                         0.8F,
@@ -371,6 +370,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // so older saves' lists line up.
     bay_ = std::make_unique<Bay>(physics_system_, *kit_);
     matron_->set_shared_survival(&bay_->district());
+    // Append static exterior access after existing saved kit bodies.
+    TwinTower::build(*kit_);
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.

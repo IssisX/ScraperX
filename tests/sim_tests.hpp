@@ -871,3 +871,6 @@ void run_well_stage_b();
 void run_well_stage_c();
 void run_well_band();
 void run_step2_movement();
+
+void run_twin();
+void run_twin_geometry();

@@ -1086,3 +1086,32 @@ func _look_summit(from_ground: bool) -> bool:
 	await _seconds(1.0)
 	await _pose("summit_mast_day")
 	return true
+
+# First contact with the neighboring shaft, from the already reachable 220
+# ring. All walking and the mantle go through the existing touch controls.
+func _twin(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
+	if not await _go(device, Vector2(-21.6, -127.6), 0.18, 18.0):
+		return _fail("twin: could not reach existing hook rack")
+	await _seconds(0.3)
+	if not await _offered(&"hook_take", "TAKE HOOK"):
+		return _fail("twin: existing hook unavailable at rack")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 1.0):
+		return _fail("twin: touch did not take hook")
+	for point in [Vector2(-21.6, -171.5), Vector2(-7.0, -172.5), Vector2(-7.0, -218.0),
+			Vector2(-17.8, -218.0), Vector2(-18.4, -218.0)]:
+		if not await _go(device, point, 0.18, 35.0):
+			return _fail("twin: approach to %s stopped at %s" % [str(point), str(_position())])
+	await _seconds(0.3)
+	if not await _c4_mantle(device, Vector2(-1.0, 0.0), 226.4, "B's exterior plinth"):
+		return false
+	await _pose("twin_upper")
+	for point in [Vector2(-17.8, -218.0), Vector2(-7.0, -218.0), Vector2(-7.0, -172.5)]:
+		if not await _go(device, point, 0.18, 35.0):
+			return _fail("twin: retreat to %s stopped at %s" % [str(point), str(_position())])
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or _position().y < 221.0 or _position().y > 222.0:
+		return _fail("twin: retreat did not end standing on A")
+	_detail = "existing rack, bridge, incline, mantle and retreat through touch; no new spawn or controls"
+	return true

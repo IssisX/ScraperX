@@ -5,6 +5,7 @@
 // forklift is lifted with its driver aboard onto the 22 m dock and driven in
 // onto the deck; the 8 t plate stack stalls the hoist on the ground.
 #include "sim/bay.hpp"
+#include "sim/twin_tower.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/yard_crane.hpp"
@@ -697,9 +698,11 @@ void run_yard_crane_magnet() {
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
     // The crane's steel and its two devices are the kit's last six bodies
     // but those built since, after them: the machines' weights, the Matron's
-    // throwables and the bay's five (bay.hpp), each built after what was
+    // throwables, the bay's five and twin access, each built after what was
     // before it, so saves from before them line up.
-    const auto count = s.kit_body_count();
+    require(s.kit_body_entity(s.kit_body_count() - 1) == scraperx::sim::TwinTower::kFrameEntity,
+            "magnet: twin access is appended after every pre-existing kit body");
+    const auto count = s.kit_body_count() - 1;
     constexpr std::uint32_t kBayBodies = 5;
     const auto weights =
         static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;

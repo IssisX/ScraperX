@@ -31,6 +31,7 @@ add_library(scraperx_sim STATIC
     src/sim/slingshot_model.cpp
     src/sim/swing.cpp
     src/sim/trapeze.cpp
+    src/sim/twin_tower.cpp
     src/sim/climb_c6.cpp
     src/sim/pipe_gallery.cpp
     src/sim/crew.cpp
@@ -169,6 +170,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_up.cpp
         tests/sim_tests_summit.cpp
         tests/sim_tests_matron.cpp
+        tests/sim_tests_twin.cpp
         tests/sim_tests_bay.cpp
         tests/sim_tests_stock.cpp
         tests/sim_tests_body_order.cpp
