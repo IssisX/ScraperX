@@ -8,8 +8,11 @@ extends "res://presentation/main_geometry.gd"
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
 
-# The stack. Mirrors the kStack* constants in simulation.cpp exactly -- these
-# are the native collision sizes, so what is drawn is what you stand on.
+# The neighboring shaft. Mirrors TwinTower in the native world.
+const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
+const TWIN_TOWER_FACE_Z := -224.0
+
+# The stack. Mirrors the kStack* native collision sizes exactly.
 const STACK_CENTER := Vector3(0.0, 0.0, -150.0)
 const STACK_HALF_EXTENT := 26.0
 const STACK_LEVEL_HEIGHT := 11.0
@@ -66,7 +69,7 @@ func _build_world() -> void:
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
 	# The neighbouring shaft stands on the ground: 1.6 km from grade up.
-	_add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), Vector3(-30.0, 800.0, -330.0), concrete)
+	_add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), TWIN_TOWER_CENTER, concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_stack_accents(verdigris, lichen)
@@ -515,11 +518,10 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 				faded if stripe % 2 == 0 else mill_scale)
 
 func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material, timber: Material) -> void:
-	# Relief on the neighbouring mass, now set well back across the yard. It is
-	# a second Kellerworks shaft receding into the weather, not a lid over the
-	# frame the player climbs.
-	var mass_x := -30.0
-	var face_z := -290.0
+	# Only the neighboring shaft moves. The main frame continuation below
+	# keeps its original world coordinates. Native bounds: TwinTower.
+	var mass_x := TWIN_TOWER_CENTER.x
+	var face_z := TWIN_TOWER_FACE_Z
 	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
 	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
 	for offset in [-38.0, -19.0, 0.0, 19.0, 38.0]:

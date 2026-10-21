@@ -4,6 +4,14 @@
 #include "sim_tests.hpp"
 
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
+        run_twin_geometry();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin") {
+        run_twin();
+        return EXIT_SUCCESS;
+    }
     // SCRAPERX_EXTRA_SOLID_Y=<meters>: every world this run builds gets one
     // half-meter static box 300 m east and south of the tower, built with the
     // solids of the 22 m band at that height, touching nothing. The run's
@@ -352,6 +360,8 @@ int main() {
     run_core_traversal();
     run_fall_checkpoint();
     run_world_solids();
+    run_twin_geometry();
+    run_twin();
     run_well_stage_a();
     run_well_stage_b();
     run_well_stage_c();

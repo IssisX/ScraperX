@@ -106,6 +106,7 @@ const SCENARIOS := {
 	# C6, the west band, from the 242 ring where the swing sets its rider down
 	# to the 264 ring: no ladder, no standpipe.
 	"touch_c6": 35,
+	"touch_twin": 16,
 	# C7, from the 264 ring's west band where C6 tops out: the exposed way to
 	# the walkway at 291.25 m without the cascade mast -- two pipe galleries
 	# swung out over the drop, four hang-ups and the block.
@@ -422,6 +423,8 @@ func _run() -> void:
 			ok = await _slingshot(InputRouter.Device.TOUCH)
 		"touch_swing":
 			ok = await _swing(InputRouter.Device.TOUCH)
+		"touch_twin":
+			ok = await _twin(InputRouter.Device.TOUCH)
 		"touch_c6":
 			ok = await _c6(InputRouter.Device.TOUCH)
 		"touch_c7":
