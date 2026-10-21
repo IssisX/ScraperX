@@ -264,6 +264,14 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
+void Matron::only_way_for_test(const std::size_t index) {
+    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
+        if (i != index) {
+            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
+        }
+    }
+}
+
 void Matron::let_go_for_test() {
     if (climb_ >= 0) {
         release_climb(true);
@@ -1102,12 +1110,16 @@ bool Matron::begin_climb(const int index, const bool down) {
 
 void Matron::release_climb(const bool failed) {
     // A climb she set out on by herself (not along her map's route, which
-    // records its own) that failed: her map leaves that way alone a while.
-    if (failed && !route_on_edge_ && climb_ >= 0) {
+    // records its own): done, her map knows it carried her; failed, her map
+    // leaves that way alone a while.
+    if (!route_on_edge_ && climb_ >= 0) {
         const std::size_t way = routes_.find_way(connector_of(climb_), climb_down_);
-        if (way < routes::kMaxEdges) {
+        if (way < routes::kMaxEdges && failed) {
             routes_.fail(way, routes::Reason::Failed, clock_s_);
             ++route_failures_;
+        } else if (way < routes::kMaxEdges) {
+            routes_.succeed(way);
+            ++route_edges_done_;
         }
     }
     climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
@@ -2301,7 +2313,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere && (follow_pipe(dt, at) || follow_line(dt, at) || follow_route(dt, at) ||
+            } else if (elsewhere && (follow_pipe(dt, at) || follow_route(dt, at) || follow_line(dt, at) ||
                                      follow_climb(dt, at))) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across

@@ -176,26 +176,31 @@ Map::Map() {
     add({Region::Ring176, Region::Deck154, Kind::LadderDown, Connector::HomeLadder, 5.00F, -127.50F, 3.90F, -128.50F,
          40.0F},
         {walk(5.00F, -128.55F), down(Connector::HomeLadder), walk(3.90F, -129.55F), walk(3.90F, -128.50F)});
-    // C3's riser: from the 143 band out onto its plate to the foot, up, over
-    // the bridge and down its steps to 154's runway; down, from the runway up
-    // the steps onto the bridge, over its lip, and off the plate onto 143.
+    // C3's riser: from the 143 band through the rail's opening onto its
+    // plate, round the ladder's west stile to its foot on the shaft side, up,
+    // over the bridge and down its steps to 154's runway; down, from the
+    // runway up the steps onto the bridge, over its lip, and round the stile
+    // and off the plate onto 143.
     add({Region::Deck143, Region::Deck154, Kind::LadderUp, Connector::RiserLadder, -6.00F, -131.00F, -6.00F, -129.50F,
          25.0F},
-        {walk(-6.00F, -133.85F), up(Connector::RiserLadder), walk(-6.00F, -131.20F), walk(-6.00F, -129.50F)});
+        {walk(-6.80F, -132.60F), walk(-6.80F, -133.85F), walk(-6.00F, -133.85F), up(Connector::RiserLadder),
+         walk(-6.00F, -131.20F), walk(-6.00F, -129.50F)});
     add({Region::Deck154, Region::Deck143, Kind::LadderDown, Connector::RiserLadder, -6.00F, -129.50F, -6.00F,
          -131.00F, 25.0F},
-        {walk(-6.00F, -131.20F), walk(-6.00F, -132.85F), down(Connector::RiserLadder), walk(-6.00F, -131.00F)});
+        {walk(-6.00F, -131.20F), walk(-6.00F, -132.85F), down(Connector::RiserLadder), walk(-6.80F, -133.85F),
+         walk(-6.80F, -132.60F), walk(-6.00F, -131.00F)});
     // C3 below the riser, 132 to 143: from the 132 south band up the stepped
     // walkway across the shaft to its landing, up the duct's face, along the
-    // duct to its wall ladder, up onto the 143 plate; and all of it back down.
+    // duct to its wall ladder, up onto the 143 plate and off it through the
+    // north rail's opening (x -8.0 to -5.2); and all of it back down.
     add({Region::Deck132, Region::Deck143, Kind::LadderUp, Connector::C3WallLadder, -10.50F, -171.00F, -10.50F,
          -131.00F, 45.0F},
         {walk(-10.50F, -145.00F), walk(-10.50F, -144.40F), up(Connector::C3Duct), walk(-10.50F, -135.85F),
-         up(Connector::C3WallLadder), walk(-10.50F, -131.00F)});
+         up(Connector::C3WallLadder), walk(-7.00F, -134.00F), walk(-7.00F, -132.40F), walk(-10.50F, -131.00F)});
     add({Region::Deck143, Region::Deck132, Kind::LadderDown, Connector::C3WallLadder, -10.50F, -131.00F, -10.50F,
          -171.00F, 45.0F},
-        {walk(-10.50F, -134.85F), down(Connector::C3WallLadder), walk(-10.50F, -143.40F), down(Connector::C3Duct),
-         walk(-10.50F, -145.00F), walk(-10.50F, -171.00F)});
+        {walk(-7.00F, -132.40F), walk(-7.00F, -134.00F), walk(-10.50F, -134.85F), down(Connector::C3WallLadder),
+         walk(-10.50F, -143.40F), down(Connector::C3Duct), walk(-10.50F, -145.00F), walk(-10.50F, -171.00F)});
     // The corner pipe, both ways between 132, 143 and 154 (matron_pipe.cpp):
     // to the north rail by her line (matron.hpp kPipeDeckX, kPipeDeckZ), over
     // it by her hands and along the riser, over the other deck's rail onto

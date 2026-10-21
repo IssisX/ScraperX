@@ -965,6 +965,8 @@ public:
     // Tests only: her hands open on the climb or the pipe she is on, as a hold
     // that gave way would open them.
     void let_go_for_test();
+    // Tests only: every way on her map but edge `index` ruled out.
+    void only_way_for_test(std::size_t index);
     bool climb_for_test(routes::Connector which, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
@@ -1484,6 +1486,7 @@ private:
     bool route_on_edge_ = false;
     routes::Region route_goal_ = routes::Region::Count;
     float route_step_s_ = 0.0F;
+    float route_step_best_ = 0.0F;   // her nearest to the walk step's point yet
     ClimbEnd climb_end_ = ClimbEnd::None;
     float clock_s_ = 0.0F;
     std::uint32_t route_edges_done_ = 0, route_failures_ = 0;

@@ -190,6 +190,10 @@ int main() {
         run_matron_pursuit();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ways") {
+        run_matron_ways();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routes") {
         run_matron_routes();
         return EXIT_SUCCESS;
@@ -507,6 +511,7 @@ int main() {
     run_matron_routes();
     run_matron_traverse();
     run_matron_pursuit();
+    run_matron_ways();
     run_matron_grab();
     run_matron_arm();
     run_matron_fatality();

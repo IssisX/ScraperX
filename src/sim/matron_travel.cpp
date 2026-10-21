@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace scraperx::sim {
 using namespace JPH;
@@ -22,7 +23,8 @@ using namespace JPH;
 namespace {
 constexpr float kRouteArriveM = 0.3F;     // at a step's point
 constexpr float kRouteWalkMps = 1.6F;     // along a way's own steel: a bridge, steps, a duct
-constexpr float kRouteStepS = 15.0F;      // a walk step longer than this got her nowhere
+constexpr float kRouteStepS = 15.0F;      // a walk step this long without getting nearer got her nowhere
+constexpr float kRouteHeadwayM = 0.1F;    // nearer by this is headway
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kTurnRate = 7.0F;
 float distance(const float ax, const float az, const float bx, const float bz) { return std::hypot(ax - bx, az - bz); }
@@ -81,6 +83,7 @@ void Matron::route_clear() noexcept {
     route_at_ = 0;
     route_step_ = 0;
     route_step_s_ = 0.0F;
+    route_step_best_ = std::numeric_limits<float>::max();
     route_on_edge_ = false;
     route_goal_ = routes::Region::Count;
     climb_end_ = ClimbEnd::None;
@@ -125,6 +128,7 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         route_on_edge_ = true;
         route_step_ = 0;
         route_step_s_ = 0.0F;
+        route_step_best_ = std::numeric_limits<float>::max();
         climb_end_ = ClimbEnd::None;
     }
     const std::size_t index = route_.edges[route_at_];
@@ -145,8 +149,13 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         if (off <= kRouteArriveM) {
             ++route_step_;
             route_step_s_ = 0.0F;
+            route_step_best_ = std::numeric_limits<float>::max();
             walk_toward(dt, ax, az, 0.0F, accel);
             return true;
+        }
+        if (off < route_step_best_ - kRouteHeadwayM) {
+            route_step_best_ = off;
+            route_step_s_ = 0.0F;
         }
         if (route_step_s_ > kRouteStepS) {
             route_failed(index, routes::Reason::Failed);
@@ -161,6 +170,7 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         climb_end_ = ClimbEnd::None;
         ++route_step_;
         route_step_s_ = 0.0F;
+        route_step_best_ = std::numeric_limits<float>::max();
         return true;
     }
     if (climb_end_ == ClimbEnd::Failed) {

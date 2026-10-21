@@ -1081,6 +1081,10 @@ void Simulation::debug_matron_hear(const Vector3 at) noexcept {
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
 }
 
+void Simulation::debug_matron_only_way(const std::size_t index) noexcept {
+    physics_world_->matron().only_way_for_test(index);
+}
+
 void Simulation::debug_matron_let_go() noexcept {
     physics_world_->matron().let_go_for_test();
 }

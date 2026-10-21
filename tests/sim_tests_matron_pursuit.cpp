@@ -35,12 +35,15 @@ struct Chase {
 // Her at `from` (feet), dangerous; the climber standing at `prey` (feet),
 // heard there every kHearEveryS. Until she stands on his deck, or `seconds`.
 Chase chase(const Vector3 from, const Vector3 prey, const Region goal, const double seconds,
-            const double let_go_at = 1.0e9) {
+            const double let_go_at = 1.0e9, const std::size_t only_way = routes::kMaxEdges) {
     constexpr double kHearEveryS = 8.0;
     Simulation s(InitialSpawn::Deck154);
     require(s.advance_frame(1.0).accepted, "matron pursuit: settle");
     s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
     s.debug_place_matron(from);
+    if (only_way < routes::kMaxEdges) {
+        s.debug_matron_only_way(only_way);
+    }
     tick(s);   // her view of herself is refreshed in the step: from here, where she was put
     const routes::Map map;
     Chase c;
@@ -83,8 +86,10 @@ Chase chase(const Vector3 from, const Vector3 prey, const Region goal, const dou
                 c.retook_after_s = static_cast<double>(i - let_go_tick) / hz;
             }
         }
+        // Alone on one way, she is there when it is done to its last step.
         const bool there = !m.on_pipe && !m.climbing &&
-                           map.region_at(float(m.position.x), float(feet), float(m.position.z)) == goal;
+                           map.region_at(float(m.position.x), float(feet), float(m.position.z)) == goal &&
+                           (only_way >= routes::kMaxEdges || m.route_edges >= 1);
         on_goal = there ? on_goal + 1 : 0;
         if (on_goal >= hz) {   // a second on its steel
             c.arrived = true;
@@ -146,4 +151,38 @@ void run_matron_pursuit() {
         require(c.worst_step < 0.2, "matron pursuit: never carried or snapped (a step a tick)");
     }
     std::cout << "PASS scraperx_sim matron pursuit\n";
+}
+
+// Every way her map plans over, end to end and alone (every other ruled
+// out): from where it starts on its deck, after the climber standing where it
+// leaves her, until she stands a second on that deck's steel. Its walks, its
+// climbs and its top-outs are all her own body in the world.
+void run_matron_ways() {
+    const routes::Map map;
+    int taken = 0;
+    for (std::size_t i = 0; i < map.edge_count(); ++i) {
+        const routes::Edge &e = map.edge(i);
+        if (e.status != routes::Status::Qualified) {
+            continue;
+        }
+        if (const char *one = std::getenv("SCRAPERX_WAY"); one != nullptr && std::atoi(one) != int(i)) {
+            continue;
+        }
+        const double from_y = map.region(e.from).top_y;
+        const double to_y = map.region(e.to).top_y;
+        const Chase c = chase(Vector3{e.entry_x, from_y, e.entry_z}, Vector3{e.exit_x, to_y, e.exit_z}, e.to, 240.0,
+                              1.0e9, i);
+        std::cout << "  matron way " << map.region(e.from).name << " to " << map.region(e.to).name << " ("
+                  << int(e.kind) << "): arrived " << c.arrived << " in " << c.seconds << " s, map ways "
+                  << c.route_edges << " (failed " << c.route_failures << "), worst step " << c.worst_step
+                  << " m, alive " << c.alive << '\n';
+        require(c.alive && c.arrived, "matron ways: along it, standing on its far deck");
+        require(c.route_failures == 0 && c.route_edges >= 1, "matron ways: every step of it, without a failure");
+        require(c.worst_step < 0.2, "matron ways: never carried or snapped (a step a tick)");
+        ++taken;
+    }
+    if (std::getenv("SCRAPERX_WAY") == nullptr) {
+        require(taken >= 10, "matron ways: every way she plans over");
+    }
+    std::cout << "PASS scraperx_sim matron ways: " << taken << " ways\n";
 }

@@ -186,6 +186,12 @@ void Matron::get_off_pipe(const bool failed) {
         climb_retry_s_ = 2.0F;
         return;
     }
+    // Along it by herself (a route records its own): her map knows it carried her.
+    const std::size_t way = pipe_way(pipe_from_, pipe_to_);
+    if (!route_on_edge_ && way < routes::kMaxEdges) {
+        routes_.succeed(way);
+        ++route_edges_done_;
+    }
     for (std::size_t i = 0; i < levels_.size(); ++i) {
         if (std::abs(levels_[i].floor_y - pipe_to_) < 0.3F) {
             level_ = static_cast<int>(i);
