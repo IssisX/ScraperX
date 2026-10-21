@@ -857,6 +857,7 @@ void run_matron_unstick();
 void run_matron_grab();
 void run_matron_arm();
 void run_matron_fatality();
+void run_one_arm_route();
 void run_matron_mischief();
 void run_matron_collision();
 void run_matron_balance();

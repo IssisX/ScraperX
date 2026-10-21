@@ -28,6 +28,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_hold.cpp
     src/sim/matron_fatality.cpp
     src/sim/physics_world_fatality.cpp
+    src/sim/physics_world_one_arm.cpp
     src/sim/matron_moves.cpp
     src/sim/physics_world_traversal.cpp
     src/sim/physics_world_climb.cpp

@@ -1032,6 +1032,17 @@ struct Snapshot final {
     // The fatality (Claimed), its beats (Matron::Fatal: 0 lay, 1 pin, 2 left
     // leg, 3 right leg, 4 drag, 5 kick, 6 haul, 7 fall, 8 wipe, 9 black) and
     // each beat's entry counted: an edge for the camera, the sound and the VO.
+    // One good arm: the hand the hang is on (-1 both), the lunge and the
+    // heel hook.
+    int hang_hand_side = -1;
+    std::uint64_t dyno_launch_count = 0;
+    std::uint64_t dyno_catch_count = 0;
+    std::uint64_t dyno_miss_count = 0;
+    std::uint64_t dyno_refused_count = 0;
+    double dyno_timing_error_s = 0.0;   // the last press, from the dead point (+ late)
+    bool dyno_in_flight = false;
+    std::uint64_t heel_hook_count = 0;
+    std::uint64_t heel_hook_refused_count = 0;
     int fatality_beat = -1;   // -1 when not Claimed
     std::array<std::uint64_t, 10> fatality_beat_edges{};
     std::uint64_t knee_pin_count = 0;

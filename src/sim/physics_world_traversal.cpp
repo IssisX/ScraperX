@@ -6,7 +6,8 @@
 namespace scraperx::sim {
 
 void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
-    if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0) {
+    if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0 || dyno_active_ ||
+        dyno_no_catch_) {
         return;
     }
     // Rising, the hands close only in a jump (M6's cat leap): a step's
@@ -618,8 +619,9 @@ JPH::Vec3 Simulation::PhysicsWorld::hang_shoulder_offset() const noexcept {
     if (traversal_state_ == TraversalState::Swinging) {
         return JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F);   // straight under the bar
     }
+    // One good arm: the body hangs from that shoulder.
     return traversal_normal_ * (kPlayerRadius + kHangWallGap) +
-           JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F);
+           JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F) + one_arm_shoulder_lean();
 }
 
 // Closes the hands on the lip at traversal_local_ledge_: the arms taut

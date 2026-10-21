@@ -252,9 +252,14 @@ void Simulation::PhysicsWorld::resolve_up(StepCommands &commands) noexcept {
 
 void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodies,
                                                         const StepCommands &commands) noexcept {
+    if (dyno_step(bodies, commands, static_cast<float>(Simulation::kFixedStepSeconds))) {
+        return;   // a one-armed lunge in flight: the catch is the timing's
+    }
     if (traversal_state_ == TraversalState::Hanging) {
         if (commands.release_requested) {
             release_hang(bodies);
+        } else if (one_arm_hang_command(bodies, commands)) {
+            // one arm: the lunge, or the heel hook (physics_world_one_arm.cpp)
         } else if (commands.jump_requested || commands.traversal_requested) {
             begin_mantle_from_hang(bodies);
         }

@@ -509,6 +509,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     if (regrab_lockout_ticks_ > 0) {
         --regrab_lockout_ticks_;
     }
+    if (grounded_) {
+        dyno_no_catch_ = false;   // a missed lunge: the feet are down again
+    }
     facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
     look_pitch_ = static_cast<float>(commands.look_pitch);
 

@@ -497,3 +497,142 @@ void run_matron_fatality() {
     std::cout << "PASS scraperx_sim matron fatality: peak_hip_n=" << peak_leg << " peak_y=" << peak_y
               << " landing_mps=" << landing << "\n";
 }
+
+// One good arm, on a built route (a stub out from a wall, the wall's lip
+// higher, far from the tower): caught one-handed on the lower lip, the hang under the
+// good hand; a lunge up to the higher lip caught at its dead point; a miss
+// when the hand is early; the heel hook up over the top.
+namespace {
+std::vector<Simulation::TestExtraSolid> one_arm_route() {
+    return {
+        {300.0, 5.5, 302.0, 4.0F, 0.5F, 6.0F, true},      // the floor, top 6
+        {300.0, 8.0, 303.55, 0.4F, 2.0F, 0.45F, true},     // a stub out from the wall, its lip at 10 (face z 303.1)
+        {300.0, 8.425, 305.0, 3.0F, 2.425F, 1.0F, true},   // the wall behind, its lip at 10.85 (face z 304)
+    };
+}
+
+bool hang_on_lower(Simulation &s) {
+    (void)s.set_facing(0.0, 1.0);
+    s.debug_launch_player(scraperx::sim::Vector3{300.0, 9.1, 302.6}, scraperx::sim::Vector3{0.0, 0.0, 0.3});
+    for (int i = 0; i < 90; ++i) {
+        (void)s.set_facing(0.0, 1.0);
+        (void)s.set_move_input(0.0, 1.0);
+        tick(s);
+        if (s.snapshot().traversal_state == scraperx::sim::TraversalState::Hanging) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    for (int i = 0; i < 135; ++i) {   // the swing stilled
+        (void)s.set_facing(0.0, 1.0);
+        tick(s);
+    }
+    return s.snapshot().traversal_state == scraperx::sim::TraversalState::Hanging;
+}
+
+// Launch the lunge; press Action `offset_s` from the dead point (vy to 0).
+std::uint64_t lunge(Simulation &s, const double offset_s, double &error_s, const double aside = 0.0) {
+    (void)s.set_move_input(aside, 0.0);
+    (void)s.request_jump();
+    tick(s);
+    bool apex = false;
+    int after = 0;
+    const int want = static_cast<int>(std::lround(offset_s * 90.0));
+    (void)s.set_move_input(0.0, 0.0);
+    double last_vy = s.snapshot().player_linear_velocity.y;
+    for (int i = 0; i < 180; ++i) {
+        (void)s.set_facing(0.0, 1.0);
+        const double vy = s.snapshot().player_linear_velocity.y;
+        if (!apex && last_vy > 0.0 && vy <= 0.0) {
+            apex = true;
+        }
+        last_vy = vy;
+        if (want < 0 && !apex && vy > 0.0 && vy <= -want * 9.81 / 90.0 + 1.0e-6) {
+            (void)s.request_traversal();
+            tick(s);
+            break;
+        }
+        if (apex && after++ == std::max(0, want)) {
+            (void)s.request_traversal();
+            tick(s);
+            break;
+        }
+        tick(s);
+    }
+    for (int i = 0; i < 30; ++i) {
+        tick(s);
+    }
+    error_s = s.snapshot().dyno_timing_error_s;
+    return s.snapshot().dyno_catch_count;
+}
+} // namespace
+
+void run_one_arm_route() {
+    // At the dead point: caught.
+    {
+        Simulation s(InitialSpawn::Deck154, one_arm_route());
+        s.debug_lose_arm(0);
+        require(hang_on_lower(s), "one arm route: caught one-handed on the lower lip");
+        const auto h = s.snapshot();
+        std::cout << "  one arm route: hanging on hand " << h.hang_hand_side << " at " << h.player_position.x << ","
+                  << h.player_position.y << "," << h.player_position.z << "\n";
+        require(h.hang_hand_side == 1 && h.one_arm, "one arm route: the hang is on the good (right) hand");
+        double error = 0.0;
+        const auto caught = lunge(s, 0.0, error, 1.0);   // up and over to the right
+        const auto p = s.snapshot();
+        std::cout << "  one arm route: lunge refused " << p.dyno_refused_count << " heel " << p.heel_hook_count << " launches " << p.dyno_launch_count << " caught " << caught << " misses "
+                  << p.dyno_miss_count << " error " << error << " s, at y " << p.player_position.y << " state "
+                  << int(p.traversal_state) << "\n";
+        require(p.dyno_launch_count == 1 && caught == 1 && std::abs(error) <= 0.12 &&
+                    p.traversal_state == scraperx::sim::TraversalState::Hanging && p.player_position.y > 9.15,
+                "one arm route: the lunge caught at its dead point, hanging from the upper lip");
+        // The heel hook: still first, then up over.
+        for (int i = 0; i < 135; ++i) {
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+        }
+        (void)s.request_traversal();
+        for (int i = 0; i < 270; ++i) {
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+        }
+        const auto top = s.snapshot();
+        std::cout << "  one arm route: heel hooks " << top.heel_hook_count << " refused " << top.heel_hook_refused_count
+                  << ", on top at " << top.player_position.y << " grounded " << top.player_grounded << " deaths "
+                  << top.death_count << "\n";
+        require(top.heel_hook_count == 1 && top.player_grounded && top.player_position.y > 11.5 &&
+                    top.player_position.z > 304.2 && top.death_count == 0,
+                "one arm route: the heel hook puts the body on top");
+    }
+    // Early: the hand finds nothing, and the body falls.
+    {
+        Simulation s(InitialSpawn::Deck154, one_arm_route());
+        s.debug_lose_arm(1);
+        require(hang_on_lower(s), "one arm route: caught (left hand)");
+        require(s.snapshot().hang_hand_side == 0, "one arm route: the hang is on the left hand");
+        double error = 0.0;
+        const auto caught = lunge(s, -0.25, error);
+        for (int i = 0; i < 180; ++i) {
+            tick(s);
+        }
+        const auto p = s.snapshot();
+        std::cout << "  one arm route: early press error " << error << " s, caught " << caught << " misses "
+                  << p.dyno_miss_count << ", down at " << p.player_position.y << " grounded " << p.player_grounded << "\n";
+        require(caught == 0 && p.dyno_miss_count == 1 && error < -0.12 && p.player_grounded &&
+                    p.player_position.y < 7.5 && p.death_count == 0,
+                "one arm route: early, the lunge misses and the body falls to the floor");
+    }
+    // Two arms: no lunge or heel hook; the plain pull-up still.
+    {
+        Simulation s(InitialSpawn::Deck154, one_arm_route());
+        require(hang_on_lower(s) && s.snapshot().hang_hand_side == -1, "one arm route: two hands, centred");
+        (void)s.request_traversal();
+        for (int i = 0; i < 180; ++i) {
+            tick(s);
+        }
+        const auto p = s.snapshot();
+        require(p.dyno_launch_count == 0 && p.heel_hook_count == 0 && p.player_position.y > 10.5,
+                "one arm route: two arms pull up as before");
+    }
+    std::cout << "PASS scraperx_sim one arm route\n";
+}

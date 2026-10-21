@@ -813,6 +813,15 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.one_arm = one_arm();
         state_.claimed_by_matron = matron_->claimed();
         state_.claimed_s = claimed_s_;
+        state_.hang_hand_side = traversal_state_ == TraversalState::Hanging ? good_arm_side() : -1;
+        state_.dyno_launch_count = dyno_launch_count_;
+        state_.dyno_catch_count = dyno_catch_count_;
+        state_.dyno_miss_count = dyno_miss_count_;
+        state_.dyno_refused_count = dyno_refused_count_;
+        state_.dyno_timing_error_s = dyno_last_error_s_;
+        state_.dyno_in_flight = dyno_active_;
+        state_.heel_hook_count = heel_hook_count_;
+        state_.heel_hook_refused_count = heel_hook_refused_count_;
         state_.fatality_beat = matron_->claimed() ? static_cast<int>(matron_->fatal_beat()) : -1;
         state_.fatality_beat_edges = fatality_beat_edges_;
         state_.knee_pin_count = knee_pin_count_;

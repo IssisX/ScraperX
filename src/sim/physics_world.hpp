@@ -1036,6 +1036,17 @@ public:
     void arm_reset(JPH::BodyInterface &bodies) noexcept;
     void sever_arm(JPH::BodyInterface &bodies) noexcept;
     void despawn_severed_arm(JPH::BodyInterface &bodies) noexcept;
+    // One good arm (physics_world_one_arm.cpp).
+    bool dyno_active_ = false;
+    bool dyno_no_catch_ = false;
+    bool dyno_short_ = false;
+    float dyno_t_ = 0.0F, dyno_apex_t_ = 0.0F, dyno_last_error_s_ = 0.0F, dyno_target_y_ = 0.0F;
+    std::uint64_t dyno_launch_count_ = 0, dyno_catch_count_ = 0, dyno_miss_count_ = 0, dyno_refused_count_ = 0;
+    std::uint64_t heel_hook_count_ = 0, heel_hook_refused_count_ = 0;
+    [[nodiscard]] int good_arm_side() const noexcept;
+    [[nodiscard]] JPH::Vec3 one_arm_shoulder_lean() const noexcept;
+    bool one_arm_hang_command(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+    bool dyno_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     // The fatality (physics_world_fatality.cpp).
     enum class FistOn : std::uint8_t { None, Leg, Collar };
     JPH::BodyID knee_id_;
