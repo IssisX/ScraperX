@@ -2289,6 +2289,22 @@ void run_matron_capture() {
             for (int i = 0; i < 45; ++i) tick(s);
             require(std::abs(s.snapshot().player_position.x - before.x) > 0.2,
                     "capture: normal movement actually works after physical recovery");
+            // Recovered, the body is upright for good, as every hang, carry
+            // and harness expects: a drum thrown into its chest does not tip
+            // it.
+            (void)s.set_move_input(0, 0);
+            const auto at = s.snapshot().player_position;
+            const auto first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+            const auto drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+            s.debug_launch_kit_body(drum, {at.x + 1.5, at.y + 0.5, at.z}, {-4, 0, 0});
+            double tipped = 0;
+            for (int i = 0; i < 60; ++i) {
+                tick(s);
+                const auto q = s.snapshot().player_rotation;
+                tipped = std::max(tipped, std::max(std::abs(q.x), std::abs(q.z)));
+            }
+            std::cout << "  capture: a drum thrown into the recovered body tipped it " << tipped << "\n";
+            require(tipped < 1.0e-4, "capture: recovered, the body's rotation is locked upright again");
         }
         std::cout << "PASS scraperx_sim matron capture scenario=" << scenario
                   << " peak_grip_n=" << peak_force << " peak_recovery_nm=" << peak_torque

@@ -123,13 +123,21 @@ void Simulation::PhysicsWorld::step_capture(JPH::BodyInterface &bodies, const St
         const auto torque = limited(axis * (angle * 1400.0F) - angular * 200.0F, kRecoveryNm);
         capture_torque_ = torque.Length();
         bodies.AddTorque(player_id_, torque);
-        // Keep the bounded upright servo after recovery: re-locking rotation
-        // would discard residual angular momentum and freeze a tilted pose.
+        // Recovered (within 1.4 degrees, turning under 0.08 rad/s, on its
+        // feet): the rotation locked again, upright. Every other system acts
+        // off the body's centre on a body that cannot turn: a hang's arms at
+        // the shoulders, a carry 0.6 m out at the hands, a harness. Left free
+        // under the servo, a 36 kg carry alone would hold the view about 9
+        // degrees over (212 N m against 1400 N m per radian). The last 1.4
+        // degrees and the residual turn go with the lock.
         if (capture_phase_ == 3 && grounded_ && angle < 0.025F && angular.Length() < 0.08F) {
             capture_phase_ = 0;
             capture_cooldown_ = 4.0F; // recovery time must not consume the escape window
             bodies.SetFriction(player_id_, 0.0F);
             regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+            bodies.SetRotation(player_id_, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
+            bodies.SetAngularVelocity(player_id_, JPH::Vec3::sZero());
+            player_rotation_dofs(false);
         }
     }
 }
