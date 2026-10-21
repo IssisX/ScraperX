@@ -124,6 +124,10 @@ int main() {
         run_yard_crane_spreader();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-grab") {
+        run_matron_grab();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-moves") {
         run_matron_pace();
         run_matron_unstick();
@@ -442,6 +446,7 @@ int main() {
     run_matron();
     run_matron_pace();
     run_matron_unstick();
+    run_matron_grab();
     run_bay();
     run_loose_stock();
     run_look_target();

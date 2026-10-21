@@ -956,6 +956,53 @@ public:
     int swim_kick_cooldown_ticks_ = 0;
     void update_water(JPH::BodyInterface &bodies, float dt) noexcept;
     void swim_locomotion(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+
+    // Her hold on the player (physics_world_grab.cpp). Her hand is a body of
+    // its own on her arm (a soft distance limit from her shoulder), pushed at
+    // its pose by a capped spring-damper (its reaction on her); its grip on
+    // the ankle a SwingTwist whose load and strain tear it. Held, the player's
+    // body turns freely (all DOFs); let go, a capped PD torque rights it on
+    // the ground and the DOFs lock again only once upright and clear.
+    JPH::BodyID hand_id_;
+    JPH::Ref<JPH::Shape> hand_shape_;
+    JPH::Ref<JPH::TwoBodyConstraint> hand_arm_;
+    JPH::Ref<JPH::TwoBodyConstraint> grip_;
+    JPH::Ref<JPH::TwoBodyConstraint> brace_;   // the player's hands on a rail against her pull
+    bool player_free_rot_ = false;
+    bool grip_swing_ = false;   // the grip's hinge taken on (else a bare point)
+    int upright_contact_ticks_ = 0;
+    float upright_s_ = 0.0F;
+    float grip_load_n_ = 0.0F;
+    float grip_peak_n_ = 0.0F;
+    float grip_strain_ns_ = 0.0F;
+    int grip_over_ticks_ = 0;
+    float brace_load_n_ = 0.0F;
+    float brace_strain_ns_ = 0.0F;
+    float thrash_ = 0.0F;
+    float thrash_avg_ = 0.0F;
+    double last_stick_x_ = 0.0, last_stick_z_ = 0.0;
+    double kick_dir_x_ = 0.0, kick_dir_z_ = 0.0;
+    int kick_cooldown_ticks_ = 0;
+    bool kick_now_ = false;
+    std::uint64_t grip_count_ = 0;
+    std::uint64_t grip_tear_count_ = 0;
+    std::uint64_t grip_release_count_ = 0;
+    std::uint64_t brace_count_ = 0;
+    std::uint64_t brace_tear_count_ = 0;
+    std::uint64_t thrash_kick_count_ = 0;
+    std::uint64_t upright_count_ = 0;
+    std::uint64_t upright_wedged_count_ = 0;
+    float max_hold_step_m_ = 0.0F;   // the player's biggest move in a tick while held (no teleport)
+    JPH::RVec3 hold_last_at_ = JPH::RVec3::sZero();
+    bool grab_holds_player() const noexcept { return grip_ != nullptr; }
+    bool grab_pre_step(JPH::BodyInterface &bodies, StepCommands &commands, float dt) noexcept;
+    void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void grab_reset(JPH::BodyInterface &bodies) noexcept;
+    void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
+    void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
+    void tear_grip(bool torn) noexcept;
+    [[nodiscard]] bool upright_pose_clear(JPH::RVec3 centre) const noexcept;
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

@@ -127,12 +127,29 @@ public:
         Unrigging = 9, // at the way out's eye, taking the player's rope off it
         Staggering = 10, // a blow took her balance: her feet catching her up, no hands
         Down = 11,     // a blow took her off her feet: on the steel, no hands, no eyes
+        // Her hands on the player, fully changed (matron_hold.cpp): no kill on
+        // touch. Her hand goes for the ankle and closes on it (Grab), she
+        // walks them upside down to the shaft's rail (Carry), holds them out
+        // over the drop (Dangle), plays with the arm (ArmPlay), lets go aimed
+        // at a ledge that will not kill them (Release) or sets them back on
+        // the deck (Spare).
+        Grab = 12,
+        Carry = 13,
+        Dangle = 14,
+        ArmPlay = 15,
+        Release = 16,
+        Spare = 17,
     };
+    [[nodiscard]] static constexpr bool holding_state(const State state) noexcept {
+        return state == State::Grab || state == State::Carry || state == State::Dangle || state == State::ArmPlay ||
+               state == State::Spare;
+    }
     // Out of her locker and about the world, alive (whatever she is doing).
     [[nodiscard]] static constexpr bool out(const State state) noexcept {
         return state == State::Emerging || state == State::Hunting || state == State::Searching ||
                state == State::Shuffling || state == State::Guarding || state == State::Peering ||
-               state == State::Unrigging || state == State::Staggering || state == State::Down;
+               state == State::Unrigging || state == State::Staggering || state == State::Down ||
+               (state >= State::Grab && state <= State::Spare);
     }
 
     static constexpr std::uint64_t kEntity = 3200;
@@ -573,6 +590,65 @@ public:
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;
     static constexpr std::size_t kMaxNear = 8;
+
+    // Her hold (matron_hold.cpp; the physics of it in physics_world_grab.cpp).
+    // Her hand is a body of its own (kHandMassKg) on her arm (a soft limit of
+    // kArmReachM from her shoulder, kStoopReachM while she stoops for an
+    // ankle), driven at its pose by her muscle: a spring-damper capped at
+    // kHandPullN (kHandReachPullN reaching), its reaction on her body. The
+    // grip itself is a SwingTwist hand-to-ankle; its load over
+    // kGripMaxForceN, or its strain (load past kGripStrainFloorN, over time,
+    // less kGripStrainDecay a second) past kGripTearNs, tears it out of her
+    // hand. A calm hang is 0.83 kN; only the player's thrashing gets there.
+    static constexpr float kShoulderUpM = 1.80F;      // over her feet
+    static constexpr float kArmReachM = 1.4F;
+    static constexpr float kStoopReachM = 2.1F;
+    static constexpr float kArmRetractMps = 0.9F;
+    static constexpr float kHandMassKg = 6.0F;
+    static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
+    static constexpr float kHandReachSpeedMps = 4.0F;
+    static constexpr float kHandPullN = 2600.0F;
+    static constexpr float kHandReachPullN = 900.0F;
+    static constexpr float kRipRampNps = 2000.0F;     // against a braced player, her pull grows this fast
+    static constexpr float kRipMaxN = 3400.0F;
+    static constexpr float kGripMaxForceN = 3800.0F;
+    static constexpr float kGripStrainFloorN = 2000.0F;
+    static constexpr float kGripTearNs = 220.0F;
+    static constexpr float kGripStrainDecay = 60.0F;
+    static constexpr float kGripCloseM = 0.14F;       // her fingers close on an ankle this near
+    static constexpr float kGrabReachSeconds = 1.2F;  // and miss it after this
+    static constexpr float kGrabLiftSeconds = 0.9F;
+    static constexpr float kGrabCooldownSeconds = 1.5F;   // after a miss
+    static constexpr float kAfterReleaseSeconds = 6.0F;   // no new grab for this long after a hold ends
+    // Carry: at kCarryPaceScale of her hunt, the body upside down at her
+    // side, her hand over her head (kCarryHandUpM over her feet), at most
+    // kCarryMaxSeconds to the rail; past it she drops them where she is.
+    static constexpr float kCarryPaceScale = 0.5F;
+    static constexpr float kCarryHandUpM = 2.8F;
+    static constexpr float kCarrySideM = 0.7F;
+    static constexpr float kCarryMaxSeconds = 10.0F;
+    static constexpr float kRimStandM = 0.42F;        // her middle this far in from the shaft's rail
+    static constexpr float kRimArriveM = 0.30F;
+    static constexpr float kRimBraceM = 0.9F;        // braced: her middle within this of the rail
+    static constexpr float kRimSearchM = 16.0F;       // rail spots she weighs for a ledge below
+    // Dangle: the heave out over the rail (the hand up at kCarryHandUpM and
+    // kHeaveOutM out from her middle), then down to kDangleHandUpM over her
+    // feet, kDangleOutM out: the body hangs below the deck's edge, head down.
+    static constexpr float kHeaveOutM = 0.55F;
+    static constexpr float kDangleOutM = 1.35F;
+    static constexpr float kDangleHandUpM = 1.35F;
+    static constexpr float kDangleMinSeconds = 3.0F;
+    static constexpr float kDangleSpanSeconds = 3.0F;
+    // Then: one in kSpareOdds she sets them back (Spare); else she lets go
+    // (Release) aimed at the spot she chose (a ledge whose fall is under
+    // kReleaseSafeMps: a limp at worst), the push at most kReleasePushMps;
+    // no such ledge, Spare.
+    static constexpr float kSpareOdds = 0.25F;
+    static constexpr float kReleaseSafeMps = 14.4F;   // kAnkleBreakSpeed * 1.2
+    static constexpr float kReleasePushMps = 4.0F;
+    static constexpr float kReleasePoseSeconds = 1.0F;
+    static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
+    static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -661,6 +737,23 @@ public:
         std::uint32_t crumbs_walked = 0;
         bool hushed = false;
         std::uint32_t creaks = 0;
+        // The hold: its edges counted (the voice's hooks), the hand's pose.
+        std::uint32_t grabs = 0;        // ankles her fingers closed on
+        std::uint32_t grab_misses = 0;  // reaches that came away empty
+        std::uint32_t carries = 0;
+        std::uint32_t dangles = 0;
+        std::uint32_t armplays = 0;
+        std::uint32_t releases = 0;
+        std::uint32_t spares = 0;
+        std::uint32_t grips_torn = 0;   // torn out of her hand by the player
+        std::uint32_t brace_losses = 0; // stepped back from the rail, unbraced
+        std::uint32_t carry_drops = 0;  // carried too long: dropped on the deck
+        bool hold_braced = false;
+        bool grip_on = false;
+        float hold_s = 0.0F;            // seconds in this hold state
+        float hand_x = 0.0F, hand_y = 0.0F, hand_z = 0.0F;   // her hand's pose
+        bool aim_ledge = false;         // a ledge below her rail spot to let go onto
+        float aim_x = 0.0F, aim_y = 0.0F, aim_z = 0.0F;
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -779,11 +872,40 @@ public:
     // Tests only: out of her locker (stepped out of its front, as at a
     // burst) and on her patrol round her level's loop.
     void patrol_for_test();
+
+    // The hold's interface to the physics (physics_world_grab.cpp).
+    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
+    void begin_grab(JPH::RVec3 player);
+    [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
+    [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
+    [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
+    [[nodiscard]] JPH::Vec3 hand_target_velocity() const noexcept { return hand_target_v_; }
+    [[nodiscard]] JPH::Vec3 shoulder_local() const noexcept;
+    [[nodiscard]] float arm_reach_m() const noexcept { return arm_reach_m_; }
+    [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
+    void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
+    void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
+    void grip_taken() noexcept;
+    void grip_lost(bool torn) noexcept;
+    // She lets go this tick: the push to give them (world), once.
+    [[nodiscard]] bool take_let_go(JPH::Vec3 &push) noexcept {
+        if (!let_go_) {
+            return false;
+        }
+        let_go_ = false;
+        push = let_go_push_;
+        return true;
+    }
+    void set_spare_for_test(const int spare) noexcept { spare_for_test_ = spare; }
+    void set_dangle_seconds_for_test(const float seconds) noexcept { dangle_for_test_s_ = seconds; }
     void set_stage_for_test(Stage stage) noexcept;
     // Tests only: her hands held off the player for `seconds` (no shove), so
     // a test can meet her body alone.
     void hold_hands_for_test(const float seconds) noexcept { shove_cooldown_s_ = seconds; }
-    [[nodiscard]] Saved save() const noexcept { return {state_, strain_s_, rage_, stage_, exposure_s_, handled_}; }
+    [[nodiscard]] Saved save() const noexcept {
+        // A hold is never saved: a checkpoint has her after the player.
+        return {state_ >= State::Grab ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+    }
     void restore(const Saved &saved);
 
     [[nodiscard]] const View &view() const noexcept { return view_; }
@@ -933,6 +1055,11 @@ private:
     void take_lead(float x, float z, float floor, float loudness, bool seen);
     // Back to her post if there is a way out to guard, else the patrol.
     void stand_down();
+    void step_hold(float dt, JPH::RVec3 player);
+    void end_hold(State next);
+    bool choose_rim(float ax, float az);
+    [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
+    void pose_hand(float dt, JPH::RVec3 target, float speed);
     // The Turn's clock: `distance_to_player` across, `carried_m` how far the
     // player's noise carried to her.
     void step_turn(float dt, float distance_to_player, float loudness, float carried_m);
@@ -996,6 +1123,34 @@ private:
     float yaw_ = 0.0F;
     int patrol_node_ = 0;
     bool patrol_only_ = false; // tests: no post to guard, the loop only
+
+    // The hold (matron_hold.cpp).
+    float hold_s_ = 0.0F;
+    float grab_cooldown_s_ = 0.0F;
+    float calm_s_ = 0.0F;            // after a Spare: she walks off, no hunt
+    bool grip_on_ = false;
+    bool grip_was_on_ = false;
+    bool player_braced_ = false;
+    float thrash_ = 0.0F;
+    bool thrash_failed_ = false;
+    float pull_n_ = kHandReachPullN;
+    float arm_reach_m_ = kArmReachM;
+    JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
+    JPH::Vec3 hand_target_v_ = JPH::Vec3::sZero();
+    float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
+    float rim_nx_ = 0.0F, rim_nz_ = 1.0F;   // out over the shaft from there
+    bool aim_ledge_ = false;
+    JPH::RVec3 aim_ = JPH::RVec3::sZero();  // the ledge's spot she lets go over
+    float dangle_s_ = 0.0F;                 // this dangle's length
+    JPH::Ref<JPH::Shape> player_cast_shape_;
+    JPH::Ref<JPH::Shape> hang_room_shape_;   // the player's body, swept for a ledge
+    int hold_phase_ = 0;                    // within a state: 0 heave/lift, 1 out/lowered, 2..
+    bool let_go_ = false;
+    JPH::Vec3 let_go_push_ = JPH::Vec3::sZero();
+    int spare_for_test_ = -1;
+    float dangle_for_test_s_ = -1.0F;
+    std::uint32_t grabs_ = 0, grab_misses_ = 0, carries_ = 0, dangles_ = 0, armplays_ = 0, releases_ = 0,
+                  spares_ = 0, grips_torn_ = 0, brace_losses_ = 0, carry_drops_ = 0;
     float noise_heard_ = 0.0F;
     bool sees_player_ = false;
     bool sees_far_ = false;

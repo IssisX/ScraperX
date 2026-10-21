@@ -1695,6 +1695,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
     set_s_ = std::max(0.0F, set_s_ - dt);
     shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
+    grab_cooldown_s_ = std::max(0.0F, grab_cooldown_s_ - dt);
+    calm_s_ = std::max(0.0F, calm_s_ - dt);
     throw_cooldown_s_ = std::max(0.0F, throw_cooldown_s_ - dt);
     fetch_refused_s_ = std::max(0.0F, fetch_refused_s_ - dt);
     if (fetch_refused_s_ <= 0.0F) {
@@ -2231,6 +2233,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         walk_toward(dt, wx, wz, kShuffleMps);
         break;
     }
+    case State::Grab:
+    case State::Carry:
+    case State::Dangle:
+    case State::ArmPlay:
+    case State::Release:
+    case State::Spare:
+        // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand.
+        since_heard_s_ = 0.0F;
+        step_hold(dt, player);
+        break;
     case State::Staggering:
     case State::Down:
         // Knocked about: no eyes on the player, and every sound runs on
@@ -2240,6 +2252,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         break;
     case State::Dead:
         break;
+    }
+    // Spared: she walks off and does not hunt for a while.
+    if (calm_s_ > 0.0F && (state_ == State::Hunting || state_ == State::Searching || state_ == State::Peering)) {
+        state_ = State::Shuffling;
+        turn_ = Turn::None;
+        if (body_in_world_) {
+            const RVec3 here = physics_.GetBodyInterface().GetPosition(body_);
+            pick_patrol(float(here.GetX()), float(here.GetZ()));
+        }
     }
     step_rage(dt);
     sense_near();
@@ -2592,6 +2613,18 @@ void Matron::restore(const Saved &saved) {
         blocked_.clear();
         crumb_count_ = 0;
         patrol_only_ = false;
+        hold_s_ = 0.0F;
+        grab_cooldown_s_ = 0.0F;
+        calm_s_ = 0.0F;
+        grip_on_ = false;
+        grip_was_on_ = false;
+        player_braced_ = false;
+        thrash_ = 0.0F;
+        thrash_failed_ = false;
+        let_go_ = false;
+        hold_phase_ = 0;
+        pull_n_ = kHandReachPullN;
+        arm_reach_m_ = kArmReachM;
         crumb_head_ = 0;
         crumb_on_ = -1;
         crumbs_walked_ = 0;
@@ -3212,6 +3245,26 @@ void Matron::refresh_view() {
     view_.crumbs_walked = crumbs_walked_;
     view_.hushed = hush_s_ > 0.0F;
     view_.creaks = creaks_;
+    view_.grabs = grabs_;
+    view_.grab_misses = grab_misses_;
+    view_.carries = carries_;
+    view_.dangles = dangles_;
+    view_.armplays = armplays_;
+    view_.releases = releases_;
+    view_.spares = spares_;
+    view_.grips_torn = grips_torn_;
+    view_.brace_losses = brace_losses_;
+    view_.carry_drops = carry_drops_;
+    view_.grip_on = grip_on_;
+    view_.hold_s = hold_s_;
+    view_.hold_braced = holding() && braced_at_rim(view_.x, view_.z);
+    view_.hand_x = float(hand_target_.GetX());
+    view_.hand_y = float(hand_target_.GetY());
+    view_.hand_z = float(hand_target_.GetZ());
+    view_.aim_ledge = aim_ledge_;
+    view_.aim_x = float(aim_.GetX());
+    view_.aim_y = float(aim_.GetY());
+    view_.aim_z = float(aim_.GetZ());
     if (body_in_world_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         view_.x = float(at.GetX());

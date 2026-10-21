@@ -31,7 +31,10 @@ constexpr JPH::ObjectLayer kCorpse = 3;
 // she meets what moves (a drum let go onto her, the climber) and not the
 // static steel she is wrapped round, the pipe's flanges and the rail.
 constexpr JPH::ObjectLayer kOnSteel = 4;
-constexpr JPH::ObjectLayer kCount = 5;
+// Her hand while it holds the climber (physics_world_grab.cpp): a body
+// only its constraints move; it meets nothing.
+constexpr JPH::ObjectLayer kHand = 5;
+constexpr JPH::ObjectLayer kCount = 6;
 } // namespace object_layers
 
 namespace broadphase_layers {

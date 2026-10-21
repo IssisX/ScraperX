@@ -268,6 +268,23 @@ struct MatronSnapshot final {
     std::uint32_t crumbs_walked = 0;
     bool hushed = false;
     std::uint32_t creaks = 0;
+    // Her hold (Matron::State 12..17): its edges counted, the voice's hooks.
+    std::uint32_t grabs = 0;
+    std::uint32_t grab_misses = 0;
+    std::uint32_t carries = 0;
+    std::uint32_t dangles = 0;
+    std::uint32_t armplays = 0;
+    std::uint32_t releases = 0;
+    std::uint32_t spares = 0;
+    std::uint32_t grips_torn = 0;
+    std::uint32_t brace_losses = 0;
+    std::uint32_t carry_drops = 0;
+    bool grip_on = false;
+    bool hold_braced = false;
+    double hold_s = 0.0;
+    Vector3 hand{};
+    bool aim_ledge = false;
+    Vector3 aim{};
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
@@ -966,6 +983,30 @@ struct Snapshot final {
     std::uint64_t water_exit_count = 0;
     double water_entry_speed_mps = 0.0;
     std::uint64_t swim_kick_count = 0;
+    // Her hold (physics_world_grab.cpp). The body turned freely (held, or
+    // righting after), its rotation and spin for the camera; her grip's load
+    // and strain; the player's brace; the thrash; every edge counted.
+    bool held_by_matron = false;
+    bool player_free_rotation = false;
+    double player_rot_x = 0.0, player_rot_y = 0.0, player_rot_z = 0.0, player_rot_w = 1.0;
+    Vector3 player_angular_velocity{};
+    double grip_load_n = 0.0;
+    double grip_peak_n = 0.0;
+    double grip_strain_ns = 0.0;
+    bool grip_hinged = false;
+    bool braced_on_rail = false;
+    double brace_load_n = 0.0;
+    double thrash = 0.0;
+    std::uint64_t grip_count = 0;
+    std::uint64_t grip_tear_count = 0;
+    std::uint64_t grip_release_count = 0;
+    std::uint64_t brace_count = 0;
+    std::uint64_t brace_tear_count = 0;
+    std::uint64_t thrash_kick_count = 0;
+    std::uint64_t upright_count = 0;
+    std::uint64_t upright_wedged_count = 0;
+    double max_hold_step_m = 0.0;
+    Vector3 matron_hand{};
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
@@ -1421,6 +1462,8 @@ public:
     void debug_fix_matron_pace(int pace) noexcept;
     // Tests only: her out of the locker and on her patrol loop.
     void debug_matron_patrol() noexcept;
+    // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
+    void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

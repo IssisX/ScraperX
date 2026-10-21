@@ -867,20 +867,19 @@ void run_matron() {
                 "matron: the shove is a stumble and a hit the body feels");
         s.debug_set_matron_stage(2);
         const auto start = s.snapshot();
-        stand_still(s, 12.0);
-        const auto after = s.snapshot();
-        require(s.matron_state().catches > 0 && after.death_count > start.death_count,
-                "matron: fully changed, a player who just stands there is caught, which is a death");
-        const auto m = s.matron_state();
-        std::cout << "  matron: after the catch, state " << int(m.state) << "\n";
-        // Out again: hunting, or (the player standing silent, and she quiet
-        // for their quiet, matron.hpp kHushAfterS) already searching for them.
-        require(m.alive && (m.state == kStateEmerging || m.state == kStateHunting || m.state == kStateSearching),
-                "matron: after a catch she is back at her locker, out again");
-        require(std::hypot(after.player_position.x - start.player_position.x,
-                           after.player_position.z - start.player_position.z) > 3.0 ||
-                    after.death_count > start.death_count,
-                "matron: the catch put the player back at a checkpoint");
+        // Fully changed: her hand on them is no longer a death on touch. It
+        // is her hold (run_matron_grab): her fingers close on an ankle.
+        bool grabbed = false;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !grabbed; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            grabbed = s.matron_state().grabs > 0;
+            require(s.snapshot().death_count == start.death_count, "matron: her hand on a player is no death on touch");
+        }
+        std::cout << "  matron: fully changed, catches " << s.matron_state().catches << " grabs "
+                  << s.matron_state().grabs << " misses " << s.matron_state().grab_misses << "\n";
+        require(s.matron_state().catches > 0 && grabbed,
+                "matron: fully changed, a player who just stands there is caught: her hand closes on them");
     }
     // ---- the checkpoint stops being renewed while she hunts ----------------------
     {
@@ -895,9 +894,9 @@ void run_matron() {
         require(go(s, 0.0, Matron::kBandSouthZ, true, 8.0, 1.0), "matron: a run along the south band");
         const auto far = s.snapshot().player_position;
         const auto deaths_before = s.snapshot().death_count;
-        // Fully changed (a pest or a dangerous one would only shove), stand
-        // and let her take the player.
-        s.debug_set_matron_stage(2);
+        // A death here (her hand is no longer one, run_matron_grab): a fall
+        // into the shaft from where the player stands.
+        s.debug_launch_player(scraperx::sim::Vector3{0.0, far.y + 0.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
         stand_still(s, 30.0);
         const auto back = s.snapshot();
         require(back.death_count > deaths_before, "matron: standing still on the loop gets the player caught");
@@ -1160,8 +1159,12 @@ void run_matron() {
         const auto deaths = s.snapshot().death_count;
         s.debug_set_matron_stage(2);   // a catch is a death only fully changed
         stand_still(s, 0.0);
-        const bool caught = run_until(20.0, [&] { return s.snapshot().death_count > deaths; });
+        // Caught: her hand closes on them (her hold, run_matron_grab); then a
+        // death (a fall into the shaft) for what a death forgets.
+        const bool caught = run_until(20.0, [&] { return s.matron_state().grabs > 0; });
         require(caught, "matron mind: standing still, the player is caught");
+        s.debug_launch_player(scraperx::sim::Vector3{0.0, 154.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
+        require(run_until(30.0, [&] { return s.snapshot().death_count > deaths; }), "matron mind: the fall is a death");
         tick(s);
         std::cout << "  matron mind: after the catch, fooled " << s.matron_state().fooled << "\n";
         require(s.matron_state().fooled == 0, "matron mind: a death forgets what she learned");

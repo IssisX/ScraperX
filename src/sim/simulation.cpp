@@ -1062,6 +1062,11 @@ void Simulation::debug_matron_patrol() noexcept {
     physics_world_->matron().patrol_for_test();
 }
 
+void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
+    physics_world_->matron().set_spare_for_test(spare);
+    physics_world_->matron().set_dangle_seconds_for_test(static_cast<float>(dangle_seconds));
+}
+
 void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
@@ -1111,6 +1116,22 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.crumbs_walked = view.crumbs_walked;
     result.hushed = view.hushed;
     result.creaks = view.creaks;
+    result.grabs = view.grabs;
+    result.grab_misses = view.grab_misses;
+    result.carries = view.carries;
+    result.dangles = view.dangles;
+    result.armplays = view.armplays;
+    result.releases = view.releases;
+    result.spares = view.spares;
+    result.grips_torn = view.grips_torn;
+    result.brace_losses = view.brace_losses;
+    result.carry_drops = view.carry_drops;
+    result.grip_on = view.grip_on;
+    result.hold_braced = view.hold_braced;
+    result.hold_s = view.hold_s;
+    result.hand = Vector3{view.hand_x, view.hand_y, view.hand_z};
+    result.aim_ledge = view.aim_ledge;
+    result.aim = Vector3{view.aim_x, view.aim_y, view.aim_z};
     result.fooled = view.fooled;
     result.wary = view.wary;
     result.vaults = view.vaults;

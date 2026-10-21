@@ -223,6 +223,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // moves: the checkpoint is a standing one. The Matron's hands too, before
     // any stock is put back.
     matron_->drop_stock();
+    grab_reset(bodies);
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
@@ -756,6 +757,37 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.water_exit_count = water_exit_count_;
     state_.water_entry_speed_mps = water_entry_speed_mps_;
     state_.swim_kick_count = swim_kick_count_;
+    {
+        const JPH::Quat rot = bodies.GetRotation(player_id_);
+        const JPH::Vec3 spin = bodies.GetAngularVelocity(player_id_);
+        state_.held_by_matron = grip_ != nullptr;
+        state_.player_free_rotation = player_free_rot_;
+        state_.player_rot_x = rot.GetX();
+        state_.player_rot_y = rot.GetY();
+        state_.player_rot_z = rot.GetZ();
+        state_.player_rot_w = rot.GetW();
+        state_.player_angular_velocity = Vector3{spin.GetX(), spin.GetY(), spin.GetZ()};
+        state_.grip_load_n = grip_load_n_;
+        state_.grip_peak_n = grip_peak_n_;
+        state_.grip_strain_ns = grip_strain_ns_;
+        state_.grip_hinged = grip_ != nullptr && grip_swing_;
+        state_.braced_on_rail = brace_ != nullptr;
+        state_.brace_load_n = brace_load_n_;
+        state_.thrash = thrash_;
+        state_.grip_count = grip_count_;
+        state_.grip_tear_count = grip_tear_count_;
+        state_.grip_release_count = grip_release_count_;
+        state_.brace_count = brace_count_;
+        state_.brace_tear_count = brace_tear_count_;
+        state_.thrash_kick_count = thrash_kick_count_;
+        state_.upright_count = upright_count_;
+        state_.upright_wedged_count = upright_wedged_count_;
+        state_.max_hold_step_m = max_hold_step_m_;
+        if (!hand_id_.IsInvalid()) {
+            const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
+            state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+    }
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;
     state_.summit_seconds = summit_seconds_;
