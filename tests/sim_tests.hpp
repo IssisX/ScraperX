@@ -880,3 +880,4 @@ void run_twin();
 void run_twin_geometry();
 
 void run_matron_capture();
+void run_matron_remaining();

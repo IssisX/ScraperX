@@ -4,6 +4,7 @@
 #include "sim_tests.hpp"
 
 int main() {
+    if (const char* only = std::getenv("SCRAPERX_ONLY"); only && std::string(only) == "matron-remaining") { run_matron_remaining(); return 0; }
     if (const char* only = std::getenv("SCRAPERX_ONLY"); only && std::string(only) == "matron-climb-support") { test_matron_climb_support(); return 0; }
     if (const char* only = std::getenv("SCRAPERX_ONLY"); only && std::string(only) == "matron-crash") { run_matron_crash(); return 0; }
     if (const char* only = std::getenv("SCRAPERX_ONLY"); only && std::string(only) == "matron-hearing") { test_matron_hearing(); return 0; }
