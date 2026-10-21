@@ -24,28 +24,9 @@ func _ready() -> void:
 	_marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_marker.visible = false
 	add_child(_marker)
-	var sign := Label3D.new()
-	sign.text = "BUILD YOUR WAY UP\nRIG: PLATFORM / GUIDE / TRAY\nADD THREE WEIGHTS / BOARD / PULL RELEASE"
-	sign.font_size = 40
-	sign.pixel_size = 0.007
-	sign.position = Vector3(-120, 2.8, -39.7)
-	sign.rotation.y = PI
-	sign.modulate = Color(0.9, 0.78, 0.4)
-	sign.visibility_range_end = 24.0
-	add_child(sign)
-	var winch_sign := Label3D.new()
-	winch_sign.text = "RIG THE CROSSING\n1  WINCH A / B > MATCHING BEAM END\n2  UP BOTH ENDS\n3  EACH SIDE: POST > GUIDE > BEAM SIDE LUG\n4  STAIRS > BEAM > FAR LANDING\nRECOVER FROM THE GROUND\nLEAVE BEAM; UP SLIGHTLY TO SLACKEN STAYS\nSELECT LINE > UNCLIP WHEN UNLOADED\nLOWER BEAM > UNCLIP WINCH LINES"
-	winch_sign.font_size = 28
-	winch_sign.pixel_size = 0.0045
-	winch_sign.position = Vector3(-112.3, 2.7, -37.4)
-	winch_sign.rotation.y = PI
-	winch_sign.modulate = Color(0.9, 0.78, 0.4)
-	winch_sign.visibility_range_end = 18.0
-	winch_sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(winch_sign)
 	for panel in [["A", Vector3(-109.8, 1.08, -37.33)], ["B", Vector3(-106.2, 1.08, -37.33)]]:
 		var label := Label3D.new()
-		label.text = "WINCH %s\nAIM HERE / ACTION: CLIP OR CONTROL\nUP LIFT / DOWN LOWER / RELEASE BRAKE" % panel[0]
+		label.text = "WINCH %s" % panel[0]
 		label.font_size = 24
 		label.pixel_size = 0.003
 		label.position = panel[1] + Vector3(0, .55, -.02)

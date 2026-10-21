@@ -13,7 +13,6 @@ const PlankWoodShader := preload("res://presentation/plank_wood.gdshader")
 
 var _freight_materials := FreightMaterials.new()
 var _native: Object
-var _create_sign: Callable
 var _catch_net_view: Node3D
 var _catch_frame_steel: StandardMaterial3D
 var _cargo_net_mesh: Node3D
@@ -39,11 +38,11 @@ var _plank_broken_joint_mask := -1
 var _water_lift_bucket_water: MeshInstance3D
 
 
+@warning_ignore("unused_parameter")
 func setup(native: Object, palette: Array[Material], cable_material: Material,
 		cargo_net_material: StandardMaterial3D, create_sign: Callable) -> void:
 	_native = native
 	_cargo_net_material = cargo_net_material
-	_create_sign = create_sign
 	_build_kit(palette, cable_material)
 
 
@@ -442,27 +441,9 @@ func _junction_stencil(node: Node3D, text: String, at: Vector3,
 
 
 func _junction_markings(node: Node3D, entity: int) -> void:
-	if entity == 1935:
-		_junction_stencil(node, "INSPECTION\n407", Vector3(-22.0, 407.0015, -127.7),
-			0.007, Vector3(-PI / 2.0, 0, 0), Color("253c40"))
-		_junction_stencil(node, "NORTH FRAME\n418", Vector3(0.2, 407.0015, -127.0),
-			0.0045, Vector3(-PI / 2.0, 0, 0), Color("253c40"))
-	elif entity == 1936:
-		_junction_stencil(node, "INSPECTION RETURN\n403.5", Vector3(-16.5, 403.5015, -128.25),
-			0.006, Vector3(-PI / 2.0, 0, 0), Color("263e3e"))
-	elif entity == 2935:
+	if entity == 2935:
 		_junction_stencil(node, "J-407", Vector3(0, -0.7, 0.2015),
 			0.002, Vector3.ZERO, Color("3d3526"))
-	elif entity == 1939:
-		_junction_stencil(node, "RETURN HEADER\nN-451", Vector3(-20.8, 451.0015, -130.0),
-			0.0055, Vector3(-PI / 2.0, 0, 0), Color("293b35"))
-		_junction_stencil(node, "FRAME SERVICE\n462", Vector3(-0.1, 451.0015, -129.3),
-			0.0045, Vector3(-PI / 2.0, 0, 0), Color("293b35"))
-	elif entity == 1938:
-		_junction_stencil(node, "SERVICE HEADER\nN-429", Vector3(-21.1, 429.0015, -128.0),
-			0.0055, Vector3(-PI / 2.0, 0, 0), Color("303d43"))
-		_junction_stencil(node, "NORTH FRAME\n440", Vector3(-0.1, 429.0015, -128.0),
-			0.0045, Vector3(-PI / 2.0, 0, 0), Color("303d43"))
 
 
 func _is_plank_segment(entity: int) -> bool:
@@ -683,13 +664,6 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
-		if int(_native.get_kit_body_entity_id(body)) == 1960:
-			_create_sign.call("SERVICE +121\nSWING TRANSFER", Vector3(11.6, 112.1, -180.42), 0.0, 0.22, Color("e7c67c"), node)
-			_create_sign.call("+121\nUP", Vector3(9, 121.8, -177.74), PI, 0.26, Color("e7c67c"), node)
-		if int(_native.get_kit_body_entity_id(body)) == 2560:
-			_create_sign.call("UP · JUMP TO DUCT\nCLIMB CABINET FIRST", Vector3(20.0, 23.5, -121.76), 0.0, 0.10, Color("e7c67c"), node)
-		if int(_native.get_kit_body_entity_id(body)) == 2562:
-			_create_sign.call("UP · VENT TO NEXT DECK\nCLIMB · HOLD FORWARD", Vector3(24.0, 28.2, -123.34), 0.0, 0.10, Color("e7c67c"), node)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		if entity == 2963 and _catch_frame_steel == null:
 			# Retain the shared steel bump/UV resource and one steel batch.
@@ -789,90 +763,12 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_catch_net_practicals(node, parts, palette[7])
 		if entity == 1932:
 			_inspection_practicals(node)
-		if entity in [1935, 1936, 1938, 1939, 2935]:
+		if entity == 2935:
 			_junction_markings(node, entity)
-		if entity == 1490:
-			_junction_stencil(node, "BUILD A CROSSING\nLOOSE TIMBER", Vector3(-3.1, 0.362, 0),
-				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
-			_junction_stencil(node, "RECEIVING", Vector3(3.1, 0.362, -1.65),
-				0.0045, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
-		elif entity == 1491:
-			_junction_stencil(node, "MAKE A RAMP\nLIFT THE YARD BEAM", Vector3(-1.5, 0.003, -3.0),
-				0.006, Vector3(-PI / 2.0, 0, 0), Color("d6b45f"))
-			_junction_stencil(node, "BEAM LANDING\nLIFT · PLACE · CLIMB", Vector3(0, 2.402, 0),
-				0.005, Vector3(-PI / 2.0, 0, PI / 2.0), Color("d6b45f"))
-		elif entity == 2490:
-			_junction_stencil(node, "GRIP", Vector3(0, 0.079, 0),
-				0.004, Vector3(-PI / 2.0, 0, 0), Color("e2cc8d"))
-		# Signs stay on the native landing/deck bodies, including the moving
-		# pendant. They label the real stations without owning machine state.
-		if entity == 1981:
-			_balance_sign(node, "GRAVITY BALANCE · +143\nOPERATE · HOLD UP TO RISE", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1982:
-			_balance_sign(node, "EXIT · +165\nHOLD DOWN TO RESET", Vector3(0.0, 1.8, 0.0))
-		elif entity == 2980:
-			_balance_sign(node, "GRAVITY BALANCE\nUP: RISE · DOWN: RESET\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		elif entity == 1984:
-			_balance_sign(node, "CROWN GONDOLA · +165\nOPERATE · HOLD UP TO RISE", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1985:
-			_balance_sign(node, "EXIT · +198\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
-			_balance_sign(node, "CROWN RECALL\nHOLD DOWN TO RETURN", Vector3(-14.337928, 1.8, -0.55))
-		elif entity == 2983:
-			_balance_sign(node, "CROWN GONDOLA\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		elif entity == 1987:
-			_balance_sign(node, "TRACTION TRAM · +198\nOPERATE · HOLD UP TO CLIMB", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1988:
-			_balance_sign(node, "EXIT · +231\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
-		elif entity == 2984:
-			_balance_sign(node, "TRACTION TRAM\nUP: CLIMB · DOWN: RETURN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		elif entity == 1992:
-			_balance_sign(node, "BARREL HELIX · +231\nOPERATE · ROLLER RIDES CAM", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1993:
-			_balance_sign(node, "EXIT · +253\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
-		elif entity == 2988:
-			_balance_sign(node, "BARREL HELIX\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		elif entity == 1995:
-			_balance_sign(node, "CASCADE MAST · +253\nOPERATE · 1:2:3 CABLE CASCADE", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1996:
-			_balance_sign(node, "EXIT · +286\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
-		elif entity == 2992:
-			_balance_sign(node, "CASCADE MAST\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		elif entity == 1921:
-			_balance_sign(node, "PITMAN LIFT · +286\nOPERATE · CRANK DRIVES ROD", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1922:
-			_balance_sign(node, "EXIT · +308\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
-		elif entity == 2921:
-			_balance_sign(node, "PITMAN LIFT\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
-		if entity == 1941:
-			_balance_sign(node, "REFRACTORY RECLAIM · +308\nFEED WHILE HELD · BOARD TO RELEASE", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1942:
-			_balance_sign(node, "RECLAIM EXIT · +330\nEMPTY THE SCOOPS BEFORE RETURN", Vector3(0.0, 1.8, 0.0))
-		elif entity == 1945:
-			_balance_sign(node, "MAINTENANCE CROSSING · +319\nDUMP TO RETURN · LOWER FEED BELOW", Vector3(3.5, -0.5, 5.75))
-		elif entity == 2201:
-			_balance_sign(node, "RECLAIM CABIN\nUP: RELEASE BRAKE · DOWN: DUMP\nRELEASE TO HOLD", Vector3(0.0, -0.7, 0.0))
-		# Factory static parts share (-41.5,327.25,-142); the cart control
-		# moves with its deck. Each sign is local to its actual native owner.
-		if entity == 1955:
-			_balance_sign(node, "SLAB HAUL · +330\nFALLING SLAB LIFTS CART\nDOWN: PAID RETURN", Vector3(15.6, 3.85, 2.5))
-		elif entity == 1956:
-			_balance_sign(node, "INSPECTION · +341\nJUMP ASHORE · DOWN TO RECOVER\nREBOARD TO CONTINUE", Vector3(15.6, 14.85, 2.5))
-		elif entity == 1957:
-			_balance_sign(node, "EXIT · +352\nJUMP NORTH LANE TO TOWER\nDOWN: RAISE SLAB / RETURN CART", Vector3(16.4, 25.85, 2.5))
-		elif entity == 2320:
-			_balance_sign(node, "SLAB HAUL CART\nUP: RELEASE · NEUTRAL: BRAKE\n341 INSPECTION · 352 JUMP", Vector3(-1.15, 3.85, -0.45))
 		# Paint identifies a maintenance transfer, not a scripted cargo objective.
 		# Every mark lies on an existing native surface and follows that owner.
 		if entity == 1957:
 			_cart_storage_marks(node, Vector3(15.7, 24.751, 2.35))
-			var stores := Label3D.new()
-			stores.text = "MAINTENANCE STORES"
-			stores.position = Vector3(15.7, 24.752, 2.65)
-			stores.rotation.x = -PI / 2.0
-			stores.font_size = 32
-			stores.pixel_size = 0.0025
-			stores.modulate = Color("d7b54f")
-			node.add_child(stores)
 		elif entity == 2327:
 			_cart_paint(node, Vector3(0.25, 0.001, 0.045), Vector3(0, 0.1306, 0))
 		elif entity == 2326:
@@ -883,16 +779,6 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			for slab_y in [351.721281, 339.019575, 326.317869]:
 				_cart_paint(node, Vector3(0.001, 0.045, 0.17),
 					Vector3(-2.0985, slab_y - 327.25, 0.7))
-		if entity == 2952:
-			var sign := Label3D.new()
-			sign.name = "CargoNetSign"
-			sign.text = "EASY WAY UP · FIRST DECK +11 M\nTAP CLIMB · HOLD FORWARD"
-			sign.position = Vector3(20.0, 2.8, -117.65)
-			sign.font_size = 44
-			sign.pixel_size = 0.006
-			sign.modulate = Color("fff0c4")
-			sign.outline_size = 12
-			node.add_child(sign)
 		if entity == 2011:
 			var water_mesh := BoxMesh.new()
 			water_mesh.size = Vector3(1.54, 1.0, 1.54)
@@ -992,25 +878,6 @@ func _cart_storage_marks(parent: Node3D, centre: Vector3) -> void:
 	for side in [-1.0, 1.0]:
 		_cart_paint(parent, Vector3(0.36, 0.001, 0.012), centre + Vector3(0, 0, side * 0.18))
 		_cart_paint(parent, Vector3(0.012, 0.001, 0.36), centre + Vector3(side * 0.18, 0, 0))
-
-
-func _balance_sign(parent: Node3D, text: String, at: Vector3) -> void:
-	var plate := MeshInstance3D.new()
-	plate.name = "GravityBalanceControlSign"
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(3.8, 0.84, 0.035)
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("252a2d")
-	material.roughness = 0.85
-	mesh.material = material
-	plate.mesh = mesh
-	plate.position = at
-	parent.add_child(plate)
-	for face in [-1.0, 1.0]:
-		var label: Label3D = _create_sign.call(text, at + Vector3(0.0, 0.0, face * 0.025),
-			0.0 if face > 0.0 else PI, 0.16, Color("fff0c4"), parent)
-		label.name = "GravityBalanceInstructions"
-		label.outline_size = 8
 
 
 # Native CargoNet exposes four corners per knot and two triangles per woven

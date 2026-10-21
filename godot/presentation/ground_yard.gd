@@ -35,9 +35,6 @@ func build() -> void:
 			_box("YardPaint", Vector3(0.14, 0.003, 4.0), Vector3(x, 0.004, float(z)), paint)
 	for x in range(22, 49, 6):
 		_box("YardPaint", Vector3(0.12, 0.003, 10.0), Vector3(float(x), 0.004, -38.0), chalk)
-	_label("RECEIVING / 01", Vector3(-36.0, 4.50, -21.87), 0.007, paint.albedo_color)
-	_label("REPAIR BAY", Vector3(-36.0, 3.0, -37.76), 0.014, paint.albedo_color)
-	_label("KEEP ACCESS CLEAR", Vector3(36.0, 0.01, -40.0), 0.011, chalk.albedo_color, true)
 	_build_pennants()
 	_build_dust()
 	var arrival := FreightArrival.new(_g, _cloth)
@@ -161,20 +158,6 @@ func _box(part: String, size: Vector3, at: Vector3, material: Material) -> void:
 	var mesh := _g.add_box_to(part, size, at, material, _root)
 	mesh.visibility_range_end = 180.0
 	mesh.visibility_range_end_margin = 12.0
-
-func _label(text: String, at: Vector3, pixel_size: float, color: Color, floor_text: bool = false) -> void:
-	var label := Label3D.new()
-	label.text = text
-	label.font_size = 64
-	label.pixel_size = pixel_size
-	label.modulate = color
-	label.outline_size = 0
-	label.position = at
-	label.no_depth_test = false
-	label.visibility_range_end = 75.0
-	if floor_text:
-		label.rotation.x = -PI / 2.0
-	_root.add_child(label)
 
 func _weather_surface(material: StandardMaterial3D, base: Color, stain: Color, seed_value: int) -> void:
 	# One shared seeded albedo map per surface, not a texture per stock item.

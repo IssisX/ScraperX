@@ -63,6 +63,11 @@ func _run() -> void:
 	check(presenter._intro.visible and presenter._intro_alpha < 1.0, "retained copy permits visual fade out")
 	presenter.present(supplied, 1.0)
 	check(not presenter._intro.visible and presenter._objective.visible, "intro fade never changes objective")
+	supplied.objective_visible = false
+	presenter.present(supplied, 0.0)
+	check(not presenter._objective.visible and presenter._radio.visible, "world guidance hides its mission card while retaining spoken captions")
+	check(presenter._objective_text.text == supplied.objective, "hidden mission card retains supplied direction without changing progression")
+	supplied.erase("objective_visible")
 	presenter.present({}, 0.0)
 	check(not presenter._intro.visible and not presenter._objective.visible and not presenter._radio.visible, "neutral cancellation hides immediately with zero delta")
 	check(presenter._transmission.text.is_empty() and presenter._objective_text.text.is_empty(), "neutral cancellation clears stale copy")

@@ -196,5 +196,41 @@
     "voice_id": "am_michael",
     "clean_sha256": "dee276d36052a1688da786e2a98af597012f0bd585d97fd279e286865aff006d",
     "radio_sha256": "5d4cefed9e37eedc2338e613ba935ede1a33d07841eade749c253613e30a284d"
+  },
+  "arrival_iona_empty_record": {
+    "event_id": "3fe743a54e4d45f3b70ed309a73761f9",
+    "text": "Ro. They used your name to call this yard empty. That man is still working. Get to Freight One, eleven metres up. We need the original handover.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:30:56.443056+00:00",
+    "clean_sha256": "6409e8284a68fafb3fe7e0774440ad9fb755f9e2f9ad0746b0001a13429bab37",
+    "radio_sha256": "3daf15ba618b0fca6de917bde7fd8f91eb33cb0f60836a99087792c9bba97556"
+  },
+  "arrival_iona_personnel_way": {
+    "event_id": "0a7b22016e234c64829d6acce1a500c7",
+    "text": "The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:05.909495+00:00",
+    "clean_sha256": "bc6497821659d7a674fc12677d6ee78e1749bdd38544ebbd07f553e18621dc09",
+    "radio_sha256": "63d8a67539cee3130fc083db5ff6c7ce03e21aa92d53783aa425e89ab4d3915f"
+  },
+  "arrival_iona_mesh_lip": {
+    "event_id": "3471a8464515476bac31e8c724a32826",
+    "text": "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:14.776750+00:00",
+    "clean_sha256": "526be4cca8df09fc0ef61aeca0598fc54bc1b238add5b41f839f8d4b8fc2cd51",
+    "radio_sha256": "83683c1c5694bcc4e66b1f19ce4f2a56c6883c34ef37827908a199b3dd890d34"
+  },
+  "arrival_iona_first_ring": {
+    "event_id": "ddd2f7e6450b4519a16f8577cdd54b40",
+    "text": "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:26.360599+00:00",
+    "clean_sha256": "60a59a99e176b81f7d393d90207e916b425815c0467ffdfd77eac60c68afaaa7",
+    "radio_sha256": "7dc9ba059a631145aabf0b8bfd8f287182d2ea1644e8528ea2cf9919aa99860e"
   }
 }

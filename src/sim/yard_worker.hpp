@@ -42,7 +42,7 @@ public:
     // and seam derive from this single authored station, never from a pose.
     static JPH::RVec3 home() { return JPH::RVec3(-89, .9, -50); }
     static JPH::RVec3 work_point() { return home() + JPH::Vec3(0, -.06F, -.68F); }
-    static JPH::RVec3 guide_point() { return JPH::RVec3(-105, 1.3, -38.5); }
+    static JPH::RVec3 guide_point() { return JPH::RVec3(-94, 1.3, -75); }
 
 private:
     void enter(Activity activity) noexcept;

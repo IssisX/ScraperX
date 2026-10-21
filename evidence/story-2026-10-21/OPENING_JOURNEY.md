@@ -1,0 +1,9 @@
+# World-first opening journey — 2026-10-21
+
+Normal arrival connects a working human witness to the personnel mesh, actual11m footing and the existing cabinet→duct→vent route toward22m. Four real Iona recordings connect those physical events to the original handover. The permanent mission card and production navigation placards are removed; functional controls, equipment IDs, company fiction and discoverable story paperwork remain. Machinery and collision geometry retain their existing owners.
+
+Root implemented guidance/audio generation/native pointing/context integration and world cleanup. One bounded implementer completed service finishes; another completed the continuous touch fixture. Native worker public test exits0 on the coherent new library. Existing `story_guidance_test.gd` reports37checks/0failures; `story_presenter_test.gd` reports88/0. Exact commands/output are in OPENING_MODULE_CHECKS.json; real generation event/output is in OPENING_VOICE_GENERATION.json.
+
+Godot MCP observed one uninterrupted shipping Main life from ordinary spawn through two actual mesh hands, fresh receiving Action,90firm receiver ticks, all four packaged recordings and supported onward movement. Rendering was disabled for this integrated phone-host interaction run. Isolated native service geometry was rendered separately; neither proves whole-yard appearance or phone performance.
+
+The first live run exposed lost worker facts during context replacement; root repaired the actual Main handoff and the next life played its recordings. The route fixture later expected tower51, while the native public contract is tower11. That new fixture error was corrected from independent source evidence; the original failure remains disclosed. Separate same-life onward observation does not turn the original complete fixture into a PASS. Fresh corrected CI and matching APK remain pending at this source publication. OPENING_JOURNEY.json records the observations and limits.

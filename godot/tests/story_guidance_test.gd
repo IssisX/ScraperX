@@ -20,9 +20,21 @@ func observation(at: Vector3, support: int = 51, firm: bool = true) -> Dictionar
 func _run() -> void:
 	var guide := Guide.new()
 	var spawn := observation(Vector3(-94, 1.2, -44))
+	spawn.merge({"yard_worker_present": true, "yard_worker_supported": true, "yard_worker_activity": 0})
 	var state: Dictionary = guide.sample(spawn, 0)
 	check(state.intro_visible and state.objective_id == &"freight_one", "live Receiving starts with clear first destination")
-	check(state.transmission_key == &"receiving_iona_come_look", "arrival names an actual recorded cue")
+	check(state.transmission_key == &"arrival_iona_empty_record", "actual working witness starts the recorded story and first destination")
+	check(not state.objective_visible, "ordinary guidance leaves the permanent mission card hidden")
+	var witness := Guide.new()
+	var absent := observation(Vector3(-94, 1.2, -44))
+	check(witness.sample(absent, 0).transmission.is_empty(), "missing worker cannot be described as still working")
+	absent.merge({"yard_worker_present": true, "yard_worker_supported": false, "yard_worker_activity": 0})
+	check(witness.sample(absent, 1).transmission.is_empty(), "unsupported worker cannot start the witness line")
+	absent.yard_worker_supported = true
+	absent.yard_worker_activity = 2
+	check(witness.sample(absent, 2).transmission.is_empty(), "a pointing worker is not reported as welding")
+	absent.yard_worker_activity = 0
+	check(witness.sample(absent, 3).transmission_key == &"arrival_iona_empty_record", "late real work starts the introduction once")
 	var id: int = state.transmission_id
 	check(guide.sample(spawn, 0).transmission_id == id, "same native tick never repeats dialogue")
 	var air := observation(Vector3(0, 352.9, -150), 0, false)
@@ -36,8 +48,8 @@ func _run() -> void:
 	check(guide.sample(wrong, 7).objective_id == &"freight_one", "unrelated yard height does not claim tower access")
 	var net := observation(Vector3(20, 11.9, -119), 2952)
 	state = guide.sample(net, 8)
-	check(state.objective_id == &"crown" and state.transmission_key == &"freight_one_iona_crown", "real net receiver accepts a machine-free alternate arrival")
-	check("+33 M" in state.detail, "first ring suggests the real nearby service walk")
+	check(state.objective_id == &"crown" and state.transmission_key == &"arrival_iona_first_ring", "real personnel receiver starts its recorded onward direction")
+	check("+22 M" in state.detail and "Cabinet" in state.detail, "first ring names the existing cabinet duct and vent route to22m")
 	var higher := Guide.new()
 	state = higher.sample(observation(Vector3(6, 352.9, -150), 51), 0)
 	check(state.objective_id == &"crown" and not "+33 M" in state.detail, "higher supported bypass never sends player backward to33m")
@@ -55,7 +67,7 @@ func _run() -> void:
 	state = guide.sample(spawn, 0)
 	check(state.intro_visible and state.objective_id == &"freight_one", "native time reset clears session narrative history")
 	check(state.transmission_id > previous_id, "native retry gets a new serial so its recorded introduction can play")
-	guide.configure_voice_lengths({&"receiving_iona_come_look": 20.0})
+	guide.configure_voice_lengths({&"arrival_iona_empty_record": 20.0})
 	guide.reset()
 	state = guide.sample(spawn, 0)
 	check(not guide.sample(spawn, 15 * 90).transmission.is_empty(), "long real recording retains caption lifetime")
@@ -78,10 +90,23 @@ func _run() -> void:
 	var starting := spawn.duplicate()
 	starting.story_discovery = &"vale_emergency_contact"
 	state = delayed.sample(starting, 0)
-	check(state.transmission_key == &"receiving_iona_come_look", "personal discovery does not interrupt necessary introductory speech")
+	check(state.transmission_key == &"arrival_iona_empty_record", "personal discovery does not interrupt necessary introductory speech")
 	starting.erase("story_discovery")
 	starting.grounded = false
 	starting.checkpoint_footing_valid = false
 	check(delayed.sample(starting, 1200).transmission_key != &"vale_contact_ro", "queued banter waits through an unsupported fall")
+	var approach := Guide.new()
+	approach.sample(spawn, 0)
+	var aisle := observation(Vector3(-94, .9, -75))
+	state = approach.sample(aisle, 1200)
+	check(state.transmission_key == &"arrival_iona_personnel_way", "actual ground approach describes the existing mesh route")
+	check(approach.sample(aisle, 2400).transmission_id == state.transmission_id, "ground direction is heard once rather than looping")
+	var climbing := observation(Vector3(20, 6, -117.5), 0, false)
+	check(approach.sample(climbing, 2401).transmission_id == state.transmission_id, "being airborne near mesh cannot claim the player is climbing it")
+	climbing.climbing = true
+	state = approach.sample(climbing, 2402)
+	check(state.transmission_key == &"arrival_iona_mesh_lip", "actual native climb receives the lip cue")
+	check(state.objective_id == &"freight_one", "hanging on mesh does not award receiving footing")
+	check(approach.sample(climbing, 3600).transmission_id == state.transmission_id, "mesh direction is not repeated during a long hang")
 	print("STORY_GUIDANCE %s checks=%d failures=%d supplied_native_facts_only=1" % ["PASS" if failures.is_empty() else "FAIL", checks, failures.size()])
 	quit(0 if failures.is_empty() else 1)

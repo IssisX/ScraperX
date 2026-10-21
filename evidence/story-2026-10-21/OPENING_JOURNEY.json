@@ -1,0 +1,83 @@
+{
+  "base_commit": "ad143151327b70c5b1e509b8f95b140a715847ef",
+  "native": {
+    "sha256": "0b26bcba7c3d6ed228cb26ccfe9b1c2a969a0a93992bc41d0ba7eab46be7d0d6",
+    "header_hash": "e9770930a2253cb7c2ebfd8dfaa03a2388264c8351d17060c4f123ff6850f8ed",
+    "public_worker_command_output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nYARD_WORKER start=-89,0.9,-50 support=1 activity=0\nYARD_WORKER shove_dx=-0.171883 peak_speed=1.79387\nYARD_WORKER_PUBLIC PASS arrival notice point onward return checkpoint collision\n"
+  },
+  "source_hashes": {
+    "src/sim/yard_worker.hpp": "a3750161dbd9d8fdcfa7ce26fa109244b8e2e1a75c72b0ba86ed2fc0c9ba301f",
+    "godot/presentation/main.gd": "720d797054479794449ef23da1a89a824e0eaf25a50870954b4d3d3aa2dd97a3",
+    "godot/presentation/story_guidance.gd": "0fa9e02592237f5495000c5b83e11ee4f3311acb31d10573eb807d7d300ff8b3",
+    "godot/presentation/story_presenter.gd": "75feef28af90a2c42cb43a44a58ae91c65944f05660003de6ade1c190367e4ec",
+    "godot/presentation/materials/freight_materials.gd": "4cfc6cfac16b53dd5f59b6a6a1f03d4e60992132502356abad406d794dd930c5",
+    "godot/tests/opening_journey_input_case.gd": "6b6d90d8525155ea685d48680c95dcf8a8bcbde8f2483e651540fc3d232cbe87",
+    "godot/tests/opening_journey_input_test.gd": "b344467feae601727517b3cbe8a6c62cedf6ffa727964d614135e19a543206a1"
+  },
+  "module_evidence": "OPENING_MODULE_CHECKS.json",
+  "voice_evidence": "OPENING_VOICE_GENERATION.json",
+  "mcp_observation": {
+    "executor": "opening_journey_touch; Godot MCP run_project/run_script/stop_project",
+    "runtime": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+    "viewport_3d_disabled": true,
+    "start": [
+      -94,
+      1.2,
+      -44
+    ],
+    "last_route_tick": 12048,
+    "mesh_entity": 1953,
+    "hands_on_mesh": 2,
+    "receiver_entity": 2952,
+    "receiver_firm_consecutive_ticks": 90,
+    "first_ring_position": [
+      18.50017,
+      11.9,
+      -125.8585
+    ],
+    "actual_tower_support": 11,
+    "packaged_cues_played": [
+      "arrival_iona_empty_record",
+      "arrival_iona_personnel_way",
+      "arrival_iona_mesh_lip",
+      "arrival_iona_first_ring"
+    ],
+    "gravity_factor": 1,
+    "deaths": 0,
+    "debug_placement": false,
+    "mission_hud_hidden": true,
+    "onward_same_life": {
+      "position": [
+        17.1384296417236,
+        11.8999996185303,
+        -125.986991882324
+      ],
+      "support": 11,
+      "firm": true,
+      "grounded": true
+    },
+    "original_full_fixture_pass": false,
+    "classification": "Introduced fixture expectation51 was wrong; native Simulation::kTowerEntityId is11. Actual route reached ring11; same-life onward motion observed separately. Original failure retained; corrected full fresh wrapper awaits CI.",
+    "runtime_stopped": true
+  },
+  "earliest_failure_and_repair": {
+    "classification": "introduced integration defect",
+    "trigger": "Native worker supported/Working but no opening recording scheduled at tick90",
+    "cause": "Main rendered worker facts into old ctx, then replaced ctx with_read_context before StoryGuidance sampled it.",
+    "repair": "Cache three native worker facts before view culling; fresh context copies them. Native getter remains once per render snapshot.",
+    "observed_after": "Actual packaged witness/approach/climb/arrival cues played in uninterrupted touch journey."
+  },
+  "material_evidence": {
+    "executor": "opening_sign_cleanup; actual isolated native bodies2560/2561/2562 through Godot MCP",
+    "failures": [],
+    "native_material_groups": 7,
+    "geometry_or_support_changed": false,
+    "scope": "Isolated render/selection; whole-world appearance and device performance unobserved."
+  },
+  "unverified": [
+    "Corrected complete CI fixture in a fresh process",
+    "Matching green-CI APK for this batch",
+    "Physical-device appearance, audio listening and game feel",
+    "Full upper-world storyline and final Crown encounter"
+  ]
+}

@@ -110,7 +110,7 @@ func present(state: Dictionary, delta: float) -> void:
 	_chapter.text = _copy(state, "chapter")
 	_objective_text.text = _copy(state, "objective")
 	_detail.text = _copy(state, "detail")
-	_objective.visible = not _objective_text.text.is_empty()
+	_objective.visible = bool(state.get("objective_visible", true)) and not _objective_text.text.is_empty()
 
 	var line := _copy(state, "transmission")
 	var id_value: Variant = state.get("transmission_id", 0)

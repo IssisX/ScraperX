@@ -151,25 +151,25 @@ The opening has no compulsory camera flight, waiting room, forced drive, or lock
 | Chapter | **1 · EMPTY ON PAPER** |
 | Objective | **Reach Freight One** |
 | Detail | **Find firm footing on the tower's first freight ring, 11 m up.** |
-| Transmission ID | `receiving_iona_come_look` |
+| Transmission ID | `arrival_iona_empty_record` |
 | Speaker | **IONA** |
-| Transmission | **Ro. You're in Receiving. Your name's still on the handover. Come look at what it calls empty.** |
+| Transmission | **Ro. They used your name to call this yard empty. That man is still working. Get to Freight One, eleven metres up. We need the original handover.** |
 
-This is a short authored dispatch message with actual spoken audio. The owner requires real recorded or synthesized voices; text is the accessible transcript, not a substitute for speech. Five Iona opening Ogg recordings now exist under `godot/audio/story_radio/`, with exact text and asset paths in `manifest.json` and generation receipts alongside it. Their existence does not prove successful game playback or acceptable delivery by ear; those checks remain separate. Iona is an authored radio contact; no visible NPC, simulated radio network or online service is claimed. The short contact-card scene below uses locally recorded dialogue as a fictional live exchange. The recorded opening and transcript remain available during ordinary movement.
+This short dispatch uses actual recorded speech. It starts from fresh native footing and the actual supported yard worker welding; a missing, unsupported or non-working actor cannot trigger the claim that he is still working. The visible worker is a separate physical character, not a claim that Iona is present. Nine Iona opening recordings exist under `godot/audio/story_radio/`, including four `arrival_iona_*` recordings added on October21. Exact text, asset paths and generation receipts are retained. Asset existence does not prove audible device delivery.
+
+The objective and detail above remain narrative state, with the permanent mission card hidden during ordinary play. Brief captions accompany actual speech. The title, radio and story never capture touch or stop the player.
 
 The player can move immediately. The objective identifies a place and an outcome, rather than ordering a specific machine interaction. Receiving wayfinding should identify the actual tower access and actual machinery positions. It must not point through a wall or imply a complete route that has not been built.
 
 ### Beat 2 — A Working Yard
 
-The player finds useful industrial choices within the existing yard. Use at most one relevant cue for the opportunity being inspected. Do not deliver all of these as a sequence of radio interruptions.
+The supported worker welds, notices the approaching player and points down the open personnel approach. His spatial welding sound stops when he lifts the electrode. The stock streets frame real usable ground; navigation placards are removed. The crane and forklift remain optional working machinery.
 
 | Actual situation | Short cue | Meaning |
 |---|---|---|
-| Approaching the forklift/cargo work area | **IONA: Truck still works. Heavy things still weigh what they weigh.** | The truck is usable machinery, with real cargo and stability. It is an opportunity, not a required button press. |
-| First inspection of the local dispatch-height gallery | **RECEIVING: Dispatch gallery above. Make your footing before you climb.** | A local supported place can be reached using real cargo placement. A sign or note can supply this line. |
-| Approaching the crane's real operator access | **IONA: Freight One's above the receiving docks. The crane can take the truck. You don't have to go with it.** | A freight solution exists; personal ascent is allowed to differ. |
-| Approaching the existing net/tower access | **ACCESS: Freight One · 11 m. Check your receiving footing.** | A valid climbing route is not treated as cheating. |
-| Inspecting the carried gun or local practice opportunity | **RO: Same kit. Different building.** | The gun is already carried equipment. No acquisition errand is invented. |
+| Firm grade in the actual personnel approach, while no machine is being operated | **IONA: The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.** | `arrival_iona_personnel_way`, once. The crane is not required for personal ascent. |
+| Actual native hanging/climbing on the personnel mesh above grade | **IONA: There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.** | `arrival_iona_mesh_lip`, once. Proximity or airborne height alone does not claim attachment. |
+| Supported first freight receiver | **IONA: That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.** | `arrival_iona_first_ring`. Real footing reveals an actual onward route. |
 
 Operational controls remain contextual machine/tool instruction owned by their existing systems. Story copy must not pretend that “Action” automatically rigs a load, establishes support, or safely drives a truck. Ro's familiarity is characterization, not a reason to hide necessary touch-control information.
 
@@ -195,17 +195,18 @@ These environmental notes and this exchange are authored additions. The gallery'
 
 When the player actually stands on the first tower ring with valid native footing, the local objective is complete. A truck resting on the dock, the player passing 11 m in flight, or boarding a vehicle above the ring does not prove the player arrived on supported tower footing.
 
-**Transmission ID:** `freight_one_iona_crown`  
-**Speaker:** IONA  
-**Text:** “Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.”
+**Transmission ID:** `arrival_iona_first_ring`
 
-**Optional player reply:** “Then we separate it first.”
+**Speaker:** IONA  
+**Text:** “That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.”
+
+Cabinet2560, duct2561 and vent2562 share cached, worn service finishes. Their existing geometry, mounts, physical contacts and route remain authoritative. The finish distinguishes a maintained installation without arrows, glowing targets or a new collision path. The vent reaches the actual +22m receiver; +33m is the following service walk.
 
 **Chapter:** `THE COMMON WAY`  
 **Objective:** `Reach the Crown service deck`  
-**Detail:** `The shared return ends at 1,600 m. Keep finding real ways up.`
+**Detail:** `Cabinet, then duct, then vent stack: the existing service route reaches +22 M.`
 
-This message states the authored campaign problem. It must not accompany a false claim that the full Crown route or final machine is already implemented. The current shipping batch's actual content boundary must remain explicit in its delivery records.
+The chapter and long objective remain narrative state rather than a permanent screen card. The retained `freight_one_iona_crown` recording states the campaign problem for later contextual use; this first receiver no longer plays it instead of immediate onward direction. The larger Crown story and final machine remain required unfinished content, not a claim of completion.
 
 Once the player understands the long objective, the next local hint names a nearby authored opportunity the player can actually reach from their current route. It does not continuously replace the summit purpose with an unrelated list of chores.
 
@@ -229,7 +230,7 @@ The guide answers three questions in plain language: **Why does this matter? Whe
 
 - **Keep purpose stable.** “Reach the Crown and free the common freight connection” survives a different route, a fall, or an optional repair. Local objectives explain the nearest useful opportunity without erasing that purpose.
 - **Name destinations and results.** Prefer “Stand on Freight One” or “Leave the load supported at the receiving deck” to “Use forklift, then use crane.” A player who makes the result another way gets the result.
-- **Let the world teach technique.** Load shapes, receiving space, actual controls, motion, support, signs, sounds, and short contextual cues should make an operation legible. Dialogue cannot compensate for an unusable receiver or invisible route.
+- **Let the world teach technique.** Load shapes, receiving space, actual controls, motion, support, coherent materials, character gestures and spatial sound make an operation legible. Dialogue cannot compensate for an unusable receiver or invisible route. Owner direction October21 removes navigation signs and instruction placards throughout the world; functional controls, equipment IDs, company fiction and discoverable story paperwork are separate. Do not replace the removed placards with arrows, a permanent mission card or another wall of instructions.
 - **Separate arrival from service.** A supported personal arrival can finish a traversal objective. A freight objective needs the actual specified vehicle/load at its real receiver. A loaded route can remain unfinished after Ro takes a shortcut.
 - **Respect present knowledge.** Iona can explain Receiving; Nadi can explain discovered routes; Dev can explain the held upper plant. Nobody announces an unseen success because a mission flag advanced.
 - **Make silence normal.** Trigger dialogue from a new meaningful situation. Suppress or defer it during acute falls and precise machine work. Do not restart the same line whenever the player enters a radius.
@@ -257,7 +258,7 @@ The distinction below is part of the narrative contract. Fiction can define the 
 
 | Material | Source-grounded physical content at the 2026-10-20 narrative baseline | Narrative authorship still needed |
 |---|---|---|
-| Receiving arrival | Shipping `src/bridge/scraperx_simulation.cpp` selects `InitialSpawn::FreightYardArrival`; `src/sim/simulation/queries.cpp` supplies the yard arrival. Existing workshop/stock, truck/cargo, and crane give a real opening setting. Five generated Iona recordings and their manifest now exist in `godot/audio/story_radio/`; their game playback and listening acceptance are separate. | Opening integration and acceptance, signs, and receiving paperwork. No existing visible Iona or simulated resident is claimed. |
+| Receiving arrival | Shipping bridge selects `InitialSpawn::FreightYardArrival`. A supported physical yard worker, spatial welding, actual stock streets and working machinery form the opening. Four new recorded `arrival_iona_*` cues join the retained library; guidance observes native facts and hides the permanent mission card. | Continuous journey and matching batch delivery are tracked in the live checkpoint; whole-yard device feel and listening require actual play. No visible Iona is claimed. |
 | Forklift/gallery | Existing independent 600 kg crates and +5.9 m gallery; native gallery entity `1440`. Actual supported cargo placement can create personal access. The beam is a handling prop, not proof of a required gap. | Optional dispatch identity and environmental story on the gallery. It is not a required campaign gate. |
 | Crane and first freight ring | Existing crane and supported receiving infrastructure include an accepted same-truck transfer to +11 m. The +22 m dock exists as content; the broader transfer is not credited as accepted by this document. | Freight One place name and outcome-based story acknowledgement. “The crane took your truck” is conditional on actual freight state. |
 | Other first-ring access | Existing net/receiver approach offers another +11 m access opportunity; tower rings share an entity identity, so support identity alone does not distinguish altitude. | Alternate arrival acknowledgement and local wayfinding. No mandatory crane checklist. |

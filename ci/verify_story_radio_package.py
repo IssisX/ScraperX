@@ -12,6 +12,10 @@ import zipfile
 
 # Preserve opening/discovery and double dialogue; require the terminal handover recordings.
 REQUIRED_CUES = {
+    'arrival_iona_empty_record': 'IONA',
+    'arrival_iona_personnel_way': 'IONA',
+    'arrival_iona_mesh_lip': 'IONA',
+    'arrival_iona_first_ring': 'IONA',
     'receiving_iona_come_look': 'IONA',
     'receiving_iona_freight_one': 'IONA',
     'freight_one_iona_crown': 'IONA',

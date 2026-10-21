@@ -2,7 +2,6 @@ extends RefCounted
 ## Authored west-apron practice network. Native SolidExport owns all collision.
 ## Construction alone is not route acceptance; see PARKOUR_YARD_LAYOUT_20261015.
 const WorldGeometry := preload("res://presentation/world_geometry.gd")
-const RouteMarkings := preload("res://presentation/parkour_route_markings.gd")
 const YARD_OFFSET := Vector3(4.0, 0.0, 0.0)
 # Local deck-top centres. The alternating maintenance perches branch off the
 # existing2.4m gallery; native export supplies their actual collision.
@@ -45,9 +44,6 @@ func build() -> void:
 	# The service aisle remains an ordinary walkable recovery route.
 	for z in [-54.0, -66.0, -78.0, -90.0, -99.0]:
 		_box("ParkourPaint", Vector3(0.12, 0.003, 3.0), Vector3(-50.0, 0.004, z), _paint)
-	RouteMarkings.build(_g, _root, _paint)
-	RouteMarkings.upper_gallery(_g, _root, _paint, UPPER_GALLERY_PERCHES)
-	RouteMarkings.wall_exit(_g, _root, _paint, WALL_EXIT_TOP)
 
 func _utility_bay() -> void:
 	# Ground-bearing concrete equipment plinths: 1.6m gaps, 2.4m landings.

@@ -5,6 +5,7 @@ Offline authoring only; Python stdlib plus ffmpeg/ffprobe. No runtime service.
 The hosted model uses fixed bundled voice IDs, never an uploaded reference.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -14,6 +15,10 @@ import urllib.request
 BASE = 'https://pendrokar-kokoro-tts.hf.space'
 API = BASE + '/gradio_api/call/predict'
 CUES = {
+    'arrival_iona_empty_record': 'Ro. They used your name to call this yard empty. That man is still working. Get to Freight One, eleven metres up. We need the original handover.',
+    'arrival_iona_personnel_way': 'The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.',
+    'arrival_iona_mesh_lip': "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
+    'arrival_iona_first_ring': "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
     'receiving_iona_come_look': 'Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.',
     'receiving_iona_freight_one': 'Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.',
     'freight_one_iona_crown': 'Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.',
@@ -107,6 +112,7 @@ def main():
             clean.write_bytes(speech)
             receipt[cue_id] = {'event_id': event_id, 'text': text,
                                'speaker': speaker, 'voice_id': voice_id,
+                               'generated_utc': datetime.now(timezone.utc).isoformat(),
                                'clean_sha256': hashlib.sha256(speech).hexdigest()}
             receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=False) + '\n')
         elif receipt.get(cue_id, {}).get('text') != text:
@@ -131,6 +137,8 @@ def main():
              '-of', 'default=noprint_wrappers=1:nokey=1', str(target)], text=True))
         cues[cue_id] = {'file': 'res://audio/story_radio/' + target.name,
                         'speaker': speaker, 'text': text, 'duration_s': duration}
+        if accepted.get('generated_utc'):
+            cues[cue_id]['generated_utc'] = accepted['generated_utc']
         receipt[cue_id]['radio_sha256'] = hashlib.sha256(target.read_bytes()).hexdigest()
         print(cue_id, duration, target.stat().st_size, flush=True)
     receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=False) + '\n')

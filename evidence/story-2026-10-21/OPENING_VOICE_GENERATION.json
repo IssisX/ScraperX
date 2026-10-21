@@ -1,0 +1,46 @@
+[
+  {
+    "command": [
+      "python",
+      "tools/generate_story_radio.py",
+      "--only",
+      "arrival_iona_empty_record"
+    ],
+    "exit": 0,
+    "seconds": 11.035465934022795,
+    "output": "generation_event 3fe743a54e4d45f3b70ed309a73761f9\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\narrival_iona_empty_record 10.2 68260\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  },
+  {
+    "command": [
+      "python",
+      "tools/generate_story_radio.py",
+      "--only",
+      "arrival_iona_personnel_way"
+    ],
+    "exit": 0,
+    "seconds": 9.39962713199202,
+    "output": "generation_event 0a7b22016e234c64829d6acce1a500c7\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\narrival_iona_personnel_way 7.8 52840\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  },
+  {
+    "command": [
+      "python",
+      "tools/generate_story_radio.py",
+      "--only",
+      "arrival_iona_mesh_lip"
+    ],
+    "exit": 0,
+    "seconds": 8.983369893045165,
+    "output": "generation_event 3471a8464515476bac31e8c724a32826\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\narrival_iona_mesh_lip 5.9 40165\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  },
+  {
+    "command": [
+      "python",
+      "tools/generate_story_radio.py",
+      "--only",
+      "arrival_iona_first_ring"
+    ],
+    "exit": 0,
+    "seconds": 12.749674005026463,
+    "output": "generation_event ddd2f7e6450b4519a16f8577cdd54b40\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\narrival_iona_first_ring 10.7 71090\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  }
+]

@@ -8,6 +8,10 @@ const TICKS_PER_SECOND := 90
 const INTRO_TICKS := 7 * TICKS_PER_SECOND
 const TRANSMISSION_TICKS := 11 * TICKS_PER_SECOND
 const CUES := {
+	&"arrival_iona_empty_record": "Ro. They used your name to call this yard empty. That man is still working. Get to Freight One, eleven metres up. We need the original handover.",
+	&"arrival_iona_personnel_way": "The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.",
+	&"arrival_iona_mesh_lip": "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
+	&"arrival_iona_first_ring": "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
 	&"receiving_iona_come_look": "Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.",
 	&"receiving_iona_freight_one": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
 	&"freight_one_iona_crown": "Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.",
@@ -17,6 +21,7 @@ const CUES := {
 	&"vale_contact_iona": "They asked for next of kin. Not a fucking recommendation."
 }
 const SERVICE_WALKS := [
+	[22.0, "VENT STACK RECEIVER"],
 	[33.0, "EXTERIOR SERVICE WALK"], [44.0, "SWINGING STAIR LANDING"],
 	[66.0, "UPPER SERVICE FRAME"], [88.0, "BRACED WORKSITE"],
 	[110.0, "NORTH FRAME"], [121.0, "SUSPENDED LADDER LANDING"],
@@ -140,8 +145,12 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 		_origin = _observation.position
 		_last_deaths = _observation.deaths
 		_intro_at_arrival = _origin.distance_to(Vector3(-94, 1.2, -44)) < 4.0
-		if _intro_at_arrival:
-			_say(&"receiving_iona_come_look", tick)
+	if fresh and _intro_at_arrival and _observation.firm \
+			and bool(context.get("yard_worker_present", false)) \
+			and bool(context.get("yard_worker_supported", false)) \
+			and int(context.get("yard_worker_activity", -1)) == 0 \
+			and not _heard.has(&"arrival_iona_empty_record"):
+		_say(&"arrival_iona_empty_record", tick)
 	if fresh and _observation.deaths != _last_deaths:
 		_last_deaths = _observation.deaths
 		_double_encounter.cancel_attention()
@@ -150,9 +159,16 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 	if fresh and _on_tower_access():
 		_arrival_seen = true
 		_last_supported_height = _observation.position.y - .9
-		_say(&"receiving_iona_keep_the_height" if _observation.position.y > 34.0 else &"freight_one_iona_crown", tick)
-	elif fresh and not _arrival_seen and _intro_at_arrival and tick > _transmission_until:
-		_say(&"receiving_iona_freight_one", tick)
+		_say(&"receiving_iona_keep_the_height" if _observation.position.y > 34.0 else &"arrival_iona_first_ring", tick)
+	elif fresh and not _arrival_seen and _intro_at_arrival and tick > _transmission_until \
+			and _observation.operating.is_empty():
+		var p := _observation.position
+		if _observation.hanging and p.x > 17.0 and p.x < 23.0 \
+				and p.z > -119.5 and p.z < -114.0 and p.y > 4.0:
+			_say(&"arrival_iona_mesh_lip", tick)
+		elif _observation.firm and p.z < -65.0 and p.z > -114.0 \
+				and p.x > -109.0 and p.x < 26.0 and p.y < 4.0:
+			_say(&"arrival_iona_personnel_way", tick)
 	if fresh and _contact_phase == 0 and context.get("story_discovery", &"") == &"vale_emergency_contact":
 		_contact_pending = true
 	if fresh and _contact_pending and tick > _transmission_until \
@@ -189,7 +205,7 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 
 	var objective_id := &"freight_one"
 	var objective := "REACH FREIGHT ONE  /  +11 M"
-	var detail := "Crane yard ahead, toward the tower. Reach its first freight ring; choose your route."
+	var detail := "The crew's hanging mesh reaches the first freight ring. The original handover is higher up."
 	if _arrival_seen:
 		objective_id = &"crown"
 		objective = "REACH THE CROWN SERVICE DECK"
@@ -198,6 +214,8 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			if float(destination[0]) > _last_supported_height + .2:
 				detail = "NEARBY: %s  /  +%d M" % [destination[1], int(destination[0])]
 				break
+		if _last_supported_height < 21.8:
+			detail = "Cabinet, then duct, then vent stack: the existing service route reaches +22 M."
 		if not _on_tower_access() and _observation.position.y < 10.0:
 			objective_id = &"return_to_spine"
 			objective = "RETURN TO THE FREIGHT SPINE"
@@ -205,9 +223,9 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 		elif _heard.has(&"handover_iona_gallery") and not _heard.has(&"double_ro_who") and _last_supported_height < 253.2:
 			detail = "WITNESS: ARI WARD  /  BARREL HELIX LANDING  /  +253 M"
 	if _observation.operating == &"forklift":
-		detail = "Move cargo to open a route. The crane can carry this truck to the tower dock."
+		detail = "Move cargo to open routes. Personnel can climb the hanging mesh to Freight One."
 	elif _observation.station == &"yard_crane" or _observation.operating == &"yard_crane":
-		detail = "The crane can transfer the truck to the tower dock. Rig all four lifting eyes."
+		detail = "The crane transfers cargo to the dock; the hanging mesh is the personnel approach."
 	elif bool(context.get("grapple_line_attached", false)):
 		detail = "REEL IN draws you toward the hook. DROP releases; steer toward clear footing."
 	elif not _observation.grounded and not _observation.hanging and _observation.position.y > 4.0:
@@ -217,7 +235,7 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 	var intro_visible := _intro_at_arrival and tick - _start_tick < INTRO_TICKS \
 		and _observation.position.distance_to(_origin) < 3.0
 	return {"intro_title": "SCRAPERX", "intro_subtitle": "THE EXCHANGE  /  RECEIVING", "intro_visible": intro_visible,
-		"chapter": "THE COMMON WAY" if _arrival_seen else "1 / EMPTY ON PAPER", "objective_id": objective_id, "objective": objective, "detail": detail,
+		"chapter": "THE COMMON WAY" if _arrival_seen else "1 / EMPTY ON PAPER", "objective_id": objective_id, "objective": objective, "detail": detail, "objective_visible": false,
 		"transmission_key": _cue_key,
 		"transmission_id": _transmission_id, "speaker": _speaker if tick <= _transmission_until else "",
 		"transmission": _line if tick <= _transmission_until else ""}

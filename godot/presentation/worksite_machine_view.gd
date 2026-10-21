@@ -423,8 +423,6 @@ func build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Mater
 		INTAKE_BAY_WALL_THICKNESS),
 		Vector3(0.0, INTAKE_THROAT_HEIGHT + lintel_height * 0.5, INTAKE_BAY_FRONT_Z),
 		concrete, bay)
-	_geometry.add_sign_text("STAIR A", Vector3(0.0, 4.1, INTAKE_BAY_FRONT_Z + 0.4), 0.0, 0.5,
-		Color("d8b45a"), bay)
 
 	# MOD-DOG-A. The pivot sits on the hinge line so the plate swings exactly
 	# as the native hinge does; _render_snapshot drives its yaw.
@@ -545,8 +543,6 @@ func build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Mater
 	_geometry.add_box_to("IntakeHandoff", Vector3(8.0, 0.4, handoff_depth),
 		Vector3(INTAKE_HANDOFF_CENTER_X, INTAKE_HANDOFF_Y + tread_surface - 0.2,
 			(INTAKE_HANDOFF_SOUTH_Z + INTAKE_HANDOFF_NORTH_Z) * 0.5), timber, bay)
-	_geometry.add_sign_text("+24", Vector3(INTAKE_HANDOFF_CENTER_X, INTAKE_HANDOFF_Y + 1.6,
-		INTAKE_HANDOFF_SOUTH_Z - 0.2), 0.0, 0.9, Color("c8a04a"), bay)
 
 	# MOD-SKIN-LADDER-S: the exposed bypass, stepping north up the apron.
 	var head_z := INTAKE_HANDOFF_SOUTH_Z + INTAKE_SKIN_RUNG_HALF_Z
@@ -755,9 +751,6 @@ func build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Mater
 		Vector3(LEGAL_FORTY_MID_LANDING_X, LEGAL_FORTY_MID_LANDING_SURFACE_Y - 0.18,
 			LEGAL_FORTY_MID_LANDING_Z),
 		galvanised, forty)
-	_geometry.add_sign_text("+32", Vector3(LEGAL_FORTY_MID_LANDING_X, LEGAL_FORTY_MID_LANDING_SURFACE_Y + 1.6,
-		LEGAL_FORTY_MID_LANDING_Z + LEGAL_FORTY_MID_LANDING_HALF_Z - 0.2),
-		0.0, 0.9, Color("c8a04a"), forty)
 
 	# ---- MOD-HALL-DECK, four strips tiling the deck minus its well ----------
 	var well_min_x := LEGAL_FORTY_WELL_X - LEGAL_FORTY_WELL_HALF_X
@@ -789,8 +782,6 @@ func build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Mater
 	_geometry.add_box_to("HallDeckEast", Vector3(east_hx * 2.0, LEGAL_FORTY_HALL_DECK_HALF_THICKNESS * 2.0,
 		LEGAL_FORTY_WELL_HALF_Z * 2.0),
 		Vector3(east_cx, deck_center_y, LEGAL_FORTY_WELL_Z), timber, forty)
-	_geometry.add_sign_text("+40", Vector3(0.0, LEGAL_FORTY_HALL_DECK_SURFACE_Y + 1.6, deck_max_z - 0.2),
-		0.0, 0.9, Color("c8a04a"), forty)
 
 	# ---- MOD-SKIN-LADDER-S continuation, rungs 16-20, and its walkway -------
 	for rung in range(LEGAL_FORTY_SKIN_RUNG_FIRST, LEGAL_FORTY_SKIN_RUNG_LAST + 1):

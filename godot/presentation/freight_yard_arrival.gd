@@ -22,7 +22,6 @@ func build() -> Array[SpotLight3D]:
 	var timber := _g.material(Color("837054"), 0.0, 0.94, Color.BLACK, 1.0, _g.bump_timber)
 	var concrete := _g.material(Color("65645c"), 0.0, 0.96, Color.BLACK, 1.0, _g.bump_concrete)
 	var yellow := _g.material(Color("b7a15d"), 0.05, 0.86)
-	var white := _g.material(Color("c6c9b9"), 0.0, 0.94)
 	# A 28m clear-span open canopy frames both machines without placing a
 	# post in the truck's proven turning arc (-102..-86 X, -58..-47.5 Z).
 	for x in [-106.0, -78.0]:
@@ -33,7 +32,6 @@ func build() -> Array[SpotLight3D]:
 	for z in [-41.0, -34.5, -28.0]:
 		_box("YardStructure", Vector3(28.0, 0.24, 0.18), Vector3(-92, 4.54, z), steel)
 	_box("YardStructure", Vector3(27.6, 0.62, 0.12), Vector3(-92, 4.15, -41), blue)
-	_sign("FREIGHT  /  RECEIVING 01", Vector3(-92, 4.15, -40.91), 0.005, Color("e2cf8c"))
 	# Usable side work surfaces leave the centre and all freight approaches clear.
 	for z in [-31.0, -37.0]:
 		_box("YardStock", Vector3(2.0, 0.14, 4.4), Vector3(-104, 0.92, z), timber)
@@ -63,33 +61,20 @@ func build() -> Array[SpotLight3D]:
 	_container(Vector3(-75, 0, -94), 6.1, oxide, steel)
 	_beam_stock(Vector3(-111, 0, -94), steel, oxide, timber)
 	_plate_stock(Vector3(-75, 0, -108), steel, oxide, timber)
-	_sign("02 / STEEL STORE", Vector3(-112, 3.95, -65.78), 0.003, Color("e0d6b5"))
-	_sign("RECEIVING / 03", Vector3(-75, 1.95, -62.78), 0.0025, Color("e0d6b5"))
-	_sign("RIGGING STORE", Vector3(-75, 1.95, -90.83), 0.0022, Color("e0d6b5"))
 	# Flush paint reserves a 4m walking/service strip on the east side of
 	# the open truck aisle, then ends at the existing crane approach pad.
 	# Paint does not pretend to supply collision or native route authority.
 	for z in range(-58, -138, -4):
 		for x in [-85.0, -81.0]:
 			_box("YardPaint", Vector3(0.10, 0.003, 2.4), Vector3(x, 0.005, z), yellow)
-	for z in [-80.0, -104.0, -128.0]:
-		for side in [-1.0, 1.0]:
-			_box("YardPaint", Vector3(0.12, 0.003, 1.0), Vector3(-83 + side * 0.26, 0.008, z), white, side * 0.55)
 	# Raised hoses/handrails are real steel; no decorative invisible obstacles.
 	_box("YardStructure", Vector3(0.16, 1.1, 4.6), Vector3(-77.8, 0.55, -35), steel)
 	for z in [-37.1, -32.9]:
 		_box("YardStructure", Vector3(0.16, 1.4, 0.16), Vector3(-77.8, 0.7, z), yellow)
-	# Flush lane paint points toward the existing truck and then the crane aisle.
+	# Existing warehouse lane boundaries leave the actual vehicle aisle clear.
 	for z in range(-62, -38, 4):
 		for x in [-103.2, -96.8]:
 			_box("YardPaint", Vector3(0.12, 0.003, 2.4), Vector3(x, 0.005, z), yellow)
-	for z in [-38.0, -41.0, -44.0]:
-		var at := Vector3(-93.4, 0.008, z)
-		_box("YardPaint", Vector3(0.13, 0.003, 1.0), at + Vector3(-0.28, 0, 0), white, -0.55)
-		_box("YardPaint", Vector3(0.13, 0.003, 1.0), at + Vector3(0.28, 0, 0), white, 0.55)
-	_sign("MATERIAL HANDLING", Vector3(-100, 0.012, -43), 0.004, Color("b7a15d"), true)
-	_sign("FORKLIFT 01", Vector3(-101.8, 2.6, -41.2), 0.0035, Color("e0d6b5"))
-	_sign("CRANE YARD  /  TOWER ACCESS", Vector3(-83, 2.6, -41.2), 0.003, Color("e0d6b5"))
 	for x in [-105.7, -78.3]:
 		var flag := MeshInstance3D.new()
 		flag.name = "FreightPennant"
@@ -123,19 +108,6 @@ func build() -> Array[SpotLight3D]:
 func _box(part: String, size: Vector3, at: Vector3, material: Material, yaw := 0.0) -> void:
 	var mesh := _g.add_box_to(part, size, at, material, _root, yaw)
 	mesh.visibility_range_end = 180
-
-func _sign(text: String, at: Vector3, pixel: float, color: Color, floor_text := false) -> void:
-	var sign := Label3D.new()
-	sign.text = text
-	sign.font_size = 64
-	sign.pixel_size = pixel
-	sign.modulate = color
-	sign.outline_size = 0
-	sign.position = at
-	sign.visibility_range_end = 90
-	if floor_text:
-		sign.rotation.x = -PI / 2
-	_root.add_child(sign)
 
 # Closed freight containers, built from actual skin, corner posts, edge
 # rails, corrugation and locking bars. Every visible rib exports as stock;

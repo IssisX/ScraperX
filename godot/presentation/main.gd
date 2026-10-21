@@ -37,6 +37,9 @@ const YardWorkerView := preload("res://presentation/life/yard_worker_view.gd")
 const YardWorkerAudio := preload("res://presentation/audio/yard_worker_audio.gd")
 var _yard_worker_view: Node3D
 var _yard_worker_audio: Node3D
+# Snapshot rendering reads the native worker before context is rebuilt. Keep
+# these facts independent of view culling and copy them into that fresh context.
+var _yard_worker_observation: Dictionary = {}
 
 const ForkliftView := preload("res://presentation/forklift_view.gd")
 var _forklift_view: ForkliftView
@@ -1651,6 +1654,9 @@ func _read_context() -> Dictionary:
 		"position": position,
 		"velocity": velocity,
 		"grounded": grounded,
+		"yard_worker_present": bool(_yard_worker_observation.get("present", false)),
+		"yard_worker_supported": bool(_yard_worker_observation.get("supported", false)),
+		"yard_worker_activity": int(_yard_worker_observation.get("activity", -1)),
 		"support_entity": int(_native.get_support_entity_id()),
 		"checkpoint_footing_valid": bool(landing.get("checkpoint_footing_valid", false)),
 		"crouched": bool(_native.is_player_crouched()),
@@ -2591,6 +2597,9 @@ func _update_yard_worker(delta: float) -> void:
 	if _regression_scene:
 		return
 	var state: Dictionary = _native.get_yard_worker_state()
+	_yard_worker_observation = {"present": bool(state.get("present", false)),
+		"supported": bool(state.get("supported", false)),
+		"activity": int(state.get("activity", -1))}
 	var center: Vector3 = state.get("position", Vector3.ZERO)
 	var nearby := bool(state.get("present", false)) and center.is_finite() \
 		and _camera.global_position.distance_squared_to(center) < 576.0

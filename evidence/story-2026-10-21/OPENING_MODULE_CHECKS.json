@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+      "--script",
+      "res://tests/story_guidance_test.gd"
+    ],
+    "exit": 0,
+    "seconds": 2.872290050960146,
+    "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSTORY_GUIDANCE PASS checks=37 failures=0 supplied_native_facts_only=1\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+  },
+  {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+      "--script",
+      "res://tests/story_presenter_test.gd"
+    ],
+    "exit": 0,
+    "seconds": 2.0622684879926965,
+    "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSTORY_PRESENTER PASS checks=88 failures=0 supplied_state=1 input_transparent=1 layouts=5 world_physics=0\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+  }
+]

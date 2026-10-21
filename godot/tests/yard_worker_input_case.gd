@@ -77,7 +77,7 @@ func advance() -> Dictionary:
 			step(12)
 			if int(last_state.activity) == 2:
 				check(saw_point and last_state.look_target == last_state.guide_point,
-					"native pointing directs the player toward the crane yard")
+					"native pointing directs the player toward the personnel approach")
 				check(not main._yard_worker_view.welding_active() and not main._yard_worker_audio._arc.playing,
 					"looking up and pointing stop the electrode effect and sound")
 				main._open_pause()
