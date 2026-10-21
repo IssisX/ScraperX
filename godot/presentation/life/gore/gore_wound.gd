@@ -12,7 +12,7 @@ var flap_len := 0.06
 var bone_out := 0.05
 var cloth := Color(0.12, 0.14, 0.11)
 var skin := Color(0.78, 0.6, 0.52)
-var strands := 6
+var strands := 5
 var strand_len := Vector2(0.06, 0.2)
 
 var _band: MeshInstance3D
@@ -56,24 +56,33 @@ func setup(r: float, s: int, cloth_color: Color, skin_color: Color, flaps: float
 	flap_mat.roughness = 0.35
 	# Skin outside, blood inside: the flaps' inner faces read red.
 	var inner := ShaderMaterial.new()
-	inner.shader = Kit.shader("flap", """
+	inner.shader = Kit.shader("flap2", """
 shader_type spatial;
 render_mode cull_disabled;
 uniform vec4 skin : source_color;
 uniform vec4 cloth : source_color;
 float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float n(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
 void fragment() {
-	float b = COLOR.r * (0.6 + 0.4 * h(floor(UV * vec2(40.0, 12.0))));
-	vec3 outside = mix(cloth.rgb, skin.rgb, step(0.45, UV.y));
-	outside = mix(outside, vec3(0.4, 0.02, 0.02), b * 0.55);
-	vec3 inside = mix(vec3(0.6, 0.06, 0.05), vec3(0.85, 0.7, 0.45), step(0.8, h(floor(UV * 30.0))) * 0.5);
+	// Outside: the skin (or the cloth) soaked toward the torn margin, its very
+	// edge raw; inside: the raw underside, fat and blood.
+	float b = clamp(COLOR.r * 1.25 * (0.65 + 0.5 * n(UV * vec2(60.0, 9.0))), 0.0, 1.0);
+	vec3 outside = mix(cloth.rgb, skin.rgb, step(0.5, cloth.a));
+	outside = mix(outside, vec3(0.24, 0.01, 0.01), b);
+	vec3 inside = mix(vec3(0.35, 0.03, 0.025), vec3(0.72, 0.56, 0.32), smoothstep(0.55, 0.75, n(UV * vec2(90.0, 20.0))) * 0.6);
+	inside = mix(inside, vec3(0.15, 0.0, 0.0), b * 0.5);
 	ALBEDO = FRONT_FACING ? outside : inside;
-	ROUGHNESS = FRONT_FACING ? mix(0.75, 0.2, b) : 0.1;
-	SPECULAR = 0.7;
+	ROUGHNESS = mix(0.7, 0.25, b);
+	SPECULAR = 0.5;
 }
 """)
+
 	inner.set_shader_parameter("skin", skin)
-	inner.set_shader_parameter("cloth", cloth)
+	# cloth.a picks the outside: a = 1 bare skin, 0 the cloth.
+	inner.set_shader_parameter("cloth", Color(cloth.r, cloth.g, cloth.b, 1.0 if cloth.is_equal_approx(skin) else 0.0))
 	_end.set_surface_override_material(0, inner)
 	_end.set_surface_override_material(1, Kit.material("flesh"))
 	_end.set_surface_override_material(2, Kit.material("bone"))
@@ -184,7 +193,8 @@ func _draw_strands(cam: Camera3D) -> void:
 			var side := (b - a).cross(eye - a).normalized()
 			var wa := w0 * (1.0 - float(k) / pts.size()) + 0.0012
 			var wb := w0 * (1.0 - float(k + 1) / pts.size()) + 0.0012
-			var c := Color(0.55, 0.08, 0.07) if i % 2 == 0 else Color(0.86, 0.8, 0.68)  # tendon pale
+			# Tendon pale, vein dark, a strand of muscle.
+			var c: Color = [Color(0.8, 0.72, 0.6), Color(0.22, 0.04, 0.1), Color(0.42, 0.05, 0.04)][i % 3]
 			for v in [a - side * wa, a + side * wa, b + side * wb, a - side * wa, b + side * wb, b - side * wb]:
 				_im.surface_set_color(c)
 				_im.surface_add_vertex(v)

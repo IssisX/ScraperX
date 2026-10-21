@@ -167,9 +167,10 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 		victim.unruin()
 	# Drag: a smear behind the torso on the deck.
 	if claimed and beat == DRAG:
-		if _drag_last == Vector3.INF or _drag_last.distance_to(position) > 0.14:
-			var along := position - _drag_last if _drag_last != Vector3.INF else Vector3.FORWARD
-			fx.splat(Vector3(position.x, ground_y, position.z), Vector3.UP, 0.42, 1.0, along)
+		if _drag_last == Vector3.INF:
+			_drag_last = position
+		elif _drag_last.distance_to(position) > 0.14:
+			fx.splat(Vector3(position.x, ground_y, position.z), Vector3.UP, 0.26, 1.0, position - _drag_last)
 			_drag_last = position
 			smears += 1
 	else:

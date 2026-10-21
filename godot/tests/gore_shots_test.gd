@@ -236,6 +236,8 @@ func _run() -> void:
 	await _shot("fatal_7_fall_impact", Vector3(0.4, 1.8, 2.2), Vector3(-1.0, 0.1, 0.2), 55.0)
 	await _step(30)
 	await _shot("fatal_7_fall_ruin", Vector3(-0.2, 1.4, 1.5), Vector3(-1.0, 0.1, 0.2), 50.0)
+	var chest: Vector3 = _gore.victim.ribs[2].global_position
+	await _shot("fatal_7_ruin_chest_close", chest + Vector3(0.35, 0.45, 0.3), chest, 40.0)
 	_check(_gore.ruins == 1, "fall", "ruins %d" % _gore.ruins)
 	# Wipe: her hands down her apron.
 	_edge(8)

@@ -16,7 +16,11 @@ const CENTRE_ABOVE_SOLES := 0.9
 var body: Body
 var head: Node3D               # follows the head bone (blood from the mouth)
 var stumps: Array[Node3D] = []
-var ribs: Array[MeshInstance3D] = []
+var ribs: Array[MeshInstance3D] = []   # the crush's and the ruin's (tests)
+var _crush_ribs: MeshInstance3D
+var _crush_meat: MeshInstance3D
+var _burst_ribs: MeshInstance3D
+var _burst_meat: MeshInstance3D
 var _soak: ShaderMaterial   # body_gore: wounds, runs, the strained joint
 var _wound_r := [0.0, 0.0, 0.0, 0.0]
 var crush := 0.0
@@ -35,26 +39,19 @@ func build() -> void:
 	body.transform = Transform3D(Basis(Vector3.UP, PI), Vector3(0, -CENTRE_ABOVE_SOLES, 0))
 	head = Node3D.new()
 	add_child(head)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 77
-	for i in 6:
-		var rib := MeshInstance3D.new()
-		var c := CylinderMesh.new()
-		c.top_radius = 0.003
-		c.bottom_radius = 0.011
-		c.height = rng.randf_range(0.08, 0.14)
-		rib.mesh = c
-		rib.material_override = Kit.material("rib")
-		rib.visible = false
-		add_child(rib)
-		rib.set_meta("at", Vector3(rng.randf_range(-0.12, 0.12), rng.randf_range(1.2, 1.36), 0.14))
-		rib.set_meta("tilt", Vector3(PI * 0.5 + rng.randf_range(-0.5, 0.5), 0.0, rng.randf_range(-0.6, 0.6)))
-		ribs.append(rib)
+	# The ribcage, hidden until the knee goes in: a few ribs snapped through
+	# the front of the chest; at the ruin the cage burst open, the meat of
+	# the chest out over it.
+	var chest_frame := Transform3D(Basis(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0)), Vector3(0, 1.3, 0.12))
+	_crush_ribs = _part_mesh(Kit.ribcage(31, 5, 0.45), Kit.material("bone"), chest_frame)
+	_crush_meat = _part_mesh(Kit.wound_mass(0.05, 12), Kit.material("flesh"), chest_frame.translated_local(Vector3(0.02, -0.01, 0.0)))
+	_burst_ribs = _part_mesh(Kit.ribcage(57, 10, 1.0), Kit.material("bone"), chest_frame.translated_local(Vector3(0, 0.01, 0)))
+	_burst_meat = _part_mesh(Kit.wound_mass(0.1, 44), Kit.material("flesh"), chest_frame.translated_local(Vector3(0, -0.015, 0)))
 	for k in 4:
 		var w := Wound.new()
 		add_child(w)
 		w.setup(0.05 if k < 2 else 0.078, 100 + k, Color(0.72, 0.55, 0.47) if k < 2 else Color("24272c"),
-			Color(0.72, 0.55, 0.47), 0.05, 0.08 if k < 2 else 0.1)
+			Color(0.72, 0.55, 0.47), 0.03, 0.08 if k < 2 else 0.1)
 		w.band_on = false   # the body's own overlay shows the strain
 		stumps.append(w)
 	_pose_lying()
@@ -126,13 +123,10 @@ func _place_wounds() -> void:
 			- body.skel.get_bone_global_rest(int(body.bone[root])).origin)).normalized()
 		stumps[k].global_transform = Transform3D(Basis(Quaternion(Vector3.UP, d)), r.origin + d * 0.02)
 	head.global_position = body.world_bone("head").origin + body.global_transform.basis * Vector3(0, 0.02, 0.09)
-	for rib in ribs:
-		rib.visible = crush > 0.55 or ruined
-		if rib.visible:
-			var at: Vector3 = rib.get_meta("at")
-			var tilt: Vector3 = rib.get_meta("tilt")
-			rib.global_transform = Transform3D(body.global_transform.basis * Basis.from_euler(tilt) *
-				Basis.from_scale(Vector3(1, 1.8 if ruined else 1.0, 1)), body.global_transform * (at + Vector3(0, 0, -0.02 * crush)))
+	_crush_ribs.visible = crush > 0.55 and not ruined
+	_crush_meat.visible = _crush_ribs.visible
+	_burst_ribs.visible = ruined
+	_burst_meat.visible = ruined
 
 
 ## Hit the bottom: flattened, twisted, what is left broken the wrong way.
@@ -150,6 +144,18 @@ func ruin() -> void:
 func unruin() -> void:
 	ruined = false
 	_pose_lying()
+
+
+# A mesh on the figure, in its model space (follows the body's root).
+func _part_mesh(mesh: Mesh, mat: Material, at: Transform3D) -> MeshInstance3D:
+	var m := MeshInstance3D.new()
+	m.mesh = mesh
+	m.material_override = mat
+	m.transform = at
+	m.visible = false
+	body.add_child(m)
+	ribs.append(m)
+	return m
 
 
 func head_position() -> Vector3:

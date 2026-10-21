@@ -41,7 +41,7 @@ func build_limb(k: int, seed: int) -> void:
 	wound = Wound.new()
 	add_child(wound)
 	wound.setup(0.05 if not is_leg else 0.078, seed, Color(0.72, 0.55, 0.47) if not is_leg else Color("24272c"),
-		Color(0.72, 0.55, 0.47), 0.07, 0.08 if not is_leg else 0.1)
+		Color(0.72, 0.55, 0.47), 0.035, 0.08 if not is_leg else 0.1)
 	wound.tear()
 
 

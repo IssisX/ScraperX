@@ -74,9 +74,9 @@ void fragment() {
 const FLESH_SHADER := """
 shader_type spatial;
 render_mode cull_disabled;
-uniform vec4 muscle : source_color = vec4(0.5, 0.06, 0.06, 1.0);
-uniform vec4 fat : source_color = vec4(0.86, 0.72, 0.42, 1.0);
-uniform vec4 blood : source_color = vec4(0.3, 0.005, 0.01, 1.0);
+uniform vec4 muscle : source_color = vec4(0.42, 0.045, 0.04, 1.0);
+uniform vec4 fat : source_color = vec4(0.82, 0.66, 0.36, 1.0);
+uniform vec4 blood : source_color = vec4(0.16, 0.0, 0.005, 1.0);
 uniform float wet = 1.0;
 float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float n(vec2 p) {
@@ -84,29 +84,48 @@ float n(vec2 p) {
 	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
 }
 void fragment() {
-	float fibre = n(vec2(UV.x * 90.0, UV.y * 6.0)) * 0.6 + n(vec2(UV.x * 220.0, UV.y * 14.0)) * 0.4;
-	vec3 m = muscle.rgb * (0.55 + 0.75 * fibre);
-	m = mix(m, fat.rgb * (0.8 + 0.3 * n(UV * 40.0)), COLOR.g);
-	m = mix(m, blood.rgb, clamp(COLOR.r * (0.7 + 0.5 * n(UV * 23.0)), 0.0, 1.0));
+	// Fibres run along UV.y; fine striation over coarse bundles.
+	float bundle = n(vec2(UV.x * 40.0, UV.y * 3.0));
+	float fibre = 0.6 * n(vec2(UV.x * 160.0, UV.y * 9.0)) + 0.4 * bundle;
+	vec3 m = muscle.rgb * (0.65 + 0.6 * fibre);
+	m = mix(m, vec3(0.62, 0.12, 0.1), smoothstep(0.7, 0.95, fibre) * 0.4);   // paler fascia
+	// Fat: lumpy globules, not stripes.
+	float glob = smoothstep(0.35, 0.6, n(UV * vec2(70.0, 25.0)));
+	vec3 f = fat.rgb * (0.75 + 0.3 * glob);
+	f = mix(f, vec3(0.55, 0.2, 0.1), (1.0 - glob) * 0.35);
+	m = mix(m, f, COLOR.g);
+	// Blood pooled in the folds, clotting dark.
+	float clot = clamp(COLOR.r * (0.6 + 0.6 * n(UV * 31.0)), 0.0, 1.0);
+	m = mix(m, blood.rgb, clot * 0.85);
 	ALBEDO = m;
-	ROUGHNESS = mix(0.6, 0.22, wet * (0.5 + 0.5 * COLOR.r) * fibre);
-	SPECULAR = 0.5;
-	SSS_STRENGTH = 0.0;
+	float wetness = wet * (0.4 + 0.6 * n(UV * vec2(23.0, 11.0)));
+	ROUGHNESS = mix(0.62, 0.2, wetness);
+	SPECULAR = 0.45;
+	BACKLIGHT = vec3(0.35, 0.03, 0.02);   // light through thin tissue
+	RIM = 0.25;
+	RIM_TINT = 0.8;
 }
 """
 
 const BONE_SHADER := """
 shader_type spatial;
-uniform vec4 bone : source_color = vec4(0.88, 0.84, 0.74, 1.0);
+uniform vec4 bone : source_color = vec4(0.84, 0.79, 0.68, 1.0);
 float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float n(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
 void fragment() {
-	float pit = h(floor(UV * vec2(60.0, 30.0)));
-	vec3 c = bone.rgb * (0.82 + 0.18 * pit);
-	// Marrow at the broken end (COLOR.g), blood smeared up the shaft (COLOR.r).
-	c = mix(c, vec3(0.32, 0.03, 0.03), COLOR.g);
-	c = mix(c, vec3(0.42, 0.02, 0.02), COLOR.r * (0.6 + 0.4 * pit));
+	float grain = n(UV * vec2(8.0, 60.0));
+	vec3 c = bone.rgb * (0.82 + 0.2 * grain);
+	c = mix(c, vec3(0.72, 0.52, 0.42), 0.25 * n(UV * 13.0));    // periosteum, pinkish
+	// Marrow: dark red, spongy.
+	c = mix(c, vec3(0.28, 0.03, 0.03) * (0.7 + 0.5 * h(floor(UV * 90.0))), COLOR.g);
+	// Blood smeared up from the meat.
+	c = mix(c, vec3(0.3, 0.015, 0.015), clamp(COLOR.r * (0.6 + 0.6 * n(UV * 20.0)), 0.0, 1.0));
 	ALBEDO = c;
-	ROUGHNESS = mix(0.55, 0.12, max(COLOR.r, COLOR.g));
+	ROUGHNESS = mix(0.5, 0.22, max(COLOR.r, COLOR.g));
+	SPECULAR = 0.4;
 }
 """
 
@@ -117,43 +136,72 @@ shader_type spatial;
 render_mode cull_disabled, depth_draw_never, blend_mix;
 uniform float seed = 0.0;
 uniform float age = 0.0;
-uniform float smear = 0.0;   // 0 round splat, 1 a drag smear along +x
+uniform float smear = 0.0;   // 0 a thrown splat (travelling +x), 1 a drag smear along +x
 uniform float alpha_scale = 1.0;
 float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed * 17.13) * 43758.5453); }
 float n(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
 	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
 }
+float fbm(vec2 p) { return 0.5 * n(p) + 0.25 * n(p * 2.03) + 0.125 * n(p * 4.1) + 0.0625 * n(p * 8.3); }
+// Thickness of the blood at p (0 none .. 1 deep): the main pool elongated
+// the way it travelled, a lobed irregular edge, a tail of drops thrown on
+// ahead, a few short directional streaks; for a smear, broken lanes.
+float thick(vec2 p) {
+	float t = 0.0;
+	if (smear < 0.5) {
+		vec2 q = p - vec2(-0.25, 0.0);
+		q.x *= 0.72;
+		float r = length(q);
+		float edge = 0.42 + 0.16 * (fbm(q * 3.0 + seed) - 0.5) * 2.0;
+		t = smoothstep(edge, edge - 0.12, r) * (0.6 + 0.4 * fbm(q * 6.0 + 3.0));
+		// Drops thrown on ahead (+x), shrinking with distance, along a wobbling line.
+		for (int i = 0; i < 9; i++) {
+			float fi = float(i);
+			float x = 0.2 + fi * 0.085 + 0.03 * h(vec2(fi, 1.0));
+			float y = (h(vec2(fi, 2.0)) - 0.5) * 0.18 * (1.0 + fi * 0.15);
+			float rr = 0.055 * (1.0 - fi / 10.0) * (0.6 + 0.6 * h(vec2(fi, 3.0)));
+			vec2 d = p - vec2(x, y);
+			d.x *= 0.8;
+			t = max(t, smoothstep(rr, rr * 0.4, length(d)) * 0.8);
+		}
+		// Two or three short streaks where it hit hardest.
+		float a = atan(q.y, q.x);
+		float streak = pow(n(vec2(a * 3.0, seed)), 5.0) * step(abs(a), 1.1);
+		t = max(t, smoothstep(edge + 0.25 * streak, edge + 0.25 * streak - 0.06, r) * step(0.2, streak) * 0.5);
+	} else {
+		// A body dragged through it: a broad wiped band, thinning and
+		// breaking up at its sides and ends, finger-like streaks off its tail.
+		float wob = (fbm(vec2(p.x * 1.5, seed)) - 0.5) * 0.3;
+		float band = smoothstep(0.5, 0.25, abs(p.y + wob));
+		float ends = smoothstep(1.0, 0.45 + 0.3 * fbm(vec2(p.y * 4.0, 2.0)), abs(p.x));
+		float grain = fbm(p * vec2(1.5, 9.0) + seed);
+		t = band * ends * smoothstep(0.25, 0.6, grain + 0.25 * band);
+	}
+	return t;
+}
 void fragment() {
 	vec2 p = (UV - 0.5) * 2.0;
-	p.x *= mix(1.0, 0.45, smear);
-	float r = length(p);
-	float a = atan(p.y, p.x);
-	float edge = 0.45 + 0.2 * n(vec2(a * 2.5, seed)) + 0.12 * n(vec2(a * 9.0, seed + 3.0));
-	// Tendrils thrown out from the core.
-	float spikes = pow(n(vec2(a * 14.0, seed + 9.0)), 6.0) * 0.55 * (1.0 - smear);
-	float body = 1.0 - smoothstep(edge + spikes - 0.04, edge + spikes, r);
-	// Satellite droplets.
-	vec2 cell = floor(p * 7.0);
-	vec2 cp = fract(p * 7.0) - 0.5;
-	float drop = step(0.82, h(cell)) * (1.0 - smoothstep(0.12, 0.2, length(cp - (vec2(h(cell + 1.0), h(cell + 2.0)) - 0.5) * 0.5)));
-	drop *= step(0.5, r) * (1.0 - step(0.98, r));
-	// Smear streaks.
-	// A drag: streaks along x, ragged and tapering at both ends.
-	float lanes = n(vec2(UV.y * 26.0, seed));
-	float len = 0.55 + 0.4 * lanes;
-	float taper = 1.0 - smoothstep(len * 0.6, len, abs((UV.x - 0.5) * 2.0));
-	float streak = smear * (1.0 - smoothstep(0.35 * taper, 0.45 * taper + 0.01, abs(p.y) * (1.0 + 0.6 * (1.0 - lanes))));
-	streak *= step(0.25, lanes + 0.3);
-	float m = clamp(max(max(body, drop), streak), 0.0, 1.0);
-	if (m < 0.02) { discard; }
-	float core = 1.0 - smoothstep(0.0, edge, r);
-	vec3 wet = mix(vec3(0.36, 0.012, 0.012), vec3(0.11, 0.0, 0.004), core * 0.85);
-	vec3 dry = vec3(0.12, 0.025, 0.018);
-	ALBEDO = mix(wet, dry, clamp(age / 90.0, 0.0, 0.7)) * (0.8 + 0.25 * n(UV * 30.0));
-	ALPHA = m * alpha_scale * (0.85 + 0.15 * core);
-	ROUGHNESS = mix(0.04, 0.6, clamp(age / 60.0, 0.0, 1.0));
-	SPECULAR = 0.9;
+	float t = thick(p);
+	if (t < 0.03) { discard; }
+	// The surface of the pool from its thickness: wet highlights round the
+	// meniscus of each lobe and drop.
+	float e = 0.02;
+	float tx = thick(p + vec2(e, 0.0)) - thick(p - vec2(e, 0.0));
+	float ty = thick(p + vec2(0.0, e)) - thick(p - vec2(0.0, e));
+	NORMAL_MAP = normalize(vec3(-tx * 2.5, -ty * 2.5, 1.0)) * 0.5 + 0.5;
+	NORMAL_MAP_DEPTH = 1.0;
+	float dry = clamp(age / 120.0, 0.0, 1.0);
+	// Thin at the edges: coagulated dark brown-red; thick: deep, almost black red.
+	vec3 thin = mix(vec3(0.3, 0.02, 0.015), vec3(0.16, 0.03, 0.02), dry);
+	vec3 deep = mix(vec3(0.17, 0.0, 0.004), vec3(0.08, 0.01, 0.008), dry);
+	float rim = smoothstep(0.03, 0.18, t) * (1.0 - smoothstep(0.18, 0.45, t));
+	vec3 c = mix(thin, deep, smoothstep(0.15, 0.7, t));
+	c = mix(c, vec3(0.1, 0.01, 0.005), rim * 0.6);      // the clotting edge
+	ALBEDO = c;
+	ALPHA = clamp(smoothstep(0.03, 0.12, t) * alpha_scale * (0.82 + 0.18 * t), 0.0, 1.0);
+	ROUGHNESS = mix(0.04, 0.55, dry) + rim * 0.2;
+	SPECULAR = 0.85;
 }
 """
 
@@ -183,12 +231,13 @@ void fragment() {
 		float size = mix(0.025, 0.11, h(fi * 5.3) * h(fi * 5.3));
 		vec2 d = (uv - c) * vec2(aspect, 1.0);
 		float a = atan(d.y, d.x);
-		float edge = size * (0.75 + 0.35 * n1(a * 2.0 + fi * 10.0) + 0.25 * n1(a * 7.0 + fi * 3.0));
+		float edge = size * (0.8 + 0.3 * n1(a * 1.5 + fi * 10.0) + 0.08 * n1(a * 6.0 + fi * 3.0));
 		float r = length(d);
 		float splash = 1.0 - smoothstep(edge * 0.85, edge, r);
 		// Thrown spatter around it.
-		float sp = pow(n1(a * 9.0 + fi * 5.0), 10.0);
-		splash = max(splash, (1.0 - smoothstep(edge * (1.0 + 0.5 * sp) - 0.004, edge * (1.0 + 0.5 * sp), r)) * step(0.5, sp));
+		// A drop or two flicked off it, not a starburst.
+		vec2 fl = d - vec2(cos(fi * 2.3), sin(fi * 2.3)) * edge * 1.5;
+		splash = max(splash, 1.0 - smoothstep(size * 0.12, size * 0.18, length(fl)));
 		// The run: down from its bottom, narrowing, as long as it has run.
 		float len = min(run * (0.05 + 0.18 * h(fi * 7.7)), 0.55) * step(0.35, size / 0.11);
 		float w = size * 0.28 * (1.0 - clamp((d.y - 0.0) / max(len, 1e-4), 0.0, 1.0) * 0.7);
@@ -436,154 +485,265 @@ static func _drop_texture() -> Texture2D:
 # --- the torn end -------------------------------------------------------------
 
 ## A ragged torn end, local +y out of the wound (away from the body it was
-## torn from). radius is the limb's; long_flaps for the severed piece (skin
-## drawn off it), bone_out how far the broken bone stands proud.
-## Returns a mesh with three surfaces: 0 skin/cloth flaps (uses `skin_mat`),
-## 1 flesh, 2 bone.
+## torn from). radius is the limb's; bone_out how far the broken bone stands
+## proud; flap_len how far the skin rim curls. Three surfaces: 0 the skin rim
+## (skin outside, raw inside), 1 the meat (muscle mass, fat layer, hanging
+## fibre strands), 2 the bone (one shaft, a jagged break, the marrow).
 static func torn_end(radius: float, seed: int, bone_out: float, flap_len: float) -> ArrayMesh:
-	var key := "torn_%.3f_%d_%.3f_%.3f" % [radius, seed, bone_out, flap_len]
+	var key := "torn2_%.3f_%d_%.3f_%.3f" % [radius, seed, bone_out, flap_len]
 	if _cache.has(key):
 		return _cache[key]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
+	var noise := FastNoiseLite.new()
+	noise.seed = seed
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = 1.0
+	noise.fractal_octaves = 3
 	var mesh := ArrayMesh.new()
-	_flaps(mesh, rng, radius, flap_len)
-	_flesh(mesh, rng, radius)
-	_bone(mesh, rng, radius * 0.36, bone_out)
+	_skin_rim(mesh, rng, noise, radius, flap_len)
+	_meat(mesh, rng, noise, radius)
+	_bone(mesh, rng, noise, radius * 0.36, bone_out)
 	_cache[key] = mesh
 	return mesh
 
 
-# Skin flaps: a ring of tongues of skin/cloth torn to different lengths,
-# curling out and down; vertex colour r is the blood on their inner faces.
-static func _flaps(mesh: ArrayMesh, rng: RandomNumberGenerator, r: float, flap_len: float) -> void:
+# The skin's torn edge: a ring round the wound, its top torn unevenly, the
+# torn margin curling outward and back like a rolled lip.
+static func _skin_rim(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseLite, r: float, curl_len: float) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var count := 13
-	for i in count:
-		var a0 := TAU * (float(i) + rng.randf_range(-0.2, 0.1)) / count
-		var a1 := TAU * (float(i + 1) + rng.randf_range(-0.1, 0.25)) / count
-		var length := flap_len * pow(rng.randf(), 1.6) + r * 0.08
-		var peel := rng.randf_range(0.05, 0.55)    # how far it has peeled back
-		var segs := 5
-		var rows := []
-		for sgi in segs + 1:
-			var t := float(sgi) / segs
-			# Wide at the tear, ragging to an uneven, rounded tip; peeling
-			# outward and sagging back toward the body as it goes.
-			var w := lerpf(1.0, rng.randf_range(0.35, 0.75), t * t)
-			var am := (a0 + a1) * 0.5 + rng.randf_range(-0.04, 0.04) * t
-			var half := (a1 - a0) * 0.5 * w
-			var out := r * (1.0 + 0.6 * peel * t)
-			var y := length * t * (1.0 - peel * 0.8 * t) - peel * length * 0.5 * t * t
-			var row := []
-			for k in 3:
-				var ak := am + half * (float(k) - 1.0)
-				var jag := (rng.randf_range(-0.25, 0.25) * length * 0.25) if sgi == segs else 0.0
-				row.append(Vector3(sin(ak) * out, y + jag, cos(ak) * out))
-			rows.append(row)
-		for sgi in segs:
-			for k in 2:
-				var q := [rows[sgi][k], rows[sgi][k + 1], rows[sgi + 1][k + 1], rows[sgi + 1][k]]
-				var t0 := float(sgi) / segs
-				var t1 := float(sgi + 1) / segs
-				var ts := [t0, t0, t1, t1]
-				for idx in [0, 1, 2, 0, 2, 3]:
-					st.set_color(Color(clampf(0.3 + 0.7 * ts[idx], 0.0, 1.0), 0.0, 0.0))
-					st.set_uv(Vector2((float(i) + (float(k) + (1.0 if idx in [1, 2] else 0.0)) * 0.5) / count, ts[idx]))
-					st.add_vertex(q[idx])
+	var sides := 40
+	var rows := 5
+	var grid := []
+	for row in rows + 1:
+		var t := float(row) / rows
+		var line := []
+		for side in sides + 1:
+			var a := TAU * float(side % sides) / sides
+			# How far this part of the margin tore free (0 a clean edge, 1 a long tongue).
+			var tongue := clampf(0.5 + 0.9 * noise.get_noise_1d(float(side % sides) * 0.35), 0.0, 1.0)
+			var reach := curl_len * (0.25 + 0.75 * tongue)
+			var arc := t * PI * 0.75 * (0.6 + 0.6 * tongue)     # rolling out and back
+			var out := r * 1.0 + sin(arc) * reach * 0.6
+			var y := -0.012 + sin(arc * 0.5) * reach * 0.55 - (1.0 - cos(arc)) * reach * 0.25
+			var lump := 1.0 + 0.06 * noise.get_noise_2d(a * 3.0, t * 4.0)
+			line.append(Vector3(sin(a) * out * lump, y, cos(a) * out * lump))
+		grid.append(line)
+	for row in rows:
+		for side in sides:
+			var q := [grid[row][side], grid[row][side + 1], grid[row + 1][side + 1], grid[row + 1][side]]
+			var uvs := [Vector2(float(side) / sides, float(row) / rows), Vector2(float(side + 1) / sides, float(row) / rows),
+				Vector2(float(side + 1) / sides, float(row + 1) / rows), Vector2(float(side) / sides, float(row + 1) / rows)]
+			for idx in [0, 1, 2, 0, 2, 3]:
+				st.set_color(Color(clampf(0.25 + 0.75 * uvs[idx].y, 0.0, 1.0), 0.0, 0.0))
+				st.set_uv(uvs[idx])
+				st.add_vertex(q[idx])
 	st.index()
 	st.generate_normals()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
 
 
-# The flesh: a lumpy, fibrous mound of torn muscle in a yellow fat ring,
-# strands of it standing proud; vertex colour r blood, g fat.
-static func _flesh(mesh: ArrayMesh, rng: RandomNumberGenerator, r: float) -> void:
+# The meat: a lumpy mass of torn muscle bellies swelling out of the wound,
+# ringed by the yellow fat under the skin, fibre bundles hanging off it.
+# Vertex colour r = blood (pooled in the folds), g = fat.
+static func _meat(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseLite, r: float) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var rings := 6
-	var sides := 18
-	var heights := []
-	for ring in rings + 1:
-		var row := []
-		for side in sides:
-			row.append(rng.randf_range(-0.25, 1.0))
-		heights.append(row)
-	var pts := []
-	for ring in rings + 1:
-		var row := []
-		var t := float(ring) / rings           # 0 rim .. 1 centre
-		for side in sides:
-			var a := TAU * side / sides
-			var rad := r * (1.08 - 1.08 * t)
-			var lump: float = heights[ring][side]
-			var y := r * (0.05 + 0.55 * sin(t * PI * 0.5)) + r * 0.28 * lump * t * (1.0 - t * 0.5)
-			row.append(Vector3(sin(a) * rad, y, cos(a) * rad))
-		pts.append(row)
-	for ring in rings:
-		for side in sides:
-			var n := (side + 1) % sides
-			var quad := [pts[ring][side], pts[ring][n], pts[ring + 1][n], pts[ring + 1][side]]
-			var fat := 0.55 if ring == 0 else 0.0
-			var blood := rng.randf_range(0.3, 0.9) if ring == 0 else rng.randf_range(0.1, 0.7)
-			for idx in [0, 1, 2, 0, 2, 3]:
-				st.set_color(Color(blood, fat, 0.0))
-				st.set_uv(Vector2(float(side) / sides, float(ring) / rings))
-				st.add_vertex(quad[idx])
-	# Muscle fibre bundles torn to different lengths.
-	for k in 14:
+	var lat := 10
+	var lon := 32
+	var bellies := []
+	for i in 5:
 		var a := rng.randf() * TAU
-		var d := rng.randf_range(0.2, 0.75) * r
-		var base := Vector3(sin(a) * d, r * 0.2, cos(a) * d)
-		var tip := base + Vector3(rng.randf_range(-0.4, 0.4) * r, rng.randf_range(0.3, 1.1) * r,
-			rng.randf_range(-0.4, 0.4) * r)
-		var w := r * rng.randf_range(0.07, 0.14)
-		var axis := (tip - base).normalized()
-		var side := axis.cross(Vector3.FORWARD if absf(axis.z) < 0.9 else Vector3.RIGHT).normalized()
-		var side2 := axis.cross(side).normalized()
-		# A torn bundle: a tapered four-sided tube, its end frayed.
-		var ring0 := [base + side * w, base + side2 * w, base - side * w, base - side2 * w]
-		var ring1 := [tip + side * w * 0.35, tip + side2 * w * 0.35, tip - side * w * 0.35, tip - side2 * w * 0.35]
-		for j in 4:
-			var jn := (j + 1) % 4
-			for v in [ring0[j], ring0[jn], ring1[jn], ring0[j], ring1[jn], ring1[j]]:
-				st.set_color(Color(0.3, 0.0, 0.0))
-				st.set_uv(Vector2(float(j) / 4.0, (v - base).length() / r))
+		bellies.append([Vector2(sin(a), cos(a)) * rng.randf_range(0.15, 0.65), rng.randf_range(0.25, 0.5), rng.randf_range(0.2, 0.55)])
+	var pts := []
+	var cols := []
+	for i in lat + 1:
+		var t := float(i) / lat                 # 0 rim .. 1 crown
+		var row := []
+		var crow := []
+		for j in lon + 1:
+			var a := TAU * float(j % lon) / lon
+			var rad := r * 0.96 * cos(t * PI * 0.5)
+			var xz := Vector2(sin(a), cos(a)) * rad
+			var h := r * 0.45 * sin(t * PI * 0.5)
+			var swell := 0.0
+			for b in bellies:
+				var d: float = (xz / r - (b[0] as Vector2)).length()
+				swell += float(b[2]) * exp(-d * d / (float(b[1]) * float(b[1])))
+			var n := noise.get_noise_3d(xz.x / r * 2.5, h / r * 2.5, float(rng.seed % 97))
+			h += r * (0.35 * swell + 0.12 * n) * smoothstep(0.0, 0.3, t)
+			var p := Vector3(xz.x, h - 0.005, xz.y) * (1.0 + 0.05 * n)
+			row.append(p)
+			# Fat in the outer band, blood pooled where the surface dips.
+			var fat := 1.0 - smoothstep(0.08, 0.2, t)
+			var blood := clampf(0.35 - 0.9 * n + 0.4 * (1.0 - swell), 0.0, 1.0)
+			crow.append(Color(blood, fat, 0.0))
+		pts.append(row)
+		cols.append(crow)
+	for i in lat:
+		for j in lon:
+			var ids := [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]]
+			for k in [0, 1, 2, 0, 2, 3]:
+				var ij: Array = ids[k]
+				st.set_color(cols[ij[0]][ij[1]])
+				st.set_uv(Vector2(float(ij[1]) / lon, float(ij[0]) / lat))
+				st.add_vertex(pts[ij[0]][ij[1]])
+	# Fibre bundles torn long: flat tapering ribbons sagging out and down
+	# over the rim, a few layered on each other.
+	for f in 7:
+		var a := rng.randf() * TAU
+		var d := rng.randf_range(0.3, 0.85) * r
+		var base := Vector3(sin(a) * d, r * 0.25, cos(a) * d)
+		var outward := Vector3(sin(a), 0.0, cos(a))
+		var side := Vector3(cos(a), 0.0, -sin(a))
+		var length := r * rng.randf_range(0.6, 1.5)
+		var w := r * rng.randf_range(0.1, 0.22)
+		var segs := 6
+		var prev_l := Vector3.ZERO
+		var prev_r := Vector3.ZERO
+		for sg in segs + 1:
+			var t := float(sg) / segs
+			var p := base + outward * length * 0.7 * t + Vector3(0, length * (0.35 * t - 0.9 * t * t), 0)
+			var ww := w * (1.0 - 0.75 * t)
+			var l := p - side * ww
+			var rr := p + side * ww
+			if sg > 0:
+				for v in [[prev_l, t - 1.0 / segs], [prev_r, t - 1.0 / segs], [rr, t], [prev_l, t - 1.0 / segs], [rr, t], [l, t]]:
+					st.set_color(Color(0.25 + 0.5 * float(v[1]), 0.0, 0.0))
+					st.set_uv(Vector2(0.5, float(v[1]) * 3.0))
+					st.add_vertex(v[0])
+			prev_l = l
+			prev_r = rr
+	st.index()
+	st.generate_normals()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+
+
+# The bone: one shaft out of the meat, snapped across at a slant with a
+# jagged lip, the marrow cavity dark inside; blood up it from the meat.
+# Vertex colour r = blood, g = marrow.
+static func _bone(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseLite, r: float, out: float) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var sides := 16
+	var slant := rng.randf_range(0.4, 0.9)
+	var slant_a := rng.randf() * TAU
+	var off := Vector3(rng.randf_range(-0.25, 0.25) * r, 0.0, rng.randf_range(-0.25, 0.25) * r)
+	var tops := []
+	for sd in sides:
+		var a := TAU * sd / sides
+		var top := out * (1.0 + slant * 0.5 * cos(a - slant_a))
+		top += out * 0.35 * noise.get_noise_1d(float(sd) * 1.7 + 40.0)
+		if sd % 5 == 0:
+			top += out * 0.3            # a splinter
+		tops.append(maxf(top, out * 0.25))
+	var rings := 4
+	for sd in sides:
+		var nx := (sd + 1) % sides
+		var a0 := TAU * sd / sides
+		var a1 := TAU * nx / sides
+		for ring in rings:
+			var t0 := float(ring) / rings
+			var t1 := float(ring + 1) / rings
+			var verts := []
+			for pr in [[a0, t0, tops[sd]], [a1, t0, tops[nx]], [a1, t1, tops[nx]], [a0, t1, tops[sd]]]:
+				var swell := 1.0 + 0.12 * (1.0 - float(pr[1]))     # flaring toward the joint end
+				var y := -0.01 + float(pr[2]) * float(pr[1])
+				verts.append([off + Vector3(sin(pr[0]) * r * swell, y, cos(pr[0]) * r * swell), clampf(0.8 - 1.4 * float(pr[1]), 0.0, 1.0)])
+			for idx in [0, 1, 2, 0, 2, 3]:
+				st.set_color(Color(verts[idx][1], 0.0, 0.0))
+				st.set_uv(Vector2(float(sd) / sides, verts[idx][0].y * 10.0))
+				st.add_vertex(verts[idx][0])
+		# The broken end: the cortex's thickness inward, then the marrow.
+		var o0 := off + Vector3(sin(a0) * r, tops[sd] - 0.01, cos(a0) * r)
+		var o1 := off + Vector3(sin(a1) * r, tops[nx] - 0.01, cos(a1) * r)
+		var i0 := off + Vector3(sin(a0) * r * 0.62, tops[sd] * 0.92 - 0.012, cos(a0) * r * 0.62)
+		var i1 := off + Vector3(sin(a1) * r * 0.62, tops[nx] * 0.92 - 0.012, cos(a1) * r * 0.62)
+		var c := off + Vector3(0.0, out * 0.55, 0.0)
+		for v in [[o0, 0.0, 0.0], [o1, 0.0, 0.0], [i1, 0.15, 0.3], [o0, 0.0, 0.0], [i1, 0.15, 0.3], [i0, 0.15, 0.3],
+				[i0, 0.3, 1.0], [i1, 0.3, 1.0], [c, 0.5, 1.0]]:
+			st.set_color(Color(v[1], v[2], 0.0))
+			st.set_uv(Vector2(0.0, 0.0))
+			st.add_vertex(v[0])
+	st.index()
+	st.generate_normals()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+
+
+# --- the ribcage -------------------------------------------------------------
+
+## Broken ribs: curved arcs of bone (each a thin tube along a circle's arc),
+## snapped and splayed; blood on their roots. `count` arcs, `splay` 0..1
+## how far they are levered out of the chest. Local: +y out of the chest,
+## x across it, z along the body (+ to the head).
+static func ribcage(seed: int, count: int, splay: float) -> ArrayMesh:
+	var key := "ribs_%d_%d_%.2f" % [seed, count, splay]
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in count:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var z := (float(i / 2) - float(count / 2) * 0.5) * 0.035
+		var radius := rng.randf_range(0.1, 0.13)
+		var from := rng.randf_range(0.1, 0.35)
+		var to := from + rng.randf_range(0.35, 0.7)
+		var lift := splay * rng.randf_range(0.5, 1.2)
+		var segs := 8
+		var prev := []
+		for sg in segs + 1:
+			var t := lerpf(from, to, float(sg) / segs)
+			# Round the chest from the spine side toward the sternum, the
+			# broken end levered up and out.
+			var u := float(sg) / segs
+			var c := Vector3(side * radius * sin(t * PI * 0.5), radius * (cos(t * PI * 0.5) - 1.0) * 0.6 + lift * 0.09 * u * u, z + 0.01 * u)
+			var tan := Vector3(side * cos(t * PI * 0.5), -sin(t * PI * 0.5) * 0.6 + lift * 0.5 * u, 0.0).normalized()
+			var nrm := tan.cross(Vector3(0, 0, 1)).normalized()
+			var bin := tan.cross(nrm).normalized()
+			var rr := 0.0055 * (1.0 - 0.45 * u)
+			var ring := []
+			for k in 6:
+				var a := TAU * k / 6.0
+				ring.append(c + (nrm * cos(a) * 1.3 + bin * sin(a)) * rr)
+			if not prev.is_empty():
+				for k in 6:
+					var kn := (k + 1) % 6
+					for v in [prev[k], prev[kn], ring[kn], prev[k], ring[kn], ring[k]]:
+						st.set_color(Color(clampf(0.7 - u, 0.0, 1.0) if sg < 3 else 0.05, 0.0, 0.0))
+						st.set_uv(Vector2(float(k) / 6.0, u))
+						st.add_vertex(v)
+			prev = ring
+		# The jagged broken tip.
+		var tip: Vector3 = (prev[0] + prev[3]) * 0.5
+		var tip_tan := Vector3(side * cos(to * PI * 0.5), -sin(to * PI * 0.5) * 0.6 + lift * 0.5, 0.0).normalized()
+		var point := tip + tip_tan * rng.randf_range(0.006, 0.016)
+		for k in 6:
+			for v in [prev[k], prev[(k + 1) % 6], point]:
+				st.set_color(Color(0.1, 0.4, 0.0))
+				st.set_uv(Vector2.ZERO)
 				st.add_vertex(v)
 	st.index()
 	st.generate_normals()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+	_cache[key] = m
+	return m
 
 
-# The bone: a shaft standing out of the flesh, its end snapped in a jagged
-# crown with the marrow showing; blood smeared up from the flesh.
-static func _bone(mesh: ArrayMesh, rng: RandomNumberGenerator, r: float, out: float) -> void:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var sides := 10
-	var tops := []
-	for s in sides:
-		tops.append(out * rng.randf_range(0.55, 1.0) + (out * 0.35 if s % 3 == 0 else 0.0))
-	var off := Vector3(rng.randf_range(-0.3, 0.3) * r, 0.0, rng.randf_range(-0.3, 0.3) * r)
-	for s in sides:
-		var n := (s + 1) % sides
-		var a0 := TAU * s / sides
-		var a1 := TAU * n / sides
-		var b0 := off + Vector3(sin(a0) * r, -0.02, cos(a0) * r)
-		var b1 := off + Vector3(sin(a1) * r, -0.02, cos(a1) * r)
-		var t0 := off + Vector3(sin(a0) * r * 0.9, tops[s], cos(a0) * r * 0.9)
-		var t1 := off + Vector3(sin(a1) * r * 0.9, tops[n], cos(a1) * r * 0.9)
-		for v in [[b0, 0.55, 0.0], [b1, 0.55, 0.0], [t1, 0.0, 0.0], [b0, 0.55, 0.0], [t1, 0.0, 0.0], [t0, 0.0, 0.0]]:
-			st.set_color(Color(v[1], v[2], 0.0))
-			st.set_uv(Vector2(float(s) / sides, (v[0] as Vector3).y))
-			st.add_vertex(v[0])
-		# The marrow cavity: the broken end's inside.
-		var c := off + Vector3(0.0, out * 0.4, 0.0)
-		for v in [t0, t1, c]:
-			st.set_color(Color(0.2, 1.0 if v == c else 0.6, 0.0))
-			st.set_uv(Vector2(0.0, 0.0))
-			st.add_vertex(v)
-	st.index()
-	st.generate_normals()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+## An open wound mass (chest cavity, the ruin): the meat surface alone.
+static func wound_mass(radius: float, seed: int) -> ArrayMesh:
+	var key := "mass_%.3f_%d" % [radius, seed]
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var noise := FastNoiseLite.new()
+	noise.seed = seed
+	noise.frequency = 1.0
+	var m := ArrayMesh.new()
+	_meat(m, rng, noise, radius)
+	_cache[key] = m
+	return m
