@@ -1448,8 +1448,9 @@ private:
     // Deliberate airborne reach waits only for a fresh, legal grip query.
     // No anchor or support is retained before the physical catch.
     std::uint32_t air_catch_action_ticks_left_ = 0;
-    // A short input transaction on these exact two grips. This never extends
-    // their reach or lifetime and cannot survive a release/regrip/restart.
+    // A bounded pull request on these exact two grips. It uses the existing
+    // posture allowance, retains actual reach/receiver gates and cannot
+    // survive a release/regrip/restart.
     std::uint32_t hang_topout_ticks_left_ = 0;
     std::uint64_t hang_topout_left_generation_ = 0;
     std::uint64_t hang_topout_right_generation_ = 0;

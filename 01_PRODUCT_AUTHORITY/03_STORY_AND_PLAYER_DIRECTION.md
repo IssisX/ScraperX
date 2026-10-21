@@ -214,6 +214,16 @@ Once the player understands the long objective, the next local hint names a near
 
 From this point the player's route and actual tool/machine state determine the useful local direction. There can be a quiet view before another message. The first story beat does not need a dozen follow-up instructions to prove it is a campaign.
 
+Supported arrival on the front 22 m ring earns a specific onward direction:
+
+**Transmission ID:** `service_iona_inspection_rail`
+
+**Speaker:** IONA
+
+**Text:** “Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.”
+
+The existing rail2563, davit2565 and ladder2566 share the service finish already used below. This recording requires actual firm footing in the front service region; altitude in flight or a distant receiver at the same height does not trigger it. Its source route leads to 33 m, whose touch execution remains separate acceptance. Later movement out of this region does not immediately replace the recording with a bypass acknowledgement.
+
 An early personal bypass can receive one concise acknowledgement:
 
 **Transmission ID:** `receiving_iona_keep_the_height`  
@@ -256,9 +266,9 @@ These are writing patterns, not unconditional prompts. For example, “The load 
 
 The distinction below is part of the narrative contract. Fiction can define the destination now; presentation must not sell unbuilt content as an already working campaign.
 
-| Material | Source-grounded physical content at the 2026-10-20 narrative baseline | Narrative authorship still needed |
+| Material | Source-grounded physical content; exact revision in the live checkpoint | Narrative authorship still needed |
 |---|---|---|
-| Receiving arrival | Shipping bridge selects `InitialSpawn::FreightYardArrival`. A supported physical yard worker, spatial welding, actual stock streets and working machinery form the opening. Four new recorded `arrival_iona_*` cues join the retained library; guidance observes native facts and hides the permanent mission card. | Continuous journey and matching batch delivery are tracked in the live checkpoint; whole-yard device feel and listening require actual play. No visible Iona is claimed. |
+| Receiving arrival | Shipping bridge selects `InitialSpawn::FreightYardArrival`. A supported physical yard worker, spatial welding, actual stock streets and working machinery form the opening. Four recorded `arrival_iona_*` cues connect ordinary spawn to Freight One; the continuous shipping-touch journey passed in green3651447 candidate CI. Guidance observes native facts and hides the permanent mission card. | Whole-yard device feel and listening require actual play. No visible Iona is claimed. |
 | Forklift/gallery | Existing independent 600 kg crates and +5.9 m gallery; native gallery entity `1440`. Actual supported cargo placement can create personal access. The beam is a handling prop, not proof of a required gap. | Optional dispatch identity and environmental story on the gallery. It is not a required campaign gate. |
 | Crane and first freight ring | Existing crane and supported receiving infrastructure include an accepted same-truck transfer to +11 m. The +22 m dock exists as content; the broader transfer is not credited as accepted by this document. | Freight One place name and outcome-based story acknowledgement. “The crane took your truck” is conditional on actual freight state. |
 | Other first-ring access | Existing net/receiver approach offers another +11 m access opportunity; tower rings share an entity identity, so support identity alone does not distinguish altitude. | Alternate arrival acknowledgement and local wayfinding. No mandatory crane checklist. |

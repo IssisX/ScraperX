@@ -1,0 +1,633 @@
+{
+  "scope": "Default shipping Main touch service ascent; one declared initial 11m stage. This is not normal-spawn proof.",
+  "completed_utc": {
+    "current_time": "2026-10-21 19:14:16 UTC"
+  },
+  "repository": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo",
+  "base_revision": "36514477bd4084110265b9190400f6a62efab74d",
+  "runtime": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+  "native_sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+  "viewport_3d_disabled": true,
+  "explicit_tuck_before_duct_topout": false,
+  "source_manifest": {
+    "chunk_id": "46970c",
+    "wall_time_seconds": 0.114126823,
+    "exit_code": 0,
+    "original_token_count": 534,
+    "output": "ff5827bb5cd2213c756f687d63864c40cee0236a32e51135103691f7ead29151  godot/tests/service_ascent_input_case.gd\n655ed726f72ea5f0ff041f2ab64a56d87eb83bb3c4debe7ba67c0481ff9b5bdb  godot/tests/service_ascent_input_test.gd\n6b6d90d8525155ea685d48680c95dcf8a8bcbde8f2483e651540fc3d232cbe87  godot/tests/opening_journey_input_case.gd\n30388c09e6a9459e4e8232a6b3f7db3691277b84346ecb01b305d80506b4ef16  godot/tests/yard_worker_input_case.gd\n720d797054479794449ef23da1a89a824e0eaf25a50870954b4d3d3aa2dd97a3  godot/presentation/main.gd\ne17bc0049588b46a75d5f1f7169b6ec9801c3dd1ee88663dee2579839482cab3  godot/presentation/story_guidance.gd\n64bb7d98dc120fccafa2a338c6bfec73a0ffa6a2f008950bd585fbecec09fa23  src/sim/simulation/locomotion.cpp\ne0d35d44cbc2781020cb6bd952c11c966b527491a69cc759d8b2746d7f8d0697  src/sim/simulation/constants.hpp\nb516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89  /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/addons/scraperx_native/bin/linux/libscraperx_native.so\n .github/workflows/chatgpt-apk-candidate.yml        |  15 +-\n .../03_STORY_AND_PLAYER_DIRECTION.md               |   8 +\n CMakeLists.txt                                     |   2 +-\n CONTINUE_HERE_CHATGPT_CODEX.md                     |   4 +\n ci/verify_story_radio_package.py                   |   1 +\n godot/audio/story_radio/AUTHORING.md               |   6 +-\n godot/audio/story_radio/generation_receipt.json    |   9 +\n godot/audio/story_radio/manifest.json              | 368 +++++++++++++++++++++\n godot/presentation/materials/freight_materials.gd  |   2 +-\n godot/presentation/story_guidance.gd               |  12 +-\n godot/tests/story_guidance_test.gd                 |   9 +\n src/sim/simulation/constants.hpp                   |   7 +\n src/sim/simulation/locomotion.cpp                  |   8 +-\n src/sim/simulation/tick.cpp                        |   8 +\n src/sim/simulation/world.hpp                       |   5 +-\n tests/physical_hang_intent_tests.cpp               |  89 ++++-\n tools/generate_story_radio.py                      |   1 +\n 17 files changed, 540 insertions(+), 14 deletions(-)\n"
+  },
+  "source_entry_receipt": {
+    "chunk_id": "c3013f",
+    "wall_time_seconds": 0.000286979,
+    "exit_code": 0,
+    "original_token_count": 418,
+    "output": "36514477bd4084110265b9190400f6a62efab74d\n?? godot/tests/service_ascent_input_case.gd\n?? godot/tests/service_ascent_input_test.gd\nff5827bb5cd2213c756f687d63864c40cee0236a32e51135103691f7ead29151  godot/tests/service_ascent_input_case.gd\n655ed726f72ea5f0ff041f2ab64a56d87eb83bb3c4debe7ba67c0481ff9b5bdb  godot/tests/service_ascent_input_test.gd\nff5827bb5cd2213c756f687d63864c40cee0236a32e51135103691f7ead29151  /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/service_ascent_input_case.gd\nsha256sum: /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/bin/libscraperx_native.so: No such file or directory\n9:var initial_stage_count := 0\n16:var explicit_tuck_before_duct_topout := false\n18:var duct_topout_before_jump: Dictionary = {}\n19:var duct_topout_after_jump: Dictionary = {}\n49:\t\tif phase == 0 or phase == 9:\n50:\t\t\tvar expected := support == 11 if phase == 0 else support in [11, 2562]\n52:\t\t\t\treceiver_ticks += 1\n54:\t\t\t\treceiver_ticks = 0\n67:\tinitial_stage_count = 1\n120:\t\t\tif receiver_ticks >= 90:\n158:\t\t\t\t\tif explicit_tuck_before_duct_topout:\n165:\t\t\t\t\tduct_topout_before_jump = duct_posture()\n172:\t\t\tif duct_topout_after_jump.is_empty():\n173:\t\t\t\tduct_topout_after_jump = duct_posture()\n197:\t\t\t\t\treceiver_ticks = 0\n203:\t\t\tif receiver_ticks >= 90:\n234:\t\t\"native\": true, \"touch\": true, \"initial_11m_stage_only\": true, \"initial_stage_count\": initial_stage_count,\n238:\t\t\"explicit_tuck_before_duct_topout\": explicit_tuck_before_duct_topout,\n239:\t\t\"duct_tuck_before\": duct_tuck_before, \"duct_topout_before_jump\": duct_topout_before_jump,\n240:\t\t\"duct_topout_after_jump\": duct_topout_after_jump,\n"
+  },
+  "corrected_native_path_and_extension_config": {
+    "chunk_id": "33660b",
+    "wall_time_seconds": 0.000051875,
+    "exit_code": 0,
+    "original_token_count": 304,
+    "output": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89  /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/addons/scraperx_native/bin/linux/libscraperx_native.so\n[configuration]\n\nentry_symbol = \"scraperx_library_init\"\ncompatibility_minimum = \"4.7\"\nreloadable = false\n\n[libraries]\n\nlinux.editor.x86_64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\nlinux.debug.x86_64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\nlinux.release.x86_64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\n\nlinux.editor.arm64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\nlinux.debug.arm64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\nlinux.release.arm64 = \"res://addons/scraperx_native/bin/linux/libscraperx_native.so\"\nandroid.debug.arm64 = \"res://addons/scraperx_native/bin/android/arm64/libscraperx_native.so\"\nandroid.release.arm64 = \"res://addons/scraperx_native/bin/android/arm64/libscraperx_native.so\"\nandroid.debug.x86_64 = \"res://addons/scraperx_native/bin/android/x86_64/libscraperx_native.so\"\nandroid.release.x86_64 = \"res://addons/scraperx_native/bin/android/x86_64/libscraperx_native.so\"\n"
+  },
+  "calls": [
+    {
+      "tool": "mcp__godot_mcp_runtime__run_project",
+      "args": {
+        "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+        "scene": "res://tests/rigging_mcp_bootstrap.tscn"
+      },
+      "result": "Godot project started and MCP bridge is ready (port 42731)."
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n scene_tree.root.disable_3d = true\n scene_tree.root.size = Vector2i(1280,900)\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n var test = load(\"res://tests/service_ascent_input_case.gd\").new()\n scene_tree.current_scene.set_meta(\"service_main\",main)\n scene_tree.current_scene.set_meta(\"service_test\",test)\n return test.begin(main)"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":2,\"cues\":[],\"done\":false,\"duct_topout_after_jump\":{},\"duct_topout_before_jump\":{},\"duct_tuck_before\":{},\"explicit_tuck_before_duct_topout\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{},\"initial_11m_stage_only\":true,\"initial_stage_count\":1,\"mission_hud_hidden\":true,\"native\":true,\"phase\":0,\"phase_ticks\":0,\"position\":{\"x\":18.5,\"y\":11.9499998092651,\"z\":-126},\"radio_cues\":[],\"support_ticks\":{},\"tick\":0,\"touch\":true,\"viewport_3d_disabled\":true,\"waypoint\":0},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 11: load - load() with a literal path can run _init code in the loaded resource\"]}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 2,
+            "cues": [],
+            "done": false,
+            "duct_topout_after_jump": {},
+            "duct_topout_before_jump": {},
+            "duct_tuck_before": {},
+            "explicit_tuck_before_duct_topout": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {},
+            "initial_11m_stage_only": true,
+            "initial_stage_count": 1,
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 0,
+            "phase_ticks": 0,
+            "position": {
+              "x": 18.5,
+              "y": 11.9499998092651,
+              "z": -126
+            },
+            "radio_cues": [],
+            "support_ticks": {},
+            "tick": 0,
+            "touch": true,
+            "viewport_3d_disabled": true,
+            "waypoint": 0
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+          "warnings": [
+            "Warning line 5: load - load() with a literal path can run _init code in the loaded resource",
+            "Warning line 11: load - load() with a literal path can run _init code in the loaded resource"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"service_test\")\n var result = test.result()\n for i in 50:\n  result = test.advance()\n  if result.done: break\n return result"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":57,\"cues\":[\"\",\"arrival_iona_first_ring\"],\"done\":false,\"duct_topout_after_jump\":{\"accepted\":1,\"actual_span_m\":1.49722445011139,\"commanded_span_m\":1.34403836727142,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1171.76745605469,\"hand_positive_work_j\":7502.89166217564,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0069541931152,\"y\":16.2961177825928,\"z\":-123.02547454834},\"left_force_n\":{\"x\":85.9750366210938,\"y\":549.919677734375,\"z\":-183.233795166016},\"position\":{\"x\":20.0068702697754,\"y\":14.8913984298706,\"z\":-122.556503295898},\"rejected\":0,\"right_force_n\":{\"x\":-85.8833770751953,\"y\":549.735412597656,\"z\":-183.184310913086},\"shoulder_to_lip_m\":1.06368374824524,\"tick\":1028,\"tuck_available\":true,\"tuck_requested\":true,\"velocity\":{\"x\":0.000854862155392766,\"y\":1.07684528827667,\"z\":0.0597543008625507}},\"duct_topout_before_jump\":{\"accepted\":1,\"actual_span_m\":1.48771464824677,\"commanded_span_m\":1.43012201786041,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1014.43286132812,\"hand_positive_work_j\":7371.22105637625,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0067901611328,\"y\":16.2973937988281,\"z\":-123.018074035645},\"left_force_n\":{\"x\":75.2142562866211,\"y\":473.014129638672,\"z\":-167.364440917969},\"position\":{\"x\":20.0067291259766,\"y\":14.9099998474121,\"z\":-122.528266906738},\"rejected\":0,\"right_force_n\":{\"x\":-75.1395263671875,\"y\":472.756042480469,\"z\":-167.279342651367},\"shoulder_to_lip_m\":1.05764758586884,\"tick\":1004,\"tuck_available\":true,\"tuck_requested\":false,\"velocity\":{\"x\":0.000193476109416224,\"y\":-1.28521370887756,\"z\":0.0271451976150274}},\"duct_tuck_before\":{},\"explicit_tuck_before_duct_topout\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2560\":126,\"2561\":205},\"initial_11m_stage_only\":true,\"initial_stage_count\":1,\"mission_hud_hidden\":true,\"native\":true,\"phase\":7,\"phase_ticks\":48,\"position\":{\"x\":20.5448989868164,\"y\":17.1970081329346,\"z\":-123.450668334961},\"radio_cues\":[\"arrival_iona_first_ring\"],\"support_ticks\":{\"11\":374,\"1600\":330,\"2560\":118,\"2561\":68},\"tick\":1244,\"touch\":true,\"viewport_3d_disabled\":true,\"waypoint\":0},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 57,
+            "cues": [
+              "",
+              "arrival_iona_first_ring"
+            ],
+            "done": false,
+            "duct_topout_after_jump": {
+              "accepted": 1,
+              "actual_span_m": 1.49722445011139,
+              "commanded_span_m": 1.34403836727142,
+              "gravity": 1,
+              "hand_absorbed_work_j": 5.28214785892851,
+              "hand_load_n": 1171.76745605469,
+              "hand_positive_work_j": 7502.89166217564,
+              "hand_support": 2561,
+              "hands": 2,
+              "ledge": {
+                "x": 20.0069541931152,
+                "y": 16.2961177825928,
+                "z": -123.02547454834
+              },
+              "left_force_n": {
+                "x": 85.9750366210938,
+                "y": 549.919677734375,
+                "z": -183.233795166016
+              },
+              "position": {
+                "x": 20.0068702697754,
+                "y": 14.8913984298706,
+                "z": -122.556503295898
+              },
+              "rejected": 0,
+              "right_force_n": {
+                "x": -85.8833770751953,
+                "y": 549.735412597656,
+                "z": -183.184310913086
+              },
+              "shoulder_to_lip_m": 1.06368374824524,
+              "tick": 1028,
+              "tuck_available": true,
+              "tuck_requested": true,
+              "velocity": {
+                "x": 0.000854862155392766,
+                "y": 1.07684528827667,
+                "z": 0.0597543008625507
+              }
+            },
+            "duct_topout_before_jump": {
+              "accepted": 1,
+              "actual_span_m": 1.48771464824677,
+              "commanded_span_m": 1.43012201786041,
+              "gravity": 1,
+              "hand_absorbed_work_j": 5.28214785892851,
+              "hand_load_n": 1014.43286132812,
+              "hand_positive_work_j": 7371.22105637625,
+              "hand_support": 2561,
+              "hands": 2,
+              "ledge": {
+                "x": 20.0067901611328,
+                "y": 16.2973937988281,
+                "z": -123.018074035645
+              },
+              "left_force_n": {
+                "x": 75.2142562866211,
+                "y": 473.014129638672,
+                "z": -167.364440917969
+              },
+              "position": {
+                "x": 20.0067291259766,
+                "y": 14.9099998474121,
+                "z": -122.528266906738
+              },
+              "rejected": 0,
+              "right_force_n": {
+                "x": -75.1395263671875,
+                "y": 472.756042480469,
+                "z": -167.279342651367
+              },
+              "shoulder_to_lip_m": 1.05764758586884,
+              "tick": 1004,
+              "tuck_available": true,
+              "tuck_requested": false,
+              "velocity": {
+                "x": 0.000193476109416224,
+                "y": -1.28521370887756,
+                "z": 0.0271451976150274
+              }
+            },
+            "duct_tuck_before": {},
+            "explicit_tuck_before_duct_topout": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {
+              "2560": 126,
+              "2561": 205
+            },
+            "initial_11m_stage_only": true,
+            "initial_stage_count": 1,
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 7,
+            "phase_ticks": 48,
+            "position": {
+              "x": 20.5448989868164,
+              "y": 17.1970081329346,
+              "z": -123.450668334961
+            },
+            "radio_cues": [
+              "arrival_iona_first_ring"
+            ],
+            "support_ticks": {
+              "11": 374,
+              "1600": 330,
+              "2560": 118,
+              "2561": 68
+            },
+            "tick": 1244,
+            "touch": true,
+            "viewport_3d_disabled": true,
+            "waypoint": 0
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"service_test\")\n var result = test.result()\n for i in 45:\n  result = test.advance()\n  if result.done: break\n return result"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":103,\"cues\":[\"\",\"arrival_iona_first_ring\",\"service_iona_inspection_rail\"],\"done\":false,\"duct_topout_after_jump\":{\"accepted\":1,\"actual_span_m\":1.49722445011139,\"commanded_span_m\":1.34403836727142,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1171.76745605469,\"hand_positive_work_j\":7502.89166217564,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0069541931152,\"y\":16.2961177825928,\"z\":-123.02547454834},\"left_force_n\":{\"x\":85.9750366210938,\"y\":549.919677734375,\"z\":-183.233795166016},\"position\":{\"x\":20.0068702697754,\"y\":14.8913984298706,\"z\":-122.556503295898},\"rejected\":0,\"right_force_n\":{\"x\":-85.8833770751953,\"y\":549.735412597656,\"z\":-183.184310913086},\"shoulder_to_lip_m\":1.06368374824524,\"tick\":1028,\"tuck_available\":true,\"tuck_requested\":true,\"velocity\":{\"x\":0.000854862155392766,\"y\":1.07684528827667,\"z\":0.0597543008625507}},\"duct_topout_before_jump\":{\"accepted\":1,\"actual_span_m\":1.48771464824677,\"commanded_span_m\":1.43012201786041,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1014.43286132812,\"hand_positive_work_j\":7371.22105637625,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0067901611328,\"y\":16.2973937988281,\"z\":-123.018074035645},\"left_force_n\":{\"x\":75.2142562866211,\"y\":473.014129638672,\"z\":-167.364440917969},\"position\":{\"x\":20.0067291259766,\"y\":14.9099998474121,\"z\":-122.528266906738},\"rejected\":0,\"right_force_n\":{\"x\":-75.1395263671875,\"y\":472.756042480469,\"z\":-167.279342651367},\"shoulder_to_lip_m\":1.05764758586884,\"tick\":1004,\"tuck_available\":true,\"tuck_requested\":false,\"velocity\":{\"x\":0.000193476109416224,\"y\":-1.28521370887756,\"z\":0.0271451976150274}},\"duct_tuck_before\":{},\"explicit_tuck_before_duct_topout\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2560\":126,\"2561\":205,\"2562\":535},\"initial_11m_stage_only\":true,\"initial_stage_count\":1,\"mission_hud_hidden\":true,\"native\":true,\"phase\":11,\"phase_ticks\":0,\"position\":{\"x\":22.0435180664062,\"y\":22.8999996185303,\"z\":-125.180473327637},\"radio_cues\":[\"arrival_iona_first_ring\",\"service_iona_inspection_rail\"],\"support_ticks\":{\"11\":497,\"1600\":330,\"2560\":118,\"2561\":371,\"2562\":173},\"tick\":2354,\"touch\":true,\"viewport_3d_disabled\":true,\"waypoint\":1},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 103,
+            "cues": [
+              "",
+              "arrival_iona_first_ring",
+              "service_iona_inspection_rail"
+            ],
+            "done": false,
+            "duct_topout_after_jump": {
+              "accepted": 1,
+              "actual_span_m": 1.49722445011139,
+              "commanded_span_m": 1.34403836727142,
+              "gravity": 1,
+              "hand_absorbed_work_j": 5.28214785892851,
+              "hand_load_n": 1171.76745605469,
+              "hand_positive_work_j": 7502.89166217564,
+              "hand_support": 2561,
+              "hands": 2,
+              "ledge": {
+                "x": 20.0069541931152,
+                "y": 16.2961177825928,
+                "z": -123.02547454834
+              },
+              "left_force_n": {
+                "x": 85.9750366210938,
+                "y": 549.919677734375,
+                "z": -183.233795166016
+              },
+              "position": {
+                "x": 20.0068702697754,
+                "y": 14.8913984298706,
+                "z": -122.556503295898
+              },
+              "rejected": 0,
+              "right_force_n": {
+                "x": -85.8833770751953,
+                "y": 549.735412597656,
+                "z": -183.184310913086
+              },
+              "shoulder_to_lip_m": 1.06368374824524,
+              "tick": 1028,
+              "tuck_available": true,
+              "tuck_requested": true,
+              "velocity": {
+                "x": 0.000854862155392766,
+                "y": 1.07684528827667,
+                "z": 0.0597543008625507
+              }
+            },
+            "duct_topout_before_jump": {
+              "accepted": 1,
+              "actual_span_m": 1.48771464824677,
+              "commanded_span_m": 1.43012201786041,
+              "gravity": 1,
+              "hand_absorbed_work_j": 5.28214785892851,
+              "hand_load_n": 1014.43286132812,
+              "hand_positive_work_j": 7371.22105637625,
+              "hand_support": 2561,
+              "hands": 2,
+              "ledge": {
+                "x": 20.0067901611328,
+                "y": 16.2973937988281,
+                "z": -123.018074035645
+              },
+              "left_force_n": {
+                "x": 75.2142562866211,
+                "y": 473.014129638672,
+                "z": -167.364440917969
+              },
+              "position": {
+                "x": 20.0067291259766,
+                "y": 14.9099998474121,
+                "z": -122.528266906738
+              },
+              "rejected": 0,
+              "right_force_n": {
+                "x": -75.1395263671875,
+                "y": 472.756042480469,
+                "z": -167.279342651367
+              },
+              "shoulder_to_lip_m": 1.05764758586884,
+              "tick": 1004,
+              "tuck_available": true,
+              "tuck_requested": false,
+              "velocity": {
+                "x": 0.000193476109416224,
+                "y": -1.28521370887756,
+                "z": 0.0271451976150274
+              }
+            },
+            "duct_tuck_before": {},
+            "explicit_tuck_before_duct_topout": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {
+              "2560": 126,
+              "2561": 205,
+              "2562": 535
+            },
+            "initial_11m_stage_only": true,
+            "initial_stage_count": 1,
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 11,
+            "phase_ticks": 0,
+            "position": {
+              "x": 22.0435180664062,
+              "y": 22.8999996185303,
+              "z": -125.180473327637
+            },
+            "radio_cues": [
+              "arrival_iona_first_ring",
+              "service_iona_inspection_rail"
+            ],
+            "support_ticks": {
+              "11": 497,
+              "1600": 330,
+              "2560": 118,
+              "2561": 371,
+              "2562": 173
+            },
+            "tick": 2354,
+            "touch": true,
+            "viewport_3d_disabled": true,
+            "waypoint": 1
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"service_test\")\n var result = test.advance()\n var main = scene_tree.current_scene.get_meta(\"service_main\")\n var landing = main._native.get_landing_state()\n return {\"fixture\":result,\"native_final\":{\"tick\":main._native.get_tick_index(),\"position\":main._native.get_player_position(),\"velocity\":main._native.get_player_linear_velocity(),\"grounded\":main._native.is_player_grounded(),\"support\":main._native.get_support_entity_id(),\"deaths\":main._native.get_death_count(),\"gravity\":landing.player_gravity_factor,\"hands\":landing.traversal_hand_constraint_count,\"firm\":landing.checkpoint_footing_valid,\"foot_transfer_count\":landing.foot_transfer_count,\"foot_transfer_tick\":landing.foot_transfer_tick,\"foot_transfer_support\":landing.foot_transfer_support_entity_id,\"hand_positive_work_j\":landing.hand_actuator_positive_work_j,\"hand_absorbed_work_j\":landing.hand_actuator_absorbed_work_j,\"last_hand_foot_solve_tick\":landing.hand_foot_last_solve_tick,\"last_hand_load_n\":landing.hand_foot_last_hand_load_n,\"last_foot_load_n\":landing.hand_foot_last_foot_load_n},\"radio\":main._story_radio.readback()}"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"fixture\":{\"blocker\":{},\"checks\":107,\"cues\":[\"\",\"arrival_iona_first_ring\",\"service_iona_inspection_rail\"],\"done\":true,\"duct_topout_after_jump\":{\"accepted\":1,\"actual_span_m\":1.49722445011139,\"commanded_span_m\":1.34403836727142,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1171.76745605469,\"hand_positive_work_j\":7502.89166217564,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0069541931152,\"y\":16.2961177825928,\"z\":-123.02547454834},\"left_force_n\":{\"x\":85.9750366210938,\"y\":549.919677734375,\"z\":-183.233795166016},\"position\":{\"x\":20.0068702697754,\"y\":14.8913984298706,\"z\":-122.556503295898},\"rejected\":0,\"right_force_n\":{\"x\":-85.8833770751953,\"y\":549.735412597656,\"z\":-183.184310913086},\"shoulder_to_lip_m\":1.06368374824524,\"tick\":1028,\"tuck_available\":true,\"tuck_requested\":true,\"velocity\":{\"x\":0.000854862155392766,\"y\":1.07684528827667,\"z\":0.0597543008625507}},\"duct_topout_before_jump\":{\"accepted\":1,\"actual_span_m\":1.48771464824677,\"commanded_span_m\":1.43012201786041,\"gravity\":1,\"hand_absorbed_work_j\":5.28214785892851,\"hand_load_n\":1014.43286132812,\"hand_positive_work_j\":7371.22105637625,\"hand_support\":2561,\"hands\":2,\"ledge\":{\"x\":20.0067901611328,\"y\":16.2973937988281,\"z\":-123.018074035645},\"left_force_n\":{\"x\":75.2142562866211,\"y\":473.014129638672,\"z\":-167.364440917969},\"position\":{\"x\":20.0067291259766,\"y\":14.9099998474121,\"z\":-122.528266906738},\"rejected\":0,\"right_force_n\":{\"x\":-75.1395263671875,\"y\":472.756042480469,\"z\":-167.279342651367},\"shoulder_to_lip_m\":1.05764758586884,\"tick\":1004,\"tuck_available\":true,\"tuck_requested\":false,\"velocity\":{\"x\":0.000193476109416224,\"y\":-1.28521370887756,\"z\":0.0271451976150274}},\"duct_tuck_before\":{},\"explicit_tuck_before_duct_topout\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2560\":126,\"2561\":205,\"2562\":535},\"initial_11m_stage_only\":true,\"initial_stage_count\":1,\"mission_hud_hidden\":true,\"native\":true,\"phase\":12,\"phase_ticks\":0,\"position\":{\"x\":22.0435180664062,\"y\":22.8999996185303,\"z\":-125.180473327637},\"radio_cues\":[\"arrival_iona_first_ring\",\"service_iona_inspection_rail\"],\"support_ticks\":{\"11\":497,\"1600\":330,\"2560\":118,\"2561\":371,\"2562\":173},\"tick\":2354,\"touch\":true,\"viewport_3d_disabled\":true,\"waypoint\":1},\"native_final\":{\"deaths\":0,\"firm\":true,\"foot_transfer_count\":3,\"foot_transfer_support\":2562,\"foot_transfer_tick\":2065,\"gravity\":1,\"grounded\":true,\"hand_absorbed_work_j\":13.5777579777015,\"hand_positive_work_j\":29089.2985806302,\"hands\":0,\"last_foot_load_n\":395.829895019531,\"last_hand_foot_solve_tick\":2065,\"last_hand_load_n\":394.982055664062,\"position\":{\"x\":22.0435180664062,\"y\":22.8999996185303,\"z\":-125.180473327637},\"support\":11,\"tick\":2354,\"velocity\":{\"x\":0,\"y\":0,\"z\":0}},\"radio\":{\"active_id\":2,\"active_key\":\"service_iona_inspection_rail\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":2,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/service_iona_inspection_rail.ogg\"}}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "fixture": {
+              "blocker": {},
+              "checks": 107,
+              "cues": [
+                "",
+                "arrival_iona_first_ring",
+                "service_iona_inspection_rail"
+              ],
+              "done": true,
+              "duct_topout_after_jump": {
+                "accepted": 1,
+                "actual_span_m": 1.49722445011139,
+                "commanded_span_m": 1.34403836727142,
+                "gravity": 1,
+                "hand_absorbed_work_j": 5.28214785892851,
+                "hand_load_n": 1171.76745605469,
+                "hand_positive_work_j": 7502.89166217564,
+                "hand_support": 2561,
+                "hands": 2,
+                "ledge": {
+                  "x": 20.0069541931152,
+                  "y": 16.2961177825928,
+                  "z": -123.02547454834
+                },
+                "left_force_n": {
+                  "x": 85.9750366210938,
+                  "y": 549.919677734375,
+                  "z": -183.233795166016
+                },
+                "position": {
+                  "x": 20.0068702697754,
+                  "y": 14.8913984298706,
+                  "z": -122.556503295898
+                },
+                "rejected": 0,
+                "right_force_n": {
+                  "x": -85.8833770751953,
+                  "y": 549.735412597656,
+                  "z": -183.184310913086
+                },
+                "shoulder_to_lip_m": 1.06368374824524,
+                "tick": 1028,
+                "tuck_available": true,
+                "tuck_requested": true,
+                "velocity": {
+                  "x": 0.000854862155392766,
+                  "y": 1.07684528827667,
+                  "z": 0.0597543008625507
+                }
+              },
+              "duct_topout_before_jump": {
+                "accepted": 1,
+                "actual_span_m": 1.48771464824677,
+                "commanded_span_m": 1.43012201786041,
+                "gravity": 1,
+                "hand_absorbed_work_j": 5.28214785892851,
+                "hand_load_n": 1014.43286132812,
+                "hand_positive_work_j": 7371.22105637625,
+                "hand_support": 2561,
+                "hands": 2,
+                "ledge": {
+                  "x": 20.0067901611328,
+                  "y": 16.2973937988281,
+                  "z": -123.018074035645
+                },
+                "left_force_n": {
+                  "x": 75.2142562866211,
+                  "y": 473.014129638672,
+                  "z": -167.364440917969
+                },
+                "position": {
+                  "x": 20.0067291259766,
+                  "y": 14.9099998474121,
+                  "z": -122.528266906738
+                },
+                "rejected": 0,
+                "right_force_n": {
+                  "x": -75.1395263671875,
+                  "y": 472.756042480469,
+                  "z": -167.279342651367
+                },
+                "shoulder_to_lip_m": 1.05764758586884,
+                "tick": 1004,
+                "tuck_available": true,
+                "tuck_requested": false,
+                "velocity": {
+                  "x": 0.000193476109416224,
+                  "y": -1.28521370887756,
+                  "z": 0.0271451976150274
+                }
+              },
+              "duct_tuck_before": {},
+              "explicit_tuck_before_duct_topout": false,
+              "failures": [],
+              "gravity_intact": true,
+              "hand_ticks": {
+                "2560": 126,
+                "2561": 205,
+                "2562": 535
+              },
+              "initial_11m_stage_only": true,
+              "initial_stage_count": 1,
+              "mission_hud_hidden": true,
+              "native": true,
+              "phase": 12,
+              "phase_ticks": 0,
+              "position": {
+                "x": 22.0435180664062,
+                "y": 22.8999996185303,
+                "z": -125.180473327637
+              },
+              "radio_cues": [
+                "arrival_iona_first_ring",
+                "service_iona_inspection_rail"
+              ],
+              "support_ticks": {
+                "11": 497,
+                "1600": 330,
+                "2560": 118,
+                "2561": 371,
+                "2562": 173
+              },
+              "tick": 2354,
+              "touch": true,
+              "viewport_3d_disabled": true,
+              "waypoint": 1
+            },
+            "native_final": {
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 3,
+              "foot_transfer_support": 2562,
+              "foot_transfer_tick": 2065,
+              "gravity": 1,
+              "grounded": true,
+              "hand_absorbed_work_j": 13.5777579777015,
+              "hand_positive_work_j": 29089.2985806302,
+              "hands": 0,
+              "last_foot_load_n": 395.829895019531,
+              "last_hand_foot_solve_tick": 2065,
+              "last_hand_load_n": 394.982055664062,
+              "position": {
+                "x": 22.0435180664062,
+                "y": 22.8999996185303,
+                "z": -125.180473327637
+              },
+              "support": 11,
+              "tick": 2354,
+              "velocity": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              }
+            },
+            "radio": {
+              "active_id": 2,
+              "active_key": "service_iona_inspection_rail",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 2,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/service_iona_inspection_rail.ogg"
+              }
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__stop_project",
+      "args": {},
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"message\":\"Godot project stopped\",\"mode\":\"spawned\",\"externalProcessPreserved\":false,\"alreadyExited\":false,\"finalOutput\":[\"OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe\",\"McpBridge: Listening on TCP port 42731\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=726 driver=Dummy\",\"McpBridge: Stopped\"],\"finalErrors\":[\"\\r\\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.\",\"\\r\\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/0\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/1\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/2\\\": No such file or directory\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.\",\"     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)\",\"WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\",\"Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\",\"     at: setup2 (main/main.cpp:3577)\",\"ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory\",\"ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory\",\"ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory\",\"ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory\",\"ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default\",\"ERROR: Condition \\\"status < 0\\\" is true. Returning: ERR_CANT_OPEN\",\"   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)\",\"WARNING: All audio drivers failed, falling back to the dummy driver.\",\"     at: initialize (servers/audio/audio_server.cpp:258)\"]}"
+          }
+        ],
+        "structuredContent": {
+          "message": "Godot project stopped",
+          "mode": "spawned",
+          "externalProcessPreserved": false,
+          "alreadyExited": false,
+          "finalOutput": [
+            "OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe",
+            "McpBridge: Listening on TCP port 42731",
+            "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+            "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+            "SCRAPERX_AUDIO_BANK clips=35 msec=726 driver=Dummy",
+            "McpBridge: Stopped"
+          ],
+          "finalErrors": [
+            "\r\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.",
+            "\r\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.",
+            "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.",
+            "     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)",
+            "WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.",
+            "Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.",
+            "     at: setup2 (main/main.cpp:3577)",
+            "ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory",
+            "ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory",
+            "ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory",
+            "ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory",
+            "ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default",
+            "ERROR: Condition \"status < 0\" is true. Returning: ERR_CANT_OPEN",
+            "   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)",
+            "WARNING: All audio drivers failed, falling back to the dummy driver.",
+            "     at: initialize (servers/audio/audio_server.cpp:258)"
+          ]
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Dummy audio driver: packaged stream playing/scheduling was observed; physical speaker output was not heard.",
+    "Viewport 3D disabled for software-rendered host interaction checks.",
+    "No full normal-spawn route rerun or APK/device claim; declared 11m initial stage only.",
+    "No fixture or production source changes made during this acceptance run."
+  ]
+}

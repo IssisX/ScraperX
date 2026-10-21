@@ -12,6 +12,7 @@ const CUES := {
 	&"arrival_iona_personnel_way": "The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.",
 	&"arrival_iona_mesh_lip": "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
 	&"arrival_iona_first_ring": "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
+	&"service_iona_inspection_rail": "Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.",
 	&"receiving_iona_come_look": "Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.",
 	&"receiving_iona_freight_one": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
 	&"freight_one_iona_crown": "Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.",
@@ -159,7 +160,16 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 	if fresh and _on_tower_access():
 		_arrival_seen = true
 		_last_supported_height = _observation.position.y - .9
-		_say(&"receiving_iona_keep_the_height" if _observation.position.y > 34.0 else &"arrival_iona_first_ring", tick)
+		if _last_supported_height >= 32.8:
+			_say(&"receiving_iona_keep_the_height", tick)
+		elif _last_supported_height >= 21.8:
+			var p := _observation.position
+			if p.x >= 10.5 and p.x <= 25.5 and p.z >= -127.5 and p.z <= -123.0:
+				_say(&"service_iona_inspection_rail", tick)
+			elif not _heard.has(&"arrival_iona_first_ring") and not _heard.has(&"service_iona_inspection_rail"):
+				_say(&"receiving_iona_keep_the_height", tick)
+		else:
+			_say(&"arrival_iona_first_ring", tick)
 	elif fresh and not _arrival_seen and _intro_at_arrival and tick > _transmission_until \
 			and _observation.operating.is_empty():
 		var p := _observation.position

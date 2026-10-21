@@ -151,6 +151,9 @@ void success(Simulation &sim, bool action) {
 std::vector<Snapshot> cancellation_trace(bool early_action) {
     Simulation sim(InitialSpawn::ExteriorGrade);
     const auto caught = catch_roof(sim);
+    // Both worlds perform the same real tuck on the first solved tick.
+    // Cancelling an input cannot erase physical work already performed.
+    require(sim.set_crouch_input(true), "matched physical posture before optional Action", sim);
     if (early_action)
         require(sim.request_traversal(), "one early Action before posture cancellation", sim);
     advance(sim);
@@ -171,8 +174,8 @@ std::vector<Snapshot> cancellation_trace(bool early_action) {
 }
 
 void cancellation(Simulation &diagnostic) {
-    // This actual Crouch/neutral sequence eventually loses the baseline
-    // radial hang too. Cancellation must not change that physical outcome.
+    // Compare the same physical preparation with/without a pending Action.
+    // The following Crouch cancels the transaction while retaining its work.
     const auto baseline = cancellation_trace(false);
     const auto buffered = cancellation_trace(true);
     require(baseline.size() == buffered.size(), "paired traces cover the same native ticks", diagnostic);
@@ -202,6 +205,87 @@ void cancellation(Simulation &diagnostic) {
               << " peak_position_delta_m=" << peak_position_delta
               << " peak_velocity_delta_mps=" << peak_velocity_delta
               << " peak_hand_load_delta_n=" << peak_hand_load_delta << '\n';
+}
+
+void duct_flow(Simulation &sim, const std::string &mode) {
+    require(sim.debug_restart_at({20, 13.62, -122.10}), "single actual cabinet-top staging", sim);
+    require(sim.set_move_input(0, 0) && sim.set_facing(0, -1), "ordinary cabinet facing", sim);
+    for (unsigned i = 0; i < 90; ++i) advance(sim);
+    require(sim.snapshot().player_grounded && sim.snapshot().support_entity_id == 2560,
+            "staged capsule earns actual cabinet footing", sim);
+    require(sim.request_jump() && sim.set_move_input(0, -.4), "earned jump toward actual duct", sim);
+    bool caught = false;
+    for (unsigned i = 0; i < 180; ++i) {
+        advance(sim);
+        if (sim.snapshot().traversal_state == TraversalState::Hanging) { caught = true; break; }
+    }
+    require(caught && sim.snapshot().traversal_support_entity_id == 2561 &&
+            sim.snapshot().traversal_hand_constraint_count == 2,
+            "real cabinet jump catches duct with two hands", sim);
+    require(sim.set_move_input(0, 0), "passive hang without shimmy or explicit tuck", sim);
+    for (unsigned i = 0; i < 45; ++i) advance(sim);
+    const auto before = sim.snapshot();
+    require(shoulder_reach(before) > 1.05, "passive duct catch really needs physical preparation", sim);
+    std::cout << "DUCT_PREPARE tick=" << before.tick_index << " reach_m=" << shoulder_reach(before)
+              << " body_y=" << before.player_position.y << '\n';
+    require(mode == "duct-action" ? sim.request_traversal() : sim.request_jump(),
+            "one deliberate duct top-out input", sim);
+    bool paid_pull = false, received = false;
+    double peak_pull_m = 0;
+    for (unsigned i = 0; i < 360; ++i) {
+        advance(sim);
+        const auto s = sim.snapshot();
+        const double debit = s.traversal_command_work_bound_j - before.traversal_command_work_bound_j;
+        require(debit >= -.000001, "preparation never refunds commanded work", sim);
+        if (s.traversal_state == TraversalState::Hanging) {
+            const double elapsed = (s.tick_index - before.tick_index) * Simulation::kFixedStepSeconds;
+            // Radial power limits positive spring energy supplied by changing
+            // rest lengths. Fmax * target distance is a separate conservative
+            // receipt; it does not measure the energy actually supplied.
+            const double supplied = s.traversal_actuator_positive_work_j - before.traversal_actuator_positive_work_j;
+            require(supplied <= 500.0 * elapsed + .001,
+                    "preparation uses the existing500W supplied-work allowance", sim);
+            require(debit <= 2.0 * 1500.0 * .6 * elapsed + .001,
+                    "command debit retains both1500N hands and0.6m/s stroke limit", sim);
+            require(s.hanging_free_arc_active &&
+                    s.hanging_commanded_span_m >= before.hanging_commanded_span_m - .250001,
+                    "preparation retains radial ownership and the shared0.25m allowance", sim);
+            require(s.traversal_left_hand_generation == before.traversal_left_hand_generation &&
+                    s.traversal_right_hand_generation == before.traversal_right_hand_generation &&
+                    s.traversal_hand_constraint_count == 2,
+                    "physical pull retains the original two real grips", sim);
+            for (const auto &force : {s.traversal_left_hand_force, s.traversal_right_hand_force})
+                require(std::hypot(force.x, force.y, force.z) <= 1501.0,
+                        "preparation retains actual1500N hand limits", sim);
+            peak_pull_m = std::max(peak_pull_m, s.player_position.y - before.player_position.y);
+            paid_pull |= s.traversal_actuator_positive_work_j > before.traversal_actuator_positive_work_j &&
+                         peak_pull_m > .01;
+        }
+        if (mode == "duct-cancel" && i == 5) {
+            require(sim.set_crouch_input(true), "cancel after actual finite preparation", sim);
+        } else if (mode == "duct-cancel" && i == 95) {
+            require(paid_pull && shoulder_reach(s) < 1.05, "cancelled attempt remains genuinely within reach after paid tuck", sim);
+            require(sim.set_crouch_input(false), "release tuck without a fresh top-out input", sim);
+        }
+        if (mode == "duct-cancel") {
+            require(s.traversal_plan_kind == 0 && s.accepted_traversal_count == before.accepted_traversal_count,
+                    "cancellation prevents delayed transfer even after actual reach improves", sim);
+            continue;
+        }
+        if (s.traversal_plan_kind != 0)
+            require(paid_pull, "actual paid body movement precedes physical transfer", sim);
+        if (s.player_grounded && s.support_entity_id == 2561 && s.traversal_hand_constraint_count == 0 &&
+                s.player_position.y > 17.0) { received = true; break; }
+    }
+    if (mode != "duct-cancel") {
+        require(received && paid_pull, "single duct input completes physical pull and actual receiving footing", sim);
+        for (unsigned i = 0; i < 90; ++i) advance(sim);
+        require(sim.snapshot().checkpoint_footing_valid && sim.snapshot().support_entity_id == 2561 &&
+                sim.snapshot().accepted_traversal_count == before.accepted_traversal_count + 1,
+                "duct exit stays firm and the input never replays", sim);
+    }
+    std::cout << "DUCT_PULL mode=" << mode << " actual_pull_m=" << peak_pull_m
+              << " paid_pull=" << paid_pull << " received=" << received << '\n';
 }
 
 void negative(Simulation &sim, const std::string &mode) {
@@ -236,6 +320,7 @@ int main(int argc, char **argv) {
     const std::string mode = argc > 1 ? argv[1] : "jump";
     Simulation sim(InitialSpawn::ExteriorGrade);
     if (mode == "jump" || mode == "action") success(sim, mode == "action");
+    else if (mode == "duct-jump" || mode == "duct-action" || mode == "duct-cancel") duct_flow(sim, mode);
     else if (mode == "cancel") cancellation(sim);
     else if (mode == "release" || mode == "restart") negative(sim, mode);
     else require(false, "known test mode required", sim);

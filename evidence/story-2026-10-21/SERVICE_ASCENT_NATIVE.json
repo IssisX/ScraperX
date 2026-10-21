@@ -1,0 +1,250 @@
+{
+  "exit": 0,
+  "native_sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+  "checks": 10,
+  "reused_unchanged_cases": [
+    {
+      "label": "topout-check-physical_hang_intent-jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "jump"
+      ],
+      "exit": 0,
+      "seconds": 17.90058970451355,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nHANG_START elapsed_ticks=7 grouped=0\nPASS PHYSICAL_HANG_INTENT mode=jump\n"
+    },
+    {
+      "label": "topout-check-physical_hang_intent-action",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "action"
+      ],
+      "exit": 0,
+      "seconds": 20.60296869277954,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nHANG_START elapsed_ticks=7 grouped=1\nPASS PHYSICAL_HANG_INTENT mode=action\n"
+    },
+    {
+      "label": "topout-check-physical_hang_intent-cancel",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "cancel"
+      ],
+      "exit": 0,
+      "seconds": 31.966208457946777,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nHANG_CANCEL_PAIR samples=92 peak_position_delta_m=0 peak_velocity_delta_mps=0 peak_hand_load_delta_n=0\nPASS PHYSICAL_HANG_INTENT mode=cancel\n"
+    },
+    {
+      "label": "topout-check-physical_hang_intent-release",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "release"
+      ],
+      "exit": 0,
+      "seconds": 13.93551754951477,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nPASS PHYSICAL_HANG_INTENT mode=release\n"
+    },
+    {
+      "label": "topout-check-physical_hang_intent-restart",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "restart"
+      ],
+      "exit": 0,
+      "seconds": 13.603049278259277,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nHANG_CATCH tick=283 reach_m=1.37838 grips=1,1\nPASS PHYSICAL_HANG_INTENT mode=restart\n"
+    }
+  ],
+  "commands_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/topout-focused-checks.json",
+  "commands": [
+    {
+      "label": "topout-test-build-corrected-oracle",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-std=c++17",
+        "-fno-rtti",
+        "-O2",
+        "-DNDEBUG",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tests/physical_hang_intent_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libyard-life.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent"
+      ],
+      "exit": 0,
+      "seconds": 13.663774734013714,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-focused-duct-jump",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "duct-jump"
+      ],
+      "exit": 0,
+      "seconds": 12.352323119994253,
+      "output": "DUCT_PREPARE tick=172 reach_m=1.15985 body_y=14.7847\nDUCT_PULL mode=duct-jump actual_pull_m=0.127889 paid_pull=1 received=1\nPASS PHYSICAL_HANG_INTENT mode=duct-jump\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-focused-duct-action",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "duct-action"
+      ],
+      "exit": 0,
+      "seconds": 10.847255517030135,
+      "output": "DUCT_PREPARE tick=172 reach_m=1.15985 body_y=14.7847\nDUCT_PULL mode=duct-action actual_pull_m=0.127889 paid_pull=1 received=1\nPASS PHYSICAL_HANG_INTENT mode=duct-action\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-focused-duct-cancel",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_hang_intent",
+        "duct-cancel"
+      ],
+      "exit": 0,
+      "seconds": 10.112160048971418,
+      "output": "DUCT_PREPARE tick=172 reach_m=1.15985 body_y=14.7847\nDUCT_PULL mode=duct-cancel actual_pull_m=0.38251 paid_pull=1 received=0\nPASS PHYSICAL_HANG_INTENT mode=duct-cancel\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-test-build-shared-transfer",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-std=c++17",
+        "-fno-rtti",
+        "-O2",
+        "-DNDEBUG",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tests/physical_topout_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libyard-life.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_topout"
+      ],
+      "exit": 0,
+      "seconds": 3.466900622996036,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-focused-default",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_topout"
+      ],
+      "exit": 0,
+      "seconds": 29.03876050899271,
+      "output": "SHARED tick=143 contact=142 hand_n=428.896 foot_n=98.1484\nPASS PHYSICAL_TOPOUT public_inputs=1 shared_positive_loads=1 preserved_foot=1 elapsed=97 final_tick=233\nPASS PHYSICAL_TOPOUT higher_ledge elapsed=128 release_inward_m_s=2.30259\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "label": "topout-focused-blocked",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/physical_topout",
+        "blocked"
+      ],
+      "exit": 0,
+      "seconds": 0.5080026040086523,
+      "output": "PASS PHYSICAL_TOPOUT blocked_receiver no_legacy_action_started=1\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    }
+  ],
+  "base_commit": "36514477bd4084110265b9190400f6a62efab74d",
+  "initial_oracle_failure": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nFAIL HANG_INTENT preparation uses existing500W command allowance tick=173 p=20.0002,14.7879,-122.559 state=1 hands=2 plan=0 accepted=0 support=0\n",
+  "test_contract_corrections": [
+    "500W radial cap applies to positive spring energy supplied, not Fmax-distance receipt. Both power and independent force/speed/stroke checks are retained.",
+    "The existing cancellation comparison performs matched first-tick tuck in both worlds; cancellation does not erase previous physical work. Duct-cancel separately interrupts an automatically prepared request after five ticks."
+  ],
+  "build_limit": "Constants header comment clarified supplied spring work after the coherent build; executable code and duration value are unchanged. Final CI builds the published source."
+}

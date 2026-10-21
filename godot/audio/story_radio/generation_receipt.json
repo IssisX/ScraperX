@@ -232,5 +232,14 @@
     "generated_utc": "2026-10-21T18:31:26.360599+00:00",
     "clean_sha256": "60a59a99e176b81f7d393d90207e916b425815c0467ffdfd77eac60c68afaaa7",
     "radio_sha256": "7dc9ba059a631145aabf0b8bfd8f287182d2ea1644e8528ea2cf9919aa99860e"
+  },
+  "service_iona_inspection_rail": {
+    "event_id": "45bb8ec29c45427bacd34ab157d02c01",
+    "text": "Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:52:55.038125+00:00",
+    "clean_sha256": "9d497f4701619301b30ce41e066c54194d326a07cdf1ae18311d91a9e63cdc27",
+    "radio_sha256": "faeb660f77294ba07da89e0bf5588971e20b18ff01b9dc04b4e1d9592585f98f"
   }
 }

@@ -8,7 +8,7 @@ var _service_wear: Texture2D
 var _service_bump: NoiseTexture2D
 
 func for_part(entity: int, index: int, original: Material, dynamic: bool) -> Material:
-	if entity in [2560, 2561, 2562] and index in [0, 5] and original is StandardMaterial3D:
+	if entity in [2560, 2561, 2562, 2563, 2565, 2566] and index in [0, 5] and original is StandardMaterial3D:
 		return _service_finish(index, original as StandardMaterial3D)
 	# Static freight retains the standard finish and whole-world batching.
 	if not dynamic:

@@ -1,0 +1,41 @@
+{
+  "source_commit": "36514477bd4084110265b9190400f6a62efab74d",
+  "run_id": 39655873601,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/39655873601",
+  "conclusion": "success",
+  "command": "tools/godot/godot --headless --path godot --audio-driver Dummy --script res://tests/opening_journey_input_test.gd",
+  "output": "SCRAPERX_OPENING_JOURNEY PASS checks=568 touch=1 actual_native=1 staged=0 viewport_3d_disabled=1 result={ \"done\": true, \"checks\": 568, \"failures\": [], \"phase\": 8, \"phase_ticks\": 0, \"waypoint\": 1, \"blocker\": {  }, \"native\": true, \"touch\": true, \"staged\": false, \"position\": (17.13844, 11.9, -125.9872), \"tick\": 12118, \"gravity_intact\": true, \"mission_hud_hidden\": true, \"cues\": [&\"\", &\"arrival_iona_empty_record\", &\"arrival_iona_personnel_way\", &\"arrival_iona_mesh_lip\", &\"arrival_iona_first_ring\"], \"radio_cues\": [&\"arrival_iona_empty_record\", &\"arrival_iona_personnel_way\", &\"arrival_iona_mesh_lip\", &\"arrival_iona_first_ring\"], \"viewport_3d_disabled\": true }",
+  "accepted_candidate": {
+    "result": "matching_signed_candidate_available_from_green_CI",
+    "source_commit": "36514477bd4084110265b9190400f6a62efab74d",
+    "run_id": "39655873601",
+    "artifact_id": 12372652324,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39655873601/artifacts/12372652324",
+    "version_code": 214772848,
+    "version_name": "0.1.0-chatgpt.36514477bd40.39655873601.1",
+    "apk": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-3651447/artifacts/ScraperX-ChatGPT-candidate-36514477bd4084110265b9190400f6a62efab74d/ScraperX-ChatGPT.apk",
+    "apk_sha256": "2278154800c2f48261a0d7f24a6dcddb518659edc65adb186ed2f059f32fa120",
+    "native_sha256": "e19ff1e59c0a088282cdb5e8bbeb599af28ff04ba264f4ae13e8422ead1273c7",
+    "actual_signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+    "producer_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-3651447/artifacts/ScraperX-ChatGPT-candidate-36514477bd4084110265b9190400f6a62efab74d/CANDIDATE-PROVENANCE.json",
+    "verification_owner": "Candidate CI signing and producer-provenance stages",
+    "local_apk_checks_run": false,
+    "full_gameplay": "Separate full-release acceptance; not established by this development candidate",
+    "phone_play": "Not run; no FPS improvement claim",
+    "delivered_local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-3651447.apk"
+  },
+  "direct_apk": {
+    "source_commit": "36514477bd4084110265b9190400f6a62efab74d",
+    "version_code": 214772848,
+    "tag": "chatgpt-candidate-3651447",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-3651447/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-3651447",
+    "asset_id": 663516576,
+    "asset_size": 61232026
+  },
+  "limits": [
+    "Viewport3D disabled in integrated input fixture.",
+    "No device FPS, human listening or full-release claim."
+  ]
+}

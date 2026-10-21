@@ -264,6 +264,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
     // A fresh airborne catch may have acquired hands later in this tick.
     if (traversal_state_ != TraversalState::LineSwing) sync_radial_profile(bodies, commands);
     if (traversal_state_ == TraversalState::Hanging && physical_hands_->active()) {
+        // CLIMB UP requests the existing finite pull before waiting for actual
+        // shoulder reach. A shimmy may have replaced a grip earlier this tick;
+        // that old transaction must not command even one new actuator step.
+        const bool preparing_topout = hang_topout_ticks_left_ > 0 &&
+            physical_hands_->compatible_hands() &&
+            hands_[0].generation == hang_topout_left_generation_ &&
+            hands_[1].generation == hang_topout_right_generation_;
+        hanging_posture_input_ = commands.crouch_held || preparing_topout;
         // Request a bounded rest-target change, never the root velocity.
         // Measure commanded position rather than actual compliant sag.
         const auto goal = from_support_local(bodies, traversal_body_, traversal_local_hold_);

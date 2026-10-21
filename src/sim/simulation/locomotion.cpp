@@ -108,11 +108,17 @@ void Simulation::PhysicsWorld::apply_traversal_commands(JPH::BodyInterface &bodi
             release_hang(bodies);
         } else if (!commands.cancel_jump_requested) {
             if (commands.jump_requested || commands.traversal_requested) {
-                hang_topout_ticks_left_ = kOrdinaryJumpIntentTicks;
+                hang_topout_ticks_left_ = kHangTopoutPreparationTicks;
                 hang_topout_left_generation_ = hands_[0].generation;
                 hang_topout_right_generation_ = hands_[1].generation;
             }
             if (hang_topout_ticks_left_ > 0) {
+                const auto landing = from_support_local(bodies, traversal_target_body_, traversal_local_target_);
+                if (!capsule_pose_is_clear(landing)) {
+                    hang_topout_ticks_left_ = 0;
+                    ++rejected_traversal_count_;
+                    return;
+                }
                 const auto ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
                 const auto shoulder = bodies.GetPosition(player_id_) + JPH::Vec3(0, kClimbHandMid, 0);
                 if (JPH::Vec3(ledge - shoulder).Length() <= kTransferShoulderReachM) {

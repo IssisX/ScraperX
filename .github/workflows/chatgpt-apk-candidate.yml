@@ -143,14 +143,23 @@ jobs:
           2>&1 | tee artifacts/slingshot-sleep-native.log
         timeout 120s build/candidate-host/scraperx_warehouse_forklift_tests \
           2>&1 | tee artifacts/forklift-sleep-native.log
-    - name: Check real airborne Action catch, cancellation and expiry
+    - name: Check airborne catch and finite hand-supported top-out intent
       shell: bash
       run: |
         set -euo pipefail
-        cmake --build build/candidate-host --target scraperx_air_catch_intent_tests --parallel 2
+        cmake --build build/candidate-host --target scraperx_air_catch_intent_tests scraperx_physical_hang_intent_tests scraperx_physical_topout_tests --parallel 2
         timeout 90s build/candidate-host/scraperx_air_catch_intent_tests \
           2>&1 | tee artifacts/air-catch-intent-native.log
         grep -F 'SCRAPERX_AIR_CATCH PASS' artifacts/air-catch-intent-native.log
+        for mode in jump action cancel release restart duct-jump duct-action duct-cancel; do
+          timeout 90s build/candidate-host/scraperx_physical_hang_intent_tests "$mode" \
+            2>&1 | tee "artifacts/hang-topout-${mode}-native.log"
+          grep -F "PASS PHYSICAL_HANG_INTENT mode=$mode" "artifacts/hang-topout-${mode}-native.log"
+        done
+        timeout 90s build/candidate-host/scraperx_physical_topout_tests \
+          2>&1 | tee artifacts/physical-topout-native.log
+        timeout 90s build/candidate-host/scraperx_physical_topout_tests blocked \
+          2>&1 | tee artifacts/physical-topout-blocked-native.log
     - name: Check connected yard, upper gallery and wall-kick receiver
       shell: bash
       run: |
@@ -296,7 +305,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for entry in story_guidance:STORY_GUIDANCE story_presenter:STORY_PRESENTER story_radio_player:STORY_RADIO story_discovery:STORY_DISCOVERY story_handover:STORY_HANDOVER story_handover_input:SCRAPERX_STORY_HANDOVER_INPUT story_opening_input:SCRAPERX_STORY_OPENING opening_journey_input:SCRAPERX_OPENING_JOURNEY story_discovery_input:SCRAPERX_STORY_DISCOVERY; do
+        for entry in story_guidance:STORY_GUIDANCE story_presenter:STORY_PRESENTER story_radio_player:STORY_RADIO story_discovery:STORY_DISCOVERY story_handover:STORY_HANDOVER story_handover_input:SCRAPERX_STORY_HANDOVER_INPUT story_opening_input:SCRAPERX_STORY_OPENING opening_journey_input:SCRAPERX_OPENING_JOURNEY service_ascent_input:SCRAPERX_SERVICE_ASCENT story_discovery_input:SCRAPERX_STORY_DISCOVERY; do
           check="${entry%%:*}"
           marker="${entry#*:}"
           timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \

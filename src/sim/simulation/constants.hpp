@@ -132,6 +132,13 @@ inline constexpr std::uint32_t kJumpVaultWindowTicks =
 // Intent lasts eleven native ticks (~122 ms). Contact sampled at a tick's
 // end is eligible on the following tick; this window supplies no support.
 inline constexpr std::uint32_t kOrdinaryJumpIntentTicks = 11;
+// A deliberate hand-supported pull retains the existing0.25m stroke and
+// 500W supplied-spring-work limit: 2*1500N*0.25m/500W=1.5s at worst load.
+// Retain the ordinary intent window for the solved body's response. This
+// lifetime grants no reach, force, footing or guaranteed settling time.
+inline constexpr std::uint32_t kHangTopoutPreparationTicks =
+    static_cast<std::uint32_t>(1.5 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz)) +
+    kOrdinaryJumpIntentTicks;
 // Intent ceiling only: real foot reach, traction and lifetime can end sooner.
 inline constexpr std::uint32_t kCoyotePlantIntentTicks = 8;
 
