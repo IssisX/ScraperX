@@ -70,6 +70,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                         0.8F,
                         Simulation::kTowerEntityId);
 
+    // Crossing to the second shaft. Before the world's solids, so a later
+    // export of the matching drawn boxes is recognised as a mirror.
+    build_second_crossing(bodies);
+
     // The proving ground's movement fixtures (WO-002, WO-003): only in a
     // world started at one of its spawns, never in the game's.
     if (scraperx::sim::is_proving_spawn(initial_spawn)) {

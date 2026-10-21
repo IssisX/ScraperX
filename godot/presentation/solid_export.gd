@@ -55,6 +55,9 @@ const NON_SOLID := [
 	# bodies stay where they are.
 	"LampStandard", "LampArm", "FloodFitting", "WordmarkCrest",
 	"BridgePostFoot", "BridgeLine", "BridgeTrestle", "BridgePylonFoot",
+	# Second-shaft crossing: the stays and the cable are paint. The bars,
+	# landing and ladder are native (crossing.cpp) and listed as mirrors.
+	"CrossingStay", "CrossingCable", "CrossingMark",
 ]
 
 # Native bodies drawn one-for-one. Listed so the exporter never relies on
@@ -71,6 +74,9 @@ const MIRROR := [
 	# walls' own 0.30 m slabs.
 	"Hook5Buttress", "Hook5Roof", "Hook5Header", "Hook5Bracket", "Hook5Rack", "Hook5Post",
 	"Hook5Rail", "Hook5Grille",
+	# crossing.cpp, one drawn box per native body.
+	"CrossingBar", "CrossingLedge", "CrossingBracket", "CrossingRail",
+	"CrossingStile", "CrossingRung", "CrossingShelf",
 ]
 
 const CYLINDER_SEGMENTS := 12

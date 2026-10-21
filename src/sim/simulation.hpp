@@ -1055,6 +1055,10 @@ public:
     // the hook itself while it is out.
     static constexpr std::uint64_t kHookRackEntityId = 55;
     static constexpr std::uint64_t kHookEntityId = 56;
+    // The second-shaft crossing: bars, landing, ladder. Not the shaft mass
+    // (kTowerEntityId) and not dressing (kWorldSolidEntityId), so a rider
+    // standing on the landing is not reported as standing on the stack.
+    static constexpr std::uint64_t kCrossingEntityId = 57;
     // The game's hook rack on the 220 ring, and the hook gun lying on it.
     static constexpr std::uint64_t kHookRackFrameEntityId = 1959;
     static constexpr std::uint64_t kHookGunEntityId = 2970;

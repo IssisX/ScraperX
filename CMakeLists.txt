@@ -25,6 +25,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_traversal.cpp
     src/sim/physics_world_climb.cpp
     src/sim/physics_world_state.cpp
+    src/sim/crossing.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
     src/sim/slingshot.cpp

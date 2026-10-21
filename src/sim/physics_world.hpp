@@ -255,6 +255,11 @@ private:
 
     void build_stack(JPH::BodyInterface &bodies);
 
+    // The first playable slice across to the second shaft. Static holds and
+    // one landing, reachable from the 220 ring's north band with the 30 m
+    // hook. Defined in crossing.cpp.
+    void build_second_crossing(JPH::BodyInterface &bodies);
+
     [[nodiscard]] JPH::TwoBodyConstraint *create_constraint(
         const JPH::TwoBodyConstraintSettings &settings,
         const JPH::BodyID first,

@@ -71,6 +71,7 @@ func _build_world() -> void:
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_stack_accents(verdigris, lichen)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
+	_build_second_crossing(oxidised, galvanised, faded_yellow)
 	_build_yard(concrete, faded_yellow, tar)
 	_build_mountains_and_waterfall()
 	_build_kellerworks_signage(timber, faded_yellow)
@@ -588,6 +589,47 @@ func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_sca
 		if level % 3 == 0:
 			_add_box("UpperLightBand", Vector3(half * 2.0, 0.7, 0.4),
 				Vector3(cx, base_y + 1.2, cz + half + 0.3), faded)
+
+# The first way onto the second shaft. The bodies are crossing.cpp, drawn
+# here one for one and listed as mirrors in solid_export.gd. A stay or a
+# cable is paint: the stays are what the floating audit holds the bars by,
+# from inside the 220 ring's north band. The hook is the only way across.
+# The shaft's mass is not opened.
+func _build_second_crossing(oxidised: Material, galvanised: Material, faded: Material) -> void:
+	var level := 20
+	var base_level := STACK_LEVEL_COUNT
+	var top_level := STACK_LEVEL_COUNT + 24
+	var shrink := 1.0 - float(level - base_level) / float(top_level - base_level) * 0.42
+	var half := STACK_HALF_EXTENT * shrink
+	var deck_y := float(level) * STACK_LEVEL_HEIGHT
+	var face_z := STACK_CENTER.z - (half - 2.0) - 2.0
+	var bars := [
+		Vector3(-18.0, 222.0, -198.0),
+		Vector3(-25.0, 219.6, -222.0),
+		Vector3(-32.0, 217.2, -246.0),
+		Vector3(-36.0, 215.0, -268.0),
+	]
+	for bar in bars:
+		_add_box("CrossingBar", Vector3(4.0, 0.16, 0.16), bar, galvanised)
+	_add_box("CrossingLedge", Vector3(3.2, 0.30, 1.70), Vector3(-36.0, 213.70, -285.80), oxidised)
+	_add_box("CrossingBracket", Vector3(0.60, 0.56, 4.00), Vector3(-36.0, 213.40, -288.30), oxidised)
+	_add_box("CrossingRail", Vector3(2.40, 0.16, 0.16), Vector3(-36.0, 213.85, -284.78), galvanised)
+	for stile_x in [-37.45, -34.55]:
+		_add_box("CrossingStile", Vector3(0.16, 6.10, 0.16), Vector3(stile_x, 216.65, -286.20), galvanised)
+	for rung_y in [215.2, 216.6, 218.0]:
+		_add_box("CrossingRung", Vector3(2.90, 0.16, 0.16), Vector3(-36.0, rung_y, -286.20), galvanised)
+	_add_box("CrossingShelf", Vector3(3.10, 0.24, 0.80), Vector3(-36.0, 219.55, -286.20), oxidised)
+	# West side of the lip. Past about x = -2 the first bar is outside the
+	# 30 m line, so the mark is where the shot is actually there.
+	var lip_x := [-16.0, -19.5, -21.5, -22.2]
+	var inset := half - 1.1
+	for i in bars.size():
+		var anchor_x := clampf(lip_x[i], -inset, inset)
+		_add_strut("CrossingStay", Vector3(anchor_x, deck_y, face_z + 0.85), bars[i], 0.12, oxidised)
+	for i in bars.size() - 1:
+		_add_strut("CrossingCable", bars[i], bars[i + 1], 0.04, galvanised)
+	_add_box("CrossingMark", Vector3(2.4, 0.04, 0.7),
+		Vector3(-17.0, deck_y + 0.24, face_z + 0.6), faded)
 
 func _build_yard(concrete: Material, faded: Material, tar: Material) -> void:
 	for z in range(-130, 10, 14):
