@@ -2315,6 +2315,7 @@ func _update_legs(body_state: Dictionary, delta: float) -> void:
 	state["velocity"] = body_state["velocity"]
 	state["bob_phase"] = body_state["bob_phase"]
 	state["crouch_visual_01"] = _crouch_eye
+	state["wrist_positions"] = _arms.wrist_positions()
 	_leg_deaths = deaths
 	_legs.update_legs(state, _camera.global_transform, delta)
 

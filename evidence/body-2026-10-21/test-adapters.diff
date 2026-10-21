@@ -1,0 +1,82 @@
+--- a/godot/tests/first_person_legs_native_test.gd
++++ b/godot/tests/_mcp_body_native.gd
+@@ -1,4 +1,5 @@
+-extends SceneTree
++extends RefCounted
++var root: Window
+ 
+ # Actual Simulation -> bridge -> shipping Main adapter -> drawn sole.
+ const STEP := 1.0 / 90.0
+@@ -7,12 +8,6 @@
+ var main: Node
+ var native: RefCounted
+ var capture_dir := ""
+-
+-func _initialize() -> void:
+-	for argument in OS.get_cmdline_user_args():
+-		if argument.begins_with("--capture-dir="):
+-			capture_dir = argument.trim_prefix("--capture-dir=")
+-	_run.call_deferred()
+ 
+ func check(ok: bool, label: String) -> void:
+ 	checks += 1
+@@ -50,13 +45,15 @@
+ 	if capture_dir.is_empty() or main._legs.planted_foot_index() < 0:
+ 		return
+ 	main._camera.look_at(main._legs.planted_foot_position() + Vector3.UP * 0.1)
+-	await process_frame
++	await root.get_tree().process_frame
+ 	await RenderingServer.frame_post_draw
+ 	var image := root.get_texture().get_image()
+ 	check(image != null and image.save_png(capture_dir.path_join(label + ".png")) == OK,
+ 		"actual Main viewport capture " + label)
+ 
+-func _run() -> void:
++func run(tree: SceneTree) -> Dictionary:
++	root = tree.root
++	root.disable_3d = true
+ 	main = load("res://main.tscn").instantiate()
+ 	main.prepare_initial_world = false
+ 	main._settings_persistent = false
+@@ -132,5 +129,5 @@
+ 		"stable actual exit returns to ordinary unplanted legs")
+ 	print("SCRAPERX_LEGS_NATIVE %s checks=%d" % ["FAIL" if failed else "PASS", checks])
+ 	main.queue_free()
+-	await process_frame
+-	quit(1 if failed else 0)
++	await root.get_tree().process_frame
++	return {"checks":checks,"failed":failed}
+--- a/godot/tests/first_person_legs_test.gd
++++ b/godot/tests/_mcp_body_unit.gd
+@@ -1,13 +1,11 @@
+-extends SceneTree
++extends RefCounted
++var root: Window
+ 
+ # Supplied native observations exercise presentation only; no Jolt runtime claim.
+ # godot --headless --path godot --script res://tests/first_person_legs_test.gd
+ const Legs := preload("res://presentation/first_person_legs.gd")
+ var _checks := 0
+ var _failed := false
+-
+-func _initialize() -> void:
+-	_run.call_deferred()
+ 
+ func _check(ok: bool, label: String) -> void:
+ 	_checks += 1
+@@ -23,7 +21,8 @@
+ 		"foot_push_support_entity_id": 42, "foot_push_world_anchor": Vector3(0.115, 0, 0),
+ 		"foot_push_world_normal": Vector3.UP}
+ 
+-func _run() -> void:
++func run(tree: SceneTree) -> Dictionary:
++	root = tree.root
+ 	var rig := Legs.new()
+ 	root.add_child(rig)
+ 	var material := StandardMaterial3D.new()
+@@ -177,4 +176,4 @@
+ 	print("SCRAPERX_LEGS ", "FAIL" if _failed else "PASS", " checks=", _checks,
+ 		" supplied observations only; no native runtime or device visual claim")
+ 	rig.free()
+-	quit(1 if _failed else 0)
++	return {"checks":_checks,"failed":_failed}

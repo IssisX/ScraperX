@@ -15,6 +15,16 @@ with zipfile.ZipFile(apk) as package:
     payload = package.read('lib/arm64-v8a/libscraperx_native.so')
     if payload != native.read_bytes():
         raise SystemExit('Packaged native library differs from this build')
+    climber_files = {}
+    for name in ('climber_body.glb.bytes', 'SOURCE.md', 'LICENSE.MakeHuman.txt'):
+        relative = 'presentation/life/climber/' + name
+        try:
+            data = package.read('assets/' + relative)
+        except KeyError as error:
+            raise SystemExit('APK body resource missing: assets/' + relative) from error
+        if data != (Path('godot') / relative).read_bytes():
+            raise SystemExit('APK body resource differs from source: ' + relative)
+        climber_files[name] = {'bytes': len(data), 'sha256': sha(data)}
 if payload[:6] != b'\x7fELF\x02\x01' or struct.unpack_from('<H', payload, 18)[0] != 183:
     raise SystemExit('Expected ELF64 little-endian AArch64 native library')
 header = struct.unpack_from('<16sHHIQQQIHHHHHH', payload)
@@ -52,6 +62,7 @@ record = {
     'signer_sha256': expected_signer, 'signer_verification_min_sdk': 28, 'apk_sha256': sha(apk.read_bytes()),
     'native_sha256': sha(payload), 'native_matches_build': True,
     'native_abi': 'AArch64', 'native_load_alignments': alignments,
+    'climber_body_resources': climber_files,
     'validation': ['host/Android native build', 'Godot resource import', 'signed export/package identity', '16K ELF/ZIP alignment'],
     'full_gameplay_proof': 'separate required wo000-delivery-spine.yml workflow; not certified by this artifact',
     'installed_android_play': 'not run',

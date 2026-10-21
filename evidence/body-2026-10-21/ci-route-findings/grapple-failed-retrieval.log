@@ -1,0 +1,17 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+[DEBUG-grapple-pose] roof484,stable cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof484,stable,135,10.000000,485.149994,-132.800003,0.000000,0.000000,0.000000,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] roof_to_launch_bay,begin cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof_to_launch_bay,begin,135,10.000000,485.149994,-132.800003,0.000000,0.000000,0.000000,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] roof_to_launch_bay,arrived cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof_to_launch_bay,arrived,222,11.992622,485.149994,-132.800003,0.092650,0.000000,0.000013,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,begin cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,real_departure_approach,begin,222,11.992622,485.149994,-132.800003,0.092650,0.000000,0.000013,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+GRAPPLE_ROUTE,real_departure_approach,arrived,386,11.999923,485.148804,-135.507812,0.001218,0.000041,0.131083,1,1965,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,actual_support_stable cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+GRAPPLE_ROUTE,real_departure_approach,actual_support_stable,476,12.000111,485.148804,-135.485504,0.000004,0.000001,0.000424,1,1965,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,failed_retrieval_feedback cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+[DEBUG-grapple-head] local=-2.60788,-5.00601,0.0150122
+GRAPPLE_ROUTE,real_departure_approach,failed_retrieval_feedback,481,11.990715,485.148804,-135.485504,-0.257738,0.000000,0.000308,1,1965,0,3,8,3,13.197150,485.602936,-135.485504,0.000000,0.000000,0.000000
+PASS GRAPPLE_ROUTE failed_retrieval_preserves_stock

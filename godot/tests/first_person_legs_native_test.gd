@@ -58,10 +58,16 @@ func capture(label: String) -> void:
 
 func _run() -> void:
 	main = load("res://main.tscn").instantiate()
+	main.prepare_initial_world = false
+	main._settings_persistent = false
+	main._force_touch = true
 	root.add_child(main)
 	main.set_process(false)
 	native = main._native
 	check(native != null and native.get_class() == "ScraperXSimulation", "shipping native owner")
+	var touch_case = load("res://tests/first_person_body_input_case.gd").new()
+	var touch: Dictionary = touch_case.run(main)
+	check(touch.failures.is_empty(), "normal touch body sequence: " + str(touch))
 	main._yaw = -PI * 0.5
 	check(native.debug_restart_at(Vector3(-46, 0.9, -38.45)) and native.set_move_input(0, 0)
 		and native.set_facing(1, 0), "one actual yard approach stage")

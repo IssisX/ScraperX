@@ -1,0 +1,54 @@
+--- a/src/sim/simulation/hand_transfer.cpp
++++ b/src/sim/simulation/hand_transfer.cpp
+@@ -1,5 +1,6 @@
+ #include "sim/simulation/world.hpp"
+ #include "sim/traversal_receiver.hpp"
++#include <iostream>
+ 
+ namespace scraperx::sim {
+ using namespace detail;
+@@ -25,6 +26,11 @@
+     const JPH::IgnoreSingleBodyFilter filter(player_id_);
+     physics_system_.GetNarrowPhaseQuery().CastShape(sweep,JPH::ShapeCastSettings(),from,
+         collector,{},{},filter);
++    static int traces=0;
++    if (collector.HadHit() && from.GetY()>380 && from.GetY()<384 && traces++<6) {
++        const auto &h=collector.mHit;
++        std::cerr << "WEST_SWEEP from=" << from << " to=" << to << " fraction=" << h.mFraction << " body=" << h.mBodyID2.GetIndexAndSequenceNumber() << " sub=" << h.mSubShapeID2.GetValue() << " axis=" << h.mPenetrationAxis << '\n';
++    }
+     return !collector.HadHit();
+ }
+ 
+@@ -285,6 +291,8 @@
+     const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
+     const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
+     if (!shape_pose_is_clear(player_shape_.GetPtr(),landing)) {
++        static int traces=0;
++        if (traversal_entity_id_==1934 && traces++<6) std::cerr << "WEST_LANDING_BLOCK actual=" << actual << " landing=" << landing << '\n';
+         traversal_plan_.rejection = TraversalRejection::BlockedClearance;
+         return;
+     }
+@@ -315,8 +323,11 @@
+     }
+     const auto receiving_goal=hand_goal+JPH::Vec3(0,0.02F,0);
+     if (receiving || actual.GetY()-kPlayerHalfHeight >= ledge.GetY()+0.04F) {
+-        if (!shape_pose_is_clear(player_shape_.GetPtr(),receiving_goal) ||
+-            !standing_path_is_clear(actual,receiving_goal)) {
++        const bool pose_clear=shape_pose_is_clear(player_shape_.GetPtr(),receiving_goal);
++        const bool path_clear=pose_clear && standing_path_is_clear(actual,receiving_goal);
++        if (!pose_clear || !path_clear) {
++            static int traces=0;
++            if (traversal_entity_id_==1934 && traces++<6) std::cerr << "WEST_RECEIVING_BLOCK actual=" << actual << " landing=" << landing << " goal=" << receiving_goal << " pose=" << pose_clear << " path=" << path_clear << '\n';
+             traversal_plan_.rejection = TraversalRejection::BlockedClearance;
+             return;
+         }
+--- a/tests/west_brace_bay_route_tests.cpp
++++ b/tests/west_brace_bay_route_tests.cpp
+@@ -100,6 +100,7 @@
+     }
+     for (int i = 0; i < tick_budget; ++i) {
+         const auto v = s.snapshot();
++        if (i % 120 == 0) std::cerr << "WEST_PHASE i=" << i << " pos=" << v.player_position.x << ',' << v.player_position.y << ',' << v.player_position.z << " phase=" << int(v.traversal_phase) << " reject=" << int(v.traversal_rejection_reason) << " receiver=" << v.traversal_receiver_entity_id << " shared=" << v.hand_foot_overlap_solved_ticks << " foot=" << v.foot_push_active << " load=" << v.foot_push_last_load_n << '\n';
+         if (on_support_top(v, top_y, expected_support)) {
+             break;
+         }

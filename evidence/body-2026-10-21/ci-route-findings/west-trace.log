@@ -1,0 +1,30 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/1": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/2": No such file or directory
+WEST_PHASE i=0 pos=-24.7,375.15,-139.5 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=120 pos=-24.7001,376.092,-139.128 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=240 pos=-24.7012,377.143,-138.847 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=360 pos=-24.7013,378.195,-138.527 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=480 pos=-24.7007,379.246,-138.177 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=600 pos=-24.7007,380.297,-137.857 phase=0 reject=0 receiver=0 shared=0 foot=0 load=0
+WEST_PHASE i=720 pos=-24.7015,381.635,-137.691 phase=4 reject=0 receiver=1934 shared=0 foot=0 load=0
+WEST_SWEEP from=-24.6499, 382.842, -137.699 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.294941, -0.076124, 0.146217
+WEST_RECEIVING_BLOCK actual=-24.6499, 382.842, -137.699 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_SWEEP from=-24.6478, 382.853, -137.699 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.292832, -0.0874152, 0.14614
+WEST_RECEIVING_BLOCK actual=-24.6478, 382.853, -137.699 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_SWEEP from=-24.6459, 382.863, -137.699 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.290861, -0.0974862, 0.146018
+WEST_RECEIVING_BLOCK actual=-24.6459, 382.863, -137.699 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_SWEEP from=-24.644, 382.872, -137.699 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.289034, -0.106428, 0.145896
+WEST_RECEIVING_BLOCK actual=-24.644, 382.872, -137.699 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_SWEEP from=-24.6424, 382.88, -137.698 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.287354, -0.114241, 0.145774
+WEST_RECEIVING_BLOCK actual=-24.6424, 382.88, -137.698 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_SWEEP from=-24.6408, 382.887, -137.698 to=-23.4883, 382.84, -137.697 fraction=0 body=8391674 sub=4294967254 axis=0.285822, -0.120985, 0.145652
+WEST_RECEIVING_BLOCK actual=-24.6408, 382.887, -137.698 landing=-23.795, 382.82, -137.697 goal=-23.4883, 382.84, -137.697 pose=1 path=0
+WEST_PHASE i=840 pos=-24.6351,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=960 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=1080 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=1200 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=1320 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=1440 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+WEST_PHASE i=1560 pos=-24.635,382.886,-137.697 phase=4 reject=4 receiver=1934 shared=0 foot=0 load=0
+FAIL WEST_BRACE_BAY first diagonal climb tops out on the real381.9m recovery shelf tick=1716 pos=-24.635,382.886,-137.697 velocity=-1.18333e-05,0.00145638,-0.000743414 grounded=0 support=0 traversal=4 traversal_support=1934 grip=0:0 hands=2 hand_l=-24.145,381.9,-137.477 hand_r=-24.06,381.9,-137.917 gravity=1 landings=1 deaths=0

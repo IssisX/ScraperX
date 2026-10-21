@@ -1,0 +1,106 @@
+{
+  "base_revision": "dc9a53965959849525e3486238da351d6fc13ab0",
+  "platform": "Termux/Ubuntu Linux ARM64; Godot 4.7; native Jolt ScraperXSimulation; softpipe renderer, Dummy audio",
+  "native_evidence_reused": "evidence/grapple-2026-10-20/CHARGE_NATIVE.json; existing coherent charge/libscraperx_native.so; no native source changes for body integration",
+  "tools": [
+    {
+      "tool": "mcp__godot_mcp_runtime__run_project",
+      "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/runtime",
+      "scene": "tests/rigging_mcp_bootstrap.tscn",
+      "background": true
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "script": "extends RefCounted\nfunc execute(tree:SceneTree)->Variant:\n tree.root.disable_3d=true\n var runner=load(\"res://tests/_mcp_body_native.gd\").new()\n var result:Dictionary=await runner.run(tree)\n return result\n",
+      "observed": {
+        "success": true,
+        "result": {
+          "checks": 859,
+          "failed": false
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 4: load - load() with a literal path can run _init code in the loaded resource"
+        ]
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "script": "extends RefCounted\nfunc execute(tree:SceneTree)->Variant:\n tree.root.disable_3d=true\n return await load(\"res://tests/_mcp_body_unit.gd\").new().run(tree)\n",
+      "observed": {
+        "success": true,
+        "result": {
+          "checks": 64,
+          "failed": false
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 4: load - load() with a literal path can run _init code in the loaded resource"
+        ]
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "script": "extends RefCounted\nfunc execute(tree:SceneTree)->Variant:\n tree.root.disable_3d=true\n var runner=load(\"res://tests/first_person_body_view_test.gd\").new()\n tree.root.add_child(runner)\n await runner._run()\n var result={\"checks\":runner.checks,\"failures\":runner.failures,\"finished\":runner.finished,\"rendered_captures\":false}\n runner.queue_free()\n await tree.process_frame\n return result\n",
+      "observed": {
+        "success": true,
+        "result": {
+          "checks": 53,
+          "failures": 0,
+          "finished": true,
+          "rendered_captures": false
+        },
+        "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+        "warnings": [
+          "Warning line 4: load - load() with a literal path can run _init code in the loaded resource"
+        ]
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__take_screenshot",
+      "responseMode": "preview",
+      "observed": {
+        "responseMode": "preview",
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/runtime/.mcp/godot-runtime/screenshots/screenshot_1792599549_56825.png",
+        "size": {
+          "width": 540,
+          "height": 720
+        },
+        "previewPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/runtime/.mcp/godot-runtime/screenshots/screenshot_1792599549_56825_preview.png",
+        "previewSize": {
+          "width": 540,
+          "height": 720
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__stop_project",
+      "observed": {
+        "message": "Godot project stopped"
+      }
+    }
+  ],
+  "evidence_limits": [
+    "Native and unit SceneTree checks were adapted only to return checks/failed from the MCP SceneTree; all assertions retained. Runtime-only adapter diffs are included in this evidence directory.",
+    "The native check includes a normal arrival touch movement/crouch/stand/jump/landing/equip sequence. Wall/top-out sections retain their existing initial native debug stages, not a continuous ascent claim.",
+    "The unit/native observations precede the final player_sliding field wiring. The unchanged contact, stance and body behavior retains those results; the final source passed the 53-check existing body-view sequence. Matching CI is a separate required gate.",
+    "Normal shipping Main was rendered with actual touch overlay at540x720/native tick31. Host-only directional shadow atlas512 was used for the software preview; source quality settings were unchanged. No phone frame-rate or feel claim.",
+    "Earlier expanded touch failures were introduced test-driver gaps and a70tick wait shorter than actual ballistic flight. ResourceLoader CACHE_MODE_REPLACE retained the old GDScript source; a real MCP project restart admitted the new Main._process test driver. Native physics was unchanged.",
+    "An initial isolated-runtime launch had overwritten its ARM64 GDExtension descriptor with the shipping host descriptor; the original matching ARM64 descriptor was restored. This was test setup, not a production ABI change."
+  ],
+  "apk": "Pending matching green candidate; existing b71e238 candidate is separate.",
+  "physics_authority": "Presentation only; no changed transforms/velocities/force limits in native simulation.",
+  "upstream_asset": "82cb58992f9ecd300830e6289d25367e6bc0e6b7; raw GLB sha256918c244ec10ae8cfaeea57cd6f40deacec547f57e73145059b2b199e91922c8e",
+  "source_sha256": {
+    "godot/presentation/first_person_body_rig.gd": "d6e4a166433aa322cf26878e29a93b495c46c22a2bcec98d3be46915d7e17eb6",
+    "godot/presentation/first_person_legs.gd": "85cfe2d9f16935b09fcacdf86a357b4bec99f61171de40271ad7526c526e611a",
+    "godot/presentation/main.gd": "07f7255f320d77cef59d397230400027156bac734a53ab3b3a15ebc190bdd6dc",
+    "godot/tests/first_person_body_input_case.gd": "702294cd261d374f0b1c9a3944646f1108fcd8500719374f280b6f4ab6fa6a97",
+    "godot/tests/first_person_body_view_test.gd": "38c57e3106080bf34bddccd1f01b7bbcf58eb876d633a81fb27828b343cbcb1a",
+    "godot/tests/first_person_legs_test.gd": "4a0bed5abddac4b7671ae5243bb0546860f4d99f949452e593dd6a934473c00e",
+    "godot/tests/first_person_legs_native_test.gd": "eefd40c55bb3d00681d1cea6ff97b200305a867a384786045fc4b78ed834eb0d",
+    "godot/export_presets.cfg": "c19c63dbf9e0d1995e9197fceddcf56888b52f2f83bef30244c9fe9f0101e124",
+    "godot/presentation/life/climber/climber_body.glb.bytes": "918c244ec10ae8cfaeea57cd6f40deacec547f57e73145059b2b199e91922c8e"
+  },
+  "native_src_tree": "db88928d206595dfc01b188b69d8b79f78b4d075"
+}

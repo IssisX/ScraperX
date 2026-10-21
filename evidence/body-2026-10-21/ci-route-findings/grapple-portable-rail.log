@@ -1,0 +1,157 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+[DEBUG-grapple-pose] roof484,stable cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof484,stable,135,10.000000,485.149994,-132.800003,0.000000,0.000000,0.000000,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] roof_to_launch_bay,begin cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof_to_launch_bay,begin,135,10.000000,485.149994,-132.800003,0.000000,0.000000,0.000000,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] roof_to_launch_bay,arrived cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,roof_to_launch_bay,arrived,222,11.992622,485.149994,-132.800003,0.092650,0.000000,0.000013,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,begin cup=16,490.5,-135.501 q=-6.09793e-05,5.44291e-07,-4.0909e-06,1
+GRAPPLE_ROUTE,real_departure_approach,begin,222,11.992622,485.149994,-132.800003,0.092650,0.000000,0.000013,1,51,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+GRAPPLE_ROUTE,real_departure_approach,arrived,386,11.999923,485.148804,-135.507812,0.001218,0.000041,0.131083,1,1965,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] real_departure_approach,actual_support_stable cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+GRAPPLE_ROUTE,real_departure_approach,actual_support_stable,476,12.000111,485.148804,-135.485504,0.000004,0.000001,0.000424,1,1965,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-pose] ordinary_aim_fire,begin cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+GRAPPLE_ROUTE,ordinary_aim_fire,begin,478,12.000111,485.148804,-135.485504,0.000003,0.000001,0.000373,1,1965,0,0,0,4,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+[DEBUG-grapple-spin] flight_contact tick=660 relative_rad_s=0 peak=0 neck_axis=-0.12577,-0.992059,0.000209752
+[DEBUG-grapple-seat] i=180 settled=0 head_local=-0.507639,2.46066,0.00576724
+[DEBUG-grapple-pose] ordinary_aim_fire,seating_probe cup=16,490.499,-135.502 q=-0.000156933,3.48352e-06,8.08579e-07,1
+[DEBUG-grapple-head] local=-0.507639,2.46066,0.00576724
+GRAPPLE_ROUTE,ordinary_aim_fire,seating_probe,660,11.993339,485.148804,-135.485504,-0.000001,0.000000,0.000000,1,1965,0,1,0,3,15.358727,492.779999,-135.496552,10.170462,0.000000,0.000000
+[DEBUG-grapple-spin] flight_contact tick=670 relative_rad_s=0 peak=0 neck_axis=-0.12577,-0.992059,0.000209752
+[DEBUG-grapple-spin] flight_contact tick=680 relative_rad_s=0 peak=0 neck_axis=-0.12577,-0.992059,0.000209752
+[DEBUG-grapple-spin] flight_contact tick=690 relative_rad_s=3.61913 peak=7.68187 neck_axis=-0.0675562,-0.996477,-0.0496915
+[DEBUG-grapple-seat] i=210 settled=3 head_local=0.00732951,-0.0826,-0.00538773
+[DEBUG-grapple-pose] ordinary_aim_fire,seating_probe cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00732951,-0.0826,-0.00538773
+GRAPPLE_ROUTE,ordinary_aim_fire,seating_probe,690,11.993339,485.148804,-135.485504,-0.000001,-0.000018,0.000002,1,1965,0,1,0,3,15.884513,490.229248,-135.512436,10.170462,0.000000,0.000000
+[DEBUG-grapple-spin] flight_contact tick=700 relative_rad_s=0.26594 peak=7.68187 neck_axis=0.0142036,-0.999871,0.00755697
+[DEBUG-grapple-spin] flight_contact tick=710 relative_rad_s=0.477845 peak=7.68187 neck_axis=-0.0050784,-0.999957,0.00772311
+[DEBUG-grapple-spin] flight_contact tick=720 relative_rad_s=0.893342 peak=7.68187 neck_axis=-0.0876219,-0.996124,0.00772385
+[DEBUG-grapple-seat] i=240 settled=24 head_local=0.00298838,-0.089015,-0.0062485
+[DEBUG-grapple-pose] ordinary_aim_fire,seating_probe cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00298838,-0.089015,-0.0062485
+GRAPPLE_ROUTE,ordinary_aim_fire,seating_probe,720,11.993339,485.148804,-135.485504,-0.000000,0.000000,0.000000,1,1965,0,1,0,3,15.876431,490.225372,-135.502502,10.170462,0.000000,0.000000
+[DEBUG-grapple-spin] flight_contact tick=730 relative_rad_s=0.725629 peak=7.68187 neck_axis=-0.182902,-0.983106,0.00702749
+[DEBUG-grapple-spin] flight_contact tick=740 relative_rad_s=0.0348183 peak=7.68187 neck_axis=-0.218978,-0.975713,0.00577143
+[DEBUG-grapple-pose] capture_deliberate_pause,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=-0.00347658,-0.0890486,-0.00620536
+GRAPPLE_ROUTE,capture_deliberate_pause,begin,741,11.993339,485.148804,-135.485504,-0.000000,0.000000,0.000000,1,1965,0,1,0,3,15.846780,490.243591,-135.502884,10.170462,0.000000,0.000000
+[DEBUG-grapple-spin] human_pause tick=742 relative_rad_s=0.159335 peak=7.68187 neck_axis=-0.216185,-0.976335,0.00577136
+[DEBUG-grapple-spin] human_pause tick=752 relative_rad_s=0.716183 peak=7.68187 neck_axis=-0.16155,-0.986837,0.00742091
+[DEBUG-grapple-spin] human_pause tick=762 relative_rad_s=0.788186 peak=7.68187 neck_axis=-0.0735826,-0.997261,0.00746117
+[DEBUG-grapple-spin] human_pause tick=772 relative_rad_s=0.346031 peak=7.68187 neck_axis=-0.00761845,-0.999941,0.00778654
+[DEBUG-grapple-spin] human_pause tick=782 relative_rad_s=0.358267 peak=7.68187 neck_axis=-0.0157282,-0.999844,0.00800501
+[DEBUG-grapple-spin] human_pause tick=792 relative_rad_s=0.753657 peak=7.68187 neck_axis=-0.0830073,-0.99652,0.0076009
+[DEBUG-grapple-spin] human_pause tick=802 relative_rad_s=0.699278 peak=7.68187 neck_axis=-0.167208,-0.985894,0.00743777
+[DEBUG-grapple-spin] human_pause tick=812 relative_rad_s=0.0320944 peak=7.68187 neck_axis=-0.2071,-0.978301,0.00611177
+[DEBUG-grapple-spin] human_pause tick=822 relative_rad_s=0.486911 peak=7.68187 neck_axis=-0.177496,-0.9841,0.00656958
+[DEBUG-grapple-spin] human_pause tick=832 relative_rad_s=0.701075 peak=7.68187 neck_axis=-0.107527,-0.994175,0.00733599
+[DEBUG-grapple-spin] human_pause tick=842 relative_rad_s=0.498494 peak=7.68187 neck_axis=-0.038534,-0.99923,0.00733588
+[DEBUG-grapple-spin] human_pause tick=852 relative_rad_s=0.0938882 peak=7.68187 neck_axis=-0.0161113,-0.999842,0.00751581
+[DEBUG-grapple-spin] human_pause tick=862 relative_rad_s=0.557157 peak=7.68187 neck_axis=-0.056724,-0.998362,0.00751562
+[DEBUG-grapple-spin] human_pause tick=872 relative_rad_s=0.690477 peak=7.68187 neck_axis=-0.130284,-0.991449,0.00735318
+[DEBUG-grapple-spin] human_pause tick=882 relative_rad_s=0.325658 peak=7.68187 neck_axis=-0.190389,-0.981687,0.00657981
+[DEBUG-grapple-spin] human_pause tick=892 relative_rad_s=0.263585 peak=7.68187 neck_axis=-0.187177,-0.982306,0.00628736
+[DEBUG-grapple-spin] human_pause tick=902 relative_rad_s=0.589588 peak=7.68187 neck_axis=-0.136071,-0.990679,0.00629725
+[DEBUG-grapple-spin] human_pause tick=912 relative_rad_s=0.563755 peak=7.68187 neck_axis=-0.0689595,-0.997597,0.00676244
+[DEBUG-grapple-pose] capture_deliberate_pause,head_seated_locked cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00600038,-0.0888471,-0.00606078
+GRAPPLE_ROUTE,capture_deliberate_pause,head_seated_locked,922,11.993339,485.148804,-135.485504,-0.000000,0.000000,0.000000,1,1965,0,2,0,3,15.891032,490.218079,-135.502701,10.170462,0.000000,0.000000
+[DEBUG-grapple-pose] braked_departure_lip,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00600038,-0.0888471,-0.00606078
+GRAPPLE_ROUTE,braked_departure_lip,begin,922,11.993339,485.148804,-135.485504,-0.000000,0.000000,0.000000,1,1965,0,2,0,3,15.891032,490.218079,-135.502701,10.170462,0.000000,0.000000
+[DEBUG-grapple-pose] braked_departure_lip,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00594065,-0.0888811,-0.00601406
+GRAPPLE_ROUTE,braked_departure_lip,arrived,1003,12.965489,485.148926,-135.500381,0.133734,-0.000000,-0.001983,1,1965,0,2,0,3,15.890727,490.218201,-135.502686,10.170462,0.000000,0.000000
+[DEBUG-grapple-pose] braked_departure_lip,actual_support_stable cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00322226,-0.0889784,-0.00594599
+GRAPPLE_ROUTE,braked_departure_lip,actual_support_stable,1093,12.988560,485.148926,-135.500381,0.000432,0.000000,-0.000006,1,1965,0,2,0,3,15.877439,490.224854,-135.502548,10.170462,0.000000,0.000000
+[DEBUG-grapple-pose] finite_slack_takeup,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00322226,-0.0889784,-0.00594599
+GRAPPLE_ROUTE,finite_slack_takeup,begin,1093,12.988560,485.148926,-135.500381,0.000432,0.000000,-0.000006,1,1965,0,2,0,3,15.877439,490.224854,-135.502548,10.170462,0.000000,0.000000
+[TAKEUP-contact] i=0 tick=1094 seated=1 head=0.00292447,-0.0890009,-0.00594599 tension=0 rest=10.1594
+[TAKEUP-contact] i=10 tick=1104 seated=1 head=-0.000139419,-0.0892368,-0.00594583 tension=0 rest=10.0483
+[TAKEUP-contact] i=20 tick=1114 seated=1 head=-0.00183912,-0.0894213,-0.00592103 tension=0 rest=9.93719
+[TAKEUP-contact] i=30 tick=1124 seated=1 head=-0.000753014,-0.0892805,-0.00592087 tension=0 rest=9.8261
+[TAKEUP-contact] i=40 tick=1134 seated=1 head=0.0019087,-0.0890556,-0.00592135 tension=0 rest=9.71502
+[TAKEUP-contact] i=50 tick=1144 seated=1 head=0.00455745,-0.0889093,-0.00590674 tension=0 rest=9.60393
+[TAKEUP-contact] i=60 tick=1154 seated=1 head=0.00561495,-0.0888711,-0.0059067 tension=0 rest=9.49285
+[TAKEUP-contact] i=70 tick=1164 seated=1 head=0.00448806,-0.088916,-0.0059067 tension=0 rest=9.38177
+[TAKEUP-contact] i=80 tick=1174 seated=1 head=0.00176486,-0.0890553,-0.00590673 tension=0 rest=9.27068
+[TAKEUP-contact] i=90 tick=1184 seated=1 head=-0.000959045,-0.0893154,-0.00590667 tension=0 rest=9.1596
+[TAKEUP-contact] i=100 tick=1194 seated=1 head=-0.00160059,-0.0893909,-0.0058935 tension=0 rest=9.04851
+[TAKEUP-contact] i=110 tick=1204 seated=1 head=0.000131819,-0.0892118,-0.00589359 tension=0 rest=8.93743
+[TAKEUP-contact] i=120 tick=1214 seated=1 head=0.0029159,-0.0890003,-0.0058887 tension=0 rest=8.82635
+[TAKEUP-contact] i=130 tick=1224 seated=1 head=0.00508158,-0.0888839,-0.00588869 tension=0 rest=8.71526
+[TAKEUP-contact] i=140 tick=1234 seated=1 head=0.00536303,-0.08889,-0.0058887 tension=0 rest=8.60418
+[TAKEUP-contact] i=150 tick=1244 seated=1 head=0.00358363,-0.088948,-0.00588866 tension=0 rest=8.49309
+[TAKEUP-contact] i=160 tick=1254 seated=1 head=0.000728495,-0.0891334,-0.00588854 tension=0 rest=8.38201
+[TAKEUP-contact] i=170 tick=1264 seated=1 head=-0.00149427,-0.0893828,-0.00587542 tension=0 rest=8.27093
+[TAKEUP-contact] i=180 tick=1274 seated=1 head=-0.00120769,-0.0893417,-0.00587084 tension=0 rest=8.15984
+[TAKEUP-contact] i=190 tick=1284 seated=1 head=0.00102279,-0.0891164,-0.00585709 tension=0 rest=8.04876
+[TAKEUP-contact] i=200 tick=1294 seated=1 head=0.00377251,-0.0889509,-0.00585825 tension=0 rest=7.93766
+[TAKEUP-contact] i=210 tick=1304 seated=1 head=0.00540028,-0.0888878,-0.00585823 tension=0 rest=7.82656
+[TAKEUP-contact] i=220 tick=1314 seated=1 head=0.00495042,-0.0888976,-0.00585822 tension=0 rest=7.71546
+[TAKEUP-contact] i=230 tick=1324 seated=1 head=0.0026256,-0.0889956,-0.00585819 tension=0 rest=7.60435
+[TAKEUP-contact] i=240 tick=1334 seated=1 head=-0.000206916,-0.0892256,-0.00585811 tension=0 rest=7.49325
+[TAKEUP-contact] i=250 tick=1344 seated=1 head=-0.00165641,-0.089384,-0.00583354 tension=0 rest=7.38215
+[TAKEUP-contact] i=260 tick=1354 seated=1 head=-0.000503268,-0.0892594,-0.00583361 tension=0 rest=7.27104
+[TAKEUP-contact] i=270 tick=1364 seated=1 head=0.00208568,-0.0890468,-0.00582871 tension=0 rest=7.15994
+[TAKEUP-contact] i=280 tick=1374 seated=1 head=0.00456083,-0.0889093,-0.0058288 tension=0 rest=7.04884
+[TAKEUP-contact] i=290 tick=1384 seated=1 head=0.00544779,-0.0888843,-0.00582875 tension=0 rest=6.93774
+[TAKEUP-contact] i=300 tick=1394 seated=1 head=0.00421293,-0.0889213,-0.00582879 tension=0 rest=6.82663
+[TAKEUP-contact] i=310 tick=1404 seated=1 head=0.00153057,-0.0890836,-0.00582879 tension=0 rest=6.71553
+[TAKEUP-contact] i=320 tick=1414 seated=1 head=-0.00100515,-0.0893068,-0.00582867 tension=0 rest=6.60443
+[TAKEUP-contact] i=330 tick=1424 seated=1 head=-0.00160492,-0.0893987,-0.00580862 tension=0 rest=6.49332
+[TAKEUP-contact] i=340 tick=1434 seated=1 head=0.000142412,-0.0892143,-0.00580866 tension=0 rest=6.38222
+[TAKEUP-contact] i=350 tick=1444 seated=1 head=0.00294329,-0.0889995,-0.00580312 tension=0 rest=6.27112
+[TAKEUP-contact] i=360 tick=1454 seated=1 head=0.00511285,-0.0888832,-0.00580307 tension=0 rest=6.16001
+[TAKEUP-contact] i=370 tick=1464 seated=1 head=0.00537696,-0.0888908,-0.00580306 tension=0 rest=6.04891
+[TAKEUP-contact] i=380 tick=1474 seated=1 head=0.00354987,-0.0889574,-0.00580309 tension=0 rest=5.93781
+[TAKEUP-contact] i=390 tick=1484 seated=1 head=0.000680222,-0.0891531,-0.00580304 tension=81.2808 rest=5.8267
+[DEBUG-grapple-pose] ordinary_stepoff_passive_swing,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.000919352,-0.0891188,-0.00580306
+GRAPPLE_ROUTE,ordinary_stepoff_passive_swing,begin,1488,12.989827,485.148926,-135.500381,0.055607,-0.000000,-0.000011,1,1965,0,2,0,3,15.866509,490.230896,-135.502502,5.782263,338.920074,10.041936
+[DEBUG-grapple-pose] ordinary_stepoff_passive_swing,passive_loaded cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00426737,-0.0889243,-0.00579852
+GRAPPLE_ROUTE,ordinary_stepoff_passive_swing,passive_loaded,1699,13.645481,484.726440,-135.500381,0.868808,-1.450296,-0.000264,0,0,0,2,0,3,15.906992,490.208466,-135.502594,5.782263,1067.614380,10.041936
+[DEBUG-grapple-pose] loaded_take_up_and_timed_drop,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00426737,-0.0889243,-0.00579852
+GRAPPLE_ROUTE,loaded_take_up_and_timed_drop,begin,1699,13.645481,484.726440,-135.500381,0.868808,-1.450296,-0.000264,0,0,0,2,0,3,15.906992,490.208466,-135.502594,5.782263,1067.614380,10.041936
+GRAPPLE_COMMAND_WORK,reel_j=1084.792661,ordinary_steering_j=1904.345746
+[DEBUG-grapple-pose] receiver_braking,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=-0.0144431,-0.0858598,-0.00626937
+GRAPPLE_ROUTE,receiver_braking,begin,1868,19.306692,485.165985,-135.500381,3.322219,-1.883533,0.001487,1,1968,0,3,0,3,15.794974,490.295654,-135.506409,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] receiver_braking,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.012103,-0.0867988,-0.00595505
+GRAPPLE_ROUTE,receiver_braking,arrived,1910,20.021446,485.165833,-135.500381,0.134692,0.000001,0.001619,1,1968,0,3,0,3,15.979409,490.190704,-135.504654,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] receiver_braking,actual_support_stable cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.016067,-0.0843313,-0.00588065
+GRAPPLE_ROUTE,receiver_braking,actual_support_stable,2000,20.044682,485.165833,-135.500381,0.000435,0.000000,0.000005,1,1968,0,3,0,3,15.986731,490.192719,-135.504486,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] original_roof_exit,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.016067,-0.0843313,-0.00588065
+GRAPPLE_ROUTE,original_roof_exit,begin,2000,20.044682,485.165833,-135.500381,0.000435,0.000000,0.000005,1,1968,0,3,0,3,15.986731,490.192719,-135.504486,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] original_roof_exit,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.0147066,-0.0850858,-0.00582755
+GRAPPLE_ROUTE,original_roof_exit,arrived,2155,19.999359,485.149994,-132.761932,0.002917,0.000000,-0.120964,1,51,0,3,0,3,15.970942,490.194336,-135.504318,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] original_roof_exit,stable cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00160583,-0.0892937,-0.00604668
+GRAPPLE_ROUTE,original_roof_exit,stable,2245,19.999378,485.149994,-132.762756,0.000000,0.000000,0.000000,1,51,0,3,0,3,15.898252,490.211090,-135.505356,0.000000,0.000000,1094.834598
+GRAPPLE_PORTABLE away_from_rack=1 stow_re_equip=1 finite_stock=1
+[DEBUG-grapple-pose] portable_return_rail,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=-0.000914544,-0.0893456,-0.00609911
+GRAPPLE_ROUTE,portable_return_rail,begin,2247,19.999378,485.149994,-132.762756,0.000000,0.000000,0.000000,1,51,0,3,0,3,15.885636,490.216614,-135.505844,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] portable_rail_launch,begin cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=-0.000914544,-0.0893456,-0.00609911
+GRAPPLE_ROUTE,portable_rail_launch,begin,2247,19.999378,485.149994,-132.762756,0.000000,0.000000,0.000000,1,51,0,3,0,3,15.885636,490.216614,-135.505844,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] portable_rail_launch,arrived cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=-0.00759261,-0.0882027,-0.0062727
+GRAPPLE_ROUTE,portable_rail_launch,arrived,2425,19.600073,485.165955,-135.309830,0.004444,0.000000,0.028990,1,1968,0,3,0,3,15.853409,490.235260,-135.506561,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] portable_rail_launch,actual_support_stable cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.00841234,-0.0879039,-0.00594004
+GRAPPLE_ROUTE,portable_rail_launch,actual_support_stable,2515,19.600798,485.165955,-135.305161,0.000014,0.000000,0.000094,1,1968,0,3,0,3,15.934171,490.199890,-135.504211,0.000000,0.000000,1094.834598
+[DEBUG-grapple-pose] portable_rail_launch,failure cup=16,490.499,-135.502 q=-0.000156933,3.48353e-06,8.0858e-07,1
+[DEBUG-grapple-head] local=0.612408,0.592906,0.189102
+GRAPPLE_ROUTE,portable_rail_launch,failure,2770,19.605953,485.165955,-135.305161,0.000000,0.000000,0.000000,1,1968,0,1,0,2,16.600269,490.868378,-135.312302,10.117996,0.000000,1094.834598
+FAIL GRAPPLE_ROUTE phase=portable_rail_launch reason=second rail physical pause retention

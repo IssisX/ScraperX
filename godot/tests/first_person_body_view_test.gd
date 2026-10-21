@@ -50,9 +50,14 @@ func step(count: int) -> void:
 	check(native.get_tick_index() == before + count, "exact native input time")
 	check(native.get_death_count() == 0, "no hidden death or restart")
 	check(main._legs.visible, "normal first-person legs visible")
-	for leg in main._legs._legs:
-		check(leg.upper.visible and leg.lower.visible and leg.boot.visible,
-			"both complete leg chains remain reachable")
+	for side in 2:
+		var hip: Vector3 = main._legs._body.joint_world(side, "hp")
+		var knee: Vector3 = main._legs._body.joint_world(side, "kn")
+		var ankle: Vector3 = main._legs._body.joint_world(side, "an")
+		check(hip.is_finite() and knee.is_finite() and ankle.is_finite()
+			and absf(hip.distance_to(knee) - main._legs.THIGH) < 0.0001
+			and absf(knee.distance_to(ankle) - main._legs.SHIN) < 0.0001,
+			"both skinned leg chains retain their anatomical reach")
 	if main._legs.planted_foot_index() >= 0:
 		var state: Dictionary = native.get_landing_state()
 		check(bool(state.foot_push_active) and
@@ -106,10 +111,11 @@ func _run() -> void:
 
 
 func _movement() -> void:
-	check(main._legs._pelvis.visible, "workwear joins both thighs at the hips")
-	for leg in main._legs._legs:
-		check(leg.upper.mesh is ArrayMesh and leg.lower.mesh is ArrayMesh and leg.sole.mesh is ArrayMesh,
-			"shaped trouser and sole resources replace simple primitives")
+	check(main._legs._body.ready_to_pose() and main._legs._body.pelvis_world().is_finite(),
+		"weighted workwear joins both thighs at the hips")
+	for mesh in main._legs._body._meshes:
+		check(mesh.mesh is ArrayMesh and mesh.skin != null and mesh.skeleton != NodePath(),
+			"clothing, boots and shadow stay bound to the real posed skeleton")
 	# Use real player input in the clear eastward arrival aisle.
 	main._yaw = -PI * 0.5
 	key(KEY_W, true)

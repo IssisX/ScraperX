@@ -35,7 +35,8 @@ void sample(const Simulation &s, const char *event) {
         const auto local = qcup.Conjugated() * JPH::Vec3(
             float(h.position.x-cp.x)+head.GetX(), float(h.position.y-cp.y)+head.GetY(),
             float(h.position.z-cp.z)+head.GetZ());
-        std::cerr << "[DEBUG-grapple-head] local=" << local.GetX() << ',' << local.GetY() << ',' << local.GetZ() << '\n';
+        std::cerr << "[DEBUG-grapple-head] local=" << local.GetX() << ',' << local.GetY() << ',' << local.GetZ()
+                  << " rotation=" << h.rotation.x << ',' << h.rotation.y << ',' << h.rotation.z << ',' << h.rotation.w << '\n';
     }
     std::cout << "GRAPPLE_ROUTE," << phase << ',' << event << ',' << v.tick_index << ','
               << v.player_position.x << ',' << v.player_position.y << ',' << v.player_position.z << ','
@@ -536,7 +537,9 @@ void failed_retrieval_preserves_stock(Simulation &s) {
     const double dx=before.hook_endpoint.x-before.player_endpoint.x;
     const double dy=before.hook_endpoint.y-before.player_endpoint.y;
     const double dz=before.hook_endpoint.z-before.player_endpoint.z;
-    require(!before.line_attached && before.action_recovers_hook && dx*dx+dy*dy+dz*dz<=2.25,
+    // Nearby moving hardware still routes Action to recovery. Grasp admission
+    // (action_recovers_hook) also requires low relative speed and can be false.
+    require(!before.line_attached && before.recovery_nearby && dx*dx+dy*dy+dz*dz<=2.25,
             "actual released hook is in native Action recovery region",s);
     require(s.request_grapple_action(), "Action attempts nearby hook recovery", s); tick(s);
     const auto after=s.grapple_gun_state();

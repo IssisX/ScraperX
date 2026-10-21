@@ -1,0 +1,89 @@
+{
+  "status": "one_test_contract_repaired_portable_capture_unresolved",
+  "source_head_at_assignment": "dc9a53965959849525e3486238da351d6fc13ab0",
+  "owned_file": "tests/grapple_practice_route_tests.cpp",
+  "final_test_sha256": "4f3e0b9582f90c552a581c609438bc72bda5d8cfd1bd91abd83217c28b2bf919",
+  "native_identity_receipt": "source.json",
+  "build": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-fno-rtti",
+      "-O2",
+      "-DNDEBUG",
+      "-pthread",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tests/grapple_practice_route_tests.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/charge/libgrapple-charge.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/grapple-ci-repair/grapple_practice_route"
+    ],
+    "exit": 0,
+    "test_sha256": "4f3e0b9582f90c552a581c609438bc72bda5d8cfd1bd91abd83217c28b2bf919"
+  },
+  "failed_retrieval": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/grapple-ci-repair/grapple_practice_route",
+      "failed-retrieval"
+    ],
+    "exit": 0,
+    "wall_seconds": 11.53884457895765,
+    "binary_sha256": "12cc174ee4a0f6f7e79d50f65a85a20ceaccab62bd875c60801896f753c77c2b"
+  },
+  "portable_rail": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/body-view/grapple-ci-repair/grapple_practice_route",
+      "portable-rail"
+    ],
+    "exit": 1,
+    "wall_seconds": 30.884345664991997,
+    "binary_sha256": "461f482c3a2ac8bd142e0d88660a866e505ea66e364e80f9235e6349c0908746"
+  },
+  "findings": [
+    {
+      "contract": "src/sim/simulation/grapple.cpp: nearby_grapple_hook and final Action fallback",
+      "repair": "Use recovery_nearby for a released moving hook in the 1.5m fallback region. action_recovers_hook is narrow grasp admission and excludes fast hooks. Existing physical radius, native failure8/11, hook count, cartridge count and active-hook checks retained.",
+      "independent_evidence": "Native find_retrieval_grasp returns RetrievalTooFast above1m/s; accepted CHARGE_TOUCH actual fixture already reports recovery_nearby=true/action_recovers_hook=false for the identical input and OutOfReach on Action.",
+      "result": "Local host exit0, native failure8, cartridges3, no new shot. Final edit after this run changes only diagnostic rotation output; matching behavior evidence reused."
+    },
+    {
+      "contract": "Actual square section remains inside every finger aperture through capture45 and pause180, then finite loaded reel and actual receiver return.",
+      "result": "CI x86 capture/dwell failed at tick3051. Exact-native-source ARM64 host captures45 then fails strict pause at tick2770, repeated on final diagnostic binary.",
+      "cause_supported": "Actual native hook rolls relative to the square rail; its lowest section corner crosses the actual open-mouth boundary. Rounded pose calculation gives -0.277mm clearance; no tolerance changed. This establishes lost conservative containment, not complete escape or lack of actual load capacity.",
+      "not_supported": "No demonstrated wrong public input, target transform, rail axis or launch energy in portable driver. 0.95m ballistic aperture offset is current0.85m launch origin plus0.10m crook center.",
+      "next_owner": "Consequential contact design in src/sim/grappling_hook_geometry.hpp / src/sim/grapple_practice_route.cpp. A native repair needs a specific physical cause and unchanged capture/load/stock acceptance; no test weakening or aim sweep."
+    }
+  ],
+  "limits": "Linux ARM64 under Termux proot; no x86 CI rerun and no device gameplay evidence. Existing broader native/public/MCP acceptance is unchanged. No native source, publication, workflow or settings edits.",
+  "repetition_reason": "The second portable run followed one diagnostic output edit because the first run stopped during pause, before the original capture-failure-only diagnostic could print the hook rotation. It settled actual containment versus target/observation mismatch; no physics/input change or launch search."
+}

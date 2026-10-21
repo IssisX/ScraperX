@@ -28,32 +28,24 @@ func _run() -> void:
 	root.add_child(rig)
 	var material := StandardMaterial3D.new()
 	rig.build(material, material, material)
-	_check(rig.get_child_count() == 11, "hip garment plus ten leg surfaces")
+	_check(rig.get_child_count() == 1, "one rigged body renderer")
 	_check(not rig.visible and rig.planted_foot_index() == -1, "build starts cleared")
-	for child in rig.get_children():
-		_check(child is MeshInstance3D and child.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
-			"mesh only with shadows disabled")
-	_check(rig._legs[0].upper.mesh == rig._legs[1].upper.mesh, "shared meshes")
-	_check(rig._legs[0].upper.mesh is ArrayMesh and rig._legs[0].lower.mesh is ArrayMesh
-		and rig._legs[0].knee.mesh is ArrayMesh and rig._legs[0].sole.mesh is ArrayMesh,
-		"shaped workwear replaces tube, sphere and box primitives")
-	_check(rig._legs[0].upper.material_override == rig._legs[1].upper.material_override
-		and rig._legs[0].upper.material_override == rig._pelvis.material_override,
-		"one shared fabric resource joins both legs and hips")
-	_check(rig._legs[0].upper.material_override.vertex_color_use_as_albedo,
-		"cloth seam and reinforcement shades reach the shared material")
-	_check(absf(rig._legs[0].sole.mesh.get_aabb().position.y + 0.0125) < 0.00001,
-		"beveled sole retains the actual native contact plane")
-	var boot_mesh: Mesh = rig._legs[0].boot.mesh
-	_check(boot_mesh is ArrayMesh and boot_mesh.get_surface_count() == 1,
-		"rounded work boot retains one surface")
-	_check(boot_mesh == rig._legs[1].boot.mesh, "rounded boot resource shared")
-	var boot_vertices: PackedVector3Array = boot_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-	var has_toe_chamfer := false
-	for vertex in boot_vertices:
-		if vertex.z < -0.11 and absf(vertex.x) > 0.03 and absf(vertex.x) < 0.07:
-			has_toe_chamfer = true
-	_check(has_toe_chamfer, "toe outline has chamfered corners")
+	_check(rig._body.ready_to_pose(), "imported work-clothed skeleton is ready")
+	_check(rig._body._skeleton.get_bone_count() == 56, "full weighted anatomy, including shadow head and arms")
+	_check(rig._body._meshes.size() == 8, "bounded eight-surface imported body")
+	var shadow_parts := 0
+	var visible_parts := 0
+	for mesh in rig._body._meshes:
+		_check(mesh.skin != null and mesh.mesh.get_surface_count() == 1, "real skin and one surface per garment")
+		if String(mesh.name) == "shadow":
+			shadow_parts += 1
+			_check(mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,
+				"head and arms cast the silhouette without blocking the first-person lens")
+		else:
+			visible_parts += 1
+			_check(mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON,
+				"visible workwear participates in body shadow")
+	_check(shadow_parts == 1 and visible_parts == 7, "complete garment body and one shadow-only part")
 	var pose := _sample()
 	pose.foot_push_active = false
 	pose.bob_phase = PI
@@ -90,9 +82,12 @@ func _run() -> void:
 	_check(rig.planted_foot_index() == 1, "generation selects presentation side")
 	_check(rig.planted_foot_position().distance_to(state.foot_push_world_anchor) < 0.00001, "floor sole exact")
 	_check(rig.planted_foot_normal().distance_to(Vector3.UP) < 0.00001, "floor sole normal")
-	_check((rig._legs[1].upper.global_transform * Vector3(0, 0.5, 0)).y >
-		(rig._legs[1].upper.global_transform * Vector3(0, -0.5, 0)).y,
-		"trouser proximal end faces the hip")
+	_check(rig._body.joint_world(1, "hp").y > rig._body.joint_world(1, "kn").y,
+		"rigged knee remains below its hip")
+	_check(absf(rig._body.joint_world(1, "hp").distance_to(rig._body.joint_world(1, "kn")) - rig.THIGH) < 0.0001,
+		"skinned thigh preserves its measured anatomical length")
+	_check(absf(rig._body.joint_world(1, "kn").distance_to(rig._body.joint_world(1, "an")) - rig.SHIN) < 0.0001,
+		"skinned shin preserves its measured anatomical length")
 	state.player_grounded = false
 	rig.update_legs(state, Transform3D.IDENTITY, 0.016)
 	_check(rig.planted_foot_position().distance_to(state.foot_push_world_anchor) < 0.00001,
@@ -144,13 +139,13 @@ func _run() -> void:
 	state.player_crouched = true
 	state.crouch_visual_01 = 0.25
 	rig.update_legs(state, camera, 0.016)
-	var lowering_hip := rig._pelvis.global_position.y
+	var lowering_hip := rig._body.pelvis_world().y
 	_check(rig.planted_foot_position().distance_to(state.foot_push_world_anchor) < 0.00001,
 		"camera-shared crouch transition preserves the material point")
 	state.crouch_visual_01 = 1.0
 	rig.update_legs(state, camera, 0.016)
 	_check(rig.planted_foot_index() == 1, "crouched floor contact reachable")
-	_check(lowering_hip > rig._pelvis.global_position.y + 0.15,
+	_check(lowering_hip > rig._body.pelvis_world().y + 0.15,
 		"hip lowers using the supplied camera crouch phase")
 	# A transformed parent must not offset the supplied world material point.
 	rig.position = Vector3(2, 3, 4)
