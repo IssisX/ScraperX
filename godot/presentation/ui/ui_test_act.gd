@@ -24,7 +24,6 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # the ladder after, and the 220 ring. Between those the drawing is
 # switched off (the simulation runs on), so the capture is quick.
 
-const MATRON_STATE_GUARDING := 7
 const STAGE_PEST := 0
 const STAGE_DANGEROUS := 1
 const STAGE_CHANGED := 2
@@ -489,9 +488,15 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	_act_log("dangerous")
 	# By the rail, still: she comes (off her pipe, a listen, then on), and
 	# shoves at the shaft.
-	# A sprint there, heard all the way from her pipe: she knows where to come.
+	# A sprint there, and jumps on the spot until she has heard where the
+	# climber is (she knows only what she hears or sees: src/sim/matron.cpp
+	# hear; across the shaft from her pipe one sprint may not carry).
 	if not (await _sprint_to(device, ACT_RIM, 1.0, 8.0) and await _walk_to(device, ACT_RIM, 0.3, 3.0)):
 		return _fail("the run to the shaft's rail stalled at %s" % str(_position()))
+	if not await _act_call_her(40.0):
+		var m := _matron_state()
+		return _fail("at the rail she never heard the climber (state %d at %s, lead %s at (%.1f, %.1f))" % [
+			int(m["state"]), str(m["position"]), str(m["lead_valid"]), float(m["lead_x"]), float(m["lead_z"])])
 	var shoves := int(_matron_state()["shoves"])
 	var x0 := _position().x
 	var watch := {"nearest": x0}
@@ -540,6 +545,26 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		await _act_pose("act_changed_hung")
 	_act_log("held")
 	return true
+
+
+# Jumps where the climber stands (a landing is loud), one every 1.5 s,
+# until she has heard or seen them there (her lead within 6 m), up to
+# `budget` seconds.
+func _act_call_her(budget: float) -> bool:
+	var waited := 0.0
+	var next_jump := 0.0
+	while waited < budget:
+		var m := _matron_state()
+		_act_stages_seen[int(m["stage"])] = true
+		if bool(m["lead_valid"]) and Vector2(float(m["lead_x"]), float(m["lead_z"])).distance_to(_act_me_xz()) < 6.0:
+			_act_log("heard")
+			return true
+		if waited >= next_jump and bool(_ctx()["grounded"]):
+			_press(&"jump", 1)
+			next_jump = waited + 1.5
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	return false
 
 
 func _capture_phase() -> int:
