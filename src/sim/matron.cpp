@@ -264,6 +264,14 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
+void Matron::let_go_for_test() {
+    if (climb_ >= 0) {
+        release_climb(true);
+    } else if (pipe_phase_ != PipePhase::Off && pipe_phase_ != PipePhase::Slide) {
+        tear_off_pipe();
+    }
+}
+
 bool Matron::climb_for_test(const routes::Connector which, const bool down) {
     int index = -1;
     switch (which) {
@@ -970,6 +978,11 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     if (turn_ == Turn::None && best != bay_climb_) {
         return true;
     }
+    // One that failed under her a moment ago she leaves alone a while (her map).
+    const std::size_t way = routes_.find_way(connector_of(best), false);
+    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
+        return true;
+    }
     begin_climb(best);
     return true;
 }
@@ -1088,6 +1101,15 @@ bool Matron::begin_climb(const int index, const bool down) {
 }
 
 void Matron::release_climb(const bool failed) {
+    // A climb she set out on by herself (not along her map's route, which
+    // records its own) that failed: her map leaves that way alone a while.
+    if (failed && !route_on_edge_ && climb_ >= 0) {
+        const std::size_t way = routes_.find_way(connector_of(climb_), climb_down_);
+        if (way < routes::kMaxEdges) {
+            routes_.fail(way, routes::Reason::Failed, clock_s_);
+            ++route_failures_;
+        }
+    }
     climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
     climb_ = -1;
     reaching_up_ = false;
@@ -1264,6 +1286,11 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         next = floor_y + kStackPitch;
     }
     if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
+        return false;
+    }
+    // A way that failed under her a moment ago she leaves alone a while.
+    const std::size_t way = pipe_way(floor_y, next);
+    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
         return false;
     }
     const float ax = float(at.GetX());
@@ -2475,6 +2502,14 @@ void Matron::post_step(const float dt) {
             dead_ = true;
             state_ = State::Dead;
             remove_body();
+        } else if (falling >= kHardLandingMps && vy - fall_vy_ > 0.5F * falling && state_ != State::Down &&
+                   state_ != State::Staggering) {
+            // Down hard, alive: down a while, the way she was going.
+            const Vec3 v = bodies.GetLinearVelocity(body_);
+            const Vec3 way(v.GetX(), 0.0F, v.GetZ());
+            fall_x_ = way.LengthSq() > 1.0e-4F ? way.Normalized().GetX() : std::sin(yaw_);
+            fall_z_ = way.LengthSq() > 1.0e-4F ? way.Normalized().GetZ() : std::cos(yaw_);
+            knock_down();
         }
     }
     fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;

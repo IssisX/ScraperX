@@ -44,6 +44,31 @@ int Matron::climb_index(const routes::Connector which) const noexcept {
     }
 }
 
+routes::Connector Matron::connector_of(const int climb) const noexcept {
+    if (climb == 0) {
+        return routes::Connector::HomeLadder;
+    }
+    if (climb == 1) {
+        return routes::Connector::RiserLadder;
+    }
+    if (climb == bay_climb_) {
+        return routes::Connector::BayRungs;
+    }
+    if (climb == c3_wall_climb_) {
+        return routes::Connector::C3WallLadder;
+    }
+    if (climb == c3_duct_climb_) {
+        return routes::Connector::C3Duct;
+    }
+    return routes::Connector::Count;
+}
+
+std::size_t Matron::pipe_way(const float from_floor, const float to_floor) const noexcept {
+    return routes_.find(routes_.region_at(kPipeDeckX, from_floor, kPipeDeckZ),
+                        routes_.region_at(kPipeDeckX, to_floor, kPipeDeckZ),
+                        to_floor < from_floor ? routes::Kind::PipeDown : routes::Kind::PipeUp);
+}
+
 routes::Region Matron::lead_region() const noexcept {
     // The deck under her lead: where she placed it, on the floor she placed it.
     return routes_.region_at(heard_x_, lead_floor_, heard_z_);

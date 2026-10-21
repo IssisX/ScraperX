@@ -610,6 +610,9 @@ public:
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
     static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
+    // A landing this hard (a fall of 2.5 m) puts her down a while; from
+    // kLethalLandingMps it kills her.
+    static constexpr float kHardLandingMps = 7.0F;
     // A lead a storey away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
@@ -959,6 +962,9 @@ public:
     // Tests only: she hears the climber at `at` (feet), as her ears would
     // report a sound there: a lead with an age, nothing more.
     void hear_for_test(JPH::RVec3 at);
+    // Tests only: her hands open on the climb or the pipe she is on, as a hold
+    // that gave way would open them.
+    void let_go_for_test();
     bool climb_for_test(routes::Connector which, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
@@ -1241,6 +1247,10 @@ private:
     // Her travel across the tower (matron_travel.cpp).
     bool follow_route(float dt, JPH::RVec3 at);
     [[nodiscard]] int climb_index(routes::Connector which) const noexcept;
+    // The other way round: the connector a climb of hers is (Count for none).
+    [[nodiscard]] routes::Connector connector_of(int climb) const noexcept;
+    // The corner pipe's way on her map from one deck to the other.
+    [[nodiscard]] std::size_t pipe_way(float from_floor, float to_floor) const noexcept;
     [[nodiscard]] routes::Region lead_region() const noexcept;
     [[nodiscard]] bool travels() const noexcept;
     void route_clear() noexcept;

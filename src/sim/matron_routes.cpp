@@ -271,6 +271,21 @@ std::size_t Map::find(const Region from, const Region to, const Kind kind) const
     return kMaxEdges;
 }
 
+std::size_t Map::find_way(const Connector connector, const bool down) const noexcept {
+    std::size_t found = kMaxEdges;
+    for (std::size_t i = 0; i < edge_count_; ++i) {
+        const Kind k = edges_[i].kind;
+        const bool goes_down = k == Kind::LadderDown || k == Kind::PipeDown || k == Kind::DropDown;
+        if (edges_[i].connector == connector && goes_down == down) {
+            if (found != kMaxEdges) {
+                return kMaxEdges;
+            }
+            found = i;
+        }
+    }
+    return found;
+}
+
 void Map::set_status(const std::size_t index, const Status status, const Reason reason) noexcept {
     if (index < edge_count_) {
         edges_[index].status = status;

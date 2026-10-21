@@ -1556,6 +1556,8 @@ public:
     [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
+    // Tests only: her hands open on the climb or pipe she is on.
+    void debug_matron_let_go() noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.

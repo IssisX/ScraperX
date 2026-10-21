@@ -174,7 +174,14 @@ void Matron::get_off_pipe(const bool failed) {
     pipe_force_n_ = 0.0F;
     climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
     if (failed) {
-        // Her level is what her feet find (settle_level), not where she meant to go.
+        // Set out on by herself (a route records its own): her map leaves
+        // this way alone a while. Her level is what her feet find
+        // (settle_level), not where she meant to go.
+        const std::size_t way = pipe_way(pipe_from_, pipe_to_);
+        if (!route_on_edge_ && way < routes::kMaxEdges) {
+            routes_.fail(way, routes::Reason::Failed, clock_s_);
+            ++route_failures_;
+        }
         ++climb_releases_;
         climb_retry_s_ = 2.0F;
         return;

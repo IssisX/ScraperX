@@ -175,6 +175,9 @@ public:
 
     // The edge from `from` to `to` by `kind`; kMaxEdges when there is none.
     [[nodiscard]] std::size_t find(Region from, Region to, Kind kind) const noexcept;
+    // The way along `connector` going down (or up), when it has only one in
+    // that direction (a ladder); kMaxEdges when it has none or several.
+    [[nodiscard]] std::size_t find_way(Connector connector, bool down) const noexcept;
     // Qualifying a way (its executor and test exist) or ruling it out.
     void set_status(std::size_t index, Status status, Reason reason) noexcept;
 
