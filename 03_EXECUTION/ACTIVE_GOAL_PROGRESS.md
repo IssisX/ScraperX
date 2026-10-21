@@ -22,6 +22,24 @@ has not been checked against its scope here.
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
 | 10 Paid-release readiness | ~30% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). The title over the live tower is done (`touch_title`), and the START list is development-only. The top of the route is a native latch with an arrival beat, and the altimeter is scaled to it (what stands there is the owner's). The pause menu carries the licences the build ships under (`touch_pause`). The launcher icon and boot splash are the game's own, no engine branding (placeholder icon, owner may replace). The ending beyond the arrival, the release build, store identity, credits, the voice's clearance and device measurement are open (`RELEASE_PLAN.md`). |
 
+**The bay: shared survival on the 154 m deck (2026-10-21, `claude/shared-survival`).** Built on the
+other agent's native core (`src/sim/shared_survival.*`: finite palms, a district of drives that coast,
+brake and start again only afresh). A cut across the deck's north band, spanned by a motor-held steel
+leaf with a fan on the same district. Across it from her, heard or seen, the Matron does not follow:
+she drops onto a bracket under the leaf's west end and holds it up on her palms (about 930 N at most);
+her hands stop its motor and fan, and the fan's cover of the player's steps goes with it. She can
+hold the leaf, not the leaf and a climber: stepped onto, it goes down about 1 to 2.2 m out from the
+hinge and the climber lands alive on 143. The chain off its cleat, hooked onto the leaf's eye, holds
+it (about 2.3 kN): she lets go, the district starts again by itself and the leaf carries the player.
+Her brace pose, the drive's hum, the fan's roar coasting down, the leaf groaning on her palms, clanks
+for the trip, the hook and the restart, a pulse in the hands on the leaf while only she holds it;
+Action reads UNHOOK CHAIN and HOOK ONTO THE WALKWAY'S EYE. Found on the way and fixed: the leaf's
+rails jammed it on the deck's edge as it turned down; she could hang on a zipline cable over the
+shaft for good behind a trolley left short in the buffer; the deck's rail stood open beside the
+leaf. Proof: native `bay` (`SCRAPERX_ONLY=bay`), `touch_bay`; CI green on `ad43f84` (run 623),
+the full native suite and every touch run with it. The design as built:
+`03_EXECUTION/MATRON_REDESIGN/shared_survival/THE_BAY.md`. Not yet played on a phone.
+
 **The chiller drop rebuilt: walk in, drop, get blown out of the shaft (2026-10-20, `claude/chiller-drop`).**
 Stage E (256.25 to 298.25 m) is no longer a door shut and a handle pulled. From D's top the rider
 walks through a pair of self-closing leaves onto no floor and drops 2.85 m onto the car's deck; the
