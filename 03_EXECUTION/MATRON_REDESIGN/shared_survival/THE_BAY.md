@@ -79,6 +79,11 @@ nothing, and falls when it is held by nothing.
 - The leaf's hand rails first ran to its west end: turning down, their
   tops swung west over the deck's edge and held the leaf up at a quarter
   radian. They now stop 0.3 m short.
+- The deck's rail at the bay's west edge was open from the rungs' head all
+  the way to the leaf (1.3 m): a walk onto the leaf at an angle went off the
+  edge beside it, 11 m down. Now only the rungs' head is open (her width
+  and a hand's either side), and a short rail stands between it and the
+  leaf.
 - On a line's bare cable she could hang for good over the shaft's edge
   behind a trolley left short in the buffer; she now lets go where her
   swing lands her on the band.

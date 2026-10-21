@@ -21,7 +21,8 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # player, the rungs ringing; at the top the player goes off along the ring
 # and she comes over the ladder's head onto it.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
-# out, her hunt, from the player's eyes.
+# out, her hunt, from the player's eyes. look_bay: renders only, the bay on
+# her deck from either end.
 # touch_bay (src/sim/bay.hpp): woken, she is led round the deck and the
 # player east over the bay's leaf; she does not follow over it. East of it, a
 # dash along the band is heard across it: she drops into the bay and holds
@@ -554,6 +555,18 @@ func _look_matron(stage: String) -> bool:
 		await _go(device, Vector2(12.0, -170.5), 0.5, 20.0)
 		await _look_at_point(Vector3(15.0, MATRON_DECK_Y + 0.8, -174.6))
 		await _pose("matron_stock_stack")
+		return true
+	if stage == "bay":
+		# The bay on her deck (src/sim/bay.hpp) by day: from its west end
+		# over the leaf, and from its east end back over it and down into it.
+		_main._sky_cycle.set_hour(15.0)
+		await _go(device, Vector2(-6.2, MATRON_NORTH_Z), 0.3, 20.0)
+		await _look_at_point(Vector3(-1.5, MATRON_DECK_Y - 0.6, -128.0))
+		await _pose("bay_west")
+		for leg in [Vector2(-4.6, MATRON_NORTH_Z), Vector2(0.4, MATRON_NORTH_Z), Vector2(0.9, -130.6)]:
+			await _go(device, leg, 0.3, 20.0)
+		await _look_at_point(Vector3(-3.0, MATRON_DECK_Y - 1.2, -129.6))
+		await _pose("bay_east")
 		return true
 	if stage == "catwalk":
 		await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0)

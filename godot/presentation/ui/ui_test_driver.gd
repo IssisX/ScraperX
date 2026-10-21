@@ -129,6 +129,7 @@ const SCENARIOS := {
 	# she climbs back up knocks her off it, alive (ui_test_act.gd).
 	"touch_matron_pipe": 11,
 	"look_matron_locker": 11,
+	"look_bay": 11,
 	"look_matron_hunt": 11,
 	"look_matron_catwalk": 11,
 	"look_matron_gallery": 11,
@@ -443,6 +444,8 @@ func _run() -> void:
 			ok = await _matron_climb_touch(InputRouter.Device.TOUCH)
 		"touch_bay":
 			ok = await _bay_touch(InputRouter.Device.TOUCH)
+		"look_bay":
+			ok = await _look_matron("bay")
 		"look_matron_locker":
 			ok = await _look_matron("locker")
 		"look_matron_hunt":

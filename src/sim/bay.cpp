@@ -92,8 +92,11 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
         frame.push_back(span({kWestX, y - 0.02F, kRungsZ - 0.25F}, {kWestX + 0.06F, y + 0.02F, kRungsZ + 0.25F},
                              Material::Steel));
     }
-    // Waist rails along the cut, open at the leaf's ends and where she drops.
-    rail_z(frame, kWestX - 0.06F, kSouthZ + 0.1F, -130.6F);
+    // Waist rails along the cut, open at the leaf's ends and at the rungs'
+    // head, where she drops and climbs out (her width and a hand's either
+    // side of it): a short length between the rungs' head and the leaf.
+    rail_z(frame, kWestX - 0.06F, kSouthZ + 0.1F, kRungsZ - 0.45F);
+    rail_z(frame, kWestX - 0.06F, kRungsZ + 0.4F, kLeafZ - kLeafHalfWidth - 0.05F);
     rail_z(frame, kWestX - 0.06F, kLeafZ + kLeafHalfWidth + 0.15F, kNorthZ - 0.1F);
     rail_z(frame, kEastX + 0.06F, kSouthZ + 0.1F, kLeafZ - kLeafHalfWidth - 0.15F);
     rail_z(frame, kEastX + 0.06F, kLeafZ + kLeafHalfWidth + 0.15F, kNorthZ - 0.1F);
