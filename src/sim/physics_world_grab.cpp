@@ -227,7 +227,7 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
     if (brace_ != nullptr && commands.release_requested) {
         destroy_grab_constraint(brace_);
     }
-    if (held || player_free_rot_) {
+    if (held || player_free_rot_ || matron_->claimed()) {
         // Held, or not yet back on their feet: the body is hers, or the
         // ground's; only the thrash is theirs.
         commands.move_input_x = 0.0;
@@ -379,6 +379,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         hold_last_at_ = player_at;
     }
     arm_drive(bodies, 0.0F);
+    fatality_drive(bodies, 0.0F);
     JPH::Vec3 push;
     if (matron_->take_let_go(push)) {
         // She lets go: the push is her arm's, at most kReleasePushMps.
@@ -387,8 +388,16 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     }
 }
 
+bool Simulation::PhysicsWorld::body_down_on_ground(JPH::BodyInterface &bodies) const noexcept {
+    // A body lying down (not on its feet: grounded_ is the feet's): steel
+    // within a hand's breadth under its centre line.
+    JPH::RayCastResult hit;
+    return cast_ray(bodies.GetPosition(player_id_), JPH::Vec3(0.0F, -(kPlayerRadius + 0.15F), 0.0F), hit);
+}
+
 void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const float dt) noexcept {
     arm_post_step(bodies, dt);
+    fatality_post_step(bodies, dt);
     if (grip_ != nullptr) {
         const JPH::Vec3 lambda =
             grip_swing_ ? static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr())->GetTotalLambdaPosition()
@@ -418,25 +427,25 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     } else {
         brace_load_n_ = 0.0F;
     }
-    if (player_free_rot_ && grip_ == nullptr) {
+    if (player_free_rot_ && grip_ == nullptr && (grounded_ || body_down_on_ground(bodies))) {
+        // A body down on the steel slides to a stop: the player's own
+        // shape has no friction (its feet do that, and they are not
+        // under it), so the ground's is applied here, mu ~0.7.
+        JPH::Vec3 v = bodies.GetLinearVelocity(player_id_);
+        const JPH::Vec3 flat(v.GetX(), 0.0F, v.GetZ());
+        const float speed = flat.Length();
+        if (speed > 1.0e-4F) {
+            const float lose = std::min(speed, kDownFrictionMps2 * dt);
+            v -= flat * (lose / speed);
+            bodies.SetLinearVelocity(player_id_, v);
+        }
+    }
+    if (player_free_rot_ && grip_ == nullptr && !matron_->claimed()) {
         // The handback: on the ground (or a hold in hand), a capped PD torque
         // to upright; the DOFs lock once it is and the pose is clear.
         upright_contact_ticks_ = grounded_ || traversal_state_ != TraversalState::None || in_water_
                                      ? upright_contact_ticks_ + 1
                                      : 0;
-        if (grounded_) {
-            // A body down on the steel slides to a stop: the player's own
-            // shape has no friction (its feet do that, and they are not
-            // under it), so the ground's is applied here, mu ~0.7.
-            JPH::Vec3 v = bodies.GetLinearVelocity(player_id_);
-            const JPH::Vec3 flat(v.GetX(), 0.0F, v.GetZ());
-            const float speed = flat.Length();
-            if (speed > 1.0e-4F) {
-                const float lose = std::min(speed, kDownFrictionMps2 * dt);
-                v -= flat * (lose / speed);
-                bodies.SetLinearVelocity(player_id_, v);
-            }
-        }
         if (upright_contact_ticks_ >= kUprightContactTicks || upright_s_ > 0.0F) {
             upright_s_ += dt;
             const JPH::Quat rot = bodies.GetRotation(player_id_);

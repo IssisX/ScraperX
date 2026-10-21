@@ -1029,6 +1029,38 @@ struct Snapshot final {
     Vector3 matron_hand2{};
     bool claimed_by_matron = false;
     double claimed_s = 0.0;
+    // The fatality (Claimed), its beats (Matron::Fatal: 0 lay, 1 pin, 2 left
+    // leg, 3 right leg, 4 drag, 5 kick, 6 haul, 7 fall, 8 wipe, 9 black) and
+    // each beat's entry counted: an edge for the camera, the sound and the VO.
+    int fatality_beat = -1;   // -1 when not Claimed
+    std::array<std::uint64_t, 10> fatality_beat_edges{};
+    std::uint64_t knee_pin_count = 0;
+    std::uint64_t leg_tear_count = 0;
+    std::uint64_t leg_toss_count = 0;
+    bool left_leg_lost = false;
+    bool right_leg_lost = false;
+    double leg_load_n = 0.0;
+    double leg_peak_n = 0.0;     // the hip's peak, the last leg
+    std::array<bool, 2> severed_leg_present{};
+    std::array<Vector3, 2> severed_leg_position{};
+    std::array<Quaternion, 2> severed_leg_rotation{};
+    std::uint64_t collar_count = 0;
+    std::uint64_t shackle_unhook_count = 0;
+    std::uint64_t knot_count = 0;
+    double knot_load_n = 0.0;
+    double knot_peak_n = 0.0;
+    std::uint64_t brake_kick_count = 0;   // the catch's pin out: the skip goes
+    std::uint64_t haul_count = 0;
+    double haul_from_y = 0.0;
+    double haul_peak_y = 0.0;
+    std::uint64_t knot_part_count = 0;
+    std::uint64_t fall_landing_count = 0;
+    double fall_landing_speed_mps = 0.0;
+    double fall_drop_m = 0.0;
+    std::uint64_t waste_not_count = 0;    // the voice hook: "Waste not."
+    double wipe_s = 0.0;
+    Vector3 matron_knee{};
+    bool matron_knee_down = false;
     std::uint64_t claimed_count = 0;
     std::uint64_t runs_ended_by_matron = 0;   // the edge: a new count, the run ended and started again whole
     // The XCoM past the edge of the footing, the stick not driving that way:
@@ -1126,6 +1158,7 @@ public:
     static constexpr std::uint64_t kPlayerEntityId = 2;
     // The player's arm she tore off (physics_world_arm.cpp).
     static constexpr std::uint64_t kSeveredArmEntityId = 3290;
+    static constexpr std::uint64_t kSeveredLegEntityId = 3291;   // and 3292, the right
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
     static constexpr std::uint64_t kVaultRailEntityId = 5;

@@ -402,22 +402,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         step_armplay(dt, player, at, feet);
         break;
     }
-    case State::Claimed: {
-        // She has won: the body in her fist, back to her locker.
-        const float off = xz(ax, az, kLockerX, kSpawnZ);
-        if (off > 0.6F) {
-            float wx = kLockerX;
-            float wz = kSpawnZ;
-            if (off > 6.0F) {
-                route_toward(ax, az, kLockerX, kSpawnZ, on_catwalk, wx, wz);
-            }
-            walk_toward(dt, wx, wz, std::min(kHuntMps * kCarryPaceScale, 0.6F + off));
-        } else {
-            stand();
-        }
-        pose_hand(dt, carry_pose(), kHandSpeedMps);
+    case State::Claimed:
+        step_claimed(dt, at, feet);
         break;
-    }
     case State::Spare: {
         stand();
         const Vec3 out(rim_nx_, 0.0F, rim_nz_);
@@ -598,6 +585,8 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
             state_ = State::Claimed;
             hold_s_ = 0.0F;
             hold_phase_ = 0;
+            fatal_beat_ = 0;
+            fatal_sub_ = 0;
         } else {
             // Back down over the drop, then the dangle's end.
             state_ = State::Dangle;

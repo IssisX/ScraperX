@@ -32,8 +32,6 @@ constexpr float kArmSideM = 0.25F;
 // where it was thrown from.
 constexpr float kSeveredArmSeconds = 90.0F;
 constexpr float kSeveredArmFallM = 30.0F;
-// Claimed: this long with the armless body in her fist, then the run ends.
-constexpr float kClaimedSeconds = 12.0F;
 } // namespace
 
 JPH::Vec3 Simulation::PhysicsWorld::wrist_local(const int side) const noexcept {
@@ -62,6 +60,7 @@ void Simulation::PhysicsWorld::arm_reset(JPH::BodyInterface &bodies) noexcept {
     despawn_severed_arm(bodies);
     // A death or a restart: whole again.
     arm_lost_ = {false, false};
+    fatality_reset(bodies);
     wrist_side_ = -1;
     wrist_strain_ns_ = 0.0F;
     wrist_load_n_ = 0.0F;
@@ -143,7 +142,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     if (matron_->reaching_wrist()) {
         wrist_side_ = side;
     }
-    const bool active = matron_->hand2_active() && grip_ != nullptr;
+    const bool active = matron_->hand2_active() && (grip_ != nullptr || matron_->claimed());
     if (!active && !hand2_id_.IsInvalid()) {
         destroy_grab_constraint(wrist_);
         destroy_grab_constraint(hand2_arm_);
@@ -242,10 +241,7 @@ void Simulation::PhysicsWorld::arm_post_step(JPH::BodyInterface &bodies, const f
         if (claimed_s_ == 0.0F) {
             ++claimed_count_;
         }
-        claimed_s_ += dt;
-        if (claimed_s_ >= kClaimedSeconds) {
-            run_ended_by_matron_ = true;
-        }
+        claimed_s_ += dt;   // the run ends with the fatality (physics_world_fatality.cpp)
     }
 }
 

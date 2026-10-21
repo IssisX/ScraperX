@@ -813,6 +813,42 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.one_arm = one_arm();
         state_.claimed_by_matron = matron_->claimed();
         state_.claimed_s = claimed_s_;
+        state_.fatality_beat = matron_->claimed() ? static_cast<int>(matron_->fatal_beat()) : -1;
+        state_.fatality_beat_edges = fatality_beat_edges_;
+        state_.knee_pin_count = knee_pin_count_;
+        state_.leg_tear_count = leg_tear_count_;
+        state_.leg_toss_count = leg_toss_count_;
+        state_.left_leg_lost = leg_off_[0];
+        state_.right_leg_lost = leg_off_[1];
+        state_.leg_load_n = leg_load_n_;
+        state_.leg_peak_n = std::max(leg_peak_n_, last_leg_peak_n_);
+        for (std::size_t k = 0; k < 2; ++k) {
+            state_.severed_leg_present[k] = !leg_id_[k].IsInvalid();
+            if (!leg_id_[k].IsInvalid()) {
+                { const JPH::RVec3 a = bodies.GetPosition(leg_id_[k]); state_.severed_leg_position[k] = Vector3{a.GetX(), a.GetY(), a.GetZ()}; }
+                { const JPH::Quat q = bodies.GetRotation(leg_id_[k]); state_.severed_leg_rotation[k] = Quaternion{q.GetX(), q.GetY(), q.GetZ(), q.GetW()}; }
+            }
+        }
+        state_.collar_count = collar_count_;
+        state_.shackle_unhook_count = unhook_count_;
+        state_.knot_count = knot_count_;
+        state_.knot_load_n = knot_load_n_;
+        state_.knot_peak_n = knot_peak_n_;
+        state_.brake_kick_count = brake_kick_count_;
+        state_.haul_count = haul_count_;
+        state_.haul_from_y = haul_from_y_;
+        state_.haul_peak_y = haul_peak_y_;
+        state_.knot_part_count = knot_part_count_;
+        state_.fall_landing_count = fall_landing_count_;
+        state_.fall_landing_speed_mps = landing_speed_mps_;
+        state_.fall_drop_m = landing_drop_m_;
+        state_.waste_not_count = matron_->waste_not_lines();
+        state_.wipe_s = matron_->wipe_phase();
+        state_.matron_knee_down = !knee_id_.IsInvalid();
+        if (!knee_id_.IsInvalid()) {
+            const JPH::RVec3 a = bodies.GetPosition(knee_id_);
+            state_.matron_knee = Vector3{a.GetX(), a.GetY(), a.GetZ()};
+        }
         state_.claimed_count = claimed_count_;
     }
     state_.player_teetering = teetering_;

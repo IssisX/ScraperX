@@ -8,7 +8,10 @@
 
 #include "sim/matron.hpp"
 
+#include <array>
+#include <cmath>
 #include <cstdlib>
+#include <vector>
 #include <set>
 
 namespace {
@@ -395,4 +398,102 @@ void run_matron_arm() {
                 "matron two tears: the new run is whole");
         std::cout << "PASS scraperx_sim matron two tears\n";
     }
+}
+
+// The second arm gone: the fatality, beat by beat, all of it physics. The
+// knee pin, both legs torn at the hips, the torso dragged onto the skip
+// lift's rope and hauled up the well as the catch's pin comes out, the knot
+// parting at the jerk, the fall, her hands on her apron, black, and a whole
+// body in a new run. No death is counted: the run was hers.
+void run_matron_fatality() {
+    Simulation s(InitialSpawn::Deck154);
+    s.debug_lose_arm(0);
+    meet_her(s, -6.0, -129.0);
+    s.debug_matron_hold(0, 3.0);
+    s.debug_matron_armplay(1);
+    std::vector<int> order;
+    std::array<double, 10> at_s{};
+    double max_step = 0.0;
+    double peak_leg = 0.0, peak_knot = 0.0, peak_y = 0.0, landing = 0.0, drop = 0.0;
+    std::uint64_t tears = 0, kicks = 0, hauls = 0, parts = 0, lines = 0, deaths = 0, knots = 0, pins = 0;
+    bool legs_seen = false;
+    std::uint64_t ended = 0;
+    scraperx::sim::Vector3 last{};
+    bool have_last = false;
+    const bool debug = std::getenv("FATAL_DEBUG") != nullptr;
+    for (int i = 0; i < 200 * 90 && ended == 0; ++i) {
+        (void)s.set_move_input(0.0, 0.0);
+        tick(s);
+        const auto p = s.snapshot();
+        ended = p.runs_ended_by_matron;
+        if (ended != 0) {
+            break;
+        }
+        if (p.claimed_by_matron) {
+            if (order.empty() || order.back() != p.fatality_beat) {
+                order.push_back(p.fatality_beat);
+                at_s[static_cast<std::size_t>(p.fatality_beat)] = i / 90.0;
+                if (debug) {
+                    std::cout << "    beat " << p.fatality_beat << " at " << i / 90.0 << " torso " << p.player_position.x
+                              << "," << p.player_position.y << "," << p.player_position.z << " her "
+                              << s.matron_state().position.x << "," << s.matron_state().position.z << "\n";
+                }
+            }
+            if (have_last && p.fatality_beat < 6) {
+                const double dx = p.player_position.x - last.x, dy = p.player_position.y - last.y,
+                             dz = p.player_position.z - last.z;
+                max_step = std::max(max_step, std::sqrt(dx * dx + dy * dy + dz * dz));
+            }
+            last = p.player_position;
+            have_last = true;
+            peak_leg = std::max(peak_leg, p.leg_peak_n);
+            peak_knot = std::max(peak_knot, p.knot_peak_n);
+            peak_y = std::max(peak_y, p.haul_peak_y);
+            tears = p.leg_tear_count;
+            legs_seen = legs_seen || (p.left_leg_lost && p.right_leg_lost && p.severed_leg_present[0] &&
+                                      p.severed_leg_present[1]);
+            kicks = p.brake_kick_count;
+            hauls = p.haul_count;
+            parts = p.knot_part_count;
+            knots = p.knot_count;
+            pins = p.knee_pin_count;
+            landing = std::max(landing, p.fall_landing_speed_mps);
+            drop = std::max(drop, p.fall_drop_m);
+            lines = p.waste_not_count;
+            deaths = p.death_count;
+            if (debug && i % 45 == 0) {
+                std::cout << "      t=" << i / 90.0 << " beat " << p.fatality_beat << " torso " << p.player_position.x
+                          << "," << p.player_position.y << "," << p.player_position.z << " hand "
+                          << p.matron_hand.x << "," << p.matron_hand.y << "," << p.matron_hand.z << " knee "
+                          << p.matron_knee_down << " leg " << p.leg_load_n << " knot " << p.knot_load_n << " unhooks " << p.shackle_unhook_count << " collar " << p.collar_count << " her "
+                          << s.matron_state().position.x << "," << s.matron_state().position.z << "\n";
+            }
+        }
+    }
+    std::cout << "  matron fatality: beats";
+    for (const int b : order) {
+        std::cout << " " << b << "@" << at_s[static_cast<std::size_t>(b)];
+    }
+    std::cout << " | pins " << pins << " leg tears " << tears << " peak hip " << peak_leg << " N, knots " << knots
+              << " kicks " << kicks << " hauls " << hauls << " peak torso y " << peak_y << ", knot peak " << peak_knot
+              << " N, parts " << parts << ", fell " << drop << " m landing " << landing << " m/s, lines " << lines
+              << ", deaths " << deaths << ", max step " << max_step << " m, ended " << ended << "\n";
+    const std::vector<int> want{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    require(order == want, "matron fatality: every beat, in order");
+    require(pins == 1, "matron fatality: her knee on the chest");
+    require(tears == 2 && legs_seen, "matron fatality: both legs torn off, bodies on the deck");
+    require(peak_leg > scraperx::sim::Matron::kLegHoldN && peak_leg < 8000.0, "matron fatality: the hip's load finite");
+    require(knots == 1 && kicks == 1 && hauls == 1, "matron fatality: on the rope, the pin out, hauled");
+    require(peak_y > 165.0, "matron fatality: the machine takes it up the well");
+    require(parts == 1 && drop > 8.0 && landing > 10.0, "matron fatality: the knot parts and it falls");
+    require(lines == 1, "matron fatality: 'Waste not.'");
+    require(deaths == 0, "matron fatality: no death counted, the run was hers");
+    require(max_step < 0.2, "matron fatality: no teleport (the torso's step, before the haul)");
+    require(ended == 1, "matron fatality: the run ends");
+    const auto p = s.snapshot();
+    require(!p.left_arm_lost && !p.right_arm_lost && !p.left_leg_lost && !p.right_leg_lost && !p.claimed_by_matron &&
+                p.fatality_beat == -1 && p.death_count == 0,
+            "matron fatality: a new run, a whole body");
+    std::cout << "PASS scraperx_sim matron fatality: peak_hip_n=" << peak_leg << " peak_y=" << peak_y
+              << " landing_mps=" << landing << "\n";
 }

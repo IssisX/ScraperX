@@ -1036,6 +1036,35 @@ public:
     void arm_reset(JPH::BodyInterface &bodies) noexcept;
     void sever_arm(JPH::BodyInterface &bodies) noexcept;
     void despawn_severed_arm(JPH::BodyInterface &bodies) noexcept;
+    // The fatality (physics_world_fatality.cpp).
+    enum class FistOn : std::uint8_t { None, Leg, Collar };
+    JPH::BodyID knee_id_;
+    JPH::Ref<JPH::TwoBodyConstraint> knee_arm_, knee_pin_, fist_, knot_, handle_fist_;
+    std::array<JPH::Ref<JPH::TwoBodyConstraint>, 2> hip_{};
+    std::array<JPH::BodyID, 2> leg_id_{};
+    std::array<bool, 2> leg_off_{false, false};
+    std::array<float, 2> leg_strain_ns_{0.0F, 0.0F};
+    FistOn fist_on_ = FistOn::None;
+    int leg_in_fist_ = -1;
+    int fatal_prev_beat_ = -1;
+    std::array<std::uint64_t, 10> fatality_beat_edges_{};
+    float leg_load_n_ = 0.0F, leg_peak_n_ = 0.0F, last_leg_peak_n_ = 0.0F;
+    float knot_load_n_ = 0.0F, knot_peak_n_ = 0.0F;
+    float haul_from_y_ = 0.0F, haul_peak_y_ = 0.0F;
+    bool haul_seen_ = false;
+    float fall_from_y_ = 0.0F, fall_peak_speed_ = 0.0F;
+    float landing_speed_mps_ = 0.0F, landing_drop_m_ = 0.0F;
+    std::uint64_t knee_pin_count_ = 0, leg_tear_count_ = 0, leg_toss_count_ = 0, collar_count_ = 0;
+    std::uint64_t unhook_count_ = 0, knot_count_ = 0, brake_kick_count_ = 0, haul_count_ = 0;
+    std::uint64_t knot_part_count_ = 0, fall_landing_count_ = 0;
+    [[nodiscard]] JPH::Vec3 ankle_local(int side) const noexcept;
+    void set_player_mass_for_losses(JPH::BodyInterface &bodies) noexcept;
+    void fatality_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    [[nodiscard]] bool body_down_on_ground(JPH::BodyInterface &bodies) const noexcept;
+    void fatality_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void fatality_reset(JPH::BodyInterface &bodies) noexcept;
+    JPH::BodyID make_limb_body(JPH::BodyInterface &bodies, JPH::RVec3 at, JPH::Quat rot, float half, float radius,
+                               float kg, std::uint64_t entity, JPH::ObjectLayer layer);
 public:
     [[nodiscard]] bool take_run_ended_by_matron() noexcept {
         const bool ended = run_ended_by_matron_;

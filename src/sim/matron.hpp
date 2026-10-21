@@ -778,6 +778,8 @@ public:
         std::uint32_t arm_tears = 0;    // arms she tore off
         std::uint32_t arm_throws = 0;   // and threw
         std::uint32_t claims = 0;       // both arms gone: she won
+        std::uint8_t fatal_beat = 0;    // Fatal, while Claimed
+        std::uint32_t waste_not = 0;    // the 'Waste not.' voice hook, an edge
         std::uint8_t armplay_beat = 0;  // 0 reach, 1 pull, 2 to her face, 3 swing, 4 throw
         float hand2_x = 0.0F, hand2_y = 0.0F, hand2_z = 0.0F;
         bool hold_braced = false;
@@ -930,7 +932,9 @@ public:
     }
 
     // Her second hand (ArmPlay).
-    [[nodiscard]] bool hand2_active() const noexcept { return state_ == State::ArmPlay && hold_phase_ < 5; }
+    [[nodiscard]] bool hand2_active() const noexcept {
+        return (state_ == State::ArmPlay && hold_phase_ < 5) || (claimed() && fatal_beat_ == 5);
+    }
     [[nodiscard]] bool reaching_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 0; }
     [[nodiscard]] bool pulling_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 1; }
     [[nodiscard]] JPH::RVec3 hand2_target() const noexcept { return hand2_target_; }
@@ -955,6 +959,84 @@ public:
     }
     void set_armplay_for_test(const int armplay) noexcept { armplay_for_test_ = armplay; }
     [[nodiscard]] bool claimed() const noexcept { return state_ == State::Claimed; }
+
+    // ---- Claimed: the fatality (matron_fatality.cpp) -----------------------
+    // Her beats, in order. Each is a physical act on kit and body: nothing in
+    // it moves the player but her hands, her knee, the rope and gravity.
+    enum class Fatal : std::uint8_t {
+        Lay = 0,    // the armless body to the pin spot by its ankle, let down on the steel
+        Pin = 1,    // her knee down on the torso
+        Leg0 = 2,   // her fist on the left ankle, the leg drawn out from the hip
+        Leg1 = 3,   // the right
+        Drag = 4,   // the torso by its collar to the skip lift's bollard, onto the rope's shackle
+        Kick = 5,   // the catch's trip handle wrenched down under her boot: the skip goes
+        Haul = 6,   // 800 kg of skip down the well; up the rope goes the torso
+        Fall = 7,   // the knot parts at the jerk; the torso comes back down
+        Wipe = 8,   // her hands on her apron ("Waste not.")
+        Black = 9,  // to black: the run is over
+    };
+    // Her knee and its weight, her leg pull, and the knot's strength (CHOSEN).
+    static constexpr float kKneePinN = 3500.0F;    // her bulk on one knee, braced: the cap on the knee's push
+    static constexpr float kLegPullN = 3200.0F;    // both arms on an ankle, her back in it
+    static constexpr float kLegHoldN = 2200.0F;    // a hip takes this much for as long as you like
+    static constexpr float kLegTearNs = 1200.0F;   // the hip's strain past kLegHoldN that tears the leg
+    static constexpr float kLegMassKg = 12.0F;
+    static constexpr float kLegTossMps = 3.0F;
+    static constexpr float kKnotTearN = 5000.0F;   // her knot of the torso to the shackle
+    static constexpr float kWipeSeconds = 2.6F;
+    static constexpr float kBlackSeconds = 1.5F;
+    static constexpr float kFatalGiveUpSeconds = 20.0F;   // a beat that the world will not let finish
+    // Where she does it (the Counterweight Well, stage A, on the 154 deck).
+    static constexpr float kPinSpotX = -6.4F, kPinSpotZ = -129.0F;
+    static constexpr float kBollardStandX = -13.35F, kBollardStandZ = -130.9F;
+    static constexpr float kTripStandX = -11.0F, kTripStandZ = -128.35F;
+
+    [[nodiscard]] Fatal fatal_beat() const noexcept { return static_cast<Fatal>(fatal_beat_); }
+    struct FatalPoints final {
+        JPH::RVec3 torso = JPH::RVec3::sZero();
+        JPH::RVec3 collar = JPH::RVec3::sZero();
+        JPH::RVec3 ankle[2] = {JPH::RVec3::sZero(), JPH::RVec3::sZero()};
+        JPH::RVec3 shackle = JPH::RVec3::sZero();
+        JPH::RVec3 handle = JPH::RVec3::sZero();
+        bool torso_grounded = false;
+    };
+    void set_fatal_points(const FatalPoints &points) noexcept { fatal_points_ = points; }
+    // Physics tells her what her hands have done.
+    void fatal_pinned() noexcept;
+    void fatal_leg_taken() noexcept;
+    void fatal_leg_torn() noexcept;
+    void fatal_collar_taken() noexcept;
+    void fatal_hooked() noexcept;
+    void fatal_handle_taken() noexcept;
+    void fatal_tripped() noexcept;
+    void fatal_dropped() noexcept;
+    void fatal_landed() noexcept;
+    // And she tells physics what she is doing with them.
+    [[nodiscard]] bool knee_down() const noexcept {
+        return claimed() && fatal_beat_ >= 1 && fatal_beat_ <= 3;
+    }
+    [[nodiscard]] JPH::RVec3 knee_target() const noexcept { return knee_target_; }
+    [[nodiscard]] int leg_side() const noexcept {
+        return claimed() && (fatal_beat_ == 2 || fatal_beat_ == 3) ? fatal_beat_ - 2 : -1;
+    }
+    [[nodiscard]] bool reaching_leg() const noexcept { return leg_side() >= 0 && fatal_sub_ == 0; }
+    [[nodiscard]] bool reaching_collar() const noexcept { return claimed() && fatal_beat_ == 4 && fatal_sub_ == 0; }
+    [[nodiscard]] bool hooking() const noexcept { return claimed() && fatal_beat_ == 4 && fatal_sub_ == 1; }
+    [[nodiscard]] bool reaching_handle() const noexcept { return claimed() && fatal_beat_ == 5 && fatal_sub_ == 0; }
+    [[nodiscard]] bool wrenching_handle() const noexcept { return claimed() && fatal_beat_ == 5 && fatal_sub_ == 1; }
+    [[nodiscard]] bool take_leg_toss(JPH::Vec3 &velocity) noexcept {
+        if (!leg_toss_) {
+            return false;
+        }
+        leg_toss_ = false;
+        velocity = leg_toss_v_;
+        return true;
+    }
+    [[nodiscard]] bool fatality_over() const noexcept {
+        return claimed() && fatal_beat_ == 9 && hold_s_ >= kBlackSeconds;
+    }
+    [[nodiscard]] float wipe_phase() const noexcept { return claimed() && fatal_beat_ == 8 ? hold_s_ : 0.0F; }
+    [[nodiscard]] std::uint32_t waste_not_lines() const noexcept { return waste_not_; }
     void set_spare_for_test(const int spare) noexcept { spare_for_test_ = spare; }
     void set_dangle_seconds_for_test(const float seconds) noexcept { dangle_for_test_s_ = seconds; }
     void set_stage_for_test(Stage stage) noexcept;
@@ -1118,6 +1200,8 @@ private:
     void end_hold(State next);
     void finish_dangle(JPH::RVec3 player);
     void step_armplay(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
+    void step_claimed(float dt, JPH::RVec3 at, float feet);
+    void fatal_next(int beat) noexcept;
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed);
@@ -1222,6 +1306,13 @@ private:
     JPH::Vec3 arm_throw_v_ = JPH::Vec3::sZero();
     int armplay_for_test_ = -1;
     bool armplay_done_ = false;   // this hold's ArmPlay is over
+    int fatal_beat_ = 0;          // Fatal, while Claimed
+    int fatal_sub_ = 0;           // within a beat: 0 her hand going to it, 1 on it
+    FatalPoints fatal_points_{};
+    JPH::RVec3 knee_target_ = JPH::RVec3::sZero();
+    bool leg_toss_ = false;
+    JPH::Vec3 leg_toss_v_ = JPH::Vec3::sZero();
+    std::uint32_t waste_not_ = 0;
     std::uint32_t arm_tears_ = 0, arm_throws_ = 0, claims_ = 0;
     float dangle_for_test_s_ = -1.0F;
     std::uint32_t grabs_ = 0, grab_misses_ = 0, carries_ = 0, dangles_ = 0, armplays_ = 0, releases_ = 0,

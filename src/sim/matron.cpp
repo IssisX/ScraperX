@@ -3262,6 +3262,8 @@ void Matron::refresh_view() {
     view_.arm_tears = arm_tears_;
     view_.arm_throws = arm_throws_;
     view_.claims = claims_;
+    view_.fatal_beat = state_ == State::Claimed ? static_cast<std::uint8_t>(fatal_beat_) : 0;
+    view_.waste_not = waste_not_;
     view_.armplay_beat = state_ == State::ArmPlay ? static_cast<std::uint8_t>(hold_phase_) : 0;
     view_.hand2_x = float(hand2_target_.GetX());
     view_.hand2_y = float(hand2_target_.GetY());
