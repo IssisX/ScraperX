@@ -97,6 +97,7 @@
 namespace scraperx::sim {
 
 class Zipline;
+class SharedSurvival;
 
 class Matron final {
 public:
@@ -535,6 +536,8 @@ public:
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
         bool climbing = false;      // on a ladder, going up it (stride: metres climbed)
         std::uint32_t climbs = 0;   // ladders she went up after the player, this run
+        bool bracing_structure = false;
+        float support_n = 0.0F;
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
@@ -584,6 +587,10 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // Opt-in encounter; world owns its lifetime and borrowed machine bodies.
+    // Detach before destroying it. No campaign encounter is enabled by default.
+    void set_shared_survival(SharedSurvival *encounter) noexcept;
+    [[nodiscard]] bool bracing_structure() const noexcept;
     // Whether each level's way up is there to guard (Stage A's cage down at
     // her deck, B's down at the 176 ring): given before pre_step. Gone up,
     // there is nothing to guard.
@@ -839,6 +846,7 @@ private:
     JPH::BodyID player_;
     JPH::Ref<JPH::Shape> shape_;
     JPH::Ref<JPH::Shape> hips_;   // way_clear's sweep: her width at her hips
+    SharedSurvival *shared_survival_ = nullptr;
     JPH::BodyID body_;
     JPH::BodyID locker_body_;
     bool body_in_world_ = false;
