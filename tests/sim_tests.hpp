@@ -852,6 +852,8 @@ void run_summit();
 void run_summit_arm();
 void run_matron();
 void run_water();
+void run_matron_pace();
+void run_matron_unstick();
 void run_matron_mischief();
 void run_matron_collision();
 void run_matron_balance();

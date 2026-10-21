@@ -253,6 +253,21 @@ struct MatronSnapshot final {
     double support_n = 0.0;
     std::uint8_t trap = 0;
     std::uint32_t traps = 0;
+    // Her pace (Matron::Pace: 0 creep, 1 stalk, 2 stride, 3 hunt) and its
+    // speed; getting unstuck; the player's trail; silence for silence.
+    std::uint8_t pace = 0;
+    double pace_mps = 0.0;
+    std::uint32_t pace_changes = 0;
+    std::uint32_t stalls = 0;
+    std::uint32_t step_ups = 0;
+    std::uint32_t clambers = 0;
+    std::uint32_t sidesteps = 0;
+    std::uint32_t reroutes = 0;
+    double longest_stall_s = 0.0;
+    std::uint32_t crumbs = 0;
+    std::uint32_t crumbs_walked = 0;
+    bool hushed = false;
+    std::uint32_t creaks = 0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
@@ -1402,6 +1417,10 @@ public:
     // Tests only (never bound to the bridge): her hands held off the player
     // for `seconds`, so a test can meet her body alone.
     void debug_hold_matron_hands(double seconds) noexcept;
+    // Tests only: her pace fixed (0 creep .. 3 hunt) with no hush; -1 free.
+    void debug_fix_matron_pace(int pace) noexcept;
+    // Tests only: her out of the locker and on her patrol loop.
+    void debug_matron_patrol() noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

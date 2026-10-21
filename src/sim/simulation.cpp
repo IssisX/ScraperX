@@ -1054,6 +1054,14 @@ void Simulation::debug_set_matron_stage(const std::uint8_t stage) noexcept {
     physics_world_->matron().set_stage_for_test(static_cast<Matron::Stage>(std::min<std::uint8_t>(stage, 2)));
 }
 
+void Simulation::debug_fix_matron_pace(const int pace) noexcept {
+    physics_world_->matron().fix_pace_for_test(pace);
+}
+
+void Simulation::debug_matron_patrol() noexcept {
+    physics_world_->matron().patrol_for_test();
+}
+
 void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
@@ -1090,6 +1098,19 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.catwalk_allowed = view.catwalk_allowed;
     result.turn = static_cast<std::uint8_t>(view.turn);
     result.turn_s = view.turn_s;
+    result.pace = view.pace;
+    result.pace_mps = view.pace_mps;
+    result.pace_changes = view.pace_changes;
+    result.stalls = view.stalls;
+    result.step_ups = view.step_ups;
+    result.clambers = view.clambers;
+    result.sidesteps = view.sidesteps;
+    result.reroutes = view.reroutes;
+    result.longest_stall_s = view.longest_stall_s;
+    result.crumbs = view.crumbs;
+    result.crumbs_walked = view.crumbs_walked;
+    result.hushed = view.hushed;
+    result.creaks = view.creaks;
     result.fooled = view.fooled;
     result.wary = view.wary;
     result.vaults = view.vaults;

@@ -193,6 +193,69 @@ public:
     static constexpr float kLoseTrackSeconds = 9.0F;
     static constexpr float kSearchSeconds = 8.0F;
 
+    // Her paces in the hunt (matron_moves.cpp choose_pace). She is not one
+    // speed: she creeps, stalks, strides and runs, and changes between them
+    // when she likes -- from what she has of the player (sight, the noise,
+    // how far, her rage) and a deterministic roll -- so where she will be is
+    // never sure. Her feet take her from one pace to the next at kFootAccel
+    // (speeding up) and kCutAccel (braking): never a snap. Hunt is kHuntMps,
+    // her old top speed, kept.
+    enum class Pace : std::uint8_t { Creep = 0, Stalk = 1, Stride = 2, Hunt = 3 };
+    static constexpr float kCreepMps = 0.7F;
+    static constexpr float kStalkMps = 2.0F;
+    static constexpr float kStrideMps = 4.2F;
+    [[nodiscard]] static constexpr float pace_mps(const Pace pace) noexcept {
+        return pace == Pace::Creep ? kCreepMps : pace == Pace::Stalk ? kStalkMps
+                                               : pace == Pace::Stride ? kStrideMps : kHuntMps;
+    }
+    // A pace is held kPaceHoldMinS..+kPaceHoldSpanS, then chosen again (sooner
+    // when sight of the player comes or goes). The roll: kPaceSnapUp of the
+    // time straight to Hunt, kPaceDropOff of the time (not with the player in
+    // plain sight close) back to Creep, kPaceWander a tier either way.
+    static constexpr float kPaceHoldMinS = 1.2F;
+    static constexpr float kPaceHoldSpanS = 2.8F;
+    static constexpr float kPaceSnapUp = 0.12F;
+    static constexpr float kPaceDropOff = 0.10F;
+    static constexpr float kPaceWander = 0.25F;
+    // The first kPaceWarmS of a hunt she holds one tier lower unless the
+    // player is in plain sight within kPaceCloseM: slow first, then faster.
+    static constexpr float kPaceWarmS = 3.0F;
+    static constexpr float kPaceCloseM = 6.0F;
+
+    // Getting unstuck (matron_moves.cpp). Outside the Turn: a step up onto
+    // what is under kStepUpM (the player's 0.35 m); a clamber onto what is up
+    // to kClamberMaxM (the player mantles 1.85 m), slower forward than the
+    // Turn's vault; both only with her feet pressed into it. A stall: under
+    // kStallMoveM made in kStallWindowS with her way still ahead; each one in
+    // a row goes a rung further: 1 a clamber or a vault, 2 a sidestep along
+    // the face in her way (kSidestepM, kSidestepS), 3 a reroute round the
+    // node she could not reach (blocked kRerouteBlockS), then the rungs again.
+    static constexpr float kStepUpM = 0.38F;
+    static constexpr float kClamberMaxM = 1.9F;
+    static constexpr float kClamberForwardMps = 1.4F;
+    static constexpr float kClamberCooldownS = 1.0F;
+    static constexpr float kStallMoveM = 0.3F;
+    static constexpr float kStallWindowS = 1.0F;
+    static constexpr float kSidestepM = 1.8F;
+    static constexpr float kSidestepS = 1.4F;
+    static constexpr float kRerouteBlockS = 12.0F;
+    // A knee-height sweep in way_clear, over anything a step-up takes.
+    static constexpr float kKneeSweepM = 0.5F;
+
+    // The player's way, remembered (matron_moves.cpp): a crumb every
+    // kCrumbEveryM of their walk on her level, the last kCrumbs; searching,
+    // she walks their trail on from where she meets it.
+    static constexpr int kCrumbs = 24;
+    static constexpr float kCrumbEveryM = 1.5F;
+    static constexpr float kCrumbMeetM = 6.0F;
+    // Silence for silence: the player quiet kHushAfterS while she hunts out of
+    // sight, she stops dead and listens kHushMinS..+kHushSpanS (or until a
+    // sound), then moves again with a creak (a counted edge), at Creep.
+    static constexpr float kHushAfterS = 1.2F;
+    static constexpr float kHushMinS = 2.0F;
+    static constexpr float kHushSpanS = 2.5F;
+    static constexpr float kQuietLoudness = 0.02F;
+
     // The catwalk: 11 plates across the shaft, each on a bolt that shears
     // when its load, averaged over kBoltWindowS, passes kBoltShearN. The plate
     // itself is 0.59 kN; with a climber's 80 kg (0.8 kN, a hop's landings a
@@ -581,6 +644,23 @@ public:
         std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
         std::uint32_t pipe_slams = 0;   // flanges slammed onto, torn off
         float pipe_slam_mps = 0.0F;     // the last slam's speed
+        // Her pace (Pace) and the speed it asks of her feet; getting unstuck
+        // (stalls met, step-ups, clambers, sidesteps, reroutes, the longest
+        // time without kStallMoveM of progress); the player's trail (crumbs
+        // kept, crumbs walked); silence for silence (listening now, creaks).
+        std::uint8_t pace = 0;
+        float pace_mps = 0.0F;
+        std::uint32_t pace_changes = 0;
+        std::uint32_t stalls = 0;
+        std::uint32_t step_ups = 0;
+        std::uint32_t clambers = 0;
+        std::uint32_t sidesteps = 0;
+        std::uint32_t reroutes = 0;
+        float longest_stall_s = 0.0F;
+        std::uint32_t crumbs = 0;
+        std::uint32_t crumbs_walked = 0;
+        bool hushed = false;
+        std::uint32_t creaks = 0;
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
@@ -693,6 +773,12 @@ public:
     }
     [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
+    // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
+    // the tests that meet the Turn and the vault at one speed, as written.
+    void fix_pace_for_test(const int pace) noexcept { fixed_pace_ = pace; }
+    // Tests only: out of her locker (stepped out of its front, as at a
+    // burst) and on her patrol round her level's loop.
+    void patrol_for_test();
     void set_stage_for_test(Stage stage) noexcept;
     // Tests only: her hands held off the player for `seconds` (no shove), so
     // a test can meet her body alone.
@@ -799,6 +885,16 @@ private:
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
+    // matron_moves.cpp: her pace chosen for this tick of the hunt; a crumb of
+    // the player's way; the next crumb on from where she is; the stall
+    // watchdog's tick (true: a sidestep target set); silence for silence.
+    Pace choose_pace(float dt, float distance, bool saw, bool heard, float loudness);
+    void drop_crumb(float px, float pz, float floor_y);
+    bool crumb_ahead(float ax, float az, float &wx, float &wz);
+    void watch_stall(float dt, JPH::RVec3 at, float heading_x, float heading_z, bool wants);
+    bool hush_step(float dt, bool saw, float distance, float loudness);
+    [[nodiscard]] float roll() noexcept;
+    [[nodiscard]] bool node_blocked(float x, float z) const noexcept;
     // Her floor this tick: its height under her, whether it moves (she clings).
     void feel_floor(float dt);
     // The level whose floor is under her feet, once she is on one.
@@ -899,6 +995,7 @@ private:
     float speed_ = 0.0F;
     float yaw_ = 0.0F;
     int patrol_node_ = 0;
+    bool patrol_only_ = false; // tests: no post to guard, the loop only
     float noise_heard_ = 0.0F;
     bool sees_player_ = false;
     bool sees_far_ = false;
@@ -991,6 +1088,45 @@ private:
     std::uint32_t fooled_ = 0;
     float vault_cooldown_s_ = 0.0F;
     std::uint32_t vaults_ = 0;
+    // matron_moves.cpp (above): pace, the stall watchdog, crumbs, hush.
+    std::uint32_t rng_ = 0x9E3779B9U;
+    int fixed_pace_ = -1;   // tests only: one pace, no hush (fix_pace_for_test)
+    Pace pace_ = Pace::Stalk;
+    float pace_hold_s_ = 0.0F;
+    bool pace_saw_ = false;
+    float hunt_s_ = 0.0F;
+    std::uint32_t pace_changes_ = 0;
+    float stall_window_s_ = 0.0F;
+    float stall_x_ = 0.0F, stall_z_ = 0.0F;
+    int stall_rung_ = 0;
+    float stall_s_ = 0.0F;
+    float longest_stall_s_ = 0.0F;
+    std::uint32_t stalls_ = 0;
+    std::uint32_t step_ups_ = 0;
+    std::uint32_t clambers_ = 0;
+    std::uint32_t sidesteps_ = 0;
+    std::uint32_t reroutes_ = 0;
+    bool clamber_now_ = false;   // the watchdog's first rung: clamber or vault whatever her feet feel
+    float sidestep_s_ = 0.0F;
+    float sidestep_x_ = 0.0F, sidestep_z_ = 0.0F;
+    struct Blocked {
+        float x, z, s;
+    };
+    std::vector<Blocked> blocked_;
+    mutable float last_way_x_ = 0.0F, last_way_z_ = 0.0F;
+    mutable bool last_way_node_ = false;
+    struct Crumb {
+        float x, z, floor_y;
+    };
+    std::array<Crumb, kCrumbs> crumbs_{};
+    int crumb_count_ = 0;
+    int crumb_head_ = 0;   // the next slot written
+    std::uint32_t crumbs_walked_ = 0;
+    int crumb_on_ = -1;    // the age (0 newest) of the crumb she is walking to
+    float quiet_s_ = 0.0F;
+    float hush_s_ = 0.0F;
+    bool hush_spent_ = false;
+    std::uint32_t creaks_ = 0;
     // A far noise she let go while guarding: she turns to it a moment.
     float look_x_ = 0.0F, look_z_ = 0.0F;
     float look_s_ = 0.0F;

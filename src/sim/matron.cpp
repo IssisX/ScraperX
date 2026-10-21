@@ -1,6 +1,8 @@
 // The Matron: a sealed locker, a build-up, and a hunt by sound on the 154 m
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
+#include <cstdio>
+#include <cstdlib>
 
 #include "sim/zipline.hpp"
 #include "sim/shared_survival.hpp"
@@ -408,11 +410,21 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     };
     const int from = insert(fx, fz, false);
     const int to = insert(tx, tz, true);
-    // Dijkstra over at most a dozen nodes.
+    // Dijkstra over at most a dozen nodes. Nodes she found no way to just
+    // now (matron_moves.cpp, the watchdog's reroute) are left out first; if
+    // that leaves no way at all, they are tried again.
     const std::size_t n = nodes.size();
     std::vector<float> dist(n, std::numeric_limits<float>::max());
     std::vector<int> prev(n, -1);
     std::vector<bool> done(n, false);
+    const auto blocked_node = [&](const int i) {
+        return i != from && i != to && node_blocked(nodes[static_cast<std::size_t>(i)].x,
+                                                    nodes[static_cast<std::size_t>(i)].z);
+    };
+    for (int attempt = blocked_.empty() ? 1 : 0; attempt < 2; ++attempt) {
+    std::fill(dist.begin(), dist.end(), std::numeric_limits<float>::max());
+    std::fill(prev.begin(), prev.end(), -1);
+    std::fill(done.begin(), done.end(), false);
     dist[static_cast<std::size_t>(from)] = 0.0F;
     for (std::size_t round = 0; round < n; ++round) {
         int u = -1;
@@ -435,7 +447,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
             } else if (e.b == u) {
                 v = e.a;
             }
-            if (v < 0) {
+            if (v < 0 || (attempt == 0 && blocked_node(v))) {
                 continue;
             }
             const Node &a = nodes[static_cast<std::size_t>(u)];
@@ -446,6 +458,10 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
                 prev[static_cast<std::size_t>(v)] = u;
             }
         }
+    }
+    if (prev[static_cast<std::size_t>(to)] >= 0 || to == from) {
+        break;
+    }
     }
     // The path from `from` to `to`, then its first point she is not already
     // standing on (the start is inserted on whichever edge is nearest, often
@@ -483,6 +499,9 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     }
     if (pick >= 0) {
         point(pick, wx, wz);
+        last_way_node_ = path[static_cast<std::size_t>(pick)] != to;
+        last_way_x_ = wx;
+        last_way_z_ = wz;
     }
     // Something built in the straight way (a post, a ladder's rail, a cage's
     // corner by her post): when it is the place she is going to, first its
@@ -541,7 +560,16 @@ bool Matron::way_clear(const float fx, const float fz, const float tx, const flo
     const RShapeCast sweep(hips_, Vec3::sReplicate(1.0F), RMat44::sTranslation(start), Vec3(dx, 0.0F, dz));
     AnyHitCollisionCollector<CastShapeCollector> hit;
     physics_.GetNarrowPhaseQuery().CastShape(sweep, ShapeCastSettings(), start, hit, {}, {}, built);
-    return !hit.HadHit();
+    if (hit.HadHit()) {
+        return false;
+    }
+    // And at her knees (kKneeSweepM, over what a step-up takes): a low box or
+    // a curb at the hips' sweep passes under it, and stopped her dead.
+    const RVec3 knee(fx, feet_y_ + kKneeSweepM, fz);
+    const RShapeCast low(hips_, Vec3::sReplicate(1.0F), RMat44::sTranslation(knee), Vec3(dx, 0.0F, dz));
+    AnyHitCollisionCollector<CastShapeCollector> knee_hit;
+    physics_.GetNarrowPhaseQuery().CastShape(low, ShapeCastSettings(), knee, knee_hit, {}, {}, built);
+    return !knee_hit.HadHit();
 }
 
 void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const bool seen) {
@@ -571,7 +599,7 @@ void Matron::stand_down() {
 
 const Matron::Post *Matron::reachable_post(const float ax, const float az) const {
     const Level &level = levels_[static_cast<std::size_t>(level_)];
-    if (level.way < 0 || !ways_out_[static_cast<std::size_t>(level.way)]) {
+    if (patrol_only_ || level.way < 0 || !ways_out_[static_cast<std::size_t>(level.way)]) {
         return nullptr;
     }
     for (const Post &post : level.posts) {
@@ -1095,10 +1123,16 @@ void Matron::ride_pipe(const float dt) {
     }
 }
 
-void Matron::walk_toward(const float dt, const float wx, const float wz, const float speed, const float foot_accel,
+void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
                          const bool turn_moves) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
+    // A sidestep the stall watchdog set (matron_moves.cpp): along the face
+    // in her way a moment, whatever she was making for.
+    if (sidestep_s_ > 0.0F && speed > 0.0F) {
+        wx = sidestep_x_;
+        wz = sidestep_z_;
+    }
     target_x_ = wx;
     target_z_ = wz;
     Vec3 velocity = bodies.GetLinearVelocity(body_);
@@ -1248,7 +1282,90 @@ void Matron::walk_toward(const float dt, const float wx, const float wz, const f
                 ++vaults_;
             }
         }
+        // Outside the Turn (matron.hpp, getting unstuck): her feet pressed
+        // into something in her way, she steps up onto it (under kStepUpM) or
+        // clambers onto it (to kClamberMaxM), slower than the Turn's vault;
+        // and on the watchdog's first rung she does whichever her feet find,
+        // or vaults. A finite push from her feet: the speed up that just
+        // carries her feet over its top.
+        bool climbed = false;
+        if (!turn_moves && !leapt && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.3F &&
+            !edge_at(Vec3(dx / length, 0.0F, dz / length), 0.3F)) {
+            // (Only with floor under the step: across a gap only the Turn's leap.)
+            const Vec3 heading(dx / length, 0.0F, dz / length);
+            const float along_now = Vec3(velocity.GetX(), 0.0F, velocity.GetZ()).Dot(heading);
+            const bool pressed = speed_now < 0.35F * std::min(speed, 2.0F) || clamber_now_;
+            const auto ray_ahead = [&](const float rise, const float reach, float &fraction) {
+                RayCastResult r;
+                const bool any = physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(at + Vec3(0.0F, rise - kStandCentre, 0.0F), heading * reach), r, {}, {}, not_us);
+                fraction = any ? r.mFraction : 1.0F;
+                return any;
+            };
+            // The top of what is in her way, `ahead_m` on, looked for from
+            // her head height down.
+            const auto top_ahead = [&](const float ahead_m, float &top_y) {
+                return floor_under(at + heading * ahead_m + Vec3(0.0F, 2.2F - kStandCentre, 0.0F), 2.25F, top_y);
+            };
+            float f = 1.0F;
+            float top_y = 0.0F;
+            if (ray_ahead(0.12F, 0.7F, f) && !ray_ahead(kStepUpM + 0.12F, 0.9F, f) && pressed &&
+                top_ahead(0.7F * f + 0.25F, top_y) && top_y - feet > 0.05F && top_y - feet <= kStepUpM) {
+                const float rise = top_y - feet + 0.12F;
+                velocity = Vec3(heading.GetX() * std::max(along_now, 1.2F), std::sqrt(2.0F * 9.81F * rise),
+                                heading.GetZ() * std::max(along_now, 1.2F));
+                vault_cooldown_s_ = 0.4F;
+                ++step_ups_;
+                climbed = true;
+            } else if ((pressed || clamber_now_) && ray_ahead(0.45F, 1.0F, f)) {
+                const float hit_at = 1.0F * f;
+                if (top_ahead(hit_at + 0.3F, top_y) && top_y - feet > kStepUpM - 0.05F &&
+                    top_y - feet <= kClamberMaxM) {
+                    const float h = top_y - feet;
+                    // Room over its top for her: nothing at her height above it.
+                    RayCastResult over;
+                    const bool room = !physics_.GetNarrowPhaseQuery().CastRay(
+                        RRayCast(at + Vec3(0.0F, h + 0.3F - kStandCentre + 1.0F, 0.0F), heading * (hit_at + 0.8F)),
+                        over, {}, {}, not_us);
+                    if (room) {
+                        velocity = Vec3(heading.GetX() * kClamberForwardMps, std::sqrt(2.0F * 9.81F * (h + 0.35F)),
+                                        heading.GetZ() * kClamberForwardMps);
+                        vault_cooldown_s_ = kClamberCooldownS;
+                        ++clambers_;
+                        climbed = true;
+                    }
+                }
+            }
+            if (!climbed && clamber_now_) {
+                // Nothing to clamber onto: the Turn's vault, if what is in her
+                // way is lower than her chest and there is floor beyond.
+                const Vec3 ahead = heading * 1.1F;
+                RayCastResult knee;
+                RayCastResult head;
+                const bool low = physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(at + Vec3(0.0F, 0.45F - kStandCentre, 0.0F), ahead), knee, {}, {}, not_us);
+                const bool high = physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(at + Vec3(0.0F, 1.6F - kStandCentre, 0.0F), ahead), head, {}, {}, not_us);
+                RayCastResult landing;
+                const bool lands = physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(at + ahead * 2.7F + Vec3(0.0F, 0.5F, 0.0F), Vec3(0.0F, -(kStandCentre + 1.2F), 0.0F)),
+                    landing, {}, {}, not_us);
+                // Outside the Turn never over a gap: floor runs on under it.
+                if (low && !high && lands && !edge_at(heading, 0.45F) && !edge_at(heading, 1.5F)) {
+                    velocity = Vec3(heading.GetX() * kVaultForwardMps, kVaultUpMps, heading.GetZ() * kVaultForwardMps);
+                    vault_cooldown_s_ = kVaultCooldownS;
+                    ++vaults_;
+                    climbed = true;
+                }
+            }
+        }
+        clamber_now_ = false;
         bodies.SetLinearVelocity(body_, velocity);
+        // The watchdog: a way ahead of her (more than a stride off, at a pace).
+        watch_stall(dt, at, length > 0.15F ? dx / length : 0.0F, length > 0.15F ? dz / length : 0.0F,
+                    speed > 0.3F && length > 1.0F && !climbed);
+    } else {
+        watch_stall(dt, at, 0.0F, 0.0F, false);
     }
     speed_ = std::hypot(velocity.GetX(), velocity.GetZ());
     stride_ += speed_ * dt;
@@ -1634,6 +1751,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
          (stage_ != Stage::Pest && pipe_reaches(level_floor) && pipe_reaches(player_floor_y) &&
           std::abs(std::abs(player_floor_y - level_floor) - kStackPitch) < 0.1F));
     player_on_deck_ = on_deck || player_climb >= 0 || by_her_pipe;
+    // The player's way on her level, remembered (matron_moves.cpp).
+    if (on_deck && body_in_world_) {
+        drop_crumb(px, pz, player_floor_y);
+    }
+    if (state_ != State::Hunting) {
+        hunt_s_ = 0.0F;
+        hush_s_ = 0.0F;
+    }
     // The loudest at her ear of the tick's sounds that carry to it (her
     // locker while she sleeps, her body awake): not her own, carried within
     // `within` and within its own reach. Her lead goes to the level it is on.
@@ -1990,8 +2115,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 } else if (turn_ == Turn::Lunge) {
                     const bool burst = std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
                     walk_toward(dt, wx, wz, burst ? kTurnBurstMps : kTurnPauseMps, kTurnFootAccel, true);
+                } else if (hush_step(dt, saw, d, loudness)) {
+                    // The player gone quiet: so does she. Still, listening,
+                    // turned to where she had them (matron.hpp kHushAfterS).
+                    walk_toward(dt, ax, az, 0.0F);
+                    yaw_ = turn_toward(yaw_, std::atan2(heard_x_ - ax, heard_z_ - az), kTurnRate, dt);
                 } else {
-                    walk_toward(dt, wx, wz, kHuntMps);
+                    // Her pace: creep, stalk, stride or run, as she chooses.
+                    walk_toward(dt, wx, wz, pace_mps(choose_pace(dt, d, saw, heard, loudness)));
                 }
                 break;
             }
@@ -2009,7 +2140,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
         if (state_ == State::Searching) {
             if (distance_xz(ax, az, heard_x_, heard_z_) > 1.5F) {
-                route_toward(ax, az, heard_x_, heard_z_, on_catwalk, wx, wz);
+                // Where she meets the player's trail she walks it, the way
+                // they went (matron_moves.cpp crumb_ahead); else to the place.
+                float cx = 0.0F;
+                float cz = 0.0F;
+                if (crumb_ahead(ax, az, cx, cz)) {
+                    route_toward(ax, az, cx, cz, on_catwalk, wx, wz);
+                } else {
+                    route_toward(ax, az, heard_x_, heard_z_, on_catwalk, wx, wz);
+                }
                 walk_toward(dt, wx, wz, kSearchMps);
             } else {
                 search_s_ += dt;
@@ -2436,6 +2575,30 @@ void Matron::restore(const Saved &saved) {
         look_s_ = 0.0F;
         vault_cooldown_s_ = 0.0F;
         vaults_ = 0;
+        // matron_moves.cpp: the same rolls again from a restore.
+        rng_ = 0x9E3779B9U;
+        pace_ = Pace::Stalk;
+        pace_hold_s_ = 0.0F;
+        pace_saw_ = false;
+        hunt_s_ = 0.0F;
+        pace_changes_ = 0;
+        stall_window_s_ = 0.0F;
+        stall_rung_ = 0;
+        stall_s_ = 0.0F;
+        longest_stall_s_ = 0.0F;
+        stalls_ = step_ups_ = clambers_ = sidesteps_ = reroutes_ = 0;
+        clamber_now_ = false;
+        sidestep_s_ = 0.0F;
+        blocked_.clear();
+        crumb_count_ = 0;
+        patrol_only_ = false;
+        crumb_head_ = 0;
+        crumb_on_ = -1;
+        crumbs_walked_ = 0;
+        quiet_s_ = 0.0F;
+        hush_s_ = 0.0F;
+        hush_spent_ = false;
+        creaks_ = 0;
         leaps_ = 0;
         unrigs_ = 0;
         guess_line_ = -1;
@@ -3036,6 +3199,19 @@ void Matron::refresh_view() {
     view_.catwalk_allowed = allow_catwalk_;
     view_.turn = turn_;
     view_.turn_s = turn_s_;
+    view_.pace = static_cast<std::uint8_t>(pace_);
+    view_.pace_mps = pace_mps(pace_);
+    view_.pace_changes = pace_changes_;
+    view_.stalls = stalls_;
+    view_.step_ups = step_ups_;
+    view_.clambers = clambers_;
+    view_.sidesteps = sidesteps_;
+    view_.reroutes = reroutes_;
+    view_.longest_stall_s = longest_stall_s_;
+    view_.crumbs = static_cast<std::uint32_t>(crumb_count_);
+    view_.crumbs_walked = crumbs_walked_;
+    view_.hushed = hush_s_ > 0.0F;
+    view_.creaks = creaks_;
     if (body_in_world_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         view_.x = float(at.GetX());
