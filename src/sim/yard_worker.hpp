@@ -38,8 +38,10 @@ public:
     [[nodiscard]] State capture() const noexcept { return state_; }
     void restore(const State &);
 
-    static JPH::RVec3 home() { return JPH::RVec3(-93, .9, -47); }
-    static JPH::RVec3 work_point() { return JPH::RVec3(-93, .84, -47.68); }
+    // East of the loaded six-metre beam's swept operating lane. The bench
+    // and seam derive from this single authored station, never from a pose.
+    static JPH::RVec3 home() { return JPH::RVec3(-89, .9, -50); }
+    static JPH::RVec3 work_point() { return home() + JPH::Vec3(0, -.06F, -.68F); }
     static JPH::RVec3 guide_point() { return JPH::RVec3(-105, 1.3, -38.5); }
 
 private:

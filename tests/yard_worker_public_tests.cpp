@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <functional>
 
 using namespace scraperx::sim;
 namespace {
@@ -17,8 +18,9 @@ void step(Simulation &sim, int count = 1) {
 double distance(Vector3 a, Vector3 b) {
     return std::sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)+(a.z-b.z)*(a.z-b.z));
 }
-void walk_to(Simulation &sim, Vector3 target) {
-    for (int i=0; i<360; ++i) {
+void walk_to(Simulation &sim, Vector3 target, const std::function<void()> &observe = {}) {
+    for (int i=0; i<600; ++i) {
+        if (observe) observe();
         const auto p = sim.snapshot().player_position;
         const double x = target.x-p.x, z = target.z-p.z, d = std::hypot(x,z);
         if (d < .13) {
@@ -46,23 +48,31 @@ void normal_arrival() {
             "worker settles and welds beside ordinary arrival");
     require(std::abs(actor.position.y-.9)<.04,"worker soles stand on real yard grade");
     const auto start=sim.snapshot().player_position;
-    walk_to(sim,{-93.15,0,-45.6});
     bool attended=false,pointed=false;
-    for (int i=0;i<260;++i) {
+    // The longer walk may include the greeting; observe it throughout rather
+    // than requiring the player to arrive during one exact activity frame.
+    const auto observe_greeting=[&] {
         actor=sim.yard_worker_state();
         attended|=actor.activity==YardWorkerActivity::Attending;
         pointed|=actor.activity==YardWorkerActivity::Pointing;
         require(actor.supported,"greeting retains real ground contact");
         require(std::hypot(actor.drive_force_n.x,actor.drive_force_n.z)<=220.001,
                 "greeting retains finite native walk force");
-        if (pointed) break;
+        if (actor.activity==YardWorkerActivity::Pointing)
+            require(distance(actor.look_target,actor.guide_point)<.00001,
+                    "point targets the authored crane-yard direction");
+    };
+    walk_to(sim,{-93.15,0,-45.6},observe_greeting);
+    walk_to(sim,{-89.15,0,-48.6},observe_greeting);
+    for (int i=0;i<260;++i) {
+        observe_greeting();
+        if (attended && pointed) break;
         step(sim);
     }
     require(attended && pointed,"normal player approach makes worker notice then point");
-    require(distance(actor.look_target,actor.guide_point)<.00001,"point targets the authored crane-yard direction");
     const auto before=sim.snapshot().player_position;
-    // Walk around the actual six-metre cargo beam's west end, rather than
-    // asking ordinary grounded walking to pass diagonally through its flange.
+    // Retrace the clear approach, then pass the cargo beam at its west end.
+    walk_to(sim,{-93.15,0,-45.6});
     walk_to(sim,{-99,0,-45.6});
     walk_to(sim,{-99,0,-43.5});
     const auto after=sim.snapshot().player_position;
@@ -97,7 +107,7 @@ void normal_arrival() {
         require(sim.entity_body_count(Simulation::kYardWorkerEntityId)==1 && sim.moving_body_count()==moving,
                 "retry leaks no bodies and preserves actor identity");
     }
-    require(sim.debug_restart_at({-91.9,.9,-47}),"stage only collision subcase beside worker");
+    require(sim.debug_restart_at({-87.9,.9,-50}),"stage only collision subcase beside worker");
     step(sim,30);
     const auto before_shove=sim.yard_worker_state().position;
     require(sim.set_move_input(-.8,0),"ordinary player walking drives collision");

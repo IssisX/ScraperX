@@ -19,7 +19,7 @@ This queue records the current engineering choice, not a permanent ordering. Exp
 
 ## Active goal and next handoff
 
-**Active handoff2026-10-21:** opening-yard worker implementation complete: actual ground/contact/finite walking, greet/point/yield/return, real bench, imported body/gestures and spatial welding/boot feedback. Native public check and actual shipping Main touch12checks/791ticks pass; isolated view28/28 accepted. Evidence/yard-worker-2026-10-21 owns results and limits. Publish source and matching candidate APK. The body801679f, handover scene and charged grapple are already delivered. Larger R20 campaign, later companion agency and optional hosted narrator remain unfinished. Sole live checkpoint owns exact CI/worker state and separate full-release blockers; preserve rigging/Ari WIP.
+**Active handoff2026-10-21:** opening-yard worker implementation and relocated-station acceptance complete. Original600kg beam route, new worker public route and actual shipping Main touch12checks/1407ticks pass. The first published candidate failed because the new bench occupied the loaded operating lane; root moved the complete station clear without changing original mechanics or route tests. Publish the repair and obtain its matching green candidate APK; the sole checkpoint and evidence/yard-worker-2026-10-21 own exact source, commands, results and limits. Broader storyline and deferred machinery scope remain intact.
 
 The following handoff entries are historical2026-10-17, not current assignments:
 

@@ -8,7 +8,10 @@ var initial := Vector3.ZERO
 var saw_attention := false
 var saw_point := false
 var saw_yield := false
-var onward_corner := false
+var approach_index := 0
+var onward_index := 0
+const APPROACH := [Vector3(-93.15,0,-45.6), Vector3(-89.15,0,-48.6)]
+const ONWARD := [Vector3(-93.15,0,-45.6), Vector3(-99,0,-45.6), Vector3(-99,0,-43.5)]
 var last_state: Dictionary = {}
 
 func step(count: int = 1) -> void:
@@ -63,10 +66,12 @@ func advance() -> Dictionary:
 					"welding sound stays at the bench seam")
 				next_phase()
 		1:
-			if walk_chunk(Vector3(-93.15,0,-45.6)):
-				check(saw_attention, "touch approach makes native worker notice the player")
-				next_phase()
-			elif phase_ticks > 360:
+			if walk_chunk(APPROACH[approach_index]):
+				approach_index += 1
+				if approach_index == APPROACH.size():
+					check(saw_attention, "touch approach makes native worker notice the player")
+					next_phase()
+			elif phase_ticks > 900:
 				check(false, "touch approach reaches the worker without staging")
 		2:
 			step(12)
@@ -84,13 +89,13 @@ func advance() -> Dictionary:
 			elif phase_ticks > 270:
 				check(false, "noticed player receives a finite pointing gesture")
 		3:
-			if not onward_corner:
-				onward_corner = walk_chunk(Vector3(-99,0,-45.6))
-			elif walk_chunk(Vector3(-99,0,-43.5)):
-				check(main._native.get_player_position().distance_to(initial) > 4.5,
-					"player continues toward the yard through ordinary touch movement")
-				next_phase()
-			elif phase_ticks > 600:
+			if walk_chunk(ONWARD[onward_index]):
+				onward_index += 1
+				if onward_index == ONWARD.size():
+					check(main._native.get_player_position().distance_to(initial) > 4.5,
+						"player continues toward the yard through ordinary touch movement")
+					next_phase()
+			elif phase_ticks > 1200:
 				check(false, "worker interaction leaves a usable onward route")
 		4:
 			step(30)

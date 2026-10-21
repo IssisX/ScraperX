@@ -1,9 +1,9 @@
 {
   "base_revision": "801679ffef0bc011f2fc8d663113c2191caf3fc5",
-  "feature_source": "working feature sources identified by producer hashes; no native edit after these checks",
+  "feature_source": "Relocated station working source after 167aa106; producer identifies native source/header hashes. Test-driver and documentation changes do not alter the native library.",
   "producer": {
     "native": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libscraperx_native.so",
-    "sha256": "d145517f254f0094f18c6761f2b2a1b8d770d76c42425afb73f88c3f37e33dd1",
+    "sha256": "a8aba795a8f867b730242633caec04cbf0bac49db45b2ad97e7fc261b75e1bdb",
     "source_hashes": {
       "src/bridge/register_types.cpp": "65e4f5d31131b17df921a41fc2ad2bf764cb55c8a5bf6185c35f6c6fef666627",
       "src/bridge/scraperx_simulation.cpp": "7d0ba3a4fa6af0e14f1733334613ce95d749b3b7383e90b426e8fd78f798ec10",
@@ -11,8 +11,8 @@
       "src/bridge/yard_crane_bridge.cpp": "b1ec99439451fb8bbfc3f0311a132307d1123dc48956301004f128197512c6c1",
       "src/sim/grappling_gun.cpp": "c9e0f7d62a166653b0f8c9b32bba964cc60671acbb717f043697e7f144527b57",
       "src/sim/physical_story_actor.cpp": "574e96224543aec19159d70c4ad1deadb4d6ae8222df94ccc650ec3235f7230e",
-      "src/sim/simulation/affordance.cpp": "b22dfa1c50551211619b7485a7ff2c15057910b91b48c0bc7bb72834fde3d522",
       "src/sim/simulation.cpp": "b149e971b692988ecd874855c54bd96b52fac128cd5fbc99b859bd4b3ae93601",
+      "src/sim/simulation/affordance.cpp": "b22dfa1c50551211619b7485a7ff2c15057910b91b48c0bc7bb72834fde3d522",
       "src/sim/simulation/carry.cpp": "ab177f4e392404845e152ba3d4e93d1595716b93049798c845113a883997a74b",
       "src/sim/simulation/checkpoint.cpp": "589c02a5ac31eeabeb686955218a02019ff4baeb50b5bfbe27bbf5b49d0309d6",
       "src/sim/simulation/climb.cpp": "a25f8ea4a41a38508dcea685193910dc7604e96bbde1c19b002cda6d3ae7c33b",
@@ -38,12 +38,12 @@
       "src/sim/simulation/swing_transfer.cpp": "97060d7be0c0bec9ddf834e17eba83bf6a38d734699d8da779299412a3d1e646",
       "src/sim/simulation/tick.cpp": "a55a780e97fede5981e9d0b29ffc326092330b423bee00218ca695eae5cdee4f",
       "src/sim/simulation/traversal_line.cpp": "0dc2eee2fb64ac82538ef62dbfa771a88cccd03494e79b833d1c1095ab4eb134",
+      "src/sim/simulation/world.cpp": "ef47e8d6ee028cd956694db961449a57aa7787753d8a10f10d0bad33f3d4792e",
       "src/sim/simulation/world_geometry.cpp": "c370d4a1af4a5b4a39731073ee45e7f8597c7a164089b1f460bc98cecf3a580e",
-      "src/sim/simulation/world.cpp": "a1dd0a7612a125f501e73b176e29ad3d5b919ea760f05912ab8dc348fc2c910f",
       "src/sim/simulation/yard_crane_control.cpp": "293afd00acb02fdd8a9ca9fa4a863584ea675bb17842fff418ca686ce56de192",
       "src/sim/yard_worker.cpp": "682aeeb9c4a8e024f7c7a62c54b1f28f6810db09d1af0a3f788f893d1cff19b3"
     },
-    "header_hash": "9236a0c18de70a0d7cfc617cf9fed5394398c7021f467e96ed2c7cc5dac3fc4e"
+    "header_hash": "71b5dd791ad14ac6f41a5ef133a72111f53070276005b82b840b0aa1452f76d4"
   },
   "reused_actor_checks_and_bridge_link": [
     {
@@ -215,6 +215,7 @@
         "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/yard_worker_public"
       ],
       "exit": 0,
+      "seconds": 5.603001594543457,
       "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
     },
     {
@@ -228,7 +229,8 @@
         "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/yard_worker_public"
       ],
       "exit": 0,
-      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nYARD_WORKER start=-93,0.9,-47 support=1 activity=0\nYARD_WORKER shove_dx=-0.171883 peak_speed=1.79387\nYARD_WORKER_PUBLIC PASS arrival notice point onward return checkpoint collision\n"
+      "seconds": 43.525535345077515,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nYARD_WORKER start=-89,0.9,-50 support=1 activity=0\nYARD_WORKER shove_dx=-0.171883 peak_speed=1.79387\nYARD_WORKER_PUBLIC PASS arrival notice point onward return checkpoint collision\n"
     }
   ],
   "earlier_fixture_failures": [
@@ -242,5 +244,145 @@
       "failure": "standing near worker allowed new firm footing to replace the checkpoint under comparison",
       "correction": "existing public flight stage keeps player airborne while testing exact checkpoint restoration"
     }
-  ]
+  ],
+  "earlier_actor_evidence_identity": {
+    "source": "167aa1069ea78c3f05b79c9d2095e90c016f16c9",
+    "producer": {
+      "native": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libscraperx_native.so",
+      "sha256": "d145517f254f0094f18c6761f2b2a1b8d770d76c42425afb73f88c3f37e33dd1",
+      "source_hashes": {
+        "src/bridge/register_types.cpp": "65e4f5d31131b17df921a41fc2ad2bf764cb55c8a5bf6185c35f6c6fef666627",
+        "src/bridge/scraperx_simulation.cpp": "7d0ba3a4fa6af0e14f1733334613ce95d749b3b7383e90b426e8fd78f798ec10",
+        "src/bridge/story_actor_bridge.cpp": "ff157507084491f26fe96887ca0828e98a8d3df2df9673f59a9f8a5840f168fa",
+        "src/bridge/yard_crane_bridge.cpp": "b1ec99439451fb8bbfc3f0311a132307d1123dc48956301004f128197512c6c1",
+        "src/sim/grappling_gun.cpp": "c9e0f7d62a166653b0f8c9b32bba964cc60671acbb717f043697e7f144527b57",
+        "src/sim/physical_story_actor.cpp": "574e96224543aec19159d70c4ad1deadb4d6ae8222df94ccc650ec3235f7230e",
+        "src/sim/simulation/affordance.cpp": "b22dfa1c50551211619b7485a7ff2c15057910b91b48c0bc7bb72834fde3d522",
+        "src/sim/simulation.cpp": "b149e971b692988ecd874855c54bd96b52fac128cd5fbc99b859bd4b3ae93601",
+        "src/sim/simulation/carry.cpp": "ab177f4e392404845e152ba3d4e93d1595716b93049798c845113a883997a74b",
+        "src/sim/simulation/checkpoint.cpp": "589c02a5ac31eeabeb686955218a02019ff4baeb50b5bfbe27bbf5b49d0309d6",
+        "src/sim/simulation/climb.cpp": "a25f8ea4a41a38508dcea685193910dc7604e96bbde1c19b002cda6d3ae7c33b",
+        "src/sim/simulation/fixture_build.cpp": "a47f9a02901b0abbe3884e05c3ad160da37a8abd114336c3a242e44741ba0473",
+        "src/sim/simulation/forklift.cpp": "6550eb52ad001eb3aba49b0441d58bf81d307188120cf2a395172db0000afd5c",
+        "src/sim/simulation/geometry.cpp": "ed276ce28a86df339bded72ec6f40784aa140d1611c199a31a9fb01008d51a68",
+        "src/sim/simulation/grapple.cpp": "79d72f8be5bdbb0651e96fe511e9f87713fdfb180b7e14c66b6d42aadd9dcb29",
+        "src/sim/simulation/ground_slide.cpp": "fb0350a2669565f6774dd997b09ed57a5b7ecc64b4dcb604a4b83eda0ca2885d",
+        "src/sim/simulation/hand_transfer.cpp": "004cc7ac5844c26c778dcf1df54bb5461dd6cb5a97a124bc4be8aba28e9ab4b0",
+        "src/sim/simulation/ledge_corner.cpp": "798fa6987b5d0f82a22123331b96a681fdc6278dc89659e1904e02f7ef123154",
+        "src/sim/simulation/legacy_traversal.cpp": "d0f3b9cbaa42b7fffe68109543c3a325f20d5436ca51bbf501cd55c737ea6f0a",
+        "src/sim/simulation/locomotion.cpp": "6a271ab532582119878d26c5097710a9a3ae84ba08f67e836ac0662e61c02f18",
+        "src/sim/simulation/machine_build.cpp": "f052c724aa2751198853e95e2f7e193479ab9a3948f61809c58767584e530022",
+        "src/sim/simulation/machine_update.cpp": "64391075dacca8fd300eaad6bbfdc0f41e1b8a76e9c1b2f2920fbd89f40000fd",
+        "src/sim/simulation/palm_vault.cpp": "d7f2058b32ab4501d29be3834c1b470c37f2b979f1f16eb733b799af0575895c",
+        "src/sim/simulation/parkour_intent.cpp": "4cecdb77d12b9315ce25627f04b13624992ee433d75b0f242e999a6350e3156f",
+        "src/sim/simulation/queries.cpp": "d70419ec87a2238d5663bc06be0e0f2e87d9d000c193c48f56ebc4064a4e3235",
+        "src/sim/simulation/rigging.cpp": "8e3a6b2592ad4967f98634013f8a8f8f5f40d8e4f76604e9b8309e8ddd2eaf02",
+        "src/sim/simulation/slingshot_audio.cpp": "d0c08b2e91dc357f8034296b41675a9e238f78ac5b88867b4e9496d145f328be",
+        "src/sim/simulation/snapshot.cpp": "427dfc5afeed7fefd00edf9d668bdeee908128e1c7f026414c28162143b1b828",
+        "src/sim/simulation/story_actor.cpp": "58c271fe9e1d253f4b6d9dce0a4e6c7176c22afd6c68fd19cdfb7f89da5300fb",
+        "src/sim/simulation/support.cpp": "2a480bee2b9164418d130dbb863e332c7508ee6b6c7f615a492074fab5b0016a",
+        "src/sim/simulation/swing_transfer.cpp": "97060d7be0c0bec9ddf834e17eba83bf6a38d734699d8da779299412a3d1e646",
+        "src/sim/simulation/tick.cpp": "a55a780e97fede5981e9d0b29ffc326092330b423bee00218ca695eae5cdee4f",
+        "src/sim/simulation/traversal_line.cpp": "0dc2eee2fb64ac82538ef62dbfa771a88cccd03494e79b833d1c1095ab4eb134",
+        "src/sim/simulation/world_geometry.cpp": "c370d4a1af4a5b4a39731073ee45e7f8597c7a164089b1f460bc98cecf3a580e",
+        "src/sim/simulation/world.cpp": "a1dd0a7612a125f501e73b176e29ad3d5b919ea760f05912ab8dc348fc2c910f",
+        "src/sim/simulation/yard_crane_control.cpp": "293afd00acb02fdd8a9ca9fa4a863584ea675bb17842fff418ca686ce56de192",
+        "src/sim/yard_worker.cpp": "682aeeb9c4a8e024f7c7a62c54b1f28f6810db09d1af0a3f788f893d1cff19b3"
+      },
+      "header_hash": "9236a0c18de70a0d7cfc617cf9fed5394398c7021f467e96ed2c7cc5dac3fc4e"
+    },
+    "scope": "The reused actor component/public checks and earlier bridge-link below ran on the initial station. Their unchanged actor laws remain relevant; they are not claimed as new execution on the relocated station."
+  },
+  "current_bridge_link": [
+    {
+      "label": "bridge-link",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-shared",
+        "-pthread",
+        "-static-libgcc",
+        "-static-libstdc++",
+        "-Wl,-z,defs",
+        "-Wl,-soname,libscraperx_native.so",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libscraperx_native.so",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/src_bridge_register_types.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/src_bridge_scraperx_simulation.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/src_bridge_yard_crane_bridge.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/src_bridge_story_actor_bridge.cpp.o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libyard-life.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/bin/libgodot-cpp.linux.template_release.arm64.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a"
+      ],
+      "exit": 0,
+      "seconds": 2.613450050354004,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    }
+  ],
+  "original_beam_ramp_route_commands": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/usr/bin/c++",
+        "-std=c++17",
+        "-fno-rtti",
+        "-O2",
+        "-DNDEBUG",
+        "-pthread",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-forklift-operator-20261015/jolt-finite-clean",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tests/beam_ramp_route_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/libyard-life.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-startup-preparation-20261016/build/libJolt-finite-clean.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/beam_ramp_route"
+      ],
+      "exit": 0,
+      "seconds": 3.219857931137085,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/beam_ramp_route"
+      ],
+      "exit": 0,
+      "seconds": 103.12170839309692,
+      "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nPLAYER_WALK truck=-99.9999,0.608809,-56.004 crate=-95.0003,0.78,-44.0405 forks=-99.9999,0.142453,-54.2702 player=-93.996,1.86,-43.7146 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2446 reachable=0 lift=1.93189e-05 tilt=-1.72342e-05 force=1097.27 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-99.9997,0.608735,-56.0042 crate=-95.0003,0.78,-44.0405 forks=-99.9998,0.142822,-54.2703 player=-98.0015,0.9,-56.278 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=1 reachable=0 lift=1.86272e-05 tilt=-7.36252e-05 force=1098.6 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nNORMAL_ARRIVAL_BOARDED truck=-99.9998,0.608418,-56.0046 crate=-95.0003,0.78,-44.0405 forks=-99.9996,0.143689,-54.2703 player=-99.5235,1.25316,-57.6543 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=1.45471e-06 tilt=-0.00017118 force=1100.73 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nMANEUVER truck=-94.5173,0.608496,-59.9071 crate=-95.0003,0.78,-44.0405 forks=-96.2395,0.143463,-59.7066 player=-92.8269,1.2529,-59.6416 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=2.81329e-06 tilt=-0.000547326 force=1095.81 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPATH segment=18 forward=-0.993183,0.116567 steer=-0.131359 target=-92.7266,-60\nMANEUVER_FINISHED truck=-91.3749,0.608423,-59.9931 crate=-95.0003,0.78,-44.0405 forks=-93.1083,0.143064,-59.9602 player=-89.7099,1.25312,-59.5643 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=8.80206e-07 tilt=-0.00168994 force=1094.69 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nMANEUVER truck=-95.2395,0.608437,-55.1669 crate=-95.0003,0.78,-44.0405 forks=-95.0254,0.142863,-53.447 player=-95.0023,1.25286,-56.8851 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=2.16666e-06 tilt=-0.00229697 force=1098.66 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPATH segment=18 forward=0.123581,0.992334 steer=-0.0181235 target=-95,-53.3762\nMANEUVER truck=-95.0296,0.608593,-47.1221 crate=-95.0003,0.78,-44.0405 forks=-94.9728,0.141973,-45.3905 player=-94.6353,1.25302,-48.807 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=1.63028e-05 tilt=-0.00297884 force=1133.05 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPATH segment=19 forward=0.0328477,0.99946 steer=-0.217814 target=-95,-46.65\nMANEUVER_FINISHED truck=-95.0381,0.608428,-47.0329 crate=-95.0003,0.78,-44.0405 forks=-94.9551,0.142458,-45.3021 player=-94.6692,1.25305,-48.719 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=-6.78874e-09 tilt=-0.00290988 force=1098.53 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nTRANSPORT truck=-95.0381,0.608441,-47.0328 crate=-95.0003,0.78,-44.0405 forks=-94.9551,0.142536,-45.3021 player=-94.6692,1.25299,-48.719 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=-1.10786e-07 tilt=-0.00290885 force=1328.6 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nBEAM_FORKS_INSERTED truck=-95.0209,0.608398,-46.6739 crate=-95.0003,0.78,-44.0405 forks=-94.938,0.142649,-44.943 player=-94.6519,1.25288,-48.3597 cargo_q=-3.63604e-07,0.00676492,-5.43135e-08,0.999977 support=2440 reachable=1 lift=6.84876e-06 tilt=-0.00287064 force=1094.84 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nBEAM_RAISED truck=-95.0201,0.607029,-46.6692 crate=-94.9992,1.37934,-44.0344 forks=-94.9373,1.03089,-44.9405 player=-94.6507,1.2641,-48.357 cargo_q=0.000827294,0.00677302,-2.4832e-05,0.999977 support=2440 reachable=1 lift=0.902701 tilt=-0.00282432 force=7000.07 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nMANEUVER truck=-93.2881,0.607046,-53.5415 crate=-93.5934,1.37881,-50.924 forks=-93.4197,1.03061,-51.8156 player=-92.7104,1.26438,-55.1632 cargo_q=0.000975506,-0.0552418,4.86462e-05,0.998473 support=2440 reachable=1 lift=0.902695 tilt=-0.00301517 force=6980.55 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPATH segment=32 forward=-0.0764718,0.997072 steer=0.0793102 target=-93.2209,-55.3323\nMANEUVER_FINISHED truck=-93.2327,0.607022,-55.341 crate=-93.4245,1.37907,-52.7127 forks=-93.2897,1.03071,-53.6111 player=-92.7265,1.26415,-56.9958 cargo_q=0.000898222,-0.0335964,-1.72305e-05,0.999435 support=2440 reachable=1 lift=0.902684 tilt=-0.00306731 force=6999.17 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nMANEUVER truck=-93.2327,0.607027,-55.3409 crate=-93.4245,1.37911,-52.7127 forks=-93.2897,1.03076,-53.6111 player=-92.7265,1.2641,-56.9958 cargo_q=0.00090236,-0.0335947,-1.84012e-05,0.999435 support=2440 reachable=1 lift=0.902682 tilt=-0.00307052 force=7586.29 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPATH segment=0 forward=-0.0328363,0.999461 steer=-0.0705674 target=-93.2293,-53.541\nMANEUVER_FINISHED truck=-93.1889,0.607012,-49.386 crate=-93.3919,1.37913,-46.7585 forks=-93.2529,1.03081,-47.6564 player=-92.6787,1.26376,-51.0391 cargo_q=0.000895169,-0.03562,-4.45231e-05,0.999365 support=2440 reachable=1 lift=0.902681 tilt=-0.00317594 force=6970.79 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nTRANSPORT truck=-93.185,0.607027,-49.3857 crate=-93.3882,2.87649,-46.7515 forks=-93.2493,2.52805,-47.6531 player=-92.6789,1.26372,-51.0388 cargo_q=0.000849009,-0.0357078,-1.59834e-05,0.999362 support=2440 reachable=1 lift=2.4 tilt=-0.00322893 force=7142.57 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nBEAM_OVER_RECEIVER truck=-93.2856,0.607015,-46.6884 crate=-93.4879,2.87648,-44.0542 forks=-93.3493,2.52816,-44.9562 player=-92.78,1.26355,-48.3414 cargo_q=0.000915196,-0.0355706,1.51695e-05,0.999367 support=2440 reachable=1 lift=2.39992 tilt=-0.00324672 force=6868.78 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nBEAM_LOWERED truck=-93.2826,0.608422,-46.6929 crate=-93.6479,1.52525,-44.063 forks=-93.3455,0.7894,-44.9649 player=-92.7773,1.2528,-48.3441 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=2440 reachable=1 lift=0.647029 tilt=-0.00319547 force=1097.81 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nTRANSPORT truck=-93.2826,0.60842,-46.6929 crate=-93.6479,1.52525,-44.063 forks=-93.3455,0.789389,-44.9649 player=-92.7773,1.2528,-48.3441 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=2440 reachable=1 lift=0.647029 tilt=-0.00319328 force=1074.87 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nBEAM_FORKS_WITHDRAWN truck=-93.1355,0.60842,-50.6689 crate=-93.6479,1.52525,-44.063 forks=-93.1987,0.789396,-48.9409 player=-92.6302,1.25265,-52.3195 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=2440 reachable=1 lift=0.646978 tilt=-0.0030599 force=1099.17 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1356,0.60842,-50.6689 crate=-93.6479,1.52525,-44.063 forks=-93.1987,0.789396,-48.9409 player=-92.6309,1.25266,-52.3195 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=2440 reachable=1 lift=0.646978 tilt=-0.00306041 force=1099.29 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1354,0.608737,-50.6683 crate=-93.6479,1.52525,-44.063 forks=-93.1985,0.788484,-48.9403 player=-94.5533,0.9,-52.3183 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=1 reachable=0 lift=0.64696 tilt=-0.00298307 force=1100.18 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1363,0.608736,-50.6683 crate=-93.6479,1.52525,-44.063 forks=-93.1995,0.788471,-48.9403 player=-97.6925,0.9,-52.3177 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=1 reachable=0 lift=0.646947 tilt=-0.00298159 force=1097.53 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1362,0.608736,-50.6683 crate=-93.6479,1.52525,-44.063 forks=-93.1994,0.788434,-48.9403 player=-97.7712,0.9,-45.7796 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=1 reachable=0 lift=0.646905 tilt=-0.00298085 force=1100.96 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1363,0.608737,-50.6683 crate=-93.6479,1.52525,-44.063 forks=-93.1995,0.78842,-48.9403 player=-97.7662,0.9,-45.595 cargo_q=-0.00110303,-0.0350804,0.212743,0.976478 support=1 reachable=0 lift=0.646892 tilt=-0.00298079 force=1100.56 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_BEAM_FOOTING truck=-93.1363,0.608738,-50.6683 crate=-93.6482,1.52524,-44.0644 forks=-93.1995,0.788392,-48.9403 player=-95.8057,1.68071,-44.5448 cargo_q=-0.00437006,-0.0356729,0.213132,0.976362 support=2446 reachable=0 lift=0.646863 tilt=-0.00297923 force=1101.15 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1363,0.608738,-50.6683 crate=-93.6488,1.52547,-44.0666 forks=-93.1995,0.788392,-48.9403 player=-95.8187,1.67,-44.5395 cargo_q=-0.00809111,-0.0363031,0.213576,0.976218 support=2446 reachable=0 lift=0.646863 tilt=-0.0029796 force=1101.4 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6483,1.52514,-44.07 forks=-93.1999,0.788339,-48.9403 player=-92.1703,3.36166,-43.9419 cargo_q=-0.00734986,-0.0354896,0.213498,0.976271 support=2446 reachable=0 lift=0.646809 tilt=-0.0029789 force=1099.62 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6483,1.52514,-44.07 forks=-93.1999,0.788329,-48.9403 player=-92.0939,3.39688,-43.9414 cargo_q=-0.00734986,-0.0354896,0.213498,0.976271 support=2446 reachable=0 lift=0.646798 tilt=-0.00297884 force=1100.11 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_RECEIVING_FOOTING truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.1999,0.788277,-48.9403 player=-89.5773,3.3,-44.0002 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1491 reachable=0 lift=0.646746 tilt=-0.00297906 force=1100.14 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.1999,0.788277,-48.9403 player=-89.5767,3.3,-44.0002 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1491 reachable=0 lift=0.646746 tilt=-0.00297906 force=1100.13 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.1999,0.788256,-48.9403 player=-88.778,3.3,-44.0006 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1491 reachable=0 lift=0.646725 tilt=-0.00297904 force=1100.14 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.1999,0.78824,-48.9403 player=-88.6997,0.9,-45.9224 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1 reachable=0 lift=0.64671 tilt=-0.00297895 force=1100.17 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.2,0.788184,-48.9403 player=-95.4372,0.9,-46.0035 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1 reachable=0 lift=0.646654 tilt=-0.00297915 force=1100.19 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nPLAYER_WALK truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.2,0.788161,-48.9403 player=-95.7025,0.9,-46.0029 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1 reachable=0 lift=0.64663 tilt=-0.00297915 force=1100.19 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nGRADE_RECOVERY truck=-93.1366,0.608736,-50.6683 crate=-93.6482,1.52515,-44.0689 forks=-93.2,0.788145,-48.9403 player=-95.7635,0.9,-45.5939 cargo_q=-0.00548234,-0.035098,0.213274,0.976346 support=1 reachable=0 lift=0.646614 tilt=-0.00297916 force=1100.18 traversal=0 phase=0 rejection=0 hand=0,0,0 target=0,0,0\nSCRAPERX_BEAM_RAMP PASS normal arrival, ordinary600kg pickup, low transport, settled ramp, fork withdrawal, actual beam/trestle footing, onward walk and grade recovery\n"
+    }
+  ],
+  "station_regression": {
+    "classification": "introduced placement regression",
+    "candidate_run": 39642854365,
+    "source": "167aa1069ea78c3f05b79c9d2095e90c016f16c9",
+    "failure": "Original unchanged beam_ramp_route low loaded transport collided with the newly authored workbench.",
+    "correction": "Move the complete station from (-93,.9,-47) to (-89,.9,-50), east of the loaded six-metre beam operating lane. Derive bench and seam from the same home point.",
+    "acceptance": "Original beam_ramp_route source unchanged; exit0 through ordinary600kg pickup, transport, ramp placement, withdrawal, actual footing, onward walk and recovery. No mechanics or original route expectations weakened."
+  }
 }

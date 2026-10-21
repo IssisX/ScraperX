@@ -283,7 +283,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
         bench.push_back({JPH::Vec3(.28F,.015F,.09F), JPH::Vec3(0,.825F,.17F),
             JPH::Quat::sIdentity(), kit::Material::Steel});
         (void)kit_->add_body(Simulation::kYardWorkerBenchEntityId, bench,
-            JPH::RVec3(-93,0,-47.85), JPH::Quat::sIdentity(), 0, .8F);
+            YardWorker::home() + JPH::Vec3(0,-.9F,-.85F), JPH::Quat::sIdentity(), 0, .8F);
         yard_worker_ = std::make_unique<YardWorker>(physics_system_,
             object_layers::kMoving, Simulation::kYardWorkerEntityId);
         if (!yard_worker_->spawn())

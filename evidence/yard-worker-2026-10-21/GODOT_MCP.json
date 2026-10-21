@@ -1,13 +1,57 @@
 {
-	"activity": 0,
-	"actual_native": true,
-	"audio_playing": true,
 	"checks": 12,
 	"done": true,
 	"failures": [],
-	"native_tick": 791,
+	"native": true,
+	"native_sha256": "a8aba795a8f867b730242633caec04cbf0bac49db45b2ad97e7fc261b75e1bdb",
 	"phase": 5,
-	"player": "(-98.99075, 0.9, -43.63809)",
+	"player": {
+		"x": -98.9906692504883,
+		"y": 0.899999916553497,
+		"z": -43.6389923095703
+	},
+	"rendering": "3D disabled; shipping Main touch/native processing; dummy audio playback state only",
 	"staged": false,
+	"state": {
+		"activity": 0,
+		"activity_seconds": 7.52222240436822,
+		"drive_force_n": {
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		},
+		"entity_id": 63201,
+		"episode": 1,
+		"guide_point": {
+			"x": -105.0,
+			"y": 1.29999995231628,
+			"z": -38.5
+		},
+		"heading_radians": 0.0,
+		"look_target": {
+			"x": -89.0,
+			"y": 0.839999973773956,
+			"z": -50.6800003051758
+		},
+		"native_tick": 1407,
+		"position": {
+			"x": -89.0,
+			"y": 0.899999976158142,
+			"z": -50.0
+		},
+		"present": true,
+		"support_entity_id": 1,
+		"supported": true,
+		"velocity": {
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		},
+		"work_point": {
+			"x": -89.0,
+			"y": 0.839999973773956,
+			"z": -50.6800003051758
+		}
+	},
 	"touch": true
 }
