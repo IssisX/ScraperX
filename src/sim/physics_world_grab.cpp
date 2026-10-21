@@ -54,6 +54,7 @@ constexpr float kUprightMaxNm = 600.0F;
 constexpr float kUprightDoneRad = 0.14F;   // 8 degrees
 constexpr float kUprightOverlapM = 0.02F;
 constexpr float kUprightWedgedS = 2.0F;
+constexpr float kDownFrictionMps2 = 6.9F;   // mu 0.7 on steel, a body down
 constexpr int kUprightContactTicks = 3;
 // The brace: the player's hands on a rail within kBraceReachM of the chest.
 constexpr float kBraceReachM = 0.75F;
@@ -377,6 +378,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         max_hold_step_m_ = std::max(max_hold_step_m_, step);
         hold_last_at_ = player_at;
     }
+    arm_drive(bodies, 0.0F);
     JPH::Vec3 push;
     if (matron_->take_let_go(push)) {
         // She lets go: the push is her arm's, at most kReleasePushMps.
@@ -386,6 +388,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
 }
 
 void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const float dt) noexcept {
+    arm_post_step(bodies, dt);
     if (grip_ != nullptr) {
         const JPH::Vec3 lambda =
             grip_swing_ ? static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr())->GetTotalLambdaPosition()
@@ -394,7 +397,7 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         grip_peak_n_ = std::max(grip_peak_n_, grip_load_n_);
         grip_over_ticks_ = grip_load_n_ > Matron::kGripMaxForceN ? grip_over_ticks_ + 1 : 0;
         grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ +
-                                             std::max(0.0F, grip_load_n_ - Matron::kGripStrainFloorN) * dt -
+                                             std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) * dt -
                                              Matron::kGripStrainDecay * dt);
         if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
             tear_grip(true);
@@ -405,7 +408,7 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     if (brace_ != nullptr) {
         auto *point = static_cast<JPH::PointConstraint *>(brace_.GetPtr());
         brace_load_n_ = point->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F);
-        const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
+        const float grip = one_arm() ? kOneArmGripScale : 1.0F;
         brace_strain_ns_ += std::max(0.0F, brace_load_n_ - kBraceStrainFloorN) * dt;
         if (brace_load_n_ > kLedgeGripMaxForceN * grip || brace_strain_ns_ > kLedgeGripTearImpulseNs * grip) {
             // Her pull wins: the hands come off the rail.
@@ -421,6 +424,19 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         upright_contact_ticks_ = grounded_ || traversal_state_ != TraversalState::None || in_water_
                                      ? upright_contact_ticks_ + 1
                                      : 0;
+        if (grounded_) {
+            // A body down on the steel slides to a stop: the player's own
+            // shape has no friction (its feet do that, and they are not
+            // under it), so the ground's is applied here, mu ~0.7.
+            JPH::Vec3 v = bodies.GetLinearVelocity(player_id_);
+            const JPH::Vec3 flat(v.GetX(), 0.0F, v.GetZ());
+            const float speed = flat.Length();
+            if (speed > 1.0e-4F) {
+                const float lose = std::min(speed, kDownFrictionMps2 * dt);
+                v -= flat * (lose / speed);
+                bodies.SetLinearVelocity(player_id_, v);
+            }
+        }
         if (upright_contact_ticks_ >= kUprightContactTicks || upright_s_ > 0.0F) {
             upright_s_ += dt;
             const JPH::Quat rot = bodies.GetRotation(player_id_);

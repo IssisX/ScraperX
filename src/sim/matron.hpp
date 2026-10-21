@@ -139,17 +139,20 @@ public:
         ArmPlay = 15,
         Release = 16,
         Spare = 17,
+        // Both the player's arms gone: she has won (matron_hold.cpp, the
+        // physics_world fatality); the run ends, and starts again whole.
+        Claimed = 18,
     };
     [[nodiscard]] static constexpr bool holding_state(const State state) noexcept {
         return state == State::Grab || state == State::Carry || state == State::Dangle || state == State::ArmPlay ||
-               state == State::Spare;
+               state == State::Spare || state == State::Claimed;
     }
     // Out of her locker and about the world, alive (whatever she is doing).
     [[nodiscard]] static constexpr bool out(const State state) noexcept {
         return state == State::Emerging || state == State::Hunting || state == State::Searching ||
                state == State::Shuffling || state == State::Guarding || state == State::Peering ||
                state == State::Unrigging || state == State::Staggering || state == State::Down ||
-               (state >= State::Grab && state <= State::Spare);
+               (state >= State::Grab && state <= State::Claimed);
     }
 
     static constexpr std::uint64_t kEntity = 3200;
@@ -649,6 +652,30 @@ public:
     static constexpr float kReleasePoseSeconds = 1.0F;
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
+
+    // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): fully
+    // changed, after a dangle (one in kArmPlayOdds, or the player thrashed
+    // and stayed in her hand), her other hand takes a wrist and pulls it away
+    // from the body, her pull rising from kArmPullStartN at kRipRampNps to
+    // kArmPullMaxN (the ankle hand then holds the pull and the weight: under
+    // its cap; she grips it hard, the strain counted only past
+    // kGripRipFloorN). The shoulder tears (physics) at kArmTearNs of the
+    // wrist's load past kArmHoldN; the arm (kArmMassKg) is hers: lifted to
+    // her face, swung, thrown (kArmThrowMps) onto the deck behind her. The
+    // whole of it kArmPlaySeconds from the tear; no tear in kArmPullGiveUpS
+    // and she gives it up.
+    static constexpr float kArmPlayOdds = 1.0F / 3.0F;
+    static constexpr float kArmPullStartN = 1500.0F;
+    static constexpr float kArmPullMaxN = 2600.0F;
+    static constexpr float kGripRipFloorN = 3500.0F;
+    static constexpr float kArmHoldN = 1500.0F;
+    static constexpr float kArmTearNs = 600.0F;
+    static constexpr float kArmMassKg = 4.5F;
+    static constexpr float kArmThrowMps = 7.5F;
+    static constexpr float kArmPlaySeconds = 4.5F;
+    static constexpr float kArmReachSeconds = 3.5F;
+    static constexpr float kArmPullGiveUpS = 4.0F;
+    static constexpr float kArmPullMoveMps = 0.5F;
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -748,6 +775,11 @@ public:
         std::uint32_t grips_torn = 0;   // torn out of her hand by the player
         std::uint32_t brace_losses = 0; // stepped back from the rail, unbraced
         std::uint32_t carry_drops = 0;  // carried too long: dropped on the deck
+        std::uint32_t arm_tears = 0;    // arms she tore off
+        std::uint32_t arm_throws = 0;   // and threw
+        std::uint32_t claims = 0;       // both arms gone: she won
+        std::uint8_t armplay_beat = 0;  // 0 reach, 1 pull, 2 to her face, 3 swing, 4 throw
+        float hand2_x = 0.0F, hand2_y = 0.0F, hand2_z = 0.0F;
         bool hold_braced = false;
         bool grip_on = false;
         float hold_s = 0.0F;            // seconds in this hold state
@@ -896,6 +928,33 @@ public:
         push = let_go_push_;
         return true;
     }
+
+    // Her second hand (ArmPlay).
+    [[nodiscard]] bool hand2_active() const noexcept { return state_ == State::ArmPlay && hold_phase_ < 5; }
+    [[nodiscard]] bool reaching_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 0; }
+    [[nodiscard]] bool pulling_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 1; }
+    [[nodiscard]] JPH::RVec3 hand2_target() const noexcept { return hand2_target_; }
+    [[nodiscard]] JPH::Vec3 hand2_target_velocity() const noexcept { return hand2_target_v_; }
+    [[nodiscard]] float hand2_pull_n() const noexcept { return pull2_n_; }
+    [[nodiscard]] float grip_strain_floor_n() const noexcept {
+        return state_ == State::ArmPlay ? kGripRipFloorN : kGripStrainFloorN;
+    }
+    void set_player_body(const JPH::RVec3 wrist, const int arms_left) noexcept {
+        player_wrist_ = wrist;
+        player_arms_left_ = arms_left;
+    }
+    void wrist_taken() noexcept;
+    void arm_torn() noexcept;
+    [[nodiscard]] bool take_arm_throw(JPH::Vec3 &velocity) noexcept {
+        if (!arm_throw_) {
+            return false;
+        }
+        arm_throw_ = false;
+        velocity = arm_throw_v_;
+        return true;
+    }
+    void set_armplay_for_test(const int armplay) noexcept { armplay_for_test_ = armplay; }
+    [[nodiscard]] bool claimed() const noexcept { return state_ == State::Claimed; }
     void set_spare_for_test(const int spare) noexcept { spare_for_test_ = spare; }
     void set_dangle_seconds_for_test(const float seconds) noexcept { dangle_for_test_s_ = seconds; }
     void set_stage_for_test(Stage stage) noexcept;
@@ -1057,9 +1116,12 @@ private:
     void stand_down();
     void step_hold(float dt, JPH::RVec3 player);
     void end_hold(State next);
+    void finish_dangle(JPH::RVec3 player);
+    void step_armplay(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed);
+    void pose_hand2(float dt, JPH::RVec3 target, float speed);
     // The Turn's clock: `distance_to_player` across, `carried_m` how far the
     // player's noise carried to her.
     void step_turn(float dt, float distance_to_player, float loudness, float carried_m);
@@ -1148,6 +1210,19 @@ private:
     bool let_go_ = false;
     JPH::Vec3 let_go_push_ = JPH::Vec3::sZero();
     int spare_for_test_ = -1;
+
+    JPH::RVec3 hand2_target_ = JPH::RVec3::sZero();
+    JPH::Vec3 hand2_target_v_ = JPH::Vec3::sZero();
+    JPH::RVec3 wrist_taken_at_ = JPH::RVec3::sZero();
+    JPH::RVec3 player_wrist_ = JPH::RVec3::sZero();
+    int player_arms_left_ = 2;
+    float pull2_n_ = kHandReachPullN;
+    bool wrist_on_ = false;
+    bool arm_throw_ = false;
+    JPH::Vec3 arm_throw_v_ = JPH::Vec3::sZero();
+    int armplay_for_test_ = -1;
+    bool armplay_done_ = false;   // this hold's ArmPlay is over
+    std::uint32_t arm_tears_ = 0, arm_throws_ = 0, claims_ = 0;
     float dangle_for_test_s_ = -1.0F;
     std::uint32_t grabs_ = 0, grab_misses_ = 0, carries_ = 0, dangles_ = 0, armplays_ = 0, releases_ = 0,
                   spares_ = 0, grips_torn_ = 0, brace_losses_ = 0, carry_drops_ = 0;

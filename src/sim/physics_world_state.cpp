@@ -224,6 +224,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // any stock is put back.
     matron_->drop_stock();
     grab_reset(bodies);
+    arm_reset(bodies);   // a death: whole again
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
@@ -787,6 +788,32 @@ void Simulation::PhysicsWorld::read_state() noexcept {
             const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
             state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
         }
+        if (!hand2_id_.IsInvalid()) {
+            const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
+            state_.matron_hand2 = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+        state_.left_arm_lost = arm_lost_[0];
+        state_.right_arm_lost = arm_lost_[1];
+        state_.last_severed_side = last_severed_side_;
+        state_.arm_tear_count = arm_tear_count_;
+        state_.arm_throw_count = arm_throw_count_;
+        state_.severed_arm_despawn_count = severed_arm_despawn_count_;
+        state_.severed_arm_present = !severed_arm_id_.IsInvalid();
+        if (!severed_arm_id_.IsInvalid()) {
+            const JPH::RVec3 at = bodies.GetPosition(severed_arm_id_);
+            const JPH::Quat q = bodies.GetRotation(severed_arm_id_);
+            state_.severed_arm_position = Vector3{at.GetX(), at.GetY(), at.GetZ()};
+            state_.severed_arm_rot_x = q.GetX();
+            state_.severed_arm_rot_y = q.GetY();
+            state_.severed_arm_rot_z = q.GetZ();
+            state_.severed_arm_rot_w = q.GetW();
+        }
+        state_.wrist_load_n = wrist_load_n_;
+        state_.wrist_strain_ns = wrist_strain_ns_;
+        state_.one_arm = one_arm();
+        state_.claimed_by_matron = matron_->claimed();
+        state_.claimed_s = claimed_s_;
+        state_.claimed_count = claimed_count_;
     }
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;

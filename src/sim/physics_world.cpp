@@ -734,7 +734,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         // stop's jolt at a run-in faster than the buffer takes tears them off
         // and the body is thrown on (kLedgeGripMaxForceN, as hang_on_ledge).
         // One good arm holds kOneArmGripScale of two hands'.
-        const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
+        const float grip = one_arm() ? kOneArmGripScale : 1.0F;
         const float load = zipline_->state().hands_load_n;
         if (load > kLedgeGripMaxForceN * grip) {
             ++hang_over_grip_ticks_;

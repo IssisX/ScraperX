@@ -2239,6 +2239,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::ArmPlay:
     case State::Release:
     case State::Spare:
+    case State::Claimed:
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand.
         since_heard_s_ = 0.0F;
         step_hold(dt, player);
@@ -2625,6 +2626,9 @@ void Matron::restore(const Saved &saved) {
         hold_phase_ = 0;
         pull_n_ = kHandReachPullN;
         arm_reach_m_ = kArmReachM;
+        wrist_on_ = false;
+        arm_throw_ = false;
+        pull2_n_ = kHandReachPullN;
         crumb_head_ = 0;
         crumb_on_ = -1;
         crumbs_walked_ = 0;
@@ -3255,6 +3259,13 @@ void Matron::refresh_view() {
     view_.grips_torn = grips_torn_;
     view_.brace_losses = brace_losses_;
     view_.carry_drops = carry_drops_;
+    view_.arm_tears = arm_tears_;
+    view_.arm_throws = arm_throws_;
+    view_.claims = claims_;
+    view_.armplay_beat = state_ == State::ArmPlay ? static_cast<std::uint8_t>(hold_phase_) : 0;
+    view_.hand2_x = float(hand2_target_.GetX());
+    view_.hand2_y = float(hand2_target_.GetY());
+    view_.hand2_z = float(hand2_target_.GetZ());
     view_.grip_on = grip_on_;
     view_.hold_s = hold_s_;
     view_.hold_braced = holding() && braced_at_rim(view_.x, view_.z);

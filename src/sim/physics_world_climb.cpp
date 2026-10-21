@@ -192,7 +192,7 @@ void Simulation::PhysicsWorld::update_swing(JPH::BodyInterface &bodies, const St
         return;
     }
     // Hand over hand needs a good hand to let go: one broken arm, none.
-    if (arm_broken() || input.Dot(facing_) < 0.5F) {
+    if (one_arm() || input.Dot(facing_) < 0.5F) {
         return;
     }
     const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
@@ -326,7 +326,7 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
     climb_sliding_ = false;
     climb_slide_mps_ = 0.0F;
     // One good arm hauls the body at kOneArmClimbScale.
-    const float arm = arm_broken() ? kOneArmClimbScale : 1.0F;
+    const float arm = one_arm() ? kOneArmClimbScale : 1.0F;
     JPH::RVec3 next = hold;
     Grip carries;
     if (up_input > kClimbInputDeadzone) {

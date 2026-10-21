@@ -703,7 +703,7 @@ void Simulation::PhysicsWorld::check_hang_grip(JPH::BodyInterface &bodies, const
         return;
     }
     // One good arm holds kOneArmGripScale of two hands'.
-    const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
+    const float grip = one_arm() ? kOneArmGripScale : 1.0F;
     const float load = std::abs(hang_arms_->GetTotalLambdaPosition()) / delta_seconds;
     if (load > kLedgeGripMaxForceN * grip) {
         ++hang_over_grip_ticks_;

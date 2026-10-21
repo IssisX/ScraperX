@@ -279,6 +279,11 @@ struct MatronSnapshot final {
     std::uint32_t grips_torn = 0;
     std::uint32_t brace_losses = 0;
     std::uint32_t carry_drops = 0;
+    std::uint32_t arm_tears = 0;
+    std::uint32_t arm_throws = 0;
+    std::uint32_t claims = 0;
+    std::uint8_t armplay_beat = 0;
+    Vector3 hand2{};
     bool grip_on = false;
     bool hold_braced = false;
     double hold_s = 0.0;
@@ -1007,6 +1012,25 @@ struct Snapshot final {
     std::uint64_t upright_wedged_count = 0;
     double max_hold_step_m = 0.0;
     Vector3 matron_hand{};
+    // Arms (physics_world_arm.cpp): lost per side until a death or a
+    // restart; the severed arm's body; her win.
+    bool left_arm_lost = false;
+    bool right_arm_lost = false;
+    int last_severed_side = -1;
+    std::uint64_t arm_tear_count = 0;
+    std::uint64_t arm_throw_count = 0;
+    std::uint64_t severed_arm_despawn_count = 0;
+    bool severed_arm_present = false;
+    Vector3 severed_arm_position{};
+    double severed_arm_rot_x = 0.0, severed_arm_rot_y = 0.0, severed_arm_rot_z = 0.0, severed_arm_rot_w = 1.0;
+    double wrist_load_n = 0.0;
+    double wrist_strain_ns = 0.0;
+    bool one_arm = false;
+    Vector3 matron_hand2{};
+    bool claimed_by_matron = false;
+    double claimed_s = 0.0;
+    std::uint64_t claimed_count = 0;
+    std::uint64_t runs_ended_by_matron = 0;   // the edge: a new count, the run ended and started again whole
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
@@ -1100,6 +1124,8 @@ public:
     static constexpr double kLethalImpactSpeedMps = 20.0;
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
+    // The player's arm she tore off (physics_world_arm.cpp).
+    static constexpr std::uint64_t kSeveredArmEntityId = 3290;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
     static constexpr std::uint64_t kVaultRailEntityId = 5;
@@ -1464,6 +1490,9 @@ public:
     void debug_matron_patrol() noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
+    // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.
+    void debug_matron_armplay(int armplay) noexcept;
+    void debug_lose_arm(int side) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
@@ -1600,6 +1629,10 @@ private:
     void step_fixed() noexcept;
 
     std::unique_ptr<PhysicsWorld> physics_world_;
+    // To start again whole (a run the Matron ended): how the world was made.
+    InitialSpawn initial_spawn_ = InitialSpawn{};
+    std::vector<TestExtraSolid> test_extra_solids_;
+    std::uint64_t runs_ended_by_matron_ = 0;
     std::uint64_t tick_index_ = 0;
     double remainder_seconds_ = 0.0;
     double move_input_x_ = 0.0;

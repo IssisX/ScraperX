@@ -1003,6 +1003,47 @@ public:
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
     void tear_grip(bool torn) noexcept;
     [[nodiscard]] bool upright_pose_clear(JPH::RVec3 centre) const noexcept;
+
+    // Arms (physics_world_arm.cpp): lost per side (0 left, 1 right), until a
+    // death or a restart; her second hand on a wrist; the severed arm a body.
+    std::array<bool, 2> arm_lost_{false, false};
+    JPH::BodyID hand2_id_;
+    JPH::Ref<JPH::TwoBodyConstraint> hand2_arm_;
+    JPH::Ref<JPH::TwoBodyConstraint> wrist_;
+    JPH::Ref<JPH::TwoBodyConstraint> arm_in_hand_;
+    JPH::BodyID severed_arm_id_;
+    JPH::Ref<JPH::Shape> severed_arm_shape_;
+    int wrist_side_ = -1;
+    int last_severed_side_ = -1;
+    float wrist_load_n_ = 0.0F;
+    float wrist_strain_ns_ = 0.0F;
+    float severed_arm_s_ = 0.0F;
+    bool severed_arm_thrown_ = false;
+    float severed_arm_thrown_y_ = 0.0F;
+    std::uint64_t arm_tear_count_ = 0;
+    std::uint64_t arm_throw_count_ = 0;
+    std::uint64_t severed_arm_despawn_count_ = 0;
+    float claimed_s_ = 0.0F;
+    bool run_ended_by_matron_ = false;
+    std::uint64_t claimed_count_ = 0;
+    [[nodiscard]] int arms_lost() const noexcept { return int(arm_lost_[0]) + int(arm_lost_[1]); }
+    // One good arm: one lost, or one broken (a hang holds half, a climb hauls
+    // at half, no hand over hand).
+    [[nodiscard]] bool one_arm() const noexcept { return arms_lost() == 1 || arm_broken(); }
+    [[nodiscard]] JPH::Vec3 wrist_local(int side) const noexcept;
+    void arm_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    void arm_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void arm_reset(JPH::BodyInterface &bodies) noexcept;
+    void sever_arm(JPH::BodyInterface &bodies) noexcept;
+    void despawn_severed_arm(JPH::BodyInterface &bodies) noexcept;
+public:
+    [[nodiscard]] bool take_run_ended_by_matron() noexcept {
+        const bool ended = run_ended_by_matron_;
+        run_ended_by_matron_ = false;
+        return ended;
+    }
+    void lose_arm_for_test(const int side) noexcept { arm_lost_[static_cast<std::size_t>(side & 1)] = true; }
+private:
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

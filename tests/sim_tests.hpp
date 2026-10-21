@@ -855,6 +855,7 @@ void run_water();
 void run_matron_pace();
 void run_matron_unstick();
 void run_matron_grab();
+void run_matron_arm();
 void run_matron_mischief();
 void run_matron_collision();
 void run_matron_balance();

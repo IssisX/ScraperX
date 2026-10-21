@@ -217,3 +217,182 @@ void run_matron_grab() {
         std::cout << "PASS scraperx_sim matron grab spare: player_y=" << r.p.player_position.y << "\n";
     }
 }
+
+void run_matron_arm() {
+    // ---- ArmPlay: her other hand on a wrist, the pull, the tear; the arm hers,
+    //      shown, thrown; the player one-armed till a death ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        meet_her(s, -6.0, -129.0);
+        s.debug_matron_hold(0, 3.0);
+        s.debug_matron_armplay(1);
+        double peak_wrist = 0.0;
+        double strain_at_tear = 0.0;
+        double last_strain = 0.0;
+        std::set<int> beats;
+        bool thrown_seen = false;
+        const HoldRun r = hold_run(s, 70.0, [&](int, const scraperx::sim::MatronSnapshot &m) {
+            (void)s.set_move_input(0.0, 0.0);
+            const auto p = s.snapshot();
+            peak_wrist = std::max(peak_wrist, p.wrist_load_n);
+            if (p.arm_tear_count == 0) {
+                last_strain = p.wrist_strain_ns;
+            } else if (strain_at_tear == 0.0) {
+                strain_at_tear = last_strain;
+            }
+            if (m.state == static_cast<int>(Matron::State::ArmPlay)) {
+                beats.insert(m.armplay_beat);
+            }
+            thrown_seen = thrown_seen || p.arm_throw_count > 0;
+            if (std::getenv("ARM_DEBUG") != nullptr && m.state >= 14) {
+                std::cout << "    st=" << int(m.state) << " beat=" << int(m.armplay_beat) << " tears=" << m.arm_tears
+                          << " hold_s=" << m.hold_s << " wrist=" << p.wrist_load_n << " strain=" << p.wrist_strain_ns
+                          << " grip=" << p.held_by_matron << "\n";
+            }
+        });
+        report("matron arm", r);
+        const auto p = s.snapshot();
+        std::cout << "  matron arm: tears " << p.arm_tear_count << " side " << p.last_severed_side << " lost L/R "
+                  << p.left_arm_lost << "/" << p.right_arm_lost << " peak wrist " << peak_wrist << " N, strain before tear "
+                  << strain_at_tear << " N*s, throws " << p.arm_throw_count << ", arm at " << p.severed_arm_position.x
+                  << "," << p.severed_arm_position.y << "," << p.severed_arm_position.z << " beats " << beats.size()
+                  << "\n";
+        require(r.m.armplays >= 1 && p.arm_tear_count == 1 && (p.left_arm_lost != p.right_arm_lost),
+                "matron arm: her pull tears one arm from the shoulder");
+        require(peak_wrist < 6000.0, "matron arm: the load on the wrist is finite");
+        require(beats.size() >= 4 && thrown_seen && p.arm_throw_count == 1, "matron arm: shown, swung and thrown");
+        require(p.severed_arm_present, "matron arm: the arm is a body in the world");
+        require(r.deaths_held == 0 && r.deaths_end == r.deaths_start && p.one_arm,
+                "matron arm: one-armed and alive; no health, a body");
+        {
+            std::uint64_t d0 = s.snapshot().death_count;
+            int st0 = -1;
+            for (int i = 0; i < 95 * 90; ++i) {
+                tick(s);
+                const auto q = s.snapshot();
+                const int st = s.matron_state().state;
+                if (std::getenv("ARM_DEBUG") != nullptr && (st != st0 || q.death_count != d0)) {
+                    std::cout << "    idle t=" << i / 90.0 << " st " << st << " deaths " << q.death_count << " impact "
+                              << q.last_impact_speed_mps << " tears " << q.arm_tear_count << " p " << q.player_position.x
+                              << "," << q.player_position.y << "," << q.player_position.z << "\n";
+                }
+                if (std::getenv("ARM_DEBUG") != nullptr && i > int(25.0 * 90) && i < int(31.7 * 90) && i % 18 == 0) {
+                    std::cout << "      t=" << i / 90.0 << " p " << q.player_position.x << "," << q.player_position.y << ","
+                              << q.player_position.z << " free " << q.player_free_rotation << " held " << q.held_by_matron
+                              << " gnd " << q.player_grounded << " torn " << s.matron_state().grips_torn << " drops "
+                              << s.matron_state().carry_drops << " brace " << s.matron_state().brace_losses << " her "
+                              << s.matron_state().position.x << "," << s.matron_state().position.z << "\n";
+                }
+                st0 = st;
+                d0 = q.death_count;
+            }
+        }
+        std::cout << "  matron arm: after 95 s present " << s.snapshot().severed_arm_present << " despawns "
+                  << s.snapshot().severed_arm_despawn_count << " L/R " << s.snapshot().left_arm_lost
+                  << s.snapshot().right_arm_lost << " deaths " << s.snapshot().death_count << " state "
+                  << int(s.matron_state().state) << "\n";
+        require(!s.snapshot().severed_arm_present && s.snapshot().severed_arm_despawn_count == 1 &&
+                    (s.snapshot().left_arm_lost || s.snapshot().right_arm_lost),
+                "matron arm: the thrown arm goes in time; the loss stays");
+        const auto deaths = s.snapshot().death_count;
+        s.debug_launch_player(scraperx::sim::Vector3{0.0, 154.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
+        for (int i = 0; i < 40 * 90 && s.snapshot().death_count == deaths; ++i) {
+            tick(s);
+        }
+        require(s.snapshot().death_count > deaths && !s.snapshot().left_arm_lost && !s.snapshot().right_arm_lost,
+                "matron arm: a death, and the body is whole again");
+        std::cout << "PASS scraperx_sim matron arm: strain_ns=" << strain_at_tear << " peak_wrist_n=" << peak_wrist
+                  << "\n";
+    }
+    // ---- the second arm: she has won; the run ends and starts again whole ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.debug_lose_arm(0);
+        meet_her(s, -6.0, -129.0);
+        s.debug_matron_hold(0, 3.0);
+        s.debug_matron_armplay(1);
+        bool claimed = false;
+        std::uint64_t ended = 0;
+        for (int i = 0; i < 90 * 90 && ended == 0; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            claimed = claimed || s.snapshot().claimed_by_matron;
+            if (std::getenv("ARM_DEBUG") != nullptr && s.matron_state().state == 15 && i % 10 == 0) {
+                const auto q = s.snapshot();
+                std::cout << "    c beat=" << int(s.matron_state().armplay_beat) << " hold_s=" << s.matron_state().hold_s
+                          << " wrist=" << q.wrist_load_n << " strain=" << q.wrist_strain_ns << " h2=" << s.matron_state().hand2.x << "," << s.matron_state().hand2.y
+                          << "\n";
+            }
+            ended = s.snapshot().runs_ended_by_matron;
+        }
+        const auto p = s.snapshot();
+        std::cout << "  matron claimed: claimed " << claimed << " ended " << ended << " arms L/R " << p.left_arm_lost
+                  << "/" << p.right_arm_lost << " matron state " << int(s.matron_state().state) << " grabs "
+                  << s.matron_state().grabs << " armplays " << s.matron_state().armplays << " tears " << p.arm_tear_count
+                  << " one_arm " << p.one_arm << " deaths " << p.death_count << "\n";
+        require(claimed && ended == 1, "matron claimed: both arms gone, she has won and the run ends");
+        require(!p.left_arm_lost && !p.right_arm_lost && !p.held_by_matron && s.matron_state().state == 0,
+                "matron claimed: the run starts again, the body whole, her in her locker");
+        std::cout << "PASS scraperx_sim matron claimed\n";
+    }
+    // ---- two grabs, two tears, the ending: nothing faked between them ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        meet_her(s, -6.0, -129.0);
+        s.debug_matron_hold(1, 3.0);   // the first: set back on her deck
+        s.debug_matron_armplay(1);
+        std::uint64_t most_tears = 0;
+        bool claimed = false;
+        std::uint64_t ended = 0;
+        int second_meet = 0;
+        std::uint64_t deaths_seen = 0;
+        for (int i = 0; i < 400 * 90 && ended == 0; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto q = s.snapshot();
+            if (q.arm_tear_count != most_tears && std::getenv("ARM_DEBUG") != nullptr) {
+                std::cout << "    tear " << q.arm_tear_count << " at " << i / 90.0 << " side " << q.last_severed_side
+                          << " L/R " << q.left_arm_lost << q.right_arm_lost << " st " << int(s.matron_state().state) << "\n";
+            }
+            if (q.death_count != deaths_seen && std::getenv("ARM_DEBUG") != nullptr) {
+                std::cout << "    death at " << i / 90.0 << " impact " << q.last_impact_speed_mps << " st "
+                          << int(s.matron_state().state) << " second " << second_meet << "\n";
+            }
+            if (std::getenv("ARM_DEBUG") != nullptr && s.matron_state().state == 15 && i % 30 == 0) {
+                std::cout << "    t beat=" << int(s.matron_state().armplay_beat) << " hold_s=" << s.matron_state().hold_s
+                          << " wrist=" << q.wrist_load_n << " strain=" << q.wrist_strain_ns << " grip=" << q.grip_load_n << "\n";
+            }
+            deaths_seen = std::max<std::uint64_t>(deaths_seen, q.death_count);
+            most_tears = std::max<std::uint64_t>(most_tears, q.arm_tear_count);
+            claimed = claimed || q.claimed_by_matron;
+            ended = q.runs_ended_by_matron;
+            if (second_meet == 0 && q.arm_tear_count == 1 && !q.held_by_matron &&
+                s.matron_state().state < static_cast<int>(Matron::State::Grab) && q.player_grounded) {
+                second_meet = 1;
+                require(q.one_arm && q.death_count == 0, "matron two tears: one-armed, alive, on her deck");
+                // Back on her deck, one-armed; stand there. She comes back for
+                // it on her own.
+                (void)s.set_move_input(0.0, 0.0);
+                s.debug_set_matron_stage(2);
+                s.debug_matron_hold(0, 3.0);
+                s.debug_matron_armplay(1);
+            }
+            if (second_meet == 1 && s.matron_state().state == static_cast<int>(Matron::State::Grab)) {
+                second_meet = 2;   // her hand on the one-armed body
+            }
+        }
+        std::cout << "  matron two tears: tears " << most_tears << " second meet " << second_meet << " claimed "
+                  << claimed << " ended " << ended << " state " << int(s.matron_state().state) << " grabs "
+                  << s.matron_state().grabs << " armplays "
+                  << s.matron_state().armplays << " player " << s.snapshot().player_position.x << ","
+                  << s.snapshot().player_position.y << "," << s.snapshot().player_position.z << " her " << s.matron_state().position.x << "," << s.matron_state().position.y << "," << s.matron_state().position.z << " held "
+                  << s.snapshot().held_by_matron << " deaths " << s.snapshot().death_count << "\n";
+        require(deaths_seen == 0, "matron two tears: no death on the way");
+        require(second_meet == 2 && most_tears == 2 && claimed && ended == 1,
+                "matron two tears: two grabs, two arms, and the run is hers");
+        const auto p = s.snapshot();
+        require(!p.left_arm_lost && !p.right_arm_lost && p.death_count == 0,
+                "matron two tears: the new run is whole");
+        std::cout << "PASS scraperx_sim matron two tears\n";
+    }
+}
