@@ -83,6 +83,9 @@ up. Each half is two lanes wide.
    simulated: the steel plate swings from the hook's actual hit, and the missing bridge piece
    falls by its own weight and lands where it lands. What is a rule: the plate passing 0.35 rad
    lets go of the piece (the kit's catch, with no modeled pin, rod or linkage between them),
-   and the slow fall is a declared damping number standing in for a hydraulic ram. A fully
-   causal version would model the linkage from the plate to a real pin holding the piece, and
-   the ram as a body.
+   and the slow fall is a declared damping number standing in for a hydraulic ram. The kit
+   already had the causal parts, and they would have taken no longer (the owner: reuse the
+   parts we have): `add_pin_catch` (the piece held by a real pin body the hook shot knocks
+   out), or a rope holding it up with `add_slip` (the rope let go when a lever turns), and
+   `add_cell` + `add_piston` + `add_throttle` for the slow fall (a real cylinder pushing fluid
+   through an orifice).
