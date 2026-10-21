@@ -1,0 +1,812 @@
+{
+  "candidate": {
+    "run_id": "39670756514",
+    "head_sha": "ace50994027dc7129c5473762311729c3ba3a999",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 119467697389,
+        "run_id": 39670756514,
+        "workflow_name": "ScraperX ChatGPT \u2014 downloadable APK candidate",
+        "head_branch": "ChatGPT",
+        "run_url": "https://api.github.com/repos/IssisX/ScraperX/actions/runs/39670756514",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOUdo6ls8AAAAb0NRk7Q",
+        "head_sha": "ace50994027dc7129c5473762311729c3ba3a999",
+        "url": "https://api.github.com/repos/IssisX/ScraperX/actions/jobs/119467697389",
+        "html_url": "https://github.com/IssisX/ScraperX/actions/runs/39670756514/job/119467697389",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-21T20:29:33Z",
+        "started_at": "2026-10-21T20:29:36Z",
+        "completed_at": "2026-10-21T20:51:48Z",
+        "name": "android-apk-candidate",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-21T20:29:37Z",
+            "completed_at": "2026-10-21T20:29:38Z"
+          },
+          {
+            "name": "Checkout exact source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-21T20:29:38Z",
+            "completed_at": "2026-10-21T20:29:40Z"
+          },
+          {
+            "name": "Configure Java 17",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-21T20:29:40Z",
+            "completed_at": "2026-10-21T20:29:40Z"
+          },
+          {
+            "name": "Install build and render prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-21T20:29:40Z",
+            "completed_at": "2026-10-21T20:29:56Z"
+          },
+          {
+            "name": "Install verified Godot 4.7 editor and Android template",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-21T20:29:56Z",
+            "completed_at": "2026-10-21T20:30:05Z"
+          },
+          {
+            "name": "Restore native compiler cache",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-21T20:30:05Z",
+            "completed_at": "2026-10-21T20:30:06Z"
+          },
+          {
+            "name": "Bound native compiler cache",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-21T20:30:06Z",
+            "completed_at": "2026-10-21T20:30:06Z"
+          },
+          {
+            "name": "Build host bridge for Godot resource import (no gameplay test claim)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-21T20:30:06Z",
+            "completed_at": "2026-10-21T20:31:27Z"
+          },
+          {
+            "name": "Check installed rig lifecycle and loaded moving-guide cable",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-10-21T20:31:27Z",
+            "completed_at": "2026-10-21T20:33:10Z"
+          },
+          {
+            "name": "Check reusable portable line, actual contacts and public swing/crossing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-21T20:33:10Z",
+            "completed_at": "2026-10-21T20:34:32Z"
+          },
+          {
+            "name": "Check native sleep preserves launcher and forklift work",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-21T20:34:32Z",
+            "completed_at": "2026-10-21T20:34:34Z"
+          },
+          {
+            "name": "Check airborne catch and finite hand-supported top-out intent",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-21T20:34:34Z",
+            "completed_at": "2026-10-21T20:36:02Z"
+          },
+          {
+            "name": "Check connected yard, upper gallery and wall-kick receiver",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-21T20:36:02Z",
+            "completed_at": "2026-10-21T20:37:16Z"
+          },
+          {
+            "name": "Check physical story actor and public encounter state",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-10-21T20:37:16Z",
+            "completed_at": "2026-10-21T20:37:39Z"
+          },
+          {
+            "name": "Cross-compile native graph for Android arm64",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-21T20:37:39Z",
+            "completed_at": "2026-10-21T20:38:31Z"
+          },
+          {
+            "name": "Save native compiler cache before presentation gates",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16,
+            "started_at": "2026-10-21T20:38:31Z",
+            "completed_at": "2026-10-21T20:38:31Z"
+          },
+          {
+            "name": "Prepare visible source and Android build identity",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-21T20:38:31Z",
+            "completed_at": "2026-10-21T20:38:31Z"
+          },
+          {
+            "name": "Import shipping Godot project with matching host bridge",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18,
+            "started_at": "2026-10-21T20:38:31Z",
+            "completed_at": "2026-10-21T20:38:46Z"
+          },
+          {
+            "name": "Check open-hand Reach presentation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19,
+            "started_at": "2026-10-21T20:38:46Z",
+            "completed_at": "2026-10-21T20:38:47Z"
+          },
+          {
+            "name": "Check shipping early-catch input and visible hand feedback",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 20,
+            "started_at": "2026-10-21T20:38:47Z",
+            "completed_at": "2026-10-21T20:39:21Z"
+          },
+          {
+            "name": "Check selectable thumb controls and safe gesture routing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 21,
+            "started_at": "2026-10-21T20:39:21Z",
+            "completed_at": "2026-10-21T20:39:22Z"
+          },
+          {
+            "name": "Check carried gun touch travel through the shipping native scene",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22,
+            "started_at": "2026-10-21T20:39:22Z",
+            "completed_at": "2026-10-21T20:39:54Z"
+          },
+          {
+            "name": "Check story opening, actual arrivals and voiced discovery",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23,
+            "started_at": "2026-10-21T20:39:54Z",
+            "completed_at": "2026-10-21T20:43:39Z"
+          },
+          {
+            "name": "Check optional local portrait and voiced double encounter",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24,
+            "started_at": "2026-10-21T20:43:39Z",
+            "completed_at": "2026-10-21T20:44:07Z"
+          },
+          {
+            "name": "Check handover photo replacement and removal on actual rendered screen",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25,
+            "started_at": "2026-10-21T20:44:07Z",
+            "completed_at": "2026-10-21T20:44:11Z"
+          },
+          {
+            "name": "Check rigging touch controls and actual shipping native view",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26,
+            "started_at": "2026-10-21T20:44:11Z",
+            "completed_at": "2026-10-21T20:45:23Z"
+          },
+          {
+            "name": "Check footsteps against actual steel and concrete contacts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27,
+            "started_at": "2026-10-21T20:45:23Z",
+            "completed_at": "2026-10-21T20:45:53Z"
+          },
+          {
+            "name": "Check thumb-zone controls through actual Main and native physics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-10-21T20:45:53Z",
+            "completed_at": "2026-10-21T20:46:16Z"
+          },
+          {
+            "name": "Check player-built loose gangway and real tipping",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29,
+            "started_at": "2026-10-21T20:46:16Z",
+            "completed_at": "2026-10-21T20:46:45Z"
+          },
+          {
+            "name": "Check forklift-built beam ramp and independent load support",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30,
+            "started_at": "2026-10-21T20:46:45Z",
+            "completed_at": "2026-10-21T20:47:16Z"
+          },
+          {
+            "name": "Check upper-gallery collision and controls in the shipping view",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31,
+            "started_at": "2026-10-21T20:47:16Z",
+            "completed_at": "2026-10-21T20:47:36Z"
+          },
+          {
+            "name": "Check native-driven landing and slide camera feedback",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 32,
+            "started_at": "2026-10-21T20:47:36Z",
+            "completed_at": "2026-10-21T20:47:38Z"
+          },
+          {
+            "name": "Check loaded climbing cloth feedback",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 33,
+            "started_at": "2026-10-21T20:47:38Z",
+            "completed_at": "2026-10-21T20:47:39Z"
+          },
+          {
+            "name": "Check native foot contacts in the shipping player view",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 34,
+            "started_at": "2026-10-21T20:47:39Z",
+            "completed_at": "2026-10-21T20:47:53Z"
+          },
+          {
+            "name": "Check look-down body through standing walking crouching and landing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 35,
+            "started_at": "2026-10-21T20:47:53Z",
+            "completed_at": "2026-10-21T20:48:08Z"
+          },
+          {
+            "name": "Check opening worker through normal arrival and touch movement",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 36,
+            "started_at": "2026-10-21T20:48:08Z",
+            "completed_at": "2026-10-21T20:48:24Z"
+          },
+          {
+            "name": "Check moving swing-bearing sound feedback",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 37,
+            "started_at": "2026-10-21T20:48:24Z",
+            "completed_at": "2026-10-21T20:48:25Z"
+          },
+          {
+            "name": "Check grounded slingshot audio through real touch input",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 38,
+            "started_at": "2026-10-21T20:48:25Z",
+            "completed_at": "2026-10-21T20:49:42Z"
+          },
+          {
+            "name": "Check static batching and native cable rendering",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 39,
+            "started_at": "2026-10-21T20:49:42Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Check visible build identity and normal freight arrival",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 40,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:20Z"
+          },
+          {
+            "name": "Prepare native world before player control",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 41,
+            "started_at": "2026-10-21T20:50:20Z",
+            "completed_at": "2026-10-21T20:50:37Z"
+          },
+          {
+            "name": "Check crane operator controls and native audio receipts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 42,
+            "started_at": "2026-10-21T20:50:37Z",
+            "completed_at": "2026-10-21T20:50:40Z"
+          },
+          {
+            "name": "Check real crane camera and controls in a captured-mouse window",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 43,
+            "started_at": "2026-10-21T20:50:40Z",
+            "completed_at": "2026-10-21T20:50:54Z"
+          },
+          {
+            "name": "Check clear operator sightlines and capture forklift controls",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 44,
+            "started_at": "2026-10-21T20:50:54Z",
+            "completed_at": "2026-10-21T20:51:15Z"
+          },
+          {
+            "name": "Render ordinary freight arrival",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 45,
+            "started_at": "2026-10-21T20:51:15Z",
+            "completed_at": "2026-10-21T20:51:20Z"
+          },
+          {
+            "name": "Preserve opening render evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46,
+            "started_at": "2026-10-21T20:51:20Z",
+            "completed_at": "2026-10-21T20:51:22Z"
+          },
+          {
+            "name": "Export ChatGPT Android arm64 APK",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47,
+            "started_at": "2026-10-21T20:51:22Z",
+            "completed_at": "2026-10-21T20:51:35Z"
+          },
+          {
+            "name": "Preserve Android updates across download channels",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48,
+            "started_at": "2026-10-21T20:51:35Z",
+            "completed_at": "2026-10-21T20:51:42Z"
+          },
+          {
+            "name": "Record candidate identity and explicit proof boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49,
+            "started_at": "2026-10-21T20:51:42Z",
+            "completed_at": "2026-10-21T20:51:43Z"
+          },
+          {
+            "name": "Upload downloadable ChatGPT APK candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50,
+            "started_at": "2026-10-21T20:51:43Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          },
+          {
+            "name": "Explain download and quality status",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51,
+            "started_at": "2026-10-21T20:51:46Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          },
+          {
+            "name": "Retain candidate build failure diagnostics",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 52,
+            "started_at": "2026-10-21T20:51:46Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          },
+          {
+            "name": "Post Configure Java 17",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 103,
+            "started_at": "2026-10-21T20:51:46Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          },
+          {
+            "name": "Post Checkout exact source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 104,
+            "started_at": "2026-10-21T20:51:46Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 105,
+            "started_at": "2026-10-21T20:51:46Z",
+            "completed_at": "2026-10-21T20:51:46Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/IssisX/ScraperX/check-runs/119467697389",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000002703,
+        "runner_name": "GitHub Actions 1000002703",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ],
+    "download_returncode": 0,
+    "download_stderr": ""
+  },
+  "accepted_candidate": {
+    "result": "matching_signed_candidate_available_from_green_CI",
+    "source_commit": "ace50994027dc7129c5473762311729c3ba3a999",
+    "run_id": "39670756514",
+    "artifact_id": 12380643872,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39670756514/artifacts/12380643872",
+    "version_code": 214779095,
+    "version_name": "0.1.0-chatgpt.ace50994027d.39670756514.1",
+    "apk": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-ace5099/artifacts/ScraperX-ChatGPT-candidate-ace50994027dc7129c5473762311729c3ba3a999/ScraperX-ChatGPT.apk",
+    "apk_sha256": "ee2f33581f8e2cf52e794c793ba00334d61f35380ec3673feee7b56852bce630",
+    "native_sha256": "67dc3b7aa69321e43c931ff6450dba7b237d329963c2ecd4fc39b7f9340835dd",
+    "actual_signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+    "producer_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-ace5099/artifacts/ScraperX-ChatGPT-candidate-ace50994027dc7129c5473762311729c3ba3a999/CANDIDATE-PROVENANCE.json",
+    "verification_owner": "Candidate CI signing and producer-provenance stages",
+    "local_apk_checks_run": false,
+    "full_gameplay": "Separate full-release acceptance; not established by this development candidate",
+    "phone_play": "Not run; no FPS improvement claim",
+    "delivered_local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-ace5099.apk"
+  },
+  "direct_apk": {
+    "source_commit": "ace50994027dc7129c5473762311729c3ba3a999",
+    "version_code": 214779095,
+    "tag": "chatgpt-candidate-ace5099",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-ace5099/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-ace5099",
+    "asset_id": 663760527,
+    "asset_size": 61841792
+  },
+  "full_result": {
+    "run_id": "39670756427",
+    "head_sha": "ace50994027dc7129c5473762311729c3ba3a999",
+    "status": "completed",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "id": 119467697124,
+        "run_id": 39670756427,
+        "workflow_name": "ScraperX \u2014 full proof path (kernel + ascent)",
+        "head_branch": "ChatGPT",
+        "run_url": "https://api.github.com/repos/IssisX/ScraperX/actions/runs/39670756427",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOUdo6ls8AAAAb0NRj5A",
+        "head_sha": "ace50994027dc7129c5473762311729c3ba3a999",
+        "url": "https://api.github.com/repos/IssisX/ScraperX/actions/jobs/119467697124",
+        "html_url": "https://github.com/IssisX/ScraperX/actions/runs/39670756427/job/119467697124",
+        "status": "completed",
+        "conclusion": "failure",
+        "created_at": "2026-10-21T20:29:33Z",
+        "started_at": "2026-10-21T20:29:36Z",
+        "completed_at": "2026-10-21T20:50:13Z",
+        "name": "moving-support-truth",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-21T20:29:37Z",
+            "completed_at": "2026-10-21T20:29:38Z"
+          },
+          {
+            "name": "Checkout exact source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-21T20:29:38Z",
+            "completed_at": "2026-10-21T20:29:41Z"
+          },
+          {
+            "name": "Configure Java 17",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-21T20:29:41Z",
+            "completed_at": "2026-10-21T20:29:41Z"
+          },
+          {
+            "name": "Install build and render prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-21T20:29:41Z",
+            "completed_at": "2026-10-21T20:30:04Z"
+          },
+          {
+            "name": "Install verified Godot 4.7 editor and Android template",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-21T20:30:04Z",
+            "completed_at": "2026-10-21T20:30:10Z"
+          },
+          {
+            "name": "Build native host graph and run the full native suite",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 6,
+            "started_at": "2026-10-21T20:30:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Import presentation resources",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove interpolated parkour camera and motion comfort",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 8,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove manual slingshot, character, settings and touch input",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 9,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove uninterrupted cargo-net and service-lift ascent to 143 metres",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove physical ballast mantle, footing feedback and ordinary touch return",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove loaded slab-haul ascent, missed-exit recovery and paid reset",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove first-taper touch ascent and crouched missed-gap recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove west-brace normal touch ascent to 396 metres",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove default inventory and rejected fallback absence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Historical pipe bridge fixture - ordinary input and native material state",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Historical opening fixture and retained upper route - rendered touch to 110 metres",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Regression fixture - native machine authority and Fold-aspect capture",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Regression fixtures - drive controller and mechanism input paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Render-native kit and retired mechanism proofs",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Measure the mix a player hears",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "World solids table matches the Godot builders",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Prove physical catch, ordinary exit and day/night native presentation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Require every Godot proof before Android export",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 24,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Cross-compile native graph for Android arm64",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 25,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Export ChatGPT Android arm64 APK",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 26,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Record evidence boundaries",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 27,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:10Z"
+          },
+          {
+            "name": "Retain failed-run diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-10-21T20:50:10Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Preserve Android updates across download channels",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 29,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Publish immutable checkpoint build and evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 30,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Post Configure Java 17",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 59,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Post Checkout exact source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 60,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 61,
+            "started_at": "2026-10-21T20:50:11Z",
+            "completed_at": "2026-10-21T20:50:11Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/IssisX/ScraperX/check-runs/119467697124",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000002702,
+        "runner_name": "GitHub Actions 1000002702",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ],
+    "download_returncode": 0,
+    "download_stderr": ""
+  },
+  "boundary": "Candidate accepted and APK published. Separate full native stage failed; this is not full-release or device evidence."
+}

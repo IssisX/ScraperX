@@ -15,3 +15,7 @@ Guide alone owns the accepted disposition. The terminal validates the current cl
 The first new touch fixture mistakenly used the displayed caption Action as the control ID. `INVESTIGATION_CHOICE_INITIAL_FAILURE.json` preserves that failure and a diagnostic call to a nonexistent UI helper. Root corrected the driver to the existing `TouchControls.B_ACTION` ID and performed the two fresh corrected cases above. No control or production behavior was weakened to make that fixture pass.
 
 The two screen images are actual terminal SubViewport captures, not a full first-person or phone view. Matching fresh CI wrapper/package acceptance and APK delivery remain pending this source batch. The wider campaign, inhabited districts, remaining ascent and finale are unfinished.
+
+## Accepted matching delivery
+
+Gameplay source `ace50994027dc7129c5473762311729c3ba3a999` is actually pushed. Candidate39670756514 completed GREEN, including the final combined two-choice wrapper, recorded resources and package gates. Signed build214779095 is published at https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-ace5099/ScraperX-ChatGPT.apk . `INVESTIGATION_CHOICE_CI.json` retains the ordinary workers' source/artifact/publication receipts; no local APK re-audit was performed. This supersedes this document's earlier pending-delivery statement. Separate full39670756427 failed its native-suite stage; its current exact failed-case set was not investigated in this narrative slice. Full-release issues and phone observations remain open.
