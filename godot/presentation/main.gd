@@ -427,6 +427,7 @@ func _process(delta: float) -> void:
 		"eye": _camera.global_position,
 		"view": _camera.global_transform.basis,
 		"wrists": _arms.wrist_positions(),
+		"physical_rotation": (_ctx.get("landing", {}) as Dictionary).get("physical_rotation", Quaternion.IDENTITY),
 	}, _yaw, delta)
 	if _canopy == null:
 		_canopy = CanopyView.new()
@@ -1015,6 +1016,11 @@ func _update_gesture_hints() -> void:
 	_touch.up_on_lift = up in [UP_JUMP_OFF, UP_LAUNCH, UP_LET_GO, UP_THROW]
 	_touch.jump_throws = up == UP_THROW
 	_touch.down_on_lift = route in [&"hook_release", &"let_go", &"slide_down"]
+	var capture_phase := int((_ctx.get("landing", {}) as Dictionary).get("capture_phase", 0))
+	if capture_phase != 0:
+		_touch.up_hint = "MOVE TO STRUGGLE" if capture_phase in [1, 2] else "GETTING UP"
+		_touch.down_hint = ""
+		_touch.up_hint_special = true
 
 # The throw's path, while the thumb swipes up with a throwable in the hands
 # (made as it lifts): faint, and gone with the thumb.

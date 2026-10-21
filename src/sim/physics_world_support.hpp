@@ -210,6 +210,7 @@ public:
     void begin_tick() noexcept {
         lock();
         sample_ = {};
+        matron_contact_ = false;
         struck_closing_ = 0.0F;
         hit_closing_ = 0.0F;
         hit_toward_ = JPH::Vec3::sZero();
@@ -291,6 +292,10 @@ public:
                                     : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
     }
 
+    bool matron_contact() const noexcept {
+        lock(); const bool result = matron_contact_; unlock(); return result;
+    }
+
     void OnContactAdded(const JPH::Body &first,
                         const JPH::Body &second,
                         const JPH::ContactManifold &manifold,
@@ -361,6 +366,10 @@ private:
 
         const auto first_entity = first.GetUserData();
         const auto second_entity = second.GetUserData();
+        if ((first_entity == Simulation::kPlayerEntityId && second_entity == Matron::kEntity) ||
+            (second_entity == Simulation::kPlayerEntityId && first_entity == Matron::kEntity)) {
+            lock(); matron_contact_ = true; unlock();
+        }
         std::uint64_t support_entity = 0;
         float support_normal_y = 0.0F;
         JPH::RVec3 support_contact_point{};
@@ -462,6 +471,7 @@ private:
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     SupportSample sample_{};
+    bool matron_contact_ = false;
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
     JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();

@@ -4,6 +4,10 @@
 #include "sim_tests.hpp"
 
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "capture") {
+        run_matron_capture();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;
@@ -126,6 +130,7 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
+        run_matron_capture();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "bay") {
@@ -430,6 +435,7 @@ int main() {
     run_summit();
     run_summit_arm();
     run_matron();
+    run_matron_capture();
     run_bay();
     run_loose_stock();
     run_look_target();
