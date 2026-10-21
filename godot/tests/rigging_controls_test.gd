@@ -21,6 +21,12 @@ func finger(router: Node, at: Vector2, pressed: bool, cancelled: bool = false, i
 	event.canceled = cancelled
 	router._input(event)
 
+func open_tools(router: Node, touch: Control) -> void:
+	if not touch._tool_tray_open:
+		finger(router, touch.button_center(&"tools"), true)
+		finger(router, touch.button_center(&"tools"), false)
+		check(router.frame(.016).verbs.is_empty(), "tool selector is local UI")
+
 func context() -> Dictionary:
 	return {"hanging": false, "jump_ok": true, "action": {"id": &"rigging", "icon": &"hook", "label": "INSTALL", "detail": ""},
 		"chute_ok": false, "chute": false, "danger": 0.0, "operating": &"rigging", "slung": false,
@@ -41,10 +47,12 @@ func _run() -> void:
 	router.set_rigging_mode(true)
 	var ctx := context()
 	touch.update_context(ctx, 1.0)
-	check(touch.is_button_shown(&"toggle_rigging") and touch.is_button_shown(&"rigging_cut"), "acknowledged rig exposes equipment and contextual controls")
+	check(touch.is_button_shown(&"tools") and touch.is_button_shown(&"rigging_cut"), "acknowledged rig exposes equipment and contextual controls")
 	check(not touch._movement_blocked and not touch.is_button_shown(&"pendant_up") and not touch.is_button_shown(&"pendant_down"), "rigging station retains movement without machine pendant")
-	check(touch.is_button_shown(&"grapple") and touch.is_button_shown(&"action"), "grapple and installation remain independently accessible")
+	check(touch.is_button_shown(&"tools") and touch.is_button_shown(&"action"), "grapple and installation remain independently accessible")
 	for entry in [[&"toggle_rigging", &"toggle_rigging"], [&"rigging_undo", &"rigging_undo"], [&"rigging_unclip", &"rigging_unclip"], [&"grapple", &"toggle_grapple"]]:
+		if entry[0] in [&"toggle_rigging", &"grapple"]:
+			open_tools(router, touch)
 		var at: Vector2 = touch.button_center(entry[0])
 		finger(router, at, true)
 		finger(router, at, false)
@@ -105,7 +113,7 @@ func _run() -> void:
 			touch.set_touch_scale(scale)
 			touch._layout()
 			touch.update_context(ctx, 1.0)
-			for id in [&"toggle_rigging", &"rigging_undo", &"rigging_unclip", &"rigging_cut"]:
+			for id in [&"tools", &"rigging_undo", &"rigging_unclip", &"rigging_cut"]:
 				var button = touch._buttons[id]
 				var hit: float = button.radius * touch.HIT_SLOP
 				check(touch._safe.encloses(Rect2(button.center-Vector2.ONE*hit, Vector2.ONE*hit*2)), "rig hit target within safe area " + str(id))
@@ -115,7 +123,7 @@ func _run() -> void:
 			layouts += 1
 	touch.set_control_profile(1)
 	touch.update_context(ctx, 1.0)
-	check(touch.is_button_shown(&"rigging_cut") and touch.is_button_shown(&"toggle_rigging"), "thumb-flow profile retains separate rig controls")
+	check(touch.is_button_shown(&"rigging_cut") and touch.is_button_shown(&"tools"), "thumb-flow profile retains separate rig controls")
 	check(touch._thumb_active and not touch._movement_blocked, "acknowledged rigging station preserves thumb-flow locomotion")
 	ctx.operating = &""
 	touch.update_context(ctx, .016)

@@ -1165,6 +1165,10 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 					_native.request_set_down()
 				else:
 					_native.request_release()
+			&"grapple_range":
+				var gun: Dictionary = _native.get_grapple_gun_state()
+				if bool(gun.get("equipped", false)) and not bool(gun.get("line_attached", false)):
+					_native.request_grapple_shot_profile(0 if int(gun.get("shot_profile", 1)) == 1 else 1)
 			&"auto_reel":
 				_toggle_grapple_auto_reel()
 			&"toggle_grapple":
@@ -1177,6 +1181,7 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 					if _operating == &"grappling_gun":
 						_operating = &""
 				elif bool(_ctx.get("grapple_draw_available", false)):
+					_end_operation()
 					_native.set_grapple_equipped(true)
 			&"chute":
 				_native.request_parachute()
@@ -1222,12 +1227,20 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 static func _grapple_primary_action(gun: Dictionary) -> Dictionary:
 	var line_state := int(gun.get("state", 0))
 	var action := {"id": &"grapple_action", "label": "FIRE HOOK", "icon": &"hook",
-		"detail": "ARC THE HOOK OVER THE CROSSBAR"}
-	if line_state == 1:
-		action["label"] = "LOCK LINE"
+		"detail": "ARC OVER A BEAM OR EDGE"}
+	if line_state == 2 and bool(gun.get("line_attached", false)) and bool(gun.get("auto_reel", false)):
+		action["id"] = &"grapple_reel"
+		action["label"] = "STOP REEL"
+		action["detail"] = "STOP BEFORE RECOVERING THE HOOK"
 	elif bool(gun.get("action_recovers_hook", false)):
 		action["label"] = "RECOVER HOOK"
-		action["detail"] = "HOOK WITHIN REACH"
+		action["detail"] = "PICK UP THE HOOK / LINE MUST BE UNLOADED"
+	elif bool(gun.get("recovery_nearby", false)) and not bool(gun.get("line_attached", false)):
+		action["label"] = "RECOVER HOOK"
+		action["detail"] = "MOVE WITHIN ARM'S REACH"
+	elif line_state == 1:
+		action["label"] = "LOCK LINE"
+		action["detail"] = "LET THE HOOK SETTLE BEFORE LOCKING"
 	elif line_state == 2 and bool(gun.get("line_attached", false)):
 		action["id"] = &"grapple_reel"
 		action["label"] = "STOP REEL" if bool(gun.get("auto_reel", false)) else "REEL IN"
@@ -1650,7 +1663,9 @@ func _read_context() -> Dictionary:
 		"grapple_equipped": bool(grapple.get("equipped", false)),
 		"grapple_draw_available": grapple_draw_available,
 		"grapple_line_attached": bool(grapple.get("line_attached", false)),
+		"grapple_state": int(grapple.get("state", 0)),
 		"grapple_auto_reel": bool(grapple.get("auto_reel", false)),
+		"grapple_shot_profile": int(grapple.get("shot_profile", 1)),
 		"air_catch_intent_pending": bool(landing.get("air_catch_intent_pending", false)),
 		"drop_ok": line_gripping or bool(landing.get("air_catch_intent_pending", false)) or bool(grapple.get("equipped", false)) or sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or propping or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,

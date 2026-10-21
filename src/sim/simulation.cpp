@@ -107,6 +107,7 @@ std::vector<Vector3> Simulation::slingshot_prediction() const {
 
 bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     if (!physics_world_->debug_restart_at(centre)) return false;
+    grapple_shot_profile_requested_ = false;
     physics_world_->clear_forklift_commands();
     move_input_x_ = move_input_z_ = 0.0;
     jump_requested_ = jump_cancel_requested_ = traversal_requested_ = release_requested_ = false;
@@ -153,6 +154,7 @@ bool Simulation::restart_gravity_reclaim_attempt() noexcept {
 
 bool Simulation::restart_checkpoint() noexcept {
     if (!physics_world_->restart_checkpoint()) return false;
+    grapple_shot_profile_requested_ = false;
     move_input_x_ = move_input_z_ = 0.0;
     jump_requested_ = jump_cancel_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
@@ -594,6 +596,12 @@ bool Simulation::set_grapple_auto_reel(bool enabled) noexcept {
     grapple_auto_reel_requested_=true;
     return true;
 }
+bool Simulation::request_grapple_shot_profile(unsigned profile) noexcept {
+    if (profile>1) return false;
+    grapple_shot_profile_input_=profile;
+    grapple_shot_profile_requested_=true;
+    return true;
+}
 bool Simulation::request_grapple_action() noexcept {
     grapple_action_requested_ = true;
     return true;
@@ -673,6 +681,8 @@ void Simulation::step_fixed() noexcept {
     commands.grapple_release = grapple_release_requested_;
     commands.grapple_auto_reel = grapple_auto_reel_input_;
     commands.grapple_auto_reel_requested = grapple_auto_reel_requested_;
+    commands.grapple_shot_profile_requested = grapple_shot_profile_requested_;
+    commands.grapple_shot_profile = grapple_shot_profile_input_;
     commands.rigging_cut_held = rigging_cut_held_;
     commands.rigging_power = rigging_power_input_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
@@ -681,6 +691,7 @@ void Simulation::step_fixed() noexcept {
     rigging_command_count_ = 0;
     grapple_equip_requested_ = grapple_action_requested_ = grapple_release_requested_ = false;
     grapple_auto_reel_requested_ = false;
+    grapple_shot_profile_requested_ = false;
     jump_requested_ = jump_cancel_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;

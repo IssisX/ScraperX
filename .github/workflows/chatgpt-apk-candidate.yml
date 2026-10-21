@@ -110,6 +110,12 @@ jobs:
           timeout 300s "build/candidate-host/scraperx_${check}_tests" \
             2>&1 | tee "artifacts/${check}-native.log"
         done
+        timeout 120s build/candidate-host/scraperx_grapple_practice_route_tests long-range \
+          2>&1 | tee artifacts/grapple-long-range-native.log
+        grep -F 'PASS GRAPPLE_LONG_RANGE' artifacts/grapple-long-range-native.log
+        timeout 180s build/candidate-host/scraperx_grapple_practice_route_tests recovery-only \
+          2>&1 | tee artifacts/grapple-recovery-native.log
+        grep -F 'PASS GRAPPLE_ROUTE recovery-only' artifacts/grapple-recovery-native.log
         grep -F 'PASS PORTABLE_LINE_PUBLIC' artifacts/portable_line_public_route-native.log
         grep -F 'PASS PORTABLE_LINE_CROSSING_PUBLIC' artifacts/portable_line_crossing_public-native.log
     - name: Check native sleep preserves launcher and forklift work
@@ -229,10 +235,20 @@ jobs:
       run: |
         set -euo pipefail
         timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/toolbelt_touch_test.gd \
+          2>&1 | tee artifacts/toolbelt-touch.log
+        grep -F 'TOOLBELT_TOUCH PASS' artifacts/toolbelt-touch.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/toolbelt-touch.log; then exit 1; fi
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
           --script res://tests/grapple_primary_touch_test.gd \
           2>&1 | tee artifacts/grapple-primary-touch.log
         grep -F 'GRAPPLE_PRIMARY_TOUCH PASS' artifacts/grapple-primary-touch.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-primary-touch.log; then exit 1; fi
+        timeout 90s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/grapple_toolbelt_input_test.gd \
+          2>&1 | tee artifacts/grapple-toolbelt-input.log
+        grep -F 'GRAPPLE_TOOLBELT_INPUT PASS' artifacts/grapple-toolbelt-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-toolbelt-input.log; then exit 1; fi
         timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
           --script res://tests/grapple_trip_input_test.gd \
           2>&1 | tee artifacts/grapple-trip-input.log
@@ -622,10 +638,14 @@ jobs:
           artifacts/mounted-winch-input.log
           artifacts/mounted-winch-crossing.log
           artifacts/mounted-winch-crossing-input.log
+          artifacts/grapple-toolbelt-input.log
+          artifacts/toolbelt-touch.log
           artifacts/grapple-primary-touch.log
           artifacts/grapple-trip-input.log
           artifacts/grappling_gun-native.log
           artifacts/grapple_practice_route-native.log
+          artifacts/grapple-long-range-native.log
+          artifacts/grapple-recovery-native.log
           artifacts/powered_cable-native.log
           artifacts/routed-cable-native.log
           artifacts/upper-gallery/

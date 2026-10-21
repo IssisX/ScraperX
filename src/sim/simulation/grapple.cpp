@@ -28,11 +28,12 @@ bool Simulation::PhysicsWorld::nearby_grapple_hook(const GrapplingGun::Readback 
     out.failure = unsigned(state.failure);
     out.cartridges = state.cartridges;
     out.available_hooks = state.available_hooks;
+    out.shot_profile = unsigned(state.shot_profile); out.shot_energy_j = state.shot_energy_j;
     out.line_attached = grappling_gun_->line_active();
     // A locked distant line is a travel tool, not a remote pickup command.
     // Retrieval still validates the actual grasp/clearance in its owner.
-    out.action_recovers_hook = state.state!=GrapplingGun::LineState::PayingOut &&
-        nearby_grapple_hook(state) && (!out.line_attached || state.tension_n<=1.0F);
+    out.action_recovers_hook = grappling_gun_->recovery_in_reach();
+    out.recovery_nearby = nearby_grapple_hook(state);
     out.active_hook = state.hook.GetIndexAndSequenceNumber();
     out.player_endpoint = to_vector3(state.player_endpoint);
     out.hook_endpoint = to_vector3(state.hook_endpoint);
@@ -67,6 +68,8 @@ void Simulation::PhysicsWorld::apply_grapple_commands(const StepCommands &comman
             grapple_acquired_ = grapple_equipped_ = true;
         }
     }
+    if (commands.grapple_shot_profile_requested && grapple_equipped_)
+        (void)grappling_gun_->set_shot_profile(GrapplingGun::ShotProfile(commands.grapple_shot_profile));
     if (commands.grapple_auto_reel_requested && grapple_equipped_)
         (void)grappling_gun_->set_auto_reel(commands.grapple_auto_reel);
     if (commands.grapple_release) grappling_gun_->release();
@@ -74,7 +77,11 @@ void Simulation::PhysicsWorld::apply_grapple_commands(const StepCommands &comman
     if (!commands.grapple_action || !grapple_equipped_ ||
         traversal_state_ != TraversalState::None || carried_entity_ != 0) return;
     const auto before = grappling_gun_->readback();
-    if (before.state == GrapplingGun::LineState::PayingOut) {
+    if (grappling_gun_->recovery_in_reach()) {
+        // A reachable hook is recovered before spool mode can consume Action
+        // as Lock Line. The owner still validates actual hand/steel clearance.
+        (void)grappling_gun_->retrieve();
+    } else if (before.state == GrapplingGun::LineState::PayingOut) {
         (void)grappling_gun_->lock_line();
     } else if (before.state == GrapplingGun::LineState::Locked) {
         (void)grappling_gun_->retrieve();

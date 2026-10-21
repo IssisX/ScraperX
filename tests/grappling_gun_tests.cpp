@@ -54,7 +54,7 @@ struct Fixture final {
     std::unique_ptr<Gun> gun;
     std::unique_ptr<Listener> listener;
     unsigned collision_steps=1;
-    explicit Fixture(Vec3 gravity = Vec3::sZero()) {
+    explicit Fixture(Vec3 gravity = Vec3::sZero(), Gun::ShotProfile profile=Gun::ShotProfile::Near) {
         world.Init(64, 0, 128, 128, bp, bv, lp);
         world.SetGravity(gravity);
         BodyCreationSettings settings(new BoxShape(Vec3(.2F,.3F,.2F)), RVec3::sZero(),
@@ -67,6 +67,8 @@ struct Fixture final {
         player = world.GetBodyInterface().CreateAndAddBody(settings, EActivation::Activate);
         check(!player.IsInvalid(), "85 kg dynamic translation player created");
         gun = std::make_unique<Gun>(world, player, 1);
+        check(gun->readback().shot_profile==Gun::ShotProfile::Long,"carried gun defaults to long shot");
+        check(gun->set_shot_profile(profile),"explicit fixture shot profile accepted before firing");
         listener = std::make_unique<Listener>(*gun);
         world.AddStepListener(listener.get());
     }
@@ -138,8 +140,8 @@ void terminal_mass_and_inertia() {
           "symmetric steel layout preserves independently integrated zero cross inertia");
 }
 void launch_momentum_energy() {
-    check(Gun::hook_mass_kg==2.0F && Gun::cartridge_energy_j==180.0F, "published hook mass and cartridge energy contract");
-    Fixture f(Vec3(0,-9.81F,0));
+    check(Gun::hook_mass_kg==2.0F && Gun::cartridge_energy_j==900.0F, "published hook mass and cartridge energy contract");
+    Fixture f(Vec3(0,-9.81F,0),Gun::ShotProfile::Long);
     const Vec3 inherited(3,2,-4);
     f.velocity(f.player,inherited);
     const BodyID hook=f.fire();
@@ -152,8 +154,8 @@ void launch_momentum_energy() {
     const double initial=.5*(player_mass+Gun::hook_mass_kg)*inherited.LengthSq();
     const double added=p.kinetic+h.kinetic-initial;
     const auto rb=f.gun->readback();
-    check(added>179.99 && added<=Gun::cartridge_energy_j+.001 && std::abs(added-rb.last_launch_work_j)<.001,
-          "measured kinetic increment matches finite 180 J cartridge");
+    check(added>899.99 && added<=Gun::cartridge_energy_j+.001 && std::abs(added-rb.last_launch_work_j)<.001,
+          "measured kinetic increment matches finite 900 J powered cartridge");
     const double start=p.kinetic+h.kinetic+9.81*(player_mass*p.center.GetY()+Gun::hook_mass_kg*h.center.GetY());
     f.tick(30);
     const State endp=f.state(f.player), endh=f.state(hook);
@@ -183,7 +185,7 @@ void launch_orientation_follows_horizontal_bearing() {
         Vec3(-.6F,.8F,0),Vec3(.3F,-.4F,.5F).Normalized(),
         Vec3(.00001F,1,-.00002F).Normalized(),Vec3::sAxisY(),-Vec3::sAxisY()};
     for(const Vec3 direction:directions) {
-        Fixture shot;
+        Fixture shot(Vec3::sZero(),Gun::ShotProfile::Long);
         shot.world.GetBodyInterface().SetPosition(shot.player,RVec3(17.25F,42.5F,-9.75F),EActivation::Activate);
         const State before=shot.state(shot.player);
         const auto inventory=shot.gun->readback();
@@ -201,8 +203,8 @@ void launch_orientation_follows_horizontal_bearing() {
         check((shot.world.GetBodyInterface().GetPosition(shot.player)-before.center).LengthSq()==0,
               "predicting and firing never relocates the player");
         check(fired.cartridges+1==inventory.cartridges&&fired.available_hooks+1==inventory.available_hooks&&
-              fired.last_launch_work_j>179.99&&fired.last_launch_work_j<=180.0,
-              "predicted real shot spends exactly one finite hook/cartridge and existing 180 J work");
+              fired.last_launch_work_j>899.99&&fired.last_launch_work_j<=900.0,
+              "predicted real shot spends exactly one finite hook/cartridge and 900 J powered work");
         const State player=shot.state(shot.player),hook=shot.state(fired.hook);
         check(player.velocity.Dot(direction)<0&&hook.velocity.Dot(direction)>0&&
               (player_mass*player.velocity+Gun::hook_mass_kg*hook.velocity).Length()<3.e-5F,
@@ -241,6 +243,63 @@ void slack_and_neutral() {
     f.tick(10);
     check(unchanged(p,f.state(f.player)) && unchanged(h,f.state(hook)) && f.gun->readback().tension_n==0,
           "slack shortening rope never pushes or brakes endpoints");
+}
+void shot_profile_changes_only_next_cartridge() {
+    Fixture f(Vec3::sZero(),Gun::ShotProfile::Long);
+    check(f.gun->readback().shot_energy_j==900,"long profile publishes finite900J shot");
+    check(!f.gun->set_shot_profile(Gun::ShotProfile(9)),"invalid profile rejected without mutation");
+    check(f.gun->set_shot_profile(Gun::ShotProfile::Near)&&f.gun->readback().shot_energy_j==180,
+          "near profile publishes finite180J precision shot");
+    f.fire();
+    check(f.gun->readback().last_launch_work_j>179.99&&f.gun->readback().last_launch_work_j<=180,
+          "near selection actually changes paid launch energy");
+    check(!f.gun->set_shot_profile(Gun::ShotProfile::Long),"attached line cannot be mistaken for a power selector");
+    f.gun->release();
+    f.tick(90); // Let the first real hook leave the muzzle corridor.
+    check(f.gun->set_shot_profile(Gun::ShotProfile::Long),"released tool accepts long profile for next cartridge");
+    f.fire();
+    check(f.gun->readback().last_launch_work_j>899.99&&f.gun->readback().last_launch_work_j<=900,
+          "same real tool fires the next900J cartridge");
+    f.gun->clear_transients();
+    check(f.gun->readback().shot_profile==Gun::ShotProfile::Long,"restart clears old selection to long default");
+}
+void useful_vertical_range() {
+    Fixture f(Vec3(0,-9.81F,0),Gun::ShotProfile::Long);
+    f.wall(RVec3(0,-.34F,0),Vec3(10,.04F,10));
+    f.tick(90);
+    const auto start=f.state(f.player).center;
+    check(f.gun->fire(Vec3::sAxisY()),"ordinary upward powered shot fires");
+    const auto shot=f.gun->readback();
+    double rise=0;
+    for(unsigned i=0;i<1300;++i) {
+        f.tick();
+        const auto current=f.gun->readback();
+        check(current.hook==shot.hook&&f.gun->line_active(),"real long shot keeps its actual hook and clear rope");
+        rise=std::max(rise,double(f.state(shot.hook).center.GetY()-start.GetY()));
+        check(current.line_length_m<=60.0F&&current.cartridges==3,
+              "long shot stays inside finite line and inventory");
+    }
+    check(rise>40&&rise<47,"actual gravity-driven hook reaches overhead beams over40m above departure");
+    check(shot.last_launch_work_j>899.99&&shot.last_launch_work_j<=900.0,
+          "measured long shot is paid by one finite900J cartridge");
+    std::cout<<"GRAPPLE_RANGE rise_m="<<rise<<" paid_j="<<shot.last_launch_work_j
+             <<" max_line_m="<<Gun::maximum_line_length_m<<" gravity=9.81 player_kg=85 hook_kg=2\n";
+}
+void slow_paying_out_hook_is_recoverable() {
+    Fixture f;
+    const auto hook=f.fire();
+    f.velocity(hook,Vec3::sZero());f.velocity(f.player,Vec3::sZero());
+    const auto before=f.gun->readback();
+    check(before.state==Gun::LineState::PayingOut,"recovery fixture retains live payout mode");
+    check(f.gun->recovery_in_reach(),"actual slow unloaded grasp is offered without locking first");
+    const auto observed=f.gun->readback();
+    check(observed.cartridges==before.cartridges&&observed.available_hooks==before.available_hooks&&
+          observed.failure==before.failure&&observed.state==before.state,
+          "grasp observation never changes inventory, failure or spool mode");
+    check(f.gun->retrieve(),"same validated payout hook can actually be picked up");
+    const auto after=f.gun->readback();
+    check(!f.gun->line_active()&&after.available_hooks==before.available_hooks+1&&
+          after.cartridges==before.cartridges,"recovery returns hardware and clears live rope without inventing cartridges");
 }
 void finite_inventory_retrieval() {
     check(Gun::capacity==4, "published four-cartridge stock contract");
@@ -293,7 +352,7 @@ void gravity_settled_terminal_retrieval() {
     plate.mFriction=.8F;
     check(!bodies.CreateAndAddBody(plate,EActivation::DontActivate).IsInvalid(),
           "actual zero-radius24mm plate supports gravity-settled hook");
-    check(f.gun->fire({.8F,-.6F,0}),"actual180J miss angle launches real hook");
+    check(f.gun->fire({.8F,-.6F,0}),"ordinary near-shot miss launches real hook onto recovery plate");
     const BodyID hook=f.gun->readback().hook; f.gun->release();
     f.velocity(f.player,Vec3::sZero());
     f.tick(360);
@@ -600,6 +659,9 @@ void rotated_retention_observation() {
 int main() {
     RegisterDefaultAllocator(); Factory::sInstance=new Factory; RegisterTypes();
     const std::pair<const char *,void(*)()> tests[]{
+        {"shot_profile_changes_only_next_cartridge",shot_profile_changes_only_next_cartridge},
+        {"useful_vertical_range",useful_vertical_range},
+        {"slow_paying_out_hook_is_recoverable",slow_paying_out_hook_is_recoverable},
         {"automatic_reel_latches_and_stops",automatic_reel_latches_and_stops},
         {"automatic_reel_limits_and_failure",automatic_reel_limits_and_failure},
         {"rotated_retention_observation",rotated_retention_observation},

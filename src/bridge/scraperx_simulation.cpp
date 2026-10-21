@@ -1,5 +1,6 @@
 #include "bridge/scraperx_simulation.hpp"
 #include "sim/grappling_hook_geometry.hpp"
+#include "sim/grappling_gun.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/supplied_ascent.hpp"
 
@@ -72,6 +73,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_aim", "x", "y", "z"), &ScraperXSimulation::set_grapple_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_equipped", "equipped"), &ScraperXSimulation::set_grapple_equipped);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_reel_input", "input"), &ScraperXSimulation::set_grapple_reel_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_shot_profile", "profile"), &ScraperXSimulation::request_grapple_shot_profile);
     godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_action"), &ScraperXSimulation::request_grapple_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_release"), &ScraperXSimulation::request_grapple_release);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_auto_reel", "enabled"), &ScraperXSimulation::set_grapple_auto_reel);
@@ -821,6 +823,9 @@ bool ScraperXSimulation::set_grapple_equipped(bool equipped) {
 bool ScraperXSimulation::set_grapple_reel_input(double input) {
     return simulation_->set_grapple_reel_input(input);
 }
+bool ScraperXSimulation::request_grapple_shot_profile(int profile) {
+    return profile>=0 && profile<=1 && simulation_->request_grapple_shot_profile(unsigned(profile));
+}
 bool ScraperXSimulation::request_grapple_action() { return simulation_->request_grapple_action(); }
 bool ScraperXSimulation::set_grapple_auto_reel(bool enabled) { return simulation_->set_grapple_auto_reel(enabled); }
 bool ScraperXSimulation::request_grapple_release() { return simulation_->request_grapple_release(); }
@@ -828,6 +833,11 @@ bool ScraperXSimulation::request_grapple_release() { return simulation_->request
 namespace {
 godot::Dictionary grapple_dictionary(const scraperx::sim::GrappleGunSnapshot &state) {
     godot::Dictionary out;
+    out["shot_energy_j"] = state.shot_energy_j;
+    out["shot_profile"] = state.shot_profile;
+    out["maximum_shot_energy_j"] = sim::GrapplingGun::cartridge_energy_j;
+    out["maximum_line_length_m"] = sim::GrapplingGun::maximum_line_length_m;
+    out["hook_mass_kg"] = sim::GrapplingGun::hook_mass_kg;
     const char *const names[]{"READY", "PAYING OUT", "LOCKED", "RELEASED", "FAILED"};
     const char *const failures[]{"", "INVALID AIM", "NO CARTRIDGE", "LINE BUSY", "MUZZLE BLOCKED",
         "HOOK UNAVAILABLE", "LINE SNAGGED", "LINE BROKEN", "HOOK OUT OF REACH", "LINE LOADED",
@@ -841,6 +851,7 @@ godot::Dictionary grapple_dictionary(const scraperx::sim::GrappleGunSnapshot &st
     out["launch_direction"] = godot::Vector3(state.launch_direction.x, state.launch_direction.y, state.launch_direction.z);
     out["line_attached"] = state.line_attached;
     out["action_recovers_hook"] = state.action_recovers_hook;
+    out["recovery_nearby"] = state.recovery_nearby;
     out["state"] = state.state;
     out["state_name"] = names[std::min(state.state, 4U)];
     out["last_failure"] = failures[std::min(state.failure, 11U)];

@@ -42,6 +42,10 @@ func _button(id: StringName, held: bool) -> bool:
 	return true
 
 func _tap(id: StringName) -> bool:
+	if id in [&"grapple", &"toggle_rigging", &"toggle_traversal_line"] and not _main._touch._tool_tray_open:
+		if not _tap(&"tools"):
+			return false
+		_main._touch.update_context(_main._ctx, 1.0)
 	if not _button(id, true):
 		return false
 	_touch(_main._touch.button_center(id), false)
@@ -116,35 +120,28 @@ func _auto_reel_context_contract() -> void:
 		"drop_ok": true, "chute_ok": false, "chute": false, "danger": 0.0,
 		"operating": &"grappling_gun", "crouched": false, "slung": false,
 		"grapple_equipped": true, "grapple_line_attached": true, "grapple_auto_reel": false}
-	if not _check(touch._buttons.has(&"auto_reel"), "explicit one-tap auto reel control exists"):
-		touch.queue_free()
-		router.free()
-		return
 	for running in [false, true]:
 		ctx["grapple_auto_reel"] = running
+		ctx["action"] = {"id": &"grapple_reel", "icon": &"operate", "label": "STOP REEL" if running else "REEL IN"}
 		touch.update_context(ctx, 1.0)
-		_check(touch.is_button_shown(&"auto_reel") and touch.button_label(&"auto_reel") == ("STOP REEL" if running else "AUTO REEL"),
-			"auto reel label follows reported native running=" + str(running))
+		_check(not touch.is_button_shown(&"auto_reel"), "primary Action has no duplicate automatic reel target")
+		_check(touch.button_label(&"action") == ("STOP REEL" if running else "REEL IN"),
+			"primary reel label follows native running=" + str(running))
 		var event := InputEventScreenTouch.new()
 		event.index = 9
-		event.position = touch.button_center(&"auto_reel")
+		event.position = touch.button_center(&"action")
 		event.pressed = true
 		touch.handle_touch(event)
-		_check(router.frame(STEP)["verbs"] == [&"auto_reel"], "auto reel touch emits one semantic toggle")
+		_check(router.frame(STEP)["verbs"] == [&"action"], "reel touch emits one primary semantic action")
 		event.pressed = false
 		touch.handle_touch(event)
-		_check(router.frame(STEP)["verbs"].is_empty(), "auto reel release emits no stop or repeated toggle")
-		var auto_button = touch._buttons[&"auto_reel"]
-		for id in [&"pendant_up", &"pendant_down", &"drop", &"action", &"crouch", &"chute", &"jump"]:
-			var other = touch._buttons[id]
-			_check(auto_button.center.distance_to(other.center) > (auto_button.radius + other.radius) * TouchControls.HIT_SLOP,
-				"auto reel hit area does not overlap " + String(id))
-		_check(not touch._movement_blocked, "auto reel preserves portable movement stick")
+		_check(router.frame(STEP)["verbs"].is_empty(), "reel release emits no stop or repeated toggle")
+		_check(not touch._movement_blocked, "primary reel preserves portable movement stick")
 	for cleanup in ["grapple_line_attached", "grapple_equipped"]:
 		ctx[cleanup] = false
 		touch.update_context(ctx, 1.0)
 		_check(not touch.is_button_shown(&"auto_reel") and not touch._buttons[&"auto_reel"].enabled,
-			"auto reel removed after native cleanup: " + cleanup)
+			"duplicate reel remains absent after native cleanup: " + cleanup)
 		ctx[cleanup] = true
 	touch.queue_free()
 	router.free()
@@ -173,11 +170,11 @@ func _pendant_event_contract() -> void:
 	touch.update_context(ctx, 1.0)
 	event.pressed = false
 	touch.handle_touch(event)
-	event.position = touch.button_center(&"auto_reel")
+	event.position = touch.button_center(&"action")
 	event.pressed = true
 	touch.handle_touch(event)
 	var immediate: Dictionary = router.frame(STEP)
-	_check(immediate["pendant"] == Vector2.ZERO and immediate["verbs"] == [&"auto_reel"],
+	_check(immediate["pendant"] == Vector2.ZERO and immediate["verbs"] == [&"action"],
 		"UP release then immediate AUTO delivers neutral pendant and one toggle")
 	event.pressed = false
 	touch.handle_touch(event)
@@ -268,6 +265,11 @@ func _nearby_recovery_action() -> void:
 	if not _tap(&"action"):
 		return
 	await _step(8)
+	if int(_state().shot_profile) == 1:
+		if not _tap(&"grapple_range"):
+			return
+		await _step()
+	_check(int(_state().shot_profile) == 0, "real touch chooses near profile for local recovery diagnostic")
 	var at := root.get_visible_rect().size * Vector2(0.78, 0.35)
 	var sensitivity: float = Router.LOOK_RADIANS_PER_UNIT * _main._router.look_sensitivity
 	var relative := Vector2((float(_main._yaw) + PI * 0.5) / sensitivity,
@@ -291,7 +293,7 @@ func _nearby_recovery_action() -> void:
 	await _step()
 	var released := _state()
 	print("SCRAPERX_GRAPPLE_RECOVERY before=", released)
-	_check(not bool(released["line_attached"]) and bool(released["action_recovers_hook"]),
+	_check(not bool(released["line_attached"]) and bool(released["recovery_nearby"]) and not bool(released["action_recovers_hook"]),
 		"nearby released native hook selects recovery intent")
 	_check(_main._ctx["action"]["label"] == "RECOVER HOOK"
 		and _main._touch.button_label(&"action") == "RECOVER HOOK",
@@ -403,8 +405,8 @@ func _run() -> void:
 	await _walk("equipped")
 	for id in [&"pendant_up", &"pendant_down"]:
 		var button = _main._touch._buttons[id]
-		_check(button.center.x - button.radius * 1.22 > _main._touch._stick_zone.end.x
-			and button.center.distance_to(_main._touch.stick_home()) > button.radius * 1.22 + 150.0 * _main._touch._u,
+		_check(button.center.distance_to(_main._touch.stick_home()) > button.radius * 1.22 + 150.0 * _main._touch._u
+			and button.center.distance_to(_main._touch.button_center(&"tools")) > (button.radius + _main._touch._buttons[&"tools"].radius) * 1.22,
 			"grapple reel control stays outside movement stick: " + String(id))
 	var at := root.get_visible_rect().size * Vector2(0.78, 0.35)
 	var sensitivity: float = Router.LOOK_RADIANS_PER_UNIT * _main._router.look_sensitivity
@@ -420,6 +422,12 @@ func _run() -> void:
 	await _step()
 	_check(absf(float(_main._pitch) - 1.45) < 0.001
 		and absf(float(_main._yaw) + PI * 0.5) < 0.001, "viewport look drag reaches high grapple aim through router")
+	_check(float(_state().shot_energy_j) == 900.0 and int(_state().shot_profile) == 1, "carried gun defaults to long shot before near-work diagnostic")
+	if not _tap(&"grapple_range"):
+		quit(1)
+		return
+	await _step(2)
+	_check(int(_state().shot_profile) == 0 and float(_state().shot_energy_j) == 180.0, "touch selects precision for close-work controls")
 	var ammo: int = _state()["cartridges_remaining"]
 	if not _tap(&"action"):
 		quit(1)
@@ -428,8 +436,10 @@ func _run() -> void:
 	var fired := _state()
 	_check(int(fired["cartridges_remaining"]) == ammo - 1 and int(fired["state"]) == 1
 		and bool(fired["line_attached"]), "touch Action fires one native hook and pays line")
+	_check(float(fired["shot_energy_j"]) == 180.0 and float(fired["maximum_shot_energy_j"]) == 900.0 and float(fired["maximum_line_length_m"]) == 60.0
+		and float(fired["hook_mass_kg"]) == 2.0, "native bridge reports finite powered-shot contract")
 	_check(is_finite(float(fired["launch_energy_j"])) and float(fired["launch_energy_j"]) > 179.0
-		and float(fired["launch_energy_j"]) <= 180.001, "finite native cartridge work")
+		and float(fired["launch_energy_j"]) <= float(fired["shot_energy_j"]) + 0.001, "finite native cartridge work")
 	_view("flight")
 	if not _tap(&"action"):
 		quit(1)
@@ -456,16 +466,16 @@ func _run() -> void:
 	_check(_state().has("auto_reel") and typeof(_state().get("auto_reel")) == TYPE_BOOL,
 		"actual bridge exposes Boolean auto reel state")
 	length = _state()["paid_out_length"]
-	if not _tap(&"auto_reel"):
+	if not _tap(&"action"):
 		quit(1)
 		return
 	await _step(18)
 	_check(bool(_state()["auto_reel"]) and float(_state()["paid_out_length"]) < length - 0.1,
 		"one touch starts native takeup that persists through neutral pendant frames")
-	_check(_main._ctx["grapple_auto_reel"] and _main._touch.button_label(&"auto_reel") == "STOP REEL",
+	_check(_main._ctx["grapple_auto_reel"] and _main._touch.button_label(&"action") == "STOP REEL",
 		"shipping HUD acknowledges actual native auto reel")
 	await _walk("automatic reel")
-	if not _tap(&"auto_reel"):
+	if not _tap(&"action"):
 		quit(1)
 		return
 	await _step(2)
@@ -473,7 +483,19 @@ func _run() -> void:
 	await _step(18)
 	_check(not bool(_state()["auto_reel"]) and absf(float(_state()["paid_out_length"]) - length) < 0.0001,
 		"one touch STOP halts native takeup across subsequent neutral frames")
-	if not _tap(&"auto_reel"):
+	# The old dedicated Auto button is now the contextual primary Action.
+	# Keep this motor-control exercise outside real pickup reach by walking
+	# on the existing roof; pickup itself has separate native/public checks.
+	for i in 90:
+		var gun := _state()
+		if (gun.rope_end as Vector3).distance_to(gun.rope_start) >= 2.0:
+			break
+		_stick(true)
+		await _step()
+	_stick(false)
+	await _step(4)
+	_check(_native.is_player_grounded() and not bool(_state().action_recovers_hook), "ordinary roof movement keeps repeated motor commands distinct from pickup")
+	if not _tap(&"action"):
 		quit(1)
 		return
 	await _step(2)
@@ -483,9 +505,9 @@ func _run() -> void:
 	_touch(_main._touch.button_center(&"pendant_down"), false)
 	await _step(2)
 	_check(not bool(_state()["auto_reel"]) and float(_state()["paid_out_length"]) > length + 0.1
-		and _main._touch.button_label(&"auto_reel") == "AUTO REEL",
+		and _main._touch.button_label(&"action") == "REEL IN",
 		"manual pendant overrides automatic reel and HUD acknowledges cancellation")
-	if not _tap(&"auto_reel"):
+	if not _tap(&"action"):
 		quit(1)
 		return
 	await _step(2)

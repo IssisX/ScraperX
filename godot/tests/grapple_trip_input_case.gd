@@ -12,6 +12,7 @@ var next_phase := ""
 var loaded_ticks := 0
 var paid_before := 0.0
 var initial_shots := 0
+var shot_flight_ticks := 0
 var before_exit := Vector3.ZERO
 
 func begin(shipping_main: Node) -> Dictionary:
@@ -23,15 +24,21 @@ func begin(shipping_main: Node) -> Dictionary:
 	main._touch.update_context(main._ctx, 1.0)
 	check(bool(main._native.get_grapple_gun_state().acquired), "gun starts carried without visiting high rack")
 	check(bool(main._ctx.grapple_draw_available), "starting touch draw is offered")
-	tap(&"grapple")
+	draw_or_stow()
 	step(2)
 	check(bool(main._native.get_grapple_gun_state().equipped), "touch draws carried gun at ordinary spawn")
-	tap(&"grapple")
+	draw_or_stow()
 	step(2)
 	check(not bool(main._native.get_grapple_gun_state().equipped), "touch stows at spawn")
 	check(main._native.debug_restart_at(Vector3(10, 485.15, -132.8)), "single roof start, no later relocation")
 	transition("settle")
 	return result()
+
+func draw_or_stow() -> void:
+	if not main._touch._tool_tray_open:
+		tap(&"tools")
+		main._touch.update_context(main._ctx, 1.0)
+	tap(&"grapple")
 
 func result() -> Dictionary:
 	return {"checks": checks, "failures": failures, "done": done, "phase": phase, "ticks": ticks,
@@ -91,8 +98,11 @@ func shoot() -> void:
 	var delta := target - position
 	var distance := Vector2(delta.x, delta.z).length()
 	# Same physical launch model as the native public route: 2kg head,
-	# 180J cartridge, reciprocal85kg recoil, finite muzzle/head offset.
-	var speed := sqrt(360.0 / (1.0 / 85.0 + 1.0 / 2.0)) / 2.0
+	# Native finite cartridge, reciprocal85kg recoil, finite muzzle/head offset.
+	var config: Dictionary = main._native.get_grapple_gun_state()
+	var mass := float(config.hook_mass_kg)
+	var speed := sqrt(2.0 * float(config.shot_energy_j) / (1.0 / 85.0 + 1.0 / mass)) / mass
+	shot_flight_ticks = ceili(2.0 * speed / 9.81 * 90.0) + 90
 	var low := 1.1
 	var high := 1.49
 	for i in 48:
@@ -138,11 +148,15 @@ func advance(budget: int = 90) -> Dictionary:
 			"departure":
 				if phase_ticks >= 90:
 					check(main._native.get_support_entity_id() == 1965, "actual departure footing")
-					tap(&"grapple")
+					draw_or_stow()
 					transition("draw")
 			"draw":
 				if phase_ticks >= 1:
 					check(bool(gun.equipped), "touch draw acknowledged before shot")
+					if int(gun.shot_profile) == 1:
+						tap(&"grapple_range")
+						step(1)
+					check(int(main._native.get_grapple_gun_state().shot_profile) == 0, "touch selects near shot for close receiver")
 					shoot()
 			"flight":
 				if phase_ticks >= 450:

@@ -208,7 +208,7 @@ void fire_into_cup(Simulation &s) {
     const auto v = s.snapshot();
     // Ideal high arc includes barrel offset and reciprocal85kg recoil.
     // This chooses ordinary aim only; real collision/contact decides retention.
-    const double speed = std::sqrt(2*GrapplingGun::cartridge_energy_j /
+    const double speed = std::sqrt(2*GrapplingGun::precision_energy_j /
         (1.0/85.0+1.0/GrapplingGun::hook_mass_kg))/GrapplingGun::hook_mass_kg;
     const auto p = s.kit_body_position(s.kit_body_index(kGrapplePracticeCupEntity));
     const double target_dx = p.x-v.player_position.x;
@@ -474,7 +474,7 @@ void portable_return_rail(Simulation&s){
  require(before.acquired&&before.equipped&&!before.station_available&&!before.line_attached,"portable second use without rack",s);
  const auto target=body_point(s,kGrapplePracticeCupEntity,{.6F,.6F,.19F});
  const double dx=target.x-v.player_position.x,dz=target.z-v.player_position.z,range=std::hypot(dx,dz),height=target.y-v.player_position.y-.35;
- const double speed=std::sqrt(2*GrapplingGun::cartridge_energy_j/(1./85+1./GrapplingGun::hook_mass_kg))/GrapplingGun::hook_mass_kg;
+ const double speed=std::sqrt(2*GrapplingGun::precision_energy_j/(1./85+1./GrapplingGun::hook_mass_kg))/GrapplingGun::hook_mass_kg;
  double lo=1.1,hi=1.5707;
  for(int i=0;i<48;++i){const double a=(lo+hi)/2,t=(range-.95*std::cos(a))/(speed*std::cos(a));if(.95*std::sin(a)+speed*std::sin(a)*t-4.905*t*t>height)lo=a;else hi=a;}
  const double a=(lo+hi)/2;
@@ -698,7 +698,7 @@ void independent_407(Simulation &s) {
     const auto v = s.snapshot();
     const double dx = -5.1-v.player_position.x, dz = -128.645-v.player_position.z;
     const double range = std::hypot(dx, dz), height = 408.3-v.player_position.y-.35;
-    const double speed = std::sqrt(2*GrapplingGun::cartridge_energy_j /
+    const double speed = std::sqrt(2*GrapplingGun::precision_energy_j /
         (1./85+1./GrapplingGun::hook_mass_kg))/GrapplingGun::hook_mass_kg;
     double lo = 1.1, hi = 1.5707;
     for (int i = 0; i < 48; ++i) {
@@ -768,7 +768,7 @@ void independent_407(Simulation &s) {
 } // namespace
 int main(int argc, char **argv) {
     const std::string mode = argc > 1 ? argv[1] : "primary";
-    if (mode != "primary" && mode != "miss-retry" && mode != "failed-retrieval" && mode != "recovery-only" && mode != "older-hook" && mode != "portable-fire" && mode != "portable-rail" && mode != "independent407") return EXIT_FAILURE;
+    if (mode != "primary" && mode != "miss-retry" && mode != "failed-retrieval" && mode != "recovery-only" && mode != "older-hook" && mode != "portable-fire" && mode != "portable-rail" && mode != "independent407" && mode != "long-range") return EXIT_FAILURE;
     std::cout << std::fixed << std::setprecision(6);
     Simulation s(InitialSpawn::ExteriorGrade, WorldContent::Slingshot);
     require(s.entity_body_count(kDeparture) == 1 && s.entity_body_count(kReceiver) == 1 &&
@@ -782,6 +782,22 @@ int main(int argc, char **argv) {
     walk_body(s,kDeparture,JPH::Vec3::sZero(),"real_departure_approach"); stable_actual_support(s,kDeparture);
     require(s.grapple_gun_state().station_available && s.set_grapple_equipped(true), "real gun station equip", s);
     tick(s); require(s.grapple_gun_state().acquired && s.grapple_gun_state().equipped, "gun acquired", s);
+    if (mode == "long-range") {
+        const auto before=s.grapple_gun_state();
+        require(before.shot_profile==1&&before.shot_energy_j==900,"carried gun defaults to native long profile",s);
+        require(!s.request_grapple_shot_profile(2),"unknown profile rejected at input boundary",s);
+        require(s.set_grapple_aim(0,1,0)&&s.request_grapple_action(),"ordinary long-range upward shot",s);tick(s);
+        const auto launched=s.grapple_gun_state();const auto start=s.snapshot().player_position;
+        tick(s,45);const auto end=s.grapple_gun_state();
+        require(end.line_attached&&end.hook_endpoint.y-start.y>12&&launched.last_launch_work_j>899&&
+                launched.last_launch_work_j<=900&&end.cartridges+1==before.cartridges,
+                "actual public long shot exceeds old apex with one finite cartridge",s);
+        std::cout<<"PASS GRAPPLE_LONG_RANGE actual_public_input=1 rise_m="<<end.hook_endpoint.y-start.y<<" paid_j="<<launched.last_launch_work_j<<" default_long=1\n";
+        return EXIT_SUCCESS;
+    }
+    require(s.request_grapple_shot_profile(0),"near-target precision profile requested through ordered public input",s);tick(s);
+    require(s.grapple_gun_state().shot_profile==0&&s.grapple_gun_state().shot_energy_j==180,
+            "near-target precision acknowledged by native owner",s);
     if (mode == "independent407") { independent_407(s); return EXIT_SUCCESS; }
     if (mode == "failed-retrieval") { failed_retrieval_preserves_stock(s); return EXIT_SUCCESS; }
     if (mode == "older-hook") { older_hook_recovery_intent(s); return EXIT_SUCCESS; }

@@ -152,6 +152,8 @@ public:
         bool grapple_equip_requested = false, grapple_equipped = false;
         bool grapple_action = false, grapple_release = false;
         bool grapple_auto_reel_requested = false, grapple_auto_reel = false;
+        bool grapple_shot_profile_requested = false;
+        unsigned grapple_shot_profile = 1;
     };
 
     static bool nearby_grapple_hook(const GrapplingGun::Readback &state);

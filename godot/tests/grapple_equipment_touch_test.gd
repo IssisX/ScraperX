@@ -24,6 +24,12 @@ func touch(router: Node, index: int, at: Vector2, pressed: bool) -> void:
 	event.pressed = pressed
 	router._input(event)
 
+func open_tools(router: Node, controls: Control) -> void:
+	if not controls._tool_tray_open:
+		touch(router, 90, controls.button_center(&"tools"), true)
+		touch(router, 90, controls.button_center(&"tools"), false)
+		check(router.frame(0.016)["verbs"].is_empty(), "tools opens locally without a native verb")
+
 func _run() -> void:
 	root.size = Vector2i(2160, 1856)
 	var controls := TouchControls.new()
@@ -39,14 +45,15 @@ func _run() -> void:
 	if not controls._buttons.has(&"grapple"):
 		quit(1)
 		return
+	open_tools(router, controls)
 	var button = controls._buttons[&"grapple"]
-	check(button.shown and button.enabled and button.label == "DRAW", "draw availability shown")
+	check(button.shown and button.enabled and button.label == "GRAPPLE", "draw availability shown")
 	touch(router, 0, button.center, true)
 	check(router.frame(0.016)["verbs"] == [&"toggle_grapple"], "competing climb Action does not mask grapple draw")
 	for i in range(10):
 		controls.update_context(ctx, 0.016)
 		check(router.frame(0.016)["verbs"].is_empty(), "held draw never repeats")
-	check(button.label == "DRAW" and not ctx["grapple_equipped"], "draw press waits for native acknowledgement")
+	check(not button.shown and not ctx["grapple_equipped"], "draw press waits for native acknowledgement")
 	touch(router, 0, button.center, false)
 	touch(router, 1, controls.button_center(&"action"), true)
 	check(router.frame(0.016)["verbs"] == [&"action"], "contextual Action remains separate")
@@ -56,7 +63,8 @@ func _run() -> void:
 	ctx["grapple_line_attached"] = true
 	ctx["drop_ok"] = true
 	controls.update_context(ctx, 1.0)
-	check(button.shown and button.enabled and button.label == "STOW", "native equipped state exposes deliberate stow")
+	open_tools(router, controls)
+	check(button.shown and button.enabled and button.label == "STOW GRAPPLE", "native equipped state exposes deliberate stow")
 	check(controls.button_label(&"drop") == "RELEASE", "attached Drop still releases line")
 	touch(router, 2, button.center, true)
 	check(router.frame(0.016)["verbs"] == [&"toggle_grapple"], "stow uses equipment verb even with attached line")
@@ -68,11 +76,13 @@ func _run() -> void:
 	router.clear_held()
 	ctx["grapple_draw_available"] = true
 	controls.update_context(ctx, 1.0)
+	open_tools(router, controls)
 	button.enabled = false
 	touch(router, 4, button.center, true)
 	check(router.frame(0.016)["verbs"].is_empty() and button.index == -1, "disabled grapple cannot capture or dispatch")
 	router.clear_held()
 	controls.update_context(ctx, 1.0)
+	open_tools(router, controls)
 	touch(router, 5, button.center, true)
 	router.frame(0.016)
 	button.enabled = false
@@ -99,6 +109,7 @@ func _run() -> void:
 				ctx["grapple_equipped"] = true
 				ctx["chute_ok"] = true
 				controls.update_context(ctx, 1.0)
+				open_tools(router, controls)
 				var hit: float = button.radius * controls.HIT_SLOP
 				check(controls._safe.has_point(button.center - Vector2.ONE * hit) and controls._safe.has_point(button.center + Vector2.ONE * hit), "grapple hit circle stays within safe area")
 				# HUD altimeter is scaled independently of the touch-size setting.
@@ -110,10 +121,10 @@ func _run() -> void:
 				var font: Font = controls.UiStyle.font_label()
 				var font_size := int(roundf(25.0 * controls._u))
 				var outline := int(roundf(6.0 * controls._u))
-				for label in ["DRAW", "STOW"]:
+				for label in ["GRAPPLE", "STOW GRAPPLE"]:
 					var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 					var height := font.get_ascent(font_size) + font.get_descent(font_size)
-					var label_center: Vector2 = button.center + Vector2(0.0, button.radius + 30.0 * controls._u)
+					var label_center: Vector2 = button.center
 					var label_bounds := Rect2(label_center - Vector2(width, height) * 0.5, Vector2(width, height)).grow(outline)
 					check(not label_bounds.intersects(hud_reserved), "grapple " + label + " label avoids HUD altimeter")
 					check(controls._safe.encloses(label_bounds), "grapple label stays within safe area")

@@ -23,6 +23,8 @@ func step() -> void:
 	main._rigging_view.update_state(main._native.get_rigging_state(), main._audio)
 
 func tap(control: StringName) -> void:
+	if control == &"toggle_rigging" and not main._touch._tool_tray_open:
+		tap(&"tools")
 	check(main._touch.is_button_shown(control), "touch target visible: " + str(control))
 	var event := InputEventScreenTouch.new()
 	event.index = 41
@@ -59,7 +61,7 @@ func _run() -> void:
 	step()
 	check(bool(native.get_rigging_state().equipped), "actual touch target equips native tool")
 	check(main._ctx.operating == &"rigging", "native acknowledgment selects rigging station")
-	check(main._touch.is_button_shown(&"toggle_rigging"), "phone equipment control stays visible")
+	check(main._touch.is_button_shown(&"tools"), "phone equipment selector stays visible")
 	check(not main._touch.is_button_shown(&"pendant_up"), "tool does not expose machine pendant")
 	check(int(native.get_rigging_state().installed_count) == 0 and int(native.get_kit_body_count()) == bodies,
 		"equipping does not create support or hardware")

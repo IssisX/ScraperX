@@ -1,0 +1,160 @@
+{
+  "source_parent": "7c6269fbcaa47afc9260e933fba2be7e1081e2ff",
+  "working_source": {
+    "result": "module23_pass_bridge_built",
+    "source_sha256": {
+      "src/sim/simulation/affordance.cpp": "b22dfa1c50551211619b7485a7ff2c15057910b91b48c0bc7bb72834fde3d522",
+      "src/sim/simulation/carry.cpp": "ab177f4e392404845e152ba3d4e93d1595716b93049798c845113a883997a74b",
+      "src/sim/simulation/checkpoint.cpp": "c9f055f05d80d8699d1b7371046a7128dbecc9d18337af1e1e199871fff3041a",
+      "src/sim/simulation/climb.cpp": "a25f8ea4a41a38508dcea685193910dc7604e96bbde1c19b002cda6d3ae7c33b",
+      "src/sim/simulation/fixture_build.cpp": "a47f9a02901b0abbe3884e05c3ad160da37a8abd114336c3a242e44741ba0473",
+      "src/sim/simulation/forklift.cpp": "6550eb52ad001eb3aba49b0441d58bf81d307188120cf2a395172db0000afd5c",
+      "src/sim/simulation/geometry.cpp": "ed276ce28a86df339bded72ec6f40784aa140d1611c199a31a9fb01008d51a68",
+      "src/sim/simulation/grapple.cpp": "8f880ae778217a5ed90fee4049a3320e8ce573fbfb844133ab92e9b700b39023",
+      "src/sim/simulation/ground_slide.cpp": "fb0350a2669565f6774dd997b09ed57a5b7ecc64b4dcb604a4b83eda0ca2885d",
+      "src/sim/simulation/hand_transfer.cpp": "004cc7ac5844c26c778dcf1df54bb5461dd6cb5a97a124bc4be8aba28e9ab4b0",
+      "src/sim/simulation/ledge_corner.cpp": "798fa6987b5d0f82a22123331b96a681fdc6278dc89659e1904e02f7ef123154",
+      "src/sim/simulation/legacy_traversal.cpp": "d0f3b9cbaa42b7fffe68109543c3a325f20d5436ca51bbf501cd55c737ea6f0a",
+      "src/sim/simulation/locomotion.cpp": "6a271ab532582119878d26c5097710a9a3ae84ba08f67e836ac0662e61c02f18",
+      "src/sim/simulation/machine_build.cpp": "f052c724aa2751198853e95e2f7e193479ab9a3948f61809c58767584e530022",
+      "src/sim/simulation/machine_update.cpp": "64391075dacca8fd300eaad6bbfdc0f41e1b8a76e9c1b2f2920fbd89f40000fd",
+      "src/sim/simulation/palm_vault.cpp": "d7f2058b32ab4501d29be3834c1b470c37f2b979f1f16eb733b799af0575895c",
+      "src/sim/simulation/parkour_intent.cpp": "4cecdb77d12b9315ce25627f04b13624992ee433d75b0f242e999a6350e3156f",
+      "src/sim/simulation/queries.cpp": "d70419ec87a2238d5663bc06be0e0f2e87d9d000c193c48f56ebc4064a4e3235",
+      "src/sim/simulation/rigging.cpp": "8e3a6b2592ad4967f98634013f8a8f8f5f40d8e4f76604e9b8309e8ddd2eaf02",
+      "src/sim/simulation/slingshot_audio.cpp": "d0c08b2e91dc357f8034296b41675a9e238f78ac5b88867b4e9496d145f328be",
+      "src/sim/simulation/snapshot.cpp": "427dfc5afeed7fefd00edf9d668bdeee908128e1c7f026414c28162143b1b828",
+      "src/sim/simulation/story_actor.cpp": "8c51e169290540166d82b9da36a49755aefecc2ce2630c466fa3b690164e7519",
+      "src/sim/simulation/support.cpp": "2a480bee2b9164418d130dbb863e332c7508ee6b6c7f615a492074fab5b0016a",
+      "src/sim/simulation/swing_transfer.cpp": "97060d7be0c0bec9ddf834e17eba83bf6a38d734699d8da779299412a3d1e646",
+      "src/sim/simulation/tick.cpp": "aeec95c94f78f888eae4fbab78bff11ec4d51adc5bf2556055dac0ced7957c75",
+      "src/sim/simulation/traversal_line.cpp": "0dc2eee2fb64ac82538ef62dbfa771a88cccd03494e79b833d1c1095ab4eb134",
+      "src/sim/simulation/world.cpp": "c3e8f266f44e1eb8f25b5f066da4602741555ffc72cab7a639631e9f6008b6f0",
+      "src/sim/simulation/world_geometry.cpp": "c370d4a1af4a5b4a39731073ee45e7f8597c7a164089b1f460bc98cecf3a580e",
+      "src/sim/simulation/yard_crane_control.cpp": "293afd00acb02fdd8a9ca9fa4a863584ea675bb17842fff418ca686ce56de192",
+      "src/sim/simulation.cpp": "622c51152a465faa65bec17a421ae4eaf4604700982abd067c79bf8697a75356",
+      "src/sim/grappling_gun.cpp": "3949af6e9bb4f7d45ae9d0fddd04dfa2ebde374ae723fcc4107d8d7c89774509",
+      "src/sim/physical_story_actor.cpp": "574e96224543aec19159d70c4ad1deadb4d6ae8222df94ccc650ec3235f7230e",
+      "src/bridge/register_types.cpp": "65e4f5d31131b17df921a41fc2ad2bf764cb55c8a5bf6185c35f6c6fef666627",
+      "src/bridge/scraperx_simulation.cpp": "36baf2a13727bebcbc707648316b2f62e128832478f6f2029cada60e37ede1f6",
+      "src/bridge/yard_crane_bridge.cpp": "b1ec99439451fb8bbfc3f0311a132307d1123dc48956301004f128197512c6c1",
+      "src/bridge/story_actor_bridge.cpp": "e753afdc50ee4cd48488fbd3a34f946ec6f3a041448640746c5a46de96622331"
+    },
+    "headers_sha256": {
+      "src/sim/simulation.hpp": "4e0d530c488dc0d6cdc695db8942a4ce89b5f72dca551778e227ec17885b2c5d",
+      "src/sim/simulation/world.hpp": "a95400d68cbb4f36e780e59a326f09213e190e66f3d6f894636b82d925b50b37",
+      "src/sim/grappling_gun.hpp": "e28e1dc8109be6f2f6c0b2dba2f148df2e5d64586f1291f0a8b3a8283763c55b",
+      "src/bridge/scraperx_simulation.hpp": "ca1448390619c31d714b6c62ea662ef466080207c631d6c03841d2687da5ba5e"
+    },
+    "archive": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/libgrapple-profiles.a",
+    "library": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/libscraperx_native.so"
+  },
+  "executions": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/grappling_gun"
+      ],
+      "exit": 0,
+      "observed_output": [
+        "PASS shot_profile_changes_only_next_cartridge",
+        "GRAPPLE_RANGE rise_m=46.0436 paid_j=900 max_line_m=60 gravity=9.81 player_kg=85 hook_kg=2",
+        "PASS useful_vertical_range",
+        "PASS slow_paying_out_hook_is_recoverable",
+        "PASS automatic_reel_latches_and_stops",
+        "PASS automatic_reel_limits_and_failure",
+        "PASS rotated_retention_observation",
+        "PASS square_retention_observation",
+        "PASS terminal_mass_and_inertia",
+        "PASS launch_momentum_energy",
+        "PASS passive_release",
+        "PASS launch_orientation_follows_horizontal_bearing",
+        "PASS slack_and_neutral",
+        "PASS finite_inventory_retrieval",
+        "PASS resting_terminal_retrieval",
+        "GRAVITY_PICKUP_WORK paid_j=1.06542 recovered=1",
+        "PASS gravity_settled_terminal_retrieval",
+        "PASS captured_terminal_cannot_withdraw_through_slot",
+        "PASS hand_clearance_includes_other_hook_parts",
+        "PASS pickup_overspeed_cancels_without_impulse",
+        "PASS pickup_completion_keeps_requested_hook",
+        "PASS wall_collision_does_not_anchor",
+        "PASS obstructed_line_cancels_force",
+        "PASS finite_paid_reel_reaction",
+        "PASS outward_loaded_reel_force_limit",
+        "grappling gun checks: 23/23"
+      ],
+      "full_output_sha256": "3fa39ccdb868a912319525fbb5f414d9c4ef38ba8155588679a66ed51d5b6923"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/grapple_practice_route",
+        "long-range"
+      ],
+      "exit": 0,
+      "observed_output": [
+        "PASS GRAPPLE_LONG_RANGE actual_public_input=1 rise_m=14.972778 paid_j=899.999895 default_long=1"
+      ],
+      "full_output_sha256": "333a007ec71a3a7130fdcac7371749e5486d44521054c42d3c0b7cd330076742"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/grapple_practice_route",
+        "primary"
+      ],
+      "exit": 0,
+      "observed_output": [
+        "PASS GRAPPLE_ROUTE mode=primary initial_staging_only=1 native_head_seated=1 passive_loaded=1 loaded_reel_work=1 receiver1968=1 original_roof_exit=1 deaths=0"
+      ],
+      "full_output_sha256": "64d780b3d5c20b5dcd5c20ec281886aca2f57d22856a693b9365ae4cf88d877e"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/grapple-touch/profiles/grapple_practice_route",
+        "recovery-only"
+      ],
+      "exit": 0,
+      "observed_output": [
+        "PASS GRAPPLE_ROUTE recovery-only initial_staging_only=1 actual_hook_retrieved=1 finite_leg_stairs=1 departure_return=1 spent_cartridge=1 deaths=0"
+      ],
+      "full_output_sha256": "a356fca7a44ac3035c81eed4d6186aaed09f9f2f49a4ac305af888e720832780"
+    }
+  ],
+  "toolbelt": {
+    "exit": 0,
+    "pass": true,
+    "source": {
+      "presentation/ui/touch_controls.gd": "8eb538858f6fd0495b32999a769e57f24fd514b5bbdce7521cf46002cfe779ea",
+      "tests/toolbelt_touch_test.gd": "3889acac6de00e8c54825a6e7c0a07c631ced9d25d0f6ddcbeb7d344e63501eb"
+    }
+  },
+  "scope": "GNU/Linux ARM64 native plus actual Godot4.7 MCP touch integration; staged crossing start, ordinary yard toolbelt start; not phone feel, full-ascent or release proof",
+  "limits": [
+    "Recovered steel does not replenish spent finite launch cartridges.",
+    "A full-power miss on very thin steel exposed opposed contacts inside Jolt20mm contact slop. No collision/withdrawal gate weakened or global solver setting changed; that edge remains unresolved. Near profile preserves close-work control.",
+    "Phone layout ergonomics, hearing and sustainable FPS require device observation."
+  ]
+}

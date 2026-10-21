@@ -100,13 +100,20 @@ func _run() -> void:
 	# locked hook whose geometry has moved back within the player's reach.
 	native.gun["action_recovers_hook"] = true
 	refresh()
+	check(controls.button_label(&"action") == "STOP REEL", "active motor always keeps a stop control even when hook is reachable")
+	native.gun["auto_reel"] = false
+	refresh()
 	check(controls.button_label(&"action") == "RECOVER HOOK", "native nearby hook offers recovery")
 	tap(&"action")
 	check(native.action_requests == 1 and native.reel_requests.size() == 2, "nearby primary dispatch remains recovery")
 	native.gun.erase("action_recovers_hook")
 	refresh()
-	check(controls.button_label(&"action") == "STOP REEL", "absent native recovery flag never assumes remote retrieval")
+	check(controls.button_label(&"action") == "REEL IN", "absent native recovery flag never assumes remote retrieval")
 	native.gun["state"] = 1
+	native.gun["action_recovers_hook"] = true
+	refresh()
+	check(controls.button_label(&"action") == "RECOVER HOOK", "native reachable payout hook offers pickup before Lock Line")
+	native.gun["action_recovers_hook"] = false
 	refresh()
 	check(controls.button_label(&"action") == "LOCK LINE", "flying hook retains Lock Line")
 	tap(&"action")

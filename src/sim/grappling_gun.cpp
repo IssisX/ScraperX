@@ -122,6 +122,8 @@ struct GrapplingGun::Impl {
     JPH::Ref<GrappleRope> rope;
     JPH::RefConst<JPH::Shape> shape;
     unsigned cartridges=capacity;
+    ShotProfile shot_profile=ShotProfile::Long;
+    float shot_energy() const { return shot_profile==ShotProfile::Near ? precision_energy_j : cartridge_energy_j; }
     int selected=-1;
     LineState state=LineState::Ready;
     Failure failure=Failure::None, pending=Failure::None;
@@ -133,6 +135,81 @@ struct GrapplingGun::Impl {
     float pickup_time=0;
     double pickup_work=0;
     void cancel_pickup() { pickup_active=false; pickup_body=BodyID(); pickup_time=0; }
+    struct RetrievalGrasp {
+        int index=-1;
+        RVec3 from=RVec3::sZero(), target=RVec3::sZero();
+        Vec3 relative_velocity=Vec3::sZero();
+        RefConst<Shape> shape;
+        RMat44 transform;
+        Vec3 contact_local=Vec3::sZero(), hand_local=Vec3::sZero();
+        AABox bounds;
+    };
+    // Shared read-only hand approach. Queries select intent, never support or
+    // inventory; retrieve still checks the complete hand and withdrawal path.
+    Failure find_retrieval_grasp(RetrievalGrasp &result) const {
+        const auto &s=*this;
+    RVec3 from;
+    Vec3 player_velocity;
+    {
+        BodyLockRead lock(s.system.GetBodyLockInterface(),s.player);
+        if (!lock.Succeeded()) return Failure::BodyUnavailable;
+        from=lock.GetBody().GetCenterOfMassPosition(); player_velocity=lock.GetBody().GetLinearVelocity();
+    }
+    int best=-1;
+    float nearest=1.10F;
+    RVec3 target;
+    float selected_eye_distance=0;
+    Vec3 relative_velocity;
+    RefConst<Shape> retrieved_shape;
+    RMat44 retrieved_transform;
+    Vec3 contact_local=Vec3::sZero(), hand_local=Vec3::sZero();
+    AABox retrieved_bounds;
+    for (unsigned i=0;i<capacity;++i) {
+        if (s.hooks[i].IsInvalid()) continue;
+        // Automatic completion belongs to the grasp requested by Action.
+        // A different old hook becoming nearer does not transfer that request.
+        if (s.inspecting_pickup && s.hooks[i]!=s.pickup_body) continue;
+        BodyLockRead lock(s.system.GetBodyLockInterface(),s.hooks[i]);
+        if (!lock.Succeeded()) continue;
+        const auto &hook=lock.GetBody();
+        const auto bounds=hook.GetWorldSpaceBounds();
+        const Vec3 outside=Vec3::sMax(bounds.mMin-Vec3(from),
+            Vec3::sMax(Vec3(from)-bounds.mMax,Vec3::sZero()));
+        if (outside.LengthSq()>1.14F*1.14F) continue;
+        // Sweep the whole finite hand to the actual back bridge. First contact
+        // supplies an exposed grasp even when a ray-normal offset would bury
+        // the hand in another leaf of this concave compound.
+        const RVec3 focus=hook.GetWorldTransform()*Vec3(-.091F,.10F,0);
+        const Vec3 direction(focus-from);
+        const SphereShape hand(.04F);
+        const RShapeCast approach(&hand,Vec3::sReplicate(1),RMat44::sTranslation(from),direction);
+        ShapeCastSettings settings; settings.mReturnDeepestPoint=true;
+        ClosestHitCollisionCollector<CastShapeCollector> hits;
+        const HookBodyFilter only_hook(s.hooks[i]);
+        s.system.GetNarrowPhaseQueryNoLock().CastShape(approach,settings,from,hits,{},{},only_hook);
+        if (!hits.HadHit()) continue;
+        const RVec3 contact=from+hits.mHit.mContactPointOn2;
+        const RVec3 grasp=from+direction*hits.mHit.mFraction;
+        const float distance=Vec3(grasp-from).Length();
+        if (distance<=nearest) {
+            best=int(i); nearest=distance; target=grasp;
+            selected_eye_distance=Vec3(s.eye(hook)-from).Length();
+            relative_velocity=hook.GetPointVelocity(contact)-player_velocity;
+            retrieved_shape=hook.GetShape(); retrieved_transform=hook.GetCenterOfMassTransform();
+            contact_local=Vec3(retrieved_transform.Inversed()*contact);
+            hand_local=Vec3(retrieved_transform.Inversed()*grasp);
+            retrieved_bounds=hook.GetWorldSpaceBounds();
+        }
+    }
+    if (best<0) return Failure::OutOfReach;
+    if (s.rope && best==s.selected && (selected_eye_distance>s.rope->rest()+.005F || s.rope->tension()>1.0F)) {
+        return Failure::LineTaut;
+    }
+    if (relative_velocity.Length()>1.0F) return Failure::RetrievalTooFast;
+        result={best,from,target,relative_velocity,retrieved_shape,retrieved_transform,
+            contact_local,hand_local,retrieved_bounds};
+        return Failure::None;
+    }
     void pickup_step(float dt) {
         if (!pickup_active || !std::isfinite(dt) || dt<=0) return;
         const auto &access=system.GetBodyLockInterfaceNoLock();
@@ -233,6 +310,12 @@ GrapplingGun::GrapplingGun(JPH::PhysicsSystem &system, JPH::BodyID player, JPH::
     : impl_(std::make_unique<Impl>(system,player,layer)) {}
 GrapplingGun::~GrapplingGun() { clear_transients(); }
 bool GrapplingGun::line_active() const noexcept { return impl_->rope.GetPtr()!=nullptr; }
+bool GrapplingGun::set_shot_profile(ShotProfile profile) {
+    auto &s=*impl_;
+    if ((profile!=ShotProfile::Near && profile!=ShotProfile::Long) || s.rope || s.pickup_active) return false;
+    s.shot_profile=profile;
+    return true;
+}
 bool GrapplingGun::fire(JPH::Vec3 aim) {
     using namespace JPH;
     auto &s=*impl_;
@@ -293,13 +376,13 @@ bool GrapplingGun::fire(JPH::Vec3 aim) {
             rs.mRestLength=Vec3(s.eye(*h)-p->GetCenterOfMassPosition()).Length();
             rope=new GrappleRope(*p,*h,rs);
             const float inverse_mass=p->GetMotionProperties()->GetInverseMass()+h->GetMotionProperties()->GetInverseMass();
-            float magnitude=std::sqrt(2*cartridge_energy_j/(inverse_mass*aim.LengthSq()));
+            float magnitude=std::sqrt(2*s.shot_energy()/(inverse_mass*aim.LengthSq()));
             Vec3 impulse=aim*magnitude;
             const auto paid_energy=[&]() {
                 return .5*inverse_mass*(double(impulse.GetX())*impulse.GetX()+
                     double(impulse.GetY())*impulse.GetY()+double(impulse.GetZ())*impulse.GetZ());
             };
-            while (paid_energy()>cartridge_energy_j) {
+            while (paid_energy()>s.shot_energy()) {
                 magnitude=std::nextafter(magnitude,0.0F); impulse=aim*magnitude;
             }
             p->AddImpulse(-impulse);
@@ -400,63 +483,23 @@ void GrapplingGun::post_step() {
         s.remove_line(); s.failure=failure; s.state=LineState::Failed;
     }
 }
+bool GrapplingGun::recovery_in_reach() const {
+    Impl::RetrievalGrasp grasp;
+    return impl_->find_retrieval_grasp(grasp)==Failure::None;
+}
 bool GrapplingGun::retrieve() {
     using namespace JPH;
     auto &s=*impl_;
-    RVec3 from;
-    Vec3 player_velocity;
-    {
-        BodyLockRead lock(s.system.GetBodyLockInterface(),s.player);
-        if (!lock.Succeeded()) { s.failure=Failure::BodyUnavailable; return false; }
-        from=lock.GetBody().GetCenterOfMassPosition(); player_velocity=lock.GetBody().GetLinearVelocity();
-    }
-    int best=-1;
-    float nearest=1.10F;
-    RVec3 target;
-    float selected_eye_distance=0;
-    Vec3 relative_velocity;
-    RefConst<Shape> retrieved_shape;
-    RMat44 retrieved_transform;
-    Vec3 contact_local=Vec3::sZero(), hand_local=Vec3::sZero();
-    AABox retrieved_bounds;
-    for (unsigned i=0;i<capacity;++i) {
-        if (s.hooks[i].IsInvalid()) continue;
-        // Automatic completion belongs to the grasp requested by Action.
-        // A different old hook becoming nearer does not transfer that request.
-        if (s.inspecting_pickup && s.hooks[i]!=s.pickup_body) continue;
-        BodyLockRead lock(s.system.GetBodyLockInterface(),s.hooks[i]);
-        if (!lock.Succeeded()) continue;
-        const auto &hook=lock.GetBody();
-        // Sweep the whole finite hand to the actual back bridge. First contact
-        // supplies an exposed grasp even when a ray-normal offset would bury
-        // the hand in another leaf of this concave compound.
-        const RVec3 focus=hook.GetWorldTransform()*Vec3(-.091F,.10F,0);
-        const Vec3 direction(focus-from);
-        const SphereShape hand(.04F);
-        const RShapeCast approach(&hand,Vec3::sReplicate(1),RMat44::sTranslation(from),direction);
-        ShapeCastSettings settings; settings.mReturnDeepestPoint=true;
-        ClosestHitCollisionCollector<CastShapeCollector> hits;
-        const HookBodyFilter only_hook(s.hooks[i]);
-        s.system.GetNarrowPhaseQueryNoLock().CastShape(approach,settings,from,hits,{},{},only_hook);
-        if (!hits.HadHit()) continue;
-        const RVec3 contact=from+hits.mHit.mContactPointOn2;
-        const RVec3 grasp=from+direction*hits.mHit.mFraction;
-        const float distance=Vec3(grasp-from).Length();
-        if (distance<=nearest) {
-            best=int(i); nearest=distance; target=grasp;
-            selected_eye_distance=Vec3(s.eye(hook)-from).Length();
-            relative_velocity=hook.GetPointVelocity(contact)-player_velocity;
-            retrieved_shape=hook.GetShape(); retrieved_transform=hook.GetCenterOfMassTransform();
-            contact_local=Vec3(retrieved_transform.Inversed()*contact);
-            hand_local=Vec3(retrieved_transform.Inversed()*grasp);
-            retrieved_bounds=hook.GetWorldSpaceBounds();
-        }
-    }
-    if (best<0) { s.failure=Failure::OutOfReach; return false; }
-    if (s.rope && best==s.selected && (selected_eye_distance>s.rope->rest()+.005F || s.rope->tension()>1.0F)) {
-        s.failure=Failure::LineTaut; return false;
-    }
-    if (relative_velocity.Length()>1.0F) { s.failure=Failure::RetrievalTooFast; return false; }
+    Impl::RetrievalGrasp grasp;
+    const auto failure=s.find_retrieval_grasp(grasp);
+    if (failure!=Failure::None) { s.failure=failure; return false; }
+    const auto from=grasp.from, target=grasp.target;
+    const auto best=grasp.index;
+    const auto relative_velocity=grasp.relative_velocity;
+    const auto &retrieved_shape=grasp.shape;
+    const auto &retrieved_transform=grasp.transform;
+    const auto contact_local=grasp.contact_local, hand_local=grasp.hand_local;
+    const auto &retrieved_bounds=grasp.bounds;
     // A normal offset from one leaf can intersect another leaf of a
     // concave hook. Validate the full hand against the complete hook.
     const SphereShape hand(.04F);
@@ -538,6 +581,7 @@ GrapplingGun::Readback GrapplingGun::readback() const {
     result.retrieval_absorbed_relative_energy_j=s.retrieval_absorbed;
     result.reel_work_j=s.reel_work;
     result.auto_reel=s.auto_reel;
+    result.shot_profile=s.shot_profile; result.shot_energy_j=s.shot_energy();
     {
         BodyLockRead lock(s.system.GetBodyLockInterface(),s.player);
         if (lock.Succeeded()) result.player_endpoint=lock.GetBody().GetCenterOfMassPosition();
@@ -568,7 +612,7 @@ void GrapplingGun::clear_transients() {
     for (auto &hook:s.hooks) if (!hook.IsInvalid()) {
         bodies.RemoveBody(hook); bodies.DestroyBody(hook); hook=JPH::BodyID();
     }
-    s.selected=-1; s.cartridges=capacity;
+    s.selected=-1; s.cartridges=capacity; s.shot_profile=ShotProfile::Long;
     s.state=LineState::Ready; s.failure=s.pending=Failure::None;
     s.reel_input=0;
     s.launch_work=s.last_launch_work=s.spool_absorbed=s.release_discarded=s.retrieval_absorbed=s.reel_work=0;

@@ -72,6 +72,7 @@ public:
     [[nodiscard]] bool set_grapple_equipped(bool equipped);
     [[nodiscard]] bool set_grapple_reel_input(double input);
     [[nodiscard]] bool set_grapple_auto_reel(bool enabled);
+    [[nodiscard]] bool request_grapple_shot_profile(int profile);
     [[nodiscard]] bool request_grapple_action();
     [[nodiscard]] bool request_grapple_release();
     [[nodiscard]] godot::Dictionary get_grapple_gun_state() const;

@@ -32,6 +32,8 @@ const B_RIGHT := &"pendant_right"
 const B_SLING := &"sling"
 const B_REEL := &"slingshot_reel"
 const B_AUTO_REEL := &"auto_reel"
+const B_TOOLS := &"tools"
+const B_RANGE := &"grapple_range"
 const B_GRAPPLE := &"grapple"
 const B_LINE := &"toggle_traversal_line"
 const B_PACK_LINE := &"pack_traversal_line"
@@ -103,7 +105,7 @@ var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
 	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL, B_AUTO_REEL, B_GRAPPLE,
 	B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL, B_RIG, B_UNRIG,
-	B_RIGGING, B_UNDO, B_UNCLIP, B_CUT, B_LINE, B_PACK_LINE]
+	B_RIGGING, B_UNDO, B_UNCLIP, B_CUT, B_LINE, B_PACK_LINE, B_TOOLS, B_RANGE]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -134,6 +136,10 @@ var _thumb_notice_left := 0.0
 var _stick_tap_age := 0.0
 var _stick_tap_candidate := false
 var _cut_progress := 0.0
+var _tool_tray_open := false
+var _toolbelt_ctx: Dictionary = {}
+var _tool_name := "NONE"
+var _tool_tray_bounds := Rect2()
 
 
 func _ready() -> void:
@@ -231,14 +237,6 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
 	_place(B_CHUTE, jump + Vector2(-306.0, -450.0 if _split_drop_chute else 96.0) * _u, 86.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
-	# Leave the HUD altimeter its unscaled 394-unit top-right strip. The
-	# equipment circle keeps a 66-unit gap even when touch size changes.
-	var grapple_x := corner.x - 394.0 * UiStyle.unit(self) - 126.0 * _u
-	_place(B_GRAPPLE, Vector2(grapple_x, _safe.position.y + 108.0 * _u), 60.0)
-	for entry in [[B_RIGGING, 300.0], [B_UNDO, 480.0], [B_UNCLIP, 660.0], [B_CUT, 840.0]]:
-		_place(entry[0], Vector2(grapple_x, _safe.position.y + entry[1] * _u), 60.0)
-	_place(B_LINE, Vector2(grapple_x - 180.0 * _u, _safe.position.y + 108.0 * _u), 60.0)
-	_place(B_PACK_LINE, Vector2(grapple_x - 180.0 * _u, _safe.position.y + 300.0 * _u), 60.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
@@ -256,6 +254,21 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)
 	_place(B_RIGHT, _pendant_center + Vector2(arm, 0.0), 80.0)
 	_place(B_SLING, _pendant_center + Vector2(arm + 250.0 * _u, -arm * 0.6), 78.0)
+	# One left-thumb equipment home; the tray and selected-tool operations
+	# share its local deck and never occupy the sightline or right Action.
+	var tool_home := _stick_home + Vector2(0.0, -380.0) * _u
+	_place(B_TOOLS, tool_home, 72.0)
+	for entry in [[B_GRAPPLE, -140.0], [B_LINE, 40.0], [B_RIGGING, 220.0]]:
+		_place(entry[0], tool_home + Vector2(entry[1], -270.0) * _u, 64.0)
+	_tool_tray_bounds = Rect2(tool_home + Vector2(-230.0, -390.0) * _u, Vector2(550.0, 230.0) * _u)
+	for entry in [[B_RANGE, 250.0], [B_PACK_LINE, 250.0], [B_UNDO, 250.0], [B_UNCLIP, 430.0], [B_CUT, 610.0]]:
+		_place(entry[0], tool_home + Vector2(entry[1], 0.0) * _u, 64.0)
+	if _portable_tool and not forklift_mode and not yard_crane_mode:
+		_place(B_UP, tool_home + Vector2(250.0, 0.0) * _u, 64.0)
+		_place(B_DOWN, tool_home + Vector2(430.0, 0.0) * _u, 64.0)
+		if _toolbelt_ctx.get("operating", &"") == &"rigging":
+			_place(B_UP, tool_home + Vector2(250.0, -180.0) * _u, 64.0)
+			_place(B_DOWN, tool_home + Vector2(430.0, -180.0) * _u, 64.0)
 	if forklift_mode:
 		_layout_forklift()
 	if yard_crane_mode:
@@ -314,7 +327,7 @@ func _place(id: StringName, center: Vector2, radius: float) -> void:
 
 
 func _verb_for(id: StringName) -> StringName:
-	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG, B_RIGGING, B_UNDO, B_UNCLIP, B_LINE, B_PACK_LINE]:
+	if id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_TOOL, B_RIG, B_UNRIG, B_RIGGING, B_UNDO, B_UNCLIP, B_LINE, B_PACK_LINE, B_RANGE]:
 		return id
 	match id:
 		B_JUMP:
@@ -339,6 +352,9 @@ func _verb_for(id: StringName) -> StringName:
 
 
 func reset_touches() -> void:
+	_tool_tray_open = false
+	if not _toolbelt_ctx.is_empty():
+		_apply_toolbelt(_toolbelt_ctx)
 	if router != null:
 		router.set_rigging_cut(&"touch", false)
 	_thumb.reset()
@@ -393,7 +409,18 @@ func handle_touch(event: InputEvent) -> bool:
 func _touch_down(index: int, at: Vector2) -> bool:
 	# A fresh press owns exactly one control, including finger-ID reuse.
 	# Clear every old owner so release cannot stop at an unrelated capture.
+	var tray_was_open := _tool_tray_open
+	_tool_tray_open = false
 	_touch_up(index, true)
+	_tool_tray_open = tray_was_open
+	if _tool_tray_open and not _tool_tray_bounds.has_point(at) \
+			and at.distance_to(_buttons[B_TOOLS].center) > _buttons[B_TOOLS].radius * HIT_SLOP:
+		_tool_tray_open = false
+		_apply_toolbelt(_toolbelt_ctx)
+		queue_redraw()
+		var pause: TouchButton = _buttons[B_PAUSE]
+		if at.distance_to(pause.center) > pause.radius * HIT_SLOP:
+			return true
 	for id in _order:
 		var button: TouchButton = _buttons[id]
 		# Fade is presentation only. A newly enabled Cancel must receive the
@@ -408,10 +435,18 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		button.press_position = at
 		_refresh_held_controls()
 		button.flash = 1.0
-		if not button.hold and router != null:
+		if id == B_TOOLS:
+			_tool_tray_open = not _tool_tray_open
+			_apply_toolbelt(_toolbelt_ctx)
+		elif not button.hold and router != null:
 			router.push_verb(_verb_for(id))
+			if id in [B_GRAPPLE, B_LINE, B_RIGGING]:
+				_tool_tray_open = false
+				_apply_toolbelt(_toolbelt_ctx)
 		pressed_feedback.emit()
 		queue_redraw()
+		return true
+	if _tool_tray_open and _tool_tray_bounds.has_point(at):
 		return true
 	if _stick_index == -1 and not _movement_blocked and _stick_zone.has_point(at):
 		_stick_index = index
@@ -474,6 +509,9 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 
 
 func _touch_up(index: int, cancelled: bool = false) -> bool:
+	if cancelled and _tool_tray_open:
+		_tool_tray_open = false
+		_apply_toolbelt(_toolbelt_ctx)
 	var released := false
 	if index == _stick_index:
 		if _stick_tap_candidate and not cancelled and _stick_tap_age < ThumbGestures.ARM_SECONDS \
@@ -750,6 +788,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_cut_progress = clampf(float(ctx.get("rigging_cut_progress", 0.0)), 0.0, 1.0)
 	if _movement_blocked and _stick_index != -1:
 		_touch_up(_stick_index)
+	if ctx.get("operating", &"") != _toolbelt_ctx.get("operating", &""):
+		_tool_tray_open = false
+	_toolbelt_ctx = ctx.duplicate(true)
+	_apply_toolbelt(ctx)
 	_update_thumb_context(ctx)
 
 	for button in _buttons.values():
@@ -762,6 +804,72 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_refresh_held_controls()
 	if visible:
 		queue_redraw()
+
+
+func _apply_toolbelt(ctx: Dictionary) -> void:
+	var station: StringName = ctx.get("operating", &"")
+	var grapple := bool(ctx.get("grapple_equipped", false))
+	var line := bool(ctx.get("traversal_line_equipped", false))
+	var rigging := bool(ctx.get("rigging_equipped", false))
+	var allowed := station in [&"", &"grappling_gun", &"traversal_line", &"rigging"] \
+		and not bool(ctx.get("slingshot_recovering", false))
+	var free_hands := not bool(ctx.get("hanging", false)) and not bool(ctx.get("climbing", false))
+	var availability := [grapple or bool(ctx.get("grapple_draw_available", false)),
+		line or bool(ctx.get("traversal_line_available", false)) and free_hands,
+		rigging or bool(ctx.get("rigging_available", false)) and free_hands]
+	_buttons[B_TOOLS].shown = allowed and (availability[0] or availability[1] or availability[2])
+	if not _buttons[B_TOOLS].shown:
+		_tool_tray_open = false
+	_tool_name = "GRAPPLE" if grapple else ("TRAVERSAL LINE" if line else ("RIGGING" if rigging else "NONE"))
+	_buttons[B_TOOLS].label = "CANCEL" if _tool_tray_open else "TOOLS"
+	_buttons[B_TOOLS].tone = TONE_SAFE if grapple or line or rigging else TONE_NORMAL
+	var ids := [B_GRAPPLE, B_LINE, B_RIGGING]
+	var names := ["GRAPPLE", "TRAVERSAL LINE", "RIGGING"]
+	for i in range(ids.size()):
+		var button: TouchButton = _buttons[ids[i]]
+		var equipped: bool = [grapple, line, rigging][i]
+		button.shown = _tool_tray_open
+		button.enabled = allowed and availability[i]
+		button.label = "STOW " + names[i] if equipped else names[i]
+		button.icon = &""
+		button.tone = TONE_SAFE if equipped else TONE_NORMAL
+	var shot_range: TouchButton = _buttons[B_RANGE]
+	shot_range.shown = allowed and grapple and not bool(ctx.get("grapple_line_attached", false)) and not _tool_tray_open
+	shot_range.enabled = shot_range.shown
+	shot_range.label = "NEAR SHOT" if int(ctx.get("grapple_shot_profile", 1)) == 0 else "LONG SHOT"
+	# Primary Action owns automatic reeling. Manual adjustments stay local.
+	_buttons[B_AUTO_REEL].shown = false
+	_buttons[B_AUTO_REEL].enabled = false
+	if station == &"grappling_gun":
+		_buttons[B_UP].shown = grapple and bool(ctx.get("grapple_line_attached", false)) and int(ctx.get("grapple_state", 2)) == 2 and not _tool_tray_open
+		_buttons[B_DOWN].shown = _buttons[B_UP].shown
+		_buttons[B_UP].label = "TAKE UP"
+		_buttons[B_DOWN].label = "PAY OUT"
+	elif station == &"traversal_line":
+		_buttons[B_UP].shown = line and bool(ctx.get("traversal_line_gripping", false)) and not bool(ctx.get("traversal_line_two_ended", false)) and not _tool_tray_open
+		_buttons[B_DOWN].shown = _buttons[B_UP].shown
+		_buttons[B_UP].label = "TIGHTEN"
+		_buttons[B_DOWN].label = "PAY OUT"
+	elif station == &"rigging":
+		# A powered rig can coexist with undo/unclip/cut, so give its hold
+		# controls a second row on the same tool deck.
+		var home: Vector2 = _buttons[B_TOOLS].center
+		_place(B_UP, home + Vector2(250.0, -180.0) * _u, 64.0)
+		_place(B_DOWN, home + Vector2(430.0, -180.0) * _u, 64.0)
+		_buttons[B_UP].shown = rigging and bool(ctx.get("rigging_power_operable", false)) and not _tool_tray_open
+		_buttons[B_DOWN].shown = _buttons[B_UP].shown
+		_buttons[B_UP].label = "LIFT"
+		_buttons[B_DOWN].label = "LOWER"
+	_buttons[B_PACK_LINE].shown = allowed and line and bool(ctx.get("traversal_line_can_recover", false)) and not _tool_tray_open
+	_buttons[B_UNDO].shown = allowed and rigging and bool(ctx.get("rigging_draft", false)) and not _tool_tray_open
+	for id in [B_UNCLIP, B_CUT]:
+		_buttons[id].shown = allowed and rigging and int(ctx.get("rigging_selected", 0)) != 0 and not _tool_tray_open
+	for button in _buttons.values():
+		if (not button.shown or not button.enabled) and button.index != -1:
+			if button.id == B_CUT and router != null:
+				router.set_rigging_cut(&"touch", false)
+			button.index = -1
+	_refresh_held_controls()
 
 
 func _update_thumb_context(ctx: Dictionary) -> void:
@@ -796,8 +904,15 @@ func _held(id: StringName) -> float:
 func _draw() -> void:
 	if not _movement_blocked:
 		_draw_stick()
+	if _tool_tray_open:
+		draw_rect(_tool_tray_bounds, UiStyle.with_alpha(UiStyle.INK, 0.94))
+		draw_rect(_tool_tray_bounds, UiStyle.with_alpha(UiStyle.PAPER, 0.5), false, 2.0 * _u)
 	for id in _order:
 		_draw_button(_buttons[id])
+	if _buttons[B_TOOLS].shown:
+		UiStyle.text_centered(self, UiStyle.font_label(), "EQUIPPED: " + _tool_name,
+			_buttons[B_TOOLS].center + Vector2(80.0, -115.0) * _u,
+			maxi(8, int(22.0 * _u)), UiStyle.PAPER, int(4.0 * _u))
 	if _operating:
 		_draw_pendant_labels()
 	if _thumb_active:
@@ -885,15 +1000,20 @@ func _draw_button(button: TouchButton) -> void:
 		UiStyle.ring(self, button.center, radius + (1.0 - button.flash) * 22.0 * _u,
 			UiStyle.with_alpha(accent, button.flash * 0.55 * alpha), 3.0 * _u)
 	var icon_color := UiStyle.INK if pressed else UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
-	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
+	if not (_portable_tool and not forklift_mode and not yard_crane_mode and button.id in [B_UP, B_DOWN]):
+		UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
 	if button.id == B_CUT and _cut_progress > 0.0:
 		draw_arc(button.center, radius + 8.0 * _u, -PI * .5,
 			-PI * .5 + TAU * _cut_progress, 32, UiStyle.HAZARD, 5.0 * _u, true)
-	if button.id in [B_RIGGING, B_UNDO, B_UNCLIP, B_CUT]:
+	if button.id in [B_TOOLS, B_RANGE, B_GRAPPLE, B_LINE, B_PACK_LINE, B_RIGGING, B_UNDO, B_UNCLIP, B_CUT] or (_portable_tool and not forklift_mode and not yard_crane_mode and button.id in [B_UP, B_DOWN]):
+		var lines := button.label.split(" ")
 		var pixels := maxi(1, int(roundf(22.0 * _u)))
-		while pixels > 1 and UiStyle.text_width(UiStyle.font_label(), button.label, pixels) > radius * 1.8:
-			pixels -= 1
-		UiStyle.text_centered(self, UiStyle.font_label(), button.label, button.center, pixels, icon_color)
+		for line in lines:
+			while pixels > 1 and UiStyle.text_width(UiStyle.font_label(), line, pixels) > radius * 1.8:
+				pixels -= 1
+		for i in range(lines.size()):
+			var offset := Vector2(0.0, (i - (lines.size() - 1) * 0.5) * 27.0 * _u)
+			UiStyle.text_centered(self, UiStyle.font_label(), lines[i], button.center + offset, pixels, icon_color)
 		return
 	if not button.label.is_empty():
 		if forklift_mode and button.id in [B_FORWARD, B_NEUTRAL, B_REVERSE, B_PARK, B_INCH, B_HORN, B_TOOL]:
@@ -953,7 +1073,7 @@ func _draw_stick() -> void:
 
 
 func _draw_pendant_labels() -> void:
-	if forklift_mode or yard_crane_mode:
+	if forklift_mode or yard_crane_mode or _portable_tool:
 		return
 	var size := int(roundf(22.0 * _u))
 	var font := UiStyle.font_label()

@@ -13,8 +13,11 @@ class GrapplingGun final {
 public:
     static constexpr unsigned capacity = 4;
     static constexpr float hook_mass_kg = 2.0F;
-    static constexpr float cartridge_energy_j = 180.0F;
-    static constexpr float maximum_line_length_m = 18.0F;
+    // Powered cartridge: finite work includes reciprocal player recoil.
+    static constexpr float cartridge_energy_j = 900.0F;
+    static constexpr float precision_energy_j = 180.0F;
+    enum class ShotProfile : unsigned { Near, Long };
+    static constexpr float maximum_line_length_m = 60.0F;
     static constexpr float strength_n = GrappleRopeSettings::strength_n;
     static constexpr float stiffness_n_per_m = GrappleRopeSettings::stiffness_n_per_m;
     static constexpr float damping_ns_per_m = GrappleRopeSettings::damping_ns_per_m;
@@ -51,6 +54,8 @@ public:
         LineState state = LineState::Ready;
         Failure failure = Failure::None;
         bool auto_reel = false;
+        ShotProfile shot_profile = ShotProfile::Long;
+        float shot_energy_j = cartridge_energy_j;
         unsigned cartridges = capacity;
         unsigned available_hooks = capacity;
         JPH::BodyID hook;
@@ -72,6 +77,7 @@ public:
     ~GrapplingGun();
     GrapplingGun(const GrapplingGun &) = delete;
     GrapplingGun &operator=(const GrapplingGun &) = delete;
+    bool set_shot_profile(ShotProfile profile);
     bool fire(JPH::Vec3 normalized_aim);
     bool lock_line();
     // Owner-thread intent: +1 takes up, -1 pays out. Only Locked line responds;
@@ -81,6 +87,9 @@ public:
     // other passive substeps retain the separate3000N rope strength.
     void set_reel_input(float input);
     bool set_auto_reel(bool enabled);
+    // Native read-only grasp/load admission, including a slow slack hook while
+    // paying out. Final hand/withdrawal clearance is validated on the request.
+    bool recovery_in_reach() const;
     bool retrieve();
     // A blocked, otherwise valid grasp can perform a short reciprocal physical
     // pull. Inventory removal still requires the unchanged whole-hook cast.
