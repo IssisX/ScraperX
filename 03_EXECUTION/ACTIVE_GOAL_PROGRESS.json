@@ -137,7 +137,7 @@
   "execution_state": {
     "as_of": "2026-10-20T23:37:40.390924+00:00",
     "published_head": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
-    "active_behavior": "Reach and compare the false handover recording with the original access-only survey before Ari; preserve optional local likeness/default and live touch",
+    "active_behavior": "Ari boards the safely held253m barrel carriage, rides/returns to real gallery footing, refuses unsafe/blocked entry; live touch",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
       "actual GitHub publication and matching83bAPK214279695 candidate38838367126 artifact12020128011 delivered",
@@ -148,16 +148,17 @@
       "Receiving story intro and real-arrival guidance: actual MCP19checks accepted",
       "Readable gallery contact discovery, two real recorded speakers and onward touch: actual MCP13checks accepted",
       "CombinedReceivingopening/guidance/voiceddiscovery exactc299 GREENcandidate39505154801 APK214698123delivered",
-      "PhysicalAri253m/optionalpersistentphoto/13spatial-radio dialogue/free touch/cleanretry delivered64d21f1 GREEN39513436973 APK214702401"
+      "PhysicalAri253m/optionalpersistentphoto/13spatial-radio dialogue/free touch/cleanretry delivered64d21f1 GREEN39513436973 APK214702401",
+      "Playable110m handover/source/replay/localidentity/free touch delivered dbf88c4 GREEN39519063431 APK214705264"
     ],
-    "frontier": "Handover record implemented at actual110m receiver1960: MCP69/standalone28/nearby26+26+10 accepted, readable render inspected; next matching green-CI APK delivery.",
+    "frontier": "Handover delivered; next bounded physical Ari lift-cooperation goal selected. Current actor has no safe boarding intent/admission; implementation not begun.",
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
-    "next_implementation_packet": "Publish complete handover recording slice, use ordinary existing candidate/full/collector/publisher workers, collect matching fullyGREENAPK. Reuse accepted source/runtime evidence; do not rerun native or oldAPK audits.",
-    "current_candidate": "64d21f1 fullyGREEN and delivered",
-    "last_delivered_game_source": "64d21f13b107ac6ec4dd65213f4caba62dfa1161",
-    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-64d21f1/ScraperX-ChatGPT.apk",
-    "evidence": "evidence/story-2026-10-20/HANDOVER_RECORD.json; handover-voice.json; DOUBLE_DELIVERY.json"
+    "next_implementation_packet": "Use current nativeactor/barrel owners at1993/2988. Resolve walk-only0.30mgap and actualsupport/clearance admission, explicit player-authorized intent, finiteboard/ride/exit/refusal and checkpoint lifecycle. No source/force/pose bypass. One writer per file; root owns integration.",
+    "current_candidate": "dbf88c4 fullyGREEN and delivered",
+    "last_delivered_game_source": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
+    "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-dbf88c4/ScraperX-ChatGPT.apk",
+    "evidence": "evidence/story-2026-10-20/HANDOVER_DELIVERY.json; HANDOVER_RECORD.json; handover-voice.json; DOUBLE_DELIVERY.json"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

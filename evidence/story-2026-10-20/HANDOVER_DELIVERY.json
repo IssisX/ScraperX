@@ -1,0 +1,55 @@
+{
+  "source": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
+  "ci": {
+    "run_id": "39519063431",
+    "url": "https://github.com/IssisX/ScraperX/actions/runs/39519063431",
+    "status": "completed",
+    "conclusion": "success",
+    "failed_steps": []
+  },
+  "accepted_candidate": {
+    "result": "matching_signed_candidate_available_from_green_CI",
+    "source_commit": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
+    "run_id": "39519063431",
+    "artifact_id": 12310658507,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39519063431/artifacts/12310658507",
+    "version_code": 214705264,
+    "version_name": "0.1.0-chatgpt.dbf88c49ce0f.39519063431.1",
+    "apk": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-dbf88c4/artifacts/ScraperX-ChatGPT-candidate-dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46/ScraperX-ChatGPT.apk",
+    "apk_sha256": "9952a2efba600cb7b20456ba86d1c44dd5a1f4c029de56e38be8a7c7c55cc525",
+    "native_sha256": "1253ddf0ee49d430a000d2f71a9f614a3c05f2cbf493d7c9633c065ff1c128ef",
+    "actual_signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+    "producer_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-dbf88c4/artifacts/ScraperX-ChatGPT-candidate-dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46/CANDIDATE-PROVENANCE.json",
+    "verification_owner": "Candidate CI signing and producer-provenance stages",
+    "local_apk_checks_run": false,
+    "full_gameplay": "Separate full-release acceptance; not established by this development candidate",
+    "phone_play": "Not run; no FPS improvement claim",
+    "delivered_local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-dbf88c4.apk"
+  },
+  "direct_apk": {
+    "source_commit": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
+    "version_code": 214705264,
+    "tag": "chatgpt-candidate-dbf88c4",
+    "prerelease": true,
+    "apk_url": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-dbf88c4/ScraperX-ChatGPT.apk",
+    "release_url": "https://github.com/IssisX/ScraperX/releases/tag/chatgpt-candidate-dbf88c4",
+    "asset_id": 660877883,
+    "asset_size": 60567692
+  },
+  "local_delivery": {
+    "source_commit": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
+    "apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-dbf88c4.apk",
+    "bytes": 60567692,
+    "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/39519063431/artifacts/12310658507"
+  },
+  "actual_ci_outputs": [
+    "STORY_HANDOVER PASS checks=28 failures=0 supplied_native_facts_only=1",
+    "SCRAPERX_STORY_HANDOVER_INPUT PASS checks=69 actual_native=1 touch=1 staged_receiver_only=1 heard=5",
+    "STORY_HANDOVER_IDENTITY_RENDER PASS checks=3 failures=0"
+  ],
+  "implementation_evidence": "HANDOVER_RECORD.json",
+  "accepted_existing_evidence_reused": true,
+  "device_play": "not observed",
+  "broader_full_workflow": "Separate39519063436, no full-release claim",
+  "superseded_candidate": "f2e0cc1 had stale cached identity presentation; repair is dbf88c4. Preserve original work/evidence."
+}
