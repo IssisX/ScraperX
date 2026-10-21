@@ -38,8 +38,18 @@ ladder, no way back); its hook-crossing idea is kept. Proof: native `twin` (the 
 hook over and back with the line's jolt at about 345 of the 500 N s that tears the bite, the leaf down
 and walked both ways, save and load) and `twin geometry` (nothing near the shaft reachable from the
 ground above 2.6 m), the full native suite (981 s), `touch_twin` with touch_hook, touch_hook_rope,
-touch_wet, touch_c6 and touch_stack locally; CI run 626. Designs and the owner's next idea for tower
-two (PROPERTY DAMAGE, on the to-do): `03_EXECUTION/SECOND_TOWER/`.
+touch_wet, touch_c6 and touch_stack locally; CI run 626 green on 547038f (the full native suite,
+every touch run with touch_twin, nothing floats, the APK `ScraperX-APK-547038f…`). The goal the owner
+set for it is met. The owner's note on it: it reads as scripted, kept for now (`BROKEN_BRIDGE.md`
+objection 6). Designs and the owner's next idea for tower two (PROPERTY DAMAGE, on the to-do):
+`03_EXECUTION/SECOND_TOWER/`.
+
+**Rigging reaches overhead (2026-10-21).** The owner's playtest: the crane's sling would not hook onto
+the forklift, whose eye is on its guard's roof. HOOK and UNHOOK now count the hands lifting the
+shackle up to overhead (`kRigReachUp`, 1 m over the belly) at every anchor, and a shackle whose rope
+cannot come down to the hands is no longer offered. Proof: native `crane` rigs and unrigs the forklift
+from the ground on both sides; the full native suite (1019 s) and the thirteen touch runs that rig
+pass locally.
 
 **The bay: shared survival on the 154 m deck (2026-10-21, `claude/shared-survival`).** Built on the
 other agent's native core (`src/sim/shared_survival.*`: finite palms, a district of drives that coast,
