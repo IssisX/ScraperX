@@ -7,14 +7,14 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # follows onto a plate that gives way under her: the one thing that kills her.
 # touch_matron_ride: Stage A rigged quietly (UNHOOK, HOOK); out of the cage a
 # sprint toward her locker wakes her; back in, GRAB the trip handle and wait
-# for her. With her 4.5 m from the cage's mouth, step back: she steps in as it
+# for her. With her 3.8 m from the cage's mouth, step back: she steps in as it
 # leaves and rides it up holding on, taking nobody. At the top a hop over the
 # 1.09 m to the 176 ring and away along it: frail, she stays on the cages;
 # back within her reach, the Turn takes her over the gap.
 # touch_matron_line: woken, she is led round the deck to the 154 m line's
-# stand; with her near, a JUMP takes the bar and the ride down (braked) to
-# 143 m; in the Turn she goes after the player down the bare cable, sparks
-# off her forearms, and lets go over 143's south band.
+# ramp; as she charges, up onto the stand, a JUMP takes the bar and the ride
+# down (braked) to 143 m; in the Turn she goes after the player down the bare
+# cable, sparks off her forearms, and lets go over 143's south band.
 # touch_matron_climb: woken, she bursts out as the player takes hold of the
 # ladder from her deck to the 176 ring and climbs: frail she stands at its
 # foot looking up; in the Turn she takes hold and comes up it after the
@@ -22,6 +22,14 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # and she comes over the ladder's head onto it.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
+# touch_bay (src/sim/bay.hpp): woken, she loses the crouched player beyond the
+# bay's leaf and keeps the way out west of it; the player comes round the deck
+# to stand east of the bay, and a
+# dash along the band is heard across it: she drops into the bay and holds
+# the leaf up on her palms, its motor and fan stopped. UNHOOK the chain off
+# its cleat, a step onto the leaf by its hinge, HOOK it onto the leaf's eye:
+# she lets go, the district starts again by itself, and the leaf carries the
+# player out over its far half and back.
 #
 # Loose stock (src/sim/loose_stock.hpp), in the yard south of the start.
 # touch_stock: round the beam stack to the drums on their pallet, PICK UP one,
@@ -55,6 +63,10 @@ const MATRON_BAND_X := 21.5
 const MATRON_NORTH_Z := -128.5
 const MATRON_MID_Z := -150.0
 const MATRON_DECK_Y := 154.0
+const BAY_TRAP_HOLDING := 4
+const BAY_WEST_X := -3.9
+const MATRON_STATE_GUARDING := 7
+const BAY_SHACKLE := 2653
 
 
 func _matron_state() -> Dictionary:
@@ -162,14 +174,18 @@ func _matron_ride_touch(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2004, 0.5):
 		return _fail("GRAB did not put the trip handle in the hands")
-	# Her coming for the cage; at 4.5 m from its mouth, step back.
+	# Her coming for the cage; at 3.8 m from its mouth, step back. (4.5 m
+	# before the bay's leaf put her line's last bend at its west end,
+	# src/sim/bay.hpp: she now reaches the mouth a moment later.)
 	var near: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
-		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(-10.5, -129.9)) < 4.5, 45.0)
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(-10.5, -129.9)) < 3.8, 45.0)
 	if not near:
 		return _fail("she did not come for the cage (state %d, at %s)" % [int(_matron_state()["state"]), str(_matron_state()["position"])])
-	_move(device, -0.6)
+	# A gentle step back (the stick a third of the way): the catch opens as she
+	# comes to the mouth.
+	_move(device, -0.35)
 	var tripped: bool = await _wait_until(func() -> bool: return not bool(_native().is_well_a_catch_latched()), 3.0)
 	_move(device, 0.0)
 	if not tripped:
@@ -193,8 +209,10 @@ func _matron_ride_touch(device: int) -> bool:
 	var her: Vector3 = _matron_state()["position"]
 	await _face(Vector2(her.x - _position().x, her.z - _position().z))
 	await _pose("matron_ride_clinging")
-	# At the top: to the cage's mouth and over the gap to the ring.
-	if not await _walk_to(device, Vector2(-11.0, -130.3), 0.15, 2.0):
+	# At the top: to the cage's mouth, the side of it she is not clinging at
+	# (it is 3 m wide), and over the gap to the ring.
+	var hop_x := -9.9 if her.x < -10.5 else -11.0
+	if not await _walk_to(device, Vector2(hop_x, -130.3), 0.15, 2.0):
 		return _fail("the step to the cage's mouth at the top stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
 	var across: bool = await _leap(device, 0.6, func() -> bool:
@@ -261,34 +279,44 @@ func _sprint_to(device: int, target: Vector2, tolerance: float, budget: float) -
 func _matron_line_touch(device: int) -> bool:
 	if not await _wake_matron(device):
 		return false
-	# Quietly to the catwalk's east end to wait for her.
+	# Quietly west over the bay's leaf and down the west band to wait for her
+	# there: the run round then comes to the line's ramp from the east, with
+	# her behind on this side of the bay. (Run east over it, the player goes
+	# unheard under its fan, src/sim/bay.hpp; or, heard or seen, she does not
+	# cross after them: her trap.)
 	if not await _crouch_on(device, true):
 		return _fail("CROUCH did not crouch the climber")
-	if not (await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0) and \
-			await _go(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), 0.5, 40.0)):
-		return _fail("the crouched walk to the catwalk's east end stalled at %s" % str(_position()))
+	if not (await _go(device, Vector2(-MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 60.0) and \
+			await _go(device, Vector2(-MATRON_BAND_X, -138.0), 0.5, 40.0)):
+		return _fail("the crouched walk down the west band stalled at %s" % str(_position()))
 	var coming: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
 		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 16.0, 45.0)
 	if not coming:
-		return _fail("she did not come for the player at the catwalk's east end")
+		return _fail("she did not come for the player on the west band")
 	await _crouch_on(device, false)
-	# The long way round ahead of her, back along the north band to the line's ramp.
-	for leg in [Vector2(MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, MATRON_NORTH_Z),
-			Vector2(1.0, MATRON_NORTH_Z)]:
+	# The long way round ahead of her, by the south and east bands back along
+	# the north band to the line's ramp.
+	for leg in [Vector2(-MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, MATRON_NORTH_Z),
+			Vector2(1.6, MATRON_NORTH_Z)]:
 		if not await _sprint_to(device, leg, 1.0, 12.0):
 			return _fail("the sprint round the deck stalled at %s" % str(_position()))
-	if not (await _walk_to(device, Vector2(3.0, -132.36), 0.3, 4.0, true) and \
-			await _walk_to(device, Vector2(6.0, -132.36), 0.15, 6.0, true)) or _position().y < 155.0:
-		return _fail("up the ramp onto the line's stand stalled at %s" % str(_position()))
+	if not await _walk_to(device, Vector2(3.0, -132.36), 0.3, 4.0, true):
+		return _fail("the walk to the ramp's foot stalled at %s" % str(_position()))
 	_move_dir(device, Vector2.ZERO)
-	var near: bool = await _wait_until(func() -> bool:
+	# At the ramp's foot, wait for her charge (her Turn); then up onto the
+	# stand and the jump for the bar, with her coming up the ramp behind.
+	var charging: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
-		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 11.0, 20.0)
-	if not near or int(_native().get_death_count()) != 0:
-		return _fail("she did not come for the player on the stand (deaths %d)" % int(_native().get_death_count()))
+		return int(m["state"]) == MATRON_STATE_HUNTING and int(m["turn"]) != 0 and \
+			Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 14.0, 30.0)
+	if not charging or int(_native().get_death_count()) != 0:
+		return _fail("she did not come for the player at the line's ramp (deaths %d)" % int(_native().get_death_count()))
+	if not await _walk_to(device, Vector2(6.0, -132.36), 0.15, 3.0, true) or _position().y < 155.0:
+		return _fail("up the ramp onto the line's stand stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
 	await _face(Vector2(0.0, -1.0))
 	_press(&"jump", 1)
 	if not await _wait_until(func() -> bool: return bool(_native().get_zipline_state()["riding"]), 1.5):
@@ -346,6 +374,98 @@ func _matron_line_touch(device: int) -> bool:
 		return _fail("she never let go over 143's band (on line %s, at %s, level %.2f)" % [
 			str(_matron_state()["on_line"]), str(_matron_state()["position"]), float(_matron_state()["floor_y"])])
 	_detail = "slides=%d she_at=%s deaths=%d" % [int(_matron_state()["cable_slides"]), str(_matron_state()["position"]),
+		int(_native().get_death_count())]
+	return true
+
+
+func _bay_touch(device: int) -> bool:
+	if not await _wake_matron(device):
+		return false
+	# Crouched: west over the leaf and down the west band, still there until
+	# she has lost the player and keeps the way out's mouth west of the bay;
+	# then round by the south band, back along the north band to stand east
+	# of the bay.
+	if not await _crouch_on(device, true):
+		return _fail("CROUCH did not crouch the climber")
+	for leg in [Vector2(-MATRON_BAND_X, MATRON_NORTH_Z), Vector2(-MATRON_BAND_X, -160.0)]:
+		if not await _go(device, leg, 0.4, 70.0):
+			return _fail("the crouched walk down the west band stalled at %s" % str(_position()))
+	_move_dir(device, Vector2.ZERO)
+	var keeping: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		return int(m["state"]) == MATRON_STATE_GUARDING and at.x < BAY_WEST_X - 0.5 and \
+			at.x > BAY_WEST_X - 11.0 and absf(at.z - MATRON_NORTH_Z) < 3.0, 120.0)
+	if not keeping:
+		return _fail("she never gave up the player and kept the way out west of the bay (state %d, at %s)" % [
+			int(_matron_state()["state"]), str(_matron_state()["position"])])
+	for leg in [Vector2(-MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, MATRON_NORTH_Z),
+			Vector2(3.0, MATRON_NORTH_Z)]:
+		if not await _go(device, leg, 0.4, 70.0):
+			return _fail("the crouched walk round the deck stalled at %s" % str(_position()))
+	await _crouch_on(device, false)
+	# A dash along the band and back, heard across the bay, until she is down
+	# in it holding the leaf (three dashes at most).
+	var holding := false
+	for dash in 3:
+		if not (await _sprint_to(device, Vector2(8.0, MATRON_NORTH_Z), 0.4, 6.0) and \
+				await _walk_to(device, Vector2(3.0, MATRON_NORTH_Z), 0.3, 6.0, true)):
+			return _fail("the dash along the band stalled at %s" % str(_position()))
+		holding = await _wait_until(func() -> bool:
+			var m := _matron_state()
+			return int(m["trap"]) == BAY_TRAP_HOLDING and bool(m["bracing"]), 25.0)
+		if holding:
+			break
+	if not holding:
+		return _fail("she never went down into the bay to hold the leaf (state %d, trap %d, at %s)" % [
+			int(_matron_state()["state"]), int(_matron_state()["trap"]), str(_matron_state()["position"])])
+	var held: Dictionary = _native().get_bay_state()
+	if bool(held["leaf_running"]) or not bool(held["hands"]) or absf(float(held["leaf_angle"])) > 0.02:
+		return _fail("her hands in it did not stop its motor with the leaf level on her palms (%s)" % str(held))
+	var her: Vector3 = _matron_state()["position"]
+	await _face(Vector2(her.x - _position().x, her.z - _position().z))
+	await _tilt(-0.35)
+	await _pose("bay_holding")
+	await _tilt(0.0)
+	# The chain off its cleat on the rail's end post.
+	if not await _walk_to(device, Vector2(0.4, -129.5), 0.08, 6.0, true):
+		return _fail("the walk to the cleat stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"unhook", "UNHOOK", "CHAIN"):
+		return _fail("Action read '%s' at the cleat, not UNHOOK CHAIN" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == BAY_SHACKLE, 0.8):
+		return _fail("UNHOOK did not put the chain's shackle in the hands")
+	# A step onto the leaf by its hinge (her hands hold that), the eye in reach.
+	if not await _walk_to(device, Vector2(-0.6, -128.1), 0.08, 6.0, true):
+		return _fail("the step onto the leaf by its hinge stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO THE WALKWAY'S EYE"):
+		return _fail("Action read '%s' at the leaf's eye, not HOOK" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_bay_state()["hooked"]), 0.8):
+		return _fail("HOOK did not make the chain fast on the leaf's eye")
+	# The chain has it: she lets go; the district starts again by itself.
+	var restarted: bool = await _wait_until(func() -> bool:
+		var b: Dictionary = _native().get_bay_state()
+		return not bool(_matron_state()["bracing"]) and int(b["restarts"]) > 0 and bool(b["leaf_open"]), 30.0)
+	if not restarted:
+		return _fail("hooked, she did not let go or the district did not start again (%s)" % str(_native().get_bay_state()))
+	await _pose("bay_chained")
+	# Out over the leaf's far half, where her hands could not have held it
+	# with the player on it, and back.
+	for leg in [Vector2(-3.0, MATRON_NORTH_Z), Vector2(0.6, MATRON_NORTH_Z)]:
+		if not await _walk_to(device, leg, 0.2, 8.0, true):
+			return _fail("over the leaf stalled at %s" % str(_position()))
+		if _position().y < MATRON_DECK_Y:
+			return _fail("the hooked leaf went down under the player (at %s)" % str(_position()))
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died at the bay")
+	var cues: Dictionary = _main._audio.bay_cues
+	if int(cues.get(&"trip", 0)) < 1 or int(cues.get(&"hook", 0)) < 1 or int(cues.get(&"restart", 0)) < 1:
+		return _fail("the bay's trip, hook and restart were not all heard (%s)" % str(cues))
+	_detail = "support_n=%.0f trips=%d hooks=%d restarts=%d deaths=%d" % [float(held["support_n"]),
+		int(cues.get(&"trip", 0)), int(cues.get(&"hook", 0)), int(cues.get(&"restart", 0)),
 		int(_native().get_death_count())]
 	return true
 

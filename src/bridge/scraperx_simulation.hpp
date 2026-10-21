@@ -206,6 +206,7 @@ public:
     [[nodiscard]] godot::Dictionary get_swing_state() const;
     [[nodiscard]] godot::Dictionary get_summit_state() const;
     [[nodiscard]] godot::Dictionary get_matron_state() const;
+    [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();

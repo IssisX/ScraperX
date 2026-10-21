@@ -929,6 +929,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_feel_crane(delta)
 	_sample_machines(delta)
 	_sample_wet_e(delta)
+	_sample_bay()
+	_feel_bay()
 	if delta > 0.0:
 		_feel_wet_e(delta)
 
@@ -1233,6 +1235,20 @@ func _feel_her(her: Dictionary, position: Vector3) -> void:
 		_haptic(&"land", 1.0)
 	_her_holds_seen = holds
 	_her_slams_seen = slams
+
+# On the bay's leaf while only her palms hold it up (src/sim/bay.hpp): her
+# strain comes up through the steel under the feet, a pulse every
+# BAY_FELT_S, stronger the nearer the load is to all she can give.
+const BAY_FELT_S := 0.6
+var _bay_felt_s := 0.0
+
+func _feel_bay() -> void:
+	_bay_felt_s = maxf(0.0, _bay_felt_s - get_process_delta_time())
+	if _bay.is_empty() or not bool(_bay["hands"]) or int(_native.get_support_entity_id()) != BAY_LEAF_ENTITY:
+		return
+	if _bay_felt_s <= 0.0:
+		_bay_felt_s = BAY_FELT_S
+		_haptic(&"her", clampf(float(_bay["support_n"]) / BAY_HOLD_FULL_N, 0.3, 1.0))
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
 	var support := int(_native.get_support_entity_id())

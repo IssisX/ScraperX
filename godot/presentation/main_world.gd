@@ -88,6 +88,11 @@ const MATRON_GATE_WIDTH := 3.0
 # src/sim/band_stack.cpp) meets the deck's north band at the shaft: the rail
 # there is open from its post at x -8.5 to the plate's east end.
 const DECK13_LEVEL := 13
+# The bay across the 154 m deck's north band (src/sim/bay.hpp): the deck and
+# its planks stop at either side of the cut.
+const BAY_WEST_X := -3.9
+const BAY_EAST_X := -0.4
+const BAY_PLANK_SETBACK := 0.05
 const DECK13_GATE_WEST := -8.4
 const DECK13_GATE_EAST := -5.1
 
@@ -104,6 +109,12 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		var deck_material: Material = galvanised if level % 2 == 1 else mill_scale
 
 		for sz in [1.0, -1.0]:
+			if level == MATRON_DECK_LEVEL and sz > 0.0:
+				for run in [[cx - STACK_HALF_EXTENT, BAY_WEST_X], [BAY_EAST_X, cx + STACK_HALF_EXTENT]]:
+					_add_box("StackDeck", Vector3(float(run[1]) - float(run[0]), STACK_DECK_THICKNESS,
+						STACK_DECK_BAND_DEPTH), Vector3((float(run[0]) + float(run[1])) * 0.5, slab_y,
+						cz + sz * band_center), deck_material)
+				continue
 			_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
 				STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
 		for sx in [1.0, -1.0]:
@@ -153,6 +164,13 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		for plank in range(-2, 3):
 			for sz in [1.0, -1.0]:
 				var plank_z := band_center + float(plank) * DECK_PLANK_PITCH
+				if level == MATRON_DECK_LEVEL and sz > 0.0:
+					for run in [[cx - STACK_HALF_EXTENT + 1.0, BAY_WEST_X - BAY_PLANK_SETBACK],
+							[BAY_EAST_X + BAY_PLANK_SETBACK, cx + STACK_HALF_EXTENT - 1.0]]:
+						_add_box("DeckPlank", Vector3(float(run[1]) - float(run[0]), 0.08, DECK_PLANK_WIDTH),
+							Vector3((float(run[0]) + float(run[1])) * 0.5, deck_y + DECK_PLANK_TOP - 0.04,
+							cz + sz * plank_z), timber)
+					continue
 				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, DECK_PLANK_WIDTH),
 					Vector3(cx, deck_y + DECK_PLANK_TOP - 0.04, cz + sz * plank_z), timber)
 

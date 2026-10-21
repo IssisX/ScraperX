@@ -677,6 +677,8 @@ void run_matron_mischief() {
         require(go(s, -4.6, Matron::kBandNorthZ, false, 12.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2) &&
                     go(s, 2.0, -126.6, false, 12.0, 0.2),
                 "matron mischief: carried east along the band, across the bay on its leaf");
+        // Stopped, then set down (let go on the move, it slides on off the band).
+        stand_still(s, 0.4);
         (void)s.request_set_down();
         (void)s.advance_frame(1.0);
         const std::uint32_t box_body = s.kit_body_index(box);

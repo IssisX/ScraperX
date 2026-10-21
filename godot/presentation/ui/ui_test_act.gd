@@ -24,12 +24,15 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # the ladder after, and the 220 ring. Between those the drawing is
 # switched off (the simulation runs on), so the capture is quick.
 
-const MATRON_STATE_GUARDING := 7
 const STAGE_PEST := 0
 const STAGE_DANGEROUS := 1
 const STAGE_CHANGED := 2
 const ACT_TOOLBOX_PICK := Vector2(-6.5, -125.75)
 const ACT_TOOLBOX_DOOR := Vector2(6.0, -126.4)
+# Either end of the bay's leaf on the north band (src/sim/bay.hpp): the way
+# over the bay.
+const ACT_BAY_WEST := Vector2(-4.6, -128.5)
+const ACT_BAY_EAST := Vector2(0.4, -128.5)
 const ACT_143_EDGE_Z := -132.6
 const ACT_GATE := Vector2(-6.8, -132.2)
 const ACT_PLATE := Vector2(-6.8, -134.1)
@@ -268,8 +271,10 @@ func _act_asleep(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
 		return _fail("PICK UP did not put the toolbox in the hands")
 	_act_box = int(_native().get_carrying_entity_id())
-	if not await _act_creep_to(device, ACT_TOOLBOX_DOOR, 0.2, 14.0, 0.5):
-		return _fail("the carry to her locker door stalled at %s" % str(_position()))
+	# Over the bay on its leaf (src/sim/bay.hpp), then to her door.
+	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, ACT_TOOLBOX_DOOR]:
+		if not await _act_creep_to(device, leg, 0.2, 14.0, 0.5):
+			return _fail("the carry to her locker door stalled at %s" % str(_position()))
 	if int(_matron_state()["state"]) != MATRON_STATE_DORMANT:
 		return _fail("rigging and the carry woke her (state %d)" % int(_matron_state()["state"]))
 	# Set down at her door, its clank wakes her.
@@ -463,7 +468,10 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	# Round onto the east band while she climbs, beside the shaft's rail
 	# (whatever her hands do there throws the climber at the rail, not off the
 	# deck's open outer edge).
-	if not (await _sprint_to(device, Vector2(16.0, -128.6), 1.0, 8.0) and \
+	# (Over the bay on its leaf, src/sim/bay.hpp: from the riser's head
+	# straight east runs off the leaf's south side into the bay.)
+	if not (await _walk_to(device, ACT_BAY_WEST, 0.3, 4.0, true) and \
+			await _sprint_to(device, Vector2(16.0, -128.6), 1.0, 8.0) and \
 			await _sprint_to(device, ACT_LAP_NORTH, 1.0, 6.0)):
 		return _fail("the run round onto the east band stalled at %s" % str(_position()))
 	# Gone back to a pest on the way (her rage cools as she climbs): sprints up
@@ -620,14 +628,20 @@ func _matron_heave_touch(device: int) -> bool:
 		return _fail("the sprint toward her locker stalled at %s" % str(_position()))
 	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_STRAINING, 3.0):
 		return _fail("the sprint by her locker did not wake her (state %d)" % int(_matron_state()["state"]))
-	if not await _walk_to(device, HEAVE_BOX_PICK, 0.08, 14.0):
-		return _fail("the walk to the toolbox stalled at %s" % str(_position()))
+	# Back over the bay on its leaf (src/sim/bay.hpp), then to the toolbox.
+	for leg in [ACT_BAY_EAST, ACT_BAY_WEST, HEAVE_BOX_PICK]:
+		if not await _walk_to(device, leg, 0.08 if leg == HEAVE_BOX_PICK else 0.2, 14.0):
+			return _fail("the walk to the toolbox stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
 	if not await _offered(&"pick_up", "PICK UP"):
 		return _fail("Action read '%s' at the toolbox, not PICK UP" % _action_label())
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
 		return _fail("PICK UP did not put the toolbox in the hands")
+	# Onto her line west of the bay: she comes off its leaf straight along the
+	# band, and the throw's way to her is clear.
+	if not await _walk_to(device, Vector2(-6.6, -128.5), 0.15, 10.0):
+		return _fail("the walk west along the band with the toolbox stalled at %s" % str(_position()))
 	# Still, until a pest comes for the climber in sight: from 9 m the view
 	# kept level on her, leading her.
 	var last: Vector3 = _matron_state()["position"]

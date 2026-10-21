@@ -316,6 +316,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
@@ -1683,6 +1684,31 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
         planks[static_cast<std::int64_t>(i)] = static_cast<float>(state.planks[i]);
     }
     out["planks"] = planks;
+    out["bracing"] = state.bracing;
+    out["support_n"] = state.support_n;
+    out["trap"] = static_cast<std::int64_t>(state.trap);
+    out["traps"] = static_cast<std::int64_t>(state.traps);
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_bay_state() const {
+    const sim::BaySnapshot state = simulation_->bay_state();
+    godot::Dictionary out;
+    out["leaf_angle"] = state.leaf_angle;
+    out["leaf_speed"] = state.leaf_speed;
+    out["leaf_running"] = state.leaf_running;
+    out["leaf_open"] = state.leaf_open;
+    out["fan_fraction"] = state.fan_fraction;
+    out["fan_running"] = state.fan_running;
+    out["hooked"] = state.hooked;
+    out["chain_n"] = state.chain_n;
+    out["hands"] = state.hands;
+    out["support_n"] = state.support_n;
+    out["hand"] = godot::Vector3(static_cast<real_t>(state.hand.x), static_cast<real_t>(state.hand.y),
+                                 static_cast<real_t>(state.hand.z));
+    out["trips"] = static_cast<std::int64_t>(state.trips);
+    out["restarts"] = static_cast<std::int64_t>(state.restarts);
+    out["cover"] = state.cover;
     return out;
 }
 

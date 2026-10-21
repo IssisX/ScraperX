@@ -1056,6 +1056,30 @@ func _puff_material() -> StandardMaterial3D:
 	material.albedo_texture = _soft_puff()
 	return material
 
+# Once a frame, while the camera is near the bay on the 154 m deck
+# (src/sim/bay.hpp): its drive, fan, leaf and chain, heard.
+const BAY_LEAF_ENTITY := 2650
+const BAY_NEAR_M := 45.0
+const BAY_MIDDLE := Vector3(-2.15, 154.0, -128.5)
+const BAY_DRIVE := Vector3(-0.7, 153.4, -129.85)
+const BAY_FAN := Vector3(-0.62, 153.2, -126.2)
+# On the leaf, about its middle: its west end, and the eye the chain hooks.
+const BAY_LEAF_TIP := Vector3(-1.6, 0.0, 0.0)
+const BAY_LEAF_EYE := Vector3(0.9, 0.1, 0.4)
+# About the most her palms give, holding the leaf.
+const BAY_HOLD_FULL_N := 930.0
+var _bay := {}   # get_bay_state() this frame while near the bay, else empty
+func _sample_bay() -> void:
+	_bay = {}
+	if _camera.global_position.distance_to(BAY_MIDDLE) > BAY_NEAR_M:
+		return
+	var leaf := int(_native.get_kit_body_index(BAY_LEAF_ENTITY))
+	if leaf < 0:
+		return
+	_bay = _native.get_bay_state()
+	var at: Transform3D = _native.get_kit_body_transform(leaf)
+	_audio.update_bay(_bay, BAY_DRIVE, BAY_FAN, at * BAY_LEAF_TIP, at * BAY_LEAF_EYE)
+
 # Once a frame: E's state while the camera is near its shaft, the lamps and
 # drips on the car, the vents' air.
 func _sample_wet_e(delta: float) -> void:

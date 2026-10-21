@@ -35,6 +35,10 @@ const RIG_UNHOOK := 2
 # The yard crane's sling shackle and the forklifts' frames, whose eye on the
 # guard a crane's sling hooks (sim/yard_crane.hpp, sim/forklift.hpp).
 const YARD_CRANE_SHACKLE := 2987
+# The bay on the 154 m deck (src/sim/bay.hpp): its leaf, and the chain's
+# shackle made fast on a cleat by it.
+const BAY_LEAF := 2650
+const BAY_SHACKLE := 2653
 const FORKLIFT_CHASSIS := 2982
 const CRANE_FORKLIFT_CHASSIS := 2989
 # The yard crane's lifting magnet, and the device on its sling as the native
@@ -350,7 +354,8 @@ func _read_context() -> Dictionary:
 		action = {"id": &"pick_up", "label": verb, "icon": &"pick_up",
 			"detail": _carry_name(carry_target)}
 	elif grounded and rig == RIG_UNHOOK:
-		action = {"id": &"unhook", "label": "UNHOOK", "icon": &"hook", "detail": "ROPE END"}
+		action = {"id": &"unhook", "label": "UNHOOK", "icon": &"hook",
+			"detail": "CHAIN" if rig_target == BAY_SHACKLE else "ROPE END"}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -459,6 +464,8 @@ func _carry_name(entity: int) -> String:
 	match entity:
 		YARD_CRANE_SHACKLE:
 			return "CRANE SLING"
+		BAY_SHACKLE:
+			return "CHAIN"
 		2002, 2012:
 			return "ROPE SHACKLE"
 		2004, 2014:
@@ -568,6 +575,8 @@ func _kit_anchor_name(entity: int) -> String:
 			return "THE MAGNET"
 		YARD_CRANE_SPREADER:
 			return "THE SPREADER"
+		BAY_LEAF:
+			return "THE WALKWAY'S EYE"
 	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
 		_stock_name(entity)
 		match int(_stock_kinds.get(entity, -1)):

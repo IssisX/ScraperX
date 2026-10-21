@@ -32,6 +32,8 @@ const STATE_PEERING := 8    # stopped short of a noise, looking
 const STATE_UNRIGGING := 9  # at the way out's eye, taking the player's rope off it
 const STATE_STAGGERING := 10  # a blow took her balance
 const STATE_DOWN := 11        # a blow took her off her feet
+# Holding the bay's leaf up (src/sim/bay.hpp): about the most her palms give.
+const BRACE_FULL_N := 930.0
 const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
 const STEP_M := 0.7
@@ -658,6 +660,8 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var clinging := bool(data.get("clinging", false))
 	# Going down a line's bare cable on her forearms.
 	var on_line := bool(data.get("on_line", false))
+	# Her hands up under the bay's leaf, holding it (her trap).
+	var bracing := bool(data.get("bracing", false))
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -714,6 +718,22 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.55 * ahead
 		head_roll = 0.3 * sin(_clock * 9.0)
 		jaw_open = 0.75
+	elif bracing:
+		# Under the leaf's edge: one foot set before the other, the trunk leant
+		# up into it, both arms up before her with the palms under it,
+		# trembling with the load; the head tipped up, the jaw shut on it.
+		var load := clampf(float(data.get("support_n", 0.0)) / BRACE_FULL_N, 0.0, 1.0)
+		var shake := sin(_clock * 37.0) * 0.04 * load
+		pitch = 0.25
+		hip_y = 0.92
+		knees = 0.45
+		legs_fwd = 0.25
+		legs_back = 0.35
+		arms_fwd = 2.1 + shake
+		arms_bend = 0.75 - 0.15 * load
+		arms_splay = 0.3
+		head_pitch = -0.45
+		jaw_open = 0.05
 	elif on_line:
 		# Hung from the cable by her forearms hooked over it, the body
 		# swinging under, legs trailing, the head craned down the line.

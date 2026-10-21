@@ -1199,6 +1199,65 @@ func _positional_player(bus: StringName, at: Vector3, unit_size: float,
 	return player
 
 
+# The bay on the 154 m deck (src/sim/bay.hpp), from get_bay_state(): the
+# leaf's drive humming while it holds the leaf up; the fan's roar, coasting
+# down when the district stops; the leaf groaning on her palms while she
+# holds it, louder with the load. Its moments, counted for the scripted runs:
+# `trip` (hands in it: the district's contactors dropping out), `hook` (the
+# chain made fast on the leaf's eye) and `restart` (the district starting
+# again by itself). The leaf on its stops is update_machines' clang.
+const BAY_HOLD_FULL_N := 930.0
+var bay_cues := {}
+var _bay_drive: AudioStreamPlayer3D
+var _bay_fan: AudioStreamPlayer3D
+var _bay_groan: AudioStreamPlayer3D
+var _bay_trips := -1
+var _bay_restarts := -1
+var _bay_hooked := false
+
+func update_bay(state: Dictionary, drive: Vector3, fan: Vector3, tip: Vector3, eye: Vector3) -> void:
+	if state.is_empty():
+		return
+	if _bay_drive == null:
+		_bay_drive = _positional_player(BUS_EFFECTS, drive, 3.0, 40.0)
+		_bay_fan = _positional_player(BUS_EFFECTS, fan, 4.0, 50.0)
+		_bay_groan = _positional_player(BUS_EFFECTS, tip, 3.0, 40.0)
+	var trips := int(state["trips"])
+	var restarts := int(state["restarts"])
+	var hooked := bool(state["hooked"])
+	# The first sample only sets the counts: a load arrives mid-story.
+	var tripped := _bay_trips >= 0 and trips > _bay_trips
+	var restarted := _bay_restarts >= 0 and restarts > _bay_restarts
+	var hooked_on := hooked and not _bay_hooked and _bay_trips >= 0
+	_bay_trips = trips
+	_bay_restarts = restarts
+	_bay_hooked = hooked
+	if tripped:
+		_count(bay_cues, &"trip")
+	if restarted:
+		_count(bay_cues, &"restart")
+	if hooked_on:
+		_count(bay_cues, &"hook")
+	if not _bank_ready or _silent:
+		return
+	var running := bool(state["leaf_running"])
+	var lifting := clampf(absf(float(state["leaf_speed"])) / 0.35, 0.0, 1.0)
+	_loop_level(_bay_drive, &"motor_loop", drive, (0.35 + 0.45 * lifting) if running else 0.0,
+		0.75 + 0.35 * lifting, -10.0)
+	var spin := clampf(float(state["fan_fraction"]), 0.0, 1.0)
+	_loop_level(_bay_fan, &"air_roar_loop", fan, 0.75 * spin, 0.45 + 0.6 * spin, -4.0)
+	var hold := clampf(float(state["support_n"]) / BAY_HOLD_FULL_N, 0.0, 1.0) if bool(state["hands"]) else 0.0
+	_loop_level(_bay_groan, &"groan_loop", tip, 0.8 * hold, 0.55 + 0.1 * hold, -4.0)
+	if tripped:
+		_play_at(&"clang", drive, -2.0, randf_range(0.42, 0.48))
+	if restarted:
+		_play_at(&"clang", drive, -6.0, randf_range(0.6, 0.66))
+		_play_at(&"creak", drive, -8.0, randf_range(0.7, 0.8))
+	if hooked_on:
+		_play_at(&"jingle", eye, -3.0, randf_range(0.85, 0.95))
+		_play_at(&"clang", eye, -6.0, randf_range(0.9, 1.0))
+
+
 # The chiller drop (AS-007 E), machines only, from get_wet_state(): the air
 # roaring through the throttle under the car's floor, louder with its flow
 # and higher with the duct's pressure; the collar's blast at the shaft's mouth
