@@ -2,11 +2,12 @@ extends Node3D
 
 # Native state owns every contact, activity and position. This is a garment rig.
 const BodyRig := preload("res://presentation/first_person_body_rig.gd")
+const SPARK_COUNT := 10
 var _body: Node3D
 var _hood: Node3D
 var _rod: MeshInstance3D
 var _arc: MeshInstance3D
-var _sparks: Array[MeshInstance3D] = []
+var _sparks: MultiMeshInstance3D
 var _working := false
 var _tip := Vector3.ZERO
 var _episode := -1
@@ -33,6 +34,57 @@ func _box(parent: Node3D, label: String, size: Vector3, point: Vector3, material
 	node.position = point
 	return node
 
+func _batch_garment() -> void:
+	# The imported garment uses one shared skin. Join only equivalent render
+	# state; keep source nodes for the rig's sole/mesh references.
+	var groups: Dictionary = {}
+	for source in _body._meshes:
+		if source.skin == null or source.material_override == null \
+				or source.mesh.get_surface_count() != 1 \
+				or source.mesh.get_blend_shape_count() != 0 \
+				or source.transform != Transform3D.IDENTITY:
+			continue
+		var key := [source.get_parent().get_instance_id(), source.skin.get_instance_id(),
+			source.skeleton, source.material_override.get_instance_id(), source.cast_shadow,
+			source.layers, source.extra_cull_margin, source.mesh.surface_get_format(0),
+			source.mesh.surface_get_primitive_type(0)]
+		if not groups.has(key):
+			groups[key] = []
+		groups[key].append(source)
+	for sources in groups.values():
+		if sources.size() < 2:
+			continue
+		var first: MeshInstance3D = sources[0]
+		var arrays: Array = first.mesh.surface_get_arrays(0).duplicate()
+		for index in range(1, sources.size()):
+			var incoming: Array = sources[index].mesh.surface_get_arrays(0)
+			var vertex_offset: int = arrays[Mesh.ARRAY_VERTEX].size()
+			for slot in Mesh.ARRAY_MAX:
+				if arrays[slot] == null:
+					continue
+				var joined: Variant = arrays[slot]
+				var extra: Variant = incoming[slot].duplicate()
+				if slot == Mesh.ARRAY_INDEX:
+					for element in extra.size():
+						extra[element] += vertex_offset
+				joined.append_array(extra)
+				arrays[slot] = joined
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(first.mesh.surface_get_primitive_type(0), arrays,
+			[], {}, first.mesh.surface_get_format(0) & Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES)
+		var batch := MeshInstance3D.new()
+		batch.name = "GarmentBatch" + String(first.name)
+		batch.mesh = mesh
+		batch.skin = first.skin
+		batch.skeleton = first.skeleton
+		batch.material_override = first.material_override
+		batch.cast_shadow = first.cast_shadow
+		batch.layers = first.layers
+		batch.extra_cull_margin = first.extra_cull_margin
+		first.get_parent().add_child(batch)
+		for source in sources:
+			source.visible = false
+
 func _build() -> void:
 	if _body != null:
 		return
@@ -44,6 +96,7 @@ func _build() -> void:
 		if String(mesh.name) == "shadow":
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			mesh.material_override = _material(Color("292d2b"))
+	_batch_garment()
 	_hood = Node3D.new()
 	_hood.name = "WeldingHood"
 	add_child(_hood)
@@ -58,8 +111,17 @@ func _build() -> void:
 	_arc = _box(self, "SeamArc", Vector3(0.018, 0.014, 0.018), Vector3.ZERO, glow)
 	var spark_material := _material(Color("df9d53"))
 	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	for index in 10:
-		_sparks.append(_box(self, "SeamSpark%d" % index, Vector3(0.003, 0.003, 0.018), Vector3.ZERO, spark_material))
+	var spark_mesh := BoxMesh.new()
+	spark_mesh.size = Vector3(0.003, 0.003, 0.018)
+	var spark_batch := MultiMesh.new()
+	spark_batch.transform_format = MultiMesh.TRANSFORM_3D
+	spark_batch.mesh = spark_mesh
+	spark_batch.instance_count = SPARK_COUNT
+	_sparks = MultiMeshInstance3D.new()
+	_sparks.name = "SeamSparks"
+	_sparks.multimesh = spark_batch
+	_sparks.material_override = spark_material
+	add_child(_sparks)
 	_effects(false)
 
 func reset() -> void:
@@ -79,8 +141,7 @@ func _effects(active: bool) -> void:
 		return
 	_arc.visible = active
 	_rod.visible = active
-	for spark in _sparks:
-		spark.visible = active
+	_sparks.visible = active
 
 func welding_active() -> bool:
 	return _working
@@ -168,7 +229,9 @@ func present(state: Dictionary, delta: float) -> void:
 		_rod.scale.z = maxf(0.05, hand.distance_to(_tip)) / 0.26
 		_arc.global_position = _tip
 		_arc.scale = Vector3.ONE * (0.72 + 0.24 * sin(float(tick) * 2.7))
-		for index in _sparks.size():
+		for index in SPARK_COUNT:
 			var age := fposmod(float(tick) / 90.0 * 3.0 + index * 0.137, 1.0) * 0.16
 			var angle := index * 2.399
-			_sparks[index].global_position = _tip + Vector3(cos(angle) * age * 0.8, age * 0.6 - 4.9 * age * age, sin(angle) * age * 0.8)
+			var world_point := _tip + Vector3(cos(angle) * age * 0.8, age * 0.6 - 4.9 * age * age, sin(angle) * age * 0.8)
+			_sparks.multimesh.set_instance_transform(index,
+				Transform3D(Basis.IDENTITY, _sparks.to_local(world_point)))

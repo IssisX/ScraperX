@@ -18,6 +18,9 @@ env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
   ANDROID_NDK_VERSION: 29.0.14206865
+  CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
   GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/ci/android/ScraperX-ChatGPT-debug.keystore
   GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
   GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
@@ -39,7 +42,7 @@ jobs:
       run: |
         set -euo pipefail
         sudo apt-get update
-        sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+        sudo apt-get install --yes ccache ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
         SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
         test -x "${SDKMANAGER_PATH}"
         yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
@@ -64,12 +67,22 @@ jobs:
         unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
           -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
         tools/godot/godot --version
+    - name: Restore native compiler cache
+      id: native-compiler-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ${{ runner.os }}-chatgpt-native-v1-${{ hashFiles('src/**', 'tests/**', 'CMakeLists.txt', 'cmake/**', 'ci/godot-cpp-build-profile.json') }}
+        restore-keys: ${{ runner.os }}-chatgpt-native-v1-
+    - name: Bound native compiler cache
+      run: ccache --max-size=1G
     - name: Build host bridge for Godot resource import (no gameplay test claim)
       shell: bash
       run: |
         set -euo pipefail
         cmake -S . -B build/candidate-host -G Ninja \
           -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
           -DGODOTCPP_TARGET=template_release \
           -DGODOTCPP_BUILD_PROFILE="${GITHUB_WORKSPACE}/ci/godot-cpp-build-profile.json"
@@ -180,6 +193,7 @@ jobs:
         set -euo pipefail
         cmake -S . -B build/android-arm64 -G Ninja \
           -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
           -DANDROID_ABI=arm64-v8a \
           -DANDROID_PLATFORM=android-24 \
@@ -190,6 +204,13 @@ jobs:
         cmake --build build/android-arm64 --target scraperx_native --parallel 2
         test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
         file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+        ccache --show-stats | tee artifacts/native-compiler-cache.log
+    - name: Save native compiler cache before presentation gates
+      if: steps.native-compiler-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ${{ steps.native-compiler-cache.outputs.cache-primary-key }}
     - name: Prepare visible source and Android build identity
       shell: bash
       run: python3 ci/prepare_chatgpt_build_info.py
@@ -524,7 +545,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        for check in freight_activity alpine_peak_mesh static_world_batch kit_cable_batch static_shadow_render opening_render_budget; do
+        for check in freight_activity alpine_peak_mesh static_world_batch kit_cable_batch static_shadow_render yard_worker_spark_batch yard_worker_garment_batch opening_render_budget; do
           timeout 120s xvfb-run -a -s '-screen 0 160x120x24' \
             tools/godot/godot --path godot --audio-driver Dummy \
             --rendering-method gl_compatibility --resolution 160x120 \

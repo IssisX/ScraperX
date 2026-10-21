@@ -1,0 +1,246 @@
+{
+  "base_revision": "f2bf0b8e94b19aa138b4667941016c99ba480ecd",
+  "introduced_failure": {
+    "candidate": 39647297796,
+    "gate": "Check static batching and native cable rendering / opening_render_budget",
+    "scope": "Actual shipping Main camera stress probe; not native route completion or phoneFPS",
+    "draws": {
+      "opening": 930,
+      "ground_to_crown": 778,
+      "crown_to_ground": 1011
+    },
+    "required_draws": "0 < calls <1000, unchanged"
+  },
+  "spark_mcp": {
+    "execution": "Godot MCP run_project(scene=tests/yard_worker_mcp.tscn), then run_script",
+    "far_observation": {
+      "camera_distance_m": 1590,
+      "far_draws_after": 1,
+      "far_draws_before": 10,
+      "meshes": [
+        {
+          "material_override_id": "-9223372007914076701",
+          "name": "trousers",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 6552,
+              "format": 34359745567,
+              "material_id": "-9223372004726405472",
+              "vertices": 1638,
+              "weights": 6552
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372007914076701",
+          "name": "jacket",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 6748,
+              "format": 34359745567,
+              "material_id": "-9223372004709628255",
+              "vertices": 1687,
+              "weights": 6748
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372007880522266",
+          "name": "jacket_inner",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 392,
+              "format": 34359745567,
+              "material_id": "-9223372004692851038",
+              "vertices": 98,
+              "weights": 392
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372003652663614",
+          "name": "hivis",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 588,
+              "format": 34359745567,
+              "material_id": "-9223372004676073821",
+              "vertices": 147,
+              "weights": 588
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372007880522266",
+          "name": "zip",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 192,
+              "format": 34359745567,
+              "material_id": "-9223372004659296604",
+              "vertices": 48,
+              "weights": 192
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372007897299483",
+          "name": "boots",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 7536,
+              "format": 34359745567,
+              "material_id": "-9223372004642519387",
+              "vertices": 1884,
+              "weights": 7536
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372007880522266",
+          "name": "soles",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 448,
+              "format": 34359745567,
+              "material_id": "-9223372004625742170",
+              "vertices": 112,
+              "weights": 448
+            }
+          ],
+          "transform_identity": true
+        },
+        {
+          "material_override_id": "-9223372003635886616",
+          "name": "shadow",
+          "skeleton": "..",
+          "skin_id": "-9223372004139202886",
+          "surface_count": 1,
+          "surfaces": [
+            {
+              "bones": 9760,
+              "format": 34359745567,
+              "material_id": "-9223372004608964953",
+              "vertices": 2440,
+              "weights": 9760
+            }
+          ],
+          "transform_identity": true
+        }
+      ],
+      "saved_draws": 9,
+      "shadow_distance_m": 220,
+      "shadow_mode": 2
+    },
+    "paired_call": "return await load(\"res://tests/yard_worker_spark_batch_test.gd\").Probe.new().run(scene_tree,\"res://\")",
+    "paired_result": {
+      "changed_pixels": 0.0,
+      "channel_tolerance": 0.00784313725490196,
+      "checks": 17.0,
+      "draws_after": 4.0,
+      "draws_before": 22.0,
+      "failures": [],
+      "maximum_channel_error": 0.0,
+      "spark_pixels": 206.0
+    },
+    "renderer": "Mesa softpipe, actual 256x256 SubViewport; directional shadows enabled",
+    "source_sha256": {
+      "presentation/life/yard_worker_view.gd": "3b7d12ea87e778560cd704f8587ad5df2899aa431e1b636d1164631dee15ca9c",
+      "tests/yard_worker_spark_batch_test.gd": "beb574c8fd2ff7f94ec7db6ffcc54d6a6fe75e8c49aa958f8ac32151c9d5f4fa",
+      "tests/yard_worker_view_test.gd": "c2ca443218cae1daff7d4bb2c63b3384bbbe379dd8f9d3bb22d8d16626589a2b"
+    },
+    "view_call": "return load(\"res://tests/yard_worker_view_test.gd\").new().execute(scene_tree)",
+    "view_result": {
+      "checks": 31.0,
+      "failed": [],
+      "welding": true
+    }
+  },
+  "garment_mcp": {
+    "garment": {
+      "channel_tolerance": 0.00784313725490196,
+      "checks": 41,
+      "failures": [],
+      "poses": [
+        {
+          "changed_pixels": 0,
+          "draws_after": 24,
+          "draws_before": 30,
+          "maximum_channel_error": 0.00392156839370728,
+          "pose": "working",
+          "visible_pixels": 19449
+        },
+        {
+          "changed_pixels": 0,
+          "draws_after": 18,
+          "draws_before": 24,
+          "maximum_channel_error": 0.0,
+          "pose": "pointing",
+          "visible_pixels": 22149
+        },
+        {
+          "changed_pixels": 0,
+          "draws_after": 18,
+          "draws_before": 24,
+          "maximum_channel_error": 0.0,
+          "pose": "moving",
+          "visible_pixels": 22022
+        }
+      ]
+    },
+    "view": {
+      "checks": 31,
+      "failed": [],
+      "hand": "(-0.13, 1.17, -0.34)",
+      "hood": "(-0.0, 1.55402, -0.088851)",
+      "tip": "(-0.08, 1.08, -0.48)",
+      "welding": true
+    },
+    "source_sha256": {
+      "presentation/life/yard_worker_view.gd": "6f7a9c38e7a5530b864214d35cb994363c74f1c99b328594b3b67fda295d7dea",
+      "tests/yard_worker_garment_batch_test.gd": "29bd66b58a38368335710632b54226c0ae4fd8f4769e36240d7d1bf5e989f5c3",
+      "tests/yard_worker_view_test.gd": "c2ca443218cae1daff7d4bb2c63b3384bbbe379dd8f9d3bb22d8d16626589a2b"
+    },
+    "execution": "Godot MCP run_project tests/yard_worker_mcp.tscn; run_script await load(\"res://tests/yard_worker_garment_batch_test.gd\").Probe.new().run(scene_tree,\"res://\"); affected view execute(scene_tree)",
+    "renderer": "Mesa softpipe, isolated384x384 SubViewport, directional shadows enabled"
+  },
+  "native_unchanged": {
+    "source": "f2bf0b8e94b19aa138b4667941016c99ba480ecd",
+    "sha256": "a8aba795a8f867b730242633caec04cbf0bac49db45b2ad97e7fc261b75e1bdb",
+    "evidence": "NATIVE.json and sourcef2bf0b8 candidate39647297796 native/public/worker/beam/body gates; no local native rebuild for these presentation edits"
+  },
+  "ci_configuration": {
+    "change": "Same candidate workflow uses bounded1GiB compiler cache for host and Android C++; cache saved after successful compilation before later presentation gates. Required checks and exact-source APK acceptance remain intact.",
+    "scope": "YAML parsed locally; first runtime cache population/hits are not yet observed. Compilation output is still validated through ordinary candidate build/gates.",
+    "syntax_command": "python yaml.safe_load(.github/workflows/chatgpt-apk-candidate.yml), cache-step ordering and two CMake launcher assertions",
+    "syntax_result": "exit0; Candidate YAML parsed; cache precedes host+Android builds, saves before presentation, both render probes retain original budget gate."
+  },
+  "pending": "Original whole-world<1000 guard and matching accepted APK for the complete combined repair. Focused images/data establish preserved appearance and fewer submissions, not whole-world or phone performance."
+}

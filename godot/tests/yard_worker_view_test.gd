@@ -17,21 +17,27 @@ func execute(scene_tree: SceneTree) -> Variant:
 		worker.present(state, 1.0 / 90.0)
 	var checks := {"rig_loaded": worker._body.ready_to_pose(), "welding": worker.welding_active(),
 		"tip_at_seam": worker.weld_tip_world().is_equal_approx(state.work_point),
-		"masked_head": worker._hood.visible, "bounded_sparks": worker._sparks.size() == 10}
+		"masked_head": worker._hood.visible, "bounded_sparks": worker._sparks.multimesh.instance_count == 10,
+		"active_sparks_visible": worker._sparks.visible}
+	var paused_spark: Transform3D = worker._sparks.multimesh.get_instance_transform(0)
+	state["paused"] = true
+	worker.present(state, 0.0)
+	checks["pause_retains_frozen_sparks"] = worker._sparks.visible and worker._sparks.multimesh.get_instance_transform(0).is_equal_approx(paused_spark)
+	state["paused"] = false
 	for side in 2:
 		for joint in ["sh", "el", "wr", "hp", "kn", "an"]:
 			checks["finite_%s_%d" % [joint, side]] = worker._body.joint_world(side, joint).is_finite()
 	for activity in [1, 2, 3, 4, 5]:
 		state.activity = activity
 		worker.present(state, 1.0 / 90.0)
-		checks["activity_%d_stops_arc" % activity] = not worker.welding_active() and not worker._arc.visible
+		checks["activity_%d_stops_arc" % activity] = not worker.welding_active() and not worker._arc.visible and not worker._sparks.visible
 	state.activity = 0
 	state.supported = false
 	state.velocity = Vector3(1, -3, 0)
 	var serial: int = worker.footstep_serial()
 	for index in 30:
 		worker.present(state, 1.0 / 90.0)
-	checks["fall_stops_arc"] = not worker.welding_active()
+	checks["fall_stops_arc"] = not worker.welding_active() and not worker._sparks.visible
 	checks["fall_no_footsteps"] = serial == worker.footstep_serial()
 	state.supported = true
 	state.activity = 3
@@ -41,7 +47,7 @@ func execute(scene_tree: SceneTree) -> Variant:
 	checks["walk_has_steps"] = worker.footstep_serial() > serial
 	state.present = false
 	worker.present(state, 1.0 / 90.0)
-	checks["hide_clears"] = not worker.visible and not worker.welding_active() and not worker._arc.visible
+	checks["hide_clears"] = not worker.visible and not worker.welding_active() and not worker._arc.visible and not worker._sparks.visible
 	state.present = true
 	state.velocity = Vector3.ZERO
 	state.activity = 0
@@ -51,11 +57,14 @@ func execute(scene_tree: SceneTree) -> Variant:
 	checks["episode_clears_steps"] = worker.footstep_serial() == 0
 	state.position = Vector3(INF, 0, 0)
 	worker.present(state, 0.1)
-	checks["invalid_hidden"] = not worker.visible and not worker.welding_active()
+	checks["invalid_hidden"] = not worker.visible and not worker.welding_active() and not worker._sparks.visible
 	state.position = Vector3(0, 0.9, 0)
 	for index in 30:
 		state.native_tick = index
 		worker.present(state, 1.0 / 90.0)
+	worker.reset()
+	checks["reset_hides_sparks"] = not worker._sparks.visible and not worker.welding_active()
+	worker.present(state, 1.0 / 90.0)
 	# A plain work surface/floor provides scale without supplying fictional footing.
 	worker._box(root, "FixtureBench", Vector3(1.3, 0.12, 0.6), Vector3(0, 1.0, -0.65), worker._material(Color("44494c"), 0.7))
 	worker._box(root, "FixtureFloor", Vector3(12, 0.1, 12), Vector3(0, -0.05, 0), worker._material(Color("555657")))

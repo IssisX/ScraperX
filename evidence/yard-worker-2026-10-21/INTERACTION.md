@@ -18,6 +18,14 @@ Full-world screenshots on the Mesa softpipe host timed out; the completed screen
 
 Candidate39642854365/source167aa106 exposed an introduced regression: the first bench location blocked the existing loaded forklift lane. The station is now east of that lane, with bench and seam derived from the same native home. The original beam route and physical laws are unchanged. New worker fixtures follow the clear approach and retrace it before passing the existing cargo beam and crate; longer travel budgets cover the longer walk. Actual native and Godot MCP paths pass with the new station. Matching candidate acceptance remains a separate publication result.
 
+## Render repair in the combined delivery batch
+
+Sourcef2bf0b8 candidate39647297796 passed the worker, body and original loaded-beam gates, then exposed1011draws in the crown-to-ground render stress view against the existing<1000limit. That limit and shipping shadows/whole-tower visibility remain unchanged.
+
+Root batches all ten identical sparks into one MultiMesh and joins only worker garment surfaces with identical material, Skin, skeleton, transform, format and shadow/layer settings. Every original vertex, triangle and bone weight remains. The first-person body owner/assets and all native laws are unchanged. Actual Godot MCP paired rendering: sparks22→4 near/10→1 at1590m; near spark images match exactly. Garment working30→24draws, pointing/moving24→18; maximum image error1/255 in the working pose, exact pixels in the other two. Garment data/render41checks and affected worker behavior31checks pass. Exact calls/results/source hashes and limits live in `RENDER_BATCH.json`. Whole-world budget and matching APK acceptance remain separate pending CI observations.
+
+The same candidate workflow now caches compiled C++ work and saves the cache before later presentation gates. This is configured build reuse, not a measured build-time claim. Focused checks cover partial edits; the complete connected feature/repair is one APK batch.
+
 ## Tuning
 
 `src/sim/yard_worker.cpp` owns the2.2m notice radius, .8s attention before pointing,2s pointing interval,5m rearm distance, .9m/s return and1.2m/s yield targets, all below the existing actuator speed bound. `yard_worker.hpp` owns the authored home, work seam and crane guide points. `yard_worker_view.gd` owns garment/gesture appearance; `yard_worker_audio.gd` owns only source gain, spatial falloff and presentation sound. These cannot redefine contact, body position or actuator limits.

@@ -19,7 +19,7 @@ This queue records the current engineering choice, not a permanent ordering. Exp
 
 ## Active goal and next handoff
 
-**Active handoff2026-10-21:** opening-yard worker implementation and relocated-station acceptance complete. Original600kg beam route, new worker public route and actual shipping Main touch12checks/1407ticks pass. The first published candidate failed because the new bench occupied the loaded operating lane; root moved the complete station clear without changing original mechanics or route tests. Publish the repair and obtain its matching green candidate APK; the sole checkpoint and evidence/yard-worker-2026-10-21 own exact source, commands, results and limits. Broader storyline and deferred machinery scope remain intact.
+**Active handoff2026-10-21:** opening-yard worker and relocated-station interaction are implemented; original600kg beam route, worker/body shipping touch gates pass in f2bf0b8 CI. That candidate failed the whole-world draw budget1011/required<1000. Root finished the connected spark/garment batching repair with actual paired Godot MCP image/data evidence, retaining geometry, skin, shadows and physics. Matching whole-world candidate/APK is still pending. All connected fixes go in one delivery batch, with focused checks during edits and compiler caching for unchanged C++. Exact source/results/limits live in the sole checkpoint and evidence/yard-worker-2026-10-21. Broader storyline and deferred machinery scope remain intact.
 
 The following handoff entries are historical2026-10-17, not current assignments:
 
