@@ -1,0 +1,6 @@
+interface:
+  display_name: "Adversarial Ideation"
+  short_description: "Independent ideas, distinct critics, stronger choices"
+  default_prompt: "Use $adversarial-ideation to develop independent ideas for my objective, challenge their strongest claims, and synthesize the best feasible concept."
+policy:
+  allow_implicit_invocation: false
