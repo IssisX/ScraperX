@@ -135,13 +135,21 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
     std::vector<Part> leaf;
     leaf.push_back(box({0.5F * length, 0.5F * kLeafThick, kLeafHalfWidth}, JPH::Vec3::sZero(), Material::Galvanised,
                        101.5F));
+    // Its hand rails and toe boards stop short of its west end: turning down
+    // about the east edge, what stands up on it swings west, and anything
+    // farther from the hinge than the cut's far edge would catch on the deck
+    // there and hold the leaf up.
+    const float east_end = 0.5F * length;
+    const float rail_west = -0.5F * length + kLeafRailInset;
+    const float toe_west = -0.5F * length + 0.1F;
     for (const float side : {-1.0F, 1.0F}) {
         const float z = side * (kLeafHalfWidth - 0.04F);
-        leaf.push_back(box({0.5F * length, 0.03F, 0.03F}, {0.0F, 0.5F * kLeafThick + kRailH, z}, Material::Yellow,
-                           4.0F));
-        leaf.push_back(box({0.5F * length, 0.06F, 0.02F}, {0.0F, 0.5F * kLeafThick + 0.06F, z}, Material::Yellow, 2.0F));
-        for (const float x : {-0.47F, 0.0F, 0.47F}) {
-            leaf.push_back(box({0.025F, 0.5F * kRailH, 0.025F}, {x * length, 0.5F * kLeafThick + 0.5F * kRailH, z},
+        leaf.push_back(box({0.5F * (east_end - rail_west), 0.03F, 0.03F},
+                           {0.5F * (east_end + rail_west), 0.5F * kLeafThick + kRailH, z}, Material::Yellow, 4.0F));
+        leaf.push_back(box({0.5F * (east_end - toe_west), 0.06F, 0.02F},
+                           {0.5F * (east_end + toe_west), 0.5F * kLeafThick + 0.06F, z}, Material::Yellow, 2.0F));
+        for (const float x : {rail_west + 0.025F, 0.5F * (east_end + rail_west), east_end - 0.025F}) {
+            leaf.push_back(box({0.025F, 0.5F * kRailH, 0.025F}, {x, 0.5F * kLeafThick + 0.5F * kRailH, z},
                                Material::Yellow, 1.0F));
         }
     }

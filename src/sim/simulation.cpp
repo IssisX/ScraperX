@@ -1162,6 +1162,8 @@ BaySnapshot Simulation::bay_state() const noexcept {
     result.hand = Vector3{view.hand_x, view.hand_y, view.hand_z};
     result.trips = view.trips;
     result.restarts = view.restarts;
+    const Vector3 &p = snapshot_.player_position;
+    result.cover = bay.mask_factor(JPH::RVec3(p.x, p.y, p.z));
     return result;
 }
 

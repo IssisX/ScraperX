@@ -274,6 +274,7 @@ struct BaySnapshot final {
     Vector3 hand{};               // where her palms are
     std::uint32_t trips = 0;      // times hands stopped the district
     std::uint32_t restarts = 0;   // times it started again by itself
+    double cover = 1.0;           // of the player's noise, what the fan leaves her to hear (1 none covered)
 };
 
 // AS-012, the swing off the 220 ring: the rider's seat and the ram on their

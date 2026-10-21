@@ -331,33 +331,21 @@ void matron_transition() {
     w.hinge(beam,at+facing*Vec3(2.45F,0.76F,0),facing*Vec3::sAxisZ());
     SharedSurvival encounter(w.physics,{beam});
     matron.set_shared_survival(&encounter);
+    // Her hands go up only in her trap at the bay (matron.hpp, bay.hpp): a
+    // falling beam beside her while she hunts is not hers to hold. The bay's
+    // own test (sim_tests_bay.cpp) holds the bracing itself: no catch while
+    // bracing, her rage still fed, friction back and hostile after release.
     int braced=0;
-    const float rage_before=matron.view().rage;
     for(int i=0;i<120;++i) {
         matron.pre_step(1.0F/120,at,1.0F);
-        if(matron.bracing_structure()) {
-            ++braced;
-            check(!matron.caught(at),"Matron catches player while hands support structure");
-        }
+        if(matron.bracing_structure()) ++braced;
         w.tick(); matron.post_step(1.0F/120);
     }
-    std::cout << "  Matron bracing ticks=" << braced << " of 120\n";
-    check(braced>=110,"Matron did not sustain physical bracing");
-    check(matron.view().rage > rage_before,"bracing erased audible rage input");
-    const float prop_half=float(at.GetY()+0.71F-Matron::kDeckTop)*0.5F;
-    const auto prop_at=RVec3(at.GetX(),Matron::kDeckTop+prop_half,at.GetZ())+facing*Vec3(0.65F,0,0);
-    auto prop=w.box({0.18F,prop_half,0.35F},prop_at,40);
-    w.physics.GetBodyInterface().SetRotation(prop,facing,EActivation::Activate);
-    for(int i=0;i<240;++i) {
-        matron.pre_step(1.0F/120,at,0);
-        w.tick(); matron.post_step(1.0F/120);
-    }
-    check(w.y(beam)>Matron::kDeckTop+1.5F,"Matron release lost the propped route");
-    check(!matron.bracing_structure(),"Matron did not release after prop took load");
-    check(w.physics.GetBodyInterface().GetFriction(matron.body())==0,"Matron locomotion friction not restored");
-    check(matron.caught(w.physics.GetBodyInterface().GetPosition(matron.body())),"Matron cannot resume hostile contact");
+    std::cout << "  Matron bracing ticks=" << braced << " of 120, out of her trap\n";
+    check(braced==0,"Matron braced a structure out of her trap");
+    check(matron.caught(w.physics.GetBodyInterface().GetPosition(matron.body())),"Matron not hostile beside the beam");
     matron.set_shared_survival(nullptr);
-    std::cout << "PASS shared survival actual Matron hands occupied then hostile release\n";
+    std::cout << "PASS shared survival actual Matron: hands up only in her trap, hostile beside a falling beam\n";
 }
 }
 int main() {

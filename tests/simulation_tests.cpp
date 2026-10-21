@@ -120,6 +120,10 @@ int main() {
         run_matron();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "bay") {
+        run_bay();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-collision") {
         run_matron_collision();
         return EXIT_SUCCESS;
@@ -416,6 +420,7 @@ int main() {
     run_summit();
     run_summit_arm();
     run_matron();
+    run_bay();
     run_loose_stock();
     run_look_target();
     run_body_order();

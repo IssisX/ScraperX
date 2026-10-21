@@ -26,6 +26,17 @@ bool walk_off_deck_4(Simulation &s) {
     return died;
 }
 
+// From the deck spawn, crouched (her locker not woken), east over the bay's
+// leaf and past her locker to the band's east end, in line with the
+// locker's east side: a run-up along the band clear of the bay (bay.hpp).
+bool to_the_run_up(Simulation &s) {
+    (void)s.set_crouch_input(true);
+    const bool there = walk_to(s, 0.6, -128.5, 12.0, 0.2) && walk_to(s, 25.0, -129.5, 30.0, 0.3) &&
+                       walk_to(s, 25.0, -126.2, 6.0, 0.1);
+    (void)s.set_crouch_input(false);
+    return there;
+}
+
 } // namespace
 
 void run_corpse() {
@@ -144,11 +155,11 @@ void run_arm_break() {
         // then up the ladder to the 176 ring, one-armed until it heals. (The
         // sprint wakes her; she is out as the climb is well under way.)
         Simulation s(InitialSpawn::Deck154);
-        require(s.advance_frame(1.0).accepted && walk_to(s, -15.0, -126.2, 8.0, 0.1), "arm: back along the band");
+        require(s.advance_frame(1.0).accepted && to_the_run_up(s), "arm: back along the band");
         bool struck = false;
         for (int i = 0; i < 6 * hz && !struck; ++i) {
-            (void)s.set_facing(1.0, 0.0);
-            (void)s.set_move_input(1.0, 0.0);
+            (void)s.set_facing(-1.0, 0.0);
+            (void)s.set_move_input(-1.0, 0.0);
             (void)s.set_sprint_input(true);
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
             struck = s.snapshot().hit_count > 0;
@@ -159,7 +170,8 @@ void run_arm_break() {
         std::cout << "  arm: into her locker at " << hit.hit_speed_mps << " m/s; arm broken " << hit.arm_broken
                   << ", deaths " << hit.death_count << "\n";
         require(struck && hit.arm_broken && hit.death_count == 0, "arm: flat out into the locker, an arm broken");
-        require(walk_to(s, 3.5, -128.2, 8.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+        require(walk_to(s, 12.2, -128.2, 4.0) && walk_to(s, 3.5, -128.2, 8.0) && walk_to(s, 3.5, -129.8, 4.0) &&
+                    walk_to(s, 5.0, -129.6, 4.0, 0.08),
                 "arm: to the ladder's foot");
         (void)s.set_facing(0.0, 1.0);
         require(s.advance_frame(0.4).accepted && s.request_traversal() && s.advance_frame(0.2).accepted &&
@@ -233,18 +245,19 @@ void run_arm_break() {
     }
     {
         Simulation s(InitialSpawn::Deck154);
-        require(s.advance_frame(1.0).accepted && walk_to(s, -15.0, -126.2, 8.0, 0.1), "arm: back along the band again");
+        require(s.advance_frame(1.0).accepted && to_the_run_up(s), "arm: back along the band again");
         bool struck = false;
         for (int i = 0; i < 6 * hz && !struck; ++i) {
-            (void)s.set_facing(1.0, 0.0);
-            (void)s.set_move_input(1.0, 0.0);
+            (void)s.set_facing(-1.0, 0.0);
+            (void)s.set_move_input(-1.0, 0.0);
             (void)s.set_sprint_input(true);
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
             struck = s.snapshot().arm_broken;
         }
         (void)s.set_sprint_input(false);
         (void)s.set_crouch_input(true);
-        require(struck && walk_to(s, 3.0, -128.5, 8.0, 0.3) && walk_to(s, 3.0, -132.36, 8.0, 0.3) &&
+        require(struck && walk_to(s, 12.2, -128.5, 4.0, 0.3) && walk_to(s, 3.0, -128.5, 8.0, 0.3) &&
+                    walk_to(s, 3.0, -132.36, 8.0, 0.3) &&
                     walk_to(s, 6.0, -132.36, 10.0, 0.12),
                 "arm: an arm broken on the locker, crouched onto the line's stand");
         (void)s.set_crouch_input(false);

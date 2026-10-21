@@ -61,6 +61,9 @@ public:
     // 4 cm toward the deck it is hinged at: 6 cm clear.
     static constexpr float kLeafEastX = kEastX - 0.06F;
     static constexpr float kLeafHangAngle = -1.45F;   // rad, its lower stop (hanging)
+    // Its rails end this far short of its west end (bay.cpp: clear of the
+    // deck's edge as it turns down).
+    static constexpr float kLeafRailInset = 0.3F;
     // Its motor holds it on the upper stop with a climber and the Matron on
     // it; let go, its brake slows it only a little (kLeafBrakeNm of the
     // ~2000 N m its own weight turns it with).

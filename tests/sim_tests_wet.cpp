@@ -2,6 +2,8 @@
 
 #include "sim_tests.hpp"
 
+#include "sim/bay.hpp"
+
 // Through the gap in D's fill line, where it crosses the walkway, onto the
 // platform.
 bool board_wet_d(scraperx::sim::Simulation &simulation) {
@@ -190,12 +192,22 @@ const Box kWetEZones[] = {
 // built where it was, and none of them reaches into E's shaft, duct or bucket
 // column. Prints its counts and hashes; when `expect` is set, requires them.
 void run_wet_e_guard(const bool expect) {
+    using scraperx::sim::Bay;
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
     Simulation world(InitialSpawn::WetFPlatform);
+    // The bodies there were before E's rebuild, in order; and those built
+    // since, after them (the bay on the 154 m deck, bay.hpp).
+    constexpr std::uint32_t kBodiesBeforeE = 595;
     Fnv bodies;
-    for (std::uint32_t i = 0; i < world.kit_body_count(); ++i) {
+    for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
         bodies.add(world.kit_body_entity(i));
+    }
+    const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
+                                    Bay::kShackleEntity};
+    bool since_after = world.kit_body_count() == kBodiesBeforeE + std::size(kSince);
+    for (std::uint32_t i = kBodiesBeforeE; since_after && i < world.kit_body_count(); ++i) {
+        since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
     }
     Fnv lines;
     bool lines_clear = true;
@@ -244,6 +256,7 @@ void run_wet_e_guard(const bool expect) {
         }
     }
     std::cout << "  E guard: bodies=" << world.kit_body_count() << " body_hash=" << bodies.hash
+              << " since_after=" << since_after
               << " lines=" << world.zipline_count() << " line_hash=" << lines.hash
               << " stock=" << world.loose_stock_count() << " stock_hash=" << stock.hash
               << " lines_clear=" << lines_clear << " stock_clear=" << stock_clear << '\n';
@@ -251,8 +264,9 @@ void run_wet_e_guard(const bool expect) {
         return;
     }
     // As recorded on the tree before E's rebuild (its parent, 4118862).
-    require(world.kit_body_count() == 595 && bodies.hash == 3514033760028014323ULL,
+    require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
+    require(since_after, "E guard: the bodies built since come after them, the bay's five");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     require(world.loose_stock_count() == 325 && stock.hash == 12537791641516680014ULL,
