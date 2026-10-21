@@ -3,6 +3,7 @@
 #include "bridge/fabricated_delivery.hpp"
 #include "sim/corpse.hpp"
 #include "sim/fabricated.hpp"
+#include "sim/matron.hpp"
 
 #include <cstring>
 #include <limits>
@@ -1757,6 +1758,10 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["severed_arm_rotation"] =
         to_godot_quat(p.severed_arm_rot_x, p.severed_arm_rot_y, p.severed_arm_rot_z, p.severed_arm_rot_w);
     out["wrist_load_n"] = p.wrist_load_n;
+    out["wrist_strain_ns"] = p.wrist_strain_ns;
+    out["wrist_side"] = static_cast<std::int64_t>(p.wrist_side);
+    out["wrist_tear_ns"] = static_cast<double>(sim::Matron::kArmTearNs);
+    out["last_severed_side"] = static_cast<std::int64_t>(p.last_severed_side);
     out["hang_hand_side"] = static_cast<std::int64_t>(p.hang_hand_side);
     out["dyno_in_flight"] = p.dyno_in_flight;
     out["dyno_catch_count"] = static_cast<std::int64_t>(p.dyno_catch_count);
@@ -1774,6 +1779,13 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["left_leg_lost"] = p.left_leg_lost;
     out["right_leg_lost"] = p.right_leg_lost;
     out["leg_tear_count"] = static_cast<std::int64_t>(p.leg_tear_count);
+    out["leg_load_n"] = p.leg_load_n;
+    out["leg_strain_ns"] = godot::Vector2(static_cast<real_t>(p.leg_strain_ns[0]), static_cast<real_t>(p.leg_strain_ns[1]));
+    out["leg_tear_ns"] = static_cast<double>(sim::Matron::kLegTearNs);
+    out["knee_pin_count"] = static_cast<std::int64_t>(p.knee_pin_count);
+    out["matron_hand"] = to_godot(p.matron_hand);
+    out["matron_hand2"] = to_godot(p.matron_hand2);
+    out["player_position"] = to_godot(p.player_position);
     godot::Array legs;
     for (std::size_t k = 0; k < 2; ++k) {
         godot::Dictionary leg;
