@@ -1549,6 +1549,22 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // Tests only, never bound to the bridge. Optional placement holds the NPC
+    // fixture between ticks; a null pointer only reads the last physical step.
+    struct MatronFixtureSample {
+        bool present = false;
+        Vector3 position{};
+        bool player_contact = false;
+        bool standing_on_static = false;
+        std::uint64_t floor_entity = 0;
+        std::vector<std::uint64_t> static_contacts;
+        std::vector<std::uint64_t> moving_contacts;
+        bool player_support_static = false;
+        bool traversal_support_static = false;
+        double hang_arm_limit = 0.0;
+        double hang_overload_impulse = 0.0;
+    };
+    [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

@@ -1100,6 +1100,51 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+Simulation::MatronFixtureSample Simulation::debug_matron_fixture(const Vector3 *place) {
+    auto &world = *physics_world_;
+    auto &physics = world.physics_system_;
+    auto &bodies = physics.GetBodyInterface();
+    const auto id = world.matron().body();
+    MatronFixtureSample sample;
+    sample.present = !id.IsInvalid() && bodies.IsAdded(id);
+    if (!sample.present) return sample;
+    if (place != nullptr) {
+        bodies.SetPositionAndRotation(id, JPH::RVec3(place->x, place->y, place->z),
+                                      JPH::Quat::sIdentity(), JPH::EActivation::Activate);
+        bodies.SetLinearAndAngularVelocity(id, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+    }
+    const auto at = bodies.GetPosition(id);
+    sample.position = {at.GetX(), at.GetY(), at.GetZ()};
+    sample.player_contact = physics.WereBodiesInContact(id, world.player_id_);
+    const JPH::RRayCast down(at, JPH::Vec3(0.0F, -1.15F, 0.0F));
+    JPH::RayCastResult floor;
+    if (physics.GetNarrowPhaseQuery().CastRay(down, floor, {}, {}, JPH::IgnoreSingleBodyFilter(id))) {
+        const JPH::BodyLockRead lock(physics.GetBodyLockInterfaceNoLock(), floor.mBodyID);
+        if (lock.Succeeded()) {
+            const auto &body = lock.GetBody();
+            sample.floor_entity = body.GetUserData();
+            sample.standing_on_static = body.IsStatic() && !body.IsSensor() &&
+                body.GetWorldSpaceSurfaceNormal(floor.mSubShapeID2, down.GetPointOnRay(floor.mFraction)).GetY() > 0.9F &&
+                floor.mFraction * 1.15F > 1.0F && floor.mFraction * 1.15F < 1.10F &&
+                physics.WereBodiesInContact(id, floor.mBodyID);
+        }
+    }
+    JPH::BodyIDVector ids;
+    physics.GetBodies(ids);
+    for (const auto other : ids) {
+        const auto entity = bodies.GetUserData(other);
+        const bool stationary = bodies.GetMotionType(other) == JPH::EMotionType::Static;
+        if (entity == snapshot_.support_entity_id) sample.player_support_static = stationary;
+        if (entity == snapshot_.traversal_support_entity_id) sample.traversal_support_static = stationary;
+        if (other != id && physics.WereBodiesInContact(id, other)) {
+            (stationary ? sample.static_contacts : sample.moving_contacts).push_back(entity);
+        }
+    }
+    sample.hang_arm_limit = world.hang_arms_ == nullptr ? 0.0 : world.hang_arms_->GetMaxDistance();
+    sample.hang_overload_impulse = world.hang_over_grip_impulse_;
+    return sample;
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();

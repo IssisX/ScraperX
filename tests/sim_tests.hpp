@@ -881,3 +881,5 @@ void run_step2_movement();
 
 void run_twin();
 void run_twin_geometry();
+
+void run_matron_player_independence();
