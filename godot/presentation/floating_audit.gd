@@ -47,7 +47,7 @@ const KIT_SHAPE_CAPSULE := 2
 # the structure rather than being it.
 const LAMPS := ["LampFitting", "LampHead", "CageLamp", "FloodFitting"]
 const SIGNS := ["SignPlate", "SignPlateMark", "BayPlate", "Banner", "BannerRod", "BannerMark",
-	"BannerBacking", "WordmarkBacking", "ChevronSpine", "ChevronUpper", "ChevronLower",
+	"WordmarkBacking", "ChevronSpine", "ChevronUpper", "ChevronLower",
 	"LiftSignBacking"]
 # Laid on a surface: held along their thin axis.
 const PAINT := ["DeckPlank", "DeckStreak", "StairTread", "Tread", "SkinRungPlate", "LaneStripe",

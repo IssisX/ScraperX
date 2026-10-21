@@ -854,19 +854,11 @@ func _build_waterfall(at: Vector3) -> void:
 	$TowerPresentation.add_child(mist)
 
 func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
-	# Painted banners (identity doc items 1 and 7): real Label3D copy over a
-	# backing plane, plus an original chevron-K mark. Non-collidable.
+	# The company's name and mark (identity doc item 1). The slogans hang on
+	# the stack as cloth banners (_build_stack_signage); the yard's three
+	# standing slogan boards repeated them and were taken out (the owner,
+	# 2026-10-21: "Why signs in the first place dude - waste").
 	var backing := _material(Color("4a231c"), 0.05, 0.85)
-	var slogans := [
-		["MATERIALS MOVE", "CIVILIZATION RISES"],
-		["HIGHER  STRONGER", "FURTHER"],
-		["PEOPLE  POWER", "PROGRESS"],
-	]
-	var banner_spots := [Vector3(-9.4, 0.0, -22.0), Vector3(21.4, 0.0, -42.0), Vector3(26.5, 0.0, -90.5)]
-	var steel := _material(LAMP_MAST_COLOR, 0.7, 0.62)
-	for index in banner_spots.size():
-		_add_banner(banner_spots[index], slogans[index], backing)
-		_hang_banner(banner_spots[index], steel)
 
 	# Tower-face wordmark: bigger backing, bigger text, high enough to be read
 	# from the approach. Set out on the old tower's face (z -143), it now hangs
@@ -890,27 +882,3 @@ func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
 	var crest_top := mark_at.y + 1.0
 	_add_box("WordmarkCrest", Vector3(2.2, crest_top - board_top, 0.12),
 		Vector3(mark_at.x, (board_top + crest_top) * 0.5, mark_at.z - 0.035 - 0.06), backing)
-
-# A banner's board hangs on two arms from the lamp mast behind it, over head
-# height; with no mast within BANNER_MAST_REACH it stands on two posts of its
-# own. (Set out along the approach, the boards were left 2.3 m up in the air.)
-# Drawn only: the board is the solid part.
-const BANNER_MAST_REACH := 3.0
-
-func _hang_banner(at: Vector3, steel: Material) -> void:
-	var back_z := at.z - BANNER_BOARD.z * 0.5
-	var bottom := at.y + BANNER_BOARD_Y - BANNER_BOARD.y * 0.5
-	var top := bottom + BANNER_BOARD.y
-	var nearest := Vector3.INF
-	for mast: Vector3 in LAMP_MASTS:
-		if Vector2(mast.x - at.x, mast.z - at.z).length() < Vector2(nearest.x - at.x, nearest.z - at.z).length():
-			nearest = mast
-	if Vector2(nearest.x - at.x, nearest.z - at.z).length() <= BANNER_MAST_REACH and nearest.z < back_z:
-		var mast_front := nearest.z + LAMP_MAST_SIZE.z * 0.5
-		for arm_y in [bottom + 0.3, top - 0.3]:
-			_add_box("BannerArm", Vector3(0.08, 0.08, back_z - mast_front),
-				Vector3(nearest.x, arm_y, (back_z + mast_front) * 0.5), steel)
-		return
-	for side in [-1.0, 1.0]:
-		_add_box("BannerPost", Vector3(0.12, top, 0.12),
-			Vector3(at.x + side * (BANNER_BOARD.x * 0.5 - 0.1), top * 0.5, back_z - 0.06), steel)
