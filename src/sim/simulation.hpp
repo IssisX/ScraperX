@@ -1572,6 +1572,22 @@ public:
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
+    // Tests only, never bound to the bridge. Optional placement holds the NPC
+    // fixture between ticks; a null pointer only reads the last physical step.
+    struct MatronFixtureSample {
+        bool present = false;
+        Vector3 position{};
+        bool player_contact = false;
+        bool standing_on_static = false;
+        std::uint64_t floor_entity = 0;
+        std::vector<std::uint64_t> static_contacts;
+        std::vector<std::uint64_t> moving_contacts;
+        bool player_support_static = false;
+        bool traversal_support_static = false;
+        double hang_arm_limit = 0.0;
+        double hang_overload_impulse = 0.0;
+    };
+    [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

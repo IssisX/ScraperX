@@ -49,6 +49,11 @@ int main() {
             {{300.0, y, 300.0, 0.5F, 0.5F, 0.5F, false}});
         std::cout << "  every world of this run: one extra solid in the band at " << y << " m\n";
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "matron-player-independence") {
+        run_matron_player_independence();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour") {
         run_parkour_seams();
         return EXIT_SUCCESS;
@@ -495,6 +500,7 @@ int main() {
     run_c7();
     run_summit();
     run_summit_arm();
+    run_matron_player_independence();
     run_matron();
     run_matron_pace();
     run_matron_unstick();
