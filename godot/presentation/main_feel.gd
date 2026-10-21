@@ -4,6 +4,8 @@ extends "res://presentation/main_context.gd"
 # voice and feedback, the first-person arms, the HUD layout, the camera's
 # feel, the snapshot rendered, and the telemetry overlay.
 
+const CapturePose := preload("res://presentation/capture_pose.gd")
+
 const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
 
 # Interface: every device (touch, pad, keyboard/mouse) is read by one router
@@ -864,6 +866,11 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			_camera.basis = Basis(axis.normalized(), Vector3.UP.angle_to(floor_up)) * _camera.basis
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
+	# The native capsule owns inversion, including recovery. Compose quaternions
+	# rather than extracting Euler angles around the upside-down singularity.
+	var physical_rotation: Quaternion = landing.get("physical_rotation", Quaternion.IDENTITY)
+	CapturePose.apply(_camera, position, eye - position, physical_rotation,
+		int(landing.get("capture_phase", 0)) != 0)
 	if _death_cam_left > 0.0:
 		_ride_death()
 

@@ -747,6 +747,16 @@ struct Snapshot final {
     double interpolation_alpha = 0.0;
     Vector3 player_position{};
     Vector3 player_linear_velocity{};
+    Quaternion player_rotation{};
+    Vector3 player_angular_velocity{};
+    // 0 traversal, 1 ankle grip/lift, 2 dangling, 3 physical recovery.
+    std::uint8_t capture_phase = 0;
+    Vector3 capture_ankle{};
+    double capture_force_n = 0.0;
+    double capture_escape = 0.0;
+    double capture_recovery_torque_nm = 0.0;
+    std::uint64_t capture_releases = 0;
+
     bool player_grounded = false;
     // Crouched: the short capsule (see Simulation::set_crouch_input).
     bool player_crouched = false;

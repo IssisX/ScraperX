@@ -1607,6 +1607,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             settle_level();
         }
     }
+    capture_rest_s_ = std::max(0.0F, capture_rest_s_ - dt);
+    if ((capturing_ || capture_rest_s_ > 0.0F) && can_hold_player()) {
+        // Feet and world contacts take the load. Do not overwrite the
+        // equal-and-opposite grip reaction with the pursuit controller.
+        player_on_deck_ = true;
+        sense_near();
+        return;
+    }
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
     // On her level (the height of the floor under her, within the tower's
@@ -1981,10 +1989,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 step_turn(dt, d, loudness, player_carry);
                 // Her hands on the player do what her stage has them do (a
-                // shove, once in its cooldown; fully changed, a death): her
+                // shove, once in its cooldown; fully changed, a grip): her
                 // feet stand meanwhile, and do not drive her body on into the
                 // player, carrying them off along a rail between shoves.
-                const bool hands_on = d < kCatchM && std::abs(float(player.GetY() - at.GetY())) < 1.4F;
+                const bool hands_on = stage_ != Stage::Changed && d < kCatchM &&
+                    std::abs(float(player.GetY() - at.GetY())) < 1.4F;
                 if (turn_ == Turn::Windup || hands_on) {
                     walk_toward(dt, wx, wz, 0.0F, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
                 } else if (turn_ == Turn::Lunge) {
@@ -2396,6 +2405,8 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 }
 
 void Matron::restore(const Saved &saved) {
+    capturing_ = false;
+    capture_rest_s_ = 0.0F;
     if (shared_survival_) shared_survival_->reset();
     if (!dead_) {
         remove_body();

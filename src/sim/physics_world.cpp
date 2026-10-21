@@ -493,6 +493,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    if (capture_phase_ != 0) {
+        commands = {}; // exclusive body owner; raw input goes to bounded escape below
+        commands.facing_x = requested.facing_x;
+        commands.facing_z = requested.facing_z;
+        commands.look_pitch = requested.look_pitch;
+        commands.time_seconds = requested.time_seconds;
+        commands.room_loudness = requested.room_loudness;
+    }
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;
@@ -515,6 +523,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // The forklift: the stick read as the driver's, forward and right of the
     // view. Driving, the stick and the buttons are the truck's and the body
     // stands on its floor.
+    bool vehicle_controlling = false;
     {
         const JPH::Vec3 right(-facing_.GetZ(), 0.0F, facing_.GetX());
         const double stick_forward = commands.move_input_x * facing_.GetX() + commands.move_input_z * facing_.GetZ();
@@ -528,6 +537,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                            static_cast<float>(commands.forklift_lift));
             driving = driving || truck.driving();
         }
+        vehicle_controlling = driving;
         if (driving) {
             commands.move_input_x = 0.0;
             commands.move_input_z = 0.0;
@@ -567,8 +577,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
 
     // Harnessed into the slingshot's pouch or the swing's seat, the body
     // is the machine's: no crouch, carry, rig or traversal begins.
-    if (!slingshot_->controls_player() && !swing_->controls_player() && !trapeze_->controls_player()) {
+    if (capture_phase_ == 0 && !slingshot_->controls_player() && !swing_->controls_player() && !trapeze_->controls_player()) {
+        const auto shape_before = active_player_shape();
         update_crouch(bodies, commands);
+        if (player_rotation_free_ && shape_before != active_player_shape()) player_rotation_dofs(true);
         update_rig(bodies, commands);
         update_carry(bodies, commands, delta_seconds);
         apply_traversal_commands(bodies, commands);
@@ -620,7 +632,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         clear_support_jolt();
     }
     apply_wind(bodies, commands.time_seconds);
-    if (!sling_controlling && traversal_state_ == TraversalState::None) {
+    if (capture_phase_ == 0 && !sling_controlling && traversal_state_ == TraversalState::None) {
         if (slingshot_flight_ && !grounded_) {
             // Thrown: the stick steers with a bounded force (2 m/s/s at
             // full stick) and does not brake the throw to a walking speed
@@ -695,6 +707,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         // its shackle, to be hooked on again.
         (void)kit_->unhook(way == 0 ? well_.a_rope : well_.b_rope);
     }
+    step_capture(bodies, requested, delta_seconds);
+    if (capture_phase_ != 0) {
+        pre_contact_velocity_ = bodies.GetLinearVelocity(player_id_);
+        pre_contact_fall_speed_mps_ = std::max(0.0F, -pre_contact_velocity_.GetY());
+    }
     kit_->pre_step(delta_seconds);
     crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
                     grounded_);
@@ -703,7 +720,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+    // Rebuild contacts midway through rotating-capsule recovery. Extra
+    // position iterations alone reuse the old orientation's manifold.
+    physics_system_.Update(delta_seconds, capture_phase_ != 0 ? 2 : 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
@@ -784,20 +803,19 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                     ++precision_landing_count_;
                 }
             }
-            record_landing(bodies, prepared);
+            record_landing(bodies, prepared && capture_phase_ == 0);
         }
         precision_target_valid_ = false;
     }
-    // Her hands on the player. Fully changed, a death like a lethal fall;
+    // Her hands on the player. Fully changed, a contact-gated physical grip;
     // before that a shove (matron.hpp, the stages): a pest's away from her, a
     // dangerous one's at the shaft's rim when it is near.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
-        if (matron_->kills()) {
-            matron_->count_catch();
-            leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), bodies.GetLinearVelocity(player_id_).Length(),
-                         false);
-            restore_from_checkpoint(bodies);
-            died_this_tick = true;
+    if (!died_this_tick && capture_phase_ == 0 && matron_->caught(bodies.GetPosition(player_id_))) {
+        if (matron_->captures()) {
+            if (capture_phase_ == 0 && capture_cooldown_ <= 0.0F && contact_listener_.matron_contact() &&
+                !sling_controlling && traversal_state_ == TraversalState::None && !vehicle_controlling) {
+                start_capture(bodies);
+            }
         } else if (matron_->shove_ready()) {
             matron_->count_shove();
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
@@ -822,7 +840,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     if (!died_this_tick) {
         advance_recovery(bodies, delta_seconds);
     }
-    if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
+    if (!died_this_tick && capture_phase_ == 0 && grounded_ && traversal_state_ == TraversalState::None &&
         footing_is_firm(bodies)) {
         // Once she is out the checkpoint is not renewed (it would lie just
         // ahead of her): the one at her release stays, committed the first

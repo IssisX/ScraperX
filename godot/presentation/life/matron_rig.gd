@@ -278,6 +278,11 @@ func contact(data: Dictionary, falling: bool) -> void:
 		return
 	# feet on the deck: the body rides up or down to the lower foot
 	_lift_body(clampf(-_lowest_foot(), -0.15, 0.3))
+	if int(data.get("capture_phase", 0)) in [1, 2]:
+		# Mirror the native ankle attachment; the rig never pulls the body.
+		var ankle: Vector3 = data["capture_ankle"]
+		_reach("r", skel.global_transform.affine_inverse() * ankle)
+		return
 	# (A pest hurries after you upright: only the dangerous and the changed run
 	# on all fours, and the Turn's lunge.)
 	var on_all_fours := state == 3 and not bool(data.get("clinging", false)) and \

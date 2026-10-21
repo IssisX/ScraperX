@@ -443,6 +443,14 @@ jobs:
           ! grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log
           test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 9
 
+      - name: Check physical capture camera presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s tools/godot/godot --headless --path godot \
+            --script res://tests/capture_pose_test.gd 2>&1 | tee artifacts/capture-pose.log
+          grep -q '^CAPTURE_POSE PASS' artifacts/capture-pose.log
+
       - name: Cross-compile native graph for Android arm64
         shell: bash
         run: |
