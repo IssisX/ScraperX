@@ -43,7 +43,7 @@ func setup(native: Object) -> void:
 	_band = _material(Color("b8611d"), 0.55)
 	_trousers = _material(Color("23262b"), 0.9)
 	_boots = _material(Color("2a1c10"), 0.75)
-	_skin = _material(Color("8a5a40"), 0.7)
+	_skin = _material(Color("e6bea5"), 0.7)   # the climber is white (the owner, 2026-10-21)
 	var plan: Array = native.get_corpse_plan()
 	for corpse in MAX_CORPSES:
 		var body: Array = []
