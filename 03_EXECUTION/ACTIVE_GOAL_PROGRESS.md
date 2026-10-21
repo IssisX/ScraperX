@@ -22,6 +22,25 @@ has not been checked against its scope here.
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
 | 10 Paid-release readiness | ~30% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). The title over the live tower is done (`touch_title`), and the START list is development-only. The top of the route is a native latch with an arrival beat, and the altimeter is scaled to it (what stands there is the owner's). The pause menu carries the licences the build ships under (`touch_pause`). The launcher icon and boot splash are the game's own, no engine branding (placeholder icon, owner may replace). The ending beyond the arrival, the release build, store identity, credits, the voice's clearance and device measurement are open (`RELEASE_PLAN.md`). |
 
+**The second tower in play: the broken bridge at the 220 ring (2026-10-21).** The owner asked for the
+second tower to come into play, then for the new side branches to be weighed and the strongest way
+taken. `dot/twin-tower-first-contact`'s move of the second shaft was taken whole: its face at z -224,
+a 48 m gap at the Stack, the drawn and native boxes, relief and regenerated collision together; the
+full native suite passed on it (990 s). Its walkway at the 220 ring became a broken bridge
+(`03_EXECUTION/SECOND_TOWER/BROKEN_BRIDGE.md`): two stayed halves with 18 m of open air between them;
+the shaft's erection arm over the gap's middle, a yellow bar across its tip; from a step at either tip
+the hook on the bar swings a body across to the top of its arc over the other deck, and DROP lets it
+down there (a pendulum over the middle carries a body to the height it left from; from the step its
+feet clear the far edge). A leaf stands raised on the far half; a hook shot into its trip's hood, which
+opens only toward the shaft, lets it down across the gap in 5.6 s, for good, through saves and loads.
+`feature/second-tower-crossing` was not merged (built for the old position, bars on drawn cables, a
+ladder, no way back); its hook-crossing idea is kept. Proof: native `twin` (the gap, the hood, the
+hook over and back with the line's jolt at about 345 of the 500 N s that tears the bite, the leaf down
+and walked both ways, save and load) and `twin geometry` (nothing near the shaft reachable from the
+ground above 2.6 m), the full native suite (981 s), `touch_twin` with touch_hook, touch_hook_rope,
+touch_wet, touch_c6 and touch_stack locally; CI run 626. Designs and the owner's next idea for tower
+two (PROPERTY DAMAGE, on the to-do): `03_EXECUTION/SECOND_TOWER/`.
+
 **The bay: shared survival on the 154 m deck (2026-10-21, `claude/shared-survival`).** Built on the
 other agent's native core (`src/sim/shared_survival.*`: finite palms, a district of drives that coast,
 brake and start again only afresh). A cut across the deck's north band, spanned by a motor-held steel
@@ -70,20 +89,11 @@ band, the 143 m band, the crane band, after every body) and requires a drive at 
 native suite passes on the patched build (149 PASS, no FAIL, 18.8 min); the diagnosis and evidence are
 in `03_EXECUTION/ENGINEERING/BODY_ORDER_STABILITY.md`.
 
-**Where the work stood when effort was lowered (2026-10-20).** The owner lowered effort to stay in
-the usage limits; nothing was lost. Each piece of unfinished work is on its own branch:
-- `claude/body-order-stability`: the body-order fix, merged into ScraperX-Claude the same day (the
-  entry above).
-- `claude/wip-bump-smooth` (b34fe3f): smooth parts get a faint bump, rough parts keep theirs. Done,
-  not yet checked by a second pair of eyes.
-- `claude/wip-edge-slide` (ceccb6b): the player sliding off near edges; an edge-drift test and a
-  movement change, unproven. Needs the edge test, the movement groups and the full native suite.
-- `claude/wip-floating-dressing` (649879c): lights and signs floating in midair; an audit and placement
-  changes, unproven. Needs the audit's count, a parse check, the solids table byte-identical.
-- `claude/wip-sky-vsync` (d2d52b3): a VSync setting and test changes; the sky-over-things fix may not
-  be in yet. Needs a parse check, the settings scenario, pictures at the 700 m spawns.
-- The glass spares tube's design: two maps and one design, `03_EXECUTION/CLIMB_REDESIGN/`.
-- The chiller drop's spec is ready for the owner's picks (`03_EXECUTION/CLIMB_REDESIGN/README.md`).
+**Where the work stood when effort was lowered (2026-10-20), since closed.** Every branch left then
+is merged or superseded: the body-order fix, and the four playtest fixes (the faint bump on smooth
+parts, the edge slide, the floating lights and the sky over things near 700 m with a VSync setting)
+went into ScraperX-Claude with the playtest work; the chiller drop was built and merged (2026-10-21);
+the glass spares tube is parked by the owner, its designs kept in `03_EXECUTION/CLIMB_REDESIGN/`.
 
 **Frontier (2026-10-13): Phase 6, the remaining RAISE machines.** The incline, tram and derrick are worked with the body (row 6). Next: the cascade mast, pitman lift, barrel helix and crown gondola, each by a decision not used yet (alignment, route, or the rider's own work), then the places around them.
 continue, the title, the top and the licences are done (see the rows). The landing, roll and edge code was
