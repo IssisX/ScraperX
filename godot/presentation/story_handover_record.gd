@@ -62,6 +62,7 @@ func _ready() -> void:
 func invalidate_identity() -> void:
 	_identity_dirty = true
 	_portrait_key = ""
+	_display_key = ""
 
 func _label(parent: Node, text: String, at: Vector2, extent: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -98,7 +99,9 @@ func _build_display() -> void:
 	_portrait.size = Vector2i(584, 340)
 	_portrait.own_world_3d = true
 	_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	add_child(_portrait)
+	# Child viewports render before their parent: the screen must receive this
+	# frame's fitted/default portrait rather than retain the previous image.
+	_display.add_child(_portrait)
 	var world := WorldEnvironment.new()
 	world.environment = Environment.new()
 	world.environment.background_mode = Environment.BG_COLOR

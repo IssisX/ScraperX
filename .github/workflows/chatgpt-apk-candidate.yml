@@ -264,6 +264,16 @@ jobs:
           grep -F "${marker}" "artifacts/story-${check}.log"
           if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' "artifacts/story-${check}.log"; then exit 1; fi
         done
+    - name: Check handover photo replacement and removal on actual rendered screen
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 60s xvfb-run -a -s '-screen 0 800x600x24' \
+          tools/godot/godot --path godot --audio-driver Dummy --rendering-method gl_compatibility \
+          --script res://tests/story_handover_identity_render_test.gd \
+          2>&1 | tee artifacts/story-handover-identity-render.log
+        grep -F 'STORY_HANDOVER_IDENTITY_RENDER PASS' artifacts/story-handover-identity-render.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/story-handover-identity-render.log; then exit 1; fi
     - name: Check rigging touch controls and actual shipping native view
       shell: bash
       run: |

@@ -117,11 +117,31 @@
   "voice_evidence": "handover-voice.json",
   "render": "handover-terminal-native-view.png",
   "render_scope": "Actual terminal component, source camera height/position/FOV, isolated world under software rendering. Full-world screenshot attempt was stopped; no frame-rate or phone-render proof. Root viewed saved image.",
-  "delivery_status": "matching candidate not yet started",
+  "delivery_status": "f2e0cc1 candidate superseded by repaired identity-display source; matching green-CI APK pending",
   "unverified": [
     "Android picker and likeness on actual owner photo",
     "Audible device playback and phone frame time",
     "Continuous ascent to this terminal (actual receiver integration staged once)",
     "Whole game commercial readiness"
-  ]
+  ],
+  "identity_display_repair": {
+    "introduced_in": "f2e0cc1",
+    "supported_cause": "Cached outer display did not invalidate with identity and sibling portrait could render after the one-shot parent screen. Actual frozen-render probe showed unchanged screen after new photo; invalidation alone left removal stale.",
+    "repair": "Invalidate both caches and parent portrait viewport beneath display so it renders first.",
+    "command": "Godot MCP run_script: await load(res://tests/story_handover_identity_render_case.gd).new().run(tree)",
+    "result": {
+      "checks": 3,
+      "failures": [],
+      "gameplay": false,
+      "photo_changes_screen": true,
+      "removal_exact_default": true,
+      "rendered": true
+    },
+    "repaired_source_sha256": {
+      "godot/presentation/story_handover_record.gd": "4c240a880403dcab7e398a66057cd08a55c6f422655e9da6dcd27dcf9d1652fb",
+      "godot/tests/story_handover_identity_render_case.gd": "f46c94cab6ee6fd3ce6d4d73bfbedf751b6f5ab754d3603c5e6d561002d4e1cd",
+      "godot/tests/story_handover_identity_render_test.gd": "38907f1ec331fd4b41b0032e426a795d0f613ff5b29491be082d16ae37b122d4"
+    },
+    "evidence_reuse": "Existing69native/input checks retain unchanged input/dialogue/footing paths; no local duplicate. New matching CI repeats required combined gates including this rendered identity regression."
+  }
 }
