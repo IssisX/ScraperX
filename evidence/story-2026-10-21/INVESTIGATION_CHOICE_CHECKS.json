@@ -1,0 +1,105 @@
+{
+  "handover-module-check.json": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+      "--script",
+      "res://tests/story_handover_test.gd"
+    ],
+    "exit": 0,
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nSTORY_HANDOVER PASS checks=157 failures=0 supplied_native_facts_only=1\n",
+    "source_hashes": {
+      "presentation/main.gd": "c8edb0d51055d2ecb77802f57fe8405da576ad94db92f46c28cdee0a62669104",
+      "presentation/story_guidance.gd": "415f4a52ae978487a78c447150cb0f76898dab73d7ae6e96061d5ea75745ebf2",
+      "presentation/story_handover_record.gd": "15fe974eaad5e268ec39ce2980919b11ef17698d0b0dedf7d505cfad8d20b5ab",
+      "presentation/story_handover_dialogue.gd": "9fe7c9c039ab8945707bcb299fa19e5f7f885fdbe4ab5eefa5b0bdb33060d45e",
+      "presentation/story_double_encounter.gd": "baa8d3e71d631a2bcd6b957d56bc6c6d1b3a8eb5268b31d5764e9a4eded0b316",
+      "tests/story_handover_test.gd": "8c51855e87ec60794b9f0b1749da2cf125ea3e123092023597bdbb2e23348610",
+      "tests/story_double_encounter_test.gd": "700e54ec05c4252d9ceccc88bb58bda557bd094fba3a7e30b78850e8aff0b5da"
+    },
+    "boundary": "supplied-observation module test; not native gameplay or audibility proof"
+  },
+  "encounter-owner-check.json": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+      "--script",
+      "res://tests/story_double_encounter_test.gd"
+    ],
+    "exit": 0,
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nSTORY_DOUBLE PASS checks=426 failures=0 supplied_native_facts_only=1\n",
+    "reason": "Guide now owns the accepted disposition; integration setup uses its actual archive events and choose_handover API instead of injecting the derived context field."
+  },
+  "source-assets-workflow.json": {
+    "command": "python: verify_story_radio_package.verify_recordings(source_directory, source_manifest); yaml.safe_load; bash -n for workflow run blocks",
+    "exit": 0,
+    "output": "STORY_SOURCE_RECORDINGS PASS cues=40 hashes=exact text=exact non_silent_rms=finite; WORKFLOW_SYNTAX PASS bash_steps=43",
+    "boundary": "source recordings and workflow syntax; APK package validation belongs to matching candidate CI"
+  },
+  "voice-generation.json": {
+    "command": [
+      "python",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/tools/generate_story_radio.py"
+    ],
+    "exit": 0,
+    "seconds": 76.0891435649828,
+    "output": "arrival_iona_empty_record reused accepted audio\narrival_iona_personnel_way reused accepted audio\narrival_iona_mesh_lip reused accepted audio\narrival_iona_first_ring reused accepted audio\nservice_iona_inspection_rail reused accepted audio\nservice_iona_swing_stair reused accepted audio\nreceiving_iona_come_look reused accepted audio\nreceiving_iona_freight_one reused accepted audio\nfreight_one_iona_crown reused accepted audio\nreceiving_iona_keep_the_height reused accepted audio\nreceiving_iona_recovery reused accepted audio\nvale_contact_ro reused accepted audio\nvale_contact_iona reused accepted audio\ndouble_ro_who reused accepted audio\ndouble_ari_name reused accepted audio\ndouble_ro_face reused accepted audio\ndouble_ari_job reused accepted audio\ndouble_ro_empty reused accepted audio\ndouble_ari_told reused accepted audio\ngeneration_event 0fa954e8f9c641d29137e90f466639d4\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\ndouble_ro_original_scope 9.3 63706\ngeneration_event 9eb6a27f80f24973ac61a508a9fc6914\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\ndouble_ari_original_scope 5.1 38508\ngeneration_event 6ebf48aac1f54e0e9cbe9a4f8c835d34\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\ndouble_ro_dev_has_scope 7.2 48595\ngeneration_event a86b9bb297084533b7710b8a7d0203cb\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\ndouble_ari_dev_has_scope 5.5 41624\ndouble_ro_when reused accepted audio\ndouble_ari_before reused accepted audio\ndouble_ro_name reused accepted audio\ndouble_ari_will reused accepted audio\ndouble_ro_and_face reused accepted audio\ndouble_ari_cannot reused accepted audio\ndouble_iona_here reused accepted audio\nhandover_record_assurance reused accepted audio\nhandover_ro_denial reused accepted audio\nhandover_iona_revision reused accepted audio\nhandover_ro_witness reused accepted audio\nhandover_iona_gallery reused accepted audio\nhandover_source_survey reused accepted audio\ngeneration_event 18c645c790cf487284b38d1b92221e07\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nhandover_ro_send_scope 5.4 36852\ngeneration_event cf6ac74ee4db4c7c8988d4835a83e9cf\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nhandover_dev_received 13.2 83932\ngeneration_event b7798ffa58b4408fa93b175b7bc7bd60\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nhandover_ro_ari_first 6.5 44798\ngeneration_event 71d37adf50194059b2e348047007fa51\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nhandover_iona_ari_first 4.7 31233\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\n"
+  },
+  "import.json": {
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+      "--editor",
+      "--import"
+    ],
+    "exit": 0,
+    "output": "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nGodot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n\nUnable to open Android 'build-tools' directory.\n[   0% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Started Project initialization (5 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Scanning file structure...\u001b[39m\u001b[0m\n[  16% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Loading global class names...\u001b[39m\u001b[0m\n[  33% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Verifying GDExtensions...\u001b[39m\u001b[0m\n[  50% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Creating autoload scripts...\u001b[39m\u001b[0m\n[  66% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Initializing plugins...\u001b[39m\u001b[0m\n[  83% ] \u001b[90m\u001b[1mfirst_scan_filesystem\u001b[22m | Starting file scan...\u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1mfirst_scan_filesystem\u001b[22m\n\u001b[0m\n[   0% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | Started Registering global classes... (12 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[   7% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  15% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  23% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  30% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  38% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  46% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  53% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  61% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  69% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  76% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n[  84% ] \u001b[90m\u001b[1mupdate_scripts_classes\u001b[22m | \u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1mupdate_scripts_classes\u001b[22m\n\u001b[0m\n[   0% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | Started Scanning actions... (8 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | double_ari_dev_has_scope.ogg\u001b[39m\u001b[0m\n[  11% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | double_ari_original_scope.ogg\u001b[39m\u001b[0m\n[  22% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | double_ro_dev_has_scope.ogg\u001b[39m\u001b[0m\n[  33% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | double_ro_original_scope.ogg\u001b[39m\u001b[0m\n[  44% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | handover_dev_received.ogg\u001b[39m\u001b[0m\n[  55% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | handover_iona_ari_first.ogg\u001b[39m\u001b[0m\n[  66% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | handover_ro_ari_first.ogg\u001b[39m\u001b[0m\n[  77% ] \u001b[90m\u001b[1m_update_scan_actions\u001b[22m | handover_ro_send_scope.ogg\u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1m_update_scan_actions\u001b[22m\n\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | Started (Re)Importing Assets (8 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  11% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  22% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  33% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  44% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  55% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  66% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[  77% ] \u001b[90m\u001b[1mreimport\u001b[22m | Preparing files to reimport...\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | Executing pre-reimport operations...\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | double_ari_dev_has_scope.ogg\u001b[39m\u001b[0m\n[  11% ] \u001b[90m\u001b[1mreimport\u001b[22m | double_ari_original_scope.ogg\u001b[39m\u001b[0m\n[  22% ] \u001b[90m\u001b[1mreimport\u001b[22m | double_ro_dev_has_scope.ogg\u001b[39m\u001b[0m\n[  33% ] \u001b[90m\u001b[1mreimport\u001b[22m | double_ro_original_scope.ogg\u001b[39m\u001b[0m\n[  44% ] \u001b[90m\u001b[1mreimport\u001b[22m | handover_dev_received.ogg\u001b[39m\u001b[0m\n[  55% ] \u001b[90m\u001b[1mreimport\u001b[22m | handover_iona_ari_first.ogg\u001b[39m\u001b[0m\n[  66% ] \u001b[90m\u001b[1mreimport\u001b[22m | handover_ro_ari_first.ogg\u001b[39m\u001b[0m\n[  77% ] \u001b[90m\u001b[1mreimport\u001b[22m | handover_ro_send_scope.ogg\u001b[39m\u001b[0m\n[  88% ] \u001b[90m\u001b[1mreimport\u001b[22m | Finalizing Asset Import...\u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1mreimport\u001b[22m\n\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | Started (Re)Importing Assets (8 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mreimport\u001b[22m | Executing post-reimport operations...\u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1mreimport\u001b[22m\n\u001b[0m\n[   0% ] \u001b[90m\u001b[1mloading_editor_layout\u001b[22m | Started Loading editor (5 steps)\u001b[39m\u001b[0m\n[   0% ] \u001b[90m\u001b[1mloading_editor_layout\u001b[22m | Loading editor layout...\u001b[39m\u001b[0m\n[  16% ] \u001b[90m\u001b[1mloading_editor_layout\u001b[22m | Loading docks...\u001b[39m\u001b[0m\n\u001b[92m[ DONE ]\u001b[39m \u001b[1mloading_editor_layout\u001b[22m\n\u001b[0m\n"
+  },
+  "source_hashes": {
+    "presentation/main.gd": "c8edb0d51055d2ecb77802f57fe8405da576ad94db92f46c28cdee0a62669104",
+    "presentation/story_guidance.gd": "415f4a52ae978487a78c447150cb0f76898dab73d7ae6e96061d5ea75745ebf2",
+    "presentation/story_handover_record.gd": "15fe974eaad5e268ec39ce2980919b11ef17698d0b0dedf7d505cfad8d20b5ab",
+    "presentation/story_handover_dialogue.gd": "9fe7c9c039ab8945707bcb299fa19e5f7f885fdbe4ab5eefa5b0bdb33060d45e",
+    "presentation/story_double_encounter.gd": "baa8d3e71d631a2bcd6b957d56bc6c6d1b3a8eb5268b31d5764e9a4eded0b316",
+    "tests/story_handover_input_case.gd": "fcd0b2512734ed0a16892ec859b9ab5373faa4a8f1020578c00add64defe6107",
+    "tests/story_handover_input_test.gd": "0afcac0e954eca975bad1b7b1d7e931c49afbe4fc94217e63bbbc7810d632ce5",
+    "tests/story_handover_test.gd": "8c51855e87ec60794b9f0b1749da2cf125ea3e123092023597bdbb2e23348610",
+    "tests/story_double_encounter_test.gd": "0ee720402772fa646199b60f9782c25b8fd27cfccb39b28013e791b37b2b6dc4",
+    "audio/story_radio/manifest.json": "80e837093ea22ced89e8c65deea3b42da776c7070c572c6f1876d99dc20faed4",
+    "audio/story_radio/generation_receipt.json": "5ccc4409900ac34a354b9f5bddc867ccc5c56dda551eaa098f6eceeda6b0bda9"
+  },
+  "native_evidence_reused": {
+    "sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+    "reason": "No native or bridge source/config changes; only GDScript and audio files copied into the established runtime."
+  }
+}

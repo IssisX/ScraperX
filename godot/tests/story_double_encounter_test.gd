@@ -2,6 +2,7 @@ extends SceneTree
 
 const Encounter := preload("res://presentation/story_double_encounter.gd")
 const Guide := preload("res://presentation/story_guidance.gd")
+const Dialogue := preload("res://presentation/story_handover_dialogue.gd")
 var checks := 0
 var failures: Array[String] = []
 
@@ -30,7 +31,101 @@ func focus(encounter: RefCounted, ctx: Dictionary, start: int = 0) -> StringName
 		key = encounter.observe(ctx, tick)
 	return key
 
+func reach_branch(encounter: RefCounted, ctx: Dictionary) -> int:
+	var tick := 54
+	check(focus(encounter, ctx) == Encounter.KEYS[0], "branch approach retains deliberate attention")
+	for phase in range(4):
+		var key: StringName = Encounter.KEYS[phase]
+		check(encounter.observe(ctx, tick + 1) == key, "common opening phase " + str(phase))
+		encounter.accept(key)
+		tick += 1
+	return tick
+
+func branch_checks() -> void:
+	for disposition in [&"undecided", &"ari_first", &"sent_to_dev", &"unrecognized", &""]:
+		var ctx := context()
+		ctx.handover_disposition = disposition
+		var encounter := Encounter.new()
+		var tick := reach_branch(encounter, ctx)
+		var expected: Array = Encounter.KEYS.duplicate()
+		if Encounter.BRANCH_KEYS.has(disposition):
+			expected[4] = Encounter.BRANCH_KEYS[disposition][0]
+			expected[5] = Encounter.BRANCH_KEYS[disposition][1]
+		for phase in range(4, expected.size()):
+			tick += 1
+			check(encounter.observe(ctx, tick) == expected[phase], "branch and shared close " + String(disposition) + " phase " + str(phase))
+			encounter.accept(expected[phase])
+		check(encounter.observe(ctx, tick + 1).is_empty(), "branch ends after thirteen accepted lines")
+	# A busy Guide observes but does not accept. Only the latest accepted
+	# request decides which knowledge the conversation commits to.
+	var ctx := context()
+	ctx.handover_disposition = &"ari_first"
+	var encounter := Encounter.new()
+	var tick := reach_branch(encounter, ctx)
+	check(encounter.observe(ctx, tick + 1) == &"double_ro_original_scope", "survey branch offered while Guide is busy")
+	encounter.accept(&"double_ro_dev_has_scope")
+	ctx.handover_disposition = &"sent_to_dev"
+	check(encounter.observe(ctx, tick + 2) == &"double_ro_dev_has_scope", "unaccepted branch follows changed knowledge")
+	encounter.accept(&"double_ro_original_scope")
+	check(encounter.observe(ctx, tick + 3) == &"double_ro_dev_has_scope", "stale branch acceptance cannot advance")
+	encounter.accept(&"double_ro_dev_has_scope")
+	ctx.handover_disposition = &"ari_first"
+	check(encounter.observe(ctx, tick + 4) == &"double_ari_dev_has_scope", "accepted first line freezes matching reply")
+	encounter.cancel_attention()
+	encounter.accept(&"double_ari_dev_has_scope")
+	ctx.story_actor.episode = 2
+	check(focus(encounter, ctx, tick + 5) == &"double_ari_dev_has_scope", "attention cancellation and new episode retain branch and accepted phase")
+	ctx.story_actor.present = false
+	check(encounter.observe(ctx, tick + 60).is_empty(), "actor loss pauses selected branch")
+	ctx.story_actor.present = true
+	check(focus(encounter, ctx, tick + 61) == &"double_ari_dev_has_scope", "actor return retains selected branch")
+	check(encounter.observe(ctx, 0).is_empty(), "native restart clears selected branch attention")
+	check(focus(encounter, ctx, 1) == Encounter.KEYS[0], "native restart clears accepted conversation")
+	for phase in range(4):
+		encounter.observe(ctx, 56 + phase)
+		encounter.accept(Encounter.KEYS[phase])
+	check(encounter.observe(ctx, 60) == &"double_ro_original_scope", "native restart selects current knowledge anew")
+	# The bypass is a committed branch too; later discovery cannot rewrite a
+	# question already heard into a mismatched answer.
+	ctx = context()
+	encounter = Encounter.new()
+	tick = reach_branch(encounter, ctx)
+	check(encounter.observe(ctx, tick + 1) == &"double_ro_empty", "missing knowledge uses original bypass")
+	encounter.accept(&"double_ro_empty")
+	ctx.handover_disposition = &"ari_first"
+	check(encounter.observe(ctx, tick + 2) == &"double_ari_told", "accepted bypass retains original answer after discovery")
+	encounter.reset()
+	tick = reach_branch(encounter, ctx)
+	check(encounter.observe(ctx, tick + 1) == &"double_ro_original_scope", "explicit reset clears bypass latch")
+
+func choose_at_archive(guide: RefCounted, disposition: StringName) -> int:
+	# Guide owns the accepted knowledge state. Earn it through the archive
+	# events rather than injecting its derived field into the actor context.
+	var terminal := {"position": Vector3(12, 110.9, -181.95), "grounded": true,
+		"checkpoint_footing_valid": true, "support_entity": 1960, "deaths": 0,
+		"story_handover_near": true, "story_handover": &"handover"}
+	guide.sample(terminal, 0)
+	terminal.erase("story_handover")
+	var tick: int = guide._transmission_until + 1
+	for key in Dialogue.KEYS:
+		check(guide.sample(terminal, tick).transmission_key == key, "archive prerequisite uses authored sequence " + String(key))
+		tick = guide._transmission_until + 1
+	terminal.story_handover = &"source"
+	check(guide.sample(terminal, tick).transmission_key == &"handover_source_survey", "original scope comparison precedes the choice")
+	terminal.erase("story_handover")
+	tick = guide._transmission_until + 1
+	guide.sample(terminal, tick)
+	check(guide.choose_handover(disposition, tick), "Guide accepts the explicit archive decision " + String(disposition))
+	var responses: Array = Dialogue.SEND_KEYS if disposition == &"sent_to_dev" else Dialogue.ARI_KEYS
+	for key in responses:
+		tick += 1
+		check(guide.sample(terminal, tick).transmission_key == key, "chosen archive response precedes the witness encounter " + String(key))
+		tick = guide._transmission_until + 1
+	guide.sample(terminal, tick)
+	return tick + 1
+
 func _run() -> void:
+	branch_checks()
 	var ctx := context()
 	var encounter := Encounter.new()
 	check(focus(encounter, ctx) == &"double_ro_who", "54 fresh ticks of clear face attention request first line")
@@ -69,7 +164,9 @@ func _run() -> void:
 		check(focus(Encounter.new(), bad).is_empty(), "reject " + invalid)
 	var guide := Guide.new()
 	var lengths := {}
-	for key in Encounter.KEYS:
+	for key in Encounter.CUES:
+		lengths[key] = .1
+	for key in Dialogue.CUES:
 		lengths[key] = .1
 	guide.configure_voice_lengths(lengths)
 	ctx = context()
@@ -92,6 +189,32 @@ func _run() -> void:
 				previous_tick = tick
 				check(guide.sample(ctx, tick).transmission_id == last_id, "same tick does not duplicate accepted cue")
 	check(seen == Encounter.KEYS, "all thirteen lines accepted exactly once in order")
+	for disposition in Encounter.BRANCH_KEYS:
+		var branch_guide := Guide.new()
+		branch_guide.configure_voice_lengths(lengths)
+		var start_tick := choose_at_archive(branch_guide, disposition)
+		ctx = context()
+		var accepted: Array[StringName] = []
+		var branch_id := 0
+		var death_tick := -1
+		for tick in range(start_tick, start_tick + 3000):
+			var branch_state: Dictionary = branch_guide.sample(ctx, tick)
+			if branch_state.transmission_id != branch_id:
+				branch_id = branch_state.transmission_id
+				var key: StringName = branch_state.transmission_key
+				if Encounter.CUES.has(key):
+					accepted.append(key)
+					check(branch_state.speaker == Encounter.SPEAKERS[key] and branch_state.transmission == Encounter.CUES[key], "authored branch speaker/text " + String(key))
+					if key == Encounter.BRANCH_KEYS[disposition][0]:
+						ctx.deaths = 1
+						ctx.handover_disposition = &"undecided"
+						death_tick = tick
+					if key == Encounter.BRANCH_KEYS[disposition][1]:
+						check(tick >= death_tick + Encounter.FOCUS_TICKS, "death requires fresh attention before branch reply")
+		var expected: Array = Encounter.KEYS.duplicate()
+		expected[4] = Encounter.BRANCH_KEYS[disposition][0]
+		expected[5] = Encounter.BRANCH_KEYS[disposition][1]
+		check(accepted == expected, "Guide retains accepted branch across death " + String(disposition))
 	var paused := Guide.new()
 	paused.configure_voice_lengths(lengths)
 	for tick in range(1000):

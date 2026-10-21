@@ -19,8 +19,8 @@ func context() -> Dictionary:
 	return {"position": Vector3(12, 110.9, -181.95), "grounded": true,
 		"checkpoint_footing_valid": true, "support_entity": Record.RECEIVER_ID, "deaths": 0}
 
-func view(at: Vector3, pixel_y: float = 480) -> Transform3D:
-	var target := Record.SCREEN_POSITION + Vector3(0, (.5 - pixel_y / Record.PIXELS.y) * Record.SCREEN_SIZE.y, 0)
+func view(at: Vector3, pixel_y: float = 480, pixel_x: float = 320) -> Transform3D:
+	var target := Record.SCREEN_POSITION + Vector3((pixel_x / Record.PIXELS.x - .5) * Record.SCREEN_SIZE.x, (.5 - pixel_y / Record.PIXELS.y) * Record.SCREEN_SIZE.y, 0)
 	return Transform3D(Basis.IDENTITY, at + Vector3(0, .62, 0)).looking_at(target, Vector3.UP)
 
 func rejected(ctx: Dictionary, camera: Transform3D, why: String) -> void:
@@ -91,6 +91,7 @@ func _run() -> void:
 	rejected(ctx, behind, "back of cabinet cannot activate the front screen")
 	rejected(ctx, away, "passing without screen attention cannot activate")
 	check_guide()
+	check_deliberate_choice()
 	print("STORY_HANDOVER %s checks=%d failures=%d supplied_native_facts_only=1" % ["PASS" if failures.is_empty() else "FAIL", checks, failures.size()])
 	record.queue_free()
 	fresh.queue_free()
@@ -128,3 +129,45 @@ func check_guide() -> void:
 	ctx.erase("story_handover")
 	state = guide.sample(ctx, guide._transmission_until + 1)
 	check(state.transmission.is_empty() and guide._record_phase == Dialogue.KEYS.size(), "replay never repeats the personal exchange")
+	var decision_tick: int = guide._last_tick
+	check(guide.handover_choice_available(decision_tick), "completed exchange and source comparison unlock a deliberate challenge")
+	check(not guide.choose_handover(&"unknown", decision_tick), "unrecognized choices never change knowledge")
+	check(not guide.choose_handover(&"sent_to_dev", decision_tick - 1), "stale choice ticks cannot submit evidence")
+	check(guide.choose_handover(&"sent_to_dev", decision_tick), "accepted send commits the single narrative disposition")
+	check(not guide.choose_handover(&"ari_first", decision_tick), "a second press cannot unsend the dispatched evidence")
+	state = guide.sample(ctx, decision_tick + 1)
+	check(state.transmission_key == Dialogue.SEND_KEYS[0] and state.handover_disposition == &"sent_to_dev", "send starts Ro's recorded request with the retained knowledge state")
+	state = guide.sample(ctx, guide._transmission_until + 1)
+	check(state.transmission_key == Dialogue.SEND_KEYS[1] and state.speaker == "DEV", "Dev acknowledges the actual chosen dispatch without declaring machinery safe")
+	check("ORIGINAL PRESERVED" in state.handover_receipt, "dispatch receipt preserves original evidence")
+	ctx.deaths = 1
+	state = guide.sample(ctx, guide._last_tick + 1)
+	check(state.handover_disposition == &"sent_to_dev", "death cannot erase accepted narrative knowledge")
+	state = guide.sample(ctx, 0)
+	check(state.handover_disposition == &"undecided" and not state.handover_choice_available, "native-time restart resets decision and comparison prerequisites")
+	var incomplete := Guide.new()
+	incomplete.sample(context(), 0)
+	check(not incomplete.choose_handover(&"ari_first", 0), "arrival alone cannot claim comparison or select a witness route")
+
+func check_deliberate_choice() -> void:
+	var ctx := context()
+	for choice in [&"sent_to_dev", &"ari_first"]:
+		var record := Record.new()
+		root.add_child(record)
+		# Supplied presentation state isolates the screen's press/geometry law;
+		# the actual Main path earns this state through Guide and packaged audio.
+		record._first_play = false
+		record._choice_available = true
+		var camera := view(ctx.position, 638, 168 if choice == &"sent_to_dev" else 472)
+		record.observe(camera, ctx, 0)
+		for tick in range(1, Record.FOCUS_TICKS):
+			check(record.observe(camera, ctx, tick).is_empty(), "choice gaze never submits " + str(choice))
+		check(record.choice_offer().is_empty(), "partial attention cannot offer a commit " + str(choice))
+		check(record.observe(camera, ctx, Record.FOCUS_TICKS).is_empty() and record.choice_offer() == choice, "completed attention highlights without submitting " + str(choice))
+		var airborne := ctx.duplicate()
+		airborne.grounded = false
+		check(record.confirm_choice(camera, airborne, Record.FOCUS_TICKS).is_empty(), "cached highlight cannot submit after footing loss " + str(choice))
+		check(record.confirm_choice(camera, ctx, Record.FOCUS_TICKS - 1).is_empty(), "stale Action cannot commit " + str(choice))
+		check(record.confirm_choice(camera, ctx, Record.FOCUS_TICKS) == choice, "fresh physical Action returns the aimed choice " + str(choice))
+		check(record.confirm_choice(camera, ctx, Record.FOCUS_TICKS).is_empty(), "held or duplicated Action cannot submit twice " + str(choice))
+		record.queue_free()

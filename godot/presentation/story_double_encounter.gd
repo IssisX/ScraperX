@@ -10,6 +10,10 @@ const KEYS := [
 	&"double_ro_empty", &"double_ari_told", &"double_ro_when", &"double_ari_before",
 	&"double_ro_name", &"double_ari_will", &"double_ro_and_face", &"double_ari_cannot", &"double_iona_here"
 ]
+const BRANCH_KEYS := {
+	&"ari_first": [&"double_ro_original_scope", &"double_ari_original_scope"],
+	&"sent_to_dev": [&"double_ro_dev_has_scope", &"double_ari_dev_has_scope"]
+}
 const CUES := {
 	&"double_ro_who": "Who the fuck are you?",
 	&"double_ari_name": "Ari Ward.",
@@ -17,6 +21,10 @@ const CUES := {
 	&"double_ari_job": "I was hired to attend your handovers.",
 	&"double_ro_empty": "You told them the rooms were empty.",
 	&"double_ari_told": "I was told they were.",
+	&"double_ro_original_scope": "I have the original survey. It says occupancy was never assessed. Whose inspection did you read into that camera?",
+	&"double_ari_original_scope": "It was a statement they gave me. I read it as you. There was no inspection.",
+	&"double_ro_dev_has_scope": "Dev has the original survey. Your handover calls this place empty. Mine never did.",
+	&"double_ari_dev_has_scope": "Then he has the proof. They wrote the statement. I read it as you. There was no inspection.",
 	&"double_ro_when": "When did you find out?",
 	&"double_ari_before": "Before the last recording.",
 	&"double_ro_name": "Stop using my name.",
@@ -30,6 +38,8 @@ const SPEAKERS := {
 	&"double_ari_job": "ARI", &"double_ro_empty": "RO", &"double_ari_told": "ARI",
 	&"double_ro_when": "RO", &"double_ari_before": "ARI", &"double_ro_name": "RO",
 	&"double_ari_will": "ARI", &"double_ro_and_face": "RO", &"double_ari_cannot": "ARI",
+	&"double_ro_original_scope": "RO", &"double_ari_original_scope": "ARI",
+	&"double_ro_dev_has_scope": "RO", &"double_ari_dev_has_scope": "ARI",
 	&"double_iona_here": "IONA"
 }
 var _last_tick := -1
@@ -38,6 +48,8 @@ var _focus_ticks := 0
 var _latched := false
 var _phase := 0
 var _requested := &""
+var _requested_disposition := &""
+var _branch_disposition := &""
 
 func cancel_attention() -> void:
 	# Loss of actor/footing, death or episode change cancels attention, never
@@ -45,6 +57,7 @@ func cancel_attention() -> void:
 	_focus_ticks = 0
 	_latched = false
 	_requested = &""
+	_requested_disposition = &""
 
 func reset() -> void:
 	# Native time reset starts a new session, including its conversation.
@@ -52,9 +65,11 @@ func reset() -> void:
 	_last_tick = -1
 	_episode = -1
 	_phase = 0
+	_branch_disposition = &""
 
 func observe(context: Dictionary, tick: int) -> StringName:
 	_requested = &""
+	_requested_disposition = &""
 	if tick < 0:
 		cancel_attention()
 		return &""
@@ -105,10 +120,23 @@ func observe(context: Dictionary, tick: int) -> StringName:
 		_latched = true
 	if _phase < KEYS.size():
 		_requested = KEYS[_phase]
+		if _phase == 4 or _phase == 5:
+			var disposition := _branch_disposition
+			if disposition.is_empty():
+				disposition = StringName(context.get("handover_disposition", &"undecided"))
+				if not BRANCH_KEYS.has(disposition):
+					disposition = &"undecided"
+			_requested_disposition = disposition
+			if BRANCH_KEYS.has(disposition):
+				_requested = BRANCH_KEYS[disposition][_phase - 4]
 	return _requested
 
 func accept(key: StringName) -> void:
 	# A request is not speech: only Guide's accepted queue entry advances it.
 	if not _requested.is_empty() and key == _requested:
+		if _phase == 4:
+			# Knowledge may change while Guide is busy; freeze only heard speech.
+			_branch_disposition = _requested_disposition
 		_phase += 1
 		_requested = &""
+		_requested_disposition = &""

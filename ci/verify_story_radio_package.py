@@ -31,6 +31,10 @@ REQUIRED_CUES = {
     'double_ari_job': 'ARI',
     'double_ro_empty': 'RO',
     'double_ari_told': 'ARI',
+    'double_ro_original_scope': 'RO',
+    'double_ari_original_scope': 'ARI',
+    'double_ro_dev_has_scope': 'RO',
+    'double_ari_dev_has_scope': 'ARI',
     'double_ro_when': 'RO',
     'double_ari_before': 'ARI',
     'double_ro_name': 'RO',
@@ -44,6 +48,10 @@ REQUIRED_CUES = {
     'handover_ro_witness': 'RO',
     'handover_iona_gallery': 'IONA',
     'handover_source_survey': 'SOURCE',
+    'handover_ro_send_scope': 'RO',
+    'handover_dev_received': 'DEV',
+    'handover_ro_ari_first': 'RO',
+    'handover_iona_ari_first': 'IONA',
 }
 
 

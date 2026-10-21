@@ -1,0 +1,1538 @@
+{
+  "base_commit": "f07510e5e00a8d8d9bc31f9bc95b092ea791af60",
+  "boundary": "Two fresh corrected cases in actual Main via Godot MCP, each with explicitly staged archive and Ari receivers. Not continuous ascent, device listening or performance proof.",
+  "calls": [
+    {
+      "tool": "mcp__godot_mcp_runtime__run_project",
+      "args": {
+        "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+        "scene": "res://tests/rigging_mcp_bootstrap.tscn"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Godot project started and MCP bridge is ready (port 44837).\n- Runtime tools (take_screenshot, simulate_input, get_ui_elements, run_script) are available now\n- Use get_debug_output to check runtime output and errors\n- Call stop_project when done"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n scene_tree.root.disable_3d = true\n scene_tree.root.size = Vector2i(1280,900)\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n var test = load(\"res://tests/story_handover_input_case.gd\").new()\n test.requested_disposition = &\"sent_to_dev\"\n var result = test.begin(main)\n scene_tree.current_scene.set_meta(\"story_choice_main\",main)\n scene_tree.current_scene.set_meta(\"story_choice_case\",test)\n return {\"result\":result,\"position\":main._native.get_player_position(),\"support\":main._native.get_support_entity_id()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"position\":{\"x\":12,\"y\":110.900001525879,\"z\":-181.949996948242},\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":6,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[],\"phase\":\"wait_for_quiet\",\"tick\":100,\"touch\":true,\"two_explicit_receiver_stages\":true},\"support\":1960},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 11: load - load() with a literal path can run _init code in the loaded resource\"]}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "position": {
+              "x": 12,
+              "y": 110.900001525879,
+              "z": -181.949996948242
+            },
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 6,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [],
+              "phase": "wait_for_quiet",
+              "tick": 100,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            },
+            "support": 1960
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+          "warnings": [
+            "Warning line 5: load - load() with a literal path can run _init code in the loaded resource",
+            "Warning line 11: load - load() with a literal path can run _init code in the loaded resource"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_record_assurance\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":2,\"active_key\":\"handover_record_assurance\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":2,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_record_assurance.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":14,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\"],\"phase\":\"conversation\",\"tick\":1063,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_record_assurance",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 2,
+              "active_key": "handover_record_assurance",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 2,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_record_assurance.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 14,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance"
+              ],
+              "phase": "conversation",
+              "tick": 1063,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_iona_revision\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":4,\"active_key\":\"handover_iona_revision\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":4,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_iona_revision.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":30,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\"],\"phase\":\"conversation\",\"tick\":2023,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_iona_revision",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 4,
+              "active_key": "handover_iona_revision",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 4,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_iona_revision.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 30,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision"
+              ],
+              "phase": "conversation",
+              "tick": 2023,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_iona_gallery\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":6,\"active_key\":\"handover_iona_gallery\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":6,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_iona_gallery.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":44,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"conversation\",\"tick\":2983,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_iona_gallery",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 6,
+              "active_key": "handover_iona_gallery",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 6,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_iona_gallery.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 44,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "conversation",
+              "tick": 2983,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_source_survey\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":7,\"active_key\":\"handover_source_survey\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":7,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_source_survey.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":56,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"source_finish\",\"tick\":3946,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_source_survey",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 7,
+              "active_key": "handover_source_survey",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 7,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_source_survey.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 56,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "source_finish",
+              "tick": 3946,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_record_assurance\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":null,\"active_key\":\"\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":false,\"scheduled_plays\":8,\"spatial\":false,\"status\":\"idle\",\"stream\":null},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":74,\"decision_heard\":[],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"decision_dialogue\",\"tick\":4912,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_record_assurance",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": null,
+              "active_key": "",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": false,
+              "scheduled_plays": 8,
+              "spatial": false,
+              "status": "idle",
+              "stream": null
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 74,
+              "decision_heard": [],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "decision_dialogue",
+              "tick": 4912,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_dev_received\",\"disposition\":\"sent_to_dev\",\"radio\":{\"active_id\":10,\"active_key\":\"handover_dev_received\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":10,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_dev_received.ogg\"}},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":120,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"decision_dialogue\",\"tick\":5872,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_dev_received",
+            "disposition": "sent_to_dev",
+            "radio": {
+              "active_id": 10,
+              "active_key": "handover_dev_received",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 10,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_dev_received.ogg"
+              }
+            },
+            "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 120,
+              "decision_heard": [
+                "handover_ro_send_scope",
+                "handover_dev_received"
+              ],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "decision_dialogue",
+              "tick": 5872,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var image = main._story_record._display.get_texture().get_image()\n var saved = image.save_png(\"/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-choice/dev-receipt-screen.png\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"screen_saved\":saved,\"support\":main._native.get_support_entity_id(),\"position\":main._native.get_player_position()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_dev_received\",\"disposition\":\"sent_to_dev\",\"position\":{\"x\":-26.75,\"y\":253.899978637695,\"z\":-140.722991943359},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":153,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"ari_settle\",\"tick\":6712,\"touch\":true,\"two_explicit_receiver_stages\":true},\"screen_saved\":0,\"support\":0},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 6: image.save_png - Image.save_png writes an image file to disk\"]}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_dev_received",
+            "disposition": "sent_to_dev",
+            "position": {
+              "x": -26.75,
+              "y": 253.899978637695,
+              "z": -140.722991943359
+            },
+            "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 153,
+              "decision_heard": [
+                "handover_ro_send_scope",
+                "handover_dev_received"
+              ],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "ari_settle",
+              "tick": 6712,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            },
+            "screen_saved": 0,
+            "support": 0
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+          "warnings": [
+            "Warning line 6: image.save_png - Image.save_png writes an image file to disk"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty():\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback(),\"gravity\":main._native.get_landing_state().player_gravity_factor,\"deaths\":main._native.get_death_count()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"double_ari_job\",\"deaths\":0,\"disposition\":\"sent_to_dev\",\"gravity\":1,\"radio\":{\"active_id\":14,\"active_key\":\"double_ari_job\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":14,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/double_ari_job.ogg\"}},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\"],\"checks\":183,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"ari_consequence\",\"tick\":7675,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "double_ari_job",
+            "deaths": 0,
+            "disposition": "sent_to_dev",
+            "gravity": 1,
+            "radio": {
+              "active_id": 14,
+              "active_key": "double_ari_job",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 14,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/double_ari_job.ogg"
+              }
+            },
+            "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [
+                "double_ro_who",
+                "double_ari_name",
+                "double_ro_face",
+                "double_ari_job"
+              ],
+              "checks": 183,
+              "decision_heard": [
+                "handover_ro_send_scope",
+                "handover_dev_received"
+              ],
+              "disposition": "sent_to_dev",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "ari_consequence",
+              "tick": 7675,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty():\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback(),\"gravity\":main._native.get_landing_state().player_gravity_factor,\"deaths\":main._native.get_death_count()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"double_ari_dev_has_scope\",\"deaths\":0,\"disposition\":\"sent_to_dev\",\"gravity\":1,\"radio\":{\"active_id\":null,\"active_key\":\"\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":true,\"scheduled_plays\":16,\"spatial\":false,\"status\":\"idle\",\"stream\":null},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_dev_has_scope\",\"double_ari_dev_has_scope\"],\"checks\":201,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":true,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"complete\",\"tick\":8515,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "double_ari_dev_has_scope",
+            "deaths": 0,
+            "disposition": "sent_to_dev",
+            "gravity": 1,
+            "radio": {
+              "active_id": null,
+              "active_key": "",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": true,
+              "scheduled_plays": 16,
+              "spatial": false,
+              "status": "idle",
+              "stream": null
+            },
+            "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [
+                "double_ro_who",
+                "double_ari_name",
+                "double_ro_face",
+                "double_ari_job",
+                "double_ro_dev_has_scope",
+                "double_ari_dev_has_scope"
+              ],
+              "checks": 201,
+              "decision_heard": [
+                "handover_ro_send_scope",
+                "handover_dev_received"
+              ],
+              "disposition": "sent_to_dev",
+              "done": true,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "complete",
+              "tick": 8515,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var results: Array = scene_tree.current_scene.get_meta(\"story_choice_results\", [])\n results.append({\"result\":test.result(),\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"support\":main._native.get_support_entity_id(),\"position\":main._native.get_player_position(),\"deaths\":main._native.get_death_count(),\"gravity\":main._native.get_landing_state().player_gravity_factor})\n scene_tree.current_scene.set_meta(\"story_choice_results\",results)\n scene_tree.current_scene.remove_meta(\"story_choice_case\")\n scene_tree.current_scene.remove_meta(\"story_choice_main\")\n main.queue_free()\n return {\"completed_choices\":results}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"completed_choices\":[{\"deaths\":0,\"disposition\":\"sent_to_dev\",\"gravity\":1,\"position\":{\"x\":-26.75,\"y\":253.899978637695,\"z\":-140.600341796875},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_dev_has_scope\",\"double_ari_dev_has_scope\"],\"checks\":201,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":true,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"complete\",\"tick\":8515,\"touch\":true,\"two_explicit_receiver_stages\":true},\"support\":1993}]},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "completed_choices": [
+              {
+                "deaths": 0,
+                "disposition": "sent_to_dev",
+                "gravity": 1,
+                "position": {
+                  "x": -26.75,
+                  "y": 253.899978637695,
+                  "z": -140.600341796875
+                },
+                "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+                "result": {
+                  "actual_native": true,
+                  "ari_heard": [
+                    "double_ro_who",
+                    "double_ari_name",
+                    "double_ro_face",
+                    "double_ari_job",
+                    "double_ro_dev_has_scope",
+                    "double_ari_dev_has_scope"
+                  ],
+                  "checks": 201,
+                  "decision_heard": [
+                    "handover_ro_send_scope",
+                    "handover_dev_received"
+                  ],
+                  "disposition": "sent_to_dev",
+                  "done": true,
+                  "failures": [],
+                  "heard": [
+                    "handover_record_assurance",
+                    "handover_ro_denial",
+                    "handover_iona_revision",
+                    "handover_ro_witness",
+                    "handover_iona_gallery"
+                  ],
+                  "phase": "complete",
+                  "tick": 8515,
+                  "touch": true,
+                  "two_explicit_receiver_stages": true
+                },
+                "support": 1993
+              }
+            ]
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n var test = load(\"res://tests/story_handover_input_case.gd\").new()\n test.requested_disposition = &\"ari_first\"\n var result = test.begin(main)\n scene_tree.current_scene.set_meta(\"story_choice_main\",main)\n scene_tree.current_scene.set_meta(\"story_choice_case\",test)\n return {\"result\":result,\"position\":main._native.get_player_position(),\"support\":main._native.get_support_entity_id(),\"disposition\":main._story_guidance._handover_disposition}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"disposition\":\"undecided\",\"position\":{\"x\":12,\"y\":110.900001525879,\"z\":-181.949996948242},\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":6,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[],\"phase\":\"wait_for_quiet\",\"tick\":100,\"touch\":true,\"two_explicit_receiver_stages\":true},\"support\":1960},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 3: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 9: load - load() with a literal path can run _init code in the loaded resource\"]}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "disposition": "undecided",
+            "position": {
+              "x": 12,
+              "y": 110.900001525879,
+              "z": -181.949996948242
+            },
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 6,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [],
+              "phase": "wait_for_quiet",
+              "tick": 100,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            },
+            "support": 1960
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+          "warnings": [
+            "Warning line 3: load - load() with a literal path can run _init code in the loaded resource",
+            "Warning line 9: load - load() with a literal path can run _init code in the loaded resource"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_record_assurance\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":2,\"active_key\":\"handover_record_assurance\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":2,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_record_assurance.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":14,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\"],\"phase\":\"conversation\",\"tick\":1063,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_record_assurance",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 2,
+              "active_key": "handover_record_assurance",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 2,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_record_assurance.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 14,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance"
+              ],
+              "phase": "conversation",
+              "tick": 1063,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_iona_revision\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":4,\"active_key\":\"handover_iona_revision\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":4,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_iona_revision.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":30,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\"],\"phase\":\"conversation\",\"tick\":2023,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_iona_revision",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 4,
+              "active_key": "handover_iona_revision",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 4,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_iona_revision.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 30,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision"
+              ],
+              "phase": "conversation",
+              "tick": 2023,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_iona_gallery\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":6,\"active_key\":\"handover_iona_gallery\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":6,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_iona_gallery.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":44,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"conversation\",\"tick\":2983,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_iona_gallery",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 6,
+              "active_key": "handover_iona_gallery",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 6,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_iona_gallery.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 44,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "conversation",
+              "tick": 2983,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_source_survey\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":7,\"active_key\":\"handover_source_survey\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":7,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_source_survey.ogg\"}},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":56,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"source_finish\",\"tick\":3946,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_source_survey",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": 7,
+              "active_key": "handover_source_survey",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 7,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_source_survey.ogg"
+              }
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 56,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "source_finish",
+              "tick": 3946,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_record_assurance\",\"disposition\":\"undecided\",\"radio\":{\"active_id\":null,\"active_key\":\"\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":false,\"scheduled_plays\":8,\"spatial\":false,\"status\":\"idle\",\"stream\":null},\"receipt\":\"\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":74,\"decision_heard\":[],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"decision_dialogue\",\"tick\":4912,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_record_assurance",
+            "disposition": "undecided",
+            "radio": {
+              "active_id": null,
+              "active_key": "",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": false,
+              "scheduled_plays": 8,
+              "spatial": false,
+              "status": "idle",
+              "stream": null
+            },
+            "receipt": "",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 74,
+              "decision_heard": [],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "decision_dialogue",
+              "tick": 4912,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty() or result.phase == \"ari_settle\":\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"radio\":main._story_radio.readback()}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"handover_iona_ari_first\",\"disposition\":\"ari_first\",\"radio\":{\"active_id\":10,\"active_key\":\"handover_iona_ari_first\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":false,\"scheduled_plays\":10,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/handover_iona_ari_first.ogg\"}},\"receipt\":\"UNSENT / ORIGINAL KEPT FOR ARI\",\"result\":{\"actual_native\":true,\"ari_heard\":[],\"checks\":120,\"decision_heard\":[\"handover_ro_ari_first\",\"handover_iona_ari_first\"],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"decision_dialogue\",\"tick\":5872,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "handover_iona_ari_first",
+            "disposition": "ari_first",
+            "radio": {
+              "active_id": 10,
+              "active_key": "handover_iona_ari_first",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": false,
+              "scheduled_plays": 10,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/handover_iona_ari_first.ogg"
+              }
+            },
+            "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [],
+              "checks": 120,
+              "decision_heard": [
+                "handover_ro_ari_first",
+                "handover_iona_ari_first"
+              ],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "decision_dialogue",
+              "tick": 5872,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty():\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"dev_received\":main._story_guidance._heard.has(&\"handover_dev_received\"),\"radio\":main._story_radio.readback(),\"deaths\":main._native.get_death_count(),\"gravity\":main._native.get_landing_state().player_gravity_factor}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"double_ari_job\",\"deaths\":0,\"dev_received\":false,\"disposition\":\"ari_first\",\"gravity\":1,\"radio\":{\"active_id\":14,\"active_key\":\"double_ari_job\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":14,\"spatial\":true,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/double_ari_job.ogg\"}},\"receipt\":\"UNSENT / ORIGINAL KEPT FOR ARI\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\"],\"checks\":160,\"decision_heard\":[\"handover_ro_ari_first\",\"handover_iona_ari_first\"],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"ari_consequence\",\"tick\":6835,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "double_ari_job",
+            "deaths": 0,
+            "dev_received": false,
+            "disposition": "ari_first",
+            "gravity": 1,
+            "radio": {
+              "active_id": 14,
+              "active_key": "double_ari_job",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": true,
+              "quiesced": false,
+              "scheduled_plays": 14,
+              "spatial": true,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/double_ari_job.ogg"
+              }
+            },
+            "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [
+                "double_ro_who",
+                "double_ari_name",
+                "double_ro_face",
+                "double_ari_job"
+              ],
+              "checks": 160,
+              "decision_heard": [
+                "handover_ro_ari_first",
+                "handover_iona_ari_first"
+              ],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "ari_consequence",
+              "tick": 6835,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty():\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"dev_received\":main._story_guidance._heard.has(&\"handover_dev_received\"),\"radio\":main._story_radio.readback(),\"deaths\":main._native.get_death_count(),\"gravity\":main._native.get_landing_state().player_gravity_factor}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"double_ro_original_scope\",\"deaths\":0,\"dev_received\":false,\"disposition\":\"ari_first\",\"gravity\":1,\"radio\":{\"active_id\":15,\"active_key\":\"double_ro_original_scope\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":false,\"scheduled_plays\":15,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/double_ro_original_scope.ogg\"}},\"receipt\":\"UNSENT / ORIGINAL KEPT FOR ARI\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_original_scope\"],\"checks\":167,\"decision_heard\":[\"handover_ro_ari_first\",\"handover_iona_ari_first\"],\"disposition\":\"ari_first\",\"done\":false,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"ari_consequence\",\"tick\":7795,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "double_ro_original_scope",
+            "deaths": 0,
+            "dev_received": false,
+            "disposition": "ari_first",
+            "gravity": 1,
+            "radio": {
+              "active_id": 15,
+              "active_key": "double_ro_original_scope",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": false,
+              "scheduled_plays": 15,
+              "spatial": false,
+              "status": "scheduled",
+              "stream": {
+                "class": "AudioStreamOggVorbis",
+                "path": "res://audio/story_radio/double_ro_original_scope.ogg"
+              }
+            },
+            "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [
+                "double_ro_who",
+                "double_ari_name",
+                "double_ro_face",
+                "double_ari_job",
+                "double_ro_original_scope"
+              ],
+              "checks": 167,
+              "decision_heard": [
+                "handover_ro_ari_first",
+                "handover_iona_ari_first"
+              ],
+              "disposition": "ari_first",
+              "done": false,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "ari_consequence",
+              "tick": 7795,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var result: Dictionary = test.result()\n for i in 32:\n  if result.done or not result.failures.is_empty():\n   break\n  result = test.advance()\n return {\"result\":result,\"cue\":main._story_guidance._cue_key,\"disposition\":main._story_guidance._handover_disposition,\"receipt\":main._story_guidance.handover_receipt(),\"dev_received\":main._story_guidance._heard.has(&\"handover_dev_received\"),\"radio\":main._story_radio.readback(),\"deaths\":main._native.get_death_count(),\"gravity\":main._native.get_landing_state().player_gravity_factor}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"cue\":\"double_ari_original_scope\",\"deaths\":0,\"dev_received\":false,\"disposition\":\"ari_first\",\"gravity\":1,\"radio\":{\"active_id\":null,\"active_key\":\"\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":true,\"scheduled_plays\":16,\"spatial\":false,\"status\":\"idle\",\"stream\":null},\"receipt\":\"UNSENT / ORIGINAL KEPT FOR ARI\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_original_scope\",\"double_ari_original_scope\"],\"checks\":178,\"decision_heard\":[\"handover_ro_ari_first\",\"handover_iona_ari_first\"],\"disposition\":\"ari_first\",\"done\":true,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"complete\",\"tick\":8035,\"touch\":true,\"two_explicit_receiver_stages\":true}},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "cue": "double_ari_original_scope",
+            "deaths": 0,
+            "dev_received": false,
+            "disposition": "ari_first",
+            "gravity": 1,
+            "radio": {
+              "active_id": null,
+              "active_key": "",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": true,
+              "scheduled_plays": 16,
+              "spatial": false,
+              "status": "idle",
+              "stream": null
+            },
+            "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+            "result": {
+              "actual_native": true,
+              "ari_heard": [
+                "double_ro_who",
+                "double_ari_name",
+                "double_ro_face",
+                "double_ari_job",
+                "double_ro_original_scope",
+                "double_ari_original_scope"
+              ],
+              "checks": 178,
+              "decision_heard": [
+                "handover_ro_ari_first",
+                "handover_iona_ari_first"
+              ],
+              "disposition": "ari_first",
+              "done": true,
+              "failures": [],
+              "heard": [
+                "handover_record_assurance",
+                "handover_ro_denial",
+                "handover_iona_revision",
+                "handover_ro_witness",
+                "handover_iona_gallery"
+              ],
+              "phase": "complete",
+              "tick": 8035,
+              "touch": true,
+              "two_explicit_receiver_stages": true
+            }
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "timeout": 60000,
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"story_choice_case\")\n var main = scene_tree.current_scene.get_meta(\"story_choice_main\")\n var results: Array = scene_tree.current_scene.get_meta(\"story_choice_results\", [])\n results.append({\"result\":test.result(),\"disposition\":main._story_guidance._handover_disposition,\"dev_received\":main._story_guidance._heard.has(&\"handover_dev_received\"),\"receipt\":main._story_guidance.handover_receipt(),\"support\":main._native.get_support_entity_id(),\"position\":main._native.get_player_position(),\"deaths\":main._native.get_death_count(),\"gravity\":main._native.get_landing_state().player_gravity_factor})\n return {\"completed_choices\":results,\"checks\":int(results[0].result.checks)+int(results[1].result.checks),\"viewport_3d_disabled\":scene_tree.root.disable_3d}\n"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"checks\":379,\"completed_choices\":[{\"deaths\":0,\"disposition\":\"sent_to_dev\",\"gravity\":1,\"position\":{\"x\":-26.75,\"y\":253.899978637695,\"z\":-140.600341796875},\"receipt\":\"DEV RECEIVED BOTH / ORIGINAL PRESERVED\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_dev_has_scope\",\"double_ari_dev_has_scope\"],\"checks\":201,\"decision_heard\":[\"handover_ro_send_scope\",\"handover_dev_received\"],\"disposition\":\"sent_to_dev\",\"done\":true,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"complete\",\"tick\":8515,\"touch\":true,\"two_explicit_receiver_stages\":true},\"support\":1993},{\"deaths\":0,\"dev_received\":false,\"disposition\":\"ari_first\",\"gravity\":1,\"position\":{\"x\":-26.75,\"y\":253.899978637695,\"z\":-140.235336303711},\"receipt\":\"UNSENT / ORIGINAL KEPT FOR ARI\",\"result\":{\"actual_native\":true,\"ari_heard\":[\"double_ro_who\",\"double_ari_name\",\"double_ro_face\",\"double_ari_job\",\"double_ro_original_scope\",\"double_ari_original_scope\"],\"checks\":178,\"decision_heard\":[\"handover_ro_ari_first\",\"handover_iona_ari_first\"],\"disposition\":\"ari_first\",\"done\":true,\"failures\":[],\"heard\":[\"handover_record_assurance\",\"handover_ro_denial\",\"handover_iona_revision\",\"handover_ro_witness\",\"handover_iona_gallery\"],\"phase\":\"complete\",\"tick\":8035,\"touch\":true,\"two_explicit_receiver_stages\":true},\"support\":1993}],\"viewport_3d_disabled\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "checks": 379,
+            "completed_choices": [
+              {
+                "deaths": 0,
+                "disposition": "sent_to_dev",
+                "gravity": 1,
+                "position": {
+                  "x": -26.75,
+                  "y": 253.899978637695,
+                  "z": -140.600341796875
+                },
+                "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+                "result": {
+                  "actual_native": true,
+                  "ari_heard": [
+                    "double_ro_who",
+                    "double_ari_name",
+                    "double_ro_face",
+                    "double_ari_job",
+                    "double_ro_dev_has_scope",
+                    "double_ari_dev_has_scope"
+                  ],
+                  "checks": 201,
+                  "decision_heard": [
+                    "handover_ro_send_scope",
+                    "handover_dev_received"
+                  ],
+                  "disposition": "sent_to_dev",
+                  "done": true,
+                  "failures": [],
+                  "heard": [
+                    "handover_record_assurance",
+                    "handover_ro_denial",
+                    "handover_iona_revision",
+                    "handover_ro_witness",
+                    "handover_iona_gallery"
+                  ],
+                  "phase": "complete",
+                  "tick": 8515,
+                  "touch": true,
+                  "two_explicit_receiver_stages": true
+                },
+                "support": 1993
+              },
+              {
+                "deaths": 0,
+                "dev_received": false,
+                "disposition": "ari_first",
+                "gravity": 1,
+                "position": {
+                  "x": -26.75,
+                  "y": 253.899978637695,
+                  "z": -140.235336303711
+                },
+                "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+                "result": {
+                  "actual_native": true,
+                  "ari_heard": [
+                    "double_ro_who",
+                    "double_ari_name",
+                    "double_ro_face",
+                    "double_ari_job",
+                    "double_ro_original_scope",
+                    "double_ari_original_scope"
+                  ],
+                  "checks": 178,
+                  "decision_heard": [
+                    "handover_ro_ari_first",
+                    "handover_iona_ari_first"
+                  ],
+                  "disposition": "ari_first",
+                  "done": true,
+                  "failures": [],
+                  "heard": [
+                    "handover_record_assurance",
+                    "handover_ro_denial",
+                    "handover_iona_revision",
+                    "handover_ro_witness",
+                    "handover_iona_gallery"
+                  ],
+                  "phase": "complete",
+                  "tick": 8035,
+                  "touch": true,
+                  "two_explicit_receiver_stages": true
+                },
+                "support": 1993
+              }
+            ],
+            "viewport_3d_disabled": true
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__stop_project",
+      "args": {},
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"message\":\"Godot project stopped\",\"mode\":\"spawned\",\"externalProcessPreserved\":false,\"alreadyExited\":false,\"finalOutput\":[\"OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe\",\"McpBridge: Listening on TCP port 44837\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=694 driver=Dummy\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=725 driver=Dummy\",\"McpBridge: Stopped\"],\"finalErrors\":[\"\\r\\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.\",\"\\r\\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/0\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/1\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/2\\\": No such file or directory\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.\",\"     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)\",\"WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\",\"Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\",\"     at: setup2 (main/main.cpp:3577)\",\"ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory\",\"ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory\",\"ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory\",\"ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory\",\"ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default\",\"ERROR: Condition \\\"status < 0\\\" is true. Returning: ERR_CANT_OPEN\",\"   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)\",\"WARNING: All audio drivers failed, falling back to the dummy driver.\",\"     at: initialize (servers/audio/audio_server.cpp:258)\"]}"
+          }
+        ],
+        "structuredContent": {
+          "message": "Godot project stopped",
+          "mode": "spawned",
+          "externalProcessPreserved": false,
+          "alreadyExited": false,
+          "finalOutput": [
+            "OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe",
+            "McpBridge: Listening on TCP port 44837",
+            "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+            "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+            "SCRAPERX_AUDIO_BANK clips=35 msec=694 driver=Dummy",
+            "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+            "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+            "SCRAPERX_AUDIO_BANK clips=35 msec=725 driver=Dummy",
+            "McpBridge: Stopped"
+          ],
+          "finalErrors": [
+            "\r\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.",
+            "\r\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.",
+            "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.",
+            "     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)",
+            "WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.",
+            "Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.",
+            "     at: setup2 (main/main.cpp:3577)",
+            "ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory",
+            "ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory",
+            "ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory",
+            "ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory",
+            "ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default",
+            "ERROR: Condition \"status < 0\" is true. Returning: ERR_CANT_OPEN",
+            "   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)",
+            "WARNING: All audio drivers failed, falling back to the dummy driver.",
+            "     at: initialize (servers/audio/audio_server.cpp:258)"
+          ]
+        }
+      }
+    }
+  ],
+  "final_result": {
+    "success": true,
+    "result": {
+      "checks": 379,
+      "completed_choices": [
+        {
+          "deaths": 0,
+          "disposition": "sent_to_dev",
+          "gravity": 1,
+          "position": {
+            "x": -26.75,
+            "y": 253.899978637695,
+            "z": -140.600341796875
+          },
+          "receipt": "DEV RECEIVED BOTH / ORIGINAL PRESERVED",
+          "result": {
+            "actual_native": true,
+            "ari_heard": [
+              "double_ro_who",
+              "double_ari_name",
+              "double_ro_face",
+              "double_ari_job",
+              "double_ro_dev_has_scope",
+              "double_ari_dev_has_scope"
+            ],
+            "checks": 201,
+            "decision_heard": [
+              "handover_ro_send_scope",
+              "handover_dev_received"
+            ],
+            "disposition": "sent_to_dev",
+            "done": true,
+            "failures": [],
+            "heard": [
+              "handover_record_assurance",
+              "handover_ro_denial",
+              "handover_iona_revision",
+              "handover_ro_witness",
+              "handover_iona_gallery"
+            ],
+            "phase": "complete",
+            "tick": 8515,
+            "touch": true,
+            "two_explicit_receiver_stages": true
+          },
+          "support": 1993
+        },
+        {
+          "deaths": 0,
+          "dev_received": false,
+          "disposition": "ari_first",
+          "gravity": 1,
+          "position": {
+            "x": -26.75,
+            "y": 253.899978637695,
+            "z": -140.235336303711
+          },
+          "receipt": "UNSENT / ORIGINAL KEPT FOR ARI",
+          "result": {
+            "actual_native": true,
+            "ari_heard": [
+              "double_ro_who",
+              "double_ari_name",
+              "double_ro_face",
+              "double_ari_job",
+              "double_ro_original_scope",
+              "double_ari_original_scope"
+            ],
+            "checks": 178,
+            "decision_heard": [
+              "handover_ro_ari_first",
+              "handover_iona_ari_first"
+            ],
+            "disposition": "ari_first",
+            "done": true,
+            "failures": [],
+            "heard": [
+              "handover_record_assurance",
+              "handover_ro_denial",
+              "handover_iona_revision",
+              "handover_ro_witness",
+              "handover_iona_gallery"
+            ],
+            "phase": "complete",
+            "tick": 8035,
+            "touch": true,
+            "two_explicit_receiver_stages": true
+          },
+          "support": 1993
+        }
+      ],
+      "viewport_3d_disabled": true
+    },
+    "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+  }
+}

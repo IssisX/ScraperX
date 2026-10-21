@@ -77,6 +77,8 @@ var _contact_phase := 0
 var _double_encounter := DoubleEncounter.new()
 var _record_phase := -1
 var _record_selection := &""
+var _handover_disposition := &"undecided"
+var _decision_phase := -1
 
 func configure_voice_lengths(lengths: Dictionary) -> void:
 	_voice_lengths = lengths.duplicate()
@@ -100,6 +102,31 @@ func reset() -> void:
 	_double_encounter.reset()
 	_record_phase = -1
 	_record_selection = &""
+	_handover_disposition = &"undecided"
+	_decision_phase = -1
+
+func handover_choice_available(tick: int) -> bool:
+	return _handover_disposition == &"undecided" and _record_phase == Handover.KEYS.size() \
+		and _heard.has(&"handover_source_survey") and tick > _transmission_until \
+		and not _heard.has(&"double_ro_empty") \
+		and not _heard.has(&"double_ro_original_scope") and not _heard.has(&"double_ro_dev_has_scope")
+
+func choose_handover(choice: StringName, tick: int) -> bool:
+	# The physical screen validates the deliberate press and current viewing
+	# passage. Guide alone accepts and retains the narrative knowledge change.
+	if choice not in [&"ari_first", &"sent_to_dev"] or tick != _last_tick \
+			or not handover_choice_available(tick):
+		return false
+	_handover_disposition = choice
+	_decision_phase = 0
+	return true
+
+func handover_receipt() -> String:
+	if _handover_disposition == &"sent_to_dev":
+		return "DEV RECEIVED BOTH / ORIGINAL PRESERVED" if _heard.has(&"handover_dev_received") else "SENT TO DEV / BOTH VERSIONS PRESERVED"
+	if _handover_disposition == &"ari_first":
+		return "UNSENT / ORIGINAL KEPT FOR ARI"
+	return ""
 
 func _say(key: StringName, tick: int, replay: bool = false) -> bool:
 	var replayable := key == &"handover_record_assurance" or key == &"handover_source_survey"
@@ -220,6 +247,13 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 			elif not _record_selection.is_empty():
 				_say(&"handover_source_survey" if _record_selection == &"source" else &"handover_record_assurance", tick, true)
 				_record_selection = &""
+	if fresh and _decision_phase >= 0 and tick > _transmission_until \
+			and _observation.firm and _observation.operating.is_empty():
+		var response: Array = Handover.SEND_KEYS if _handover_disposition == &"sent_to_dev" else Handover.ARI_KEYS
+		if _decision_phase < response.size() and _say(response[_decision_phase], tick):
+			_decision_phase += 1
+	# This derived narrative field never changes the native support/actor facts.
+	context["handover_disposition"] = _handover_disposition
 	var double_key: StringName = _double_encounter.observe(context, tick)
 	if fresh and not double_key.is_empty() and tick > _transmission_until:
 		if _say(double_key, tick):
@@ -260,5 +294,8 @@ func sample(context: Dictionary, tick: int) -> Dictionary:
 	return {"intro_title": "SCRAPERX", "intro_subtitle": "THE EXCHANGE  /  RECEIVING", "intro_visible": intro_visible,
 		"chapter": "THE COMMON WAY" if _arrival_seen else "1 / EMPTY ON PAPER", "objective_id": objective_id, "objective": objective, "detail": detail, "objective_visible": false,
 		"transmission_key": _cue_key,
+		"handover_disposition": _handover_disposition,
+		"handover_choice_available": handover_choice_available(tick),
+		"handover_receipt": handover_receipt(),
 		"transmission_id": _transmission_id, "speaker": _speaker if tick <= _transmission_until else "",
 		"transmission": _line if tick <= _transmission_until else ""}

@@ -34,6 +34,10 @@ CUES = {
     'double_ari_job': 'I was hired to attend your handovers.',
     'double_ro_empty': 'You told them the rooms were empty.',
     'double_ari_told': 'I was told they were.',
+    'double_ro_original_scope': 'I have the original survey. It says occupancy was never assessed. Whose inspection did you read into that camera?',
+    'double_ari_original_scope': 'It was a statement they gave me. I read it as you. There was no inspection.',
+    'double_ro_dev_has_scope': 'Dev has the original survey. Your handover calls this place empty. Mine never did.',
+    'double_ari_dev_has_scope': 'Then he has the proof. They wrote the statement. I read it as you. There was no inspection.',
     'double_ro_when': 'When did you find out?',
     'double_ari_before': 'Before the last recording.',
     'double_ro_name': 'Stop using my name.',
@@ -47,6 +51,10 @@ CUES = {
     'handover_ro_witness': 'Who delivered the final handover?',
     'handover_iona_gallery': 'Ari Ward. Barrel Helix landing, two hundred and fifty-three metres. Find them. Ask what they were told.',
     'handover_source_survey': 'Temporary construction access withdrawn. Occupancy not assessed.',
+    'handover_ro_send_scope': 'Send both versions to Dev. Let him see exactly what they changed.',
+    'handover_dev_received': "Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature.",
+    'handover_ro_ari_first': "Keep both versions. I want Ari's account before Dev gets another version of it.",
+    'handover_iona_ari_first': 'Then ask Ari what they actually saw. Not what they were told to say.',
 }
 CUE_SPEAKERS = {'vale_contact_ro': 'RO', 'double_ro_who': 'RO', 'double_ari_name': 'ARI', 'double_ro_face': 'RO', 'double_ari_job': 'ARI', 'double_ro_empty': 'RO', 'double_ari_told': 'ARI', 'double_ro_when': 'RO', 'double_ari_before': 'ARI', 'double_ro_name': 'RO', 'double_ari_will': 'ARI', 'double_ro_and_face': 'RO', 'double_ari_cannot': 'ARI', 'double_iona_here': 'IONA'}
 CUE_SPEAKERS.update({
@@ -56,9 +64,13 @@ CUE_SPEAKERS.update({
     'handover_ro_witness': 'RO',
     'handover_iona_gallery': 'IONA',
     'handover_source_survey': 'SOURCE',
+    'handover_ro_send_scope': 'RO', 'handover_dev_received': 'DEV',
+    'handover_ro_ari_first': 'RO', 'handover_iona_ari_first': 'IONA',
+    'double_ro_original_scope': 'RO', 'double_ari_original_scope': 'ARI',
+    'double_ro_dev_has_scope': 'RO', 'double_ari_dev_has_scope': 'ARI',
 })
 VOICE_IDS = {'IONA': 'af_heart', 'RO': 'am_michael', 'ARI': 'am_adam',
-             'RECORD': 'am_michael', 'SOURCE': 'am_michael'}
+             'RECORD': 'am_michael', 'SOURCE': 'am_michael', 'DEV': 'bm_george'}
 DIRECT_SPEAKERS = {'ARI', 'RECORD', 'SOURCE'}
 FILTER = 'highpass=f=180,lowpass=f=4800,loudnorm=I=-18:TP=-2:LRA=9'
 DIRECT_FILTER = 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=9'
@@ -171,7 +183,7 @@ def main():
     }
     import copy
     manifest['voices'].update(existing_manifest.get('voices', {}))
-    for speaker in ['RO', 'ARI', 'RECORD', 'SOURCE']:
+    for speaker in ['RO', 'ARI', 'RECORD', 'SOURCE', 'DEV']:
         if not any(cue['speaker'] == speaker for cue in cues.values()):
             continue
         voice = copy.deepcopy(manifest['voices']['IONA'])
@@ -180,6 +192,9 @@ def main():
         voice['generation']['placement'] = (
             'handover terminal speaker / spatial' if speaker in {'RECORD', 'SOURCE'}
             else 'native actor head / spatial' if speaker == 'ARI' else 'player radio')
+        if speaker == 'DEV':
+            voice['generation']['language'] = 'British English'
+            voice['provenance']['generated_utc_date'] = datetime.now(timezone.utc).date().isoformat()
         voice['license']['commercial_use'] = voice['license']['commercial_use'].replace('af_heart', VOICE_IDS[speaker])
         manifest['voices'][speaker] = voice
     # Analyze the actual shipped recording. Mouth motion samples this envelope

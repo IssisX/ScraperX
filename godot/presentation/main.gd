@@ -689,10 +689,10 @@ func _process(delta: float) -> void:
 		_slingshot_view.update_view(delta, sling, _native.get_player_render_position(), _native.get_player_linear_velocity(), _camera)
 		_audio.update_launch_cinematic(_slingshot_view.get_cinematic_state())
 	_update_feedback(delta)
+	_update_story(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
 	_hud.update_hud(_ctx, delta)
-	_update_story(delta)
 	_ambient_clock += delta
 	_machine_view.update_ambient_dressing(_native, _ambient_clock)
 	if _inspection_worksite_life != null:
@@ -1283,6 +1283,11 @@ func _toggle_grapple_auto_reel() -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"handover_decision":
+			if not _paused:
+				var choice: StringName = _story_record.confirm_choice(_camera.global_transform,
+					_read_context(), int(_native.get_tick_index()))
+				_story_guidance.choose_handover(choice, int(_native.get_tick_index()))
 		&"traversal_line_action":
 			_native.request_traversal_line(2, int(_ctx.get("traversal_line_target", 0)))
 		&"rigging_action":
@@ -2644,6 +2649,13 @@ func _update_story(delta: float) -> void:
 		state["suppress_voice"] = _paused or (not bool(_ctx.get("grounded", false)) and velocity.y < -7.0)
 		_story_radio.present(state, delta)
 		_story_record.present_record(state, _story_radio, tick)
+		var choice: StringName = _story_record.choice_offer()
+		# Keep tool, carrying and hand actions at their established owners.
+		# Only the free-footed contextual gateway becomes the archive choice.
+		if not choice.is_empty() and StringName(_ctx.get("action", {}).get("id", &"")) \
+				in [&"", &"climb", &"catch", &"equip_grapple"]:
+			_ctx["action"] = {"id": &"handover_decision", "label": "SEND" if choice == &"sent_to_dev" else "KEEP",
+				"icon": &"operate", "detail": "SEND BOTH VERSIONS TO DEV" if choice == &"sent_to_dev" else "TAKE THE ORIGINAL TO ARI FIRST"}
 
 
 func _update_story_human(tick: int) -> void:

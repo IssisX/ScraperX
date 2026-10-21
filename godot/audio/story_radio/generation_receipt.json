@@ -250,5 +250,77 @@
     "generated_utc": "2026-10-21T19:22:28.406274+00:00",
     "clean_sha256": "942c91b5ba26a1e636a149631e4aea475a0c7911ace9ef54a7d8f10f1c9a7902",
     "radio_sha256": "50bfefe0ab0ec4116a5f90190622d1addf4fd40b5cd74ae5e3e3a0d3f132e59d"
+  },
+  "double_ro_original_scope": {
+    "event_id": "0fa954e8f9c641d29137e90f466639d4",
+    "text": "I have the original survey. It says occupancy was never assessed. Whose inspection did you read into that camera?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:13.602238+00:00",
+    "clean_sha256": "8c3bbae8c0f83e061a5febca0ab248204be0c387e9eb291c64a44bb636f81ddc",
+    "radio_sha256": "a96738f3e4ba98b56ba7d3ee285bbe6d448aa6e689762e353a8d8692677f8b74"
+  },
+  "double_ari_original_scope": {
+    "event_id": "9eb6a27f80f24973ac61a508a9fc6914",
+    "text": "It was a statement they gave me. I read it as you. There was no inspection.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "generated_utc": "2026-10-21T20:00:21.021083+00:00",
+    "clean_sha256": "8d17a85e909dff3600e2ac6361ad3e5a4450d85fb5e4abb16601e45e32f01cdc",
+    "radio_sha256": "9b1194877d0b0f8547d39ab81a9cec8fdd1220134aa3608db1e80c62b3490c95"
+  },
+  "double_ro_dev_has_scope": {
+    "event_id": "6ebf48aac1f54e0e9cbe9a4f8c835d34",
+    "text": "Dev has the original survey. Your handover calls this place empty. Mine never did.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:28.871356+00:00",
+    "clean_sha256": "9cf4251ef4e4625273113c6fcd1c7adcf6ea48e08485dc2ed42bb51fb5829dd2",
+    "radio_sha256": "0c17610fb6690c422bf7bc82bec56fe9d65302ca786106cc5804b8aaefb4d012"
+  },
+  "double_ari_dev_has_scope": {
+    "event_id": "a86b9bb297084533b7710b8a7d0203cb",
+    "text": "Then he has the proof. They wrote the statement. I read it as you. There was no inspection.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "generated_utc": "2026-10-21T20:00:36.087706+00:00",
+    "clean_sha256": "b29fe99c7e6a179472fe22d26989b7a39f664f01fdcb11081c10349c2e600440",
+    "radio_sha256": "1654fdf353be7f207b435b3697ed534ef47924130a086a6b733bd0dd525fed22"
+  },
+  "handover_ro_send_scope": {
+    "event_id": "18c645c790cf487284b38d1b92221e07",
+    "text": "Send both versions to Dev. Let him see exactly what they changed.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:42.851601+00:00",
+    "clean_sha256": "10dbb610d7712cdda6ba3f39415741c7f5a9d0ed6e137df4393a9962fed1e588",
+    "radio_sha256": "6b1457a26f41db2325a33750043373ded6c924f2abf97ba727f6a0931dff5022"
+  },
+  "handover_dev_received": {
+    "event_id": "cf6ac74ee4db4c7c8988d4835a83e9cf",
+    "text": "Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature.",
+    "speaker": "DEV",
+    "voice_id": "bm_george",
+    "generated_utc": "2026-10-21T20:00:52.823701+00:00",
+    "clean_sha256": "9f66b1506aea536dc3f0e943d9d84e03749e3d3e631ac9d0a6cbd1de369da7cf",
+    "radio_sha256": "5b5bc70f937e0ec3a57f6107e7030384c86f71c81245571690d62c41aa68ef30"
+  },
+  "handover_ro_ari_first": {
+    "event_id": "b7798ffa58b4408fa93b175b7bc7bd60",
+    "text": "Keep both versions. I want Ari's account before Dev gets another version of it.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:01:01.442022+00:00",
+    "clean_sha256": "b724cc35d03d8aaed7a147e7892bba17fb97f896571e7c3208a86dcdb68a79d0",
+    "radio_sha256": "d26bd366f2b9181c0568146904c9b1e4aff8ad530541eb9c5be3b42fb1b86503"
+  },
+  "handover_iona_ari_first": {
+    "event_id": "71d37adf50194059b2e348047007fa51",
+    "text": "Then ask Ari what they actually saw. Not what they were told to say.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T20:01:08.102179+00:00",
+    "clean_sha256": "459ded1c0c037b27417de07b7b5e2e39eadc35574eb7b1ea513d4954b4dc7381",
+    "radio_sha256": "9300dba7c7aa14f5a1b6738f138b9c4f7b2d18c73e3fb72b9019ee7c5b4855d4"
   }
 }

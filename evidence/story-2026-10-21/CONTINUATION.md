@@ -14,4 +14,6 @@ The final rail wrapper includes the new33m voice assertion. The final stair wrap
 
 ## Finish boundary
 
+Completed in source `f07510e5e00a8d8d9bc31f9bc95b092ea791af60`: candidate39665215492 GREEN, including the final fresh rail/stair wrappers and packaged32voice resources. Signed build214776717 is published at https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-f07510e/ScraperX-ChatGPT.apk . This supersedes the pending-CI statements above for that source. Separate full-release and phone observations remain distinct.
+
 Commit and publish this connected batch, let the existing candidate gates exercise the final wrappers once, and deliver only its matching accepted APK. Do not add more crossing fixtures, dialogue polish, native rebuilds or extra route scope to finish it. A real introduced failure still needs repair; passing evidence is reused. The broader storyline remains unfinished: this route/cue batch is supporting work, not a completed story chapter.
