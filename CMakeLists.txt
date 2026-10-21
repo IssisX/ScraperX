@@ -36,6 +36,7 @@ add_library(scraperx_sim STATIC
     src/sim/crew.cpp
     src/sim/climb_c7.cpp
     src/sim/summit.cpp
+    src/sim/shared_survival.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
     src/sim/fabricated.cpp
@@ -142,6 +143,12 @@ set_target_properties(scraperx_delivery PROPERTIES POSITION_INDEPENDENT_CODE ON
 option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
 if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
+    add_executable(scraperx_shared_survival_tests tests/shared_survival_tests.cpp)
+    target_link_libraries(scraperx_shared_survival_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_shared_survival_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Werror>)
+    add_test(NAME scraperx_sim.shared_survival COMMAND scraperx_shared_survival_tests)
+
     add_executable(scraperx_sim_tests
         tests/simulation_tests.cpp
         tests/sim_tests_core.cpp
@@ -169,6 +176,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_zipline.cpp
         tests/sim_tests_corpse.cpp
     )
+    add_dependencies(scraperx_sim_tests scraperx_shared_survival_tests)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)
     # Where the fabricated test objects are read from (godot/tests/fabricated),
     # whatever directory the tests run in.

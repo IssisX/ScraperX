@@ -3,6 +3,7 @@
 #include "sim/matron.hpp"
 
 #include "sim/zipline.hpp"
+#include "sim/shared_survival.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
@@ -1370,6 +1371,15 @@ int Matron::planks_fallen() const noexcept {
     return count;
 }
 
+void Matron::set_shared_survival(SharedSurvival *encounter) noexcept {
+    if (shared_survival_ && shared_survival_ != encounter) shared_survival_->release_hands();
+    shared_survival_ = encounter;
+}
+
+bool Matron::bracing_structure() const noexcept {
+    return shared_survival_ && shared_survival_->snapshot().hands_busy;
+}
+
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
@@ -1396,6 +1406,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     noise_heard_ = 0.0F;
     heard_level_ = 0.0F;
     if (dead_) {
+        if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
         return;
     }
     if (body_in_world_) {
@@ -1479,6 +1490,24 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     const float player_carry = loudness > 0.0F && Vec3(player - ear).Length() <= player_reach
                                    ? carry_m(player, ear)
                                    : std::numeric_limits<float>::max();
+    if (shared_survival_) {
+        const bool eligible = body_in_world_ && out(state_) && state_ != State::Emerging &&
+            state_ != State::Down && state_ != State::Staggering && !riding_ && !on_line_ &&
+            climb_ < 0 && pipe_phase_ == PipePhase::Off && held_ < 0;
+        shared_survival_->pre_step(body_, eligible, Quat::sRotation(Vec3::sAxisY(), yaw_));
+        if (bracing_structure()) {
+            // She keeps listening, but neither her feet nor hands pursue prey
+            // while those hands carry this load. Her hostile state is retained.
+            const Sound crash = pick(ear, kFullHearingM);
+            noise_heard_ = std::max(crash.loudness, player_reach >= player_carry ? loudness : 0.0F);
+            heard_level_ = std::max(crash.heard ? picked_level : 0.0F,
+                player_reach >= player_carry ? loudness * std::max(0.0F,
+                    1.0F - player_carry / std::max(player_reach, 0.1F)) : 0.0F);
+            turn_ = Turn::None;
+            step_rage(dt);
+            return;
+        }
+    }
     switch (state_) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
@@ -1891,7 +1920,7 @@ void Matron::post_step(const float dt) {
 bool Matron::caught(const RVec3 player) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel.
-    if (!body_in_world_ || dead_ || riding_ || pipe_phase_ != PipePhase::Off ||
+    if (bracing_structure() || !body_in_world_ || dead_ || riding_ || pipe_phase_ != PipePhase::Off ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
@@ -2164,6 +2193,7 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 }
 
 void Matron::restore(const Saved &saved) {
+    if (shared_survival_) shared_survival_->reset();
     if (!dead_) {
         remove_body();
         state_ = saved.state;
@@ -2759,6 +2789,8 @@ void Matron::refresh_view() {
     view_.stage = stage_;
     view_.exposure = std::min(1.0F, exposure_s_ / kExposureFullSeconds);
     view_.shoves = shoves_;
+    view_.bracing_structure = bracing_structure();
+    view_.support_n = shared_survival_ ? shared_survival_->snapshot().applied_n : 0.0F;
     view_.carrying = held_ >= 0 ? throwables_[static_cast<std::size_t>(held_)].entity : 0;
     view_.takes = takes_;
     view_.throws = throws_;
