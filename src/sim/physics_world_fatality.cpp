@@ -63,14 +63,19 @@ void Simulation::PhysicsWorld::set_player_mass_for_losses(JPH::BodyInterface & /
 // A shape whose centre of mass sits elsewhere (the torso's is 0.45 m up the
 // body): Jolt keeps each joint's anchor relative to the centre of mass, and
 // leaves telling them to us. Untold, a joint still on the body would pull
-// it the 0.45 m in one tick.
+// it the 0.45 m in one tick. Its velocity is the old centre's too: the steel
+// at the new centre was moving at v + w x r, and still is.
 void Simulation::PhysicsWorld::set_player_shape(JPH::BodyInterface &bodies, const JPH::Shape *shape) noexcept {
     const JPH::Vec3 before = bodies.GetShape(player_id_)->GetCenterOfMass();
+    const JPH::Quat rotation = bodies.GetRotation(player_id_);
+    const JPH::Vec3 v = bodies.GetLinearVelocity(player_id_);
+    const JPH::Vec3 w = bodies.GetAngularVelocity(player_id_);
     bodies.SetShape(player_id_, shape, false, JPH::EActivation::Activate);
     const JPH::Vec3 delta = shape->GetCenterOfMass() - before;
     if (delta.IsNearZero()) {
         return;
     }
+    bodies.SetLinearVelocity(player_id_, v + w.Cross(rotation * delta));
     for (const JPH::Ref<JPH::Constraint> &constraint : physics_system_.GetConstraints()) {
         constraint->NotifyShapeChanged(player_id_, delta);
     }

@@ -28,6 +28,15 @@ constexpr int kHunting = static_cast<int>(Matron::State::Hunting);
 
 void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
 
+// The fatality's beats (matron.hpp Fatal), Lay to Black, none skipped.
+const std::vector<int> kEveryBeat{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+// Each beat as it comes, once.
+void note_beat(const scraperx::sim::Snapshot &p, std::vector<int> &beats) {
+    if (p.claimed_by_matron && (beats.empty() || beats.back() != p.fatality_beat)) {
+        beats.push_back(p.fatality_beat);
+    }
+}
+
 bool steer(Simulation &s, const double x, const double z, const bool sprint) {
     const auto p = s.snapshot().player_position;
     const double dx = x - p.x;
@@ -328,10 +337,12 @@ void run_matron_arm() {
         s.debug_matron_armplay(1);
         bool claimed = false;
         std::uint64_t ended = 0;
+        std::vector<int> beats;
         for (int i = 0; i < 90 * 90 && ended == 0; ++i) {
             (void)s.set_move_input(0.0, 0.0);
             tick(s);
             claimed = claimed || s.snapshot().claimed_by_matron;
+            note_beat(s.snapshot(), beats);
             if (std::getenv("ARM_DEBUG") != nullptr && s.matron_state().state == 15 && i % 10 == 0) {
                 const auto q = s.snapshot();
                 std::cout << "    c beat=" << int(s.matron_state().armplay_beat) << " hold_s=" << s.matron_state().hold_s
@@ -346,6 +357,7 @@ void run_matron_arm() {
                   << s.matron_state().grabs << " armplays " << s.matron_state().armplays << " tears " << p.arm_tear_count
                   << " one_arm " << p.one_arm << " deaths " << p.death_count << "\n";
         require(claimed && ended == 1, "matron claimed: both arms gone, she has won and the run ends");
+        require(beats == kEveryBeat, "matron claimed: every beat of it, in order");
         require(!p.left_arm_lost && !p.right_arm_lost && !p.held_by_matron && s.matron_state().state == 0,
                 "matron claimed: the run starts again, the body whole, her in her locker");
         require(p.player_body_length_m > 1.75, "matron claimed: the run starts again with the body's full length");
@@ -362,10 +374,12 @@ void run_matron_arm() {
         std::uint64_t ended = 0;
         int second_meet = 0;
         std::uint64_t deaths_seen = 0;
+        std::vector<int> beats;
         for (int i = 0; i < 400 * 90 && ended == 0; ++i) {
             (void)s.set_move_input(0.0, 0.0);
             tick(s);
             const auto q = s.snapshot();
+            note_beat(q, beats);
             if (q.arm_tear_count != most_tears && std::getenv("ARM_DEBUG") != nullptr) {
                 std::cout << "    tear " << q.arm_tear_count << " at " << i / 90.0 << " side " << q.last_severed_side
                           << " L/R " << q.left_arm_lost << q.right_arm_lost << " st " << int(s.matron_state().state) << "\n";
@@ -406,6 +420,7 @@ void run_matron_arm() {
         require(deaths_seen == 0, "matron two tears: no death on the way");
         require(second_meet == 2 && most_tears == 2 && claimed && ended == 1,
                 "matron two tears: two grabs, two arms, and the run is hers");
+        require(beats == kEveryBeat, "matron two tears: every beat of the end, in order");
         const auto p = s.snapshot();
         require(!p.left_arm_lost && !p.right_arm_lost && p.death_count == 0,
                 "matron two tears: the new run is whole");
@@ -495,8 +510,7 @@ void run_matron_fatality() {
               << " kicks " << kicks << " hauls " << hauls << " peak torso y " << peak_y << ", knot peak " << peak_knot
               << " N, parts " << parts << ", fell " << drop << " m landing " << landing << " m/s, lines " << lines
               << ", deaths " << deaths << ", max step " << max_step << " m, ended " << ended << "\n";
-    const std::vector<int> want{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    require(order == want, "matron fatality: every beat, in order");
+    require(order == kEveryBeat, "matron fatality: every beat, in order");
     require(pins == 1, "matron fatality: her knee on the chest");
     require(tears == 2 && legs_seen, "matron fatality: both legs torn off, bodies on the deck");
     require(peak_leg > scraperx::sim::Matron::kLegHoldN && peak_leg < 8000.0, "matron fatality: the hip's load finite");
