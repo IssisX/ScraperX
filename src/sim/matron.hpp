@@ -1220,6 +1220,13 @@ private:
     // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
+    // Her travel across the tower (matron_travel.cpp).
+    bool follow_route(float dt, JPH::RVec3 at);
+    [[nodiscard]] int climb_index(routes::Connector which) const noexcept;
+    [[nodiscard]] routes::Region lead_region() const noexcept;
+    [[nodiscard]] bool travels() const noexcept;
+    void route_clear() noexcept;
+    void route_failed(std::size_t edge, routes::Reason reason);
     // On a climb: up it, and over its head.
     void climb(float dt);
     bool begin_climb(int index, bool down = false);
@@ -1433,6 +1440,18 @@ private:
     int bay_climb_ = -1;
     int c3_wall_climb_ = -1;
     routes::Map routes_;          // her map of the tower (matron_routes.hpp)
+    // Her way across it: the edges planned, the one she is on and its step,
+    // started along it or not, and how her last climb ended.
+    enum class ClimbEnd : std::uint8_t { None, Done, Failed };
+    routes::Path route_{};
+    std::uint8_t route_at_ = 0;
+    std::uint8_t route_step_ = 0;
+    bool route_on_edge_ = false;
+    routes::Region route_goal_ = routes::Region::Count;
+    float route_step_s_ = 0.0F;
+    ClimbEnd climb_end_ = ClimbEnd::None;
+    float clock_s_ = 0.0F;
+    std::uint32_t route_edges_done_ = 0, route_failures_ = 0;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
     int c3_duct_climb_ = -1;
     JPH::BodyID bay_leaf_;

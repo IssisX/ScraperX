@@ -1129,6 +1129,7 @@ bool Matron::begin_climb(const int index, const bool down) {
 }
 
 void Matron::release_climb(const bool failed) {
+    climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
     climb_ = -1;
     reaching_up_ = false;
     climb_down_ = false;
@@ -2075,6 +2076,7 @@ bool Matron::trap_lets_go(const RVec3 player, const float dt, const bool perceiv
 }
 
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
+    clock_s_ += dt;
     acoustic_queries_ = 0;
     since_heard_s_ = std::min(since_heard_s_ + dt, 3600.0F);
     // Waking evidence keeps aging while sealed, but she needs an opportunity
@@ -2377,9 +2379,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             ride_pipe(dt);
             break;
         }
-        // On a climb she is going up it, whatever else she is about.
+        // On a climb she is going up (or down) it, whatever else she is about;
+        // started along a way across the tower, she finishes it.
         if (climb_ >= 0) {
             climb(dt);
+            step_turn(dt, d, loudness, player_carry);
+            break;
+        }
+        if (route_on_edge_) {
+            (void)follow_route(dt, at);
             step_turn(dt, d, loudness, player_carry);
             break;
         }
@@ -2487,10 +2495,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere && (follow_pipe(dt, at) || follow_line(dt, at) || follow_climb(dt, at))) {
+            } else if (elsewhere && (follow_pipe(dt, at) || follow_line(dt, at) || follow_route(dt, at) ||
+                                     follow_climb(dt, at))) {
                 // After the lead along the corner pipe (no longer frail), down
-                // a line (its stand, its cable) or up a climb (its foot, its
-                // rungs).
+                // a line (its stand, its cable), or by her map's ways across
+                // the tower (its ladders up and down), or up a climb.
                 step_turn(dt, d, loudness, player_carry);
                 break;
             } else {
@@ -3062,6 +3071,11 @@ void Matron::restore(const Saved &saved) {
         climb_grips_ = 0;
         climb_releases_ = 0;
         climbs_done_ = 0;
+        // A restore is a world changed: every way of her map is worth trying again.
+        route_clear();
+        routes_.unblock_all();
+        route_edges_done_ = 0;
+        route_failures_ = 0;
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
         unrig_way_ = -1;

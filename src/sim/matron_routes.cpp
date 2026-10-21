@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <tuple>
 
 namespace scraperx::sim::routes {
 namespace {
@@ -161,15 +162,42 @@ Map::Map() {
         LadderInfo{-6.00F, -133.50F, 0.28F, 143.40F, 155.15F, 0.30F, -1.0F, 1.0F, 143.00F, 154.00F};
 
     // Every way starts Unknown: none is planned over until its executor has
-    // taken her along it, this direction, in a test.
-    add({Region::Deck154, Region::Ring176, Kind::LadderUp, Connector::HomeLadder, 5.00F, -129.55F, 5.00F, -128.00F,
-         40.0F});
-    add({Region::Ring176, Region::Deck154, Kind::LadderDown, Connector::HomeLadder, 5.00F, -128.40F, 5.00F, -129.75F,
-         40.0F});
-    add({Region::Deck143, Region::Deck154, Kind::LadderUp, Connector::RiserLadder, -6.00F, -133.85F, -6.00F, -129.50F,
-         25.0F});
+    // taken her along it, this direction, in a test (set_status).
+    using Do = Step::Do;
+    const auto walk = [](const float x, const float z) { return Step{Do::Walk, Connector::Count, x, z}; };
+    const auto up = [](const Connector c) { return Step{Do::ClimbUp, c, 0.0F, 0.0F}; };
+    const auto down = [](const Connector c) { return Step{Do::ClimbDown, c, 0.0F, 0.0F}; };
+    // The home ladder: from the north band round its west rail to its foot,
+    // up, and onto the ring; down from the ring's edge over its head to the
+    // foot, and back round the rail.
+    add({Region::Deck154, Region::Ring176, Kind::LadderUp, Connector::HomeLadder, 3.90F, -128.50F, 5.00F, -127.50F,
+         40.0F},
+        {walk(3.90F, -129.55F), walk(5.00F, -129.55F), up(Connector::HomeLadder), walk(5.00F, -127.50F)});
+    add({Region::Ring176, Region::Deck154, Kind::LadderDown, Connector::HomeLadder, 5.00F, -127.50F, 3.90F, -128.50F,
+         40.0F},
+        {walk(5.00F, -128.55F), down(Connector::HomeLadder), walk(3.90F, -129.55F), walk(3.90F, -128.50F)});
+    // C3's riser: from the 143 band out onto its plate to the foot, up, over
+    // the bridge and down its steps to 154's runway; down, from the runway up
+    // the steps onto the bridge, over its lip, and off the plate onto 143.
+    add({Region::Deck143, Region::Deck154, Kind::LadderUp, Connector::RiserLadder, -6.00F, -131.00F, -6.00F, -129.50F,
+         25.0F},
+        {walk(-6.00F, -133.85F), up(Connector::RiserLadder), walk(-6.00F, -131.20F), walk(-6.00F, -129.50F)});
     add({Region::Deck154, Region::Deck143, Kind::LadderDown, Connector::RiserLadder, -6.00F, -129.50F, -6.00F,
-         -133.85F, 25.0F});
+         -131.00F, 25.0F},
+        {walk(-6.00F, -131.20F), walk(-6.00F, -132.85F), down(Connector::RiserLadder), walk(-6.00F, -131.00F)});
+    // C3 below the riser, 132 to 143: from the 132 south band up the stepped
+    // walkway across the shaft to its landing, up the duct's face, along the
+    // duct to its wall ladder, up onto the 143 plate; and all of it back down.
+    add({Region::Deck132, Region::Deck143, Kind::LadderUp, Connector::C3WallLadder, -10.50F, -171.00F, -10.50F,
+         -131.00F, 45.0F},
+        {walk(-10.50F, -145.00F), walk(-10.50F, -144.40F), up(Connector::C3Duct), walk(-10.50F, -135.85F),
+         up(Connector::C3WallLadder), walk(-10.50F, -131.00F)});
+    add({Region::Deck143, Region::Deck132, Kind::LadderDown, Connector::C3WallLadder, -10.50F, -131.00F, -10.50F,
+         -171.00F, 45.0F},
+        {walk(-10.50F, -134.85F), down(Connector::C3WallLadder), walk(-10.50F, -143.40F), down(Connector::C3Duct),
+         walk(-10.50F, -145.00F), walk(-10.50F, -171.00F)});
+    // The corner pipe, both ways between 132, 143 and 154 (no executor that
+    // is physical yet: Unknown); the bay's rungs and lip (her trap's own).
     add({Region::Deck154, Region::Deck143, Kind::PipeDown, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
          15.0F});
     add({Region::Deck143, Region::Deck154, Kind::PipeUp, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
@@ -182,11 +210,30 @@ Map::Map() {
          8.0F});
     add({Region::Deck154, Region::Bracket152, Kind::DropDown, Connector::BayLip, -4.35F, -130.15F, -3.45F, -129.85F,
          4.0F});
+
+    // Qualified: her hands have taken her along these, these ways, in tests
+    // (tests/sim_tests_matron_traverse.cpp each climb both ways; the routes
+    // themselves end to end).
+    for (const auto &[from, to, kind] : {std::tuple{Region::Deck154, Region::Ring176, Kind::LadderUp},
+                                         std::tuple{Region::Ring176, Region::Deck154, Kind::LadderDown},
+                                         std::tuple{Region::Deck143, Region::Deck154, Kind::LadderUp},
+                                         std::tuple{Region::Deck154, Region::Deck143, Kind::LadderDown},
+                                         std::tuple{Region::Deck132, Region::Deck143, Kind::LadderUp},
+                                         std::tuple{Region::Deck143, Region::Deck132, Kind::LadderDown}}) {
+        set_status(find(from, to, kind), Status::Qualified, Reason::None);
+    }
 }
 
-void Map::add(const Edge &edge) noexcept {
-    if (edge_count_ < kMaxEdges) {
-        edges_[edge_count_++] = edge;
+void Map::add(const Edge &edge, const std::initializer_list<Step> steps) noexcept {
+    if (edge_count_ >= kMaxEdges) {
+        return;
+    }
+    Edge &e = edges_[edge_count_++];
+    e = edge;
+    for (const Step &step : steps) {
+        if (e.step_count < kMaxSteps) {
+            e.steps[e.step_count++] = step;
+        }
     }
 }
 

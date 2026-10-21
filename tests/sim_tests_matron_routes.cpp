@@ -17,6 +17,15 @@ using scraperx::sim::InitialSpawn;
 using scraperx::sim::Simulation;
 using scraperx::sim::Vector3;
 
+// A map with no way yet shown to carry her: the planning rules alone.
+routes::Map bare_map() {
+    routes::Map map;
+    for (std::size_t i = 0; i < map.edge_count(); ++i) {
+        map.set_status(i, Status::Unknown, Reason::Untested);
+    }
+    return map;
+}
+
 void qualify(routes::Map &map, const Region from, const Region to, const Kind kind) {
     const std::size_t i = map.find(from, to, kind);
     require(i < routes::kMaxEdges, "matron routes: the way is on the map");
@@ -47,7 +56,7 @@ void run_regions() {
 }
 
 void run_directed() {
-    routes::Map map;
+    routes::Map map = bare_map();
     routes::Path path;
     // Nothing is planned over before it is qualified.
     require(!map.plan(Region::Deck154, 5.0F, -129.0F, Region::Ring176, 0.0F, 3.0F, path),
@@ -83,7 +92,7 @@ void run_directed() {
 }
 
 void run_blocked() {
-    routes::Map map;
+    routes::Map map = bare_map();
     routes::Path path;
     qualify(map, Region::Deck154, Region::Ring176, Kind::LadderUp);
     const std::size_t up = map.find(Region::Deck154, Region::Ring176, Kind::LadderUp);

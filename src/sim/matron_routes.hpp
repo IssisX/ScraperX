@@ -21,6 +21,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <string_view>
 
 namespace scraperx::sim::routes {
@@ -103,6 +104,16 @@ struct LadderInfo final {
     float foot_y = 0.0F, head_y = 0.0F;   // the support at its foot and over its head
 };
 
+// How she goes along an edge: walks to points (on the edge's own steel:
+// steps, a bridge, a duct) and climbs up or down named climbs, in order.
+struct Step final {
+    enum class Do : std::uint8_t { Walk, ClimbUp, ClimbDown };
+    Do what = Do::Walk;
+    Connector climb = Connector::Count;
+    float x = 0.0F, z = 0.0F;
+};
+constexpr std::size_t kMaxSteps = 8;
+
 struct Edge final {
     Region from = Region::Count;
     Region to = Region::Count;
@@ -115,6 +126,8 @@ struct Edge final {
     Reason reason = Reason::Untested;
     float blocked_until_s = 0.0F;
     std::uint8_t failures = 0;
+    std::array<Step, kMaxSteps> steps{};
+    std::uint8_t step_count = 0;
 };
 
 constexpr std::size_t kRegionCount = static_cast<std::size_t>(Region::Count);
@@ -170,7 +183,7 @@ private:
     std::array<Edge, kMaxEdges> edges_{};
     std::size_t edge_count_ = 0;
     std::array<LadderInfo, static_cast<std::size_t>(Connector::Count)> ladders_{};
-    void add(const Edge &edge) noexcept;
+    void add(const Edge &edge, std::initializer_list<Step> steps = {}) noexcept;
 };
 
 [[nodiscard]] std::string_view name(Region id) noexcept;
