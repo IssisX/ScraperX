@@ -124,6 +124,33 @@ int main() {
         run_yard_crane_spreader();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "one-arm") {
+        run_one_arm_route();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-fatality") {
+        run_matron_fatality();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-arm") {
+        run_matron_arm();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-grab") {
+        run_matron_grab();
+        run_matron_arm();
+        run_matron_fatality();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-moves") {
+        run_matron_pace();
+        run_matron_unstick();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "water") {
+        run_water();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -373,6 +400,7 @@ int main() {
     run_wet_handling();
     run_wet_band();
     run_wet_route();
+    run_water();
     run_plate_shop();
     run_plate_band();
     run_plate_route();
@@ -430,6 +458,12 @@ int main() {
     run_summit();
     run_summit_arm();
     run_matron();
+    run_matron_pace();
+    run_matron_unstick();
+    run_matron_grab();
+    run_matron_arm();
+    run_matron_fatality();
+    run_one_arm_route();
     run_bay();
     run_loose_stock();
     run_look_target();

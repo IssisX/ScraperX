@@ -184,6 +184,7 @@ public:
     // keyed by its field names.
     // Phase 4: the last landing and the recovery from it (Snapshot fields).
     [[nodiscard]] godot::Dictionary get_landing_state() const;
+    [[nodiscard]] godot::Dictionary get_water_state() const;
     [[nodiscard]] godot::Dictionary get_hand_state() const;
     [[nodiscard]] double get_wind_mps() const;
     [[nodiscard]] godot::Dictionary get_wet_state() const;
@@ -206,6 +207,9 @@ public:
     [[nodiscard]] godot::Dictionary get_swing_state() const;
     [[nodiscard]] godot::Dictionary get_summit_state() const;
     [[nodiscard]] godot::Dictionary get_matron_state() const;
+    // Her hands on the player: the hold, the arms, the fatality and the
+    // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
+    [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
     [[nodiscard]] bool request_trapeze_action();

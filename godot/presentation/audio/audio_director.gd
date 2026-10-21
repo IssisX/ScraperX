@@ -1311,3 +1311,46 @@ func update_wet_e(_delta: float, state: Dictionary, floor_at: Vector3, mouth: Ve
 		_play_at(&"catch_bang", lever, 0.0, randf_range(0.95, 1.05))
 	if thump:
 		_play_at(&"seat_thump", WET_E_CHILLER_SEAT, 0.0, 1.0)
+
+
+# Water (sim physics_world_water.cpp). The body going in at `speed_mps`
+# (louder and lower the harder), and a stroke through it.
+var water_cues := {}   # name -> count (counted in CI too)
+var _underwater_filters := {}   # bus name -> AudioEffectLowPassFilter
+var _underwater_mix := 0.0
+
+func water_splash(at: Vector3, speed_mps: float) -> void:
+	water_cues[&"splash"] = int(water_cues.get(&"splash", 0)) + 1
+	var hard := clampf(speed_mps / 12.0, 0.0, 1.0)
+	_play_at(&"splash", at, lerpf(-10.0, 0.0, hard), lerpf(1.15, 0.8, hard))
+
+
+func swim_stroke(at: Vector3) -> void:
+	water_cues[&"stroke"] = int(water_cues.get(&"stroke", 0)) + 1
+	_play_at(&"swim_stroke", at, -12.0, randf_range(0.9, 1.1))
+
+
+# Under the surface the world is heard through water: a low-pass on the
+# effects and the ambience, eased in and out so it never clicks (the voice
+# and the interface stay clear: captions and menus are not in the water).
+func set_underwater(under: bool, delta: float) -> void:
+	_underwater_mix = move_toward(_underwater_mix, 1.0 if under else 0.0, delta * 6.0)
+	for bus_name in [BUS_EFFECTS, BUS_AMBIENCE]:
+		var index := AudioServer.get_bus_index(bus_name)
+		if index < 0:
+			continue
+		var filter: AudioEffectLowPassFilter = _underwater_filters.get(bus_name)
+		if filter == null:
+			filter = AudioEffectLowPassFilter.new()
+			filter.cutoff_hz = 20000.0
+			AudioServer.add_bus_effect(index, filter)
+			_underwater_filters[bus_name] = filter
+		var effect_index := -1
+		for i in AudioServer.get_bus_effect_count(index):
+			if AudioServer.get_bus_effect(index, i) == filter:
+				effect_index = i
+		if effect_index < 0:
+			continue
+		# 20 kHz dry to 450 Hz under: exponential in the mix, as heard.
+		filter.cutoff_hz = 20000.0 * pow(450.0 / 20000.0, _underwater_mix)
+		AudioServer.set_bus_effect_enabled(index, effect_index, _underwater_mix > 0.001)

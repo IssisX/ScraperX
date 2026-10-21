@@ -31,7 +31,10 @@ constexpr JPH::ObjectLayer kCorpse = 3;
 // she meets what moves (a drum let go onto her, the climber) and not the
 // static steel she is wrapped round, the pipe's flanges and the rail.
 constexpr JPH::ObjectLayer kOnSteel = 4;
-constexpr JPH::ObjectLayer kCount = 5;
+// Her hand while it holds the climber (physics_world_grab.cpp): a body
+// only its constraints move; it meets nothing.
+constexpr JPH::ObjectLayer kHand = 5;
+constexpr JPH::ObjectLayer kCount = 6;
 } // namespace object_layers
 
 namespace broadphase_layers {
@@ -825,3 +828,25 @@ constexpr float kTraversalStallTolerance = 0.22F;
 constexpr std::uint32_t kTraversalStallAbortTicks = 12;
 
 } // namespace scraperx::sim::detail
+
+// ---- Water (physics_world_water.cpp) -------------------------------------
+// The body is wet past kWaterWetFraction of its height under a pool's level,
+// afloat (swimming, treading) past kSwimFraction off the floor.
+constexpr float kWaterGravity = 9.81F;
+constexpr float kWaterWetFraction = 0.03F;
+constexpr float kSwimFraction = 0.55F;
+// Buoyancy per submerged fraction, in body weights: afloat at 1/1.12 = 0.89
+// submerged, the face 0.2 m out.
+constexpr float kBodyBuoyancyRatio = 1.12F;
+// Drag through water: a falling body entering at 15 m/s meets ~5.6 kN fully
+// in, about 6.7 g; at a 1.3 m/s swim, ~0.4 kN (finite, no infinite force).
+constexpr float kWaterLinearDragNsPerM = 180.0F;
+constexpr float kWaterQuadraticDragNs2PerM2 = 12.0F;
+// Swimming: the stick asks for up to kSwimMaxMps through the water, pushed
+// for at most kSwimForceN (a strong swimmer's thrust).
+constexpr float kSwimMaxMps = 1.3F;
+constexpr float kSwimResponse = 3.0F;
+constexpr float kSwimForceN = 320.0F;
+// A kick up: 2.4 m/s of body momentum (204 N*s) once per 0.5 s, bounded.
+constexpr float kSwimKickMps = 2.4F;
+constexpr int kSwimKickTicks = 45;

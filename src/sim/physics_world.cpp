@@ -509,6 +509,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     if (regrab_lockout_ticks_ > 0) {
         --regrab_lockout_ticks_;
     }
+    if (grounded_) {
+        dyno_no_catch_ = false;   // a missed lunge: the feet are down again
+    }
     facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
     look_pitch_ = static_cast<float>(commands.look_pitch);
 
@@ -564,6 +567,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
 
     resolve_up(commands);
+    // Her hand on them (physics_world_grab.cpp): the stick is a thrash.
+    const bool held_by_her = grab_pre_step(bodies, commands, delta_seconds);
+    const bool body_hers = held_by_her || player_free_rot_;
 
     // Harnessed into the slingshot's pouch or the swing's seat, the body
     // is the machine's: no crouch, carry, rig or traversal begins.
@@ -620,8 +626,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         clear_support_jolt();
     }
     apply_wind(bodies, commands.time_seconds);
-    if (!sling_controlling && traversal_state_ == TraversalState::None) {
-        if (slingshot_flight_ && !grounded_) {
+    update_water(bodies, delta_seconds);
+    if (!sling_controlling && traversal_state_ == TraversalState::None && !body_hers) {
+        if (swimming_) {
+            // Afloat: no ground to walk on, no air to steer in; the stroke
+            // and the kick (physics_world_water.cpp).
+            parachute_deployed_ = false;
+            swim_locomotion(bodies, commands);
+        } else if (slingshot_flight_ && !grounded_) {
             // Thrown: the stick steers with a bounded force (2 m/s/s at
             // full stick) and does not brake the throw to a walking speed
             // as air control would.
@@ -690,6 +702,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
+    grab_drive(bodies, delta_seconds);
+    if (body_hers && !was_grounded_before_tick) {
+        // Off the ground in her hand (or righting after): the speed it
+        // carries into contact, for the fall rules once she lets go.
+        pre_contact_velocity_ = bodies.GetLinearVelocity(player_id_);
+        pre_contact_fall_speed_mps_ = std::max(0.0F, -pre_contact_velocity_.GetY());
+        fall_peak_speed_mps_ = std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
+    }
     if (const int way = matron_->take_unrig(); way >= 0) {
         // Her hands have the rope's end off the cage's eye: it hangs there on
         // its shackle, to be hooked on again.
@@ -717,7 +737,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         // stop's jolt at a run-in faster than the buffer takes tears them off
         // and the body is thrown on (kLedgeGripMaxForceN, as hang_on_ledge).
         // One good arm holds kOneArmGripScale of two hands'.
-        const float grip = arm_broken() ? kOneArmGripScale : 1.0F;
+        const float grip = one_arm() ? kOneArmGripScale : 1.0F;
         const float load = zipline_->state().hands_load_n;
         if (load > kLedgeGripMaxForceN * grip) {
             ++hang_over_grip_ticks_;
@@ -737,6 +757,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
     }
     summit_->post_step();
+    grab_post_step(bodies, delta_seconds);
     matron_->post_step(delta_seconds);
     if (matron_->take_released_edge()) {
         matron_checkpoint_pending_ = true;
@@ -766,7 +787,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // always sets a support-relative landing velocity first -- so no
     // separate traversal exemption is needed.
     bool died_this_tick = false;
-    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None && !takeoff) {
+    // While she is finishing it (Claimed) the run is hers: its end is the
+    // fatality's, not a death and a checkpoint.
+    const bool hers = matron_->claimed();
+    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None && !takeoff &&
+        grip_ == nullptr && !hers) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.
@@ -793,11 +818,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // dangerous one's at the shaft's rim when it is near.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
         if (matron_->kills()) {
-            matron_->count_catch();
-            leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), bodies.GetLinearVelocity(player_id_).Length(),
-                         false);
-            restore_from_checkpoint(bodies);
-            died_this_tick = true;
+            // Fully changed: no kill on touch. Her hand goes for the ankle
+            // (matron_hold.cpp); what follows is physics.
+            if (matron_->grab_ready()) {
+                matron_->count_catch();
+                matron_->begin_grab(bodies.GetPosition(player_id_));
+            }
         } else if (matron_->shove_ready()) {
             matron_->count_shove();
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
@@ -805,7 +831,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Run into something (or run into) hard enough (kHitLethalSpeed): a
     // death side-on. Softer, a hit the body feels.
-    if (!died_this_tick && hit_closing_mps_ >= kHitLethalSpeed) {
+    if (!died_this_tick && !hers && hit_closing_mps_ >= kHitLethalSpeed) {
         leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), hit_closing_mps_, true);
         restore_from_checkpoint(bodies);
         died_this_tick = true;
@@ -916,6 +942,18 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
     bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
     impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+}
+
+void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {
+    if (grip_ != nullptr) {
+        tear_grip(false);   // tests: out of her hand first
+    }
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    release_carry();
+    clear_traversal();
+    bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
+    grounded_ = false;
 }
 
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {

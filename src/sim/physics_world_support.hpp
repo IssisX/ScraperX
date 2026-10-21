@@ -85,6 +85,7 @@ public:
         mapping_[object_layers::kPlayer] = broadphase_layers::kMoving;
         mapping_[object_layers::kCorpse] = broadphase_layers::kMoving;
         mapping_[object_layers::kOnSteel] = broadphase_layers::kMoving;
+        mapping_[object_layers::kHand] = broadphase_layers::kMoving;
     }
 
     [[nodiscard]] JPH::uint GetNumBroadPhaseLayers() const override {
@@ -127,6 +128,9 @@ public:
         if (object_layer == object_layers::kOnSteel) {
             return broadphase_layer == broadphase_layers::kMoving;
         }
+        if (object_layer == object_layers::kHand) {
+            return false;
+        }
         JPH_ASSERT(false);
         return false;
     }
@@ -136,6 +140,9 @@ class ObjectLayerPairFilter final : public JPH::ObjectLayerPairFilter {
 public:
     [[nodiscard]] bool ShouldCollide(const JPH::ObjectLayer first,
                                      const JPH::ObjectLayer second) const override {
+        if (first == object_layers::kHand || second == object_layers::kHand) {
+            return false;
+        }
         if (first == object_layers::kStatic) {
             return second != object_layers::kStatic && second != object_layers::kOnSteel;
         }

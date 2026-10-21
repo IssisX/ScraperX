@@ -10,6 +10,7 @@ extends SceneTree
 ##       --script res://tests/matron_figure_test.gd -- --out=<dir>
 
 const MatronView := preload("res://presentation/life/matron_view.gd")
+const MatronLook := preload("res://presentation/life/matron_look.gd")
 const EYE_TOLERANCE_DEG := 5.0
 const FLOOR_TOLERANCE_M := 0.03
 const DT := 1.0 / 30.0
@@ -135,6 +136,15 @@ func _run() -> void:
 		if (m as MeshInstance3D).material_override == null:
 			undressed.append(String(m.name))
 	_check(meshes.size() >= 18 and undressed.is_empty(), "dressed", "%d parts, undressed %s" % [meshes.size(), str(undressed)])
+	# Exposure contrast: skin stays light (waxy) while the uniform darkens, and
+	# their luminance separates more as exposure rises.
+	var gaps := []
+	for e in [0.0, 0.5, 1.0]:
+		var t: Dictionary = MatronLook.exposure_tints(e)
+		gaps.append((t["skin"] as Color).get_luminance() - (t["cloth"] as Color).get_luminance())
+	var grey_skin: float = (MatronLook.exposure_tints(1.0)["skin"] as Color).get_luminance()
+	_check(grey_skin > 0.85 and gaps[2] > 0.5 and gaps[1] > gaps[0] - 0.001 and gaps[2] > gaps[1],
+		"contrast", "skin %.2f, skin-cloth gap %s" % [grey_skin, str(gaps)])
 	if _out != "":
 		DirAccess.make_dir_recursive_absolute(_out)
 	# Every pose: the body follows the pivots; standing, her soles on the floor.

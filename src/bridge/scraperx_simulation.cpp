@@ -293,6 +293,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_state"), &ScraperXSimulation::get_water_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wind_mps"), &ScraperXSimulation::get_wind_mps);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
@@ -316,6 +317,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
@@ -994,6 +996,23 @@ double ScraperXSimulation::get_stack_s3_brake_angle() const {
 
 bool ScraperXSimulation::is_stack_s3_brake_latched() const {
     return simulation_->stack_state().s3_brake_latched;
+}
+
+godot::Dictionary ScraperXSimulation::get_water_state() const {
+    const sim::Snapshot &s = simulation_->snapshot();
+    godot::Dictionary out;
+    out["in_water"] = s.in_water;
+    out["swimming"] = s.swimming;
+    out["head_under"] = s.head_underwater;
+    out["submersion"] = s.water_submersion;
+    out["surface_y"] = s.water_surface_y;
+    out["pool"] = static_cast<std::int64_t>(s.water_pool);
+    out["entries"] = static_cast<std::int64_t>(s.water_entry_count);
+    out["exits"] = static_cast<std::int64_t>(s.water_exit_count);
+    out["entry_speed"] = s.water_entry_speed_mps;
+    out["kicks"] = static_cast<std::int64_t>(s.swim_kick_count);
+    out["position"] = to_godot(s.player_position);
+    return out;
 }
 
 godot::Dictionary ScraperXSimulation::get_landing_state() const {
@@ -1688,6 +1707,96 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["support_n"] = state.support_n;
     out["trap"] = static_cast<std::int64_t>(state.trap);
     out["traps"] = static_cast<std::int64_t>(state.traps);
+    return out;
+}
+
+namespace {
+[[nodiscard]] godot::Quaternion to_godot_quat(const double x, const double y, const double z, const double w) {
+    return to_godot(sim::Quaternion{x, y, z, w});
+}
+} // namespace
+
+godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
+    const sim::Snapshot &p = simulation_->snapshot();
+    const sim::MatronSnapshot m = simulation_->matron_state();
+    godot::Dictionary out;
+    // Her side.
+    out["state"] = static_cast<std::int64_t>(m.state);
+    out["grip_on"] = m.grip_on;
+    out["hold_s"] = m.hold_s;
+    out["hand"] = to_godot(m.hand);
+    out["hand2"] = to_godot(m.hand2);
+    out["armplay_beat"] = static_cast<std::int64_t>(m.armplay_beat);
+    out["fatal_beat_view"] = static_cast<std::int64_t>(m.fatal_beat);
+    out["grabs"] = static_cast<std::int64_t>(m.grabs);
+    out["carries"] = static_cast<std::int64_t>(m.carries);
+    out["dangles"] = static_cast<std::int64_t>(m.dangles);
+    out["armplays"] = static_cast<std::int64_t>(m.armplays);
+    out["releases"] = static_cast<std::int64_t>(m.releases);
+    out["spares"] = static_cast<std::int64_t>(m.spares);
+    out["arm_tears"] = static_cast<std::int64_t>(m.arm_tears);
+    out["claims"] = static_cast<std::int64_t>(m.claims);
+    out["waste_not"] = static_cast<std::int64_t>(m.waste_not);
+    // The body in her hand.
+    out["held"] = p.held_by_matron;
+    out["free_rotation"] = p.player_free_rotation;
+    out["body_rotation"] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);
+    out["body_angular_velocity"] = to_godot(p.player_angular_velocity);
+    out["grip_load_n"] = p.grip_load_n;
+    out["grip_strain_ns"] = p.grip_strain_ns;
+    out["thrash"] = p.thrash;
+    out["braced"] = p.braced_on_rail;
+    // Arms.
+    out["left_arm_lost"] = p.left_arm_lost;
+    out["right_arm_lost"] = p.right_arm_lost;
+    out["one_arm"] = p.one_arm;
+    out["arm_tear_count"] = static_cast<std::int64_t>(p.arm_tear_count);
+    out["arm_throw_count"] = static_cast<std::int64_t>(p.arm_throw_count);
+    out["severed_arm_present"] = p.severed_arm_present;
+    out["severed_arm_position"] = to_godot(p.severed_arm_position);
+    out["severed_arm_rotation"] =
+        to_godot_quat(p.severed_arm_rot_x, p.severed_arm_rot_y, p.severed_arm_rot_z, p.severed_arm_rot_w);
+    out["wrist_load_n"] = p.wrist_load_n;
+    out["hang_hand_side"] = static_cast<std::int64_t>(p.hang_hand_side);
+    out["dyno_in_flight"] = p.dyno_in_flight;
+    out["dyno_catch_count"] = static_cast<std::int64_t>(p.dyno_catch_count);
+    out["dyno_miss_count"] = static_cast<std::int64_t>(p.dyno_miss_count);
+    out["heel_hook_count"] = static_cast<std::int64_t>(p.heel_hook_count);
+    // The fatality.
+    out["claimed"] = p.claimed_by_matron;
+    out["fatality_beat"] = static_cast<std::int64_t>(p.fatality_beat);
+    godot::PackedInt64Array edges;
+    edges.resize(static_cast<std::int64_t>(p.fatality_beat_edges.size()));
+    for (std::size_t i = 0; i < p.fatality_beat_edges.size(); ++i) {
+        edges[static_cast<std::int64_t>(i)] = static_cast<std::int64_t>(p.fatality_beat_edges[i]);
+    }
+    out["fatality_beat_edges"] = edges;
+    out["left_leg_lost"] = p.left_leg_lost;
+    out["right_leg_lost"] = p.right_leg_lost;
+    out["leg_tear_count"] = static_cast<std::int64_t>(p.leg_tear_count);
+    godot::Array legs;
+    for (std::size_t k = 0; k < 2; ++k) {
+        godot::Dictionary leg;
+        leg["present"] = p.severed_leg_present[k];
+        leg["position"] = to_godot(p.severed_leg_position[k]);
+        const sim::Quaternion &q = p.severed_leg_rotation[k];
+        leg["rotation"] = to_godot_quat(q.x, q.y, q.z, q.w);
+        legs.append(leg);
+    }
+    out["severed_legs"] = legs;
+    out["knee_down"] = p.matron_knee_down;
+    out["knee"] = to_godot(p.matron_knee);
+    out["knot_count"] = static_cast<std::int64_t>(p.knot_count);
+    out["knot_load_n"] = p.knot_load_n;
+    out["brake_kick_count"] = static_cast<std::int64_t>(p.brake_kick_count);
+    out["haul_count"] = static_cast<std::int64_t>(p.haul_count);
+    out["haul_peak_y"] = p.haul_peak_y;
+    out["knot_part_count"] = static_cast<std::int64_t>(p.knot_part_count);
+    out["fall_landing_count"] = static_cast<std::int64_t>(p.fall_landing_count);
+    out["fall_landing_speed_mps"] = p.fall_landing_speed_mps;
+    out["waste_not_count"] = static_cast<std::int64_t>(p.waste_not_count);
+    out["wipe_s"] = p.wipe_s;
+    out["runs_ended_by_matron"] = static_cast<std::int64_t>(p.runs_ended_by_matron);
     return out;
 }
 

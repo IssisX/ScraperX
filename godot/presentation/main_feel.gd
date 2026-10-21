@@ -258,6 +258,7 @@ const HAPTICS := {
 	&"her": [18, 0.5],   # her hands on the steel you are on or beside
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
+	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -864,6 +865,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			_camera.basis = Basis(axis.normalized(), Vector3.UP.angle_to(floor_up)) * _camera.basis
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
+	_feel_hold(delta)
 	if _death_cam_left > 0.0:
 		_ride_death()
 
@@ -880,7 +882,32 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
 		if absf(_cam_fov_offset - fov_target) < 0.005:
 			_cam_fov_offset = fov_target
-	_camera.fov = _fov_base + _cam_fov_offset
+	_camera.fov = _fov_base + _cam_fov_offset + _hold_cam.fov_offset()
+
+# Her hands on the body (life/matron_hold_camera.gd): while held, dangled or
+# claimed the head is the body's quaternion with the free look clamped about
+# it; the fatality's beats frame over that. A plain overlay carries the spin
+# vignette and the closing black.
+var _hold_cam: RefCounted = preload("res://presentation/life/matron_hold_camera.gd").new()
+var _hold_veil: ColorRect = null
+
+func _feel_hold(delta: float) -> void:
+	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
+		return
+	var hold: Dictionary = _native.get_matron_hold_state()
+	_camera.basis = _hold_cam.orient(hold, _camera.basis, _yaw, _pitch, delta, _reduced_motion)
+	var veil: float = maxf(_hold_cam.vignette() * 0.6, _hold_cam.black())
+	if veil > 0.002 and _hold_veil == null:
+		_hold_veil = ColorRect.new()
+		_hold_veil.color = Color(0, 0, 0, 0)
+		_hold_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_hold_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+		var layer := CanvasLayer.new()
+		layer.layer = 50
+		add_child(layer)
+		layer.add_child(_hold_veil)
+	if _hold_veil != null:
+		_hold_veil.color.a = veil
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
@@ -933,6 +960,23 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_feel_bay()
 	if delta > 0.0:
 		_feel_wet_e(delta)
+		_feel_water(delta)
+
+
+# Water (sim physics_world_water.cpp): the splash, the tint and fog under the
+# surface, the muffle on the effects, the haptic at the entry. All of it is
+# read from the native's water state; nothing here decides wet or dry.
+var _water_feel: Node = null
+
+func _feel_water(delta: float) -> void:
+	if not _native.has_method(&"get_water_state"):
+		return
+	if _water_feel == null:
+		_water_feel = preload("res://presentation/water_feel.gd").new()
+		add_child(_water_feel)
+	var entered: float = _water_feel.update_view(_native.get_water_state(), _camera, _audio, delta)
+	if entered > 0.0:
+		_haptic(&"splash", clampf(0.4 + entered / 12.0, 0.4, 1.0))
 
 
 # Deaths (sim/corpse.hpp): the body a death leaves is drawn where it lies.

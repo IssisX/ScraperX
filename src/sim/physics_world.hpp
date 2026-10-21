@@ -113,6 +113,7 @@ public:
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
+    void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
@@ -941,6 +942,148 @@ public:
     int broken_arm_side_ = 1;
     std::uint64_t arm_break_count_ = 0;
     [[nodiscard]] bool arm_broken() const noexcept { return arm_broken_seconds_left_ > 0.0; }
+    // Water (physics_world_water.cpp): measured each tick before the step.
+    bool in_water_ = false;
+    bool swimming_ = false;
+    bool head_underwater_ = false;
+    float water_submersion_ = 0.0F;
+    float water_surface_y_ = 0.0F;
+    int water_pool_ = -1;
+    float water_entry_speed_mps_ = 0.0F;
+    std::uint64_t water_entry_count_ = 0;
+    std::uint64_t water_exit_count_ = 0;
+    std::uint64_t swim_kick_count_ = 0;
+    int swim_kick_cooldown_ticks_ = 0;
+    void update_water(JPH::BodyInterface &bodies, float dt) noexcept;
+    void swim_locomotion(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+
+    // Her hold on the player (physics_world_grab.cpp). Her hand is a body of
+    // its own on her arm (a soft distance limit from her shoulder), pushed at
+    // its pose by a capped spring-damper (its reaction on her); its grip on
+    // the ankle a SwingTwist whose load and strain tear it. Held, the player's
+    // body turns freely (all DOFs); let go, a capped PD torque rights it on
+    // the ground and the DOFs lock again only once upright and clear.
+    JPH::BodyID hand_id_;
+    JPH::Ref<JPH::Shape> hand_shape_;
+    JPH::Ref<JPH::TwoBodyConstraint> hand_arm_;
+    JPH::Ref<JPH::TwoBodyConstraint> grip_;
+    JPH::Ref<JPH::TwoBodyConstraint> brace_;   // the player's hands on a rail against her pull
+    bool player_free_rot_ = false;
+    bool grip_swing_ = false;   // the grip's hinge taken on (else a bare point)
+    int upright_contact_ticks_ = 0;
+    float upright_s_ = 0.0F;
+    float grip_load_n_ = 0.0F;
+    float grip_peak_n_ = 0.0F;
+    float grip_strain_ns_ = 0.0F;
+    int grip_over_ticks_ = 0;
+    float brace_load_n_ = 0.0F;
+    float brace_strain_ns_ = 0.0F;
+    float thrash_ = 0.0F;
+    float thrash_avg_ = 0.0F;
+    double last_stick_x_ = 0.0, last_stick_z_ = 0.0;
+    double kick_dir_x_ = 0.0, kick_dir_z_ = 0.0;
+    int kick_cooldown_ticks_ = 0;
+    bool kick_now_ = false;
+    std::uint64_t grip_count_ = 0;
+    std::uint64_t grip_tear_count_ = 0;
+    std::uint64_t grip_release_count_ = 0;
+    std::uint64_t brace_count_ = 0;
+    std::uint64_t brace_tear_count_ = 0;
+    std::uint64_t thrash_kick_count_ = 0;
+    std::uint64_t upright_count_ = 0;
+    std::uint64_t upright_wedged_count_ = 0;
+    float max_hold_step_m_ = 0.0F;   // the player's biggest move in a tick while held (no teleport)
+    JPH::RVec3 hold_last_at_ = JPH::RVec3::sZero();
+    bool grab_holds_player() const noexcept { return grip_ != nullptr; }
+    bool grab_pre_step(JPH::BodyInterface &bodies, StepCommands &commands, float dt) noexcept;
+    void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void grab_reset(JPH::BodyInterface &bodies) noexcept;
+    void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
+    void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
+    void tear_grip(bool torn) noexcept;
+    [[nodiscard]] bool upright_pose_clear(JPH::RVec3 centre) const noexcept;
+
+    // Arms (physics_world_arm.cpp): lost per side (0 left, 1 right), until a
+    // death or a restart; her second hand on a wrist; the severed arm a body.
+    std::array<bool, 2> arm_lost_{false, false};
+    JPH::BodyID hand2_id_;
+    JPH::Ref<JPH::TwoBodyConstraint> hand2_arm_;
+    JPH::Ref<JPH::TwoBodyConstraint> wrist_;
+    JPH::Ref<JPH::TwoBodyConstraint> arm_in_hand_;
+    JPH::BodyID severed_arm_id_;
+    JPH::Ref<JPH::Shape> severed_arm_shape_;
+    int wrist_side_ = -1;
+    int last_severed_side_ = -1;
+    float wrist_load_n_ = 0.0F;
+    float wrist_strain_ns_ = 0.0F;
+    float severed_arm_s_ = 0.0F;
+    bool severed_arm_thrown_ = false;
+    float severed_arm_thrown_y_ = 0.0F;
+    std::uint64_t arm_tear_count_ = 0;
+    std::uint64_t arm_throw_count_ = 0;
+    std::uint64_t severed_arm_despawn_count_ = 0;
+    float claimed_s_ = 0.0F;
+    bool run_ended_by_matron_ = false;
+    std::uint64_t claimed_count_ = 0;
+    [[nodiscard]] int arms_lost() const noexcept { return int(arm_lost_[0]) + int(arm_lost_[1]); }
+    // One good arm: one lost, or one broken (a hang holds half, a climb hauls
+    // at half, no hand over hand).
+    [[nodiscard]] bool one_arm() const noexcept { return arms_lost() == 1 || arm_broken(); }
+    [[nodiscard]] JPH::Vec3 wrist_local(int side) const noexcept;
+    void arm_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    void arm_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void arm_reset(JPH::BodyInterface &bodies) noexcept;
+    void sever_arm(JPH::BodyInterface &bodies) noexcept;
+    void despawn_severed_arm(JPH::BodyInterface &bodies) noexcept;
+    // One good arm (physics_world_one_arm.cpp).
+    bool dyno_active_ = false;
+    bool dyno_no_catch_ = false;
+    bool dyno_short_ = false;
+    float dyno_t_ = 0.0F, dyno_apex_t_ = 0.0F, dyno_last_error_s_ = 0.0F, dyno_target_y_ = 0.0F;
+    std::uint64_t dyno_launch_count_ = 0, dyno_catch_count_ = 0, dyno_miss_count_ = 0, dyno_refused_count_ = 0;
+    std::uint64_t heel_hook_count_ = 0, heel_hook_refused_count_ = 0;
+    [[nodiscard]] int good_arm_side() const noexcept;
+    [[nodiscard]] JPH::Vec3 one_arm_shoulder_lean() const noexcept;
+    bool one_arm_hang_command(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
+    bool dyno_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
+    // The fatality (physics_world_fatality.cpp).
+    enum class FistOn : std::uint8_t { None, Leg, Collar };
+    JPH::BodyID knee_id_;
+    JPH::Ref<JPH::TwoBodyConstraint> knee_arm_, knee_pin_, fist_, knot_, handle_fist_;
+    std::array<JPH::Ref<JPH::TwoBodyConstraint>, 2> hip_{};
+    std::array<JPH::BodyID, 2> leg_id_{};
+    std::array<bool, 2> leg_off_{false, false};
+    std::array<float, 2> leg_strain_ns_{0.0F, 0.0F};
+    FistOn fist_on_ = FistOn::None;
+    int leg_in_fist_ = -1;
+    int fatal_prev_beat_ = -1;
+    std::array<std::uint64_t, 10> fatality_beat_edges_{};
+    float leg_load_n_ = 0.0F, leg_peak_n_ = 0.0F, last_leg_peak_n_ = 0.0F;
+    float knot_load_n_ = 0.0F, knot_peak_n_ = 0.0F;
+    float haul_from_y_ = 0.0F, haul_peak_y_ = 0.0F;
+    bool haul_seen_ = false;
+    float fall_from_y_ = 0.0F, fall_peak_speed_ = 0.0F;
+    float landing_speed_mps_ = 0.0F, landing_drop_m_ = 0.0F;
+    std::uint64_t knee_pin_count_ = 0, leg_tear_count_ = 0, leg_toss_count_ = 0, collar_count_ = 0;
+    std::uint64_t unhook_count_ = 0, knot_count_ = 0, brake_kick_count_ = 0, haul_count_ = 0;
+    std::uint64_t knot_part_count_ = 0, fall_landing_count_ = 0;
+    [[nodiscard]] JPH::Vec3 ankle_local(int side) const noexcept;
+    void set_player_mass_for_losses(JPH::BodyInterface &bodies) noexcept;
+    void fatality_drive(JPH::BodyInterface &bodies, float dt) noexcept;
+    [[nodiscard]] bool body_down_on_ground(JPH::BodyInterface &bodies) const noexcept;
+    void fatality_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    void fatality_reset(JPH::BodyInterface &bodies) noexcept;
+    JPH::BodyID make_limb_body(JPH::BodyInterface &bodies, JPH::RVec3 at, JPH::Quat rot, float half, float radius,
+                               float kg, std::uint64_t entity, JPH::ObjectLayer layer);
+public:
+    [[nodiscard]] bool take_run_ended_by_matron() noexcept {
+        const bool ended = run_ended_by_matron_;
+        run_ended_by_matron_ = false;
+        return ended;
+    }
+    void lose_arm_for_test(const int side) noexcept { arm_lost_[static_cast<std::size_t>(side & 1)] = true; }
+private:
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

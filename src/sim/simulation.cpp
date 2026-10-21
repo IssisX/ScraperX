@@ -41,7 +41,9 @@ Simulation::Simulation(const InitialSpawn initial_spawn)
     : Simulation(initial_spawn, test_extra_solids_for_every_world()) {}
 
 Simulation::Simulation(const InitialSpawn initial_spawn, std::vector<TestExtraSolid> test_extra_solids)
-    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn, std::move(test_extra_solids))) {
+    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn, test_extra_solids)),
+      initial_spawn_(initial_spawn),
+      test_extra_solids_(std::move(test_extra_solids)) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
     previous_player_position_ = snapshot_.player_position;
@@ -556,6 +558,12 @@ void Simulation::step_fixed() noexcept {
     commands.hook_take = hook_take_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
+    if (physics_world_->take_run_ended_by_matron()) {
+        // She won: the run ends and starts again, the body whole.
+        physics_world_.reset();
+        physics_world_ = std::make_unique<PhysicsWorld>(initial_spawn_, test_extra_solids_);
+        ++runs_ended_by_matron_;
+    }
     sling_action_ = false;
     sling_drop_ = false;
     swing_action_ = false;
@@ -581,6 +589,7 @@ void Simulation::step_fixed() noexcept {
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
+    snapshot_.runs_ended_by_matron = runs_ended_by_matron_;
     const double render_dx = snapshot_.player_position.x - previous_player_position_.x;
     const double render_dy = snapshot_.player_position.y - previous_player_position_.y;
     const double render_dz = snapshot_.player_position.z - previous_player_position_.z;
@@ -1054,6 +1063,27 @@ void Simulation::debug_set_matron_stage(const std::uint8_t stage) noexcept {
     physics_world_->matron().set_stage_for_test(static_cast<Matron::Stage>(std::min<std::uint8_t>(stage, 2)));
 }
 
+void Simulation::debug_fix_matron_pace(const int pace) noexcept {
+    physics_world_->matron().fix_pace_for_test(pace);
+}
+
+void Simulation::debug_matron_patrol() noexcept {
+    physics_world_->matron().patrol_for_test();
+}
+
+void Simulation::debug_matron_armplay(const int armplay) noexcept {
+    physics_world_->matron().set_armplay_for_test(armplay);
+}
+
+void Simulation::debug_lose_arm(const int side) noexcept {
+    physics_world_->lose_arm_for_test(side);
+}
+
+void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
+    physics_world_->matron().set_spare_for_test(spare);
+    physics_world_->matron().set_dangle_seconds_for_test(static_cast<float>(dangle_seconds));
+}
+
 void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
@@ -1061,6 +1091,12 @@ void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
 void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 at, const Vector3 velocity) noexcept {
     physics_world_->launch_kit_body_for_test(
         body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
+        JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
+}
+
+void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
+    physics_world_->launch_player_for_test(
+        JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
@@ -1084,6 +1120,42 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.catwalk_allowed = view.catwalk_allowed;
     result.turn = static_cast<std::uint8_t>(view.turn);
     result.turn_s = view.turn_s;
+    result.pace = view.pace;
+    result.pace_mps = view.pace_mps;
+    result.pace_changes = view.pace_changes;
+    result.stalls = view.stalls;
+    result.step_ups = view.step_ups;
+    result.clambers = view.clambers;
+    result.sidesteps = view.sidesteps;
+    result.reroutes = view.reroutes;
+    result.longest_stall_s = view.longest_stall_s;
+    result.crumbs = view.crumbs;
+    result.crumbs_walked = view.crumbs_walked;
+    result.hushed = view.hushed;
+    result.creaks = view.creaks;
+    result.grabs = view.grabs;
+    result.grab_misses = view.grab_misses;
+    result.carries = view.carries;
+    result.dangles = view.dangles;
+    result.armplays = view.armplays;
+    result.releases = view.releases;
+    result.spares = view.spares;
+    result.grips_torn = view.grips_torn;
+    result.brace_losses = view.brace_losses;
+    result.carry_drops = view.carry_drops;
+    result.arm_tears = view.arm_tears;
+    result.arm_throws = view.arm_throws;
+    result.claims = view.claims;
+    result.armplay_beat = view.armplay_beat;
+    result.fatal_beat = view.fatal_beat;
+    result.waste_not = view.waste_not;
+    result.hand2 = Vector3{view.hand2_x, view.hand2_y, view.hand2_z};
+    result.grip_on = view.grip_on;
+    result.hold_braced = view.hold_braced;
+    result.hold_s = view.hold_s;
+    result.hand = Vector3{view.hand_x, view.hand_y, view.hand_z};
+    result.aim_ledge = view.aim_ledge;
+    result.aim = Vector3{view.aim_x, view.aim_y, view.aim_z};
     result.fooled = view.fooled;
     result.wary = view.wary;
     result.vaults = view.vaults;

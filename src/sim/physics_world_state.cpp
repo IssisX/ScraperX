@@ -223,6 +223,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // moves: the checkpoint is a standing one. The Matron's hands too, before
     // any stock is put back.
     matron_->drop_stock();
+    grab_reset(bodies);
+    arm_reset(bodies);   // a death: whole again
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
@@ -746,6 +748,118 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.arm_broken_seconds_left = arm_broken_seconds_left_;
     state_.arm_break_count = arm_break_count_;
     state_.broken_arm_side = broken_arm_side_;
+    state_.in_water = in_water_;
+    state_.swimming = swimming_;
+    state_.head_underwater = head_underwater_;
+    state_.water_submersion = water_submersion_;
+    state_.water_surface_y = water_surface_y_;
+    state_.water_pool = in_water_ ? water_pool_ : -1;
+    state_.water_entry_count = water_entry_count_;
+    state_.water_exit_count = water_exit_count_;
+    state_.water_entry_speed_mps = water_entry_speed_mps_;
+    state_.swim_kick_count = swim_kick_count_;
+    {
+        const JPH::Quat rot = bodies.GetRotation(player_id_);
+        const JPH::Vec3 spin = bodies.GetAngularVelocity(player_id_);
+        state_.held_by_matron = grip_ != nullptr;
+        state_.player_free_rotation = player_free_rot_;
+        state_.player_rot_x = rot.GetX();
+        state_.player_rot_y = rot.GetY();
+        state_.player_rot_z = rot.GetZ();
+        state_.player_rot_w = rot.GetW();
+        state_.player_angular_velocity = Vector3{spin.GetX(), spin.GetY(), spin.GetZ()};
+        state_.grip_load_n = grip_load_n_;
+        state_.grip_peak_n = grip_peak_n_;
+        state_.grip_strain_ns = grip_strain_ns_;
+        state_.grip_hinged = grip_ != nullptr && grip_swing_;
+        state_.braced_on_rail = brace_ != nullptr;
+        state_.brace_load_n = brace_load_n_;
+        state_.thrash = thrash_;
+        state_.grip_count = grip_count_;
+        state_.grip_tear_count = grip_tear_count_;
+        state_.grip_release_count = grip_release_count_;
+        state_.brace_count = brace_count_;
+        state_.brace_tear_count = brace_tear_count_;
+        state_.thrash_kick_count = thrash_kick_count_;
+        state_.upright_count = upright_count_;
+        state_.upright_wedged_count = upright_wedged_count_;
+        state_.max_hold_step_m = max_hold_step_m_;
+        if (!hand_id_.IsInvalid()) {
+            const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
+            state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+        if (!hand2_id_.IsInvalid()) {
+            const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
+            state_.matron_hand2 = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+        state_.left_arm_lost = arm_lost_[0];
+        state_.right_arm_lost = arm_lost_[1];
+        state_.last_severed_side = last_severed_side_;
+        state_.arm_tear_count = arm_tear_count_;
+        state_.arm_throw_count = arm_throw_count_;
+        state_.severed_arm_despawn_count = severed_arm_despawn_count_;
+        state_.severed_arm_present = !severed_arm_id_.IsInvalid();
+        if (!severed_arm_id_.IsInvalid()) {
+            const JPH::RVec3 at = bodies.GetPosition(severed_arm_id_);
+            const JPH::Quat q = bodies.GetRotation(severed_arm_id_);
+            state_.severed_arm_position = Vector3{at.GetX(), at.GetY(), at.GetZ()};
+            state_.severed_arm_rot_x = q.GetX();
+            state_.severed_arm_rot_y = q.GetY();
+            state_.severed_arm_rot_z = q.GetZ();
+            state_.severed_arm_rot_w = q.GetW();
+        }
+        state_.wrist_load_n = wrist_load_n_;
+        state_.wrist_strain_ns = wrist_strain_ns_;
+        state_.one_arm = one_arm();
+        state_.claimed_by_matron = matron_->claimed();
+        state_.claimed_s = claimed_s_;
+        state_.hang_hand_side = traversal_state_ == TraversalState::Hanging ? good_arm_side() : -1;
+        state_.dyno_launch_count = dyno_launch_count_;
+        state_.dyno_catch_count = dyno_catch_count_;
+        state_.dyno_miss_count = dyno_miss_count_;
+        state_.dyno_refused_count = dyno_refused_count_;
+        state_.dyno_timing_error_s = dyno_last_error_s_;
+        state_.dyno_in_flight = dyno_active_;
+        state_.heel_hook_count = heel_hook_count_;
+        state_.heel_hook_refused_count = heel_hook_refused_count_;
+        state_.fatality_beat = matron_->claimed() ? static_cast<int>(matron_->fatal_beat()) : -1;
+        state_.fatality_beat_edges = fatality_beat_edges_;
+        state_.knee_pin_count = knee_pin_count_;
+        state_.leg_tear_count = leg_tear_count_;
+        state_.leg_toss_count = leg_toss_count_;
+        state_.left_leg_lost = leg_off_[0];
+        state_.right_leg_lost = leg_off_[1];
+        state_.leg_load_n = leg_load_n_;
+        state_.leg_peak_n = std::max(leg_peak_n_, last_leg_peak_n_);
+        for (std::size_t k = 0; k < 2; ++k) {
+            state_.severed_leg_present[k] = !leg_id_[k].IsInvalid();
+            if (!leg_id_[k].IsInvalid()) {
+                { const JPH::RVec3 a = bodies.GetPosition(leg_id_[k]); state_.severed_leg_position[k] = Vector3{a.GetX(), a.GetY(), a.GetZ()}; }
+                { const JPH::Quat q = bodies.GetRotation(leg_id_[k]); state_.severed_leg_rotation[k] = Quaternion{q.GetX(), q.GetY(), q.GetZ(), q.GetW()}; }
+            }
+        }
+        state_.collar_count = collar_count_;
+        state_.shackle_unhook_count = unhook_count_;
+        state_.knot_count = knot_count_;
+        state_.knot_load_n = knot_load_n_;
+        state_.knot_peak_n = knot_peak_n_;
+        state_.brake_kick_count = brake_kick_count_;
+        state_.haul_count = haul_count_;
+        state_.haul_from_y = haul_from_y_;
+        state_.haul_peak_y = haul_peak_y_;
+        state_.knot_part_count = knot_part_count_;
+        state_.fall_landing_count = fall_landing_count_;
+        state_.fall_landing_speed_mps = landing_speed_mps_;
+        state_.fall_drop_m = landing_drop_m_;
+        state_.waste_not_count = matron_->waste_not_lines();
+        state_.wipe_s = matron_->wipe_phase();
+        state_.matron_knee_down = !knee_id_.IsInvalid();
+        if (!knee_id_.IsInvalid()) {
+            const JPH::RVec3 a = bodies.GetPosition(knee_id_);
+            state_.matron_knee = Vector3{a.GetX(), a.GetY(), a.GetZ()};
+        }
+        state_.claimed_count = claimed_count_;
+    }
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;
     state_.summit_seconds = summit_seconds_;
