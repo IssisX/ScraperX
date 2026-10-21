@@ -337,6 +337,18 @@ struct StoryActorSnapshot final {
     double heading_radians = 0; // Yaw: zero faces world -Z, positive turns left.
 };
 
+enum class YardWorkerActivity : std::uint8_t {
+    Working, Attending, Pointing, Returning, Yielding, Recovering
+};
+struct YardWorkerSnapshot final {
+    bool present = false, supported = false;
+    std::uint64_t entity_id = 0, support_entity_id = 0, episode = 0, native_tick = 0;
+    Vector3 position{}, velocity{}, drive_force_n{};
+    double heading_radians = 0, activity_seconds = 0;
+    YardWorkerActivity activity = YardWorkerActivity::Working;
+    Vector3 work_point{}, guide_point{}, look_target{};
+};
+
 struct Snapshot final {
     std::uint64_t tick_index = 0;
     double simulation_time_seconds = 0.0;
@@ -745,6 +757,8 @@ public:
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
     static constexpr std::uint64_t kStoryActorEntityId = 63200;
+    static constexpr std::uint64_t kYardWorkerEntityId = 63201;
+    static constexpr std::uint64_t kYardWorkerBenchEntityId = 63202;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
     static constexpr std::uint64_t kVaultRailEntityId = 5;
@@ -934,6 +948,7 @@ public:
     [[nodiscard]] bool request_yard_crane_detach() noexcept;
     [[nodiscard]] YardCraneSnapshot yard_crane_state() const noexcept;
     [[nodiscard]] StoryActorSnapshot story_actor_state() const noexcept;
+    [[nodiscard]] YardWorkerSnapshot yard_worker_state() const noexcept;
     [[nodiscard]] bool story_actor_line_of_sight(Vector3 eye) const noexcept;
 
 

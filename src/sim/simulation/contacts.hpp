@@ -7,6 +7,7 @@
 #include "sim/physical_foot_push.hpp"
 #include "sim/physical_story_actor.hpp"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <tuple>
@@ -68,24 +69,20 @@ public:
     // One canonical actual bottom manifold, selected without retaining an
     // unbounded callback list. Body identity/tick are immutable during Update.
     void set_story_actor(JPH::BodyID body, std::uint64_t tick) noexcept {
-        lock();
-        story_actor_body_ = body;
-        story_actor_tick_ = tick;
-        story_actor_contact_ = {};
-        story_actor_contact_valid_ = false;
-        unlock();
+        set_actor(0, body, tick);
     }
     bool story_actor_contact(PhysicalStoryActor::Contact &out) const noexcept {
-        lock();
-        const bool valid = story_actor_contact_valid_;
-        if (valid) out = story_actor_contact_;
-        unlock();
-        return valid;
+        return actor_contact(0, out);
+    }
+    void set_yard_worker(JPH::BodyID body, std::uint64_t tick) noexcept {
+        set_actor(1, body, tick);
+    }
+    bool yard_worker_contact(PhysicalStoryActor::Contact &out) const noexcept {
+        return actor_contact(1, out);
     }
     void begin_tick() noexcept {
         lock();
-        story_actor_contact_ = {};
-        story_actor_contact_valid_ = false;
+        for (auto &actor : actors_) { actor.contact = {}; actor.valid = false; }
         sample_ = {};
         transfer_sample_ = {};
         wall_sample_ = {};
@@ -101,8 +98,7 @@ public:
         lock();
         // Stance belongs to the current substep; impact_sample_ retains the
         // strongest rigid strike across the entire tick for consequences.
-        story_actor_contact_ = {};
-        story_actor_contact_valid_ = false;
+        for (auto &actor : actors_) { actor.contact = {}; actor.valid = false; }
         sample_ = {};
         transfer_sample_ = {};
         wall_sample_ = {};
@@ -231,23 +227,42 @@ public:
     }
 
 private:
+    void set_actor(std::size_t index, JPH::BodyID body, std::uint64_t tick) noexcept {
+        lock();
+        auto &actor = actors_[index];
+        actor.body = body;
+        actor.tick = tick;
+        actor.contact = {};
+        actor.valid = false;
+        unlock();
+    }
+    bool actor_contact(std::size_t index, PhysicalStoryActor::Contact &out) const noexcept {
+        lock();
+        const auto &actor = actors_[index];
+        const bool valid = actor.valid;
+        if (valid) out = actor.contact;
+        unlock();
+        return valid;
+    }
     void observe_story_actor(const JPH::Body &first, const JPH::Body &second,
                              const JPH::ContactManifold &manifold) noexcept {
-        if (story_actor_body_.IsInvalid() ||
-            (first.GetID() != story_actor_body_ && second.GetID() != story_actor_body_)) return;
-        PhysicalStoryActor::Contact candidate;
-        if (!PhysicalStoryActor::capture_contact(story_actor_body_, first, second,
-            manifold, story_actor_tick_, candidate)) return;
         const auto key = [](const PhysicalStoryActor::Contact &c) {
             return std::make_tuple(c.support.GetIndexAndSequenceNumber(), c.subshape.GetValue(),
                 c.local_point.GetX(), c.local_point.GetY(), c.local_point.GetZ());
         };
-        lock();
-        if (!story_actor_contact_valid_ || key(candidate) < key(story_actor_contact_)) {
-            story_actor_contact_ = candidate;
-            story_actor_contact_valid_ = true;
+        for (auto &actor : actors_) {
+            if (actor.body.IsInvalid() ||
+                (first.GetID() != actor.body && second.GetID() != actor.body)) continue;
+            PhysicalStoryActor::Contact candidate;
+            if (!PhysicalStoryActor::capture_contact(actor.body, first, second,
+                manifold, actor.tick, candidate)) continue;
+            lock();
+            if (!actor.valid || key(candidate) < key(actor.contact)) {
+                actor.contact = candidate;
+                actor.valid = true;
+            }
+            unlock();
         }
-        unlock();
     }
     void observe_inspection_seat(const JPH::Body &first, const JPH::Body &second,
                                  const JPH::ContactManifold &manifold) noexcept {
@@ -500,10 +515,13 @@ private:
     std::uint64_t reclaim_first_=0,reclaim_last_=0;
     std::atomic<std::uint64_t> carried_entity_{0};
     scraperx::sim::Slingshot *slingshot_ = nullptr;
-    JPH::BodyID story_actor_body_;
-    std::uint64_t story_actor_tick_ = 0;
-    PhysicalStoryActor::Contact story_actor_contact_{};
-    bool story_actor_contact_valid_ = false;
+    struct ActorReceipt {
+        JPH::BodyID body;
+        std::uint64_t tick = 0;
+        PhysicalStoryActor::Contact contact{};
+        bool valid = false;
+    };
+    std::array<ActorReceipt, 2> actors_{};
 };
 
 // Callback only copies supplied soft manifold data. All player reads, material

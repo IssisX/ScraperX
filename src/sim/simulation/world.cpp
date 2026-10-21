@@ -272,6 +272,22 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
             object_layers::kMoving, Simulation::kStoryActorEntityId);
         if (!story_actor_->spawn(JPH::RVec3(-26.75, 253.9, -143.2)))
             throw std::runtime_error("Unable to create native story actor on barrel exit");
+        // The workbench is real static steel, shared by native collision and
+        // the existing Kit renderer. Its seam is within the worker's reach.
+        std::vector<kit::Part> bench;
+        bench.push_back({JPH::Vec3(.6F,.06F,.3F), JPH::Vec3(0,.75F,0),
+            JPH::Quat::sIdentity(), kit::Material::Steel});
+        for (float x : {-.53F,.53F}) for (float z : {-.23F,.23F})
+            bench.push_back({JPH::Vec3(.025F,.345F,.025F), JPH::Vec3(x,.345F,z),
+                JPH::Quat::sIdentity(), kit::Material::Steel});
+        bench.push_back({JPH::Vec3(.28F,.015F,.09F), JPH::Vec3(0,.825F,.17F),
+            JPH::Quat::sIdentity(), kit::Material::Steel});
+        (void)kit_->add_body(Simulation::kYardWorkerBenchEntityId, bench,
+            JPH::RVec3(-93,0,-47.85), JPH::Quat::sIdentity(), 0, .8F);
+        yard_worker_ = std::make_unique<YardWorker>(physics_system_,
+            object_layers::kMoving, Simulation::kYardWorkerEntityId);
+        if (!yard_worker_->spawn())
+            throw std::runtime_error("Unable to create native yard worker beside arrival");
     }
     if (slingshot_) physics_system_.AddStepListener(this);
     contact_listener_.set_slingshot(slingshot_.get());
@@ -285,6 +301,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn, const W
 }
 
 Simulation::PhysicsWorld::~PhysicsWorld() {
+    contact_listener_.set_yard_worker(JPH::BodyID(), 0);
+    yard_worker_.reset();
     contact_listener_.set_story_actor(JPH::BodyID(), 0);
     story_actor_.reset();
     if (slingshot_) physics_system_.RemoveStepListener(this);

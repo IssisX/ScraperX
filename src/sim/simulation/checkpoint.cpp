@@ -92,6 +92,10 @@ bool Simulation::PhysicsWorld::restart_checkpoint() noexcept {
 
 void Simulation::PhysicsWorld::capture_machine_checkpoint(const JPH::BodyInterface &bodies,
                                 MachineCheckpoint &checkpoint) const noexcept {
+    if (yard_worker_) {
+        checkpoint.yard_worker = capture_body(bodies, yard_worker_->body_id());
+        checkpoint.yard_worker_state = yard_worker_->capture();
+    }
     if (story_actor_) {
         checkpoint.story_actor = capture_body(bodies, story_actor_->body_id());
         checkpoint.story_actor_leg = story_actor_leg_;
@@ -268,6 +272,11 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         story_actor_supported_ = false;
         story_actor_support_entity_ = 0;
         ++story_actor_episode_;
+    }
+    if (yard_worker_) {
+        restore_body(bodies, yard_worker_->body_id(), checkpoint_.yard_worker);
+        yard_worker_->restore(checkpoint_.yard_worker_state);
+        contact_listener_.set_yard_worker(yard_worker_->body_id(), yard_worker_->view().tick);
     }
     JPH::Vec3 restored_transport = JPH::Vec3::sZero();
     const auto saved_support = kit_->body_for_entity(checkpoint_.support_entity);

@@ -3,6 +3,48 @@
 namespace scraperx::sim {
 using namespace detail;
 
+YardWorkerSnapshot Simulation::PhysicsWorld::yard_worker_state() const noexcept {
+    YardWorkerSnapshot out;
+    if (!yard_worker_) return out;
+    const auto view = yard_worker_->view();
+    out.present = view.body.present;
+    out.supported = view.supported;
+    out.entity_id = Simulation::kYardWorkerEntityId;
+    out.support_entity_id = view.support_entity;
+    out.episode = view.episode;
+    out.native_tick = view.tick;
+    out.position = to_vector3(view.body.position);
+    out.velocity = to_vector3(JPH::RVec3(view.body.velocity));
+    out.drive_force_n = to_vector3(JPH::RVec3(view.body.applied_force_n));
+    out.heading_radians = view.heading;
+    out.activity = static_cast<YardWorkerActivity>(view.activity);
+    out.activity_seconds = view.seconds;
+    out.work_point = to_vector3(view.work_point);
+    out.guide_point = to_vector3(view.guide_point);
+    out.look_target = to_vector3(view.look_target);
+    return out;
+}
+
+void Simulation::PhysicsWorld::prepare_yard_worker(float dt) noexcept {
+    if (!yard_worker_) return;
+    const auto &bodies = physics_system_.GetBodyInterface();
+    const auto player = bodies.GetPosition(player_id_);
+    const auto target = yard_worker_->view().body.position + JPH::Vec3(0,.72F,0);
+    const auto eye = player + JPH::Vec3(0,.62F,0);
+    const JPH::Vec3 ray(target-eye);
+    JPH::RayCastResult hit;
+    const bool visible = ray.LengthSq() < 16 && cast_ray(eye,ray,hit) &&
+        hit.mBodyID == yard_worker_->body_id();
+    yard_worker_->pre_step(dt,player,bodies.GetLinearVelocity(player_id_),visible);
+    contact_listener_.set_yard_worker(yard_worker_->body_id(),yard_worker_->view().tick);
+}
+
+void Simulation::PhysicsWorld::finish_yard_worker(bool solved) noexcept {
+    if (!yard_worker_) return;
+    PhysicalStoryActor::Contact contact;
+    yard_worker_->finish_step(solved && contact_listener_.yard_worker_contact(contact) ? &contact : nullptr);
+}
+
 bool Simulation::PhysicsWorld::story_actor_line_of_sight(Vector3 eye) const noexcept {
     if (!story_actor_ || !std::isfinite(eye.x) || !std::isfinite(eye.y) || !std::isfinite(eye.z)) return false;
     const auto actor = story_actor_->readback();

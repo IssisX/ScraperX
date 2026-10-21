@@ -16,6 +16,10 @@ StoryActorSnapshot Simulation::story_actor_state() const noexcept {
     return physics_world_->story_actor_state();
 }
 
+YardWorkerSnapshot Simulation::yard_worker_state() const noexcept {
+    return physics_world_->yard_worker_state();
+}
+
 bool Simulation::story_actor_line_of_sight(Vector3 eye) const noexcept {
     return physics_world_->story_actor_line_of_sight(eye);
 }

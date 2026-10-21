@@ -33,6 +33,10 @@ const FreightActivity := preload("res://presentation/freight_activity.gd")
 var _freight_activity: Node3D
 const YardAmbience := preload("res://presentation/audio/yard_ambience.gd")
 var _yard_ambience: Node3D
+const YardWorkerView := preload("res://presentation/life/yard_worker_view.gd")
+const YardWorkerAudio := preload("res://presentation/audio/yard_worker_audio.gd")
+var _yard_worker_view: Node3D
+var _yard_worker_audio: Node3D
 
 const ForkliftView := preload("res://presentation/forklift_view.gd")
 var _forklift_view: ForkliftView
@@ -944,6 +948,8 @@ func _open_pause(from_system: bool = false) -> void:
 		_forklift_audio.reset()
 	if _yard_crane_audio != null:
 		_yard_crane_audio.reset()
+	if _yard_worker_audio != null:
+		_yard_worker_audio.reset()
 	_reset_grapple_feedback()
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic()
@@ -2578,6 +2584,30 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		var charging := bool(aiming.get("charging", false)) and not _paused
 		_grapple_view.update_aim_preview(_native.get_grapple_aim_preview() if charging else {},
 			bool(aiming.get("equipped", false)), charging)
+	_update_yard_worker(delta)
+
+
+func _update_yard_worker(delta: float) -> void:
+	if _regression_scene:
+		return
+	var state: Dictionary = _native.get_yard_worker_state()
+	var center: Vector3 = state.get("position", Vector3.ZERO)
+	var nearby := bool(state.get("present", false)) and center.is_finite() \
+		and _camera.global_position.distance_squared_to(center) < 576.0
+	if nearby and _yard_worker_view == null:
+		_yard_worker_view = YardWorkerView.new()
+		_yard_worker_view.name = "ArrivalWelder"
+		add_child(_yard_worker_view)
+		_yard_worker_audio = YardWorkerAudio.new()
+		_yard_worker_audio.name = "ArrivalWelderAudio"
+		add_child(_yard_worker_audio)
+	if _yard_worker_view == null:
+		return
+	state["present"] = nearby
+	state["paused"] = _paused
+	_yard_worker_view.present(state, delta if not _paused else 0.0)
+	_yard_worker_audio.present(state, _yard_worker_view.welding_active(),
+		_yard_worker_view.weld_tip_world(), _yard_worker_view.footstep_serial())
 
 
 func _update_story(delta: float) -> void:

@@ -55,6 +55,7 @@ add_library(scraperx_sim STATIC
     src/sim/physical_hand_climb.cpp
     src/sim/physical_foot_push.cpp
     src/sim/physical_story_actor.cpp
+    src/sim/yard_worker.cpp
     src/sim/traversal_affordance.cpp
     src/sim/traversal_plan.cpp
     src/sim/traversal_receiver.cpp
@@ -382,6 +383,9 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
         add_executable(scraperx_story_actor_public_tests tests/story_actor_public_tests.cpp)
         target_link_libraries(scraperx_story_actor_public_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.story_actor_public COMMAND scraperx_story_actor_public_tests)
+        add_executable(scraperx_yard_worker_public_tests tests/yard_worker_public_tests.cpp)
+        target_link_libraries(scraperx_yard_worker_public_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.yard_worker_public COMMAND scraperx_yard_worker_public_tests)
         add_executable(scraperx_physical_story_actor_tests tests/physical_story_actor_tests.cpp)
         target_link_libraries(scraperx_physical_story_actor_tests PRIVATE scraperx_sim)
         add_test(NAME scraperx_sim.physical_story_actor COMMAND scraperx_physical_story_actor_tests)

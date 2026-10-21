@@ -369,11 +369,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &queued_commands,
         for (auto &palm : physical_palms_) if (palm) palm->pre_step(delta_seconds);
     }
     prepare_story_actor(delta_seconds);
+    prepare_yard_worker(delta_seconds);
     const auto update_result = physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1,
         &temp_allocator_, &job_system_);
     // Existing player error policy is unchanged. Only successful native solves
     // may publish a new actor support receipt.
     finish_story_actor(update_result == JPH::EPhysicsUpdateError::None);
+    finish_yard_worker(update_result == JPH::EPhysicsUpdateError::None);
     if (grappling_gun_) grappling_gun_->post_step();
     if (cargo_net_) cargo_net_->refresh();
     if (catch_net_) catch_net_->refresh();

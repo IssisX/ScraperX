@@ -1,0 +1,14 @@
+{
+  "owner": "yard_worker_view local implementer",
+  "model": "GPT-6.1 Sol",
+  "effort": "medium",
+  "method": "Godot MCP fresh project launch and load(\"res://tests/yard_worker_view_test.gd\").new().execute(scene_tree)",
+  "checks": 28,
+  "failures": [],
+  "scope": "isolated presentation fixture, not full-world rendering or native gameplay",
+  "source_sha256": {
+    "godot/presentation/life/yard_worker_view.gd": "0c5c3abc73b208c43faa5280a66376a533486123fdaecca1820a4df9108e3c15",
+    "godot/tests/yard_worker_view_test.gd": "aafd8c34edb739a5c5675cdeb491333bd6ab5b8fcbb73ccee66692acefa12340"
+  },
+  "limitations": "Mesa softpipe host and dummy audio; shipping Main native/touch acceptance is recorded separately"
+}

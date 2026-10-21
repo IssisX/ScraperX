@@ -170,6 +170,10 @@ jobs:
         timeout 180s build/candidate-host/scraperx_story_actor_public_tests \
           2>&1 | tee artifacts/story-actor-public-native.log
         grep -F 'PASS STORY_ACTOR_PUBLIC' artifacts/story-actor-public-native.log
+        cmake --build build/candidate-host --target scraperx_yard_worker_public_tests --parallel 2
+        timeout 180s build/candidate-host/scraperx_yard_worker_public_tests \
+          2>&1 | tee artifacts/yard-worker-public-native.log
+        grep -F 'YARD_WORKER_PUBLIC PASS' artifacts/yard-worker-public-native.log
     - name: Cross-compile native graph for Android arm64
       shell: bash
       run: |
@@ -485,6 +489,15 @@ jobs:
           2>&1 | tee artifacts/body-workwear-view.log
         grep -F 'SCRAPERX_BODY_VIEW PASS' artifacts/body-workwear-view.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/body-workwear-view.log; then exit 1; fi
+    - name: Check opening worker through normal arrival and touch movement
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout 180s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/yard_worker_input_test.gd \
+          2>&1 | tee artifacts/yard-worker-touch.log
+        grep -F 'SCRAPERX_YARD_WORKER_INPUT PASS' artifacts/yard-worker-touch.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/yard-worker-touch.log; then exit 1; fi
     - name: Check moving swing-bearing sound feedback
       shell: bash
       run: |

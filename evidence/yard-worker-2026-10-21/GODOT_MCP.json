@@ -1,0 +1,13 @@
+{
+	"activity": 0,
+	"actual_native": true,
+	"audio_playing": true,
+	"checks": 12,
+	"done": true,
+	"failures": [],
+	"native_tick": 791,
+	"phase": 5,
+	"player": "(-98.99075, 0.9, -43.63809)",
+	"staged": false,
+	"touch": true
+}
