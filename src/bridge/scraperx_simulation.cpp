@@ -1672,6 +1672,17 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["clinging"] = state.clinging;
     out["floor_y"] = state.floor_y;
     out["lead_floor_y"] = state.lead_floor_y;
+    out["climb_hand"] = godot::Vector3(state.climb_hand.x, state.climb_hand.y, state.climb_hand.z);
+    out["climb_force_n"] = state.climb_force_n;
+    out["climb_grips"] = static_cast<std::int64_t>(state.climb_grips);
+    out["climb_releases"] = static_cast<std::int64_t>(state.climb_releases);
+    out["mantling"] = state.mantling;
+    out["lead_x"] = state.lead_x;
+    out["lead_z"] = state.lead_z;
+    out["lead_age_s"] = state.lead_age_s;
+    out["lead_seen"] = state.lead_seen;
+    out["lead_valid"] = state.lead_valid;
+    out["acoustic_queries"] = static_cast<std::int64_t>(state.acoustic_queries);
     out["rage"] = state.rage;
     out["stage"] = static_cast<std::int64_t>(state.stage);
     out["exposure"] = state.exposure;

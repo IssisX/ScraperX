@@ -270,6 +270,10 @@ func contact(data: Dictionary, falling: bool) -> void:
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
 	var airborne := falling or float(view._fall_speed) > 1.0
+	if bool(data.get("climbing", false)) and data.has("climb_hand"):
+		var hand: Vector3 = data["climb_hand"]
+		_reach("r", skel.global_transform.affine_inverse() * hand)
+		return
 	if climbing or on_line:
 		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
 		_lift_body(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))

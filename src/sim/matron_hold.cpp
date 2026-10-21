@@ -57,8 +57,7 @@ void Matron::begin_grab(const RVec3 player) {
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     hand_target_ = at + shoulder_local();
     hand_target_v_ = Vec3::sZero();
-    heard_x_ = float(player.GetX());
-    heard_z_ = float(player.GetZ());
+    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
 }
 
 void Matron::grip_taken() noexcept {
@@ -233,6 +232,7 @@ void Matron::end_hold(const State next) {
     if (next == State::Searching) {
         search_s_ = 0.0F;
         since_heard_s_ = 0.0F;
+        pursuit_s_ = 0.0F;
     }
     if (next == State::Shuffling) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -452,8 +452,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     case State::Release: {
         stand();
         if (hold_s_ >= kReleasePoseSeconds) {
-            heard_x_ = float(player.GetX());
-            heard_z_ = float(player.GetZ());
+            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
             end_hold(State::Searching);
         }
         break;

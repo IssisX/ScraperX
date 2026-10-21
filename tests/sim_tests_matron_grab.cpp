@@ -55,13 +55,25 @@ bool go(Simulation &s, const double x, const double z, const bool sprint, const 
 }
 
 // Wakes her, walks to the north band west of her locker, fully changed, and
-// waits there still for her hand.
+// waits there still for her hand. She cannot know where a quiet walk went while
+// she was sealed: once she is out, one real noise from the spot calls her.
 void meet_her(Simulation &s, const double x, const double z) {
     s.debug_fix_matron_pace(3);
     require(s.advance_frame(1.0).accepted, "matron grab: settle");
     require(go(s, 10.0, -128.5, true, 4.0), "matron grab: a sprint to wake her");
     require(go(s, x, z, false, 30.0), "matron grab: to the spot");
     (void)s.set_move_input(0.0, 0.0);
+    constexpr int kStraining = static_cast<int>(scraperx::sim::Matron::State::Straining);
+    constexpr int kEmerging = static_cast<int>(scraperx::sim::Matron::State::Emerging);
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) &&
+                    (s.matron_state().state == kStraining || s.matron_state().state == kEmerging);
+         ++i) {
+        tick(s);
+    }
+    require(s.set_room_loudness(1.0), "matron grab: a noise from the spot");
+    tick(s);
+    require(s.matron_state().noise_heard > 0.0, "matron grab: she hears it");
+    require(s.set_room_loudness(0.0), "matron grab: quiet again");
     s.debug_set_matron_stage(2);
 }
 

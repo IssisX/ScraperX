@@ -10,6 +10,26 @@ int main() {
     // still shows every result up to that moment (fully buffered, a group
     // stopped at 90 s showed only its first 14 of 24 passes).
     std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-remaining") {
+        run_matron_remaining();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-support") {
+        test_matron_climb_support();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-crash") {
+        run_matron_crash();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-hearing") {
+        test_matron_hearing();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder") {
+        run_matron_ladder();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;

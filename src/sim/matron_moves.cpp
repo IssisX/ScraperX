@@ -274,9 +274,8 @@ bool Matron::hush_step(const float dt, const bool saw, const float distance, con
     }
     if (hush_s_ > 0.0F) {
         hush_s_ -= dt;
-        // Listening on purpose is not losing the player: the lead's clock
-        // stands while she does.
-        since_heard_s_ = std::max(0.0F, since_heard_s_ - dt);
+        // She listens; what she last heard grows no younger for it (its age
+        // is the sound's own, matron.cpp pre_step).
         if (hush_s_ <= 0.0F) {
             ++creaks_;   // a creak: she is moving again
             pace_ = Pace::Creep;

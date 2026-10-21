@@ -212,6 +212,13 @@ struct MatronSnapshot final {
     std::uint32_t climbs = 0;
     bool clinging = false;
     double floor_y = 154.0;
+    Vector3 climb_hand{};
+    double climb_force_n = 0.0;
+    std::uint32_t climb_grips = 0, climb_releases = 0;
+    bool mantling = false;
+    double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;
+    bool lead_seen = false, lead_valid = false;
+    std::uint32_t acoustic_queries = 0;
     double lead_floor_y = 154.0;   // the level of her lead: its floor's top
     // Her stages (matron.hpp): her rage, 0..1, the stage it has her in (0 a
     // pest, 1 dangerous, 2 fully changed), and her exposure, 0..1.

@@ -620,6 +620,16 @@ func _hash(n: int) -> float:
 	return v - floorf(v)
 
 
+# An unseen player cannot steer her head through steel. Acoustic attention
+# follows the native estimate until it expires, then returns to body heading.
+func perceived_target(data: Dictionary, player_position: Vector3) -> Vector3:
+	if bool(data.get("sees_player", false)):
+		return player_position
+	if bool(data.get("lead_valid", false)):
+		return Vector3(float(data["lead_x"]), float(data.get("lead_floor_y", 0.0)) + 1.6, float(data["lead_z"]))
+	return _figure.global_position + _figure.global_basis.z * 5.0
+
+
 func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bool) -> void:
 	var state := int(data["state"])
 	var speed := float(data["speed"])
@@ -637,7 +647,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var jaw_open := 0.08
 	var yaw_to_player := 0.0
 	var figure_yaw := _figure.rotation.y
-	var to_player := player_position - _figure.global_position
+	var to_player := perceived_target(data, player_position) - _figure.global_position
 	yaw_to_player = clampf(wrapf(atan2(to_player.x, to_player.z) - figure_yaw, -PI, PI), -1.4, 1.4)
 	var legs_fwd := 0.0
 	var legs_back := 0.0
