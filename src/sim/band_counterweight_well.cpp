@@ -175,6 +175,24 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
         kSheaveY - std::sqrt((free_length - kBollardSlack) * (free_length - kBollardSlack) -
                              bollard_offset * bollard_offset);
     const float rail_mid = 0.5F * (kDeckTop + 179.4F);
+    // The head beam boxed round the cage's sheave housing, its underside
+    // flush with the housing's: what comes up the rope strikes flat steel,
+    // not a corner. It ends west of the column Stage C's dumpster comes down.
+    const JPH::Vec3 housing_half(0.18F, 0.18F, 0.10F);
+    const float housing_y = kSheaveY + 0.07F;
+    const float head_west = -13.00F;
+    const float head_east = -11.15F;
+    const float head_south = -132.80F;
+    const float head_north = -129.30F;
+    const float housing_west = float(cage_sheave.GetX()) - housing_half.GetX();
+    const float housing_east = float(cage_sheave.GetX()) + housing_half.GetX();
+    const float housing_south = float(cage_sheave.GetZ()) - housing_half.GetZ();
+    const float housing_north = float(cage_sheave.GetZ()) + housing_half.GetZ();
+    const auto head_box = [&](const float x0, const float x1, const float z0, const float z1) {
+        return Part{JPH::Vec3(0.5F * (x1 - x0), housing_half.GetY(), 0.5F * (z1 - z0)),
+                    JPH::Vec3(0.5F * (x0 + x1), housing_y, 0.5F * (z0 + z1)), JPH::Quat::sIdentity(),
+                    Material::Rust};
+    };
     std::vector<Part> frame{
         // Head post on the deck, west of the cage.
         {JPH::Vec3(0.20F, 0.5F * (kSheaveY + 0.6F - kDeckTop), 0.20F),
@@ -193,8 +211,7 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
         {JPH::Vec3(1.00F, 0.15F, 0.15F), JPH::Vec3(kSkipCenterX, kSheaveY + 0.40F, kSkipCenterZ),
          JPH::Quat::sIdentity(), Material::Rust},
         // Sheave housings.
-        {JPH::Vec3(0.18F, 0.18F, 0.10F),
-         JPH::Vec3(cage_sheave.GetX(), kSheaveY + 0.07F, cage_sheave.GetZ()),
+        {housing_half, JPH::Vec3(cage_sheave.GetX(), housing_y, cage_sheave.GetZ()),
          JPH::Quat::sIdentity(), Material::Hazard},
         {JPH::Vec3(0.18F, 0.18F, 0.10F), JPH::Vec3(kSkipCenterX, kSheaveY + 0.07F, kSkipCenterZ),
          JPH::Quat::sIdentity(), Material::Hazard},
@@ -242,6 +259,11 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
          JPH::Quat::sIdentity(), Material::Hazard},
         {JPH::Vec3(0.06F, 0.05F, 0.03F), JPH::Vec3(kTripSheaveEast.GetX(), kTripSheaveEast.GetY(), kGantryZ),
          JPH::Quat::sIdentity(), Material::Hazard},
+        // The head beam round the housing: west, east, south, north of it.
+        head_box(head_west, housing_west, head_south, head_north),
+        head_box(housing_east, head_east, head_south, head_north),
+        head_box(housing_west, housing_east, head_south, housing_south),
+        head_box(housing_west, housing_east, housing_north, head_north),
     };
     const kit::BodyIndex frame_body =
         kit.add_body(Sim::kWellAFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),

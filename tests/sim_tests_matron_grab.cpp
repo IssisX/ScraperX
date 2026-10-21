@@ -490,6 +490,7 @@ void run_matron_fatality() {
     require(peak_leg > scraperx::sim::Matron::kLegHoldN && peak_leg < 8000.0, "matron fatality: the hip's load finite");
     require(knots == 1 && kicks == 1 && hauls == 1, "matron fatality: on the rope, the pin out, hauled");
     require(peak_y > 165.0, "matron fatality: the machine takes it up the well");
+    require(peak_y < 191.0, "matron fatality: it stops under the head beam, not past the sheave");
     require(parts == 1 && drop > 8.0 && landing > 10.0, "matron fatality: the knot parts and it falls");
     require(lines == 1, "matron fatality: 'Waste not.'");
     require(deaths == 0, "matron fatality: no death counted, the run was hers");

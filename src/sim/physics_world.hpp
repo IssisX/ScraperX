@@ -1071,6 +1071,7 @@ public:
     std::uint64_t knot_part_count_ = 0, fall_landing_count_ = 0;
     [[nodiscard]] JPH::Vec3 ankle_local(int side) const noexcept;
     void set_player_mass_for_losses(JPH::BodyInterface &bodies) noexcept;
+    void set_player_shape(JPH::BodyInterface &bodies, const JPH::Shape *shape) noexcept;
     void fatality_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     [[nodiscard]] bool body_down_on_ground(JPH::BodyInterface &bodies) const noexcept;
     void fatality_post_step(JPH::BodyInterface &bodies, float dt) noexcept;

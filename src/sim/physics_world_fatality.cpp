@@ -7,9 +7,11 @@
 // is dragged by its collar onto the stage-A skip lift's rope (the shackle
 // unhooked from its bollard, her knot a point constraint that parts past
 // kKnotTearN), she wrenches the catch's trip handle down, and the kit does
-// the rest: 800 kg of skip down the well, the torso up the rope, the jerk
-// at the buffer, the knot gone, the fall. No death is counted in it: the run
-// is hers, and it ends (run_ended_by_matron_) when she has wiped her hands.
+// the rest: 800 kg of skip down the well, the torso up the rope and on past
+// the skip's buffer (a rope only pulls) into the head beam, the knot gone
+// there or when the rope next snaps taut, the fall. No death is counted in
+// it: the run is hers, and it ends (run_ended_by_matron_) when she has wiped
+// her hands.
 
 #include "sim/physics_world.hpp"
 
@@ -58,10 +60,26 @@ void Simulation::PhysicsWorld::set_player_mass_for_losses(JPH::BodyInterface & /
     }
 }
 
+// A shape whose centre of mass sits elsewhere (the torso's is 0.45 m up the
+// body): Jolt keeps each joint's anchor relative to the centre of mass, and
+// leaves telling them to us. Untold, a joint still on the body would pull
+// it the 0.45 m in one tick.
+void Simulation::PhysicsWorld::set_player_shape(JPH::BodyInterface &bodies, const JPH::Shape *shape) noexcept {
+    const JPH::Vec3 before = bodies.GetShape(player_id_)->GetCenterOfMass();
+    bodies.SetShape(player_id_, shape, false, JPH::EActivation::Activate);
+    const JPH::Vec3 delta = shape->GetCenterOfMass() - before;
+    if (delta.IsNearZero()) {
+        return;
+    }
+    for (const JPH::Ref<JPH::Constraint> &constraint : physics_system_.GetConstraints()) {
+        constraint->NotifyShapeChanged(player_id_, delta);
+    }
+}
+
 void Simulation::PhysicsWorld::fatality_reset(JPH::BodyInterface &bodies) noexcept {
     if (bodies.GetShape(player_id_).GetPtr() == player_torso_shape_.GetPtr()) {
         // A whole body again for the restart.
-        bodies.SetShape(player_id_, active_player_shape(), false, JPH::EActivation::Activate);
+        set_player_shape(bodies, active_player_shape());
     }
     destroy_grab_constraint(knee_pin_);
     destroy_grab_constraint(knee_arm_);
@@ -340,7 +358,7 @@ void Simulation::PhysicsWorld::fatality_post_step(JPH::BodyInterface &bodies, co
                 // capsule was the full 1.8 m (the owner's playtest). The
                 // shape's origin stays put, the centre of mass moves up into
                 // what is left.
-                bodies.SetShape(player_id_, player_torso_shape_.GetPtr(), false, JPH::EActivation::Activate);
+                set_player_shape(bodies, player_torso_shape_.GetPtr());
             }
             set_player_mass_for_losses(bodies);
             matron_->fatal_leg_torn();
@@ -369,9 +387,10 @@ void Simulation::PhysicsWorld::fatality_post_step(JPH::BodyInterface &bodies, co
         }
     }
     if (matron_->fatal_beat() == Matron::Fatal::Fall) {
+        // Landed: it fell, and something has taken the fall out of it. A
+        // probe under it is not enough: the shackle comes down with it.
         fall_peak_speed_ = std::max(fall_peak_speed_, -v.GetY());
-        const bool down = fall_peak_speed_ > 3.0F && v.Length() < kFallLandSpeedMps;
-        if (down || ((grounded_ || body_down_on_ground(bodies)) && fall_peak_speed_ > 3.0F)) {
+        if (fall_peak_speed_ > 3.0F && -v.GetY() < kFallLandSpeedMps) {
             ++fall_landing_count_;
             landing_speed_mps_ = fall_peak_speed_;
             landing_drop_m_ = fall_from_y_ - static_cast<float>(torso.GetY());

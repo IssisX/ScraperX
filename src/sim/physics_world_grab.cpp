@@ -439,6 +439,19 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
             v -= flat * (lose / speed);
             bodies.SetLinearVelocity(player_id_, v);
         }
+        // The same friction along its length stops it turning about the
+        // floor's normal: a rod of length L, 3 mu g / L. L is what lies
+        // flat of it, at least its breadth.
+        JPH::Vec3 w = bodies.GetAngularVelocity(player_id_);
+        if (std::abs(w.GetY()) > 1.0e-4F) {
+            const JPH::Vec3 axis = bodies.GetRotation(player_id_).RotateAxisY();
+            const float length = 2.0F * bodies.GetShape(player_id_)->GetLocalBounds().GetExtent().GetY();
+            const float flat_length =
+                std::max(2.0F * kPlayerRadius, length * std::hypot(axis.GetX(), axis.GetZ()));
+            const float lose = std::min(std::abs(w.GetY()), 3.0F * kDownFrictionMps2 / flat_length * dt);
+            w.SetY(w.GetY() - std::copysign(lose, w.GetY()));
+            bodies.SetAngularVelocity(player_id_, w);
+        }
     }
     if (player_free_rot_ && grip_ == nullptr && !matron_->claimed()) {
         // The handback: on the ground (or a hold in hand), a capped PD torque

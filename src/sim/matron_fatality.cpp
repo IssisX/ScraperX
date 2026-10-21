@@ -16,6 +16,12 @@ namespace {
 using namespace JPH;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kHoldTurnRate = 5.0F;
+// Held up short of her spot (no nearer in kWorkStallS) with the thing she
+// works on in reach less kWorkMarginM, she works from there; once at it she
+// stays until pushed kWorkSlackM past her reach.
+constexpr float kWorkStallS = 0.5F;
+constexpr float kWorkMarginM = 0.15F;
+constexpr float kWorkSlackM = 0.3F;
 float xz(const float ax, const float az, const float bx, const float bz) { return std::hypot(ax - bx, az - bz); }
 float turn_to(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, 2.0F * kPiF);
@@ -24,10 +30,17 @@ float turn_to(const float yaw, const float want, const float rate, const float d
 }
 } // namespace
 
+void Matron::fatal_work_reset() noexcept {
+    fatal_at_work_ = false;
+    fatal_best_off_ = 1.0e9F;
+    fatal_stall_s_ = 0.0F;
+}
+
 void Matron::fatal_next(const int beat) noexcept {
     fatal_beat_ = beat;
     fatal_sub_ = 0;
     hold_s_ = 0.0F;
+    fatal_work_reset();
     if (beat == static_cast<int>(Fatal::Wipe)) {
         ++waste_not_;   // the voice hook: "Waste not."
     }
@@ -60,6 +73,7 @@ void Matron::fatal_collar_taken() noexcept {
     if (reaching_collar()) {
         fatal_sub_ = 1;
         hold_s_ = 0.0F;
+        fatal_work_reset();
     }
 }
 void Matron::fatal_hooked() noexcept {
@@ -108,6 +122,32 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         walk_toward(dt, wx, wz, std::min(pace, 0.5F + 1.5F * off));
         return false;
     };
+    // To the spot she works the thing from: there within 0.25 m, or held up
+    // short of it with the thing already in her reach. One walk a tick.
+    const auto at_work = [&](const float x, const float z, const float pace, const RVec3 thing,
+                             const float reach) {
+        const float to_thing = Vec3(thing - shoulder).Length();
+        if (fatal_at_work_ && to_thing > reach + kWorkSlackM) {
+            fatal_work_reset();
+        }
+        if (!fatal_at_work_) {
+            const float off = xz(ax, az, x, z);
+            if (off < fatal_best_off_ - 0.02F) {
+                fatal_best_off_ = off;
+                fatal_stall_s_ = 0.0F;
+            } else {
+                fatal_stall_s_ += dt;
+            }
+            fatal_at_work_ =
+                off <= 0.25F || (fatal_stall_s_ >= kWorkStallS && to_thing <= reach - kWorkMarginM);
+        }
+        if (fatal_at_work_) {
+            stand();
+            return true;
+        }
+        (void)go_to(x, z, pace);
+        return false;
+    };
     const auto face = [&](const RVec3 p) {
         const float want = std::atan2(float(p.GetX()) - ax, float(p.GetZ()) - az);
         yaw_ = turn_to(yaw_, want, kHoldTurnRate, dt);
@@ -117,6 +157,12 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     const Vec3 right(fwd.GetZ(), 0.0F, -fwd.GetX());
     const FatalPoints &p = fatal_points_;
     const RVec3 rest_hand = RVec3(at.GetX(), feet + 1.0F, at.GetZ()) + right * 0.35F + fwd * 0.2F;
+    // Beside the torso, wherever it lies now: 0.7 m short of it on her side.
+    const auto beside_torso = [&] {
+        const Vec3 to_torso = Vec3(fatal_points_.torso - at);
+        const Vec3 flat(to_torso.GetX(), 0.0F, to_torso.GetZ());
+        return flat.Length() > 0.75F ? fatal_points_.torso - flat.Normalized() * 0.7F : at;
+    };
     const Fatal beat = static_cast<Fatal>(fatal_beat_);
     // A beat the world will not let her finish (a jammed rope, a body caught
     // on a post): she is done with it, and with them.
@@ -158,9 +204,7 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     case Fatal::Leg0:
     case Fatal::Leg1: {
         // Down over it, her knee on the chest.
-        const Vec3 to_torso = Vec3(p.torso - at);
-        Vec3 flat(to_torso.GetX(), 0.0F, to_torso.GetZ());
-        const RVec3 beside = flat.Length() > 0.75F ? p.torso - flat.Normalized() * 0.7F : at;
+        const RVec3 beside = beside_torso();
         if (go_to(float(beside.GetX()), float(beside.GetZ()), 1.2F)) {
             (void)face(p.torso);
         }
@@ -189,20 +233,21 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     case Fatal::Drag: {
         arm_reach_m_ = kStoopReachM;
         if (fatal_sub_ == 0) {
-            // Her fist in the collar.
-            stand();
-            (void)face(p.torso);
+            // To it, wherever the last leg left it, and her fist in the collar.
+            const RVec3 beside = beside_torso();
+            if (go_to(float(beside.GetX()), float(beside.GetZ()), 1.2F)) {
+                (void)face(p.torso);
+            }
             pull_n_ = kHandReachPullN;
             pose_hand(dt, p.collar, kHandReachSpeedMps);
             break;
         }
         // Dragged on its back to the bollard; the collar up to the shackle.
         pull_n_ = kHandPullN;
-        const bool there = go_to(kBollardStandX, kBollardStandZ, 1.1F);
+        const bool there = at_work(kBollardStandX, kBollardStandZ, 1.1F, p.shackle, arm_reach_m_);
         if (!there) {
             pose_hand(dt, RVec3(at.GetX(), feet + 0.9F, at.GetZ()) - fwd * 0.6F + right * 0.3F, kHandSpeedMps);
         } else {
-            fatal_sub_ = std::max(fatal_sub_, 1);
             if (face(p.shackle)) {
                 pose_hand(dt, p.shackle - Vec3(0.0F, 0.05F, 0.0F), 0.7F * kHandSpeedMps);
             }
@@ -213,7 +258,7 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         // To the catch's trip handle under the gantry, and down with it.
         arm_reach_m_ = kArmReachM;
         pose_hand(dt, rest_hand, kHandSpeedMps);
-        const bool there = go_to(kTripStandX, kTripStandZ, 1.4F);
+        const bool there = at_work(kTripStandX, kTripStandZ, 1.4F, p.handle, kArmReachM);
         if (there) {
             (void)face(p.handle);
         }

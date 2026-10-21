@@ -971,7 +971,7 @@ public:
         Drag = 4,   // the torso by its collar to the skip lift's bollard, onto the rope's shackle
         Kick = 5,   // the catch's trip handle wrenched down under her boot: the skip goes
         Haul = 6,   // 800 kg of skip down the well; up the rope goes the torso
-        Fall = 7,   // the knot parts at the jerk; the torso comes back down
+        Fall = 7,   // the knot parts at the head beam or the rope's next snap; the torso comes back down
         Wipe = 8,   // her hands on her apron ("Waste not.")
         Black = 9,  // to black: the run is over
     };
@@ -1202,6 +1202,7 @@ private:
     void step_armplay(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     void step_claimed(float dt, JPH::RVec3 at, float feet);
     void fatal_next(int beat) noexcept;
+    void fatal_work_reset() noexcept;
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed);
@@ -1308,6 +1309,9 @@ private:
     bool armplay_done_ = false;   // this hold's ArmPlay is over
     int fatal_beat_ = 0;          // Fatal, while Claimed
     int fatal_sub_ = 0;           // within a beat: 0 her hand going to it, 1 on it
+    bool fatal_at_work_ = false;  // at the bollard or the trip handle, until pushed out of reach
+    float fatal_best_off_ = 1.0e9F;
+    float fatal_stall_s_ = 0.0F;
     FatalPoints fatal_points_{};
     JPH::RVec3 knee_target_ = JPH::RVec3::sZero();
     bool leg_toss_ = false;
