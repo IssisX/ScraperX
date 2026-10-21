@@ -229,6 +229,8 @@ func _build_stack_footings(rust_deep: Material, oxidised: Material, mill_scale: 
 	var reach := STACK_HALF_EXTENT + 13.0
 	var meet_y := STACK_LEVEL_HEIGHT * 3.0
 
+	# The two feet facing the yard carry the company's slogans, painted on.
+	var slogans := {-1.0: "MATERIALS MOVE\nCIVILIZATION RISES", 1.0: "HIGHER  STRONGER\nFURTHER"}
 	for sx in [1.0, -1.0]:
 		for sz in [1.0, -1.0]:
 			var foot := Vector3(cx + sx * reach, 0.0, cz + sz * reach)
@@ -236,6 +238,8 @@ func _build_stack_footings(rust_deep: Material, oxidised: Material, mill_scale: 
 			_add_strut("Buttress", foot, head, 2.4, rust_deep)
 			_add_box("ButtressFoot", Vector3(6.0, 2.6, 6.0),
 				foot + Vector3(0.0, 1.3, 0.0), mill_scale)
+			if sz > 0.0:
+				_paint_text(slogans[sx], foot + Vector3(0.0, 1.3, 3.0), 0.0, Vector2(6.0, 2.6), Color("e4d8c4"))
 			# Secondary tie back into the frame, one storey down.
 			var tie_foot := foot.lerp(head, 0.42)
 			var tie_head := Vector3(cx + sx * STACK_HALF_EXTENT, STACK_LEVEL_HEIGHT,
@@ -329,7 +333,8 @@ func _build_stack_signage(banner_cloth: Material, sign_plate: Material) -> void:
 	# Bay lettering down at the loading level, where the player starts.
 	var bay_centre := Vector3(cx - 12.0, 6.4, front_z + 0.45)
 	_add_box("BayPlate", Vector3(8.0, 9.0, 0.3), bay_centre, sign_plate)
-	_add_sign_text("STACK 1", bay_centre + Vector3(0.0, 2.2, 0.25), 0.0, 2.1, Color("e8dcc6"))
+	# 1.9 m letters: at 2.1 m "STACK 1" ran 7 cm past each side of the plate.
+	_add_sign_text("STACK 1", bay_centre + Vector3(0.0, 2.2, 0.25), 0.0, 1.9, Color("e8dcc6"))
 	_add_sign_text("TO A HIGHER\nTOMORROW", bay_centre + Vector3(0.0, -1.8, 0.25), 0.0, 0.8,
 		Color("cbbfa8"))
 

@@ -28,9 +28,8 @@ const AUDIT_FRAMES := 3
 const MOUNT_GAP_M := 0.15
 const CONTACT_M := 0.02
 const LIGHT_REACH_M := 1.2
-# A label's board: a part at most BOARD_THICK_M half thick, within BOARD_GAP_M
-# of the label; the label may pass its face by BOARD_SLACK_M.
-const BOARD_THICK_M := 0.15
+# A label's board: the part whose face lies flat within BOARD_GAP_M of the
+# label; the label may pass that face by BOARD_SLACK_M.
 const BOARD_GAP_M := 0.25
 const BOARD_SLACK_M := 0.02
 const NEAREST_SEARCH_M := 40.0
@@ -156,8 +155,9 @@ func run(main: Node) -> void:
 
 
 # Sign text off its board (the owner, 2026-10-21, of a banner's slogan: "It's
-# not even on the sign all the way"): a label laid on a board, a thin part
-# lying flat just behind or in front of it, must lie within that board's face.
+# not even on the sign all the way"): a label laid on a board, a plate or a
+# wall with a face flat just behind or in front of it, must lie within that
+# face.
 func _text_off_boards() -> Array:
 	var out: Array = []
 	for label in _parts:
@@ -181,8 +181,8 @@ func _text_off_boards() -> Array:
 	return out
 
 
-# The board a label is painted on: of the thin parts flat to the label's face
-# that its middle lies over, the one whose face is nearest it, within
+# The board a label is painted on: of the parts with a face flat to the
+# label's that its middle lies over, the one whose face is nearest it, within
 # BOARD_GAP_M (a stencil on a plate on a door is held to the plate).
 func _board_of(label: Dictionary) -> Dictionary:
 	var normal: Vector3 = label["u"][2]
@@ -193,16 +193,19 @@ func _board_of(label: Dictionary) -> Dictionary:
 		if str(part["name"]).begins_with("Label3D"):
 			continue
 		var e: Vector3 = part["e"]
-		var thin := 0 if e.x <= e.y and e.x <= e.z else (1 if e.y <= e.z else 2)
-		if e[thin] > BOARD_THICK_M or absf((part["u"][thin] as Vector3).dot(normal)) < 0.95:
+		var flat := -1
+		for i in 3:
+			if absf((part["u"][i] as Vector3).dot(normal)) >= 0.95:
+				flat = i
+		if flat < 0:
 			continue
 		var offset: Vector3 = (label["c"] as Vector3) - (part["c"] as Vector3)
-		var gap := maxf(absf(offset.dot(normal)) - e[thin], 0.0)
+		var gap := maxf(absf(offset.dot(part["u"][flat] as Vector3)) - e[flat], 0.0)
 		if gap > best_gap:
 			continue
 		var over := true
 		for i in 3:
-			if i != thin:
+			if i != flat:
 				over = over and absf(offset.dot(part["u"][i] as Vector3)) <= e[i]
 		if over:
 			best = part

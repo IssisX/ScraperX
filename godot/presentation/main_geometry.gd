@@ -217,6 +217,23 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 	host.add_child(label)
 	return label
 
+# Paint on a structure's face (the owner, 2026-10-21, of the yard's slogans:
+# "just put that on existing shit"): the text as large as fits inside `face`
+# (width, height) less PAINT_MARGIN_M a side, centred at `at` on the face,
+# PAINT_LIFT_M off it. No outline: paint has none.
+const PAINT_MARGIN_M := 0.3
+const PAINT_LIFT_M := 0.01
+
+func _paint_text(text: String, at: Vector3, yaw: float, face: Vector2, color: Color) -> Label3D:
+	var lift := Basis(Vector3.UP, yaw) * Vector3(0.0, 0.0, PAINT_LIFT_M)
+	var label := _add_sign_text(text, at + lift, yaw, 1.0, color)
+	label.outline_size = 0
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	var text_px := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, label.font_size)
+	label.pixel_size = minf((face.x - 2.0 * PAINT_MARGIN_M) / text_px.x,
+		(face.y - 2.0 * PAINT_MARGIN_M) / text_px.y)
+	return label
+
 # Real bump mapping, not flat-shaded boxes. gl_compatibility (what CI renders
 # with) has no SSAO/SSIL/SDFGI -- those are Forward+-only -- so per-pixel
 # normal perturbation is the actual lever available here for surface detail,
