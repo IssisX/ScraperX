@@ -909,6 +909,21 @@ func _feel_hold(delta: float) -> void:
 	if _hold_veil != null:
 		_hold_veil.color.a = veil
 
+# Gore (life/gore/gore_view.gd): wounds, blood and the lens, from the hold
+# state. Always full: there is no setting that softens it.
+var _gore: Node3D = null
+
+func _feel_gore(her_state: Dictionary, delta: float) -> void:
+	if not _native.has_method("get_matron_hold_state"):
+		return
+	if _gore == null:
+		_gore = preload("res://presentation/life/gore/gore_view.gd").new()
+		add_child(_gore)
+		_gore.attach_arms(_arms)
+		_gore.matron_view = _matron_view
+	_gore.update_view(_native.get_matron_hold_state(), her_state, delta, _camera,
+		float(her_state.get("floor_y", 0.0)))
+
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
 	var render_position: Vector3 = _native.get_player_render_position()
@@ -950,6 +965,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		var her_state: Dictionary = _native.get_matron_state()
 		_matron_view.update_view(her_state, delta, _camera.global_position, position)
 		_feel_her(her_state, position)
+		_feel_gore(her_state, delta)
 	if _forklift_view != null:
 		_feel_forklift(delta)
 	if _crane_view != null:

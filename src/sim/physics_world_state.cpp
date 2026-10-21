@@ -810,6 +810,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         }
         state_.wrist_load_n = wrist_load_n_;
         state_.wrist_strain_ns = wrist_strain_ns_;
+        state_.wrist_side = wrist_side_;
         state_.one_arm = one_arm();
         state_.claimed_by_matron = matron_->claimed();
         state_.claimed_s = claimed_s_;
@@ -830,6 +831,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.left_leg_lost = leg_off_[0];
         state_.right_leg_lost = leg_off_[1];
         state_.leg_load_n = leg_load_n_;
+        state_.leg_strain_ns = {leg_strain_ns_[0], leg_strain_ns_[1]};
         state_.leg_peak_n = std::max(leg_peak_n_, last_leg_peak_n_);
         for (std::size_t k = 0; k < 2; ++k) {
             state_.severed_leg_present[k] = !leg_id_[k].IsInvalid();

@@ -523,6 +523,46 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_pose_fingers(hand)
 
 	_update_risers(chute and operating == &"" and traversal == 0)
+	_update_lost()
+
+
+# Torn off (gore_view.gd): the arm's gone below a ragged stump at the
+# shoulder; `stumps[side]` is the wound node the gore view dresses.
+var lost := [false, false]
+var stumps: Array[Node3D] = [null, null]
+const StumpWound := preload("res://presentation/life/gore/gore_wound.gd")
+
+func set_lost(side: int, gone: bool) -> void:
+	lost[side] = gone
+	if gone and stumps[side] == null:
+		var w := StumpWound.new()
+		add_child(w)
+		w.setup(0.05, 300 + side, Color("1f231c"), Color(0.76, 0.58, 0.5), 0.06, 0.05)
+		w.tear()
+		stumps[side] = w
+	if stumps[side] != null:
+		stumps[side].visible = gone
+
+
+func _update_lost() -> void:
+	for hand in _hands:
+		var side := 1 if hand.side > 0.0 else 0
+		var gone: bool = lost[side]
+		for part in [hand.elbow, hand.fore, hand.band, hand.cuff]:
+			part.visible = not gone
+		hand.root.visible = not gone
+		if gone:
+			# The stub of the upper arm, the wound at its end.
+			var top := hand.upper.global_transform
+			var dir := top.basis.y.normalized()
+			var shoulder := top.origin - dir * UPPER_ARM * 0.5
+			hand.upper.global_transform = Transform3D(top.basis.scaled_local(Vector3(1.0, 0.3, 1.0)),
+				shoulder + dir * UPPER_ARM * 0.15)
+			if stumps[side] != null:
+				stumps[side].global_transform = Transform3D(Basis(Quaternion(Vector3.UP, dir)),
+					shoulder + dir * UPPER_ARM * 0.3)
+		else:
+			hand.upper.scale = Vector3.ONE
 
 
 # [wrist, basis, anchored, smoothing rate, curl, thumb curl] in world space.
