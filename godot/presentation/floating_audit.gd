@@ -28,6 +28,11 @@ const AUDIT_FRAMES := 3
 const MOUNT_GAP_M := 0.15
 const CONTACT_M := 0.02
 const LIGHT_REACH_M := 1.2
+# A label's board: a part at most BOARD_THICK_M half thick, within BOARD_GAP_M
+# of the label; the label may pass its face by BOARD_SLACK_M.
+const BOARD_THICK_M := 0.15
+const BOARD_GAP_M := 0.25
+const BOARD_SLACK_M := 0.02
 const NEAREST_SEARCH_M := 40.0
 const CELL_M := 4.0
 const BIG_M := 48.0
@@ -126,7 +131,14 @@ func run(main: Node) -> void:
 	for light in _lights:
 		if not _reaches(light):
 			dark.append(light)
+	var off_board := _text_off_boards()
 	var lines := _report(floating, loose)
+	lines.append("")
+	lines.append("SIGN TEXT OFF ITS BOARD: %d" % off_board.size())
+	for item: Dictionary in off_board:
+		var c: Vector3 = item["c"]
+		lines.append("  %-40s at (%7.2f, %7.2f, %8.2f)  past %s by %.2f m  placed by %s" % [item["name"], c.x, c.y, c.z,
+			item["board"], float(item["past_m"]), item["where"]])
 	lines.append("")
 	lines.append("DARK LAMPS (no light of their own, or a light that reaches nothing): %d" % dark.size())
 	for item: Dictionary in dark:
@@ -138,9 +150,64 @@ func run(main: Node) -> void:
 		if file != null:
 			file.store_string("\n".join(lines) + "\n")
 	print("\n".join(lines))
-	print("SCRAPERX_FLOATING floating=%d loose_solids=%d dark=%d parts=%d lights=%d" % [
-		floating.size(), loose.size(), dark.size(), _parts.size(), _lights.size()])
-	exit_code = EXIT_FLOATING if floating.size() + loose.size() + dark.size() > 0 else 0
+	print("SCRAPERX_FLOATING floating=%d loose_solids=%d dark=%d off_board=%d parts=%d lights=%d" % [
+		floating.size(), loose.size(), dark.size(), off_board.size(), _parts.size(), _lights.size()])
+	exit_code = EXIT_FLOATING if floating.size() + loose.size() + dark.size() + off_board.size() > 0 else 0
+
+
+# Sign text off its board (the owner, 2026-10-21, of a banner's slogan: "It's
+# not even on the sign all the way"): a label laid on a board, a thin part
+# lying flat just behind or in front of it, must lie within that board's face.
+func _text_off_boards() -> Array:
+	var out: Array = []
+	for label in _parts:
+		if not str(label["name"]).begins_with("Label3D"):
+			continue
+		var board := _board_of(label)
+		if board.is_empty():
+			continue
+		var past := 0.0
+		for axis in 2:
+			var along: Vector3 = label["u"][axis]
+			var reach := 0.0
+			for i in 3:
+				reach += absf((board["u"][i] as Vector3).dot(along)) * float((board["e"] as Vector3)[i])
+			var off := absf(((label["c"] as Vector3) - (board["c"] as Vector3)).dot(along))
+			past = maxf(past, off + float((label["e"] as Vector3)[axis]) - reach)
+		if past > BOARD_SLACK_M:
+			label["board"] = str(board["name"])
+			label["past_m"] = past
+			out.append(label)
+	return out
+
+
+# The board a label is painted on: of the thin parts flat to the label's face
+# that its middle lies over, the one whose face is nearest it, within
+# BOARD_GAP_M (a stencil on a plate on a door is held to the plate).
+func _board_of(label: Dictionary) -> Dictionary:
+	var normal: Vector3 = label["u"][2]
+	var best := {}
+	var best_gap := BOARD_GAP_M
+	for index in _near(_grown(label, BOARD_GAP_M)):
+		var part: Dictionary = _parts[index]
+		if str(part["name"]).begins_with("Label3D"):
+			continue
+		var e: Vector3 = part["e"]
+		var thin := 0 if e.x <= e.y and e.x <= e.z else (1 if e.y <= e.z else 2)
+		if e[thin] > BOARD_THICK_M or absf((part["u"][thin] as Vector3).dot(normal)) < 0.95:
+			continue
+		var offset: Vector3 = (label["c"] as Vector3) - (part["c"] as Vector3)
+		var gap := maxf(absf(offset.dot(normal)) - e[thin], 0.0)
+		if gap > best_gap:
+			continue
+		var over := true
+		for i in 3:
+			if i != thin:
+				over = over and absf(offset.dot(part["u"][i] as Vector3)) <= e[i]
+		if over:
+			best = part
+			best_gap = gap
+	return best
 
 
 # A lamp is lit when one of the lights is within LIGHT_REACH_M of its box.

@@ -740,6 +740,27 @@ func _look_night_lamps() -> bool:
 	return true
 
 
+# look_banners: renders only (not in CI): the yard's three slogan banners
+# square on in the afternoon, to see each slogan inside its board.
+func _look_banners() -> bool:
+	_main._sky_cycle.set_hour(15.5)
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	var spots := [Vector3(-9.4, 0.0, -22.0), Vector3(21.4, 0.0, -42.0), Vector3(26.5, 0.0, -90.5)]
+	for i in spots.size():
+		var middle: Vector3 = spots[i] + Vector3(0.0, 4.6, 0.0)
+		held.pose = Transform3D(Basis(), middle + Vector3(0.0, 0.0, 6.5)).looking_at(middle, Vector3.UP)
+		held.fov = 55.0
+		await _frames(8)
+		await _pose("banner_%d" % i)
+	held.queue_free()
+	hud.visible = true
+	_detail = "shots=%d" % spots.size()
+	return true
+
+
 # look_tower_stock: renders only (not in CI): the lived-in spots of stock up
 # the tower (LooseStock::dress_tower), from deck 2's south band and from the
 # 176 ring: to the nearest spot on the same deck, and looked at.

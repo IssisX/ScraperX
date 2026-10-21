@@ -245,7 +245,8 @@ func _build_locker() -> void:
 	var stencil := Label3D.new()
 	stencil.text = "9"
 	stencil.font_size = 220
-	stencil.pixel_size = 0.0016
+	# Its line, 301 pixels tall, inside the 0.4 m plate.
+	stencil.pixel_size = 0.0013
 	stencil.modulate = Color("b9b09a")
 	stencil.position = Vector3(-0.25, -0.88, -0.03)
 	stencil.rotation.y = PI

@@ -124,6 +124,11 @@ func _add_sphere(node_name: String, radius: float, at: Vector3,
 # A banner's board: its size, and how high its middle stands over its spot.
 const BANNER_BOARD := Vector3(3.2, 4.6, 0.12)
 const BANNER_BOARD_Y := 4.6
+# The slogan's size: BANNER_PIXEL_M a pixel, smaller when its longest line
+# would come nearer than BANNER_MARGIN_M to the board's edge (the owner,
+# 2026-10-21: "It's not even on the sign all the way").
+const BANNER_PIXEL_M := 0.0095
+const BANNER_MARGIN_M := 0.2
 
 func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
 	_add_box("BannerBacking", BANNER_BOARD, at + Vector3(0.0, BANNER_BOARD_Y, 0.0), backing)
@@ -131,14 +136,18 @@ func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
 	label.name = "BannerCopy"
 	label.text = "\n".join(lines)
 	label.font_size = 40
-	label.pixel_size = 0.0095
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	var text_px := font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_CENTER, -1, label.font_size)
+	label.pixel_size = minf(BANNER_PIXEL_M, minf((BANNER_BOARD.x - 2.0 * BANNER_MARGIN_M) / text_px.x,
+		(BANNER_BOARD.y - 2.0 * BANNER_MARGIN_M) / text_px.y))
 	label.modulate = Color(0.92, 0.88, 0.8)
 	# Paint on the board: lit as the board is, never glowing in the dark.
 	label.shaded = true
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.position = at + Vector3(0.0, BANNER_BOARD_Y, 0.07)
 	$TowerPresentation.add_child(label)
-	_add_chevron_mark(at + Vector3(0.0, 6.7, 0.07), 0.55, backing)
+	# The mark 0.35 m under the board's top, all of it on the board.
+	_add_chevron_mark(at + Vector3(0.0, BANNER_BOARD_Y + BANNER_BOARD.y * 0.5 - 0.35, 0.07), 0.55, backing)
 
 func _add_chevron_mark(at: Vector3, scale: float, accent: Material) -> void:
 	# Original angular chevron-K mark, built from three thin boxes. Not a copy
