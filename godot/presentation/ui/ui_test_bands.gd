@@ -410,13 +410,17 @@ func _wet_e(device: int) -> bool:
 			int(_native().get_support_entity_id()), feet])
 	if int(_main._audio.air_heard) <= 0:
 		return _fail("E's air was never heard roaring under the car")
+	# The seal's break seen: the burst out of the collar, the rider by it.
+	if int(_main.vent_bursts) <= 0 or float(_main.vent_burst_eye_m) > 8.0:
+		return _fail("E's seal broke out of sight (bursts %d, the eye %.1f m from the collar)" % [
+			int(_main.vent_bursts), float(_main.vent_burst_eye_m)])
 	if _felt(&"heave") <= 0 or _felt(&"rumble") <= 0:
 		return _fail("E's car was not felt in the hands (heave %d, rumble %d)" % [_felt(&"heave"), _felt(&"rumble")])
 	if int(_native().get_death_count()) != deaths:
 		return _fail("the climber died in E's shaft")
 	await _pose("wet_e_top")
-	print("SCRAPERX_WET_E feet=%.2f heave=%d rumble=%d air_heard=%d climb_offered='%s'" % [feet, _felt(&"heave"),
-		_felt(&"rumble"), int(_main._audio.air_heard), climbs[0]])
+	print("SCRAPERX_WET_E feet=%.2f heave=%d rumble=%d air_heard=%d burst_eye_m=%.1f climb_offered='%s'" % [feet,
+		_felt(&"heave"), _felt(&"rumble"), int(_main._audio.air_heard), float(_main.vent_burst_eye_m), climbs[0]])
 	return true
 
 func _wet_f(device: int) -> bool:

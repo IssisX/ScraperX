@@ -804,6 +804,11 @@ var _wet_e := {}   # get_wet_state() this frame while near E's shaft, else empty
 var _wet_e_lamps: Array[OmniLight3D] = []
 var _wet_e_drips: CPUParticles3D
 var _vents: Array[Dictionary] = []
+# Seals broken and their bursts shown, and how far the eye was from the last
+# (the owner, 2026-10-20: "Make sure we see a whoosh of air/wind when vacuum
+# seal is broken"; touch_wet holds it to that).
+var vent_bursts := 0
+var vent_burst_eye_m := INF
 
 func _glass_material() -> StandardMaterial3D:
 	# Clear glass with a green-grey cast; a steel mullion every 3 m, drawn by
@@ -1085,6 +1090,8 @@ func _render_vents(delta: float, near: bool) -> void:
 		if flowing and not bool(vent["flowing"]):
 			# The seal breaks: everything out of the slots at once.
 			vent["burst_left"] = VENT_BURST_S
+			vent_bursts += 1
+			vent_burst_eye_m = _camera.global_position.distance_to(vent["centre"])
 			for burst: CPUParticles3D in vent["bursts"]:
 				burst.initial_velocity_min = lerpf(4.0, 9.0, strength)
 				burst.initial_velocity_max = lerpf(7.0, 15.0, strength)

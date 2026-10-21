@@ -37,7 +37,9 @@ The owner asked Claude to choose as the owner would: design 1 as specified, with
 the self-closing doors, the lights riding with the car, the drips, the rumble and the float at the
 top. Not taken: the throw start (the throw stays the Matron's) and the rider's weight as power. The
 deck is far enough from S1's scale plate (a fall sets it off, not weight); old saves refused is
-accepted for now. Built on `claude/chiller-drop`, then merged.
+accepted for now. Built on `claude/chiller-drop` and merged 2026-10-21: played by touch
+(`touch_wet`) from the float lift's stop through the doors and the drop to the deck at 298 m, nothing
+offered to pull, the air heard and felt, and the seal's burst seen 3.7 m from the eye.
 The owner confirmed the picks, and added: *"Make sure we see a whoosh of air/wind when vacuum seal
 is broken on glass machine."* At the chiller drop's top, the seal's break is a visible blast of air
 from the collar, not only heard; the glass spares tube does the same at its stations.
