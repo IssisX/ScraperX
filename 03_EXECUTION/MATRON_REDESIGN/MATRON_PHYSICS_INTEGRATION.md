@@ -50,10 +50,21 @@ The owner (2026-10-21): another agent is reworking the arm tear and the
 fatality now, so this is left to that work. The experiment's patch (the
 reach-based stop and the trace) is not committed.
 
+## The 143 walkway carry (the owner's known risk)
+
+She sometimes loses the ankle grip about 1 s into a carry on the narrow 143
+walkway. The tear rule (`grab_post_step`): the grip's load over
+`kGripMaxForceN` (3.8 kN) for two ticks, or its strain past `kGripTearNs`.
+A dangling body caught on the rail while her feet walk on would spike the
+load that way: physical, but a carrier feels a snag and checks her stride
+or lifts, and she does neither. Not yet reproduced natively: a probe that
+woke her, set her fully changed and stood the player on 143's shaft band
+below her deck (x -10 to -4, z -132.6) had her search the deck straight
+above and go to guard; she did not come down to 143 to take hold. The setup
+where it was seen is needed to trace it.
+
 ## Still to do here
 
-- The owner's known risk: on the narrow 143 walkway she sometimes loses the
-  ankle grip about 1 s into a carry (the body snagging on the rail, likely).
 - Touch runs on the merge; her voice through the hosted voice system; the
   fatality's presentation; a phone build. ScraperX-Claude's CI runs the full
   native suite, so the merge waits there until the fatality passes.
