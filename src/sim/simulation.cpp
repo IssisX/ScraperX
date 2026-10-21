@@ -1096,6 +1096,17 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.clinging = view.clinging;
     result.floor_y = view.floor_y;
     result.lead_floor_y = view.lead_floor_y;
+    result.climb_hand = {view.climb_hand.GetX(), view.climb_hand.GetY(), view.climb_hand.GetZ()};
+    result.climb_force_n = view.climb_force_n;
+    result.climb_grips = view.climb_grips;
+    result.climb_releases = view.climb_releases;
+    result.mantling = view.mantling;
+    result.lead_x = view.lead_x;
+    result.lead_z = view.lead_z;
+    result.lead_age_s = view.lead_age_s;
+    result.lead_seen = view.lead_seen;
+    result.lead_valid = view.lead_valid;
+    result.acoustic_queries = view.acoustic_queries;
     result.rage = view.rage;
     result.stage = static_cast<std::uint8_t>(view.stage);
     result.exposure = view.exposure;

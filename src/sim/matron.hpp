@@ -67,9 +67,10 @@
 // next (the 154 m deck's to the 176 ring). Seen or heard on it, the player
 // is where it tops out (her guess where they are going). Frail, she cannot
 // take hold of it: she stands at its foot looking up, and gives up there. In
-// the Turn she takes hold, and then does not let go: up rung by rung at
-// kClimbMps, in jerks (kClimbBurstMps) while a Turn has her, her hands
-// holding her weight, and over its head onto the floor above. The riser from
+// the Turn she reaches for real rung tops and pulls at kClimbMps, under
+// gravity with finite reach and grip force. Missing holds, overload and
+// blocked clearance can release her; a reachable last hold lets her push
+// over the lip onto verified floor. The riser from
 // 143 up to her deck she knows the same way (heard or seen on it, the player
 // is going up to her deck), but never takes hold of: her way between those
 // two decks is her corner pipe.
@@ -171,6 +172,10 @@ public:
     // +-12 m at 396 m), where the way round the shaft would pass through
     // their decks unmuffled (she has no way of her own up there). A deck is
     // a level's floor: a flat face met within kDeckDepthM under its top.
+    static constexpr std::size_t kMaxAcousticHits = 16;
+    static constexpr std::size_t kMaxAcousticQueries = 4 * (16 + 1);
+    static constexpr float kObstructionMuffle = 2.0F;
+    static constexpr float kAcousticMemorySeconds = 40.0F;
     static constexpr float kDeckMuffle = 10.0F;
     static constexpr float kBendMuffle = 1.4F;
     static constexpr float kShaftHalfM = 17.0F;
@@ -258,12 +263,12 @@ public:
     static constexpr float kCableFriction = 0.3F;
     // Letting go of a cable at its end, she swings on this fast over the band.
     static constexpr float kLetGoSwingMps = 1.6F;
-    // A climb: her hands' steady pull up it (the player climbs at 0.9), the
-    // Turn's jerks on it and how hard they snap, and her mantle over its head
-    // (on until her middle is this far out over the floor above).
+    // A climb: steady pull (the player climbs at 0.9), finite hand reach
+    // from the body centre and combined grip rating; a push over its head
+    // until her middle is this far out over actual landing steel.
     static constexpr float kClimbMps = 0.6F;
-    static constexpr float kClimbBurstMps = 2.2F;
-    static constexpr float kClimbAccel = 70.0F;
+    static constexpr float kClimbReachM = 1.9F;
+    static constexpr float kClimbGripMaxN = 5500.0F;
     static constexpr float kMantleMps = 1.4F;
     static constexpr float kMantleOutM = 1.0F;
     // How long her hands are at a rigged cage's eye before the rope is off it.
@@ -547,6 +552,11 @@ public:
         std::uint32_t unrigs = 0;   // ropes she took off a way out's eye, this run
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
+        JPH::RVec3 climb_hand = JPH::RVec3::sZero();
+        float climb_force_n = 0.0F;
+        std::uint32_t climb_grips = 0;
+        std::uint32_t climb_releases = 0;
+        bool mantling = false;
         bool climbing = false;      // on a ladder, going up it (stride: metres climbed)
         std::uint32_t climbs = 0;   // ladders she went up after the player, this run
         bool bracing_structure = false;   // her hands holding the bay's leaf
@@ -556,6 +566,11 @@ public:
         std::uint32_t traps = 0;          // times she set it, this run
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
+        float lead_x = 0.0F, lead_z = 0.0F;
+        float lead_age_s = 0.0F;
+        bool lead_seen = false;
+        bool lead_valid = false;
+        std::uint32_t acoustic_queries = 0;
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
         float rage = 0.0F;          // 0..1: fed by sound at her ear, lowered by quiet
         Stage stage = Stage::Pest;
@@ -659,8 +674,8 @@ public:
     static constexpr std::size_t kMaxSounds = 16;
     static constexpr float kOwnSoundM = 1.5F;
     void hear(float x, float y, float z, float loudness) noexcept {
-        if (sound_count_ < kMaxSounds) {
-            sounds_[sound_count_++] = {true, x, y, z, loudness};
+        if (loudness > 0.0F && sound_count_ < kMaxSounds) {
+            sounds_[sound_count_++] = {true, x, y, z, loudness > 1.0F ? 1.0F : loudness};
         }
     }
     void post_step(float dt);
@@ -787,7 +802,7 @@ private:
     // How far a sound at `from` has to carry to an ear at `to` (above); and
     // the decks (static floors) the straight line between passes through.
     [[nodiscard]] float carry_m(JPH::RVec3 from, JPH::RVec3 to) const;
-    [[nodiscard]] int decks_between(JPH::RVec3 from, JPH::RVec3 to) const;
+    [[nodiscard]] float muffled_distance(JPH::RVec3 from, JPH::RVec3 to) const;
     // The floor of the level a sound at height y is on (the highest under
     // it, within a storey), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
@@ -829,6 +844,9 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
+    bool begin_climb(int index);
+    bool find_climb_hold(JPH::RVec3 at, float above);
+    void release_climb(bool failed);
     // After a lead a storey away along the corner pipe (above): to the rail's
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
@@ -985,10 +1003,20 @@ private:
     static constexpr float kTrapLostSeconds = 20.0F;    // for this long: she gives it up
     // Her trap's step (true: it moved her this tick), and whether she lets go.
     bool trap_step(float dt, JPH::RVec3 at, JPH::RVec3 player, bool saw, bool heard, bool on_deck);
-    bool trap_lets_go(JPH::RVec3 player, float dt);
+    bool trap_lets_go(JPH::RVec3 player, float dt, bool perceived);
     int guess_climb_ = -1;
     int climb_ = -1;
     bool mantling_ = false;
+    JPH::BodyID climb_support_;
+    JPH::Vec3 climb_local_hand_ = JPH::Vec3::sZero();
+    JPH::RVec3 climb_hand_ = JPH::RVec3::sZero();
+    float climb_force_n_ = 0.0F;
+    float climb_stall_s_ = 0.0F;
+    float climb_overload_s_ = 0.0F;
+    float climb_best_y_ = 0.0F;
+    float climb_retry_s_ = 0.0F;
+    std::uint32_t climb_grips_ = 0;
+    std::uint32_t climb_releases_ = 0;
     std::uint32_t climbs_done_ = 0;
     // Her mind (see above): what she has learned this run.
     std::array<bool, 2> ways_out_{true, true};
@@ -996,6 +1024,8 @@ private:
     float unrig_s_ = 0.0F;
     int unrig_way_ = -1;
     std::uint32_t unrigs_ = 0;
+    bool lead_valid_ = false;
+    mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
     bool wary_ = false;
     float peer_s_ = 0.0F;

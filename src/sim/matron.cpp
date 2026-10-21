@@ -222,6 +222,7 @@ void Matron::remove_body() {
     if (!body_in_world_) {
         return;
     }
+    release_climb(false);
     physics_.GetBodyInterface().RemoveBody(body_);
     body_in_world_ = false;
 }
@@ -251,59 +252,62 @@ bool Matron::sees(const RVec3 from, const RVec3 to) const {
     return false;
 }
 
-int Matron::decks_between(const RVec3 from, const RVec3 to) const {
+float Matron::muffled_distance(const RVec3 from, const RVec3 to) const {
     const Vec3 run(to - from);
-    if (run.LengthSq() < 0.01F) {
-        return 0;
-    }
-    // Neither her body nor her locker: the ear is in one or the other.
-    class NotHers final : public BodyFilter {
+    const float straight = run.Length();
+    if (straight < 0.1F) return straight;
+    if (acoustic_queries_ >= kMaxAcousticQueries) return std::numeric_limits<float>::max();
+    // Bounded storage and work per path: no allocating all-hit collector.
+    // Saturation is conservatively inaudible, never an untested clear path.
+    class BoundedHits final : public CastRayCollector {
     public:
-        NotHers(const BodyID body, const BodyID locker) : body_(body), locker_(locker) {}
-        bool ShouldCollide(const BodyID &id) const override { return id != body_ && id != locker_; }
-
+        std::array<RayCastResult, kMaxAcousticHits> hits{};
+        std::size_t count = 0;
+        void AddHit(const RayCastResult &hit) override {
+            if (count < hits.size()) hits[count++] = hit;
+            if (count == hits.size()) ForceEarlyOut();
+        }
+    } hits;
+    class BuiltOnly final : public BodyFilter {
+    public:
+        explicit BuiltOnly(const BodyID locker) : locker_(locker) {}
+        bool ShouldCollide(const BodyID &id) const override { return id != locker_; }
+        bool ShouldCollideLocked(const Body &body) const override {
+            return body.IsStatic() && !body.IsSensor();
+        }
     private:
-        BodyID body_;
         BodyID locker_;
-    };
-    const NotHers not_hers(body_, locker_body_);
+    } built(locker_body_);
     const RRayCast ray(from, run);
-    AllHitCollisionCollector<CastRayCollector> hits;
-    physics_.GetNarrowPhaseQuery().CastRay(ray, RayCastSettings(), hits, {}, {}, not_hers);
-    // A deck is a level's floor, met through its top or its underside: not
-    // a column's side, nor a rail's, a stand's or a ramp's flat face, nor
-    // anything that moves.
-    int decks = 0;
-    for (const RayCastResult &hit : hits.mHits) {
+    ++acoustic_queries_;
+    physics_.GetNarrowPhaseQuery().CastRay(ray, RayCastSettings(), hits, {}, {}, built);
+    if (hits.count == hits.hits.size()) return std::numeric_limits<float>::max();
+    float carried = straight;
+    for (std::size_t i = 0; i < hits.count; ++i) {
+        const RayCastResult &hit = hits.hits[i];
+        if (hit.mFraction * straight < 0.15F || (1.0F - hit.mFraction) * straight < 0.15F) continue;
+        bool duplicate = false;
+        for (std::size_t j = 0; j < i; ++j) duplicate |= hits.hits[j].mBodyID == hit.mBodyID;
+        if (duplicate) continue;
         const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-        if (!lock.Succeeded() || !lock.GetBody().IsStatic() || lock.GetBody().IsSensor()) {
-            continue;
-        }
+        if (!lock.Succeeded()) return std::numeric_limits<float>::max();
         const RVec3 point = ray.GetPointOnRay(hit.mFraction);
-        if (std::abs(lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY()) <= 0.7F) {
-            continue;
-        }
-        const float y = float(point.GetY());
-        for (const Level &level : levels_) {
-            if (y > level.floor_y - kDeckDepthM && y < level.floor_y + 0.05F) {
-                ++decks;
-                break;
+        bool deck = false;
+        if (std::abs(lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY()) > 0.7F) {
+            const float y = float(point.GetY());
+            for (const Level &level : levels_) {
+                deck |= y > level.floor_y - kDeckDepthM && y < level.floor_y + 0.05F;
             }
         }
+        carried *= deck ? kDeckMuffle : kObstructionMuffle;
     }
-    return decks;
+    return carried;
 }
 
 float Matron::carry_m(const RVec3 from, const RVec3 to) const {
     const float straight = Vec3(to - from).Length();
-    const int decks = decks_between(from, to);
-    if (decks == 0) {
-        return straight;
-    }
-    float through = straight;
-    for (int i = 0; i < decks; ++i) {
-        through *= kDeckMuffle;
-    }
+    const float through = muffled_distance(from, to);
+    if (through <= straight || std::abs(from.GetY() - to.GetY()) < 1.0) return through;
     // Or round by the shaft: out to it level, along it, and in again level.
     const auto in_shaft = [](const RVec3 p) {
         return RVec3(std::clamp(float(p.GetX()), -kShaftHalfM, kShaftHalfM), p.GetY(),
@@ -313,7 +317,7 @@ float Matron::carry_m(const RVec3 from, const RVec3 to) const {
     const RVec3 in = in_shaft(to);
     const float to_shaft = Vec3(out - from).Length();
     const float from_shaft = Vec3(to - in).Length();
-    float round = to_shaft + Vec3(in - out).Length() + from_shaft;
+    float round = muffled_distance(from, out) + muffled_distance(out, in) + muffled_distance(in, to);
     round *= to_shaft > 0.5F ? kBendMuffle : 1.0F;
     round *= from_shaft > 0.5F ? kBendMuffle : 1.0F;
     return std::min(through, round);
@@ -553,9 +557,11 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     guess_climb_ = -1;
     since_heard_s_ = 0.0F;
     lead_seen_ = seen;
+    lead_valid_ = true;
 }
 
 void Matron::stand_down() {
+    lead_valid_ = false;
     turn_ = Turn::None;
     turn_s_ = 0.0F;
     wary_ = false;
@@ -777,6 +783,7 @@ void Matron::ride_line() {
 }
 
 bool Matron::follow_climb(const float dt, const RVec3 at) {
+    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
@@ -818,11 +825,99 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     if (turn_ == Turn::None && best != bay_climb_) {
         return true;
     }
-    climb_ = best;
-    mantling_ = false;
-    ++climbs_done_;
-    physics_.GetBodyInterface().SetGravityFactor(body_, 0.0F);
+    begin_climb(best);
     return true;
+}
+
+namespace {
+// Two exclusions without the heap storage used by IgnoreMultipleBodiesFilter.
+class ClimbBodyFilter final : public BodyFilter {
+public:
+    ClimbBodyFilter(BodyID actor, BodyID player) : actor_(actor), player_(player) {}
+    bool ShouldCollide(const BodyID &id) const override { return id != actor_ && id != player_; }
+    bool ShouldCollideLocked(const Body &body) const override { return !body.IsSensor(); }
+private:
+    BodyID actor_, player_;
+};
+} // namespace
+
+// A real upward-facing contact, in hand reach and visible from the chest.
+// As in the player's physical hang, anchors live in the support's frame and
+// the support receives the reaction. The mechanism kit's welded load grips
+// cannot attach to static steel and rigidly weld the bodies rather than
+// allowing a climber to move relative to a hand contact.
+bool Matron::find_climb_hold(const RVec3 at, const float above) {
+    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
+    const float standoff = climb_ == bay_climb_ ? 0.27F : 0.5F;
+    // A short ladder can end below an overhead reach (the bay's bracket is
+    // only 1.78 m down). Search its actual lip-height band rather than the
+    // empty air above it; the ray still has to find real reachable steel.
+    const float probe_y = std::min(float(at.GetY()) + above, c.head_y + 0.04F);
+    const RVec3 origin(c.x + c.out_x * standoff, probe_y, c.z + c.out_z * standoff);
+    const ClimbBodyFilter filter(body_, player_);
+    const RRayCast down(origin, Vec3(0.0F, -0.42F, 0.0F));
+    RayCastSettings settings;
+    settings.mTreatConvexAsSolid = false; // a probe starting inside a rung must not invent a top normal
+    ClosestHitCollisionCollector<CastRayCollector> hits;
+    physics_.GetNarrowPhaseQuery().CastRay(down, settings, hits, {}, {}, filter);
+    if (!hits.HadHit()) {
+        return false;
+    }
+    const RayCastResult &hit = hits.mHit;
+    const RVec3 point = down.GetPointOnRay(hit.mFraction);
+    if (Vec3(point - at).Length() > kClimbReachM ||
+        (!climb_support_.IsInvalid() && point.GetY() <= climb_hand_.GetY() + 0.1F)) {
+        return false;
+    }
+    const RVec3 chest = at + Vec3(0.0F, 0.6F, 0.0F);
+    const Vec3 reach(point - chest);
+    RayCastResult obstruction;
+    if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(chest, reach), obstruction, {}, {}, filter) &&
+        (1.0F - obstruction.mFraction) * reach.Length() > 0.06F) {
+        return false;
+    }
+    const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+    if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY() < 0.7F) {
+        return false;
+    }
+    climb_support_ = hit.mBodyID;
+    climb_local_hand_ = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point);
+    climb_hand_ = point;
+    ++climb_grips_;
+    return true;
+}
+
+bool Matron::begin_climb(const int index) {
+    if (climb_retry_s_ > 0.0F) {
+        return false;
+    }
+    climb_ = index;
+    mantling_ = false;
+    climb_support_ = BodyID();
+    climb_force_n_ = 0.0F;
+    climb_stall_s_ = 0.0F;
+    climb_overload_s_ = 0.0F;
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    climb_best_y_ = float(at.GetY());
+    if (!find_climb_hold(at, 1.35F)) {
+        release_climb(true);
+        return false;
+    }
+    ++climbs_done_;
+    return true;
+}
+
+void Matron::release_climb(const bool failed) {
+    climb_ = -1;
+    mantling_ = false;
+    climb_support_ = BodyID();
+    climb_force_n_ = 0.0F;
+    if (failed) {
+        ++climb_releases_;
+        climb_retry_s_ = 2.0F;
+    }
+    // No velocity write: a missed hand or broken hold leaves her momentum
+    // and gravity to the same collision solver as every other falling body.
 }
 
 void Matron::climb(const float dt) {
@@ -830,44 +925,101 @@ void Matron::climb(const float dt) {
     const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
     const RVec3 at = bodies.GetPosition(body_);
     const float feet = float(at.GetY()) - kStandCentre;
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
-    Vec3 want = Vec3::sZero();
-    if (!mantling_ && feet < c.head_y + 0.15F) {
-        // Up it rung by rung, held to its line: still in a Turn's wind-up, in
-        // jerks in its lunges.
-        float rate = kClimbMps;
-        if (turn_ == Turn::Windup) {
-            rate = 0.0F;
-        } else if (turn_ == Turn::Lunge &&
-                   std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds) {
-            rate = kClimbBurstMps;
-        }
-        want = Vec3(std::clamp((c.x - float(at.GetX())) * 5.0F, -0.5F, 0.5F), rate,
-                    std::clamp((c.z - float(at.GetZ())) * 5.0F, -0.5F, 0.5F));
-    } else {
-        // Her feet over the floor above: out over its edge, and once her
-        // middle is over it, her own weight on her feet again.
-        mantling_ = true;
-        const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
-        if (out >= kMantleOutM) {
-            bodies.SetGravityFactor(body_, 1.0F);
-            climb_ = -1;
-            mantling_ = false;
+    if (climb_support_.IsInvalid() || !bodies.IsAdded(climb_support_)) {
+        release_climb(true);
+        return;
+    }
+    climb_hand_ = bodies.GetCenterOfMassTransform(climb_support_) * climb_local_hand_;
+    // The body can survive while a compound's rung disappears or moves.
+    // Revalidate the contact, not merely the body ID, before applying load.
+    const ClimbBodyFilter support_filter(body_, player_);
+    RayCastResult contact;
+    const RRayCast contact_ray(climb_hand_ + Vec3(0.0F, 0.04F, 0.0F), Vec3(0.0F, -0.08F, 0.0F));
+    if (!physics_.GetNarrowPhaseQuery().CastRay(contact_ray, contact, {}, {}, support_filter) ||
+        contact.mBodyID != climb_support_) {
+        release_climb(true);
+        return;
+    }
+
+    if (Vec3(climb_hand_ - at).Length() > kClimbReachM) {
+        release_climb(true);
+        return;
+    }
+    // The hand can only advance to another reachable surface; empty space
+    // above the last rung is not a hold. Retain the old hand during a miss.
+    if (!mantling_ && climb_hand_.GetY() - at.GetY() < 1.05F) {
+        find_climb_hold(at, 1.5F);
+    }
+    if (!mantling_ && climb_hand_.GetY() > c.head_y - 0.4F) {
+        // Reuse the same full-body clearance query as standing after a fall.
+        // Check both the lift and landing before committing over the lip;
+        // collisions still arbitrate the entire intervening movement.
+        const RVec3 lifted(c.x, c.head_y + kStandCentre + 0.12F, c.z);
+        const RVec3 landed = lifted + Vec3(c.out_x * kMantleOutM, 0.0F, c.out_z * kMantleOutM);
+        if (!shape_fits(shape_, lifted) || !shape_fits(shape_, landed)) {
+            release_climb(true);
             return;
         }
-        want = Vec3(c.out_x * kMantleMps, std::clamp((c.head_y + 0.15F - feet) * 4.0F, 0.0F, 1.0F),
-                    c.out_z * kMantleMps);
+        mantling_ = true;
+        climb_stall_s_ = 0.0F;
     }
-    Vec3 delta = want - velocity;
-    const float limit = kClimbAccel * dt;
-    if (delta.Length() > limit) {
-        delta = delta.Normalized() * limit;
+    const Vec3 relative = bodies.GetLinearVelocity(body_) - bodies.GetPointVelocity(climb_support_, climb_hand_);
+    Vec3 target(c.x, float(climb_hand_.GetY()) - 0.65F, c.z);
+    if (mantling_) {
+        target.SetY(c.head_y + kStandCentre + 0.12F);
+        if (feet > c.head_y + 0.03F) {
+            target.SetX(c.x + c.out_x * kMantleOutM);
+            target.SetZ(c.z + c.out_z * kMantleOutM);
+        }
+        const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
+        if (out > 0.8F && feet >= c.head_y - 0.08F) {
+            // Verify actual landing steel, not just the authored destination.
+            const ClimbBodyFilter filter(body_, player_);
+            RayCastResult floor;
+            if (physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor, {}, {}, filter)) {
+                release_climb(false);
+                return;
+            }
+        }
     }
-    const Vec3 moved = velocity + delta;
-    bodies.SetLinearVelocity(body_, moved);
+    Vec3 wanted = (target - Vec3(at)) * 3.0F;
+    const float rate = mantling_ ? kMantleMps : kClimbMps;
+    if (wanted.Length() > rate) {
+        wanted *= rate / wanted.Length();
+    }
+    // Clearance is enforced by the real capsule and solver. A jam consumes
+    // finite force and times out; it never teleports through the lip/ceiling.
+    Vec3 force = kMassKg * ((wanted - relative) * 7.0F - physics_.GetGravity());
+    const float requested = force.Length();
+    climb_overload_s_ = requested > kClimbGripMaxN ? climb_overload_s_ + dt : 0.0F;
+    if (climb_overload_s_ > 0.18F) {
+        release_climb(true);
+        return;
+    }
+    if (requested > kClimbGripMaxN) {
+        force *= kClimbGripMaxN / requested;
+    }
+    const float progress = float(at.GetY()) + (mantling_ ?
+        (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z : 0.0F);
+    if (progress > climb_best_y_ + 0.04F) {
+        climb_best_y_ = progress;
+        climb_stall_s_ = 0.0F;
+    } else {
+        climb_stall_s_ += dt;
+    }
+    if (climb_stall_s_ > 2.5F) {
+        release_climb(true);
+        return;
+    }
+    climb_force_n_ = force.Length();
+    bodies.AddForce(body_, force);
+    if (bodies.GetMotionType(climb_support_) == EMotionType::Dynamic) {
+        bodies.AddForce(climb_support_, -force, climb_hand_);
+    }
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     speed_ = 0.0F;
-    stride_ += moved.Length() * dt;
+    stride_ += bodies.GetLinearVelocity(body_).Length() * dt;
 }
 
 bool Matron::pipe_reaches(const float floor_y) noexcept {
@@ -1422,7 +1574,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
     BodyInterface &bodies = physics_.GetBodyInterface();
-    const bool player_past = px < Bay::kWestX - 0.2F && in_north_band(pz) && player.GetY() > kDeckTop;
+    const bool player_past = (saw || heard) && px < Bay::kWestX - 0.2F && in_north_band(pz) && player.GetY() > kDeckTop;
     trap_s_ += dt;
     if (trap_ == Trap::Off) {
         const bool can = level_ == 0 && turn_ == Turn::None && held_ < 0 && traps_ < kTrapsPerRun && bay_open_ &&
@@ -1542,20 +1694,22 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         }
         walk_toward(dt, c.x, c.z, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-        climb_ = bay_climb_;
-        mantling_ = false;
-        ++climbs_done_;
-        bodies.SetGravityFactor(body_, 0.0F);
+        climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+        begin_climb(bay_climb_);
         return true;
     }
     return false;
 }
 
 // Whether, holding the bay's leaf, she lets it go (matron.hpp).
-bool Matron::trap_lets_go(const RVec3 player, const float dt) {
+bool Matron::trap_lets_go(const RVec3 player, const float dt, const bool perceived) {
     // The chain has it: her trap is beaten.
     if (bay_hooked_) {
         return true;
+    }
+    if (!perceived) {
+        trap_lost_s_ += dt;
+        return trap_lost_s_ >= kTrapLostSeconds;
     }
     const float px = float(player.GetX());
     const float py = float(player.GetY());
@@ -1571,6 +1725,8 @@ bool Matron::trap_lets_go(const RVec3 player, const float dt) {
 }
 
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
+    acoustic_queries_ = 0;
+    since_heard_s_ = std::min(since_heard_s_ + dt, 3600.0F);
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
     sound_count_ = 0;
@@ -1649,6 +1805,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // Just off the corner pipe she stands listening (matron.hpp): every sound
     // carries farther to her.
     const float hearing = body_in_world_ && pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F ? kListenReach : 1.0F;
+    float picked_carry = std::numeric_limits<float>::max();
     float picked_level = 0.0F;   // the picked sound's level at her ear, 0..1
     const auto pick = [&](const RVec3 ear, const float within) {
         Sound best{};
@@ -1675,6 +1832,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             if (!best.heard || share > best_share) {
                 best = s;
                 best_share = share;
+                picked_carry = carried;
                 picked_level = s.loudness * std::max(0.0F, 1.0F - carried / std::max(reach, 0.1F));
             }
         }
@@ -1692,10 +1850,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // Her hands go up under the bay's leaf only in her trap, at her spot
         // (an intent; the contact and her footing decide what they hold), and
         // come away when she lets go.
-        if (trap_ == Trap::Holding && trap_lets_go(player, dt)) {
+        const Sound support_sound = trap_ == Trap::Holding ? pick(ear, kFullHearingM) : Sound{};
+        const bool support_heard = player_reach >= player_carry &&
+            (!support_sound.heard || loudness / std::max(player_carry, 0.1F) >=
+                                     support_sound.loudness / std::max(picked_carry, 0.1F));
+        const bool support_saw = trap_ == Trap::Holding && Vec3(player - ear).Length() <= kSightM &&
+            sees(ear + RVec3(0, -0.5, 0), player - RVec3(0, 0.3, 0));
+        if (trap_ == Trap::Holding && trap_lets_go(player, dt, support_saw || support_heard)) {
             trap_ = Trap::ClimbOut;
             trap_s_ = 0.0F;
-            take_lead(px, pz, floor_of(float(player.GetY())), 0.3F, false);
+            // The load released; pursue the last evidence, not hidden live coordinates.
             state_ = State::Hunting;
         }
         const bool eligible = trap_ == Trap::Holding && body_in_world_ && out(state_) && state_ != State::Emerging &&
@@ -1705,7 +1869,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         if (bracing_structure()) {
             // She keeps listening, but neither her feet nor hands pursue prey
             // while those hands carry this load. Her hostile state is retained.
-            const Sound crash = pick(ear, kFullHearingM);
+            const Sound crash = support_sound;
             noise_heard_ = std::max(crash.loudness, player_reach >= player_carry ? loudness : 0.0F);
             heard_level_ = std::max(crash.heard ? picked_level : 0.0F,
                 player_reach >= player_carry ? loudness * std::max(0.0F,
@@ -1719,11 +1883,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            noise_heard_ = crash.loudness;
+            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, false);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (player_carry <= kWakeNoiseM && loudness * kFullHearingM >= player_carry) {
-            noise_heard_ = loudness;
+            take_lead(px, pz, floor_of(float(player.GetY())), loudness, false);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         }
@@ -1736,15 +1900,13 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             state_ = State::Emerging;
             emerge_s_ = 0.0F;
             released_edge_ = true;
-            heard_x_ = px;
-            heard_z_ = pz;
+            // Keep the sound that woke her, even if its source has moved.
         }
         break;
     case State::Emerging:
         emerge_s_ += dt;
         if (emerge_s_ >= kEmergeSeconds) {
             state_ = State::Hunting;
-            since_heard_s_ = 0.0F;
         }
         break;
     case State::Hunting:
@@ -1779,6 +1941,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         heard_level_ = std::max(crash_heard ? picked_level : 0.0F,
                                 heard ? loudness * std::max(0.0F, 1.0F - player_carry / std::max(player_reach, 0.1F)) : 0.0F);
         const float player_floor = floor_of(float(player.GetY()));
+        bool selected_player_sound = false;
         if (saw) {
             // In sight: no doubt where the player is.
             take_lead(px, pz, player_floor, heard ? loudness : 0.3F, true);
@@ -1787,8 +1950,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         } else if (crash_heard || heard) {
             // The louder sound at her ear: a crash, or the player.
             const bool crash_first =
-                crash_heard && (!heard || crash.loudness / std::max(carry_m(RVec3(crash.x, crash.y, crash.z), at), 0.1F) >
+                crash_heard && (!heard || crash.loudness / std::max(picked_carry, 0.1F) >
                                               loudness / std::max(player_carry, 0.1F));
+            selected_player_sound = !crash_first;
             const float sx = crash_first ? crash.x : px;
             const float sy = crash_first ? crash.y : float(player.GetY());
             const float sz = crash_first ? crash.z : pz;
@@ -1797,10 +1961,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
-                take_lead(sx, sz, sfloor, loud, lead_seen_);
+                take_lead(sx, sz, sfloor, loud, false);
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
+                selected_player_sound = false;
                 noise_heard_ = loud;
                 look_x_ = sx;
                 look_z_ = sz;
@@ -1814,12 +1979,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
             }
-        } else {
-            since_heard_s_ += dt;
         }
         // A guess where the player is going: seen or heard riding a line, to
         // its far end.
-        if (zipline_ != nullptr && (saw || heard) && zipline_->riding()) {
+        if (zipline_ != nullptr && (saw || selected_player_sound) && zipline_->riding()) {
             const int line = zipline_->state().line;
             const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
             heard_x_ = float(end.GetX());
@@ -1830,7 +1993,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // Or seen or heard on a climb from her level: where it lets them off
         // over its head. That lead is on another level: not a noise she
         // checks from a vantage (wary), but one she goes after by her way there.
-        if (player_climb >= 0 && (saw || heard)) {
+        if (player_climb >= 0 && (saw || selected_player_sound)) {
             const Climb &c = climbs_[static_cast<std::size_t>(player_climb)];
             heard_x_ = c.top_x;
             heard_z_ = c.top_z;
@@ -1841,7 +2004,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // What she holds she lets go when it no longer fits what she is doing
         // (matron.hpp, her mischief); else her hands keep it.
         if (held_ >= 0) {
-            const bool at_player = Vec3(player - at).Length() < kCatchM + 0.6F;
+            const bool at_player = saw && Vec3(player - at).Length() < kCatchM + 0.6F;
             if (stage_ != Stage::Pest || turn_ != Turn::None || climb_ >= 0 || on_line_ || riding_ ||
                 pipe_phase_ != PipePhase::Off || state_ == State::Unrigging || state_ == State::Peering || at_player) {
                 drop_stock();
@@ -1883,7 +2046,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             break;
         }
         // Her trap at the bay (bay.hpp): set, and her way to it and out of it.
-        if (trap_step(dt, at, player, saw, heard, on_deck)) {
+        if (trap_step(dt, at, player, saw, selected_player_sound, on_deck)) {
             break;
         }
         // The catwalk (her deck's) is only ever taken in plain sight of prey
@@ -1891,8 +2054,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const bool deck = level_ == 0;
         const bool on_catwalk = deck && on_catwalk_line(ax, az, 0.4F);
         const bool prey_at_catwalk =
-            deck && on_deck && (on_catwalk_line(px, pz, 0.0F) || distance_xz(px, pz, -kBandX, kMidZ) < kEndM ||
-                                distance_xz(px, pz, kBandX, kMidZ) < kEndM);
+            deck && std::abs(lead_floor_ - kDeckTop) < 1.0F &&
+            (on_catwalk_line(heard_x_, heard_z_, 0.0F) || distance_xz(heard_x_, heard_z_, -kBandX, kMidZ) < kEndM ||
+             distance_xz(heard_x_, heard_z_, kBandX, kMidZ) < kEndM);
         // Once she has decided for the catwalk she keeps to it a moment.
         // At the catwalk's end she is off its axis as often as on it, and a rail
         // post can hide the prey on the plates: a sound a moment ago counts as sight there.
@@ -1917,7 +2081,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const float lose_track = !by_pipe                     ? kLoseTrackSeconds
                                      : stage_ == Stage::Changed ? kPipeChaseChangedSeconds
                                                                 : kPipeChaseDangerousSeconds;
-            if (!wary_ && since_heard_s_ > lose_track) {
+            // A cautious approach walks at search speed and may need longer
+            // than the chase timer to reach a vantage, but never forever.
+            const float evidence_timeout = wary_ ? kAcousticMemorySeconds :
+                (lead_seen_ ? lose_track : std::min(lose_track, kAcousticMemorySeconds));
+            if (since_heard_s_ > evidence_timeout) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
                     // where she lost them, at its top.
@@ -1975,7 +2143,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 if (held_ >= 0 && saw && throw_stock(dt, at, player)) {
                     break;
                 }
-                if (Vec3(player - at).Length() > kThrowMinM && fetch_stock(dt, ax, az, allow)) {
+                if ((!saw || Vec3(player - at).Length() > kThrowMinM) && fetch_stock(dt, ax, az, allow)) {
                     break;
                 }
                 // In the Turn a gap is no bar: she leaps it. A lead on
@@ -2017,19 +2185,17 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             break;
         }
         if (state_ == State::Searching) {
+            search_s_ += dt;
+            if (search_s_ >= kSearchSeconds) {
+                if (!lead_seen_) ++fooled_;
+                stand_down();
+                break;
+            }
             if (distance_xz(ax, az, heard_x_, heard_z_) > 1.5F) {
                 route_toward(ax, az, heard_x_, heard_z_, on_catwalk, wx, wz);
                 walk_toward(dt, wx, wz, kSearchMps);
             } else {
-                search_s_ += dt;
                 walk_toward(dt, ax, az, 0.0F);
-                if (search_s_ >= kSearchSeconds) {
-                    // Ran to a sound and found nobody: she will not be had so easily again.
-                    if (!lead_seen_) {
-                        ++fooled_;
-                    }
-                    stand_down();
-                }
             }
             break;
         }
@@ -2105,7 +2271,6 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Down:
         // Knocked about: no eyes on the player, and every sound runs on
         // unheeded while she gets her feet (and her head) back.
-        since_heard_s_ += dt;
         step_knocked(dt, player);
         break;
     case State::Dead:
@@ -2443,6 +2608,7 @@ void Matron::restore(const Saved &saved) {
         traps_ = 0;
         wary_ = false;
         lead_seen_ = false;
+        lead_valid_ = false;
         peer_s_ = 0.0F;
         look_s_ = 0.0F;
         vault_cooldown_s_ = 0.0F;
@@ -2454,8 +2620,10 @@ void Matron::restore(const Saved &saved) {
         on_line_ = false;
         cable_slides_ = 0;
         guess_climb_ = -1;
-        climb_ = -1;
-        mantling_ = false;
+        release_climb(false);
+        climb_retry_s_ = 0.0F;
+        climb_grips_ = 0;
+        climb_releases_ = 0;
         climbs_done_ = 0;
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
@@ -3000,6 +3168,11 @@ void Matron::refresh_view() {
     view_.cable_slides = cable_slides_;
     view_.climbing = climb_ >= 0;
     view_.climbs = climbs_done_;
+    view_.climb_hand = climb_hand_;
+    view_.climb_force_n = climb_force_n_;
+    view_.climb_grips = climb_grips_;
+    view_.climb_releases = climb_releases_;
+    view_.mantling = mantling_;
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.lead_floor_y = lead_floor_;
@@ -3041,6 +3214,12 @@ void Matron::refresh_view() {
     view_.stride = stride_;
     view_.yaw = yaw_;
     view_.noise_heard = noise_heard_;
+    view_.lead_x = heard_x_;
+    view_.lead_z = heard_z_;
+    view_.lead_age_s = since_heard_s_;
+    view_.lead_seen = lead_seen_;
+    view_.lead_valid = lead_valid_ && since_heard_s_ <= (lead_seen_ ? kPipeChaseChangedSeconds : kAcousticMemorySeconds);
+    view_.acoustic_queries = acoustic_queries_;
     view_.sees_player = sees_player_;
     view_.target_x = target_x_;
     view_.target_z = target_z_;
