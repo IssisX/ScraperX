@@ -207,6 +207,9 @@ public:
     [[nodiscard]] godot::Dictionary get_swing_state() const;
     [[nodiscard]] godot::Dictionary get_summit_state() const;
     [[nodiscard]] godot::Dictionary get_matron_state() const;
+    // Her hands on the player: the hold, the arms, the fatality and the
+    // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
+    [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
     [[nodiscard]] bool request_trapeze_action();

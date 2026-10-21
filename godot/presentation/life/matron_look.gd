@@ -148,15 +148,30 @@ func dress(root: Node) -> void:
 		mesh.extra_cull_margin = 1.5
 
 
+## Her tints for an exposure (0..1), as albedo multipliers: the skin goes
+## pale and waxy (it stays light, a little cooler) while the uniform darkens,
+## so the two separate more the further she is gone. Static so the figure
+## test can check the separation without a scene.
+static func exposure_tints(exposure: float) -> Dictionary:
+	var e := clampf(exposure, 0.0, 1.0)
+	var first := clampf(e * 2.0, 0.0, 1.0)
+	var second := clampf((e - 0.5) * 2.0, 0.0, 1.0)
+	return {
+		"skin": Color.WHITE.lerp(Color(0.95, 0.95, 0.98), first).lerp(Color(0.9, 0.92, 0.98), second),
+		"cloth": Color.WHITE.lerp(Color(0.78, 0.72, 0.65), first).lerp(Color(0.36, 0.31, 0.28), second),
+	}
+
+
 func apply_exposure(exposure: float) -> void:
+	if _skin == null or _cloth == null or _eye == null or _hair == null:
+		return  # before build(): nothing to tint yet
 	var e := clampf(exposure, 0.0, 1.0)
 	if absf(e - _applied_exposure) < 0.01:
 		return
 	_applied_exposure = e
-	var first := clampf(e * 2.0, 0.0, 1.0)
-	var second := clampf((e - 0.5) * 2.0, 0.0, 1.0)
-	_skin.albedo_color = Color.WHITE.lerp(Color(0.86, 0.85, 0.89), first).lerp(Color(0.64, 0.64, 0.7), second)
-	_skin.roughness = lerpf(0.6, 0.48, e)   # clammy
-	_cloth.albedo_color = Color.WHITE.lerp(Color(0.86, 0.8, 0.72), first).lerp(Color(0.55, 0.48, 0.42), second)
+	var tints := exposure_tints(e)
+	_skin.albedo_color = tints["skin"]
+	_skin.roughness = lerpf(0.6, 0.42, e)   # clammy, a waxy sheen
+	_cloth.albedo_color = tints["cloth"]
 	_eye.albedo_color = Color.WHITE.lerp(Color(1.0, 0.84, 0.8), e)
 	_hair.alpha_scissor_threshold = lerpf(0.45, 0.78, e)

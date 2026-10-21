@@ -865,6 +865,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			_camera.basis = Basis(axis.normalized(), Vector3.UP.angle_to(floor_up)) * _camera.basis
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
+	_feel_hold(delta)
 	if _death_cam_left > 0.0:
 		_ride_death()
 
@@ -881,7 +882,32 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
 		if absf(_cam_fov_offset - fov_target) < 0.005:
 			_cam_fov_offset = fov_target
-	_camera.fov = _fov_base + _cam_fov_offset
+	_camera.fov = _fov_base + _cam_fov_offset + _hold_cam.fov_offset()
+
+# Her hands on the body (life/matron_hold_camera.gd): while held, dangled or
+# claimed the head is the body's quaternion with the free look clamped about
+# it; the fatality's beats frame over that. A plain overlay carries the spin
+# vignette and the closing black.
+var _hold_cam: RefCounted = preload("res://presentation/life/matron_hold_camera.gd").new()
+var _hold_veil: ColorRect = null
+
+func _feel_hold(delta: float) -> void:
+	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
+		return
+	var hold: Dictionary = _native.get_matron_hold_state()
+	_camera.basis = _hold_cam.orient(hold, _camera.basis, _yaw, _pitch, delta, _reduced_motion)
+	var veil: float = maxf(_hold_cam.vignette() * 0.6, _hold_cam.black())
+	if veil > 0.002 and _hold_veil == null:
+		_hold_veil = ColorRect.new()
+		_hold_veil.color = Color(0, 0, 0, 0)
+		_hold_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_hold_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+		var layer := CanvasLayer.new()
+		layer.layer = 50
+		add_child(layer)
+		layer.add_child(_hold_veil)
+	if _hold_veil != null:
+		_hold_veil.color.a = veil
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()

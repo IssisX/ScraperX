@@ -283,6 +283,8 @@ struct MatronSnapshot final {
     std::uint32_t arm_throws = 0;
     std::uint32_t claims = 0;
     std::uint8_t armplay_beat = 0;
+    std::uint8_t fatal_beat = 0;     // Matron::Fatal while Claimed
+    std::uint32_t waste_not = 0;     // the 'Waste not.' voice hook
     Vector3 hand2{};
     bool grip_on = false;
     bool hold_braced = false;
