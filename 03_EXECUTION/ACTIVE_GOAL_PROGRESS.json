@@ -135,8 +135,8 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-21T01:59:09.159759+00:00",
-    "published_head": "df739deede4fbaf872719afc296f5da346c14d66",
+    "as_of": "2026-10-21T02:03:25.100546+00:00",
+    "published_head": "2fdd827c9f659ea1dac7088c1cee207ffc5b84c6",
     "active_behavior": "R21 hold-to-charge/release-to-fire with world aim arc, hook recovery and coherent toolbelt.",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
@@ -155,7 +155,7 @@
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
     "next_implementation_packet": "Honor owner pause. On explicit resume inspect latest ordinary candidate terminal receipt once: deliver direct matching APK if green; otherwise resolve first real required failure. Reuse native25/public/MCP27+5702 and all unchanged evidence. No repeated native rebuild or scope switch.",
-    "current_candidate": "Charge df739de actually pushed; candidate39530039936/full39530039954 running",
+    "current_candidate": "2fdd827 pushed; candidate39530442113/full39530442213 running; matching green APK pending",
     "last_delivered_game_source": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
     "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-dbf88c4/ScraperX-ChatGPT.apk",
     "evidence": "evidence/grapple-2026-10-20/CHARGE_AIM.md; CHARGE_NATIVE.json; CHARGE_MCP.json; CHARGE_TOUCH.json",
@@ -167,8 +167,10 @@
       "remaining": "production boarding/ride/return, Main/Guide touch integration, matching bridge and release acceptance",
       "resumption_condition": "Materially different high-value experience consistent with latest owner restriction; never automatic from a stale goal or failed check."
     },
-    "delivery_workers": "A/github-workers.json candidate-policy-df739de watcher17481/full17483/collector17484/copier17485/publisher17496; existing d23 jobs preserved",
-    "status": "paused by owner"
+    "delivery_workers": "A/github-workers.json tag2fdd827; ordinary watchers20511/20510, collector20512/copier20516/publisher20521",
+    "status": "paused by owner; small short-label change complete",
+    "superseded_candidate": "df739de candidate39530039936 cancellation requested successfully; old responsive test known to fail. Changes/logs and useful full jobs preserved.",
+    "label_correction": "LOOSEN replaces visible PAY OUT; RELEASE stays for disconnecting. Six text strings only; toolbelt144PASS. Publish this small change, then remain paused."
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

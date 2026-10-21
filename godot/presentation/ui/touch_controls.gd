@@ -742,7 +742,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		&"forklift":
 			_axis_names = ["RAISE / LOWER", "TILT BACK / FORWARD"]
 		&"grappling_gun", &"traversal_line":
-			_axis_names = ["TIGHTEN / PAY OUT", ""]
+			_axis_names = ["TIGHTEN / LOOSEN", ""]
 		&"service_lift":
 			_axis_names = ["SERVICE LIFT", ""]
 		&"jib":
@@ -871,12 +871,12 @@ func _apply_toolbelt(ctx: Dictionary) -> void:
 		_buttons[B_UP].shown = grapple and bool(ctx.get("grapple_line_attached", false)) and int(ctx.get("grapple_state", 2)) == 2 and not _tool_tray_open
 		_buttons[B_DOWN].shown = _buttons[B_UP].shown
 		_buttons[B_UP].label = "TAKE UP"
-		_buttons[B_DOWN].label = "PAY OUT"
+		_buttons[B_DOWN].label = "LOOSEN"
 	elif station == &"traversal_line":
 		_buttons[B_UP].shown = line and bool(ctx.get("traversal_line_gripping", false)) and not bool(ctx.get("traversal_line_two_ended", false)) and not _tool_tray_open
 		_buttons[B_DOWN].shown = _buttons[B_UP].shown
 		_buttons[B_UP].label = "TIGHTEN"
-		_buttons[B_DOWN].label = "PAY OUT"
+		_buttons[B_DOWN].label = "LOOSEN"
 	elif station == &"rigging":
 		# A powered rig can coexist with undo/unclip/cut, so give its hold
 		# controls a second row on the same tool deck.

@@ -1793,7 +1793,7 @@ func _station_panel() -> Dictionary:
 			var failures := ["", "HANDS BUSY", "AIM AT SUPPORT", "TARGET CHANGED", "UNSUITABLE SUPPORT", "MOVE CLOSER", "LINE BLOCKED", "ALREADY INSTALLED", "NO LINE", "UNLOAD BEFORE PACKING", "FITTING MOVING", "LINE BROKEN", "SUPPORT CHANGED", "HANDS BUSY"]
 			var failure := clampi(int(line.get("failure", 0)), 0, failures.size() - 1)
 			var status := "BROKEN" if bool(line.get("broken", false)) else ("HELD" if bool(line.get("gripping", false)) else ("INSTALLED" if bool(line.get("installed", false)) else "CARRIED"))
-			return {"title": "PORTABLE LINE", "subtitle": "STICK: HAND OVER HAND / DROP: LET GO" if bool(line.get("two_ended", false)) else "UP: TAKE UP / DOWN: PAY OUT / DROP: LET GO",
+			return {"title": "PORTABLE LINE", "subtitle": "STICK: HAND OVER HAND / DROP: LET GO" if bool(line.get("two_ended", false)) else "UP: TAKE UP / DOWN: LOOSEN / DROP: LET GO",
 				"rows": [["STATE", status, 2 if bool(line.get("broken", false)) else 0],
 					["SPOOLS", str(int(line.get("available_spools", 1))), 0],
 					["TENSION", "%d N" % int(line.get("tension_n", 0.0)), 0],
@@ -1829,12 +1829,12 @@ func _station_panel() -> Dictionary:
 			var action_label: String = _grapple_primary_action(gun)["label"]
 			var failure := str(gun.get("last_failure", ""))
 			var status := failure if not failure.is_empty() else str(gun.get("state_name", "READY"))
-			var verbs := [[&"action", action_label], [&"hoist", "TIGHTEN / PAY OUT"]]
+			var verbs := [[&"action", action_label], [&"hoist", "TIGHTEN / LOOSEN"]]
 			if bool(gun.get("line_attached", false)):
 				verbs.append([&"auto_reel", "STOP REEL" if bool(gun.get("auto_reel", false)) else "AUTO REEL"])
 				verbs.append([&"drop", "RELEASE"])
 			verbs.append([&"toggle_grapple", "STOW"])
-			return {"title": "GRAPPLING GUN", "subtitle": "UP: TIGHTEN / DOWN: PAY OUT / DROP: " + drop_label,
+			return {"title": "GRAPPLING GUN", "subtitle": "UP: TIGHTEN / DOWN: LOOSEN / DROP: " + drop_label,
 				"rows": [["SHOTS", str(int(gun.get("cartridges_remaining", 0))), 0],
 					["LINE", "%.1f M" % float(gun.get("paid_out_length", 0.0)), 0],
 					["TENSION", "%d N" % int(gun.get("tension_n", 0.0)), 2 if float(gun.get("tension_n", 0.0)) >= 2500.0 else 0],
