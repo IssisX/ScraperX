@@ -715,6 +715,20 @@ public:
     JPH::BodyID blocked_ledge_canopy_id_;
     JPH::BodyID tower_id_;
     JPH::BodyID player_id_;
+    std::uint8_t capture_phase_ = 0;
+    bool player_rotation_free_ = false;
+    float capture_seconds_ = 0.0F, capture_escape_ = 0.0F, capture_cooldown_ = 0.0F;
+    float capture_force_ = 0.0F, capture_torque_ = 0.0F, capture_overload_ = 0.0F;
+    std::uint64_t capture_releases_ = 0;
+    JPH::Vec3 capture_hand_ = JPH::Vec3::sZero();
+    JPH::Vec3 capture_side_ = JPH::Vec3::sAxisX();
+    JPH::Vec3 capture_ankle_ = JPH::Vec3::sZero();
+    void start_capture(JPH::BodyInterface &bodies) noexcept;
+    void release_capture(JPH::BodyInterface &bodies) noexcept;
+    void step_capture(JPH::BodyInterface &bodies, const StepCommands &input, float dt) noexcept;
+    void reset_capture(JPH::BodyInterface &bodies) noexcept;
+    void player_rotation_dofs(bool free) noexcept;
+
 
     std::vector<JPH::BodyID> machine_bodies_;
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;

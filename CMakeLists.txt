@@ -19,6 +19,7 @@ set(SCRAPERX_MONOCYPHER_COMMIT "ab2b16dd619ad5f6979a4fbe69cfa324a6fcc35f" CACHE 
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/physics_world_capture.cpp
     src/sim/physics_world.cpp
     src/sim/physics_world_probes.cpp
     src/sim/physics_world_movement.cpp
@@ -192,6 +193,8 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.matron_capture COMMAND scraperx_sim_tests)
+    set_tests_properties(scraperx_sim.matron_capture PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=capture")
     add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
     target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_parkour_flow_tests PRIVATE

@@ -222,6 +222,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // (a ledge, a climb's holds, a bar, a zipline's trolley), before the body
     // moves: the checkpoint is a standing one. The Matron's hands too, before
     // any stock is put back.
+    reset_capture(bodies);
     matron_->drop_stock();
     slingshot_->detach();
     swing_->detach();
@@ -535,6 +536,16 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
     const JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
     state_.player_position = to_vector3(player_position);
+    const auto rotation = bodies.GetRotation(player_id_);
+    state_.player_rotation = {rotation.GetX(), rotation.GetY(), rotation.GetZ(), rotation.GetW()};
+    const auto angular = bodies.GetAngularVelocity(player_id_);
+    state_.player_angular_velocity = {angular.GetX(), angular.GetY(), angular.GetZ()};
+    state_.capture_phase = capture_phase_;
+    state_.capture_ankle = to_vector3(player_position + rotation * capture_ankle_);
+    state_.capture_force_n = capture_force_;
+    state_.capture_escape = capture_escape_;
+    state_.capture_recovery_torque_nm = capture_torque_;
+    state_.capture_releases = capture_releases_;
     state_.player_linear_velocity =
         {player_velocity.GetX(), player_velocity.GetY(), player_velocity.GetZ()};
     state_.player_grounded = grounded_;

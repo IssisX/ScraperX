@@ -154,10 +154,11 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 	var traversal := int(state["traversal"])
 	var on_line := bool(state.get("on_line", false))
 	var hanging := on_line or traversal in [TRAVERSAL_HANGING, TRAVERSAL_SWINGING, TRAVERSAL_LOWERING, TRAVERSAL_CLIMBING]
-	var soles := centre - Vector3(0.0, CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT, 0.0)
+	var physical: Quaternion = state.get("physical_rotation", Quaternion.IDENTITY)
+	var soles := centre - physical * Vector3(0.0, CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT, 0.0)
 	var eye_world: Vector3 = state.get("eye", soles + Vector3(0.0, Rig.EYE.y, 0.0))
 	# Model space: soles at the origin under the capsule, his front (+z) the view's.
-	var turn := Basis(Vector3.UP, yaw + PI)
+	var turn := Basis(physical) * Basis(Vector3.UP, yaw + PI)
 	_root.global_transform = Transform3D(turn, soles)
 	var to_model := _root.global_transform.affine_inverse()
 	var local_v := turn.inverse() * velocity

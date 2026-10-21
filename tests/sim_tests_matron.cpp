@@ -850,17 +850,19 @@ void run_matron() {
                 "matron: the shove is a stumble and a hit the body feels");
         s.debug_set_matron_stage(2);
         const auto start = s.snapshot();
-        stand_still(s, 12.0);
+        stand_still(s, 0.0);
+        for (int i = 0; i < 90 * 30 && s.matron_state().catches == 0; ++i) tick(s);
+        std::cout << "hunt capture catches=" << s.matron_state().catches << " deaths=" << s.snapshot().death_count - start.death_count << std::endl;
+        require(s.matron_state().catches > 0 && s.snapshot().death_count == start.death_count,
+                "matron: fully changed, standing still starts physical capture without contact death");
+        const auto checkpoint = s.save_game();
+        require(s.load_game(checkpoint.data(), checkpoint.size()), "matron: captured encounter restores checkpoint");
         const auto after = s.snapshot();
-        require(s.matron_state().catches > 0 && after.death_count > start.death_count,
-                "matron: fully changed, a player who just stands there is caught, which is a death");
         const auto m = s.matron_state();
-        require(m.alive && (m.state == kStateEmerging || m.state == kStateHunting),
-                "matron: after a catch she is back at her locker, out again");
-        require(std::hypot(after.player_position.x - start.player_position.x,
-                           after.player_position.z - start.player_position.z) > 3.0 ||
-                    after.death_count > start.death_count,
-                "matron: the catch put the player back at a checkpoint");
+        require(m.alive && after.capture_phase == 0, "matron: explicit restore clears the grip, she remains alive");
+        require(std::hypot(after.player_position.x - after.checkpoint_position.x,
+                           after.player_position.z - after.checkpoint_position.z) < 0.02,
+                "matron: explicit restore puts the player at the committed checkpoint");
     }
     // ---- the checkpoint stops being renewed while she hunts ----------------------
     {
@@ -878,8 +880,11 @@ void run_matron() {
         // and let her take the player.
         s.debug_set_matron_stage(2);
         stand_still(s, 30.0);
+        require(s.matron_state().catches > 0, "matron: standing still on the loop gets the player captured");
+        const auto checkpoint = s.save_game();
+        require(s.load_game(checkpoint.data(), checkpoint.size()), "matron: restore the frozen encounter checkpoint");
         const auto back = s.snapshot();
-        require(back.death_count > deaths_before, "matron: standing still on the loop gets the player caught");
+        require(back.death_count >= deaths_before, "matron: restore preserves death accounting");
         require(std::hypot(back.player_position.x - far.x, back.player_position.z - far.z) > 12.0,
                 "matron: the death returns the player to the checkpoint of her release, not to where they stood");
     }
@@ -1131,11 +1136,13 @@ void run_matron() {
             hunted = s.matron_state().state == kStateHunting;
         }
         require(hunted, "matron mind: a noise close to her post draws her");
-        const auto deaths = s.snapshot().death_count;
-        s.debug_set_matron_stage(2);   // a catch is a death only fully changed
+        const auto catches = s.matron_state().catches;
+        s.debug_set_matron_stage(2);   // changed contact starts capture
         stand_still(s, 0.0);
-        const bool caught = run_until(20.0, [&] { return s.snapshot().death_count > deaths; });
+        const bool caught = run_until(20.0, [&] { return s.matron_state().catches > catches; });
         require(caught, "matron mind: standing still, the player is caught");
+        const auto checkpoint = s.save_game();
+        require(s.load_game(checkpoint.data(), checkpoint.size()), "matron mind: explicit checkpoint restores memory");
         tick(s);
         std::cout << "  matron mind: after the catch, fooled " << s.matron_state().fooled << "\n";
         require(s.matron_state().fooled == 0, "matron mind: a death forgets what she learned");
@@ -2174,4 +2181,117 @@ void run_matron_room() {
             "matron room: the bark sends her hunting, toward the player");
     std::cout << "PASS scraperx_sim matron room: off_m=" << off_m << " heard=" << loudest << " came_m="
               << at_bark_m - after_m << "\n";
+}
+
+void run_matron_capture() {
+    for (int scenario = 0; scenario < 5; ++scenario) {
+        Simulation s(InitialSpawn::Deck154);
+        wake_and_wait_east(s);
+        s.debug_set_matron_stage(2);
+        if (scenario == 1) (void)s.set_crouch_input(false);
+        stand_still(s, 0.0);
+        const auto deaths = s.snapshot().death_count;
+        for (int i = 0; i < 90 * 45 && s.matron_state().catches == 0; ++i) tick(s);
+        require(s.matron_state().catches > 0, "capture: actual encounter reaches the player");
+        require(s.snapshot().death_count == deaths && s.snapshot().capture_phase == 1,
+                "capture: contact starts a physical grip, never instant death");
+        const auto saved = s.save_game();
+        auto last = s.snapshot();
+        bool dangled = false, released = false, recovered = false;
+        double peak_force = 0, peak_torque = 0, minimum_up_y = 1, maximum_deck_penetration = 0;
+        for (int i = 0; i < 90 * 16 && !recovered; ++i) {
+            // A short input burst cannot instantly escape; a sustained stick
+            // can. Simultaneous jump/crouch must not take controller ownership.
+            if (scenario == 1 && i >= 270 && !released) {
+                (void)s.set_move_input(1.0, 1.0);
+                (void)s.request_jump();
+                (void)s.set_crouch_input(true);
+            }
+            if (scenario == 2 && i == 270) s.debug_set_matron_stage(0);
+            if (scenario == 4 && i == 270) {
+                const auto at = s.snapshot().player_position;
+                const auto first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+                const auto drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+                s.debug_launch_kit_body(drum, {at.x + 2.0, at.y, at.z}, {-30, 0, 0});
+            }
+            if (scenario == 3 && i == 270) {
+                require(s.load_game(saved.data(), saved.size()), "capture: checkpoint restore during hold");
+                require(s.snapshot().capture_phase == 0, "capture: restore clears ownership");
+                tick(s);
+                require(s.snapshot().capture_phase == 0 && s.snapshot().capture_force_n == 0,
+                        "capture: no stale grip after restore");
+                recovered = true;
+                break;
+            }
+            tick(s);
+            const auto now = s.snapshot();
+            if (scenario == 4 && now.death_count > deaths) {
+                require(now.capture_phase == 0 && now.capture_force_n == 0,
+                        "capture: real lethal collision releases before death checkpoint restore");
+                tick(s);
+                require(s.snapshot().capture_phase == 0, "capture: no stale grip after death");
+                recovered = true;
+                break;
+            }
+            peak_force = std::max(peak_force, now.capture_force_n);
+            peak_torque = std::max(peak_torque, now.capture_recovery_torque_nm);
+            require(now.capture_force_n <= 3800.01 && now.capture_recovery_torque_nm <= 650.01,
+                    "capture: total grip and recovery torque remain finite and capped");
+            const auto q = now.player_rotation;
+            const double norm = q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w;
+            require(std::isfinite(norm) && std::abs(norm - 1) < 0.001, "capture: normalized finite physical quaternion");
+            const auto p = last.player_rotation;
+            const double dot = std::abs(p.x*q.x + p.y*q.y + p.z*q.z + p.w*q.w);
+            require(dot > 0.99, "capture: no instantaneous orientation snap across grip/release/recovery");
+            const auto a = now.player_position, b = last.player_position;
+            require((scenario == 4 && i >= 270) || std::hypot(std::hypot(a.x-b.x, a.z-b.z), a.y-b.y) < 0.18,
+                    "capture: physical per-tick travel, no teleport");
+            require(now.death_count == deaths, "capture: contact/lift/release on the real deck survives");
+            require(scenario == 4 || now.player_position.y >= 154.15, "capture: floor collision remains active while rotating");
+            const double up_y = 1.0 - 2.0 * (q.x*q.x + q.z*q.z);
+            minimum_up_y = std::min(minimum_up_y, up_y);
+            if (now.capture_phase == 2 && up_y < -0.75) dangled = true;
+            const double capsule_half_segment = now.player_crouched ? 0.25 : 0.55;
+            const double bottom = now.player_position.y - 0.35 - capsule_half_segment * std::abs(up_y);
+            if (scenario != 4) maximum_deck_penetration = std::max(maximum_deck_penetration, 154.0 - bottom);
+            if (scenario != 4 && bottom < 153.96) std::cout << "floor penetration scenario=" << scenario
+                << " tick=" << i << " phase=" << int(now.capture_phase) << " bottom=" << bottom << std::endl;
+            require(scenario == 4 || bottom >= 153.96,
+                    "capture: rotated capsule envelope does not clip through the deck");
+            if (now.capture_phase == 3 && !released) {
+                released = true;
+                require(now.capture_force_n == 0, "capture: release applies no remaining grip force");
+                require(scenario != 1 || i >= 90 * 5, "capture: input effort is rate bounded");
+                (void)s.set_move_input(0, 0);
+                (void)s.set_crouch_input(scenario != 1);
+                if (scenario == 2) {
+                    require(s.load_game(saved.data(), saved.size()), "capture: checkpoint restore during recovery");
+                    require(s.snapshot().capture_phase == 0, "capture: recovery owner removed by restore");
+                    recovered = true;
+                    break;
+                }
+            }
+            recovered = released && now.capture_phase == 0;
+            last = now;
+        }
+        require(dangled, "capture: gravity rotates ankle-held body into dangle");
+        if (scenario == 4) require(s.snapshot().death_count > deaths, "capture: lethal impact actually happened");
+        if (!recovered) std::cout << "recovery stuck scenario=" << scenario << " phase=" << int(s.snapshot().capture_phase)
+            << " q=" << s.snapshot().player_rotation.x << "," << s.snapshot().player_rotation.y << "," << s.snapshot().player_rotation.z << "," << s.snapshot().player_rotation.w
+            << " grounded=" << s.snapshot().player_grounded << std::endl;
+        require(recovered, "capture: release recovers normal controller or restores checkpoint");
+        if (scenario < 2) {
+            require(s.snapshot().player_grounded, "capture: normal traversal resumes on real support");
+            require(std::abs(s.snapshot().player_rotation.w) > 0.9999,
+                    "capture: recovered physical heading agrees with view-relative input");
+            const auto before = s.snapshot().player_position;
+            (void)s.set_move_input(-1, 0);
+            for (int i = 0; i < 45; ++i) tick(s);
+            require(std::abs(s.snapshot().player_position.x - before.x) > 0.2,
+                    "capture: normal movement actually works after physical recovery");
+        }
+        std::cout << "PASS scraperx_sim matron capture scenario=" << scenario
+                  << " peak_grip_n=" << peak_force << " peak_recovery_nm=" << peak_torque
+                  << " minimum_up_y=" << minimum_up_y << " max_deck_penetration_m=" << maximum_deck_penetration << "\n";
+    }
 }

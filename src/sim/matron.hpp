@@ -355,7 +355,7 @@ public:
     // over this, is how far the source's work shows on her.
     static constexpr float kExposureFullSeconds = 600.0F;
     // What her hands on the player are, by stage (physics_world.cpp): fully
-    // changed, a death; before that a shove, kShoveMps along the floor and
+    // changed, a finite ankle grip; before that a shove, kShoveMps along the floor and
     // kShoveUpMps up, once in kShoveCooldownSeconds. A pest's shove is away
     // from her; dangerous, she aims it at the shaft's rim when the player is
     // within kShoveEdgeReachM of it (the owner: she tries to nudge him off a
@@ -683,9 +683,18 @@ public:
         return edge;
     }
     void count_catch() noexcept { ++catches_; }
-    // Her hands on the player, by stage: a death only fully changed; else a
+    // Her hands on the player, by stage: capture only fully changed; else a
     // shove, once in its cooldown, along shove_direction.
-    [[nodiscard]] bool kills() const noexcept { return stage_ == Stage::Changed; }
+    [[nodiscard]] bool captures() const noexcept { return stage_ == Stage::Changed; }
+    void set_capturing(bool value) noexcept {
+        if (capturing_ && !value) capture_rest_s_ = 2.5F;
+        capturing_ = value;
+    }
+    [[nodiscard]] bool can_hold_player() const noexcept {
+        return body_in_world_ && !dead_ && stage_ == Stage::Changed &&
+            state_ != State::Down && state_ != State::Staggering && !riding_ && !on_line_ &&
+            climb_ < 0 && pipe_phase_ == PipePhase::Off && !bracing_structure();
+    }
     [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F; }
     void count_shove() noexcept {
         ++shoves_;
@@ -943,6 +952,8 @@ private:
     std::array<Sound, kMaxSounds> sounds_{};
     std::size_t sound_count_ = 0;
     bool dead_ = false;
+    bool capturing_ = false;
+    float capture_rest_s_ = 0.0F;
     // Her floor (feel_floor): its top under her, and riding it.
     float feet_y_ = kDeckTop;
     bool riding_ = false;

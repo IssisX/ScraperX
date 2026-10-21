@@ -999,6 +999,10 @@ bool ScraperXSimulation::is_stack_s3_brake_latched() const {
 godot::Dictionary ScraperXSimulation::get_landing_state() const {
     const sim::Snapshot &s = simulation_->snapshot();
     godot::Dictionary out;
+    out["capture_phase"] = s.capture_phase;
+    out["capture_escape"] = s.capture_escape;
+    out["capture_force_n"] = s.capture_force_n;
+    out["physical_rotation"] = to_godot(s.player_rotation);
     out["response"] = static_cast<std::int64_t>(s.landing_response);
     out["normal_speed"] = s.landing_normal_speed_mps;
     out["tangent_speed"] = s.landing_tangent_speed_mps;
@@ -1627,6 +1631,8 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     const sim::MatronSnapshot state = simulation_->matron_state();
     godot::Dictionary out;
     out["state"] = static_cast<std::int64_t>(state.state);
+    out["capture_phase"] = simulation_->snapshot().capture_phase;
+    out["capture_ankle"] = to_godot(simulation_->snapshot().capture_ankle);
     out["alive"] = state.alive;
     out["released"] = state.released;
     out["sees_player"] = state.sees_player;
