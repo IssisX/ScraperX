@@ -6,7 +6,9 @@ namespace {
 // Tunable actuator budgets, not measurements of a person.
 constexpr float kGripN = 3800.0F;
 constexpr float kEscapeN = 350.0F;
-constexpr float kRecoveryNm = 650.0F;
+// Getting up lifts the body about its feet: from lying flat that takes its
+// weight times the centre's 0.9 m, about 705 N m, so the budget is above it.
+constexpr float kRecoveryNm = 900.0F;
 JPH::Vec3 limited(JPH::Vec3 v, float cap) {
     const float length = v.Length();
     return length > cap ? v * (cap / length) : v;
@@ -114,15 +116,26 @@ void Simulation::PhysicsWorld::step_capture(JPH::BodyInterface &bodies, const St
         }
     }
     if (player_rotation_free_ && capture_phase_ != 1 && capture_phase_ != 2) {
-        // Return the whole physical frame, including yaw, so the normal
-        // view-relative input frame agrees after an oblique escape.
+        // Getting up: the limbs push off the floor. The righting torque comes
+        // only while the body touches its support, and goes back into that
+        // support when it can move; in the air nothing turns the body upright,
+        // and it lands as it falls. The whole frame returns, yaw included, so
+        // the view-relative input agrees after an oblique escape.
         JPH::Vec3 axis;
         float angle;
         bodies.GetRotation(player_id_).Conjugated().EnsureWPositive().GetAxisAngle(axis, angle);
         const auto angular = bodies.GetAngularVelocity(player_id_);
-        const auto torque = limited(axis * (angle * 1400.0F) - angular * 200.0F, kRecoveryNm);
-        capture_torque_ = torque.Length();
-        bodies.AddTorque(player_id_, torque);
+        if (grounded_) {
+            const auto torque = limited(axis * (angle * 1400.0F) - angular * 200.0F, kRecoveryNm);
+            capture_torque_ = torque.Length();
+            bodies.AddTorque(player_id_, torque);
+            if (kit::is_dynamic_entity(support_entity_id_)) {
+                const kit::BodyIndex support = kit_->body_for_entity(support_entity_id_);
+                if (kit_->body_enabled(support)) {
+                    bodies.AddTorque(kit_->body_id(support), -torque);
+                }
+            }
+        }
         // Recovered (within 1.4 degrees, turning under 0.08 rad/s, on its
         // feet): the rotation locked again, upright. Every other system acts
         // off the body's centre on a body that cannot turn: a hang's arms at

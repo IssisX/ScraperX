@@ -2230,7 +2230,7 @@ void run_matron_capture() {
             }
             peak_force = std::max(peak_force, now.capture_force_n);
             peak_torque = std::max(peak_torque, now.capture_recovery_torque_nm);
-            require(now.capture_force_n <= 3800.01 && now.capture_recovery_torque_nm <= 650.01,
+            require(now.capture_force_n <= 3800.01 && now.capture_recovery_torque_nm <= 900.01,
                     "capture: total grip and recovery torque remain finite and capped");
             const auto q = now.player_rotation;
             const double norm = q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w;

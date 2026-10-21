@@ -501,11 +501,15 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         commands.time_seconds = requested.time_seconds;
         commands.room_loudness = requested.room_loudness;
         if (capture_phase_ == 3) {
-            // Let go and getting up: the legs are the player's again, so the
-            // stick walks (and, let go, stands) while the body rights itself.
-            // Everything else waits for it to be upright.
-            commands.move_input_x = requested.move_input_x;
-            commands.move_input_z = requested.move_input_z;
+            // Let go and getting up: the legs are the player's again once the
+            // body is near enough upright to stand on them (all of the stick
+            // within 18 degrees, none past 32). Lower, the walk's push at the
+            // hips over soles that grip only tips it further (seen at 50
+            // degrees). Everything else waits for it to be upright.
+            const JPH::Vec3 up = physics_system_.GetBodyInterface().GetRotation(player_id_) * JPH::Vec3::sAxisY();
+            const double legs = std::clamp((up.GetY() - 0.85F) / 0.10F, 0.0F, 1.0F);
+            commands.move_input_x = requested.move_input_x * legs;
+            commands.move_input_z = requested.move_input_z * legs;
         }
     }
     // WO-008: captured before anything this tick can change grounded_, so
@@ -817,9 +821,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // Her hands on the player. Fully changed, a contact-gated physical grip;
     // before that a shove (matron.hpp, the stages): a pest's away from her, a
     // dangerous one's at the shaft's rim when it is near.
-    if (!died_this_tick && capture_phase_ == 0 && matron_->caught(bodies.GetPosition(player_id_))) {
+    // Down and still getting up is no shelter: once her grip's cooldown has
+    // run, her hands on the body take hold again (left leaning on a climber
+    // who could not rise under her, she pinned them for good).
+    const bool holdable = capture_phase_ == 0 || capture_phase_ == 3;
+    if (!died_this_tick && holdable && matron_->caught(bodies.GetPosition(player_id_))) {
         if (matron_->captures()) {
-            if (capture_phase_ == 0 && capture_cooldown_ <= 0.0F && contact_listener_.matron_contact() &&
+            if (capture_cooldown_ <= 0.0F && contact_listener_.matron_contact() &&
                 !sling_controlling && traversal_state_ == TraversalState::None && !vehicle_controlling) {
                 start_capture(bodies);
             }
