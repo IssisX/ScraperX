@@ -644,11 +644,8 @@ void run_stack() {
             "along the 220 ring, D's spool carried aboard and seated");
     require(wait_for(band, 120.0, [&](const Snapshot &) { return band.wet_state().d_platform_travel >= 35.95; }),
             "D must carry the rider to 256.25");
-    require(walk_to(band, 13.2, -134.5, 6.0) && walk_to(band, 13.2, -135.8, 6.0) && shut_wet_door(band) &&
-                pull_wet_trip(band),
-            "into E's cab, its door shut and the chiller tripped");
-    require(wait_for(band, 90.0, [&](const Snapshot &) { return band.wet_state().e_cab_travel >= 41.95; }),
-            "E must carry the rider to 298.25");
+    require(drop_into_wet_e(band) && wait_wet_e_top(band, 60.0),
+            "through E's doors onto its deck, and E must blow the rider up to 298.25");
     require(walk_to(band, 13.4, -137.2, 4.0) && walk_to(band, 13.4, -139.9, 6.0) && couple_wet_hose(band) &&
                 pull_wet_stop_valve(band),
             "onto F, its hose coupled and its stop valve thrown");

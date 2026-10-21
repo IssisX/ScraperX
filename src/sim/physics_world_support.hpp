@@ -524,7 +524,9 @@ private:
         // On the 220 ring west of the spool, as a rider off C's platform.
         return {4.0, 221.2, -129.2};
     case scraperx::sim::InitialSpawn::WetECab:
-        // In E's cab on its bottom stop, south of its door.
+        // In E's shaft south of its doorway, at the sill's height: over the
+        // deck, which a start here drops onto and so sets E off. Tests only;
+        // not in the START list.
         return {13.0, 257.2, -137.2};
     case scraperx::sim::InitialSpawn::WetFPlatform:
         // On F's platform, east of the hose.

@@ -111,8 +111,8 @@ func _build_kit() -> void:
 	_kit_root.name = "KitPresentation"
 	add_child(_kit_root)
 	# Indexed by the native's Material enum: steel, rust, timber, concrete,
-	# hazard, galvanised, rubble, yellow. The steel and the galvanized are
-	# smooth (a machine's frame, a tank, a rail); only the rust is pitted.
+	# hazard, galvanised, rubble, yellow, glass. The steel and the galvanized
+	# are smooth (a machine's frame, a tank, a rail); only the rust is pitted.
 	var palette: Array[Material] = [
 		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_smooth),
 		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust),
@@ -122,7 +122,12 @@ func _build_kit() -> void:
 		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth),
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("c19a2a"), 0.2, 0.62),
+		_glass_material(),
 	]
+	const KIT_GLASS := 8
+	# The static glass (AS-007 E's shaft) under its own key: one transparent
+	# draw for all of it, never in the opaque batches.
+	var glass_groups := {}
 	# Drawn in batches (see _batch_static_dressing): a moving body's parts as
 	# one mesh per material, moving with it; the static bodies' parts with
 	# the dressing's batcher.
@@ -166,7 +171,9 @@ func _build_kit() -> void:
 			var material: Material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
 			var part := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
-			if dynamic or far_visible:
+			if not dynamic and int(parts[p + 10]) == KIT_GLASS:
+				Batcher.append(glass_groups, "glass", mesh, 0, node.transform * part, "", false)
+			elif dynamic or far_visible:
 				var key := str(material.get_instance_id())
 				Batcher.append(body_groups, key, mesh, 0, part, "", false)
 				body_groups[key][1] = material
@@ -203,6 +210,12 @@ func _build_kit() -> void:
 	var statics := Node3D.new()
 	statics.name = "KitStatics"
 	_kit_root.add_child(statics)
+	if glass_groups.has("glass"):
+		var glass := Batcher.instance(glass_groups["glass"][0], palette[KIT_GLASS])
+		glass.name = "KitGlass"
+		glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		glass.visibility_range_end = BATCH_NEAR_RANGE
+		statics.add_child(glass)
 	_batch_report += "kit statics %d parts -> %d meshes, %d wet; " % [statics_batcher.parts,
 		statics_batcher.emit(statics), statics_batcher.wet_parts]
 	var cable := BoxMesh.new()
@@ -323,6 +336,7 @@ func _build_kit() -> void:
 		spout.visible = false
 		_kit_root.add_child(spout)
 		_kit_spouts.append(spout)
+	_build_wet_e()
 	_render_kit()
 
 # Where a machine's beacon sits, in its own frame: on the highest corner of
@@ -767,3 +781,323 @@ func _tumble_stones(fall: MultiMeshInstance3D, from: Vector3, to: Vector3, key: 
 		fall.multimesh.set_instance_transform(k, Transform3D(spin * _stone_basis(key * 53 + k, 0, 1.0),
 			from + along * (length * phase) + offset))
 		fall.multimesh.set_instance_color(k, _stone_tint(key * 53 + k, 2))
+
+# ---- AS-007 E, the chiller drop (03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md) ----
+# Glass in its shaft's walls, two work lamps and the drips riding with its
+# car, and the vent collar at the shaft's mouth: its slotted band, and the air
+# it lets out seen as it goes, a fast blast of spray, mist and grit when the
+# seal breaks, then mist hanging over the mouth. All read from the native
+# (get_wet_state, get_kit_vents); nothing here moves anything.
+const WET_E_CAB_ENTITY := 2040
+const WET_E_DECK_ENTITY := 2045
+const WET_E_SHAFT_LOW := Vector3(13.0, 249.0, -136.65)
+const WET_E_SHAFT_HIGH := Vector3(13.0, 300.0, -136.65)
+const WET_E_NEAR_M := 60.0
+const KIT_VENT_FLOATS := 7
+# The vent's air, m^3/s at atmospheric, that reads as a full blast.
+const VENT_FULL_M3S := 12.0
+# How long the burst lasts once the seal breaks, and the flow under which the
+# collar is taken as shut again.
+const VENT_BURST_S := 1.0
+const VENT_SHUT_M3S := 0.3
+var _wet_e := {}   # get_wet_state() this frame while near E's shaft, else empty
+var _wet_e_lamps: Array[OmniLight3D] = []
+var _wet_e_drips: CPUParticles3D
+var _vents: Array[Dictionary] = []
+
+func _glass_material() -> StandardMaterial3D:
+	# Clear glass with a green-grey cast; a steel mullion every 3 m, drawn by
+	# the material's own texture (triplanar, one tile a 3 m square), not by
+	# parts. Drawn after the opaque world, both faces.
+	const SIZE := 64
+	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	for y in SIZE:
+		for x in SIZE:
+			var mullion := x < 3 or y < 2
+			image.set_pixel(x, y, Color(0.17, 0.17, 0.16, 1.0) if mullion else Color(0.62, 0.70, 0.66, 0.24))
+	image.generate_mipmaps()
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = ImageTexture.create_from_image(image)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.metallic = 0.0
+	material.roughness = 0.08
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3.ONE / 3.0
+	if _bump_smooth != null:
+		# The band's wet streaks run down the panes as ripples.
+		material.normal_enabled = true
+		material.normal_texture = _bump_smooth
+		material.normal_scale = 0.4
+	return material
+
+# The lamps and the drips, on the car's own nodes, so they ride with it.
+func _build_wet_e() -> void:
+	var cab := int(_native.get_kit_body_index(WET_E_CAB_ENTITY))
+	var deck := int(_native.get_kit_body_index(WET_E_DECK_ENTITY))
+	if cab < 0 or cab >= _kit_bodies.size() or deck < 0 or deck >= _kit_bodies.size():
+		return
+	for side in [-1.0, 1.0]:
+		# Warm work lamps on the east and west rails' tops, lighting the wet
+		# walls as the car climbs.
+		var lamp := OmniLight3D.new()
+		lamp.name = "WetELamp"
+		lamp.light_color = Color(1.0, 0.78, 0.5)
+		lamp.light_energy = 1.6
+		lamp.omni_range = 6.0
+		lamp.shadow_enabled = false
+		lamp.position = Vector3(side * 1.2, 1.1, 0.0)
+		lamp.visible = false
+		_kit_bodies[cab].add_child(lamp)
+		_wet_e_lamps.append(lamp)
+		var housing := MeshInstance3D.new()
+		housing.mesh = _box_mesh(Vector3(0.14, 0.1, 0.12))
+		housing.material_override = _material(Color("e0b040"), 0.2, 0.5, Color(1.0, 0.8, 0.5), 2.0)
+		housing.position = Vector3(side * 1.27, 1.06, 0.0)
+		_kit_bodies[cab].add_child(housing)
+	# Water running off the deck's edges while it moves.
+	var drips := CPUParticles3D.new()
+	drips.name = "WetEDrips"
+	drips.amount = 40
+	drips.lifetime = 1.1
+	drips.emitting = false
+	drips.local_coords = false
+	drips.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	drips.emission_ring_axis = Vector3.UP
+	drips.emission_ring_radius = 1.3
+	drips.emission_ring_inner_radius = 1.15
+	drips.emission_ring_height = 0.02
+	drips.position = Vector3(0.0, -0.08, 0.0)
+	drips.direction = Vector3.DOWN
+	drips.spread = 6.0
+	drips.initial_velocity_min = 0.2
+	drips.initial_velocity_max = 0.8
+	drips.gravity = Vector3(0.0, -9.8, 0.0)
+	var drop := QuadMesh.new()
+	drop.size = Vector2(0.015, 0.09)
+	var wet := StandardMaterial3D.new()
+	wet.albedo_color = Color(0.7, 0.8, 0.85, 0.55)
+	wet.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	wet.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	wet.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	drop.material = wet
+	drips.mesh = drop
+	_kit_bodies[deck].add_child(drips)
+	_wet_e_drips = drips
+	_build_vents()
+
+# Each vent collar: its slotted band, and its air.
+func _build_vents() -> void:
+	var vents: PackedFloat32Array = _native.get_kit_vents()
+	for v in range(0, vents.size() - KIT_VENT_FLOATS + 1, KIT_VENT_FLOATS):
+		var low := Vector3(vents[v], vents[v + 4], vents[v + 1])
+		var high := Vector3(vents[v + 2], vents[v + 5], vents[v + 3])
+		var root := Node3D.new()
+		root.name = "KitVent%d" % _vents.size()
+		_kit_root.add_child(root)
+		var centre := (low + high) * 0.5
+		var size := high - low
+		# The collar: a slotted band on the inside of each wall, as deep as
+		# the slots run.
+		var band := _material(Color("3a3632"), 0.6, 0.55)
+		band.albedo_texture = _slot_texture()
+		band.uv1_triplanar = true
+		band.uv1_scale = Vector3.ONE * 0.5
+		var faces := [
+			[Vector3(centre.x, centre.y, low.z + 0.02), Vector3(size.x, size.y, 0.04), Vector3(0, 0, -1)],
+			[Vector3(centre.x, centre.y, high.z - 0.02), Vector3(size.x, size.y, 0.04), Vector3(0, 0, 1)],
+			[Vector3(low.x + 0.02, centre.y, centre.z), Vector3(0.04, size.y, size.z), Vector3(-1, 0, 0)],
+			[Vector3(high.x - 0.02, centre.y, centre.z), Vector3(0.04, size.y, size.z), Vector3(1, 0, 0)],
+		]
+		var sheets: Array[CPUParticles3D] = []
+		var bursts: Array[CPUParticles3D] = []
+		for face in faces:
+			var slab := MeshInstance3D.new()
+			slab.mesh = _box_mesh(face[1])
+			slab.material_override = band
+			slab.position = face[0]
+			root.add_child(slab)
+			# Air out of the slots: a sheet of spray off the wall's top edge,
+			# up and out over the rim, as long and thick as the flow.
+			var along: Vector3 = face[1]
+			var top := Vector3(face[0].x, high.y + 0.05, face[0].z)
+			var sheet := _spray(along, face[2], 28, 1.4, false)
+			sheet.position = top
+			root.add_child(sheet)
+			sheets.append(sheet)
+			# The burst when the seal breaks: everything at once, fast.
+			var burst := _spray(along, face[2], 36, 0.9, true)
+			burst.position = top
+			root.add_child(burst)
+			bursts.append(burst)
+		var grit := _grit(Vector3(size.x, 0.1, size.z))
+		grit.position = Vector3(centre.x, high.y + 0.1, centre.z)
+		root.add_child(grit)
+		var mist := _mist(Vector3(size.x, 0.2, size.z))
+		mist.position = Vector3(centre.x, high.y + 0.6, centre.z)
+		root.add_child(mist)
+		_vents.append({"root": root, "sheets": sheets, "bursts": bursts, "grit": grit, "mist": mist,
+			"centre": centre, "flowing": false, "burst_left": 0.0})
+
+# Steel with a row of dark slots, for the vent collar's band.
+func _slot_texture() -> ImageTexture:
+	const SIZE := 32
+	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	for y in SIZE:
+		for x in SIZE:
+			var slot := (x % 8) >= 2 and (x % 8) <= 5 and y >= 6 and y <= 26
+			image.set_pixel(x, y, Color(0.05, 0.05, 0.05) if slot else Color(1.0, 1.0, 1.0))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+# Spray off a slotted edge `along` long, out along `out`: soft white puffs
+# blown up and out. A burst is one shot, all at once.
+func _spray(along: Vector3, out: Vector3, amount: int, lifetime: float, burst: bool) -> CPUParticles3D:
+	var spray := CPUParticles3D.new()
+	spray.amount = amount
+	spray.lifetime = lifetime
+	spray.emitting = false
+	spray.one_shot = burst
+	spray.explosiveness = 0.85 if burst else 0.0
+	spray.local_coords = false
+	spray.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	spray.emission_box_extents = Vector3(maxf(along.x * 0.5, 0.02), 0.02, maxf(along.z * 0.5, 0.02))
+	spray.direction = (out * 0.8 + Vector3.UP).normalized()
+	spray.spread = 28.0 if burst else 18.0
+	spray.initial_velocity_min = 7.0 if burst else 2.0
+	spray.initial_velocity_max = 13.0 if burst else 5.0
+	spray.gravity = Vector3(0.0, -3.0, 0.0)
+	spray.damping_min = 2.0
+	spray.damping_max = 4.0
+	var grow := Curve.new()
+	grow.add_point(Vector2(0.0, 0.3))
+	grow.add_point(Vector2(1.0, 1.8 if burst else 1.4))
+	spray.scale_amount_curve = grow
+	var fade := Gradient.new()
+	fade.set_color(0, Color(0.92, 0.95, 0.97, 0.75 if burst else 0.5))
+	fade.set_color(1, Color(0.92, 0.95, 0.97, 0.0))
+	spray.color_ramp = fade
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.6, 0.6) if burst else Vector2(0.4, 0.4)
+	quad.material = _puff_material()
+	spray.mesh = quad
+	return spray
+
+# Rust and grit blown out of the slots with the first of the air: small,
+# dark, fast, opaque, falling back.
+func _grit(extent: Vector3) -> CPUParticles3D:
+	var grit := CPUParticles3D.new()
+	grit.amount = 40
+	grit.lifetime = 1.6
+	grit.one_shot = true
+	grit.explosiveness = 0.9
+	grit.emitting = false
+	grit.local_coords = false
+	grit.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	grit.emission_box_extents = extent * 0.5
+	grit.direction = Vector3.UP
+	grit.spread = 55.0
+	grit.initial_velocity_min = 5.0
+	grit.initial_velocity_max = 11.0
+	grit.gravity = Vector3(0.0, -9.8, 0.0)
+	grit.angular_velocity_min = -360.0
+	grit.angular_velocity_max = 360.0
+	var chip := QuadMesh.new()
+	chip.size = Vector2(0.035, 0.035)
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.22, 0.17, 0.13)
+	dark.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dark.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	chip.material = dark
+	grit.mesh = chip
+	return grit
+
+# Mist that hangs over the mouth after the air has gone, and fades.
+func _mist(extent: Vector3) -> CPUParticles3D:
+	var mist := CPUParticles3D.new()
+	mist.amount = 16
+	mist.lifetime = 4.5
+	mist.emitting = false
+	mist.local_coords = false
+	mist.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	mist.emission_box_extents = extent * 0.5
+	mist.direction = Vector3.UP
+	mist.spread = 80.0
+	mist.initial_velocity_min = 0.2
+	mist.initial_velocity_max = 0.7
+	mist.gravity = Vector3(0.0, 0.05, 0.0)
+	mist.damping_min = 0.3
+	mist.damping_max = 0.6
+	var grow := Curve.new()
+	grow.add_point(Vector2(0.0, 0.6))
+	grow.add_point(Vector2(1.0, 2.2))
+	mist.scale_amount_curve = grow
+	var fade := Gradient.new()
+	fade.set_color(0, Color(0.88, 0.91, 0.93, 0.35))
+	fade.set_color(1, Color(0.88, 0.91, 0.93, 0.0))
+	mist.color_ramp = fade
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.4, 1.4)
+	quad.material = _puff_material()
+	mist.mesh = quad
+	return mist
+
+func _puff_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = _soft_puff()
+	return material
+
+# Once a frame: E's state while the camera is near its shaft, the lamps and
+# drips on the car, the vents' air.
+func _sample_wet_e(delta: float) -> void:
+	var at := _camera.global_position
+	var axis := Geometry3D.get_closest_point_to_segment(at, WET_E_SHAFT_LOW, WET_E_SHAFT_HIGH)
+	var near := at.distance_to(axis) <= WET_E_NEAR_M
+	_wet_e = _native.get_wet_state() if near else {}
+	for lamp in _wet_e_lamps:
+		lamp.visible = near
+	if _wet_e_drips != null:
+		_wet_e_drips.emitting = near and absf(float(_wet_e.get("e_cab_speed", 0.0))) > 0.3
+	_render_vents(delta, near)
+	if near:
+		var lever := Vector3(10.0, 305.3, -134.8)
+		var cab := int(_native.get_kit_body_index(WET_E_CAB_ENTITY))
+		var floor_at: Vector3 = (_native.get_kit_body_transform(cab) as Transform3D) * Vector3(0.0, -1.0, 0.0)
+		var mouth := (WET_E_SHAFT_HIGH + Vector3(0.0, -2.0, 0.0))
+		_audio.update_wet_e(delta, _wet_e, floor_at, mouth, lever)
+
+# The vents' air: the burst for VENT_BURST_S once a vent opens, by its flow;
+# the spray sheets while it flows; the mist hanging on after.
+func _render_vents(delta: float, near: bool) -> void:
+	if _vents.is_empty():
+		return
+	var vents: PackedFloat32Array = _native.get_kit_vents() if near else PackedFloat32Array()
+	for index in _vents.size():
+		var vent: Dictionary = _vents[index]
+		var p := index * KIT_VENT_FLOATS
+		var flow := absf(vents[p + 6]) if p + KIT_VENT_FLOATS <= vents.size() else 0.0
+		var strength := clampf(flow / VENT_FULL_M3S, 0.0, 1.0)
+		var flowing := flow > VENT_SHUT_M3S
+		if flowing and not bool(vent["flowing"]):
+			# The seal breaks: everything out of the slots at once.
+			vent["burst_left"] = VENT_BURST_S
+			for burst: CPUParticles3D in vent["bursts"]:
+				burst.initial_velocity_min = lerpf(4.0, 9.0, strength)
+				burst.initial_velocity_max = lerpf(7.0, 15.0, strength)
+				burst.restart()
+			(vent["grit"] as CPUParticles3D).restart()
+		vent["flowing"] = flowing
+		vent["burst_left"] = maxf(0.0, float(vent["burst_left"]) - delta)
+		var bursting := float(vent["burst_left"]) > 0.0
+		for sheet: CPUParticles3D in vent["sheets"]:
+			sheet.emitting = flowing
+			# Longest and thickest while the burst lasts, then as the flow.
+			var push := strength * (1.6 if bursting else 1.0)
+			sheet.initial_velocity_min = 1.5 + 4.0 * push
+			sheet.initial_velocity_max = 3.0 + 7.0 * push
+			sheet.speed_scale = 0.7 + 0.6 * clampf(push, 0.0, 1.0)
+		(vent["mist"] as CPUParticles3D).emitting = flowing or bursting

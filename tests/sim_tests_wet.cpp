@@ -48,56 +48,64 @@ bool seat_wet_spool(scraperx::sim::Simulation &simulation) {
            on_support(simulation.snapshot(), Simulation::kWetDPlatformEntityId);
 }
 
-// Inside E's cab, east of its door (it opens into the cab): wait for the
-// leaf to stop swinging, take its handle and draw it east until the latch
-// drops.
-bool shut_wet_door(scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    if (!walk_to(simulation, 13.05, -136.4, 6.0, 0.08)) {
+// From D's platform at the top, through E's doors onto no floor: walked
+// south until the feet leave the sill, then the stick let go, so the body
+// drops onto E's deck. True once airborne.
+bool drop_into_wet_e(scraperx::sim::Simulation &simulation) {
+    if (!walk_to(simulation, 13.2, -134.5, 6.0)) {
         return false;
     }
-    const auto door_index = simulation.kit_body_index(Simulation::kWetEDoorEntityId);
-    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
-        const auto v = simulation.kit_body_velocity(door_index);
-        if (std::hypot(v.x, v.z) < 0.2) {
-            break;
-        }
-        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
-    }
-    const auto door = simulation.kit_body_center_of_mass(door_index);
-    const auto here = simulation.snapshot().player_position;
-    const double dx = door.x - here.x;
-    const double dz = door.z - here.z;
-    const double length = std::hypot(dx, dz);
-    (void)simulation.set_facing(dx / length, dz / length);
-    (void)simulation.advance_frame(0.6);
-    if (simulation.snapshot().carry_target_entity_id != Simulation::kWetEDoorEntityId) {
-        return false;
-    }
-    (void)simulation.request_pick_up();
-    (void)simulation.advance_frame(0.3);
-    bool latched = false;
-    for (std::uint32_t tick = 0; tick < 90 * 6 && !latched; ++tick) {
-        (void)simulation.set_move_input(0.4, 0.0);
-        (void)simulation.set_facing(dx / length, dz / length);
-        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
-        latched = simulation.wet_state().e_door_latched;
-    }
+    const bool airborne = hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 4.0, [](const scraperx::sim::Snapshot &state) {
+        return !state.player_grounded && state.player_position.y < 257.0;
+    });
     (void)simulation.set_move_input(0.0, 0.0);
-    if (simulation.snapshot().carrying_entity_id != 0) {
-        (void)simulation.request_set_down();
-    }
-    (void)simulation.advance_frame(0.3);
-    return latched;
+    return airborne;
 }
 
-// The chiller's trip handle hangs inside the cab's east wall.
-bool pull_wet_trip(scraperx::sim::Simulation &simulation) {
+// From D's platform: backed to the doorway's sill facing north, dropped into
+// a hang on its lip, then let go. True once hanging; `hang_seconds` is how
+// long the hands hold before letting go (0: the caller lets go).
+bool hang_drop_into_wet_e(scraperx::sim::Simulation &simulation, const double hang_seconds) {
+    using scraperx::sim::TraversalState;
+    if (!walk_to(simulation, 13.2, -134.6, 6.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.3);
+    (void)hold_stick(simulation, 0.0, -0.4, 0.0, 1.0, 3.0, [](const scraperx::sim::Snapshot &state) {
+        return state.edge_drop_available;
+    });
+    (void)simulation.advance_frame(0.2);
+    if (!simulation.snapshot().edge_drop_available) {
+        return false;
+    }
+    (void)simulation.request_release();
+    if (!wait_for(simulation, 1.5, [](const scraperx::sim::Snapshot &state) {
+            return state.traversal_state == TraversalState::Hanging;
+        })) {
+        return false;
+    }
+    if (hang_seconds > 0.0) {
+        (void)simulation.advance_frame(hang_seconds);
+        (void)simulation.request_release();
+    }
+    return true;
+}
+
+// E's cab at the top, still: its speed under 0.05 m/s for 2 s running.
+bool wait_wet_e_top(scraperx::sim::Simulation &simulation, const double budget_seconds) {
     using scraperx::sim::Simulation;
-    return pull_facing(simulation, 13.4, -136.65, 1.0, 0.0, Simulation::kWetEHandleEntityId, 0.5,
-                       4.0, [&](const scraperx::sim::Snapshot &) {
-                           return !simulation.wet_state().e_catch_latched;
-                       });
+    const auto ticks = static_cast<std::uint32_t>(budget_seconds * Simulation::kTickRateHz);
+    std::uint32_t still = 0;
+    for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const auto w = simulation.wet_state();
+        still = w.e_cab_travel > 40.0 && std::abs(w.e_cab_speed) < 0.05 ? still + 1 : 0;
+        if (still >= 2 * Simulation::kTickRateHz) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // On F's platform: the hose off the deck and onto the ram's inlet on the
@@ -141,6 +149,116 @@ bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation) {
 
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity) {
     return state.player_grounded && state.support_entity_id == entity;
+}
+
+namespace {
+
+// FNV-1a, 64 bits, over whatever words are fed to it.
+struct Fnv final {
+    std::uint64_t hash = 14695981039346656037ULL;
+    void add(const std::uint64_t word) {
+        for (int byte = 0; byte < 8; ++byte) {
+            hash ^= (word >> (8 * byte)) & 0xFFU;
+            hash *= 1099511628211ULL;
+        }
+    }
+    void add_mm(const double meters) { add(static_cast<std::uint64_t>(static_cast<std::int64_t>(std::llround(meters * 1000.0)))); }
+};
+
+struct Box final {
+    double x0, y0, z0, x1, y1, z1;
+    [[nodiscard]] bool overlaps(const Box &other) const {
+        return x0 < other.x1 && other.x0 < x1 && y0 < other.y1 && other.y0 < y1 && z0 < other.z1 && other.z0 < z1;
+    }
+};
+
+// Where stage E stands and moves since its rebuild (chiller_drop_spec.md
+// section 4): the shaft and the travel of the cab and deck in it, the duct
+// and the chiller's travel, the bucket's column, and the line's post and arm
+// on the shaft's north-east corner.
+const Box kWetEZones[] = {
+    {11.50, 249.35, -138.15, 14.50, 300.75, -135.15},   // shaft, cab and deck
+    {14.00, 298.00, -135.65, 14.55, 305.05, -135.10},   // the post and its sheave arm
+    {8.50, 247.60, -138.15, 11.50, 306.74, -135.15},    // duct, chiller, sheave beam
+    {6.15, 249.35, -137.60, 8.05, 306.74, -135.70},     // basin, bucket and striker
+};
+
+} // namespace
+
+// The rebuilt stage E moved no body, line or piece of stock elsewhere: the kit's
+// bodies stand in the same order, every zipline and every piece of stock is
+// built where it was, and none of them reaches into E's shaft, duct or bucket
+// column. Prints its counts and hashes; when `expect` is set, requires them.
+void run_wet_e_guard(const bool expect) {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation world(InitialSpawn::WetFPlatform);
+    Fnv bodies;
+    for (std::uint32_t i = 0; i < world.kit_body_count(); ++i) {
+        bodies.add(world.kit_body_entity(i));
+    }
+    Fnv lines;
+    bool lines_clear = true;
+    for (std::uint32_t i = 0; i < world.zipline_count(); ++i) {
+        const auto line = world.zipline_line(i);
+        lines.add_mm(line.top.x);
+        lines.add_mm(line.top.y);
+        lines.add_mm(line.top.z);
+        lines.add_mm(line.bottom.x);
+        lines.add_mm(line.bottom.y);
+        lines.add_mm(line.bottom.z);
+        // The rider's room under the cable, 1.0 m wide and 2.7 m deep.
+        const double length = std::hypot(std::hypot(line.bottom.x - line.top.x, line.bottom.y - line.top.y),
+                                         line.bottom.z - line.top.z);
+        const int samples = std::max(2, static_cast<int>(length / 0.25));
+        for (int s = 0; s <= samples; ++s) {
+            const double t = static_cast<double>(s) / samples;
+            const double x = line.top.x + t * (line.bottom.x - line.top.x);
+            const double y = line.top.y + t * (line.bottom.y - line.top.y);
+            const double z = line.top.z + t * (line.bottom.z - line.top.z);
+            const Box room{x - 0.5, y - 2.7, z - 0.5, x + 0.5, y, z + 0.5};
+            for (const Box &zone : kWetEZones) {
+                lines_clear = lines_clear && !room.overlaps(zone);
+            }
+        }
+    }
+    Fnv stock;
+    bool stock_clear = true;
+    for (std::uint32_t i = 0; i < world.loose_stock_count(); ++i) {
+        const std::uint32_t body = world.kit_body_index(Simulation::kLooseStockFirstEntity + i);
+        const auto at = world.kit_body_position(body);
+        stock.add(world.loose_stock_piece(i).kind);
+        stock.add_mm(at.x);
+        stock.add_mm(at.y);
+        stock.add_mm(at.z);
+        // Its parts' reach about where it was built, as a ball round each part.
+        for (std::uint32_t p = 0; p < world.kit_body_part_count(body); ++p) {
+            const auto part = world.kit_body_part(body, p);
+            const double reach =
+                std::hypot(std::hypot(part.half.x, part.half.y), part.half.z) +
+                std::hypot(std::hypot(part.offset.x, part.offset.y), part.offset.z);
+            const Box piece{at.x - reach, at.y - reach, at.z - reach, at.x + reach, at.y + reach, at.z + reach};
+            for (const Box &zone : kWetEZones) {
+                stock_clear = stock_clear && !piece.overlaps(zone);
+            }
+        }
+    }
+    std::cout << "  E guard: bodies=" << world.kit_body_count() << " body_hash=" << bodies.hash
+              << " lines=" << world.zipline_count() << " line_hash=" << lines.hash
+              << " stock=" << world.loose_stock_count() << " stock_hash=" << stock.hash
+              << " lines_clear=" << lines_clear << " stock_clear=" << stock_clear << '\n';
+    if (!expect) {
+        return;
+    }
+    // As recorded on the tree before E's rebuild (its parent, 4118862).
+    require(world.kit_body_count() == 595 && bodies.hash == 3514033760028014323ULL,
+            "E guard: the kit's bodies stand in the same order as before E's rebuild");
+    require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
+            "E guard: every zipline is built where it was, to the millimeter");
+    require(world.loose_stock_count() == 325 && stock.hash == 12537791641516680014ULL,
+            "E guard: every piece of loose stock is built where it was, to the millimeter");
+    require(lines_clear && stock_clear,
+            "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
 }
 
 
@@ -192,42 +310,6 @@ void run_wet_isolation() {
               << " tank_level=" << d_after.d_tank_level << " tube_level=" << d_after.d_tube_level
               << " gain_J=" << d_gain << " released_J=" << d_released << '\n';
 
-    // ---- E: door open, the air leaves by it ---------------------------------------
-    Simulation e_open(InitialSpawn::WetECab);
-    (void)e_open.advance_frame(1.0);
-    require(!e_open.wet_state().e_door_latched && e_open.wet_state().e_catch_latched,
-            "as found, E's door stands open and the chiller hangs in its catch");
-    require(pull_wet_trip(e_open), "the rider must trip the chiller from the cab");
-    (void)e_open.advance_frame(15.0);
-    require(e_open.wet_state().e_cab_travel < 0.05 && e_open.wet_state().e_chiller_travel < -10.0,
-            "with the door open the chiller falls and the cab stays on its stop");
-
-    // ---- E: door shut, the ride ------------------------------------------------------
-    Simulation e_ride(InitialSpawn::WetECab);
-    (void)e_ride.advance_frame(1.0);
-    require(shut_wet_door(e_ride), "the rider must swing E's door shut until it latches");
-    const double e_rider_y0 = e_ride.snapshot().player_position.y;
-    const double e_chiller_y0 = kit_y(e_ride, Simulation::kWetEChillerEntityId);
-    const double e_bucket_y0 = kit_y(e_ride, Simulation::kWetEBucketEntityId);
-    require(pull_wet_trip(e_ride), "the rider must trip the chiller with the door shut");
-    const bool e_arrived = wait_for(e_ride, 90.0, [&](const scraperx::sim::Snapshot &) {
-        return e_ride.wet_state().e_cab_travel >= 41.95;
-    });
-    (void)e_ride.advance_frame(1.0);
-    const auto e_top = e_ride.snapshot();
-    require(e_arrived, "the chiller's air must lift E's cab to its stop at 298.25");
-    require(on_support(e_top, Simulation::kWetECabEntityId),
-            "the rider must ride E's cab all the way");
-    const double e_gain = kRiderMassKg * kG * (e_top.player_position.y - e_rider_y0);
-    const double e_released =
-        5000.0 * kG * (e_chiller_y0 - kit_y(e_ride, Simulation::kWetEChillerEntityId)) -
-        300.0 * kG * (kit_y(e_ride, Simulation::kWetEBucketEntityId) - e_bucket_y0);
-    require(e_gain > 0.0 && e_gain <= e_released,
-            "E's rider must never gain more than the chiller released");
-    std::cout << "PASS scraperx_sim AS-007 E: rider_y=" << e_top.player_position.y
-              << " cab_pa=" << e_ride.wet_state().e_cab_pa << " gain_J=" << e_gain
-              << " released_J=" << e_released << '\n';
-
     // ---- F: hose free, the accumulator dumps -----------------------------------------
     Simulation f_free(InitialSpawn::WetFPlatform);
     (void)f_free.advance_frame(1.0);
@@ -278,16 +360,9 @@ void run_wet_band() {
                      }) &&
                 on_support(band.snapshot(), Simulation::kWetDPlatformEntityId),
             "band: D carries the rider to 256.25");
-    require(walk_to(band, 13.2, -134.5, 6.0) && walk_to(band, 13.2, -135.8, 6.0),
-            "band: from D's platform through E's door into the cab");
-    require(shut_wet_door(band), "band: E's door shut behind the rider");
-    require(pull_wet_trip(band), "band: E's chiller tripped");
-    require(wait_for(band, 90.0,
-                     [&](const scraperx::sim::Snapshot &) {
-                         return band.wet_state().e_cab_travel >= 41.95;
-                     }) &&
-                on_support(band.snapshot(), Simulation::kWetECabEntityId),
-            "band: E carries the rider to 298.25");
+    require(drop_into_wet_e(band), "band: from D's platform through E's doors, off the sill");
+    require(wait_wet_e_top(band, 60.0) && on_support(band.snapshot(), Simulation::kWetEDeckEntityId),
+            "band: E blows the rider up its shaft to 298.25, standing on its deck");
     require(walk_to(band, 13.4, -137.2, 4.0) && walk_to(band, 13.4, -139.9, 6.0),
             "band: from E's cab over the rim onto F's platform");
     require(couple_wet_hose(band), "band: F's hose coupled");
@@ -321,6 +396,20 @@ void run_wet_band() {
     const auto w = band.wet_state();
     require(rearmed, "band: the dump must hoist the chiller back, recharge the accumulator and "
                      "refill D's tank, bringing E's cab and F's platform back down");
+    // E re-armed: its deck hung proud again, its doors shut, its chiller in
+    // its catch; and the cab's jerk coming back down onto its line is no blow.
+    require(w.e_deck_drop <= 0.01 && w.e_door_shut && w.e_catch_latched,
+            "band: re-armed, E's deck hangs proud again over its shut doors' cab");
+    double rearmed_worst_travel = 0.0;
+    bool rearmed_held = true;
+    for (std::uint32_t tick = 0; tick < 20U * Simulation::kTickRateHz; ++tick) {
+        (void)band.advance_frame(Simulation::kFixedStepSeconds);
+        const auto e = band.wet_state();
+        rearmed_held = rearmed_held && e.e_catch_latched;
+        rearmed_worst_travel = std::max(rearmed_worst_travel, e.e_cab_travel);
+    }
+    require(rearmed_held && rearmed_worst_travel <= 0.05,
+            "band: re-armed, E stays set for 20 s: nothing released, its cab on its stop");
     std::cout << "PASS scraperx_sim AS-007 band: to_340_s=" << to_plate
               << " plate_y=" << on_plate.player_position.y << " tank_kg=" << w.d_tank_kg
               << " header_kg=" << w.header_kg << " bucket_kg=" << w.e_bucket_kg << '\n';
@@ -495,4 +584,470 @@ void run_wet_handling() {
 
     std::cout << "PASS scraperx_sim handling: handle_tick_m=" << worst_handle_tick
               << " spool_peak_mps=" << spool_peak_speed << "\n";
+}
+
+// ---- AS-007 E, the chiller drop (03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md) ----
+
+namespace {
+
+// Where the rider stands at the top: level with F's platform.
+constexpr double kWetETopY = 298.25;
+// The skirt's edge reaches the vent collar's lower edge (296.85 m) at this
+// much of the cab's travel (the edge starts at 251.5 m).
+constexpr double kWetECollarTravel = 296.85 - 251.5;
+// The deck's top, as found: where it hangs, and the height it passes once it
+// has risen with the cab to the doorway's foot.
+constexpr double kWetEDeckHungY = 253.45;
+constexpr double kWetEDoorFootY = 256.0;
+// The rider's capsule (physics_world_tuning.hpp): radius and half height.
+constexpr double kRiderRadius = 0.35;
+constexpr double kRiderHalfHeight = 0.9;
+
+scraperx::sim::Vector3 rotate_back(const scraperx::sim::Quaternion &q, const scraperx::sim::Vector3 &v) {
+    // v rotated by q's conjugate: v + 2w (u x v) + 2 u x (u x v), u = -q.xyz.
+    const double ux = -q.x;
+    const double uy = -q.y;
+    const double uz = -q.z;
+    const double cx = uy * v.z - uz * v.y;
+    const double cy = uz * v.x - ux * v.z;
+    const double cz = ux * v.y - uy * v.x;
+    return {v.x + 2.0 * (q.w * cx + uy * cz - uz * cy), v.y + 2.0 * (q.w * cy + uz * cx - ux * cz),
+            v.z + 2.0 * (q.w * cz + ux * cy - uy * cx)};
+}
+
+// How far the rider's capsule stands clear of the leaf's box, m (under 0:
+// touching).
+double leaf_clearance(const scraperx::sim::Simulation &sim, const std::uint64_t leaf) {
+    const std::uint32_t index = sim.kit_body_index(leaf);
+    const auto centre = sim.kit_body_center_of_mass(index);
+    const auto turn = sim.kit_body_rotation(index);
+    const auto half = sim.kit_body_part(index, 0).half;
+    const auto at = sim.snapshot().player_position;
+    const double reach = kRiderHalfHeight - kRiderRadius;
+    double nearest = std::numeric_limits<double>::infinity();
+    for (int i = 0; i <= 44; ++i) {
+        const double y = at.y - reach + 2.0 * reach * static_cast<double>(i) / 44.0;
+        const auto local = rotate_back(turn, {at.x - centre.x, y - centre.y, at.z - centre.z});
+        const double dx = local.x - std::clamp(local.x, -half.x, half.x);
+        const double dy = local.y - std::clamp(local.y, -half.y, half.y);
+        const double dz = local.z - std::clamp(local.z, -half.z, half.z);
+        nearest = std::min(nearest, std::sqrt(dx * dx + dy * dy + dz * dz));
+    }
+    return nearest - kRiderRadius;
+}
+
+// The ride, from the step off the sill (or the hands letting go) until the
+// cab has stood still for 2 s: what each falsifier of check 3 reads.
+struct WetERide final {
+    bool landed = false;
+    double land_t = -1.0;
+    double land_speed = 0.0;
+    int land_response = 0;
+    double release_t = -1.0;
+    double drop_by_1s = 0.0;          // the deck's deepest drop within 1 s of landing
+    double shut_t = -1.0;
+    double deck_door_t = -1.0;        // the deck's top past the doorway's foot
+    double leaf_clear = std::numeric_limits<double>::infinity();
+    double launch_accel = 0.0;        // the cab's peak upward acceleration, first 3 s after landing
+    double later_accel = 0.0;         // its peak acceleration either way after that
+    double peak_deck = 0.0;
+    double airborne_s = 0.0;
+    bool airborne_low = false;        // off the deck before the skirt reached the collar
+    double eye_t = -1.0;
+    double eye_y = 0.0;
+    double eye_closing = 0.0;
+    double still_t = -1.0;            // the cab still for 2 s, at the end of those 2 s
+    double rest_deck = 0.0;
+    bool saved = false;
+    std::vector<std::uint8_t> save;
+    scraperx::sim::Vector3 saved_at[4];   // cab, deck, west leaf, chiller, as saved
+    double saved_leaf_east_y = 0.0;
+};
+
+const std::uint64_t kWetESavedBodies[4] = {scraperx::sim::Simulation::kWetECabEntityId,
+                                           scraperx::sim::Simulation::kWetEDeckEntityId,
+                                           scraperx::sim::Simulation::kWetEDoorEntityId,
+                                           scraperx::sim::Simulation::kWetEChillerEntityId};
+
+// Steps the world from the step off (or the letting go) until E's cab has
+// stood still 2 s or `budget` passes; with save_after >= 0, saves the climb
+// that long after the landing.
+WetERide ride_wet_e(scraperx::sim::Simulation &sim, const double budget, const double save_after) {
+    using scraperx::sim::Simulation;
+    WetERide ride;
+    const double t0 = sim.snapshot().simulation_time_seconds;
+    const std::uint32_t ticks = static_cast<std::uint32_t>(budget * Simulation::kTickRateHz);
+    double last_speed = sim.wet_state().e_cab_speed;
+    std::uint32_t still = 0;
+    for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+        (void)sim.advance_frame(Simulation::kFixedStepSeconds);
+        const auto s = sim.snapshot();
+        const auto w = sim.wet_state();
+        const double t = s.simulation_time_seconds - t0;
+        const double accel = (w.e_cab_speed - last_speed) / Simulation::kFixedStepSeconds;
+        last_speed = w.e_cab_speed;
+        const double deck = kit_y(sim, Simulation::kWetEDeckEntityId);
+        const bool on_deck = s.player_grounded && s.support_entity_id == Simulation::kWetEDeckEntityId;
+        if (!ride.landed && on_deck) {
+            ride.landed = true;
+            ride.land_t = t;
+            ride.land_speed = s.last_impact_speed_mps;
+            ride.land_response = s.landing_response;
+        }
+        if (ride.release_t < 0.0 && !w.e_catch_latched) {
+            ride.release_t = t;
+        }
+        if (ride.shut_t < 0.0 && w.e_door_shut) {
+            ride.shut_t = t;
+        }
+        if (ride.deck_door_t < 0.0 && deck > kWetEDoorFootY) {
+            ride.deck_door_t = t;
+        }
+        ride.peak_deck = std::max(ride.peak_deck, deck);
+        if (!ride.landed) {
+            continue;
+        }
+        if (t - ride.land_t <= 1.0) {
+            ride.drop_by_1s = std::max(ride.drop_by_1s, w.e_deck_drop);
+        }
+        ride.leaf_clear = std::min({ride.leaf_clear, leaf_clearance(sim, Simulation::kWetEDoorEntityId),
+                                    leaf_clearance(sim, Simulation::kWetEEastLeafEntityId)});
+        if (t - ride.land_t <= 3.0) {
+            ride.launch_accel = std::max(ride.launch_accel, accel);
+        } else {
+            ride.later_accel = std::max(ride.later_accel, std::abs(accel));
+        }
+        if (!on_deck) {
+            ride.airborne_s += Simulation::kFixedStepSeconds;
+            ride.airborne_low = ride.airborne_low || w.e_cab_travel < kWetECollarTravel;
+        }
+        const double eye = s.player_position.y + 0.62;
+        const double chiller = kit_y(sim, Simulation::kWetEChillerEntityId);
+        if (ride.eye_t < 0.0 && chiller <= eye) {
+            ride.eye_t = t - ride.land_t;
+            ride.eye_y = eye;
+            ride.eye_closing = s.player_linear_velocity.y -
+                               sim.kit_body_velocity(sim.kit_body_index(Simulation::kWetEChillerEntityId)).y;
+        }
+        if (save_after >= 0.0 && !ride.saved && t - ride.land_t >= save_after) {
+            ride.saved = true;
+            ride.save = sim.save_game();
+            for (int i = 0; i < 4; ++i) {
+                ride.saved_at[i] = sim.kit_body_position(sim.kit_body_index(kWetESavedBodies[i]));
+            }
+            ride.saved_leaf_east_y = kit_y(sim, Simulation::kWetEEastLeafEntityId);
+        }
+        still = w.e_cab_travel > 40.0 && std::abs(w.e_cab_speed) < 0.05 ? still + 1 : 0;
+        if (still >= 2 * Simulation::kTickRateHz) {
+            ride.still_t = t;
+            ride.rest_deck = deck;
+            break;
+        }
+    }
+    return ride;
+}
+
+// From the 220 ring: D's spool seated and D ridden to 256.25.
+bool ride_wet_d_up(scraperx::sim::Simulation &sim) {
+    using scraperx::sim::Simulation;
+    (void)sim.advance_frame(1.0);
+    return seat_wet_spool(sim) &&
+           wait_for(sim, 120.0, [&](const scraperx::sim::Snapshot &) { return sim.wet_state().d_platform_travel >= 35.95; }) &&
+           on_support(sim.snapshot(), Simulation::kWetDPlatformEntityId);
+}
+
+// Off D's platform into E's doorway, the leaves pushed open on the body.
+bool stand_in_wet_e_doorway(scraperx::sim::Simulation &sim) {
+    return walk_to(sim, 13.2, -134.5, 6.0) && walk_to(sim, 13.2, -135.15, 4.0, 0.1);
+}
+
+// The first piece of loose stock of a kind (LooseStock::Kind), its kit index.
+std::uint32_t first_stock(const scraperx::sim::Simulation &sim, const std::uint8_t kind) {
+    for (std::uint32_t i = 0; i < sim.loose_stock_count(); ++i) {
+        if (sim.loose_stock_piece(i).kind == kind) {
+            return sim.kit_body_index(scraperx::sim::Simulation::kLooseStockFirstEntity + i);
+        }
+    }
+    return scraperx::sim::Simulation::kKitNone;
+}
+
+constexpr std::uint8_t kStockDrum = 3;
+constexpr std::uint8_t kStockToolbox = 16;
+const scraperx::sim::Vector3 kOverWetEDeck{13.0, 256.4, -136.65};
+
+} // namespace
+
+void run_wet_e() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+
+    // ---- 1. As found ----------------------------------------------------------------
+    {
+        Simulation found(InitialSpawn::Ring220North);
+        (void)found.advance_frame(1.0);
+        const auto w = found.wet_state();
+        require(std::abs(w.e_deck_drop) < 0.005 && w.e_door_angle < 0.02 && w.e_catch_latched &&
+                    std::abs(w.e_cab_travel) < 0.005 && std::abs(w.e_lever_angle) < 0.02,
+                "E as found: the deck hung proud, both leaves shut, the chiller in its catch, the cab on "
+                "its stop and the trip lever at rest");
+        for (std::uint64_t entity = Simulation::kWetECabEntityId; entity <= Simulation::kWetEStrikerEntityId; ++entity) {
+            require(found.kit_body_carry_kind(found.kit_body_index(entity)) == 0,
+                    "E as found: nothing in it is taken in the hands");
+        }
+    }
+
+    // ---- 2. The brink: in the doorway, nothing moves and nothing is offered ------------
+    Simulation ride(InitialSpawn::Ring220North);
+    require(ride_wet_d_up(ride), "E brink: D carries the rider to 256.25");
+    require(stand_in_wet_e_doorway(ride), "E brink: the rider steps into E's doorway");
+    const double brink_leaves = ride.wet_state().e_door_angle;
+    require(brink_leaves > 0.3, "E brink: the leaves stand open on the body in the doorway");
+    bool brink_held = true;
+    bool brink_offered = false;
+    for (std::uint32_t tick = 0; tick < 10U * Simulation::kTickRateHz; ++tick) {
+        (void)ride.advance_frame(Simulation::kFixedStepSeconds);
+        const auto s = ride.snapshot();
+        const auto w = ride.wet_state();
+        brink_held = brink_held && w.e_catch_latched && std::abs(w.e_cab_travel) < 0.005 &&
+                     std::abs(w.e_deck_drop) < 0.005 && w.e_lever_angle < 0.05 && s.player_grounded;
+        brink_offered = brink_offered || s.carry_target_entity_id != 0 || s.rig_action != 0;
+    }
+    require(brink_held, "E brink: standing 10 s in the doorway sets nothing off (rule 1)");
+    require(!brink_offered, "E brink: nothing in E is offered to pull, rig or take");
+    std::cout << "  E brink: leaves " << brink_leaves << " rad on the body, 10 s, nothing moved\n";
+
+    // ---- 3. The drop and the ride ------------------------------------------------------
+    const auto before = ride.snapshot();
+    const double rider_y0 = before.player_position.y;
+    const double chiller_y0 = kit_y(ride, Simulation::kWetEChillerEntityId);
+    const double bucket_y0 = kit_y(ride, Simulation::kWetEBucketEntityId);
+    require(drop_into_wet_e(ride), "E: the rider walks off the sill through the doors");
+    const WetERide up = ride_wet_e(ride, 40.0, 8.0);
+    const auto top = ride.snapshot();
+    std::cout << "  E ride: landed at " << up.land_speed << " m/s (response " << up.land_response
+              << "), deck down " << up.drop_by_1s << " m within 1 s, catch released "
+              << up.release_t - up.land_t << " s after landing; leaves shut "
+              << up.deck_door_t - up.shut_t << " s before the deck reached the doorway; nearest leaf "
+              << up.leaf_clear << " m; launch " << up.launch_accel << " m/s^2, top " << up.later_accel
+              << " m/s^2; peak deck " << up.peak_deck << "; off the deck " << up.airborne_s
+              << " s; chiller past the eye at " << up.eye_y << " m, " << up.eye_t
+              << " s after landing, closing " << up.eye_closing << " m/s; still "
+              << up.still_t - up.land_t << " s after landing, deck " << up.rest_deck << '\n';
+    require(up.landed && up.land_speed < 8.0 && top.death_count == before.death_count &&
+                up.land_response >= 1 && up.land_response <= 3,
+            "E: the rider lands on the deck under 8 m/s, alive, no worse than a heavy landing");
+    require(up.drop_by_1s >= 0.12 && up.release_t >= 0.0 && up.release_t - up.land_t <= 1.0,
+            "E: within 1 s of the landing the blow carries the deck 0.12 m down and the chiller's catch lets go");
+    require(up.shut_t >= 0.0 && up.deck_door_t >= 0.0 && up.shut_t < up.deck_door_t,
+            "E: both leaves swing shut before the deck rises to the doorway");
+    require(up.leaf_clear > 0.0, "E: no leaf ever touches the rider");
+    require(up.launch_accel <= 12.0, "E: the launch heaves the floor at no more than 12 m/s^2");
+    require(up.later_accel <= 16.0, "E: at the top the cab slows and bobs at no more than 16 m/s^2");
+    require(up.peak_deck <= 299.65, "E: the deck peaks at most 299.65 m, short of the cab's hard top");
+    require(up.still_t >= 0.0 && up.still_t - up.land_t <= 25.0 && std::abs(up.rest_deck - kWetETopY) <= 0.10,
+            "E: within 25 s of the landing the cab is still with the deck within 0.10 m of 298.25");
+    require(on_support(top, Simulation::kWetEDeckEntityId) && up.airborne_s <= 0.6 && !up.airborne_low,
+            "E: the rider rides the deck all the way, off it at most 0.6 s and only once the skirt is in the collar");
+    const double gain = kRiderMassKg * kGravity * (top.player_position.y - rider_y0);
+    const double released = 5000.0 * kGravity * (chiller_y0 - kit_y(ride, Simulation::kWetEChillerEntityId)) -
+                            300.0 * kGravity * (kit_y(ride, Simulation::kWetEBucketEntityId) - bucket_y0);
+    require(gain > 0.0 && gain <= released, "E: the rider never gains more than the chiller released");
+    double rest_30 = 0.0;
+    double rest_60 = 0.0;
+    for (std::uint32_t tick = 1; tick <= 60U * Simulation::kTickRateHz; ++tick) {
+        (void)ride.advance_frame(Simulation::kFixedStepSeconds);
+        if (tick == 30U * Simulation::kTickRateHz) {
+            rest_30 = kit_y(ride, Simulation::kWetEDeckEntityId);
+        }
+    }
+    rest_60 = kit_y(ride, Simulation::kWetEDeckEntityId);
+    std::cout << "  E rest: deck " << up.rest_deck << " still, " << rest_30 << " 30 s on, " << rest_60
+              << " 60 s on\n";
+    require(std::abs(rest_30 - kWetETopY) <= 0.12 && std::abs(rest_60 - kWetETopY) <= 0.12,
+            "E: the cab holds within 0.12 m of 298.25 30 s and 60 s after it stills");
+    require(walk_to(ride, 13.4, -137.2, 4.0) && walk_to(ride, 13.4, -139.9, 6.0) &&
+                on_support(ride.snapshot(), Simulation::kWetFPlatformEntityId),
+            "E: from the deck the rider walks south onto F's platform");
+
+    // ---- 7. Saved mid-ride, loaded into a fresh world -----------------------------------
+    require(up.saved, "E save: the climb saved 8 s into the ride");
+    {
+        Simulation loaded(InitialSpawn::Ring220North);
+        (void)loaded.advance_frame(0.5);
+        require(loaded.load_game(up.save.data(), up.save.size()), "E save: a fresh world loads the ride");
+        double worst = 0.0;
+        for (int i = 0; i < 4; ++i) {
+            const auto at = loaded.kit_body_position(loaded.kit_body_index(kWetESavedBodies[i]));
+            worst = std::max({worst, std::abs(at.x - up.saved_at[i].x), std::abs(at.y - up.saved_at[i].y),
+                              std::abs(at.z - up.saved_at[i].z)});
+        }
+        worst = std::max(worst, std::abs(kit_y(loaded, Simulation::kWetEEastLeafEntityId) - up.saved_leaf_east_y));
+        require(worst <= 0.001, "E save: cab, deck, leaves and chiller load where they were saved, within 1 mm");
+        require(wait_wet_e_top(loaded, 40.0), "E save: the loaded ride comes to rest at the top");
+        const double loaded_rest = kit_y(loaded, Simulation::kWetEDeckEntityId);
+        std::cout << "  E save: loaded within " << worst << " m, rests at " << loaded_rest << '\n';
+        require(std::abs(loaded_rest - up.rest_deck) <= 0.02, "E save: the loaded ride ends within 0.02 m of the ride");
+    }
+
+    // ---- 4. Hang from the sill and let go -------------------------------------------------
+    {
+        Simulation hang(InitialSpawn::Ring220North);
+        require(ride_wet_d_up(hang), "E hang: D carries the rider to 256.25");
+        require(hang_drop_into_wet_e(hang, 0.0), "E hang: the rider drops into a hang on the sill's lip");
+        bool held = true;
+        for (std::uint32_t tick = 0; tick < 3U * Simulation::kTickRateHz; ++tick) {
+            (void)hang.advance_frame(Simulation::kFixedStepSeconds);
+            held = held && hang.wet_state().e_catch_latched &&
+                   hang.snapshot().traversal_state == TraversalState::Hanging;
+        }
+        require(held && hang.wet_state().e_door_shut,
+                "E hang: hanging 3 s the chiller stays in its catch and the leaves shut over the hands");
+        (void)hang.request_release();
+        const WetERide let_go = ride_wet_e(hang, 40.0, -1.0);
+        std::cout << "  E hang: landed at " << let_go.land_speed << " m/s, deck down " << let_go.drop_by_1s
+                  << " m, catch released " << let_go.release_t - let_go.land_t << " s after landing, still deck "
+                  << let_go.rest_deck << '\n';
+        require(let_go.landed && let_go.release_t >= 0.0 && let_go.release_t - let_go.land_t <= 1.0,
+                "E hang: let go, the drop sets the chiller off within 1 s of the landing");
+        require(let_go.still_t >= 0.0 && let_go.still_t - let_go.land_t <= 25.0 &&
+                    std::abs(let_go.rest_deck - kWetETopY) <= 0.10 &&
+                    on_support(hang.snapshot(), Simulation::kWetEDeckEntityId),
+                "E hang: the cab carries the rider to the top as from the walk off");
+    }
+
+    // ---- 5. Loads, the rider not in E ----------------------------------------------------
+    double empty_rest = 0.0;
+    {
+        Simulation tool(InitialSpawn::WetFPlatform);
+        (void)tool.advance_frame(1.0);
+        const std::uint32_t box = first_stock(tool, kStockToolbox);
+        require(box != Simulation::kKitNone, "E loads: the yard's toolbox is found");
+        tool.debug_launch_kit_body(box, kOverWetEDeck, {0.0, 0.0, 0.0});
+        double tool_drop = 0.0;
+        for (std::uint32_t tick = 0; tick < 5U * Simulation::kTickRateHz; ++tick) {
+            (void)tool.advance_frame(Simulation::kFixedStepSeconds);
+            tool_drop = std::max(tool_drop, tool.wet_state().e_deck_drop);
+        }
+        const auto w = tool.wet_state();
+        std::cout << "  E loads: an 18 kg toolbox dropped on the deck took it " << tool_drop << " m down\n";
+        require(w.e_catch_latched && std::abs(w.e_deck_drop) < 0.01 && std::abs(w.e_cab_travel) < 0.005,
+                "E loads: an 18 kg toolbox dropped on the deck sets nothing off");
+
+        Simulation drum(InitialSpawn::WetFPlatform);
+        (void)drum.advance_frame(1.0);
+        const std::uint32_t barrel = first_stock(drum, kStockDrum);
+        require(barrel != Simulation::kKitNone, "E loads: a drum is found");
+        drum.debug_launch_kit_body(barrel, kOverWetEDeck, {0.0, 0.0, 0.0});
+        const bool released = wait_for(drum, 3.0, [&](const Snapshot &) { return !drum.wet_state().e_catch_latched; });
+        require(released, "E loads: a 55 kg drum dropped on the deck sets the chiller off");
+        require(wait_wet_e_top(drum, 40.0), "E loads: the cab blown up empty comes to rest at the top");
+        empty_rest = kit_y(drum, Simulation::kWetEDeckEntityId);
+        std::cout << "  E loads: the drum's ride rests at " << empty_rest << '\n';
+        require(std::abs(empty_rest - up.rest_deck) <= 0.15,
+                "E loads: empty, the cab rests within 0.15 m of where it rests with the rider");
+    }
+
+    // ---- 6. The doors held open, a load thrown in ------------------------------------------
+    {
+        Simulation held(InitialSpawn::Ring220North);
+        require(ride_wet_d_up(held), "E jam: D carries the rider to 256.25");
+        require(stand_in_wet_e_doorway(held) && held.wet_state().e_door_angle > 0.3,
+                "E jam: the rider holds the leaves open in the doorway");
+        const std::uint64_t hits0 = held.snapshot().hit_count;
+        const std::uint32_t barrel = first_stock(held, kStockDrum);
+        held.debug_launch_kit_body(barrel, kOverWetEDeck, {0.0, 0.0, 0.0});
+        bool released = false;
+        double highest = 0.0;
+        // The car jammed under the doors: the cab, the deck, both leaves and
+        // the trip lever. (The spec first asked every body in E to be still;
+        // the 5 t chiller cannot be: hung on the air it has trapped, it bounces
+        // on it as on a spring, and is held to what follows instead.)
+        const std::uint64_t car[] = {Simulation::kWetECabEntityId, Simulation::kWetEDeckEntityId,
+                                     Simulation::kWetEDoorEntityId, Simulation::kWetEEastLeafEntityId,
+                                     Simulation::kWetELeverEntityId};
+        double car_fastest = 0.0;
+        // The chiller: within its travel, never onto a stop faster than
+        // kWetEStopStrikeMps; each swing (half a bounce) peaking slower than the
+        // one before.
+        constexpr double kWetEStopStrikeMps = 0.5;
+        const std::uint32_t chiller = held.kit_body_index(Simulation::kWetEChillerEntityId);
+        double low = 0.0;
+        double high = -1.0e9;
+        double stop_strike = 0.0;
+        std::vector<double> swing_peaks;
+        std::vector<double> lows_t;
+        double swing_peak = 0.0;
+        double last_v = 0.0;
+        double last_travel = 0.0;
+        for (std::uint32_t tick = 0; tick < 18U * Simulation::kTickRateHz; ++tick) {
+            (void)held.set_move_input(0.0, 0.0);
+            (void)held.advance_frame(Simulation::kFixedStepSeconds);
+            const auto w = held.wet_state();
+            released = released || !w.e_catch_latched;
+            highest = std::max(highest, kit_y(held, Simulation::kWetEDeckEntityId));
+            const double v = held.kit_body_velocity(chiller).y;
+            if (w.e_chiller_travel <= -49.99 || w.e_chiller_travel >= -0.001) {
+                stop_strike = std::max(stop_strike, std::abs(v));
+            }
+            if (tick < 3U * Simulation::kTickRateHz) {
+                last_v = v;
+                last_travel = w.e_chiller_travel;
+                continue;
+            }
+            for (const std::uint64_t entity : car) {
+                const auto u = held.kit_body_velocity(held.kit_body_index(entity));
+                car_fastest = std::max(car_fastest, std::sqrt(u.x * u.x + u.y * u.y + u.z * u.z));
+            }
+            low = std::min(low, w.e_chiller_travel);
+            high = std::max(high, w.e_chiller_travel);
+            swing_peak = std::max(swing_peak, std::abs(v));
+            if ((last_v < 0.0) != (v < 0.0)) {
+                // A swing ends where the chiller turns; a turn at the bottom
+                // marks the bounce's period.
+                swing_peaks.push_back(swing_peak);
+                swing_peak = 0.0;
+                if (last_v < 0.0) {
+                    lows_t.push_back(tick * Simulation::kFixedStepSeconds);
+                }
+            }
+            last_v = v;
+            last_travel = w.e_chiller_travel;
+        }
+        (void)last_travel;
+        bool decays = swing_peaks.size() >= 3;
+        // The first swing counted may have begun before the window: from the
+        // second on, each is slower than the last.
+        for (std::size_t i = 2; i < swing_peaks.size(); ++i) {
+            decays = decays && swing_peaks[i] < swing_peaks[i - 1];
+        }
+        const double period = lows_t.size() >= 2 ? (lows_t.back() - lows_t.front()) / static_cast<double>(lows_t.size() - 1)
+                                                 : 0.0;
+        std::cout << "  E jam: deck rose to " << highest << " m; after 3 s the car's fastest body moved " << car_fastest
+                  << " m/s; the chiller bounced between " << low << " and " << high << " m of travel (amplitude "
+                  << 0.5 * (high - low) << " m), period " << period << " s, swing peaks";
+        for (const double peak : swing_peaks) {
+            std::cout << ' ' << peak;
+        }
+        std::cout << " m/s; onto a stop at " << stop_strike << " m/s\n";
+        require(released && highest <= 256.40,
+                "E jam: the drum sets the chiller off, and the cab rises no higher than the open leaves");
+        require(car_fastest < 0.2, "E jam: the car stays jammed under the doors: cab, deck, leaves and lever still");
+        require(low > -50.0 && high < 0.0 && stop_strike <= kWetEStopStrikeMps,
+                "E jam: the chiller bounces within its travel, never onto a stop faster than 0.5 m/s");
+        require(decays, "E jam: the chiller's bounce dies away, each swing slower than the last");
+        require(held.snapshot().hit_count == hits0, "E jam: nothing strikes the rider");
+        require(walk_to(held, 13.2, -134.0, 6.0) && on_support(held.snapshot(), Simulation::kWetDPlatformEntityId),
+                "E jam: the rider walks back onto D's platform");
+    }
+
+    // ---- 8. The world guard ----------------------------------------------------------------
+    run_wet_e_guard(true);
+
+    std::cout << "PASS scraperx_sim AS-007 E: landing_mps=" << up.land_speed
+              << " release_s=" << up.release_t - up.land_t << " shut_margin_s=" << up.deck_door_t - up.shut_t
+              << " launch_mps2=" << up.launch_accel << " top_mps2=" << up.later_accel << " peak_deck=" << up.peak_deck
+              << " still_s=" << up.still_t - up.land_t << " rest_deck=" << up.rest_deck << " rest_60=" << rest_60
+              << " empty_rest=" << empty_rest << " gain_J=" << gain << " released_J=" << released << '\n';
 }

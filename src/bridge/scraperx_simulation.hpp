@@ -151,6 +151,7 @@ public:
     // its spout pours this frame and from where to where.
     [[nodiscard]] godot::PackedFloat32Array get_kit_pools() const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_spouts() const;
+    [[nodiscard]] godot::PackedFloat32Array get_kit_vents() const;
     // Stage A, the skip lift, read back.
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;

@@ -473,16 +473,10 @@ func _carry_name(entity: int) -> String:
 			return "PIPE SPOOL"
 		2035:
 			return "DRAIN HANDLE"
-		2042:
-			return "DOOR"
-		2043:
-			return "DOOR LATCH"
 		2958, 2959, 2960, 2961, 2962, 2963:
 			return "IRON PIG"
 		2979:
 			return "SKIP LINE"
-		2045:
-			return "CHILLER TRIP"
 		2052:
 			return "HOSE"
 		2054:

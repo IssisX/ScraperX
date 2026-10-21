@@ -246,6 +246,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_pools);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_spouts"),
                                 &ScraperXSimulation::get_kit_spouts);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_vents"),
+                                &ScraperXSimulation::get_kit_vents);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_cage_travel"),
                                 &ScraperXSimulation::get_well_a_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_a_catch_latched"),
@@ -876,6 +878,23 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_spouts() const {
     return out;
 }
 
+// Each vent collar: x0, z0, x1, z1, from_y, to_y and the air it let out last
+// step (m^3/s at atmospheric pressure).
+godot::PackedFloat32Array ScraperXSimulation::get_kit_vents() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->kit_vent_count(); ++index) {
+        const sim::KitVent vent = simulation_->kit_vent(index);
+        out.push_back(static_cast<float>(vent.low.x));
+        out.push_back(static_cast<float>(vent.low.z));
+        out.push_back(static_cast<float>(vent.high.x));
+        out.push_back(static_cast<float>(vent.high.z));
+        out.push_back(static_cast<float>(vent.low.y));
+        out.push_back(static_cast<float>(vent.high.y));
+        out.push_back(static_cast<float>(vent.flow_m3s));
+    }
+    return out;
+}
+
 godot::PackedFloat32Array ScraperXSimulation::get_kit_piles() const {
     godot::PackedFloat32Array out;
     for (std::uint32_t index = 0; index < simulation_->kit_pile_count(); ++index) {
@@ -1037,8 +1056,13 @@ godot::Dictionary ScraperXSimulation::get_wet_state() const {
     out["d_platform_travel"] = state.d_platform_travel;
     out["d_drain_angle"] = state.d_drain_angle;
     out["dump_angle"] = state.dump_angle;
-    out["e_door_latched"] = state.e_door_latched;
+    out["e_door_shut"] = state.e_door_shut;
     out["e_door_angle"] = state.e_door_angle;
+    out["e_deck_drop"] = state.e_deck_drop;
+    out["e_lever_angle"] = state.e_lever_angle;
+    out["e_cab_speed"] = state.e_cab_speed;
+    out["e_throttle_m3s"] = state.e_throttle_m3s;
+    out["e_vent_m3s"] = state.e_vent_m3s;
     out["e_catch_latched"] = state.e_catch_latched;
     out["e_duct_pa"] = state.e_duct_pa;
     out["e_cab_pa"] = state.e_cab_pa;

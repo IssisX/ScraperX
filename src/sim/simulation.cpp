@@ -181,6 +181,11 @@ bool Simulation::kit_body_dynamic(const std::uint32_t body) const noexcept {
     return physics_world_->kit().body_dynamic(kit::BodyIndex{body});
 }
 
+std::uint8_t Simulation::kit_body_carry_kind(const std::uint32_t body) const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    return static_cast<std::uint8_t>(kit.carry_kind(kit.body_entity(kit::BodyIndex{body})));
+}
+
 bool Simulation::kit_body_enabled(const std::uint32_t body) const noexcept {
     return physics_world_->kit().body_enabled(kit::BodyIndex{body});
 }
@@ -331,6 +336,25 @@ KitSpout Simulation::kit_spout(const std::uint32_t spout) const noexcept {
     return out;
 }
 
+std::uint32_t Simulation::kit_vent_count() const noexcept {
+    return physics_world_->kit().vent_count();
+}
+
+KitVent Simulation::kit_vent(const std::uint32_t vent) const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    KitVent out;
+    if (vent >= kit.vent_count()) {
+        return out;
+    }
+    JPH::Vec3 low;
+    JPH::Vec3 high;
+    kit.vent_box(kit::VentIndex{vent}, low, high);
+    out.low = to_sim_vector(low);
+    out.high = to_sim_vector(high);
+    out.flow_m3s = kit.vent_flow(kit::VentIndex{vent});
+    return out;
+}
+
 WetState Simulation::wet_state() const noexcept {
     const kit::Kit &kit = physics_world_->kit();
     const scraperx::sim::bands::WetIsolation &wet = physics_world_->wet();
@@ -344,8 +368,15 @@ WetState Simulation::wet_state() const noexcept {
     out.d_platform_travel = kit.guide_travel(wet.d_guide);
     out.d_drain_angle = kit.lever_angle(wet.d_drain);
     out.dump_angle = kit.lever_angle(wet.header_dump);
-    out.e_door_latched = kit.catch_latched(wet.e_door_catch);
-    out.e_door_angle = kit.lever_angle(wet.e_door_hinge);
+    const double west_leaf = kit.lever_angle(wet.e_door_hinge);
+    const double east_leaf = kit.lever_angle(wet.e_latch);
+    out.e_door_shut = west_leaf < 0.05 && east_leaf < 0.05;
+    out.e_door_angle = std::max(west_leaf, east_leaf);
+    out.e_deck_drop = -kit.guide_travel(wet.e_deck_guide) + kit.guide_travel(wet.e_cab_guide);
+    out.e_lever_angle = kit.lever_angle(wet.e_lever);
+    out.e_cab_speed = kit.body_velocity(wet.e_cab).GetY();
+    out.e_throttle_m3s = kit.cell_inflow(wet.e_cab_cell);
+    out.e_vent_m3s = kit.vent_flow(wet.e_vent);
     out.e_catch_latched = kit.catch_latched(wet.e_catch);
     out.e_duct_pa = kit.cell_pressure(wet.e_duct_cell);
     out.e_cab_pa = kit.cell_pressure(wet.e_cab_cell);

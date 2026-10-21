@@ -322,6 +322,34 @@ void Kit::set_guide_friction(const GuideIndex guide, const float max_friction_fo
     }
 }
 
+void Kit::set_interlock(const GuideIndex guide, const LeverIndex door_a, const LeverIndex door_b,
+                        const float open_angle, const float stop_travel) {
+    Guide &record = guides_[guide.value];
+    record.interlock_a = door_a;
+    record.interlock_b = door_b;
+    record.interlock_open = open_angle;
+    record.interlock_stop = stop_travel;
+}
+
+void Kit::update_interlock(Guide &guide) {
+    if (!guide.interlock_a.valid() || guide.slider == nullptr) {
+        return;
+    }
+    const bool open = lever_angle(guide.interlock_a) > guide.interlock_open ||
+                      lever_angle(guide.interlock_b) > guide.interlock_open;
+    const float travel = guide.slider->GetCurrentPosition();
+    const float speed = jolt_body(guide.body).GetLinearVelocity().Dot(guide.axis);
+    // Stopped on the interlock with a door open: held there.
+    if (guide.interlock_active && open && travel >= guide.interlock_stop - 0.01F) {
+        guide.interlock_latched = true;
+    }
+    // Back at rest on the bottom of its travel, its doors shut: let go.
+    if (guide.interlock_latched && !open && travel <= guide.min_travel + 0.01F && std::abs(speed) < 0.01F) {
+        guide.interlock_latched = false;
+    }
+    guide.interlock_active = guide.interlock_latched || (open && travel <= guide.interlock_stop + 0.005F);
+}
+
 void Kit::set_rail_gap(const GuideIndex guide, const float gap_travel, const BodyIndex joint,
                        const JPH::RVec3 seat, const JPH::Vec3 seat_axis, const float tolerance,
                        const float angle) {
@@ -664,7 +692,36 @@ void Kit::add_throttle(const CellIndex a, const CellIndex b, const float area) {
 
 void Kit::add_door(const CellIndex cell, const LeverIndex door, const float area,
                    const float full_angle, const JPH::Vec3 normal) {
-    cells_[cell.value].doors.push_back({door, area, full_angle, normal.Normalized()});
+    Door record;
+    record.lever = door;
+    record.area = area;
+    record.full_angle = full_angle;
+    record.normal = normal.Normalized();
+    cells_[cell.value].doors.push_back(record);
+}
+
+void Kit::add_door(const CellIndex cell, const LeverIndex door, const float area, const float full_angle,
+                   const JPH::Vec3 normal, const BodyIndex piston, const float edge_local_y,
+                   const float sill_y, const float top_y) {
+    add_door(cell, door, area, full_angle, normal);
+    Door &record = cells_[cell.value].doors.back();
+    record.piston = piston;
+    record.edge_local_y = edge_local_y;
+    record.sill_y = sill_y;
+    record.top_y = top_y;
+}
+
+VentIndex Kit::add_vent(const CellIndex cell, const BodyIndex piston, const float edge_local_y,
+                        const JPH::Vec3 low, const JPH::Vec3 high, const float area_per_m) {
+    Vent vent;
+    vent.cell = cell;
+    vent.piston = piston;
+    vent.edge_local_y = edge_local_y;
+    vent.low = low;
+    vent.high = high;
+    vent.area_per_m = area_per_m;
+    vents_.push_back(vent);
+    return VentIndex{static_cast<std::uint32_t>(vents_.size() - 1U)};
 }
 
 void Kit::add_breaker(const CellIndex cell, const float area) {
@@ -736,6 +793,7 @@ void Kit::pre_step(const float delta_seconds) {
     for (Guide &guide : guides_) {
         govern(guide);
         engage_dogs(guide);
+        update_interlock(guide);
         apply_limits(guide);
     }
     for (Rope &rope : ropes_) {
@@ -1107,6 +1165,26 @@ float Kit::pipe_opening(const Pipe &pipe) const {
     return opening;
 }
 
+float Kit::door_opening(const Door &door) const {
+    // Only a turn the opening way, off its shut stop at 0, opens it: pressed
+    // onto its frame, the solver lets a door a fraction of a milliradian past
+    // its stop, and that is still shut.
+    return std::clamp(lever_angle(door.lever) / door.full_angle, 0.0F, 1.0F);
+}
+
+float Kit::door_exposure(const Door &door) const {
+    if (!door.piston.valid() || door.top_y <= door.sill_y) {
+        return 1.0F;
+    }
+    const float edge = static_cast<float>(world_point(door.piston, JPH::Vec3(0.0F, door.edge_local_y, 0.0F)).GetY());
+    return std::clamp((edge - door.sill_y) / (door.top_y - door.sill_y), 0.0F, 1.0F);
+}
+
+float Kit::vent_area(const Vent &vent) const {
+    const float edge = static_cast<float>(world_point(vent.piston, JPH::Vec3(0.0F, vent.edge_local_y, 0.0F)).GetY());
+    return vent.area_per_m * std::clamp(edge - vent.low.GetY(), 0.0F, vent.high.GetY() - vent.low.GetY());
+}
+
 float Kit::cell_volume(const Cell &cell) const {
     float volume = cell.volume0;
     for (const Piston &piston : cell.pistons) {
@@ -1143,9 +1221,9 @@ void Kit::press(const float) {
         }
         for (const Door &door : cell.doors) {
             const Lever &lever = levers_[door.lever.value];
-            const float shut =
-                1.0F - std::clamp(std::abs(lever_angle(door.lever)) / door.full_angle, 0.0F, 1.0F);
-            bodies.AddForce(bodies_[lever.body.value].id, door.normal * (gauge * door.area * shut));
+            const float shut = 1.0F - door_opening(door);
+            bodies.AddForce(bodies_[lever.body.value].id,
+                            door.normal * (gauge * door.area * shut * door_exposure(door)));
         }
     }
     for (const Charge &charge : charges_) {
@@ -1245,6 +1323,13 @@ void Kit::flow_water(const float delta_seconds) {
 }
 
 void Kit::flow_air(const float delta_seconds) {
+    for (Cell &cell : cells_) {
+        cell.inflow = 0.0F;
+    }
+    for (Vent &vent : vents_) {
+        vent.flow = 0.0F;
+    }
+    const float per_second = delta_seconds > 0.0F ? 1.0F / (kAtmosphere * delta_seconds) : 0.0F;
     for (const Throttle &throttle : throttles_) {
         Cell &a = cells_[throttle.a.value];
         Cell &b = cells_[throttle.b.value];
@@ -1260,16 +1345,25 @@ void Kit::flow_air(const float delta_seconds) {
         moved = std::min(moved, std::abs(a.air - equal * va));
         a.air += pa > pb ? -moved : moved;
         b.air += pa > pb ? moved : -moved;
+        a.inflow += (pa > pb ? -moved : moved) * per_second;
+        b.inflow += (pa > pb ? moved : -moved) * per_second;
     }
-    for (Cell &cell : cells_) {
+    for (std::uint32_t index = 0; index < cells_.size(); ++index) {
+        Cell &cell = cells_[index];
         const float volume = cell_volume(cell);
         const float pressure = cell.air / volume;
         const float gauge = pressure - kAtmosphere;
         float leak = cell.bleed;
         for (const Door &door : cell.doors) {
-            leak += door.area *
-                    std::clamp(std::abs(lever_angle(door.lever)) / door.full_angle, 0.0F, 1.0F);
+            leak += door.area * door_exposure(door) * door_opening(door);
         }
+        float vented = 0.0F;
+        for (const Vent &vent : vents_) {
+            if (vent.cell.value == index) {
+                vented += vent_area(vent);
+            }
+        }
+        leak += vented;
         if (gauge < -kBreakerOpen) {
             leak += cell.breaker;
         }
@@ -1281,6 +1375,14 @@ void Kit::flow_air(const float delta_seconds) {
         float moved = upstream * orifice(leak, gauge, rho, kPressureLinear) * delta_seconds;
         moved = std::min(moved, std::abs(cell.air - kAtmosphere * volume));
         cell.air += gauge > 0.0F ? -moved : moved;
+        if (vented > 0.0F) {
+            // Each vent's share of what left (or came in, negative), by its area.
+            for (Vent &vent : vents_) {
+                if (vent.cell.value == index) {
+                    vent.flow = (gauge > 0.0F ? moved : -moved) * per_second * vent_area(vent) / leak;
+                }
+            }
+        }
     }
 }
 
@@ -1320,7 +1422,10 @@ void Kit::apply_limits(Guide &guide) {
         return;
     }
     const float low = guide.dog_pitch > 0.0F ? guide.dog_floor : guide.min_travel;
-    const float high = gap_closed(guide) ? guide.max_travel : std::min(guide.gap_travel, guide.max_travel);
+    float high = gap_closed(guide) ? guide.max_travel : std::min(guide.gap_travel, guide.max_travel);
+    if (guide.interlock_active) {
+        high = std::min(high, guide.interlock_stop);
+    }
     if (low != guide.limit_low || high != guide.limit_high) {
         guide.limit_low = low;
         guide.limit_high = std::max(low, high);
@@ -1799,6 +1904,17 @@ void Kit::restore(const Checkpoint &in) {
         if (guide.slider != nullptr) {
             guide.slider->SetLimits(guide.dog_floor, guide.max_travel);
         }
+        if (guide.interlock_a.valid() && guide.slider != nullptr) {
+            // Not saved: a body found standing on its interlock's stop was
+            // stopped there.
+            const float travel = guide.slider->GetCurrentPosition();
+            const float speed = jolt_body(guide.body).GetLinearVelocity().Dot(guide.axis);
+            guide.interlock_latched = std::abs(travel - guide.interlock_stop) < 0.02F && std::abs(speed) < 0.05F;
+            guide.interlock_active = guide.interlock_latched;
+            guide.limit_low = guide.dog_floor;
+            guide.limit_high = guide.max_travel;
+            apply_limits(guide);
+        }
     }
     for (std::size_t index = 0; index < catches_.size(); ++index) {
         if (in.catch_latched[index]) {
@@ -2098,6 +2214,22 @@ bool Kit::pipe_whole(const PipeIndex pipe) const noexcept {
 float Kit::cell_pressure(const CellIndex cell) const noexcept {
     const Cell *record = find(cells_, cell);
     return record != nullptr ? record->air / cell_volume(*record) : kAtmosphere;
+}
+
+float Kit::cell_inflow(const CellIndex cell) const noexcept {
+    const Cell *record = find(cells_, cell);
+    return record != nullptr ? record->inflow : 0.0F;
+}
+
+float Kit::vent_flow(const VentIndex vent) const noexcept {
+    const Vent *record = find(vents_, vent);
+    return record != nullptr ? record->flow : 0.0F;
+}
+
+void Kit::vent_box(const VentIndex vent, JPH::Vec3 &low, JPH::Vec3 &high) const noexcept {
+    const Vent *record = find(vents_, vent);
+    low = record != nullptr ? record->low : JPH::Vec3::sZero();
+    high = record != nullptr ? record->high : JPH::Vec3::sZero();
 }
 
 bool Kit::rail_whole(const GuideIndex guide) const noexcept {

@@ -319,6 +319,7 @@ In `/home/user/ScraperX/tests/sim_tests_wet.cpp`, registered in `/home/user/Scra
    - The catch is released and the deck's top never rises above 256.40.
    - After 3 s every E body moves under 0.2 m/s and stays so for 15 s: the car is jammed under the doors until the TP-340 dump.
    - The rider is never hit at or above `kHitFeltSpeed`, and walks back onto D's platform.
+   - *As built (2026-10-20):* "every E body" could not hold: the 5 t chiller, hung on the air it has trapped, bounces on it as on a spring (about ±2.3 m, a 3.7 s period, dying away about 5 % a swing). The check holds the jammed car (cab, deck, both leaves, lever) under 0.2 m/s, and the chiller to staying in its travel, never onto a stop faster than 0.5 m/s, each swing slower than the last. The declared door interlock (risk 3) is built. See `AS-007_WET_ISOLATION.md`, "Changed in E's rebuild".
 7. **Save mid-ride.** Save 8 s into check 3's ride, load into a fresh world: cab, deck, leaves and chiller as saved within 1 mm, and the ride ends within 0.02 m of check 3. A save from before the change is refused by the existing exact-size path, which run_save's "cut short" case already exercises.
 8. **World guard** (section 4).
 
