@@ -3,7 +3,13 @@
 
 #include "sim_tests.hpp"
 
+#include <cstdio>
+
 int main() {
+    // A line at a time, piped or not: a harness that stops the run early
+    // still shows every result up to that moment (fully buffered, a group
+    // stopped at 90 s showed only its first 14 of 24 passes).
+    std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;
