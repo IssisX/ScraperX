@@ -400,12 +400,13 @@ jobs:
         run: |
           set -euo pipefail
           # Every light, lamp, sign and piece of dressing is held up by what
-          # it hangs on (godot/presentation/floating_audit.gd; the owner,
+          # it hangs on, and every lamp gives light of its own that reaches
+          # something (godot/presentation/floating_audit.gd; the owner,
           # 2026-10-20: "we should just not have floating shit").
           timeout 300s tools/godot/godot --headless --path godot \
             -- "--audit-floating=${GITHUB_WORKSPACE}/artifacts/floating.txt" \
             2>&1 | tee artifacts/floating-audit.log
-          grep -F "SCRAPERX_FLOATING floating=0 " artifacts/floating-audit.log
+          grep -F "SCRAPERX_FLOATING floating=0 loose_solids=0 dark=0 " artifacts/floating-audit.log
 
       - name: Footsteps follow the floor, not the world
         shell: bash

@@ -61,6 +61,18 @@ func setup(main: Node, native: Object) -> void:
 		lamp.name = "CraneLamp%d" % i
 		lamp.mesh = lamp_mesh
 		lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Its red glow on the jib's steel round it, as a warning lamp's at
+		# night: a lamp gives light of its own (floating_audit.gd, dark lamps).
+		var glow := OmniLight3D.new()
+		glow.name = "CraneLampGlow"
+		glow.light_color = Color(1.0, 0.12, 0.08)
+		glow.light_energy = 1.5
+		glow.omni_range = 5.0
+		glow.omni_attenuation = 1.4
+		glow.distance_fade_enabled = true
+		glow.distance_fade_begin = 100.0
+		glow.distance_fade_length = 20.0
+		lamp.add_child(glow)
 		add_child(lamp)
 		_lamps.append(lamp)
 	update_view(native.get_yard_crane_state())

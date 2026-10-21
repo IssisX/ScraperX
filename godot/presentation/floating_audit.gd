@@ -40,7 +40,7 @@ const KIT_SHAPE_CAPSULE := 2
 
 # Dressing among the solid parts: lamps and signs, collidable, but hung on
 # the structure rather than being it.
-const LAMPS := ["LampFitting", "LampHead", "CageLamp"]
+const LAMPS := ["LampFitting", "LampHead", "CageLamp", "FloodFitting"]
 const SIGNS := ["SignPlate", "SignPlateMark", "BayPlate", "Banner", "BannerRod", "BannerMark",
 	"BannerBacking", "WordmarkBacking", "ChevronSpine", "ChevronUpper", "ChevronLower",
 	"LiftSignBacking"]
@@ -116,15 +116,52 @@ func run(main: Node) -> void:
 	for light in _lights:
 		if str(light["held_by"]).is_empty():
 			floating.append(light)
+	# Dark lamps (the owner, 2026-10-21: "light(s) that weren't giving off
+	# light"): a lamp with no light of its own within LIGHT_REACH_M, or a
+	# light whose range reaches nothing held.
+	var dark: Array = []
+	for part in _parts:
+		if str(part["kind"]) == "lamp" and not _lit(part):
+			dark.append(part)
+	for light in _lights:
+		if not _reaches(light):
+			dark.append(light)
 	var lines := _report(floating, loose)
+	lines.append("")
+	lines.append("DARK LAMPS (no light of their own, or a light that reaches nothing): %d" % dark.size())
+	for item: Dictionary in dark:
+		var at: Vector3 = item["c"]
+		lines.append("  %-6s %-34s at (%7.2f, %7.2f, %8.2f)  placed by %s" % [item["kind"], item["name"], at.x,
+			at.y, at.z, item["where"]])
 	if not report_path.is_empty():
 		var file := FileAccess.open(report_path, FileAccess.WRITE)
 		if file != null:
 			file.store_string("\n".join(lines) + "\n")
 	print("\n".join(lines))
-	print("SCRAPERX_FLOATING floating=%d loose_solids=%d parts=%d lights=%d" % [
-		floating.size(), loose.size(), _parts.size(), _lights.size()])
-	exit_code = EXIT_FLOATING if floating.size() + loose.size() > 0 else 0
+	print("SCRAPERX_FLOATING floating=%d loose_solids=%d dark=%d parts=%d lights=%d" % [
+		floating.size(), loose.size(), dark.size(), _parts.size(), _lights.size()])
+	exit_code = EXIT_FLOATING if floating.size() + loose.size() + dark.size() > 0 else 0
+
+
+# A lamp is lit when one of the lights is within LIGHT_REACH_M of its box.
+func _lit(lamp: Dictionary) -> bool:
+	var half: Vector3 = lamp["e"]
+	for light in _lights:
+		if (light["c"] as Vector3).distance_to(lamp["c"]) <= LIGHT_REACH_M + half.length():
+			return true
+	return false
+
+
+# A light reaches something when a held part's box comes within its range.
+func _reaches(light: Dictionary) -> bool:
+	var at: Vector3 = light["c"]
+	var reach := float(light.get("range", 0.0))
+	for part in _parts:
+		if str(part["held_by"]).is_empty() and not _is_structure(part):
+			continue
+		if (part["c"] as Vector3).distance_to(at) - (part["e"] as Vector3).length() <= reach:
+			return true
+	return false
 
 
 static func _is_structure(part: Dictionary) -> bool:
@@ -230,10 +267,12 @@ func _gather_lights_and_labels(node: Node, tower: Node) -> void:
 		if child is Light3D and not (child is DirectionalLight3D) and (child as Node3D).is_visible_in_tree():
 			# A light renamed for a sibling of the same name is known by its class.
 			var named := "" if str(child.name).begins_with("@") else " %s" % child.name
+			var reach := (child as OmniLight3D).omni_range if child is OmniLight3D else \
+				((child as SpotLight3D).spot_range if child is SpotLight3D else 0.0)
 			_lights.append({"name": child.get_class() + named, "kind": "light",
 				"where": str(child.get_meta(&"placed_by", "?")), "c": (child as Node3D).global_position,
 				"u": [Vector3.RIGHT, Vector3.UP, Vector3.BACK], "e": Vector3.ONE * LIGHT_REACH_M,
-				"held_by": ""})
+				"held_by": "", "range": reach})
 		elif child is Label3D and (child as Node3D).is_visible_in_tree():
 			_add(child, "Label3D \"%s\"" % (child as Label3D).text.replace("\n", " "), "sign", "thin")
 		_gather_lights_and_labels(child, tower)
