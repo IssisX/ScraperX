@@ -56,6 +56,14 @@ Kept here so none of it is lost when a session's scratch space goes away
 (the owner, 2026-10-20: "PLEASE DON'T LOSE THAT"). This is design work, not
 shipped code: nothing under this folder is loaded by the game or built by CI.
 
+## Shared survival: the bay (2026-10-21)
+
+Her one encounter built since: the bay on the 154 m deck, where she holds a
+failing walkway leaf up on her palms as bait. As built, with its numbers and
+tests: `shared_survival/THE_BAY.md`. The other agent's native core it is built
+on, and that agent's own records: `shared_survival/HANDOFF.md`,
+`shared_survival/TEST_RESULTS.md`, `shared_survival/PLAN_2026-10-21.md`.
+
 ## What is here
 
 - `panel_results/` holds what the design workflows returned, verbatim.

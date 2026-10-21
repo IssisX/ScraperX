@@ -24,6 +24,7 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # the ladder after, and the 220 ring. Between those the drawing is
 # switched off (the simulation runs on), so the capture is quick.
 
+const MATRON_STATE_GUARDING := 7
 const STAGE_PEST := 0
 const STAGE_DANGEROUS := 1
 const STAGE_CHANGED := 2
@@ -552,7 +553,8 @@ func _act_way_up(device: int) -> bool:
 	if not await _act_up_riser(device):
 		return false
 	_act_log("back_on_her_deck")
-	for leg in [Vector2(3.5, -128.2), Vector2(3.5, -129.8), Vector2(5.0, -129.6)]:
+	# Over the bay on its leaf (src/sim/bay.hpp), then to the ladder's foot.
+	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, Vector2(3.5, -128.2), Vector2(3.5, -129.8), Vector2(5.0, -129.6)]:
 		if not await _act_creep_to(device, leg, 0.08 if leg.x > 4.0 else 0.15, 10.0, 0.5):
 			return _fail("the creep to the ladder's foot stalled at %s (deaths %d)" % [str(_position()),
 				int(_native().get_death_count())])

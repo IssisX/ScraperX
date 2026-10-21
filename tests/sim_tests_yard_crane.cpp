@@ -4,6 +4,7 @@
 // ridden up and landed on the 44 m dock, alike twice to the bit; the crane's
 // forklift is lifted with its driver aboard onto the 22 m dock and driven in
 // onto the deck; the 8 t plate stack stalls the hoist on the ground.
+#include "sim/bay.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/yard_crane.hpp"
@@ -14,6 +15,7 @@
 #include <cstring>
 #include <iostream>
 
+using scraperx::sim::Bay;
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
@@ -694,15 +696,19 @@ void run_yard_crane_magnet() {
     const auto at = body_at(s, YardCrane::kMagnetEntity);
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
     // The crane's steel and its two devices are the kit's last six bodies
-    // but the machines' weights and the Matron's throwables after them (each
-    // built after what was before it, so saves from before them line up).
+    // but those built since, after them: the machines' weights, the Matron's
+    // throwables and the bay's five (bay.hpp), each built after what was
+    // before it, so saves from before them line up.
     const auto count = s.kit_body_count();
-    const auto weights = static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables);
-    require(count > 6 + weights && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 1)) &&
+    constexpr std::uint32_t kBayBodies = 5;
+    const auto weights =
+        static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;
+    require(count > 6 + weights && s.kit_body_entity(count - 1) == Bay::kShackleEntity &&
+                scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 1 - kBayBodies)) &&
                 s.kit_body_entity(count - 1 - weights) == YardCrane::kSpreaderEntity &&
                 s.kit_body_entity(count - 2 - weights) == YardCrane::kMagnetEntity &&
                 scraperx::sim::kit::is_stock_entity(s.kit_body_entity(count - 6 - weights)),
-            "magnet: the crane's steel, the magnet and the spreader, then the machines' weights and her throwables, are the kit's last bodies");
+            "magnet: the crane's steel, the magnet and the spreader, then the machines' weights, her throwables and the bay, are the kit's last bodies");
     // As the world began: a build from before the grips saved it so, without
     // those six bodies and the weights after them.
     const std::vector<std::uint8_t> as_begun = s.save_game();

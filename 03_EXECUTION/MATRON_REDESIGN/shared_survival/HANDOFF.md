@@ -65,7 +65,7 @@ The supplied environment lacked CMake/Ninja, installed under `/tmp/scraperx-buil
 
 Independent review found and repaired sensor support, missing rage input, ignored yaw, unbalanced contact torque, zero-friction Matron footing, knockdown-friction restoration and removed-constraint availability. Final review found no further obvious important issue; this is not a guarantee of all runtime behavior.
 
-Fresh results are recorded in `docs/SHARED_SURVIVAL_TEST_RESULTS.md`. The initial broad baseline CTest run was deliberately interrupted while its monolithic traversal suite was still running; it has no full-suite verdict. Final targeted runs are the evidence for this handoff. Godot bridge, game presentation, APK, install/device/Fold execution and performance were not verified. No CI run is claimed: the only workflow triggers on pushes to `ScraperX-Claude`, not this side branch.
+Fresh results are recorded in `TEST_RESULTS.md`. The initial broad baseline CTest run was deliberately interrupted while its monolithic traversal suite was still running; it has no full-suite verdict. Final targeted runs are the evidence for this handoff. Godot bridge, game presentation, APK, install/device/Fold execution and performance were not verified. No CI run is claimed: the only workflow triggers on pushes to `ScraperX-Claude`, not this side branch.
 
 ## Adoption decision
 

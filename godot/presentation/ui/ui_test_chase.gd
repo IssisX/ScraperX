@@ -22,9 +22,8 @@ extends "res://presentation/ui/ui_test_stack.gd"
 # and she comes over the ladder's head onto it.
 # look_matron_*: renders only (not in CI): the locker straining, her bursting
 # out, her hunt, from the player's eyes.
-# touch_bay (src/sim/bay.hpp): woken, she loses the crouched player beyond the
-# bay's leaf and keeps the way out west of it; the player comes round the deck
-# to stand east of the bay, and a
+# touch_bay (src/sim/bay.hpp): woken, she is led round the deck and the
+# player east over the bay's leaf; she does not follow over it. East of it, a
 # dash along the band is heard across it: she drops into the bay and holds
 # the leaf up on her palms, its motor and fan stopped. UNHOOK the chain off
 # its cleat, a step onto the leaf by its hinge, HOOK it onto the leaf's eye:
@@ -64,8 +63,6 @@ const MATRON_NORTH_Z := -128.5
 const MATRON_MID_Z := -150.0
 const MATRON_DECK_Y := 154.0
 const BAY_TRAP_HOLDING := 4
-const BAY_WEST_X := -3.9
-const MATRON_STATE_GUARDING := 7
 const BAY_SHACKLE := 2653
 
 
@@ -381,29 +378,28 @@ func _matron_line_touch(device: int) -> bool:
 func _bay_touch(device: int) -> bool:
 	if not await _wake_matron(device):
 		return false
-	# Crouched: west over the leaf and down the west band, still there until
-	# she has lost the player and keeps the way out's mouth west of the bay;
-	# then round by the south band, back along the north band to stand east
-	# of the bay.
+	# Quietly to the catwalk's east end to wait for her; then the long way
+	# round ahead of her, by the south and west bands, and east along the
+	# north band over the leaf to stand east of the bay. She does not follow
+	# over it (heard or seen, her trap; or the player unheard under its fan).
 	if not await _crouch_on(device, true):
 		return _fail("CROUCH did not crouch the climber")
-	for leg in [Vector2(-MATRON_BAND_X, MATRON_NORTH_Z), Vector2(-MATRON_BAND_X, -160.0)]:
-		if not await _go(device, leg, 0.4, 70.0):
-			return _fail("the crouched walk down the west band stalled at %s" % str(_position()))
-	_move_dir(device, Vector2.ZERO)
-	var keeping: bool = await _wait_until(func() -> bool:
+	if not (await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0) and \
+			await _go(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), 0.5, 40.0)):
+		return _fail("the crouched walk to the catwalk's east end stalled at %s" % str(_position()))
+	var coming: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
-		return int(m["state"]) == MATRON_STATE_GUARDING and at.x < BAY_WEST_X - 0.5 and \
-			at.x > BAY_WEST_X - 11.0 and absf(at.z - MATRON_NORTH_Z) < 3.0, 120.0)
-	if not keeping:
-		return _fail("she never gave up the player and kept the way out west of the bay (state %d, at %s)" % [
-			int(_matron_state()["state"]), str(_matron_state()["position"])])
-	for leg in [Vector2(-MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, -171.5), Vector2(MATRON_BAND_X, MATRON_NORTH_Z),
-			Vector2(3.0, MATRON_NORTH_Z)]:
-		if not await _go(device, leg, 0.4, 70.0):
-			return _fail("the crouched walk round the deck stalled at %s" % str(_position()))
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 16.0, 45.0)
+	if not coming:
+		return _fail("she did not come for the player at the catwalk's east end")
 	await _crouch_on(device, false)
+	for leg in [Vector2(MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, MATRON_NORTH_Z),
+			Vector2(3.0, MATRON_NORTH_Z)]:
+		if not await _sprint_to(device, leg, 1.0, 12.0):
+			return _fail("the sprint round the deck stalled at %s" % str(_position()))
+	if not await _walk_to(device, Vector2(3.0, MATRON_NORTH_Z), 0.3, 4.0, true):
+		return _fail("the walk to east of the bay stalled at %s" % str(_position()))
 	# A dash along the band and back, heard across the bay, until she is down
 	# in it holding the leaf (three dashes at most).
 	var holding := false
