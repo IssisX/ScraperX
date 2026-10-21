@@ -85,3 +85,25 @@ prove contracts and execution, not visual comfort.
 
 No severing, voice generation, general climbing overhaul, injury redesign,
 one-arm route redesign, or guaranteed safe landing geometry was added.
+
+## Integrated on ScraperX-Claude (2026-10-21)
+
+Taken as delivered (`c090a9d`) on top of the broken bridge and the rigging
+reach. Two defects found against the rest of the game, fixed on top:
+
+- **The rotation stayed free after recovery** (`a3ed75c`). Every other system
+  acts off the body's centre on a body that cannot turn (a hang's arms at the
+  shoulders, a carry at the hands, a harness). Once recovered (within 1.4°,
+  under 0.08 rad/s, grounded) the body is set upright and its rotation locked
+  again. The capture test throws a drum into the recovered body: tipped 0.024
+  before, 0 now.
+- **Getting up could lock the controls indefinitely** (`d976a46`). Let go with
+  her leaning on the climber, the body stood 12–21° over, never within 1.4°,
+  every control locked (traced in `touch_matron_act`). While getting up the
+  stick now walks (and, let go, stands) the body; everything else still waits
+  for upright. Dropping the soles' friction instead was tried and refused: the
+  lethal-drum scenario then spun the body 12° in a tick.
+
+`touch_matron_act` met the old rule (her hands a death): it now waits for her
+grip, holds the stick until it breaks, waits for the climber to get up, then
+CONTINUEs from the climb's save to the checkpoint below her deck.
