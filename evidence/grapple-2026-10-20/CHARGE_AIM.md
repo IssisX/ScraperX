@@ -21,3 +21,7 @@ The first new unit compile called the wrong existing fixture helper and was corr
 Native full_charge_seconds=1.0 and precision_energy_j=180 / cartridge_energy_j=900 are the charge-feel bounds. These are tuning hypotheses, not measured device-preference claims. No new force caps, global contact tolerances or spring constants were added. The recorded full-power thin-plate jam remains unresolved; embedded steel is not silently deleted. Hook recovery returns reusable steel, not spent launch cartridges.
 
 Host rendering/input/native evidence does not prove phone look, feel, hearing or FPS. Matching green-CI APK remains the delivery gate. The earlier RANGE_AND_TOUCH.md describes the initial selector version; this document records its owner-requested replacement.
+
+## Final responsive correction and owner pause
+
+Older selector candidate39528081083 stopped at the responsive-control gate. The existing generic test expected TOOLS to emit a native gameplay verb; it now proves the actual menu opens and emits none. Keeping every overlap/safe-area check then exposed a real PayOut/Chute overlap at1.3scale in portrait. Moving only the split Chute target toward the right thumb fixes it, preserving the ordinary shared Drop/Chute slot. Final responsive576layouts/failures0 and toolbelt144pass; RESPONSIVE_TOOL_TRAY.json retains the failed attempt and exact final results. Native/charge/MCP behavior is unchanged. Owner requested finish-and-pause; no new implementation scope follows while paused. Matching latest green candidate remains pending.

@@ -82,7 +82,10 @@ func _run() -> void:
 							router.frame(0.016)
 							finger(controls, 2, button.center)
 							check(button.index == 2, label + " captures " + str(button.id))
-							if button.hold:
+							if button.id == &"tools":
+								check(controls._tool_tray_open, label + " TOOLS opens actual equipment tray")
+								check(router.frame(0.016).verbs.is_empty(), label + " equipment menu sends no gameplay command")
+							elif button.hold:
 								check(controls._held(button.id) == 1.0, label + " hold " + str(button.id))
 							else:
 								check(router.frame(0.016).verbs == [controls._verb_for(button.id)], label + " verb " + str(button.id))

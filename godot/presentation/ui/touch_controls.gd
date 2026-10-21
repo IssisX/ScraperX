@@ -236,7 +236,8 @@ func _layout_in_safe_rect(safe: Rect2) -> void:
 	# Drop and Chute normally share a slot. An equipped grapple can offer
 	# both during a fall, so give Chute a distinct hit area in that context.
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
-	_place(B_CHUTE, jump + Vector2(-306.0, -450.0 if _split_drop_chute else 96.0) * _u, 86.0)
+	_place(B_CHUTE, jump + Vector2(-150.0 if _split_drop_chute else -306.0,
+		-450.0 if _split_drop_chute else 96.0) * _u, 86.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
