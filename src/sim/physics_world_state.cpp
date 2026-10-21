@@ -763,6 +763,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         const JPH::Vec3 spin = bodies.GetAngularVelocity(player_id_);
         state_.held_by_matron = grip_ != nullptr;
         state_.player_free_rotation = player_free_rot_;
+        state_.player_body_length_m = 2.0F * bodies.GetShape(player_id_)->GetLocalBounds().GetExtent().GetY();
         state_.player_rot_x = rot.GetX();
         state_.player_rot_y = rot.GetY();
         state_.player_rot_z = rot.GetZ();

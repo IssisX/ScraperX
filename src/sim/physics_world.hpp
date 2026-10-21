@@ -703,6 +703,7 @@ public:
     PlayerContactListener contact_listener_;
     JPH::RefConst<JPH::Shape> player_shape_;
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
+    JPH::RefConst<JPH::Shape> player_torso_shape_;
     JPH::RefConst<JPH::Shape> grip_region_shape_;
     JPH::RefConst<JPH::Shape> climb_sweep_shape_;
     JPH::BodyID deck_id_;

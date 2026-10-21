@@ -59,6 +59,10 @@ void Simulation::PhysicsWorld::set_player_mass_for_losses(JPH::BodyInterface & /
 }
 
 void Simulation::PhysicsWorld::fatality_reset(JPH::BodyInterface &bodies) noexcept {
+    if (bodies.GetShape(player_id_).GetPtr() == player_torso_shape_.GetPtr()) {
+        // A whole body again for the restart.
+        bodies.SetShape(player_id_, active_player_shape(), false, JPH::EActivation::Activate);
+    }
     destroy_grab_constraint(knee_pin_);
     destroy_grab_constraint(knee_arm_);
     destroy_grab_constraint(fist_);
@@ -330,6 +334,14 @@ void Simulation::PhysicsWorld::fatality_post_step(JPH::BodyInterface &bodies, co
             leg_off_[k] = true;
             ++leg_tear_count_;
             last_leg_peak_n_ = leg_peak_n_;
+            if (leg_off_[0] && leg_off_[1]) {
+                // Both legs gone, the body is its torso: from the hips (the
+                // body's middle) to the crown, half the height. The legless
+                // capsule was the full 1.8 m (the owner's playtest). The
+                // shape's origin stays put, the centre of mass moves up into
+                // what is left.
+                bodies.SetShape(player_id_, player_torso_shape_.GetPtr(), false, JPH::EActivation::Activate);
+            }
             set_player_mass_for_losses(bodies);
             matron_->fatal_leg_torn();
         }

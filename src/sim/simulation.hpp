@@ -995,6 +995,8 @@ struct Snapshot final {
     // and strain; the player's brace; the thrash; every edge counted.
     bool held_by_matron = false;
     bool player_free_rotation = false;
+    // The player body's length, crown to soles (or hips, both legs gone).
+    double player_body_length_m = 0.0;
     double player_rot_x = 0.0, player_rot_y = 0.0, player_rot_z = 0.0, player_rot_w = 1.0;
     Vector3 player_angular_velocity{};
     double grip_load_n = 0.0;

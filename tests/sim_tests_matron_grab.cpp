@@ -336,6 +336,7 @@ void run_matron_arm() {
         require(claimed && ended == 1, "matron claimed: both arms gone, she has won and the run ends");
         require(!p.left_arm_lost && !p.right_arm_lost && !p.held_by_matron && s.matron_state().state == 0,
                 "matron claimed: the run starts again, the body whole, her in her locker");
+        require(p.player_body_length_m > 1.75, "matron claimed: the run starts again with the body's full length");
         std::cout << "PASS scraperx_sim matron claimed\n";
     }
     // ---- two grabs, two tears, the ending: nothing faked between them ----
@@ -452,6 +453,10 @@ void run_matron_fatality() {
             tears = p.leg_tear_count;
             legs_seen = legs_seen || (p.left_leg_lost && p.right_leg_lost && p.severed_leg_present[0] &&
                                       p.severed_leg_present[1]);
+            if (p.left_leg_lost && p.right_leg_lost) {
+                require(p.player_body_length_m < 1.0,
+                        "matron fatality: both legs gone, the body is its torso, not the whole capsule");
+            }
             kicks = p.brake_kick_count;
             hauls = p.haul_count;
             parts = p.knot_part_count;

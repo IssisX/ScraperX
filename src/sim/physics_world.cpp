@@ -3,6 +3,7 @@
 
 #include "sim/physics_world.hpp"
 #include "sim/twin_tower.hpp"
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 
 namespace scraperx::sim::detail {
 
@@ -194,6 +195,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
     player_crouch_shape_ =
         new JPH::CapsuleShape(kPlayerCrouchHalfHeight - kPlayerRadius, kPlayerRadius);
+    // The torso left when both legs are torn off (physics_world_fatality.cpp):
+    // the standing capsule's upper half, hips (its middle) to crown.
+    player_torso_shape_ = new JPH::RotatedTranslatedShape(
+        JPH::Vec3(0.0F, 0.5F * kPlayerHalfHeight, 0.0F), JPH::Quat::sIdentity(),
+        new JPH::CapsuleShape(0.5F * kPlayerHalfHeight - kPlayerRadius, kPlayerRadius));
     grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
     // A climber's moves are swept with a body 5 cm slimmer than the
     // capsule: a body on its holds already touches the rungs it climbs.
