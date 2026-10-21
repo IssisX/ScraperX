@@ -22,7 +22,31 @@ constexpr float kHoldTurnRate = 5.0F;
 constexpr float kWorkStallS = 0.5F;
 constexpr float kWorkMarginM = 0.15F;
 constexpr float kWorkSlackM = 0.3F;
+// The well's skip-lift cage and the trip gantry over its open north side
+// (band_counterweight_well.cpp) stand between the deck and the bollard. She
+// goes round them, never through: out north past the gantry's posts (z
+// -129.6..-129.5), west past its west post (x -12.6..-12.5), then south to
+// the bollard; and back the same way to the trip handle. The body she drags
+// follows her line, so it clears them too.
+constexpr float kGantryClearZ = -128.8F;   // her line north of the posts
+constexpr float kPastGantryZ = -129.1F;    // she is north of them
+constexpr float kPastCageX = -13.0F;       // she is west of them
+constexpr float kWestCornerX = -13.7F;     // where she turns south
 float xz(const float ax, const float az, const float bx, const float bz) { return std::hypot(ax - bx, az - bz); }
+// The next point on her way to (x, z) round the cage and the gantry.
+void round_the_cage(const float ax, const float az, const float x, const float z, float &wx, float &wz) {
+    wx = x;
+    wz = z;
+    const bool west = ax <= kPastCageX;
+    const bool north = az >= kPastGantryZ;
+    if (x <= kPastCageX && !west) {
+        wx = north ? kWestCornerX : ax;
+        wz = kGantryClearZ;
+    } else if (z >= kPastGantryZ && !north) {
+        wx = ax;
+        wz = kGantryClearZ;
+    }
+}
 float turn_to(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, 2.0F * kPiF);
     delta = std::clamp(delta, -rate * dt, rate * dt);
@@ -145,7 +169,10 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
             stand();
             return true;
         }
-        (void)go_to(x, z, pace);
+        float wx = x;
+        float wz = z;
+        round_the_cage(ax, az, x, z, wx, wz);
+        (void)go_to(wx, wz, pace);
         return false;
     };
     const auto face = [&](const RVec3 p) {
