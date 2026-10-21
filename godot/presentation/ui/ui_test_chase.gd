@@ -58,6 +58,9 @@ const YARD_CRANE_MAST_Z := -137.0
 const MATRON_STATE_DORMANT := 0
 const MATRON_STATE_STRAINING := 1
 const MATRON_STATE_HUNTING := 3
+const MATRON_STATE_GUARDING := 7
+# The bay's west lip (src/sim/bay.hpp): she guards the way out west of it.
+const BAY_WEST_X := -4.6
 const MATRON_STATE_DEAD := 6
 const MATRON_BAND_X := 21.5
 const MATRON_NORTH_Z := -128.5
@@ -400,64 +403,35 @@ func _matron_line_touch(device: int) -> bool:
 	return true
 
 
-# Ahead of her round the deck by what she hears (src/sim/matron.cpp hear):
-# at each corner the climber waits for her to be coming behind (hunting,
-# within 25 m), jumping where it stands to be heard while she is not (a
-# landing is loud), up to `budget` seconds.
-func _wait_for_her_behind(budget: float) -> bool:
-	var waited := 0.0
-	var next_jump := 0.0
-	while waited < budget:
-		var m := _matron_state()
-		var her: Vector3 = m["position"]
-		if int(m["state"]) == MATRON_STATE_HUNTING and \
-				Vector2(her.x, her.z).distance_to(Vector2(_position().x, _position().z)) < 25.0:
-			return true
-		if waited >= next_jump and bool(_ctx()["grounded"]):
-			_press(&"jump", 1)
-			next_jump = waited + 1.5
-		await get_tree().process_frame
-		waited += get_process_delta_time()
-	return false
-
-
 func _bay_touch(device: int) -> bool:
 	if not await _wake_matron(device):
 		return false
-	# Quietly to the catwalk's east end to wait for her; then the long way
-	# round ahead of her, by the south and west bands, and east along the
-	# north band over the leaf to stand east of the bay. She does not follow
-	# over it (heard or seen, her trap; or the player unheard under its fan).
+	# Quietly to the catwalk's east end, out of her hearing. Out of her locker
+	# she looks where the sprint that woke her was, finds nobody, and goes to
+	# stand in the way out's mouth west of the bay (she knows only what she
+	# hears or sees: src/sim/matron.cpp hear). Then quietly north up the east
+	# band and west along the north band to stand east of the bay, across it
+	# from her. She does not follow over it (heard or seen, her trap; or the
+	# player unheard under its fan).
 	if not await _crouch_on(device, true):
 		return _fail("CROUCH did not crouch the climber")
 	if not (await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0) and \
 			await _go(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), 0.5, 40.0)):
 		return _fail("the crouched walk to the catwalk's east end stalled at %s" % str(_position()))
-	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 25.0):
-		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
-	if not await _call_her_to_band(device):
-		return _fail("the run up the band and back stalled at %s" % str(_position()))
-	var coming: bool = await _wait_until(func() -> bool:
+	var guarding: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
-		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 16.0, 45.0)
-	if not coming:
+		return bool(m["released"]) and int(m["state"]) == MATRON_STATE_GUARDING and at.x < BAY_WEST_X, 90.0)
+	if not guarding:
 		var m := _matron_state()
-		return _fail("she did not come for the player at the catwalk's east end (state %d at %s, lead %s at (%.1f, %.1f) age %.1f s, seen %s)" % [
-			int(m["state"]), str(m["position"]), str(m["lead_valid"]), float(m["lead_x"]), float(m["lead_z"]),
-			float(m["lead_age_s"]), str(m["lead_seen"])])
+		return _fail("out, she never went to guard the way out west of the bay (state %d at %s, lead %s at (%.1f, %.1f))" % [
+			int(m["state"]), str(m["position"]), str(m["lead_valid"]), float(m["lead_x"]), float(m["lead_z"])])
+	if not (await _go(device, Vector2(MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 40.0) and \
+			await _go(device, Vector2(3.0, MATRON_NORTH_Z), 0.3, 40.0)):
+		var m := _matron_state()
+		return _fail("the crouched walk to east of the bay stalled at %s (she state %d at %s)" % [str(_position()),
+			int(m["state"]), str(m["position"])])
 	await _crouch_on(device, false)
-	for leg in [Vector2(MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, -171.5), Vector2(-MATRON_BAND_X, MATRON_NORTH_Z),
-			Vector2(3.0, MATRON_NORTH_Z)]:
-		if not await _sprint_to(device, leg, 1.0, 12.0):
-			var ms := _matron_state()
-			return _fail("the sprint round the deck stalled at %s (she state %d stage %d at %s; capture phase %d)" % [
-				str(_position()), int(ms["state"]), int(ms["stage"]), str(ms["position"]),
-				int((_native().get_landing_state() as Dictionary).get("capture_phase", 0))])
-		if not await _wait_for_her_behind(20.0):
-			var m := _matron_state()
-			return _fail("she lost the climber at %s (state %d at %s)" % [str(_position()), int(m["state"]),
-				str(m["position"])])
 	if not await _walk_to(device, Vector2(3.0, MATRON_NORTH_Z), 0.3, 4.0, true):
 		return _fail("the walk to east of the bay stalled at %s" % str(_position()))
 	# A dash along the band and back, heard across the bay, until she is down
