@@ -10,14 +10,6 @@ This later project rule overrides conflicting fixed diagnostic windows and retry
 
 The owner requested critical study of the Claude conversation and a persistent general execution change, then explicitly authorized repairing the related task skills themselves. This is a cross-project workflow, with ScraperX constraints isolated in a project profile.
 
-## Opt-in adversarial idea development — 2026-10-21
-
-Installed general skill: `/data/data/com.termux/files/home/.codex/skills/adversarial-ideation/SKILL.md`. Call `$adversarial-ideation Develop and challenge ideas for [objective].` Offer it at consequential open design choices and wait for the owner to select it; direct invocation or an explicit request for an adversarial round needs no repeated confirmation. Saved configuration enables the skill; `allow_implicit_invocation: false` keeps automatic invocation off. Picker refresh/runtime dispatch is not established by file installation.
-
-The authoritative process is in that installed skill. This [portable published package](WORKFLOW_SKILLS/adversarial-ideation/SKILL.md) is an identical restoration snapshot outside skill discovery roots, not a second startup instruction source. It generalizes independent common-brief authors, fresh distinct-lens refuters, evidence/status/score separation, root synthesis, compatible grafting and decision-based stopping beyond ScraperX. It preserves the smallest-useful-team execution default and cannot authorize implementation from a concept request. Engineering Delivery, ScraperX Crew and repository AGENTS now route the optional invitation to this process.
-
-One fresh GPT-6.1 Sol/high critic walked through an approved wording change, an open patient-appointment design and an explicit offline-feature round under four-agent capacity. It found no material defect in those written decisions. This is instruction-level walkthrough evidence, not observed dispatcher behavior or measured productivity. Packaging command `python /data/data/com.termux/files/home/.codex/skills/.system/skill-creator/scripts/quick_validate.py /data/data/com.termux/files/home/.codex/skills/adversarial-ideation` returned `Skill is valid!`, exit0. Scoped Python readback returned PASS for the enabled TOML entry, explicit-only YAML, invocation prompt, identical installed/published package, routing links and preserved gameplay pause. Portable owner backup: `/storage/emulated/0/Download/Adversarial-ideation-skill.zip`. No game checks or APK are needed for this process-only change.
-
 ## Installed result
 
 - General selectable skill: `/data/data/com.termux/files/home/.codex/skills/engineering-delivery/SKILL.md`; selection metadata in `agents/openai.yaml`. Direct invocation: `$engineering-delivery`.
