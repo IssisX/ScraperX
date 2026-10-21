@@ -698,11 +698,15 @@ void run_yard_crane_magnet() {
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
     // The crane's steel and its two devices are the kit's last six bodies
     // but those built since, after them: the machines' weights, the Matron's
-    // throwables, the bay's five and twin access, each built after what was
-    // before it, so saves from before them line up.
-    require(s.kit_body_entity(s.kit_body_count() - 1) == scraperx::sim::TwinTower::kFrameEntity,
-            "magnet: twin access is appended after every pre-existing kit body");
-    const auto count = s.kit_body_count() - 1;
+    // throwables, the bay's five and the broken bridge's three (its frame,
+    // leaf and trip flag), each built after what was before it, so saves from
+    // before them line up.
+    const auto last = s.kit_body_count();
+    require(s.kit_body_entity(last - 3) == scraperx::sim::TwinTower::kFrameEntity &&
+                s.kit_body_entity(last - 2) == scraperx::sim::TwinTower::kLeafEntity &&
+                s.kit_body_entity(last - 1) == scraperx::sim::TwinTower::kFlagEntity,
+            "magnet: the broken bridge is appended after every pre-existing kit body");
+    const auto count = s.kit_body_count() - 3;
     constexpr std::uint32_t kBayBodies = 5;
     const auto weights =
         static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;

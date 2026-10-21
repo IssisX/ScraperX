@@ -1087,8 +1087,30 @@ func _look_summit(from_ground: bool) -> bool:
 	await _pose("summit_mast_day")
 	return true
 
-# First contact with the neighboring shaft, from the already reachable 220
-# ring. All walking and the mantle go through the existing touch controls.
+# The broken bridge to the second shaft (src/sim/twin_tower.hpp), from the
+# 220 ring where the hook is found, all through the touch controls: the hook
+# taken off its rack; up onto the step at the near half's tip; the hook on
+# the erection arm's bar over the gap's middle, a step off, the swing across,
+# and DROP at its top over the far half; past the raised leaf to the shaft's
+# side and a hook shot into the trip's hood; the leaf comes down across the
+# gap, and the walk back over it to tower one.
+const TWIN_LEAF := 2660
+const TWIN_ARM_BAR := Vector3(-5.7, 231.94, -199.06)
+const TWIN_FLAG := Vector3(-8.7, 224.95, -212.9)
+
+# Aims the view at `target`, raised by the shot's drop over the distance (the
+# hook leaves at 40 m/s and falls under gravity), as a thumb learns to.
+func _twin_aim(target: Vector3) -> void:
+	var from: Vector3 = _main._camera.global_position
+	var flight := from.distance_to(target) / 40.0
+	await _look_at_point(target + Vector3(0.0, 0.5 * 9.81 * flight * flight, 0.0))
+
+# The leaf's turn down from raised: 0 raised, about 1.43 down (the angle of
+# its own up axis from the world's).
+func _twin_leaf_turn() -> float:
+	var t: Transform3D = _native().get_kit_body_transform(_native().get_kit_body_index(TWIN_LEAF))
+	return acos(clampf(t.basis.y.normalized().y, -1.0, 1.0))
+
 func _twin(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
 	if not await _go(device, Vector2(-21.6, -127.6), 0.18, 18.0):
@@ -1099,19 +1121,60 @@ func _twin(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 1.0):
 		return _fail("twin: touch did not take hook")
-	for point in [Vector2(-21.6, -171.5), Vector2(-7.0, -172.5), Vector2(-7.0, -218.0),
-			Vector2(-17.8, -218.0), Vector2(-18.4, -218.0)]:
+	for point in [Vector2(-21.6, -171.5), Vector2(-7.0, -172.5), Vector2(-5.7, -180.0), Vector2(-5.7, -188.1)]:
 		if not await _go(device, point, 0.18, 35.0):
 			return _fail("twin: approach to %s stopped at %s" % [str(point), str(_position())])
+	var raised := _twin_leaf_turn()
+	if raised > 0.2:
+		return _fail("twin: the leaf is not standing raised (turn %.2f)" % raised)
 	await _seconds(0.3)
-	if not await _c4_mantle(device, Vector2(-1.0, 0.0), 226.4, "B's exterior plinth"):
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), 221.4, "the near step"):
 		return false
-	await _pose("twin_upper")
-	for point in [Vector2(-17.8, -218.0), Vector2(-7.0, -218.0), Vector2(-7.0, -172.5)]:
-		if not await _go(device, point, 0.18, 35.0):
-			return _fail("twin: retreat to %s stopped at %s" % [str(point), str(_position())])
+	if not await _go(device, Vector2(-5.7, -189.5), 0.15, 6.0):
+		return _fail("twin: not at the near step's edge (at %s)" % str(_position()))
+	await _seconds(0.3)
+	await _pose("twin_gap")
+	var deaths := int(_native().get_death_count())
+	await _twin_aim(TWIN_ARM_BAR)
+	_tap(1, _center(&"hook"))
+	if not await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 2, 1.5):
+		return _fail("twin: HOOK at the arm's bar never bit (state %d)" % int(_native().get_hook_state()["state"]))
+	# Off the step toward the shaft, the stick held while on the line.
+	await _face(Vector2(0.0, -1.0))
+	_move(device, 1.0)
+	var topped: bool = await _wait_until(func() -> bool:
+		var p := _position()
+		return p.z <= -208.6 and p.y > 221.6 and float(_native().get_player_linear_velocity().y) <= 0.0, 6.0)
+	_move(device, 0.0)
+	if not topped:
+		return _fail("twin: the swing never topped out over the far half (at %s)" % str(_position()))
+	_press(&"drop", 1)
+	if not await _wait_until(func() -> bool:
+			return bool(_native().is_player_grounded()) and _position().z < -208.0 and _position().y > 221.0, 3.0):
+		return _fail("twin: DROP at the top of the swing did not land on the far half (at %s)" % str(_position()))
+	if int(_native().get_death_count()) != deaths:
+		return _fail("twin: died crossing")
+	var crossed := _position()
+	await _seconds(0.3)
+	# Past the raised leaf to the shaft's side; the trip from there.
+	for point in [Vector2(-5.0, -214.0), Vector2(-8.7, -217.5)]:
+		if not await _go(device, point, 0.18, 12.0):
+			return _fail("twin: to the shaft's side, stopped at %s" % str(_position()))
+	await _seconds(0.3)
+	await _twin_aim(TWIN_FLAG)
+	_tap(1, _center(&"hook"))
+	if not await _wait_until(func() -> bool: return _twin_leaf_turn() > 1.35, 15.0):
+		return _fail("twin: the hook shot into the hood did not bring the leaf down (turn %.2f)" % _twin_leaf_turn())
+	if int(_native().get_hook_state()["state"]) != 0:
+		_press(&"drop", 1)
 	await _seconds(0.5)
-	if not bool(_native().is_player_grounded()) or _position().y < 221.0 or _position().y > 222.0:
-		return _fail("twin: retreat did not end standing on A")
-	_detail = "existing rack, bridge, incline, mantle and retreat through touch; no new spawn or controls"
+	await _look_at_point(Vector3(-8.7, 220.5, -195.0))
+	await _pose("twin_leaf_down")
+	for point in [Vector2(-7.9, -214.0), Vector2(-7.9, -211.3), Vector2(-8.7, -209.3), Vector2(-8.7, -188.0)]:
+		if not await _go(device, point, 0.18, 20.0):
+			return _fail("twin: over the leaf, stopped at %s" % str(_position()))
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or _position().z < -190.0 or int(_native().get_death_count()) != deaths:
+		return _fail("twin: the walk over the leaf did not end on tower one (at %s)" % str(_position()))
+	_detail = "hook swing landed at %s; the trip shot from the shaft's side; walked back over the leaf" % str(crossed)
 	return true

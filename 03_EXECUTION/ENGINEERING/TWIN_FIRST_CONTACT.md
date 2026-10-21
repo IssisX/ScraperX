@@ -1,5 +1,7 @@
 # Second shaft: first contact
 
+**Since (2026-10-21, ScraperX-Claude):** the shaft's move below is kept whole; the walkway at the 220 ring is now a broken bridge crossed by the hook, with a leaf brought down from the shaft's side as the earned walk across: `03_EXECUTION/SECOND_TOWER/BROKEN_BRIDGE.md`.
+
 Isolated branch: `dot/twin-tower-first-contact`. Base: `28afbc4ab142e9e2b207dd5ce909cf9f5778b879` (`ScraperX-Claude`, fetched and rechecked 2026-10-21). No active branch was modified or merged.
 
 The existing solid shaft moves +66 m in Z, keeping X=-30. Nominal face gap: 48 m (157.5 ft); including the nearest facade projections: 44.6 m (146.3 ft). Its mass and facade move together; A's upper continuation stays put. `world_solids.inc` was regenerated with the existing `--export-solids` pipeline, not edited by hand.

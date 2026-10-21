@@ -341,6 +341,12 @@ jobs:
           # into one clip by loudness, its echo not a second early, then once,
           # faint, filtered, from structure near the player out of view,
           # uncaptioned with the captions on (touch_voice_echo).
+          # The broken bridge to the second shaft at the 220 ring
+          # (src/sim/twin_tower.hpp): the hook taken off its rack, up onto
+          # the near step, the hook on the erection arm's bar, the swing over
+          # the gap and DROP at its top onto the far half, a hook shot into
+          # the trip's hood from the shaft's side, the leaf down across the
+          # gap and the walk back over it to tower one (touch_twin).
           # Thirteen play again on the BUTTONS layout (a name ending
           # _buttons): jump, vault, the double tap, crouch, the quickturn,
           # the climb up and the drop from a hang, the slide, the roll, the
@@ -357,7 +363,7 @@ jobs:
               touch_stack touch_wet \
               touch_shop touch_crane \
               touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
-              touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice; do
+              touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

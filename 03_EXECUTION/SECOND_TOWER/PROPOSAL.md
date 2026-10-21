@@ -1,7 +1,10 @@
 # The second tower in play: proposal (2026-10-21)
 
-Nothing here is built. It is the source-grounded proposal the owner asked for before the
-expansion is committed (00_START_HERE.md, row of 2026-10-21).
+**Built first, since:** the broken bridge at the 220 ring (`BROKEN_BRIDGE.md`), on the second
+tower moved 66 m closer (from `dot/twin-tower-first-contact`). The rest here is still a proposal.
+
+The source-grounded proposal the owner asked for before the expansion is committed
+(00_START_HERE.md, row of 2026-10-21).
 
 **How it was made.** Three mappers read the code first. Their map, with file and line evidence for
 every fact, is `verified_map.json`. The lead then checked its load-bearing facts in the code: the

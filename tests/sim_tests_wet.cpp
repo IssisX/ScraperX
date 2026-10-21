@@ -205,7 +205,8 @@ void run_wet_e_guard(const bool expect) {
         bodies.add(world.kit_body_entity(i));
     }
     const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
-                                    Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity};
+                                    Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity,
+                                    scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity};
     bool since_after = world.kit_body_count() == kBodiesBeforeE + std::size(kSince);
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < world.kit_body_count(); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
@@ -267,7 +268,7 @@ void run_wet_e_guard(const bool expect) {
     // As recorded on the tree before E's rebuild (its parent, 4118862).
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the bodies built since come after them: the bay's five, then twin access");
+    require(since_after, "E guard: the bodies built since come after them: the bay's five, then the broken bridge's three");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     require(world.loose_stock_count() == 325 && stock.hash == 12537791641516680014ULL,
