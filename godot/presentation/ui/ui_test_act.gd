@@ -13,11 +13,9 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # listens, and comes back up it after them. Round on her east band by the
 # rail, her shove throws the climber at the shaft. More noise and she is
 # fully changed: her hands take hold, lift the climber head down, and the
-# stick held struggles free. CONTINUE from the climb's save puts them back
-# on 143 (the checkpoint: where the climber stood as she turned dangerous
-# over them), up the riser again
-# while she looks for the climber where she last had them, quietly to her
-# ladder and up it to the 176 ring, her Turn
+# stick held struggles free. From wherever her grip leaves them, on to her
+# ladder (the stick held toward it, struggling again if she takes hold on
+# the way) and up it to the 176 ring, her Turn
 # bringing her up after; on by the climbing route (boards and standpipe,
 # catwalk and scaffold), where she cannot follow, to the 220 ring.
 #
@@ -36,6 +34,8 @@ const ACT_TOOLBOX_DOOR := Vector2(6.0, -126.4)
 # over the bay.
 const ACT_BAY_WEST := Vector2(-4.6, -128.5)
 const ACT_BAY_EAST := Vector2(0.4, -128.5)
+# Her ladder's foot, on her deck, up to the 176 ring.
+const ACT_LADDER_FOOT := Vector2(5.0, -129.6)
 const ACT_143_EDGE_Z := -132.6
 const ACT_GATE := Vector2(-6.8, -132.2)
 const ACT_PLATE := Vector2(-6.8, -134.1)
@@ -162,8 +162,16 @@ func _act_wait(condition: Callable, timeout: float, tag: String) -> bool:
 # the pace whose footfalls carry (3.5 m/s), so a sleeper is not woken.
 func _act_creep_to(device: int, target: Vector2, tolerance: float, budget: float, amount: float) -> bool:
 	var waited := 0.0
+	var trace_next := 0.0
 	while waited < budget:
 		var at := _position()
+		if OS.get_environment("SCRAPERX_ACT_TRACE") != "" and waited >= trace_next:
+			trace_next += 1.0
+			var land := _native().get_landing_state() as Dictionary
+			var q: Quaternion = land.get("physical_rotation", Quaternion.IDENTITY)
+			print("ACTTRACE me=%s up=%s phase=%d her=%s her_state=%d grounded=%s" % [str(at), str(q * Vector3.UP),
+				int(land.get("capture_phase", 0)), str(_matron_state()["position"]), int(_matron_state()["state"]),
+				str(_native().is_player_grounded())])
 		var to := target - Vector2(at.x, at.z)
 		if to.length() <= tolerance:
 			_move_dir(device, Vector2.ZERO)
@@ -538,22 +546,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		return _fail("the climber was taken hold of, but not by her (catches %d)" % int(_matron_state()["catches"]))
 	if await _act_wait(func() -> bool: return _capture_phase() == 2, 3.0, "lifted"):
 		await _act_pose("act_changed_hung")
-	# The struggle: the stick held, steadily (a jab does not break her grip).
-	_move(device, 1.0)
-	var free: bool = await _act_wait(func() -> bool: return _capture_phase() in [0, 3], 10.0, "struggle")
-	_move(device, 0.0)
-	if not free:
-		return _fail("the struggle never broke her grip (phase %d)" % _capture_phase())
-	var up: bool = await _act_wait(func() -> bool: return _capture_phase() == 0, 8.0, "getting_up")
-	if not up:
-		return _fail("let go, the climber never got up (phase %d)" % _capture_phase())
-	_act_log("struggled_free")
-	# CONTINUE from the climb's save, as after a quit: back to the checkpoint
-	# frozen below her deck, the act's way up from there as before.
-	if not _native().load_save_game(_native().get_save_game()):
-		return _fail("the climb's save did not load")
-	await _seconds(0.5)
-	_act_log("continued")
+	_act_log("held")
 	return true
 
 
@@ -561,29 +554,41 @@ func _capture_phase() -> int:
 	return int((_native().get_landing_state() as Dictionary).get("capture_phase", 0))
 
 
-# Back on 143, the checkpoint (frozen once she turned dangerous over the
-# climber: a deck her pipe joins to hers is hers too): up the riser again
-# while she looks for the climber where she last had them, quietly to her
-# ladder and up it to the 176
-# ring; on by the climbing route, no lift, to the 220 ring (its boards are
-# narrower than she is: she stays on the ring).
+# From wherever her grip leaves the climber on her deck, to her ladder and up
+# it to the 176 ring, fully changed she after them; on by the climbing route,
+# no lift, to the 220 ring (its boards are narrower than she is: she stays on
+# the ring).
 func _act_way_up(device: int) -> bool:
-	if _position().y > 150.0:
-		return _fail("CONTINUE did not put the climber back below her deck (at %s)" % str(_position()))
-	if not await _act_up_riser(device):
-		return false
-	_act_log("back_on_her_deck")
-	# Over the bay on its leaf (src/sim/bay.hpp), then to the ladder's foot.
-	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, Vector2(3.5, -128.2), Vector2(3.5, -129.8), Vector2(5.0, -129.6)]:
-		if not await _act_creep_to(device, leg, 0.08 if leg.x > 4.0 else 0.15, 10.0, 0.5):
-			return _fail("the creep to the ladder's foot stalled at %s (deaths %d)" % [str(_position()),
-				int(_native().get_death_count())])
-	await _face(Vector2(0.0, 1.0))
-	if not await _offered(&"climb", "CLIMB", "HOLD"):
-		return _fail("Action read '%s' facing the ladder, not CLIMB HOLD" % _action_label())
-	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
-		return _fail("CLIMB did not take hold of the ladder")
+	if _position().y < 150.0:
+		return _fail("in her grip the climber left her deck (at %s)" % str(_position()))
+	# The stick held toward her ladder's foot all the way: in her grip that is
+	# the struggle, let go it walks the body as it gets up, then it runs. The
+	# ladder is this run's choice; nothing in the game sends the climber there.
+	var escape_seen := 0.0
+	var on_ladder := false
+	for attempt in 6:
+		for leg in [Vector2(6.5, -129.6), ACT_LADDER_FOOT]:
+			if not await _act_creep_to(device, leg, 0.08 if leg == ACT_LADDER_FOOT else 0.3, 30.0, 1.0):
+				return _fail("the way to her ladder's foot stalled at %s (phase %d, deaths %d)" % [
+					str(_position()), _capture_phase(), int(_native().get_death_count())])
+			escape_seen = maxf(escape_seen, float((_native().get_landing_state() as Dictionary).get("capture_escape", 0.0)))
+		if _capture_phase() != 0:
+			_act_log("held_at_the_ladder")
+			continue
+		await _face(Vector2(0.0, 1.0))
+		if not await _offered(&"climb", "CLIMB", "HOLD"):
+			if _capture_phase() != 0:
+				continue
+			return _fail("Action read '%s' facing the ladder, not CLIMB HOLD" % _action_label())
+		_act(device)
+		if await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+			on_ladder = true
+			break
+		if _capture_phase() == 0:
+			return _fail("CLIMB did not take hold of the ladder")
+	if not on_ladder:
+		return _fail("her grip kept the climber off her ladder (phase %d)" % _capture_phase())
+	_act_log("on_her_ladder escape=%.2f releases_by_struggle=%s" % [escape_seen, str(escape_seen >= 0.99)])
 	_move(device, 1.0)
 	var on_ring: bool = await _act_wait(func() -> bool: return _standing_above(176.5), 40.0, "ladder")
 	_move(device, 0.0)

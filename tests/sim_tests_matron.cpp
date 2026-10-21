@@ -2242,6 +2242,14 @@ void run_matron_capture() {
             require(std::isfinite(norm) && std::abs(norm - 1) < 0.001, "capture: normalized finite physical quaternion");
             const auto p = last.player_rotation;
             const double dot = std::abs(p.x*q.x + p.y*q.y + p.z*q.z + p.w*q.w);
+            if (dot <= 0.99) {
+                const auto first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+                const auto drum = s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + first + 2));
+                const auto me = now.player_position;
+                std::cout << "SNAPTRACE scenario=" << scenario << " i=" << i << " dot=" << dot << " phase=" << int(now.capture_phase)
+                          << " drum_d=" << std::hypot(std::hypot(drum.x - me.x, drum.y - me.y), drum.z - me.z)
+                          << " me=(" << me.x << "," << me.y << "," << me.z << ") v=(" << now.player_linear_velocity.x << "," << now.player_linear_velocity.y << "," << now.player_linear_velocity.z << ")\n";
+            }
             require(dot > 0.99, "capture: no instantaneous orientation snap across grip/release/recovery");
             const auto a = now.player_position, b = last.player_position;
             require((scenario == 4 && i >= 270) || std::hypot(std::hypot(a.x-b.x, a.z-b.z), a.y-b.y) < 0.18,

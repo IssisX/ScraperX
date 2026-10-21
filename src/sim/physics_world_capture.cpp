@@ -57,6 +57,7 @@ void Simulation::PhysicsWorld::release_capture(JPH::BodyInterface &bodies) noexc
     ++capture_releases_;
     matron_->set_capturing(false);
     bodies.SetFriction(matron_->body(), 0.0F);
+    bodies.SetFriction(player_id_, 0.0F);
     // No position, orientation or velocity write: gravity and contacts own the fall.
 }
 

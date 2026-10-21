@@ -501,11 +501,17 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         commands.time_seconds = requested.time_seconds;
         commands.room_loudness = requested.room_loudness;
         if (capture_phase_ == 3) {
-            // Let go and getting up: the legs are the player's again, so the
-            // stick walks (and, let go, stands) while the body rights itself.
+            // Let go and getting up: the legs are the player's again once the
+            // body is near enough upright to stand on them (all of the stick
+            // within 18 degrees, none past 32), so it can step away from what
+            // holds it over (her lean held it at 12 to 21 degrees, every
+            // control locked). Lower, the walk's push at the hips over soles
+            // that grip only tipped it further (seen at 50 degrees, stalled).
             // Everything else waits for it to be upright.
-            commands.move_input_x = requested.move_input_x;
-            commands.move_input_z = requested.move_input_z;
+            const JPH::Vec3 up = physics_system_.GetBodyInterface().GetRotation(player_id_) * JPH::Vec3::sAxisY();
+            const double legs = std::clamp((up.GetY() - 0.85F) / 0.10F, 0.0F, 1.0F);
+            commands.move_input_x = requested.move_input_x * legs;
+            commands.move_input_z = requested.move_input_z * legs;
         }
     }
     // WO-008: captured before anything this tick can change grounded_, so
