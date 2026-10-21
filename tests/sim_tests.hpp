@@ -857,6 +857,7 @@ void run_matron_unstick();
 void run_matron_grab();
 void run_matron_routes();
 void run_matron_traverse();
+void run_matron_pursuit();
 void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();

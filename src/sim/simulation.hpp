@@ -244,6 +244,10 @@ struct MatronSnapshot final {
     // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
+    // The ways of her map (matron_routes.hpp) she has been along this run,
+    // and those that failed under her.
+    std::uint32_t route_edges = 0;
+    std::uint32_t route_failures = 0;
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
@@ -1550,6 +1554,8 @@ public:
     // values of sim/matron_routes.hpp), up or down. False if she found no hold.
     void debug_place_matron(Vector3 feet) noexcept;
     [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
+    // Tests only: she hears the climber at `at` (feet): evidence with an age.
+    void debug_matron_hear(Vector3 at) noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.

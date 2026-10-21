@@ -257,6 +257,13 @@ void Matron::place_for_test(const RVec3 feet) {
     }
 }
 
+void Matron::hear_for_test(const RVec3 at) {
+    take_lead(float(at.GetX()), float(at.GetZ()), float(at.GetY()), 1.0F, false);
+    if (state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Searching) {
+        state_ = State::Hunting;
+    }
+}
+
 bool Matron::climb_for_test(const routes::Connector which, const bool down) {
     int index = -1;
     switch (which) {
@@ -2212,7 +2219,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
+            // So is one her map has a way to, that she is on her way along.
+            const bool by_pipe = (elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward)) ||
+                                 route_on_edge_ || (elsewhere && route_.count > 0 && route_goal_ == lead_region());
             const float lose_track = !by_pipe                     ? kLoseTrackSeconds
                                      : stage_ == Stage::Changed ? kPipeChaseChangedSeconds
                                                                 : kPipeChaseDangerousSeconds;
@@ -3409,6 +3418,8 @@ void Matron::refresh_view() {
     view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
     view_.on_pipe = pipe_phase_ != PipePhase::Off;
+    view_.route_edges = route_edges_done_;
+    view_.route_failures = route_failures_;
     view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
     view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
     view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;

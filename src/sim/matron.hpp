@@ -783,6 +783,8 @@ public:
         float down_s = 0.0F;            // seconds on the steel
         float down_left_s = 0.0F;       // of the time she lies there; 0 and still down: pinned, crawling to room
         bool on_pipe = false;           // on the shaft's corner pipe (getting on, on it, getting off)
+        std::uint32_t route_edges = 0;    // ways of her map she has been along, this run
+        std::uint32_t route_failures = 0; // ways that failed under her
         bool pipe_head_down = false;    // coming down it head first (fully changed)
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
@@ -954,6 +956,9 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Tests only: she hears the climber at `at` (feet), as her ears would
+    // report a sound there: a lead with an age, nothing more.
+    void hear_for_test(JPH::RVec3 at);
     bool climb_for_test(routes::Connector which, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
