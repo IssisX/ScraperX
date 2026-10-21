@@ -70,3 +70,5 @@ Fresh results are recorded in `docs/SHARED_SURVIVAL_TEST_RESULTS.md`. The initia
 ## Adoption decision
 
 Adopt/review this commit on the implementation agent's branch, then finish one small band placement with the world/save/presentation owners above and run a visible Godot encounter proof. Do not merge or present this as a shipped encounter merely because the native fixture passes. Her Chart and hypothetical forecasts are intentionally untouched.
+
+Publication check: while this work ran, `ScraperX-Claude` advanced to `c454a7dc8f14b5e9d8794497f707cd2dcb65dc11` (night lighting/sign emission). Fetched and inspected: only `godot/presentation/main.gd`, `main_geometry.gd`, `main_world.gd`, `sky_cycle.gd`, `ui/ui_test_chase.gd`, and `ui/ui_test_driver.gd` changed. No overlap with this commit's changed files. This side branch retains its verified `5f34d3d` base; neither branch was merged/rebased or force-pushed. Preserve those presentation updates when wiring the encounter.
