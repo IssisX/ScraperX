@@ -1,0 +1,59 @@
+{
+  "head_sha": "74ade74265addd08b6ac4566f4c884b0ce3b99ad",
+  "run_id": 39526457954,
+  "overall": "failure; no APK exported",
+  "failed_gate": "portable_line_controls_test.gd still taps the removed scattered LINE entry instead of opening actual TOOLS tray",
+  "classification": "Introduced incomplete test-input migration from the authorized compact toolbelt change; no native range/recovery failure observed",
+  "affected_logs": [
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/grapple-long-range-native.log",
+      "observed_result": [
+        "PASS GRAPPLE_LONG_RANGE actual_public_input=1 rise_m=14.972778 paid_j=899.999895 default_long=1"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/grapple-primary-touch.log",
+      "observed_result": [
+        "GRAPPLE_PRIMARY_TOUCH PASS checks=19 touch_router_main=1 native_requests=1 world_physics=0"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/grapple-recovery-native.log",
+      "observed_result": [
+        "PASS GRAPPLE_ROUTE recovery-only initial_staging_only=1 actual_hook_retrieved=1 finite_leg_stairs=1 departure_return=1 spent_cartridge=1 deaths=0"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/grapple-toolbelt-input.log",
+      "observed_result": [
+        "GRAPPLE_TOOLBELT_INPUT PASS checks=34 rise_m=14.611 actual_native=1 touch=1"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/grapple-trip-input.log",
+      "observed_result": [
+        "SCRAPERX_GRAPPLE_TRIP_INPUT PASS checks=5693 ticks=2188 phase=exit touch=1 actual_native=1 initial_stage_only=1"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/toolbelt-touch.log",
+      "observed_result": [
+        "TOOLBELT_TOUCH PASS real touch/router selection, acknowledgement, cancel, context, capture, active-tool operations; 144 layouts"
+      ],
+      "failures": []
+    },
+    {
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-android-compatibility-20261017/candidate-policy-74ade74/artifacts/ScraperX-ChatGPT-candidate-diagnostics-74ade74265addd08b6ac4566f4c884b0ce3b99ad/rigging-controls.log",
+      "observed_result": [
+        "RIGGING_CONTROLS PASS touch edges, cut cancellation, walking, machine visibility, 12 safe layouts"
+      ],
+      "failures": []
+    }
+  ],
+  "next": "Migrate actual portable-line and inherited mounted-winch touch drivers; preserve all route, force, geometry and lifecycle acceptance. Root owns republish."
+}

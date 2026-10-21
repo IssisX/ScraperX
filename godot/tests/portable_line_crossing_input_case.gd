@@ -33,6 +33,8 @@ func finger(at: Vector2, down: bool, index: int = 41) -> void:
 	main._router._input(event)
 
 func tap(control: StringName) -> void:
+	if control in [&"grapple", &"toggle_traversal_line", &"toggle_rigging"] and not main._touch.is_button_shown(control):
+		tap(&"tools")
 	check(main._touch.is_button_shown(control), "visible touch control: " + str(control))
 	finger(main._touch.button_center(control), true)
 	finger(main._touch.button_center(control), false)

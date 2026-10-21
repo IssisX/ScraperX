@@ -36,6 +36,23 @@ func finger(router: Node, at: Vector2, down: bool, index: int = 7, cancelled: bo
 	event.canceled = cancelled
 	router._input(event)
 
+func tap(router: Node, touch: Node, control: StringName) -> void:
+	if control in [&"grapple", &"toggle_traversal_line", &"toggle_rigging"] and not touch.is_button_shown(control):
+		tap(router, touch, &"tools")
+	check(touch.is_button_shown(control), "visible touch target: " + str(control))
+	finger(router, touch.button_center(control), true)
+	finger(router, touch.button_center(control), false)
+
+func check_layout(touch: Node, ids: Array) -> void:
+	for id in ids:
+		check(touch.is_button_shown(id), "layout checks visible control: " + str(id))
+		var button = touch._buttons[id]
+		var hit: float = button.radius * touch.HIT_SLOP
+		check(touch._safe.encloses(Rect2(button.center - Vector2.ONE * hit, Vector2.ONE * hit * 2)), "line control stays in safe area")
+		for other in touch._buttons.values():
+			if other == button or not other.shown: continue
+			check(button.center.distance_to(other.center) > (button.radius + other.radius) * touch.HIT_SLOP, "line control avoids " + str(other.id))
+
 func _run() -> void:
 	root.size = Vector2i(2160, 1856)
 	var router := Router.new()
@@ -52,9 +69,8 @@ func _run() -> void:
 		"rigging_available": true, "traversal_line_available": true, "traversal_line_equipped": false,
 		"traversal_line_gripping": false, "traversal_line_can_recover": false, "traversal": 0, "drop_ok": false}
 	touch.update_context(ctx, 1.0)
-	check(touch.is_button_shown(&"toggle_traversal_line"), "LINE accessible on ordinary foot context")
-	finger(router, touch.button_center(&"toggle_traversal_line"), true)
-	finger(router, touch.button_center(&"toggle_traversal_line"), false)
+	check(touch.is_button_shown(&"tools"), "TOOLS accessible on ordinary foot context")
+	tap(router, touch, &"toggle_traversal_line")
 	check(router.frame(.016).verbs == [&"toggle_traversal_line"], "equip dispatches one ordered verb")
 	ctx.operating = &"traversal_line"
 	ctx.traversal_line_equipped = true
@@ -110,13 +126,10 @@ func _run() -> void:
 		for scale in [.8,1.0,1.3]:
 			touch.set_touch_scale(scale)
 			touch.update_context(ctx, 1.0)
-			for id in [&"toggle_traversal_line", &"pack_traversal_line"]:
-				var button = touch._buttons[id]
-				var hit: float = button.radius * touch.HIT_SLOP
-				check(touch._safe.encloses(Rect2(button.center - Vector2.ONE * hit, Vector2.ONE * hit * 2)), "line control stays in safe area")
-				for other in touch._buttons.values():
-					if other == button or not other.shown: continue
-					check(button.center.distance_to(other.center) > (button.radius + other.radius) * touch.HIT_SLOP, "line control avoids " + str(other.id))
+			check_layout(touch, [&"tools", &"pack_traversal_line"])
+			tap(router, touch, &"tools")
+			check_layout(touch, [&"tools", &"grapple", &"toggle_traversal_line", &"toggle_rigging"])
+			tap(router, touch, &"tools")
 	ctx.traversal_line_gripping = true
 	ctx.traversal_line_can_recover = false
 	touch.update_context(ctx, 1.0)

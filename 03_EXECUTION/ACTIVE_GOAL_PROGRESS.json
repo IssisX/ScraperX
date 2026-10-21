@@ -135,8 +135,8 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-21T01:17:22.388420+00:00",
-    "published_head": "7c6269f",
+    "as_of": "2026-10-21T01:34:02.859982+00:00",
+    "published_head": "74ade74265addd08b6ac4566f4c884b0ce3b99ad",
     "active_behavior": "R21: long-range grapple, reachable-hook recovery and coherent touch toolbelt.",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
@@ -151,11 +151,11 @@
       "PhysicalAri253m/optionalpersistentphoto/13spatial-radio dialogue/free touch/cleanretry delivered64d21f1 GREEN39513436973 APK214702401",
       "Playable110m handover/source/replay/localidentity/free touch delivered dbf88c4 GREEN39519063431 APK214705264"
     ],
-    "frontier": "R21 implementation and meaningful host acceptance complete: native23, public range/crossing/recovery, actual Godot MCP34+5692 and focused Godot19/105/19/144 pass. Publication/matching green-CI APK next.",
+    "frontier": "R21 first CI range/recovery/gun/touch checks passed; old LINE fixture stopped candidate. Actual TOOLS migration now portable659/line21/crossing21/winch26/two-cable100 PASS; corrected publication next.",
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
-    "next_implementation_packet": "Commit and push the combined R21 source; ordinary delivery workers own candidate/full monitoring and APK collection. Resolve only introduced required CI failures; deliver direct green-candidate APK. No repeated host checks or native rebuild for metadata.",
-    "current_candidate": "R21 combined source ready to publish; previous dbf88c4 remains latest accepted APK",
+    "next_implementation_packet": "Push corrected tool-tray route drivers and evidence; start ordinary delivery workers. Reuse unchanged native and actual gameplay evidence. Deliver matching fully green candidate APK.",
+    "current_candidate": "74ade74 RED old portable-line input fixture; test-only correction ready to publish",
     "last_delivered_game_source": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
     "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-dbf88c4/ScraperX-ChatGPT.apk",
     "evidence": "evidence/grapple-2026-10-20/RANGE_AND_TOUCH.md; RANGE_TOUCH_NATIVE.json; RANGE_TOUCH_MCP.json; RANGE_TOUCH_AFFECTED.json",
@@ -166,7 +166,8 @@
       "blocker": "stationary braked aligned boarding still reports Blocked at tick6949",
       "remaining": "production boarding/ride/return, Main/Guide touch integration, matching bridge and release acceptance",
       "resumption_condition": "Materially different high-value experience consistent with latest owner restriction; never automatic from a stale goal or failed check."
-    }
+    },
+    "delivery_workers": "A/github-workers.json; candidate-policy-74ade74; watcher24029/collector24030/copier24031/publisher24032; ordinary shell processes"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

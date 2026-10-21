@@ -23,6 +23,8 @@ func step(count: int = 1) -> void:
 		main._portable_line_view.update_state(main._native.get_traversal_line_render_state(), main._audio)
 
 func tap(control: StringName) -> void:
+	if control in [&"grapple", &"toggle_traversal_line", &"toggle_rigging"] and not main._touch.is_button_shown(control):
+		tap(&"tools")
 	check(main._touch.is_button_shown(control), "touch target visible: " + str(control))
 	for down in [true, false]:
 		var event := InputEventScreenTouch.new()

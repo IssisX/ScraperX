@@ -1,0 +1,113 @@
+{
+  "reason": "First candidate stopped at legacy LINE test selecting a hidden old button; authorized compact UI requires actual TOOLS tray. No production/native/physics change in this followup.",
+  "source_sha256": {
+    "portable_line_controls_test": "761de41786c644289bfc91b76c35ee6b36f545a28f75e88bb2554269c333af12",
+    "portable_line_native_input_case": "65dc552b45e0475c17d1ba529f837105b9ca1468099771c5dfa798f02ccd4823",
+    "portable_line_crossing_input_case": "0fb599ac6f0cfd3bab7cf97848157c240393a526fae9278983a1475be6470ae8",
+    "mounted_winch_input_case": "a1c00c79bc1e3d3cb11c8eebd52f1c26b6b368d357a1783cae9d0f3265ee60b8"
+  },
+  "worker_scoped_check": {
+    "worker": "toolbelt_route_fixtures, Sol/medium",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--bind",
+      "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+      "--script",
+      "res://tests/portable_line_controls_test.gd"
+    ],
+    "exit": 0,
+    "observed_output": "PORTABLE_LINE_CONTROLS checks=659 failures=0 fixture_presentation_only=1"
+  },
+  "root_actual_route_checks": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/portable_line_native_input_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000\nSCRAPERX_AUDIO_BANK clips=35 msec=1582 driver=Dummy\nSCRAPERX_PORTABLE_LINE_NATIVE_INPUT PASS checks=21 fixture_start_only=1\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/portable_line_crossing_input_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000\nSCRAPERX_AUDIO_BANK clips=35 msec=1483 driver=Dummy\nSCRAPERX_PORTABLE_CROSSING_INPUT PASS checks=21 fixture_start_only=1\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/mounted_winch_input_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000\nSCRAPERX_AUDIO_BANK clips=35 msec=1416 driver=Dummy\nSCRAPERX_MOUNTED_WINCH_INPUT PASS checks=26 fixture_start_only=1\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/mounted_winch_crossing_input_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2639x1856 aspect=1.422 fov=82.0 far=2000\nSCRAPERX_AUDIO_BANK clips=35 msec=2895 driver=Dummy\nSCRAPERX_MOUNTED_WINCH_CROSSING_INPUT PASS checks=100 fixture_start_only=1\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    }
+  ],
+  "preserved": "All scenario ticks, contact/load/route/force acceptance retained. Only touch tool-choice access and visible safe-area coverage migrated."
+}
