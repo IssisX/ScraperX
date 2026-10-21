@@ -500,6 +500,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         commands.look_pitch = requested.look_pitch;
         commands.time_seconds = requested.time_seconds;
         commands.room_loudness = requested.room_loudness;
+        if (capture_phase_ == 3) {
+            // Let go and getting up: the legs are the player's again, so the
+            // stick walks (and, let go, stands) while the body rights itself.
+            // Everything else waits for it to be upright.
+            commands.move_input_x = requested.move_input_x;
+            commands.move_input_z = requested.move_input_z;
+        }
     }
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
@@ -632,7 +639,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         clear_support_jolt();
     }
     apply_wind(bodies, commands.time_seconds);
-    if (capture_phase_ == 0 && !sling_controlling && traversal_state_ == TraversalState::None) {
+    if (capture_phase_ != 1 && capture_phase_ != 2 && !sling_controlling && traversal_state_ == TraversalState::None) {
         if (slingshot_flight_ && !grounded_) {
             // Thrown: the stick steers with a bounded force (2 m/s/s at
             // full stick) and does not brake the throw to a walking speed
