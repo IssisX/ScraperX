@@ -114,6 +114,7 @@ public:
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
+    [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }

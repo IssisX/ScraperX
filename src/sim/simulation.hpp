@@ -1549,6 +1549,9 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): the height of the first thing
+    // straight under `at` within `depth`, or NaN where nothing is.
+    [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;

@@ -157,6 +157,10 @@ int main() {
         run_water();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routes") {
+        run_matron_routes();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -466,6 +470,7 @@ int main() {
     run_matron();
     run_matron_pace();
     run_matron_unstick();
+    run_matron_routes();
     run_matron_grab();
     run_matron_arm();
     run_matron_fatality();

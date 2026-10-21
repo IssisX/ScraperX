@@ -1100,6 +1100,12 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+double Simulation::debug_support_y(const Vector3 at, const double depth) const noexcept {
+    return physics_world_->support_y_for_test(
+        JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
+        static_cast<float>(depth));
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();

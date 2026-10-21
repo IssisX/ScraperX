@@ -3,6 +3,8 @@
 
 #include "sim/physics_world.hpp"
 
+#include <limits>
+
 namespace scraperx::sim {
 
 bool Simulation::PhysicsWorld::cast_ray(const JPH::RVec3 origin,
@@ -12,6 +14,15 @@ bool Simulation::PhysicsWorld::cast_ray(const JPH::RVec3 origin,
     hit.Reset();
     const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
     return physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, body_filter);
+}
+
+float Simulation::PhysicsWorld::support_y_for_test(const JPH::RVec3 at, const float depth) const noexcept {
+    JPH::RayCastResult hit;
+    const JPH::Vec3 down(0.0F, -depth, 0.0F);
+    if (!cast_ray(at, down, hit)) {
+        return std::numeric_limits<float>::quiet_NaN();
+    }
+    return static_cast<float>(at.GetY()) - hit.mFraction * depth;
 }
 
 namespace {
