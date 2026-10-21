@@ -14,6 +14,7 @@
 #include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
@@ -24,6 +25,7 @@
 #include <Jolt/Physics/Collision/ShapeCast.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 
@@ -126,8 +128,10 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     // side and topped out north over its head; and the riser from 143 up to
     // her deck, climbed from its plate over the shaft and left north down the
     // steps off its bridge, which she knows but does not take hold of.
-    climbs_ = {{kLadderX, kLadderFootZ, kDeckTop, kRingFloor, 0.0F, 1.0F, kLadderX, kLadderFootZ + kMantleOutM, true},
-               {kRiserX, kRiserFootZ, kDeckTop - kStackPitch, kDeckTop, 0.0F, 1.0F, kRiserX, kRiserTopZ, false}};
+    climbs_ = {{kLadderX, kLadderFootZ, kDeckTop, kRingFloor, 0.0F, 1.0F, kLadderX, kLadderFootZ + kMantleOutM, true,
+                0.5F, kRingFloor},
+               {kRiserX, kRiserFootZ, kDeckTop - kStackPitch, kDeckTop, 0.0F, 1.0F, kRiserX, kRiserTopZ, false, 0.35F,
+                kRiserBridgeTop}};
     // The bay's bracket (bay.hpp): where she holds the leaf and the foot of
     // its rungs, which she takes hold of whatever her stage (her own way out
     // of her own trap), topping out west onto her deck.
@@ -136,8 +140,17 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
     climbs_.push_back({Bay::kRungsX, Bay::kRungsZ, Bay::kBracketTop, kDeckTop, -1.0F, 0.0F, Bay::kDropX, Bay::kDropZ,
-                       true});
+                       true, 0.27F, kDeckTop});
     bay_climb_ = static_cast<int>(climbs_.size()) - 1;
+    // C3's lower half (band_stack.cpp build_c3): the wall ladder from the
+    // duct's top up to the 143 walkway plate, and the duct's own 1.7 m face
+    // from the catwalk landing, its edge the only hold.
+    climbs_.push_back({kC3WallX, kC3WallHangZ, kC3DuctTop, kStackPitch * 13.0F, 0.0F, 1.0F, kC3WallX,
+                       kC3WallHangZ + kMantleOutM + 0.1F, true, 0.35F, kStackPitch * 13.0F + 0.03F});
+    c3_wall_climb_ = static_cast<int>(climbs_.size()) - 1;
+    climbs_.push_back({kC3WallX, kC3DuctHangZ, kC3LandingTop, kC3DuctTop, 0.0F, 1.0F, kC3WallX,
+                       kC3DuctHangZ + kMantleOutM, true, 0.45F, kC3DuctTop});
+    c3_duct_climb_ = static_cast<int>(climbs_.size()) - 1;
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -218,6 +231,41 @@ void Matron::spawn_body() {
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
     bodies.AddBody(body_, EActivation::Activate);
     body_in_world_ = true;
+}
+
+void Matron::place_for_test(const RVec3 feet) {
+    spawn_body();
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    bodies.SetPositionAndRotation(body_, feet + Vec3(0.0F, kStandCentre + 0.02F, 0.0F), Quat::sIdentity(),
+                                  EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
+    state_ = State::Hunting;
+    turn_ = Turn::None;
+    feet_y_ = float(feet.GetY());
+    // Her level: the deck she stands on, or (on a ledge between two) the
+    // nearest under her feet.
+    float best = -std::numeric_limits<float>::max();
+    for (std::size_t i = 0; i < levels_.size(); ++i) {
+        const float floor = levels_[i].floor_y;
+        if (floor <= feet_y_ + 0.6F && floor > best) {
+            best = floor;
+            level_ = static_cast<int>(i);
+        }
+    }
+}
+
+bool Matron::climb_for_test(const routes::Connector which, const bool down) {
+    int index = -1;
+    switch (which) {
+    case routes::Connector::HomeLadder: index = 0; break;
+    case routes::Connector::RiserLadder: index = 1; break;
+    case routes::Connector::BayRungs: index = bay_climb_; break;
+    case routes::Connector::C3WallLadder: index = c3_wall_climb_; break;
+    case routes::Connector::C3Duct: index = c3_duct_climb_; break;
+    default: break;
+    }
+    climb_retry_s_ = 0.0F;
+    return index >= 0 && begin_climb(index, down);
 }
 
 void Matron::remove_body() {
@@ -905,65 +953,154 @@ private:
 };
 } // namespace
 
-// A real upward-facing contact, in hand reach and visible from the chest.
-// As in the player's physical hang, anchors live in the support's frame and
-// the support receives the reaction. The mechanism kit's welded load grips
-// cannot attach to static steel and rigidly weld the bodies rather than
-// allowing a climber to move relative to a hand contact.
-bool Matron::find_climb_hold(const RVec3 at, const float above) {
-    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
-    const float standoff = climb_ == bay_climb_ ? 0.27F : 0.5F;
-    // A short ladder can end below an overhead reach (the bay's bracket is
-    // only 1.78 m down). Search its actual lip-height band rather than the
-    // empty air above it; the ray still has to find real reachable steel.
-    const float probe_y = std::min(float(at.GetY()) + above, c.head_y + 0.04F);
-    const RVec3 origin(c.x + c.out_x * standoff, probe_y, c.z + c.out_z * standoff);
-    const ClimbBodyFilter filter(body_, player_);
-    const RRayCast down(origin, Vec3(0.0F, -0.42F, 0.0F));
+namespace {
+// The hits along one ray, at most kMax of them: bounded, no heap.
+class RayHits final : public CastRayCollector {
+public:
+    static constexpr int kMax = 12;
+    void AddHit(const RayCastResult &hit) override {
+        if (count < kMax) {
+            hits[static_cast<std::size_t>(count++)] = hit;
+        } else {
+            ForceEarlyOut();
+        }
+    }
+    void sort() {
+        std::sort(hits.begin(), hits.begin() + count,
+                  [](const RayCastResult &a, const RayCastResult &b) { return a.mFraction < b.mFraction; });
+    }
+    int count = 0;
+    std::array<RayCastResult, kMax> hits{};
+};
+
+// Anything solid at a point (sensors and the excluded bodies aside).
+class PointHit final : public CollidePointCollector {
+public:
+    void AddHit(const CollidePointResult &) override {
+        hit = true;
+        ForceEarlyOut();
+    }
+    bool hit = false;
+};
+// What a hand at `point` rests on: the closest top met just over it, steel the
+// check starts inside not counted (a bridge over a ladder's head). The hold
+// is taken and kept by this one query, so a seam between two parts of a
+// compound reads the same every time.
+bool hand_rests_on(const NarrowPhaseQuery &query, const RVec3 point, const BodyFilter &filter, BodyID &body,
+                   SubShapeID &member) {
+    const RRayCast ray(point + Vec3(0.0F, 0.04F, 0.0F), Vec3(0.0F, -0.08F, 0.0F));
     RayCastSettings settings;
-    settings.mTreatConvexAsSolid = false; // a probe starting inside a rung must not invent a top normal
-    ClosestHitCollisionCollector<CastRayCollector> hits;
-    physics_.GetNarrowPhaseQuery().CastRay(down, settings, hits, {}, {}, filter);
-    if (!hits.HadHit()) {
+    settings.mTreatConvexAsSolid = false;
+    ClosestHitCollisionCollector<CastRayCollector> hit;
+    query.CastRay(ray, settings, hit, {}, {}, filter);
+    if (!hit.HadHit()) {
         return false;
     }
-    const RayCastResult &hit = hits.mHit;
-    const RVec3 point = down.GetPointOnRay(hit.mFraction);
-    if (Vec3(point - at).Length() > kClimbReachM ||
-        (!climb_support_.IsInvalid() && point.GetY() <= climb_hand_.GetY() + 0.1F)) {
-        return false;
-    }
-    const RVec3 chest = at + Vec3(0.0F, 0.6F, 0.0F);
-    const Vec3 reach(point - chest);
-    RayCastResult obstruction;
-    if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(chest, reach), obstruction, {}, {}, filter) &&
-        (1.0F - obstruction.mFraction) * reach.Length() > 0.06F) {
-        return false;
-    }
-    const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-    if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY() < 0.7F) {
-        return false;
-    }
-    climb_support_ = hit.mBodyID;
-    climb_local_hand_ = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point);
-    climb_hand_ = point;
-    ++climb_grips_;
+    body = hit.mHit.mBodyID;
+    member = hit.mHit.mSubShapeID2;
     return true;
 }
+} // namespace
 
-bool Matron::begin_climb(const int index) {
+// A real upward-facing contact on the climb's line of holds, in hand reach,
+// visible from the chest, with room above it for her fingers (a rung buried
+// in a fascia plate is no hold). As in the player's physical hang, anchors
+// live in the support's frame and the support receives the reaction. The
+// mechanism kit's welded load grips cannot attach to static steel and
+// rigidly weld the bodies rather than allowing a climber to move relative to
+// a hand contact. Going up she takes the highest such hold she can reach
+// above the hand she has; going down, the highest below it, never the floor
+// at the foot; starting down from the top, the first under its lip.
+bool Matron::find_climb_hold(const RVec3 at, const bool down) {
+    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
+    const bool holding = !climb_support_.IsInvalid();
+    float top = 0.0F;
+    float bottom = 0.0F;
+    if (!down && holding) {
+        top = std::min(c.lip_y + 0.04F, float(at.GetY()) + kClimbReachM);
+        bottom = float(climb_hand_.GetY()) + 0.1F;
+    } else if (!down) {
+        // Her first hold, from her feet: overhead, as far as a standing reach.
+        top = std::min(c.lip_y + 0.04F, float(at.GetY()) + kStandingReachM);
+        bottom = top - 0.6F;
+    } else if (holding) {
+        top = float(climb_hand_.GetY()) - 0.1F;
+        bottom = std::max(c.foot_y + 0.15F, float(at.GetY()) - 0.6F);
+    } else {
+        top = c.lip_y + 0.04F;
+        bottom = c.lip_y - 0.6F;
+    }
+    if (top <= bottom) {
+        return false;
+    }
+    const RVec3 origin(c.x + c.out_x * c.standoff, top, c.z + c.out_z * c.standoff);
+    const ClimbBodyFilter filter(body_, player_);
+    const RRayCast ray(origin, Vec3(0.0F, bottom - top, 0.0F));
+    RayCastSettings settings;
+    settings.mTreatConvexAsSolid = false; // a probe starting inside a rung must not invent a top normal
+    RayHits hits;
+    physics_.GetNarrowPhaseQuery().CastRay(ray, settings, hits, {}, {}, filter);
+    hits.sort();
+    for (int i = 0; i < hits.count; ++i) {
+        const RayCastResult &hit = hits.hits[static_cast<std::size_t>(i)];
+        const RVec3 point = ray.GetPointOnRay(hit.mFraction);
+        if (Vec3(point - at).Length() > kClimbReachM) {
+            continue;
+        }
+        PointHit fingers;
+        physics_.GetNarrowPhaseQuery().CollidePoint(point + Vec3(0.0F, 0.04F, 0.0F), fingers, {}, {}, filter);
+        if (fingers.hit) {
+            continue;
+        }
+        // Her arm's way to it: up in front of the face to just over the hold
+        // (a hand goes over a lip's edge, not through its corner); the last
+        // few centimeters down onto it are the room above it, checked above.
+        const RVec3 chest = at + Vec3(0.0F, 0.6F, 0.0F);
+        const RVec3 over = point + Vec3(0.0F, 0.08F, 0.0F) - Vec3(c.out_x, 0.0F, c.out_z) * 0.12F;
+        const Vec3 reach(over - chest);
+        RayCastResult obstruction;
+        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(chest, reach), obstruction, {}, {}, filter) &&
+            (1.0F - obstruction.mFraction) * reach.Length() > 0.06F) {
+            continue;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+        if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY() < 0.7F) {
+            continue;
+        }
+        BodyID rests_body;
+        SubShapeID rests_member;
+        if (!hand_rests_on(physics_.GetNarrowPhaseQuery(), point, filter, rests_body, rests_member) ||
+            rests_body != hit.mBodyID) {
+            continue;
+        }
+        climb_support_ = hit.mBodyID;
+        climb_member_ = rests_member;
+        climb_local_hand_ = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point);
+        climb_hand_ = point;
+        ++climb_grips_;
+        return true;
+    }
+    return false;
+}
+
+bool Matron::begin_climb(const int index, const bool down) {
     if (climb_retry_s_ > 0.0F) {
         return false;
     }
     climb_ = index;
+    climb_down_ = down;
+    lowering_ = down;
     mantling_ = false;
     climb_support_ = BodyID();
+    climb_member_ = SubShapeID();
     climb_force_n_ = 0.0F;
     climb_stall_s_ = 0.0F;
     climb_overload_s_ = 0.0F;
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    climb_best_y_ = float(at.GetY());
-    if (!find_climb_hold(at, 1.35F)) {
+    climb_best_y_ = -std::numeric_limits<float>::max();
+    // Up: a hold overhead. Down: from its top, the first hold under its lip.
+    reaching_up_ = false;
+    if (!find_climb_hold(at, down)) {
         release_climb(true);
         return false;
     }
@@ -973,8 +1110,12 @@ bool Matron::begin_climb(const int index) {
 
 void Matron::release_climb(const bool failed) {
     climb_ = -1;
+    reaching_up_ = false;
+    climb_down_ = false;
+    lowering_ = false;
     mantling_ = false;
     climb_support_ = BodyID();
+    climb_member_ = SubShapeID();
     climb_force_n_ = 0.0F;
     if (failed) {
         ++climb_releases_;
@@ -995,12 +1136,13 @@ void Matron::climb(const float dt) {
     }
     climb_hand_ = bodies.GetCenterOfMassTransform(climb_support_) * climb_local_hand_;
     // The body can survive while a compound's rung disappears or moves.
-    // Revalidate the contact, not merely the body ID, before applying load.
+    // Revalidate the contact, the very part of the support she holds and not
+    // merely its body (a compound is many rungs), before applying load.
     const ClimbBodyFilter support_filter(body_, player_);
-    RayCastResult contact;
-    const RRayCast contact_ray(climb_hand_ + Vec3(0.0F, 0.04F, 0.0F), Vec3(0.0F, -0.08F, 0.0F));
-    if (!physics_.GetNarrowPhaseQuery().CastRay(contact_ray, contact, {}, {}, support_filter) ||
-        contact.mBodyID != climb_support_) {
+    BodyID rests_body;
+    SubShapeID rests_member;
+    if (!hand_rests_on(physics_.GetNarrowPhaseQuery(), climb_hand_, support_filter, rests_body, rests_member) ||
+        rests_body != climb_support_ || rests_member != climb_member_) {
         release_climb(true);
         return;
     }
@@ -1009,44 +1151,81 @@ void Matron::climb(const float dt) {
         release_climb(true);
         return;
     }
-    // The hand can only advance to another reachable surface; empty space
-    // above the last rung is not a hold. Retain the old hand during a miss.
-    if (!mantling_ && climb_hand_.GetY() - at.GetY() < 1.05F) {
-        find_climb_hold(at, 1.5F);
-    }
-    if (!mantling_ && climb_hand_.GetY() > c.head_y - 0.4F) {
-        // Reuse the same full-body clearance query as standing after a fall.
-        // Check both the lift and landing before committing over the lip;
-        // collisions still arbitrate the entire intervening movement.
-        const RVec3 lifted(c.x, c.head_y + kStandCentre + 0.12F, c.z);
-        const RVec3 landed = lifted + Vec3(c.out_x * kMantleOutM, 0.0F, c.out_z * kMantleOutM);
-        if (!shape_fits(shape_, lifted) || !shape_fits(shape_, landed)) {
-            release_climb(true);
-            return;
+    const auto floor_under = [&] {
+        RayCastResult floor;
+        return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor,
+                                                      {}, {}, support_filter);
+    };
+    Vec3 target(c.x, float(climb_hand_.GetY()) - (reaching_up_ ? 0.30F : 0.65F), c.z);
+    float progress = 0.0F;
+    if (!climb_down_) {
+        // The hand can only advance to another reachable surface; empty space
+        // above the last rung is not a hold. Retain the old hand during a miss.
+        // With none higher in reach yet, she pulls up higher on the one she
+        // has (the hand at her chest), to reach further.
+        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 1.05F) {
+            reaching_up_ = !find_climb_hold(at, false);
         }
-        mantling_ = true;
-        climb_stall_s_ = 0.0F;
-    }
-    const Vec3 relative = bodies.GetLinearVelocity(body_) - bodies.GetPointVelocity(climb_support_, climb_hand_);
-    Vec3 target(c.x, float(climb_hand_.GetY()) - 0.65F, c.z);
-    if (mantling_) {
-        target.SetY(c.head_y + kStandCentre + 0.12F);
-        if (feet > c.head_y + 0.03F) {
-            target.SetX(c.x + c.out_x * kMantleOutM);
-            target.SetZ(c.z + c.out_z * kMantleOutM);
+        // Over the top from a hand near the lip, or from the last hold under
+        // a lip she cannot hold on its line (a plate's edge stands out from
+        // the rungs): up and over it, if her body fits all the way.
+        if (!mantling_ && (climb_hand_.GetY() > c.lip_y - 0.4F || (reaching_up_ && climb_hand_.GetY() > c.lip_y - 0.7F))) {
+            // Reuse the same full-body clearance query as standing after a fall,
+            // up over the lip, half way out and landed: collisions still
+            // arbitrate every step in between.
+            const RVec3 lifted(c.x, c.lip_y + kStandCentre + 0.12F, c.z);
+            const RVec3 half = lifted + Vec3(c.out_x, 0.0F, c.out_z) * (0.5F * kMantleOutM);
+            const RVec3 landed = lifted + Vec3(c.out_x, 0.0F, c.out_z) * kMantleOutM;
+            if (!shape_fits(shape_, lifted) || !shape_fits(shape_, half) || !shape_fits(shape_, landed)) {
+                release_climb(true);
+                return;
+            }
+            mantling_ = true;
+            climb_stall_s_ = 0.0F;
         }
-        const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
-        if (out > 0.8F && feet >= c.head_y - 0.08F) {
+        if (mantling_) {
+            target.SetY(c.lip_y + kStandCentre + 0.12F);
+            if (feet > c.lip_y + 0.03F) {
+                target.SetX(c.x + c.out_x * kMantleOutM);
+                target.SetZ(c.z + c.out_z * kMantleOutM);
+            }
+            const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
             // Verify actual landing steel, not just the authored destination.
-            const ClimbBodyFilter filter(body_, player_);
-            RayCastResult floor;
-            if (physics_.GetNarrowPhaseQuery().CastRay(
-                    RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor, {}, {}, filter)) {
+            if (out > 0.8F && feet >= c.lip_y - 0.08F && floor_under()) {
                 release_climb(false);
                 return;
             }
         }
+        progress = float(at.GetY()) +
+                   (mantling_ ? (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z : 0.0F);
+    } else if (lowering_) {
+        // Off the top backward onto its face, her hands on the hold under the
+        // lip: at the height she has, to its line, then down it.
+        target = Vec3(c.x, float(at.GetY()), c.z);
+        const float to_line = distance_xz(float(at.GetX()), float(at.GetZ()), c.x, c.z);
+        progress = -to_line;
+        if (to_line < 0.12F) {
+            // On its face: from here her progress is measured going down.
+            lowering_ = false;
+            climb_stall_s_ = 0.0F;
+            progress = -float(at.GetY());
+            climb_best_y_ = progress - 0.05F;
+        }
+    } else {
+        // Hand under hand: hanging off the hold she has, and with her hands
+        // high over her, the next one down at her chest. Her feet down onto
+        // its foot's support is the end of it; air under them is not.
+        if (climb_hand_.GetY() - at.GetY() > 0.95F) {
+            find_climb_hold(at, true);
+        }
+        target.SetY(std::max(float(climb_hand_.GetY()) - 1.15F, c.foot_y + kStandCentre));
+        if (feet <= c.foot_y + 0.06F && floor_under()) {
+            release_climb(false);
+            return;
+        }
+        progress = -float(at.GetY());
     }
+    const Vec3 relative = bodies.GetLinearVelocity(body_) - bodies.GetPointVelocity(climb_support_, climb_hand_);
     Vec3 wanted = (target - Vec3(at)) * 3.0F;
     const float rate = mantling_ ? kMantleMps : kClimbMps;
     if (wanted.Length() > rate) {
@@ -1064,8 +1243,6 @@ void Matron::climb(const float dt) {
     if (requested > kClimbGripMaxN) {
         force *= kClimbGripMaxN / requested;
     }
-    const float progress = float(at.GetY()) + (mantling_ ?
-        (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z : 0.0F);
     if (progress > climb_best_y_ + 0.04F) {
         climb_best_y_ = progress;
         climb_stall_s_ = 0.0F;

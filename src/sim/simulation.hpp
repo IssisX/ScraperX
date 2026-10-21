@@ -1545,6 +1545,11 @@ public:
     void debug_fix_matron_pace(int pace) noexcept;
     // Tests only: her out of the locker and on her patrol loop.
     void debug_matron_patrol() noexcept;
+    // Tests only (never bound to the bridge): her body put standing at `feet`,
+    // awake and hunting; and one of her climbs begun from there (Connector
+    // values of sim/matron_routes.hpp), up or down. False if she found no hold.
+    void debug_place_matron(Vector3 feet) noexcept;
+    [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.

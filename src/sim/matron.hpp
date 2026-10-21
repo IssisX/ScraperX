@@ -97,6 +97,7 @@
 // Only simulation state decides anything here (no clock, no randomness): the
 // same start and inputs give the same chase.
 
+#include "sim/matron_routes.hpp"
 #include <Jolt/Jolt.h>
 
 #include <Jolt/Physics/Body/BodyID.h>
@@ -353,6 +354,7 @@ public:
     static constexpr float kClimbMps = 0.6F;
     static constexpr float kClimbReachM = 1.9F;
     static constexpr float kClimbGripMaxN = 5500.0F;
+    static constexpr float kStandingReachM = 1.5F;   // her centre to a first hold, standing
     static constexpr float kMantleMps = 1.4F;
     static constexpr float kMantleOutM = 1.0F;
     // How long her hands are at a rigged cage's eye before the rope is off it.
@@ -391,6 +393,16 @@ public:
     static constexpr float kRiserX = -6.0F;
     static constexpr float kRiserFootZ = -133.85F;
     static constexpr float kRiserTopZ = -129.5F;
+    static constexpr float kRiserBridgeTop = 155.18F;   // what she goes over at its head
+    // C3 below that (band_stack.cpp build_c3): the stepped walkway up from the
+    // 132 deck's south band across the shaft to a landing (135.5), the duct's
+    // 1.7 m face up from it (137.2), and the wall ladder from the duct's north
+    // end to the 143 walkway plate: where she hangs on the ladder and the duct.
+    static constexpr float kC3WallX = -10.5F;
+    static constexpr float kC3WallHangZ = -135.85F;
+    static constexpr float kC3DuctHangZ = -144.40F;
+    static constexpr float kC3LandingTop = 135.5F;
+    static constexpr float kC3DuctTop = 137.2F;
 
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
@@ -922,6 +934,10 @@ public:
     // Tests only: out of her locker (stepped out of its front, as at a
     // burst) and on her patrol round her level's loop.
     void patrol_for_test();
+    // Tests only: her body put standing at `feet`, awake and hunting (a test's
+    // start, never a move in play); and a climb of hers begun where she stands.
+    void place_for_test(JPH::RVec3 feet);
+    bool climb_for_test(routes::Connector which, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
@@ -1121,12 +1137,19 @@ private:
     // hold of it herself. Her ladder she does (its foot a node of her deck's
     // lines); the riser from 143 to her deck she does not (its foot is on
     // 143's walkway plate out over the shaft, through the gate in the rail).
+    // A climb (matron.cpp climb()): she hangs on the line (x, z), standoff
+    // short of its holds, between the support at its foot and the deck at its
+    // head; the steel she goes over at the top is lip_y (a bridge or a fascia
+    // can stand above the deck it leads to). out is the way over the top;
+    // top is where she stands up there, and where she starts a climb down.
     struct Climb {
         float x, z;
         float foot_y, head_y;
         float out_x, out_z;
         float top_x, top_z;
         bool hers;
+        float standoff;
+        float lip_y;
     };
     struct Plank {
         JPH::BodyID body;
@@ -1195,8 +1218,8 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
-    bool begin_climb(int index);
-    bool find_climb_hold(JPH::RVec3 at, float above);
+    bool begin_climb(int index, bool down = false);
+    bool find_climb_hold(JPH::RVec3 at, bool down);
     void release_climb(bool failed);
     // After a lead a storey away along the corner pipe (above): to the rail's
     // corner on her level and onto it. False when it does not go that way, or
@@ -1403,6 +1426,8 @@ private:
     // The bay (bay.hpp): its bracket as a level of hers, and its rungs.
     int bay_level_ = -1;
     int bay_climb_ = -1;
+    int c3_wall_climb_ = -1;
+    int c3_duct_climb_ = -1;
     JPH::BodyID bay_leaf_;
     bool bay_open_ = true;
     bool bay_hooked_ = false;
@@ -1420,7 +1445,11 @@ private:
     int guess_climb_ = -1;
     int climb_ = -1;
     bool mantling_ = false;
+    bool climb_down_ = false;   // this climb goes down it: from its top to its foot
+    bool lowering_ = false;     // climbing down: off the top onto its face, still at the top's height
+    bool reaching_up_ = false;  // climbing up with no higher hold in reach: pulled up high on hers
     JPH::BodyID climb_support_;
+    JPH::SubShapeID climb_member_;   // which of the support's parts the hand is on
     JPH::Vec3 climb_local_hand_ = JPH::Vec3::sZero();
     JPH::RVec3 climb_hand_ = JPH::RVec3::sZero();
     float climb_force_n_ = 0.0F;

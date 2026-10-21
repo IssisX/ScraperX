@@ -194,6 +194,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
         tests/sim_tests_matron_routes.cpp
+        tests/sim_tests_matron_traverse.cpp
     )
     add_dependencies(scraperx_sim_tests scraperx_shared_survival_tests)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)

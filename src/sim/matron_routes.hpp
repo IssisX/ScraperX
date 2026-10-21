@@ -67,6 +67,8 @@ enum class Connector : std::uint8_t {
     CornerPipe,   // the north-east riser and its flanges (world_solids.inc)
     BayRungs,     // the bay's west wall (bay.cpp)
     BayLip,       // the bay cut's west lip down to the bracket
+    C3WallLadder, // C3's wall ladder, the duct's north end up to 143 (band_stack.cpp)
+    C3Duct,       // C3's duct, its 1.7 m face up from the catwalk landing
     Count,
 };
 

@@ -1067,6 +1067,15 @@ void Simulation::debug_fix_matron_pace(const int pace) noexcept {
     physics_world_->matron().fix_pace_for_test(pace);
 }
 
+void Simulation::debug_place_matron(const Vector3 feet) noexcept {
+    physics_world_->matron().place_for_test(
+        JPH::RVec3(static_cast<float>(feet.x), static_cast<float>(feet.y), static_cast<float>(feet.z)));
+}
+
+bool Simulation::debug_matron_climb(const int connector, const bool down) noexcept {
+    return physics_world_->matron().climb_for_test(static_cast<routes::Connector>(connector), down);
+}
+
 void Simulation::debug_matron_patrol() noexcept {
     physics_world_->matron().patrol_for_test();
 }
