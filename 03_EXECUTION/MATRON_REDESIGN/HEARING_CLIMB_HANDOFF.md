@@ -61,12 +61,10 @@ SCRAPERX_ONLY=matron ./scraperx_sim_tests
 ```
 
 Final focused CTest: **7/7 passed**, approximately 15 seconds total on this host.
-The broader `SCRAPERX_ONLY=matron` run is **not green**: chase, catwalk, Turn,
-stock, mind, crate crash, vault and moving-cage/ride cases passed, then it stopped
-at `matron unrig: she comes for the noise, sees the player and hunts`.
-That remaining older noise/chase fixture has not been adapted or diagnosed
-further; downstream cases were not reached. Do not report a full regression pass.
-Log preserved during implementation: `/tmp/hearing-fullmatron.log`.
+The initial broad Matron failure at unrig was diagnosed and corrected in the
+follow-up (details below), rather than deferred. `matron-remaining` also exposes
+all cases from unrig onward for focused closure without dropping them from the
+normal full Matron sequence.
 
 Focused coverage:
 - Actual 154→176 ladder caller and physical mantle: measured ascent 0.600128 m/s,
@@ -78,8 +76,8 @@ Focused coverage:
 - Quiet/loud, open/occluded/saturated paths, retained wake point, decoy provenance,
   hidden movement, evidence expiry, visual reacquisition, query budget and replay.
 - Actual crate-S/crate-N collision caller: 239.035 J impact, loudness 0.55983,
-  heard from 17.82 m; unseen player 18.817 m away, exact collision lead,
-  investigation within 0.012 m, then abandoned. No synthetic hear call here.
+  heard from 17.317 m; unseen player 18.3025 m away, exact collision lead,
+  investigation within 0.006 m, then abandoned. No synthetic hear call here.
 - Five existing physical capture scenarios, parkour flow and shared survival.
 
 Official pinned Godot 4.7 CLI: `matron_perception_climb_test.gd` passes bridge,
@@ -100,3 +98,57 @@ dynamic objects emit sounds but do not form a general moving acoustic model.
 Existing route-graph allocations are unchanged; new hearing/contact query
 storage is bounded. Desktop test times are not Android performance evidence.
 No device, phone, Android build or visual-comfort proof is claimed.
+
+
+## Regression closure following 4ec02df
+
+The unrig failure was traced to a production occlusion regression, not waived.
+A 34 m horizontal rail only 8 cm thick (entity 51) doubled effective sound
+range as if it were a wall. Individual hit leaves now use a 30 cm transverse
+acoustic aperture; narrow rails/posts leave it open, solid walls still muffle.
+Accepted-barrier dedup occurs after that filter, so a rail cannot hide a wall
+in the same compound. No additional rays or unbounded storage were introduced.
+
+The next previously unreached cross-deck case exposed a shaft ray exactly on
+z=-133 intersecting both the deck and its rim beam. The checked route now runs
+0.5 m into the open shaft, retaining geometry checks and original bend factors.
+Focused falsifiers cover single rails/posts, sparse compound geometry, a wall
+in the same compound, an open shaft with an edge beam, and a blocked shaft.
+
+Fixture corrections preserve their gameplay outcomes: the unrig player must
+finish crossing before turning north (the earlier failure turned at x=12.62,
+still over the shaft); the cable chase now starts with an audible run after
+emergence instead of relying on silent movement rewriting the waking source.
+Unrig's original acoustic inputs and hunt/catwalk-death assertions are unchanged.
+
+
+A third production regression conflated absolute evidence age with the time
+available to pursue it: the 18.2-second wake sequence exhausted a nine-second
+hunt before Matron could act. Separate clocks now preserve the actual heard
+point/age and the absolute 40-second acoustic ceiling while allowing the
+existing bounded active pursuit after emergence. A lifecycle test checks the
+old, unchanged waking point, actual pursuit, and subsequent expiry. The toolbox
+hoarding fixture passes unchanged with this correction.
+
+The unrig fixture now verifies physical return to the post before its next
+lure, rather than assuming a fixed three-second delay. Vault and cable chase
+fixtures establish their lure through audible movement after emergence; their
+physical traversal/outcome assertions remain intact. No hidden-coordinate
+refresh, relaxed occlusion threshold for walls, pipe conversion, or unrelated
+mechanics change was used to make them pass.
+
+Final closure verification (all exit 0):
+- `SCRAPERX_ONLY=matron`: complete broad sequence, **29 PASS records**, including
+  all five capture scenarios and the formerly unreached cases. Log:
+  `/workspace/matron-close-full.log`.
+- `SCRAPERX_ONLY=matron-remaining`: all cases from unrig through deterministic
+  replay; `/workspace/matron-close-remaining.log`.
+- Focused CTest selection above: **7/7 passed**, 14.64 seconds on this host;
+  `/workspace/matron-close-ctest.log`.
+- `SCRAPERX_ONLY=bay`: walkway, trap exit and chain pass;
+  `/workspace/matron-close-bay.log`.
+- Godot 4.7 `matron_perception_climb_test.gd`: bridge, contact and hidden-attention
+  smoke passes; `/workspace/matron-close-godot.log`.
+
+There is no remaining known Matron regression from this closure. This is not a
+claim that the entire repository test suite or an Android/device run was done.

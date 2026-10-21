@@ -175,6 +175,7 @@ public:
     static constexpr std::size_t kMaxAcousticHits = 16;
     static constexpr std::size_t kMaxAcousticQueries = 4 * (16 + 1);
     static constexpr float kObstructionMuffle = 2.0F;
+    static constexpr float kAcousticApertureM = 0.30F; // narrow members leave room for sound to bend around
     static constexpr float kAcousticMemorySeconds = 40.0F;
     static constexpr float kDeckMuffle = 10.0F;
     static constexpr float kBendMuffle = 1.4F;
@@ -919,7 +920,8 @@ private:
     State state_ = State::Dormant;
     float strain_s_ = 0.0F;
     float emerge_s_ = 0.0F;
-    float since_heard_s_ = 0.0F;
+    float since_heard_s_ = 0.0F; // absolute evidence age, including time sealed/emerging
+    float pursuit_s_ = 0.0F; // time available to act on that evidence after emerging
     float search_s_ = 0.0F;
     float heard_x_ = 0.0F, heard_z_ = 0.0F;
     float stride_ = 0.0F;

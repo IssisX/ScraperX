@@ -1297,9 +1297,14 @@ void run_matron() {
         // Wake her with a sprint up the band, then walk off west along the north
         // band and wait there for her.
         require(go(s, Matron::kBandX, -133.0, true, 8.0, 0.8), "matron vault: a sprint up the band, near her locker");
-        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 1.0) &&
-                    go(s, -10.0, Matron::kBandNorthZ, false, 15.0),
-                "matron vault: a walk off west along the north band");
+        // Establish the chase with audible movement after emergence. Quiet
+        // movement while sealed cannot relocate her retained waking source.
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) &&
+             s.matron_state().state != kStateEmerging; ++i) tick(s);
+        require(s.matron_state().state == kStateEmerging, "matron vault: she emerges before the lure");
+        require(go(s, Matron::kBandX, Matron::kBandNorthZ, true, 10.0, 1.0) &&
+                    go(s, -10.0, Matron::kBandNorthZ, true, 15.0),
+                "matron vault: an audible run west along the north band");
         (void)s.set_crouch_input(true);
         require(wait_for_her(s, 18.0, 40.0), "matron vault: she comes along the north band");
         (void)s.set_crouch_input(false);
@@ -1499,6 +1504,10 @@ void run_matron() {
         std::cout << "PASS scraperx_sim matron ride: with_her_s=" << with_her_s << " alone_s=" << alone_s
                   << " island_s=" << island_s << " leaps=" << over.leaps << "\n";
     }
+    run_matron_remaining();
+}
+
+void run_matron_remaining() {
     // ---- B: a way out rigged and left, she takes the rope off its eye; hooked on again,
     //      it rides ---------------------------------------------------------------------
     {
@@ -1528,9 +1537,15 @@ void run_matron() {
         require(unrigged && after_unrig.well_a_rope_end_entity_id == Simulation::kWellAShackleEntityId &&
                     after_unrig.death_count == 0,
                 "matron unrig: guarding the cage, she took the player's rope off its eye");
-        stand_still(s, 3.0);
-        require(s.matron_state().state == kStateGuarding && s.matron_state().unrigs == 1,
-                "matron unrig: then back to her post, once");
+        bool back_at_post = false;
+        for (int i = 0; i < 15 * static_cast<int>(Simulation::kTickRateHz) && !back_at_post; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            back_at_post = m.state == kStateGuarding && m.speed < 0.3 &&
+                std::hypot(m.position.x - Matron::kPostX, m.position.z - Matron::kPostZ) < 0.6;
+        }
+        require(back_at_post && s.matron_state().unrigs == 1,
+                "matron unrig: physically back at her post, once");
         // Draw her: a sprint along the south band and up the west band to the
         // catwalk's west end; then over the catwalk, and she follows to her death.
         (void)s.set_crouch_input(false);
@@ -1553,6 +1568,11 @@ void run_matron() {
             dead = s.matron_state().state == kStateDead;
         }
         require(dead && s.snapshot().death_count == 0, "matron unrig: over the catwalk after the player, she falls");
+        // Her fall can occur while the player is still on the catwalk
+        // (observed x=12.62). Finish crossing before turning north; a diagonal
+        // shortcut from there leaves the real deck and falls into the shaft.
+        require(go(s, Matron::kBandX, Matron::kMidZ, false, 6.0, 0.6),
+                "matron unrig: finish the catwalk crossing before turning north");
         // Back to the cage: the shackle hangs at its eye; take it and hook it on.
         require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 1.0) && go(s, -10.0, -128.4, false, 10.0) &&
                     board_well_a(s) && walk_to(s, -11.35, -131.40, 3.0, 0.08),
@@ -1585,18 +1605,23 @@ void run_matron() {
     // ---- lines: seen riding a line away, in the Turn she goes down its cable after ----
     {
         Simulation s(InitialSpawn::Deck154);
-        // The sprint that wakes her, then crouched west over the bay's leaf
-        // and down the west band, to wait for her there: the run round below
+        // The sprint that wakes her, then an audible escape west after she
+        // emerges, and down the west band: the run round below
         // then comes to the line's ramp from the east, with her behind on
         // this side of the bay. (Run east over it, the player goes unheard
         // under its fan, bay.hpp; or, heard or seen, she does not cross after
         // them: her trap, matron.hpp.)
         require(s.advance_frame(1.0).accepted, "matron line: settle");
         require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron line: a sprint toward her locker");
-        (void)s.set_crouch_input(true);
-        require(go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0) &&
-                    go(s, -Matron::kBandX, -138.0, false, 40.0),
-                "matron line: a crouched walk down the west band");
+        // Stay until she emerges, then leave audibly. Moving quietly before
+        // she emerged used to rely on her overwriting the heard point with
+        // hidden player coordinates; it cannot establish this chase now.
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) &&
+             s.matron_state().state != kStateEmerging; ++i) tick(s);
+        require(s.matron_state().state == kStateEmerging, "matron line: she emerges before the escape");
+        require(go(s, -Matron::kBandX, Matron::kBandNorthZ, true, 12.0) &&
+                    go(s, -Matron::kBandX, -138.0, true, 6.0),
+                "matron line: an audible run down the west band");
         (void)s.set_move_input(0.0, 0.0);
         require(wait_for_her(s, 14.0, 40.0), "matron line: she comes");
         (void)s.set_crouch_input(false);

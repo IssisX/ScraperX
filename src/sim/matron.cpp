@@ -283,11 +283,13 @@ float Matron::muffled_distance(const RVec3 from, const RVec3 to) const {
     physics_.GetNarrowPhaseQuery().CastRay(ray, RayCastSettings(), hits, {}, {}, built);
     if (hits.count == hits.hits.size()) return std::numeric_limits<float>::max();
     float carried = straight;
+    std::array<BodyID, kMaxAcousticHits> barriers{};
+    std::size_t barrier_count = 0;
     for (std::size_t i = 0; i < hits.count; ++i) {
         const RayCastResult &hit = hits.hits[i];
         if (hit.mFraction * straight < 0.15F || (1.0F - hit.mFraction) * straight < 0.15F) continue;
         bool duplicate = false;
-        for (std::size_t j = 0; j < i; ++j) duplicate |= hits.hits[j].mBodyID == hit.mBodyID;
+        for (std::size_t j = 0; j < barrier_count; ++j) duplicate |= barriers[j] == hit.mBodyID;
         if (duplicate) continue;
         const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
         if (!lock.Succeeded()) return std::numeric_limits<float>::max();
@@ -299,6 +301,33 @@ float Matron::muffled_distance(const RVec3 from, const RVec3 to) const {
                 deck |= y > level.floor_y - kDeckDepthM && y < level.floor_y + 0.05F;
             }
         }
+        if (!deck) {
+            // Low thuds diffract around a narrow rail or rung. Test the hit
+            // leaf, not a whole ladder's/compound's envelope, against a
+            // 30 cm acoustic aperture perpendicular to the sound path.
+            TransformedShape leaf = lock.GetBody().GetTransformedShape();
+            SubShapeID remainder = hit.mSubShapeID2;
+            for (int depth = 0; depth < 8; ++depth) {
+                SubShapeID next;
+                TransformedShape child = leaf.GetSubShapeTransformedShape(remainder, next);
+                if (child.mShape == leaf.mShape || child.mShape == nullptr) break;
+                leaf = child;
+                remainder = next;
+            }
+            const Vec3 direction = run / straight;
+            const Vec3 horizontal(-direction.GetZ(), 0, direction.GetX());
+            const Vec3 across = horizontal.LengthSq() > 1.0e-6F ? horizontal.Normalized() : Vec3::sAxisX();
+            const Vec3 up = direction.Cross(across);
+            const AABox bounds = leaf.mShape->GetLocalBounds();
+            const Vec3 size = (bounds.mMax - bounds.mMin) * leaf.GetShapeScale().Abs();
+            const auto span = [&](const Vec3 axis) {
+                return (leaf.mShapeRotation.Conjugated() * axis).Abs().Dot(size);
+            };
+            if (span(across) < kAcousticApertureM || span(up) < kAcousticApertureM) continue;
+        }
+        // Only accepted barriers count for deduplication. A compound's rail
+        // must not mask a wall hit belonging to that same compound body.
+        barriers[barrier_count++] = hit.mBodyID;
         carried *= deck ? kDeckMuffle : kObstructionMuffle;
     }
     return carried;
@@ -309,14 +338,20 @@ float Matron::carry_m(const RVec3 from, const RVec3 to) const {
     const float through = muffled_distance(from, to);
     if (through <= straight || std::abs(from.GetY() - to.GetY()) < 1.0) return through;
     // Or round by the shaft: out to it level, along it, and in again level.
-    const auto in_shaft = [](const RVec3 p) {
-        return RVec3(std::clamp(float(p.GetX()), -kShaftHalfM, kShaftHalfM), p.GetY(),
-                     std::clamp(float(p.GetZ()), kMidZ - kShaftHalfM, kMidZ + kShaftHalfM));
+    const auto in_shaft = [](const RVec3 p, const float inset) {
+        const float half = kShaftHalfM - inset;
+        return RVec3(std::clamp(float(p.GetX()), -half, half), p.GetY(),
+                     std::clamp(float(p.GetZ()), kMidZ - half, kMidZ + half));
     };
-    const RVec3 out = in_shaft(from);
-    const RVec3 in = in_shaft(to);
-    const float to_shaft = Vec3(out - from).Length();
-    const float from_shaft = Vec3(to - in).Length();
+    // The floor edge is not an open ray: its supporting beam projects 25 cm
+    // into the shaft. Half a metre clears that beam plus the 15 cm aperture
+    // radius. Every displaced leg still gets its ordinary geometry query.
+    const RVec3 out = in_shaft(from, 0.5F);
+    const RVec3 in = in_shaft(to, 0.5F);
+    // Bends describe the actual room/shaft boundary; clearance displacement
+    // must not introduce a second bend for a source already at that opening.
+    const float to_shaft = Vec3(in_shaft(from, 0.0F) - from).Length();
+    const float from_shaft = Vec3(to - in_shaft(to, 0.0F)).Length();
     float round = muffled_distance(from, out) + muffled_distance(out, in) + muffled_distance(in, to);
     round *= to_shaft > 0.5F ? kBendMuffle : 1.0F;
     round *= from_shaft > 0.5F ? kBendMuffle : 1.0F;
@@ -556,6 +591,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     guess_line_ = -1;
     guess_climb_ = -1;
     since_heard_s_ = 0.0F;
+    pursuit_s_ = 0.0F;
     lead_seen_ = seen;
     lead_valid_ = true;
 }
@@ -1727,6 +1763,11 @@ bool Matron::trap_lets_go(const RVec3 player, const float dt, const bool perceiv
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
     acoustic_queries_ = 0;
     since_heard_s_ = std::min(since_heard_s_ + dt, 3600.0F);
+    // Waking evidence keeps aging while sealed, but she needs an opportunity
+    // to investigate it once she can move. Neither clock refreshes a position.
+    if (state_ != State::Dormant && state_ != State::Straining && state_ != State::Emerging) {
+        pursuit_s_ = std::min(pursuit_s_ + dt, 3600.0F);
+    }
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
     sound_count_ = 0;
@@ -2085,7 +2126,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             // than the chase timer to reach a vantage, but never forever.
             const float evidence_timeout = wary_ ? kAcousticMemorySeconds :
                 (lead_seen_ ? lose_track : std::min(lose_track, kAcousticMemorySeconds));
-            if (since_heard_s_ > evidence_timeout) {
+            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > kAcousticMemorySeconds)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
                     // where she lost them, at its top.
@@ -2596,6 +2637,7 @@ void Matron::restore(const Saved &saved) {
         throws_ = 0;
         speed_ = 0.0F;
         since_heard_s_ = 0.0F;
+        pursuit_s_ = 0.0F;
         turn_ = Turn::None;
         turn_s_ = 0.0F;
         turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
