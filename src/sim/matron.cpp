@@ -2313,8 +2313,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere && (follow_pipe(dt, at) || follow_route(dt, at) || follow_line(dt, at) ||
-                                     follow_climb(dt, at))) {
+            } else if (elsewhere &&
+                       (follow_pipe(dt, at) ||
+                        // A line she knows the climber took, she takes after him; else her map's ways first.
+                        (guess_line_ >= 0 ? (follow_line(dt, at) || follow_route(dt, at))
+                                          : (follow_route(dt, at) || follow_line(dt, at))) ||
+                        follow_climb(dt, at))) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
                 // the tower (its ladders up and down), or up a climb.
