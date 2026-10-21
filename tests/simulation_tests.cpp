@@ -124,6 +124,10 @@ int main() {
         run_yard_crane_spreader();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "water") {
+        run_water();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -373,6 +377,7 @@ int main() {
     run_wet_handling();
     run_wet_band();
     run_wet_route();
+    run_water();
     run_plate_shop();
     run_plate_band();
     run_plate_route();

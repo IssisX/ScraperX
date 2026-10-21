@@ -196,6 +196,7 @@ constexpr float kPlateTop = 340.25F;
 const JPH::Vec3 kHeaderMin(2.0F, 340.45F, -152.0F);
 const JPH::Vec3 kHeaderMax(10.0F, 345.0F, -143.0F);
 constexpr float kHeaderWaterKg = 300000.0F;
+constexpr float kHeaderLadderX = 5.0F;   // its way out (build_climbing_route)
 // The dump's bar lies north of F's hole, where the rider steps off; its
 // handle hangs west of the hole's north-west corner.
 const JPH::RVec3 kDumpPivot(9.2, 341.2, -136.5);
@@ -757,6 +758,18 @@ void build_climbing_route(kit::Kit &kit) {
     route_panel(route, 0.5F, 2.5F, -135.41F, 310.5F, 330.2F);
     // 330 -> TP-340, on the plate's north face.
     route_ladder(route, 3.0F, -135.46F, 330.25F, kPlateTop);
+    // The header tank is a pool 4.85 m deep inside its walls, more than any
+    // reach from its floor or its water: a ladder up the inside of its north
+    // wall to the rim, climbed facing north, tops out onto a plank on the
+    // wall's top, 5 m over the plate and clear of the walk under it. From the
+    // plank the drop to the plate is 5.05 m (9.9 m/s, under kAnkleBreakSpeed),
+    // or Drop lowers the body into a hang off it first. The way out is always
+    // there, full or dumped.
+    route_ladder(route, kHeaderLadderX, kHeaderMax.GetZ() - 0.14F, kHeaderMin.GetY(),
+                 kHeaderMax.GetY() + 0.3F);
+    route.push_back(span({kHeaderLadderX - 0.8F, kHeaderMax.GetY() + 0.15F, kHeaderMax.GetZ() + kWall},
+                         {kHeaderLadderX + 0.8F, kHeaderMax.GetY() + 0.3F, kHeaderMax.GetZ() + kWall + 0.6F},
+                         Material::Timber));
     (void)kit.add_body(Sim::kWetRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F,
                        0.8F);
 }

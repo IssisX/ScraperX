@@ -104,6 +104,10 @@ func build() -> void:
 	clips[&"vent_blast_loop"] = [_loop(_vent_blast(1.6), 0.3)]
 	clips[&"catch_bang"] = [_wav(_catch_bang())]
 	clips[&"seat_thump"] = [_wav(_seat_thump())]
+	# Water (sim physics_world_water.cpp), made last so every clip before it
+	# is as it was: the body going in, and a stroke through it.
+	clips[&"splash"] = _variants(2, _splash)
+	clips[&"swim_stroke"] = _variants(3, _swim_stroke)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -1240,3 +1244,32 @@ func _loop(samples: PackedFloat32Array, fade_seconds: float) -> AudioStreamWAV:
 		var w := float(i) / float(fade)
 		out[i] = out[i] * w + samples[body + i] * (1.0 - w)
 	return _wav(out, out.size())
+
+
+# A body going into deep water: the slap of the surface (broadband, a few
+# milliseconds), the crown thrown up and falling back as a wash of hiss, and
+# the air dragged under ringing low as bubbles under it all.
+func _splash() -> PackedFloat32Array:
+	var out := _silence(1.4)
+	_add_band_noise(out, 0.0, 0.03, 0.9, 0.008, 200.0, 6000.0)
+	_add_band_noise(out, 0.02, 1.2, 0.45, 0.35, 900.0, 7000.0)
+	_add_band_noise(out, 0.05, 0.9, 0.35, 0.25, 80.0, 600.0)
+	for b in 9:
+		var start := int(_rng.randf_range(0.06, 0.8) * MIX_RATE)
+		var f0 := _rng.randf_range(180.0, 520.0)
+		var env := _rng.randf_range(0.15, 0.3)
+		var decay := _decay(_rng.randf_range(0.02, 0.05))
+		var phase := 0.0
+		for i in range(start, mini(out.size(), start + int(0.25 * MIX_RATE))):
+			phase += TAU * f0 * (1.0 + float(i - start) / float(MIX_RATE) * 2.0) / float(MIX_RATE)
+			out[i] += sin(phase) * env
+			env *= decay
+	return out
+
+
+# A stroke through water at the surface: a soft rushing push, low and short.
+func _swim_stroke() -> PackedFloat32Array:
+	var out := _silence(0.5)
+	_add_band_noise(out, 0.0, 0.45, 0.35, 0.16, 300.0, 3000.0)
+	_add_band_noise(out, 0.03, 0.3, 0.2, 0.08, 60.0, 400.0)
+	return out

@@ -746,6 +746,16 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.arm_broken_seconds_left = arm_broken_seconds_left_;
     state_.arm_break_count = arm_break_count_;
     state_.broken_arm_side = broken_arm_side_;
+    state_.in_water = in_water_;
+    state_.swimming = swimming_;
+    state_.head_underwater = head_underwater_;
+    state_.water_submersion = water_submersion_;
+    state_.water_surface_y = water_surface_y_;
+    state_.water_pool = in_water_ ? water_pool_ : -1;
+    state_.water_entry_count = water_entry_count_;
+    state_.water_exit_count = water_exit_count_;
+    state_.water_entry_speed_mps = water_entry_speed_mps_;
+    state_.swim_kick_count = swim_kick_count_;
     state_.player_teetering = teetering_;
     state_.summit_reached = summit_reached_;
     state_.summit_seconds = summit_seconds_;

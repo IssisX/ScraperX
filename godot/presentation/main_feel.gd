@@ -258,6 +258,7 @@ const HAPTICS := {
 	&"her": [18, 0.5],   # her hands on the steel you are on or beside
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
+	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -933,6 +934,23 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_feel_bay()
 	if delta > 0.0:
 		_feel_wet_e(delta)
+		_feel_water(delta)
+
+
+# Water (sim physics_world_water.cpp): the splash, the tint and fog under the
+# surface, the muffle on the effects, the haptic at the entry. All of it is
+# read from the native's water state; nothing here decides wet or dry.
+var _water_feel: Node = null
+
+func _feel_water(delta: float) -> void:
+	if not _native.has_method(&"get_water_state"):
+		return
+	if _water_feel == null:
+		_water_feel = preload("res://presentation/water_feel.gd").new()
+		add_child(_water_feel)
+	var entered: float = _water_feel.update_view(_native.get_water_state(), _camera, _audio, delta)
+	if entered > 0.0:
+		_haptic(&"splash", clampf(0.4 + entered / 12.0, 0.4, 1.0))
 
 
 # Deaths (sim/corpse.hpp): the body a death leaves is drawn where it lies.

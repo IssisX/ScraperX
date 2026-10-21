@@ -113,6 +113,7 @@ public:
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
+    void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
@@ -941,6 +942,20 @@ public:
     int broken_arm_side_ = 1;
     std::uint64_t arm_break_count_ = 0;
     [[nodiscard]] bool arm_broken() const noexcept { return arm_broken_seconds_left_ > 0.0; }
+    // Water (physics_world_water.cpp): measured each tick before the step.
+    bool in_water_ = false;
+    bool swimming_ = false;
+    bool head_underwater_ = false;
+    float water_submersion_ = 0.0F;
+    float water_surface_y_ = 0.0F;
+    int water_pool_ = -1;
+    float water_entry_speed_mps_ = 0.0F;
+    std::uint64_t water_entry_count_ = 0;
+    std::uint64_t water_exit_count_ = 0;
+    std::uint64_t swim_kick_count_ = 0;
+    int swim_kick_cooldown_ticks_ = 0;
+    void update_water(JPH::BodyInterface &bodies, float dt) noexcept;
+    void swim_locomotion(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept;
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

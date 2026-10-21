@@ -293,6 +293,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_state"), &ScraperXSimulation::get_water_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wind_mps"), &ScraperXSimulation::get_wind_mps);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
@@ -994,6 +995,23 @@ double ScraperXSimulation::get_stack_s3_brake_angle() const {
 
 bool ScraperXSimulation::is_stack_s3_brake_latched() const {
     return simulation_->stack_state().s3_brake_latched;
+}
+
+godot::Dictionary ScraperXSimulation::get_water_state() const {
+    const sim::Snapshot &s = simulation_->snapshot();
+    godot::Dictionary out;
+    out["in_water"] = s.in_water;
+    out["swimming"] = s.swimming;
+    out["head_under"] = s.head_underwater;
+    out["submersion"] = s.water_submersion;
+    out["surface_y"] = s.water_surface_y;
+    out["pool"] = static_cast<std::int64_t>(s.water_pool);
+    out["entries"] = static_cast<std::int64_t>(s.water_entry_count);
+    out["exits"] = static_cast<std::int64_t>(s.water_exit_count);
+    out["entry_speed"] = s.water_entry_speed_mps;
+    out["kicks"] = static_cast<std::int64_t>(s.swim_kick_count);
+    out["position"] = to_godot(s.player_position);
+    return out;
 }
 
 godot::Dictionary ScraperXSimulation::get_landing_state() const {

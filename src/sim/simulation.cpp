@@ -1064,6 +1064,12 @@ void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 a
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
+    physics_world_->launch_player_for_test(
+        JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
+        JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();

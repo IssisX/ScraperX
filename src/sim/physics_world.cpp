@@ -620,8 +620,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         clear_support_jolt();
     }
     apply_wind(bodies, commands.time_seconds);
+    update_water(bodies, delta_seconds);
     if (!sling_controlling && traversal_state_ == TraversalState::None) {
-        if (slingshot_flight_ && !grounded_) {
+        if (swimming_) {
+            // Afloat: no ground to walk on, no air to steer in; the stroke
+            // and the kick (physics_world_water.cpp).
+            parachute_deployed_ = false;
+            swim_locomotion(bodies, commands);
+        } else if (slingshot_flight_ && !grounded_) {
             // Thrown: the stick steers with a bounded force (2 m/s/s at
             // full stick) and does not brake the throw to a walking speed
             // as air control would.
@@ -916,6 +922,15 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
     bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
     impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+}
+
+void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    release_carry();
+    clear_traversal();
+    bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
+    grounded_ = false;
 }
 
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {

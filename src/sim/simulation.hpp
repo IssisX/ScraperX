@@ -937,6 +937,20 @@ struct Snapshot final {
     double arm_broken_seconds_left = 0.0;
     std::uint64_t arm_break_count = 0;
     std::int32_t broken_arm_side = 1;
+    // Water (Kit::add_pool): the body in a pool's water; afloat; the head
+    // under; how much of the body is under (0..1); the surface's height; the
+    // pool (-1 none); every entry and exit, and the latest entry's falling
+    // speed (the splash's size and the haptic's).
+    bool in_water = false;
+    bool swimming = false;
+    bool head_underwater = false;
+    double water_submersion = 0.0;
+    double water_surface_y = 0.0;
+    std::int32_t water_pool = -1;
+    std::uint64_t water_entry_count = 0;
+    std::uint64_t water_exit_count = 0;
+    double water_entry_speed_mps = 0.0;
+    std::uint64_t swim_kick_count = 0;
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
@@ -1391,6 +1405,9 @@ public:
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): the player's body put at `at`
+    // and sent off at `velocity` (a fall into a pool, met from its start).
+    void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;
