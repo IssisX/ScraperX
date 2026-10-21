@@ -78,3 +78,11 @@ up. Each half is two lanes wide.
    the bar is 2.8 m long to make it forgiving.
 5. **The second tower's own climb** above its 220 m landing is still dot's short incline and
    plinth. The proposal's top slice (`PROPOSAL.md`) is the next way up it.
+6. **It reads as scripted** (the owner, 2026-10-21: *"Seems like a bunch of scripted shit when
+   we're trying for a fully causal world, but keep it and make NOTE"*). Kept as built. What is
+   simulated: the steel plate swings from the hook's actual hit, and the missing bridge piece
+   falls by its own weight and lands where it lands. What is a rule: the plate passing 0.35 rad
+   lets go of the piece (the kit's catch, with no modeled pin, rod or linkage between them),
+   and the slow fall is a declared damping number standing in for a hydraulic ram. A fully
+   causal version would model the linkage from the plate to a real pin holding the piece, and
+   the ram as a body.
