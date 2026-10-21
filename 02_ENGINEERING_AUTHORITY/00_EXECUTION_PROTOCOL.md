@@ -336,6 +336,12 @@ If it does not block the objective, record it separately and keep it outside the
 
 Permanent owner directive, 2026-10-20: maximize meaningful, verified progress toward a finished ScraperX. The goal is a complete, cohesive, playable game. Activity, technical refinement, more agents and passing isolated checks do not automatically improve gameplay.
 
+Owner correction, 2026-10-20: choose the player payoff before the engineering problem. No new routine lift rides, basic-machine chores or reskinned board/raise/exit encounters. Existing machinery remains intact. Ari's barrel-lift cooperation is deferred; its unfinished collision check does not become a story prerequisite. Current development emphasis is consequential storyline, meaningful player choices, expressive traversal and inhabited, atmospheric places within authorized scope.
+
+An authored possibility is not an implementation order. A delivered subgoal does not automatically authorize the nearest unfinished mechanism as its successor. Select work by the distinct player experience it creates: what they discover, decide, risk, change or gain access to, and why that matters now. Another passenger, elevation, realistic solver, voice line or cosmetic theme does not establish a new experience. When storyline is selected, movement scaffolding must serve a concrete dramatic consequence; routine transport is not the story payoff. Prefer using already-working machinery over building another transport problem.
+
+Later owner corrections supersede older selected goals, checkpoints and plans. At a material correction, reconcile the existing live task record and directly conflicting instructions before continuing implementation. Preserve unfinished work and honest evidence, but do not resume rejected work merely to finish a test, spend sunk effort or satisfy an obsolete tracker object. Record a specific resumption condition; do not treat deferral as delivery. Re-selection requires a materially different player benefit consistent with the latest owner direction, not renamed work. This is judgment at selection and real scope changes, not a recurring audit or permission request.
+
 At meaningful checkpoints—such as an integrated result, evidence that changes a hypothesis, repeated lack of useful evidence, a delivery blocker or a priority change—make an independent judgment:
 
 - **Progress:** What demonstrably improved in actual play? Distinguish source/component progress from an exercised player experience and a delivered APK.
