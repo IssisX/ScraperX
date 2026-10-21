@@ -1,6 +1,7 @@
 // The Matron: a sealed locker, a build-up, and a hunt by sound on the 154 m
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
+#include "sim/matron_grip.hpp"
 #include <cstdio>
 #include <cstdlib>
 
@@ -267,6 +268,11 @@ bool Matron::climb_for_test(const routes::Connector which, const bool down) {
     default: break;
     }
     climb_retry_s_ = 0.0F;
+    if (which == routes::Connector::CornerPipe) {
+        const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+        const float to = floor_y + (down ? -kStackPitch : kStackPitch);
+        return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
+    }
     return index >= 0 && begin_climb(index, down);
 }
 
@@ -962,64 +968,10 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
 }
 
 namespace {
-// Two exclusions without the heap storage used by IgnoreMultipleBodiesFilter.
-class ClimbBodyFilter final : public BodyFilter {
-public:
-    ClimbBodyFilter(BodyID actor, BodyID player) : actor_(actor), player_(player) {}
-    bool ShouldCollide(const BodyID &id) const override { return id != actor_ && id != player_; }
-    bool ShouldCollideLocked(const Body &body) const override { return !body.IsSensor(); }
-private:
-    BodyID actor_, player_;
-};
-} // namespace
-
-namespace {
-// The hits along one ray, at most kMax of them: bounded, no heap.
-class RayHits final : public CastRayCollector {
-public:
-    static constexpr int kMax = 12;
-    void AddHit(const RayCastResult &hit) override {
-        if (count < kMax) {
-            hits[static_cast<std::size_t>(count++)] = hit;
-        } else {
-            ForceEarlyOut();
-        }
-    }
-    void sort() {
-        std::sort(hits.begin(), hits.begin() + count,
-                  [](const RayCastResult &a, const RayCastResult &b) { return a.mFraction < b.mFraction; });
-    }
-    int count = 0;
-    std::array<RayCastResult, kMax> hits{};
-};
-
-// Anything solid at a point (sensors and the excluded bodies aside).
-class PointHit final : public CollidePointCollector {
-public:
-    void AddHit(const CollidePointResult &) override {
-        hit = true;
-        ForceEarlyOut();
-    }
-    bool hit = false;
-};
-// What a hand at `point` rests on: the closest top met just over it, steel the
-// check starts inside not counted (a bridge over a ladder's head). The hold
-// is taken and kept by this one query, so a seam between two parts of a
-// compound reads the same every time.
-bool hand_rests_on(const NarrowPhaseQuery &query, const RVec3 point, const BodyFilter &filter, BodyID &body,
-                   SubShapeID &member) {
-    const RRayCast ray(point + Vec3(0.0F, 0.04F, 0.0F), Vec3(0.0F, -0.08F, 0.0F));
-    RayCastSettings settings;
-    settings.mTreatConvexAsSolid = false;
-    ClosestHitCollisionCollector<CastRayCollector> hit;
-    query.CastRay(ray, settings, hit, {}, {}, filter);
-    if (!hit.HadHit()) {
-        return false;
-    }
-    body = hit.mHit.mBodyID;
-    member = hit.mHit.mSubShapeID2;
-    return true;
-}
+using grip::ClimbBodyFilter;
+using grip::hand_rests_on;
+using grip::PointHit;
+using grip::RayHits;
 } // namespace
 
 // A real upward-facing contact on the climb's line of holds, in hand reach,
@@ -1319,194 +1271,12 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         walk_toward(dt, wx, wz, std::min(kHuntMps, 1.0F + 3.0F * off), accel);
         return true;
     }
-    get_on_pipe(floor_y, next);
+    // Her hands on the rail: over it and onto the pipe (matron_pipe.cpp).
+    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    walk_toward(dt, ax, az, 0.0F, accel);
+    yaw_ = turn_toward(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
+    (void)get_on_pipe(floor_y, next);
     return true;
-}
-
-// Her way along it, as her feet go: up off the band over the rail's corner,
-// across into the corner by the pipe, along it to the other deck's height
-// over its rail, back across, and down onto that band.
-void Matron::get_on_pipe(const float from_floor, const float to_floor) {
-    drop_stock();
-    pipe_from_ = from_floor;
-    pipe_to_ = to_floor;
-    pipe_phase_ = PipePhase::Mount;
-    pipe_waypoint_ = 0;
-    pipe_s_ = 0.0F;
-    pipe_hold_m_ = 0.0F;
-    ++pipe_links_;
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    bodies.SetObjectLayer(body_, static_cast<ObjectLayer>(steel_layer_));
-    bodies.SetGravityFactor(body_, 0.0F);
-    bodies.SetLinearVelocity(body_, Vec3::sZero());
-}
-
-void Matron::get_off_pipe() {
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    bodies.SetObjectLayer(body_, static_cast<ObjectLayer>(moving_layer_));
-    bodies.SetGravityFactor(body_, 1.0F);
-    pipe_phase_ = PipePhase::Off;
-    for (std::size_t i = 0; i < levels_.size(); ++i) {
-        if (std::abs(levels_[i].floor_y - pipe_to_) < 0.3F) {
-            level_ = static_cast<int>(i);
-        }
-    }
-    feet_y_ = pipe_to_;
-    const RVec3 at = bodies.GetPosition(body_);
-    pick_patrol(float(at.GetX()), float(at.GetZ()));
-}
-
-void Matron::tear_off_pipe() {
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const float feet = float(bodies.GetPosition(body_).GetY()) - kStandCentre;
-    // The flange under her: the highest flange top below her feet.
-    float stop = kPipeLowestFloor - kPipeFlangeUnderDeckM;
-    for (float deck = kPipeLowestFloor; deck <= kDeckTop + 0.1F; deck += kStackPitch) {
-        const float top = deck - kPipeFlangeUnderDeckM;
-        if (top < feet - 0.05F) {
-            stop = std::max(stop, top);
-        }
-    }
-    pipe_stop_y_ = stop;
-    pipe_slide_mps_ = std::max(0.0F, -bodies.GetLinearVelocity(body_).GetY());
-    pipe_phase_ = PipePhase::Slide;
-}
-
-void Matron::ride_pipe(const float dt) {
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const RVec3 at = bodies.GetPosition(body_);
-    const float feet = float(at.GetY()) - kStandCentre;
-    pipe_s_ += dt;
-    speed_ = 0.0F;
-    // Her hands held to her line on the pipe: the pull back onto it.
-    const auto to_line = [&]() {
-        return Vec3(std::clamp((kPipeLineX - float(at.GetX())) * 5.0F, -0.5F, 0.5F), 0.0F,
-                    std::clamp((kPipeLineZ - float(at.GetZ())) * 5.0F, -0.5F, 0.5F));
-    };
-    const auto count_flanges = [&](const float from_feet, const float to_feet) {
-        for (float deck = kPipeLowestFloor; deck <= kDeckTop + 0.1F; deck += kStackPitch) {
-            const float top = deck - kPipeFlangeUnderDeckM;
-            if ((from_feet - top) * (to_feet - top) < 0.0F) {
-                ++pipe_flanges_;
-            }
-        }
-    };
-    if (pipe_phase_ == PipePhase::Stunned) {
-        bodies.SetLinearVelocity(body_, to_line());
-        pipe_stun_s_ -= dt;
-        if (pipe_stun_s_ <= 0.0F) {
-            pipe_phase_ = PipePhase::Climb;   // and on, the way she was going
-        }
-        return;
-    }
-    if (pipe_phase_ == PipePhase::Slide) {
-        pipe_slide_mps_ += kPipeSlideAccel * dt;
-        float step = pipe_slide_mps_ * dt;
-        if (feet - step <= pipe_stop_y_) {
-            // Onto the flange: the slam.
-            step = std::max(0.0F, feet - pipe_stop_y_);
-            pipe_slam_mps_ = pipe_slide_mps_;
-            pipe_stun_s_ = kPipeStunSeconds + kPipeStunPerMps * std::max(0.0F, pipe_slide_mps_ - kPipeStunFromMps);
-            pipe_slide_mps_ = 0.0F;
-            pipe_phase_ = PipePhase::Stunned;
-            ++pipe_slams_;
-            ++knockdowns_;
-            rage_ = std::min(1.0F, rage_ + kKnockdownRage);
-        }
-        count_flanges(feet, feet - step);
-        bodies.SetLinearVelocity(body_, to_line() + Vec3(0.0F, -step / dt, 0.0F));
-        return;
-    }
-    // Her waypoints, feet first: on, across, along, across, off.
-    const float over_from = pipe_from_ + kPipeOverRailM;
-    const float over_to = pipe_to_ + kPipeOverRailM;
-    RVec3 goal;
-    float speed = kPipeMountMps;
-    switch (pipe_phase_) {
-    case PipePhase::Mount:
-        goal = pipe_waypoint_ == 0 ? RVec3(kPipeDeckX, over_from, kPipeDeckZ) : RVec3(kPipeLineX, over_from, kPipeLineZ);
-        yaw_ = turn_toward(yaw_, std::atan2(kPipeLineX - kPipeDeckX, kPipeLineZ - kPipeDeckZ), kTurnRate, dt);
-        break;
-    case PipePhase::Climb: {
-        goal = RVec3(kPipeLineX, over_to, kPipeLineZ);
-        const bool down = over_to < feet;
-        if (stage_ == Stage::Changed) {
-            const bool burst = std::fmod(pipe_s_, kTurnCycleSeconds) < kTurnBurstSeconds;
-            speed = burst ? (down ? kPipeChangedDownBurstMps : kPipeChangedUpBurstMps) : kPipeChangedPauseMps;
-        } else if (stage_ == Stage::Dangerous) {
-            speed = down ? kPipeDownMps : kPipeUpMps;
-        } else {
-            speed = 0.4F;   // gone frail on it: down it slow, feet first
-        }
-        // Facing the pipe.
-        yaw_ = turn_toward(yaw_, std::atan2(15.8F - kPipeLineX, -134.2F - kPipeLineZ), kTurnRate, dt);
-        break;
-    }
-    case PipePhase::Dismount:
-        goal = pipe_waypoint_ == 0 ? RVec3(kPipeDeckX, over_to, kPipeDeckZ) : RVec3(kPipeDeckX, pipe_to_, kPipeDeckZ);
-        yaw_ = turn_toward(yaw_, std::atan2(kPipeDeckX - kPipeLineX, kPipeDeckZ - kPipeLineZ), kTurnRate, dt);
-        break;
-    default:
-        return;
-    }
-    // A loose piece lying in her way on the steel (a drum come to rest on a
-    // flange) she swats off it, out into the shaft.
-    for (std::size_t i = 0; i < near_count_; ++i) {
-        const Near &n = near_[i];
-        if (!bodies.IsAdded(n.body) || n.velocity.Length() > 0.5F) {
-            continue;
-        }
-        const RVec3 there = bodies.GetCenterOfMassPosition(n.body);
-        const float along = std::clamp(float(there.GetY() - at.GetY()), -kHalfHeight, kHalfHeight);
-        if ((Vec3(there - at) - Vec3(0.0F, along, 0.0F)).Length() > kRadius + n.radius + 0.1F) {
-            continue;
-        }
-        const Vec3 out = Vec3(float(there.GetX()) - 15.8F, 0.0F, float(there.GetZ()) + 134.2F).NormalizedOr(Vec3::sAxisX());
-        bodies.SetLinearVelocity(n.body, Vec3(-out.GetX(), 0.5F, -out.GetZ()) * 1.6F);
-    }
-    const RVec3 feet_at(at.GetX(), feet, at.GetZ());
-    const Vec3 to_goal(goal - feet_at);
-    const float left = to_goal.Length();
-    const float step = std::min(left, speed * dt);
-    const Vec3 move = left > 1.0e-4F ? to_goal / left * step : Vec3::sZero();
-    bodies.SetLinearVelocity(body_, move / dt);
-    // Each hold a knock (her hands on the steel, the rail's too); each flange passed a bong.
-    pipe_hold_m_ += step;
-    while (pipe_hold_m_ >= kPipeHoldM) {
-        pipe_hold_m_ -= kPipeHoldM;
-        ++pipe_holds_;
-    }
-    count_flanges(feet, feet + move.GetY());
-    stride_ += step;
-    if (left - step > 0.03F) {
-        return;
-    }
-    // At this waypoint: the next, or the next phase, or off.
-    switch (pipe_phase_) {
-    case PipePhase::Mount:
-        if (pipe_waypoint_ == 0) {
-            pipe_waypoint_ = 1;
-        } else {
-            pipe_phase_ = PipePhase::Climb;
-            pipe_waypoint_ = 0;
-        }
-        break;
-    case PipePhase::Climb:
-        pipe_phase_ = PipePhase::Dismount;
-        pipe_waypoint_ = 0;
-        break;
-    case PipePhase::Dismount:
-        if (pipe_waypoint_ == 0) {
-            pipe_waypoint_ = 1;
-        } else {
-            bodies.SetLinearVelocity(body_, Vec3::sZero());
-            get_off_pipe();
-            pipe_listen_s_ = kPipeListenSeconds;
-        }
-        break;
-    default:
-        break;
-    }
 }
 
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
@@ -3087,9 +2857,8 @@ void Matron::restore(const Saved &saved) {
         riding_ = false;
         let_go_s_ = 0.0F;
         // Off the pipe, whatever had her on it.
-        if (pipe_phase_ != PipePhase::Off) {
-            physics_.GetBodyInterface().SetObjectLayer(body_, static_cast<ObjectLayer>(moving_layer_));
-        }
+        pipe_support_ = BodyID();
+        pipe_drive_dv_ = Vec3::sZero();
         pipe_phase_ = PipePhase::Off;
         pipe_links_ = 0;
         pipe_holds_ = 0;
@@ -3177,7 +2946,9 @@ void Matron::sense_near() {
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
-    set_velocity_ = bodies.GetLinearVelocity(body_);
+    // On the pipe her own drive is a force the step applies, not a velocity
+    // set: what it will change is hers, not a blow's.
+    set_velocity_ = bodies.GetLinearVelocity(body_) + (pipe_phase_ != PipePhase::Off ? pipe_drive_dv_ : Vec3::sZero());
     sensed_ = true;
     const Vec3 centre(at);
     AllHitCollisionCollector<CollideShapeBodyCollector> found;
@@ -3242,8 +3013,8 @@ void Matron::take_blow(const float dt) {
         return;
     }
     sensed_ = false;
-    // On the pipe her hands hold her (gravity off): a blow is read the same
-    // way, but in all three directions, and only on the pipe itself.
+    // On the pipe her hands hold her against her weight: a blow is read the
+    // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_phase_ != PipePhase::Off;
     if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || state_ == State::Down ||
         state_ == State::Emerging || pipe_phase_ == PipePhase::Slide || pipe_phase_ == PipePhase::Stunned) {
@@ -3344,18 +3115,9 @@ void Matron::take_blow(const float dt) {
             if (distance_xz(float(at.GetX()), float(at.GetZ()), kPipeLineX, kPipeLineZ) < 0.5F) {
                 tear_off_pipe();
             } else {
-                // Still over the band at the rail's corner: off the steel,
-                // down onto the band.
-                const bool coming_off = pipe_phase_ == PipePhase::Dismount;
-                get_off_pipe();
-                if (!coming_off) {
-                    for (std::size_t i = 0; i < levels_.size(); ++i) {
-                        if (std::abs(levels_[i].floor_y - pipe_from_) < 0.3F) {
-                            level_ = static_cast<int>(i);
-                        }
-                    }
-                    feet_y_ = pipe_from_;
-                }
+                // Still at a rail, over the band: her hands off it, down
+                // onto whatever steel her feet find.
+                get_off_pipe(true);
                 const Vec3 way = blow_impulse_.LengthSq() > 1.0e-4F ? Vec3(blow_impulse_.GetX(), 0.0F, blow_impulse_.GetZ())
                                                                    : Vec3::sZero();
                 fall_x_ = way.LengthSq() > 1.0e-6F ? way.Normalized().GetX() : std::sin(yaw_);
@@ -3620,7 +3382,7 @@ void Matron::refresh_view() {
     view_.climbing = climb_ >= 0;
     view_.climbs = climbs_done_;
     view_.climb_hand = climb_hand_;
-    view_.climb_force_n = climb_force_n_;
+    view_.climb_force_n = pipe_phase_ != PipePhase::Off ? pipe_force_n_ : climb_force_n_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     view_.mantling = mantling_;

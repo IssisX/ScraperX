@@ -196,16 +196,18 @@ Map::Map() {
          -171.00F, 45.0F},
         {walk(-10.50F, -134.85F), down(Connector::C3WallLadder), walk(-10.50F, -143.40F), down(Connector::C3Duct),
          walk(-10.50F, -145.00F), walk(-10.50F, -171.00F)});
-    // The corner pipe, both ways between 132, 143 and 154 (no executor that
-    // is physical yet: Unknown); the bay's rungs and lip (her trap's own).
-    add({Region::Deck154, Region::Deck143, Kind::PipeDown, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
-         15.0F});
-    add({Region::Deck143, Region::Deck154, Kind::PipeUp, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
-         30.0F});
-    add({Region::Deck143, Region::Deck132, Kind::PipeDown, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
-         15.0F});
-    add({Region::Deck132, Region::Deck143, Kind::PipeUp, Connector::CornerPipe, 15.95F, -132.25F, 15.95F, -132.25F,
-         30.0F});
+    // The corner pipe, both ways between 132, 143 and 154 (matron_pipe.cpp):
+    // to the north rail by her line (matron.hpp kPipeDeckX, kPipeDeckZ), over
+    // it by her hands and along the riser, over the other deck's rail onto
+    // it, and a step in off the rail.
+    for (const auto &[from, to, kind, cost] : {std::tuple{Region::Deck154, Region::Deck143, Kind::PipeDown, 20.0F},
+                                               std::tuple{Region::Deck143, Region::Deck154, Kind::PipeUp, 35.0F},
+                                               std::tuple{Region::Deck143, Region::Deck132, Kind::PipeDown, 20.0F},
+                                               std::tuple{Region::Deck132, Region::Deck143, Kind::PipeUp, 35.0F}}) {
+        const Step climb = kind == Kind::PipeDown ? down(Connector::CornerPipe) : up(Connector::CornerPipe);
+        add({from, to, kind, Connector::CornerPipe, 14.85F, -132.55F, 14.85F, -131.50F, cost},
+            {walk(14.85F, -132.55F), climb, walk(14.85F, -131.50F)});
+    }
     add({Region::Bracket152, Region::Deck154, Kind::RungsUp, Connector::BayRungs, -3.60F, -130.15F, -4.35F, -130.15F,
          8.0F});
     add({Region::Deck154, Region::Bracket152, Kind::DropDown, Connector::BayLip, -4.35F, -130.15F, -3.45F, -129.85F,
@@ -219,7 +221,11 @@ Map::Map() {
                                          std::tuple{Region::Deck143, Region::Deck154, Kind::LadderUp},
                                          std::tuple{Region::Deck154, Region::Deck143, Kind::LadderDown},
                                          std::tuple{Region::Deck132, Region::Deck143, Kind::LadderUp},
-                                         std::tuple{Region::Deck143, Region::Deck132, Kind::LadderDown}}) {
+                                         std::tuple{Region::Deck143, Region::Deck132, Kind::LadderDown},
+                                         std::tuple{Region::Deck154, Region::Deck143, Kind::PipeDown},
+                                         std::tuple{Region::Deck143, Region::Deck154, Kind::PipeUp},
+                                         std::tuple{Region::Deck143, Region::Deck132, Kind::PipeDown},
+                                         std::tuple{Region::Deck132, Region::Deck143, Kind::PipeUp}}) {
         set_status(find(from, to, kind), Status::Qualified, Reason::None);
     }
 }

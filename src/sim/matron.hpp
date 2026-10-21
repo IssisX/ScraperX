@@ -560,43 +560,56 @@ public:
     static constexpr float kStaggerRage = 0.02F;
     // The shaft's corner pipe (the owner, 2026-10-19: "She comes down the
     // shaft after you. One shaft pipe becomes hers to climb."): the north-east
-    // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, a flange
-    // 1.4 m under every deck), too thick for the climber's hands. Her line
-    // hugs its north-west corner from the open shaft, west of the flanges
-    // (theirs reach x 15.25): a drum thrown down from the north band west of
-    // them falls past them onto her, with room for the way a throw carries it
-    // on (in the corner by the shaft's east edge the flange under the deck
-    // takes any drum: no room past it). She gets on and off over the north
-    // edge from the band, kPipeOverRailM over the deck, over the rail. On
-    // it she is on the steel (object_layers::kOnSteel): what moves meets her,
-    // the steel she wraps round does not. Frail, she cannot take hold of it
-    // (as her ladder); dangerous she slides down it held by her forearms and
-    // knees and climbs it hand over hand; fully changed she comes down it head
-    // first in jerks. Each kPipeHoldM her hands go is a knock on the pipe, each
+    // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, solid
+    // from grade to 154, a 0.35 m flange reaching x 15.25 under every deck).
+    // Too thick for the climber's hands; hers wrap it. Her line runs down its
+    // west side clear of every flange (her 0.30 m against their x 15.25), so
+    // the steel she climbs is steel she meets: she is on her own layer, with
+    // gravity, and only her hands hold her (matron_pipe.cpp). From a deck she
+    // takes the north rail's top (kPipeRailTopM over the deck at kPipeRailZ),
+    // lifts herself over it and out to her line, and takes the riser; at 154,
+    // where the riser ends flush with the deck, she lowers herself on the rail
+    // until it is in reach. On it her grip is friction: her squeeze, at most
+    // kPipeSqueezeN, times kPipeFriction holds her weight; she climbs it hand
+    // over hand and lets herself down it at her stage's pace. At the other
+    // deck she takes its rail and goes over it onto the deck, done only with
+    // her feet on its steel. Frail, she cannot take hold of it (as her
+    // ladder); dangerous she slides down it held by her forearms and knees
+    // and climbs it hand over hand; fully changed she comes down it head first
+    // in jerks. Each kPipeHoldM her hands go is a knock on the pipe, each
     // flange passed a bong: she is heard on it from the moment she takes hold
     // (an 11 m storey takes her at least 4 s). A blow on it past kPipeTearMps
-    // opens her hands: her legs slide her down to the flange under her
-    // (kPipeSlideAccel, her squeeze against her weight) and she slams onto it,
-    // stunned a while by how hard, alive; then she goes on.
-    static constexpr float kPipeLineX = 15.15F;
+    // opens her hands: her legs alone slow her (kPipeSlideAccel, her squeeze
+    // against her weight) until they meet the flange under her and she slams
+    // onto it, stunned a while by how hard, alive; then she goes on.
+    static constexpr float kPipeLineX = 14.85F;
     static constexpr float kPipeLineZ = -133.75F;
-    static constexpr float kPipeDeckX = 15.95F;
-    static constexpr float kPipeDeckZ = -132.25F;
-    static constexpr float kPipeOverRailM = 1.35F;
+    static constexpr float kPipeDeckX = 14.85F;    // where she stands at the rail to go over it
+    static constexpr float kPipeDeckZ = -132.55F;
+    static constexpr float kPipeCentreX = 15.8F;
+    static constexpr float kPipeCentreZ = -134.2F;
+    static constexpr float kPipeRailZ = -133.0F;
+    static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
+    static constexpr float kPipeOverRailM = 0.15F; // her feet over the rail's top, going over it
+    static constexpr float kPipeSqueezeN = 4500.0F;
+    static constexpr float kPipeFriction = 0.7F;
     static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
-    static constexpr float kPipeMountMps = 1.4F;
     static constexpr float kPipeDownMps = 2.6F;
     static constexpr float kPipeUpMps = 0.7F;
     static constexpr float kPipeChangedDownBurstMps = 4.2F;
     static constexpr float kPipeChangedUpBurstMps = 2.6F;
     static constexpr float kPipeChangedPauseMps = 0.3F;
     static constexpr float kPipeHoldM = 0.45F;
-    static constexpr float kPipeFlangeUnderDeckM = 1.225F;   // a flange's top, under its deck
-    static constexpr float kPipeTearMps = 1.0F;   // CHOSEN: a drum let go onto her from the rail above (1.15 m/s measured) tears her off; a thrown toolbox (0.3) does not
+    static constexpr float kPipeFlangeUnderDeckM = 1.225F;   // a flange's top under its deck (her bong as she passes it)
+    // CHOSEN: a drum let go onto her from the rail above tears her off (0.99
+    // m/s measured on her physical grip; 1.15 when she was moved by velocity),
+    // a toolbox let go the same way does not (tests: matron pipe drum, toolbox).
+    static constexpr float kPipeTearMps = 0.8F;
     static constexpr float kPipeSlideAccel = 4.4F;
     static constexpr float kPipeStunSeconds = 0.5F;
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
+    static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
     // A lead a storey away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
@@ -1237,11 +1250,18 @@ private:
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
-    void get_on_pipe(float from_floor, float to_floor);
+    // Her hands on the rail of the deck she is leaving: false (and nothing
+    // started) when there is no rail top in her reach.
+    bool get_on_pipe(float from_floor, float to_floor);
     void ride_pipe(float dt);
-    void get_off_pipe();
+    // Off it: her feet on the deck's steel, or (failed) her hands gone.
+    void get_off_pipe(bool failed = false);
     // A blow on the pipe past kPipeTearMps: her hands open, her legs slide.
     void tear_off_pipe();
+    // A hold for her hands (matron_pipe.cpp): the rail's top over `deck`
+    // beside her, or the riser's face at height y on her side of it.
+    bool pipe_rail_hold(float deck, JPH::RVec3 at);
+    bool pipe_face_hold(JPH::RVec3 at, float y);
     // Down on the steel from a blow (take_blow), the way (fall_x_, fall_z_).
     void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
@@ -1594,6 +1614,19 @@ private:
     float pipe_stun_s_ = 0.0F;
     float pipe_listen_s_ = 0.0F; // off the pipe, still and listening
     float pipe_slam_mps_ = 0.0F;
+    // Her hand on the pipe's steel (as climb_support_): the rail's top or the
+    // riser's face, kept in the support's frame.
+    JPH::BodyID pipe_support_;
+    JPH::SubShapeID pipe_member_;
+    JPH::Vec3 pipe_local_hand_ = JPH::Vec3::sZero();
+    JPH::RVec3 pipe_hand_ = JPH::RVec3::sZero();
+    bool pipe_on_face_ = false;       // the hand is on the riser (friction), not a rail's top
+    bool pipe_over_ = false;          // over the rail she is crossing
+    float pipe_best_ = 0.0F;          // her progress along it, for the stall
+    float pipe_stall_s_ = 0.0F;
+    float pipe_overload_s_ = 0.0F;
+    float pipe_force_n_ = 0.0F;
+    JPH::Vec3 pipe_drive_dv_ = JPH::Vec3::sZero(); // what her drive changes her velocity by this step
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;
     std::uint32_t pipe_flanges_ = 0;

@@ -551,7 +551,8 @@ struct PipeRun {
     bool alive = true;
     std::uint64_t deaths = 0;
 };
-PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const double seconds) {
+PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const double seconds,
+                 const std::uint32_t piece = 2) {
     PipeRun r;
     Simulation s(InitialSpawn::Deck154);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
@@ -577,7 +578,7 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
     (void)s.set_move_input(0.0, 0.0);
     (void)s.set_sprint_input(false);
     const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
-    const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+    const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + piece);
     const double hz = static_cast<double>(Simulation::kTickRateHz);
     int first_hold = -1;
     bool dropped = false;
@@ -670,6 +671,14 @@ void run_matron_pipe() {
         require(r.slams == 1 && r.alive && r.deaths == 0, "matron pipe: a drum dropped on her knocks her off, alive");
         require(r.arrived, "matron pipe: torn off, she goes on down to 143 after it");
         std::cout << "PASS scraperx_sim matron pipe drum: slam_mps=" << r.slam_mps << "\n";
+    }
+    // A toolbox let go onto her the same way: a knock, not enough to open her hands.
+    {
+        const PipeRun r = pipe_run(1, 154.2, 70.0, 0);
+        std::cout << "  matron pipe: a toolbox onto her as she starts down: slams " << r.slams << ", arrived "
+                  << r.arrived << "\n";
+        require(r.slams == 0 && r.arrived && r.alive, "matron pipe: a toolbox dropped on her does not tear her off");
+        std::cout << "PASS scraperx_sim matron pipe toolbox\n";
     }
 }
 

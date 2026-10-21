@@ -49,7 +49,7 @@ Result take(const Leg &leg) {
     // (Her view of herself, climbing or not, is refreshed in the step.)
     for (bool climbing = true; ticks < 90 * static_cast<int>(Simulation::kTickRateHz) && climbing; ++ticks) {
         tick(s);
-        climbing = s.matron_state().climbing;
+        climbing = s.matron_state().climbing || s.matron_state().on_pipe;
         const auto m = s.matron_state();
         r.peak_force = std::max(r.peak_force, m.climb_force_n);
         r.worst_step = std::max(r.worst_step, std::hypot(m.position.x - last.x, m.position.y - last.y,
@@ -73,7 +73,7 @@ Result take(const Leg &leg) {
 
 void run_matron_traverse() {
     const routes::Map map;
-    const std::array<Leg, 8> legs{{
+    const std::array<Leg, 12> legs{{
         {"home ladder up: 154 to the 176 ring", Connector::HomeLadder, false, {5.0, 154.0, -129.55}, 176.25,
          Region::Ring176},
         {"home ladder down: the 176 ring to 154", Connector::HomeLadder, true, {5.0, 176.25, -128.55}, 154.0,
@@ -90,6 +90,14 @@ void run_matron_traverse() {
          Region::Count},
         {"C3 duct down: the duct to the landing", Connector::C3Duct, true, {-10.5, 137.2, -143.4}, 135.5,
          Region::Count},
+        {"corner pipe down: 154 to 143", Connector::CornerPipe, true,
+         {Matron::kPipeDeckX, 154.0, Matron::kPipeDeckZ}, 143.0, Region::Deck143},
+        {"corner pipe up: 143 to 154", Connector::CornerPipe, false,
+         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 154.0, Region::Deck154},
+        {"corner pipe down: 143 to 132", Connector::CornerPipe, true,
+         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 132.0, Region::Deck132},
+        {"corner pipe up: 132 to 143", Connector::CornerPipe, false,
+         {Matron::kPipeDeckX, 132.0, Matron::kPipeDeckZ}, 143.0, Region::Deck143},
     }};
     for (const Leg &leg : legs) {
         const Result r = take(leg);

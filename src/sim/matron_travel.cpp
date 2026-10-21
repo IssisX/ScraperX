@@ -9,7 +9,7 @@
 //
 // Her stage decides whether she takes a way: the frail pest stays on her deck
 // unless the Turn takes her (as at the ladder's foot); dangerous or changed
-// she follows by any way she knows, as she already did down the corner pipe.
+// she follows by any way she knows, the corner pipe among them.
 
 #include "sim/matron.hpp"
 
@@ -141,6 +141,23 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
     if (climb_end_ == ClimbEnd::Failed) {
         route_failed(index, routes::Reason::Failed);
         return false;
+    }
+    if (step.climb == routes::Connector::CornerPipe) {
+        // At the north rail, facing it; her hands on it, and over (matron_pipe.cpp).
+        walk_toward(dt, ax, az, 0.0F, accel);
+        yaw_ = turn_to(yaw_, kPiF, kTurnRate, dt);
+        if (!travels() || climb_retry_s_ > 0.0F) {
+            climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+            return true;
+        }
+        climb_end_ = ClimbEnd::None;
+        const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+        const float to = floor_y + (step.what == routes::Step::Do::ClimbDown ? -kStackPitch : kStackPitch);
+        if (!pipe_reaches(floor_y) || !pipe_reaches(to) || !get_on_pipe(floor_y, to)) {
+            route_failed(index, routes::Reason::Failed);
+            return false;
+        }
+        return true;
     }
     const int climb = climb_index(step.climb);
     if (climb < 0) {
