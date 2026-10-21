@@ -38,6 +38,7 @@ page at a time, in her hand, and it is right.
   stared at standing alone on a deck 300 m up, turned the way you saw it.
 - **Your bodies.** You already leave your body where you fall (up to eight stay). She tends them:
   later you find one moved, laid out straight, hands folded, a chart page under it.
+  **Dropped by the owner (2026-10-21):** *"I dont want the bodies tended thing"*. Not to be built.
 - **Your voice.** In a quiet stretch, something you said to yourself twenty minutes ago comes up a
   pipe or out of a dropped radio, faint, in your own voice. Never loud, never explained. Later, a
   line you said is written in her chart, word for word.
@@ -91,7 +92,8 @@ native world's determinism and body order are untouched.
 ## Build order
 
 1. **Her chart from play alone:** the attention tracker (dwell per object), the clock, chart pages
-   written from both and placed in the tower, your bodies tended. No permission, no server.
+   written from both and placed in the tower. No permission, no server. (Your bodies tended:
+   dropped by the owner, 2026-10-21.)
 2. **The echoes of what you looked at:** copies set in her hoard and on the decks.
 3. **Your voice:** microphone clips replayed from the tower (needs RECORD_AUDIO, the owner's call).
 4. **Your words:** speech to text on our server, into her chart.
@@ -99,7 +101,7 @@ native world's determinism and body order are untouched.
 6. **Your face:** the badge photo, once.
 7. **The end:** she says your words.
 
-**Built (2026-10-20):** steps 1 and 3, all but your bodies tended. What the eyes rest on
+**Built (2026-10-20):** steps 1 and 3. What the eyes rest on
 (`attention.gd`, native `look target`), the tower's clocks on the phone's own time, her chart's
 pages left late and rarely, and, with consent asked once at first launch, your voice heard back
 faint from the structure. HER CHART (FAST) on the START list brings a page and an echo of your
