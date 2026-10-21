@@ -154,10 +154,13 @@ public:
         bool grapple_auto_reel_requested = false, grapple_auto_reel = false;
         bool grapple_shot_profile_requested = false;
         unsigned grapple_shot_profile = 1;
+        std::array<GrappleChargeCommand, 8> grapple_charge_commands{};
+        std::size_t grapple_charge_command_count = 0;
     };
 
     static bool nearby_grapple_hook(const GrapplingGun::Readback &state);
     [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept;
+    [[nodiscard]] GrappleAimPreview grapple_aim_preview(Vector3 aim) const noexcept;
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
     [[nodiscard]] bool forklift_controls_reachable(const JPH::BodyInterface &bodies) const noexcept;
     void prepare_forklift(const StepCommands &commands, const JPH::BodyInterface &bodies);

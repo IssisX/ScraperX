@@ -74,6 +74,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_equipped", "equipped"), &ScraperXSimulation::set_grapple_equipped);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_reel_input", "input"), &ScraperXSimulation::set_grapple_reel_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_shot_profile", "profile"), &ScraperXSimulation::request_grapple_shot_profile);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_charge", "command"), &ScraperXSimulation::request_grapple_charge);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_grapple_aim_preview"), &ScraperXSimulation::get_grapple_aim_preview);
     godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_action"), &ScraperXSimulation::request_grapple_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_grapple_release"), &ScraperXSimulation::request_grapple_release);
     godot::ClassDB::bind_method(godot::D_METHOD("set_grapple_auto_reel", "enabled"), &ScraperXSimulation::set_grapple_auto_reel);
@@ -823,6 +825,19 @@ bool ScraperXSimulation::set_grapple_equipped(bool equipped) {
 bool ScraperXSimulation::set_grapple_reel_input(double input) {
     return simulation_->set_grapple_reel_input(input);
 }
+bool ScraperXSimulation::request_grapple_charge(int command) {
+    return command>=0 && command<=2 && simulation_->request_grapple_charge(unsigned(command));
+}
+godot::Dictionary ScraperXSimulation::get_grapple_aim_preview() const {
+    const auto state=simulation_->grapple_aim_preview();
+    godot::PackedVector3Array points;
+    points.resize(state.count);
+    for (unsigned i=0;i<state.count;++i) points.set(i,godot::Vector3(state.points[i].x,state.points[i].y,state.points[i].z));
+    godot::Dictionary out;
+    out["points"]=points; out["blocked"]=state.blocked; out["line_limit"]=state.line_limit;
+    out["charge_fraction"]=state.charge_fraction;
+    return out;
+}
 bool ScraperXSimulation::request_grapple_shot_profile(int profile) {
     return profile>=0 && profile<=1 && simulation_->request_grapple_shot_profile(unsigned(profile));
 }
@@ -833,6 +848,8 @@ bool ScraperXSimulation::request_grapple_release() { return simulation_->request
 namespace {
 godot::Dictionary grapple_dictionary(const scraperx::sim::GrappleGunSnapshot &state) {
     godot::Dictionary out;
+    out["charging"] = state.charging;
+    out["charge_fraction"] = state.charge_fraction;
     out["shot_energy_j"] = state.shot_energy_j;
     out["shot_profile"] = state.shot_profile;
     out["maximum_shot_energy_j"] = sim::GrapplingGun::cartridge_energy_j;

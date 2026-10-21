@@ -136,6 +136,7 @@ var _thumb_notice_left := 0.0
 var _stick_tap_age := 0.0
 var _stick_tap_candidate := false
 var _cut_progress := 0.0
+var _grapple_charge_index := -1
 var _tool_tray_open := false
 var _toolbelt_ctx: Dictionary = {}
 var _tool_name := "NONE"
@@ -352,6 +353,9 @@ func _verb_for(id: StringName) -> StringName:
 
 
 func reset_touches() -> void:
+	if _grapple_charge_index != -1 and router != null:
+		router.push_verb(&"grapple_charge_cancel")
+	_grapple_charge_index = -1
 	_tool_tray_open = false
 	if not _toolbelt_ctx.is_empty():
 		_apply_toolbelt(_toolbelt_ctx)
@@ -436,8 +440,13 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		_refresh_held_controls()
 		button.flash = 1.0
 		if id == B_TOOLS:
+			if _grapple_charge_index != -1:
+				_touch_up(_grapple_charge_index, true)
 			_tool_tray_open = not _tool_tray_open
 			_apply_toolbelt(_toolbelt_ctx)
+		elif id == B_ACTION and button.hold and router != null:
+			_grapple_charge_index = index
+			router.push_verb(&"grapple_charge_begin")
 		elif not button.hold and router != null:
 			router.push_verb(_verb_for(id))
 			if id in [B_GRAPPLE, B_LINE, B_RIGGING]:
@@ -496,6 +505,13 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	for button in _buttons.values():
 		if button.index != index:
 			continue
+		if index == _grapple_charge_index:
+			if at.distance_to(button.center) > button.radius * HIT_SLOP:
+				_touch_up(index, true)
+			else:
+				_look_accum += relative
+				_looked = true
+			return true
 		if button.id == B_CUT and at.distance_to(button.center) > button.radius * HIT_SLOP:
 			_touch_up(index, true)
 			return true
@@ -509,6 +525,10 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 
 
 func _touch_up(index: int, cancelled: bool = false) -> bool:
+	if index == _grapple_charge_index:
+		if router != null:
+			router.push_verb(&"grapple_charge_cancel" if cancelled else &"grapple_charge_fire")
+		_grapple_charge_index = -1
 	if cancelled and _tool_tray_open:
 		_tool_tray_open = false
 		_apply_toolbelt(_toolbelt_ctx)
@@ -628,6 +648,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
+	var charge_action: bool = act["id"] == &"grapple_charge"
+	if _grapple_charge_index != -1 and not charge_action:
+		_touch_up(_grapple_charge_index, true)
+	action.hold = charge_action
 	var reach_hand: bool = act["id"] == &"reach_hand"
 	var line_pin := bool(ctx.get("traversal_line_can_pin_end", false))
 	# A solo hold offers an explicit second hand independently of its release
@@ -796,6 +820,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	for button in _buttons.values():
 		if (not button.shown or not button.enabled) and button.index != -1:
+			if button.index == _grapple_charge_index:
+				_touch_up(_grapple_charge_index, true)
 			if button.id == B_CUT and router != null:
 				router.set_rigging_cut(&"touch", false)
 			button.index = -1
@@ -834,7 +860,7 @@ func _apply_toolbelt(ctx: Dictionary) -> void:
 		button.icon = &""
 		button.tone = TONE_SAFE if equipped else TONE_NORMAL
 	var shot_range: TouchButton = _buttons[B_RANGE]
-	shot_range.shown = allowed and grapple and not bool(ctx.get("grapple_line_attached", false)) and not _tool_tray_open
+	shot_range.shown = false # Hold duration now selects shot power.
 	shot_range.enabled = shot_range.shown
 	shot_range.label = "NEAR SHOT" if int(ctx.get("grapple_shot_profile", 1)) == 0 else "LONG SHOT"
 	# Primary Action owns automatic reeling. Manual adjustments stay local.

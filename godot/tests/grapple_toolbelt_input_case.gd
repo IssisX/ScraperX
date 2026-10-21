@@ -25,18 +25,13 @@ func run(shipping_main: Node) -> Dictionary:
 	var bodies := int(native.get_kit_body_count())
 	var gun: Dictionary = native.get_grapple_gun_state()
 	check(bool(native.is_player_grounded()), "normal starting world has actual player footing")
-	check(int(gun.shot_profile) == 1 and float(gun.shot_energy_j) == 900.0, "ordinary carried gun starts with long-range power")
+	check(not bool(gun.charging) and int(gun.cartridges_remaining) == 4, "ordinary carried gun starts ready with finite stock")
 	check(main._touch.is_button_shown(&"tools") and not main._touch.is_button_shown(&"grapple"), "normal view shows compact equipment selector")
 	select_tool(&"grapple")
 	check(bool(native.get_grapple_gun_state().equipped) and main._ctx.operating == &"grappling_gun", "touch draws actual carried grapple")
-	check(main._touch.button_label(&"grapple_range") == "LONG SHOT", "selected native long profile reaches actual touch label")
+	check(not main._touch.is_button_shown(&"grapple_range") and main._touch.button_label(&"action") == "HOLD TO AIM",
+		"ready native gun offers primary hold-to-aim without a range selector")
 	check(not main._touch.is_button_shown(&"pendant_up") and not main._touch.is_button_shown(&"pendant_down"), "empty gun offers no useless reel controls")
-	tap(&"grapple_range")
-	step()
-	gun = native.get_grapple_gun_state()
-	check(int(gun.shot_profile) == 0 and float(gun.shot_energy_j) == 180.0 and int(gun.cartridges_remaining) == 4,
-		"one touch changes real next-shot profile without firing or spending stock")
-	check(main._touch.button_label(&"grapple_range") == "NEAR SHOT", "near-shot label waits for actual native acknowledgement")
 	select_tool(&"toggle_rigging")
 	check(bool(native.get_rigging_state().equipped) and not bool(native.get_grapple_gun_state().equipped), "selecting rigging stows grapple in native state")
 	check(not main._touch.is_button_shown(&"grapple_range") and not main._touch.is_button_shown(&"auto_reel"), "rigging cannot show grapple-only controls")
@@ -49,22 +44,29 @@ func run(shipping_main: Node) -> Dictionary:
 	check(not bool(native.get_traversal_line_state().equipped) and bool(native.get_grapple_gun_state().equipped), "returning to grapple stows the line")
 	check(int(native.get_kit_body_count()) == bodies and int(native.get_grapple_gun_state().cartridges_remaining) == 4,
 		"tool changes create no support or projectile and consume no cartridge")
-	if int(native.get_grapple_gun_state().shot_profile) == 0:
-		tap(&"grapple_range")
-		step()
 	main._pitch = PI * .5 - .001
 	step()
 	var from: Vector3 = native.get_player_position()
-	tap(&"action")
+	finger(&"action", true)
+	step()
+	gun = native.get_grapple_gun_state()
+	check(bool(gun.charging) and not bool(gun.line_attached) and int(gun.cartridges_remaining) == 4,
+		"real held touch begins native charge without firing or spending stock")
+	check(main._touch.button_label(&"action") == "RELEASE TO FIRE", "native charging acknowledgment reaches touch label")
+	step(89)
+	gun = native.get_grapple_gun_state()
+	check(bool(gun.charging) and float(gun.charge_fraction) > 0.999 and int(gun.cartridges_remaining) == 4
+		and not bool(gun.line_attached), "ninety real collision ticks charge fully while all cartridges remain")
+	finger(&"action", false)
 	step()
 	gun = native.get_grapple_gun_state()
 	check(bool(gun.line_attached) and float(gun.launch_energy_j) > 899.0 and float(gun.launch_energy_j) <= 900.001,
-		"actual primary touch launches the selected finite long-range cartridge")
-	check(not main._touch.is_button_shown(&"grapple_range"), "attached tool shows line controls instead of shot selector")
+		"actual release launches the fully charged finite cartridge")
+	check(not main._touch.is_button_shown(&"grapple_range"), "attached tool keeps obsolete range selector hidden")
 	step(45)
 	gun = native.get_grapple_gun_state()
 	var rise: float = (gun.rope_end as Vector3).y - from.y
-	check(bool(gun.line_attached) and rise > 12.0, "actual touch-fired hook exceeds the former nine-metre apex")
+	check(bool(gun.line_attached) and rise > 14.0, "actual charged touch release rises fourteen metres after45ticks")
 	tap(&"drop")
 	step()
 	check(not bool(native.get_grapple_gun_state().line_attached) and int(native.get_grapple_gun_state().cartridges_remaining) == 3,

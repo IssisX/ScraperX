@@ -5,6 +5,7 @@ class_name GrapplingGunView
 # No aim, inventory, capture, line payout, or physical state is owned here.
 const HOOK_CAPACITY := 4
 const ROPE_RADIUS := 0.014
+const AIM_POINT_CAPACITY := 33
 # The end face of the authored barrel, in tool mesh coordinates.
 const MUZZLE_LOCAL := Vector3(0, 0.012, -0.297)
 const RECEIVER_OFFSET := Vector3(0.105, 0, 0)
@@ -16,6 +17,13 @@ var _rack_tool: MeshInstance3D
 var _hooks: Array[MeshInstance3D] = []
 var _line: MeshInstance3D
 var _built := false
+var _aim_guide: MeshInstance3D
+var _aim_mesh: ImmediateMesh
+var _aim_material: StandardMaterial3D
+var _aim_points := PackedVector3Array()
+var _aim_camera_transform := Transform3D.IDENTITY
+var _aim_color := Color.TRANSPARENT
+
 var _hook_geometry: Array = []
 var _geometry_error_reported := false
 var _spool: MeshInstance3D
@@ -26,6 +34,7 @@ var launch_receipts := 0
 
 
 func reset_feedback() -> void:
+	_clear_aim_preview()
 	recoil_amount = 0.0
 	if _lamp_material != null:
 		_lamp_material.emission_energy_multiplier = 0.15
@@ -89,6 +98,7 @@ func configure_hook_geometry(parts: Array) -> void:
 
 
 func configure(camera: Camera3D) -> void:
+	_clear_aim_preview()
 	_camera = camera
 	_build_once()
 
@@ -115,6 +125,8 @@ func _launch_frame(state: Dictionary) -> Variant:
 
 
 func update_state(state: Dictionary) -> void:
+	if not bool(state.get("equipped", false)):
+		_clear_aim_preview()
 	_build_once()
 	if not _built:
 		return
@@ -187,6 +199,94 @@ func update_state(state: Dictionary) -> void:
 	# paid_out_length and tension never invent a different endpoint or motion.
 
 
+# Approximate ballistic sight only. Supplied samples never imply an anchor,
+# a captured hook, or a physical line, and this view performs no world queries.
+func update_aim_preview(preview: Dictionary, equipped: bool, charging: bool) -> void:
+	if not equipped or not charging or not is_instance_valid(_camera):
+		_clear_aim_preview()
+		return
+	_build_once()
+	if not _built:
+		return
+	var supplied: Variant = preview.get("points")
+	var charge := float(preview.get("charge_fraction", 0.0))
+	if not (supplied is PackedVector3Array) or not is_finite(charge):
+		_clear_aim_preview()
+		return
+	var points: PackedVector3Array = supplied
+	if points.size() < 2 or points.size() > AIM_POINT_CAPACITY:
+		_clear_aim_preview()
+		return
+	for i in points.size():
+		if not points[i].is_finite() or (i > 0 and points[i].distance_squared_to(points[i - 1]) < 0.00000001):
+			_clear_aim_preview()
+			return
+	var camera_transform := _camera.global_transform
+	if not camera_transform.is_finite():
+		_clear_aim_preview()
+		return
+	var color := Color("e5a45b") if bool(preview.get("blocked", false)) else Color("70bdca")
+	# A spool boundary is a flight limit, never a successful-attachment cue.
+	if bool(preview.get("line_limit", false)) and not bool(preview.get("blocked", false)):
+		color = color.lerp(Color("c7b386"), 0.35)
+	color.a = lerpf(0.42, 0.70, clampf(charge, 0.0, 1.0))
+	if color != _aim_color:
+		_aim_material.albedo_color = color
+		_aim_color = color
+	if points != _aim_points or camera_transform != _aim_camera_transform:
+		_aim_points = points
+		_aim_camera_transform = camera_transform
+		_rebuild_aim_preview()
+	_aim_guide.visible = true
+
+
+func _clear_aim_preview() -> void:
+	if is_instance_valid(_aim_guide):
+		_aim_guide.visible = false
+	# Retain the mesh/cache for unchanged samples when charging resumes.
+
+
+func _rebuild_aim_preview() -> void:
+	_aim_mesh.clear_surfaces()
+	_aim_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(1, _aim_points.size()):
+		var start := _aim_points[i - 1]
+		var end := _aim_points[i]
+		var tangent := (end - start).normalized()
+		var midpoint := (start + end) * 0.5
+		var side := tangent.cross(_aim_camera_transform.origin - midpoint)
+		if side.length_squared() < 0.000001:
+			side = _aim_camera_transform.basis.x - tangent * tangent.dot(_aim_camera_transform.basis.x)
+		if side.length_squared() < 0.000001:
+			side = tangent.cross(_aim_camera_transform.basis.y)
+		# Bounded world-space width stays restrained near the muzzle.
+		var width := clampf(midpoint.distance_to(_aim_camera_transform.origin) * 0.0007, 0.008, 0.025)
+		side = side.normalized() * width
+		_aim_quad(start - side, start + side, end + side, end - side)
+	# Small open endpoint ring: a predicted stop, not an anchor icon.
+	var endpoint := _aim_points[_aim_points.size() - 1]
+	var radius := clampf(endpoint.distance_to(_aim_camera_transform.origin) * 0.002, 0.035, 0.11)
+	var right := _aim_camera_transform.basis.x
+	var up := _aim_camera_transform.basis.y
+	for i in 12:
+		var a := float(i) * TAU / 12.0
+		var b := float(i + 1) * TAU / 12.0
+		var offset_a := right * cos(a) + up * sin(a)
+		var offset_b := right * cos(b) + up * sin(b)
+		_aim_quad(endpoint + offset_a * radius * 0.78, endpoint + offset_a * radius,
+			endpoint + offset_b * radius, endpoint + offset_b * radius * 0.78)
+	_aim_mesh.surface_end()
+
+
+func _aim_quad(a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	_aim_mesh.surface_add_vertex(a)
+	_aim_mesh.surface_add_vertex(b)
+	_aim_mesh.surface_add_vertex(c)
+	_aim_mesh.surface_add_vertex(a)
+	_aim_mesh.surface_add_vertex(c)
+	_aim_mesh.surface_add_vertex(d)
+
+
 func _build_once() -> void:
 	if _built:
 		return
@@ -196,6 +296,16 @@ func _build_once() -> void:
 			_geometry_error_reported = true
 		return
 	_built = true
+	_aim_mesh = ImmediateMesh.new()
+	_aim_material = StandardMaterial3D.new()
+	_aim_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_aim_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_aim_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_aim_material.no_depth_test = false
+	_aim_guide = _instance("BallisticAimGuide", _aim_mesh)
+	_aim_guide.global_transform = Transform3D.IDENTITY
+	_aim_guide.material_override = _aim_material
+	_aim_guide.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var paint := _finish(Color("34444b"), 0.35, 0.72)
 	var steel := _finish(Color("b4bdc0"), 0.95, 0.3)
 	var ochre := _finish(Color("cc822d"), 0.3, 0.62)

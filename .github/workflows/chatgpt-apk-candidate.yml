@@ -113,6 +113,9 @@ jobs:
         timeout 120s build/candidate-host/scraperx_grapple_practice_route_tests long-range \
           2>&1 | tee artifacts/grapple-long-range-native.log
         grep -F 'PASS GRAPPLE_LONG_RANGE' artifacts/grapple-long-range-native.log
+        timeout 120s build/candidate-host/scraperx_grapple_practice_route_tests charge \
+          2>&1 | tee artifacts/grapple-charge-native.log
+        grep -F 'PASS GRAPPLE_CHARGE_PUBLIC' artifacts/grapple-charge-native.log
         timeout 180s build/candidate-host/scraperx_grapple_practice_route_tests recovery-only \
           2>&1 | tee artifacts/grapple-recovery-native.log
         grep -F 'PASS GRAPPLE_ROUTE recovery-only' artifacts/grapple-recovery-native.log
@@ -249,6 +252,16 @@ jobs:
           2>&1 | tee artifacts/grapple-toolbelt-input.log
         grep -F 'GRAPPLE_TOOLBELT_INPUT PASS' artifacts/grapple-toolbelt-input.log
         if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-toolbelt-input.log; then exit 1; fi
+        timeout 60s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/grapple_aim_preview_view_test.gd \
+          2>&1 | tee artifacts/grapple-aim-view.log
+        grep -F 'GRAPPLE_AIM_VIEW checks=' artifacts/grapple-aim-view.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-aim-view.log; then exit 1; fi
+        timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
+          --script res://tests/grapple_charge_input_test.gd \
+          2>&1 | tee artifacts/grapple-charge-input.log
+        grep -F 'GRAPPLE_CHARGE_INPUT PASS' artifacts/grapple-charge-input.log
+        if grep -E 'SCRIPT ERROR:|Parse Error:|FAIL' artifacts/grapple-charge-input.log; then exit 1; fi
         timeout 120s tools/godot/godot --headless --path godot --audio-driver Dummy \
           --script res://tests/grapple_trip_input_test.gd \
           2>&1 | tee artifacts/grapple-trip-input.log
@@ -645,6 +658,9 @@ jobs:
           artifacts/grappling_gun-native.log
           artifacts/grapple_practice_route-native.log
           artifacts/grapple-long-range-native.log
+          artifacts/grapple-charge-native.log
+          artifacts/grapple-charge-input.log
+          artifacts/grapple-aim-view.log
           artifacts/grapple-recovery-native.log
           artifacts/powered_cable-native.log
           artifacts/routed-cable-native.log

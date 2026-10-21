@@ -135,9 +135,9 @@
     }
   ],
   "execution_state": {
-    "as_of": "2026-10-21T01:34:02.859982+00:00",
-    "published_head": "74ade74265addd08b6ac4566f4c884b0ce3b99ad",
-    "active_behavior": "R21: long-range grapple, reachable-hook recovery and coherent touch toolbelt.",
+    "as_of": "2026-10-21T01:54:33.428227+00:00",
+    "published_head": "d23fbfee23b9b907e31159437c4c63318c14b6b3",
+    "active_behavior": "R21 hold-to-charge/release-to-fire with world aim arc, hook recovery and coherent toolbelt.",
     "completed_goals": [
       "connected original-truck11m crane freight trial9PASS638.49s",
       "actual GitHub publication and matching83bAPK214279695 candidate38838367126 artifact12020128011 delivered",
@@ -151,14 +151,14 @@
       "PhysicalAri253m/optionalpersistentphoto/13spatial-radio dialogue/free touch/cleanretry delivered64d21f1 GREEN39513436973 APK214702401",
       "Playable110m handover/source/replay/localidentity/free touch delivered dbf88c4 GREEN39519063431 APK214705264"
     ],
-    "frontier": "R21 first CI range/recovery/gun/touch checks passed; old LINE fixture stopped candidate. Actual TOOLS migration now portable659/line21/crossing21/winch26/two-cable100 PASS; corrected publication next.",
+    "frontier": "Charge/arc implementation and native25/public charge+primary/actual MCP27+5702/view24/primary30/toolbelt144/gun102 acceptance complete. Publish combined source and matching green-CI APK next.",
     "fixed_deadline_utc": null,
     "wider_scope_preserved": true,
-    "next_implementation_packet": "Push corrected tool-tray route drivers and evidence; start ordinary delivery workers. Reuse unchanged native and actual gameplay evidence. Deliver matching fully green candidate APK.",
-    "current_candidate": "74ade74 RED old portable-line input fixture; test-only correction ready to publish",
+    "next_implementation_packet": "Push complete R21 charged aiming source and accepted evidence, preserve d23 baseline workers; ordinary workers monitor/collect/publish the new matching candidate. Fix only introduced required CI failures; no new unrelated work.",
+    "current_candidate": "R21 d23fbfe actually pushed; candidate39528081083/full39528080972 running",
     "last_delivered_game_source": "dbf88c49ce0f3ff27eecb51bbfb07936dd1b1f46",
     "last_delivered_apk": "https://github.com/IssisX/ScraperX/releases/download/chatgpt-candidate-dbf88c4/ScraperX-ChatGPT.apk",
-    "evidence": "evidence/grapple-2026-10-20/RANGE_AND_TOUCH.md; RANGE_TOUCH_NATIVE.json; RANGE_TOUCH_MCP.json; RANGE_TOUCH_AFFECTED.json",
+    "evidence": "evidence/grapple-2026-10-20/CHARGE_AIM.md; CHARGE_NATIVE.json; CHARGE_MCP.json; CHARGE_TOUCH.json",
     "deferred_ari_lift": {
       "status": "deferred by owner correction; not delivered",
       "source_state": "stash793bfc89b75250ab88ac0e91560ed0a86b16ed74 + P/ari-trip-native/deferred-complete.patch; exact paths/hashes in preservation.json",
@@ -167,7 +167,7 @@
       "remaining": "production boarding/ride/return, Main/Guide touch integration, matching bridge and release acceptance",
       "resumption_condition": "Materially different high-value experience consistent with latest owner restriction; never automatic from a stale goal or failed check."
     },
-    "delivery_workers": "A/github-workers.json; candidate-policy-74ade74; watcher24029/collector24030/copier24031/publisher24032; ordinary shell processes"
+    "delivery_workers": "A/github-workers.json; candidate-policy-d23fbfe; ordinary watcher31366/collector31368/copier31369/publisher31370"
   },
   "deferred_physical_trapeze_encounter": {
     "owner_requested": "2026-10-13",

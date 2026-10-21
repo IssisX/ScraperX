@@ -768,7 +768,7 @@ void independent_407(Simulation &s) {
 } // namespace
 int main(int argc, char **argv) {
     const std::string mode = argc > 1 ? argv[1] : "primary";
-    if (mode != "primary" && mode != "miss-retry" && mode != "failed-retrieval" && mode != "recovery-only" && mode != "older-hook" && mode != "portable-fire" && mode != "portable-rail" && mode != "independent407" && mode != "long-range") return EXIT_FAILURE;
+    if (mode != "primary" && mode != "miss-retry" && mode != "failed-retrieval" && mode != "recovery-only" && mode != "older-hook" && mode != "portable-fire" && mode != "portable-rail" && mode != "independent407" && mode != "long-range" && mode != "charge") return EXIT_FAILURE;
     std::cout << std::fixed << std::setprecision(6);
     Simulation s(InitialSpawn::ExteriorGrade, WorldContent::Slingshot);
     require(s.entity_body_count(kDeparture) == 1 && s.entity_body_count(kReceiver) == 1 &&
@@ -782,6 +782,31 @@ int main(int argc, char **argv) {
     walk_body(s,kDeparture,JPH::Vec3::sZero(),"real_departure_approach"); stable_actual_support(s,kDeparture);
     require(s.grapple_gun_state().station_available && s.set_grapple_equipped(true), "real gun station equip", s);
     tick(s); require(s.grapple_gun_state().acquired && s.grapple_gun_state().equipped, "gun acquired", s);
+    if (mode == "charge") {
+        const auto stock=s.grapple_gun_state().cartridges;
+        require(!s.request_grapple_charge(3),"unknown charge command rejected",s);
+        require(s.set_grapple_aim(0,1,0)&&s.request_grapple_charge(0),"ordinary charge press",s);
+        tick(s,45);auto held=s.grapple_gun_state();
+        require(held.charging&&held.cartridges==stock&&held.launch_work_j==0&&
+                held.charge_fraction>.49&&held.charge_fraction<.51,"half hold has finite intermediate energy without firing",s);
+        const auto preview=s.grapple_aim_preview();
+        require(preview.count>=2&&preview.count<=33,"bounded prospective native guide",s);
+        require(s.request_grapple_charge(1)&&s.request_grapple_charge(2),"cancel pending release",s);tick(s);
+        require(!s.grapple_gun_state().charging&&s.grapple_gun_state().cartridges==stock&&
+                !s.grapple_gun_state().line_attached,"cancellation supersedes queued shot",s);
+        require(s.request_grapple_charge(0),"fresh charge after cancel",s);tick(s,120);
+        held=s.grapple_gun_state();
+        require(held.charging&&held.charge_fraction>.999&&held.shot_energy_j<=900&&held.cartridges==stock,
+                "overlong hold clamps without auto-fire",s);
+        require(s.request_grapple_charge(1),"ordinary charge release",s);tick(s);
+        const auto launched=s.grapple_gun_state();const auto start=s.snapshot().player_position;
+        tick(s,45);const auto end=s.grapple_gun_state();
+        require(end.line_attached&&end.hook_endpoint.y-start.y>12&&launched.last_launch_work_j>899&&
+                launched.last_launch_work_j<=900&&end.cartridges+1==stock&&!end.charging,
+                "real held release creates exactly one useful finite projectile",s);
+        std::cout<<"PASS GRAPPLE_CHARGE_PUBLIC rise_m="<<end.hook_endpoint.y-start.y<<" paid_j="<<launched.last_launch_work_j<<" cancel_and_cap=1\n";
+        return EXIT_SUCCESS;
+    }
     if (mode == "long-range") {
         const auto before=s.grapple_gun_state();
         require(before.shot_profile==1&&before.shot_energy_j==900,"carried gun defaults to native long profile",s);

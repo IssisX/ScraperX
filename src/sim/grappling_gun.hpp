@@ -16,6 +16,7 @@ public:
     // Powered cartridge: finite work includes reciprocal player recoil.
     static constexpr float cartridge_energy_j = 900.0F;
     static constexpr float precision_energy_j = 180.0F;
+    static constexpr float full_charge_seconds = 1.0F;
     enum class ShotProfile : unsigned { Near, Long };
     static constexpr float maximum_line_length_m = 60.0F;
     static constexpr float strength_n = GrappleRopeSettings::strength_n;
@@ -54,6 +55,8 @@ public:
         LineState state = LineState::Ready;
         Failure failure = Failure::None;
         bool auto_reel = false;
+        bool charging = false;
+        float charge_fraction = 0;
         ShotProfile shot_profile = ShotProfile::Long;
         float shot_energy_j = cartridge_energy_j;
         unsigned cartridges = capacity;
@@ -77,6 +80,17 @@ public:
     ~GrapplingGun();
     GrapplingGun(const GrapplingGun &) = delete;
     GrapplingGun &operator=(const GrapplingGun &) = delete;
+    struct AimPreview {
+        std::array<JPH::RVec3, 33> points{};
+        unsigned count = 0;
+        bool blocked = false, line_limit = false;
+        float charge_fraction = 0;
+    };
+    // Charge time is actual native collision time. Cancellation never fires.
+    bool begin_charge();
+    void cancel_charge() noexcept;
+    bool fire_charged(JPH::Vec3 normalized_aim);
+    [[nodiscard]] AimPreview aim_preview(JPH::Vec3 normalized_aim) const;
     bool set_shot_profile(ShotProfile profile);
     bool fire(JPH::Vec3 normalized_aim);
     bool lock_line();
@@ -105,6 +119,7 @@ public:
     // along with all shot bodies and owned constraints. Never remote retrieval.
     void clear_transients();
 private:
+    bool fire_with_energy(JPH::Vec3 normalized_aim, float energy_j);
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

@@ -19,6 +19,14 @@ struct Vector3 final {
     double z = 0.0;
 };
 
+enum class GrappleChargeCommand : std::uint8_t { Begin, Fire, Cancel };
+struct GrappleAimPreview final {
+    std::array<Vector3, 33> points{};
+    unsigned count = 0;
+    bool blocked = false, line_limit = false;
+    double charge_fraction = 0;
+};
+
 // Ordered rigging commands carry the exact target shown when input occurred.
 enum class RiggingCommandKind : std::uint8_t {
     Equip, Unequip, Action, Undo, Select, Unclip, BeginCut, EndCut
@@ -165,6 +173,8 @@ struct GrappleGunSnapshot final {
     bool available = false, acquired = false, equipped = false;
     bool station_available = false, line_attached = false;
     bool action_recovers_hook = false, auto_reel = false, recovery_nearby = false;
+    bool charging = false;
+    double charge_fraction = 0;
     unsigned state = 0, failure = 0, cartridges = 0, available_hooks = 0;
     unsigned shot_profile = 1;
     double shot_energy_j = 900;
@@ -906,6 +916,8 @@ public:
     [[nodiscard]] bool set_grapple_reel_input(double input) noexcept;
     [[nodiscard]] bool set_grapple_auto_reel(bool enabled) noexcept;
     [[nodiscard]] bool request_grapple_shot_profile(unsigned profile) noexcept;
+    [[nodiscard]] bool request_grapple_charge(unsigned command) noexcept;
+    [[nodiscard]] GrappleAimPreview grapple_aim_preview() const noexcept;
     [[nodiscard]] bool request_grapple_action() noexcept;
     [[nodiscard]] bool request_grapple_release() noexcept;
     [[nodiscard]] GrappleGunSnapshot grapple_gun_state() const noexcept;
@@ -1164,6 +1176,8 @@ private:
     bool grapple_auto_reel_requested_ = false, grapple_auto_reel_input_ = false;
     bool grapple_shot_profile_requested_ = false;
     unsigned grapple_shot_profile_input_ = 1;
+    std::array<GrappleChargeCommand, 8> grapple_charge_commands_{};
+    std::size_t grapple_charge_command_count_ = 0;
     double sling_draw_ = 0.0, sling_yaw_ = 0.0, sling_elevation_ = 1.4311699866353502;
     bool sling_action_ = false, sling_drop_ = false;
 };

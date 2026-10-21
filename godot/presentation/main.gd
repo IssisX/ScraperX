@@ -925,6 +925,7 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	_native.request_grapple_charge(2)
 	if _story_radio != null:
 		_story_radio.cancel()
 	_native.request_rigging(7, 0)
@@ -1165,6 +1166,13 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 					_native.request_set_down()
 				else:
 					_native.request_release()
+			&"grapple_charge_begin":
+				if not _paused and _ctx.get("action", {}).get("id", &"") == &"grapple_charge":
+					_native.request_grapple_charge(0)
+			&"grapple_charge_fire":
+				_native.request_grapple_charge(2 if _paused else 1)
+			&"grapple_charge_cancel":
+				_native.request_grapple_charge(2)
 			&"grapple_range":
 				var gun: Dictionary = _native.get_grapple_gun_state()
 				if bool(gun.get("equipped", false)) and not bool(gun.get("line_attached", false)):
@@ -1226,25 +1234,31 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 # a distant hook or moves the player from presentation code.
 static func _grapple_primary_action(gun: Dictionary) -> Dictionary:
 	var line_state := int(gun.get("state", 0))
-	var action := {"id": &"grapple_action", "label": "FIRE HOOK", "icon": &"hook",
-		"detail": "ARC OVER A BEAM OR EDGE"}
+	var action := {"id": &"grapple_charge", "label": "HOLD TO AIM", "icon": &"hook",
+		"detail": "HOLD FOR MORE RANGE / RELEASE TO FIRE"}
 	if line_state == 2 and bool(gun.get("line_attached", false)) and bool(gun.get("auto_reel", false)):
 		action["id"] = &"grapple_reel"
 		action["label"] = "STOP REEL"
 		action["detail"] = "STOP BEFORE RECOVERING THE HOOK"
 	elif bool(gun.get("action_recovers_hook", false)):
+		action["id"] = &"grapple_action"
 		action["label"] = "RECOVER HOOK"
 		action["detail"] = "PICK UP THE HOOK / LINE MUST BE UNLOADED"
 	elif bool(gun.get("recovery_nearby", false)) and not bool(gun.get("line_attached", false)):
+		action["id"] = &"grapple_action"
 		action["label"] = "RECOVER HOOK"
 		action["detail"] = "MOVE WITHIN ARM'S REACH"
 	elif line_state == 1:
+		action["id"] = &"grapple_action"
 		action["label"] = "LOCK LINE"
 		action["detail"] = "LET THE HOOK SETTLE BEFORE LOCKING"
 	elif line_state == 2 and bool(gun.get("line_attached", false)):
 		action["id"] = &"grapple_reel"
 		action["label"] = "STOP REEL" if bool(gun.get("auto_reel", false)) else "REEL IN"
 		action["detail"] = "STEER TOWARD LANDING / DROP: RELEASE"
+	if action["id"] == &"grapple_charge" and bool(gun.get("charging", false)):
+		action["label"] = "RELEASE TO FIRE"
+		action["detail"] = "CHARGE %d%% / SLIDE OFF TO CANCEL" % int(roundf(float(gun.get("charge_fraction", 0.0)) * 100.0))
 	return action
 
 
@@ -1268,6 +1282,11 @@ func _perform_action() -> void:
 			_native.request_rigging(4, int(_ctx.get("rigging_target_line", 0)))
 		&"equip_grapple":
 			_native.set_grapple_equipped(true)
+		&"grapple_charge":
+			# Existing discrete Action callers retain a quick shot; touch owns
+			# the separate press/release transaction for variable charge.
+			_native.request_grapple_charge(0)
+			_native.request_grapple_charge(1)
 		&"grapple_action":
 			_native.request_grapple_action()
 		&"grapple_reel":
@@ -2554,6 +2573,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _grapple_view != null:
 		_update_grapple_feedback(delta)
 		_grapple_view.update_state(_native.get_grapple_gun_render_state())
+		var aiming: Dictionary = _native.get_grapple_gun_state()
+		var charging := bool(aiming.get("charging", false)) and not _paused
+		_grapple_view.update_aim_preview(_native.get_grapple_aim_preview() if charging else {},
+			bool(aiming.get("equipped", false)), charging)
 
 
 func _update_story(delta: float) -> void:

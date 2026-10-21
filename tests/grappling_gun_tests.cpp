@@ -110,6 +110,50 @@ struct Fixture final {
 bool unchanged(const State &a, const State &b) {
     return (a.velocity-b.velocity).LengthSq()==0 && (a.angular-b.angular).LengthSq()==0;
 }
+void finite_hold_charge_and_cancel() {
+    for (unsigned steps : {0U,180U,720U}) {
+        Fixture f;
+        check(f.gun->begin_charge(),"ready gun begins charge");
+        f.tick(steps);
+        const auto held=f.gun->readback();
+        const float expected=steps==0 ? 180.0F : steps==180 ? 540.0F : 900.0F;
+        check(held.charging && held.cartridges==4 && held.available_hooks==4 && held.launch_work_j==0,
+              "holding neither fires nor spends inventory/work");
+        check(std::abs(held.shot_energy_j-expected)<.02F,"native collision time controls finite charge");
+        check(f.gun->fire_charged(Vec3::sAxisX()),"release fires charged cartridge");
+        const auto fired=f.gun->readback();
+        check(!fired.charging && fired.cartridges==3 && fired.available_hooks==3 &&
+              fired.last_launch_work_j<=expected+.02 && fired.last_launch_work_j>expected-.02,
+              "exactly one finite paid shot on release");
+        check(!f.gun->fire_charged(Vec3::sAxisX()) && f.gun->readback().cartridges==3,
+              "release without matching charge never fires again");
+    }
+    Fixture canceled;
+    check(canceled.gun->begin_charge(),"begin cancellable charge");canceled.tick(40);
+    canceled.gun->cancel_charge();
+    check(!canceled.gun->fire_charged(Vec3::sAxisX()) && canceled.gun->readback().cartridges==4,
+          "cancellation cannot discharge or consume inventory");
+    check(canceled.gun->begin_charge(),"begin before stow");canceled.gun->release();
+    check(!canceled.gun->readback().charging && !canceled.gun->fire_charged(Vec3::sAxisX()),
+          "ordinary release/stow cancels charged shot");
+}
+void preview_is_bounded_collision_readback() {
+    Fixture f(Vec3(0,-9.81F,0));
+    f.wall(RVec3(4,0,0),Vec3(.1F,2,2));
+    check(f.gun->begin_charge(),"preview starts only during real charge");
+    const auto before=f.state(f.player);
+    const auto bodies=f.world.GetNumBodies();
+    const auto preview=f.gun->aim_preview(Vec3::sAxisX());
+    check(preview.count>=2 && preview.count<=33 && preview.blocked && !preview.line_limit,
+          "finite hook envelope stops guide at actual wall");
+    check(preview.points[preview.count-1].GetX()<4.0F,"guide never suggests trajectory through wall");
+    check(f.world.GetNumBodies()==bodies && unchanged(before,f.state(f.player)) &&
+          f.gun->readback().cartridges==4 && !f.gun->line_active(),
+          "guide creates no body/anchor, impulse or inventory change");
+    check(f.gun->aim_preview(Vec3::sZero()).count==0,"invalid preview aim rejected");
+    f.gun->cancel_charge();
+    check(f.gun->aim_preview(Vec3::sAxisX()).count==0,"cancel clears preview immediately");
+}
 void terminal_mass_and_inertia() {
     Fixture f;
     const BodyID hook=f.fire();
@@ -659,6 +703,8 @@ void rotated_retention_observation() {
 int main() {
     RegisterDefaultAllocator(); Factory::sInstance=new Factory; RegisterTypes();
     const std::pair<const char *,void(*)()> tests[]{
+        {"finite_hold_charge_and_cancel",finite_hold_charge_and_cancel},
+        {"preview_is_bounded_collision_readback",preview_is_bounded_collision_readback},
         {"shot_profile_changes_only_next_cartridge",shot_profile_changes_only_next_cartridge},
         {"useful_vertical_range",useful_vertical_range},
         {"slow_paying_out_hook_is_recoverable",slow_paying_out_hook_is_recoverable},

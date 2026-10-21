@@ -145,7 +145,7 @@ func _cancel_rigging_cut() -> void:
 
 
 func push_verb(verb: StringName) -> void:
-	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"auto_reel", &"toggle_rigging", &"toggle_traversal_line", &"pack_traversal_line", &"rigging_undo", &"rigging_unclip", &"rigging_cut_start"]:
+	if (forklift_mode or yard_crane_mode) and verb in [&"jump", &"crouch", &"chute", &"sling_release", &"toggle_grapple", &"grapple_charge_begin", &"grapple_charge_fire", &"auto_reel", &"toggle_rigging", &"toggle_traversal_line", &"pack_traversal_line", &"rigging_undo", &"rigging_unclip", &"rigging_cut_start"]:
 		return
 	if gameplay_active:
 		_verbs.append(verb)

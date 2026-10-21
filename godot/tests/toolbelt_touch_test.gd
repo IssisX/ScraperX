@@ -72,26 +72,30 @@ func _run() -> void:
 	check(controls.is_button_shown(&"pendant_up") and controls.is_button_shown(&"pendant_down"), "locked native line exposes its actual reel controls")
 	ctx["grapple_line_attached"] = false
 	controls.update_context(ctx, 1.0)
-	check(controls.is_button_shown(&"grapple_range") and controls.button_label(&"grapple_range") == "LONG SHOT", "equipped unshot gun offers acknowledged default long range")
-	event(&"grapple_range", true)
-	check(router.frame(0.016)["verbs"] == [&"grapple_range"], "range press emits one semantic verb through real router")
+	ctx["action"] = {"id": &"grapple_charge", "icon": &"hook", "label": "HOLD TO AIM"}
+	controls.update_context(ctx, 1.0)
+	check(not controls.is_button_shown(&"grapple_range"), "charging replaces the separate range selector")
+	check(controls.button_label(&"action") == "HOLD TO AIM" and controls._buttons[&"action"].hold,
+		"ready primary Action is a hold control")
+	event(&"action", true)
+	check(router.frame(0.016)["verbs"] == [&"grapple_charge_begin"], "real primary press begins charge")
+	ctx["action"]["label"] = "RELEASE TO FIRE"
 	for frame in range(4):
 		controls.update_context(ctx, 0.016)
-		check(router.frame(0.016)["verbs"].is_empty(), "held range press never repeats")
-	check(controls.button_label(&"grapple_range") == "LONG SHOT", "range press waits for native acknowledgment")
-	ctx["grapple_shot_profile"] = 0
-	controls.update_context(ctx, 1.0)
-	check(controls.button_label(&"grapple_range") == "NEAR SHOT", "native near profile updates label")
-	check(controls.button_center(&"action") == action_home, "range selection preserves primary Action home")
+		check(router.frame(0.016)["verbs"].is_empty(), "held primary never repeats a command")
+	check(controls.button_label(&"action") == "RELEASE TO FIRE", "native charging acknowledgment updates primary label")
+	event(&"action", false)
+	check(router.frame(0.016)["verbs"] == [&"grapple_charge_fire"], "real release fires once")
+	check(controls.button_center(&"action") == action_home, "charging preserves primary Action home")
 	ctx["grapple_line_attached"] = true
+	ctx["action"] = {"id": &"grapple_action", "icon": &"hook", "label": "LOCK LINE"}
 	controls.update_context(ctx, 1.0)
-	check(not controls.is_button_shown(&"grapple_range") and controls._buttons[&"grapple_range"].index == -1, "attached line hides range and releases held capture")
-	event(&"grapple_range", false)
-	check(router.frame(0.016)["verbs"].is_empty(), "hidden range release emits no extra toggle")
+	check(not controls.is_button_shown(&"grapple_range") and not controls._buttons[&"action"].hold,
+		"attached line restores ordinary contextual Action without range selector")
 	ctx["grapple_line_attached"] = false
 	controls.update_context(ctx, 1.0)
 	open_tools()
-	check(not controls.is_button_shown(&"grapple_range"), "open tray hides range operation")
+	check(not controls.is_button_shown(&"grapple_range"), "open tray has no range selector")
 	tap(&"tools")
 	ctx["operating"] = &""
 	ctx["grapple_equipped"] = false
@@ -146,7 +150,7 @@ func _run() -> void:
 				ctx["rigging_power_operable"] = true
 				controls.update_context(ctx, 1.0)
 				controls._layout_in_safe_rect(Rect2(Vector2(24, 32), Vector2(viewport) - Vector2(48, 64)))
-				check(controls.is_button_shown(&"grapple_range") == (tool == "grapple"), "range belongs only to unshot grapple")
+				check(not controls.is_button_shown(&"grapple_range"), "range selector remains absent in every layout/tool context")
 				check(controls.is_button_shown(&"rigging_cut") == (tool == "rigging"), "cut belongs only to rigging")
 				check(controls.is_button_shown(&"pack_traversal_line") == (tool == "line"), "pack belongs only to line")
 				for tray in [false, true]:

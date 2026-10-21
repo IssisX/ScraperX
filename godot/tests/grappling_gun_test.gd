@@ -83,7 +83,7 @@ func _chute_hit_contract() -> void:
 	await process_frame
 	touch._layout()
 	var ctx := {"hanging": false, "jump_ok": false,
-		"action": {"id": &"grapple_action", "icon": &"hook", "label": "FIRE HOOK"},
+		"action": {"id": &"grapple_charge", "icon": &"hook", "label": "HOLD TO AIM"},
 		"drop_ok": true, "chute_ok": true, "chute": false, "danger": 0.7,
 		"operating": &"grappling_gun", "crouched": false, "slung": false,
 		"grapple_equipped": true, "grapple_line_attached": false}
@@ -265,11 +265,6 @@ func _nearby_recovery_action() -> void:
 	if not _tap(&"action"):
 		return
 	await _step(8)
-	if int(_state().shot_profile) == 1:
-		if not _tap(&"grapple_range"):
-			return
-		await _step()
-	_check(int(_state().shot_profile) == 0, "real touch chooses near profile for local recovery diagnostic")
 	var at := root.get_visible_rect().size * Vector2(0.78, 0.35)
 	var sensitivity: float = Router.LOOK_RADIANS_PER_UNIT * _main._router.look_sensitivity
 	var relative := Vector2((float(_main._yaw) + PI * 0.5) / sensitivity,
@@ -288,6 +283,8 @@ func _nearby_recovery_action() -> void:
 	if not _tap(&"action"):
 		return
 	await _step()
+	_check(float(_state().launch_energy_j) > 179.0 and float(_state().launch_energy_j) <= 180.001,
+		"nearby recovery diagnostic uses actual quick touch release180J")
 	if not _tap(&"drop"):
 		return
 	await _step()
@@ -422,12 +419,9 @@ func _run() -> void:
 	await _step()
 	_check(absf(float(_main._pitch) - 1.45) < 0.001
 		and absf(float(_main._yaw) + PI * 0.5) < 0.001, "viewport look drag reaches high grapple aim through router")
-	_check(float(_state().shot_energy_j) == 900.0 and int(_state().shot_profile) == 1, "carried gun defaults to long shot before near-work diagnostic")
-	if not _tap(&"grapple_range"):
-		quit(1)
-		return
-	await _step(2)
-	_check(int(_state().shot_profile) == 0 and float(_state().shot_energy_j) == 180.0, "touch selects precision for close-work controls")
+	_check(_main._ctx["action"]["id"] == &"grapple_charge"
+		and _main._touch.button_label(&"action") == "HOLD TO AIM"
+		and not _main._touch.is_button_shown(&"grapple_range"), "close-work shot uses primary charge control without range selector")
 	var ammo: int = _state()["cartridges_remaining"]
 	if not _tap(&"action"):
 		quit(1)
@@ -436,10 +430,10 @@ func _run() -> void:
 	var fired := _state()
 	_check(int(fired["cartridges_remaining"]) == ammo - 1 and int(fired["state"]) == 1
 		and bool(fired["line_attached"]), "touch Action fires one native hook and pays line")
-	_check(float(fired["shot_energy_j"]) == 180.0 and float(fired["maximum_shot_energy_j"]) == 900.0 and float(fired["maximum_line_length_m"]) == 60.0
+	_check(float(fired["maximum_shot_energy_j"]) == 900.0 and float(fired["maximum_line_length_m"]) == 60.0
 		and float(fired["hook_mass_kg"]) == 2.0, "native bridge reports finite powered-shot contract")
 	_check(is_finite(float(fired["launch_energy_j"])) and float(fired["launch_energy_j"]) > 179.0
-		and float(fired["launch_energy_j"]) <= float(fired["shot_energy_j"]) + 0.001, "finite native cartridge work")
+		and float(fired["launch_energy_j"]) <= 180.001, "actual quick touch release supplies finite180J close-work shot")
 	_view("flight")
 	if not _tap(&"action"):
 		quit(1)

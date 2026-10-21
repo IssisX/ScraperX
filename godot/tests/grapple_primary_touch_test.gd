@@ -12,6 +12,7 @@ class GunRequests extends RefCounted:
 	var reel_requests: Array[bool] = []
 	var action_requests := 0
 	var releases := 0
+	var charge_requests: Array[int] = []
 
 	func get_grapple_gun_state() -> Dictionary:
 		return gun.duplicate()
@@ -24,6 +25,9 @@ class GunRequests extends RefCounted:
 
 	func request_grapple_release() -> void:
 		releases += 1
+
+	func request_grapple_charge(command: int) -> void:
+		charge_requests.append(command)
 
 var failures: Array[String] = []
 var checks := 0
@@ -51,12 +55,16 @@ func refresh() -> void:
 		"grapple_auto_reel": native.gun["auto_reel"], "drop_ok": true}
 	controls.update_context(main._ctx, 1.0)
 
-func touch(id: StringName, pressed: bool) -> void:
+func touch(id: StringName, pressed: bool, canceled: bool = false, index: int = 1) -> void:
 	var event := InputEventScreenTouch.new()
-	event.index = 1
+	event.index = index
 	event.position = controls.button_center(id)
 	event.pressed = pressed
+	event.canceled = canceled
 	router._input(event)
+	dispatch_pending()
+
+func dispatch_pending() -> void:
 	main._dispatch(router.frame(0.016)["verbs"], 0.016)
 
 func tap(id: StringName) -> void:
@@ -122,9 +130,48 @@ func _run() -> void:
 	native.gun["line_attached"] = false
 	native.gun["auto_reel"] = false
 	refresh()
-	check(controls.button_label(&"action") == "FIRE HOOK", "ready tool retains Fire Hook")
-	tap(&"action")
-	check(native.action_requests == 3, "Fire Hook still uses native action")
+	check(controls.button_label(&"action") == "HOLD TO AIM" and controls._buttons[&"action"].hold,
+		"ready tool offers primary hold-to-aim")
+	touch(&"action", true)
+	check(native.charge_requests == [0] and native.action_requests == 2,
+		"actual primary press requests Begin without discrete native action")
+	native.gun["charging"] = true
+	native.gun["charge_fraction"] = 0.4
+	refresh()
+	check(controls.button_label(&"action") == "RELEASE TO FIRE", "native charging acknowledgment offers release-to-fire")
+	touch(&"action", false)
+	check(native.charge_requests == [0, 1] and native.action_requests == 2,
+		"actual primary release requests Fire once")
+	native.gun["charging"] = false
+	refresh()
+	for cancellation in ["os", "slide", "reset", "tools"]:
+		var first: int = native.charge_requests.size()
+		touch(&"action", true)
+		match cancellation:
+			"os":
+				touch(&"action", false, true)
+			"slide":
+				var drag := InputEventScreenDrag.new()
+				drag.index = 1
+				drag.relative = Vector2(controls._buttons[&"action"].radius * controls.HIT_SLOP + 20.0, 0)
+				drag.position = controls.button_center(&"action") + drag.relative
+				router._input(drag)
+				dispatch_pending()
+			"reset":
+				controls.reset_touches()
+				dispatch_pending()
+			"tools":
+				# A second real finger opens the tray while Action is held.
+				touch(&"tools", true, false, 2)
+		check(native.charge_requests.slice(first) == [0, 2], cancellation + " cancels held charge without Fire")
+		touch(&"action", false)
+		check(native.charge_requests.slice(first) == [0, 2], cancellation + " stale release cannot fire")
+		if cancellation == "tools":
+			touch(&"tools", false, false, 2)
+			check(controls._tool_tray_open, "cancellation preserves requested open tool tray")
+		controls.reset_touches()
+		dispatch_pending()
+		refresh()
 	main._ctx["action"] = {"id": &"grapple_reel"}
 	main._perform_action()
 	check(native.reel_requests.size() == 2, "stale primary reel cannot enable a detached line")

@@ -1,4 +1,6 @@
-# Longer-range grapple and coherent touch controls
+# Initial longer-range grapple and coherent touch controls
+
+The NEAR/LONG touch selector below is historical for74ade74/d23fbfe. The owner subsequently requested hold-to-charge/release-to-fire and a world aim arc; CHARGE_AIM.md records that replacement. Native legacy profile APIs and the physical range/recovery evidence remain valid.
 
 The owner clarified that weak meant launch distance. LONG is now the carried gun's default: finite900J versus the previous180J, with60m line instead of18m. NEAR selects the existing180J shot for close work. Both use the actual2kg hook, reciprocal85kg recoil, Jolt flight/collision and unchanged rope/reel limits. Range selection is an ordered native input; it cannot change a live line or fabricate an anchor.
 

@@ -1,0 +1,85 @@
+{
+  "root_actual_checks": [
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/toolbelt_touch_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nTOOLBELT_TOUCH PASS real touch/router selection, acknowledgement, cancel, context, capture, active-tool operations; 144 layouts\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    },
+    {
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/grappling_gun_test.gd"
+      ],
+      "exit": 0,
+      "output": "Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org\n\nSCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\nSCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000\nSCRAPERX_GRAPPLE_TOUCH diagnostic_staging=roof484 phone_evidence=0 clock=Main._process\nSCRAPERX_AUDIO_BANK clips=35 msec=1138 driver=Dummy\nSCRAPERX_GRAPPLE_RECOVERY before={ \"charging\": false, \"charge_fraction\": 0.0, \"shot_energy_j\": 900.0, \"shot_profile\": 1, \"maximum_shot_energy_j\": 900.0, \"maximum_line_length_m\": 60.0, \"hook_mass_kg\": 2.0, \"available\": true, \"acquired\": true, \"equipped\": true, \"station_available\": true, \"rack_position\": (11.30002, 485.1497, -135.5002), \"launch_origin\": (12.84354, 485.4996, -135.5), \"launch_direction\": (1.0, -0.0, -0.0), \"line_attached\": false, \"action_recovers_hook\": false, \"recovery_nearby\": true, \"state\": 3, \"state_name\": \"RELEASED\", \"last_failure\": \"\", \"cartridges_remaining\": 3, \"hooks_remaining\": 3, \"rope_start\": (11.99354, 485.1496, -135.5), \"rope_end\": (13.04969, 485.6069, -135.5), \"paid_out_length\": 0.0, \"tension_n\": 0.0, \"extension_m\": 0.0, \"launch_energy_j\": 179.999985155137, \"total_launch_work_j\": 179.999985155137, \"reel_work_j\": 0.0, \"auto_reel\": false, \"elastic_energy_j\": 0.0, \"spool_absorbed_energy_j\": 0.00019524109263, \"release_discarded_elastic_energy_j\": 0.00003569304852, \"hooks\": [{ \"active\": true, \"position\": (13.14469, 485.4969, -135.5), \"rotation\": (-0.0, 0.0, -0.707107, 0.707107) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }] }\nSCRAPERX_GRAPPLE_RECOVERY after={ \"charging\": false, \"charge_fraction\": 0.0, \"shot_energy_j\": 900.0, \"shot_profile\": 1, \"maximum_shot_energy_j\": 900.0, \"maximum_line_length_m\": 60.0, \"hook_mass_kg\": 2.0, \"available\": true, \"acquired\": true, \"equipped\": true, \"station_available\": true, \"rack_position\": (11.30002, 485.1497, -135.5002), \"launch_origin\": (12.8406, 485.4996, -135.5), \"launch_direction\": (1.0, -0.0, -0.0), \"line_attached\": false, \"action_recovers_hook\": false, \"recovery_nearby\": true, \"state\": 3, \"state_name\": \"RELEASED\", \"last_failure\": \"HOOK OUT OF REACH\", \"cartridges_remaining\": 3, \"hooks_remaining\": 3, \"rope_start\": (11.9906, 485.1496, -135.5), \"rope_end\": (13.19704, 485.6038, -135.5), \"paid_out_length\": 0.0, \"tension_n\": 0.0, \"extension_m\": 0.0, \"launch_energy_j\": 179.999985155137, \"total_launch_work_j\": 179.999985155137, \"reel_work_j\": 0.0, \"auto_reel\": false, \"elastic_energy_j\": 0.0, \"spool_absorbed_energy_j\": 0.00019524109263, \"release_discarded_elastic_energy_j\": 0.00003569304852, \"hooks\": [{ \"active\": true, \"position\": (13.29204, 485.4938, -135.5), \"rotation\": (-0.0, 0.0, -0.707107, 0.707107) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }, { \"active\": false, \"position\": (0.0, 0.0, 0.0), \"rotation\": (0, 0, 0, 1) }] }\nSCRAPERX_GRAPPLE_TOUCH PASS checks=102 phone_evidence=0 route_evidence=0\nproot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory\nproot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory\nWARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\nSet the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\n     at: setup2 (main/main.cpp:3577)\n"
+    }
+  ],
+  "worker_checks": [
+    {
+      "worker": "grapple_arc_view Sol/medium",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/grapple_aim_preview_view_test.gd"
+      ],
+      "exit": 0,
+      "observed_output": "GRAPPLE_AIM_VIEW checks=24 failures=0 supplied_preview_only=1"
+    },
+    {
+      "worker": "grapple_arc_view Sol/medium",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--bind",
+        "/data/data/com.termux/files/usr/tmp:/data/data/com.termux/files/usr/tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/story-opening/runtime",
+        "--script",
+        "res://tests/grapple_primary_touch_test.gd"
+      ],
+      "exit": 0,
+      "observed_output": "GRAPPLE_PRIMARY_TOUCH PASS checks=30 touch_router_main=1 native_requests=1 world_physics=0"
+    }
+  ],
+  "scope": "View supplied-data check and primary mocked-native command check; actual native, pause, guide and full trip acceptance is CHARGE_MCP.json. Root current discrete-Action fallback was added after primary30; the actual touch dispatch it exercises is unchanged and candidate reruns that gate."
+}

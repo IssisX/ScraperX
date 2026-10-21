@@ -3,6 +3,7 @@ extends "res://tests/mounted_winch_crossing_input_case.gd"
 # One initial roof stage, then ordinary input only. No capture flag, injected
 # anchor, player transform write or changed native physics is used in the trip.
 const STEP := 1.0 / 90.0
+const QUICK_TAP_ENERGY_J := 180.0
 var phase := "settle"
 var phase_ticks := 0
 var ticks := 0
@@ -101,7 +102,7 @@ func shoot() -> void:
 	# Native finite cartridge, reciprocal85kg recoil, finite muzzle/head offset.
 	var config: Dictionary = main._native.get_grapple_gun_state()
 	var mass := float(config.hook_mass_kg)
-	var speed := sqrt(2.0 * float(config.shot_energy_j) / (1.0 / 85.0 + 1.0 / mass)) / mass
+	var speed := sqrt(2.0 * QUICK_TAP_ENERGY_J / (1.0 / 85.0 + 1.0 / mass)) / mass
 	shot_flight_ticks = ceili(2.0 * speed / 9.81 * 90.0) + 90
 	var low := 1.1
 	var high := 1.49
@@ -153,12 +154,12 @@ func advance(budget: int = 90) -> Dictionary:
 			"draw":
 				if phase_ticks >= 1:
 					check(bool(gun.equipped), "touch draw acknowledged before shot")
-					if int(gun.shot_profile) == 1:
-						tap(&"grapple_range")
-						step(1)
-					check(int(main._native.get_grapple_gun_state().shot_profile) == 0, "touch selects near shot for close receiver")
+					check(main._ctx.action.id == &"grapple_charge", "close receiver uses primary hold-to-aim")
 					shoot()
 			"flight":
+				if phase_ticks == 1:
+					check(float(gun.launch_energy_j) > 179.0 and float(gun.launch_energy_j) <= QUICK_TAP_ENERGY_J + 0.001,
+						"actual immediate touch release supplies180J close-work shot")
 				if phase_ticks >= 450:
 					check(int(gun.cartridges_remaining) == initial_shots - 1, "shot spends exactly one finite cartridge")
 					tap(&"action")

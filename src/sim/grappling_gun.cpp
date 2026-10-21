@@ -26,6 +26,19 @@ using namespace JPH;
 template<class V> bool finite(const V &v) {
     return std::isfinite(v.GetX()) && std::isfinite(v.GetY()) && std::isfinite(v.GetZ());
 }
+// Shared launch law for the real impulse and read-only ballistic preview.
+Vec3 launch_impulse(Vec3 aim, float energy_j, float inverse_mass) {
+    float magnitude=std::sqrt(2*energy_j/(inverse_mass*aim.LengthSq()));
+    Vec3 impulse=aim*magnitude;
+    const auto paid=[&]() {
+        return .5*inverse_mass*(double(impulse.GetX())*impulse.GetX()+
+            double(impulse.GetY())*impulse.GetY()+double(impulse.GetZ())*impulse.GetZ());
+    };
+    while (paid()>energy_j) {
+        magnitude=std::nextafter(magnitude,0.0F); impulse=aim*magnitude;
+    }
+    return impulse;
+}
 double potential(float radius, float rest) {
     const double extension = std::max(0.0, double(radius) - double(rest));
     return .5 * GrapplingGun::stiffness_n_per_m * extension * extension;
@@ -123,6 +136,13 @@ struct GrapplingGun::Impl {
     JPH::RefConst<JPH::Shape> shape;
     unsigned cartridges=capacity;
     ShotProfile shot_profile=ShotProfile::Long;
+    bool charging=false;
+    float charge_seconds=0;
+    double preview_clock=0;
+    mutable double preview_at=-1;
+    mutable AimPreview preview_cache{};
+    float charge_fraction() const { return std::clamp(charge_seconds/full_charge_seconds,0.0F,1.0F); }
+    float charged_energy() const { return precision_energy_j+(cartridge_energy_j-precision_energy_j)*charge_fraction(); }
     float shot_energy() const { return shot_profile==ShotProfile::Near ? precision_energy_j : cartridge_energy_j; }
     int selected=-1;
     LineState state=LineState::Ready;
@@ -310,13 +330,103 @@ GrapplingGun::GrapplingGun(JPH::PhysicsSystem &system, JPH::BodyID player, JPH::
     : impl_(std::make_unique<Impl>(system,player,layer)) {}
 GrapplingGun::~GrapplingGun() { clear_transients(); }
 bool GrapplingGun::line_active() const noexcept { return impl_->rope.GetPtr()!=nullptr; }
+bool GrapplingGun::begin_charge() {
+    auto &s=*impl_;
+    if (s.charging) return true;
+    if (s.rope || s.pickup_active) { s.failure=Failure::Busy; return false; }
+    if (!s.cartridges || std::none_of(s.hooks.begin(),s.hooks.end(),[](JPH::BodyID id){return id.IsInvalid();})) {
+        s.failure=Failure::NoInventory; return false;
+    }
+    s.charging=true; s.charge_seconds=0; s.preview_at=-1; s.failure=Failure::None;
+    return true;
+}
+void GrapplingGun::cancel_charge() noexcept {
+    auto &s=*impl_; s.charging=false; s.charge_seconds=0; s.preview_at=-1;
+}
+bool GrapplingGun::fire_charged(JPH::Vec3 aim) {
+    auto &s=*impl_;
+    if (!s.charging) return false;
+    const float energy=s.charged_energy();
+    cancel_charge();
+    return fire_with_energy(aim,energy);
+}
+GrapplingGun::AimPreview GrapplingGun::aim_preview(JPH::Vec3 aim) const {
+    using namespace JPH;
+    const auto &s=*impl_;
+    AimPreview out;
+    if (!s.charging || !finite(aim) || !aim.IsNormalized(1.0e-4F)) return out;
+    out.charge_fraction=s.charge_fraction();
+    // At most30 collision-query batches/sec, only while actively aiming.
+    // The bounded guide is prospective geometry, never a grip/capture claim.
+    if (s.preview_at>=0 && s.preview_clock-s.preview_at<1.0/30.0) {
+        out=s.preview_cache; out.charge_fraction=s.charge_fraction(); return out;
+    }
+    RVec3 player;
+    Vec3 inherited;
+    float player_inverse_mass=0;
+    {
+        BodyLockRead lock(s.system.GetBodyLockInterface(),s.player);
+        if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) return out;
+        player=lock.GetBody().GetCenterOfMassPosition();
+        inherited=lock.GetBody().GetLinearVelocity();
+        player_inverse_mass=lock.GetBody().GetMotionProperties()->GetInverseMass();
+    }
+    aim=aim.Normalized();
+    RVec3 point=launch_origin(player,aim);
+    Vec3 velocity=inherited+launch_impulse(aim,s.charged_energy(),player_inverse_mass+1.0F/hook_mass_kg)/hook_mass_kg;
+    const Vec3 gravity=s.system.GetGravity();
+    const SphereShape envelope(.24F);
+    const RopeBodyFilter filter(s.player,BodyID());
+    ShapeCastSettings settings; settings.mReturnDeepestPoint=true;
+    // The guide shares the real barrel-clearance envelope as well as flight.
+    const RVec3 barrel=muzzle_start(player);
+    ClosestHitCollisionCollector<CastShapeCollector> barrel_hits;
+    const RShapeCast barrel_cast(&envelope,Vec3::sReplicate(1),RMat44::sTranslation(barrel),Vec3(point-barrel));
+    s.system.GetNarrowPhaseQuery().CastShape(barrel_cast,settings,barrel,barrel_hits,{},{},filter);
+    if (barrel_hits.HadHit()) {
+        out.points[0]=barrel;
+        out.points[1]=barrel+Vec3(point-barrel)*barrel_hits.mHit.mFraction;
+        out.count=2; out.blocked=true;
+        s.preview_cache=out; s.preview_at=s.preview_clock;
+        return out;
+    }
+    out.points[out.count++]=point;
+    constexpr float dt=1.0F/90.0F;
+    for (unsigned segment=0;segment<32;++segment) {
+        RVec3 next=point;
+        for (unsigned tick=0;tick<18;++tick) { velocity+=gravity*dt; next+=velocity*dt; }
+        const Vec3 relative(next-player);
+        if (relative.LengthSq()>maximum_line_length_m*maximum_line_length_m) {
+            // Bound the display by available spool. It never locks that point.
+            const Vec3 direction(next-point), start(point-player);
+            const float a=direction.LengthSq(), b=2*start.Dot(direction);
+            const float c=start.LengthSq()-maximum_line_length_m*maximum_line_length_m;
+            const float fraction=a>0 ? std::clamp((-b+std::sqrt(std::max(0.0F,b*b-4*a*c)))/(2*a),0.0F,1.0F) : 0;
+            next=point+direction*fraction; out.line_limit=true;
+        }
+        ClosestHitCollisionCollector<CastShapeCollector> hits;
+        const RShapeCast cast(&envelope,Vec3::sReplicate(1),RMat44::sTranslation(point),Vec3(next-point));
+        s.system.GetNarrowPhaseQuery().CastShape(cast,settings,point,hits,{},{},filter);
+        if (hits.HadHit()) { next=point+Vec3(next-point)*hits.mHit.mFraction; out.blocked=true; out.line_limit=false; }
+        out.points[out.count++]=next;
+        point=next;
+        if (out.blocked || out.line_limit) break;
+    }
+    s.preview_cache=out; s.preview_at=s.preview_clock;
+    return out;
+}
 bool GrapplingGun::set_shot_profile(ShotProfile profile) {
     auto &s=*impl_;
-    if ((profile!=ShotProfile::Near && profile!=ShotProfile::Long) || s.rope || s.pickup_active) return false;
+    if ((profile!=ShotProfile::Near && profile!=ShotProfile::Long) || s.rope || s.pickup_active || s.charging) return false;
     s.shot_profile=profile;
     return true;
 }
 bool GrapplingGun::fire(JPH::Vec3 aim) {
+    const float energy=impl_->shot_energy();
+    cancel_charge();
+    return fire_with_energy(aim,energy);
+}
+bool GrapplingGun::fire_with_energy(JPH::Vec3 aim, float energy_j) {
     using namespace JPH;
     auto &s=*impl_;
     s.last_launch_work=0;
@@ -376,15 +486,11 @@ bool GrapplingGun::fire(JPH::Vec3 aim) {
             rs.mRestLength=Vec3(s.eye(*h)-p->GetCenterOfMassPosition()).Length();
             rope=new GrappleRope(*p,*h,rs);
             const float inverse_mass=p->GetMotionProperties()->GetInverseMass()+h->GetMotionProperties()->GetInverseMass();
-            float magnitude=std::sqrt(2*s.shot_energy()/(inverse_mass*aim.LengthSq()));
-            Vec3 impulse=aim*magnitude;
+            const Vec3 impulse=launch_impulse(aim,energy_j,inverse_mass);
             const auto paid_energy=[&]() {
                 return .5*inverse_mass*(double(impulse.GetX())*impulse.GetX()+
                     double(impulse.GetY())*impulse.GetY()+double(impulse.GetZ())*impulse.GetZ());
             };
-            while (paid_energy()>s.shot_energy()) {
-                magnitude=std::nextafter(magnitude,0.0F); impulse=aim*magnitude;
-            }
             p->AddImpulse(-impulse);
             h->AddImpulse(impulse);
             s.last_launch_work=paid_energy();
@@ -420,6 +526,7 @@ void GrapplingGun::set_reel_input(float input) {
     if (impl_->reel_input!=0) impl_->auto_reel=false;
 }
 void GrapplingGun::release() {
+    cancel_charge();
     auto &s=*impl_;
     s.cancel_pickup();
     s.remove_line();
@@ -428,6 +535,10 @@ void GrapplingGun::release() {
 void GrapplingGun::pre_step(float dt) {
     using namespace JPH;
     auto &s=*impl_;
+    if (std::isfinite(dt) && dt>0) {
+        s.preview_clock+=dt;
+        if (s.charging) s.charge_seconds=std::min(full_charge_seconds,s.charge_seconds+dt);
+    }
     s.pickup_step(dt);
     if (!s.rope || s.pending!=Failure::None || !std::isfinite(dt) || dt<=0) return;
     s.rope->set_drive_limited(false);
@@ -581,7 +692,8 @@ GrapplingGun::Readback GrapplingGun::readback() const {
     result.retrieval_absorbed_relative_energy_j=s.retrieval_absorbed;
     result.reel_work_j=s.reel_work;
     result.auto_reel=s.auto_reel;
-    result.shot_profile=s.shot_profile; result.shot_energy_j=s.shot_energy();
+    result.shot_profile=s.shot_profile; result.shot_energy_j=s.charging ? s.charged_energy() : s.shot_energy();
+    result.charging=s.charging; result.charge_fraction=s.charge_fraction();
     {
         BodyLockRead lock(s.system.GetBodyLockInterface(),s.player);
         if (lock.Succeeded()) result.player_endpoint=lock.GetBody().GetCenterOfMassPosition();
@@ -605,6 +717,7 @@ GrapplingGun::Readback GrapplingGun::readback() const {
 bool GrapplingGun::pickup_active() const noexcept { return impl_->pickup_active; }
 double GrapplingGun::pickup_work_j() const noexcept { return impl_->pickup_work; }
 void GrapplingGun::clear_transients() {
+    cancel_charge();
     auto &s=*impl_;
     s.cancel_pickup(); s.pickup_work=0;
     s.remove_line();

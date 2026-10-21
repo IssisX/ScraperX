@@ -29,6 +29,7 @@ bool Simulation::PhysicsWorld::nearby_grapple_hook(const GrapplingGun::Readback 
     out.cartridges = state.cartridges;
     out.available_hooks = state.available_hooks;
     out.shot_profile = unsigned(state.shot_profile); out.shot_energy_j = state.shot_energy_j;
+    out.charging=state.charging; out.charge_fraction=state.charge_fraction;
     out.line_attached = grappling_gun_->line_active();
     // A locked distant line is a travel tool, not a remote pickup command.
     // Retrieval still validates the actual grasp/clearance in its owner.
@@ -56,6 +57,16 @@ bool Simulation::PhysicsWorld::nearby_grapple_hook(const GrapplingGun::Readback 
     return out;
 }
 
+GrappleAimPreview Simulation::PhysicsWorld::grapple_aim_preview(Vector3 aim) const noexcept {
+    GrappleAimPreview out;
+    if (!grappling_gun_ || !grapple_equipped_) return out;
+    const auto native=grappling_gun_->aim_preview(JPH::Vec3(float(aim.x),float(aim.y),float(aim.z)));
+    out.count=native.count; out.blocked=native.blocked; out.line_limit=native.line_limit;
+    out.charge_fraction=native.charge_fraction;
+    for (unsigned i=0;i<native.count;++i) out.points[i]=to_vector3(native.points[i]);
+    return out;
+}
+
 void Simulation::PhysicsWorld::apply_grapple_commands(const StepCommands &commands) {
     if (!grappling_gun_) return;
     if (commands.grapple_equip_requested) {
@@ -74,6 +85,16 @@ void Simulation::PhysicsWorld::apply_grapple_commands(const StepCommands &comman
         (void)grappling_gun_->set_auto_reel(commands.grapple_auto_reel);
     if (commands.grapple_release) grappling_gun_->release();
     grappling_gun_->set_reel_input(grapple_equipped_ ? float(commands.grapple_reel) : 0.0F);
+    const bool charge_allowed=grapple_equipped_ && traversal_state_==TraversalState::None && carried_entity_==0;
+    if (!charge_allowed || commands.grapple_release) grappling_gun_->cancel_charge();
+    for (std::size_t i=0;i<commands.grapple_charge_command_count;++i) {
+        const auto kind=commands.grapple_charge_commands[i];
+        if (kind==GrappleChargeCommand::Cancel) grappling_gun_->cancel_charge();
+        else if (charge_allowed && !commands.grapple_release) {
+            if (kind==GrappleChargeCommand::Begin) (void)grappling_gun_->begin_charge();
+            else (void)grappling_gun_->fire_charged(JPH::Vec3(float(commands.grapple_aim.x),float(commands.grapple_aim.y),float(commands.grapple_aim.z)));
+        }
+    }
     if (!commands.grapple_action || !grapple_equipped_ ||
         traversal_state_ != TraversalState::None || carried_entity_ != 0) return;
     const auto before = grappling_gun_->readback();
