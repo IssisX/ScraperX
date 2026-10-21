@@ -196,6 +196,7 @@ void Simulation::PhysicsWorld::commit_machine_checkpoint() noexcept {
     checkpoint_.swing = swing_->state();
     checkpoint_.vertical = vertical_->state();
     checkpoint_.matron = matron_->save();
+    checkpoint_.bay = bay_->capture();
 }
 
 // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -254,6 +255,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     trapeze_->restore();
     vertical_->restore(checkpoint_.vertical);
     matron_->restore(checkpoint_.matron);
+    // After her restore, which lets go of the district: its drives as saved.
+    bay_->restore(checkpoint_.bay);
     impacts_->resync();
     up_move_ = UpMove::None;   // chosen afresh from the restored body by the next tick
     wall_run_seconds_left_ = 0.0;
@@ -338,6 +341,7 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(k.drained);
     w.pod(checkpoint_.slingshot);
     w.pod(checkpoint_.swing);
+    w.pod(checkpoint_.bay);
     const auto &v = checkpoint_.vertical;
     w.pod(static_cast<std::uint32_t>(v.controls.size()));
     for (const auto &control : v.controls) {
@@ -383,7 +387,9 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
               r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
               r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
-              r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing);
+              r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
+              std::isfinite(loaded.bay.restart_s) && loaded.bay.restart_s >= 0.0F && loaded.bay.supplied <= 1 &&
+              loaded.bay.leaf_running <= 1 && loaded.bay.fan_running <= 1;
     std::uint32_t controls = 0;
     ok = ok && r.pod(controls) && controls == current.vertical.controls.size();
     if (ok) {

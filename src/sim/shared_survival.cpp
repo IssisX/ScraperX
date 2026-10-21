@@ -101,6 +101,11 @@ void SharedSurvival::set_brake(std::size_t channel, float torque_nm) {
     c.drive.off_brake_nm = torque_nm;
     configure(c);
 }
+void SharedSurvival::restore_running(std::size_t channel, bool running) {
+    auto &c = channels_.at(channel);
+    c.running = running && available(c);
+    configure(c);
+}
 SharedSurvival::DriveView SharedSurvival::drive_view(std::size_t channel) const {
     const auto &c = channels_.at(channel);
     if (!available(c)) return {};

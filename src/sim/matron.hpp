@@ -80,6 +80,19 @@
 // hands at it, and the shackle hangs at the eye on its rope. Hooked on again,
 // the cage rides as before. She never sends a cage away.
 //
+// The bay (bay.hpp, shared survival): a cut across her deck's north band,
+// spanned by a powered leaf. Her lines cross it on the leaf while it is a
+// floor (Link::Leaf). Her trap: on her deck west of the bay, with the player
+// across it to the east, she does not cross after them. She goes down onto
+// the bracket in the bay and puts her hands under the leaf's west end;
+// hands in its district stop its motor, and the leaf comes down onto her
+// palms (the district's finite support, shared_survival.hpp). She holds it
+// level, as bait: a climber who steps onto it is more than she can hold,
+// and it goes down under them, onto her. She lets go when the chain is
+// hooked onto it (the chain holds it: her trap is beaten), when the player
+// is past it or has fallen, or when she has lost them; then up the bracket's
+// rungs and after them. Three times a run at most: a restore forgets.
+//
 // Only simulation state decides anything here (no clock, no randomness): the
 // same start and inputs give the same chase.
 
@@ -536,8 +549,11 @@ public:
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
         bool climbing = false;      // on a ladder, going up it (stride: metres climbed)
         std::uint32_t climbs = 0;   // ladders she went up after the player, this run
-        bool bracing_structure = false;
-        float support_n = 0.0F;
+        bool bracing_structure = false;   // her hands holding the bay's leaf
+        float support_n = 0.0F;           // and what they hold up, N
+        std::uint8_t trap = 0;            // her trap at the bay: 0 none, 1 to its edge, 2 down, 3 to her spot,
+                                          // 4 holding, 5 climbing out
+        std::uint32_t traps = 0;          // times she set it, this run
         bool clinging = false;      // holding on to a floor that moves (or just stopped)
         float floor_y = kDeckTop;   // the level she hunts: its floor's top
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
@@ -587,10 +603,17 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
-    // Opt-in encounter; world owns its lifetime and borrowed machine bodies.
-    // Detach before destroying it. No campaign encounter is enabled by default.
+    // The bay's district (bay.hpp), its lifetime the world's: detach before
+    // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
     [[nodiscard]] bool bracing_structure() const noexcept;
+    // The bay's leaf: a floor (level on its stop, driven), and whether the
+    // chain holds it. Given before pre_step.
+    void set_bay(const JPH::BodyID leaf, const bool leaf_open, const bool hooked) noexcept {
+        bay_leaf_ = leaf;
+        bay_open_ = leaf_open;
+        bay_hooked_ = hooked;
+    }
     // Whether each level's way up is there to guard (Stage A's cage down at
     // her deck, B's down at the 176 ring): given before pre_step. Gone up,
     // there is nothing to guard.
@@ -694,6 +717,16 @@ private:
         Floor,
         Catwalk,
         Gap,
+        Leaf,   // the bay's leaf: a floor while it is one (set_bay)
+    };
+    // Her trap at the bay, phase by phase (see the head of this file).
+    enum class Trap : std::uint8_t {
+        Off,
+        ToEdge,
+        Down,
+        ToSpot,
+        Holding,
+        ClimbOut,
     };
     struct Edge {
         int a, b;
@@ -925,6 +958,23 @@ private:
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.
     std::vector<Climb> climbs_;
+    // The bay (bay.hpp): its bracket as a level of hers, and its rungs.
+    int bay_level_ = -1;
+    int bay_climb_ = -1;
+    JPH::BodyID bay_leaf_;
+    bool bay_open_ = true;
+    bool bay_hooked_ = false;
+    Trap trap_ = Trap::Off;
+    float trap_s_ = 0.0F;        // in this phase
+    float trap_lost_s_ = 0.0F;   // holding with the player gone
+    std::uint32_t traps_ = 0;
+    static constexpr std::uint32_t kTrapsPerRun = 3;
+    static constexpr float kTrapFromM = 12.0F;          // she and the player within this of the bay, either side
+    static constexpr float kTrapLostM = 25.0F;          // holding, the player farther than this from her
+    static constexpr float kTrapLostSeconds = 20.0F;    // for this long: she gives it up
+    // Her trap's step (true: it moved her this tick), and whether she lets go.
+    bool trap_step(float dt, JPH::RVec3 at, JPH::RVec3 player, bool saw, bool heard, bool on_deck);
+    bool trap_lets_go(JPH::RVec3 player, float dt);
     int guess_climb_ = -1;
     int climb_ = -1;
     bool mantling_ = false;

@@ -6,6 +6,7 @@
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
+#include "sim/zipline.hpp"
 
 namespace {
 using scraperx::sim::ImpactLedger;
@@ -14,6 +15,7 @@ using scraperx::sim::InitialSpawn;
 using scraperx::sim::Matron;
 using scraperx::sim::MatronSnapshot;
 using scraperx::sim::Simulation;
+using scraperx::sim::Zipline;
 
 constexpr int kStateDormant = static_cast<int>(Matron::State::Dormant);
 constexpr int kStateStraining = static_cast<int>(Matron::State::Straining);
@@ -452,12 +454,18 @@ void run_matron_balance() {
                 "matron heave: a sprint toward her locker wakes her");
         const std::uint32_t box_piece = h.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables) + 1;
         const std::uint64_t box = LooseStock::kFirstEntity + box_piece;
-        require(walk_to(h, -4.4, -125.85, 20.0, 0.08), "matron heave: to the toolbox by the north rail");
+        // Back across the bay on its leaf (bay.hpp), then to the toolbox.
+        require(walk_to(h, 0.4, Matron::kBandNorthZ, 20.0, 0.2) && walk_to(h, -4.6, Matron::kBandNorthZ, 20.0, 0.2) &&
+                    walk_to(h, -4.4, -125.85, 20.0, 0.08),
+                "matron heave: to the toolbox by the north rail");
         (void)h.set_facing(0.0, 1.0);
         (void)h.advance_frame(0.3);
         require(h.snapshot().carry_target_entity_id == box && h.request_pick_up(), "matron heave: the toolbox taken up");
         (void)h.advance_frame(0.6);
         require(h.snapshot().carrying_entity_id == box, "matron heave: the toolbox in the hands");
+        // Onto her line west of the bay (bay.hpp): she comes off its leaf
+        // straight along the band, and the throw's way to her is clear.
+        require(walk_to(h, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "matron heave: west along the band with it");
         // Still, the toolbox held, until she comes for the climber in sight:
         // from 9 m the view kept on her (where she will be a moment on, as a
         // thrower leads a runner), and the throw at 3.4 m.
@@ -666,7 +674,9 @@ void run_matron_mischief() {
         (void)s.request_pick_up();
         (void)s.advance_frame(0.4);
         require(s.snapshot().carrying_entity_id == box, "matron mischief: picked up");
-        require(go(s, 2.0, -126.6, false, 12.0, 0.2), "matron mischief: carried east along the band");
+        require(go(s, -4.6, Matron::kBandNorthZ, false, 12.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                    go(s, 2.0, -126.6, false, 12.0, 0.2),
+                "matron mischief: carried east along the band, across the bay on its leaf");
         (void)s.request_set_down();
         (void)s.advance_frame(1.0);
         const std::uint32_t box_body = s.kit_body_index(box);
@@ -735,7 +745,9 @@ void run_matron_mischief() {
         (void)s.request_pick_up();
         (void)s.advance_frame(0.4);
         require(box != 0 && s.snapshot().carrying_entity_id == box, "matron hoard: picked up");
-        require(go(s, 6.0, -126.4, false, 14.0, 0.2), "matron hoard: carried east toward her locker");
+        require(go(s, -4.6, Matron::kBandNorthZ, false, 14.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 14.0, 0.2) &&
+                    go(s, 6.0, -126.4, false, 14.0, 0.2),
+                "matron hoard: carried east toward her locker, across the bay on its leaf");
         (void)s.request_set_down();
         (void)s.advance_frame(1.0);
         const std::uint32_t box_body = s.kit_body_index(box);
@@ -1338,13 +1350,16 @@ void run_matron() {
         (void)s.request_pick_up();
         (void)s.advance_frame(0.3);
         require(s.snapshot().carrying_entity_id == Simulation::kWellAHandleEntityId, "matron ride: the handle in hand");
-        // She comes for the cage; with her 4.5 m from its mouth, step back.
+        // She comes for the cage; with her 3.8 m from its mouth, step back.
+        // (4.5 m before the bay's leaf put her line's last bend at its west
+        // end, bay.hpp: she now reaches the mouth a moment later, and clings
+        // at its west side.)
         bool near = false;
         for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !near; ++i) {
             (void)s.set_facing(0.0, 1.0);
             tick(s);
             const auto m = s.matron_state();
-            near = m.state == kStateHunting && std::hypot(m.position.x + 10.5, m.position.z + 129.9) < 4.5;
+            near = m.state == kStateHunting && std::hypot(m.position.x + 10.5, m.position.z + 129.9) < 3.8;
         }
         require(near, "matron ride: she comes for the cage");
         bool opened = false;
@@ -1383,7 +1398,10 @@ void run_matron() {
         require(with_her_s > alone_s + 0.5, "matron ride: her weight slows the cage away");
         // At the top: out of the cage's mouth and across the 1.09 m to the ring,
         // then off east along it, out of her reach.
-        require(walk_to(s, -11.0, -130.3, 2.0, 0.1), "matron ride: to the cage's mouth at the top");
+        // The mouth is 3 m wide: the player hops from the side of it she is
+        // not clinging at.
+        const double hop_x = s.matron_state().position.x < -10.5 ? -9.9 : -11.0;
+        require(walk_to(s, hop_x, -130.3, 2.0, 0.1), "matron ride: to the cage's mouth at the top");
         (void)s.set_facing(0.0, 1.0);
         (void)s.set_move_input(0.0, 0.6);
         tick(s);
@@ -1528,26 +1546,52 @@ void run_matron() {
     // ---- lines: seen riding a line away, in the Turn she goes down its cable after ----
     {
         Simulation s(InitialSpawn::Deck154);
-        wake_and_wait_east(s);
+        // The sprint that wakes her, then crouched west over the bay's leaf
+        // and down the west band, to wait for her there: the run round below
+        // then comes to the line's ramp from the east, with her behind on
+        // this side of the bay. (Run east over it, the player goes unheard
+        // under its fan, bay.hpp; or, heard or seen, she does not cross after
+        // them: her trap, matron.hpp.)
+        require(s.advance_frame(1.0).accepted, "matron line: settle");
+        require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron line: a sprint toward her locker");
+        (void)s.set_crouch_input(true);
+        require(go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0) &&
+                    go(s, -Matron::kBandX, -138.0, false, 40.0),
+                "matron line: a crouched walk down the west band");
+        (void)s.set_move_input(0.0, 0.0);
         require(wait_for_her(s, 14.0, 40.0), "matron line: she comes");
         (void)s.set_crouch_input(false);
-        // A long run round ahead of her (her first quiet spell over), back
-        // along the north band to the 154 m line's ramp.
-        require(go(s, Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
-                    go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 10.0, 1.0) &&
-                    go(s, -Matron::kBandX, Matron::kBandNorthZ, true, 10.0, 1.0) && go(s, 1.0, Matron::kBandNorthZ, true, 6.0, 0.8) &&
+        // A long run round ahead of her (her first quiet spell over), by the
+        // south and east bands back along the north band to the 154 m line's
+        // ramp.
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
+                    go(s, Matron::kBandX, Matron::kBandSouthZ, true, 10.0, 1.0) &&
+                    go(s, Matron::kBandX, Matron::kBandNorthZ, true, 10.0, 1.0) && go(s, 1.6, Matron::kBandNorthZ, true, 6.0, 0.8) &&
                     walk_to(s, 3.0, -132.36, 4.0, 0.3),
                 "matron line: round the deck to the line's ramp");
-        require(walk_to(s, 6.0, -132.36, 6.0, 0.12), "matron line: up the ramp onto the stand");
         (void)s.set_move_input(0.0, 0.0);
-        // With her near, the jump for the bar, and away down the line.
-        bool near = false;
-        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !near; ++i) {
+        // At the ramp's foot, wait for her charge (her Turn); then up onto the
+        // stand and the jump for the bar, and away down the line, with her
+        // coming up the ramp behind.
+        bool charging = false;
+        for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !charging; ++i) {
             tick(s);
-            near = s.matron_state().state == kStateHunting && matron_player_distance(s) < 11.0;
+            const auto m = s.matron_state();
+            charging = m.state == kStateHunting && m.turn != 0 && matron_player_distance(s) < 14.0;
         }
-        require(near && s.snapshot().death_count == 0, "matron line: she comes for the player on the stand");
+        require(charging && s.snapshot().death_count == 0, "matron line: she comes for the player at the line's ramp");
+        require(walk_to(s, 6.0, -132.36, 3.0, 0.12), "matron line: up the ramp onto the stand");
+        (void)s.set_move_input(0.0, 0.0);
         (void)s.set_facing(0.0, -1.0);
+        // Stood still under the bar (a step's run-on carries a jump off the
+        // stand's end).
+        for (int i = 0; i < static_cast<int>(Simulation::kTickRateHz); ++i) {
+            const double was_x = s.snapshot().player_position.x;
+            tick(s);
+            if (std::abs(s.snapshot().player_position.x - was_x) < 0.001) {
+                break;
+            }
+        }
         require(s.request_jump() && advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2),
                 "matron line: the player takes the line");
         const int line = s.snapshot().zipline_line;
@@ -1561,7 +1605,9 @@ void run_matron() {
             tick(s);
             on_cable = on_cable || s.matron_state().on_line;
             const auto m = s.snapshot();
-            if (m.zipline_riding && m.zipline_along_m > length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
+            // Stopped in the buffer: let go.
+            if (m.zipline_riding && m.zipline_along_m > length - Zipline::kStopMarginM - Zipline::kBufferM &&
+                std::abs(m.zipline_speed_mps) < 0.3) {
                 (void)s.request_release();
             }
             player_off = player_off || (!m.zipline_riding && m.player_grounded && m.player_position.y < 150.0);

@@ -437,7 +437,7 @@ void up_throw() {
     require(s.advance_frame(0.5).accepted, "up throw: settle");
     const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
     const auto throw_one = [&](const std::uint32_t piece, const double pick_x, const double pick_z, const double lo,
-                               const double hi, const char *what) {
+                               const double hi, const char *what, const double along_x = 1.0) {
         const std::uint64_t entity = LooseStock::kFirstEntity + piece;
         const std::uint32_t body = s.kit_body_index(entity);
         require(walk_to(s, pick_x, pick_z, 30.0, 0.08), what);
@@ -446,8 +446,9 @@ void up_throw() {
         require(s.snapshot().carry_target_entity_id == entity && s.request_pick_up(), what);
         (void)s.advance_frame(0.6);
         require(s.snapshot().carrying_entity_id == entity, what);
-        // Turned along the band (east), the throw's way clear.
-        (void)s.set_facing(1.0, 0.0);
+        // Turned along the band (east, or west where the bay's rail stands
+        // east of it, bay.hpp), the throw's way clear.
+        (void)s.set_facing(along_x, 0.0);
         (void)s.advance_frame(0.8);
         const auto path = s.throw_prediction();
         require(path.size() >= 3, "up throw: the throw's path is drawn ahead while the piece is held");
@@ -488,7 +489,7 @@ void up_throw() {
         require(off < 1.0, "up throw: it comes down where its drawn path did");
     };
     // Her deck's toolbox, from the pick spot south of it; then the drum.
-    throw_one(first, -6.5, -125.75, 5.4, 6.2, "a toolbox thrown");
+    throw_one(first, -6.5, -125.75, 5.4, 6.2, "a toolbox thrown", -1.0);
     (void)s.advance_frame(1.0);
     throw_one(first + 2, -15.0, -125.95, 2.9, 3.7, "a drum thrown");
     std::cout << "PASS scraperx_sim up throw: toolbox and drum thrown, unheard at the hands, landing on their drawn "

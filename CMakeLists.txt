@@ -37,6 +37,7 @@ add_library(scraperx_sim STATIC
     src/sim/climb_c7.cpp
     src/sim/summit.cpp
     src/sim/shared_survival.cpp
+    src/sim/bay.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
     src/sim/fabricated.cpp

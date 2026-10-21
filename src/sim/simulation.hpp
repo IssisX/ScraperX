@@ -246,9 +246,34 @@ struct MatronSnapshot final {
     std::uint32_t pipe_flanges = 0;
     std::uint32_t pipe_slams = 0;
     double pipe_slam_mps = 0.0;
+    // The bay (bay.hpp): her hands holding its leaf and what they hold up, N;
+    // her trap's phase (Matron::Trap: 0 none .. 4 holding, 5 climbing out)
+    // and how many times she set it this run.
+    bool bracing = false;
+    double support_n = 0.0;
+    std::uint8_t trap = 0;
+    std::uint32_t traps = 0;
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.
     std::array<double, kPlanks * 9> planks{};
+};
+
+// The bay on the 154 m deck (bay.hpp): its leaf, its district (the leaf's
+// drive and the fan), the chain, and hands in it.
+struct BaySnapshot final {
+    double leaf_angle = 0.0;      // rad, 0 level on its stop, down negative
+    double leaf_speed = 0.0;      // rad/s
+    bool leaf_running = false;    // its motor holding it
+    bool leaf_open = false;       // a floor to walk: level and driven
+    double fan_fraction = 0.0;    // its speed over its running speed
+    bool fan_running = false;
+    bool hooked = false;          // the chain on the leaf's eye
+    double chain_n = 0.0;
+    bool hands = false;           // hands in the district (hers, holding the leaf)
+    double support_n = 0.0;
+    Vector3 hand{};               // where her palms are
+    std::uint32_t trips = 0;      // times hands stopped the district
+    std::uint32_t restarts = 0;   // times it started again by itself
 };
 
 // AS-012, the swing off the 220 ring: the rider's seat and the ram on their
@@ -1351,6 +1376,7 @@ public:
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
     [[nodiscard]] SummitSnapshot summit_state() const noexcept;
     [[nodiscard]] MatronSnapshot matron_state() const noexcept;
+    [[nodiscard]] BaySnapshot bay_state() const noexcept;
     // While a piece of loose stock is in the hands: the path a throw would
     // send it on now (from the hands, cut at the first thing it would hit;
     // empty otherwise).

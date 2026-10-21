@@ -367,6 +367,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         }
         matron_->set_throwables(std::move(throwables));
     }
+    // The bay on the 154 m deck (bay.hpp): its kit bodies after every other's,
+    // so older saves' lists line up.
+    bay_ = std::make_unique<Bay>(physics_system_, *kit_);
+    matron_->set_shared_survival(&bay_->district());
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.
@@ -405,6 +409,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     drop_hang_arms();
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
+    bay_.reset();
     summit_.reset();
     yard_crane_.reset();
     forklifts_.clear();
@@ -674,8 +679,16 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_rigged(kit_->rope_end_entity(well_.a_rope) == kWellACageEntityId,
                         kit_->rope_end_entity(well_.b_rope) == kWellBCageEntityId);
     matron_->set_player_holding(carried_entity_);
-    matron_->pre_step(delta_seconds, bodies.GetPosition(player_id_),
-                      std::max(matron_loudness(bodies), static_cast<float>(commands.room_loudness)));
+    // The bay (bay.hpp): its district starts again by itself first; she
+    // knows whether its leaf is a floor and whether the chain holds it; and
+    // a climber's steps near its running fan are lost in its noise (the
+    // room's own sound is not).
+    bay_->pre_step(delta_seconds);
+    matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
+    const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
+    matron_->pre_step(delta_seconds, player_at,
+                      std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
+                               static_cast<float>(commands.room_loudness)));
     if (const int way = matron_->take_unrig(); way >= 0) {
         // Her hands have the rope's end off the cage's eye: it hangs there on
         // its shackle, to be hooked on again.
@@ -691,6 +704,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
     physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
+    bay_->post_step();
     impacts_->post_step(carried_entity_);
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->post_step(delta_seconds);
@@ -1117,6 +1131,19 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
             static_cast<float>(level) * kStackLevelHeight - kStackDeckHalfThickness;
         // Deck ring: two full-width bands and two inner bands.
         for (const float side : {1.0F, -1.0F}) {
+            if (level == kStackLevelCount && side > 0.0F) {
+                // The 154 m deck's north band is cut by the bay (bay.hpp):
+                // its parts either side of it.
+                const float west = kStackCenterX - kStackHalfExtent;
+                const float east = kStackCenterX + kStackHalfExtent;
+                const float west_half = 0.5F * (Bay::kWestX - west);
+                const float east_half = 0.5F * (east - Bay::kEastX);
+                frame(JPH::Vec3(west_half, kStackDeckHalfThickness, kStackDeckBandDepth * 0.5F),
+                      JPH::RVec3(west + west_half, slab_y, kStackCenterZ + side * band_center));
+                frame(JPH::Vec3(east_half, kStackDeckHalfThickness, kStackDeckBandDepth * 0.5F),
+                      JPH::RVec3(Bay::kEastX + east_half, slab_y, kStackCenterZ + side * band_center));
+                continue;
+            }
             frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
                             kStackDeckBandDepth * 0.5F),
                   JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + side * band_center));

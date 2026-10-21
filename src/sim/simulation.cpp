@@ -11,12 +11,13 @@ namespace scraperx::sim {
 namespace {
 
 // "SXCLIMB3" and the sizes of every saved type: a build whose types differ
-// writes a different key (3: a kit body's state says whether it sleeps).
+// writes a different key (3: a kit body's state says whether it sleeps; the
+// bay's state, bay.hpp, since 2026-10-21).
 std::uint64_t save_format_key() noexcept {
     std::uint64_t key = 0x5358434C494D4233ULL;
     const std::size_t sizes[] = {sizeof(kit::Kit::BodyState), sizeof(kit::AnchorIndex), sizeof(kit::Kit::Pile),
                                  sizeof(Slingshot::State), sizeof(Swing::State),
-                                 sizeof(vertical::Command), sizeof(JPH::RVec3)};
+                                 sizeof(vertical::Command), sizeof(JPH::RVec3), sizeof(Bay::State)};
     for (const std::size_t size : sizes) {
         key = key * 1099511628211ULL ^ static_cast<std::uint64_t>(size);
     }
@@ -1120,6 +1121,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_flanges = view.pipe_flanges;
     result.pipe_slams = view.pipe_slams;
     result.pipe_slam_mps = view.pipe_slam_mps;
+    result.bracing = view.bracing_structure;
+    result.support_n = view.support_n;
+    result.trap = view.trap;
+    result.traps = view.traps;
     result.catches = matron.catches();
     result.planks_fallen = matron.planks_fallen();
     result.plank_load_peak_n = matron.strain_force_peak_n();
@@ -1137,6 +1142,26 @@ MatronSnapshot Simulation::matron_state() const noexcept {
         result.planks[o + 7] = p.bolted ? 1.0 : 0.0;
         result.planks[o + 8] = p.gone ? 1.0 : 0.0;
     }
+    return result;
+}
+
+BaySnapshot Simulation::bay_state() const noexcept {
+    const Bay &bay = physics_world_->bay();
+    const Bay::View &view = bay.view();
+    BaySnapshot result;
+    result.leaf_angle = view.leaf_angle;
+    result.leaf_speed = view.leaf_speed;
+    result.leaf_running = view.leaf_running;
+    result.leaf_open = bay.leaf_open();
+    result.fan_fraction = view.fan_fraction;
+    result.fan_running = view.fan_running;
+    result.hooked = view.hooked;
+    result.chain_n = view.chain_n;
+    result.hands = view.hands;
+    result.support_n = view.support_n;
+    result.hand = Vector3{view.hand_x, view.hand_y, view.hand_z};
+    result.trips = view.trips;
+    result.restarts = view.restarts;
     return result;
 }
 

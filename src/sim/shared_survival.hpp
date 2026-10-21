@@ -62,6 +62,10 @@ public:
     Restart start(std::size_t channel);
     void stop(std::size_t channel);
     void set_brake(std::size_t channel, float torque_nm);
+    // After a checkpoint restore only: the channel as it was saved, running
+    // or not, without a fresh start's checks (its bodies were restored with
+    // it; restoring is not starting).
+    void restore_running(std::size_t channel, bool running);
     // Called once per physics tick, before Jolt::Update, with the actual actor.
     // Eligibility is AI intent, never a substitute for contact or footing.
     // Facing rotates the authored hand offset inside the body frame (Matron

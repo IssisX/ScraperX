@@ -109,6 +109,8 @@ public:
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }
+    [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
+    [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
@@ -738,6 +740,8 @@ public:
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<Summit> summit_;
+    // The bay on the 154 m deck (bay.hpp): after every other kit body.
+    std::unique_ptr<Bay> bay_;
     std::unique_ptr<LooseStock> loose_stock_;
     std::unique_ptr<ImpactLedger> impacts_;
     std::vector<std::unique_ptr<Forklift>> forklifts_;
@@ -907,6 +911,7 @@ public:
         Swing::State swing{};
         Matron::Saved matron{};
         scraperx::sim::vertical::Route::State vertical{};
+        Bay::State bay{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;

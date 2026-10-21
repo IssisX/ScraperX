@@ -26,6 +26,7 @@
 #include "sim/zipline.hpp"
 #include "sim/corpse.hpp"
 #include "sim/matron.hpp"
+#include "sim/bay.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 

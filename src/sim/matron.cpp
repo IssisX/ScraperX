@@ -4,6 +4,7 @@
 
 #include "sim/zipline.hpp"
 #include "sim/shared_survival.hpp"
+#include "sim/bay.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
@@ -73,11 +74,12 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     deck.nodes = {{-kBandX, kBandNorthZ},      {0.0F, kBandNorthZ},          {kBandX, kBandNorthZ},
                   {kBandX, kMidZ},             {kBandX, kBandSouthZ},        {0.0F, kBandSouthZ},
                   {-kBandX, kBandSouthZ},      {-kBandX, kMidZ},             {kLadderSideX, kBandNorthZ},
-                  {kLadderSideX, kLadderFootZ}, {kLadderX, kLadderFootZ}};
+                  {kLadderSideX, kLadderFootZ}, {kLadderX, kLadderFootZ}, {Bay::kWestX - 0.5F, kBandNorthZ}};
     const std::vector<Edge> band_loop = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor},
                                          {3, 4, Link::Floor}, {4, 5, Link::Floor}, {5, 6, Link::Floor},
                                          {6, 7, Link::Floor}, {7, 0, Link::Floor}};
-    deck.edges = {{0, 1, Link::Floor}, {1, 8, Link::Floor}, {8, 2, Link::Floor}, {2, 3, Link::Floor},
+    // The north band's line crosses the bay (bay.hpp) on its leaf.
+    deck.edges = {{0, 11, Link::Floor}, {11, 1, Link::Leaf}, {1, 8, Link::Floor}, {8, 2, Link::Floor}, {2, 3, Link::Floor},
                   {3, 4, Link::Floor}, {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor},
                   {7, 0, Link::Floor}, {7, 3, Link::Catwalk}, {8, 9, Link::Floor}, {9, 10, Link::Floor}};
     deck.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}};
@@ -124,6 +126,16 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     // steps off its bridge, which she knows but does not take hold of.
     climbs_ = {{kLadderX, kLadderFootZ, kDeckTop, kRingFloor, 0.0F, 1.0F, kLadderX, kLadderFootZ + kMantleOutM, true},
                {kRiserX, kRiserFootZ, kDeckTop - kStackPitch, kDeckTop, 0.0F, 1.0F, kRiserX, kRiserTopZ, false}};
+    // The bay's bracket (bay.hpp): where she holds the leaf and the foot of
+    // its rungs, which she takes hold of whatever her stage (her own way out
+    // of her own trap), topping out west onto her deck.
+    Level bay{Bay::kBracketTop, {{Bay::kBraceX, Bay::kBraceZ}, {Bay::kRungsX, Bay::kRungsZ}},
+              {{0, 1, Link::Floor}}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
+    levels_.push_back(bay);
+    bay_level_ = static_cast<int>(levels_.size()) - 1;
+    climbs_.push_back({Bay::kRungsX, Bay::kRungsZ, Bay::kBracketTop, kDeckTop, -1.0F, 0.0F, Bay::kDropX, Bay::kDropZ,
+                       true});
+    bay_climb_ = static_cast<int>(climbs_.size()) - 1;
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -356,7 +368,8 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     std::vector<Node> nodes = level.nodes;
     std::vector<Edge> edges = level.edges;
     const auto allowed = [&](const Edge &e) {
-        return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps);
+        return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps) &&
+               (e.link != Link::Leaf || bay_open_);
     };
     // She stands on a line she may take (the catwalk under her counts, but
     // only once she is out on it: beside it on the band, the band's line is
@@ -368,6 +381,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         float bz = 0.0F;
         for (std::size_t e = 0; e < edges.size(); ++e) {
             if ((loop_only && !allowed(edges[e])) || (edges[e].link == Link::Gap && !allow_gaps) ||
+                (edges[e].link == Link::Leaf && !bay_open_) ||
                 (!allowed(edges[e]) && !on_catwalk_line(x, z, 0.0F))) {
                 continue;
             }
@@ -609,7 +623,9 @@ void Matron::feel_floor(const float dt) {
     float floor_vy = 0.0F;
     if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(at, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self)) {
         feet_y_ = float(at.GetY()) - reach * hit.mFraction;
-        floor_vy = bodies.GetLinearVelocity(hit.mBodyID).GetY();
+        // The bay's leaf on its stop under its motor is a walkway: what it
+        // gives under her stride is not a floor going.
+        floor_vy = hit.mBodyID == bay_leaf_ && bay_open_ ? 0.0F : bodies.GetLinearVelocity(hit.mBodyID).GetY();
     }
     if (std::abs(floor_vy) > kRideMps) {
         if (!riding_) {
@@ -730,25 +746,32 @@ void Matron::ride_line() {
     }
     // Down at the end (at the stop, or against the trolley or its rider
     // there) and still: she lets go, swinging on over the far band as she
-    // does. Never into the shaft: held still with any of her over it (the
-    // buffer's clamp, a rider still hanging at the stop ahead of her), she
-    // eases her forearms' drag and comes on as far as the cable lets her.
+    // does. Never into the shaft: held still where her swing would come down
+    // with any of her over it (the buffer's clamp, a trolley left short in
+    // it, a rider still hanging at the stop ahead of her), she eases her
+    // forearms' drag and comes on as far as the cable lets her.
     BodyInterface &bodies = physics_.GetBodyInterface();
     const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(ride.line)];
     const RVec3 at = bodies.GetPosition(body_);
     const bool at_end = ride.along_m > line.length - Zipline::kStopMarginM - Zipline::kBufferM;
-    const bool over_shaft = std::abs(float(at.GetX())) < kShaftHalfM + kRadius &&
-                            std::abs(float(at.GetZ()) - kMidZ) < kShaftHalfM + kRadius;
+    const auto over_shaft = [](const RVec3 p) {
+        return std::abs(float(p.GetX())) < kShaftHalfM + kRadius && std::abs(float(p.GetZ()) - kMidZ) < kShaftHalfM + kRadius;
+    };
     // Her forearms' drag: friction on her weight across the cable, as a
     // squeeze of the line's brake.
     const float across = std::sqrt(std::max(0.0F, 1.0F - line.direction.GetY() * line.direction.GetY()));
     const float gravity = -physics_.GetGravity().GetY();
-    zipline_->set_other_brake(at_end && over_shaft ? 0.0F
-                                                   : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && !over_shaft && std::abs(ride.speed_mps) < 0.3F) {
+    zipline_->set_other_brake(at_end && over_shaft(at)
+                                  ? 0.0F
+                                  : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
+    // Where letting go puts her: on along the line as far as her swing
+    // carries her while she drops to the far floor.
+    const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
+    const float drop = std::max(0.0F, float(at.GetY() - line.bottom_floor.GetY()) - kStandCentre);
+    const RVec3 lands = at + run * (kLetGoSwingMps * std::sqrt(2.0F * drop / gravity));
+    if (at_end && !over_shaft(lands) && std::abs(ride.speed_mps) < 0.3F) {
         zipline_->unclip_other();
         on_line_ = false;
-        const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
         bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * kLetGoSwingMps);
     }
 }
@@ -788,10 +811,11 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
         return true;
     }
     // At its foot, looking up it. Frail, she cannot take hold of it; in the
-    // Turn she does, and her hands have her weight.
+    // Turn she does, and her hands have her weight. The bay's rungs she
+    // always does: they are her way out of her own trap.
     walk_toward(dt, c.x, c.z, 0.0F, accel);
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-    if (turn_ == Turn::None) {
+    if (turn_ == Turn::None && best != bay_climb_) {
         return true;
     }
     climb_ = best;
@@ -1380,6 +1404,172 @@ bool Matron::bracing_structure() const noexcept {
     return shared_survival_ && shared_survival_->snapshot().hands_busy;
 }
 
+namespace {
+bool in_north_band(const float z) noexcept {
+    return z > Bay::kSouthZ + 0.3F && z < Bay::kNorthZ - 0.3F;
+}
+} // namespace
+
+// Her trap at the bay (matron.hpp, bay.hpp): set when she is on her deck
+// west of it and the player across it to the east; then to the edge over
+// the bracket, down onto it, to her spot under the leaf's west end, hands
+// up (Holding: the shared block before the states holds the leaf); and once
+// she lets go, up the rungs onto her deck. True when it moved her.
+bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const bool saw, const bool heard,
+                       const bool on_deck) {
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const float px = float(player.GetX());
+    const float pz = float(player.GetZ());
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const bool player_past = px < Bay::kWestX - 0.2F && in_north_band(pz) && player.GetY() > kDeckTop;
+    trap_s_ += dt;
+    if (trap_ == Trap::Off) {
+        const bool can = level_ == 0 && turn_ == Turn::None && held_ < 0 && traps_ < kTrapsPerRun && bay_open_ &&
+                         !bay_hooked_ &&
+                         (state_ == State::Guarding || state_ == State::Hunting || state_ == State::Searching);
+        const bool she_west = ax < Bay::kWestX - 0.3F && ax > Bay::kWestX - kTrapFromM && in_north_band(az);
+        const bool player_east = on_deck && (saw || heard) && px > Bay::kEastX + 0.3F &&
+                                 px < Bay::kEastX + kTrapFromM && in_north_band(pz) &&
+                                 std::abs(float(player.GetY()) - (kDeckTop + 1.0F)) < 1.5F;
+        if (!(can && she_west && player_east)) {
+            return false;
+        }
+        trap_ = Trap::ToEdge;
+        trap_s_ = 0.0F;
+        ++traps_;
+        allow_catwalk_ = false;
+    }
+    if (trap_ == Trap::ToEdge) {
+        // To the deck's edge over the bracket, south of the leaf, where the
+        // rail is open; then facing the bay.
+        if (level_ != 0 || player_past || trap_s_ > 20.0F) {
+            trap_ = Trap::Off;
+            return false;
+        }
+        const float off = distance_xz(ax, az, Bay::kDropX, Bay::kDropZ);
+        if (off > 0.2F) {
+            float wx = Bay::kDropX;
+            float wz = Bay::kDropZ;
+            route_toward(ax, az, Bay::kDropX, Bay::kDropZ, false, wx, wz);
+            walk_toward(dt, wx, wz, std::min(kSearchMps, 0.6F + 2.0F * off));
+            return true;
+        }
+        walk_toward(dt, ax, az, 0.0F);
+        yaw_ = turn_toward(yaw_, 0.5F * kPi, kTurnRate, dt);
+        if (std::abs(yaw_ - 0.5F * kPi) < 0.1F) {
+            trap_ = Trap::Down;
+            trap_s_ = 0.0F;
+        }
+        return true;
+    }
+    if (trap_ == Trap::Down) {
+        // A step off the edge (her feet past it, not her lines), then straight
+        // down onto the bracket 1.78 m below.
+        const float feet = float(at.GetY()) - kStandCentre;
+        Vec3 velocity = bodies.GetLinearVelocity(body_);
+        velocity = Vec3(feet > kDeckTop - 0.6F ? 0.8F : 0.0F, velocity.GetY(), 0.0F);
+        bodies.SetLinearVelocity(body_, velocity);
+        yaw_ = turn_toward(yaw_, 0.5F * kPi, kTurnRate, dt);
+        speed_ = std::abs(velocity.GetX());
+        stride_ += speed_ * dt;
+        if (level_ == bay_level_ && std::abs(velocity.GetY()) < 0.3F && feet < Bay::kBracketTop + 0.2F) {
+            trap_ = Trap::ToSpot;
+            trap_s_ = 0.0F;
+        } else if (trap_s_ > 4.0F || feet < Bay::kBracketTop - 1.0F) {
+            // Missed it: whatever she is on now is hers to get off.
+            trap_ = Trap::Off;
+            return false;
+        }
+        return true;
+    }
+    if (trap_ == Trap::ToSpot) {
+        // On the bracket, to her spot under the leaf's west end, facing it.
+        if (level_ != bay_level_) {
+            trap_ = Trap::Off;
+            return false;
+        }
+        if (player_past || trap_s_ > 8.0F) {
+            trap_ = Trap::ClimbOut;
+            trap_s_ = 0.0F;
+            return true;
+        }
+        const float off = distance_xz(ax, az, Bay::kBraceX, Bay::kBraceZ);
+        if (off > 0.3F) {
+            walk_toward(dt, Bay::kBraceX, Bay::kBraceZ, std::min(0.9F, 0.3F + 2.0F * off));
+            return true;
+        }
+        // The last of it placed foot by foot (her walk stops steering inside
+        // 0.15 m): her hands must come under the leaf, not beside it.
+        Vec3 velocity = bodies.GetLinearVelocity(body_);
+        const float gx = std::clamp((Bay::kBraceX - ax) * 4.0F, -0.6F, 0.6F);
+        const float gz = std::clamp((Bay::kBraceZ - az) * 4.0F, -0.6F, 0.6F);
+        bodies.SetLinearVelocity(body_, Vec3(gx, velocity.GetY(), gz));
+        target_x_ = Bay::kBraceX;
+        target_z_ = Bay::kBraceZ;
+        yaw_ = turn_toward(yaw_, Bay::kBraceYaw, kTurnRate, dt);
+        speed_ = std::hypot(gx, gz);
+        stride_ += speed_ * dt;
+        if (off < 0.05F && std::abs(yaw_ - Bay::kBraceYaw) < 0.03F) {
+            trap_ = Trap::Holding;
+            trap_s_ = 0.0F;
+            trap_lost_s_ = 0.0F;
+        }
+        return true;
+    }
+    if (trap_ == Trap::Holding) {
+        // Hands up at her spot (the shared block holds the leaf once they
+        // meet it). They meet nothing within 2 s: no leaf there to hold.
+        walk_toward(dt, ax, az, 0.0F);
+        yaw_ = turn_toward(yaw_, Bay::kBraceYaw, kTurnRate, dt);
+        if (player_past || (trap_s_ > 2.0F && !bracing_structure())) {
+            trap_ = Trap::ClimbOut;
+            trap_s_ = 0.0F;
+        }
+        return true;
+    }
+    if (trap_ == Trap::ClimbOut) {
+        if (climb_ < 0 && level_ != bay_level_) {
+            // Up and out (or off it some other way): done with it.
+            trap_ = Trap::Off;
+            return false;
+        }
+        const Climb &c = climbs_[static_cast<std::size_t>(bay_climb_)];
+        const float off = distance_xz(ax, az, c.x, c.z);
+        if (off > 0.2F) {
+            walk_toward(dt, c.x, c.z, std::min(1.0F, 0.3F + 2.0F * off));
+            return true;
+        }
+        walk_toward(dt, c.x, c.z, 0.0F);
+        yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
+        climb_ = bay_climb_;
+        mantling_ = false;
+        ++climbs_done_;
+        bodies.SetGravityFactor(body_, 0.0F);
+        return true;
+    }
+    return false;
+}
+
+// Whether, holding the bay's leaf, she lets it go (matron.hpp).
+bool Matron::trap_lets_go(const RVec3 player, const float dt) {
+    // The chain has it: her trap is beaten.
+    if (bay_hooked_) {
+        return true;
+    }
+    const float px = float(player.GetX());
+    const float py = float(player.GetY());
+    const float pz = float(player.GetZ());
+    // The player down in the bay or under the deck, or past it on hers.
+    if (py < kDeckTop - 0.5F || (px < Bay::kWestX - 0.2F && in_north_band(pz))) {
+        return true;
+    }
+    // Lost: far from her, or off her deck, for long enough.
+    const bool far = distance_xz(px, pz, Bay::kBraceX, Bay::kBraceZ) > kTrapLostM || py > kDeckTop + 6.0F;
+    trap_lost_s_ = far ? trap_lost_s_ + dt : 0.0F;
+    return trap_lost_s_ >= kTrapLostSeconds;
+}
+
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
@@ -1491,7 +1681,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                                    ? carry_m(player, ear)
                                    : std::numeric_limits<float>::max();
     if (shared_survival_) {
-        const bool eligible = body_in_world_ && out(state_) && state_ != State::Emerging &&
+        // Her hands go up under the bay's leaf only in her trap, at her spot
+        // (an intent; the contact and her footing decide what they hold), and
+        // come away when she lets go.
+        if (trap_ == Trap::Holding && trap_lets_go(player, dt)) {
+            trap_ = Trap::ClimbOut;
+            trap_s_ = 0.0F;
+            take_lead(px, pz, floor_of(float(player.GetY())), 0.3F, false);
+            state_ = State::Hunting;
+        }
+        const bool eligible = trap_ == Trap::Holding && body_in_world_ && out(state_) && state_ != State::Emerging &&
             state_ != State::Down && state_ != State::Staggering && !riding_ && !on_line_ &&
             climb_ < 0 && pipe_phase_ == PipePhase::Off && held_ < 0;
         shared_survival_->pre_step(body_, eligible, Quat::sRotation(Vec3::sAxisY(), yaw_));
@@ -1673,6 +1872,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             pipe_listen_s_ -= dt;
             walk_toward(dt, ax, az, 0.0F);
             yaw_ = turn_toward(yaw_, std::atan2(heard_x_ - ax, heard_z_ - az), kTurnRate, dt);
+            break;
+        }
+        // Her trap at the bay (bay.hpp): set, and her way to it and out of it.
+        if (trap_step(dt, at, player, saw, heard, on_deck)) {
             break;
         }
         // The catwalk (her deck's) is only ever taken in plain sight of prey
@@ -2223,6 +2426,10 @@ void Matron::restore(const Saved &saved) {
         sight_far_s_ = 0.0F;
         // A new run: what she learned of the player's tricks is forgotten.
         fooled_ = 0;
+        trap_ = Trap::Off;
+        trap_s_ = 0.0F;
+        trap_lost_s_ = 0.0F;
+        traps_ = 0;
         wary_ = false;
         lead_seen_ = false;
         peer_s_ = 0.0F;
@@ -2791,6 +2998,8 @@ void Matron::refresh_view() {
     view_.shoves = shoves_;
     view_.bracing_structure = bracing_structure();
     view_.support_n = shared_survival_ ? shared_survival_->snapshot().applied_n : 0.0F;
+    view_.trap = static_cast<std::uint8_t>(trap_);
+    view_.traps = traps_;
     view_.carrying = held_ >= 0 ? throwables_[static_cast<std::size_t>(held_)].entity : 0;
     view_.takes = takes_;
     view_.throws = throws_;
