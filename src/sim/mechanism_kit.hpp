@@ -443,15 +443,19 @@ public:
     [[nodiscard]] CarryKind carry_kind(std::uint64_t entity) const noexcept;
 
     // The anchor a carried shackle would hook onto from where it is now,
-    // invalid for none: within the anchor's reach, and not so far that the
-    // rope would have to stretch.
-    [[nodiscard]] AnchorIndex hook_target(std::uint64_t shackle_entity) const noexcept;
+    // invalid for none: within the anchor's reach of the shackle anywhere
+    // from where it is to `lift` over it (the hands raise it), and not so far
+    // that the rope would have to stretch.
+    [[nodiscard]] AnchorIndex hook_target(std::uint64_t shackle_entity, float lift) const noexcept;
+    // Whether a shackle's rope reaches `point` without stretching: true for
+    // anything that is not a shackle on its rope, or on a strut.
+    [[nodiscard]] bool shackle_reaches(std::uint64_t entity, JPH::RVec3 point) const noexcept;
     // Moves the rope's end from the shackle to the anchor. The shackle leaves
     // the world; the rope keeps its length.
     bool hook(std::uint64_t shackle_entity, AnchorIndex anchor);
-    // A hooked end within reach of hand that carries no load, invalid for
-    // none.
-    [[nodiscard]] RopeIndex unhook_target(JPH::RVec3 hand) const noexcept;
+    // A hooked end that carries no load within reach of the hand anywhere
+    // from where it is to `lift` over it, invalid for none.
+    [[nodiscard]] RopeIndex unhook_target(JPH::RVec3 hand, float lift) const noexcept;
     // Moves the rope's end back onto its shackle, placed at the anchor.
     // Returns the shackle's entity, 0 when the rope has no hooked shackle.
     std::uint64_t unhook(RopeIndex rope);

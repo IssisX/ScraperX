@@ -756,6 +756,13 @@ constexpr float kCarrySlipDistance = 0.90F;
 // move. The AS-003 bar and block keep the slip rule above alone.
 constexpr float kGripNewtons = 900.0F;
 constexpr float kGripSeconds = 0.10F;
+// AS-006 rigging: the hands lift a carried shackle from the belly up to
+// overhead to hook it on, and reach as high to take a hooked end off: a
+// 1.8 m body's standing reach is about 2.25 m over the soles, 1 m over the
+// hands. Measured from the belly alone, an eye on a forklift's guard roof
+// (2.42 m up) was out of reach from the ground beside it by centimetres on
+// one side and 0.25 m on the other (the owner's playtest, 2026-10-21).
+constexpr float kRigReachUp = 1.0F;
 // The least a load in the hands leaves the carrier to start and stop with.
 constexpr float kCarryMinimumAcceleration = 2.0F;
 // A carrier keeps a fifth of the grip in hand: carried at the grip's full

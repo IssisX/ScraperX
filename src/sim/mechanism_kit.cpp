@@ -27,6 +27,17 @@ constexpr float kUnhookReach = 1.3F;
 // Hooking may take up at most this much slack beyond the rope's length:
 // more, and the rope would have to stretch.
 constexpr float kHookLengthTolerance = 0.03F;
+// Taking a hanging shackle may draw its rope this much past its length: the
+// hands draw it in a little sideways, swinging what it hangs from. More, and
+// they would have to haul down what holds it, and it is torn from them.
+constexpr float kTakeLengthTolerance = 0.3F;
+
+// How far `point` is from the hands' reach: anywhere from `hand` up to `lift`
+// over it.
+float reach_distance(const JPH::RVec3 point, const JPH::RVec3 hand, const float lift) noexcept {
+    const float up = std::clamp(static_cast<float>(point.GetY() - hand.GetY()), 0.0F, lift);
+    return JPH::Vec3(point - (hand + JPH::Vec3(0.0F, up, 0.0F))).Length();
+}
 // A rope over its rating for this many consecutive steps parts. One step
 // over is a contact spike, not a sustained load.
 constexpr std::uint32_t kPartSteps = 2;
@@ -1656,7 +1667,7 @@ CarryKind Kit::carry_kind(const std::uint64_t entity) const noexcept {
     return body != nullptr ? body->carry : CarryKind::None;
 }
 
-AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity) const noexcept {
+AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity, const float lift) const noexcept {
     const BodyIndex shackle = body_for_entity(shackle_entity);
     const Body *shackle_body = find(bodies_, shackle);
     if (shackle_body == nullptr || !shackle_body->enabled) {
@@ -1681,7 +1692,7 @@ AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity) const noexcept 
             continue;
         }
         const JPH::RVec3 point = world_point(anchor.body, anchor.local);
-        const float distance = JPH::Vec3(point - at).Length();
+        const float distance = reach_distance(point, at, lift);
         if (distance > anchor.reach || (best.valid() && distance >= best_distance)) {
             continue;
         }
@@ -1713,7 +1724,21 @@ bool Kit::hook(const std::uint64_t shackle_entity, const AnchorIndex anchor) {
     return false;
 }
 
-RopeIndex Kit::unhook_target(const JPH::RVec3 hand) const noexcept {
+bool Kit::shackle_reaches(const std::uint64_t entity, const JPH::RVec3 point) const noexcept {
+    const BodyIndex shackle = body_for_entity(entity);
+    if (!shackle.valid()) {
+        return true;
+    }
+    for (const Rope &rope : ropes_) {
+        if (rope.shackle != shackle || rope.anchor.valid() || rope.parted || rope.strut) {
+            continue;
+        }
+        return rope_span(rope, world_point(rope.body1, rope.point1), point) <= rope.length + kTakeLengthTolerance;
+    }
+    return true;
+}
+
+RopeIndex Kit::unhook_target(const JPH::RVec3 hand, const float lift) const noexcept {
     RopeIndex best;
     float best_distance = kUnhookReach;
     for (std::uint32_t index = 0; index < ropes_.size(); ++index) {
@@ -1723,8 +1748,7 @@ RopeIndex Kit::unhook_target(const JPH::RVec3 hand) const noexcept {
             continue;
         }
         const Anchor &anchor = anchors_[rope.anchor.value];
-        const float distance =
-            JPH::Vec3(world_point(anchor.body, anchor.local) - hand).Length();
+        const float distance = reach_distance(world_point(anchor.body, anchor.local), hand, lift);
         if (distance < best_distance) {
             best = RopeIndex{index};
             best_distance = distance;

@@ -320,8 +320,9 @@ JPH::Vec3 Simulation::PhysicsWorld::carry_hand_bearing(const JPH::BodyInterface 
 }
 
 // What a pick-up would take now: the nearest carryable within reach of the
-// body's centre, at rest, not behind it -- and only for a grounded body
-// outside a traversal with its hands free.
+// body's centre, at rest, not behind it, and for a shackle, on a rope that
+// lets it come to the hands -- and only for a grounded body outside a
+// traversal with its hands free.
 JPH::BodyID Simulation::PhysicsWorld::carry_candidate(const JPH::BodyInterface &bodies,
                                                       std::uint64_t &entity) const noexcept {
     entity = 0;
@@ -352,8 +353,11 @@ JPH::BodyID Simulation::PhysicsWorld::carry_candidate(const JPH::BodyInterface &
         entity = candidate_entity;
     };
     kit_->carry_candidates(kit_carryables_);
+    const JPH::RVec3 hands = at + carry_hand_offset(facing_);
     for (const auto &candidate : kit_carryables_) {
-        consider(candidate.id, candidate.entity);
+        if (kit_->shackle_reaches(candidate.entity, hands)) {
+            consider(candidate.id, candidate.entity);
+        }
     }
     return best;
 }
@@ -704,7 +708,7 @@ void Simulation::PhysicsWorld::find_rig_action(const JPH::BodyInterface &bodies)
         if (kit_->carry_kind(carried_entity_) != scraperx::sim::kit::CarryKind::Shackle) {
             return;
         }
-        rig_anchor_ = kit_->hook_target(carried_entity_);
+        rig_anchor_ = kit_->hook_target(carried_entity_, kRigReachUp);
         if (rig_anchor_.valid()) {
             rig_action_ = 1;
             rig_target_entity_ = kit_->anchor_entity(rig_anchor_);
@@ -714,7 +718,7 @@ void Simulation::PhysicsWorld::find_rig_action(const JPH::BodyInterface &bodies)
     if (!grounded_) {
         return;
     }
-    rig_rope_ = kit_->unhook_target(hand_position(bodies));
+    rig_rope_ = kit_->unhook_target(hand_position(bodies), kRigReachUp);
     if (rig_rope_.valid()) {
         rig_action_ = 2;
         rig_target_entity_ = kit_->rope_shackle_entity(rig_rope_);

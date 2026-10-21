@@ -494,6 +494,51 @@ void run_yard_crane() {
                     s.snapshot().support_entity_id == Forklift::kCraneChassisEntity,
                 "crane: the forklift driven off the dock onto the 22 m deck, its driver aboard");
     }
+    // The crane's forklift rigged from the ground beside it, as the owner
+    // tried in a playtest (2026-10-21): its eye is on its guard's roof, over
+    // the head. On each side in turn: the hook let down by the truck until
+    // its shackle hangs just over the head, where the sling cannot bring it
+    // down to the hands, and the shackle is not offered; let down to the
+    // knee, it is taken, and from the ground the hands reach it up onto the
+    // eye and take it off again.
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(1.0);
+        require(take_remote(s), "crane: the remote taken");
+        const auto truck = body_at(s, Forklift::kCraneChassisEntity);
+        const double eye_x = truck.x + Forklift::kEyeZ;
+        const double eye_z = truck.z;
+        for (const double side : {-1.0, 1.0}) {
+            // Carried over the guard high, let down by the truck's side.
+            require(work(s, true) && hoist_to(s, truck.y + 7.0, 60.0) && hook_over(s, eye_x, eye_z + side * 1.6, 90.0) &&
+                        hoist_to(s, truck.y + 1.85 + YardCrane::kSlingM, 60.0) && work(s, false),
+                    "crane: the hook by the forklift's side, its shackle over the head");
+            if (side > 0.0) {
+                require(walk_to(s, eye_x - 1.9, eye_z - 1.2, 10.0, 0.2) && walk_to(s, eye_x - 1.9, eye_z + 1.2, 10.0, 0.2),
+                        "crane: round the forklift's counterweight");
+            }
+            (void)s.advance_frame(4.0);
+            const auto high = body_at(s, YardCrane::kShackleEntity);
+            require(walk_to(s, high.x + 0.5, high.z, 20.0, 0.1), "crane: by the hanging shackle");
+            (void)s.set_facing(-1.0, 0.0);
+            (void)s.advance_frame(1.0);
+            std::cout << "  crane: the shackle hanging at y " << high.y - truck.y << " over the ground, offered "
+                      << s.snapshot().carry_target_entity_id << "\n";
+            require(s.snapshot().carry_target_entity_id != YardCrane::kShackleEntity,
+                    "crane: a shackle its sling cannot bring down to the hands is not offered");
+            require(work(s, true) && hoist_to(s, truck.y + 0.6 + YardCrane::kSlingM, 60.0) && work(s, false),
+                    "crane: let down to the knee");
+            (void)s.advance_frame(3.0);
+            require(take_shackle(s, 8.0), "crane: the shackle taken");
+            require(walk_to(s, eye_x, eye_z + side * 0.85, 10.0, 0.08), "crane: on the ground beside the forklift");
+            const auto stood = s.snapshot();
+            require(stood.support_entity_id != Forklift::kCraneChassisEntity && stood.player_position.y < truck.y + 1.0,
+                    "crane: standing on the ground, not aboard");
+            require(hook_on(s, 0.0, -side, Forklift::kCraneChassisEntity), "crane: HOOK from the ground onto the eye");
+            require(unrig(s), "crane: UNHOOK from the ground");
+        }
+        std::cout << "  crane: the forklift rigged and unrigged from the ground on both sides\n";
+    }
     // The 8 t plate stack: rigged, the hoist pulls all it has and stalls;
     // the plates stay down on their sleepers.
     double stalled_n = 0.0;
