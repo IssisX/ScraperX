@@ -3,7 +3,7 @@
   "title": "Multi-deck Matron route inventory",
   "repo": "IssisX/ScraperX",
   "pinned_commit": "c61811c311f918a1eb52516a5d53b7ab0c4c2033",
-  "base_branch": "claude/matron-physics",
+  "base_commit_short": "c61811c",
   "capsule": {
    "radius_m": 0.3,
    "diameter_m": 0.6,

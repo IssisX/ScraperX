@@ -1,8 +1,8 @@
 # Multi-Deck Matron Route Inventory
 
-Pinned to `c61811c311f918a1eb52516a5d53b7ab0c4c2033` (`claude/matron-physics` at c61811c). Machine-readable twin: [`multi_deck_inventory.json`](multi_deck_inventory.json), one record per region and per directed edge.
+Pinned to `c61811c311f918a1eb52516a5d53b7ab0c4c2033` (the Matron physics base branch at c61811c). Machine-readable twin: [`multi_deck_inventory.json`](multi_deck_inventory.json), one record per region and per directed edge.
 
-This is the measuring stick for the multi-deck work in [MULTI_DECK_PROPOSAL.md](MULTI_DECK_PROPOSAL.md) (branch `grok/matron-multi-deck`, sections *Map: Tower Opportunities* and *Coverage target*, plus the appendices on `dot/matron-multi-deck-proposal-20261021`). Every number here is read from the source at the pinned commit; anything not established is marked **UNVERIFIED**.
+This is the measuring stick for the multi-deck work in [MULTI_DECK_PROPOSAL.md](MULTI_DECK_PROPOSAL.md) (proposal commit 2442cc3, sections *Map: Tower Opportunities* and *Coverage target*, plus the appendices on `dot/matron-multi-deck-proposal-20261021`). Every number here is read from the source at the pinned commit; anything not established is marked **UNVERIFIED**.
 
 ## Method and limits
 
