@@ -122,7 +122,7 @@ Map::Map() {
         const Patch north = r.patches[0];
         r.patches[0] = {north.min_x, -3.9F, north.min_z, north.max_z};
         r.patches[r.patch_count++] = {-0.4F, north.max_x, north.min_z, north.max_z};
-        r.patches[r.patch_count++] = {-16.94F, 16.94F, -150.8F, -149.2F};
+        r.patches[r.patch_count++] = {-16.94F, 16.94F, -150.8F, -149.2F, true};
     }
     {
         RegionInfo &r = regions_[std::size_t(Region::Bracket152)];
@@ -135,6 +135,19 @@ Map::Map() {
     }
     regions_[std::size_t(Region::Ring176)] = ring(Region::Ring176, "ring 176.25", 0, 1);
     regions_[std::size_t(Region::Ring198)] = ring(Region::Ring198, "ring 198.25", 1, 2);
+    {
+        // The Counterweight Well's cages at their stops (band_counterweight_well.cpp:
+        // 3.0 x 2.8 m floors on z -131.4): stage A's up at the 176 ring, stage B's
+        // at the 176 ring below and the 198 ring above. Her walking lines on the
+        // 176 ring run into both (Matron::levels_).
+        constexpr Patch kCageA{-12.0F, -9.0F, -132.8F, -130.0F, true};
+        constexpr Patch kCageB{-8.7F, -5.7F, -132.8F, -130.0F, true};
+        RegionInfo &r176 = regions_[std::size_t(Region::Ring176)];
+        r176.patches[r176.patch_count++] = kCageA;
+        r176.patches[r176.patch_count++] = kCageB;
+        RegionInfo &r198 = regions_[std::size_t(Region::Ring198)];
+        r198.patches[r198.patch_count++] = kCageB;
+    }
     regions_[std::size_t(Region::Ring220)] = ring(Region::Ring220, "ring 220.25", 2, 3);
 
     // The ladders, from their builders. The home ladder stands on the 154

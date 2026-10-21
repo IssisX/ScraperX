@@ -116,9 +116,8 @@ void run_tops_are_steel() {
         const routes::RegionInfo &info = map.region(static_cast<Region>(r));
         for (std::uint8_t p = 0; p < info.patch_count; ++p) {
             const routes::Patch &patch = info.patches[p];
-            const bool catwalk = info.id == Region::Deck154 && patch.max_z - patch.min_z < 2.0F;
-            if (catwalk) {
-                continue;   // dynamic plates: they fall
+            if (patch.moving) {
+                continue;   // a machine's floor: steel there only while it is
             }
             const double cx = 0.5 * (patch.min_x + patch.max_x);
             const double cz = 0.5 * (patch.min_z + patch.max_z);

@@ -231,6 +231,7 @@ void Matron::spawn_body() {
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
     bodies.AddBody(body_, EActivation::Activate);
     body_in_world_ = true;
+    fall_vy_ = 0.0F;
 }
 
 void Matron::place_for_test(const RVec3 feet) {
@@ -239,6 +240,7 @@ void Matron::place_for_test(const RVec3 feet) {
     bodies.SetPositionAndRotation(body_, feet + Vec3(0.0F, kStandCentre + 0.02F, 0.0F), Quat::sIdentity(),
                                   EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
+    fall_vy_ = 0.0F;
     state_ = State::Hunting;
     turn_ = Turn::None;
     feet_y_ = float(feet.GetY());
@@ -766,8 +768,16 @@ void Matron::settle_level() {
     if (riding_) {
         return;
     }
+    // On a level is standing on it: not passing its height falling, and (where
+    // her map knows the deck's steel) inside its footprint.
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    if (std::abs(bodies.GetLinearVelocity(body_).GetY()) > 0.6F) {
+        return;
+    }
+    const RVec3 here = bodies.GetPosition(body_);
     for (std::size_t i = 0; i < levels_.size(); ++i) {
-        if (static_cast<int>(i) != level_ && std::abs(feet_y_ - levels_[i].floor_y) < 0.6F) {
+        if (static_cast<int>(i) != level_ && std::abs(feet_y_ - levels_[i].floor_y) < 0.6F &&
+            !off_its_steel(static_cast<int>(i), float(here.GetX()), feet_y_, float(here.GetZ()))) {
             level_ = static_cast<int>(i);
             commit_s_ = 0.0F;
             const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -775,6 +785,16 @@ void Matron::settle_level() {
             return;
         }
     }
+}
+
+bool Matron::off_its_steel(const int level, const float x, const float feet, const float z) const {
+    for (std::size_t r = 0; r < routes::kRegionCount; ++r) {
+        const routes::RegionInfo &info = routes_.region(static_cast<routes::Region>(r));
+        if (info.level == level) {
+            return routes_.region_at(x, feet, z) != info.id;
+        }
+    }
+    return false;   // a level her map does not know: its height is all she has
 }
 
 bool Matron::follow_line(const float dt, const RVec3 at) {
@@ -2653,15 +2673,23 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
-    if (body_in_world_ && !dead_ && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
-        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-        if (at.GetY() < levels_[static_cast<std::size_t>(level_)].floor_y - kFallenBelowM) {
+    // A fall ends where she lands, and the landing decides it: a stop from
+    // kLethalLandingMps or more kills her, on a deck, on the ground or on a
+    // plate that came down with her. No deck height counts against her on the
+    // way (one she passes is no floor under her).
+    if (body_in_world_ && !dead_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
+        BodyInterface &bodies = physics_.GetBodyInterface();
+        const float vy = bodies.GetLinearVelocity(body_).GetY();
+        const float falling = -fall_vy_;
+        const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
+        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
             remove_body();
         }
     }
+    fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
     refresh_view();
 }
 

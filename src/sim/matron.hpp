@@ -304,6 +304,10 @@ public:
     // Below this she is gone (fell): a fall of 12 m from the deck. Riding
     // (a moving floor, a line's cable) or on a climb she is not falling.
     static constexpr float kFallenBelowM = 12.0F;
+    // What kills her is the landing: a stop as hard as the end of a fall of
+    // kFallenBelowM (about 15.3 m/s), on whatever she lands on.
+    static constexpr float kLethalLandingMps = 15.34F;
+    static constexpr float kOffTheWorldY = -50.0F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
     // side; the deck's spawn is just north of it), while the cage is down.
@@ -1245,6 +1249,7 @@ private:
     void step_claimed(float dt, JPH::RVec3 at, float feet);
     void fatal_next(int beat) noexcept;
     void fatal_work_reset() noexcept;
+    [[nodiscard]] bool off_its_steel(int level, float x, float feet, float z) const;
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed);
@@ -1427,6 +1432,8 @@ private:
     int bay_level_ = -1;
     int bay_climb_ = -1;
     int c3_wall_climb_ = -1;
+    routes::Map routes_;          // her map of the tower (matron_routes.hpp)
+    float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
     int c3_duct_climb_ = -1;
     JPH::BodyID bay_leaf_;
     bool bay_open_ = true;

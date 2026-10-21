@@ -72,9 +72,12 @@ enum class Connector : std::uint8_t {
     Count,
 };
 
-// An axis-aligned patch of a region's footprint, in the horizontal plane.
+// An axis-aligned patch of a region's footprint, in the horizontal plane;
+// `moving` when it is a machine's floor (a cage at a stop, a catwalk plate),
+// steel there only while the machine is.
 struct Patch final {
     float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
+    bool moving = false;
     [[nodiscard]] bool holds(const float x, const float z) const noexcept {
         return x >= min_x && x <= max_x && z >= min_z && z <= max_z;
     }
