@@ -122,7 +122,7 @@ For later roller or monolith designs, place travel in visible lanes outside requ
 
 ### AS-017 façade route: +11 → +33 m
 
-Adapt Claude C1's static service architecture to the current front frame by translating its original +22→44 m route down 11 m. One native Kit body, ID 1600, contains the fixed landing, cabinet, duct, vent, monorail, davit and hanging ladder; presentation draws its native parts. No sibling world builder or hoist is instantiated.
+Adapt Claude C1's service architecture to the current front frame by translating its original +22→44 m route down 11 m. The native Kit/Jolt builder owns landing1600 and the separately mounted service members2560–2566: cabinet, duct, vent, monorail, bracing, davit and hanging ladder. Presentation draws those native parts; the current causal conversion preserves their layout. No sibling world builder or hoist is instantiated.
 
 The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m leads by a jump/hang to duct top +16.3 m. A thin vent at X=24, Z=-123.45 leads to the +22 m ring. From there a 0.3 m wide monorail at X=12.5 reaches Z=-119.3, top +22.3 m. The ladder's bottom rung is +24.6 m, requiring a leap; it leads to a davit at +33.3 m. The exit walks back to the tower ring near (11.2,33,-125.3), native tower support. A fall remains a real fall onto lower geometry or grade; committed checkpoint restoration is unchanged in authority. Current implementation and acceptance status are tracked in `00_START_HERE.md`; coordinates alone do not prove every clearance case.
 

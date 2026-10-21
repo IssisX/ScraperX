@@ -1,0 +1,270 @@
+{
+  "inspection-stair-cue-mcp.json": {
+    "scope": "New33m recorded direction only, one declared initial33m stage; original22m\u219233m touch route evidence is separate.",
+    "base_commit": "8a7bfc944fae85e2dae72c34e2b7eb6a40c1b8b3",
+    "native_sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+    "calls": [
+      {
+        "tool": "mcp__godot_mcp_runtime__run_project",
+        "args": {
+          "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+          "scene": "res://tests/rigging_mcp_bootstrap.tscn"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Godot project started and MCP bridge is ready (port 46307).\n- Runtime tools (take_screenshot, simulate_input, get_ui_elements, run_script) are available now\n- Use get_debug_output to check runtime output and errors\n- Call stop_project when done"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "mcp__godot_mcp_runtime__run_script",
+        "args": {
+          "timeout": 60000,
+          "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n scene_tree.root.disable_3d = true\n scene_tree.root.size = Vector2i(1280,900)\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n main._router.capture_mouse = false\n main._router.gameplay_active = true\n var staged = main._native.debug_restart_at(Vector3(11.2,33.95,-125.3))\n for i in 180:\n  main._process(1.0/90.0)\n var landing = main._native.get_landing_state()\n var state = main._story_guidance.sample(main._ctx, main._native.get_tick_index())\n scene_tree.current_scene.set_meta(\"stair_cue_main\",main)\n return {\"declared_initial_33m_stage_only\":staged,\"tick\":main._native.get_tick_index(),\"position\":main._native.get_player_position(),\"support\":main._native.get_support_entity_id(),\"grounded\":main._native.is_player_grounded(),\"firm\":landing.checkpoint_footing_valid,\"hands\":landing.traversal_hand_constraint_count,\"gravity\":landing.player_gravity_factor,\"deaths\":main._native.get_death_count(),\"cue\":state.transmission_key,\"radio\":main._story_radio.readback(),\"mission_hud_hidden\":not main._story_presenter._objective.visible,\"viewport_3d_disabled\":scene_tree.root.disable_3d}"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\":true,\"result\":{\"cue\":\"service_iona_swing_stair\",\"deaths\":0,\"declared_initial_33m_stage_only\":true,\"firm\":true,\"gravity\":1,\"grounded\":true,\"hands\":0,\"mission_hud_hidden\":true,\"position\":{\"x\":11.1999998092651,\"y\":33.9000015258789,\"z\":-125.300003051758},\"radio\":{\"active_id\":1,\"active_key\":\"service_iona_swing_stair\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":1,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/service_iona_swing_stair.ogg\"}},\"support\":11,\"tick\":180,\"viewport_3d_disabled\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\"]}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "result": {
+              "cue": "service_iona_swing_stair",
+              "deaths": 0,
+              "declared_initial_33m_stage_only": true,
+              "firm": true,
+              "gravity": 1,
+              "grounded": true,
+              "hands": 0,
+              "mission_hud_hidden": true,
+              "position": {
+                "x": 11.1999998092651,
+                "y": 33.9000015258789,
+                "z": -125.300003051758
+              },
+              "radio": {
+                "active_id": 1,
+                "active_key": "service_iona_swing_stair",
+                "manifest_error": "",
+                "missing_keys": {},
+                "playing": true,
+                "quiesced": false,
+                "scheduled_plays": 1,
+                "spatial": false,
+                "status": "scheduled",
+                "stream": {
+                  "class": "AudioStreamOggVorbis",
+                  "path": "res://audio/story_radio/service_iona_swing_stair.ogg"
+                }
+              },
+              "support": 11,
+              "tick": 180,
+              "viewport_3d_disabled": true
+            },
+            "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+            "warnings": [
+              "Warning line 5: load - load() with a literal path can run _init code in the loaded resource"
+            ]
+          }
+        }
+      },
+      {
+        "tool": "mcp__godot_mcp_runtime__stop_project",
+        "args": {},
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"message\":\"Godot project stopped\",\"mode\":\"spawned\",\"externalProcessPreserved\":false,\"alreadyExited\":false,\"finalOutput\":[\"OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe\",\"McpBridge: Listening on TCP port 46307\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=1531 driver=Dummy\",\"McpBridge: Stopped\"],\"finalErrors\":[\"\\r\\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.\",\"\\r\\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/0\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/1\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/2\\\": No such file or directory\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.\",\"     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)\",\"WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\",\"Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\",\"     at: setup2 (main/main.cpp:3577)\",\"ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory\",\"ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory\",\"ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory\",\"ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory\",\"ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default\",\"ERROR: Condition \\\"status < 0\\\" is true. Returning: ERR_CANT_OPEN\",\"   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)\",\"WARNING: All audio drivers failed, falling back to the dummy driver.\",\"     at: initialize (servers/audio/audio_server.cpp:258)\"]}"
+            }
+          ],
+          "structuredContent": {
+            "message": "Godot project stopped",
+            "mode": "spawned",
+            "externalProcessPreserved": false,
+            "alreadyExited": false,
+            "finalOutput": [
+              "OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe",
+              "McpBridge: Listening on TCP port 46307",
+              "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+              "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+              "SCRAPERX_AUDIO_BANK clips=35 msec=1531 driver=Dummy",
+              "McpBridge: Stopped"
+            ],
+            "finalErrors": [
+              "\r\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.",
+              "\r\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.",
+              "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+              "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory",
+              "proot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory",
+              "error: expected absolute path: \"--shm-helper\"",
+              "error: expected absolute path: \"--shm-helper\"",
+              "error: expected absolute path: \"--shm-helper\"",
+              "WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.",
+              "     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)",
+              "WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.",
+              "Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.",
+              "     at: setup2 (main/main.cpp:3577)",
+              "ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory",
+              "ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory",
+              "ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory",
+              "ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory",
+              "ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default",
+              "ERROR: Condition \"status < 0\" is true. Returning: ERR_CANT_OPEN",
+              "   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)",
+              "WARNING: All audio drivers failed, falling back to the dummy driver.",
+              "     at: initialize (servers/audio/audio_server.cpp:258)"
+            ]
+          }
+        }
+      }
+    ],
+    "limits": [
+      "Viewport3D disabled; Dummy audio, no human listening/device claim.",
+      "No repeat of the already observed rail/ladder route. Final combined CI must exercise the new cue after that route."
+    ]
+  },
+  "stair-crown-cue-mcp.json": {
+    "scope": "Reused Crown-purpose recording at actual44m stair receiving region; one declared initial44m cue stage, no replay of existing route.",
+    "base_commit": "8a7bfc944fae85e2dae72c34e2b7eb6a40c1b8b3",
+    "native_sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+    "calls": [
+      {
+        "tool": "mcp__godot_mcp_runtime__run_project",
+        "args": {
+          "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+          "scene": "res://tests/rigging_mcp_bootstrap.tscn"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Godot project started and MCP bridge is ready (port 46099).\n- Runtime tools (take_screenshot, simulate_input, get_ui_elements, run_script) are available now\n- Use get_debug_output to check runtime output and errors\n- Call stop_project when done"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "mcp__godot_mcp_runtime__run_script",
+        "args": {
+          "timeout": 60000,
+          "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n scene_tree.root.disable_3d = true\n scene_tree.root.size = Vector2i(1280,900)\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n main._router.capture_mouse = false\n main._router.gameplay_active = true\n var staged = main._native.debug_restart_at(Vector3(-.7,44.95,-125.5))\n for i in 180:\n  main._process(1.0/90.0)\n var landing = main._native.get_landing_state()\n var state = main._story_guidance.sample(main._ctx, main._native.get_tick_index())\n scene_tree.current_scene.set_meta(\"crown_cue_main\",main)\n return {\"declared_initial_44m_stage_only\":staged,\"tick\":main._native.get_tick_index(),\"position\":main._native.get_player_position(),\"support\":main._native.get_support_entity_id(),\"grounded\":main._native.is_player_grounded(),\"firm\":landing.checkpoint_footing_valid,\"hands\":landing.traversal_hand_constraint_count,\"gravity\":landing.player_gravity_factor,\"deaths\":main._native.get_death_count(),\"cue\":state.transmission_key,\"radio\":main._story_radio.readback(),\"mission_hud_hidden\":not main._story_presenter._objective.visible,\"viewport_3d_disabled\":scene_tree.root.disable_3d}"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\":true,\"result\":{\"cue\":\"freight_one_iona_crown\",\"deaths\":0,\"declared_initial_44m_stage_only\":true,\"firm\":true,\"gravity\":1,\"grounded\":true,\"hands\":0,\"mission_hud_hidden\":true,\"position\":{\"x\":-0.699999988079071,\"y\":44.9000015258789,\"z\":-125.5},\"radio\":{\"active_id\":1,\"active_key\":\"freight_one_iona_crown\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":true,\"quiesced\":false,\"scheduled_plays\":1,\"spatial\":false,\"status\":\"scheduled\",\"stream\":{\"class\":\"AudioStreamOggVorbis\",\"path\":\"res://audio/story_radio/freight_one_iona_crown.ogg\"}},\"support\":11,\"tick\":180,\"viewport_3d_disabled\":true},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\"]}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "result": {
+              "cue": "freight_one_iona_crown",
+              "deaths": 0,
+              "declared_initial_44m_stage_only": true,
+              "firm": true,
+              "gravity": 1,
+              "grounded": true,
+              "hands": 0,
+              "mission_hud_hidden": true,
+              "position": {
+                "x": -0.699999988079071,
+                "y": 44.9000015258789,
+                "z": -125.5
+              },
+              "radio": {
+                "active_id": 1,
+                "active_key": "freight_one_iona_crown",
+                "manifest_error": "",
+                "missing_keys": {},
+                "playing": true,
+                "quiesced": false,
+                "scheduled_plays": 1,
+                "spatial": false,
+                "status": "scheduled",
+                "stream": {
+                  "class": "AudioStreamOggVorbis",
+                  "path": "res://audio/story_radio/freight_one_iona_crown.ogg"
+                }
+              },
+              "support": 11,
+              "tick": 180,
+              "viewport_3d_disabled": true
+            },
+            "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+            "warnings": [
+              "Warning line 5: load - load() with a literal path can run _init code in the loaded resource"
+            ]
+          }
+        }
+      },
+      {
+        "tool": "mcp__godot_mcp_runtime__stop_project",
+        "args": {},
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"message\":\"Godot project stopped\",\"mode\":\"spawned\",\"externalProcessPreserved\":false,\"alreadyExited\":false,\"finalOutput\":[\"OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe\",\"McpBridge: Listening on TCP port 46099\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=709 driver=Dummy\",\"McpBridge: Stopped\"],\"finalErrors\":[\"\\r\\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.\",\"\\r\\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/0\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/1\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/2\\\": No such file or directory\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.\",\"     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)\",\"WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\",\"Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\",\"     at: setup2 (main/main.cpp:3577)\",\"ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory\",\"ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory\",\"ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory\",\"ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory\",\"ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default\",\"ERROR: Condition \\\"status < 0\\\" is true. Returning: ERR_CANT_OPEN\",\"   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)\",\"WARNING: All audio drivers failed, falling back to the dummy driver.\",\"     at: initialize (servers/audio/audio_server.cpp:258)\"]}"
+            }
+          ],
+          "structuredContent": {
+            "message": "Godot project stopped",
+            "mode": "spawned",
+            "externalProcessPreserved": false,
+            "alreadyExited": false,
+            "finalOutput": [
+              "OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe",
+              "McpBridge: Listening on TCP port 46099",
+              "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+              "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+              "SCRAPERX_AUDIO_BANK clips=35 msec=709 driver=Dummy",
+              "McpBridge: Stopped"
+            ],
+            "finalErrors": [
+              "\r\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.",
+              "\r\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.",
+              "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+              "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory",
+              "proot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory",
+              "error: expected absolute path: \"--shm-helper\"",
+              "error: expected absolute path: \"--shm-helper\"",
+              "error: expected absolute path: \"--shm-helper\"",
+              "WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.",
+              "     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)",
+              "WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.",
+              "Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.",
+              "     at: setup2 (main/main.cpp:3577)",
+              "ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory",
+              "ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory",
+              "ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name",
+              "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory",
+              "ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory",
+              "ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default",
+              "ERROR: Condition \"status < 0\" is true. Returning: ERR_CANT_OPEN",
+              "   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)",
+              "WARNING: All audio drivers failed, falling back to the dummy driver.",
+              "     at: initialize (servers/audio/audio_server.cpp:258)"
+            ]
+          }
+        }
+      }
+    ],
+    "limits": [
+      "Viewport3D disabled and Dummy audio; no phone/human listening claim.",
+      "Fresh combined stair wrapper must prove cue selection after its real touch crossing in CI."
+    ]
+  }
+}

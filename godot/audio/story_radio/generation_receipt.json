@@ -241,5 +241,14 @@
     "generated_utc": "2026-10-21T18:52:55.038125+00:00",
     "clean_sha256": "9d497f4701619301b30ce41e066c54194d326a07cdf1ae18311d91a9e63cdc27",
     "radio_sha256": "faeb660f77294ba07da89e0bf5588971e20b18ff01b9dc04b4e1d9592585f98f"
+  },
+  "service_iona_swing_stair": {
+    "event_id": "05a1ba4a424f4960a30e1db6bf6ad647",
+    "text": "Across this ring, the big stair reaches the next floor. If it's still upright, pull the chain on its landing. Give it room to settle before you cross.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T19:22:28.406274+00:00",
+    "clean_sha256": "942c91b5ba26a1e636a149631e4aea475a0c7911ace9ef54a7d8f10f1c9a7902",
+    "radio_sha256": "50bfefe0ab0ec4116a5f90190622d1addf4fd40b5cd74ae5e3e3a0d3f132e59d"
   }
 }

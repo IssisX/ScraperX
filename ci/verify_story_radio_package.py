@@ -17,6 +17,7 @@ REQUIRED_CUES = {
     'arrival_iona_mesh_lip': 'IONA',
     'arrival_iona_first_ring': 'IONA',
     'service_iona_inspection_rail': 'IONA',
+    'service_iona_swing_stair': 'IONA',
     'receiving_iona_come_look': 'IONA',
     'receiving_iona_freight_one': 'IONA',
     'freight_one_iona_crown': 'IONA',

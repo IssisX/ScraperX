@@ -20,6 +20,7 @@ CUES = {
     'arrival_iona_mesh_lip': "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
     'arrival_iona_first_ring': "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
     'service_iona_inspection_rail': "Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.",
+    'service_iona_swing_stair': "Across this ring, the big stair reaches the next floor. If it's still upright, pull the chain on its landing. Give it room to settle before you cross.",
     'receiving_iona_come_look': 'Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.',
     'receiving_iona_freight_one': 'Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.',
     'freight_one_iona_crown': 'Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.',

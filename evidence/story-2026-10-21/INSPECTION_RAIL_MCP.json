@@ -1,0 +1,871 @@
+{
+  "scope": "Shipping Main touch inspection rail22m→33m slice; exactly one declared initial22m stage. This is not a normal-spawn or11m→33m proof.",
+  "completed_utc": {
+    "current_time": "2026-10-21 19:22:26 UTC"
+  },
+  "source_identity_at_entry": {
+    "chunk_id": "d2ec84",
+    "wall_time_seconds": 0.000079271,
+    "exit_code": 0,
+    "original_token_count": 143,
+    "output": "8a328105eafc614ad5ec5c0a9ad5e6a8d2051c8ccf65e86fd6008fd569a43b6a  godot/tests/inspection_rail_input_case.gd\n05bf3d93a9ea87a9415c969efb8e74ad0243057ae93b793cdcc5ee8e39e270b2  godot/tests/inspection_rail_input_test.gd\nff5827bb5cd2213c756f687d63864c40cee0236a32e51135103691f7ead29151  godot/tests/service_ascent_input_case.gd\nb516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89  /data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/addons/scraperx_native/bin/linux/libscraperx_native.so\n8a7bfc944fae85e2dae72c34e2b7eb6a40c1b8b3\n"
+  },
+  "source": {
+    "base_revision": "8a7bfc944fae85e2dae72c34e2b7eb6a40c1b8b3",
+    "owned_source": [
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/godot/tests/inspection_rail_input_case.gd",
+        "sha256": "8a328105eafc614ad5ec5c0a9ad5e6a8d2051c8ccf65e86fd6008fd569a43b6a",
+        "source": "extends \"res://tests/service_ascent_input_case.gd\"\n\n# Exactly one declared22m placement, settled by native contacts. The rail,\n# jump-only ladder catch, ascent and onward walk use shipping touch input.\nconst RAIL_APPROACH := [Vector3(12.5, 0, -125.2), Vector3(12.5, 0, -119.65)]\nconst DAVIT_EXIT := [Vector3(12.5, 0, -125), Vector3(11.2, 0, -125.3)]\nvar rail_balancing_ticks := 0\nvar tower_firm_ticks := 0\nvar rail_end: Dictionary = {}\nvar ladder_catch: Dictionary = {}\nvar davit_footing: Dictionary = {}\nvar tower_footing: Dictionary = {}\nvar ladder_unavailable_standing := false\n\nfunc check(ok: bool, why: String) -> void:\n\tchecks += 1\n\tif not ok:\n\t\tfailures.append(why)\n\t\tpush_error(\"INSPECTION_RAIL \" + why)\n\nfunc step(count: int = 1) -> void:\n\tfor index in count:\n\t\tif not failures.is_empty():\n\t\t\treturn\n\t\tsuper.step(1)\n\t\tif bool(main._ctx.grounded) and int(main._ctx.support_entity) == 2563 and main._native.is_player_balancing():\n\t\t\trail_balancing_ticks += 1\n\t\tif phase == 7:\n\t\t\tif standing_on(11, 33.7) and bool(landing.checkpoint_footing_valid):\n\t\t\t\ttower_firm_ticks += 1\n\t\t\telse:\n\t\t\t\ttower_firm_ticks = 0\n\nfunc begin(shipping_main: Node) -> Dictionary:\n\tmain = shipping_main\n\tmain.set_process(false)\n\tmain._router.capture_mouse = false\n\tmain._router.gameplay_active = true\n\tcheck(not main._ci_mode and main._uitest_scenario.is_empty(), \"shipping Main owns the staged-start inspection rail slice\")\n\tcheck(main._native.debug_restart_at(Vector3(22.0435, 22.95, -125.18)), \"single declared initial22m placement is accepted\")\n\tinitial_stage_count = 1\n\tinitial = main._native.get_player_position()\n\tstall_position = initial\n\treturn result()\n\nfunc physical_state() -> Dictionary:\n\treturn {\"tick\": main._native.get_tick_index(), \"position\": main._native.get_player_position(),\n\t\t\"velocity\": main._native.get_player_linear_velocity(), \"grounded\": main._native.is_player_grounded(),\n\t\t\"support\": main._native.get_support_entity_id(), \"balancing\": main._native.is_player_balancing(),\n\t\t\"firm\": landing.get(\"checkpoint_footing_valid\", false), \"grip_available\": main._native.is_grip_available(),\n\t\t\"traversal\": main._native.get_traversal_state(), \"hand_support\": main._native.get_traversal_support_entity_id(),\n\t\t\"hands\": landing.get(\"traversal_hand_constraint_count\", 0), \"gravity\": landing.get(\"player_gravity_factor\", 0),\n\t\t\"deaths\": main._native.get_death_count(), \"hand_positive_work_j\": landing.get(\"hand_actuator_positive_work_j\", 0),\n\t\t\"hand_absorbed_work_j\": landing.get(\"hand_actuator_absorbed_work_j\", 0),\n\t\t\"foot_transfer_count\": landing.get(\"foot_transfer_count\", 0), \"foot_transfer_tick\": landing.get(\"foot_transfer_tick\", 0),\n\t\t\"foot_transfer_support\": landing.get(\"foot_transfer_support_entity_id\", 0),\n\t\t\"shared_solve_tick\": landing.get(\"hand_foot_last_solve_tick\", 0),\n\t\t\"shared_hand_load_n\": landing.get(\"hand_foot_last_hand_load_n\", 0), \"shared_foot_load_n\": landing.get(\"hand_foot_last_foot_load_n\", 0)}\n\nfunc advance() -> Dictionary:\n\tif not failures.is_empty() or phase >= 10:\n\t\treturn result()\n\tmatch phase:\n\t\t0:\n\t\t\tstep(24)\n\t\t\tif receiver_ticks >= 90:\n\t\t\t\tcheck(absf((main._native.get_player_position() as Vector3).y - 22.9) < .15, \"declared initial22m footing settles on actual tower11 contact\")\n\t\t\t\tcheck(radio_cues.has(&\"service_iona_inspection_rail\"), \"actual22m footing plays original packaged inspection-rail direction\")\n\t\t\t\tnext_phase()\n\t\t\tcheck(phase != 0 or phase_ticks < 360, \"initial22m tower support earns ninety firm native ticks\")\n\t\t1:\n\t\t\tif walk_route(RAIL_APPROACH):\n\t\t\t\tstep(27)\n\t\t\t\trail_end = physical_state()\n\t\t\t\tcheck(bool(rail_end.grounded) and int(rail_end.support) == 2563 and bool(rail_end.balancing)\n\t\t\t\t\tand (rail_end.position as Vector3).y > 23 and rail_balancing_ticks > 90,\n\t\t\t\t\t\"ordinary touch walking reaches the real narrow2563 rail end while balancing\")\n\t\t\t\tnext_phase()\n\t\t2:\n\t\t\tface_mesh()\n\t\t\tif absf(wrapf(main._yaw, -PI, PI)) < .002:\n\t\t\t\tstep(27)\n\t\t\t\tladder_unavailable_standing = not main._native.is_grip_available()\n\t\t\t\tcheck(ladder_unavailable_standing and bool(main._ctx.grounded), \"ladder2566 remains out of reach while standing on rail\")\n\t\t\t\ttap(&\"jump\")\n\t\t\t\tstick(Vector2(0, .3))\n\t\t\t\tnext_phase()\n\t\t3:\n\t\t\tfor index in 24:\n\t\t\t\tstep()\n\t\t\t\tif int(main._native.get_traversal_state()) == 4:\n\t\t\t\t\tladder_catch = physical_state()\n\t\t\t\t\tcheck(int(ladder_catch.hand_support) == 2566 and int(ladder_catch.hands) == 2\n\t\t\t\t\t\tand not bool(ladder_catch.grounded), \"fresh touch Jump catches actual2566 ladder with two physical hands\")\n\t\t\t\t\thold_climb()\n\t\t\t\t\tnext_phase()\n\t\t\t\t\tbreak\n\t\t\tcheck(phase != 3 or phase_ticks < 180, \"rail jump reaches the actual hanging ladder\")\n\t\t4:\n\t\t\tfor index in 24:\n\t\t\t\tstep()\n\t\t\t\tif standing_on(2565, 33.5):\n\t\t\t\t\tstick(Vector2.ZERO)\n\t\t\t\t\tdavit_footing = physical_state()\n\t\t\t\t\tcheck(int(davit_footing.hands) == 0 and int(hand_ticks.get(2566, 0)) > 90,\n\t\t\t\t\t\t\"held touch climb releases hands on actual33.3m davit2565 footing\")\n\t\t\t\t\tnext_phase()\n\t\t\t\t\tbreak\n\t\t\tcheck(phase != 4 or phase_ticks < 1800, \"ladder ascent reaches real33m davit support\")\n\t\t5:\n\t\t\tstep(24)\n\t\t\tif phase_ticks >= 90:\n\t\t\t\tcheck(standing_on(2565, 33.5), \"released touch retains actual davit footing\")\n\t\t\t\treset_walk()\n\t\t\t\tnext_phase()\n\t\t6:\n\t\t\tif walk_route(DAVIT_EXIT):\n\t\t\t\tcheck(standing_on(11, 33.7), \"ordinary touch walks back along davit and onto actual33m tower11\")\n\t\t\t\tnext_phase()\n\t\t7:\n\t\t\tstep(24)\n\t\t\tif tower_firm_ticks >= 90:\n\t\t\t\ttower_footing = physical_state()\n\t\t\t\tcheck(absf((tower_footing.position as Vector3).y - 33.9) < .15 and int(tower_footing.hands) == 0,\n\t\t\t\t\t\"actual33m tower receiver retains ninety firm ticks with hands released\")\n\t\t\t\treset_walk()\n\t\t\t\tnext_phase()\n\t\t\tcheck(phase != 7 or phase_ticks < 360, \"33m tower support earns continuous checkpoint footing\")\n\t\t8:\n\t\t\tif walk_route([Vector3(10, 0, -125.3)]):\n\t\t\t\tcheck(standing_on(11, 33.7) and bool(landing.checkpoint_footing_valid)\n\t\t\t\t\tand (main._native.get_player_position() as Vector3).distance_to(tower_footing.position) > 1,\n\t\t\t\t\t\"supported onward touch walking remains available on33m ring\")\n\t\t\t\tnext_phase()\n\t\t9:\n\t\t\tstick(Vector2.ZERO)\n\t\t\tcheck(ladder_unavailable_standing and not ladder_catch.is_empty() and not davit_footing.is_empty(), \"rail-to-ladder route requires an actual jump and complete hand-to-foot transfer\")\n\t\t\tcheck(gravity_intact and hud_hidden and int(main._native.get_death_count()) == 0 and initial_stage_count == 1,\n\t\t\t\t\"inspection route retains gravity, hidden mission HUD and one uninterrupted staged-start life\")\n\t\t\tcheck(main._story_radio.readback().missing_keys.is_empty(), \"inspection route has no missing packaged recording\")\n\t\t\tnext_phase()\n\treturn result()\n\nfunc result() -> Dictionary:\n\tif main != null and not failures.is_empty() and blocker.is_empty():\n\t\tstick(Vector2.ZERO)\n\t\tblocker = physical_state()\n\t\tblocker[\"phase\"] = phase\n\t\tblocker[\"waypoint\"] = waypoint\n\t\tblocker[\"landing\"] = landing.duplicate()\n\treturn {\"done\": phase >= 10 or not failures.is_empty(), \"checks\": checks, \"failures\": failures,\n\t\t\"phase\": phase, \"phase_ticks\": phase_ticks, \"waypoint\": waypoint, \"blocker\": blocker,\n\t\t\"native\": true, \"touch\": true, \"initial_22m_stage_only\": true, \"initial_stage_count\": initial_stage_count,\n\t\t\"position\": main._native.get_player_position() if main != null else Vector3.ZERO,\n\t\t\"tick\": main._native.get_tick_index() if main != null else -1, \"gravity_intact\": gravity_intact,\n\t\t\"mission_hud_hidden\": hud_hidden, \"rail_balancing_ticks\": rail_balancing_ticks,\n\t\t\"hand_ticks\": hand_ticks, \"support_ticks\": support_ticks, \"radio_cues\": radio_cues.keys(),\n\t\t\"rail_end\": rail_end, \"ladder_catch\": ladder_catch, \"davit_footing\": davit_footing, \"tower_footing\": tower_footing,\n\t\t\"viewport_3d_disabled\": main.get_viewport().disable_3d if main != null else false}\n"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/repo/godot/tests/inspection_rail_input_test.gd",
+        "sha256": "05bf3d93a9ea87a9415c969efb8e74ad0243057ae93b793cdcc5ee8e39e270b2",
+        "source": "extends SceneTree\n\nfunc _initialize() -> void:\n\t_run.call_deferred()\n\nfunc _run() -> void:\n\troot.size = Vector2i(1280, 900)\n\troot.disable_3d = true\n\tvar main: Node = load(\"res://main.tscn\").instantiate()\n\tmain.prepare_initial_world = false\n\tmain._settings_persistent = false\n\tmain._force_touch = true\n\troot.add_child(main)\n\tmain.set_process(false)\n\tvar test: RefCounted = load(\"res://tests/inspection_rail_input_case.gd\").new()\n\tvar result: Dictionary = test.begin(main)\n\twhile not result.done and result.failures.is_empty():\n\t\tresult = test.advance()\n\t\tawait process_frame\n\tprint(\"SCRAPERX_INSPECTION_RAIL %s checks=%d touch=1 actual_native=1 initial_22m_stage_only=1 viewport_3d_disabled=1 result=%s\" %\n\t\t[\"PASS\" if result.done and result.failures.is_empty() else \"FAIL\", result.checks, str(result)])\n\tmain.queue_free()\n\tawait process_frame\n\tquit(0 if result.done and result.failures.is_empty() else 1)\n"
+      }
+    ],
+    "runtime_owned": [
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/inspection_rail_input_case.gd",
+        "sha256": "8a328105eafc614ad5ec5c0a9ad5e6a8d2051c8ccf65e86fd6008fd569a43b6a"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/inspection_rail_input_test.gd",
+        "sha256": "05bf3d93a9ea87a9415c969efb8e74ad0243057ae93b793cdcc5ee8e39e270b2"
+      }
+    ],
+    "runtime_dependencies": [
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/service_ascent_input_case.gd",
+        "sha256": "ff5827bb5cd2213c756f687d63864c40cee0236a32e51135103691f7ead29151"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/opening_journey_input_case.gd",
+        "sha256": "6b6d90d8525155ea685d48680c95dcf8a8bcbde8f2483e651540fc3d232cbe87"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/tests/yard_worker_input_case.gd",
+        "sha256": "30388c09e6a9459e4e8232a6b3f7db3691277b84346ecb01b305d80506b4ef16"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/presentation/main.gd",
+        "sha256": "720d797054479794449ef23da1a89a824e0eaf25a50870954b4d3d3aa2dd97a3"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/presentation/story_guidance.gd",
+        "sha256": "e17bc0049588b46a75d5f1f7169b6ec9801c3dd1ee88663dee2579839482cab3"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/presentation/ui/input_router.gd",
+        "sha256": "2f9e3b21046aedcf7b6d7b479199ea08f49a78411d65850843510517d6e04ea3"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/presentation/ui/touch_controls.gd",
+        "sha256": "19e5078dea96ea1d9731a9c333d87f237f8082ac3033d3f1a74d5892abfad3cb"
+      },
+      {
+        "path": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime/addons/scraperx_native/bin/linux/libscraperx_native.so",
+        "sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89"
+      }
+    ]
+  },
+  "native_sha256": "b516c1bc3e9b768304ad1d725697b1157895df0712744d47e38539b952059b89",
+  "calls": [
+    {
+      "tool": "mcp__godot_mcp_runtime__run_project",
+      "args": {
+        "projectPath": "/data/data/com.termux/files/usr/tmp/scraperx-portable-line-20261020/yard-life/runtime",
+        "scene": "res://tests/rigging_mcp_bootstrap.tscn"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Godot project started and MCP bridge is ready (port 42019).\n- Runtime tools (take_screenshot, simulate_input, get_ui_elements, run_script) are available now\n- Use get_debug_output to check runtime output and errors\n- Call stop_project when done"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n scene_tree.root.disable_3d = true\n scene_tree.root.size = Vector2i(1280,900)\n var main = load(\"res://main.tscn\").instantiate()\n main.prepare_initial_world = false\n main._settings_persistent = false\n main._force_touch = true\n scene_tree.root.add_child(main)\n main.set_process(false)\n var test = load(\"res://tests/inspection_rail_input_case.gd\").new()\n scene_tree.current_scene.set_meta(\"rail_main\",main)\n scene_tree.current_scene.set_meta(\"rail_test\",test)\n return test.begin(main)",
+        "timeout": 60000
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":2,\"davit_footing\":{},\"done\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{},\"initial_22m_stage_only\":true,\"initial_stage_count\":1,\"ladder_catch\":{},\"mission_hud_hidden\":true,\"native\":true,\"phase\":0,\"phase_ticks\":0,\"position\":{\"x\":22.0435009002686,\"y\":22.9500007629395,\"z\":-125.180000305176},\"radio_cues\":[],\"rail_balancing_ticks\":0,\"rail_end\":{},\"support_ticks\":{},\"tick\":0,\"touch\":true,\"tower_footing\":{},\"viewport_3d_disabled\":true,\"waypoint\":0},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\",\"warnings\":[\"Warning line 5: load - load() with a literal path can run _init code in the loaded resource\",\"Warning line 11: load - load() with a literal path can run _init code in the loaded resource\"]}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 2,
+            "davit_footing": {},
+            "done": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {},
+            "initial_22m_stage_only": true,
+            "initial_stage_count": 1,
+            "ladder_catch": {},
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 0,
+            "phase_ticks": 0,
+            "position": {
+              "x": 22.0435009002686,
+              "y": 22.9500007629395,
+              "z": -125.180000305176
+            },
+            "radio_cues": [],
+            "rail_balancing_ticks": 0,
+            "rail_end": {},
+            "support_ticks": {},
+            "tick": 0,
+            "touch": true,
+            "tower_footing": {},
+            "viewport_3d_disabled": true,
+            "waypoint": 0
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.",
+          "warnings": [
+            "Warning line 5: load - load() with a literal path can run _init code in the loaded resource",
+            "Warning line 11: load - load() with a literal path can run _init code in the loaded resource"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"rail_test\")\n var result = test.result()\n for i in 60:\n  result = test.advance()\n  if result.done: break\n return result",
+        "timeout": 60000
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":69,\"davit_footing\":{},\"done\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2566\":289},\"initial_22m_stage_only\":true,\"initial_stage_count\":1,\"ladder_catch\":{\"balancing\":false,\"deaths\":0,\"firm\":false,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":false,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":2566,\"hands\":2,\"position\":{\"x\":12.500020980835,\"y\":23.8032302856445,\"z\":-119.836944580078},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":0,\"tick\":1164,\"traversal\":4,\"velocity\":{\"x\":0.0000663537866785191,\"y\":3.32005333900452,\"z\":-1.5612119436264}},\"mission_hud_hidden\":true,\"native\":true,\"phase\":4,\"phase_ticks\":288,\"position\":{\"x\":12.4999599456787,\"y\":26.5329818725586,\"z\":-119.786109924316},\"radio_cues\":[\"service_iona_inspection_rail\"],\"rail_balancing_ticks\":443,\"rail_end\":{\"balancing\":true,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.500020980835,\"y\":23.1967582702637,\"z\":-119.711219787598},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":2563,\"tick\":1124,\"traversal\":0,\"velocity\":{\"x\":0.000156704729306512,\"y\":0.000320901570376009,\"z\":-0.0117852743715048}},\"support_ticks\":{\"11\":638,\"2563\":445},\"tick\":1452,\"touch\":true,\"tower_footing\":{},\"viewport_3d_disabled\":true,\"waypoint\":2},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 69,
+            "davit_footing": {},
+            "done": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {
+              "2566": 289
+            },
+            "initial_22m_stage_only": true,
+            "initial_stage_count": 1,
+            "ladder_catch": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": false,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": false,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 2566,
+              "hands": 2,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.8032302856445,
+                "z": -119.836944580078
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 0,
+              "tick": 1164,
+              "traversal": 4,
+              "velocity": {
+                "x": 0.0000663537866785191,
+                "y": 3.32005333900452,
+                "z": -1.5612119436264
+              }
+            },
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 4,
+            "phase_ticks": 288,
+            "position": {
+              "x": 12.4999599456787,
+              "y": 26.5329818725586,
+              "z": -119.786109924316
+            },
+            "radio_cues": [
+              "service_iona_inspection_rail"
+            ],
+            "rail_balancing_ticks": 443,
+            "rail_end": {
+              "balancing": true,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.1967582702637,
+                "z": -119.711219787598
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 2563,
+              "tick": 1124,
+              "traversal": 0,
+              "velocity": {
+                "x": 0.000156704729306512,
+                "y": 0.000320901570376009,
+                "z": -0.0117852743715048
+              }
+            },
+            "support_ticks": {
+              "11": 638,
+              "2563": 445
+            },
+            "tick": 1452,
+            "touch": true,
+            "tower_footing": {},
+            "viewport_3d_disabled": true,
+            "waypoint": 2
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"rail_test\")\n var result = test.result()\n for i in 45:\n  result = test.advance()\n  if result.done: break\n return result",
+        "timeout": 60000
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":113,\"davit_footing\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.5000381469727,\"y\":34.1961784362793,\"z\":-120.453567504883},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":2565,\"tick\":2189,\"traversal\":0,\"velocity\":{\"x\":0.0000173505286511499,\"y\":-0.00395839335396886,\"z\":-2.29037690162659}},\"done\":false,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2565\":117,\"2566\":908},\"initial_22m_stage_only\":true,\"initial_stage_count\":1,\"ladder_catch\":{\"balancing\":false,\"deaths\":0,\"firm\":false,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":false,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":2566,\"hands\":2,\"position\":{\"x\":12.500020980835,\"y\":23.8032302856445,\"z\":-119.836944580078},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":0,\"tick\":1164,\"traversal\":4,\"velocity\":{\"x\":0.0000663537866785191,\"y\":3.32005333900452,\"z\":-1.5612119436264}},\"mission_hud_hidden\":true,\"native\":true,\"phase\":6,\"phase_ticks\":240,\"position\":{\"x\":12.5000381469727,\"y\":34.1964874267578,\"z\":-124.746398925781},\"radio_cues\":[\"service_iona_inspection_rail\",\"receiving_iona_keep_the_height\"],\"rail_balancing_ticks\":443,\"rail_end\":{\"balancing\":true,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.500020980835,\"y\":23.1967582702637,\"z\":-119.711219787598},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":2563,\"tick\":1124,\"traversal\":0,\"velocity\":{\"x\":0.000156704729306512,\"y\":0.000320901570376009,\"z\":-0.0117852743715048}},\"support_ticks\":{\"11\":638,\"2563\":445,\"2565\":341},\"tick\":2525,\"touch\":true,\"tower_footing\":{},\"viewport_3d_disabled\":true,\"waypoint\":0},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 113,
+            "davit_footing": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 1,
+              "foot_transfer_support": 2565,
+              "foot_transfer_tick": 2189,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 84.5209492419929,
+              "hand_positive_work_j": 17155.0177141156,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 12.5000381469727,
+                "y": 34.1961784362793,
+                "z": -120.453567504883
+              },
+              "shared_foot_load_n": 396.204742431641,
+              "shared_hand_load_n": 396.508880615234,
+              "shared_solve_tick": 2189,
+              "support": 2565,
+              "tick": 2189,
+              "traversal": 0,
+              "velocity": {
+                "x": 0.0000173505286511499,
+                "y": -0.00395839335396886,
+                "z": -2.29037690162659
+              }
+            },
+            "done": false,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {
+              "2565": 117,
+              "2566": 908
+            },
+            "initial_22m_stage_only": true,
+            "initial_stage_count": 1,
+            "ladder_catch": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": false,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": false,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 2566,
+              "hands": 2,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.8032302856445,
+                "z": -119.836944580078
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 0,
+              "tick": 1164,
+              "traversal": 4,
+              "velocity": {
+                "x": 0.0000663537866785191,
+                "y": 3.32005333900452,
+                "z": -1.5612119436264
+              }
+            },
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 6,
+            "phase_ticks": 240,
+            "position": {
+              "x": 12.5000381469727,
+              "y": 34.1964874267578,
+              "z": -124.746398925781
+            },
+            "radio_cues": [
+              "service_iona_inspection_rail",
+              "receiving_iona_keep_the_height"
+            ],
+            "rail_balancing_ticks": 443,
+            "rail_end": {
+              "balancing": true,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.1967582702637,
+                "z": -119.711219787598
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 2563,
+              "tick": 1124,
+              "traversal": 0,
+              "velocity": {
+                "x": 0.000156704729306512,
+                "y": 0.000320901570376009,
+                "z": -0.0117852743715048
+              }
+            },
+            "support_ticks": {
+              "11": 638,
+              "2563": 445,
+              "2565": 341
+            },
+            "tick": 2525,
+            "touch": true,
+            "tower_footing": {},
+            "viewport_3d_disabled": true,
+            "waypoint": 0
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"rail_test\")\n var result = test.result()\n for i in 25:\n  result = test.advance()\n  if result.done: break\n return result",
+        "timeout": 60000
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"blocker\":{},\"checks\":132,\"davit_footing\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.5000381469727,\"y\":34.1961784362793,\"z\":-120.453567504883},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":2565,\"tick\":2189,\"traversal\":0,\"velocity\":{\"x\":0.0000173505286511499,\"y\":-0.00395839335396886,\"z\":-2.29037690162659}},\"done\":true,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2565\":117,\"2566\":908},\"initial_22m_stage_only\":true,\"initial_stage_count\":1,\"ladder_catch\":{\"balancing\":false,\"deaths\":0,\"firm\":false,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":false,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":2566,\"hands\":2,\"position\":{\"x\":12.500020980835,\"y\":23.8032302856445,\"z\":-119.836944580078},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":0,\"tick\":1164,\"traversal\":4,\"velocity\":{\"x\":0.0000663537866785191,\"y\":3.32005333900452,\"z\":-1.5612119436264}},\"mission_hud_hidden\":true,\"native\":true,\"phase\":10,\"phase_ticks\":0,\"position\":{\"x\":10.0479135513306,\"y\":33.9000015258789,\"z\":-125.299613952637},\"radio_cues\":[\"service_iona_inspection_rail\",\"receiving_iona_keep_the_height\"],\"rail_balancing_ticks\":443,\"rail_end\":{\"balancing\":true,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.500020980835,\"y\":23.1967582702637,\"z\":-119.711219787598},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":2563,\"tick\":1124,\"traversal\":0,\"velocity\":{\"x\":0.000156704729306512,\"y\":0.000320901570376009,\"z\":-0.0117852743715048}},\"support_ticks\":{\"11\":933,\"2563\":445,\"2565\":413},\"tick\":2909,\"touch\":true,\"tower_footing\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":11.2466907501221,\"y\":33.9000015258789,\"z\":-125.292930603027},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":11,\"tick\":2784,\"traversal\":0,\"velocity\":{\"x\":0,\"y\":0,\"z\":0}},\"viewport_3d_disabled\":true,\"waypoint\":1},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "blocker": {},
+            "checks": 132,
+            "davit_footing": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 1,
+              "foot_transfer_support": 2565,
+              "foot_transfer_tick": 2189,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 84.5209492419929,
+              "hand_positive_work_j": 17155.0177141156,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 12.5000381469727,
+                "y": 34.1961784362793,
+                "z": -120.453567504883
+              },
+              "shared_foot_load_n": 396.204742431641,
+              "shared_hand_load_n": 396.508880615234,
+              "shared_solve_tick": 2189,
+              "support": 2565,
+              "tick": 2189,
+              "traversal": 0,
+              "velocity": {
+                "x": 0.0000173505286511499,
+                "y": -0.00395839335396886,
+                "z": -2.29037690162659
+              }
+            },
+            "done": true,
+            "failures": [],
+            "gravity_intact": true,
+            "hand_ticks": {
+              "2565": 117,
+              "2566": 908
+            },
+            "initial_22m_stage_only": true,
+            "initial_stage_count": 1,
+            "ladder_catch": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": false,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": false,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 2566,
+              "hands": 2,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.8032302856445,
+                "z": -119.836944580078
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 0,
+              "tick": 1164,
+              "traversal": 4,
+              "velocity": {
+                "x": 0.0000663537866785191,
+                "y": 3.32005333900452,
+                "z": -1.5612119436264
+              }
+            },
+            "mission_hud_hidden": true,
+            "native": true,
+            "phase": 10,
+            "phase_ticks": 0,
+            "position": {
+              "x": 10.0479135513306,
+              "y": 33.9000015258789,
+              "z": -125.299613952637
+            },
+            "radio_cues": [
+              "service_iona_inspection_rail",
+              "receiving_iona_keep_the_height"
+            ],
+            "rail_balancing_ticks": 443,
+            "rail_end": {
+              "balancing": true,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 0,
+              "foot_transfer_support": 0,
+              "foot_transfer_tick": 0,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 0,
+              "hand_positive_work_j": 0,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 12.500020980835,
+                "y": 23.1967582702637,
+                "z": -119.711219787598
+              },
+              "shared_foot_load_n": 0,
+              "shared_hand_load_n": 0,
+              "shared_solve_tick": 0,
+              "support": 2563,
+              "tick": 1124,
+              "traversal": 0,
+              "velocity": {
+                "x": 0.000156704729306512,
+                "y": 0.000320901570376009,
+                "z": -0.0117852743715048
+              }
+            },
+            "support_ticks": {
+              "11": 933,
+              "2563": 445,
+              "2565": 413
+            },
+            "tick": 2909,
+            "touch": true,
+            "tower_footing": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 1,
+              "foot_transfer_support": 2565,
+              "foot_transfer_tick": 2189,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 84.5209492419929,
+              "hand_positive_work_j": 17155.0177141156,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 11.2466907501221,
+                "y": 33.9000015258789,
+                "z": -125.292930603027
+              },
+              "shared_foot_load_n": 396.204742431641,
+              "shared_hand_load_n": 396.508880615234,
+              "shared_solve_tick": 2189,
+              "support": 11,
+              "tick": 2784,
+              "traversal": 0,
+              "velocity": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              }
+            },
+            "viewport_3d_disabled": true,
+            "waypoint": 1
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__run_script",
+      "args": {
+        "script": "extends RefCounted\nfunc execute(scene_tree: SceneTree) -> Variant:\n var test = scene_tree.current_scene.get_meta(\"rail_test\")\n return {\"fixture\":test.result(),\"native_final\":test.physical_state(),\"tower_firm_ticks\":test.tower_firm_ticks,\"radio\":scene_tree.current_scene.get_meta(\"rail_main\")._story_radio.readback()}",
+        "timeout": 30000
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\":true,\"result\":{\"fixture\":{\"blocker\":{},\"checks\":132,\"davit_footing\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.5000381469727,\"y\":34.1961784362793,\"z\":-120.453567504883},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":2565,\"tick\":2189,\"traversal\":0,\"velocity\":{\"x\":0.0000173505286511499,\"y\":-0.00395839335396886,\"z\":-2.29037690162659}},\"done\":true,\"failures\":[],\"gravity_intact\":true,\"hand_ticks\":{\"2565\":117,\"2566\":908},\"initial_22m_stage_only\":true,\"initial_stage_count\":1,\"ladder_catch\":{\"balancing\":false,\"deaths\":0,\"firm\":false,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":false,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":2566,\"hands\":2,\"position\":{\"x\":12.500020980835,\"y\":23.8032302856445,\"z\":-119.836944580078},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":0,\"tick\":1164,\"traversal\":4,\"velocity\":{\"x\":0.0000663537866785191,\"y\":3.32005333900452,\"z\":-1.5612119436264}},\"mission_hud_hidden\":true,\"native\":true,\"phase\":10,\"phase_ticks\":0,\"position\":{\"x\":10.0479135513306,\"y\":33.9000015258789,\"z\":-125.299613952637},\"radio_cues\":[\"service_iona_inspection_rail\",\"receiving_iona_keep_the_height\"],\"rail_balancing_ticks\":443,\"rail_end\":{\"balancing\":true,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":0,\"foot_transfer_support\":0,\"foot_transfer_tick\":0,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":0,\"hand_positive_work_j\":0,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":12.500020980835,\"y\":23.1967582702637,\"z\":-119.711219787598},\"shared_foot_load_n\":0,\"shared_hand_load_n\":0,\"shared_solve_tick\":0,\"support\":2563,\"tick\":1124,\"traversal\":0,\"velocity\":{\"x\":0.000156704729306512,\"y\":0.000320901570376009,\"z\":-0.0117852743715048}},\"support_ticks\":{\"11\":933,\"2563\":445,\"2565\":413},\"tick\":2909,\"touch\":true,\"tower_footing\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":11.2466907501221,\"y\":33.9000015258789,\"z\":-125.292930603027},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":11,\"tick\":2784,\"traversal\":0,\"velocity\":{\"x\":0,\"y\":0,\"z\":0}},\"viewport_3d_disabled\":true,\"waypoint\":1},\"native_final\":{\"balancing\":false,\"deaths\":0,\"firm\":true,\"foot_transfer_count\":1,\"foot_transfer_support\":2565,\"foot_transfer_tick\":2189,\"gravity\":1,\"grip_available\":false,\"grounded\":true,\"hand_absorbed_work_j\":84.5209492419929,\"hand_positive_work_j\":17155.0177141156,\"hand_support\":0,\"hands\":0,\"position\":{\"x\":10.0479135513306,\"y\":33.9000015258789,\"z\":-125.299613952637},\"shared_foot_load_n\":396.204742431641,\"shared_hand_load_n\":396.508880615234,\"shared_solve_tick\":2189,\"support\":11,\"tick\":2909,\"traversal\":0,\"velocity\":{\"x\":0,\"y\":0,\"z\":0}},\"radio\":{\"active_id\":null,\"active_key\":\"\",\"manifest_error\":\"\",\"missing_keys\":{},\"playing\":false,\"quiesced\":false,\"scheduled_plays\":2,\"spatial\":false,\"status\":\"finished\",\"stream\":null},\"tower_firm_ticks\":96},\"tip\":\"Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script.\"}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "result": {
+            "fixture": {
+              "blocker": {},
+              "checks": 132,
+              "davit_footing": {
+                "balancing": false,
+                "deaths": 0,
+                "firm": true,
+                "foot_transfer_count": 1,
+                "foot_transfer_support": 2565,
+                "foot_transfer_tick": 2189,
+                "gravity": 1,
+                "grip_available": false,
+                "grounded": true,
+                "hand_absorbed_work_j": 84.5209492419929,
+                "hand_positive_work_j": 17155.0177141156,
+                "hand_support": 0,
+                "hands": 0,
+                "position": {
+                  "x": 12.5000381469727,
+                  "y": 34.1961784362793,
+                  "z": -120.453567504883
+                },
+                "shared_foot_load_n": 396.204742431641,
+                "shared_hand_load_n": 396.508880615234,
+                "shared_solve_tick": 2189,
+                "support": 2565,
+                "tick": 2189,
+                "traversal": 0,
+                "velocity": {
+                  "x": 0.0000173505286511499,
+                  "y": -0.00395839335396886,
+                  "z": -2.29037690162659
+                }
+              },
+              "done": true,
+              "failures": [],
+              "gravity_intact": true,
+              "hand_ticks": {
+                "2565": 117,
+                "2566": 908
+              },
+              "initial_22m_stage_only": true,
+              "initial_stage_count": 1,
+              "ladder_catch": {
+                "balancing": false,
+                "deaths": 0,
+                "firm": false,
+                "foot_transfer_count": 0,
+                "foot_transfer_support": 0,
+                "foot_transfer_tick": 0,
+                "gravity": 1,
+                "grip_available": false,
+                "grounded": false,
+                "hand_absorbed_work_j": 0,
+                "hand_positive_work_j": 0,
+                "hand_support": 2566,
+                "hands": 2,
+                "position": {
+                  "x": 12.500020980835,
+                  "y": 23.8032302856445,
+                  "z": -119.836944580078
+                },
+                "shared_foot_load_n": 0,
+                "shared_hand_load_n": 0,
+                "shared_solve_tick": 0,
+                "support": 0,
+                "tick": 1164,
+                "traversal": 4,
+                "velocity": {
+                  "x": 0.0000663537866785191,
+                  "y": 3.32005333900452,
+                  "z": -1.5612119436264
+                }
+              },
+              "mission_hud_hidden": true,
+              "native": true,
+              "phase": 10,
+              "phase_ticks": 0,
+              "position": {
+                "x": 10.0479135513306,
+                "y": 33.9000015258789,
+                "z": -125.299613952637
+              },
+              "radio_cues": [
+                "service_iona_inspection_rail",
+                "receiving_iona_keep_the_height"
+              ],
+              "rail_balancing_ticks": 443,
+              "rail_end": {
+                "balancing": true,
+                "deaths": 0,
+                "firm": true,
+                "foot_transfer_count": 0,
+                "foot_transfer_support": 0,
+                "foot_transfer_tick": 0,
+                "gravity": 1,
+                "grip_available": false,
+                "grounded": true,
+                "hand_absorbed_work_j": 0,
+                "hand_positive_work_j": 0,
+                "hand_support": 0,
+                "hands": 0,
+                "position": {
+                  "x": 12.500020980835,
+                  "y": 23.1967582702637,
+                  "z": -119.711219787598
+                },
+                "shared_foot_load_n": 0,
+                "shared_hand_load_n": 0,
+                "shared_solve_tick": 0,
+                "support": 2563,
+                "tick": 1124,
+                "traversal": 0,
+                "velocity": {
+                  "x": 0.000156704729306512,
+                  "y": 0.000320901570376009,
+                  "z": -0.0117852743715048
+                }
+              },
+              "support_ticks": {
+                "11": 933,
+                "2563": 445,
+                "2565": 413
+              },
+              "tick": 2909,
+              "touch": true,
+              "tower_footing": {
+                "balancing": false,
+                "deaths": 0,
+                "firm": true,
+                "foot_transfer_count": 1,
+                "foot_transfer_support": 2565,
+                "foot_transfer_tick": 2189,
+                "gravity": 1,
+                "grip_available": false,
+                "grounded": true,
+                "hand_absorbed_work_j": 84.5209492419929,
+                "hand_positive_work_j": 17155.0177141156,
+                "hand_support": 0,
+                "hands": 0,
+                "position": {
+                  "x": 11.2466907501221,
+                  "y": 33.9000015258789,
+                  "z": -125.292930603027
+                },
+                "shared_foot_load_n": 396.204742431641,
+                "shared_hand_load_n": 396.508880615234,
+                "shared_solve_tick": 2189,
+                "support": 11,
+                "tick": 2784,
+                "traversal": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "viewport_3d_disabled": true,
+              "waypoint": 1
+            },
+            "native_final": {
+              "balancing": false,
+              "deaths": 0,
+              "firm": true,
+              "foot_transfer_count": 1,
+              "foot_transfer_support": 2565,
+              "foot_transfer_tick": 2189,
+              "gravity": 1,
+              "grip_available": false,
+              "grounded": true,
+              "hand_absorbed_work_j": 84.5209492419929,
+              "hand_positive_work_j": 17155.0177141156,
+              "hand_support": 0,
+              "hands": 0,
+              "position": {
+                "x": 10.0479135513306,
+                "y": 33.9000015258789,
+                "z": -125.299613952637
+              },
+              "shared_foot_load_n": 396.204742431641,
+              "shared_hand_load_n": 396.508880615234,
+              "shared_solve_tick": 2189,
+              "support": 11,
+              "tick": 2909,
+              "traversal": 0,
+              "velocity": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              }
+            },
+            "radio": {
+              "active_id": null,
+              "active_key": "",
+              "manifest_error": "",
+              "missing_keys": {},
+              "playing": false,
+              "quiesced": false,
+              "scheduled_plays": 2,
+              "spatial": false,
+              "status": "finished",
+              "stream": null
+            },
+            "tower_firm_ticks": 96
+          },
+          "tip": "Call take_screenshot to verify any visual changes, or get_debug_output to review print() output from your script."
+        }
+      }
+    },
+    {
+      "tool": "mcp__godot_mcp_runtime__stop_project",
+      "args": {},
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"message\":\"Godot project stopped\",\"mode\":\"spawned\",\"externalProcessPreserved\":false,\"alreadyExited\":false,\"finalOutput\":[\"OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe\",\"McpBridge: Listening on TCP port 42019\",\"SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot\",\"SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000\",\"SCRAPERX_AUDIO_BANK clips=35 msec=1368 driver=Dummy\",\"McpBridge: Stopped\"],\"finalErrors\":[\"\\r\\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.\",\"\\r\\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/0\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/1\\\": No such file or directory\",\"proot warning: can't sanitize binding \\\"/proc/self/fd/2\\\": No such file or directory\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"error: expected absolute path: \\\"--shm-helper\\\"\",\"WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.\",\"     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)\",\"WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.\",\"Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.\",\"     at: setup2 (main/main.cpp:3577)\",\"ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory\",\"ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory\",\"ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name\",\"ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory\",\"ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory\",\"ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default\",\"ERROR: Condition \\\"status < 0\\\" is true. Returning: ERR_CANT_OPEN\",\"   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)\",\"WARNING: All audio drivers failed, falling back to the dummy driver.\",\"     at: initialize (servers/audio/audio_server.cpp:258)\"]}"
+          }
+        ],
+        "structuredContent": {
+          "message": "Godot project stopped",
+          "mode": "spawned",
+          "externalProcessPreserved": false,
+          "alreadyExited": false,
+          "finalOutput": [
+            "OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe",
+            "McpBridge: Listening on TCP port 42019",
+            "SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot",
+            "SCRAPERX_VIEWPORT size=1280x900 aspect=1.422 fov=82.0 far=2000",
+            "SCRAPERX_AUDIO_BANK clips=35 msec=1368 driver=Dummy",
+            "McpBridge: Stopped"
+          ],
+          "finalErrors": [
+            "\r\u001b[KWarning: binding '--bind=/data/data/com.termux/files/home:/data/data/com.termux/files/home' overlaps with an existing one at destination '/data/data/com.termux/files/home'.",
+            "\r\u001b[KWarning: binding '--bind=/storage/emulated/0:/storage/emulated/0' overlaps with an existing one at destination '/storage/emulated/0'.",
+            "proot warning: can't sanitize binding \"/proc/self/fd/0\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/1\": No such file or directory",
+            "proot warning: can't sanitize binding \"/proc/self/fd/2\": No such file or directory",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "error: expected absolute path: \"--shm-helper\"",
+            "WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.",
+            "     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)",
+            "WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.",
+            "Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.",
+            "     at: setup2 (main/main.cpp:3577)",
+            "ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory",
+            "ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory",
+            "ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name",
+            "ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory",
+            "ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory",
+            "ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default",
+            "ERROR: Condition \"status < 0\" is true. Returning: ERR_CANT_OPEN",
+            "   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)",
+            "WARNING: All audio drivers failed, falling back to the dummy driver.",
+            "     at: initialize (servers/audio/audio_server.cpp:258)"
+          ]
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Viewport3D disabled on softpipe host; no rendered gameplay or device performance claim.",
+    "Dummy audio driver: actual packaged recording scheduling/play state observed; physical speaker output untested.",
+    "Initial22m placement only; no subsequent debug relocation, direct native movement/facing, manual state changes, retry or recovery injection.",
+    "Standalone CI wrapper was added from the accepted wrapper convention; affected fixture exercised through actual Godot MCP, no duplicate full wrapper run."
+  ]
+}

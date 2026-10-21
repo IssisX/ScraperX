@@ -206,7 +206,7 @@ Cabinet2560, duct2561 and vent2562 share cached, worn service finishes. Their ex
 **Objective:** `Reach the Crown service deck`  
 **Detail:** `Cabinet, then duct, then vent stack: the existing service route reaches +22 M.`
 
-The chapter and long objective remain narrative state rather than a permanent screen card. The retained `freight_one_iona_crown` recording states the campaign problem for later contextual use; this first receiver no longer plays it instead of immediate onward direction. The larger Crown story and final machine remain required unfinished content, not a claim of completion.
+The chapter and long objective remain narrative state rather than a permanent screen card. The retained `freight_one_iona_crown` recording states the campaign problem at the later44m stair receiver; this first receiver plays immediate onward direction. The larger Crown story and final machine remain required unfinished content, not a claim of completion.
 
 Once the player understands the long objective, the next local hint names a nearby authored opportunity the player can actually reach from their current route. It does not continuously replace the summit purpose with an unrelated list of chores.
 
@@ -223,6 +223,22 @@ Supported arrival on the front 22 m ring earns a specific onward direction:
 **Text:** “Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.”
 
 The existing rail2563, davit2565 and ladder2566 share the service finish already used below. This recording requires actual firm footing in the front service region; altitude in flight or a distant receiver at the same height does not trigger it. Its source route leads to 33 m, whose touch execution remains separate acceptance. Later movement out of this region does not immediately replace the recording with a bypass acknowledgement.
+
+At the actual front 33 m tower receiver, a short recorded direction names the next existing mechanism:
+
+**Transmission ID:** `service_iona_swing_stair`
+
+**Speaker:** IONA
+
+**Text:** “Across this ring, the big stair reaches the next floor. If it's still upright, pull the chain on its landing. Give it room to settle before you cross.”
+
+This line requires firm native tower11 footing in the service-walk exit region. Hanging from the ladder or standing on the davit does not earn it. Its conditional wording does not claim that the stair is still latched or has completed its motion. Native chain, hinge, receiver and actual contact remain authoritative. The ring walk must not replace the line with generic bypass speech; a legitimate44m arrival is never sent backward to this stair.
+
+The supported44m side exit gives the player a quiet place after the moving crossing. Actual tower11 footing there selects the existing `freight_one_iona_crown` recording:
+
+**Iona:** “Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.”
+
+It supplies the long purpose while the player remains free to move. Walking away does not interrupt it with generic bypass speech. After the purpose is heard, higher arrivals can remain silent rather than repeat that the Crown is above. This is authored narrative direction, not proof that the current independent machines already form the finale's shared freight network.
 
 An early personal bypass can receive one concise acknowledgement:
 
