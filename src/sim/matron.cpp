@@ -42,6 +42,10 @@ constexpr float kTurnRate = 7.0F;
 // a post her side only brushes she slides past; one nearer her middle line
 // stops her body.
 constexpr float kWaySkinM = 0.1F;
+// Up a ramp (follow_line) she aims this far ahead along its middle.
+constexpr float kRampAheadM = 0.6F;
+// On a ramp's strip: this near its middle line (the ramp is 1 m across).
+constexpr float kRampStripM = 0.6F;
 
 float turn_toward(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, 2.0F * kPi);
@@ -829,15 +833,13 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
     return false;   // a level her map does not know: its height is all she has
 }
 
-bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
+// A line from her level down toward her lead's (to it, or to a level on the
+// way): the one she saw taken, or the nearest. -1 when none does.
+int Matron::line_to_take(const float ax, const float az) const {
     if (zipline_ == nullptr) {
-        return false;
+        return -1;
     }
-    const float ax = float(at.GetX());
-    const float az = float(at.GetZ());
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    // A line from her level down toward her lead's (to it, or to a level
-    // on the way): the one she saw taken, or the nearest.
     const std::vector<Zipline::Line> &lines = zipline_->lines();
     int best = -1;
     float best_d = std::numeric_limits<float>::max();
@@ -853,12 +855,46 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
                             : distance_xz(ax, az, float(line.stand.GetX()), float(line.stand.GetZ()));
         if (d < best_d) {
             best_d = d;
-            best = i;
+            best = static_cast<int>(i);
         }
     }
+    return best;
+}
+
+// On the ramp up to the line's stand: past its foot, on its strip, below the stand.
+bool Matron::on_line_ramp(const RVec3 at) const {
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const int best = line_to_take(ax, az);
     if (best < 0) {
         return false;
     }
+    const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(best)];
+    const float fx = float(line.ramp_foot.GetX());
+    const float fz = float(line.ramp_foot.GetZ());
+    const float rx = float(line.stand.GetX()) - fx;
+    const float rz = float(line.stand.GetZ()) - fz;
+    const float rlen = std::hypot(rx, rz);
+    if (rlen < 0.1F) {
+        return false;
+    }
+    const float along = ((ax - fx) * rx + (az - fz) * rz) / rlen;
+    const float across = std::abs((ax - fx) * rz - (az - fz) * rx) / rlen;
+    const float feet = float(at.GetY()) - kStandCentre;
+    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    return feet >= floor_y + 0.15F && feet < float(line.stand.GetY()) - 0.3F && along > 0.0F && along < rlen &&
+           across < kRampStripM;
+}
+
+bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const int best = line_to_take(ax, az);
+    if (best < 0) {
+        return false;
+    }
+    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    const std::vector<Zipline::Line> &lines = zipline_->lines();
     const Zipline::Line &line = lines[static_cast<std::size_t>(best)];
     // A line she would only wait at (outside her Turn, or one nobody has
     // ridden) is not a way yet: her own climbing goes first, and she comes
@@ -878,6 +914,19 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
         const float fz = float(line.ramp_foot.GetZ());
         if (feet < floor_y + 0.15F && distance_xz(ax, az, fx, fz) > 0.5F) {
             route_toward(ax, az, fx, fz, false, wx, wz);
+        } else {
+            // Up the ramp she keeps to its middle: she aims a little ahead along the line from its foot to
+            // the stand, not at the stand from wherever she is (a ramp is narrow, and a diagonal run at the
+            // stand walks her off its side).
+            const float rx = sx - fx;
+            const float rz = sz - fz;
+            const float rlen = std::hypot(rx, rz);
+            if (rlen > 0.1F) {
+                const float along = std::clamp(((ax - fx) * rx + (az - fz) * rz) / rlen, 0.0F, rlen);
+                const float ahead = std::min(along + kRampAheadM, rlen);
+                wx = fx + rx / rlen * ahead;
+                wz = fz + rz / rlen * ahead;
+            }
         }
         walk_toward(dt, wx, wz, kHuntMps, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
         return true;
@@ -2439,6 +2488,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         // it: down the shaft's pipe, or a line he took.
                         follow_pipe(dt, at) ||
                         (guess_line_ >= 0 && follow_line(dt, at, false)) ||
+                        // Started up a line's ramp, she finishes it: a way found from the ramp
+                        // would walk her off its side.
+                        (on_line_ramp(at) && follow_line(dt, at, true)) ||
                         // Every other way is her own: bars she finds herself, else
                         // a way she plans over the steel her scan read
                         // (matron_found_climb.cpp), climbed by her own hands.
