@@ -91,7 +91,7 @@ struct Budget {
     float used = 0.0F;
     float power_left = 0.0F;    // watts still available this tick
     float power_used = 0.0F;
-    JPH::Vec3 velocity = JPH::Vec3::sZero();   // her body's, at the start of the tick
+    JPH::Vec3 velocity = JPH::Vec3::sZero();   // hers relative to the support (hold or floor) at the tick's start
     JPH::Vec3 take(JPH::Vec3 want) noexcept;
 };
 
@@ -197,6 +197,9 @@ public:
     float walk_between(float dt, JPH::Vec3 feet_goal, float speed);
     [[nodiscard]] const MoveSpec &spec() const noexcept { return spec_; }
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
+    // Her velocity against what she pushes on (the hold at its anchor, else
+    // the floor under her): the velocity her power budget is charged on.
+    [[nodiscard]] JPH::Vec3 relative_velocity() const;
     void set_ignore(Ignore ignore) noexcept { ignore_ = ignore; }
     // This tick's climbing rate on rungs (her pace, a Turn's jerks); <0: her own.
     void set_rate(const float mps) noexcept { rate_override_ = mps; }

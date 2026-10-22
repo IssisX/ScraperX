@@ -512,6 +512,26 @@ void test_power_budget() {
     require(b.used <= 5600.0F + 1.0F, "matron power: force total still capped");
     Budget still{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3::sZero()};
     require(std::abs(still.take(Vec3(0, 5000.0F, 0)).GetY() - 5000.0F) < 1.0F, "matron power: at rest, force cap only");
+    // Riding a rising support: her world velocity is the lift's, her
+    // velocity against it near zero, so power is not spent on the ride.
+    {
+        ClimbWorld w;
+        const BodyID lift = w.box(Vec3(1.5F, 0.2F, 1.5F), RVec3(0, 1.0F, 6.0F), false, EMotionType::Kinematic);
+        w.spawn(RVec3(0, 1.2F, 6.0F));
+        Climber climber(w.physics, w.her, traversal::Ignore{w.her, BodyID()}, traversal::Limits{});
+        for (int i = 0; i < 90; ++i) w.physics.Update(w.dt, 1, &w.temp, &w.jobs);
+        w.physics.GetBodyInterface().SetLinearVelocity(lift, Vec3(0, 2.0F, 0));
+        for (int i = 0; i < 90; ++i) {
+            climber.walk_between(w.dt, Vec3(0, 0, 6.0F), 0.0F);
+            w.physics.Update(w.dt, 1, &w.temp, &w.jobs);
+        }
+        const float world_vy = w.physics.GetBodyInterface().GetLinearVelocity(w.her).GetY();
+        const float rel = climber.relative_velocity().Length();
+        std::cout << "  matron power on a lift rising 2 m/s: world vy " << world_vy << ", relative " << rel << " m/s\n";
+        require(world_vy > 1.8F && rel < 0.2F, "matron power: charged on velocity against the moving support, not the world");
+        Budget riding{5600.0F, 0.0F, 9000.0F, 0.0F, climber.relative_velocity()};
+        require(riding.take(Vec3(0, 5000.0F, 0)).GetY() > 4900.0F, "matron power: riding a lift does not eat her power");
+    }
     std::cout << "  matron power: 9 kW cap clamps along-velocity force (3000 N at 3 m/s); sideways/braking free\n";
 }
 

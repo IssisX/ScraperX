@@ -162,6 +162,24 @@ Vec3 Budget::take(const Vec3 want) noexcept {
 RVec3 Climber::center() const { return physics_.GetBodyInterface().GetCenterOfMassPosition(body_); }
 Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVelocity(body_); }
 
+// Her velocity against what she pushes on: the hold's point velocity at the
+// anchor when holding, else the floor's under her feet. Power is spent only
+// on motion relative to the support (riding a moving deck costs nothing).
+Vec3 Climber::relative_velocity() const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    Vec3 support = Vec3::sZero();
+    if (hold_.valid() && bodies.IsAdded(hold_.body)) {
+        support = bodies.GetPointVelocity(hold_.body, hold_world_);
+    } else {
+        BodyID by;
+        if (supported(nullptr, &by) && !by.IsInvalid()) {
+            const RVec3 c = center();
+            support = bodies.GetPointVelocity(by, RVec3(c.GetX(), c.GetY() - limits_.center_above_feet(), c.GetZ()));
+        }
+    }
+    return velocity() - support;
+}
+
 bool Climber::supported(float *top, BodyID *by) const {
     const RVec3 c = center();
     const SteelFilter filter(ignore_);
@@ -410,7 +428,7 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
 }
 
 float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed) {
-    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, velocity()};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
     walk(dt, feet_goal, speed, budget);
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
@@ -483,7 +501,7 @@ Climber::Status Climber::step(const float dt) {
     if (status_ != Status::Running) {
         return status_;
     }
-    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, velocity()};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
     phase_s_ += dt;
     switch (spec_.kind) {
     case MoveKind::Walk: step_walk(dt, budget); break;
