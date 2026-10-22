@@ -13,7 +13,7 @@ public:
     static constexpr float kReach = 1.65F;
     static constexpr float kForce = 6000.0F;
     static constexpr float kPower = 9000.0F;
-    static constexpr int kMaxNodes = 768;
+    static constexpr int kMaxNodes = 1536;
     struct Report {
         Status status = Status::Idle;
         unsigned plans = 0, acquisitions = 0, steps = 0, queries = 0, native_queries = 0;
@@ -35,6 +35,7 @@ private:
     bool transition(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, const Node &) const;
     bool clear(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, JPH::RVec3) const;
     mutable Report report_;
+    mutable bool incomplete_clearance_ = false;
     struct Failed { JPH::RVec3 from, to; };
     std::vector<Failed> failed_;
     bool budget() const { return ++report_.queries <= 200000; }

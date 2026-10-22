@@ -9,6 +9,14 @@ namespace {
 using namespace JPH;
 using namespace scraperx::sim;
 using namespace scraperx::sim::detail;
+class MeasuredSolidFilter final : public BodyFilter {
+public:
+    explicit MeasuredSolidFilter(BodyID self) : self_(self) {}
+    bool ShouldCollide(const BodyID &id) const override { return id != self_; }
+    bool ShouldCollideLocked(const Body &body) const override { return !body.IsSensor(); }
+private:
+    BodyID self_;
+};
 struct Fixture {
     JoltRuntimeLease lease;
     detail::BroadPhaseLayerInterface broad;
@@ -20,7 +28,7 @@ struct Fixture {
     std::unique_ptr<kit::Kit> kit;
     std::unique_ptr<Matron> matron;
     std::vector<BodyID> solids;
-    float min_y=10000, max_x=-10000, penetration=0, controlled_penetration=0, measured_force=0, measured_power=0;
+    float min_y=10000, min_x=10000, max_x=-10000, penetration=0, controlled_penetration=0, measured_force=0, measured_power=0;
     Fixture(RVec3 start) {
         physics.Init(8192, 0, 16384, 8192, broad, vs, pair);
         physics.SetGravity(Vec3(0,-9.81F,0));
@@ -44,6 +52,7 @@ struct Fixture {
     RVec3 at() { return physics.GetBodyInterface().GetPosition(matron->body()); }
     void tick() {
         constexpr float dt=1.0F/90;
+        const RVec3 before = at();
         const auto old_plans=matron->climb_report().plans;
         const auto old_queries=matron->climb_report().native_queries;
         const auto started=std::chrono::steady_clock::now();
@@ -63,12 +72,16 @@ struct Fixture {
         }
         physics.Update(dt,1,&temp,&jobs);
         matron->post_step(dt);
+        require(Vec3(at()-before).Length()<0.2F, "routecraft: measured physical movement below 0.2 m per tick");
         require(physics.GetBodyInterface().GetGravityFactor(matron->body())==1,"routecraft: gravity stays enabled");
-        min_y=std::min(min_y,float(at().GetY())); max_x=std::max(max_x,float(at().GetX()));
+        min_y=std::min(min_y,float(at().GetY())); min_x=std::min(min_x,float(at().GetX())); max_x=std::max(max_x,float(at().GetX()));
         CapsuleShape capsule(Matron::kHalfHeight,Matron::kRadius);
         AllHitCollisionCollector<CollideShapeCollector> hits;
         physics.GetNarrowPhaseQuery().CollideShape(&capsule,Vec3::sReplicate(1),RMat44::sTranslation(at()),
-            CollideShapeSettings(),at(),hits,{}, {},IgnoreSingleBodyFilter(matron->body()));
+            CollideShapeSettings(),at(),hits,
+            physics.GetDefaultBroadPhaseLayerFilter(physics.GetBodyInterface().GetObjectLayer(matron->body())),
+            physics.GetDefaultLayerFilter(physics.GetBodyInterface().GetObjectLayer(matron->body())),
+            MeasuredSolidFilter(matron->body()));
         const auto status=matron->climb_report().status;
         for(const auto &hit:hits.mHits) {
             penetration=std::max(penetration,hit.mPenetrationDepth);
@@ -261,6 +274,17 @@ void run_matron_routecraft() {
         require(f.matron->climb_report().force==0 && f.matron->climb_report().status==MatronRoutecraft::Status::Released,"routecraft: restore clears controller");
     }
     {
+        Fixture f(RVec3(0,157,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(4,0.1F,2));
+        f.ladder(0,154,161);
+        f.physics.SetGravity(Vec3(0,-12,0)); // stronger physical load isolates force from power saturation
+        require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()), "routecraft: force saturation setup");
+        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-286,0));
+        f.tick();
+        require(f.measured_force>5999 && f.measured_power<9000, "routecraft: actual 6000 N saturation independent of power cap");
+        std::cout << "routecraft measured force saturation N=" << f.measured_force << " W=" << f.measured_power << '\n';
+    }
+    {
         Fixture f(RVec3(0,155.07,-0.55));
         f.box(RVec3(0,153.9,-1),Vec3(4,0.1F,2)); f.ladder(0,154,161);
         require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: capture interruption start");
@@ -323,15 +347,106 @@ void run_matron_routecraft() {
         require(!f.matron->request_climb_goal(RVec3(0,157.2,-0.55),Vec3::sAxisZ()),"routecraft: moving support family explicitly rejected");
     }
     {
+        Fixture f(RVec3(0,155.07,-0.55));
+        f.box(RVec3(0,153.9,-1), Vec3(3,0.1F,2));
+        const auto phantom = [&](bool sensor, RVec3 at, Vec3 half) {
+            BodyCreationSettings settings(new BoxShape(half),at,Quat::sIdentity(),EMotionType::Static,
+                sensor ? object_layers::kStatic : object_layers::kHand);
+            settings.mIsSensor = sensor;
+            f.solids.push_back(f.physics.GetBodyInterface().CreateAndAddBody(settings,EActivation::DontActivate));
+        };
+        phantom(true,RVec3(0,156,0),Vec3(0.28F,0.02F,0.02F));
+        phantom(false,RVec3(0,156.3,0),Vec3(0.28F,0.02F,0.02F));
+        require(!f.matron->request_climb_goal(RVec3(0,156,-0.55),Vec3::sAxisZ()),
+            "routecraft: sensors and noncolliding layers cannot supply grips");
+        f.ladder(0,154,160);
+        phantom(true,RVec3(0,157,-0.4),Vec3(2,0.1F,1));
+        phantom(false,RVec3(0,158,-0.4),Vec3(2,0.1F,1));
+        require(f.go(RVec3(0,159,-0.55)), "routecraft: sensor and noncolliding barriers do not obstruct body or hand");
+        require(f.matron->view().climbing && !f.matron->view().clinging,
+            "routecraft: filtered traversal retains controller ownership without riding");
+        require(f.go(RVec3(0,155.2,-0.55)), "routecraft: filtered barriers also permit descent");
+        f.matron->cancel_climb_goal();
+        for (int i = 0; i < 90; ++i) f.tick();
+        require(std::abs(f.at().GetY()-(154+Matron::kStandCentre))<0.025F &&
+            std::abs(f.matron->view().floor_y-154)<0.025F && !f.matron->view().climbing && !f.matron->view().clinging,
+            "routecraft: filtered traversal releases onto actual floor without riding");
+    }
+    {
         Simulation world(InitialSpawn::Deck154);
         world.launch_matron_for_test({11,199.32,-131.41});
-        const auto started=std::chrono::steady_clock::now();
-        const bool accepted=world.request_matron_climb_goal({11,221.37,-130.31},{0,0,1});
-        std::cout<<"held-out panel accepted="<<accepted<<" status="<<world.matron_climb_status()
-            <<" plan_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
-            <<" native_queries="<<world.matron_climb_queries()<<std::endl;
-        require(!accepted && world.matron_climb_status()==int(MatronRoutecraft::Status::BudgetExceeded),
-            "routecraft: dense held-out panel explicitly exceeds grip budget");
+        Vector3 previous{11,199.32,-131.41};
+        double maximum_step = 0;
+        const auto tick = [&]() {
+            (void)world.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = world.matron_state();
+            const double dx = m.position.x - previous.x, dy = m.position.y - previous.y, dz = m.position.z - previous.z;
+            maximum_step = std::max(maximum_step, std::sqrt(dx*dx + dy*dy + dz*dz));
+            require(m.alive && maximum_step < 0.2, "routecraft: panel alive with bounded physical steps");
+            previous = m.position;
+        };
+        const auto travel = [&](Vector3 goal, double floor) {
+            const auto started = std::chrono::steady_clock::now();
+            const bool accepted = world.request_matron_climb_goal(goal, {0,0,1});
+            std::cout << "panel goal_y=" << goal.y << " accepted=" << accepted << " status=" << world.matron_climb_status()
+                << " plan_ms=" << std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
+                << " native_queries=" << world.matron_climb_queries() << std::endl;
+            require(accepted, "routecraft: actual panel route found");
+            for (int i = 0; i < 9000 && world.matron_climb_status() == 1; ++i) {
+                if (i == 900 || i == 1800) {
+                    const auto replanning = std::chrono::steady_clock::now();
+                    require(world.request_matron_climb_goal(goal,{0,0,1}), "routecraft: dense panel mid-climb replan");
+                    std::cout << "panel replan_ms=" << std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-replanning).count()
+                        << " native_queries=" << world.matron_climb_queries() << " at_y=" << world.matron_state().position.y << '\n';
+                }
+                tick();
+            }
+            require(world.matron_climb_status() == 2, "routecraft: actual panel physical arrival");
+            world.cancel_matron_climb_goal();
+            for (int i = 0; i < 30; ++i) tick();
+            for (int i = 0; i < 90; ++i) {
+                tick(); const auto m = world.matron_state();
+                require(std::abs(m.position.y - (floor + Matron::kStandCentre)) < 0.025 && !m.climbing && !m.grip_on && m.carrying == 0,
+                    "routecraft: panel destination standing without grip for one second");
+            }
+            std::cout << "panel arrived_y=" << world.matron_state().position.y << " standing_ticks=90 max_step=" << maximum_step << '\n';
+        };
+        travel({11,221.37,-130.55}, 220.25);
+        travel({11,199.4,-131.41}, 198.25);
+    }
+    {
+        // Production panel collision leaves with independent per-tick force,
+        // power, gravity, reach, and penetration measurements in Fixture::tick.
+        Fixture f(RVec3(11,199.32,-131.41));
+        f.box(RVec3(11,220.15,-129.6),Vec3(3,0.1F,1.13F));
+        f.kit = std::make_unique<kit::Kit>(f.physics,object_layers::kStatic,object_layers::kMoving);
+        bands::CounterweightWell well;
+        bands::build_counterweight_well(*f.kit,well);
+        require(f.go(RVec3(11,221.37,-130.55)), "routecraft: measured production panel ascent");
+        require(f.go(RVec3(11,199.4,-131.41)), "routecraft: measured production panel descent");
+        std::cout << "panel measured_force=" << f.measured_force << " sampled_power=" << f.measured_power
+            << " controlled_overlap=" << f.controlled_penetration << '\n';
+    }
+    {
+        // Same generic search, translated dense members and unrelated nearby
+        // distractors. The body must go sideways around the new solid.
+        Fixture f(RVec3(20,155.07,11.45));
+        f.box(RVec3(20,153.9,11), Vec3(4,0.1F,3));
+        for (int i = 0; i < 50; ++i) f.box(RVec3(20,154.3 + i*0.44,12), Vec3(1.03F,0.02F,0.02F));
+        for (int i = 0; i < 80; ++i) f.box(RVec3(21.7,154.3 + i*0.27,12.7), Vec3(0.28F,0.02F,0.02F));
+        f.box(RVec3(20,160,11.45), Vec3(0.4F,0.2F,0.4F));
+        require(f.go(RVec3(20,175,11.45)), "routecraft: dense translated fixture with distractors");
+        require(f.min_x < 19.4F || f.max_x > 20.6F, "routecraft: dense fixture executes lateral detour");
+        require(f.go(RVec3(20,155.2,11.45)), "routecraft: dense translated descent");
+        std::cout << "dense fixture min_x=" << f.min_x << " max_x=" << f.max_x << " final_y=" << f.at().GetY() << '\n';
+    }
+    {
+        Fixture f(RVec3(0,155.07,-0.55));
+        f.box(RVec3(0,153.9,-1), Vec3(3,0.1F,2));
+        for (int i = 0; i < 2050; ++i) f.box(RVec3(i*0.0001,156,0), Vec3(0.28F,0.02F,0.02F));
+        require(!f.matron->request_climb_goal(RVec3(0,156,-0.55),Vec3::sAxisZ()) &&
+            f.matron->climb_report().status == MatronRoutecraft::Status::BudgetExceeded,
+            "routecraft: genuine collector overflow rejects the complete query");
     }
     std::cout<<"PASS: matron-routecraft\n";
 }

@@ -6,7 +6,7 @@ checkpoint is not yet a fully verified integration delivery.
 Exact base: `e098f5897066497700b7c93a2c8c2b6dc7b3314f`.
 Branch: `dot/matron-routecraft-20261022`. Initial implementation checkpoint:
 `750c52d5cef9c9e303f2f71a43621ffce05a0f1a`.
-Final code/test revision: `d5898b3208a08a357b610e123bcdaf5aa34d0fea`.
+Final code/test revision: `65c826bfd5d0ca507957fb5f8dca38b447bacb67`.
 Later documentation/evidence commits do not change the tested code.
 
 ## Implemented family and physical ownership
@@ -22,7 +22,9 @@ contact states, and executes ascent, descent, lateral transfers, and an above-ru
 posture that permits a collision-clear top transfer. It can descend before ascending.
 Neither production extraction nor search reads route entity IDs or authored ladder
 coordinates. Fixture placement and caller-provided goals are configuration, not
-solutions supplied to the search.
+solutions supplied to the search. Final diff inspection found no target-specific
+runtime selection, named-deck lookup, or authored-planner fallback in routecraft.
+Existing authored pursuit systems remain outside this opt-in controller.
 
 Execution uses `AddForce` at native 90 Hz, with gravity enabled. Actuation is capped
 at 6000 N and absolute mechanical power sampled before each physics step at
@@ -58,15 +60,28 @@ actuator limit, not a biological measurement.
 ## Search and execution bounds
 
 The search region encloses start and goal with a two-meter margin. Requests are
-limited to 28 m vertical separation and 8 m on each horizontal axis. Accepted searches contain at
-most 192 extracted grip samples, 768 body/contact nodes, and 2048 collision hits
-per collector; collector overflow rejects the result rather than selecting an
-unstable prefix. At most five samples are taken along one horizontal member.
-Candidates sort by world coordinates, then body and subshape identity.
+limited to 28 m vertical separation and 8 m on each horizontal axis. Each native
+collector accepts at most 2048 hits; overflow rejects the result rather than
+selecting an unstable prefix. Unique body/subshape leaves are sampled once, at
+most five points per horizontal member. A cheap catalog preserves all discovered
+heights and lateral branches, with at most 71680 poses (2048 × 5 × 7).
+There is no raw 192-grip rejection or nearest-start/height-prefix truncation.
+
+Deterministic A* admits at most 1536 reachable body/contact states, with cached
+lazy pose clearance and visibility. The two standoff choices doubled the prior
+768-state allowance; the main scalability change is deduplicated extraction,
+lazy validation, and spatial adjacency, not an unlimited query budget. A sorted
+1.4 m spatial grid restricts subsequent edges to 27 neighboring cells; the source
+uses a wider neighborhood preserving its 3.2 m acquisition-edge limit. Subsequent
+edges are at most 1.4 m. Cheap endpoint reach checks precede native queries.
+Euclidean path cost and heuristic permit sideways and downward detours. Geometric
+keys, then body/subshape identity, determine stable candidate and tie ordering.
 
 Each grip contributes body-center offsets of -0.65, +0.35, and +1.45 m vertically,
-0.55 m away from its approach side. The supplied goal can also be a body/contact
-node. Breadth-first search is not monotonic in height. An edge acquires the new
+at both 0.40 and 0.55 m from its approach side. Both use identical swept clearance;
+the narrower stance permits legal passage beside nearby steel without shrinking
+the capsule. The supplied goal can also be a body/contact
+node. An edge acquires the new
 support from the current body posture before releasing the old support. The
 capsule is swept continuously; hand visibility/reach is sampled every 0.2 m along
 the transition. This is a point-hand model, not an arm-volume sweep. Reach is at
@@ -83,7 +98,10 @@ power times timestep is bounded by 1.08 MJ. Solver-time work can differ from thi
 discrete estimate, especially during impacts; no exact work-integral claim is made. Three replans are allowed after failures;
 stalls time out after 2.5 s. Failed approaches are excluded locally for that
 request and forgotten on a new request, rather than globally blacklisting a hold.
-Contacts are checked every tick against body presence, motion type, subshape,
+Discovery, hand rays, overlaps, and sweeps use the actual Matron body collision-layer
+filters and exclude self and sensors. Collector overflow during clearance is
+remembered: unsuccessful searches report `BudgetExceeded`, not a false exhaustive
+`NoRoute`. Contacts are checked every tick against body presence, motion type, subshape,
 local position, reach, visibility, and current capsule clearance. Changed geometry
 triggers a new local extraction. Replanning failure applies no contact force.
 
@@ -109,7 +127,9 @@ simulation.cancel_matron_climb_goal();
 ```
 
 Those coordinates are only an example for the existing ladder. The caller must
-first bring Matron within reach of some legal starting support. The new controller
+first bring Matron within reach and unobstructed visibility of some legal starting
+support. A released landing is not automatically a reacquirable departure; callers
+choose an appropriate landing/approach goal. The new controller
 does not autonomously replace the existing chase routing or approach walking.
 `Matron::request_climb_goal(goal,facing)` is the lower-level native interface;
 `climb_report()` exposes charged operation counts, plans, selected-contact counts,
@@ -158,18 +178,22 @@ build/host/scraperx_sim_tests
 ```
 
 The new selector is registered in `tests/simulation_tests.cpp`, included in the
-normal full run, and wired in CMake. Focused coverage comprises 18 fixture/world
-runs in 17 groups: two identical replays; production compound ladder; full tower;
+normal full run, and wired in CMake. Focused coverage comprises 23 fixture/world
+runs in 22 groups: two identical replays; production compound ladder; full tower;
 shifted lateral transfer; downward backtracking; blocked body path; all grips
 removed and landing; new obstruction and lateral replanning; one grip removed
 and interrupted recovery; disturbed power saturation and restore; direct capture
 interruption; displaced static anchors; an unfamiliar shifted sparse rung pitch; a selected
 contact subsequently occluded; a removed mutable-compound child; kinematic support
-rejection; and dense-panel budget rejection. Upper-level establishment, safe lower
+rejection; sensor/noncolliding-layer grip and barrier exclusion with actual floor
+recovery; full-tower panel ascent/descent; independently measured production-panel
+execution; a translated 280-grip fixture with distractors and lateral obstruction;
+a genuine 2050-body collector overflow; and a separate 6000 N force saturation case. Upper-level establishment, safe lower
 deck recovery, and rejected goal replacement are asserted in the full-tower case. Each direction
 ends with 90 ticks standing on the actual destination with no grip or carried
 object, alive, after an initial settling interval. Every full-tower tick is checked
-for movement below 0.2 m; observed maximum was 0.0466659 m.
+for movement below 0.2 m; observed ladder maximum was 0.0466674 m; panel maximum was 0.0173981 m.
+All fixture ticks also enforce the 0.2 m displacement bound.
 
 Tests inspect Jolt's actual accumulated force and power before integration,
 contact reach, gravity factor, real capsule penetration, physical progress,
@@ -194,32 +218,53 @@ at 2 m/s.
 
 ## Host planning measurements and held-out qualification
 
-Final focused run, one sample at each full-tower stage:
+Final focused run, one sample per full-tower stage:
 
 | Operation | Host elapsed ms | Actual native queries |
 | --- | ---: | ---: |
-| Initial full-tower ladder request | 2.83631 | 3051 |
-| Mid-climb same-goal replan request at y=162.802 | 1.9924 | 2098 |
-| Mid-climb same-goal replan request at y=170.666 | 0.931427 | 951 |
-| New-obstruction fixture replan | 0.65617 | 1984 |
-| Dense held-out panel request, rejected by budget | 0.160868 | 1 |
+| Initial ladder request | 6.83817 | 6986 |
+| Ladder replan at y=162.802 | 4.52942 | 4666 |
+| Ladder replan at y=170.522 | 2.46971 | 2458 |
+| New-obstruction fixture replan | 1.51178 | 3481 |
+| Panel ascent request | 27.9307 | 24340 |
+| Panel ascent replan at y=206.758 | 22.9661 | 20136 |
+| Panel ascent replan at y=213.864 | 12.1098 | 9958 |
+| Panel descent request | 16.2267 | 15083 |
+| Panel descent replan at y=214.871 | 11.8846 | 11462 |
+| Panel descent replan at y=207.859 | 8.00875 | 7871 |
 
-These are host observations, not worst-case guarantees or a representative Android
-benchmark. The full-tower replans are explicit mid-climb requests, not geometry
-faults. Fault timings include the entire native Matron pre-step that performed the
-replan, but exclude the physics update. An earlier focused iteration observed
-3.07959 ms for the initial full-tower request. The 200000-operation budget limits
-work counts, not wall time; worst-budget synchronous latency is unmeasured. Callers
-should qualify deployment regions before adopting this opt-in controller in chase.
+These are host observations, not worst-case guarantees or Android measurements.
+An earlier run of the same planner observed 31.5482 ms for the first panel replan.
+Planning is synchronous and these spikes exceed one 90 Hz tick's wall-clock
+budget. Physics/controller integration still uses fixed 90 Hz steps; this is not
+proof of sustained real-time scheduling. Explicit requests perform full replans;
+fault timings include Matron pre-step but exclude physics integration. The fixed
+200000-operation cap limits work counts, not wall time. Worst-budget latency is
+unmeasured. Qualify deployment regions and scheduling before automatic chase adoption.
 
-The held-out 198.25–220.25 scaffold uses the production panel and catwalk from
-`band_counterweight_well.cpp`. The request started at `(11,199.32,-131.41)` and
-asked for `(11,221.37,-130.31)`, facing +z. Frozen rules returned `BudgetExceeded`
-because the dense member sampling exceeded 192 accepted grips. This negative
-qualification is explicitly tested and logged. No panel execution, jump necessity,
-or physical impossibility is established. The disputed lowest-bar reach remains
-a follow-up after a separately reviewed budget/sampling qualification; no jump,
-pole, dynamic support, or walking rewrite was added to make the panel pass.
+The previously held-out 198.25–220.25 panel exposed a real raw-candidate cutoff:
+71 native hits, 71 unique leaves, 50 eligible horizontal leaves, and 200 samples.
+There were no duplicate leaves in that case. The old 192 cutoff alone rejected it.
+The final general search preserves its four samples per horizontal member; a
+center-only sample would lie at a vertical-member crossing and can fail visibility.
+
+The full native tower now executes from supported `(11,199.32,-131.41)` to
+`(11,221.37,-130.55)`, releases onto the 220.25 ring, stands 90 ticks without a
+hold, reacquires and descends to `(11,199.4,-131.41)`, then releases and stands
+90 ticks on the 198.25 catwalk. Both requests face +z. These are fixture/deployment
+goals, never runtime route constants. The initially tested top goal at z=-130.31
+allowed normal pursuit to drift farther onto the ring during the released wait;
+its grip ray then crossed steel. The nearer-edge goal preserves reacquisition.
+A real bracket also blocks the original 0.55 m standoff; the generic 0.40 m
+alternative clears it. Neither geometry nor collision tolerances were changed.
+
+Terminal `Holding` is required before release in each direction; a lost grip and
+lucky landing cannot pass. The lowest bar is reached without a jump in this
+aggregate 1.65 m center-reach model. This does not establish anatomical reach for
+an articulated rig. A separate production-panel fixture measures actual body
+force (peak 3538.01 N), sampled power (2069.13 W), gravity, reach, and controlled
+penetration (0 m). The full-tower case measures actual arrival and released support.
+No pole, jump, dynamic-support, or ground-walking rewrite was added.
 
 Project-specific peer discussion is tracked at
 [repository issue 3](https://github.com/IssisX/ScraperX/issues/3). It prompted the
@@ -231,22 +276,28 @@ IDs, query bounds, failed-approach handling, actual-position transfer clearance,
 impact sensing, failure reporting, descent recovery, transactional replacement,
 and immediate capture cleanup. A final inspection confirmed those lifecycle fixes.
 
-Focused verbatim output is in `routecraft_evidence/focused.log`. Full-suite status,
-counts, and logs will be finalized after the ongoing run. Player climbing selector
-passed with exit 0. Capture/arm/fatality passed with exit 0 on the final controller
-code. The other two CTest executables (shared survival and parkour flow) passed
-with exit 0. The previous full-suite revision passed with 177 PASS records; that
-is supporting regression evidence, not the final revision result.
+Focused verbatim output is in `routecraft_evidence/focused.log`. Final full-suite
+verification of `65c826b` is running; this checkpoint is not yet integration-ready.
+The preserved pre-scalability baseline `d5898b3` completed with exit 0 and 177 PASS
+records (`baseline-full.log`), but does not validate the new search. Final targeted
+regression and full-suite exit codes will be recorded in `verification.txt`.
+An independent final review found no significant defect in the lazy search,
+additional stance, or caller-owned goal adjustment; it specifically identified
+the reacquisition and synchronous-latency limitations documented above.
 
 Concise verbatim focused evidence:
 
 ```text
 routecraft full tower grounded top-out y=177.3 standing_ticks=90
-routecraft full tower lower standing_ticks=90 maximum_step_m=0.0466659
-routecraft backtrack min_y=156.065 final_y=160.98
+routecraft full tower lower standing_ticks=90 maximum_step_m=0.0466674
+routecraft backtrack min_y=156.352 final_y=160.93
 routecraft interrupted recovery peak_overlap=0.0694488 controlled_overlap=0
 routecraft measured saturation N=4500 W=9000
-held-out panel accepted=0 status=5 plan_ms=0.160868 native_queries=1
+routecraft measured force saturation N=6000 W=7800
+panel arrived_y=221.3 standing_ticks=90 max_step=0.012384
+panel arrived_y=199.3 standing_ticks=90 max_step=0.0173981
+panel measured_force=3538.01 sampled_power=2069.13 controlled_overlap=0
+dense fixture min_x=19.0664 max_x=19.9999 final_y=155.22
 PASS: matron-routecraft
 ```
 
