@@ -916,7 +916,11 @@ public:
     // plans over the map, makes each move with her capped forces, commits a
     // region only standing on it, and on a failed move falls and plans again
     // from wherever she lands.
-    void set_routes(const traversal::AffordanceMap *routes) noexcept { routes_ = routes; }
+    // The tower as she has looked it over (traversal::AffordanceMap): her
+    // climbs are the ladders it found, none written in.
+    void set_routes(const traversal::AffordanceMap *routes);
+    // Out of her locker with the tower not yet looked over.
+    [[nodiscard]] bool wants_routes() const noexcept { return routes_ == nullptr && body_in_world_; }
     bool travel_to(int region);   // false: no way there from where she stands
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
@@ -1135,6 +1139,7 @@ private:
         float out_x, out_z;
         float top_x, top_z;
         bool hers;
+        int edge;   // the scanned edge (AffordanceMap::edges) she climbs it by
     };
     struct Plank {
         JPH::BodyID body;
@@ -1203,6 +1208,7 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
+    void begin_climb(int which);
     void step_journey(float dt);
     [[nodiscard]] int region_under() const;
     // After a lead a storey away along the corner pipe (above): to the rail's

@@ -122,22 +122,13 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
         stack.nodes.assign(deck.nodes.begin(), deck.nodes.begin() + 8);
         levels_.push_back(stack);
     }
-    // The ladder from her deck up to the 176 ring, climbed from its south
-    // side and topped out north over its head; and the riser from 143 up to
-    // her deck, climbed from its plate over the shaft and left north down the
-    // steps off its bridge, which she knows but does not take hold of.
-    climbs_ = {{kLadderX, kLadderFootZ, kDeckTop, kRingFloor, 0.0F, 1.0F, kLadderX, kLadderFootZ + kMantleOutM, true},
-               {kRiserX, kRiserFootZ, kDeckTop - kStackPitch, kDeckTop, 0.0F, 1.0F, kRiserX, kRiserTopZ, false}};
-    // The bay's bracket (bay.hpp): where she holds the leaf and the foot of
-    // its rungs, which she takes hold of whatever her stage (her own way out
-    // of her own trap), topping out west onto her deck.
+    // Her climbs are what her scan of the tower finds (set_routes): none written in.
+    // The bay's bracket (bay.hpp): where she holds the leaf. Its rungs, her
+    // way out of her own trap whatever her stage, are found like any others.
     Level bay{Bay::kBracketTop, {{Bay::kBraceX, Bay::kBraceZ}, {Bay::kRungsX, Bay::kRungsZ}},
               {{0, 1, Link::Floor}}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
-    climbs_.push_back({Bay::kRungsX, Bay::kRungsZ, Bay::kBracketTop, kDeckTop, -1.0F, 0.0F, Bay::kDropX, Bay::kDropZ,
-                       true});
-    bay_climb_ = static_cast<int>(climbs_.size()) - 1;
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -847,56 +838,69 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     if (turn_ == Turn::None && best != bay_climb_) {
         return true;
     }
-    climb_ = best;
-    mantling_ = false;
-    ++climbs_done_;
-    physics_.GetBodyInterface().SetGravityFactor(body_, 0.0F);
+    begin_climb(best);
     return true;
 }
 
+void Matron::set_routes(const traversal::AffordanceMap *routes) {
+    routes_ = routes;
+    climbs_.clear();
+    bay_climb_ = -1;
+    guess_climb_ = -1;
+    if (routes_ == nullptr) {
+        return;
+    }
+    const auto &regions = routes_->regions();
+    const auto &edges = routes_->edges();
+    for (std::size_t i = 0; i < edges.size(); ++i) {
+        const traversal::Edge &e = edges[i];
+        if (!e.usable || e.kind != traversal::MoveKind::RungUp) {
+            continue;
+        }
+        const traversal::MoveSpec &m = e.spec;
+        // Faced toward its line from the side she starts on.
+        const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+        climbs_.push_back({m.start.GetX(), m.start.GetZ(), regions[static_cast<std::size_t>(e.from)].top,
+                           regions[static_cast<std::size_t>(e.to)].top, face.GetX(), face.GetZ(), m.goal.GetX(), m.goal.GetZ(),
+                           true, static_cast<int>(i)});
+    }
+}
+
+// Onto a climb's rungs: her hands and feet on them, gravity on her as ever,
+// her force from one capped budget (traversal::Climber).
+void Matron::begin_climb(const int which) {
+    const Climb &c = climbs_[static_cast<std::size_t>(which)];
+    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
+    climber_->begin(routes_->edges()[static_cast<std::size_t>(c.edge)].spec);
+    climb_ = which;
+    mantling_ = false;
+    ++climbs_done_;
+}
+
 void Matron::climb(const float dt) {
-    BodyInterface &bodies = physics_.GetBodyInterface();
     const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
-    const RVec3 at = bodies.GetPosition(body_);
-    const float feet = float(at.GetY()) - kStandCentre;
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
-    Vec3 want = Vec3::sZero();
-    if (!mantling_ && feet < c.head_y + 0.15F) {
-        // Up it rung by rung, held to its line: still in a Turn's wind-up, in
-        // jerks in its lunges.
-        float rate = kClimbMps;
-        if (turn_ == Turn::Windup) {
-            rate = 0.0F;
-        } else if (turn_ == Turn::Lunge &&
-                   std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds) {
-            rate = kClimbBurstMps;
-        }
-        want = Vec3(std::clamp((c.x - float(at.GetX())) * 5.0F, -0.5F, 0.5F), rate,
-                    std::clamp((c.z - float(at.GetZ())) * 5.0F, -0.5F, 0.5F));
-    } else {
-        // Her feet over the floor above: out over its edge, and once her
-        // middle is over it, her own weight on her feet again.
-        mantling_ = true;
-        const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
-        if (out >= kMantleOutM) {
-            bodies.SetGravityFactor(body_, 1.0F);
-            climb_ = -1;
-            mantling_ = false;
-            return;
-        }
-        want = Vec3(c.out_x * kMantleMps, std::clamp((c.head_y + 0.15F - feet) * 4.0F, 0.0F, 1.0F),
-                    c.out_z * kMantleMps);
+    // Up it at her pace: still in a Turn's wind-up, in jerks in its lunges.
+    float rate = kClimbMps;
+    if (turn_ == Turn::Windup) {
+        rate = 0.0F;
+    } else if (turn_ == Turn::Lunge && std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds) {
+        rate = kClimbBurstMps;
     }
-    Vec3 delta = want - velocity;
-    const float limit = kClimbAccel * dt;
-    if (delta.Length() > limit) {
-        delta = delta.Normalized() * limit;
-    }
-    const Vec3 moved = velocity + delta;
-    bodies.SetLinearVelocity(body_, moved);
+    climber_->set_rate(rate);
+    const traversal::Climber::Status status = climber_->step(dt);
+    mantling_ = climber_->phase() >= 3;
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     speed_ = 0.0F;
-    stride_ += moved.Length() * dt;
+    stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;
+    if (status != traversal::Climber::Status::Running) {
+        // Over its head onto the floor, or off it (her hold lost: she falls,
+        // and is on her feet wherever she lands).
+        if (status == traversal::Climber::Status::Failed) {
+            climber_->cancel();
+        }
+        climb_ = -1;
+        mantling_ = false;
+    }
 }
 
 bool Matron::pipe_reaches(const float floor_y) noexcept {
@@ -1652,6 +1656,23 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
             trap_ = Trap::Off;
             return false;
         }
+        // The nearest climb up from where she stands in it (as she found them).
+        if (bay_climb_ < 0) {
+            const float floor_y = levels_[static_cast<std::size_t>(bay_level_)].floor_y;
+            float best_d = std::numeric_limits<float>::max();
+            for (std::size_t i = 0; i < climbs_.size(); ++i) {
+                const Climb &k = climbs_[i];
+                const float d = distance_xz(ax, az, k.x, k.z);
+                if (std::abs(k.foot_y - floor_y) < 0.6F && k.head_y > floor_y + 0.6F && d < best_d) {
+                    best_d = d;
+                    bay_climb_ = static_cast<int>(i);
+                }
+            }
+        }
+        if (bay_climb_ < 0) {
+            trap_ = Trap::Off;   // no way out she knows of: she stays in it, and hunts from there
+            return false;
+        }
         const Climb &c = climbs_[static_cast<std::size_t>(bay_climb_)];
         const float off = distance_xz(ax, az, c.x, c.z);
         if (off > 0.2F) {
@@ -1660,10 +1681,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         }
         walk_toward(dt, c.x, c.z, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-        climb_ = bay_climb_;
-        mantling_ = false;
-        ++climbs_done_;
-        bodies.SetGravityFactor(body_, 0.0F);
+        begin_climb(bay_climb_);
         return true;
     }
     return false;

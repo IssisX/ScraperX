@@ -704,6 +704,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
+    // Out of her locker, she looks the tower over once (her climbs are what
+    // she finds).
+    if (matron_->wants_routes()) {
+        (void)matron_affordances();
+    }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
