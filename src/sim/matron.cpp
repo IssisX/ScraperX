@@ -1924,7 +1924,7 @@ bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
     if (!body_in_world_ || dead_ || holding_state(state_) || state_ == State::Down ||
         state_ == State::Staggering || climb_ >= 0 || pipe_phase_ != PipePhase::Off || on_line_ || riding_ ||
         held_ >= 0 || bracing_structure()) return false;
-    MatronRoutecraft candidate = routecraft_;
+    MatronRoutecraft candidate = routecraft_.replacement();
     const bool accepted = candidate.request(physics_, body_, goal, facing);
     if (accepted || (!routecraft_.planning() && !routecraft_.owns_motion())) routecraft_ = std::move(candidate);
     if (accepted) {
@@ -1946,7 +1946,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // On her own journey (travel_to) nothing else has her body: a found
     // climb or a routecraft climb begun beside it gives way to it.
     if (travel_.active && journey_active_) end_journey(false);
-    if (travel_.active && routecraft_.owns_motion()) {
+    if (travel_.active && (routecraft_.planning() || routecraft_.owns_motion())) {
         routecraft_.cancel();
         routecraft_mine_ = false;
     }

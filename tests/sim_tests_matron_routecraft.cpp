@@ -51,7 +51,8 @@ struct Fixture {
     float min_y=10000, min_x=10000, max_x=-10000, penetration=0, controlled_penetration=0, measured_force=0, measured_power=0;
     double max_request_ms=0, max_planning_ms=0;
     double max_request_cpu_ms=0, max_planning_cpu_ms=0;
-    unsigned planning_ticks=0, max_slice_expansions=0;
+    unsigned planning_ticks=0, max_slice_expansions=0, max_slice_queries=0, max_slice_neighbor_checks=0;
+    unsigned publications=0, max_published_after_ticks=0;
     Fixture(RVec3 start) {
         physics.Init(8192, 0, 16384, 8192, broad, vs, pair);
         physics.SetGravity(Vec3(0,-9.81F,0));
@@ -75,17 +76,20 @@ struct Fixture {
     RVec3 at() { return physics.GetBodyInterface().GetPosition(matron->body()); }
     void tick(MatronRoutecraft *planner=nullptr,
         unsigned expansion_budget=MatronRoutecraft::kPlanningExpansionsPerTick,
-        unsigned transition_budget=MatronRoutecraft::kPlanningTransitionsPerTick) {
+        unsigned transition_budget=MatronRoutecraft::kPlanningTransitionsPerTick,
+        unsigned query_budget=MatronRoutecraft::kPlanningQueriesPerTick) {
         constexpr float dt=1.0F/90;
         const RVec3 before = at();
         const Vec3 velocity_before=physics.GetBodyInterface().GetLinearVelocity(matron->body());
         const auto &r=planner ? planner->report() : matron->climb_report();
         const auto old_plans=r.plans;
         const auto old_queries=r.native_queries;
+        const auto old_published_after_ticks=r.published_after_ticks;
         const bool was_planning=r.phase!=MatronRoutecraft::PlanPhase::None;
-        const auto started=std::chrono::steady_clock::now();
+        // CPU-clock calls can stall on the host; keep them outside wall timing.
         const auto cpu_started=std::clock();
-        if(planner) planner->step(physics,matron->body(),dt,expansion_budget,transition_budget);
+        const auto started=std::chrono::steady_clock::now();
+        if(planner) planner->step(physics,matron->body(),dt,expansion_budget,transition_budget,query_budget);
         else matron->pre_step(dt,RVec3(300,154,300),0);
         const double step_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
         const double step_cpu_ms=1000.0*(std::clock()-cpu_started)/CLOCKS_PER_SEC;
@@ -96,7 +100,20 @@ struct Fixture {
                 "routecraft: planning never writes body position or velocity");
         }
         max_slice_expansions=std::max(max_slice_expansions,r.slice_expansions);
+        max_slice_queries=std::max(max_slice_queries,r.slice_queries);
+        max_slice_neighbor_checks=std::max(max_slice_neighbor_checks,r.slice_neighbor_checks);
         require(r.slice_expansions<=expansion_budget,"routecraft: per-tick expansion cap");
+        require(r.slice_queries<=query_budget,"routecraft: per-tick planning query-work cap");
+        require(r.slice_neighbor_checks<=MatronRoutecraft::kPlanningNeighborChecksPerTick,
+            "routecraft: per-tick neighbor check cap");
+        if(old_published_after_ticks==0 && r.published_after_ticks>0) {
+            require(r.published_after_ticks<=r.planning_ticks,"routecraft: publication wait is counted within request planning ticks");
+            ++publications;
+            max_published_after_ticks=std::max(max_published_after_ticks,r.published_after_ticks);
+            std::cout<<"routecraft publication published_after_ticks="<<r.published_after_ticks
+                <<" wait_s="<<r.published_after_ticks/90.0<<" planning_ticks="<<r.planning_ticks
+                <<" plans="<<r.plans<<" queries="<<r.queries<<" native_queries="<<r.native_queries<<'\n';
+        }
         if(r.plans>old_plans) std::cout<<"routecraft fault replan pre_step_ms="<<step_ms
             <<" native_queries="<<r.native_queries-old_queries<<'\n';
         {
@@ -146,15 +163,22 @@ struct Fixture {
     void timings(const char *name) const {
         std::cout<<"PASS: routecraft slicing timing fixture="<<name<<" max_request_ms="<<max_request_ms
             <<" max_planning_pre_step_ms="<<max_planning_ms<<" planning_ticks="<<planning_ticks
-            <<" max_slice_expansions="<<max_slice_expansions<<" max_request_cpu_ms="<<max_request_cpu_ms
+            <<" max_slice_expansions="<<max_slice_expansions<<" max_slice_queries="<<max_slice_queries
+            <<" max_slice_neighbor_checks="<<max_slice_neighbor_checks<<" publications="<<publications
+            <<" max_published_after_ticks="<<max_published_after_ticks<<" max_wait_s="<<max_published_after_ticks/90.0
+            <<" max_request_cpu_ms="<<max_request_cpu_ms
             <<" max_planning_pre_step_cpu_ms="<<max_planning_cpu_ms<<'\n';
     }
     bool go(RVec3 goal,int ticks=9000) {
-        const auto started=std::chrono::steady_clock::now();
         const auto cpu_started=std::clock();
+        const auto started=std::chrono::steady_clock::now();
         const bool planned=matron->request_climb_goal(goal,Vec3::sAxisZ());
-        max_request_ms=std::max(max_request_ms,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count());
-        max_request_cpu_ms=std::max(max_request_cpu_ms,1000.0*(std::clock()-cpu_started)/CLOCKS_PER_SEC);
+        const double request_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
+        const double request_cpu_ms=1000.0*(std::clock()-cpu_started)/CLOCKS_PER_SEC;
+        max_request_ms=std::max(max_request_ms,request_ms);
+        max_request_cpu_ms=std::max(max_request_cpu_ms,request_cpu_ms);
+        std::cout<<"routecraft request goal="<<goal<<" accepted="<<planned
+            <<" request_ms="<<request_ms<<" request_cpu_ms="<<request_cpu_ms<<'\n';
         if (!planned) { std::cout<<"routecraft plan rejected status="<<int(matron->climb_report().status)<<" queries="<<matron->climb_report().queries<<'\n'; return false; }
         for(int i=0;i<ticks;++i) {
             tick();
@@ -169,69 +193,92 @@ struct Fixture {
 struct PlanTrace {
     std::vector<MatronRoutecraftTestAccess::Waypoint> route;
     MatronRoutecraft::Report report;
-    unsigned slices=0;
+    unsigned slices=0, search_slices=0, max_slice_queries=0, max_slice_neighbor_checks=0;
     double request_ms=0, max_slice_ms=0;
     double request_cpu_ms=0, max_search_cpu_ms=0, max_validate_cpu_ms=0;
 };
 template<class Build>
-PlanTrace trace_plan(RVec3 start, RVec3 goal, const Build &build, unsigned expansions, unsigned transitions) {
+PlanTrace trace_plan(RVec3 start, RVec3 goal, const Build &build, unsigned expansions, unsigned transitions, unsigned queries) {
     Fixture f(start); build(f);
     MatronRoutecraft planner;
     PlanTrace trace;
-    const auto requested=std::chrono::steady_clock::now();
+    constexpr unsigned unlimited=std::numeric_limits<unsigned>::max();
+    const unsigned neighbor_budget=expansions==unlimited && transitions==unlimited && queries==unlimited
+        ? unlimited : MatronRoutecraft::kPlanningNeighborChecksPerTick;
     const auto requested_cpu=std::clock();
+    const auto requested=std::chrono::steady_clock::now();
     require(planner.request(f.physics,f.matron->body(),goal,Vec3::sAxisZ()),"routecraft: deterministic search accepted");
     trace.request_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-requested).count();
     trace.request_cpu_ms=1000.0*(std::clock()-requested_cpu)/CLOCKS_PER_SEC;
     require(planner.planning() && planner.report().expansions==0,"routecraft: request defers search expansions");
-    // No physics updates: both budgets see exactly the same collision world,
+    // No physics updates: all budgets see exactly the same collision world,
     // source pose and velocity. Physical waiting is exercised separately below.
     while(planner.planning() && trace.slices<10000) {
-        const auto before=std::chrono::steady_clock::now();
-        const auto before_cpu=std::clock();
         const auto phase=planner.report().phase;
-        planner.step(f.physics,f.matron->body(),1.0F/90,expansions,transitions);
+        const auto before_cpu=std::clock();
+        const auto before=std::chrono::steady_clock::now();
+        planner.step(f.physics,f.matron->body(),1.0F/90,expansions,transitions,queries);
         trace.max_slice_ms=std::max(trace.max_slice_ms,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-before).count());
         const double cpu_ms=1000.0*(std::clock()-before_cpu)/CLOCKS_PER_SEC;
-        if(phase==MatronRoutecraft::PlanPhase::Search) trace.max_search_cpu_ms=std::max(trace.max_search_cpu_ms,cpu_ms);
+        if(phase==MatronRoutecraft::PlanPhase::Search) {
+            ++trace.search_slices;
+            trace.max_search_cpu_ms=std::max(trace.max_search_cpu_ms,cpu_ms);
+        }
         else trace.max_validate_cpu_ms=std::max(trace.max_validate_cpu_ms,cpu_ms);
         require(planner.report().slice_expansions<=expansions,"routecraft: explicit search expansion cap");
+        require(planner.report().slice_queries<=queries,"routecraft: explicit planning query-work cap");
+        require(planner.report().slice_neighbor_checks<=neighbor_budget,
+            "routecraft: explicit neighbor check cap");
+        trace.max_slice_queries=std::max(trace.max_slice_queries,planner.report().slice_queries);
+        trace.max_slice_neighbor_checks=std::max(trace.max_slice_neighbor_checks,planner.report().slice_neighbor_checks);
         if(planner.planning()) require(planner.report().force==0,"routecraft: unvalidated route applies no load");
         ++trace.slices;
     }
     if(planner.planning() || planner.report().status!=MatronRoutecraft::Status::Moving)
-        std::cerr<<"routecraft trace goal="<<goal<<" budget="<<expansions<<','<<transitions
+        std::cerr<<"routecraft trace goal="<<goal<<" budget="<<expansions<<','<<transitions<<','<<queries
             <<" status="<<int(planner.report().status)<<" phase="<<int(planner.report().phase)
             <<" ticks="<<trace.slices<<" queries="<<planner.report().queries<<'\n';
     require(!planner.planning() && planner.report().status==MatronRoutecraft::Status::Moving,
         "routecraft: deterministic search and validation finish");
     trace.route=MatronRoutecraftTestAccess::route(planner); trace.report=planner.report();
+    require(trace.report.planning_ticks==trace.slices && trace.report.published_after_ticks==trace.slices,
+        "routecraft: publication wait reports every pending tick through the first usable route");
     return trace;
 }
 template<class Build>
 void compare_slices(const char *name, RVec3 start, RVec3 goal, const Build &build) {
     constexpr unsigned unlimited=std::numeric_limits<unsigned>::max();
-    const auto full=trace_plan(start,goal,build,unlimited,unlimited);
-    const auto sliced=trace_plan(start,goal,build,1,3);
-    require(!full.route.empty() && full.route.size()==sliced.route.size(),"routecraft: slice-independent route length");
-    for(std::size_t i=0;i<full.route.size();++i) {
-        const auto &a=full.route[i], &b=sliced.route[i];
-        require(a.center==b.center && a.body==b.body && a.sub.GetValue()==b.sub.GetValue() &&
-            a.local==b.local && a.point==b.point,"routecraft: exactly identical complete route across budgets");
+    const auto full=trace_plan(start,goal,build,unlimited,unlimited,unlimited);
+    require(full.search_slices==1,"routecraft: unlimited reference completes A* in one tick");
+    const auto sliced=trace_plan(start,goal,build,1,3,unlimited);
+    const auto query_sliced=trace_plan(start,goal,build,unlimited,unlimited,32);
+    for(const auto *trace : {&sliced,&query_sliced}) {
+        require(!full.route.empty() && full.route.size()==trace->route.size(),"routecraft: slice-independent route length");
+        for(std::size_t i=0;i<full.route.size();++i) {
+            const auto &a=full.route[i], &b=trace->route[i];
+            require(a.center==b.center && a.body==b.body && a.sub.GetValue()==b.sub.GetValue() &&
+                a.local==b.local && a.point==b.point,"routecraft: exactly identical complete route across budgets");
+        }
+        require(full.report.expansions==trace->report.expansions && full.report.queries==trace->report.queries,
+            "routecraft: slice-independent total expansions and query budget");
+        require(full.report.native_queries==trace->report.native_queries,
+            "routecraft: resuming query work never repeats native queries in an unchanged world");
+        require(trace->slices>full.slices,"routecraft: small budget genuinely resumes across ticks");
     }
-    require(full.report.expansions==sliced.report.expansions && full.report.queries==sliced.report.queries,
-        "routecraft: slice-independent total expansions and query budget");
-    require(sliced.slices>full.slices,"routecraft: small budget genuinely resumes across ticks");
     std::cout<<"PASS: routecraft slicing exact fixture="<<name<<" nodes="<<full.route.size()
         <<" expansions="<<sliced.report.expansions<<" queries="<<sliced.report.queries<<" ticks="<<sliced.slices
         <<" request_ms="<<sliced.request_ms<<" max_slice_ms="<<sliced.max_slice_ms
         <<" unlimited_max_slice_ms="<<full.max_slice_ms<<" request_cpu_ms="<<sliced.request_cpu_ms
         <<" max_search_cpu_ms="<<sliced.max_search_cpu_ms<<" max_validate_cpu_ms="<<sliced.max_validate_cpu_ms
-        <<" unlimited_max_search_cpu_ms="<<full.max_search_cpu_ms<<'\n';
+        <<" unlimited_max_search_cpu_ms="<<full.max_search_cpu_ms
+        <<" query32_ticks="<<query_sliced.slices<<" query32_published_after_ticks="<<query_sliced.report.published_after_ticks
+        <<" query32_max_slice_queries="<<query_sliced.max_slice_queries
+        <<" query32_max_neighbor_checks="<<query_sliced.max_slice_neighbor_checks
+        <<" query32_max_slice_ms="<<query_sliced.max_slice_ms<<'\n';
 }
 void reach_validation(Fixture &f, MatronRoutecraft &planner) {
     for(int i=0;i<10000 && planner.report().phase==MatronRoutecraft::PlanPhase::Search;++i)
-        planner.step(f.physics,f.matron->body(),1.0F/90,1,4);
+        planner.step(f.physics,f.matron->body(),1.0F/90,1,4,std::numeric_limits<unsigned>::max());
     require(planner.report().phase==MatronRoutecraft::PlanPhase::Validate && planner.report().force==0,
         "routecraft: complete route awaits validation before load");
 }
@@ -267,14 +314,20 @@ void check_sliced_planning() {
         MatronRoutecraft planner;
         require(planner.request(f.physics,f.matron->body(),RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: cancel setup accepted");
         if(after_search) reach_validation(f,planner);
-        else planner.step(f.physics,f.matron->body(),1.0F/90,1,1);
-        require(planner.planning(),"routecraft: cancellation interrupts pending work");
+        const auto phase=planner.report().phase;
+        planner.step(f.physics,f.matron->body(),1.0F/90,1,1,1);
+        require(planner.report().phase==phase && planner.report().slice_queries==1,
+            "routecraft: cancellation interrupts query-limited search or validation work");
         planner.cancel();
         const auto queries=planner.report().queries, expansions=planner.report().expansions;
+        const auto native_queries=planner.report().native_queries, planning_ticks=planner.report().planning_ticks;
         for(int i=0;i<6;++i) f.tick(&planner);
         require(!planner.planning() && planner.report().status==MatronRoutecraft::Status::Released &&
             planner.report().force==0 && MatronRoutecraftTestAccess::route(planner).empty() &&
-            planner.report().queries==queries && planner.report().expansions==expansions,
+            planner.report().queries==queries && planner.report().expansions==expansions &&
+            planner.report().native_queries==native_queries && planner.report().planning_ticks==planning_ticks &&
+            planner.report().published_after_ticks==0 && planner.report().slice_queries==0 &&
+            planner.report().slice_neighbor_checks==0,
             "routecraft: cancelled search or validation never resumes");
     }
     for(bool after_validation : {false,true}) for(bool obstruct_path : {false,true}) {
@@ -290,7 +343,7 @@ void check_sliced_planning() {
             // Every sampled edge has passed, one per tick. Publication is a
             // separate tick and must see changes to an already checked edge.
             for(std::size_t i=0;i<route.size();++i)
-                planner.step(f.physics,f.matron->body(),1.0F/90,1,4);
+                planner.step(f.physics,f.matron->body(),1.0F/90,1,4,std::numeric_limits<unsigned>::max());
             require(planner.report().phase==MatronRoutecraft::PlanPhase::Validate &&
                 planner.report().plans==plans && planner.report().force==0,
                 "routecraft: sampled validation finishes before publication");
@@ -298,7 +351,8 @@ void check_sliced_planning() {
         if(obstruct_path) f.box(route.back().center,Vec3(0.3F,0.1F,0.3F));
         else f.physics.GetBodyInterface().RemoveBody(route.back().body);
         const auto plans=planner.report().plans, queries=planner.report().queries;
-        planner.step(f.physics,f.matron->body(),1.0F/90,std::numeric_limits<unsigned>::max(),std::numeric_limits<unsigned>::max());
+        planner.step(f.physics,f.matron->body(),1.0F/90,std::numeric_limits<unsigned>::max(),
+            std::numeric_limits<unsigned>::max(),std::numeric_limits<unsigned>::max());
         require(planner.report().plans>plans && planner.report().force==0 &&
             (planner.planning() || planner.report().status!=MatronRoutecraft::Status::Moving),
             "routecraft: stale future grip or clearance restarts before execution");
@@ -311,16 +365,24 @@ void check_sliced_planning() {
         f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2)); f.ladder(0,154,161);
         MatronRoutecraft planner;
         require(planner.request(f.physics,f.matron->body(),RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: query cap setup accepted");
-        planner.step(f.physics,f.matron->body(),1.0F/90,1,1);
+        planner.step(f.physics,f.matron->body(),1.0F/90,1,1,1);
         MatronRoutecraftTestAccess::queries(planner,199900);
         unsigned slices=0;
         for(;slices<200 && planner.planning();++slices) {
             const auto queries=planner.report().queries;
-            planner.step(f.physics,f.matron->body(),1.0F/90,1,1);
+            planner.step(f.physics,f.matron->body(),1.0F/90,1,1,1);
             require(planner.report().queries>=queries,"routecraft: resuming never resets cumulative query budget");
+            require(planner.report().slice_queries<=1 &&
+                planner.report().slice_neighbor_checks<=MatronRoutecraft::kPlanningNeighborChecksPerTick,
+                "routecraft: cumulative exhaustion respects each work slice");
         }
         require(slices>1 && !planner.planning() && planner.report().status==MatronRoutecraft::Status::BudgetExceeded &&
             planner.report().queries>200000,"routecraft: 200000-query limit spans the whole search");
+        const auto exhausted=planner.report();
+        planner.step(f.physics,f.matron->body(),1.0F/90);
+        require(planner.report().queries==exhausted.queries && planner.report().native_queries==exhausted.native_queries &&
+            planner.report().expansions==exhausted.expansions && planner.report().force==0,
+            "routecraft: exhausted partial work cannot issue further queries or apply load");
     }
     {
         Fixture f(RVec3(0,155.07,-0.55));
@@ -334,7 +396,7 @@ void check_sliced_planning() {
         require(planner.request(f.physics,f.matron->body(),RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: replacement search accepted while holding");
         const auto queries=planner.report().queries, native_queries=planner.report().native_queries;
         for(int i=0;i<3;++i) {
-            f.tick(&planner,0,0);
+            f.tick(&planner,MatronRoutecraft::kPlanningExpansionsPerTick,MatronRoutecraft::kPlanningTransitionsPerTick,0);
             require(planner.planning() && planner.report().force>0 && planner.report().hand==hand &&
                 Vec3(f.at()-held_at).Length()<0.1F,"routecraft: waiting retains previous physical grip and pose");
         }
@@ -588,10 +650,29 @@ void run_matron_routecraft() {
         require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()), "routecraft: force saturation setup");
         f.finish_plan();
         require(f.matron->climb_report().status==MatronRoutecraft::Status::Moving,"routecraft: force saturation plan ready");
+        // First publication can catch a falling body close to the reach
+        // limit. Wait for an actual loaded ascent before the independent
+        // force-cap disturbance; every waiting tick still checks real physics.
+        const auto loaded_ascent=[&]() {
+            const auto &r=f.matron->climb_report();
+            return r.phase==MatronRoutecraft::PlanPhase::None && r.force>0 &&
+                f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()).GetY()>=0 &&
+                Vec3(r.hand-f.at()).Length()<MatronRoutecraft::kReach-0.20F;
+        };
+        for(int i=0;i<180 && !loaded_ascent();++i) f.tick();
+        require(loaded_ascent(),"routecraft: force-cap impulse starts during a physical loaded ascent");
+        const RVec3 saturation_start=f.at();
+        const auto saturation_report=f.matron->climb_report();
         f.measured_force=0; f.measured_power=0;
         f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-286,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
+        if(!(f.measured_force>5999 && f.measured_power<9000))
+            std::cerr<<"routecraft force saturation start="<<saturation_start<<" hand="<<saturation_report.hand
+                <<" initial_force="<<saturation_report.force<<" now="<<f.at()
+                <<" measured_force="<<f.measured_force<<" measured_power="<<f.measured_power
+                <<" status="<<int(f.matron->climb_report().status)<<" phase="<<int(f.matron->climb_report().phase)
+                <<" plans="<<f.matron->climb_report().plans<<'\n';
         require(f.measured_force>5999 && f.measured_power<9000, "routecraft: actual 6000 N saturation independent of power cap");
         std::cout << "routecraft measured force saturation N=" << f.measured_force << " W=" << f.measured_power << '\n';
     }
