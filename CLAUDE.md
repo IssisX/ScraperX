@@ -30,7 +30,8 @@ rerun instead of rerunning everything all the time"*.
 2026-10-22: *"always end with a clear instruction for me and the prompt if I need to share one"*.
 End each message with one plain line saying what the owner should do now ("Nothing to do" is
 fine). If they need to give another agent something, put the complete prompt in one copyable code
-block in that same message, and name the agent it goes to.
+block in that same message, and name the agent it goes to. The owner is on a phone: never ask them to
+edit, combine or fill in a prompt ("use the earlier prompt with one change"). Give the final text, whole.
 
 ## Near misses: tweak the world, don't rework her
 
