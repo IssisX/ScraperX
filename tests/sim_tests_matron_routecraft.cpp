@@ -206,5 +206,25 @@ void run_matron_routecraft() {
         f.matron->restore(saved);
         require(f.matron->climb_report().force==0 && f.matron->climb_report().status==MatronRoutecraft::Status::Released,"routecraft: restore clears controller");
     }
+    {
+        Fixture f(RVec3(0,155.07,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(4,0.1F,2)); f.ladder(0,154,161);
+        require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: capture interruption start");
+        f.tick();
+        f.matron->begin_grab(f.at()+Vec3(0,0,0.5F));
+        require(f.matron->climb_report().status==MatronRoutecraft::Status::Released && f.matron->climb_report().force==0,"routecraft: capture immediately owns the hands");
+    }
+    {
+        Fixture f(RVec3(0,155.07,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(4,0.1F,2)); f.ladder(0,154,161);
+        require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: moved support start");
+        for(int i=0;i<45;++i) f.tick();
+        for(std::size_t i=1;i<f.solids.size();++i) {
+            const auto id=f.solids[i];
+            f.physics.GetBodyInterface().SetPosition(id,f.physics.GetBodyInterface().GetPosition(id)+Vec3(4,0,0),EActivation::DontActivate);
+        }
+        f.tick();
+        require(f.matron->climb_report().status==MatronRoutecraft::Status::NoRoute && f.matron->climb_report().force==0,"routecraft: displaced anchors invalidate before load");
+    }
     std::cout<<"PASS: matron-routecraft\n";
 }
