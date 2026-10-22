@@ -381,6 +381,83 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     push_reaction(force, at_hold);
 }
 
+bool Climber::floor_under(const RVec3 c, const Vec3 off) const {
+    const SteelFilter filter(ignore_);
+    const float reach = limits_.center_above_feet() + limits_.step_max_m + 0.05F;   // a step down is floor too
+    RayCastResult hit;
+    return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(c + off, Vec3(0.0F, -reach, 0.0F)), hit, Layers(physics_, ignore_).bp(),
+                                                  Layers(physics_, ignore_).ol(), filter);
+}
+
+// No floor straight under her middle but some under her soles to one side
+// (a board, a narrow ledge): the mean way to that floor.
+bool Climber::narrow_floor_lean(const RVec3 c, Vec3 &to_floor) const {
+    if (floor_under(c, Vec3::sZero())) return false;
+    Vec3 lean = Vec3::sZero();
+    int hits = 0;
+    for (int a = 0; a < 8; ++a) {
+        const float ang = 0.785398F * float(a);
+        for (const float r : {0.08F, 0.16F, 0.24F}) {
+            const Vec3 off(r * std::cos(ang), 0.0F, r * std::sin(ang));
+            if (floor_under(c, off)) {
+                lean += off;
+                ++hits;
+            }
+        }
+    }
+    if (hits == 0) return false;
+    to_floor = lean / float(hits);
+    return true;
+}
+
+// Standing still on a narrow floor with nothing else asked of her: her feet
+// keep her middle over it and take out her drift, inside the same caps (a
+// hard enough shove still puts her off). On wide floor it does nothing.
+float Climber::stand(const float dt) {
+    (void)dt;
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
+    const RVec3 c = center();
+    Vec3 to_floor;
+    bool narrow = narrow_floor_lean(c, to_floor);
+    if (!narrow && floor_under(c, Vec3::sZero())) {
+        // Floor under her middle but not all round her soles (near a
+        // board's edge): her middle back toward the floor's middle.
+        Vec3 sum = Vec3::sZero();
+        int hits = 1, probes = 1;
+        for (int a = 0; a < 8; ++a) {
+            const float ang = 0.785398F * float(a);
+            for (const float r : {0.08F, 0.16F, 0.24F}) {
+                const Vec3 off(r * std::cos(ang), 0.0F, r * std::sin(ang));
+                ++probes;
+                if (floor_under(c, off)) {
+                    sum += off;
+                    ++hits;
+                }
+            }
+        }
+        if (hits < probes) {
+            to_floor = sum / float(hits);
+            narrow = true;
+        }
+    }
+    if (narrow) {
+        const Vec3 v = flat(velocity());
+        const Vec3 across = to_floor.NormalizedOr(Vec3::sZero());
+        Vec3 want = to_floor * (limits_.mass_kg * 40.0F) - v * (limits_.mass_kg * 8.0F) -
+                    across * (v.Dot(across) * limits_.mass_kg * 10.0F);
+        if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
+        physics_.GetBodyInterface().AddForce(body_, budget.take(want));
+    } else if (floor_under(c, Vec3::sZero())) {
+        // Floor under her middle: feet planted, her drift taken out.
+        Vec3 want = -flat(velocity()) * (limits_.mass_kg * 8.0F);
+        if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
+        physics_.GetBodyInterface().AddForce(body_, budget.take(want));
+    }
+    view_.force_n = budget.used;
+    view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
+    return budget.used;
+}
+
 void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget, const float may_drop) {
     (void)dt;
     const RVec3 c = center();
@@ -427,39 +504,15 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
     // a shuffle. Her feet's force is capped like any other: pushed harder
     // than that across it, she goes off it.
     {
-        const SteelFilter filter(ignore_);
-        const float reach = limits_.center_above_feet() + limits_.step_max_m + 0.05F;   // a step down is floor too
-        const auto floor_under = [&](const Vec3 off, float &y) {
-            RayCastResult hit;
-            const RRayCast ray(c + off, Vec3(0.0F, -reach, 0.0F));
-            if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) return false;
-            y = float(ray.GetPointOnRay(hit.mFraction).GetY());
-            return true;
-        };
-        float y = 0.0F;
+        Vec3 to_floor;
         // Stepping across to floor her goal lies on (a board's end over a
         // drop, the next plank) is a step, not falling off: no balancing back.
-        const bool stepping_on = d > 0.05F && floor_under(to * (std::min(d, 0.3F) / d), y);
-        if (!stepping_on && !floor_under(Vec3::sZero(), y)) {
-            Vec3 lean = Vec3::sZero();
-            int hits = 0;
-            for (int a = 0; a < 8; ++a) {
-                const float ang = 0.785398F * float(a);
-                for (const float r : {0.08F, 0.16F, 0.24F}) {
-                    const Vec3 off(r * std::cos(ang), 0.0F, r * std::sin(ang));
-                    if (floor_under(off, y)) {
-                        lean += off;
-                        ++hits;
-                    }
-                }
-            }
-            if (hits > 0) {
-                const Vec3 to_floor = lean / float(hits);
-                const Vec3 across = to_floor.NormalizedOr(Vec3::sZero());
-                const Vec3 along = want_dir_v - across * want_dir_v.Dot(across);
-                want = ((along.Length() > 0.5F ? along.Normalized() * 0.5F : along) - v) * (limits_.mass_kg * 8.0F) +
-                       to_floor * (limits_.mass_kg * 40.0F) - across * (v.Dot(across) * limits_.mass_kg * 10.0F);
-            }
+        const bool stepping_on = d > 0.05F && floor_under(c, to * (std::min(d, 0.3F) / d));
+        if (!stepping_on && narrow_floor_lean(c, to_floor)) {
+            const Vec3 across = to_floor.NormalizedOr(Vec3::sZero());
+            const Vec3 along = want_dir_v - across * want_dir_v.Dot(across);
+            want = ((along.Length() > 0.5F ? along.Normalized() * 0.5F : along) - v) * (limits_.mass_kg * 8.0F) +
+                   to_floor * (limits_.mass_kg * 40.0F) - across * (v.Dot(across) * limits_.mass_kg * 10.0F);
         }
     }
     if (want.Length() > limits_.foot_force_n) {
@@ -481,7 +534,10 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
                 rise = std::max(rise, float(from.GetY()) - hit.mFraction * depth - feet);
             }
         }
-        if (rise > 0.04F && rise <= limits_.step_max_m) {
+        // Only from a footing under her soles: a leg cannot push off air
+        // (her middle out past an edge, falling).
+        Vec3 unused;
+        if (rise > 0.04F && rise <= limits_.step_max_m && (floor_under(c, Vec3::sZero()) || narrow_floor_lean(c, unused))) {
             const float lift = std::clamp(limits_.mass_kg * (kGravity + (1.6F - velocity().GetY()) * 12.0F), 0.0F,
                                           limits_.total_force_n * 0.85F);
             physics_.GetBodyInterface().AddForce(body_, budget.take(Vec3(0.0F, lift, 0.0F)));
@@ -564,6 +620,9 @@ Climber::Status Climber::step(const float dt) {
     view_.force_n = 0.0F;
     view_.support_reaction_n = 0.0F;
     if (status_ != Status::Running) {
+        // A move done (or none begun) and nothing else asked: she stands,
+        // balanced on whatever narrow floor she is on.
+        if (status_ == Status::Done || status_ == Status::Idle) (void)stand(dt);
         return status_;
     }
     Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
@@ -2049,8 +2108,9 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                                               std::clamp(static_cast<int>(std::lround((v.GetZ() - lo_z) / step)), 0, nz - 1));
                     };
                     std::vector<std::uint8_t> state(static_cast<std::size_t>(nx * nz), 0);   // 0 new, 1 queued, 2 blocked
-                    const auto [si, sk] = cell(from);
-                    const auto [gi, gk] = cell(to);
+                    // Plain ints, not structured bindings: lambdas capture them (C++17).
+                    const int si = cell(from).first, sk = cell(from).second;
+                    const int gi = cell(to).first, gk = cell(to).second;
                     std::vector<int> queue{sk * nx + si};
                     state[static_cast<std::size_t>(sk * nx + si)] = 1;
                     bool reached = false;
@@ -2146,6 +2206,25 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                         };
                         bool above_ok = capsule_free(physics, ignore, limits, above) &&
                                         passage(lip, flat(above - lip).NormalizedOr(Vec3::sZero()));
+                        if (!below_ok && above_ok && lo.narrow) {
+                            // A narrow low top (a board between the face and a
+                            // wall): her body shifted across it, her soles still
+                            // on it, toward the face or away.
+                            const Vec3 toward = flat(lip - below).NormalizedOr(Vec3::sZero());
+                            const float lean = limits.radius - 0.05F;
+                            for (float k = 0.05F; k <= 0.5F && !below_ok; k += 0.05F) {
+                                for (const float sgn : {1.0F, -1.0F}) {
+                                    const Vec3 b = below + toward * (sgn * k);
+                                    if (b.GetX() < lo.min_x - lean || b.GetX() > lo.max_x + lean || b.GetZ() < lo.min_z - lean ||
+                                        b.GetZ() > lo.max_z + lean || horizontal(b - lip) > 0.9F) continue;
+                                    if (capsule_free(physics, ignore, limits, b)) {
+                                        below = b;
+                                        below_ok = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                         if (!(below_ok && above_ok)) {
                             // Walk the high top's edges for a lip with the low top
                             // just outside it and room for her on both sides.
@@ -2427,8 +2506,9 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         bool closed = false;
     };
     std::unordered_map<int, Node> nodes;
-    const auto [si, sk] = cell_of(from);
-    const auto [gi, gk] = cell_of(to);
+    // Plain ints, not structured bindings: the heuristic lambda captures them (C++17).
+    const int si = cell_of(from).first, sk = cell_of(from).second;
+    const int gi = cell_of(to).first, gk = cell_of(to).second;
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<Item>> open;
     nodes[key(si, sk)] = Node{0.0F, from.GetY(), from.GetX(), from.GetZ(), -1, false};

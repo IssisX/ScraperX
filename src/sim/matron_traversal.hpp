@@ -201,6 +201,9 @@ public:
     // Her feet alone toward a point on the floor she stands on, out of the
     // one budget (between moves: a journey's walking). Returns the force used.
     float walk_between(float dt, JPH::Vec3 feet_goal, float speed);
+    // Standing still: balanced on a narrow floor (a board, a ledge), nothing
+    // else. step() does this itself once a move is done.
+    float stand(float dt);
     [[nodiscard]] const MoveSpec &spec() const noexcept { return spec_; }
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
     // Her velocity against what she pushes on (the hold at its anchor, else
@@ -228,6 +231,8 @@ private:
                bool carry_weight, JPH::RVec3 at_hold);
     // may_drop: how far below her feet a floor ahead still counts (a step down she means).
     void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget, float may_drop = 0.0F);
+    [[nodiscard]] bool floor_under(JPH::RVec3 c, JPH::Vec3 off) const;
+    [[nodiscard]] bool narrow_floor_lean(JPH::RVec3 c, JPH::Vec3 &to_floor) const;
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);

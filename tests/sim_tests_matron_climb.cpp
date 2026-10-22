@@ -1,4 +1,5 @@
 #include <array>
+#include <chrono>
 // The Matron's climbing moves (matron_traversal.hpp) on small worlds of real
 // steel: each move up and down, and each way a move must fail physically
 // (a missing rung, a member that is no longer the one she took, a mantle her
@@ -996,10 +997,10 @@ void test_narrow_ledges() {
             worst = std::max(worst, float((now - last).Length()));
             last = now;
         });
-        // Standing there (her balance working, nothing else): 2 s.
-        for (int i = 0; i < 180; ++i) {
-            const RVec3 at = w.at();
-            (void)climber.walk_between(ClimbWorld::dt, Vec3(float(at.GetX()), w.feet(), float(at.GetZ())), 0.0F);
+        // Standing there, the move done and nothing else asked of her (no
+        // walk): her balance alone keeps her on it, 3 s.
+        for (int i = 0; i < 270; ++i) {
+            (void)climber.step(ClimbWorld::dt);
             w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
         }
         const float feet = w.feet();
@@ -1013,7 +1014,183 @@ void test_narrow_ledges() {
 
 } // namespace
 
-void run_matron_narrow() { test_narrow_ledges(); }
+
+// Knocked off a deck partway through a journey onto a narrow board below
+// its side (0.25-0.40 m, seeded, never seen): she lands on it, keeps her
+// balance on it, plans again from the board and reaches her goal, up (a
+// ladder, then a mantle) and down (a drop, then down to the floor). The
+// executor is a journey's: plan, walk to a move's start, make the move,
+// and plan again from wherever she stands when she is off her plan.
+struct KnockRun {
+    bool knocked = false, on_board = false, arrived = false;
+    int replans = 0;
+    std::vector<double> replan_us;   // each replan's cost, in the tick it ran
+    float worst_step = 0.0F, peak_force = 0.0F;
+};
+KnockRun knock_run(const bool up, const float deck_h, const float upper, const float width, const float drop,
+                   const bool wall, const float shove_mps) {
+    ClimbWorld w;
+    w.box(Vec3(0.9F, 0.5F * deck_h, 1.5F), RVec3(0, 0.5F * deck_h, -2.5F));                        // deck A: z -4..-1
+    w.box(Vec3(0.9F, 0.5F * (deck_h + upper), 1.5F), RVec3(0, 0.5F * (deck_h + upper), -5.5F));    // deck U behind it
+    w.rungs(0.3F, deck_h - 0.1F, 0.3F);                                                             // up A's face
+    const float board_top = deck_h - drop;
+    // Room between the deck's side and the wall beyond the board for her
+    // body to come down onto it (0.62 m, wider than she is).
+    const float gap = std::max(0.03F, 0.62F - width);
+    const float bx = 0.9F + gap + 0.5F * width;
+    w.box(Vec3(0.5F * width, 0.1F, 1.5F), RVec3(bx, board_top - 0.1F, -2.5F));                     // the board along A's side
+    if (wall) w.box(Vec3(0.1F, 1.2F, 1.5F), RVec3(bx + 0.5F * width + 0.1F, board_top + 1.2F, -2.5F));
+    const Vec3 start = up ? Vec3(0, 0, 1.0F) : Vec3(0, deck_h + upper, -5.5F);
+    const Vec3 goal = up ? Vec3(0, deck_h + upper, -5.8F) : Vec3(0, 0, 1.5F);
+    w.spawn(RVec3(start));
+    w.settle(0.3F);
+    const traversal::Ignore ignore{w.her, BodyID()};
+    traversal::AffordanceMap map;
+    map.scan(w.physics, AABox(Vec3(-5, -1, -9), Vec3(5, deck_h + upper + 3.0F, 4)), ignore);
+    Climber climber(w.physics, w.her, ignore);
+    const auto feet = [&] { const RVec3 a = w.at(); return Vec3(float(a.GetX()), w.feet(), float(a.GetZ())); };
+    const int goal_region = map.region_at(goal);
+    const int board_region = map.region_at(Vec3(bx, board_top, -2.5F));
+    KnockRun r;
+    std::vector<int> plan = map.plan(map.region_at(feet()), goal_region);
+    if (plan.empty() || board_region < 0 || board_region == map.region_at(Vec3(0, deck_h, -2.5F))) return r;
+    std::size_t next = 0, wp = 0;
+    std::vector<Vec3> path;
+    int region = map.region_at(feet());
+    const auto walk_to = [&](const Vec3 target) {
+        path = traversal::grid_walk(w.physics, ignore, climber.limits(), feet(), target);
+        if (path.empty()) path.push_back(target);
+        wp = 0;
+    };
+    enum { Walk, Move, Final } mode = Walk;
+    walk_to(map.edges()[std::size_t(plan[0])].spec.start);
+    float mode_s = 0.0F;
+    RVec3 last = w.at();
+    const auto replan = [&](const int from) {
+        const auto t0 = std::chrono::steady_clock::now();
+        plan = map.plan(from, goal_region);
+        next = 0;
+        if (!plan.empty()) walk_to(map.edges()[std::size_t(plan[0])].spec.start);
+        r.replan_us.push_back(std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count());
+        ++r.replans;
+        region = from;
+        mode = Walk;
+        mode_s = 0.0F;
+    };
+    for (int i = 0; i < 90 * 120; ++i) {
+        mode_s += ClimbWorld::dt;
+        const Vec3 f = feet();
+        float top = 0.0F;
+        const int under = climber.supported(&top) ? map.region_at(Vec3(f.GetX(), top, f.GetZ())) : -1;
+        // The knock: on deck A, partway along her way, a shove off its side.
+        if (!r.knocked && std::abs(f.GetY() - deck_h) < 0.1F && f.GetZ() < -1.6F && f.GetZ() > -3.4F && mode == Walk) {
+            w.physics.GetBodyInterface().AddImpulse(w.her, Vec3(1.0F, 0, 0) * (Matron::kMassKg * shove_mps));
+            r.knocked = true;
+        }
+        if (r.knocked && under == board_region) r.on_board = true;
+        if (mode == Walk || mode == Final) {
+            // Off her plan, standing on somewhere else: plan from there.
+            if (under >= 0 && under != region && mode == Walk) {
+                if (under == goal_region) { mode = Final; walk_to(goal); }
+                else { replan(under); if (plan.empty()) break; }
+            }
+            while (wp + 1 < path.size() && Vec3(path[wp] - f).GetX() * Vec3(path[wp] - f).GetX() +
+                                                   Vec3(path[wp] - f).GetZ() * Vec3(path[wp] - f).GetZ() < 0.35F * 0.35F) ++wp;
+            (void)climber.walk_between(ClimbWorld::dt, path[wp], 1.2F);
+            const Vec3 d = path.back() - f;
+            const float left = std::sqrt(d.GetX() * d.GetX() + d.GetZ() * d.GetZ());
+            if (mode == Walk && under == region && ((wp + 1 == path.size() && left < 0.6F) || mode_s > 25.0F)) {
+                climber.begin(map.edges()[std::size_t(plan[next])].spec);
+                mode = Move;
+                mode_s = 0.0F;
+            } else if (mode == Final && left < 0.3F && under == goal_region) {
+                r.arrived = true;
+                break;
+            }
+        } else {
+            const Climber::Status st = climber.step(ClimbWorld::dt);
+            if (st == Climber::Status::Done) {
+                const int to = map.edges()[std::size_t(plan[next])].to;
+                region = under >= 0 ? under : to;
+                if (region == goal_region) { mode = Final; walk_to(goal); }
+                else if (region == to && ++next < plan.size()) { mode = Walk; walk_to(map.edges()[std::size_t(plan[next])].spec.start); }
+                else replan(region);
+                mode_s = 0.0F;
+            } else if (st == Climber::Status::Failed) {
+                // Fallen: plan again once she stands.
+                for (int k = 0; k < 90 * 4 && !climber.supported(&top); ++k) { (void)climber.stand(ClimbWorld::dt); w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs); }
+                const Vec3 g = feet();
+                const int at = map.region_at(Vec3(g.GetX(), top, g.GetZ()));
+                if (at < 0 || r.replans > 6) break;
+                replan(at);
+                if (plan.empty()) break;
+            }
+        }
+        r.peak_force = std::max(r.peak_force, climber.view().force_n);
+        require(climber.view().force_n <= climber.limits().total_force_n + 0.5F, "matron knock: every tick's force inside her one budget");
+        require(w.physics.GetBodyInterface().GetGravityFactor(w.her) == 1.0F, "matron knock: her gravity stays on");
+        w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+        const RVec3 now = w.at();
+        r.worst_step = std::max(r.worst_step, float((now - last).Length()));
+        last = now;
+    }
+    return r;
+}
+
+void test_knocked_onto_board() {
+    std::uint32_t rng = 0x1B873593U;
+    const auto uniform = [&](const float lo, const float hi) {
+        rng = rng * 1664525U + 1013904223U;
+        return lo + (hi - lo) * float(rng >> 8) / float(1U << 24);
+    };
+    int done = 0;
+    for (int run = 0; run < 6; ++run) {
+        const bool up = run % 2 == 0;
+        const float deck_h = uniform(2.8F, 3.6F);
+        const float upper = uniform(1.3F, 1.8F);
+        const float width = uniform(0.25F, 0.40F);
+        const float drop = uniform(0.9F, 1.2F);
+        const bool wall = (run / 2) % 2 == 0;
+        const KnockRun r = knock_run(up, deck_h, upper, width, drop, wall, 5.0F);
+        std::cout << "  matron knock run " << run << " (" << (up ? "up" : "down") << "): deck " << deck_h << " upper " << upper
+                  << " board " << width << " m, " << drop << " m below, " << (wall ? "along a wall" : "open") << ": knocked "
+                  << r.knocked << " on board " << r.on_board << " replans " << r.replans << " (";
+        for (std::size_t k = 0; k < r.replan_us.size(); ++k) std::cout << (k ? ", " : "") << r.replan_us[k] << " us";
+        std::cout << ") arrived " << r.arrived << " worst step " << r.worst_step << " peak " << r.peak_force << " N\n";
+        require(r.knocked && r.on_board, "matron knock: shoved off the deck, she lands on the narrow board below");
+        require(r.replans >= 1 && r.arrived, "matron knock: from the board she plans again and reaches her goal");
+        require(r.worst_step <= 0.2F, "matron knock: no tick moves her more than 0.2 m");
+        for (const double us : r.replan_us) require(us < 1.0e4, "matron knock: a replan costs its tick under 10 ms");
+        ++done;
+    }
+    std::cout << "PASS scraperx_sim matron knocked onto a narrow board: replanned and arrived " << done << " of 6\n";
+}
+
+// Standing still on an open board, nothing asked of her but to stand, a
+// little off its middle and drifting: her balance alone keeps her on it.
+void test_stand_on_board() {
+    for (const float width : {0.25F, 0.32F, 0.40F}) {
+        ClimbWorld w;
+        w.box(Vec3(0.5F * width, 0.1F, 1.5F), RVec3(0, 3.9F, 0));   // top 4, over a 4 m drop
+        w.spawn(RVec3(0.06F, 4.0F, 0));
+        w.physics.GetBodyInterface().SetLinearVelocity(w.her, Vec3(0.15F, 0, 0.1F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        for (int i = 0; i < 90 * 5; ++i) {
+            (void)climber.step(ClimbWorld::dt);   // no move begun: she stands
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+        }
+        std::cout << "  matron stands on a " << width << " m board: feet " << w.feet() << " x " << w.at().GetX() << "\n";
+        require(std::abs(w.feet() - 4.0F) < 0.06F && std::abs(float(w.at().GetX())) < 0.5F * width,
+                "matron stand: standing still, her balance keeps her on a narrow board");
+    }
+    std::cout << "PASS scraperx_sim matron stands balanced on narrow boards\n";
+}
+
+void run_matron_narrow() {
+    test_narrow_ledges();
+    test_stand_on_board();
+    test_knocked_onto_board();
+}
 
 void run_matron_climb() {
     test_power_budget();
@@ -1029,7 +1206,7 @@ void run_matron_climb() {
     test_wall_across_step();
     test_rung_gaps();
     test_pole_head_clearance();
-    test_narrow_ledges();
+    run_matron_narrow();
 }
 
 namespace {

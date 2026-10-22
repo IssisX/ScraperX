@@ -146,9 +146,10 @@ void Matron::step_journey(const float dt) {
         climber_->walk_between(dt, Vec3(float(at.GetX()), float(at.GetY()), float(at.GetZ())), 0.0F);
         return;
     }
-    // Off the plan (a fall, a move that ended elsewhere): when she is on her
-    // feet again, plan from there.
-    if (journey_.step >= journey_.steps || (under >= 0 && under != journey_.region && journey_walk_.empty())) {
+    // Off the plan (a fall, a move that ended elsewhere, knocked off her
+    // floor partway along a walk): when she is on her feet again, plan from
+    // there.
+    if (journey_.step >= journey_.steps || (under >= 0 && under != journey_.region)) {
         if (under < 0) {
             journey_wait_s_ += dt;
             if (journey_wait_s_ > kLandWaitS) {
