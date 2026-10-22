@@ -1437,6 +1437,11 @@ private:
     float travel_wp_best_ = 1.0e9F;
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
+    int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
+    JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
+    float travel_still_s_ = 0.0F;
+    float travel_yield_s_ = 0.0F;   // how long she has given way to the player at this move
+    static constexpr float kYieldGiveUpS = 12.0F;
     std::uint32_t travel_replans0_ = 0;
     float travel_wait_s_ = 0.0F;
     static constexpr float kYieldReachM = 1.3F;

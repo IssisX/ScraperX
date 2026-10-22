@@ -200,7 +200,7 @@ public:
     [[nodiscard]] int phase() const noexcept { return phase_; }
     // Her feet alone toward a point on the floor she stands on, out of the
     // one budget (between moves: a journey's walking). Returns the force used.
-    float walk_between(float dt, JPH::Vec3 feet_goal, float speed);
+    float walk_between(float dt, JPH::Vec3 feet_goal, float speed, float may_drop = 0.0F);
     // Standing still: balanced on a narrow floor (a board, a ledge), nothing
     // else. step() does this itself once a move is done.
     float stand(float dt);
@@ -295,6 +295,7 @@ struct Patch {   // a walkable top (one leaf of a body)
     float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
     int region = -1;
     bool narrow = false;   // under her diameter across (a board: her axis over it)
+    int split = -1, split_of = -1;   // a piece of a top split by what stands on it: its floor, and the top
 };
 struct Ladder {   // three or more bars stacked on one line
     float x = 0.0F, z = 0.0F;
@@ -328,7 +329,7 @@ struct Edge {
 struct ScanStats {
     double seconds = 0.0;
     std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0;
-    std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0;
+    std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0, split_patches = 0;
 };
 
 class AffordanceMap final {
@@ -355,6 +356,7 @@ public:
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
 
 private:
+    void split_patches(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_regions(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_edges(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     [[nodiscard]] bool capsule_free(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits,

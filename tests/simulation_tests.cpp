@@ -180,6 +180,10 @@ int main() {
         run_matron_climb_scan();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-board-walls") {
+        run_matron_board_walls();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-towers") {
         run_matron_towers();
         return 0;

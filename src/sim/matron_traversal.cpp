@@ -478,9 +478,9 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
     {
         const float feet_y = float(c.GetY()) - limits_.center_above_feet();
         const SteelFilter filter(ignore_);
-        const auto floor_ahead = [&](const Vec3 dir) {
+        const auto floor_ahead = [&](const Vec3 dir, const float ahead = -1.0F) {
             if (dir.LengthSq() < 1.0e-4F) return true;
-            const RVec3 from = c + dir.Normalized() * (limits_.radius + 0.1F) +
+            const RVec3 from = c + dir.Normalized() * (ahead > 0.0F ? ahead : limits_.radius + 0.1F) +
                                Vec3(0.0F, limits_.step_max_m + 0.05F - limits_.center_above_feet(), 0.0F);
             const float below = std::max(limits_.step_max_m, may_drop);
             const float depth = limits_.step_max_m + below + 0.1F;
@@ -500,6 +500,11 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
                         want_dir_v = dir * (0.5F * cs);
                         break;
                     }
+                }
+                // Nothing a stride on (a corner where one narrow top meets
+                // another): a short step, her foot just past her own edge.
+                if (want_dir_v.IsNearZero() && floor_ahead(want_v, 0.5F * limits_.radius)) {
+                    want_dir_v = want_v.Normalized() * 0.25F;
                 }
             }
         }
@@ -535,13 +540,17 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         const float feet = float(c.GetY()) - limits_.center_above_feet();
         const SteelFilter filter(ignore_);
         float rise = -1.0F;
+        // The nearest edge ahead is the one her foot goes on (stairs taken
+        // slantwise put the one after it within the same stride).
         for (const float ahead : {0.36F, 0.5F}) {
             const RVec3 from = c + dir * ahead + Vec3(0.0F, limits_.step_max_m + 0.05F - limits_.center_above_feet(), 0.0F);
             const float depth = limits_.step_max_m + 0.1F;
             RayCastResult hit;
-            if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) {
-                rise = std::max(rise, float(from.GetY()) - hit.mFraction * depth - feet);
-            }
+            const bool inside_step = physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter);
+            const float r = inside_step ? float(from.GetY()) - hit.mFraction * depth - feet : -1.0F;
+            if (inside_step && hit.mFraction <= 0.0F) break;   // ray starts inside more than a step: beyond is no step
+            rise = std::max(rise, r);
+            if (rise > 0.04F) break;
         }
         // Only from a footing under her soles: a leg cannot push off air
         // (her middle out past an edge, falling).
@@ -554,9 +563,9 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
     }
 }
 
-float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed) {
+float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed, const float may_drop) {
     Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
-    walk(dt, feet_goal, speed, budget);
+    walk(dt, feet_goal, speed, budget, may_drop);
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
     view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
@@ -1232,7 +1241,9 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
             return status_;
         }
         const float hy = std::clamp(float(c.GetY()) + 0.4F, bounds.mMin.GetY(), bounds.mMax.GetY());
-        if (hy < float(c.GetY()) - (up ? 0.5F : 1.3F)) {
+        // Down, the head may be as low as she took it from her floor (a step
+        // under her feet, and its own grip's width).
+        if (hy < float(c.GetY()) - (up ? 0.5F : limits_.center_above_feet() + 0.4F)) {
             fail(Failure::LostHold);   // its head is under her: nothing left to squeeze
             return status_;
         }
@@ -1294,7 +1305,10 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
             target_y_ = float(c.GetY());
         }
     }
-    const Vec3 side = flat(hug - c) * (limits_.mass_kg * 20.0F) - flat(rel) * (limits_.mass_kg * 6.0F);
+    // Down at its foot, the floor not under her (a pole that stands off its
+    // deck's edge): across onto the floor she came for, still holding it.
+    const Vec3 aim = !up && feet <= spec_.goal_top + 0.3F ? Vec3(spec_.goal.GetX(), 0.0F, spec_.goal.GetZ()) : hug;
+    const Vec3 side = flat(aim - c) * (limits_.mass_kg * 20.0F) - flat(rel) * (limits_.mass_kg * 6.0F);
     const Vec3 force = Vec3(0.0F, fy, 0.0F) + budget.take(side);
     bodies.AddForce(body_, force);
     push_reaction(force, hold_world_);
@@ -1698,6 +1712,8 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
 
+    // 3a. What stands on a top splits it (split_patches).
+    split_patches(physics, ignore, limits);
     // 3. Headroom: a top is walkable only where her standing capsule fits on
     // it somewhere (sampled along its long axis).
     std::vector<Patch> usable;
@@ -1803,6 +1819,115 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     stats_.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
 }
 
+// 3b. A top with something standing on it taller than a step (a wall across
+// a deck, a block on it) is not one floor: her feet cannot cross it. Each
+// such top is read in 0.25 m cells, a cell her floor where nothing above a
+// step stands on it, and split into the rectangles of floor cells that
+// touch each other. A curb within a step leaves it whole.
+void AffordanceMap::split_patches(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits) {
+    // Half the thinnest wall or board she must see (0.2 m): any such feature
+    // covers at least one cell centre, wherever it stands on the grid.
+    constexpr float kCell = 0.10F;
+    constexpr float kTall = 3.0F;   // what stands on it rises within this of its top
+    const FixedFilter filter(ignore);
+    std::vector<Patch> out;
+    out.reserve(patches_.size());
+    for (std::size_t i = 0; i < patches_.size(); ++i) {
+        const Patch &p = patches_[i];
+        const float lx = p.max_x - p.min_x, lz = p.max_z - p.min_z;
+        // Only a top something might stand on: another top over its plan,
+        // above a step and within kTall of it.
+        bool candidate = false;
+        for (std::size_t j = 0; j < patches_.size() && !candidate; ++j) {
+            const Patch &q = patches_[j];
+            candidate = j != i && q.top > p.top + limits.step_max_m && q.top < p.top + kTall && q.max_x > p.min_x &&
+                        q.min_x < p.max_x && q.max_z > p.min_z && q.min_z < p.max_z;
+        }
+        const int nx = static_cast<int>(std::ceil(lx / kCell));
+        const int nz = static_cast<int>(std::ceil(lz / kCell));
+        if (!candidate || nx < 2 || nz < 2 || nx * nz > 400000) {
+            out.push_back(p);
+            continue;
+        }
+        std::vector<std::uint8_t> floor(static_cast<std::size_t>(nx * nz), 0);
+        // From over her head: a beam or pipe she cannot pass under parts the
+        // floor as surely as a wall does.
+        const float from_y = p.top + 2.0F * limits.center_above_feet() + 0.05F;
+        for (int ix = 0; ix < nx; ++ix)
+            for (int iz = 0; iz < nz; ++iz) {
+                const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
+                const float z = std::min(p.min_z + (float(iz) + 0.5F) * kCell, p.max_z - 0.01F);
+                const float depth = from_y - p.top + 0.1F;
+                RayCastResult hit;
+                const bool any = physics.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(x, from_y, z), Vec3(0.0F, -depth, 0.0F)), hit,
+                                                                       Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), filter);
+                const float h = any ? from_y - hit.mFraction * depth : p.top;
+                floor[static_cast<std::size_t>(ix * nz + iz)] = h <= p.top + limits.step_max_m ? 1 : 0;
+            }
+        // Connected floor cells (4-way), each component cut into rectangles
+        // greedily (runs along z, grown along x while they match).
+        std::vector<int> comp(floor.size(), -1);
+        int comps = 0;
+        std::vector<int> stack;
+        for (int c0 = 0; c0 < nx * nz; ++c0) {
+            if (!floor[static_cast<std::size_t>(c0)] || comp[static_cast<std::size_t>(c0)] >= 0) continue;
+            stack.assign(1, c0);
+            comp[static_cast<std::size_t>(c0)] = comps;
+            while (!stack.empty()) {
+                const int c = stack.back();
+                stack.pop_back();
+                const int cx = c / nz, cz = c % nz;
+                const int nb[4][2] = {{cx + 1, cz}, {cx - 1, cz}, {cx, cz + 1}, {cx, cz - 1}};
+                for (const auto &n : nb) {
+                    if (n[0] < 0 || n[0] >= nx || n[1] < 0 || n[1] >= nz) continue;
+                    const int k = n[0] * nz + n[1];
+                    if (floor[static_cast<std::size_t>(k)] && comp[static_cast<std::size_t>(k)] < 0) {
+                        comp[static_cast<std::size_t>(k)] = comps;
+                        stack.push_back(k);
+                    }
+                }
+            }
+            ++comps;
+        }
+        if (comps <= 1) {
+            // One floor (perhaps with a block on part of it): left whole.
+            out.push_back(p);
+            continue;
+        }
+        std::vector<std::uint8_t> used(floor.size(), 0);
+        for (int ix = 0; ix < nx; ++ix)
+            for (int iz = 0; iz < nz; ++iz) {
+                const std::size_t c = static_cast<std::size_t>(ix * nz + iz);
+                if (!floor[c] || used[c]) continue;
+                const int id = comp[c];
+                int z1 = iz;
+                while (z1 + 1 < nz && floor[static_cast<std::size_t>(ix * nz + z1 + 1)] &&
+                       !used[static_cast<std::size_t>(ix * nz + z1 + 1)] && comp[static_cast<std::size_t>(ix * nz + z1 + 1)] == id) ++z1;
+                int x1 = ix;
+                for (bool grow = true; grow && x1 + 1 < nx;) {
+                    for (int z = iz; z <= z1 && grow; ++z) {
+                        const std::size_t k = static_cast<std::size_t>((x1 + 1) * nz + z);
+                        grow = floor[k] && !used[k] && comp[k] == id;
+                    }
+                    if (grow) ++x1;
+                }
+                for (int x = ix; x <= x1; ++x)
+                    for (int z = iz; z <= z1; ++z) used[static_cast<std::size_t>(x * nz + z)] = 1;
+                Patch q = p;
+                q.min_x = p.min_x + float(ix) * kCell;
+                q.max_x = std::min(p.max_x, p.min_x + float(x1 + 1) * kCell);
+                q.min_z = p.min_z + float(iz) * kCell;
+                q.max_z = std::min(p.max_z, p.min_z + float(z1 + 1) * kCell);
+                q.narrow = std::min(q.max_x - q.min_x, q.max_z - q.min_z) < 2.0F * limits.radius;
+                q.split = id;
+                q.split_of = static_cast<int>(i);
+                out.push_back(q);
+            }
+        ++stats_.split_patches;
+    }
+    patches_ = std::move(out);
+}
+
 void AffordanceMap::build_regions(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits) {
     // Tops join when they are a step apart and touch in plan.
     const float cell = 4.0F;
@@ -1845,7 +1970,11 @@ void AffordanceMap::build_regions(const PhysicsSystem &physics, const Ignore &ig
                     for (const int j : it->second) {
                         if (j <= static_cast<int>(i)) continue;
                         const Patch &q = patches_[static_cast<std::size_t>(j)];
-                        if (std::abs(q.top - p.top) <= limits.step_max_m && gap_xz(p, q) <= 0.25F && seam_open(p, q)) {
+                        // Pieces of one split top: joined only within their own floor
+                        // (touching pieces), never across what split them.
+                        const bool same_top = p.split_of >= 0 && p.split_of == q.split_of;
+                        if (same_top ? (p.split == q.split && gap_xz(p, q) <= 0.01F)
+                                     : (std::abs(q.top - p.top) <= limits.step_max_m && gap_xz(p, q) <= 0.25F && seam_open(p, q))) {
                             uf.join(static_cast<int>(i), j);
                             auto &li = patch_links_[i];
                             if (std::find(li.begin(), li.end(), j) == li.end()) {
@@ -2186,6 +2315,12 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 if (!head_ok) e.reason += "; blocked: no room at the head";
                 if (!climb_room) e.reason += "; blocked: capsule does not fit along the pole";
                 if (!head_room) e.reason += "; blocked: no way for her body past the pole's head onto the floor";
+                // Its head where her hands change from it to the floor: no
+                // lower than a step's reach under that floor (either way).
+                if (pole.top < hp.top - 0.4F) {
+                    e.usable = false;
+                    e.reason += "; blocked: its head ends too far under the floor";
+                }
                 add_edge(e);
                 Edge d = e;
                 d.from = hp.region;
@@ -2196,6 +2331,13 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 d.spec.goal = stand_foot;
                 d.spec.goal_top = fp.top;
                 d.cost = (hp.top - fp.top) / limits.pole_down_mps + 2.0F;
+                // Down she steps from the lip out onto it holding its head: no
+                // further out than her body's width past the lip (up, her
+                // mantle reaches back across a wider gap).
+                if (horizontal(lip - axis) > limits.radius + 0.35F) {
+                    d.usable = false;
+                    d.reason += "; blocked: too far out from the lip to step onto";
+                }
                 add_edge(d);
             }
         }
@@ -2576,8 +2718,12 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     const int gi = cell_of(to).first, gk = cell_of(to).second;
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<Item>> open;
-    nodes[key(si, sk)] = Node{0.0F, from.GetY(), from.GetX(), from.GetZ(), -1, false};
-    open.push({0.0F, key(si, sk)});
+    // A node is a grid point at one level (decks over decks share a point
+    // in plan: her feet on each are different places).
+    const auto level = [&](const float feet) { return static_cast<int>(std::floor((feet - from.GetY()) / 1.0F + 0.5F)) & 63; };
+    const auto key3 = [&](const int i, const int k, const float feet) { return key(i, k) * 64 + level(feet); };
+    nodes[key3(si, sk, from.GetY())] = Node{0.0F, from.GetY(), from.GetX(), from.GetZ(), -1, false};
+    open.push({0.0F, key3(si, sk, from.GetY())});
     const auto h = [&](const int i, const int k) { return cell * std::hypot(float(i - gi), float(k - gk)); };
     int expanded = 0;
     int found = -1;
@@ -2590,13 +2736,13 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         if (cur.closed) continue;
         cur.closed = true;
         ++expanded;
-        const int ci = n % nx;
-        const int ck = n / nx;
-        if (h(ci, ck) < nearest_h) {
+        const int ci = (n / 64) % nx;
+        const int ck = (n / 64) / nx;
+        if (h(ci, ck) < nearest_h && std::abs(cur.feet - to.GetY()) <= limits.step_max_m + 0.3F) {
             nearest_h = h(ci, ck);
             nearest = n;
         }
-        if (ci == gi && ck == gk) {
+        if (ci == gi && ck == gk && std::abs(cur.feet - to.GetY()) <= limits.step_max_m + 0.3F) {
             found = n;
             break;
         }
@@ -2608,9 +2754,6 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                 const int i = ci + di;
                 const int k = ck + dk;
                 if (i < 0 || k < 0 || i >= nx || k >= nz) continue;
-                const int m = key(i, k);
-                auto it = nodes.find(m);
-                if (it != nodes.end() && it->second.closed) continue;
                 float feet = 0.0F;
                 float bx = 0.0F, bz = 0.0F;
                 // Up a step at most; down as far as she steps off a box (a
@@ -2619,6 +2762,24 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                     cur_feet - feet > 1.0F) {
                     continue;   // no floor for her there from here (maybe from another side)
                 }
+                if (feet - cur_feet > 0.04F) {
+                    // A step up takes a tread wide enough across her way for
+                    // her body (not a stair's end from the side, not its
+                    // corner): floor at the same height a hand's width either side.
+                    const float dl = std::hypot(float(di), float(dk));
+                    const float ax = -float(dk) / dl * 0.2F, az = float(di) / dl * 0.2F;
+                    bool tread = true;
+                    for (const float side : {1.0F, -1.0F}) {
+                        const RVec3 top(bx + side * ax, feet + 0.1F, bz + side * az);
+                        RayCastResult hit;
+                        tread = tread && physics.GetNarrowPhaseQuery().CastRay(RRayCast(top, Vec3(0.0F, -0.2F, 0.0F)), hit, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things) &&
+                                hit.mFraction > 1.0e-4F;
+                    }
+                    if (!tread) continue;
+                }
+                const int m = key3(i, k, feet);
+                auto it = nodes.find(m);
+                if (it != nodes.end() && it->second.closed) continue;
                 {
                     // Leaning lets two neighboring cells put her body on two
                     // sides of a thin wall: the step between them must be open

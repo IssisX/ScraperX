@@ -1942,6 +1942,13 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     if (state_ != State::Dormant && state_ != State::Straining && state_ != State::Emerging) {
         pursuit_s_ = std::min(pursuit_s_ + dt, 3600.0F);
     }
+    // On her own journey (travel_to) nothing else has her body: a found
+    // climb or a routecraft climb begun beside it gives way to it.
+    if (travel_.active && journey_active_) end_journey(false);
+    if (travel_.active && routecraft_.owns_motion()) {
+        routecraft_.cancel();
+        routecraft_mine_ = false;
+    }
     if (journey_active_) {
         // A way she planned herself: its Climber has her body until it ends.
         if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) {
@@ -2034,7 +2041,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
     if (body_in_world_ && travel_.active) {
-        step_travel(dt);
+        // Knocked off her feet on the way: she gets them back first, then
+        // goes on (her journey plans again from where she gets up).
+        if (state_ == State::Down || state_ == State::Staggering) {
+            if (climber_ && climber_->status() == traversal::Climber::Status::Running) climber_->cancel();
+            step_knocked(dt, player);
+        } else {
+            step_travel(dt);
+        }
         if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
         return;
     }

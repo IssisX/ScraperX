@@ -3,6 +3,7 @@
 // between moves and climbed by her own hands, each move physical. A region is
 // hers only when she stands on it; a failed move is a fall, and she plans
 // again from where she lands. Nothing here sets her position.
+#include <cstdlib>
 #include "sim/matron.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
@@ -13,8 +14,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 
 namespace scraperx::sim {
 
@@ -96,6 +95,7 @@ bool Matron::travel_to(const int region) {
     travel_.steps = static_cast<int>(travel_edges_.size());
     travel_walk_.clear();
     travel_walk_i_ = 0;
+    travel_stuck_ = 0;
     travel_wait_s_ = 0.0F;
     travel_replans0_ = travel_.replans;   // her counts run on; this journey's replans from here
     climber_->cancel();
@@ -216,8 +216,16 @@ void Matron::step_travel(const float dt) {
             climber_->walk_between(dt, feet, 0.0F);
         }
         travel_walk_.clear();
+        // Kept waiting there long: another way, if her map has one.
+        travel_yield_s_ += dt;
+        if (travel_yield_s_ > kYieldGiveUpS) {
+            travel_yield_s_ = 0.0F;
+            travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+            travel_.step = travel_.steps;
+        }
         return;
     }
+    travel_yield_s_ = 0.0F;
     const float to_start = distance_xz(feet.GetX(), feet.GetZ(), e.spec.start.GetX(), e.spec.start.GetZ());
     // Over the scanned map's walkable tops only (no authored ways): patch to
     // patch to the move's start, handing over to the move's own feet once
@@ -229,9 +237,20 @@ void Matron::step_travel(const float dt) {
             travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)}, climber_->limits(), feet,
                                                  e.spec.start);
         }
+        if (travel_walk_.empty() && to_start < 15.0F) {
+            // Her feet's search again on a finer grid, close round the way (a
+            // narrow top, a board, a gap a coarse cell steps over).
+            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+                                                climber_->limits(), feet, e.spec.start, 3.0F, 0.1F, 60000);
+        }
+        if (travel_walk_.empty() && to_start < 15.0F) {
+            // And wide (the way round may leave the box round the two).
+            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+                                                climber_->limits(), feet, e.spec.start, 16.0F, 0.2F, 150000);
+        }
         if (travel_walk_.empty() && to_start < 15.0F && to_start > 0.6F) {
             // Close, and her feet find no floor that takes her there (a wall
-            // standing on the deck between): that start is not hers from
+            // standing on the deck between, found at both grain sizes): that start is not hers from
             // here. She leaves that move out and plans again.
             travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
             travel_.step = travel_.steps;
@@ -241,6 +260,21 @@ void Matron::step_travel(const float dt) {
             travel_walk_ = scanned_->walk_path(feet, e.spec.start);
         }
         travel_walk_i_ = 0;
+    }
+    // Off her path (knocked off a board onto the floor below it, the same
+    // region by the stairs): the way from here is searched again.
+    if (travel_walk_i_ > 0 && climber_->supported()) {
+        const Vec3 a = travel_walk_[travel_walk_i_ - 1], b = travel_walk_[travel_walk_i_];
+        const float len = distance_xz(a.GetX(), a.GetZ(), b.GetX(), b.GetZ());
+        const float u = len > 1.0e-3F ? std::clamp(((feet.GetX() - a.GetX()) * (b.GetX() - a.GetX()) +
+                                                    (feet.GetZ() - a.GetZ()) * (b.GetZ() - a.GetZ())) / (len * len), 0.0F, 1.0F)
+                                      : 0.0F;
+        const float path_y = a.GetY() + u * (b.GetY() - a.GetY());
+        if (path_y - feet.GetY() > 1.0F) {
+            travel_walk_.clear();
+            travel_walk_i_ = 0;
+            return;
+        }
     }
     // A waypoint is passed when she is at it, or when her feet will take her
     // no nearer (an edge her feet keep her from): on to the next.
@@ -266,6 +300,30 @@ void Matron::step_travel(const float dt) {
                 travel_wp_stall_s_ = 0.0F;
             }
         }
+        if ((feet - travel_still_at_).Length() > 0.15F) {
+            travel_still_at_ = feet;
+            travel_still_s_ = 0.0F;
+            travel_stuck_ = 0;   // she is getting somewhere
+        } else {
+            travel_still_s_ += dt;
+        }
+        if ((travel_wp_stall_s_ > 6.0F && to_wp > 1.0F) || travel_still_s_ > 6.0F) {
+            travel_still_s_ = 0.0F;
+            // Held fast where her feet's search sent her: a fresh search from
+            // where she is; and when that keeps holding her, that move's way
+            // is not hers from here: leave it out and plan again.
+            travel_wp_stall_s_ = 0.0F;
+            travel_wp_best_ = 1.0e9F;
+            travel_rerouted_ = false;
+            travel_walk_.clear();
+            travel_walk_i_ = 0;
+            if (++travel_stuck_ >= 3) {
+                travel_stuck_ = 0;
+                travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+                travel_.step = travel_.steps;
+            }
+            return;
+        }
         if (travel_walk_i_ + 1 < travel_walk_.size() && (to_wp < 0.35F || (to_wp < 1.5F && travel_wp_stall_s_ > 0.8F))) {
             travel_rerouted_ = false;
             ++travel_walk_i_;
@@ -275,10 +333,26 @@ void Matron::step_travel(const float dt) {
     }
     const bool last_leg = travel_walk_i_ + 1 >= travel_walk_.size();
     if (!(last_leg && to_start < 1.6F)) {
-        const Vec3 w = travel_walk_[travel_walk_i_];
+        Vec3 w = travel_walk_[travel_walk_i_];
+        if (travel_walk_i_ > 0) {
+            // Along the leg, not across to its end: her aim a stride ahead
+            // of where she is on it (a stair's line taken straight, not cut).
+            const Vec3 a = travel_walk_[travel_walk_i_ - 1];
+            const float len = distance_xz(a.GetX(), a.GetZ(), w.GetX(), w.GetZ());
+            if (len > 0.8F) {
+                const float u = std::clamp(((feet.GetX() - a.GetX()) * (w.GetX() - a.GetX()) +
+                                            (feet.GetZ() - a.GetZ()) * (w.GetZ() - a.GetZ())) / (len * len) + 0.6F / len,
+                                           0.0F, 1.0F);
+                w = a + (w - a) * u;
+            }
+        }
         const float off = distance_xz(feet.GetX(), feet.GetZ(), w.GetX(), w.GetZ());
         // Her own capped feet (the one budget), keeping to floor.
-        climber_->walk_between(dt, w, std::min(2.4F, 0.6F + 1.5F * off));
+        // Her feet's search found that waypoint down a drop she walks off
+        // (under 1 m): she may leave the edge for it.
+        const float drop = feet.GetY() - travel_walk_[travel_walk_i_].GetY();   // the waypoint's own floor, not the aim along the leg
+        climber_->walk_between(dt, w, std::min(2.4F, 0.6F + 1.5F * off),
+                               drop > climber_->limits().step_max_m + 0.05F ? std::min(1.1F, drop + 0.1F) : 0.0F);
         if (off > 0.15F) {
             yaw_ = turn_toward(yaw_, std::atan2(w.GetX() - feet.GetX(), w.GetZ() - feet.GetZ()), kTurnRate, dt);
         }

@@ -1648,7 +1648,44 @@ void test_player_unchanged() {
 
 void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); }
 
+// One deck box, something laid across its top. A curb within a step (and a
+// block on part of it) leaves it one floor; a wall taller than a step across
+// it splits it in two, with nothing joining the halves but over the wall.
+void test_floor_split() {
+    const auto regions_on = [](const float across_h, const bool full, const float thick = 0.5F, const float at_x = 0.0F) {
+        ClimbWorld w;
+        w.box(Vec3(3.0F, 0.25F, 3.0F), RVec3(0, 0.25F, -10));                       // the deck, top 0.5
+        w.box(Vec3(0.5F * thick, 0.5F * across_h, full ? 3.0F : 1.0F), RVec3(at_x, 0.5F + 0.5F * across_h, -10));
+        w.spawn(RVec3(0, 0, 3));
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-6, -1, -15), Vec3(6, 4, 6)), {w.her, BodyID()});
+        const int west = map.region_at(Vec3(-2.0F, 0.5F, -10));
+        const int east = map.region_at(Vec3(2.0F, 0.5F, -10));
+        return std::make_pair(west, east);
+    };
+    const auto curb = regions_on(traversal::Limits{}.step_max_m * 0.6F, true);
+    std::cout << "  matron floor split: curb " << curb.first << "/" << curb.second;
+    require(curb.first >= 0 && curb.first == curb.second, "matron floor: a curb within a step does not split the deck");
+    const auto block = regions_on(1.0F, false);
+    std::cout << ", block on part " << block.first << "/" << block.second;
+    require(block.first >= 0 && block.first == block.second, "matron floor: a block on part of a deck leaves it one floor");
+    const auto wall = regions_on(1.0F, true);
+    std::cout << ", wall across " << wall.first << "/" << wall.second << "\n";
+    require(wall.first >= 0 && wall.second >= 0 && wall.first != wall.second,
+            "matron floor: a wall taller than a step across the deck splits it");
+    // A thin wall (0.2 m, the thinnest she must see) wherever it stands on
+    // the reading grid: split every time.
+    int thin_split = 0;
+    for (int k = 0; k < 5; ++k) {
+        const auto thin = regions_on(1.0F, true, 0.2F, 0.037F * float(k));
+        thin_split += thin.first >= 0 && thin.second >= 0 && thin.first != thin.second ? 1 : 0;
+    }
+    std::cout << "  matron floor split: thin wall at 5 grid offsets split " << thin_split << "/5\n";
+    require(thin_split == 5, "matron floor: a 0.2 m wall splits the deck wherever it stands");
+}
+
 void run_matron_climb_scan() {
+    test_floor_split();
     test_tower_scan();
     test_tower_journeys();
 }
@@ -1713,6 +1750,10 @@ void run_matron_tower_proof() {
             (void)s.advance_frame(1.0 / 60.0);
             secs += 1.0 / 60.0;
             const auto p = s.matron_state().position;
+            if (std::hypot(p.x - last.x, p.y - last.y, p.z - last.z) > 2.0 && std::getenv("SCRAPERX_TOWER_DEBUG") != nullptr) {
+                std::cout << "    jump from " << last.x << "," << last.y << "," << last.z << " move " << int(j.move)
+                          << " step " << j.step << "/" << j.steps << " region " << j.region << "\n";
+            }
             worst = std::max(worst, std::hypot(p.x - last.x, p.y - last.y, p.z - last.z));
             last = p;
             j = s.matron_journey();
@@ -1723,7 +1764,7 @@ void run_matron_tower_proof() {
         if (!there) {
             return "did not arrive (at region " + std::to_string(j.region) + " of goal " + std::to_string(goal) +
                    ", failure " + std::to_string(int(j.last_failure)) + ", moves " + std::to_string(j.moves_done) +
-                   " failed " + std::to_string(j.moves_failed - failed0) + " replans " + std::to_string(j.replans) + ", at " + std::to_string(last.x) + "," + std::to_string(last.y) + "," +
+                   " failed " + std::to_string(j.moves_failed - failed0) + " replans " + std::to_string(j.replans) + " yields " + std::to_string(j.yields) + " state " + std::to_string(int(s.matron_state().state)) + ", at " + std::to_string(last.x) + "," + std::to_string(last.y) + "," +
                    std::to_string(last.z) + ")";
         }
         return std::string(j.moves_failed == failed0 ? "arrived clean" : "arrived after a replan");
@@ -1740,6 +1781,12 @@ void run_matron_tower_proof() {
             for (const int k : map.plan(p.hi, p.lo)) {
                 const traversal::Edge &e = map.edges()[std::size_t(k)];
                 std::cout << "    down edge " << k << " " << traversal::move_name(e.kind) << " start " << e.spec.start.GetX() << "," << e.spec.start.GetY() << "," << e.spec.start.GetZ() << " goal " << e.spec.goal.GetX() << "," << e.spec.goal.GetY() << "," << e.spec.goal.GetZ() << " " << e.reason << "\n";
+            }
+            if (std::getenv("SCRAPERX_TOWER_PATCHES")) {
+                const int want = std::atoi(std::getenv("SCRAPERX_TOWER_PATCHES"));
+                for (const traversal::Patch &q : map.patches()) {
+                    if (q.region == want) std::cout << "    patch top " << q.top << " x " << q.min_x << ".." << q.max_x << " z " << q.min_z << ".." << q.max_z << " narrow " << q.narrow << " split " << q.split << "\n";
+                }
             }
             // Debugging only: put her on that pair's upper deck's own spot (a fixture placement).
             const traversal::Edge *e0 = nullptr;
