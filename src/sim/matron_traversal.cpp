@@ -133,15 +133,30 @@ bool member_bounds(const Body &body, const SubShapeID &sub, AABox &out, bool &ba
 Climber::Climber(PhysicsSystem &physics, const BodyID body, const Ignore ignore, const Limits limits)
     : physics_(physics), body_(body), ignore_(ignore), limits_(limits) {}
 
-Vec3 Climber::Budget::take(const Vec3 want) noexcept {
+Vec3 Budget::take(const Vec3 want) noexcept {
     const float length = want.Length();
     if (length <= 1.0e-6F || left <= 0.0F) {
         return Vec3::sZero();
     }
-    const float granted = std::min(length, left);
-    left -= granted;
-    used += granted;
-    return want * (granted / length);
+    Vec3 granted = want * (std::min(length, left) / length);
+    // Power: only the part along her motion does work. Braking (negative)
+    // costs none here; positive work beyond what is left scales the push.
+    const float power = granted.Dot(velocity);
+    if (power > 0.0F) {
+        const float allowed = std::max(power_left, 0.0F);
+        if (power > allowed) {
+            const float speed2 = velocity.LengthSq();
+            // Remove just enough of the along-velocity component.
+            granted -= velocity * ((power - allowed) / speed2);
+        }
+        const float spent = std::max(granted.Dot(velocity), 0.0F);
+        power_left -= spent;
+        power_used += spent;
+    }
+    const float g = granted.Length();
+    left -= g;
+    used += g;
+    return granted;
 }
 
 RVec3 Climber::center() const { return physics_.GetBodyInterface().GetCenterOfMassPosition(body_); }
@@ -395,9 +410,11 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
 }
 
 float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed) {
-    Budget budget{limits_.total_force_n, 0.0F};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, velocity()};
     walk(dt, feet_goal, speed, budget);
     view_.force_n = budget.used;
+    view_.power_w = budget.power_used;
+    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     return budget.used;
 }
@@ -466,7 +483,7 @@ Climber::Status Climber::step(const float dt) {
     if (status_ != Status::Running) {
         return status_;
     }
-    Budget budget{limits_.total_force_n, 0.0F};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, velocity()};
     phase_s_ += dt;
     switch (spec_.kind) {
     case MoveKind::Walk: step_walk(dt, budget); break;
@@ -480,6 +497,8 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     }
     view_.force_n = budget.used;
+    view_.power_w = budget.power_used;
+    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     view_.phase = phase_;
     view_.sliding = sliding_;

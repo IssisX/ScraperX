@@ -57,6 +57,7 @@ struct Limits {
     // The one budget every simultaneous actuator (hands, feet, squeeze)
     // draws from: 2.6 times her weight.
     float total_force_n = 5600.0F;
+    float power_w = 9000.0F;   // actuator power: force along her own velocity, all actuators together
     float foot_force_n = 220.0F * 9.0F;   // her feet on a floor: kFootAccel
     // A jump: at most this change of velocity from the floor (apex 1.49 m).
     float launch_dv_mps = 5.4F;
@@ -82,6 +83,18 @@ struct Limits {
 };
 
 // A hold: a body, the member of it, and where on the member (body frame).
+// One tick's actuator allowance: total force and total power (the force's
+// component along her velocity, which is what does work). Every AddForce of
+// hers goes through take(); contact impulses are Jolt's and not counted.
+struct Budget {
+    float left = 0.0F;          // newtons still available this tick
+    float used = 0.0F;
+    float power_left = 0.0F;    // watts still available this tick
+    float power_used = 0.0F;
+    JPH::Vec3 velocity = JPH::Vec3::sZero();   // her body's, at the start of the tick
+    JPH::Vec3 take(JPH::Vec3 want) noexcept;
+};
+
 struct Hold {
     JPH::BodyID body;
     JPH::SubShapeID sub;
@@ -141,6 +154,8 @@ struct ClimbView {
     int phase = 0;
     float force_n = 0.0F;          // her total actuator force this tick
     float peak_force_n = 0.0F;
+    float power_w = 0.0F;
+    float peak_power_w = 0.0F;
     float support_reaction_n = 0.0F;   // pushed onto a dynamic hold's body this tick
     std::uint32_t grips = 0;
     std::uint32_t releases = 0;
@@ -195,11 +210,6 @@ public:
     [[nodiscard]] bool revalidate(Hold &hold, JPH::RVec3 &world) const;
 
 private:
-    struct Budget {
-        float left = 0.0F;
-        float used = 0.0F;
-        JPH::Vec3 take(JPH::Vec3 want) noexcept;
-    };
     void fail(Failure failure);
     void finish();
     bool take_hold(JPH::RVec3 near, float radius, bool bar_only, Hold &out, JPH::RVec3 *where = nullptr) const;
