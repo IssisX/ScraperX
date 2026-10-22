@@ -2,6 +2,7 @@
 #include "sim/physics_world_support.hpp"
 #include <algorithm>
 #include <tuple>
+#include <map>
 
 namespace scraperx::sim {
 using namespace JPH;
@@ -63,7 +64,8 @@ bool MatronRoutecraft::reach(PhysicsSystem &p, BodyID self, RVec3 at, const Grip
     const Vec3 delta(g.point - shoulder);
     RayCastResult hit;
     ++report_.native_queries;
-    if (!p.GetNarrowPhaseQuery().CastRay(RRayCast(shoulder, delta), hit, {}, {}, SolidFilter(self))) return false;
+    if (!p.GetNarrowPhaseQuery().CastRay(RRayCast(shoulder, delta), hit, p.GetDefaultBroadPhaseLayerFilter(p.GetBodyInterface().GetObjectLayer(self)),
+        p.GetDefaultLayerFilter(p.GetBodyInterface().GetObjectLayer(self)), SolidFilter(self))) return false;
     return hit.mBodyID == g.body && hit.mSubShapeID2 == g.sub && (1 - hit.mFraction) * delta.Length() <= 0.13F;
 }
 bool MatronRoutecraft::clear(PhysicsSystem &p, BodyID self, RVec3 from, RVec3 to) const {
@@ -72,15 +74,17 @@ bool MatronRoutecraft::clear(PhysicsSystem &p, BodyID self, RVec3 from, RVec3 to
     BoundedHits overlap;
     ++report_.native_queries;
     p.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1), RMat44::sTranslation(to),
-        CollideShapeSettings(), to, overlap, {}, {}, SolidFilter(self));
-    if (overlap.overflow) return false;
+        CollideShapeSettings(), to, overlap, p.GetDefaultBroadPhaseLayerFilter(p.GetBodyInterface().GetObjectLayer(self)),
+        p.GetDefaultLayerFilter(p.GetBodyInterface().GetObjectLayer(self)), SolidFilter(self));
+    if (overlap.overflow) { incomplete_clearance_ = true; return false; }
     for (const auto &hit : overlap.hits) if (hit.mPenetrationDepth > 0.015F) return false;
     if (Vec3(to - from).LengthSq() < 1.0e-8F) return true;
     BoundedSweeps hits;
     ++report_.native_queries;
     p.GetNarrowPhaseQuery().CastShape(RShapeCast(&capsule, Vec3::sReplicate(1), RMat44::sTranslation(from), Vec3(to-from)),
-        ShapeCastSettings(), from, hits, {}, {}, SolidFilter(self));
-    if (hits.overflow) return false;
+        ShapeCastSettings(), from, hits, p.GetDefaultBroadPhaseLayerFilter(p.GetBodyInterface().GetObjectLayer(self)),
+        p.GetDefaultLayerFilter(p.GetBodyInterface().GetObjectLayer(self)), SolidFilter(self));
+    if (hits.overflow) { incomplete_clearance_ = true; return false; }
     for (const auto &hit : hits.hits) {
         // Only initial resting contact while separating may be ignored.
         if (hit.mFraction <= 1.0e-5F && hit.mPenetrationDepth <= 0.015F &&
@@ -90,6 +94,9 @@ bool MatronRoutecraft::clear(PhysicsSystem &p, BodyID self, RVec3 from, RVec3 to
     return true;
 }
 bool MatronRoutecraft::transition(PhysicsSystem &p, BodyID self, RVec3 from, const Node &to) const {
+    const float length = Vec3(to.center - from).Length();
+    if (length > 3.2F || Vec3(to.grip.point - from).Length() > kReach ||
+        Vec3(to.grip.point - to.center).Length() > kReach) return false;
     if (!clear(p,self,from,to.center)) return false;
     const int samples=std::max(1,int(std::ceil(Vec3(to.center-from).Length()/0.2F)));
     if (samples>16) return false;
@@ -106,7 +113,7 @@ bool MatronRoutecraft::request(PhysicsSystem &p, BodyID self, RVec3 goal, Vec3 f
     return plan(p, self);
 }
 bool MatronRoutecraft::plan(PhysicsSystem &p, BodyID self) {
-    ++report_.plans; route_.clear(); cursor_ = 0; stall_ = 0;
+    ++report_.plans; route_.clear(); cursor_ = 0; stall_ = 0; incomplete_clearance_ = false;
     const RVec3 start = p.GetBodyInterface().GetPosition(self); last_ = start;
     const Vec3 span = Vec3(goal_ - start).Abs();
     if (!budget()) { report_.status = Status::BudgetExceeded; return false; }
@@ -118,9 +125,18 @@ bool MatronRoutecraft::plan(PhysicsSystem &p, BodyID self) {
     BoundedHits hits;
     ++report_.native_queries;
     p.GetNarrowPhaseQuery().CollideShape(&region, Vec3::sReplicate(1), RMat44::sTranslation(middle),
-        CollideShapeSettings(), middle, hits, {}, {}, SolidFilter(self));
+        CollideShapeSettings(), middle, hits, p.GetDefaultBroadPhaseLayerFilter(p.GetBodyInterface().GetObjectLayer(self)),
+        p.GetDefaultLayerFilter(p.GetBodyInterface().GetObjectLayer(self)), SolidFilter(self));
     if (hits.overflow) { report_.status = Status::BudgetExceeded; return false; }
     std::vector<Grip> grips;
+    // One geometry leaf can produce several query hits. Its samples are
+    // generated once, independent of narrow-phase callback ordering.
+    const auto leaf_key = [](const CollideShapeResult &hit) {
+        return std::make_pair(hit.mBodyID2.GetIndexAndSequenceNumber(), hit.mSubShapeID2.GetValue());
+    };
+    std::sort(hits.hits.begin(), hits.hits.end(), [&](const auto &a, const auto &b) { return leaf_key(a) < leaf_key(b); });
+    hits.hits.erase(std::unique(hits.hits.begin(), hits.hits.end(),
+        [&](const auto &a, const auto &b) { return leaf_key(a) == leaf_key(b); }), hits.hits.end());
     for (const auto &hit : hits.hits) {
         BodyLockRead lock(p.GetBodyLockInterface(), hit.mBodyID2);
         if (!lock.Succeeded() || !lock.GetBody().IsStatic()) continue;
@@ -132,44 +148,110 @@ bool MatronRoutecraft::plan(PhysicsSystem &p, BodyID self) {
         for (int s = 0; s < samples; ++s) {
             const float t = samples == 1 ? 0 : (float(s) / float(samples-1) * 2 - 1) * (box.half[axis] - 0.1F);
             const RVec3 point = box.centre + box.axes[axis] * t;
+            const Vec3 offset = Vec3(point - middle).Abs();
+            const Vec3 extent = span * 0.5F + Vec3(2, 2, 2);
+            if (offset.GetX() > extent.GetX() || offset.GetY() > extent.GetY() || offset.GetZ() > extent.GetZ()) continue;
             grips.push_back({hit.mBodyID2, hit.mSubShapeID2, Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point), point});
         }
     }
-    if (grips.size() > 192) { report_.status = Status::BudgetExceeded; return false; }
     std::sort(grips.begin(), grips.end(), [](const Grip &a, const Grip &b) {
         return std::make_tuple(a.point.GetY(),a.point.GetX(),a.point.GetZ(),a.body.GetIndexAndSequenceNumber(),a.sub.GetValue()) <
                std::make_tuple(b.point.GetY(),b.point.GetX(),b.point.GetZ(),b.body.GetIndexAndSequenceNumber(),b.sub.GetValue());
     });
-    std::vector<Node> nodes;
-    for (const auto &g : grips) {
-        for (float y : {-0.65F, 0.35F, 1.45F}) {
-            const RVec3 at = g.point - facing_ * 0.55F + Vec3(0,y,0);
-            if (clear(p,self,at,at) && reach(p,self,at,g)) nodes.push_back({at,g});
+    // Cheap catalog only: no whole-region clearance/visibility work. Its
+    // upper bound follows from 2048 leaf hits, five samples, seven postures.
+    // All heights and lateral branches remain available to the search.
+    std::vector<Node> catalog;
+    for (const Grip &grip : grips) {
+        for (const float standoff : {0.40F, 0.55F}) {
+            for (const float height : {-0.65F, 0.35F, 1.45F}) {
+                catalog.push_back({grip.point - facing_ * standoff + Vec3(0, height, 0), grip});
+            }
         }
-        if (reach(p,self,goal_,g) && clear(p,self,goal_,goal_)) nodes.push_back({goal_,g});
-        if (nodes.size() > kMaxNodes) { report_.status = Status::BudgetExceeded; return false; }
+        if (Vec3(goal_ - grip.point).Length() <= kReach) catalog.push_back({goal_, grip});
     }
-    // Breadth first search over contact states, no height monotonicity.
-    // New hand acquired at source, old hand then released, body swept while
-    // the new support remains within reach for the entire straight segment.
-    std::vector<int> parent(nodes.size(), -2), queue;
-    for (std::size_t i=0; i<nodes.size(); ++i) {
-        if (!blocked(start,nodes[i].center) && transition(p,self,start,nodes[i])) { parent[i]=-1; queue.push_back(int(i)); }
-    }
-    int end=-1;
-    for (std::size_t q=0; q<queue.size(); ++q) {
-        const int a=queue[q];
-        if (Vec3(nodes[a].center-goal_).Length() < 0.05F) { end=a; break; }
-        for (std::size_t b=0; b<nodes.size(); ++b) {
-            if (parent[b]!=-2 || Vec3(nodes[b].center-nodes[a].center).Length()>1.4F) continue;
-            if (!budget()) { report_.status=Status::BudgetExceeded; return false; }
-            if (blocked(nodes[a].center,nodes[b].center) || !transition(p,self,nodes[a].center,nodes[b])) continue;
-            parent[b]=a; queue.push_back(int(b));
+    const auto key = [](const Node &node) {
+        return std::make_tuple(node.center.GetY(), node.center.GetX(), node.center.GetZ(),
+            node.grip.point.GetY(), node.grip.point.GetX(), node.grip.point.GetZ(),
+            node.grip.body.GetIndexAndSequenceNumber(), node.grip.sub.GetValue());
+    };
+    std::sort(catalog.begin(), catalog.end(), [&](const Node &a, const Node &b) { return key(a) < key(b); });
+    catalog.erase(std::unique(catalog.begin(), catalog.end(),
+        [&](const Node &a, const Node &b) { return key(a) == key(b); }), catalog.end());
+
+    constexpr float cell_size = 1.4F;
+    using Cell = std::tuple<int, int, int>;
+    const auto cell = [&](RVec3 point) {
+        const Vec3 local(point - start); // bounded local coordinates, including negative cells
+        return Cell(int(std::floor(local.GetX() / cell_size)), int(std::floor(local.GetY() / cell_size)),
+            int(std::floor(local.GetZ() / cell_size)));
+    };
+    std::map<Cell, std::vector<int>> cells;
+    for (std::size_t i = 0; i < catalog.size(); ++i) cells[cell(catalog[i].center)].push_back(int(i));
+    std::vector<int> admitted(catalog.size(), -1);
+    std::vector<std::int8_t> posture_valid(catalog.size(), -1);
+    struct SearchState { Node node; int parent; float cost; bool closed; };
+    std::vector<SearchState> states;
+    states.reserve(kMaxNodes);
+    states.push_back({{start, {BodyID(), SubShapeID(), Vec3::sZero(), RVec3::sZero()}}, -1, 0, false}); // source is not a fabricated grip
+    bool node_budget_exhausted = false;
+    int end = -1;
+    for (int expansion = 0; expansion < kMaxNodes; ++expansion) {
+        int current = -1;
+        float best = std::numeric_limits<float>::max();
+        for (std::size_t i = 0; i < states.size(); ++i) {
+            if (states[i].closed) continue;
+            const float score = states[i].cost + Vec3(states[i].node.center - goal_).Length();
+            if (score < best) { best = score; current = int(i); }
+        }
+        if (current < 0) break;
+        states[current].closed = true;
+        const Node from = states[current].node;
+        if (current > 0 && Vec3(from.center - goal_).Length() < 0.05F) { end = current; break; }
+        // Preserve the old initial acquisition range; later transfers are
+        // local 1.4 m edges. A* distance ordering permits down and sideways.
+        const float edge_limit = current == 0 ? 3.2F : cell_size;
+        const int radius = current == 0 ? 3 : 1;
+        const auto [cx, cy, cz] = cell(from.center);
+        std::vector<int> neighbors;
+        for (int x = cx - radius; x <= cx + radius; ++x) {
+            for (int y = cy - radius; y <= cy + radius; ++y) {
+                for (int z = cz - radius; z <= cz + radius; ++z) {
+                    const auto found = cells.find(Cell(x, y, z));
+                    if (found != cells.end()) neighbors.insert(neighbors.end(), found->second.begin(), found->second.end());
+                }
+            }
+        }
+        std::sort(neighbors.begin(), neighbors.end());
+        for (const int candidate : neighbors) {
+            const Node &to = catalog[candidate];
+            const float length = Vec3(to.center - from.center).Length();
+            if (length > edge_limit || Vec3(to.grip.point - from.center).Length() > kReach ||
+                Vec3(to.grip.point - to.center).Length() > kReach || blocked(from.center, to.center)) continue;
+            int index = admitted[candidate];
+            const float cost = states[current].cost + length;
+            if (index >= 0 && (states[index].closed || cost >= states[index].cost)) continue;
+            if (!budget()) { report_.status = Status::BudgetExceeded; return false; }
+            if (posture_valid[candidate] < 0) {
+                posture_valid[candidate] = clear(p, self, to.center, to.center) && reach(p, self, to.center, to.grip);
+            }
+            if (!posture_valid[candidate] || !transition(p, self, from.center, to)) continue;
+            if (index < 0) {
+                if (states.size() == kMaxNodes) { node_budget_exhausted = true; continue; }
+                index = int(states.size());
+                admitted[candidate] = index;
+                states.push_back({to, current, cost, false});
+            } else {
+                states[index].parent = current;
+                states[index].cost = cost;
+            }
         }
     }
-    if (end<0) {
- report_.status=report_.queries>200000 ? Status::BudgetExceeded : Status::NoRoute; return false; }
-    for (int i=end; i>=0; i=parent[i]) route_.push_back(nodes[i]);
+    if (end < 0) {
+        report_.status = node_budget_exhausted || incomplete_clearance_ || report_.queries > 200000 ? Status::BudgetExceeded : Status::NoRoute;
+        return false;
+    }
+    for (int i = end; i > 0; i = states[i].parent) route_.push_back(states[i].node);
     std::reverse(route_.begin(),route_.end());
     report_.status=Status::Moving; ++report_.acquisitions;
     return true;
