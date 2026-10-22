@@ -2102,7 +2102,10 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     };
     std::unordered_map<int, Node> nodes;
     const auto [si, sk] = cell_of(from);
-    const auto [gi, gk] = cell_of(to);
+    // Plain ints: a lambda may not capture a structured binding in C++17 (the Android build).
+    const std::pair<int, int> goal_cell = cell_of(to);
+    const int gi = goal_cell.first;
+    const int gk = goal_cell.second;
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<Item>> open;
     nodes[key(si, sk)] = Node{0.0F, from.GetY(), -1, false};
