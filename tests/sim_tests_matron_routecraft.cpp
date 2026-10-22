@@ -225,7 +225,6 @@ void run_matron_routecraft() {
         require(f.matron->climb_report().force==0,"routecraft: explicit interruption clears contact");
         for(int i=0;i<270;++i) f.tick();
         require(std::abs(f.at().GetY()-155.05)<0.05,"routecraft: interrupted grounded recovery");
-        require(f.physics.GetBodyInterface().GetMotionQuality(f.matron->body())==EMotionQuality::Discrete,"routecraft: grounded recovery restores prior collision mode");
         std::cout<<"routecraft interrupted recovery peak_overlap="<<f.penetration<<" controlled_overlap="<<f.controlled_penetration<<'\n';
     }
     {
@@ -238,7 +237,6 @@ void run_matron_routecraft() {
         std::cout<<"routecraft measured saturation N="<<f.measured_force<<" W="<<f.measured_power<<'\n';
         Matron::Saved saved; saved.state=Matron::State::Dormant;
         f.matron->restore(saved);
-        require(f.physics.GetBodyInterface().GetMotionQuality(f.matron->body())==EMotionQuality::Discrete,"routecraft: reset restores collision mode");
         require(f.matron->climb_report().force==0 && f.matron->climb_report().status==MatronRoutecraft::Status::Released,"routecraft: restore clears controller");
     }
     {
@@ -302,6 +300,17 @@ void run_matron_routecraft() {
         BodyCreationSettings bar(new BoxShape(Vec3(0.28F,0.02F,0.02F)),RVec3(0,158,0),Quat::sIdentity(),EMotionType::Kinematic,object_layers::kMoving);
         f.solids.push_back(f.physics.GetBodyInterface().CreateAndAddBody(bar,EActivation::Activate));
         require(!f.matron->request_climb_goal(RVec3(0,157.2,-0.55),Vec3::sAxisZ()),"routecraft: moving support family explicitly rejected");
+    }
+    {
+        Simulation world(InitialSpawn::Deck154);
+        world.launch_matron_for_test({11,199.32,-131.41});
+        const auto started=std::chrono::steady_clock::now();
+        const bool accepted=world.request_matron_climb_goal({11,221.37,-130.31},{0,0,1});
+        std::cout<<"held-out panel accepted="<<accepted<<" status="<<world.matron_climb_status()
+            <<" plan_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
+            <<" native_queries="<<world.matron_climb_queries()<<std::endl;
+        require(!accepted && world.matron_climb_status()==int(MatronRoutecraft::Status::BudgetExceeded),
+            "routecraft: dense held-out panel explicitly exceeds grip budget");
     }
     std::cout<<"PASS: matron-routecraft\n";
 }

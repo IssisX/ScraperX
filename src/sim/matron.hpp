@@ -1251,7 +1251,6 @@ private:
 
     MatronRoutecraft routecraft_;
     bool routecraft_recovering_ = false;
-    JPH::EMotionQuality routecraft_previous_quality_ = JPH::EMotionQuality::Discrete;
     float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;
