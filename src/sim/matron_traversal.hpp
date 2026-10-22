@@ -221,7 +221,10 @@ public:
     // A ladder's rung line, felt for from `from` along `dir` at heights y0..y1.
     [[nodiscard]] bool feel_for_rungs(JPH::Vec3 from, JPH::Vec3 dir, float y0, float y1, JPH::Vec3 &line) const;
     // What she stands on now (a ray under her), or an invalid id.
-    [[nodiscard]] bool supported(float *top = nullptr, JPH::BodyID *by = nullptr) const;
+    // The actual sole contact can lie to one side of her middle on a narrow
+    // floor. Callers planning from support must use that point, not invent a
+    // floor under the body's centre.
+    [[nodiscard]] bool supported(float *top = nullptr, JPH::BodyID *by = nullptr, JPH::RVec3 *point = nullptr) const;
     // Tests and the planner: does her capsule fit, standing, feet at `feet`?
     [[nodiscard]] bool capsule_free(JPH::RVec3 center) const;
     // Hold validation, exposed for tests.

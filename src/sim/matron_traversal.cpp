@@ -192,7 +192,7 @@ Vec3 Climber::relative_velocity() const {
     return velocity() - support;
 }
 
-bool Climber::supported(float *top, BodyID *by) const {
+bool Climber::supported(float *top, BodyID *by, RVec3 *point) const {
     const RVec3 c = center();
     const SteelFilter filter(ignore_);
     const float reach = limits_.center_above_feet() + limits_.leg_travel_m;
@@ -200,11 +200,15 @@ bool Climber::supported(float *top, BodyID *by) const {
         RayCastResult hit;
         const RRayCast ray(c + off, Vec3(0.0F, -reach, 0.0F));
         if (physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) {
+            const RVec3 contact = ray.GetPointOnRay(hit.mFraction);
             if (top != nullptr) {
-                *top = float(ray.GetPointOnRay(hit.mFraction).GetY());
+                *top = float(contact.GetY());
             }
             if (by != nullptr) {
                 *by = hit.mBodyID;
+            }
+            if (point != nullptr) {
+                *point = contact;
             }
             return true;
         }
