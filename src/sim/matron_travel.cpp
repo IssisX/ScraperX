@@ -55,8 +55,9 @@ bool Matron::climb_of(const int edge, Climb &out) const noexcept {
     const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
     const float standoff = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).Length();
     const float head = regions[static_cast<std::size_t>(e.to)].top;
+    // The lip is the scan's own head patch, not the region's average: a bridge or fascia can stand above its deck.
     out = {m.start.GetX(), m.start.GetZ(), regions[static_cast<std::size_t>(e.from)].top, head, face.GetX(),
-           face.GetZ(), m.goal.GetX(), m.goal.GetZ(), true, std::clamp(standoff, 0.2F, 0.6F), head};
+           face.GetZ(), m.goal.GetX(), m.goal.GetZ(), true, std::clamp(standoff, 0.2F, 0.6F), m.goal_top};
     return true;
 }
 
