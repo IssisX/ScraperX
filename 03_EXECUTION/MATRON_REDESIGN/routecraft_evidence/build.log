@@ -1,0 +1,28 @@
+[0/2] Re-checking globbed directories...
+[1/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_movement.cpp.o
+[2/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_probes.cpp.o
+[3/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/simulation.cpp.o
+[4/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world.cpp.o
+[5/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_water.cpp.o
+[6/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_grab.cpp.o
+[7/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_arm.cpp.o
+[8/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/matron_fatality.cpp.o
+[9/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/matron_hold.cpp.o
+[10/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_fatality.cpp.o
+[11/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/matron_moves.cpp.o
+[12/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_one_arm.cpp.o
+[13/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_traversal.cpp.o
+[14/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_climb.cpp.o
+[15/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/matron_routecraft.cpp.o
+[16/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_state.cpp.o
+[17/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physics_world_fabricated.cpp.o
+[18/28] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/matron.cpp.o
+[19/28] Linking CXX static library libscraperx_sim.a
+[20/28] Building CXX object CMakeFiles/scraperx_shared_survival_tests.dir/tests/shared_survival_tests.cpp.o
+[21/28] Linking CXX executable scraperx_shared_survival_tests
+[22/28] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/sim_tests_matron_moves.cpp.o
+[23/28] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/sim_tests_bay.cpp.o
+[24/28] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/sim_tests_matron_routecraft.cpp.o
+[25/28] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/sim_tests_matron.cpp.o
+[26/28] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/sim_tests_matron_grab.cpp.o
+[27/28] Linking CXX executable scraperx_sim_tests

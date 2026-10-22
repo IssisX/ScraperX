@@ -1,0 +1,26 @@
+routecraft replay=0 ascent_y=158.98 descent_y=155.222 acquisitions=2 peak_force=3544.2 peak_power=1942.38
+routecraft replay=1 ascent_y=158.98 descent_y=155.222 acquisitions=2 peak_force=3544.2 peak_power=1942.38
+routecraft authored ascent/mantle y=177.37 grips=17
+routecraft authored descent y=155.222
+full tower initial plan_ms=2.83631 native_queries=3051 status=1
+full tower replan_request_ms=1.9924 native_queries=2098 at_y=162.802
+full tower replan_request_ms=0.931427 native_queries=951 at_y=170.666
+routecraft full tower ascent y=177.37 status=2
+routecraft full tower grounded top-out y=177.3 standing_ticks=90
+routecraft full tower descent y=155.222
+routecraft full tower lower standing_ticks=90 maximum_step_m=0.0466659
+routecraft sideways x=1.1 y=160.98 penetration=0
+routecraft backtrack min_y=156.065 final_y=160.98
+routecraft fault replan pre_step_ms=0.005478 native_queries=1
+routecraft removal/recovery y=155.048
+routecraft fault replan pre_step_ms=0.65617 native_queries=1984
+routecraft replan count=2 detour_x=1.10755
+routecraft fault replan pre_step_ms=0.176361 native_queries=836
+routecraft interrupted recovery peak_overlap=0.0694488 controlled_overlap=0
+routecraft measured saturation N=4500 W=9000
+routecraft fault replan pre_step_ms=0.005908 native_queries=1
+routecraft unfamiliar sparse descent y=157.22
+routecraft fault replan pre_step_ms=0.092186 native_queries=150
+routecraft fault replan pre_step_ms=0.001312 native_queries=1
+held-out panel accepted=0 status=5 plan_ms=0.160868 native_queries=1
+PASS: matron-routecraft

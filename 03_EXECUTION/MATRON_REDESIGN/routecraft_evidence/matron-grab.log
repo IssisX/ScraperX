@@ -1,0 +1,19 @@
+  matron grab still: states 1 2 3 4 12 13 14 15 16, grabbed 1 at 15.6222 s, inverted 1, peak 2610.92 N, max step 0.0359349 m, deaths 0->0, grabs 1 misses 0 carries 1 dangles 1 releases 1 spares 0 torn 0 drops 0 brace losses 0, aim 1 (-7.5,143.03,-133.93), player at -7.58029,143.913,-133.812 upright 1 free 0 kicks 0 state 3
+PASS scraperx_sim matron grab still: peak_n=2610.92 max_step=0.0359349 releases=1 spares=0
+  matron grab still: states 1 2 3 4 12 13 14 15 16, grabbed 1 at 15.6222 s, inverted 1, peak 2610.92 N, max step 0.0359349 m, deaths 0->0, grabs 1 misses 0 carries 1 dangles 1 releases 1 spares 0 torn 0 drops 0 brace losses 0, aim 1 (-7.5,143.03,-133.93), player at -7.58029,143.913,-133.812 upright 1 free 0 kicks 0 state 3
+PASS scraperx_sim matron grab still: peak_n=2610.92 max_step=0.0359349 releases=1 spares=0
+  matron grab thrash: states 1 2 3 4 12 13 14 16, grabbed 1 at 15.6222 s, inverted 1, peak 2479.51 N, max step 0.0374819 m, deaths 0->0, grabs 1 misses 0 carries 1 dangles 1 releases 0 spares 0 torn 1 drops 0 brace losses 0, aim 1 (-7.5,143.03,-133.93), player at -8.05239,154.882,-132.107 upright 1 free 0 kicks 38 state 3
+PASS scraperx_sim matron grab thrash: torn_s=20.1667 kicks=38
+  matron grab spare: states 1 2 3 5 12 13 14 15 17, grabbed 1 at 15.6222 s, inverted 1, peak 2610.92 N, max step 0.0359349 m, deaths 0->0, grabs 1 misses 0 carries 1 dangles 1 releases 0 spares 1 torn 0 drops 0 brace losses 0, aim 1 (-7.5,143.03,-133.93), player at -8.43501,154.882,-131.548 upright 1 free 0 kicks 0 state 5
+  after spare: grabs 1 state 5
+PASS scraperx_sim matron grab spare: player_y=154.882
+  matron arm: states 1 2 3 4 12 13 14 15 16, grabbed 1 at 15.6222 s, inverted 1, peak 2610.92 N, max step 0.0359349 m, deaths 0->0, grabs 1 misses 0 carries 1 dangles 1 releases 1 spares 0 torn 0 drops 0 brace losses 0, aim 1 (-7.5,143.03,-133.93), player at -7.58029,143.913,-133.812 upright 1 free 0 kicks 0 state 3
+  matron arm: tears 1 side 0 lost L/R 1/0 peak wrist 1963.6 N, strain before tear 599.254 N*s, throws 1, arm at -12.4689,154.037,-132.013 beats 5
+  matron arm: after 95 s present 0 despawns 1 L/R 10 deaths 0 state 3
+PASS scraperx_sim matron arm: strain_ns=599.254 peak_wrist_n=1963.6
+  matron claimed: claimed 1 ended 1 arms L/R 0/0 matron state 0 grabs 0 armplays 0 tears 0 one_arm 0 deaths 0
+PASS scraperx_sim matron claimed
+  matron two tears: tears 2 second meet 2 claimed 1 ended 1 state 0 grabs 0 armplays 0 player -10.5,155,-128.2 her 11,155.05,-126.2 held 0 deaths 0
+PASS scraperx_sim matron two tears
+  matron fatality: beats 0@33.8 1@37.9667 2@38.1111 3@39.7778 4@41.7778 5@55.2 6@58.6889 7@62.0667 8@65.1556 9@67.7667 | pins 1 leg tears 2 peak hip 4420.06 N, knots 1 kicks 1 hauls 1 peak torso y 190.431, knot peak 6340.59 N, parts 1, fell 35.6761 m landing 25.3772 m/s, lines 1, deaths 0, max step 0.0842839 m, ended 1
+PASS scraperx_sim matron fatality: peak_hip_n=4420.06 peak_y=190.431 landing_mps=25.3772

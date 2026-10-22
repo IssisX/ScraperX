@@ -1,0 +1,9 @@
+Code/test revision: d5898b3208a08a357b610e123bcdaf5aa34d0fea
+Release configure: exit 0
+Controller Release build: exit 0
+Final acceptance test build: exit 0
+SCRAPERX_ONLY=matron-routecraft: exit 0
+SCRAPERX_ONLY=climb: exit 0
+SCRAPERX_ONLY=matron-grab: exit 0
+Other registered CTest executables: 2/2 passed, exit 0
+Final full native suite: RUNNING (not yet a verified full-suite delivery)
