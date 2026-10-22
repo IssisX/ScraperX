@@ -1,5 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
 #include "sim/matron_traversal.hpp"
 
 #include <Jolt/Physics/Body/Body.h>
@@ -536,30 +534,6 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
     }
     const Vec3 applied = budget.take(want);
     physics_.GetBodyInterface().AddForce(body_, applied);
-    if (std::getenv("SCRAPERX_DBG_WALK") != nullptr) {
-        static int n = 0;
-        if ((++n % 30) == 0) {
-            Vec3 lean_to;
-            const bool lean = narrow_floor_lean(c, lean_to);
-            std::fprintf(stderr, "WALK c %.3f %.3f %.3f goal %.3f %.3f want_v %.2f %.2f dir_v %.2f %.2f v %.2f %.2f %.2f want_f %.0f %.0f applied %.0f %.0f %.0f budget used %.0f left %.0f lean %d floor_under %d may_drop %.2f\n",
-                         float(c.GetX()), float(c.GetY()), float(c.GetZ()), feet_goal.GetX(), feet_goal.GetZ(), want_v.GetX(), want_v.GetZ(),
-                         want_dir_v.GetX(), want_dir_v.GetZ(), v.GetX(), velocity().GetY(), v.GetZ(), want.GetX(), want.GetZ(),
-                         applied.GetX(), applied.GetY(), applied.GetZ(), budget.used, budget.left, int(lean), int(floor_under(c, Vec3::sZero())), may_drop);
-            AllHitCollisionCollector<CollideShapeCollector> hits;
-            CollideShapeSettings cs;
-            cs.mMaxSeparationDistance = 0.02F;
-            const BodyLockRead lock(physics_.GetBodyLockInterface(), body_);
-            if (lock.Succeeded()) {
-                const Body &b = lock.GetBody();
-                physics_.GetNarrowPhaseQuery().CollideShape(b.GetShape(), Vec3::sReplicate(1.0F), b.GetCenterOfMassTransform(), cs, b.GetCenterOfMassPosition(), hits, {}, {}, IgnoreSingleBodyFilter(body_));
-            }
-            for (const CollideShapeResult &h : hits.mHits) {
-                const Vec3 nrm = -h.mPenetrationAxis.NormalizedOr(Vec3::sZero());
-                std::fprintf(stderr, "  contact body %u depth %.3f normal %.2f %.2f %.2f at %.2f %.2f %.2f\n", h.mBodyID2.GetIndex(), h.mPenetrationDepth,
-                             nrm.GetX(), nrm.GetY(), nrm.GetZ(), float(h.mContactPointOn2.GetX()), float(h.mContactPointOn2.GetY()), float(h.mContactPointOn2.GetZ()));
-            }
-        }
-    }
     // A stair or plate edge within her stride in front of her: her leg lifts
     // her onto it, a capped push out of the same budget.
     if (d > 0.05F) {

@@ -3,7 +3,6 @@
 // between moves and climbed by her own hands, each move physical. A region is
 // hers only when she stands on it; a failed move is a fall, and she plans
 // again from where she lands. Nothing here sets her position.
-#include <cstdio>
 #include <cstdlib>
 #include "sim/matron.hpp"
 
@@ -151,11 +150,6 @@ void Matron::step_travel(const float dt) {
         } else if (climber_->status() == traversal::Climber::Status::Failed) {
             ++travel_.moves_failed;
             travel_.last_failure = climber_->failure();
-            if (std::getenv("SCRAPERX_DBG_FAIL") != nullptr) {
-                const RVec3 p = bodies.GetPosition(body_);
-                std::fprintf(stderr, "FAILED move %s failure %s phase %d at %.2f %.2f %.2f\n", traversal::move_name(climber_->view().kind),
-                             traversal::failure_name(climber_->failure()), climber_->phase(), float(p.GetX()), float(p.GetY()), float(p.GetZ()));
-            }
             // Failed before she left her floor (could not reach its start, no
             // hold there): that way is closed to this journey; a physical
             // failure on the way is not (it may go next time).
