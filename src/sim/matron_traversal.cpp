@@ -134,6 +134,17 @@ bool member_bounds(const Body &body, const SubShapeID &sub, AABox &out, bool &ba
     bar = mid <= 0.16F;
     return true;
 }
+
+// A leaf's bounds in its body's own frame. Transforming its world AABB
+// backward is not equivalent: the box grows when the same member rotates.
+bool member_local_bounds(const Body &body, const SubShapeID &sub, AABox &out) {
+    SubShapeID remainder;
+    const TransformedShape member = body.GetShape()->GetSubShapeTransformedShape(
+        sub, RVec3::sZero(), Quat::sIdentity(), Vec3::sReplicate(1.0F), remainder);
+    if (member.mShape == nullptr) return false;
+    out = member.GetWorldSpaceBounds();
+    return true;
+}
 } // namespace
 
 // ===========================================================================
@@ -386,16 +397,16 @@ void Climber::push_reaction(const Vec3 force, const RVec3 at) {
 // The leg extends beneath the capsule while its foot remains planted.
 // Keep that contact throughout the stroke; a new floor under an airborne
 // body cannot restart the push.
-bool Climber::plant_leg(const float target_hand_y) {
+bool Climber::plant_leg(const float target_hand_y, const bool required) {
     const RVec3 c = center();
     const float stroke = limits_.leg_travel_m;
     const float speed_cap = leg_speed_cap(limits_);
     if (speed_cap <= 0.0F) {
-        fail(Failure::OutOfRange);
+        if (required) fail(Failure::OutOfRange);
         return false;
     }
     if (target_hand_y > float(c.GetY()) + limits_.hand_above_center + stroke + speed_cap * speed_cap / (2.0F * kGravity)) {
-        fail(Failure::OutOfRange);
+        if (required) fail(Failure::OutOfRange);
         return false;
     }
     const SteelFilter filter(ignore_);
@@ -411,10 +422,12 @@ bool Climber::plant_leg(const float target_hand_y) {
         AABox bounds;
         bool bar = false;
         if (!member_bounds(floor, hit.mSubShapeID2, bounds, bar)) continue;
+        AABox local_bounds;
+        if (!member_local_bounds(floor, hit.mSubShapeID2, local_bounds)) continue;
         foot_.body = hit.mBodyID;
         foot_.sub = hit.mSubShapeID2;
         foot_.local = Vec3(floor.GetInverseCenterOfMassTransform() * at);
-        foot_.member_local = bounds.Transformed(floor.GetInverseCenterOfMassTransform());
+        foot_.member_local = local_bounds;
         foot_world_ = at;
         leg_start_m_ = float(c.GetY() - at.GetY());
         leg_target_y_ = target_hand_y;
@@ -423,7 +436,7 @@ bool Climber::plant_leg(const float target_hand_y) {
         view_.leg_travel_m = 0.0F;
         return true;
     }
-    fail(Failure::NotSupported);
+    if (required) fail(Failure::NotSupported);
     return false;
 }
 
@@ -438,7 +451,8 @@ bool Climber::planted_leg_contact(RVec3 &at) const {
         AABox bounds;
         bool bar = false;
         if (!member_bounds(floor, foot_.sub, bounds, bar)) return false;
-        const AABox local = bounds.Transformed(floor.GetInverseCenterOfMassTransform());
+        AABox local;
+        if (!member_local_bounds(floor, foot_.sub, local)) return false;
         if ((local.mMin - foot_.member_local.mMin).Length() > 0.02F ||
             (local.mMax - foot_.member_local.mMax).Length() > 0.02F) return false;
         anchor = floor.GetCenterOfMassTransform() * foot_.local;
@@ -1158,15 +1172,15 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
         const float v_rel = (velocity() - bodies.GetPointVelocity(hold_.body, hold_world_)).GetY();
         const float need = std::sqrt(2.0F * kGravity * std::max(rung + 0.06F - hands, 0.0F));
         if (supported()) {
-            // On the floor she drives through her planted feet. The hand
-            // is released once at toe-off, after the finite leg stroke.
-            if (!plant_leg(rung + 0.06F)) {
-                dyno_ = 0;
-                return status_;
+            // A support ray can hit a rung just below her sole even when
+            // there is no upward-bearing foothold. Only a verified plant
+            // drives her legs; otherwise she still has her original grip
+            // and makes the pull with her arms.
+            if (plant_leg(rung + 0.06F, false)) {
+                dyno_ = 4;
+                phase_s_ = 0.0F;
+                return step_dyno(dt, budget);
             }
-            dyno_ = 4;
-            phase_s_ = 0.0F;
-            return step_dyno(dt, budget);
         }
         if (v_rel >= need || float(c.GetY()) >= hold_y - 0.35F) {
             ++view_.releases;

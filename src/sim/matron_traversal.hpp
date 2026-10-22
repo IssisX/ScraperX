@@ -55,17 +55,16 @@ struct Limits {
     float reach_out = 0.95F;
     float reach_low = 0.80F;   // pressing down on a lip, hands at her hips
     // The one budget every simultaneous actuator (hands, feet, squeeze)
-    // draws from: 2.6 times her weight.
-    float total_force_n = 5600.0F;
-    float power_w = 9000.0F;   // actuator power: force along her own velocity, all actuators together
+    // draws from: about 3.7 times her weight.
+    float total_force_n = 8000.0F;
+    float power_w = 22000.0F;   // actuator power: force along her own velocity, all actuators together
     float foot_force_n = 220.0F * 9.0F;   // her feet on a floor: kFootAccel
     // During push-off the planted foot can extend this far below the fixed
     // capsule. Leg travel is independent of the ordinary standing probes.
     float leg_travel_m = 0.40F;
-    // At 90 Hz, the force and end-of-tick power caps give 2.699 m/s in
-    // 0.3904 m over 21 ticks. Round down; the remaining stroke cannot fit
-    // another tick even without a push.
-    float launch_dv_mps = 2.69F;
+    // At 90 Hz, 8 kN / 22 kW can earn 3.80 m/s over a 0.40 m stroke.
+    // The limit is a measured take-off speed, never an applied impulse.
+    float launch_dv_mps = 3.80F;
     // A catch: her grip arrests at most this much speed relative to the hold.
     float catch_arrest_mps = 4.5F;
     float catch_radius_m = 0.22F;
@@ -246,7 +245,7 @@ private:
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
-    bool plant_leg(float target_hand_y);
+    bool plant_leg(float target_hand_y, bool required = true);
     [[nodiscard]] bool planted_leg_contact(JPH::RVec3 &at) const;
     bool drive_leg(float dt, Budget &budget);   // true at toe-off; no airborne thrust
     void release_leg();
