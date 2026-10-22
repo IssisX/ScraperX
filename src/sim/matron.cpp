@@ -1928,9 +1928,9 @@ bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
     if (!body_in_world_ || dead_ || holding_state(state_) || state_ == State::Down ||
         state_ == State::Staggering || climb_ >= 0 || pipe_phase_ != PipePhase::Off || on_line_ || riding_ ||
         held_ >= 0 || bracing_structure()) return false;
-    MatronRoutecraft candidate;
+    MatronRoutecraft candidate = routecraft_;
     const bool accepted = candidate.request(physics_, body_, goal, facing);
-    if (accepted || !routecraft_.owns_motion()) routecraft_ = std::move(candidate);
+    if (accepted || (!routecraft_.planning() && !routecraft_.owns_motion())) routecraft_ = std::move(candidate);
     if (accepted) {
         routecraft_recovering_ = true;
         routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
@@ -1961,7 +1961,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             return;
         }
     }
-    if (routecraft_.owns_motion()) {
+    if (routecraft_.planning() || routecraft_.owns_motion()) {
         if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) routecraft_.cancel();
         else {
             sound_count_ = 0;
@@ -1977,13 +1977,18 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             if (routecraft_mine_ && routecraft_.report().status == MatronRoutecraft::Status::Holding) {
                 routecraft_.cancel();
                 routecraft_mine_ = false;
-            } else if (routecraft_mine_ && !routecraft_.owns_motion()) {
-                block_climb(climbing_key_);
+            } else if (routecraft_mine_ && !routecraft_.planning() && !routecraft_.owns_motion()) {
+                // Acceptance is provisional while the initial search runs.
+                // A refused route never took her off the foot of the column.
+                const bool refused = !climb_back_tried_ && routecraft_.report().steps == 0;
+                block_climb(climbing_key_, !refused);
                 routecraft_mine_ = false;
                 // Ended short of its goal (blocked at its end, a plan given
                 // out) with a hold still in her hands: back down the way she
                 // came, once, rather than let go. That failing too, she falls.
-                if (!climb_back_tried_) {
+                if (refused) {
+                    if (climbs_done_ > 0) --climbs_done_;
+                } else if (!climb_back_tried_) {
                     climb_back_tried_ = true;
                     routecraft_mine_ = request_climb_goal(climb_back_, climb_back_facing_);
                 }
