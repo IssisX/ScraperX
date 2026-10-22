@@ -7,7 +7,7 @@
 //
 //   Moves (Climber): rung climb up and down, mantle/top-out, pole grip
 //   (friction bounded: it slips under overload), jump to a hold (a bounded
-//   launch impulse, then a real catch or a real miss), hang-drop. Every
+//   leg drive, then a real catch or a real miss), hang-drop. Every
 //   force she makes comes out of one shared budget (kTotalForceN); every
 //   force on a hold goes back, equal and opposite, onto that hold's body at
 //   the contact when the body is dynamic. Gravity is never turned off and
@@ -59,8 +59,12 @@ struct Limits {
     float total_force_n = 5600.0F;
     float power_w = 9000.0F;   // actuator power: force along her own velocity, all actuators together
     float foot_force_n = 220.0F * 9.0F;   // her feet on a floor: kFootAccel
-    // A jump: at most this change of velocity from the floor (apex 1.49 m).
-    float launch_dv_mps = 5.4F;
+    // The fixed capsule's short foot-supported extension. A deeper crouch
+    // would need a separate collision-pose lifecycle; it is not extra reach.
+    float leg_travel_m = 0.10F;
+    // At 90 Hz, nine 5600 N ticks on 220 kg give 1.564 m/s in 0.087 m.
+    // 1.5 m/s leaves room for the final tick and stays below 9 kW.
+    float launch_dv_mps = 1.5F;
     // A catch: her grip arrests at most this much speed relative to the hold.
     float catch_arrest_mps = 4.5F;
     float catch_radius_m = 0.22F;
@@ -169,6 +173,8 @@ struct ClimbView {
     std::uint32_t catches = 0;
     std::uint32_t misses = 0;
     std::uint32_t launches = 0;
+    bool leg_driving = false;
+    float leg_travel_m = 0.0F;    // extension of the planted leg during this push
     Failure last_failure = Failure::None;
     JPH::RVec3 hand = JPH::RVec3::sZero();
 };
@@ -183,7 +189,7 @@ struct Ignore {
 };
 
 // The move executor on one body. step() is called once a tick before the
-// physics update; it only adds forces and impulses.
+// physics update; it only adds forces.
 class Climber final {
 public:
     enum class Status : std::uint8_t { Idle = 0, Running = 1, Done = 2, Failed = 3 };
@@ -236,6 +242,9 @@ private:
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
+    bool plant_leg(float target_hand_y);
+    bool drive_leg(float dt, Budget &budget);   // true at toe-off; no airborne thrust
+    void release_leg();
 
     Status step_rung_up(float dt, Budget &budget);
     Status step_rung_down(float dt, Budget &budget);
@@ -267,12 +276,17 @@ private:
     bool mantle_after_ = false;
     bool approach_near_ = false;
     // A dyno across a gap in the rungs: 0 off, 1 sinking to a low hang, 2
-    // pulling, 3 in the air; the rung she throws for, and her tries.
+    // pulling, 3 in the air, 4 driving from the floor; the target and tries.
     int dyno_ = 0;
     Hold dyno_hold_;
     JPH::RVec3 dyno_world_ = JPH::RVec3::sZero();
     int dyno_tries_ = 0;
     Status step_dyno(float dt, Budget &budget);
+    Hold foot_;
+    JPH::RVec3 foot_world_ = JPH::RVec3::sZero();
+    float leg_start_m_ = 0.0F;
+    float leg_target_y_ = 0.0F;
+    int leg_push_ticks_ = 0;
     float rate_override_ = -1.0F;
     [[nodiscard]] float rate_mps() const noexcept { return rate_override_ >= 0.0F ? rate_override_ : limits_.climb_mps; }
     ClimbView view_;
