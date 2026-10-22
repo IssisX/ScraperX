@@ -715,15 +715,29 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
               hold_world_);
         progress = feet;
     } else {
+        // Over the lip no farther than her hand reaches from it; a lip over
+        // the floor (a rail, a toe board) she lets go of past it, onto the floor.
+        Vec3 dest = spec_.goal;
+        const float span = limits_.reach_out - 0.1F;
+        if (horizontal(dest - lip_world_) > span) {
+            dest = Vec3(lip_world_) + flat(dest - Vec3(lip_world_)).Normalized() * span;
+        }
         float support = 0.0F;
-        if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(spec_.goal - c) < 0.35F) {
+        if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(dest - c) < 0.35F) {
             finish();
             return status_;
         }
-        const float left = horizontal(spec_.goal - c);
-        drive(dt, Vec3(spec_.goal.GetX(), over_y, spec_.goal.GetZ()), flat(spec_.goal - c).NormalizedOr(in) * std::min(limits_.mantle_mps, 1.5F * left), 20.0F, budget, true,
+        if (horizontal(dest - c) < 0.15F && top > spec_.goal_top + 0.3F) {
+            ++view_.releases;
+            hold_ = Hold{};
+            phase_ = 4;
+            phase_s_ = 0.0F;
+            return status_;
+        }
+        const float left = horizontal(dest - c);
+        drive(dt, Vec3(dest.GetX(), over_y, dest.GetZ()), flat(dest - c).NormalizedOr(in) * std::min(limits_.mantle_mps, 1.5F * left), 20.0F, budget, true,
               hold_world_);
-        progress = 10.0F - horizontal(spec_.goal - c);
+        progress = 10.0F - horizontal(dest - c);
     }
     if (progress > best_progress_ + 0.03F) {
         best_progress_ = progress;
