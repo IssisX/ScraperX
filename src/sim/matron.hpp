@@ -573,7 +573,7 @@ public:
     static constexpr float kPipeChangedPauseMps = 0.3F;
     static constexpr float kPipeHoldM = 0.45F;
     static constexpr float kPipeFlangeUnderDeckM = 1.225F;   // a flange's top, under its deck
-    static constexpr float kPipeTearMps = 1.0F;   // CHOSEN: a drum let go onto her from the rail above (1.15 m/s measured) tears her off; a thrown toolbox (0.3) does not
+    static constexpr float kPipeTearMps = 0.8F;   // CHOSEN: a drum let go onto her from the rail above (0.945 m/s measured with gravity on her and her grip holding against it) tears her off; a thrown toolbox (0.3) does not
     static constexpr float kPipeSlideAccel = 4.4F;
     static constexpr float kPipeStunSeconds = 0.5F;
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
@@ -750,6 +750,8 @@ public:
         std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
         std::uint32_t pipe_slams = 0;   // flanges slammed onto, torn off
         float pipe_slam_mps = 0.0F;     // the last slam's speed
+        float pipe_peak_force_n = 0.0F; // her grip's peak force on the pipe (budget-capped)
+        float pipe_peak_power_w = 0.0F;
         // Her pace (Pace) and the speed it asks of her feet; getting unstuck
         // (stalls met, step-ups, clambers, sidesteps, reroutes, the longest
         // time without kStallMoveM of progress); the player's trail (crumbs
@@ -1218,6 +1220,8 @@ private:
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
     void get_on_pipe(float from_floor, float to_floor);
     void ride_pipe(float dt);
+    // Her grip's force toward a velocity relative to the pipe, budget-capped, gravity on.
+    void pipe_drive(JPH::Vec3 want, float dt);
     void get_off_pipe();
     // A blow on the pipe past kPipeTearMps: her hands open, her legs slide.
     void tear_off_pipe();
@@ -1550,6 +1554,9 @@ private:
     float pipe_stun_s_ = 0.0F;
     float pipe_listen_s_ = 0.0F; // off the pipe, still and listening
     float pipe_slam_mps_ = 0.0F;
+    float pipe_peak_force_n_ = 0.0F;
+    JPH::Vec3 pipe_expect_dv_ = JPH::Vec3::sZero();
+    float pipe_peak_power_w_ = 0.0F;
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;
     std::uint32_t pipe_flanges_ = 0;

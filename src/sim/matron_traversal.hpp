@@ -47,11 +47,11 @@ struct Limits {
     float half_height = 0.75F;   // the capsule's cylinder half; center is radius + half above the feet
     float mass_kg = 220.0F;
     // Hands overhead, standing: feet + 2.45 m.
-    float hand_above_centre = 1.40F;
+    float hand_above_center = 1.40F;
     // Hanging at full stretch: the hold this far over her center.
     float hang_below_hold = 1.30F;
     // Holds she can take: up to this far out from her middle's line, and
-    // from this far under her center to hand_above_centre over it.
+    // from this far under her center to hand_above_center over it.
     float reach_out = 0.95F;
     float reach_low = 0.80F;   // pressing down on a lip, hands at her hips
     // The one budget every simultaneous actuator (hands, feet, squeeze)
@@ -79,7 +79,7 @@ struct Limits {
     float pole_up_mps = 0.5F;
     float pole_down_mps = 1.6F;
     [[nodiscard]] float center_above_feet() const noexcept { return radius + half_height; }
-    [[nodiscard]] float hand_reach_standing() const noexcept { return center_above_feet() + hand_above_centre; }
+    [[nodiscard]] float hand_reach_standing() const noexcept { return center_above_feet() + hand_above_center; }
 };
 
 // A hold: a body, the member of it, and where on the member (body frame).

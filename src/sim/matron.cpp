@@ -956,14 +956,45 @@ void Matron::get_on_pipe(const float from_floor, const float to_floor) {
     ++pipe_links_;
     BodyInterface &bodies = physics_.GetBodyInterface();
     bodies.SetObjectLayer(body_, static_cast<ObjectLayer>(steel_layer_));
-    bodies.SetGravityFactor(body_, 0.0F);
-    bodies.SetLinearVelocity(body_, Vec3::sZero());
+}
+
+// Her hands' squeeze on the pipe: gravity stays on her, and what holds her
+// to her line is a force out of the same capped budget as all her climbing
+// (Limits: total force and power), charged on her velocity relative to the
+// steel she grips; what she pulls with goes back into that steel.
+void Matron::pipe_drive(const Vec3 want, const float dt) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    const IgnoreSingleBodyFilter self(body_);
+    const Vec3 toward(15.8F - float(at.GetX()), 0.0F, -134.2F - float(at.GetZ()));
+    BodyID support;
+    Vec3 support_v = Vec3::sZero();
+    RVec3 grip = at;
+    RayCastResult hit;
+    const RRayCast ray(at, toward.NormalizedOr(Vec3::sAxisX()) * 1.5F);
+    if (physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, self)) {
+        support = hit.mBodyID;
+        grip = ray.GetPointOnRay(hit.mFraction);
+        support_v = bodies.GetPointVelocity(support, grip);
+    }
+    const Vec3 relative = bodies.GetLinearVelocity(body_) - support_v;
+    const traversal::Limits limits{};
+    traversal::Budget budget{limits.total_force_n, 0.0F, limits.power_w, 0.0F, relative};
+    const Vec3 need = (want - relative) * (kMassKg / dt) - physics_.GetGravity() * kMassKg;
+    const Vec3 force = budget.take(need);
+    bodies.AddForce(body_, force);
+    // What this tick's grip and gravity change her velocity by: a blow is read past it.
+    pipe_expect_dv_ = (force / kMassKg + physics_.GetGravity()) * dt;
+    if (!support.IsInvalid() && bodies.GetMotionType(support) == EMotionType::Dynamic) {
+        bodies.AddForce(support, -force, grip);
+    }
+    pipe_peak_force_n_ = std::max(pipe_peak_force_n_, force.Length());
+    pipe_peak_power_w_ = std::max(pipe_peak_power_w_, budget.power_used);
 }
 
 void Matron::get_off_pipe() {
     BodyInterface &bodies = physics_.GetBodyInterface();
     bodies.SetObjectLayer(body_, static_cast<ObjectLayer>(moving_layer_));
-    bodies.SetGravityFactor(body_, 1.0F);
     pipe_phase_ = PipePhase::Off;
     for (std::size_t i = 0; i < levels_.size(); ++i) {
         if (std::abs(levels_[i].floor_y - pipe_to_) < 0.3F) {
@@ -1011,7 +1042,7 @@ void Matron::ride_pipe(const float dt) {
         }
     };
     if (pipe_phase_ == PipePhase::Stunned) {
-        bodies.SetLinearVelocity(body_, to_line());
+        pipe_drive(to_line(), dt);
         pipe_stun_s_ -= dt;
         if (pipe_stun_s_ <= 0.0F) {
             pipe_phase_ = PipePhase::Climb;   // and on, the way she was going
@@ -1033,7 +1064,7 @@ void Matron::ride_pipe(const float dt) {
             rage_ = std::min(1.0F, rage_ + kKnockdownRage);
         }
         count_flanges(feet, feet - step);
-        bodies.SetLinearVelocity(body_, to_line() + Vec3(0.0F, -step / dt, 0.0F));
+        pipe_drive(to_line() + Vec3(0.0F, -step / dt, 0.0F), dt);
         return;
     }
     // Her waypoints, feet first: on, across, along, across, off.
@@ -1088,7 +1119,7 @@ void Matron::ride_pipe(const float dt) {
     const float left = to_goal.Length();
     const float step = std::min(left, speed * dt);
     const Vec3 move = left > 1.0e-4F ? to_goal / left * step : Vec3::sZero();
-    bodies.SetLinearVelocity(body_, move / dt);
+    pipe_drive(move / dt, dt);
     // Each hold a knock (her hands on the steel, the rail's too); each flange passed a bong.
     pipe_hold_m_ += step;
     while (pipe_hold_m_ >= kPipeHoldM) {
@@ -2774,6 +2805,10 @@ void Matron::sense_near() {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     set_velocity_ = bodies.GetLinearVelocity(body_);
+    if (pipe_phase_ != PipePhase::Off) {
+        set_velocity_ += pipe_expect_dv_;
+    }
+    pipe_expect_dv_ = Vec3::sZero();
     sensed_ = true;
     const Vec3 centre(at);
     AllHitCollisionCollector<CollideShapeBodyCollector> found;
@@ -2838,7 +2873,7 @@ void Matron::take_blow(const float dt) {
         return;
     }
     sensed_ = false;
-    // On the pipe her hands hold her (gravity off): a blow is read the same
+    // On the pipe her hands hold her (gravity on, her grip's force against it): a blow is read the same
     // way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_phase_ != PipePhase::Off;
     if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || journey_.active || state_ == State::Down ||
@@ -3240,6 +3275,8 @@ void Matron::refresh_view() {
     view_.on_pipe = pipe_phase_ != PipePhase::Off;
     view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
     view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
+    view_.pipe_peak_force_n = pipe_peak_force_n_;
+    view_.pipe_peak_power_w = pipe_peak_power_w_;
     view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;
     view_.pipe_listening = pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F;
     view_.pipe_links = pipe_links_;

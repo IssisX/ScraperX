@@ -240,7 +240,7 @@ bool Climber::revalidate(Hold &hold, RVec3 &world) const {
         return false;
     }
     const Vec3 d = world - center();
-    return d.GetY() <= limits_.hand_above_centre + 0.15F && d.GetY() >= -limits_.reach_low - 0.6F &&
+    return d.GetY() <= limits_.hand_above_center + 0.15F && d.GetY() >= -limits_.reach_low - 0.6F &&
            horizontal(d) <= limits_.reach_out + 0.15F;
 }
 
@@ -602,7 +602,7 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     Hold next;
     RVec3 next_world;
     const float hold_y = float(hold_world_.GetY());
-    const float top_reach = float(c.GetY()) + limits_.hand_above_centre;
+    const float top_reach = float(c.GetY()) + limits_.hand_above_center;
     if (top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
         find_rung(hold_y + 0.12F, std::min(top_reach, hold_y + 0.65F), true, next, next_world)) {
         hold_ = next;
@@ -852,7 +852,7 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         }
     }
     const float hold_y = float(hold_world_.GetY());
-    if (hold_y - float(c.GetY()) > limits_.hand_above_centre - 0.2F) {
+    if (hold_y - float(c.GetY()) > limits_.hand_above_center - 0.2F) {
         Hold next;
         RVec3 next_world;
         if (find_rung(hold_y - 0.12F, hold_y - 0.65F, false, next, next_world)) {
@@ -1062,7 +1062,7 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
             return status_;
         }
         // The launch that brings her hands to the bar at the top of the jump.
-        const float rise = spec_.bottom_y + 0.08F - (float(c.GetY()) + limits_.hand_above_centre);
+        const float rise = spec_.bottom_y + 0.08F - (float(c.GetY()) + limits_.hand_above_center);
         const float vy = rise > 0.0F ? std::sqrt(2.0F * kGravity * rise) : 0.0F;
         const float t = std::max(vy / kGravity, 0.2F);
         const Vec3 across = flat(bar + spec_.out * 0.42F - c);
@@ -1082,7 +1082,7 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
         return status_;
     }
     const Vec3 v = velocity();
-    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_centre, 0.0F);
+    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_center, 0.0F);
     Hold bar_hold;
     RVec3 bar_at;
     const bool near_bar = std::abs(float(hands.GetY()) - spec_.bottom_y) < 0.25F &&
