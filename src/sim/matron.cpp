@@ -3583,10 +3583,12 @@ void Matron::refresh_view() {
     view_.unrigs = unrigs_;
     view_.on_line = on_line_;
     view_.cable_slides = cable_slides_;
-    view_.climbing = climb_ >= 0 || routecraft_.owns_motion() || journey_moving_;
+    // A planned move counts as climbing once a hand of hers holds (walking
+    // to its start, her hands are free).
+    const bool journey_hands = journey_moving_ && climber_ != nullptr && climber_->view().holding;
+    view_.climbing = climb_ >= 0 || routecraft_.owns_motion() || journey_hands;
     view_.climbs = climbs_done_;
     // The hand and force of whichever of her climbs has her.
-    const bool journey_hands = journey_moving_ && climber_ != nullptr;
     view_.climb_hand = routecraft_.owns_motion() ? routecraft_.report().hand
                        : journey_hands           ? climber_->view().hand
                                                  : climb_hand_;
