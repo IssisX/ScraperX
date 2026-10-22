@@ -2259,7 +2259,7 @@ void run_matron_ladder() {
         double max_force = 0.0, max_reach = 0.0;
         const auto check_hold = [&] {
             const auto m = s.matron_state();
-            require(std::isfinite(m.climb_force_n) && m.climb_force_n <= Matron::kClimbGripMaxN + 0.01,
+            require(std::isfinite(m.climb_force_n) && m.climb_force_n <= std::max(Matron::kClimbGripMaxN, scraperx::sim::MatronRoutecraft::kForce) + 0.01,
                     "matron climb: finite capped actuator force");
             if (m.climbing) {
                 const double reach = std::sqrt(std::pow(m.climb_hand.x - m.position.x, 2) +

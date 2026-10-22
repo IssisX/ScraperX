@@ -133,9 +133,10 @@ void run_matron_pursuit() {
     }
     // A way that fails under her: up the home ladder after him, her hands
     // open 4.5 m up (as a hold that gave way would open them). She falls for
-    // real and lands hard on 154, alive, down a while; her map leaves the
-    // ladder alone its block time; and on what she still hears she takes it
-    // again once it may be tried, and reaches him.
+    // real and lands hard on 154, alive, down a while; she leaves the ladder
+    // alone its block time (her own found climbs and her map's ways alike);
+    // and on what she still hears she takes it again once it may be tried,
+    // and reaches him.
     {
         const Chase c = chase(Vector3{3.9, 154.0, -129.0}, Vector3{5.0, 176.25, -127.5}, Region::Ring176, 300.0, 158.5);
         report("154 up the home ladder, her hands opening on it", c);
@@ -144,7 +145,6 @@ void run_matron_pursuit() {
         require(c.let_go && c.fell_mps >= Matron::kHardLandingMps && c.alive,
                 "matron pursuit: her hands open, she falls for real and lives");
         require(c.knockdowns >= 1, "matron pursuit: the landing puts her down");
-        require(c.route_failures >= 1, "matron pursuit: the way that failed is on her map");
         require(c.retook_after_s >= scraperx::sim::routes::kFailedBlockS - 1.0,
                 "matron pursuit: she leaves the failed way alone its block time");
         require(c.arrived, "matron pursuit: then takes it again and reaches him");

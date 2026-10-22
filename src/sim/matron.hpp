@@ -106,8 +106,10 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "sim/matron_routecraft.hpp"
+#include "sim/matron_traversal.hpp"
 
 #include <array>
+#include <memory>
 #include <cstdint>
 #include <vector>
 
@@ -1235,7 +1237,8 @@ private:
     Pace choose_pace(float dt, float distance, bool saw, bool heard, float loudness);
     void drop_crumb(float px, float pz, float floor_y);
     bool crumb_ahead(float ax, float az, float &wx, float &wz);
-    void watch_stall(float dt, JPH::RVec3 at, float heading_x, float heading_z, bool wants);
+    void watch_stall(float dt, JPH::RVec3 at, float heading_x, float heading_z, bool wants, float to_x = 0.0F,
+                     float to_z = 0.0F);
     bool hush_step(float dt, bool saw, float distance, float loudness);
     [[nodiscard]] float roll() noexcept;
     [[nodiscard]] bool node_blocked(float x, float z) const noexcept;
@@ -1251,7 +1254,7 @@ private:
     // After a lead on a level below, down a line toward it (to it, or to a
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
-    bool follow_line(float dt, JPH::RVec3 at);
+    bool follow_line(float dt, JPH::RVec3 at, bool wait_ok);
     // On a line's cable: her drag on it, and letting go at its end.
     void ride_line();
     // After a lead on a level above, up a climb of hers toward it (to it, or
@@ -1280,7 +1283,9 @@ private:
         float from_y = 0.0F;   // the floor she starts from
         JPH::RVec3 goal = JPH::RVec3::sZero();
         JPH::Vec3 facing = JPH::Vec3::sAxisZ();
+        int walk_ticks = 0;    // walking to its start
     };
+    static constexpr int kFoundWalkTicks = 30 * 90;   // a start not reached in 30 s is not a way
     struct ClimbBlock {
         std::int64_t key = 0;
         int ticks = 0;
@@ -1292,6 +1297,17 @@ private:
     [[nodiscard]] bool climb_blocked(std::int64_t key) const;
     void block_climb(std::int64_t key);
     void block_climb_at(float x, float z);   // the column standing at (x, z)
+    // A column left alone at or beside (x, z): one her hands failed on is
+    // failed for every way of hers that takes it, her map's included.
+    [[nodiscard]] bool column_blocked_near(float x, float z) const;
+    // A way she plans herself where no bar column serves (a pole, a lip, a
+    // run of moves): the traversal scan of the steel round her and her lead
+    // (src/sim/matron_traversal.*), its moves done by its Climber out of one
+    // capped budget; while it runs it has her body.
+    bool start_journey(JPH::RVec3 at);
+    void step_journey(float dt);
+    void end_journey(bool failed);
+    [[nodiscard]] bool journeying() const noexcept { return journey_active_; }
     // On a climb: up it, and over its head.
     void climb(float dt);
     bool begin_climb(int index, bool down = false);
@@ -1372,10 +1388,24 @@ private:
     MatronRoutecraft routecraft_;
     bool routecraft_recovering_ = false;
     bool routecraft_mine_ = false;            // a climb she started herself (released at its goal)
+    JPH::RVec3 climb_back_ = JPH::RVec3::sZero();   // where her own climb set out from
+    JPH::Vec3 climb_back_facing_ = JPH::Vec3::sAxisZ();
+    bool climb_back_tried_ = false;           // ended short, she went back the way she came once
+    bool climb_hand_known_ = false;           // climb_hand_ is this climb's
+    bool found_climbs_off_ = false;           // a test of one map way alone
     std::int64_t climbing_key_ = 0;
     FoundClimb found_;
     std::array<ClimbBlock, 8> climb_blocks_{};
     int find_wait_ticks_ = 0;
+    std::unique_ptr<traversal::Climber> climber_;
+    std::vector<traversal::Edge> journey_;
+    std::vector<JPH::Vec3> journey_legs_;
+    std::size_t journey_at_ = 0;
+    std::size_t journey_leg_ = 0;
+    bool journey_active_ = false;
+    bool journey_moving_ = false;   // a move (not a walk) under way
+    int journey_leg_ticks_ = 0;
+    int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure
     float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;

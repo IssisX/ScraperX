@@ -270,6 +270,7 @@ void Matron::only_way_for_test(const std::size_t index) {
             routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
         }
     }
+    found_climbs_off_ = true;   // that way alone: none of her own either
 }
 
 void Matron::let_go_for_test() {
@@ -277,6 +278,19 @@ void Matron::let_go_for_test() {
         release_climb(true);
     } else if (pipe_phase_ != PipePhase::Off && pipe_phase_ != PipePhase::Slide) {
         tear_off_pipe();
+    } else if (routecraft_.owns_motion()) {
+        // Her hands open on a climb of her own, as a hold giving way opens
+        // them: the column is left alone its block time, and no way back.
+        routecraft_.cancel();
+        if (routecraft_mine_) {
+            block_climb(climbing_key_);
+            routecraft_mine_ = false;
+        }
+        climb_back_tried_ = true;
+        ++climb_releases_;
+    } else if (journey_moving_) {
+        end_journey(true);
+        ++climb_releases_;
     }
 }
 
@@ -300,6 +314,7 @@ bool Matron::climb_for_test(const routes::Connector which, const bool down) {
 }
 
 void Matron::remove_body() {
+    end_journey(false);
     routecraft_.cancel();
     routecraft_recovering_ = false;
     routecraft_mine_ = false;
@@ -830,7 +845,7 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
     return false;   // a level her map does not know: its height is all she has
 }
 
-bool Matron::follow_line(const float dt, const RVec3 at) {
+bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     if (zipline_ == nullptr) {
         return false;
     }
@@ -861,6 +876,12 @@ bool Matron::follow_line(const float dt, const RVec3 at) {
         return false;
     }
     const Zipline::Line &line = lines[static_cast<std::size_t>(best)];
+    // A line she would only wait at (outside her Turn, or one nobody has
+    // ridden) is not a way yet: her own climbing goes first, and she comes
+    // to its stand only when she finds none.
+    if (!wait_ok && (turn_ == Turn::None || line.parked)) {
+        return false;
+    }
     const float sx = float(line.stand.GetX());
     const float sz = float(line.stand.GetZ());
     const float stand_y = float(line.stand.GetY());
@@ -1081,6 +1102,7 @@ bool Matron::find_climb_hold(const RVec3 at, const bool down) {
         climb_member_ = rests_member;
         climb_local_hand_ = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point);
         climb_hand_ = point;
+        climb_hand_known_ = true;
         ++climb_grips_;
         return true;
     }
@@ -1097,6 +1119,7 @@ bool Matron::begin_climb(const int index, const bool down) {
     mantling_ = false;
     climb_support_ = BodyID();
     climb_member_ = SubShapeID();
+    climb_hand_known_ = false;
     climb_force_n_ = 0.0F;
     climb_stall_s_ = 0.0F;
     climb_overload_s_ = 0.0F;
@@ -1138,8 +1161,11 @@ void Matron::release_climb(const bool failed) {
     if (failed) {
         ++climb_releases_;
         climb_retry_s_ = 2.0F;
-        // The column it dropped her from, her found ways leave alone as long.
-        block_climb_at(float(climb_hand_.GetX()), float(climb_hand_.GetZ()));
+        // The column it dropped her from, her found ways leave alone as long
+        // (none when no hold of it was ever found).
+        if (climb_hand_known_) {
+            block_climb_at(float(climb_hand_.GetX()), float(climb_hand_.GetZ()));
+        }
     }
     // No velocity write: a missed hand or broken hold leaves her momentum
     // and gravity to the same collision solver as every other falling body.
@@ -1155,6 +1181,7 @@ void Matron::climb(const float dt) {
         return;
     }
     climb_hand_ = bodies.GetCenterOfMassTransform(climb_support_) * climb_local_hand_;
+    climb_hand_known_ = true;
     // The body can survive while a compound's rung disappears or moves.
     // Revalidate the contact, the very part of the support she holds and not
     // merely its body (a compound is many rungs), before applying load.
@@ -1569,9 +1596,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         clamber_now_ = false;
         bodies.SetLinearVelocity(body_, velocity);
-        // The watchdog: a way ahead of her (more than a stride off, at a pace).
+        // The watchdog: a way ahead of her (more than half a stride off, at a pace).
         watch_stall(dt, at, length > 0.15F ? dx / length : 0.0F, length > 0.15F ? dz / length : 0.0F,
-                    speed > 0.3F && length > 1.0F && !climbed);
+                    speed > 0.3F && length > 0.5F && !climbed, wx, wz);
     } else {
         watch_stall(dt, at, 0.0F, 0.0F, false);
     }
@@ -1920,6 +1947,18 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     if (state_ != State::Dormant && state_ != State::Straining && state_ != State::Emerging) {
         pursuit_s_ = std::min(pursuit_s_ + dt, 3600.0F);
     }
+    if (journey_active_) {
+        // A way she planned herself: its Climber has her body until it ends.
+        if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) {
+            end_journey(false);
+        } else {
+            sound_count_ = 0;
+            step_planks(dt);
+            step_journey(dt);
+            sense_near();
+            return;
+        }
+    }
     if (routecraft_.owns_motion()) {
         if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) routecraft_.cancel();
         else {
@@ -1938,6 +1977,13 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             } else if (routecraft_mine_ && !routecraft_.owns_motion()) {
                 block_climb(climbing_key_);
                 routecraft_mine_ = false;
+                // Ended short of its goal (blocked at its end, a plan given
+                // out) with a hold still in her hands: back down the way she
+                // came, once, rather than let go. That failing too, she falls.
+                if (!climb_back_tried_) {
+                    climb_back_tried_ = true;
+                    routecraft_mine_ = request_climb_goal(climb_back_, climb_back_facing_);
+                }
             }
             sense_near();
             return;
@@ -2360,14 +2406,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 }
             } else if (elsewhere &&
                        (follow_pipe(dt, at) ||
-                        // A line she knows the climber took, she takes after him; else her map's ways first.
-                        (guess_line_ >= 0 ? (follow_line(dt, at) || follow_route(dt, at))
-                                          : (follow_route(dt, at) || follow_line(dt, at))) ||
-                        // Where her map has no way (every deck above its last,
-                        // any new steel): bars she finds herself, climbed by her
-                        // own hands (matron_found_climb.cpp). The map's ways go
-                        // as the found ones pass the lab's exams.
+                        // A line she knows the climber took, she takes after him when she can.
+                        (guess_line_ >= 0 && follow_line(dt, at, false)) ||
+                        // Her own way first: bars she finds herself, else a way she
+                        // plans over the steel round her (matron_found_climb.cpp),
+                        // climbed by her own hands. Her map's ways only where she
+                        // finds none; a line she would only wait at, last.
                         follow_found_climb(dt, at) ||
+                        follow_route(dt, at) ||
+                        follow_line(dt, at, true) ||
                         follow_climb(dt, at))) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
@@ -2566,8 +2613,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 void Matron::post_step(const float dt) {
     take_blow(dt);
     if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_.cancel();
-    if (body_in_world_ && !dead_ && !routecraft_.owns_motion() && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off &&
-        routecraft_recovering_) {
+    if (body_in_world_ && !dead_ && !routecraft_.owns_motion() && !journey_moving_ && !riding_ && !on_line_ && climb_ < 0 &&
+        pipe_phase_ == PipePhase::Off && routecraft_recovering_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         {
             RayCastResult floor;
@@ -2622,6 +2669,7 @@ bool Matron::caught(const RVec3 player) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     if (bracing_structure() || !body_in_world_ || dead_ || riding_ || pipe_phase_ != PipePhase::Off || climb_ >= 0 ||
+        routecraft_.owns_motion() || journey_moving_ ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
@@ -2900,6 +2948,8 @@ void Matron::restore(const Saved &saved) {
     found_ = FoundClimb{};
     climb_blocks_ = {};
     find_wait_ticks_ = 0;
+    end_journey(false);
+    journey_wait_ticks_ = 0;
     if (shared_survival_) shared_survival_->reset();
     if (!dead_) {
         remove_body();
@@ -3533,10 +3583,17 @@ void Matron::refresh_view() {
     view_.unrigs = unrigs_;
     view_.on_line = on_line_;
     view_.cable_slides = cable_slides_;
-    view_.climbing = climb_ >= 0 || routecraft_.owns_motion();
+    view_.climbing = climb_ >= 0 || routecraft_.owns_motion() || journey_moving_;
     view_.climbs = climbs_done_;
-    view_.climb_hand = climb_hand_;
-    view_.climb_force_n = pipe_phase_ != PipePhase::Off ? pipe_force_n_ : climb_force_n_;
+    // The hand and force of whichever of her climbs has her.
+    const bool journey_hands = journey_moving_ && climber_ != nullptr;
+    view_.climb_hand = routecraft_.owns_motion() ? routecraft_.report().hand
+                       : journey_hands           ? climber_->view().hand
+                                                 : climb_hand_;
+    view_.climb_force_n = pipe_phase_ != PipePhase::Off ? pipe_force_n_
+                          : routecraft_.owns_motion()   ? routecraft_.report().force
+                          : journey_hands               ? climber_->view().force_n
+                                                        : climb_force_n_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     view_.mantling = mantling_;

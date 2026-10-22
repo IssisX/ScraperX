@@ -163,7 +163,7 @@ bool Matron::node_blocked(const float x, const float z) const noexcept {
 // still ahead of her. Each kStallWindowS: progress under kStallMoveM is a
 // stall, and the rungs go up; progress is a reset.
 void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, const float heading_z,
-                         const bool wants) {
+                         const bool wants, const float to_x, const float to_z) {
     for (Blocked &b : blocked_) {
         b.s -= dt;
     }
@@ -204,7 +204,24 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
         return;
     }
     if (stall_rung_ == 2) {
-        // Sideways along the face in her way: its normal from a ray at her
+        // Her steps round what is in her way to where she was making for, over
+        // the real floor with her body free on it (traversal grid_walk): the
+        // first of them a stride or more off is where she steps.
+        {
+            const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
+            const std::vector<Vec3> steps = traversal::grid_walk(physics_, ignore, traversal::Limits{},
+                                                                 Vec3(ax, feet_y_, az), Vec3(to_x, feet_y_, to_z), 4.0F);
+            for (const Vec3 &step : steps) {
+                if (xz(step.GetX(), step.GetZ(), ax, az) >= 0.35F) {
+                    sidestep_x_ = step.GetX();
+                    sidestep_z_ = step.GetZ();
+                    sidestep_s_ = kSidestepS;
+                    ++sidesteps_;
+                    return;
+                }
+            }
+        }
+        // None: sideways along the face in her way: its normal from a ray at her
         // middle, the tangent toward the side with floor (no edge), turn about.
         const Vec3 heading(heading_x, 0.0F, heading_z);
         Vec3 normal = -heading;

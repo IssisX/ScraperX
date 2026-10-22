@@ -207,7 +207,7 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         return true;   // at its foot (or its top), looking at it
     }
     climb_end_ = ClimbEnd::None;
-    if (!begin_climb(climb, step.what == routes::Step::Do::ClimbDown)) {
+    if (column_blocked_near(c.x, c.z) || !begin_climb(climb, step.what == routes::Step::Do::ClimbDown)) {
         route_failed(index, routes::Reason::Failed);
         return false;
     }
