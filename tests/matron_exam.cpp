@@ -5,6 +5,8 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
@@ -45,12 +47,12 @@ void add_box(JPH::StaticCompoundShapeSettings &compound, const JPH::Vec3 centre,
 }
 
 JPH::BodyID add_static(JPH::PhysicsSystem &physics, const JPH::StaticCompoundShapeSettings &compound,
-                       const JPH::ObjectLayer layer, Structure &out) {
+                       const JPH::ObjectLayer layer, const float base_y, Structure &out) {
     const JPH::ShapeSettings::ShapeResult shape = compound.Create();
     if (shape.HasError()) {
         throw std::runtime_error(std::string("exam: a structure's shape failed: ") + shape.GetError().c_str());
     }
-    JPH::BodyCreationSettings settings(shape.Get(), JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
+    JPH::BodyCreationSettings settings(shape.Get(), JPH::RVec3(0.0, base_y, 0.0), JPH::Quat::sIdentity(),
                                        JPH::EMotionType::Static, layer);
     settings.mFriction = 0.8F;
     const JPH::BodyID id = physics.GetBodyInterface().CreateAndAddBody(settings, JPH::EActivation::DontActivate);
@@ -84,7 +86,8 @@ const char *kind_name(const Kind kind) noexcept {
     return "?";
 }
 
-Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH::ObjectLayer static_layer) {
+Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH::ObjectLayer static_layer,
+                const float base_y) {
     Rng rng(seed);
     Structure out;
     out.seed = seed;
@@ -95,7 +98,7 @@ Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH
     {
         JPH::StaticCompoundShapeSettings floor;
         add_box(floor, JPH::Vec3(0.0F, -0.5F, 0.0F), JPH::Vec3(30.0F, 0.5F, 30.0F));
-        out.floor = add_static(physics, floor, static_layer, out);
+        out.floor = add_static(physics, floor, static_layer, base_y, out);
     }
 
     // The holds stand on the line z = 0, her side z < 0; the goal's face at
@@ -166,7 +169,7 @@ Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH
         break;
     }
     }
-    out.holds = add_static(physics, holds, static_layer, out);
+    out.holds = add_static(physics, holds, static_layer, base_y, out);
 
     // The goal: a platform on the floor, its rail along the front with a gap
     // over the holds.
@@ -182,23 +185,24 @@ Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH
             add_box(goal, JPH::Vec3(mid, h + 1.0F, s + 0.05F), JPH::Vec3(rail_half, 0.03F, 0.03F));
             add_box(goal, JPH::Vec3(side * 0.5F * p.opening_m, h + 0.5F, s + 0.05F), JPH::Vec3(0.03F, 0.5F, 0.03F));
         }
-        out.goal = add_static(physics, goal, static_layer, out);
-        out.goal_feet = JPH::AABox(JPH::Vec3(-2.15F, h - 0.06F, s + 0.45F), JPH::Vec3(2.15F, h + 0.06F, s + 2.65F));
+        out.goal = add_static(physics, goal, static_layer, base_y, out);
+        out.goal_feet = JPH::AABox(JPH::Vec3(-2.15F, base_y + h - 0.06F, s + 0.45F),
+                                   JPH::Vec3(2.15F, base_y + h + 0.06F, s + 2.65F));
     }
 
     // The start, out on her side, and maybe a wall across the straight way
     // to the foot (too high to climb: round its ends).
     const float start_x = rng.uniform(-4.0F, 4.0F);
     const float start_z = -rng.uniform(5.5F, 9.0F);
-    out.start_at = JPH::RVec3(start_x, 0.0, start_z);
-    out.start_feet = JPH::AABox(JPH::Vec3(-6.0F, -0.06F, -10.0F), JPH::Vec3(6.0F, 0.06F, -0.6F));
+    out.start_at = JPH::RVec3(start_x, base_y, start_z);
+    out.start_feet = JPH::AABox(JPH::Vec3(-6.0F, base_y - 0.06F, -10.0F), JPH::Vec3(6.0F, base_y + 0.06F, -0.6F));
     p.wall = rng.chance(0.3F);
     if (p.wall) {
         const float wall_z = -rng.uniform(2.0F, 3.0F);
         const float wall_x = start_x * (wall_z / start_z);
         JPH::StaticCompoundShapeSettings wall;
         add_box(wall, JPH::Vec3(wall_x, 1.5F, wall_z), JPH::Vec3(rng.uniform(2.0F, 3.0F), 1.5F, 0.1F));
-        (void)add_static(physics, wall, static_layer, out);
+        (void)add_static(physics, wall, static_layer, base_y, out);
     }
 
     // The fingerprint, of what was built (not of what was meant).
@@ -241,6 +245,10 @@ void Judge::tick(const JPH::PhysicsSystem &physics, const JPH::BodyID body, cons
     if (done()) {
         return;
     }
+    if (std::abs(dt - kTickSeconds) > 1.0e-6F) {
+        fail("not the native tick");
+        return;
+    }
     const JPH::BodyInterface &bodies = physics.GetBodyInterfaceNoLock();
     const JPH::RVec3 at = bodies.GetPosition(body);
     const JPH::Vec3 velocity = bodies.GetLinearVelocity(body);
@@ -271,20 +279,37 @@ void Judge::tick(const JPH::PhysicsSystem &physics, const JPH::BodyID body, cons
     if (failed_) {
         return;
     }
-    // Supported: her feet in the box, on the support itself (a ray just
-    // under them meets it), holding nothing, still.
+    // Supported: her feet in the box, holding nothing, still, and her own
+    // shape set 3 cm lower meeting the support itself with its contact
+    // pushing her up (a real contact, not a point in a box).
     const JPH::RVec3 feet = at - JPH::Vec3(0.0F, stand_centre_m_, 0.0F);
-    bool on_it = feet_.Contains(JPH::Vec3(feet)) && !gripping && velocity.Length() < kStillMps;
+    bool on_it = feet_.Contains(JPH::Vec3(feet)) && !gripping && velocity.Length() < kStillMps &&
+                 std::abs(velocity.GetY()) < 0.1F;
     if (on_it) {
-        const JPH::RRayCast ray(feet + JPH::Vec3(0.0F, 0.05F, 0.0F), JPH::Vec3(0.0F, -0.15F, 0.0F));
-        JPH::RayCastResult hit;
-        const JPH::IgnoreSingleBodyFilter not_her(body);
-        on_it = physics.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, not_her) && hit.mBodyID == support_;
+        on_it = false;
+        const JPH::BodyLockRead lock(physics.GetBodyLockInterfaceNoLock(), body);
+        if (lock.Succeeded()) {
+            const JPH::Body &her = lock.GetBody();
+            JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> hits;
+            const JPH::IgnoreSingleBodyFilter not_her(body);
+            physics.GetNarrowPhaseQuery().CollideShape(
+                her.GetShape(), JPH::Vec3::sReplicate(1.0F),
+                her.GetCenterOfMassTransform().PostTranslated(JPH::Vec3(0.0F, -0.03F, 0.0F)), JPH::CollideShapeSettings(),
+                her.GetCenterOfMassPosition(), hits, {}, {}, not_her);
+            for (const JPH::CollideShapeResult &hit : hits.mHits) {
+                // The way to move the support off her: down, under her.
+                if (hit.mBodyID2 == support_ && hit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero()).GetY() <= -0.7F) {
+                    on_it = true;
+                    break;
+                }
+            }
+        }
     }
     verdict_.supported_s = on_it ? verdict_.supported_s + dt : 0.0F;
     if (verdict_.supported_s >= kSupportedSeconds) {
         verdict_.arrived = true;
-        verdict_.reason = "arrived";
+        verdict_.clean = verdict_.physical_failures == 0;
+        verdict_.reason = verdict_.clean ? "arrived" : "arrived after a physical failure (a recovery)";
     }
 }
 

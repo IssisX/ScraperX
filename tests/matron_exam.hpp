@@ -57,12 +57,16 @@ struct Structure {
     std::uint64_t fingerprint = 0;      // of the built world: the same seed, the same number
 };
 
-// Static bodies only, in `static_layer`: a floor (top at y 0), the structure
-// on it, and the goal (a platform with its rail).
-[[nodiscard]] Structure build(JPH::PhysicsSystem &physics, std::uint64_t seed, JPH::ObjectLayer static_layer);
+// Static bodies only, in `static_layer`: a floor (its top at `base_y`), the
+// structure on it, and the goal (a platform with its rail). Every height in
+// Params is over the floor's top.
+[[nodiscard]] Structure build(JPH::PhysicsSystem &physics, std::uint64_t seed, JPH::ObjectLayer static_layer,
+                              float base_y = 0.0F);
 
 struct Verdict {
     bool arrived = false;           // stood on the support a second, holding nothing
+    bool clean = false;             // arrived with no physical failure on the way (not a lucky landing)
+    int physical_failures = 0;      // lost holds, slips, misses, overloads the executor reported
     bool alive = true;
     float worst_step_m = 0.0F;      // the largest move in one tick
     float peak_commanded_n = 0.0F;  // the largest commanded force reported
@@ -80,8 +84,13 @@ public:
     static constexpr float kStillMps = 0.30F;
     static constexpr float kLethalLandingMps = 15.34F;   // a 12 m fall
 
+    static constexpr float kTickSeconds = 1.0F / 90.0F;   // the native step, the only one judged
+
     Judge(JPH::BodyID support, const JPH::AABox &feet, float force_cap_n, float stand_centre_m);
     void tick(const JPH::PhysicsSystem &physics, JPH::BodyID body, float commanded_force_n, bool gripping, float dt);
+    // A physical failure the executor reported (a hold lost, a slip, a miss):
+    // an arrival after one is a recovery, not a clean arrival.
+    void note_failure() noexcept { ++verdict_.physical_failures; }
     [[nodiscard]] const Verdict &verdict() const noexcept { return verdict_; }
     [[nodiscard]] bool done() const noexcept { return verdict_.arrived || failed_; }
 
