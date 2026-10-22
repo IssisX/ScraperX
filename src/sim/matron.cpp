@@ -2443,8 +2443,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         // a way she plans over the steel her scan read
                         // (matron_found_climb.cpp), climbed by her own hands.
                         follow_found_climb(dt, at) ||
-                        // Her map's ways only where she finds none of her own.
-                        follow_route(dt, at) ||
+                        // The authored map's way alone, for the test that drives one of its
+                        // ways; in play she has none of it.
+                        (found_climbs_off_ && follow_route(dt, at)) ||
                         // A rung way her scan found off her floor; a line she
                         // would only wait at, last.
                         follow_climb(dt, at) ||
