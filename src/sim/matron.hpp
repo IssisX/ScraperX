@@ -806,6 +806,8 @@ public:
         std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
         std::uint32_t pipe_slams = 0;   // flanges slammed onto, torn off
         float pipe_slam_mps = 0.0F;     // the last slam's speed
+        float pipe_peak_force_n = 0.0F; // her grip's peak force on the pipe
+        float pipe_peak_power_w = 0.0F;
         // Her pace (Pace) and the speed it asks of her feet; getting unstuck
         // (stalls met, step-ups, clambers, sidesteps, reroutes, the longest
         // time without kStallMoveM of progress); the player's trail (crumbs
@@ -970,6 +972,30 @@ public:
     // Tests only: out of her locker (stepped out of its front, as at a
     // burst) and on her patrol round her level's loop.
     void patrol_for_test();
+
+    // Her travel over the whole tower's real steel (matron_journey.cpp): the
+    // map of what it offers her (scanned from its collision geometry, every
+    // deck), and a journey to a region of it by her own moves. No route is
+    // authored: she plans over the map, makes each move with her capped
+    // forces, commits a region only standing on it, and on a failed move or a
+    // knock off her floor plans again from wherever she stands.
+    void set_routes(const traversal::AffordanceMap *routes);
+    [[nodiscard]] const traversal::AffordanceMap *scanned_routes() const noexcept { return scanned_; }
+    // Out of her locker with the tower not yet looked over.
+    [[nodiscard]] bool wants_routes() const noexcept { return scanned_ == nullptr && body_in_world_; }
+    bool travel_to(int region);   // false: no way there from where she stands
+    [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
+    struct Journey {
+        bool active = false;
+        int goal = -1;
+        int region = -1;        // the region she last stood in (committed on support)
+        int step = 0, steps = 0;
+        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0, yields = 0;
+        traversal::MoveKind move = traversal::MoveKind::Walk;
+        traversal::Failure last_failure = traversal::Failure::None;
+    };
+    [[nodiscard]] const Journey &journey() const noexcept { return travel_; }
+    [[nodiscard]] const traversal::Climber *climber() const noexcept { return climber_.get(); }
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
@@ -1263,7 +1289,6 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // Her travel across the tower (matron_travel.cpp).
     bool follow_route(float dt, JPH::RVec3 at);
-    [[nodiscard]] int climb_index(routes::Connector which) const noexcept;
     // The other way round: the connector a climb of hers is (Count for none).
     [[nodiscard]] routes::Connector connector_of(int climb) const noexcept;
     // The corner pipe's way on her map from one deck to the other.
@@ -1400,6 +1425,28 @@ private:
     std::array<ClimbBlock, 8> climb_blocks_{};
     int find_wait_ticks_ = 0;
     std::unique_ptr<traversal::Climber> climber_;
+    std::unique_ptr<traversal::AffordanceMap> own_scan_;   // her own read of a world no one read for her
+    // Her whole-tower travel (travel_to, matron_journey.cpp).
+    const traversal::AffordanceMap *scanned_ = nullptr;
+    Journey travel_;
+    std::vector<int> travel_edges_;
+    std::vector<int> travel_avoid_;   // edges this journey found it could not start
+    std::vector<JPH::Vec3> travel_walk_;
+    std::size_t travel_walk_i_ = 0;
+    float travel_wp_best_ = 1.0e9F;
+    float travel_wp_stall_s_ = 0.0F;
+    bool travel_rerouted_ = false;
+    int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
+    JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
+    float travel_still_s_ = 0.0F;
+    float travel_yield_s_ = 0.0F;   // how long she has given way to the player at this move
+    static constexpr float kYieldGiveUpS = 12.0F;
+    std::uint32_t travel_replans0_ = 0;
+    float travel_wait_s_ = 0.0F;
+    static constexpr float kYieldReachM = 1.3F;
+    static constexpr float kYieldClearM = 1.6F;
+    void step_travel(float dt);
+    [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;
     std::vector<JPH::Vec3> journey_legs_;
     std::size_t journey_at_ = 0;
@@ -1548,11 +1595,16 @@ private:
     std::uint32_t cable_slides_ = 0;
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.
-    std::vector<Climb> climbs_;
     // The bay (bay.hpp): its bracket as a level of hers, and its rungs.
     int bay_level_ = -1;
     int bay_climb_ = -1;
-    int c3_wall_climb_ = -1;
+    [[nodiscard]] int climb_count() const noexcept;
+    // The scanned ways climb_of reads: any a hand can take (a ladder, or a lip from a floor), or ladders only.
+    enum class Ways : std::uint8_t { Any, Ladders };
+    [[nodiscard]] bool climb_of(int edge, Climb &out, Ways ways = Ways::Any) const noexcept;
+    [[nodiscard]] Climb climb_spec(int edge) const noexcept;
+    [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
+    [[nodiscard]] int bay_way_out() const noexcept;
     routes::Map routes_;          // her map of the tower (matron_routes.hpp)
     // Her way across it: the edges planned, the one she is on and its step,
     // started along it or not, and how her last climb ended.
@@ -1568,7 +1620,6 @@ private:
     float clock_s_ = 0.0F;
     std::uint32_t route_edges_done_ = 0, route_failures_ = 0;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
-    int c3_duct_climb_ = -1;
     JPH::BodyID bay_leaf_;
     bool bay_open_ = true;
     bool bay_hooked_ = false;
@@ -1721,6 +1772,8 @@ private:
     float pipe_stall_s_ = 0.0F;
     float pipe_overload_s_ = 0.0F;
     float pipe_force_n_ = 0.0F;
+    float pipe_peak_force_n_ = 0.0F;   // her grip's peak force on the pipe (budget-capped)
+    float pipe_peak_power_w_ = 0.0F;
     JPH::Vec3 pipe_drive_dv_ = JPH::Vec3::sZero(); // what her drive changes her velocity by this step
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;

@@ -64,6 +64,10 @@ struct Limits {
     // A catch: her grip arrests at most this much speed relative to the hold.
     float catch_arrest_mps = 4.5F;
     float catch_radius_m = 0.22F;
+    // A gap in the rungs: from a bent arm she reaches up to hand_above_center
+    // over her center; past that she throws for the next rung (a dyno), her
+    // arms' pull from a low hang giving at most this much more rise.
+    float dyno_rise_m = 0.45F;
     // Pole grip: squeeze (normal force) and the steel's friction on her.
     float pole_squeeze_n = 4600.0F;
     float pole_mu_static = 0.60F;
@@ -92,6 +96,7 @@ struct Budget {
     float power_left = 0.0F;    // watts still available this tick
     float power_used = 0.0F;
     JPH::Vec3 velocity = JPH::Vec3::sZero();   // hers relative to the support (hold or floor) at the tick's start
+    float brake_used = 0.0F;    // watts of braking (negative work) granted: capped by force alone, never by power
     JPH::Vec3 take(JPH::Vec3 want) noexcept;
 };
 
@@ -156,6 +161,7 @@ struct ClimbView {
     float peak_force_n = 0.0F;
     float power_w = 0.0F;
     float peak_power_w = 0.0F;
+    float peak_brake_w = 0.0F;     // braking against the support: force-capped only
     float support_reaction_n = 0.0F;   // pushed onto a dynamic hold's body this tick
     std::uint32_t grips = 0;
     std::uint32_t releases = 0;
@@ -194,7 +200,10 @@ public:
     [[nodiscard]] int phase() const noexcept { return phase_; }
     // Her feet alone toward a point on the floor she stands on, out of the
     // one budget (between moves: a journey's walking). Returns the force used.
-    float walk_between(float dt, JPH::Vec3 feet_goal, float speed);
+    float walk_between(float dt, JPH::Vec3 feet_goal, float speed, float may_drop = 0.0F);
+    // Standing still: balanced on a narrow floor (a board, a ledge), nothing
+    // else. step() does this itself once a move is done.
+    float stand(float dt);
     [[nodiscard]] const MoveSpec &spec() const noexcept { return spec_; }
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
     // Her velocity against what she pushes on (the hold at its anchor, else
@@ -222,6 +231,8 @@ private:
                bool carry_weight, JPH::RVec3 at_hold);
     // may_drop: how far below her feet a floor ahead still counts (a step down she means).
     void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget, float may_drop = 0.0F);
+    [[nodiscard]] bool floor_under(JPH::RVec3 c, JPH::Vec3 off) const;
+    [[nodiscard]] bool narrow_floor_lean(JPH::RVec3 c, JPH::Vec3 &to_floor) const;
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
@@ -249,11 +260,19 @@ private:
     float target_y_ = 0.0F;
     Hold hold_;
     JPH::RVec3 hold_world_ = JPH::RVec3::sZero();
+    JPH::Vec3 hang_off_ = JPH::Vec3::sZero();   // a hang drop's hang point, from its hold
     Hold lip_;
     JPH::RVec3 lip_world_ = JPH::RVec3::sZero();
     bool sliding_ = false;
     bool mantle_after_ = false;
     bool approach_near_ = false;
+    // A dyno across a gap in the rungs: 0 off, 1 sinking to a low hang, 2
+    // pulling, 3 in the air; the rung she throws for, and her tries.
+    int dyno_ = 0;
+    Hold dyno_hold_;
+    JPH::RVec3 dyno_world_ = JPH::RVec3::sZero();
+    int dyno_tries_ = 0;
+    Status step_dyno(float dt, Budget &budget);
     float rate_override_ = -1.0F;
     [[nodiscard]] float rate_mps() const noexcept { return rate_override_ >= 0.0F ? rate_override_ : limits_.climb_mps; }
     ClimbView view_;
@@ -276,6 +295,7 @@ struct Patch {   // a walkable top (one leaf of a body)
     float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
     int region = -1;
     bool narrow = false;   // under her diameter across (a board: her axis over it)
+    int split = -1, split_of = -1;   // a piece of a top split by what stands on it: its floor, and the top
 };
 struct Ladder {   // three or more bars stacked on one line
     float x = 0.0F, z = 0.0F;
@@ -309,7 +329,7 @@ struct Edge {
 struct ScanStats {
     double seconds = 0.0;
     std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0;
-    std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0;
+    std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0, split_patches = 0;
 };
 
 class AffordanceMap final {
@@ -336,7 +356,8 @@ public:
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
 
 private:
-    void build_regions(const Limits &limits);
+    void split_patches(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
+    void build_regions(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_edges(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     [[nodiscard]] bool capsule_free(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits,
                                     JPH::Vec3 feet);

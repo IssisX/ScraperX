@@ -151,7 +151,7 @@ void require_laws(const Run &r) {
 } // namespace
 
 void run_matron_exam_routecraft() {
-    constexpr std::uint64_t kSeeds = 40;
+    constexpr std::uint64_t kSeeds = 100;   // seeds 1-100, up and down
     int tried[4] = {0, 0, 0, 0};
     int up_clean[4] = {0, 0, 0, 0};
     int down_clean[4] = {0, 0, 0, 0};
@@ -370,7 +370,7 @@ void require_journey_laws(const Journey &j) {
 } // namespace
 
 void run_matron_exam_climber() {
-    constexpr std::uint64_t kSeeds = 40;
+    constexpr std::uint64_t kSeeds = 100;   // seeds 1-100, up and down
     int tried[4] = {0, 0, 0, 0};
     int up_clean[4] = {0, 0, 0, 0};
     int down_clean[4] = {0, 0, 0, 0};
@@ -403,6 +403,8 @@ void run_matron_exam_climber() {
         std::cout << '\n';
         require_journey_laws(up);
         require_journey_laws(down);
+        require(up.verdict.clean && down.verdict.clean && up.verdict.worst_step_m <= 0.20F && down.verdict.worst_step_m <= 0.20F,
+                "matron exam climber: every seed climbed clean, up and down, no tick over 0.20 m");
     }
     std::cout << "PASS scraperx_sim matron exam climber: laws held on " << 2 * kSeeds
               << " runs; clean (any) up/down:";

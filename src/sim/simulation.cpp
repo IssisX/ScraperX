@@ -1089,6 +1089,62 @@ void Simulation::debug_matron_let_go() noexcept {
     physics_world_->matron().let_go_for_test();
 }
 
+const traversal::AffordanceMap &Simulation::matron_affordances() {
+    return physics_world_->matron_affordances();
+}
+
+bool Simulation::debug_matron_travel(const double top) noexcept {
+    const traversal::AffordanceMap &map = physics_world_->matron_affordances();
+    Matron &matron = physics_world_->matron();
+    matron.patrol_for_test();
+    const int goal = map.region_near_top(static_cast<float>(top), 0.3F);
+    return goal >= 0 && matron.travel_to(goal);
+}
+
+bool Simulation::debug_matron_travel_region(const int region) noexcept {
+    (void)physics_world_->matron_affordances();
+    Matron &matron = physics_world_->matron();
+    matron.patrol_for_test();
+    return region >= 0 && matron.travel_to(region);
+}
+
+std::size_t Simulation::debug_matron_grid_walk(const double fx, const double fy, const double fz, const double tx,
+                                               const double ty, const double tz, const float margin, const int max_nodes) {
+    return physics_world_->matron_grid_walk(JPH::Vec3(float(fx), float(fy), float(fz)), JPH::Vec3(float(tx), float(ty), float(tz)),
+                                            margin, max_nodes);
+}
+
+Simulation::MatronJourney Simulation::matron_journey() const noexcept {
+    MatronJourney out;
+    const Matron &matron = physics_world_->matron();
+    const Matron::Journey &j = matron.journey();
+    out.active = j.active;
+    out.goal = j.goal;
+    out.region = j.region;
+    out.steps = j.steps;
+    out.step = j.step;
+    out.moves_done = j.moves_done;
+    out.yields = j.yields;
+    out.moves_failed = j.moves_failed;
+    out.replans = j.replans;
+    out.arrivals = j.arrivals;
+    out.move = static_cast<std::uint8_t>(j.move);
+    out.last_failure = static_cast<std::uint8_t>(j.last_failure);
+    if (const traversal::Climber *c = matron.climber()) {
+        const traversal::ClimbView &v = c->view();
+        out.grips = v.grips;
+        out.releases = v.releases;
+        out.slips = v.slips;
+        out.catches = v.catches;
+        out.misses = v.misses;
+        out.force_n = v.force_n;
+        out.peak_force_n = v.peak_force_n;
+        out.holding = v.holding;
+    }
+    out.gravity_factor = physics_world_->matron_gravity_factor();
+    return out;
+}
+
 void Simulation::debug_matron_patrol() noexcept {
     physics_world_->matron().patrol_for_test();
 }
@@ -1293,6 +1349,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_flanges = view.pipe_flanges;
     result.pipe_slams = view.pipe_slams;
     result.pipe_slam_mps = view.pipe_slam_mps;
+    result.pipe_peak_force_n = view.pipe_peak_force_n;
+    result.pipe_peak_power_w = view.pipe_peak_power_w;
     result.bracing = view.bracing_structure;
     result.support_n = view.support_n;
     result.trap = view.trap;

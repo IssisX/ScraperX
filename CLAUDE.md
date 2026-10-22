@@ -24,3 +24,10 @@ rerun instead of rerunning everything all the time"*.
    the contact listener, save layout) and no CI run is coming.
 5. Read the PASS/FAIL lines and the lines around a failure, not whole logs.
 6. Handing work to another agent: put this section in the brief.
+
+## Every message to the owner ends with what they do next
+
+2026-10-22: *"always end with a clear instruction for me and the prompt if I need to share one"*.
+End each message with one plain line saying what the owner should do now ("Nothing to do" is
+fine). If they need to give another agent something, put the complete prompt in one copyable code
+block in that same message, and name the agent it goes to.
