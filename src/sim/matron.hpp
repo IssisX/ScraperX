@@ -296,9 +296,10 @@ public:
     static constexpr float kCommitSightM = 50.0F;
     static constexpr float kEndM = 5.0F;
     static constexpr float kCommitHoldSeconds = 2.5F;
-    // Below this she is gone (fell): a fall of 12 m from the deck. Riding
-    // (a moving floor, a line's cable) or on a climb she is not falling.
-    static constexpr float kFallenBelowM = 12.0F;
+    // Her falls are her own speed, not a list of decks: falling as fast as a
+    // 12 m drop (from anywhere, onto anything) kills her. Riding (a moving
+    // floor, a line's cable) or on a climb she is not falling.
+    static constexpr float kLethalFallMps = 15.34F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
     // side; the deck's spawn is just north of it), while the cage is down.

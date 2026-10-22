@@ -2341,8 +2341,7 @@ void Matron::post_step(const float dt) {
             }
             settle_level();
         }
-        const float fall_from = routecraft_recovering_ ? routecraft_release_floor_ : levels_[static_cast<std::size_t>(level_)].floor_y;
-        if (at.GetY() < fall_from - kFallenBelowM) {
+        if (physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() <= -kLethalFallMps) {
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
