@@ -2030,6 +2030,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             settle_level();
         }
     }
+    // On a journey over the tower's steel (travel_to) she is about nothing else.
+    if (body_in_world_ && travel_.active) {
+        step_travel(dt);
+        if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
+        return;
+    }
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
     // On her level (the height of the floor under her, within the tower's
@@ -3221,7 +3227,7 @@ void Matron::take_blow(const float dt) {
     // On the pipe her hands hold her against her weight: a blow is read the
     // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_phase_ != PipePhase::Off;
-    if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || state_ == State::Down ||
+    if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || travel_.active || state_ == State::Down ||
         state_ == State::Emerging || pipe_phase_ == PipePhase::Slide || pipe_phase_ == PipePhase::Stunned) {
         blow_quiet_ = kBlowQuietTicks;
         return;
@@ -3629,6 +3635,8 @@ void Matron::refresh_view() {
     view_.route_failures = route_failures_;
     view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
     view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
+    view_.pipe_peak_force_n = pipe_peak_force_n_;
+    view_.pipe_peak_power_w = pipe_peak_power_w_;
     view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;
     view_.pipe_listening = pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F;
     view_.pipe_links = pipe_links_;

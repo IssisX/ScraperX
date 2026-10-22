@@ -251,6 +251,8 @@ void Matron::ride_pipe(const float dt) {
     }
     const auto apply = [&](const Vec3 force) {
         pipe_force_n_ = force.Length();
+        pipe_peak_force_n_ = std::max(pipe_peak_force_n_, pipe_force_n_);
+        pipe_peak_power_w_ = std::max(pipe_peak_power_w_, std::abs(force.Dot(v)));
         bodies.AddForce(body_, force);
         if (!pipe_support_.IsInvalid() && bodies.GetMotionType(pipe_support_) == EMotionType::Dynamic) {
             bodies.AddForce(pipe_support_, -force, pipe_hand_);

@@ -548,6 +548,8 @@ struct PipeRun {
     std::uint32_t flanges = 0;
     std::uint32_t slams = 0;
     double slam_mps = 0.0;
+    double peak_force_n = 0.0;
+    double peak_power_w = 0.0;
     bool alive = true;
     std::uint64_t deaths = 0;
 };
@@ -631,6 +633,8 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
     r.flanges = m.pipe_flanges;
     r.slams = m.pipe_slams;
     r.slam_mps = m.pipe_slam_mps;
+    r.peak_force_n = m.pipe_peak_force_n;
+    r.peak_power_w = m.pipe_peak_power_w;
     r.alive = m.alive;
     r.deaths = s.snapshot().death_count - deaths;
     return r;
@@ -651,6 +655,9 @@ void run_matron_pipe() {
         require(r.took && r.arrived && r.alive, "matron pipe: dangerous, she comes down the shaft's pipe after the climber");
         require(r.warned_s >= 4.0, "matron pipe: heard on the pipe at least 4 s before she is on the climber's deck");
         require(r.flanges >= 1, "matron pipe: a flange passed on the way (a bong)");
+        std::cout << "  matron pipe: her grip's peak " << r.peak_force_n << " N, " << r.peak_power_w << " W\n";
+        require(r.peak_force_n > 1000.0 && r.peak_force_n <= 5600.5 && r.peak_power_w <= 9000.5,
+                "matron pipe: gravity on her, her grip holds her within the shared force and power budget");
         std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
     }
     // Fully changed: head first, and still heard 4 s ahead.

@@ -7,6 +7,7 @@
 
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
+#include "sim/matron_traversal.hpp"
 
 #include <array>
 #include <set>
@@ -110,6 +111,11 @@ public:
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }
     [[nodiscard]] const JPH::PhysicsSystem &physics_system() const noexcept { return physics_system_; }
+    // What the tower's steel offers the Matron's climbing (matron_traversal.hpp):
+    // read from the real collision geometry the first time it is asked for.
+    [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
+    [[nodiscard]] double matron_gravity_factor() const;
+    [[nodiscard]] std::size_t matron_grid_walk(JPH::Vec3 from, JPH::Vec3 to, float margin, int max_nodes) const;
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
@@ -767,6 +773,8 @@ public:
     // Rides ended by the stop's jolt tearing the hands off the bar.
     std::uint64_t zip_torn_count_ = 0;
     std::unique_ptr<Matron> matron_;
+    traversal::AffordanceMap matron_affordances_;
+    bool matron_affordances_scanned_ = false;
     std::uint64_t matron_landing_seen_ = 0;
     bool matron_checkpoint_pending_ = false;
     [[nodiscard]] float matron_loudness(JPH::BodyInterface &bodies) noexcept;

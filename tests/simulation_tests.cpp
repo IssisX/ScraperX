@@ -177,6 +177,19 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb") {
         run_matron_climb();
         run_matron_climb_board();
+        run_matron_climb_scan();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-narrow") {
+        run_matron_narrow();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-board") {
+        run_matron_climb_board();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-scan") {
+        run_matron_climb_scan();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-moves") {
@@ -539,6 +552,7 @@ int main() {
     run_matron_traverse();
     run_matron_pursuit();
     run_matron_ways();
+    run_matron_climb();
     run_matron_grab();
     run_matron_arm();
     run_matron_fatality();
