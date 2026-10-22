@@ -759,6 +759,7 @@ bool pull_shop_chock(scraperx::sim::Simulation &simulation);
 bool rig_shop_i(scraperx::sim::Simulation &simulation);
 bool pull_shop_domino(scraperx::sim::Simulation &simulation);
 void run_pulley_static_end();
+void run_matron_exam();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();

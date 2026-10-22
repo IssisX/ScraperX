@@ -151,6 +151,10 @@ int main() {
         run_water();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam") {
+        run_matron_exam();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
         return EXIT_SUCCESS;
@@ -384,6 +388,7 @@ int main() {
     }
 
     run_pulley_static_end();
+    run_matron_exam();
     run_core_traversal();
     run_fall_checkpoint();
     run_world_solids();
