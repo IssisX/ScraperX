@@ -762,6 +762,7 @@ void run_pulley_static_end();
 void run_matron_exam();
 void run_matron_exam_routecraft();
 void run_matron_exam_climber();
+void run_matron_exam_descent();
 void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
