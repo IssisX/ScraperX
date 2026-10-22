@@ -656,7 +656,8 @@ void run_matron_pipe() {
         require(r.warned_s >= 4.0, "matron pipe: heard on the pipe at least 4 s before she is on the climber's deck");
         require(r.flanges >= 1, "matron pipe: a flange passed on the way (a bong)");
         std::cout << "  matron pipe: her grip's peak " << r.peak_force_n << " N, " << r.peak_power_w << " W\n";
-        require(r.peak_force_n > 1000.0 && r.peak_force_n <= 5600.5 && r.peak_power_w <= 9000.5,
+        require(r.peak_force_n > 1000.0 && r.peak_force_n <= scraperx::sim::traversal::Limits{}.total_force_n + 0.5 &&
+                    r.peak_power_w <= scraperx::sim::traversal::Limits{}.power_w + 0.5,
                 "matron pipe: gravity on her, her grip holds her within the shared force and power budget");
         std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
     }

@@ -3,7 +3,6 @@
 // between moves and climbed by her own hands, each move physical. A region is
 // hers only when she stands on it; a failed move is a fall, and she plans
 // again from where she lands. Nothing here sets her position.
-#include <cstdlib>
 #include "sim/matron.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
@@ -140,20 +139,37 @@ bool Matron::travel_to(const Vec3 feet) {
 }
 
 bool Matron::travel_to(const int region) {
-    if (scanned_ == nullptr || !body_in_world_ || dead_) {
+    if (scanned_ == nullptr || !body_in_world_ || dead_ || lying_ || kneeling_ ||
+        region < 0 || static_cast<std::size_t>(region) >= scanned_->regions().size()) {
         return false;
     }
-    // Her hands on this body (a respawn gives her a new one).
-    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     const int here = region_under();
-    if (here < 0) {
+    if (here < 0 && (routecraft_.owns_motion() || journey_active_ || climb_ >= 0 ||
+                     pipe_phase_ != PipePhase::Off || on_line_ || riding_ || held_ >= 0 ||
+                     bracing_structure())) {
         return false;
     }
+    // A new destination cannot take ownership away from hands or feet
+    // already executing a move, including a jump between supports.
+    if (climber_ != nullptr && (climber_->status() == traversal::Climber::Status::Running ||
+                                climber_->view().holding)) {
+        return false;
+    }
+    // Accept a free body's destination while she is airborne. A plan from
+    // her last real support can describe the work ahead, but remains
+    // provisional: region stays unknown and step_travel waits under gravity,
+    // then replans from her actual landing before executing any move.
+    std::vector<int> route;
+    const int from = here >= 0 ? here : travel_.region;
+    if (from >= 0) route = scanned_->plan(from, region);
+    if (here >= 0 && route.empty() && here != region) {
+        return false;
+    }
+    // Her hands on this body (a respawn gives her a new one). Invalid or
+    // unreachable requests above leave her existing controller untouched.
+    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     travel_avoid_.clear();
-    travel_edges_ = scanned_->plan(here, region, travel_avoid_);
-    if (travel_edges_.empty() && here != region) {
-        return false;
-    }
+    travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
     travel_.goal = region;
     travel_.region = here;
@@ -161,7 +177,13 @@ bool Matron::travel_to(const int region) {
     travel_.steps = static_cast<int>(travel_edges_.size());
     travel_walk_.clear();
     travel_walk_i_ = 0;
+    travel_wp_best_ = 1.0e9F;
+    travel_wp_stall_s_ = 0.0F;
+    travel_rerouted_ = false;
     travel_stuck_ = 0;
+    travel_still_at_ = Vec3(physics_.GetBodyInterface().GetPosition(body_)) - Vec3(0.0F, kStandCentre, 0.0F);
+    travel_still_s_ = 0.0F;
+    travel_yield_s_ = 0.0F;
     travel_wait_s_ = 0.0F;
     travel_replans0_ = travel_.replans;   // her counts run on; this journey's replans from here
     climber_->cancel();
@@ -249,6 +271,7 @@ void Matron::step_travel(const float dt) {
     const int under = region_under();
     if (under == travel_.goal) {
         travel_.region = under;
+        travel_.step = travel_.steps;   // support lost during arrival must replan before any further move
         const Vec3 velocity = bodies.GetLinearVelocity(body_);
         (void)climber_->stand(dt);
         const bool quiet = !climber_->view().holding && velocity.Length() < kArrivalStillMps &&
@@ -266,7 +289,7 @@ void Matron::step_travel(const float dt) {
     // Off the plan (a fall, a move that ended elsewhere, knocked off her
     // floor partway along a walk): when she is on her feet again, plan from
     // there.
-    if (travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
+    if (travel_.region < 0 || travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
         if (under < 0) {
             travel_wait_s_ -= dt;
             if (travel_wait_s_ < -kLandWaitS) {

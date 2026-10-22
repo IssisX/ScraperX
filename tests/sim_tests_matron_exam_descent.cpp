@@ -557,9 +557,48 @@ GapObstructionResult obstructed_gap(const bool after_plan) {
     return out;
 }
 
+void rejected_pending_requests() {
+    World w(1);
+    BodyInterface &bodies = w.physics.GetBodyInterface();
+    require(w.matron->travel_to(Vec3(w.course.world(w.course.bottom()))),
+            "descent request: initial own scan finds the destination");
+    const int goal = w.matron->journey().goal;
+    const int planned_steps = w.matron->journey().steps;
+    // Losing the starting support leaves her freely falling. This request
+    // must wait for a physical landing without committing a guessed floor.
+    bodies.RemoveBody(w.start_support);
+    (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+    require(w.matron->travel_to(goal), "descent request: a free airborne body accepts a pending destination");
+    const Matron::Journey pending = w.matron->journey();
+    const traversal::Climber *controller = w.matron->climber();
+    const RVec3 position = bodies.GetPosition(w.matron->body());
+    const Vec3 velocity = bodies.GetLinearVelocity(w.matron->body());
+    require(pending.active && pending.goal == goal && pending.region == -1 && pending.step == 0 &&
+                pending.steps == planned_steps && pending.steps > 0 &&
+                controller != nullptr && controller->status() == traversal::Climber::Status::Idle &&
+                !controller->view().holding && velocity.GetY() < 0.0F,
+            "descent request: a provisional plan owns no grip or unsupported region");
+    const int past_end = static_cast<int>(w.matron->scanned_routes()->regions().size());
+    for (const int invalid : {-1, past_end}) {
+        require(!w.matron->travel_to(invalid), "descent request: invalid destination is rejected");
+        const Matron::Journey after = w.matron->journey();
+        require(w.matron->climber() == controller && after.active == pending.active && after.goal == pending.goal &&
+                    after.region == pending.region && after.step == pending.step && after.steps == pending.steps &&
+                    after.moves_done == pending.moves_done && after.moves_failed == pending.moves_failed &&
+                    after.replans == pending.replans && after.arrivals == pending.arrivals && after.yields == pending.yields &&
+                    after.move == pending.move && after.last_failure == pending.last_failure &&
+                    (bodies.GetPosition(w.matron->body()) - position).Length() == 0.0 &&
+                    (bodies.GetLinearVelocity(w.matron->body()) - velocity).Length() == 0.0F &&
+                    bodies.GetGravityFactor(w.matron->body()) == 1.0F,
+                "descent request: rejection preserves the pending controller, journey and physical state");
+    }
+    std::cout << "PASS scraperx_sim matron descent pending request: free fall accepted, invalid destinations preserve state\n";
+}
+
 } // namespace
 
 void run_matron_exam_descent() {
+    rejected_pending_requests();
     int passed = 0;
     for (std::uint32_t seed = 1; seed <= kSeeds; ++seed) {
         const Course c = course_for(seed);

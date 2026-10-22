@@ -342,12 +342,12 @@ void test_pole() {
 // integrates its forces. The older, higher jump remains an independent
 // acceptance case below.
 void test_capped_launches() {
-    for (const int launch : {0, 1, 2}) {
+    for (const int launch : {0, 1, 2, 3}) {
         const bool dyno = launch == 1;
         ClimbWorld w;
         w.deck(6.0F);
         if (dyno) w.rungs(1.3F, 1.3F);
-        const float first = launch == 2 ? 3.13F : 2.55F;
+        const float first = launch == 3 ? 3.45F : launch == 2 ? 3.13F : 2.55F;
         w.rungs(first, 5.9F);
         w.spawn(RVec3(0, 0, dyno ? -0.5F : -0.6F));
         w.settle(0.3F);
@@ -382,7 +382,7 @@ void test_capped_launches() {
                 require(climber.view().leg_travel_m >= -0.001F &&
                             climber.view().leg_travel_m <= climber.limits().leg_travel_m + 0.001F,
                         "matron launch: drive stays within the named leg travel");
-                if (launch == 2 && climber.view().leg_travel_m > 0.15F) {
+                if (launch >= 2 && climber.view().leg_travel_m > 0.15F) {
                     require(!climber.supported(), "matron launch: extended legs do not widen ordinary standing probes");
                     extended_contact = true;
                 }
@@ -401,7 +401,8 @@ void test_capped_launches() {
             }
             if (climber.view().catches != 0) break;
         }
-        std::cout << "  matron capped " << (launch == 2 ? "full leg jump" : dyno ? "dyno" : "jump") << ": drive_ticks " << drive_ticks
+        std::cout << "  matron capped " << (launch == 3 ? "full leg jump" : launch == 2 ? "extended jump" : dyno ? "dyno" : "jump")
+                  << ": drive_ticks " << drive_ticks
                   << " travel " << travel << " power " << peak_power << " end_power " << peak_end_power
                   << " launches " << climber.view().launches
                   << " catches " << climber.view().catches << " takeoff_mps " << takeoff_speed
@@ -412,6 +413,10 @@ void test_capped_launches() {
         require(worst_step < 0.20F, "matron launch: no step moves her more than 0.20 m");
         if (dyno) require(climber.view().releases >= 1, "matron launch: the dyno releases its old handhold");
         if (launch == 2) {
+            require(extended_contact && travel > 0.20F,
+                    "matron launch: the intermediate bar still needs physical leg extension");
+        }
+        if (launch == 3) {
             require(extended_contact && travel > 0.35F && takeoff_speed >= climber.limits().launch_dv_mps - 0.01F,
                     "matron launch: a real extended leg reaches the measured take-off limit");
             require(peak_end_power > climber.limits().power_w - 1.0F,
@@ -455,6 +460,46 @@ void test_capped_launches() {
         w.actuate(climber);
         require(!climber.view().leg_driving && w.force(w.her).GetY() <= 0.5F,
                 "matron launch: removed support or cancellation cannot keep pushing upward");
+    }
+    // A planted sole belongs to the same physical member even while a
+    // rectangular tread yaws beneath it. The world's axis-aligned bounds
+    // change as it rotates; the tread's own geometry has not changed.
+    {
+        ClimbWorld w;
+        const BodyID tread = w.box(Vec3(1.0F, 0.2F, 0.5F), RVec3(0, 0.2F, -0.4F),
+                                   false, EMotionType::Dynamic, 1000.0F);
+        w.deck(6.4F);
+        w.rungs(2.95F, 6.1F);
+        w.spawn(RVec3(0, 0.4F, -0.6F));
+        w.settle(0.3F);
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        MoveSpec move = ladder_up(6.4F, 2.95F, 6.1F);
+        move.kind = MoveKind::JumpCatch;
+        move.start.SetY(0.4F);
+        climber.begin(move);
+        BodyInterface &bodies = w.physics.GetBodyInterface();
+        int drive_ticks = 0;
+        float yaw_turn = 0.0F;
+        bool planted = false;
+        for (int tick = 0; tick < 90 * 4 && climber.status() == Climber::Status::Running; ++tick) {
+            w.actuate(climber);
+            if (climber.view().leg_driving) {
+                planted = true;
+                ++drive_ticks;
+            }
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+            if (planted) {
+                // An external tread motor advances its rotation; the
+                // Matron is never moved or given velocity by the fixture.
+                yaw_turn += 0.035F;
+                bodies.SetRotation(tread, Quat::sRotation(Vec3::sAxisY(), yaw_turn), EActivation::Activate);
+            }
+            if (climber.view().launches > 0) break;
+        }
+        std::cout << "  matron rotating tread: drive_ticks " << drive_ticks << " yaw " << yaw_turn
+                  << " launches " << climber.view().launches << "\n";
+        require(planted && yaw_turn > 0.12F && drive_ticks >= 6 && climber.view().launches == 1,
+                "matron launch: planted leg follows the unchanged member on a rotating tread");
     }
     std::cout << "PASS scraperx_sim matron capped launches: force, power, stroke, reaction, support loss, cancellation\n";
 }
@@ -650,17 +695,21 @@ void test_dynamic_support() {
 // sideways force are not, and force never exceeds what is left.
 void test_power_budget() {
     using traversal::Budget;
-    Budget b{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 3.0F, 0)};
-    const Vec3 up = b.take(Vec3(0, 5000.0F, 0));   // 15 kW asked
-    require(std::abs(up.GetY() - 3000.0F) < 1.0F && b.power_left < 1.0F, "matron power: 9 kW at 3 m/s is 3000 N up");
+    const traversal::Limits limits;
+    constexpr float kSpeedMps = 5.0F;
+    Budget b{limits.total_force_n, 0.0F, limits.power_w, 0.0F, Vec3(0, kSpeedMps, 0)};
+    const Vec3 up = b.take(Vec3(0, limits.total_force_n, 0));
+    require(std::abs(up.GetY() - limits.power_w / kSpeedMps) < 1.0F && b.power_left < 1.0F,
+            "matron power: forward actuator force is limited by the power cap");
     const Vec3 side = b.take(Vec3(2000.0F, 0, 0));
     require(std::abs(side.GetX() - 2000.0F) < 1.0F, "matron power: force across her motion costs no power");
     const Vec3 brake = b.take(Vec3(0, -500.0F, 0));
     require(std::abs(brake.GetY() + 500.0F) < 1.0F, "matron power: braking is not power-limited");
-    require(b.used <= 5600.0F + 1.0F, "matron power: force total still capped");
-    Budget still{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3::sZero()};
+    require(b.used <= limits.total_force_n + 1.0F, "matron power: force total still capped");
+    Budget still{limits.total_force_n, 0.0F, limits.power_w, 0.0F, Vec3::sZero()};
     require(std::abs(still.take(Vec3(0, 5000.0F, 0)).GetY() - 5000.0F) < 1.0F, "matron power: at rest, force cap only");
-    std::cout << "  matron power: 9 kW cap clamps along-velocity force (3000 N at 3 m/s); sideways/braking free\n";
+    std::cout << "  matron power: " << limits.power_w << " W cap clamps along-velocity force (" << up.GetY()
+              << " N at " << kSpeedMps << " m/s); sideways/braking free\n";
 }
 // Gripping a moving bar: power is charged on her velocity relative to the
 // bar, so holding still on a bar that carries her (a lift, a swinging boom)
@@ -668,25 +717,26 @@ void test_power_budget() {
 // from her is charged for the speed she makes on it, not over the ground.
 void test_power_moving_bar() {
     using traversal::Budget;
-    const Vec3 bar(0, 5.0F, 0);   // the bar rising at 5 m/s
+    const traversal::Limits limits;
+    const Vec3 bar(0, 12.0F, 0);   // fast enough to expose wrong ground-relative charging
     const float weight = Matron::kMassKg * 9.81F;
     // Carried by it, still on it: her whole weight held, no power spent.
-    Budget carried{5600.0F, 0.0F, 9000.0F, 0.0F, bar - bar};
+    Budget carried{limits.total_force_n, 0.0F, limits.power_w, 0.0F, bar - bar};
     const Vec3 hold = carried.take(Vec3(0, weight, 0));
     require(std::abs(hold.GetY() - weight) < 1.0F && carried.power_used < 1.0F,
             "matron power: holding still on a bar that carries her costs no power");
-    // Charged over the ground instead, the same hold would be cut to 1800 N:
+    // Charged over the ground instead, the same hold would be cut below her weight:
     // the cap would drop her off any moving support.
-    Budget ground{5600.0F, 0.0F, 9000.0F, 0.0F, bar};
+    Budget ground{limits.total_force_n, 0.0F, limits.power_w, 0.0F, bar};
     require(ground.take(Vec3(0, weight, 0)).GetY() < weight - 300.0F,
             "matron power: (control) charged over the ground the hold would be cut");
-    // Climbing it at 2 m/s relative while it rises at 5: charged at 2 m/s.
-    Budget climbing{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 7.0F, 0) - bar};
-    const Vec3 pull = climbing.take(Vec3(0, 5000.0F, 0));
-    require(std::abs(pull.GetY() - 4500.0F) < 1.0F && climbing.power_used <= 9000.0F + 1.0F,
-            "matron power: climbing a moving bar is charged on her speed along it (9 kW at 2 m/s is 4500 N)");
+    // Climbing it at 5 m/s relative: power is charged on that speed.
+    Budget climbing{limits.total_force_n, 0.0F, limits.power_w, 0.0F, Vec3(0, 17.0F, 0) - bar};
+    const Vec3 pull = climbing.take(Vec3(0, limits.total_force_n, 0));
+    require(std::abs(pull.GetY() - limits.power_w / 5.0F) < 1.0F && climbing.power_used <= limits.power_w + 1.0F,
+            "matron power: climbing a moving bar charges positive power on relative speed");
     // A bar dropping away under her hands: braking against it is free.
-    Budget falling{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 0, 0) - Vec3(0, -3.0F, 0)};
+    Budget falling{limits.total_force_n, 0.0F, limits.power_w, 0.0F, Vec3(0, 0, 0) - Vec3(0, -3.0F, 0)};
     const Vec3 brake = falling.take(Vec3(0, -2000.0F, 0));
     require(std::abs(brake.GetY() + 2000.0F) < 1.0F && falling.power_used < 1.0F,
             "matron power: slowing herself against a falling bar is not power-limited");
@@ -697,9 +747,10 @@ void test_power_moving_bar() {
 // the braking rule. Power is charged only on positive work relative to the
 // hold; when the lip jerks up away from her she brakes against it (force up,
 // her velocity relative to it down), and that is capped by force alone. A
-// 2.5 m/s jerk takes her 220 kg well past 9 kW of braking to stay on, which
+// 3.2 m/s jerk takes her 220 kg beyond the stronger positive-power cap in
+// braking to stay on; that work is bounded by force alone, which
 // the power cap would have refused. She keeps her grip, arrives standing on
-// the moving deck, and her positive power never exceeds 9 kW.
+// the moving deck, and her positive power never exceeds the shared cap.
 void test_mantle_moving_ledge() {
     ClimbWorld w;
     const BodyID deck = w.box(Vec3(5, 0.8F, 3), RVec3(0, 0.8F, -4), false, EMotionType::Kinematic);
@@ -722,8 +773,8 @@ void test_mantle_moving_ledge() {
         if (lift_ticks < 0 && climber.view().holding && climber.phase() >= 3) lift_ticks = 0;
         if (lift_ticks >= 0) {
             ++lift_ticks;
-            const bool lifting = lift_ticks <= 18;   // 0.2 s at 2.5 m/s: the lip 0.5 m up
-            bodies.SetLinearVelocity(deck, Vec3(0, lifting ? 2.5F : 0.0F, 0));
+            const bool lifting = lift_ticks <= 18;   // 0.2 s at 3.2 m/s: the lip 0.64 m up
+            bodies.SetLinearVelocity(deck, Vec3(0, lifting ? 3.2F : 0.0F, 0));
             if (lifting && !climber.view().holding) held_through = false;
         }
         peak_power = std::max(peak_power, climber.view().power_w);
@@ -738,9 +789,11 @@ void test_mantle_moving_ledge() {
               << " W peak brake " << peak_brake << " W peak force " << peak_force << " N\n";
     require(lift_ticks > 18, "matron climb moving ledge: the deck was lifted while she held its lip");
     require(held_through, "matron climb moving ledge: she keeps her grip while the lip jerks up");
-    require(peak_power <= 9000.0F + 1.0F && peak_force <= 5600.0F + 1.0F,
-            "matron climb moving ledge: positive power within 9 kW, force within 5600 N");
-    require(peak_brake > 9000.0F, "matron climb moving ledge: braking against the lifted lip went past 9 kW (force-capped only)");
+    require(peak_power <= climber.limits().power_w + 1.0F &&
+                peak_force <= climber.limits().total_force_n + 1.0F,
+            "matron climb moving ledge: positive power and force within her shared Budget");
+    require(peak_brake > climber.limits().power_w,
+            "matron climb moving ledge: braking against a lifted lip can exceed positive-power cap (force-capped only)");
     require(st == Climber::Status::Done && std::abs(end - deck_top) < 0.06F,
             "matron climb moving ledge: she arrives standing on the deck that moved");
     std::cout << "PASS scraperx_sim matron climb moving ledge: brake_w=" << peak_brake << " power_w=" << peak_power << "\n";
@@ -915,6 +968,10 @@ void test_rung_gaps() {
         std::cout << "; up " << (up == Climber::Status::Done ? "done" : traversal::failure_name(climber.failure())) << " launches "
                   << climber.view().launches << " catches " << climber.view().catches << " misses " << climber.view().misses
                   << " peak " << climber.view().peak_force_n << " N " << climber.view().peak_power_w << " W";
+        if (up != Climber::Status::Done) {
+            std::cout << " phase " << climber.view().phase << " grips " << climber.view().grips
+                      << " releases " << climber.view().releases << " landed " << top;
+        }
         require(worst <= 0.20F, "matron rung gap: no tick moves her more than 0.20 m");
         require(climber.view().peak_power_w <= limits.power_w + 1.0F, "matron rung gap: power within the shared cap");
         if (up != Climber::Status::Done) {
@@ -1100,7 +1157,8 @@ void test_narrow_ledges() {
                   << r.lowest << " worst step " << r.worst_step << " peak " << r.peak_force << " N\n";
         require(r.joined, "matron narrow ledge: her scan joins the decks across the narrow ledge");
         require(r.arrived && r.lowest > 5.5F, "matron narrow ledge: along it and onto the far deck, never off it");
-        require(r.worst_step <= 0.20F && r.peak_force <= 5600.0F + 1.0F, "matron narrow ledge: no snapping, within her budget");
+        require(r.worst_step <= 0.20F && r.peak_force <= traversal::Limits{}.total_force_n + 1.0F,
+                "matron narrow ledge: no snapping, within her budget");
         ++crossed;
     }
     // A real slip: on the narrowest ledge, open both sides, a hard shove
