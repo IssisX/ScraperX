@@ -1325,11 +1325,19 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
         const float lx = p.max_x - p.min_x;
         const float lz = p.max_z - p.min_z;
         bool ok = false;
-        for (const float f : {0.0F, -0.35F, 0.35F, -0.15F, 0.15F, -0.45F, 0.45F}) {
-            const Vec3 s = lx >= lz ? Vec3(cx + f * lx, p.top, cz) : Vec3(cx, p.top, cz + f * lz);
-            if (capsule_free(physics, ignore, limits, s)) {
-                ok = true;
-                break;
+        // Along its long axis first, then across it too (a step whose back
+        // part is covered by the next step up is walkable at its front).
+        static constexpr float kAlong[7] = {0.0F, -0.35F, 0.35F, -0.15F, 0.15F, -0.45F, 0.45F};
+        static constexpr float kAcross[5] = {0.0F, -0.4F, 0.4F, -0.2F, 0.2F};
+        for (int a = 0; a < 5 && !ok; ++a) {
+            const float g = kAcross[a];
+            if (g != 0.0F && std::min(lx, lz) < 4.0F * limits.radius) continue;
+            for (const float f : kAlong) {
+                const Vec3 s = lx >= lz ? Vec3(cx + f * lx, p.top, cz + g * lz) : Vec3(cx + g * lx, p.top, cz + f * lz);
+                if (capsule_free(physics, ignore, limits, s)) {
+                    ok = true;
+                    break;
+                }
             }
         }
         if (ok) usable.push_back(p);
@@ -1737,7 +1745,12 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                         Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
                         Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
                         bool below_ok = horizontal(below - lip) <= 0.9F && capsule_free(physics, ignore, limits, below);
-                        bool above_ok = capsule_free(physics, ignore, limits, above);
+                        // Over the lip itself: her body at the edge (a rail along it stops her).
+                        const auto passage = [&](const Vec3 edge, const Vec3 inward) {
+                            return capsule_free(physics, ignore, limits, Vec3(edge.GetX(), hi.top, edge.GetZ()) + inward * 0.05F);
+                        };
+                        bool above_ok = capsule_free(physics, ignore, limits, above) &&
+                                        passage(lip, flat(above - lip).NormalizedOr(Vec3::sZero()));
                         if (!(below_ok && above_ok)) {
                             // Walk the high top's edges for a lip with the low top
                             // just outside it and room for her on both sides.
@@ -1758,7 +1771,8 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                                     if (d >= best) continue;
                                     const Vec3 bb(b.GetX(), lo.top, b.GetZ());
                                     const Vec3 aa = closest_on(hi, e - normals[side] * (limits.radius + 0.1F), limits.radius + 0.1F);
-                                    if (capsule_free(physics, ignore, limits, bb) && capsule_free(physics, ignore, limits, aa)) {
+                                    if (capsule_free(physics, ignore, limits, bb) && capsule_free(physics, ignore, limits, aa) &&
+                                        passage(e, -normals[side])) {
                                         best = d;
                                         lip = e;
                                         below = bb;
