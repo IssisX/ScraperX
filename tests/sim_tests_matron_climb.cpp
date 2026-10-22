@@ -222,12 +222,14 @@ void test_rung_failures() {
                 "matron climb: a member that is no longer the one she took is no hold");
         require(max_after < at_move + 0.3F && std::abs(landed) < 0.05F, "matron climb: the lost hold drops her to the floor");
     }
-    // A blocked mantle: a cabinet where she would stand over the head.
+    // A blocked mantle: a cabinet where she would stand over the head. (A
+    // strip 0.4 m deep in front of it is a narrow ledge she now stands on;
+    // 0.15 m is too little for her soles.)
     {
         ClimbWorld w;
         w.deck(4.0F);
         w.rungs(0.3F, 3.9F);
-        w.box(Vec3(1.5F, 1.2F, 0.8F), RVec3(0, 4.0F + 1.2F, -2.2F));   // a cabinet 0.4 m behind the lip
+        w.box(Vec3(1.5F, 1.2F, 0.8F), RVec3(0, 4.0F + 1.2F, -1.95F));   // a cabinet 0.15 m behind the lip
         w.spawn(RVec3(0, 0, 1.0F));
         Climber climber(w.physics, w.her, {w.her, BodyID()});
         climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
@@ -235,7 +237,9 @@ void test_rung_failures() {
         const auto st = w.run(climber, 30.0F, [&](int) { max_feet = std::max(max_feet, w.feet()); });
         const float landed = w.settle();
         std::cout << "  matron climb blocked mantle: " << traversal::failure_name(climber.failure()) << " highest feet " << max_feet << "\n";
-        require(st == Climber::Status::Failed && climber.failure() == Failure::BlockedSweep,
+        // Too little room for her soles in front of it, the lip is no hold to
+        // mantle on (or, reached anyway, her sweep is blocked).
+        require(st == Climber::Status::Failed && (climber.failure() == Failure::BlockedSweep || climber.failure() == Failure::NoHold),
                 "matron climb: her capsule does not fit over the head: she does not go");
         require(max_feet < 4.0F && std::abs(landed) < 0.05F, "matron climb: never through the cabinet; down to the floor");
     }
@@ -432,7 +436,7 @@ void test_drops_and_mantle() {
         for (int blocked = 0; blocked < 2; ++blocked) {
             ClimbWorld w;
             w.deck(1.6F);
-            if (blocked) w.box(Vec3(1.5F, 1.0F, 0.8F), RVec3(0, 1.6F + 1.0F, -2.4F));   // a cabinet 0.6 m behind the lip
+            if (blocked) w.box(Vec3(1.5F, 1.0F, 0.8F), RVec3(0, 1.6F + 1.0F, -1.9F));   // a cabinet 0.1 m behind the lip (0.6 m is room enough to stand in now)
             w.spawn(RVec3(0, 0, 0.5F));
             Climber climber(w.physics, w.her, {w.her, BodyID()});
             MoveSpec mantle;
@@ -448,7 +452,8 @@ void test_drops_and_mantle() {
             std::cout << "  matron climb mantle" << (blocked ? " (blocked)" : "") << ": " << int(st) << " ("
                       << traversal::failure_name(climber.failure()) << ") feet " << end << "\n";
             if (blocked) {
-                require(st == Climber::Status::Failed && climber.failure() == Failure::BlockedSweep && highest < 0.1F,
+                require(st == Climber::Status::Failed &&
+                            (climber.failure() == Failure::BlockedSweep || climber.failure() == Failure::NoHold) && highest < 0.1F,
                         "matron climb: a mantle her capsule does not fit is not tried");
             } else {
                 require(st == Climber::Status::Done && std::abs(end - 1.6F) < 0.05F, "matron climb: a 1.6 m mantle");
@@ -873,7 +878,142 @@ void test_pole_head_clearance() {
     std::cout << "PASS scraperx_sim matron pole head clearance\n";
 }
 
+// Narrow ledges she has never seen (seeded): a board 0.20 to 0.40 m wide
+// over a 6 m drop, from one deck to another a step higher or lower, open
+// both sides or along a wall. Her scan joins the decks across it; her walk
+// finds it, steps onto it, shuffles along it balanced over it, and steps
+// off onto the far deck. Nothing names a board: a narrow floor is a floor.
+struct NarrowRun {
+    bool joined = false;
+    bool arrived = false;
+    float worst_step = 0.0F;
+    float lowest = 0.0F;
+    float peak_force = 0.0F;
+};
+NarrowRun narrow_ledge_run(const float width, const float rise, const float length, const bool wall, const float shove_mps,
+                           const std::uint32_t seed) {
+    (void)seed;
+    ClimbWorld w;
+    const float base = 6.0F;   // the decks stand 6 m over the floor
+    w.box(Vec3(2.0F, 0.5F * base, 2.0F), RVec3(0, 0.5F * base, -2.0F));                       // deck A: z -4..0, top 6
+    const float far = length;
+    w.box(Vec3(2.0F, 0.5F * (base + rise), 2.0F), RVec3(0, 0.5F * (base + rise), far + 2.0F));  // deck B: from z = length
+    const float board_top = base + 0.5F * rise;
+    w.box(Vec3(0.5F * width, 0.1F, 0.5F * far + 0.1F), RVec3(0.4F, board_top - 0.1F, 0.5F * far));
+    if (wall) w.box(Vec3(0.1F, 2.0F, 0.5F * far), RVec3(0.4F + 0.5F * width + 0.1F, board_top + 2.0F, 0.5F * far));
+    w.spawn(RVec3(0.4F, base, -1.0F));
+    w.settle(0.3F);
+    const traversal::Ignore ignore{w.her, BodyID()};
+    traversal::AffordanceMap map;
+    map.scan(w.physics, AABox(Vec3(-4, -1, -6), Vec3(4, base + 4.0F, far + 6.0F)), ignore);
+    NarrowRun r;
+    const Vec3 goal(0.4F, base + rise, far + 1.2F);
+    r.joined = map.region_at(Vec3(0.4F, base, -1.0F)) >= 0 && map.region_at(Vec3(0.4F, base, -1.0F)) == map.region_at(goal);
+    Climber climber(w.physics, w.her, ignore);
+    std::vector<Vec3> path = traversal::grid_walk(w.physics, ignore, climber.limits(), Vec3(0.4F, base, -1.0F), goal);
+    if (path.empty()) return r;
+    std::size_t wp = 0;
+    RVec3 last = w.at();
+    r.lowest = w.feet();
+    bool shoved = false;
+    for (int i = 0; i < 90 * 40; ++i) {
+        const RVec3 at = w.at();
+        const Vec3 f(float(at.GetX()), w.feet(), float(at.GetZ()));
+        while (wp + 1 < path.size() && Vec3(path[wp] - f).GetX() * Vec3(path[wp] - f).GetX() +
+                                               Vec3(path[wp] - f).GetZ() * Vec3(path[wp] - f).GetZ() < 0.3F * 0.3F) ++wp;
+        r.peak_force = std::max(r.peak_force, climber.walk_between(ClimbWorld::dt, path[wp], 1.2F));
+        if (!shoved && shove_mps > 0.0F && float(at.GetZ()) > 0.5F * far) {
+            w.physics.GetBodyInterface().AddImpulse(w.her, Vec3(-1.0F, 0, 0) * (Matron::kMassKg * shove_mps));
+            shoved = true;
+        }
+        w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+        const RVec3 now = w.at();
+        r.worst_step = std::max(r.worst_step, float((now - last).Length()));
+        last = now;
+        r.lowest = std::min(r.lowest, w.feet());
+        if (float(now.GetZ()) > far + 0.8F && std::abs(w.feet() - (base + rise)) < 0.06F) {
+            r.arrived = true;
+            break;
+        }
+        if (w.feet() < 1.0F) break;   // fell off
+    }
+    return r;
+}
+
+void test_narrow_ledges() {
+    std::uint32_t rng = 0x6C8E9CF5U;
+    const auto uniform = [&](const float lo, const float hi) {
+        rng = rng * 1664525U + 1013904223U;
+        return lo + (hi - lo) * float(rng >> 8) / float(1U << 24);
+    };
+    int crossed = 0;
+    for (int run = 0; run < 8; ++run) {
+        const float width = 0.20F + 0.20F * float(run) / 7.0F + uniform(-0.01F, 0.01F);   // across 0.20 to 0.40
+        const float rise = uniform(-0.30F, 0.30F);
+        const float length = uniform(1.5F, 3.0F);
+        const bool wall = run % 2 == 1;
+        const NarrowRun r = narrow_ledge_run(width, rise, length, wall, 0.0F, rng);
+        std::cout << "  matron narrow ledge run " << run << ": width " << width << " rise " << rise << " length " << length
+                  << (wall ? " along a wall" : " open") << ": joined " << r.joined << " arrived " << r.arrived << " lowest "
+                  << r.lowest << " worst step " << r.worst_step << " peak " << r.peak_force << " N\n";
+        require(r.joined, "matron narrow ledge: her scan joins the decks across the narrow ledge");
+        require(r.arrived && r.lowest > 5.5F, "matron narrow ledge: along it and onto the far deck, never off it");
+        require(r.worst_step <= 0.20F && r.peak_force <= 5600.0F + 1.0F, "matron narrow ledge: no snapping, within her budget");
+        ++crossed;
+    }
+    // A real slip: on the narrowest ledge, open both sides, a hard shove
+    // across it. Her balance is force-capped: she goes off and falls (alive
+    // or not is the fall's business), never pulled back by magic.
+    const NarrowRun slip = narrow_ledge_run(0.20F, 0.0F, 3.0F, false, 3.0F, 1U);
+    std::cout << "  matron narrow ledge shove: arrived " << slip.arrived << " lowest " << slip.lowest << "\n";
+    require(!slip.arrived && slip.lowest < 5.0F, "matron narrow ledge: a shove past her balance is a real slip off the ledge");
+    const NarrowRun nudge = narrow_ledge_run(0.30F, 0.0F, 3.0F, false, 0.4F, 2U);
+    std::cout << "  matron narrow ledge nudge: arrived " << nudge.arrived << " lowest " << nudge.lowest << "\n";
+    require(nudge.arrived && nudge.lowest > 5.5F, "matron narrow ledge: a small nudge she balances out and goes on");
+    // Onto a narrow ledge from the floor: a shelf 0.20 to 0.40 m deep on a
+    // wall, 1.4 to 2.0 m up. Her body cannot stand square on it (the wall);
+    // she mantles onto it leaning off the wall, her soles on the shelf.
+    for (int run = 0; run < 4; ++run) {
+        const float depth = 0.20F + 0.066F * float(run);
+        const float h = uniform(1.4F, 2.0F);
+        ClimbWorld w;
+        w.box(Vec3(2.0F, 2.5F, 0.2F), RVec3(0, 2.5F, -0.2F - depth));            // the wall: face at z = -depth
+        w.box(Vec3(1.5F, 0.1F, 0.5F * depth), RVec3(0, h - 0.1F, -0.5F * depth));   // the shelf: z -depth..0, top h
+        w.spawn(RVec3(0, 0, 1.0F));
+        w.settle(0.3F);
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        MoveSpec m;
+        m.kind = MoveKind::Mantle;
+        m.start = Vec3(0, 0, 0.45F);
+        m.goal = Vec3(0, h, -0.5F * depth);
+        m.goal_top = h;
+        m.out = Vec3(0, 0, 1);
+        climber.begin(m);
+        RVec3 last = w.at();
+        float worst = 0.0F;
+        const auto st = w.run(climber, 20.0F, [&](int) {
+            const RVec3 now = w.at();
+            worst = std::max(worst, float((now - last).Length()));
+            last = now;
+        });
+        // Standing there (her balance working, nothing else): 2 s.
+        for (int i = 0; i < 180; ++i) {
+            const RVec3 at = w.at();
+            (void)climber.walk_between(ClimbWorld::dt, Vec3(float(at.GetX()), w.feet(), float(at.GetZ())), 0.0F);
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+        }
+        const float feet = w.feet();
+        std::cout << "  matron narrow shelf mantle: depth " << depth << " h " << h << " -> " << int(st) << " ("
+                  << traversal::failure_name(climber.failure()) << ") feet " << feet << " worst step " << worst << "\n";
+        require(st == Climber::Status::Done && std::abs(feet - h) < 0.06F && worst <= 0.20F,
+                "matron narrow ledge: she mantles onto a narrow shelf and stays on it");
+    }
+    std::cout << "PASS scraperx_sim matron narrow ledges: crossed " << crossed << " of 8\n";
+}
+
 } // namespace
+
+void run_matron_narrow() { test_narrow_ledges(); }
 
 void run_matron_climb() {
     test_power_budget();
@@ -889,6 +1029,7 @@ void run_matron_climb() {
     test_wall_across_step();
     test_rung_gaps();
     test_pole_head_clearance();
+    test_narrow_ledges();
 }
 
 namespace {

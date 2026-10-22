@@ -147,6 +147,10 @@ int main() {
         run_matron_climb_scan();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-narrow") {
+        run_matron_narrow();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-board") {
         run_matron_climb_board();
         return EXIT_SUCCESS;

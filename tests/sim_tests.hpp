@@ -856,6 +856,7 @@ void run_matron_pace();
 void run_matron_climb();
 void run_matron_climb_scan();
 void run_matron_climb_board();
+void run_matron_narrow();
 void run_matron_unstick();
 void run_matron_grab();
 void run_matron_arm();

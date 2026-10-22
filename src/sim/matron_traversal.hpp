@@ -349,7 +349,7 @@ public:
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
 
 private:
-    void build_regions(const Limits &limits);
+    void build_regions(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_edges(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     [[nodiscard]] bool capsule_free(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits,
                                     JPH::Vec3 feet);

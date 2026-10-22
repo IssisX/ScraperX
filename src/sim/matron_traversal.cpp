@@ -421,6 +421,47 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         }
     }
     Vec3 want = (want_dir_v - v) * (limits_.mass_kg * 8.0F);
+    // Balance on a narrow floor (a board, a ledge): no floor straight under
+    // her middle but some under her soles to one side, she keeps her middle
+    // over it (against a wall beside it, the wall takes the push), slowed to
+    // a shuffle. Her feet's force is capped like any other: pushed harder
+    // than that across it, she goes off it.
+    {
+        const SteelFilter filter(ignore_);
+        const float reach = limits_.center_above_feet() + limits_.step_max_m + 0.05F;   // a step down is floor too
+        const auto floor_under = [&](const Vec3 off, float &y) {
+            RayCastResult hit;
+            const RRayCast ray(c + off, Vec3(0.0F, -reach, 0.0F));
+            if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) return false;
+            y = float(ray.GetPointOnRay(hit.mFraction).GetY());
+            return true;
+        };
+        float y = 0.0F;
+        // Stepping across to floor her goal lies on (a board's end over a
+        // drop, the next plank) is a step, not falling off: no balancing back.
+        const bool stepping_on = d > 0.05F && floor_under(to * (std::min(d, 0.3F) / d), y);
+        if (!stepping_on && !floor_under(Vec3::sZero(), y)) {
+            Vec3 lean = Vec3::sZero();
+            int hits = 0;
+            for (int a = 0; a < 8; ++a) {
+                const float ang = 0.785398F * float(a);
+                for (const float r : {0.08F, 0.16F, 0.24F}) {
+                    const Vec3 off(r * std::cos(ang), 0.0F, r * std::sin(ang));
+                    if (floor_under(off, y)) {
+                        lean += off;
+                        ++hits;
+                    }
+                }
+            }
+            if (hits > 0) {
+                const Vec3 to_floor = lean / float(hits);
+                const Vec3 across = to_floor.NormalizedOr(Vec3::sZero());
+                const Vec3 along = want_dir_v - across * want_dir_v.Dot(across);
+                want = ((along.Length() > 0.5F ? along.Normalized() * 0.5F : along) - v) * (limits_.mass_kg * 8.0F) +
+                       to_floor * (limits_.mass_kg * 40.0F) - across * (v.Dot(across) * limits_.mass_kg * 10.0F);
+            }
+        }
+    }
     if (want.Length() > limits_.foot_force_n) {
         want = want.Normalized() * limits_.foot_force_n;
     }
@@ -673,8 +714,22 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
 Climber::Status Climber::begin_mantle_from_hang() {
     const Vec3 in = flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
     const float top = float(lip_world_.GetY());
-    const RVec3 over = lip_world_ + in * (limits_.radius + 0.08F) + Vec3(0.0F, limits_.center_above_feet() + 0.06F, 0.0F);
-    const RVec3 stand = RVec3(spec_.goal.GetX(), top + limits_.center_above_feet() + 0.04F, spec_.goal.GetZ());
+    RVec3 over = lip_world_ + in * (limits_.radius + 0.08F) + Vec3(0.0F, limits_.center_above_feet() + 0.06F, 0.0F);
+    RVec3 stand = RVec3(spec_.goal.GetX(), top + limits_.center_above_feet() + 0.04F, spec_.goal.GetZ());
+    if (!capsule_free(stand) || !capsule_free(over)) {
+        // A narrow ledge (a shelf on a wall): no room to stand square on it,
+        // so she stands leaning off the wall, her middle back toward the lip
+        // and out past it no farther than her soles still bear on it.
+        for (float k = limits_.radius + 0.04F; k >= -(limits_.radius - 0.05F); k -= 0.04F) {
+            const RVec3 lean = lip_world_ + in * k + Vec3(0.0F, limits_.center_above_feet() + 0.06F, 0.0F);
+            if (capsule_free(lean)) {
+                over = lean;
+                stand = RVec3(lean.GetX(), top + limits_.center_above_feet() + 0.04F, lean.GetZ());
+                spec_.goal = Vec3(float(lean.GetX()), top, float(lean.GetZ()));
+                break;
+            }
+        }
+    }
     if (!capsule_free(over) || !capsule_free(stand)) {
         fail(Failure::BlockedSweep);
         return status_;
@@ -1517,7 +1572,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             poles_.push_back({mid.GetX(), mid.GetZ(), std::max(sx, sz), leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
             continue;
         }
-        if (leaf.axis_aligned && std::min(sx, sz) >= 0.28F) {
+        if (leaf.axis_aligned && std::min(sx, sz) >= 0.18F) {   // a board or ledge down to 0.18 m: her soles fit
             Patch p;
             p.body = leaf.body;
             p.sub = leaf.sub;
@@ -1586,7 +1641,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
         // any gap her capsule fits, so sweep across it in 5 cm steps.
         for (int axis = 0; axis < 2 && !ok; ++axis) {
             const float half = 0.5F * (axis == 0 ? lx : lz);
-            for (float g = 0.05F; !ok && g < half - limits.radius + 0.3F; g += 0.05F) {
+            for (float g = 0.05F; !ok && g < half + limits.radius - 0.05F; g += 0.05F) {   // out to leaning off its edge, her soles still on it
                 for (const float side : {-1.0F, 1.0F}) {
                     const Vec3 s = axis == 0 ? Vec3(cx + side * g, p.top, cz) : Vec3(cx, p.top, cz + side * g);
                     if (capsule_free(physics, ignore, limits, s)) {
@@ -1654,7 +1709,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     }
     stats_.ladders = static_cast<std::uint32_t>(ladders_.size());
 
-    build_regions(limits);
+    build_regions(physics, ignore, limits);
     build_edges(physics, ignore, limits);
     stats_.regions = static_cast<std::uint32_t>(regions_.size());
     stats_.edges = static_cast<std::uint32_t>(edges_.size());
@@ -1662,7 +1717,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     stats_.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
 }
 
-void AffordanceMap::build_regions(const Limits &limits) {
+void AffordanceMap::build_regions(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits) {
     // Tops join when they are a step apart and touch in plan.
     const float cell = 4.0F;
     std::unordered_map<long long, std::vector<int>> grid;
@@ -1673,6 +1728,24 @@ void AffordanceMap::build_regions(const Limits &limits) {
             for (int z = cell_of(p.min_z - 0.3F, cell); z <= cell_of(p.max_z + 0.3F, cell); ++z)
                 grid[cell_key(x, y, z)].push_back(static_cast<int>(i));
     }
+    // A narrow top (a board, a wall's top) joins its neighbor only where
+    // she can stand across the seam between them: a wall's top that only
+    // meets a step at a corner under a ledge is not a way onto it.
+    const auto seam_open = [&](const Patch &a, const Patch &b) {
+        const float narrow = 0.28F;
+        if (std::min(a.max_x - a.min_x, a.max_z - a.min_z) >= narrow && std::min(b.max_x - b.min_x, b.max_z - b.min_z) >= narrow) {
+            return true;
+        }
+        const float m = 0.1F;   // her soles on both
+        const float x0 = std::max(a.min_x, b.min_x) - m, x1 = std::min(a.max_x, b.max_x) + m;
+        const float z0 = std::max(a.min_z, b.min_z) - m, z1 = std::min(a.max_z, b.max_z) + m;
+        const float y = std::max(a.top, b.top);
+        for (float x = x0; x <= x1 + 1.0e-4F; x += 0.1F)
+            for (float z = z0; z <= z1 + 1.0e-4F; z += 0.1F) {
+                if (capsule_free(physics, ignore, limits, Vec3(x, y, z))) return true;
+            }
+        return false;
+    };
     UnionFind uf(patches_.size());
     patch_links_.assign(patches_.size(), {});
     for (std::size_t i = 0; i < patches_.size(); ++i) {
@@ -1686,7 +1759,7 @@ void AffordanceMap::build_regions(const Limits &limits) {
                     for (const int j : it->second) {
                         if (j <= static_cast<int>(i)) continue;
                         const Patch &q = patches_[static_cast<std::size_t>(j)];
-                        if (std::abs(q.top - p.top) <= limits.step_max_m && gap_xz(p, q) <= 0.25F) {
+                        if (std::abs(q.top - p.top) <= limits.step_max_m && gap_xz(p, q) <= 0.25F && seam_open(p, q)) {
                             uf.join(static_cast<int>(i), j);
                             auto &li = patch_links_[i];
                             if (std::find(li.begin(), li.end(), j) == li.end()) {
@@ -2292,33 +2365,64 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     // rise clear (a step's riser is under her stride, not in her way).
     const float lift = limits.step_max_m;
     const CapsuleShape capsule(limits.half_height - 0.5F * lift, limits.radius - 0.04F);
-    const auto stand = [&](const int i, const int k, const float near_y, float &feet) {
-        const RVec3 top(x0 + cell * float(i), near_y + limits.step_max_m + 0.05F, z0 + cell * float(k));
+    // A floor for her feet near a grid point, and where her body stands on
+    // it: under the point, or (a narrow board, a ledge) under her soles a
+    // little to one side; her body over it, or leaning off a wall beside it
+    // as far as her soles still bear on it (radius - 0.05 from the foot).
+    const auto stand = [&](const int i, const int k, const float near_y, float &feet, float &bx, float &bz) {
+        const float px = x0 + cell * float(i), pz = z0 + cell * float(k);
         const float depth = limits.step_max_m + 1.15F;
-        RayCastResult hit;
-        if (!physics.GetNarrowPhaseQuery().CastRay(RRayCast(top, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things)) {
-            return false;
+        bool found = false;
+        float fx = px, fz = pz;
+        static constexpr float kFoot[5][2] = {{0, 0}, {0.15F, 0}, {-0.15F, 0}, {0, 0.15F}, {0, -0.15F}};
+        for (const auto &o : kFoot) {
+            const RVec3 top(px + o[0], near_y + limits.step_max_m + 0.05F, pz + o[1]);
+            RayCastResult hit;
+            if (!physics.GetNarrowPhaseQuery().CastRay(RRayCast(top, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things)) {
+                continue;
+            }
+            if (hit.mFraction <= 1.0e-4F) {
+                return false;   // the point is inside something solid (a wall's body): not a place for her
+            }
+            feet = float(top.GetY()) - hit.mFraction * depth;
+            fx = px + o[0];
+            fz = pz + o[1];
+            found = true;
+            break;
         }
-        if (hit.mFraction <= 1.0e-4F) {
-            return false;   // the probe starts inside something solid (a wall's body): no floor there
-        }
-        feet = float(top.GetY()) - hit.mFraction * depth;
+        if (!found) return false;
+        bx = fx;
+        bz = fz;
         // At the move's own start the move's approach is the judge (it gets
         // her there by contact, or fails): floor is enough.
-        if (std::hypot(float(top.GetX()) - to.GetX(), float(top.GetZ()) - to.GetZ()) <= 1.0F) {
+        if (std::hypot(px - to.GetX(), pz - to.GetZ()) <= 1.0F) {
             return true;
         }
-        CollideShapeSettings settings;
-        settings.mActiveEdgeMode = EActiveEdgeMode::CollideOnlyWithActive;
-        AnyHitCollisionCollector<CollideShapeCollector> collector;
-        const RVec3 c(top.GetX(), feet + lift + 0.02F + (limits.radius - 0.04F) + (limits.half_height - 0.5F * lift), top.GetZ());
-        physics.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1.0F), RMat44::sTranslation(c), settings,
-                                                   RVec3::sZero(), collector, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things);
-        return !collector.HadHit();
+        const auto body_free = [&](const float x, const float z) {
+            CollideShapeSettings settings;
+            settings.mActiveEdgeMode = EActiveEdgeMode::CollideOnlyWithActive;
+            AnyHitCollisionCollector<CollideShapeCollector> collector;
+            const RVec3 c(x, feet + lift + 0.02F + (limits.radius - 0.04F) + (limits.half_height - 0.5F * lift), z);
+            physics.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1.0F), RMat44::sTranslation(c), settings,
+                                                       RVec3::sZero(), collector, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things);
+            return !collector.HadHit();
+        };
+        if (body_free(fx, fz)) return true;
+        const float lean = limits.radius - 0.05F;
+        static constexpr float kLean[8][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {0.5F, 0}, {-0.5F, 0}, {0, 0.5F}, {0, -0.5F}};
+        for (const auto &o : kLean) {
+            if (body_free(fx + o[0] * lean, fz + o[1] * lean)) {
+                bx = fx + o[0] * lean;
+                bz = fz + o[1] * lean;
+                return true;
+            }
+        }
+        return false;
     };
     struct Node {
         float g = std::numeric_limits<float>::max();
         float feet = 0.0F;
+        float bx = 0.0F, bz = 0.0F;   // where her body stands for this point
         int via = -1;
         bool closed = false;
     };
@@ -2327,7 +2431,7 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     const auto [gi, gk] = cell_of(to);
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<Item>> open;
-    nodes[key(si, sk)] = Node{0.0F, from.GetY(), -1, false};
+    nodes[key(si, sk)] = Node{0.0F, from.GetY(), from.GetX(), from.GetZ(), -1, false};
     open.push({0.0F, key(si, sk)});
     const auto h = [&](const int i, const int k) { return cell * std::hypot(float(i - gi), float(k - gk)); };
     int expanded = 0;
@@ -2363,17 +2467,34 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                 auto it = nodes.find(m);
                 if (it != nodes.end() && it->second.closed) continue;
                 float feet = 0.0F;
+                float bx = 0.0F, bz = 0.0F;
                 // Up a step at most; down as far as she steps off a box (a
                 // drop under 1 m she just walks off).
-                if (!stand(i, k, cur_feet, feet) || feet - cur_feet > limits.step_max_m + 0.08F ||
+                if (!stand(i, k, cur_feet, feet, bx, bz) || feet - cur_feet > limits.step_max_m + 0.08F ||
                     cur_feet - feet > 1.0F) {
                     continue;   // no floor for her there from here (maybe from another side)
+                }
+                {
+                    // Leaning lets two neighboring cells put her body on two
+                    // sides of a thin wall: the step between them must be open
+                    // at her hips.
+                    const Node &cn = nodes[n];
+                    const float hy = std::max(cur_feet, feet) + limits.step_max_m + 0.25F;
+                    const RVec3 a(cn.bx, hy, cn.bz);
+                    const Vec3 d(bx - cn.bx, 0.0F, bz - cn.bz);
+                    RayCastResult hh;
+                    if (d.LengthSq() > 1.0e-6F &&
+                        physics.GetNarrowPhaseQuery().CastRay(RRayCast(a, d), hh, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things)) {
+                        continue;
+                    }
                 }
                 const float g = cur_g + cell * ((di != 0 && dk != 0) ? 1.4142F : 1.0F);
                 Node &next = nodes[m];
                 if (g < next.g) {
                     next.g = g;
                     next.feet = feet;
+                    next.bx = bx;
+                    next.bz = bz;
                     next.via = n;
                     open.push({g + h(i, k), m});
                 }
@@ -2384,7 +2505,7 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     if (found < 0 && max_nodes > 2 && nearest_h <= 1.5F) found = nearest;   // the goal's own spot crowded: as near as she fits
     if (found < 0) return path;
     for (int n = found; n >= 0; n = nodes[n].via) {
-        path.push_back(Vec3(x0 + cell * float(n % nx), nodes[n].feet, z0 + cell * float(n / nx)));
+        path.push_back(Vec3(nodes[n].bx, nodes[n].feet, nodes[n].bz));
     }
     std::reverse(path.begin(), path.end());
     // Keep the turns only (straight runs collapse).
