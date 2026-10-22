@@ -53,11 +53,13 @@ bool Matron::climb_of(const int edge, Climb &out) const noexcept {
     const auto &regions = scanned_->regions();
     const traversal::MoveSpec &m = e.spec;
     const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
-    const float standoff = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).Length();
     const float head = regions[static_cast<std::size_t>(e.to)].top;
+    // She hangs against the rungs, not where she stood at the foot: her radius and a hand's clearance off the line.
+    const float hang = kRadius + 0.05F;
     // The lip is the scan's own head patch, not the region's average: a bridge or fascia can stand above its deck.
-    out = {m.start.GetX(), m.start.GetZ(), regions[static_cast<std::size_t>(e.from)].top, head, face.GetX(),
-           face.GetZ(), m.goal.GetX(), m.goal.GetZ(), true, std::clamp(standoff, 0.2F, 0.6F), m.goal_top};
+    out = {m.line.GetX() - face.GetX() * hang, m.line.GetZ() - face.GetZ() * hang,
+           regions[static_cast<std::size_t>(e.from)].top, head, face.GetX(), face.GetZ(), m.goal.GetX(), m.goal.GetZ(),
+           true, hang, m.goal_top};
     return true;
 }
 
