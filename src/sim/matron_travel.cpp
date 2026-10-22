@@ -76,7 +76,13 @@ int Matron::nearest_climb(const float x, const float z, const float floor_y, con
     float best_d = std::numeric_limits<float>::max();
     for (int i = 0; i < climb_count(); ++i) {
         Climb c{};
-        if (!climb_of(i, c) || std::abs((down ? c.head_y : c.foot_y) - floor_y) > 0.6F) {
+        if (!climb_of(i, c)) {
+            continue;
+        }
+        // A climb's top floor can be its deck or the bridge over it.
+        const float gap = down ? std::min(std::abs(c.head_y - floor_y), std::abs(c.lip_y - floor_y))
+                               : std::abs(c.foot_y - floor_y);
+        if (gap > 0.6F) {
             continue;
         }
         const float d = down ? std::hypot(x - c.top_x, z - c.top_z) : std::hypot(x - c.x, z - c.z);
