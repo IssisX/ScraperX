@@ -31,6 +31,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routecraft") { run_matron_routecraft(); return EXIT_SUCCESS; }
+    // Observational only: excluded from the default suite and from ctest.
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-descent") {
+        run_matron_exam_descent();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;
