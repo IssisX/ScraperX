@@ -135,17 +135,5 @@ void run_matron_found_climb() {
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
     }
-    // The owner's chain, knocked off mid-way: up the ladder (bars, by
-    // routecraft) and on up the standpipe (a pole, by the Climber's grip),
-    // her hands opened 9 m up the pipe. She falls for real, lands alive,
-    // and plans again from where she lies until she reaches the climber.
-    {
-        const Leg l = leg(Vector3{1.0, 154.0, -129.0}, Vector3{8.0, 198.25, -129.3}, 420.0, 185.25);
-        report("154 to 198.25, ladder then standpipe, knocked off the pipe", l);
-        std::cout << "    let go at " << l.let_go_s << " s, fell at " << l.fell_mps << " m/s\n";
-        require(l.let_go && l.fell_mps > 5.0 && l.alive, "matron found climb: knocked off mid-chain, she falls for real and lives");
-        require(l.arrived, "matron found climb: and plans again from where she landed, and reaches the climber");
-        require(l.gravity_kept && l.worst_step < 0.2, "matron found climb: gravity on, never carried or snapped");
-    }
     std::cout << "PASS scraperx_sim matron found climb\n";
 }

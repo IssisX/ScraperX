@@ -379,10 +379,11 @@ bool Matron::start_journey(const RVec3 at) {
     if (plan.empty()) {
         return false;
     }
-    // A column that failed under her is left alone by this plan too.
+    // A column that failed under her is left alone by this plan too (one the
+    // bar climber only refused may still serve the Climber's own moves).
     for (const int e : plan) {
         const traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
-        if (edge.kind != traversal::MoveKind::Walk && climb_blocked(cell_key(edge.spec.line.GetX(), edge.spec.line.GetZ()))) {
+        if (edge.kind != traversal::MoveKind::Walk && column_blocked_near(edge.spec.line.GetX(), edge.spec.line.GetZ())) {
             return false;
         }
     }

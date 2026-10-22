@@ -270,7 +270,7 @@ void Matron::only_way_for_test(const std::size_t index) {
             routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
         }
     }
-    found_climbs_off_ = true;   // that way alone: none of her own either
+    found_climbs_off_ = index < routes_.edge_count();   // one way alone: none of her own either (no way named: her own only)
 }
 
 void Matron::let_go_for_test() {
