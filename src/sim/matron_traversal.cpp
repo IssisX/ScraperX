@@ -398,6 +398,18 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         };
         if (!floor_ahead(want_v) || (v.Length() > 0.3F && !floor_ahead(v))) {
             want_dir_v = floor_ahead(want_v) ? want_v * 0.3F : Vec3::sZero();
+            if (want_dir_v.IsNearZero() && !want_v.IsNearZero()) {
+                // No floor straight on (a corner cut over a gap): along the
+                // edge instead, the nearest turn with floor that still gains.
+                for (const float turn : {0.5F, -0.5F, 1.0F, -1.0F, 1.4F, -1.4F}) {
+                    const float cs = std::cos(turn), sn = std::sin(turn);
+                    const Vec3 dir(want_v.GetX() * cs - want_v.GetZ() * sn, 0.0F, want_v.GetX() * sn + want_v.GetZ() * cs);
+                    if (floor_ahead(dir)) {
+                        want_dir_v = dir * (0.5F * cs);
+                        break;
+                    }
+                }
+            }
         }
     }
     Vec3 want = (want_dir_v - v) * (limits_.mass_kg * 8.0F);
@@ -1880,7 +1892,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
     });
 }
 
-std::vector<int> AffordanceMap::plan(const int from, const int to) const {
+std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid) const {
     std::vector<int> result;
     if (from < 0 || to < 0 || from >= static_cast<int>(regions_.size()) || to >= static_cast<int>(regions_.size())) {
         return result;
@@ -1900,6 +1912,7 @@ std::vector<int> AffordanceMap::plan(const int from, const int to) const {
         auto it = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
         for (; it != edges_.end() && it->from == r; ++it) {
             if (!it->usable) continue;
+            if (std::find(avoid.begin(), avoid.end(), static_cast<int>(it - edges_.begin())) != avoid.end()) continue;
             const float nd = d + it->cost;
             if (nd < dist[static_cast<std::size_t>(it->to)]) {
                 dist[static_cast<std::size_t>(it->to)] = nd;
