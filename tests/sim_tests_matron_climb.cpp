@@ -1767,9 +1767,11 @@ void run_matron_tower_proof() {
                    " failed " + std::to_string(j.moves_failed - failed0) + " replans " + std::to_string(j.replans) + " yields " + std::to_string(j.yields) + " state " + std::to_string(int(s.matron_state().state)) + ", at " + std::to_string(last.x) + "," + std::to_string(last.y) + "," +
                    std::to_string(last.z) + ")";
         }
+        if (std::getenv("SCRAPERX_TOWER_DEBUG") != nullptr) std::cout << "    ended at " << last.x << "," << last.y << "," << last.z << "\n";
         return std::string(j.moves_failed == failed0 ? "arrived clean" : "arrived after a replan");
     };
-    int clean = 0;
+    int clean = 0, passed = 0;
+    std::vector<std::string> failed_legs;
     const char *only_lo = std::getenv("SCRAPERX_TOWER_LO");   // debugging: one pair's lower deck height
     for (const Pair &p : pairs) {
         if (only_lo != nullptr && std::abs(regions[std::size_t(p.lo)].top - std::atof(only_lo)) > 0.5F) continue;
@@ -1808,13 +1810,17 @@ void run_matron_tower_proof() {
             std::cout << "  | " << regions[std::size_t(p.lo)].top << " <-> " << regions[std::size_t(p.hi)].top << " | "
                       << (up ? "up" : "down") << " | " << out << " | " << t << " s | worst step " << w << " m | gravity "
                       << g << " |\n";
-            require(out.rfind("arrived", 0) == 0, "matron tower proof: every deck pair her scan joins, up and down");
-            require(w <= 0.20, "matron tower proof: no tick moves her more than 0.20 m");
-            require(g == 1.0, "matron tower proof: her gravity stays on");
+            // Every leg reported: the verdict comes after the whole tower.
+            const bool ok = out.rfind("arrived", 0) == 0 && w <= 0.20 && g == 1.0;
+            if (ok) ++passed; else failed_legs.push_back(std::to_string(regions[std::size_t(p.lo)].top) + (up ? " up" : " down"));
             clean += out == "arrived clean" ? 1 : 0;
         }
     }
+    std::cout << "  matron tower proof: " << passed << " of " << 2 * pairs.size() << " legs passed";
+    for (const std::string &f : failed_legs) std::cout << "; failed " << f;
+    std::cout << "\n";
     require(!pairs.empty(), "matron tower proof: her scan joins decks");
+    require(failed_legs.empty(), "matron tower proof: every deck pair her scan joins, up and down, arrived, no tick over 0.20 m, gravity on");
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
 }

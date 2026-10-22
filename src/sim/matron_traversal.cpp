@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 #include "sim/matron_traversal.hpp"
 
 #include <Jolt/Physics/Body/Body.h>
@@ -532,7 +534,32 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
     if (want.Length() > limits_.foot_force_n) {
         want = want.Normalized() * limits_.foot_force_n;
     }
-    physics_.GetBodyInterface().AddForce(body_, budget.take(want));
+    const Vec3 applied = budget.take(want);
+    physics_.GetBodyInterface().AddForce(body_, applied);
+    if (std::getenv("SCRAPERX_DBG_WALK") != nullptr) {
+        static int n = 0;
+        if ((++n % 30) == 0) {
+            Vec3 lean_to;
+            const bool lean = narrow_floor_lean(c, lean_to);
+            std::fprintf(stderr, "WALK c %.3f %.3f %.3f goal %.3f %.3f want_v %.2f %.2f dir_v %.2f %.2f v %.2f %.2f %.2f want_f %.0f %.0f applied %.0f %.0f %.0f budget used %.0f left %.0f lean %d floor_under %d may_drop %.2f\n",
+                         float(c.GetX()), float(c.GetY()), float(c.GetZ()), feet_goal.GetX(), feet_goal.GetZ(), want_v.GetX(), want_v.GetZ(),
+                         want_dir_v.GetX(), want_dir_v.GetZ(), v.GetX(), velocity().GetY(), v.GetZ(), want.GetX(), want.GetZ(),
+                         applied.GetX(), applied.GetY(), applied.GetZ(), budget.used, budget.left, int(lean), int(floor_under(c, Vec3::sZero())), may_drop);
+            AllHitCollisionCollector<CollideShapeCollector> hits;
+            CollideShapeSettings cs;
+            cs.mMaxSeparationDistance = 0.02F;
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), body_);
+            if (lock.Succeeded()) {
+                const Body &b = lock.GetBody();
+                physics_.GetNarrowPhaseQuery().CollideShape(b.GetShape(), Vec3::sReplicate(1.0F), b.GetCenterOfMassTransform(), cs, b.GetCenterOfMassPosition(), hits, {}, {}, IgnoreSingleBodyFilter(body_));
+            }
+            for (const CollideShapeResult &h : hits.mHits) {
+                const Vec3 nrm = -h.mPenetrationAxis.NormalizedOr(Vec3::sZero());
+                std::fprintf(stderr, "  contact body %u depth %.3f normal %.2f %.2f %.2f at %.2f %.2f %.2f\n", h.mBodyID2.GetIndex(), h.mPenetrationDepth,
+                             nrm.GetX(), nrm.GetY(), nrm.GetZ(), float(h.mContactPointOn2.GetX()), float(h.mContactPointOn2.GetY()), float(h.mContactPointOn2.GetZ()));
+            }
+        }
+    }
     // A stair or plate edge within her stride in front of her: her leg lifts
     // her onto it, a capped push out of the same budget.
     if (d > 0.05F) {
@@ -1203,7 +1230,9 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
             walk(dt, approach, 1.2F, budget);
             return status_;
         }
-        const RVec3 at(axis.GetX(), up ? float(c.GetY()) + 0.4F : feet - 0.3F, axis.GetZ());
+        // Down, her hand on its head where it is (within its length), not in
+        // the air over it.
+        const RVec3 at(axis.GetX(), up ? float(c.GetY()) + 0.4F : std::min(feet - 0.3F, spec_.top_y - 0.05F), axis.GetZ());
         RVec3 where;
         if (!take_hold(at, 0.12F, true, hold_, &where)) {
             fail(Failure::NoHold);
@@ -2614,10 +2643,11 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     };
     const FixedFilter filter(ignore);
     const SteelFilter things(ignore);   // loose things in her way count too
-    // Her body as it walks: a hair inside her radius, her soles a step's
+    // Her body as it walks: her full radius less a hair (a gap narrower than
+    // she is wedges her; it is no way for her), her soles a step's
     // rise clear (a step's riser is under her stride, not in her way).
     const float lift = limits.step_max_m;
-    const CapsuleShape capsule(limits.half_height - 0.5F * lift, limits.radius - 0.04F);
+    const CapsuleShape capsule(limits.half_height - 0.5F * lift, limits.radius - 0.01F);
     // A floor for her feet near a grid point, and where her body stands on
     // it: under the point, or (a narrow board, a ledge) under her soles a
     // little to one side; her body over it, or leaning off a wall beside it
@@ -2688,7 +2718,7 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
             CollideShapeSettings settings;
             settings.mActiveEdgeMode = EActiveEdgeMode::CollideOnlyWithActive;
             AnyHitCollisionCollector<CollideShapeCollector> collector;
-            const RVec3 c(x, feet + lift + 0.02F + (limits.radius - 0.04F) + (limits.half_height - 0.5F * lift), z);
+            const RVec3 c(x, feet + lift + 0.02F + (limits.radius - 0.01F) + (limits.half_height - 0.5F * lift), z);
             physics.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1.0F), RMat44::sTranslation(c), settings,
                                                        RVec3::sZero(), collector, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things);
             return !collector.HadHit();
