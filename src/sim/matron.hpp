@@ -219,6 +219,11 @@ public:
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
     static constexpr float kLoseTrackSeconds = 9.0F;
     static constexpr float kSearchSeconds = 8.0F;
+    // Her way to a place she searches may take kSearchTripSeconds and twice
+    // its straight-line walk at kSearchMps (her lines and the climber's
+    // trail wind); longer, it cannot be reached and she gives it up, as she
+    // does when the sound she goes on is older than kAcousticMemorySeconds.
+    static constexpr float kSearchTripSeconds = 6.0F;
 
     // Her paces in the hunt (matron_moves.cpp choose_pace). She is not one
     // speed: she creeps, stalks, strides and runs, and changes between them
@@ -1355,7 +1360,9 @@ private:
     float emerge_s_ = 0.0F;
     float since_heard_s_ = 0.0F; // absolute evidence age, including time sealed/emerging
     float pursuit_s_ = 0.0F; // time available to act on that evidence after emerging
-    float search_s_ = 0.0F;
+    float search_s_ = 0.0F;          // at the place she searches
+    float search_budget_s_ = 1.0e9F;     // her way there may take this long (set as she sets out)
+    float search_trip_s_ = 0.0F;    // on her way there so far
     float heard_x_ = 0.0F, heard_z_ = 0.0F;
     float stride_ = 0.0F;
     float speed_ = 0.0F;

@@ -231,6 +231,8 @@ void Matron::end_hold(const State next) {
     arm_reach_m_ = kArmReachM;
     if (next == State::Searching) {
         search_s_ = 0.0F;
+        search_budget_s_ = 1.0e9F;
+        search_trip_s_ = 0.0F;
         since_heard_s_ = 0.0F;
         pursuit_s_ = 0.0F;
     }

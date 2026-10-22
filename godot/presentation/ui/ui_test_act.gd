@@ -25,6 +25,9 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # switched off (the simulation runs on), so the capture is quick.
 
 const MATRON_STATE_GUARDING := 7
+# Her hands on the climber (src/sim/matron.hpp State Grab..Claimed).
+const MATRON_STATE_GRAB := 12
+const MATRON_STATE_CLAIMED := 18
 const STAGE_PEST := 0
 const STAGE_DANGEROUS := 1
 const STAGE_CHANGED := 2
@@ -515,8 +518,10 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if not await _sprint_to(device, _act_me_xz() + away * 5.0, 0.8, 4.0):
 		return _fail("the break away from the rail stalled at %s (she at %s)" % [str(_position()),
 			str(_matron_state()["position"])])
-	# Fully changed, her hands kill: the one death the act means. It can come
-	# in the same stride she changes.
+	# Fully changed, her hands take the climber (src/sim/matron_hold.cpp): no
+	# death on touch; her hand closes on the ankle and what follows is physics,
+	# carried, held out over the drop, the arm played with, let go or set back.
+	# At most the one death the act allows, and only in her hands.
 	_act_deaths_allowed = 1
 	var catches := int(_matron_state()["catches"])
 	var raged_more: bool = await _act_laps(device, ACT_LAP_SOUTH, ACT_LAP_NORTH,
@@ -530,27 +535,42 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		# Only fully changed are her hands a death.
 		_act_stages_seen[STAGE_CHANGED] = true
 	_act_log("changed")
-	var killed: bool = await _act_watch_her(func() -> bool: return int(_native().get_death_count()) >= 1, 30.0,
-		"changed_kill", "act_changed_coming", 3.0)
-	if not killed:
-		return _fail("fully changed, she never caught the climber")
-	if int(_matron_state()["catches"]) <= catches:
-		return _fail("the climber died, but not in her hands (%s)" % str(_native().get_death_state()))
+	var caught: bool = await _act_watch_her(func() -> bool:
+		return int(_matron_state()["catches"]) > catches or int(_native().get_death_count()) >= 1, 30.0,
+		"changed_catch", "act_changed_coming", 3.0)
+	if not caught or int(_matron_state()["catches"]) <= catches:
+		return _fail("fully changed, her hands never closed on the climber (deaths %d)" % int(_native().get_death_count()))
+	# Her hands on, and off again: the hold runs its course.
+	var held: bool = await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "changed_grab")
+	var over: bool = held and await _act_wait(func() -> bool: return not _act_in_her_hands(), 120.0, "changed_hold")
+	if not over:
+		return _fail("fully changed, her hold on the climber never ended (state %d)" % int(_matron_state()["state"]))
+	if int(_native().get_death_count()) > 1:
+		return _fail("her hold cost more than the one death (deaths %d)" % int(_native().get_death_count()))
 	await _seconds(0.5)
-	_act_log("killed")
+	var hold: Dictionary = _native().get_matron_hold_state()
+	_act_log("caught grabs=%d armplays=%d arm_tears=%d releases=%d spares=%d" % [int(hold.get("grabs", 0)),
+		int(hold.get("armplays", 0)), int(hold.get("arm_tears", 0)), int(hold.get("releases", 0)),
+		int(hold.get("spares", 0))])
 	return true
 
 
-# Back on 143, the checkpoint (frozen once she turned dangerous over the
-# climber: a deck her pipe joins to hers is hers too): up the riser again
-# while she looks for the climber where she killed them, quietly to her
-# ladder and up it to the 176
-# ring; on by the climbing route, no lift, to the 220 ring (its boards are
-# narrower than she is: she stays on the ring).
+# Her hands on the climber, or letting them go (Grab to Claimed).
+func _act_in_her_hands() -> bool:
+	var state := int(_matron_state()["state"])
+	return state >= MATRON_STATE_GRAB and state <= MATRON_STATE_CLAIMED
+
+
+# Out of her hands: dead in them, back on 143 at the checkpoint (frozen once
+# she turned dangerous over the climber: a deck her pipe joins to hers is hers
+# too) and up the riser again; set back on her deck, on from there. Then
+# quietly to her ladder and up it to the 176 ring; on by the climbing route,
+# no lift, to the 220 ring (its boards are narrower than she is: she stays on
+# the ring).
 func _act_way_up(device: int) -> bool:
-	if _position().y > 150.0:
+	if int(_native().get_death_count()) >= 1 and _position().y > 150.0:
 		return _fail("the death did not put the climber back below her deck (at %s)" % str(_position()))
-	if not await _act_up_riser(device):
+	if _position().y < 150.0 and not await _act_up_riser(device):
 		return false
 	_act_log("back_on_her_deck")
 	# Over the bay on its leaf (src/sim/bay.hpp), then to the ladder's foot.
@@ -567,7 +587,7 @@ func _act_way_up(device: int) -> bool:
 	_move(device, 1.0)
 	var on_ring: bool = await _act_wait(func() -> bool: return _standing_above(176.5), 40.0, "ladder")
 	_move(device, 0.0)
-	if not on_ring or int(_native().get_death_count()) != 1:
+	if not on_ring or int(_native().get_death_count()) > 1:
 		return _fail("the climb did not top out onto the 176 ring (y %.2f, deaths %d, she climbing %s)" % [
 			_position().y, int(_native().get_death_count()), str(_matron_state()["climbing"])])
 	_act_log("on_176")
@@ -606,7 +626,7 @@ func _act_way_up(device: int) -> bool:
 	if not on_220:
 		return _fail("the scaffold panel did not top out onto the 220 ring (y %.2f)" % _position().y)
 	_act_log("on_220")
-	if int(_native().get_death_count()) != 1:
+	if int(_native().get_death_count()) > 1:
 		return _fail("the climb on from her deck cost a death (deaths %d)" % int(_native().get_death_count()))
 	for stage in [STAGE_PEST, STAGE_DANGEROUS, STAGE_CHANGED]:
 		if not _act_stages_seen.has(stage):

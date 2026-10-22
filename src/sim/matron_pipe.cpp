@@ -367,9 +367,11 @@ void Matron::ride_pipe(const float dt) {
                 pipe_stall_s_ = 0.0F;
                 return;
             }
-            // Hand over hand: with this hold at her chest, the next overhead.
+            // Hand over hand: with this hold at her chest (pulled up to within
+            // a few centimetres of it, not crawling the last of the way), the
+            // next overhead.
             bool reaching = false;
-            if (pipe_hand_.GetY() - at.GetY() < 0.5F) {
+            if (pipe_hand_.GetY() - at.GetY() < 0.56F) {
                 const RVec3 kept = pipe_hand_;
                 const BodyID kept_body = pipe_support_;
                 const SubShapeID kept_member = pipe_member_;
@@ -383,7 +385,10 @@ void Matron::ride_pipe(const float dt) {
                     reaching = true;
                 }
             }
-            target = Vec3(kPipeLineX, float(pipe_hand_.GetY()) - (reaching ? 0.30F : 0.50F), kPipeLineZ);
+            // Always pulling for the hand at her shoulder, so each stroke runs at
+            // her pace to the next hold rather than easing into a stop.
+            (void)reaching;
+            target = Vec3(kPipeLineX, float(pipe_hand_.GetY()) - 0.30F, kPipeLineZ);
             progress = float(at.GetY());
         } else {
             // Down it at her pace, her grip sliding with her; with her feet

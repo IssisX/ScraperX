@@ -2302,6 +2302,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 turn_s_ = 0.0F;
                 state_ = State::Searching;
                 search_s_ = 0.0F;
+                search_budget_s_ = 1.0e9F;
+                search_trip_s_ = 0.0F;
             } else if (wary_) {
                 // Wary: up to where she can see the place, then she looks.
                 if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
@@ -2378,13 +2380,24 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             break;
         }
         if (state_ == State::Searching) {
-            search_s_ += dt;
-            if (search_s_ >= kSearchSeconds) {
+            // Her look about the place takes kSearchSeconds once she is there;
+            // her way there what it takes, within its budget (matron.hpp).
+            const float to_place = distance_xz(ax, az, heard_x_, heard_z_);
+            if (search_budget_s_ > 1.0e8F) {
+                search_budget_s_ = kSearchTripSeconds + 2.0F * to_place / kSearchMps;
+            }
+            if (to_place <= 1.5F) {
+                search_s_ += dt;
+            } else {
+                search_trip_s_ += dt;
+            }
+            if (search_s_ >= kSearchSeconds || search_trip_s_ >= search_budget_s_ ||
+                (!lead_seen_ && since_heard_s_ > kAcousticMemorySeconds)) {
                 if (!lead_seen_) ++fooled_;
                 stand_down();
                 break;
             }
-            if (distance_xz(ax, az, heard_x_, heard_z_) > 1.5F) {
+            if (to_place > 1.5F) {
                 // Where she meets the player's trail she walks it, the way
                 // they went (matron_moves.cpp crumb_ahead); else to the place.
                 float cx = 0.0F;
@@ -3340,6 +3353,8 @@ void Matron::stand_up() {
     lead_seen_ = true;
     state_ = State::Searching;
     search_s_ = 0.0F;
+    search_budget_s_ = 1.0e9F;
+    search_trip_s_ = 0.0F;
 }
 
 void Matron::brace_at_edges(const float dt) {
