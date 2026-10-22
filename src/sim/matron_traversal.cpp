@@ -153,6 +153,8 @@ Vec3 Budget::take(const Vec3 want) noexcept {
         const float spent = std::max(granted.Dot(velocity), 0.0F);
         power_left -= spent;
         power_used += spent;
+    } else {
+        brake_used -= power;
     }
     const float g = granted.Length();
     left -= g;
@@ -307,6 +309,10 @@ bool Climber::find_rung(const float from_y, const float to_y, const bool upward,
 
 bool Climber::find_lip(const Vec3 toward, const float near_y, Hold &out, RVec3 &where) const {
     const SteelFilter filter(ignore_);
+    // The top she means first: a lower ridge in front of it (a wall standing
+    // on the step below) is not its lip. Only if no top at that height is in
+    // reach does a near one do.
+    for (const float tol : {0.15F, 0.7F}) {
     for (const float ahead : {0.35F, 0.55F, 0.8F, 1.1F}) {
         const RVec3 from = RVec3(spec_.line.GetX(), near_y + 1.2F, spec_.line.GetZ()) + toward * ahead;
         RayCastResult hit;
@@ -315,7 +321,7 @@ bool Climber::find_lip(const Vec3 toward, const float near_y, Hold &out, RVec3 &
             continue;
         }
         const RVec3 point = ray.GetPointOnRay(hit.mFraction);
-        if (std::abs(float(point.GetY()) - near_y) > 0.7F) {
+        if (std::abs(float(point.GetY()) - near_y) > tol) {
             continue;
         }
         // Back toward her to the floor's edge: the lip her hands take.
@@ -341,6 +347,7 @@ bool Climber::find_lip(const Vec3 toward, const float near_y, Hold &out, RVec3 &
             where = edge;
             return true;
         }
+    }
     }
     return false;
 }
@@ -447,6 +454,7 @@ float Climber::walk_between(const float dt, const Vec3 feet_goal, const float sp
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
     view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
+    view_.peak_brake_w = std::max(view_.peak_brake_w, budget.brake_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     return budget.used;
 }
@@ -531,6 +539,7 @@ Climber::Status Climber::step(const float dt) {
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
     view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
+    view_.peak_brake_w = std::max(view_.peak_brake_w, budget.brake_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     view_.phase = phase_;
     view_.sliding = sliding_;
@@ -713,6 +722,16 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
         }
         fail(Failure::LostHold);
         return status_;
+    }
+    {
+        // The lip moves with what it is part of (a deck on a hoist, a boom):
+        // where she is going moves with it.
+        const Vec3 moved = Vec3(hold_world_ - lip_world_);
+        if (moved.LengthSq() > 1.0e-8F) {
+            lip_world_ = hold_world_;
+            spec_.goal += moved;
+            spec_.goal_top += moved.GetY();
+        }
     }
     const float top = float(lip_world_.GetY());
     const Vec3 in = flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
@@ -1417,6 +1436,21 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
                 }
             }
         }
+        // Still no room: a top with something standing on part of it (a
+        // wall across a step, the next step over its back) is walkable in
+        // any gap her capsule fits, so sweep across it in 5 cm steps.
+        for (int axis = 0; axis < 2 && !ok; ++axis) {
+            const float half = 0.5F * (axis == 0 ? lx : lz);
+            for (float g = 0.05F; !ok && g < half - limits.radius + 0.3F; g += 0.05F) {
+                for (const float side : {-1.0F, 1.0F}) {
+                    const Vec3 s = axis == 0 ? Vec3(cx + side * g, p.top, cz) : Vec3(cx, p.top, cz + side * g);
+                    if (capsule_free(physics, ignore, limits, s)) {
+                        ok = true;
+                        break;
+                    }
+                }
+            }
+        }
         if (ok) usable.push_back(p);
     }
     patches_ = std::move(usable);
@@ -2070,6 +2104,9 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         RayCastResult hit;
         if (!physics.GetNarrowPhaseQuery().CastRay(RRayCast(top, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), things)) {
             return false;
+        }
+        if (hit.mFraction <= 1.0e-4F) {
+            return false;   // the probe starts inside something solid (a wall's body): no floor there
         }
         feet = float(top.GetY()) - hit.mFraction * depth;
         // At the move's own start the move's approach is the judge (it gets

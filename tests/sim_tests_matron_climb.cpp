@@ -545,6 +545,164 @@ void test_power_moving_bar() {
     std::cout << "PASS scraperx_sim matron power moving bar: hold_n=" << hold.GetY() << " climb_n=" << pull.GetY() << "\n";
 }
 
+// A mantle onto a ledge that is lifted under her hands (a deck on a hoist):
+// the braking rule. Power is charged only on positive work relative to the
+// hold; when the lip jerks up away from her she brakes against it (force up,
+// her velocity relative to it down), and that is capped by force alone. A
+// 2.5 m/s jerk takes her 220 kg well past 9 kW of braking to stay on, which
+// the power cap would have refused. She keeps her grip, arrives standing on
+// the moving deck, and her positive power never exceeds 9 kW.
+void test_mantle_moving_ledge() {
+    ClimbWorld w;
+    const BodyID deck = w.box(Vec3(5, 0.8F, 3), RVec3(0, 0.8F, -4), false, EMotionType::Kinematic);
+    w.spawn(RVec3(0, 0, 0.5F));
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    MoveSpec mantle;
+    mantle.kind = MoveKind::Mantle;
+    mantle.start = Vec3(0, 0, -0.6F);
+    mantle.goal = Vec3(0, 1.6F, -1.6F);
+    mantle.goal_top = 1.6F;
+    mantle.out = Vec3(0, 0, 1);
+    climber.begin(mantle);
+    BodyInterface &bodies = w.physics.GetBodyInterface();
+    int lift_ticks = -1;
+    float peak_power = 0.0F;
+    float peak_force = 0.0F;
+    float peak_brake = 0.0F;
+    bool held_through = true;
+    const auto st = w.run(climber, 20.0F, [&](int) {
+        if (lift_ticks < 0 && climber.view().holding && climber.phase() >= 3) lift_ticks = 0;
+        if (lift_ticks >= 0) {
+            ++lift_ticks;
+            const bool lifting = lift_ticks <= 18;   // 0.2 s at 2.5 m/s: the lip 0.5 m up
+            bodies.SetLinearVelocity(deck, Vec3(0, lifting ? 2.5F : 0.0F, 0));
+            if (lifting && !climber.view().holding) held_through = false;
+        }
+        peak_power = std::max(peak_power, climber.view().power_w);
+        peak_force = std::max(peak_force, climber.view().force_n);
+        peak_brake = std::max(peak_brake, climber.view().peak_brake_w);
+    });
+    bodies.SetLinearVelocity(deck, Vec3::sZero());
+    const float deck_top = float(bodies.GetPosition(deck).GetY()) + 0.8F;
+    const float end = w.settle(1.0F);
+    std::cout << "  matron climb mantle on a lifted ledge: " << int(st) << " (" << traversal::failure_name(climber.failure())
+              << ") lifted " << (lift_ticks >= 0) << " deck top " << deck_top << " feet " << end << " peak power " << peak_power
+              << " W peak brake " << peak_brake << " W peak force " << peak_force << " N\n";
+    require(lift_ticks > 18, "matron climb moving ledge: the deck was lifted while she held its lip");
+    require(held_through, "matron climb moving ledge: she keeps her grip while the lip jerks up");
+    require(peak_power <= 9000.0F + 1.0F && peak_force <= 5600.0F + 1.0F,
+            "matron climb moving ledge: positive power within 9 kW, force within 5600 N");
+    require(peak_brake > 9000.0F, "matron climb moving ledge: braking against the lifted lip went past 9 kW (force-capped only)");
+    require(st == Climber::Status::Done && std::abs(end - deck_top) < 0.06F,
+            "matron climb moving ledge: she arrives standing on the deck that moved");
+    std::cout << "PASS scraperx_sim matron climb moving ledge: brake_w=" << peak_brake << " power_w=" << peak_power << "\n";
+}
+
+// The player bumps her partway down a ladder she has never seen (seeded
+// height, pitch and rung length): an impulse out from the face while she is
+// lowering hand under hand. She recovers on her general moves alone: her
+// hands catch and keep the rungs and she finishes the lower, or, the hold
+// lost, she drops in control onto what is under her. Never snapped (no tick
+// moves her more than 0.20 m), gravity always on, alive, on her feet.
+void test_bump_mid_lower() {
+    std::uint32_t rng = 0x9E3779B9U;
+    const auto uniform = [&](const float lo, const float hi) {
+        rng = rng * 1664525U + 1013904223U;
+        return lo + (hi - lo) * float(rng >> 8) / float(1U << 24);
+    };
+    int regripped = 0;
+    int dropped = 0;
+    for (int run = 0; run < 6; ++run) {
+        const float height = uniform(4.0F, 7.5F);
+        const float pitch = uniform(0.25F, 0.40F);
+        const float bump_mps = run < 3 ? uniform(0.8F, 2.2F) : uniform(3.0F, 5.0F);   // a nudge, then a hard shove
+        const float side = uniform(-0.6F, 0.6F);
+        ClimbWorld w;
+        w.deck(height);
+        w.rungs(0.3F, height - 0.1F, pitch);
+        w.spawn(RVec3(0, height, -2.0F));
+        w.settle(0.5F);
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        MoveSpec down = ladder_up(height, 0.3F, height - 0.1F);
+        down.kind = MoveKind::RungDown;
+        down.start = Vec3(0, height, -1.35F);
+        down.goal = Vec3(0, 0, -0.5F);
+        down.goal_top = 0.0F;
+        climber.begin(down);
+        BodyInterface &bodies = w.physics.GetBodyInterface();
+        bool bumped = false;
+        RVec3 last = w.at();
+        float worst_step = 0.0F;
+        float fastest_fall = 0.0F;
+        float pushed_out = 0.0F;   // how far off the face the bump took her
+        const auto st = w.run(climber, 60.0F, [&](int) {
+            if (!bumped && climber.view().holding && climber.phase() >= 2 && w.feet() < 0.6F * height) {
+                bodies.AddImpulse(w.her, Vec3(side, 0.0F, 1.0F).Normalized() * (Matron::kMassKg * bump_mps));
+                bumped = true;
+            }
+            const RVec3 now = w.at();
+            worst_step = std::max(worst_step, float((now - last).Length()));
+            last = now;
+            fastest_fall = std::min(fastest_fall, bodies.GetLinearVelocity(w.her).GetY());
+            if (bumped) pushed_out = std::max(pushed_out, float(now.GetZ()) + 0.5F);
+        });
+        // Whatever the move ended in, she stands up where she is.
+        for (int i = 0; i < 270; ++i) {
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+            const RVec3 now = w.at();
+            worst_step = std::max(worst_step, float((now - last).Length()));
+            last = now;
+            fastest_fall = std::min(fastest_fall, bodies.GetLinearVelocity(w.her).GetY());
+        }
+        const float feet = w.feet();
+        const bool kept = st == Climber::Status::Done;
+        regripped += kept ? 1 : 0;
+        dropped += kept ? 0 : 1;
+        std::cout << "  matron bump mid-lower run " << run << ": height " << height << " pitch " << pitch << " bump " << bump_mps
+                  << " m/s, out " << pushed_out << " m -> " << (kept ? "kept her hold, lowered to the floor" : traversal::failure_name(climber.failure()))
+                  << ", feet " << feet << ", worst step " << worst_step << " m, fastest fall " << fastest_fall << " m/s\n";
+        require(bumped && pushed_out > 0.0F, "matron bump mid-lower: the bump came while she was lowering, and moved her");
+        require(worst_step <= 0.20F, "matron bump mid-lower: no tick moves her more than 0.20 m (no snapping)");
+        require(w.gravity_always, "matron bump mid-lower: gravity always on");
+        require(std::abs(feet) < 0.06F, "matron bump mid-lower: she ends on her feet on the floor below");
+        // A controlled drop: no worse than a fall from her full hang off the
+        // lowest rung she could have held (the 12 m lethal fall is 15.3 m/s).
+        require(fastest_fall > -8.0F, "matron bump mid-lower: a lost hold is a controlled drop, never a free fall from height");
+    }
+    std::cout << "PASS scraperx_sim matron bump mid-lower: kept " << regripped << " dropped " << dropped << " of 6\n";
+}
+
+// A wall standing across a step (ledge exam seed 35's shape, built here
+// from plain boxes): the step's top is cut into a sliver in front of the
+// wall and a 0.7 m strip behind it. Her scan finds the strip she fits on,
+// she plans up onto it, and her walk to its side goes round the wall's end,
+// never through its body. (Geometry only: nothing names this stack.)
+void test_wall_across_step() {
+    ClimbWorld w;
+    w.box(Vec3(1.5F, 0.72F, 1.53F), RVec3(0, 0.72F, -1.53F));    // step 0: top 1.44, front z -3.06
+    w.box(Vec3(1.5F, 1.44F, 1.02F), RVec3(0, 1.44F, -1.02F));    // step 1: top 2.88, front z -2.04
+    w.box(Vec3(2.6F, 1.5F, 0.1F), RVec3(-0.83F, 1.5F, -2.83F));  // the wall: 3 m, x -3.43..1.77
+    w.spawn(RVec3(-2.0F, 0, -6.0F));
+    w.settle(0.3F);
+    const traversal::Ignore ignore{w.her, BodyID()};
+    traversal::AffordanceMap map;
+    map.scan(w.physics, AABox(Vec3(-8, -1, -9), Vec3(8, 5, 4)), ignore);
+    bool strip = false;
+    for (const auto &r : map.regions()) strip = strip || std::abs(r.top - 1.44F) < 0.02F;
+    const int floor = map.region_at(Vec3(-2.0F, 0, -6.0F));
+    const int top = map.region_at(Vec3(0, 2.88F, -1.0F));
+    const std::vector<int> plan = map.plan(floor, top);
+    const std::vector<Vec3> path = traversal::grid_walk(w.physics, ignore, traversal::Limits{}, Vec3(-2.0F, 0, -6.0F), Vec3(-1.9F, 0, -2.36F));
+    float west = 0.0F;
+    for (const Vec3 &q : path) west = std::min(west, q.GetX());
+    std::cout << "  matron climb wall across a step: strip region " << strip << " plan " << plan.size() << " edges, walk "
+              << path.size() << " turns, farthest west " << west << "\n";
+    require(strip, "matron scan: a step cut by a wall standing on it is walkable where she fits beside the wall");
+    require(plan.size() >= 2, "matron scan: she plans up through the strip behind the wall");
+    require(!path.empty() && west < -3.43F, "matron walk: round the wall's end, not through its body");
+    std::cout << "PASS scraperx_sim matron climb wall across a step\n";
+}
+
 } // namespace
 
 void run_matron_climb() {
@@ -556,6 +714,9 @@ void run_matron_climb() {
     test_jump();
     test_drops_and_mantle();
     test_dynamic_support();
+    test_mantle_moving_ledge();
+    test_bump_mid_lower();
+    test_wall_across_step();
 }
 
 namespace {

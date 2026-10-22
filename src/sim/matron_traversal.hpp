@@ -92,6 +92,7 @@ struct Budget {
     float power_left = 0.0F;    // watts still available this tick
     float power_used = 0.0F;
     JPH::Vec3 velocity = JPH::Vec3::sZero();   // hers relative to the support (hold or floor) at the tick's start
+    float brake_used = 0.0F;    // watts of braking (negative work) granted: capped by force alone, never by power
     JPH::Vec3 take(JPH::Vec3 want) noexcept;
 };
 
@@ -156,6 +157,7 @@ struct ClimbView {
     float peak_force_n = 0.0F;
     float power_w = 0.0F;
     float peak_power_w = 0.0F;
+    float peak_brake_w = 0.0F;     // braking against the support: force-capped only
     float support_reaction_n = 0.0F;   // pushed onto a dynamic hold's body this tick
     std::uint32_t grips = 0;
     std::uint32_t releases = 0;
