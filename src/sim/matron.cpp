@@ -153,6 +153,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     settings.mMassPropertiesOverride.mMass = kMassKg;
     Body *body = bodies.CreateBody(settings);
     body_ = body->GetID();
+    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
 
     // The locker: solid from the start, and for good.
     BodyCreationSettings cabinet(new BoxShape(Vec3(kLockerHalfX, kLockerHalfY, kLockerHalfZ)),
@@ -1726,6 +1727,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             settle_level();
         }
     }
+    // On a journey over the tower's steel she is about nothing else.
+    if (body_in_world_ && journey_.active) {
+        step_journey(dt);
+        if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
+        return;
+    }
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
     // On her level (the height of the floor under her, within the tower's
@@ -2269,7 +2276,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
-    if (body_in_world_ && !dead_ && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
+    if (body_in_world_ && !dead_ && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off &&
+        !journey_.active) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         if (at.GetY() < levels_[static_cast<std::size_t>(level_)].floor_y - kFallenBelowM) {
             drop_stock();
@@ -2815,7 +2823,7 @@ void Matron::take_blow(const float dt) {
     // On the pipe her hands hold her (gravity off): a blow is read the same
     // way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_phase_ != PipePhase::Off;
-    if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || state_ == State::Down ||
+    if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || journey_.active || state_ == State::Down ||
         state_ == State::Emerging || pipe_phase_ == PipePhase::Slide || pipe_phase_ == PipePhase::Stunned) {
         blow_quiet_ = kBlowQuietTicks;
         return;

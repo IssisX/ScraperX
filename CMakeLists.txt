@@ -48,6 +48,8 @@ add_library(scraperx_sim STATIC
     src/sim/shared_survival.cpp
     src/sim/bay.cpp
     src/sim/matron.cpp
+    src/sim/matron_traversal.cpp
+    src/sim/matron_journey.cpp
     src/sim/loose_stock.cpp
     src/sim/fabricated.cpp
     src/sim/physics_world_fabricated.cpp
@@ -190,6 +192,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_water.cpp
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
+        tests/sim_tests_matron_climb.cpp
     )
     add_dependencies(scraperx_sim_tests scraperx_shared_survival_tests)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)

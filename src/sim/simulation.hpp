@@ -6,6 +6,9 @@
 #include <memory>
 
 namespace scraperx::sim {
+namespace traversal {
+class AffordanceMap;
+}
 
 struct Vector3 final {
     double x = 0.0;
@@ -1538,6 +1541,27 @@ public:
     void debug_fix_matron_pace(int pace) noexcept;
     // Tests only: her out of the locker and on her patrol loop.
     void debug_matron_patrol() noexcept;
+    // The Matron's climbing (matron_traversal.hpp): what the tower's steel
+    // offers her, scanned from the real collision geometry on first use.
+    [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
+    // Out of her locker (patrolling), then off on a journey to the region of
+    // the scanned map whose top is nearest `top`: false if she has no way.
+    bool debug_matron_travel(double top) noexcept;
+    // Her feet's floor search between two points (traversal::grid_walk), for tests.
+    [[nodiscard]] std::size_t debug_matron_grid_walk(double fx, double fy, double fz, double tx, double ty, double tz,
+                                                     float margin, int max_nodes);
+    struct MatronJourney {
+        bool active = false;
+        int goal = -1, region = -1, steps = 0, step = 0;
+        double region_top = 0.0;
+        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0;
+        std::uint32_t grips = 0, releases = 0, slips = 0, catches = 0, misses = 0;
+        double force_n = 0.0, peak_force_n = 0.0;
+        bool holding = false;
+        std::uint8_t move = 0, last_failure = 0;
+        double gravity_factor = 1.0;
+    };
+    [[nodiscard]] MatronJourney matron_journey() const noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.

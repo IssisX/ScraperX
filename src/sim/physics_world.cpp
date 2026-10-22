@@ -1348,3 +1348,43 @@ void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JP
 }
 
 } // namespace scraperx::sim
+
+namespace scraperx::sim {
+const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {
+    if (!matron_affordances_scanned_) {
+        // The whole tower, grade to the crown (bounds generous on every side).
+        const JPH::AABox tower = physics_system_.GetBounds();   // the whole world, whatever is in it
+        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()});
+        matron_affordances_scanned_ = true;
+        matron_->set_routes(&matron_affordances_);
+    }
+    return matron_affordances_;
+}
+
+std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, const JPH::Vec3 to, const float margin,
+                                                       const int max_nodes) const {
+    if (max_nodes < 0) {
+        // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
+        const traversal::Limits limits{};
+        const traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
+        JPH::RayCastResult hit;
+        const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
+        const float depth = 2.0F * limits.step_max_m + 0.1F;
+        const JPH::IgnoreMultipleBodiesFilter none;
+        if (!physics_system_.GetNarrowPhaseQuery().CastRay(JPH::RRayCast(top, JPH::Vec3(0, -depth, 0)), hit, {}, {}, none)) return 0;
+        const float feet = float(top.GetY()) - hit.mFraction * depth;
+        const auto p = traversal::grid_walk(physics_system_, ignore, limits, JPH::Vec3(from.GetX(), feet, from.GetZ()),
+                                            JPH::Vec3(from.GetX() + 0.4F, feet, from.GetZ()), 0.0F, 0.4F, 2);
+        (void)margin;
+        (void)to;
+        return p.empty() ? 1 : 2;
+    }
+    return traversal::grid_walk(physics_system_, traversal::Ignore{matron_->body(), player_id_, matron_->moving_layer()}, traversal::Limits{}, from,
+                                to, margin, 0.4F, max_nodes)
+        .size();
+}
+
+double Simulation::PhysicsWorld::matron_gravity_factor() const {
+    return static_cast<double>(physics_system_.GetBodyInterface().GetGravityFactor(matron_->body()));
+}
+} // namespace scraperx::sim

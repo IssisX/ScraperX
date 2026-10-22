@@ -103,7 +103,10 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_traversal.hpp"
+
 #include <array>
+#include <memory>
 #include <cstdint>
 #include <vector>
 
@@ -907,6 +910,27 @@ public:
     // burst) and on her patrol round her level's loop.
     void patrol_for_test();
 
+    // Her climbing over the tower's real steel (matron_traversal.hpp): the
+    // map of what it offers her (scanned from its collision geometry), and a
+    // journey to a region of it by her own moves. No route is authored: she
+    // plans over the map, makes each move with her capped forces, commits a
+    // region only standing on it, and on a failed move falls and plans again
+    // from wherever she lands.
+    void set_routes(const traversal::AffordanceMap *routes) noexcept { routes_ = routes; }
+    bool travel_to(int region);   // false: no way there from where she stands
+    [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
+    struct Journey {
+        bool active = false;
+        int goal = -1;
+        int region = -1;        // the region she last stood in (committed on support)
+        int step = 0, steps = 0;
+        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0;
+        traversal::MoveKind move = traversal::MoveKind::Walk;
+        traversal::Failure last_failure = traversal::Failure::None;
+    };
+    [[nodiscard]] const Journey &journey() const noexcept { return journey_; }
+    [[nodiscard]] const traversal::Climber *climber() const noexcept { return climber_.get(); }
+
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
     void begin_grab(JPH::RVec3 player);
@@ -1179,6 +1203,8 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // On a climb: up it, and over its head.
     void climb(float dt);
+    void step_journey(float dt);
+    [[nodiscard]] int region_under() const;
     // After a lead a storey away along the corner pipe (above): to the rail's
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
@@ -1399,6 +1425,16 @@ private:
     bool trap_lets_go(JPH::RVec3 player, float dt);
     int guess_climb_ = -1;
     int climb_ = -1;
+    const traversal::AffordanceMap *routes_ = nullptr;
+    std::unique_ptr<traversal::Climber> climber_;
+    Journey journey_;
+    std::vector<int> journey_edges_;
+    std::vector<JPH::Vec3> journey_walk_;
+    std::size_t journey_walk_i_ = 0;
+    float journey_wp_best_ = 1.0e9F;
+    float journey_wp_stall_s_ = 0.0F;
+    bool journey_rerouted_ = false;
+    float journey_wait_s_ = 0.0F;
     bool mantling_ = false;
     std::uint32_t climbs_done_ = 0;
     // Her mind (see above): what she has learned this run.
