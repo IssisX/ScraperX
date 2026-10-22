@@ -1140,9 +1140,11 @@ private:
         float foot_y, head_y;
         float out_x, out_z;
         float top_x, top_z;
-        bool hers;
         int edge;   // the scanned edge (AffordanceMap::edges) she climbs it by
     };
+    // Read from her scanned map, never kept as a table of her own.
+    [[nodiscard]] int climb_count() const;
+    bool climb_of(int edge, Climb &out) const;
     struct Plank {
         JPH::BodyID body;
         JPH::Ref<JPH::FixedConstraint> bolt;
@@ -1415,7 +1417,6 @@ private:
     std::uint32_t cable_slides_ = 0;
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.
-    std::vector<Climb> climbs_;
     // The bay (bay.hpp): its bracket as a level of hers, and its rungs.
     int bay_level_ = -1;
     int bay_climb_ = -1;

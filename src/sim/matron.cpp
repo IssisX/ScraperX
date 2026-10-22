@@ -804,13 +804,16 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     // the way): the one she saw taken, or the nearest.
     int best = -1;
     float best_d = std::numeric_limits<float>::max();
-    for (std::size_t i = 0; i < climbs_.size(); ++i) {
-        const Climb &c = climbs_[i];
-        if (!c.hers || std::abs(c.foot_y - level_floor) > 0.6F || c.head_y > lead_floor_ + 0.6F ||
+    for (int i = 0; i < climb_count(); ++i) {
+        Climb c;
+        if (!climb_of(i, c)) {
+            continue;
+        }
+        if (std::abs(c.foot_y - level_floor) > 0.6F || c.head_y > lead_floor_ + 0.6F ||
             c.head_y < level_floor + 0.6F) {
             continue;
         }
-        const float d = static_cast<int>(i) == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
+        const float d = i == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
         if (d < best_d) {
             best_d = d;
             best = static_cast<int>(i);
@@ -819,7 +822,8 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     if (best < 0) {
         return false;
     }
-    const Climb &c = climbs_[static_cast<std::size_t>(best)];
+    Climb c;
+    climb_of(best, c);
     const float off = distance_xz(ax, az, c.x, c.z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
     if (off > 0.2F) {
@@ -844,32 +848,37 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
 
 void Matron::set_routes(const traversal::AffordanceMap *routes) {
     routes_ = routes;
-    climbs_.clear();
     bay_climb_ = -1;
     guess_climb_ = -1;
-    if (routes_ == nullptr) {
-        return;
+}
+
+int Matron::climb_count() const { return routes_ == nullptr ? 0 : static_cast<int>(routes_->edges().size()); }
+
+// A way up as she found it by scanning: a usable rung edge of her map, read
+// straight from the scan (no table of her own), faced toward its line from
+// the side she starts on.
+bool Matron::climb_of(const int edge, Climb &out) const {
+    if (routes_ == nullptr || edge < 0 || edge >= climb_count()) {
+        return false;
+    }
+    const traversal::Edge &e = routes_->edges()[static_cast<std::size_t>(edge)];
+    if (!e.usable || e.kind != traversal::MoveKind::RungUp) {
+        return false;
     }
     const auto &regions = routes_->regions();
-    const auto &edges = routes_->edges();
-    for (std::size_t i = 0; i < edges.size(); ++i) {
-        const traversal::Edge &e = edges[i];
-        if (!e.usable || e.kind != traversal::MoveKind::RungUp) {
-            continue;
-        }
-        const traversal::MoveSpec &m = e.spec;
-        // Faced toward its line from the side she starts on.
-        const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
-        climbs_.push_back({m.start.GetX(), m.start.GetZ(), regions[static_cast<std::size_t>(e.from)].top,
-                           regions[static_cast<std::size_t>(e.to)].top, face.GetX(), face.GetZ(), m.goal.GetX(), m.goal.GetZ(),
-                           true, static_cast<int>(i)});
-    }
+    const traversal::MoveSpec &m = e.spec;
+    const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+    out = {float(m.start.GetX()), float(m.start.GetZ()), regions[static_cast<std::size_t>(e.from)].top,
+           regions[static_cast<std::size_t>(e.to)].top, face.GetX(), face.GetZ(), float(m.goal.GetX()), float(m.goal.GetZ()),
+           edge};
+    return true;
 }
 
 // Onto a climb's rungs: her hands and feet on them, gravity on her as ever,
 // her force from one capped budget (traversal::Climber).
 void Matron::begin_climb(const int which) {
-    const Climb &c = climbs_[static_cast<std::size_t>(which)];
+    Climb c;
+    climb_of(which, c);
     climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     climber_->begin(routes_->edges()[static_cast<std::size_t>(c.edge)].spec);
     climb_ = which;
@@ -878,7 +887,8 @@ void Matron::begin_climb(const int which) {
 }
 
 void Matron::climb(const float dt) {
-    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
+    Climb c;
+    climb_of(climb_, c);
     // Up it at her pace: still in a Turn's wind-up, in jerks in its lunges.
     float rate = kClimbMps;
     if (turn_ == Turn::Windup) {
@@ -1691,8 +1701,11 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         if (bay_climb_ < 0) {
             const float floor_y = levels_[static_cast<std::size_t>(bay_level_)].floor_y;
             float best_d = std::numeric_limits<float>::max();
-            for (std::size_t i = 0; i < climbs_.size(); ++i) {
-                const Climb &k = climbs_[i];
+            for (int i = 0; i < climb_count(); ++i) {
+                Climb k;
+                if (!climb_of(i, k)) {
+                    continue;
+                }
                 const float d = distance_xz(ax, az, k.x, k.z);
                 if (std::abs(k.foot_y - floor_y) < 0.6F && k.head_y > floor_y + 0.6F && d < best_d) {
                     best_d = d;
@@ -1704,7 +1717,8 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
             trap_ = Trap::Off;   // no way out she knows of: she stays in it, and hunts from there
             return false;
         }
-        const Climb &c = climbs_[static_cast<std::size_t>(bay_climb_)];
+        Climb c;
+    climb_of(bay_climb_, c);
         const float off = distance_xz(ax, az, c.x, c.z);
         if (off > 0.2F) {
             walk_toward(dt, c.x, c.z, std::min(1.0F, 0.3F + 2.0F * off));
@@ -1793,8 +1807,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // heard and seen up it, and where it goes is her guess.
     int player_climb = -1;
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
-    for (std::size_t i = 0; i < climbs_.size(); ++i) {
-        const Climb &c = climbs_[i];
+    for (int i = 0; i < climb_count(); ++i) {
+        Climb c;
+        if (!climb_of(i, c)) {
+            continue;
+        }
         if (std::abs(c.foot_y - level_floor) < 0.6F && std::abs(px - c.x) < 1.0F && std::abs(pz - c.z) < 1.0F &&
             player.GetY() > c.foot_y + 1.3F && player.GetY() < c.head_y + 1.2F) {
             player_climb = static_cast<int>(i);
@@ -2006,7 +2023,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // over its head. That lead is on another level: not a noise she
         // checks from a vantage (wary), but one she goes after by her way there.
         if (player_climb >= 0 && (saw || heard)) {
-            const Climb &c = climbs_[static_cast<std::size_t>(player_climb)];
+            Climb c;
+    climb_of(player_climb, c);
             heard_x_ = c.top_x;
             heard_z_ = c.top_z;
             lead_floor_ = c.head_y;
@@ -2105,12 +2123,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     // (one she never takes hold of, the riser from its plate
                     // over the shaft: at the place on her own lines by it).
                     if (guess_climb_ >= 0) {
-                        const Climb &c = climbs_[static_cast<std::size_t>(guess_climb_)];
+                        Climb c;
+    climb_of(guess_climb_, c);
                         heard_x_ = c.x;
                         heard_z_ = c.z;
-                        if (!c.hers) {
-                            onto_floor_lines(heard_x_, heard_z_);
-                        }
                     }
                     // Heard on another level she has no way to: at the place
                     // on her own lines over or under it (not out over the
