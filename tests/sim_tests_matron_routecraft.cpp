@@ -129,6 +129,16 @@ void run_matron_routecraft() {
     {
         Simulation world(InitialSpawn::Deck154);
         world.launch_matron_for_test({5,155.07,-129.6});
+        Vector3 previous{5,155.07,-129.6};
+        float maximum_step=0;
+        const auto tick_world=[&]() {
+            (void)world.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m=world.matron_state();
+            const double dx=m.position.x-previous.x, dy=m.position.y-previous.y, dz=m.position.z-previous.z;
+            maximum_step=std::max(maximum_step,float(std::sqrt(dx*dx+dy*dy+dz*dz)));
+            require(m.alive && maximum_step<0.2F,"routecraft: full tower alive with motion under 0.2 m per tick");
+            previous=m.position;
+        };
         auto started=std::chrono::steady_clock::now();
         const bool planned=world.request_matron_climb_goal({5,177.37,-128.6},{0,0,1});
         std::cout<<"full tower initial plan_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
@@ -141,25 +151,36 @@ void run_matron_routecraft() {
                 std::cout<<"full tower replan_request_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
                     <<" native_queries="<<world.matron_climb_queries()<<" at_y="<<world.matron_state().position.y<<'\n';
             }
-            (void)world.advance_frame(Simulation::kFixedStepSeconds);
+            tick_world();
         }
         std::cout<<"routecraft full tower ascent y="<<world.matron_state().position.y<<" status="<<world.matron_climb_status()<<'\n';
         require(world.matron_climb_status()==2,"routecraft: full tower ascent executes");
         // One additional held tick lets native floor sensing establish the ring.
-        (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        tick_world();
         require(std::abs(world.matron_state().floor_y-176.25)<0.1,"routecraft: upper level established");
         require(!world.request_matron_climb_goal({5,1000,-128.6},{0,0,1}) && world.matron_climb_status()==2,"routecraft: rejected replacement keeps current hold");
         world.cancel_matron_climb_goal();
-        for(int i=0;i<30;++i) (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        for(int i=0;i<30;++i) tick_world();
         require(std::abs(world.matron_state().position.y-(176.25+Matron::kStandCentre))<0.025,"routecraft: top transfer released onto actual ring");
-        std::cout<<"routecraft full tower grounded top-out y="<<world.matron_state().position.y<<'\n';
+        for(int i=0;i<90;++i) {
+            tick_world(); const auto m=world.matron_state();
+            require(std::abs(m.position.y-(176.25+Matron::kStandCentre))<0.025 && !m.climbing && !m.grip_on && m.carrying==0,
+                "routecraft: one second standing on upper support holding nothing");
+        }
+        std::cout<<"routecraft full tower grounded top-out y="<<world.matron_state().position.y<<" standing_ticks=90"<<'\n';
         require(world.request_matron_climb_goal({5,155.2,-129.6},{0,0,1}),"routecraft: full tower plans descent");
-        for(int tick=0;tick<9000 && world.matron_climb_status()==1;++tick) (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        for(int tick=0;tick<9000 && world.matron_climb_status()==1;++tick) tick_world();
         require(world.matron_climb_status()==2,"routecraft: full tower descent executes");
         std::cout<<"routecraft full tower descent y="<<world.matron_state().position.y<<'\n';
         world.cancel_matron_climb_goal();
-        for(int i=0;i<30;++i) (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        for(int i=0;i<30;++i) tick_world();
         require(world.matron_state().alive && std::abs(world.matron_state().floor_y-154)<0.1,"routecraft: real upper-level descent recovers on lower deck");
+        for(int i=0;i<90;++i) {
+            tick_world(); const auto m=world.matron_state();
+            require(std::abs(m.position.y-(154+Matron::kStandCentre))<0.025 && !m.climbing && !m.grip_on && m.carrying==0,
+                "routecraft: one second standing on lower support holding nothing");
+        }
+        std::cout<<"routecraft full tower lower standing_ticks=90 maximum_step_m="<<maximum_step<<'\n';
     }
     {
         Fixture f(RVec3(0,155.07,-0.55));
