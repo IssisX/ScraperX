@@ -1504,12 +1504,27 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         const float iz = std::min(inset, 0.5F * (p.max_z - p.min_z));
         return Vec3(std::clamp(at.GetX(), p.min_x + ix, p.max_x - ix), p.top, std::clamp(at.GetZ(), p.min_z + iz, p.max_z - iz));
     };
-    const auto free_spot = [&](const Patch &p, const Vec3 at, Vec3 &out) {
+    const auto free_spot = [&](const Patch &p, const Vec3 at, Vec3 &out, const bool ring = false) {
         for (const float inset : {limits.radius + 0.05F, limits.radius + 0.35F, limits.radius + 0.7F}) {
             const Vec3 s = closest_on(p, at, inset);
             if (capsule_free(physics, ignore, limits, s)) {
                 out = s;
                 return true;
+            }
+        }
+        // Round a member standing in the floor (a pole's foot): the nearest
+        // point is the member itself, so a ring round it on the same top.
+        const float rings[3] = {limits.radius + 0.12F, limits.radius + 0.3F, limits.radius + 0.5F};
+        for (int ri = 0; ring && ri < 3; ++ri) {
+            const float r = rings[ri];
+            for (int k = 0; k < 16; ++k) {
+                const float a = float(k) * 0.3926991F;
+                const Vec3 s = closest_on(p, at + Vec3(std::cos(a) * r, 0.0F, std::sin(a) * r), limits.radius + 0.05F);
+                if (horizontal(s - at) < limits.radius && p.max_x - p.min_x > 2.0F * limits.radius) continue;
+                if (capsule_free(physics, ignore, limits, s)) {
+                    out = s;
+                    return true;
+                }
             }
         }
         out = closest_on(p, at, limits.radius + 0.05F);
@@ -1628,7 +1643,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 Vec3 stand_foot{}, stand_head{};
                 // Where she stands at its foot: the nearest of that floor to
                 // the pole (a board beside it as much as a deck round it).
-                const bool foot_ok = free_spot(fp, closest_on(fp, axis, 0.0F), stand_foot) &&
+                const bool foot_ok = free_spot(fp, closest_on(fp, axis, 0.0F), stand_foot, true) &&
                                      horizontal(stand_foot - axis) <= limits.reach_out;
                 const bool head_ok = free_spot(hp, lip, stand_head);
                 bool climb_room = true;
@@ -1700,12 +1715,42 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
-                        const Vec3 lip = closest_on(hi, lc, 0.0F);
-                        const Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
-                        const Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
+                        Vec3 lip = closest_on(hi, lc, 0.0F);
+                        Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
+                        Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
+                        bool below_ok = horizontal(below - lip) <= 0.9F && capsule_free(physics, ignore, limits, below);
+                        bool above_ok = capsule_free(physics, ignore, limits, above);
+                        if (!(below_ok && above_ok)) {
+                            // Walk the high top's edges for a lip with the low top
+                            // just outside it and room for her on both sides.
+                            float best = 1.0e9F;
+                            const float step = 0.3F;
+                            const float edges[4][4] = {{hi.min_x, hi.min_z, 1, 0}, {hi.min_x, hi.max_z, 1, 0},
+                                                       {hi.min_x, hi.min_z, 0, 1}, {hi.max_x, hi.min_z, 0, 1}};
+                            const Vec3 normals[4] = {Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(-1, 0, 0), Vec3(1, 0, 0)};
+                            for (int side = 0; side < 4; ++side) {
+                                const float len = edges[side][2] > 0 ? hi.max_x - hi.min_x : hi.max_z - hi.min_z;
+                                const int n = std::max(1, int(len / step));
+                                for (int t = 0; t <= n; ++t) {
+                                    const float u = len * (float(t) + 0.5F * (t < n)) / float(n + 1) + 0.0F;
+                                    const Vec3 e(edges[side][0] + edges[side][2] * u, hi.top, edges[side][1] + edges[side][3] * u);
+                                    const Vec3 b = e + normals[side] * (limits.radius + 0.1F);
+                                    if (b.GetX() < lo.min_x || b.GetX() > lo.max_x || b.GetZ() < lo.min_z || b.GetZ() > lo.max_z) continue;
+                                    const float d = horizontal(e - lc);
+                                    if (d >= best) continue;
+                                    const Vec3 bb(b.GetX(), lo.top, b.GetZ());
+                                    const Vec3 aa = closest_on(hi, e - normals[side] * (limits.radius + 0.1F), limits.radius + 0.1F);
+                                    if (capsule_free(physics, ignore, limits, bb) && capsule_free(physics, ignore, limits, aa)) {
+                                        best = d;
+                                        lip = e;
+                                        below = bb;
+                                        above = aa;
+                                        below_ok = above_ok = true;
+                                    }
+                                }
+                            }
+                        }
                         if (horizontal(below - lip) > 0.9F) continue;
-                        const bool below_ok = capsule_free(physics, ignore, limits, below);
-                        const bool above_ok = capsule_free(physics, ignore, limits, above);
                         char facts[120];
                         std::snprintf(facts, sizeof facts, "lip %.2f over the floor below", double(rise));
                         Edge up;
