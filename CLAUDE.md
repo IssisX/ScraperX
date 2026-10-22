@@ -39,3 +39,20 @@ Said more than once (2026-10-21, 2026-10-22: *"I don't like that so many tests f
 minuscule distances ... yes, you can change geometry"*). When a test or route fails by a small
 distance (a few cm to about 0.2 m), a small, unnoticeable change to the world's geometry is allowed
 and preferred over reworking code. Say so when you use one. Test assertions still never weaken.
+
+## Managing the agents for the owner
+
+2026-10-22: *"I need more management help from you telling the other agents what to do ... I'm on
+a phone"*, then *"Way better ... keep trying to manage our processes in a more intelligent manner"*.
+- Issue #3 holds one ASSIGNMENT BOARD: every agent's queue in order, who integrates whose work
+  (never their own), and the rules. Agents work down their queue without waiting for the owner,
+  post after each step, and mark ⏳/✅ on the board. Update the board instead of handing the owner
+  separate prompts.
+- The owner gets one universal prompt ("read the board, do your queue") to paste into any agent.
+  The owner can also give orders as a plain comment on issue #3, and every agent follows them.
+- Keep offering better ways to manage the work when you see them.
+- Progress over testing (2026-10-22: *"we want them to figure out hard coding problems and make
+  progress, not just test shit"*). Give agents real problems to solve in code; tests are the proof,
+  not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
+- This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
+  gets its own GitHub issue with its own short board in the same format, linked once from #3.
