@@ -537,8 +537,40 @@ void test_power_budget() {
 
 } // namespace
 
+// Gripping a moving bar: power is charged on her velocity relative to the
+// bar, so holding still on a bar that carries her (a lift, a swinging boom)
+// costs force but no power, while pulling up along a bar that falls away
+// from her is charged for the speed she makes on it, not over the ground.
+void test_power_moving_bar() {
+    using traversal::Budget;
+    const Vec3 bar(0, 5.0F, 0);   // the bar rising at 5 m/s
+    const float weight = Matron::kMassKg * 9.81F;
+    // Carried by it, still on it: her whole weight held, no power spent.
+    Budget carried{5600.0F, 0.0F, 9000.0F, 0.0F, bar - bar};
+    const Vec3 hold = carried.take(Vec3(0, weight, 0));
+    require(std::abs(hold.GetY() - weight) < 1.0F && carried.power_used < 1.0F,
+            "matron power: holding still on a bar that carries her costs no power");
+    // Charged over the ground instead, the same hold would be cut to 1800 N:
+    // the cap would drop her off any moving support.
+    Budget ground{5600.0F, 0.0F, 9000.0F, 0.0F, bar};
+    require(ground.take(Vec3(0, weight, 0)).GetY() < weight - 300.0F,
+            "matron power: (control) charged over the ground the hold would be cut");
+    // Climbing it at 2 m/s relative while it rises at 5: charged at 2 m/s.
+    Budget climbing{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 7.0F, 0) - bar};
+    const Vec3 pull = climbing.take(Vec3(0, 5000.0F, 0));
+    require(std::abs(pull.GetY() - 4500.0F) < 1.0F && climbing.power_used <= 9000.0F + 1.0F,
+            "matron power: climbing a moving bar is charged on her speed along it (9 kW at 2 m/s is 4500 N)");
+    // A bar dropping away under her hands: braking against it is free.
+    Budget falling{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 0, 0) - Vec3(0, -3.0F, 0)};
+    const Vec3 brake = falling.take(Vec3(0, -2000.0F, 0));
+    require(std::abs(brake.GetY() + 2000.0F) < 1.0F && falling.power_used < 1.0F,
+            "matron power: slowing herself against a falling bar is not power-limited");
+    std::cout << "PASS scraperx_sim matron power moving bar: hold_n=" << hold.GetY() << " climb_n=" << pull.GetY() << "\n";
+}
+
 void run_matron_climb() {
     test_power_budget();
+    test_power_moving_bar();
     test_rungs();
     test_rung_failures();
     test_pole();

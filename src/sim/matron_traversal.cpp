@@ -15,6 +15,7 @@
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -240,7 +241,7 @@ bool Climber::revalidate(Hold &hold, RVec3 &world) const {
         return false;
     }
     const Vec3 d = world - center();
-    return d.GetY() <= limits_.hand_above_centre + 0.15F && d.GetY() >= -limits_.reach_low - 0.6F &&
+    return d.GetY() <= limits_.hand_above_center + 0.15F && d.GetY() >= -limits_.reach_low - 0.6F &&
            horizontal(d) <= limits_.reach_out + 0.15F;
 }
 
@@ -407,6 +408,18 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         };
         if (!floor_ahead(want_v) || (v.Length() > 0.3F && !floor_ahead(v))) {
             want_dir_v = floor_ahead(want_v) ? want_v * 0.3F : Vec3::sZero();
+            if (want_dir_v.IsNearZero() && !want_v.IsNearZero()) {
+                // No floor straight on (a corner cut over a gap): along the
+                // edge instead, the nearest turn with floor that still gains.
+                for (const float turn : {0.5F, -0.5F, 1.0F, -1.0F, 1.4F, -1.4F}) {
+                    const float cs = std::cos(turn), sn = std::sin(turn);
+                    const Vec3 dir(want_v.GetX() * cs - want_v.GetZ() * sn, 0.0F, want_v.GetX() * sn + want_v.GetZ() * cs);
+                    if (floor_ahead(dir)) {
+                        want_dir_v = dir * (0.5F * cs);
+                        break;
+                    }
+                }
+            }
         }
     }
     Vec3 want = (want_dir_v - v) * (limits_.mass_kg * 8.0F);
@@ -599,7 +612,7 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     Hold next;
     RVec3 next_world;
     const float hold_y = float(hold_world_.GetY());
-    const float top_reach = float(c.GetY()) + limits_.hand_above_centre;
+    const float top_reach = float(c.GetY()) + limits_.hand_above_center;
     if (top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
         find_rung(hold_y + 0.12F, std::min(top_reach, hold_y + 0.65F), true, next, next_world)) {
         hold_ = next;
@@ -791,8 +804,12 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         if (!find_rung(feet + 0.3F, std::max(feet - 0.8F, lowest), false, hold_, where)) {
             const Vec3 toward = flat(Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) - Vec3(c)).NormalizedOr(-spec_.out);
             bool found = false;
-            for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
-                found = take_hold(RVec3(c.GetX(), feet - 0.03F, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+            // The floor's edge where her soles meet it: she may stand a
+            // little high on a plate or a lip's kerb, so feel down for it.
+            for (const float under : {0.03F, 0.12F, 0.22F}) {
+                for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
+                    found = take_hold(RVec3(c.GetX(), feet - under, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+                }
             }
             if (found) {
                 // Her hands at the edge itself, on the side she goes over.
@@ -849,7 +866,7 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         }
     }
     const float hold_y = float(hold_world_.GetY());
-    if (hold_y - float(c.GetY()) > limits_.hand_above_centre - 0.2F) {
+    if (hold_y - float(c.GetY()) > limits_.hand_above_center - 0.2F) {
         Hold next;
         RVec3 next_world;
         if (find_rung(hold_y - 0.12F, hold_y - 0.65F, false, next, next_world)) {
@@ -1059,7 +1076,7 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
             return status_;
         }
         // The launch that brings her hands to the bar at the top of the jump.
-        const float rise = spec_.bottom_y + 0.08F - (float(c.GetY()) + limits_.hand_above_centre);
+        const float rise = spec_.bottom_y + 0.08F - (float(c.GetY()) + limits_.hand_above_center);
         const float vy = rise > 0.0F ? std::sqrt(2.0F * kGravity * rise) : 0.0F;
         const float t = std::max(vy / kGravity, 0.2F);
         const Vec3 across = flat(bar + spec_.out * 0.42F - c);
@@ -1079,7 +1096,7 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
         return status_;
     }
     const Vec3 v = velocity();
-    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_centre, 0.0F);
+    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_center, 0.0F);
     Hold bar_hold;
     RVec3 bar_at;
     const bool near_bar = std::abs(float(hands.GetY()) - spec_.bottom_y) < 0.25F &&
@@ -1358,6 +1375,29 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             patches_.push_back(p);
         }
     }
+    // A ladder's stile is no pole: an upright that two or more bars end at
+    // along its height is the side of a ladder, climbed by its rungs, not
+    // gripped round. (Geometry alone: any upright with rungs off it.)
+    poles_.erase(std::remove_if(poles_.begin(), poles_.end(),
+                                [&](const Pole &pole) {
+                                    int ends = 0;
+                                    for (const Bar &bar : bars) {
+                                        const float y = bar.c.GetY();
+                                        if (y < pole.bottom - 0.05F || y > pole.top + 0.05F) {
+                                            continue;
+                                        }
+                                        const Vec3 along = bar.along_x ? Vec3::sAxisX() : Vec3::sAxisZ();
+                                        for (const float side : {-1.0F, 1.0F}) {
+                                            const Vec3 end = bar.c + along * (side * bar.half);
+                                            if (std::hypot(end.GetX() - pole.x, end.GetZ() - pole.z) <=
+                                                0.5F * pole.section + 0.12F) {
+                                                ++ends;
+                                            }
+                                        }
+                                    }
+                                    return ends >= 2;
+                                }),
+                 poles_.end());
     stats_.patches = static_cast<std::uint32_t>(patches_.size());
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
@@ -1889,7 +1929,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
     });
 }
 
-std::vector<int> AffordanceMap::plan(const int from, const int to) const {
+std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid) const {
     std::vector<int> result;
     if (from < 0 || to < 0 || from >= static_cast<int>(regions_.size()) || to >= static_cast<int>(regions_.size())) {
         return result;
@@ -1909,6 +1949,7 @@ std::vector<int> AffordanceMap::plan(const int from, const int to) const {
         auto it = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
         for (; it != edges_.end() && it->from == r; ++it) {
             if (!it->usable) continue;
+            if (std::find(avoid.begin(), avoid.end(), static_cast<int>(it - edges_.begin())) != avoid.end()) continue;
             const float nd = d + it->cost;
             if (nd < dist[static_cast<std::size_t>(it->to)]) {
                 dist[static_cast<std::size_t>(it->to)] = nd;

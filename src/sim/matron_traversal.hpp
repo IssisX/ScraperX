@@ -47,11 +47,11 @@ struct Limits {
     float half_height = 0.75F;   // the capsule's cylinder half; center is radius + half above the feet
     float mass_kg = 220.0F;
     // Hands overhead, standing: feet + 2.45 m.
-    float hand_above_centre = 1.40F;
+    float hand_above_center = 1.40F;
     // Hanging at full stretch: the hold this far over her center.
     float hang_below_hold = 1.30F;
     // Holds she can take: up to this far out from her middle's line, and
-    // from this far under her center to hand_above_centre over it.
+    // from this far under her center to hand_above_center over it.
     float reach_out = 0.95F;
     float reach_low = 0.80F;   // pressing down on a lip, hands at her hips
     // The one budget every simultaneous actuator (hands, feet, squeeze)
@@ -79,7 +79,7 @@ struct Limits {
     float pole_up_mps = 0.5F;
     float pole_down_mps = 1.6F;
     [[nodiscard]] float center_above_feet() const noexcept { return radius + half_height; }
-    [[nodiscard]] float hand_reach_standing() const noexcept { return center_above_feet() + hand_above_centre; }
+    [[nodiscard]] float hand_reach_standing() const noexcept { return center_above_feet() + hand_above_center; }
 };
 
 // A hold: a body, the member of it, and where on the member (body frame).
@@ -329,7 +329,8 @@ public:
     [[nodiscard]] int region_near_top(float y, float tol = 0.2F) const;
     // Directed search: the edges, in order, from one region to another
     // (usable edges only). Empty if there is no way.
-    [[nodiscard]] std::vector<int> plan(int from, int to) const;
+    // avoid: edges not to take (ones this journey already found it cannot start).
+    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {}) const;
     // A walk inside one region: patch-to-patch waypoints (feet).
     [[nodiscard]] std::vector<JPH::Vec3> walk_path(JPH::Vec3 from, JPH::Vec3 to) const;
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
