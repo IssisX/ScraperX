@@ -62,6 +62,21 @@
       "SearchPlugins",
       "DesignSync",
       "TaskOutput"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push * :refs/heads/main*)",
+      "Bash(git push * --delete *)",
+      "Bash(git branch -D *)",
+      "Bash(rm -rf /*)",
+      "mcp__github__merge_pull_request",
+      "mcp__github__delete_file",
+      "mcp__github__create_repository",
+      "mcp__github__fork_repository"
     ]
   },
   "hooks": {
