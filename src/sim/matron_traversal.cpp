@@ -133,19 +133,52 @@ bool member_bounds(const Body &body, const SubShapeID &sub, AABox &out, bool &ba
 Climber::Climber(PhysicsSystem &physics, const BodyID body, const Ignore ignore, const Limits limits)
     : physics_(physics), body_(body), ignore_(ignore), limits_(limits) {}
 
-Vec3 Climber::Budget::take(const Vec3 want) noexcept {
+Vec3 Budget::take(const Vec3 want) noexcept {
     const float length = want.Length();
     if (length <= 1.0e-6F || left <= 0.0F) {
         return Vec3::sZero();
     }
-    const float granted = std::min(length, left);
-    left -= granted;
-    used += granted;
-    return want * (granted / length);
+    Vec3 granted = want * (std::min(length, left) / length);
+    // Power: only the part along her motion does work. Braking (negative)
+    // costs none here; positive work beyond what is left scales the push.
+    const float power = granted.Dot(velocity);
+    if (power > 0.0F) {
+        const float allowed = std::max(power_left, 0.0F);
+        if (power > allowed) {
+            const float speed2 = velocity.LengthSq();
+            // Remove just enough of the along-velocity component.
+            granted -= velocity * ((power - allowed) / speed2);
+        }
+        const float spent = std::max(granted.Dot(velocity), 0.0F);
+        power_left -= spent;
+        power_used += spent;
+    }
+    const float g = granted.Length();
+    left -= g;
+    used += g;
+    return granted;
 }
 
 RVec3 Climber::center() const { return physics_.GetBodyInterface().GetCenterOfMassPosition(body_); }
 Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVelocity(body_); }
+
+// Her velocity against what she pushes on: the hold's point velocity at the
+// anchor when holding, else the floor's under her feet. Power is spent only
+// on motion relative to the support (riding a moving deck costs nothing).
+Vec3 Climber::relative_velocity() const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    Vec3 support = Vec3::sZero();
+    if (hold_.valid() && bodies.IsAdded(hold_.body)) {
+        support = bodies.GetPointVelocity(hold_.body, hold_world_);
+    } else {
+        BodyID by;
+        if (supported(nullptr, &by) && !by.IsInvalid()) {
+            const RVec3 c = center();
+            support = bodies.GetPointVelocity(by, RVec3(c.GetX(), c.GetY() - limits_.center_above_feet(), c.GetZ()));
+        }
+    }
+    return velocity() - support;
+}
 
 bool Climber::supported(float *top, BodyID *by) const {
     const RVec3 c = center();
@@ -340,7 +373,7 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     push_reaction(force, at_hold);
 }
 
-void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget) {
+void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget, const float may_drop) {
     (void)dt;
     const RVec3 c = center();
     const Vec3 to = flat(feet_goal - c);
@@ -357,10 +390,11 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
             if (dir.LengthSq() < 1.0e-4F) return true;
             const RVec3 from = c + dir.Normalized() * (limits_.radius + 0.1F) +
                                Vec3(0.0F, limits_.step_max_m + 0.05F - limits_.center_above_feet(), 0.0F);
-            const float depth = 2.0F * limits_.step_max_m + 0.1F;
+            const float below = std::max(limits_.step_max_m, may_drop);
+            const float depth = limits_.step_max_m + below + 0.1F;
             RayCastResult hit;
             return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter) &&
-                   float(from.GetY()) - hit.mFraction * depth > feet_y - limits_.step_max_m;
+                   float(from.GetY()) - hit.mFraction * depth > feet_y - below;
         };
         if (!floor_ahead(want_v) || (v.Length() > 0.3F && !floor_ahead(v))) {
             want_dir_v = floor_ahead(want_v) ? want_v * 0.3F : Vec3::sZero();
@@ -395,9 +429,11 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
 }
 
 float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed) {
-    Budget budget{limits_.total_force_n, 0.0F};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
     walk(dt, feet_goal, speed, budget);
     view_.force_n = budget.used;
+    view_.power_w = budget.power_used;
+    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     return budget.used;
 }
@@ -466,7 +502,7 @@ Climber::Status Climber::step(const float dt) {
     if (status_ != Status::Running) {
         return status_;
     }
-    Budget budget{limits_.total_force_n, 0.0F};
+    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
     phase_s_ += dt;
     switch (spec_.kind) {
     case MoveKind::Walk: step_walk(dt, budget); break;
@@ -480,6 +516,8 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     }
     view_.force_n = budget.used;
+    view_.power_w = budget.power_used;
+    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
     view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
     view_.phase = phase_;
     view_.sliding = sliding_;
@@ -677,15 +715,29 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
               hold_world_);
         progress = feet;
     } else {
+        // Over the lip no farther than her hand reaches from it; a lip over
+        // the floor (a rail, a toe board) she lets go of past it, onto the floor.
+        Vec3 dest = spec_.goal;
+        const float span = limits_.reach_out - 0.1F;
+        if (horizontal(dest - lip_world_) > span) {
+            dest = Vec3(lip_world_) + flat(dest - Vec3(lip_world_)).Normalized() * span;
+        }
         float support = 0.0F;
-        if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(spec_.goal - c) < 0.35F) {
+        if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(dest - c) < 0.35F) {
             finish();
             return status_;
         }
-        const float left = horizontal(spec_.goal - c);
-        drive(dt, Vec3(spec_.goal.GetX(), over_y, spec_.goal.GetZ()), flat(spec_.goal - c).NormalizedOr(in) * std::min(limits_.mantle_mps, 1.5F * left), 20.0F, budget, true,
+        if (horizontal(dest - c) < 0.15F && top > spec_.goal_top + 0.3F) {
+            ++view_.releases;
+            hold_ = Hold{};
+            phase_ = 4;
+            phase_s_ = 0.0F;
+            return status_;
+        }
+        const float left = horizontal(dest - c);
+        drive(dt, Vec3(dest.GetX(), over_y, dest.GetZ()), flat(dest - c).NormalizedOr(in) * std::min(limits_.mantle_mps, 1.5F * left), 20.0F, budget, true,
               hold_world_);
-        progress = 10.0F - horizontal(spec_.goal - c);
+        progress = 10.0F - horizontal(dest - c);
     }
     if (progress > best_progress_ + 0.03F) {
         best_progress_ = progress;
@@ -723,9 +775,30 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
             return status_;
         }
         RVec3 where;
-        if (!find_rung(feet + 0.3F, feet - 0.8F, false, hold_, where)) {
-            fail(Failure::NoHold);
-            return status_;
+        // The top rung within her reach as she stands (no lower than she
+        // can keep hold of); else the lip she stands on, from which she goes
+        // over and down hand under hand to the rungs.
+        const float lowest = float(c.GetY()) - limits_.reach_low - 0.55F;
+        if (!find_rung(feet + 0.3F, std::max(feet - 0.8F, lowest), false, hold_, where)) {
+            const Vec3 toward = flat(Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) - Vec3(c)).NormalizedOr(-spec_.out);
+            bool found = false;
+            for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
+                found = take_hold(RVec3(c.GetX(), feet - 0.03F, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+            }
+            if (found) {
+                // Her hands at the edge itself, on the side she goes over.
+                BodyLockRead lock(physics_.GetBodyLockInterface(), hold_.body);
+                AABox bounds;
+                bool bar = false;
+                if (lock.Succeeded() && member_bounds(lock.GetBody(), hold_.sub, bounds, bar)) {
+                    where = bounds.GetClosestPoint(RVec3(c.GetX(), feet, c.GetZ()) + toward * 3.0F);
+                    hold_.local = lock.GetBody().GetInverseCenterOfMassTransform() * where;
+                }
+            }
+            if (!found) {
+                fail(Failure::NoHold);
+                return status_;
+            }
         }
         const Vec3 hang = Vec3(spec_.line.GetX(), float(where.GetY()) - limits_.hang_below_hold + 0.4F, spec_.line.GetZ()) +
                           spec_.out * 0.42F;
@@ -1130,7 +1203,8 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
         }
     }
     if (on && !hang) {
-        walk(dt, spec_.goal, 1.6F, budget);   // on over the edge
+        // On over the edge: the floor she steps down to counts as floor.
+        walk(dt, spec_.goal, 1.6F, budget, std::max(0.0F, support - spec_.goal_top) + 0.15F);
     }
     if (phase_s_ > 8.0F) {
         fail(Failure::NotSupported);
@@ -1288,11 +1362,19 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
         const float lx = p.max_x - p.min_x;
         const float lz = p.max_z - p.min_z;
         bool ok = false;
-        for (const float f : {0.0F, -0.35F, 0.35F, -0.15F, 0.15F, -0.45F, 0.45F}) {
-            const Vec3 s = lx >= lz ? Vec3(cx + f * lx, p.top, cz) : Vec3(cx, p.top, cz + f * lz);
-            if (capsule_free(physics, ignore, limits, s)) {
-                ok = true;
-                break;
+        // Along its long axis first, then across it too (a step whose back
+        // part is covered by the next step up is walkable at its front).
+        static constexpr float kAlong[7] = {0.0F, -0.35F, 0.35F, -0.15F, 0.15F, -0.45F, 0.45F};
+        static constexpr float kAcross[5] = {0.0F, -0.4F, 0.4F, -0.2F, 0.2F};
+        for (int a = 0; a < 5 && !ok; ++a) {
+            const float g = kAcross[a];
+            if (g != 0.0F && std::min(lx, lz) < 4.0F * limits.radius) continue;
+            for (const float f : kAlong) {
+                const Vec3 s = lx >= lz ? Vec3(cx + f * lx, p.top, cz + g * lz) : Vec3(cx + g * lx, p.top, cz + f * lz);
+                if (capsule_free(physics, ignore, limits, s)) {
+                    ok = true;
+                    break;
+                }
             }
         }
         if (ok) usable.push_back(p);
@@ -1485,12 +1567,27 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         const float iz = std::min(inset, 0.5F * (p.max_z - p.min_z));
         return Vec3(std::clamp(at.GetX(), p.min_x + ix, p.max_x - ix), p.top, std::clamp(at.GetZ(), p.min_z + iz, p.max_z - iz));
     };
-    const auto free_spot = [&](const Patch &p, const Vec3 at, Vec3 &out) {
+    const auto free_spot = [&](const Patch &p, const Vec3 at, Vec3 &out, const bool ring = false) {
         for (const float inset : {limits.radius + 0.05F, limits.radius + 0.35F, limits.radius + 0.7F}) {
             const Vec3 s = closest_on(p, at, inset);
             if (capsule_free(physics, ignore, limits, s)) {
                 out = s;
                 return true;
+            }
+        }
+        // Round a member standing in the floor (a pole's foot): the nearest
+        // point is the member itself, so a ring round it on the same top.
+        const float rings[3] = {limits.radius + 0.12F, limits.radius + 0.3F, limits.radius + 0.5F};
+        for (int ri = 0; ring && ri < 3; ++ri) {
+            const float r = rings[ri];
+            for (int k = 0; k < 16; ++k) {
+                const float a = float(k) * 0.3926991F;
+                const Vec3 s = closest_on(p, at + Vec3(std::cos(a) * r, 0.0F, std::sin(a) * r), limits.radius + 0.05F);
+                if (horizontal(s - at) < limits.radius && p.max_x - p.min_x > 2.0F * limits.radius) continue;
+                if (capsule_free(physics, ignore, limits, s)) {
+                    out = s;
+                    return true;
+                }
             }
         }
         out = closest_on(p, at, limits.radius + 0.05F);
@@ -1605,11 +1702,28 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 const Patch &hp = patches_[static_cast<std::size_t>(hi)];
                 if (hp.region == fp.region || hp.top < fp.top + 2.0F) continue;
                 const Vec3 lip = closest_on(hp, axis, 0.0F);
-                const Vec3 out = flat(axis - lip).NormalizedOr(Vec3::sAxisZ());
+                const Vec3 away = flat(axis - lip).NormalizedOr(Vec3::sAxisZ());
+                // Which side of it she hugs: away from the lip, unless its head
+                // stands above the lip (then her way over from there crosses the
+                // pole): from beside it, where her body fits along it.
+                Vec3 out = away;
+                if (pole.top > hp.top + 0.3F) {
+                    const Vec3 perp(-away.GetZ(), 0.0F, away.GetX());
+                    for (const Vec3 side : {perp, -perp}) {
+                        bool fits = true;
+                        for (float y = fp.top + 0.5F; y < hp.top + 0.5F && fits; y += 1.0F) {
+                            fits = capsule_free(physics, ignore, limits, axis + side * (limits.radius + 0.1F) + Vec3(0, y, 0));
+                        }
+                        if (fits) {
+                            out = side;
+                            break;
+                        }
+                    }
+                }
                 Vec3 stand_foot{}, stand_head{};
                 // Where she stands at its foot: the nearest of that floor to
                 // the pole (a board beside it as much as a deck round it).
-                const bool foot_ok = free_spot(fp, closest_on(fp, axis, 0.0F), stand_foot) &&
+                const bool foot_ok = free_spot(fp, closest_on(fp, axis, 0.0F), stand_foot, true) &&
                                      horizontal(stand_foot - axis) <= limits.reach_out;
                 const bool head_ok = free_spot(hp, lip, stand_head);
                 bool climb_room = true;
@@ -1681,12 +1795,48 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
-                        const Vec3 lip = closest_on(hi, lc, 0.0F);
-                        const Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
-                        const Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
+                        Vec3 lip = closest_on(hi, lc, 0.0F);
+                        Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
+                        Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
+                        bool below_ok = horizontal(below - lip) <= 0.9F && capsule_free(physics, ignore, limits, below);
+                        // Over the lip itself: her body at the edge (a rail along it stops her).
+                        const auto passage = [&](const Vec3 edge, const Vec3 inward) {
+                            return capsule_free(physics, ignore, limits, Vec3(edge.GetX(), hi.top, edge.GetZ()) + inward * 0.05F);
+                        };
+                        bool above_ok = capsule_free(physics, ignore, limits, above) &&
+                                        passage(lip, flat(above - lip).NormalizedOr(Vec3::sZero()));
+                        if (!(below_ok && above_ok)) {
+                            // Walk the high top's edges for a lip with the low top
+                            // just outside it and room for her on both sides.
+                            float best = 1.0e9F;
+                            const float step = 0.3F;
+                            const float edges[4][4] = {{hi.min_x, hi.min_z, 1, 0}, {hi.min_x, hi.max_z, 1, 0},
+                                                       {hi.min_x, hi.min_z, 0, 1}, {hi.max_x, hi.min_z, 0, 1}};
+                            const Vec3 normals[4] = {Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(-1, 0, 0), Vec3(1, 0, 0)};
+                            for (int side = 0; side < 4; ++side) {
+                                const float len = edges[side][2] > 0 ? hi.max_x - hi.min_x : hi.max_z - hi.min_z;
+                                const int n = std::max(1, int(len / step));
+                                for (int t = 0; t <= n; ++t) {
+                                    const float u = len * (float(t) + 0.5F * (t < n)) / float(n + 1) + 0.0F;
+                                    const Vec3 e(edges[side][0] + edges[side][2] * u, hi.top, edges[side][1] + edges[side][3] * u);
+                                    const Vec3 b = e + normals[side] * (limits.radius + 0.1F);
+                                    if (b.GetX() < lo.min_x || b.GetX() > lo.max_x || b.GetZ() < lo.min_z || b.GetZ() > lo.max_z) continue;
+                                    const float d = horizontal(e - lc);
+                                    if (d >= best) continue;
+                                    const Vec3 bb(b.GetX(), lo.top, b.GetZ());
+                                    const Vec3 aa = closest_on(hi, e - normals[side] * (limits.radius + 0.1F), limits.radius + 0.1F);
+                                    if (capsule_free(physics, ignore, limits, bb) && capsule_free(physics, ignore, limits, aa) &&
+                                        passage(e, -normals[side])) {
+                                        best = d;
+                                        lip = e;
+                                        below = bb;
+                                        above = aa;
+                                        below_ok = above_ok = true;
+                                    }
+                                }
+                            }
+                        }
                         if (horizontal(below - lip) > 0.9F) continue;
-                        const bool below_ok = capsule_free(physics, ignore, limits, below);
-                        const bool above_ok = capsule_free(physics, ignore, limits, above);
                         char facts[120];
                         std::snprintf(facts, sizeof facts, "lip %.2f over the floor below", double(rise));
                         Edge up;

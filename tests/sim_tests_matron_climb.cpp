@@ -151,6 +151,7 @@ void test_rungs() {
     std::cout << "  matron climb rungs: down " << int(dn) << " (" << traversal::failure_name(climber.failure()) << ") feet " << below << "\n";
     require(dn == Climber::Status::Done && std::abs(below) < 0.05F, "matron climb: down the rungs, top entry, to the floor");
     require(w.gravity_always, "matron climb: her gravity never off on the rungs");
+    require(climber.view().peak_power_w <= climber.limits().power_w + 1.0F, "matron climb: rung power within the shared cap");
     std::cout << "PASS scraperx_sim matron climb rungs up and down: peak_n=" << w.peak_force << "\n";
 }
 
@@ -497,9 +498,47 @@ void test_dynamic_support() {
     require(reaction > 1500.0F && lowest < rest - 0.3F, "matron climb: her weight goes onto a dynamic hold at the contact");
     std::cout << "PASS scraperx_sim matron climb dynamic support: sink_m=" << rest - lowest << "\n";
 }
+// The shared power cap: work along her velocity is clamped, braking and
+// sideways force are not, and force never exceeds what is left.
+void test_power_budget() {
+    using traversal::Budget;
+    Budget b{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3(0, 3.0F, 0)};
+    const Vec3 up = b.take(Vec3(0, 5000.0F, 0));   // 15 kW asked
+    require(std::abs(up.GetY() - 3000.0F) < 1.0F && b.power_left < 1.0F, "matron power: 9 kW at 3 m/s is 3000 N up");
+    const Vec3 side = b.take(Vec3(2000.0F, 0, 0));
+    require(std::abs(side.GetX() - 2000.0F) < 1.0F, "matron power: force across her motion costs no power");
+    const Vec3 brake = b.take(Vec3(0, -500.0F, 0));
+    require(std::abs(brake.GetY() + 500.0F) < 1.0F, "matron power: braking is not power-limited");
+    require(b.used <= 5600.0F + 1.0F, "matron power: force total still capped");
+    Budget still{5600.0F, 0.0F, 9000.0F, 0.0F, Vec3::sZero()};
+    require(std::abs(still.take(Vec3(0, 5000.0F, 0)).GetY() - 5000.0F) < 1.0F, "matron power: at rest, force cap only");
+    // Riding a rising support: her world velocity is the lift's, her
+    // velocity against it near zero, so power is not spent on the ride.
+    {
+        ClimbWorld w;
+        const BodyID lift = w.box(Vec3(1.5F, 0.2F, 1.5F), RVec3(0, 1.0F, 6.0F), false, EMotionType::Kinematic);
+        w.spawn(RVec3(0, 1.2F, 6.0F));
+        Climber climber(w.physics, w.her, traversal::Ignore{w.her, BodyID()}, traversal::Limits{});
+        for (int i = 0; i < 90; ++i) w.physics.Update(w.dt, 1, &w.temp, &w.jobs);
+        w.physics.GetBodyInterface().SetLinearVelocity(lift, Vec3(0, 2.0F, 0));
+        for (int i = 0; i < 90; ++i) {
+            climber.walk_between(w.dt, Vec3(0, 0, 6.0F), 0.0F);
+            w.physics.Update(w.dt, 1, &w.temp, &w.jobs);
+        }
+        const float world_vy = w.physics.GetBodyInterface().GetLinearVelocity(w.her).GetY();
+        const float rel = climber.relative_velocity().Length();
+        std::cout << "  matron power on a lift rising 2 m/s: world vy " << world_vy << ", relative " << rel << " m/s\n";
+        require(world_vy > 1.8F && rel < 0.2F, "matron power: charged on velocity against the moving support, not the world");
+        Budget riding{5600.0F, 0.0F, 9000.0F, 0.0F, climber.relative_velocity()};
+        require(riding.take(Vec3(0, 5000.0F, 0)).GetY() > 4900.0F, "matron power: riding a lift does not eat her power");
+    }
+    std::cout << "  matron power: 9 kW cap clamps along-velocity force (3000 N at 3 m/s); sideways/braking free\n";
+}
+
 } // namespace
 
 void run_matron_climb() {
+    test_power_budget();
     test_rungs();
     test_rung_failures();
     test_pole();
