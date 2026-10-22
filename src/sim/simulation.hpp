@@ -1556,7 +1556,7 @@ public:
         bool active = false;
         int goal = -1, region = -1, steps = 0, step = 0;
         double region_top = 0.0;
-        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0;
+        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0, yields = 0;
         std::uint32_t grips = 0, releases = 0, slips = 0, catches = 0, misses = 0;
         double force_n = 0.0, peak_force_n = 0.0;
         bool holding = false;

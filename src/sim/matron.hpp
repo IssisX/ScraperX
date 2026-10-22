@@ -930,7 +930,7 @@ public:
         int goal = -1;
         int region = -1;        // the region she last stood in (committed on support)
         int step = 0, steps = 0;
-        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0;
+        std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0, yields = 0;
         traversal::MoveKind move = traversal::MoveKind::Walk;
         traversal::Failure last_failure = traversal::Failure::None;
     };
@@ -1446,6 +1446,11 @@ private:
     float journey_wp_stall_s_ = 0.0F;
     bool journey_rerouted_ = false;
     float journey_wait_s_ = 0.0F;
+    // Giving way on a climb: the player within this of its line (at its
+    // foot, on it, at its head) and she does not start it; she stands this
+    // far off its line until it is clear.
+    static constexpr float kYieldReachM = 1.3F;
+    static constexpr float kYieldClearM = 1.6F;
     bool mantling_ = false;
     std::uint32_t climbs_done_ = 0;
     // Her mind (see above): what she has learned this run.

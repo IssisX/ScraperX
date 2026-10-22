@@ -82,6 +82,24 @@ void Matron::step_journey(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     speed_ = 0.0F;
+    // The player on a climb she means to take (on it, at its foot, or at
+    // its head): the way is theirs. Any climb, from its own line and span.
+    const auto player_on = [&](const traversal::MoveSpec &spec) {
+        if (player_.IsInvalid() || !bodies.IsAdded(player_)) {
+            return false;
+        }
+        const RVec3 p = bodies.GetPosition(player_);
+        const float lo = std::min(spec.bottom_y, spec.start.GetY()) - 2.5F;
+        const float hi = std::max(spec.top_y, spec.goal_top) + 0.5F;
+        return distance_xz(float(p.GetX()), float(p.GetZ()), spec.line.GetX(), spec.line.GetZ()) < kYieldReachM &&
+               float(p.GetY()) > lo && float(p.GetY()) < hi;
+    };
+    // A move not yet off her floor gives way the same as one not begun.
+    if (climber_->status() == traversal::Climber::Status::Running && climber_->phase() == 0 &&
+        journey_.step < journey_.steps &&
+        player_on(routes_->edges()[static_cast<std::size_t>(journey_edges_[static_cast<std::size_t>(journey_.step)])].spec)) {
+        climber_->cancel();
+    }
     // A move under way: her hands and feet on it, nothing else.
     if (climber_->status() == traversal::Climber::Status::Running) {
         climber_->step(dt);
@@ -157,6 +175,23 @@ void Matron::step_journey(const float dt) {
     // Walk her region to the next move's start, then begin it.
     const traversal::Edge &e = routes_->edges()[static_cast<std::size_t>(journey_edges_[static_cast<std::size_t>(journey_.step)])];
     const Vec3 feet(float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
+    // Giving way: off the climb's foot (her body is not to stand in the
+    // player's way onto it) and still until it is clear. Her yielding is
+    // her own feet; the player's climbing is not touched.
+    if (player_on(e.spec)) {
+        ++journey_.yields;
+        const Vec3 line(e.spec.line.GetX(), feet.GetY(), e.spec.line.GetZ());
+        Vec3 away(feet.GetX() - line.GetX(), 0.0F, feet.GetZ() - line.GetZ());
+        const float off = away.Length();
+        away = off > 1.0e-3F ? away / off : e.spec.out;
+        if (off < kYieldClearM) {
+            climber_->walk_between(dt, line + away * (kYieldClearM + 0.2F), 1.0F);
+        } else {
+            climber_->walk_between(dt, feet, 0.0F);
+        }
+        journey_walk_.clear();
+        return;
+    }
     const float to_start = distance_xz(feet.GetX(), feet.GetZ(), e.spec.start.GetX(), e.spec.start.GetZ());
     // Over the scanned map's walkable tops only (no authored ways): patch to
     // patch to the move's start, handing over to the move's own feet once

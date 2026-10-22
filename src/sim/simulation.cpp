@@ -1095,6 +1095,7 @@ Simulation::MatronJourney Simulation::matron_journey() const noexcept {
     out.steps = j.steps;
     out.step = j.step;
     out.moves_done = j.moves_done;
+    out.yields = j.yields;
     out.moves_failed = j.moves_failed;
     out.replans = j.replans;
     out.arrivals = j.arrivals;

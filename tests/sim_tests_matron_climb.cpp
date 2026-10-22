@@ -765,6 +765,23 @@ void test_player_unchanged() {
     double alone_s = 0, alone_y = 0, near_s = 0, near_y = 0;
     climb(false, alone_s, alone_y);
     climb(true, near_s, near_y);
+    // And with her setting off up the stack, wanting the ladder he is at the
+    // foot of: she gives way (stands off its foot until he is clear), and his
+    // climb is the same as alone.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "player climb: settle");
+        require(s.debug_matron_travel(176.25), "player climb: she sets off up the stack");
+        const double t0 = s.snapshot().simulation_time_seconds;
+        require(climb_route_ladder(s), "player climb (her wanting the ladder): the 154 ladder");
+        const double up_s = s.snapshot().simulation_time_seconds - t0;
+        const double up_y = s.snapshot().player_position.y;
+        const unsigned yields = s.matron_journey().yields;
+        std::cout << "  player ladder climb with her wanting the same climb " << up_s << " s to " << up_y << ", her yield ticks "
+                  << yields << "\n";
+        require(std::abs(alone_s - up_s) <= 0.25 && std::abs(alone_y - up_y) <= 0.1,
+                "player climbing is the same with her wanting the same ladder");
+    }
     std::cout << "  player ladder climb alone " << alone_s << " s to " << alone_y << ", with her travelling " << near_s
               << " s to " << near_y << "\n";
     require(std::abs(alone_s - near_s) <= 0.25 && std::abs(alone_y - near_y) <= 0.1,
