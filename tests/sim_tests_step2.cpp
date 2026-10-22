@@ -199,8 +199,8 @@ void run_step2_movement() {
     const double caught_y = panel.snapshot().player_position.y;
     (void)hold_stick(panel, 0.0, -1.0, 0.0, 1.0, 4.0, [](const Snapshot &) { return false; });
     const auto bottom = panel.snapshot();
-    // The lowest hold is the bottom horizontal at 200.30: a body climbing
-    // down stops with it at the reach of its lower hand, feet 0.6 m over the
+    // The lowest hold is the bottom horizontal at 200.50: a body climbing
+    // down stops with it at the reach of its lower hand, feet 0.8 m over the
     // catwalk -- not stepping off onto it (0.1 m) and not falling past it.
     require(is_climbing(bottom) && bottom.player_position.y > 199.6 &&
                 bottom.player_position.y < caught_y,

@@ -284,20 +284,29 @@ bool Climber::take_hold(const RVec3 near, const float radius, const bool bar_onl
 bool Climber::find_rung(const float from_y, const float to_y, const bool upward, Hold &out, RVec3 &where) const {
     const float step = 0.04F;
     const int n = static_cast<int>(std::abs(to_y - from_y) / step) + 1;
+    // Along the rung as well as at its middle: a post crossing the rungs on
+    // the ladder's line (a lattice panel's) is not the rung her hands take.
+    const Vec3 across(-spec_.out.GetZ(), 0.0F, spec_.out.GetX());
+    const float side = std::max(0.0F, std::min(0.22F, spec_.bar_half - 0.05F));
     for (int i = 0; i < n; ++i) {
         const float y = upward ? from_y + step * float(i) : from_y - step * float(i);
-        const RVec3 at(spec_.line.GetX(), y, spec_.line.GetZ());
-        Hold hold;
-        RVec3 point;
-        if (take_hold(at, 0.05F, true, hold, &point)) {
-            // A rung across the ladder (not a stile): short in y.
-            BodyLockRead lock(physics_.GetBodyLockInterface(), hold.body);
-            AABox bounds;
-            bool bar = false;
-            if (lock.Succeeded() && member_bounds(lock.GetBody(), hold.sub, bounds, bar) && bounds.GetSize().GetY() < 0.2F) {
-                out = hold;
-                where = point;
-                return true;
+        for (const float off : {0.0F, side, -side}) {
+            const RVec3 at = RVec3(spec_.line.GetX(), y, spec_.line.GetZ()) + across * off;
+            Hold hold;
+            RVec3 point;
+            if (take_hold(at, 0.05F, true, hold, &point)) {
+                // A rung across the ladder (not a stile): short in y.
+                BodyLockRead lock(physics_.GetBodyLockInterface(), hold.body);
+                AABox bounds;
+                bool bar = false;
+                if (lock.Succeeded() && member_bounds(lock.GetBody(), hold.sub, bounds, bar) && bounds.GetSize().GetY() < 0.2F) {
+                    out = hold;
+                    where = point;
+                    return true;
+                }
+            }
+            if (side == 0.0F) {
+                break;
             }
         }
     }

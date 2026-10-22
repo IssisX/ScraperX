@@ -1025,7 +1025,7 @@ constexpr float kPipeZ = -130.30F;
 constexpr float kPipeTop = 198.20F;
 constexpr float kCatwalkX = 11.00F;
 constexpr float kPanelZ = -130.86F;      // 0.13 m off the 220 ring's face
-constexpr float kPanelBottom = 200.30F;
+constexpr float kPanelBottom = 200.50F;   // 2.22 m clear over the catwalk: the Matron's 2.1 m passes under
 constexpr float kPanelTop = 220.20F;
 
 void build_climbing_route(kit::Kit &kit) {

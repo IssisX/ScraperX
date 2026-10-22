@@ -50,13 +50,12 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds) {
                                                              m.position.z - last.z));
         last = m.position;
         out.gravity_kept = out.gravity_kept && s.debug_matron_gravity_factor() == 1.0;
-        out.her_hands = out.her_hands || s.matron_climb_status() == 1;
+        out.her_hands = out.her_hands || m.climbing;
         if (!m.alive) {
             out.alive = false;
             break;
         }
-        const bool there = std::abs(m.position.y - 1.05 - prey.y) < 0.35 && s.matron_climb_status() != 1 &&
-                           s.matron_climb_status() != 2;
+        const bool there = std::abs(m.position.y - 1.05 - prey.y) < 0.35 && !m.climbing;
         on_goal = there ? on_goal + 1 : 0;
         if (on_goal >= hz) {
             out.arrived = true;
@@ -89,6 +88,36 @@ void run_matron_found_climb() {
         report("the 176.25 ring down to 154", l);
         require(l.alive && l.arrived, "matron found climb: down to the climber's level, a way she found herself");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on (not the old climb)");
+        require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
+    }
+    // Above her map's last deck: the standpipe (a 0.10 m pole: the traversal
+    // Climber's friction grip) and the scaffold panel (bars).
+    {
+        const Leg l = leg(Vector3{7.05, 176.25, -128.4}, Vector3{8.0, 198.25, -129.3}, 240.0);
+        report("176.25 up to 198.25 (the standpipe)", l);
+        require(l.alive && l.arrived, "matron found climb: up the standpipe to the climber's level");
+        require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
+        require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
+    }
+    {
+        const Leg l = leg(Vector3{8.0, 198.25, -129.3}, Vector3{7.05, 176.25, -128.4}, 240.0);
+        report("198.25 down to 176.25 (the standpipe)", l);
+        require(l.alive && l.arrived, "matron found climb: down the standpipe to the climber's level");
+        require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
+        require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
+    }
+    {
+        const Leg l = leg(Vector3{8.0, 198.25, -129.3}, Vector3{11.0, 220.25, -129.0}, 240.0);
+        report("198.25 up to 220.25 (the scaffold panel)", l);
+        require(l.alive && l.arrived, "matron found climb: up the panel to the climber's level");
+        require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
+        require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
+    }
+    {
+        const Leg l = leg(Vector3{11.0, 220.25, -129.0}, Vector3{8.0, 198.25, -129.3}, 240.0);
+        report("220.25 down to 198.25 (the scaffold panel)", l);
+        require(l.alive && l.arrived, "matron found climb: down the panel to the climber's level");
+        require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
     }
     std::cout << "PASS scraperx_sim matron found climb\n";

@@ -255,13 +255,17 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         b.ticks = std::max(0, b.ticks - 1);
     }
     find_wait_ticks_ = std::max(0, find_wait_ticks_ - 1);
+    journey_wait_ticks_ = std::max(0, journey_wait_ticks_ - 1);
     if (!found_.active) {
         if (find_wait_ticks_ > 0) {
             return false;
         }
         find_wait_ticks_ = kFindEveryTicks;
         if (!find_climb(at, found_)) {
-            return false;
+            // No bar column: a way she plans over the steel round her.
+            const bool frail = stage_ == Stage::Pest && turn_ == Turn::None;
+            const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
+            return !frail && still && start_journey(at);
         }
     }
     const float ax = float(at.GetX());
@@ -291,6 +295,129 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     }
     found_ = FoundClimb{};
     return true;
+}
+
+} // namespace scraperx::sim
+
+namespace scraperx::sim {
+
+bool Matron::start_journey(const RVec3 at) {
+    if (journey_wait_ticks_ > 0) {
+        return false;
+    }
+    journey_wait_ticks_ = 2 * 90;
+    const float feet = float(at.GetY()) - kStandCentre;
+    const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
+    const float lo_x = std::min(float(at.GetX()), heard_x_) - 12.0F;
+    const float hi_x = std::max(float(at.GetX()), heard_x_) + 12.0F;
+    const float lo_z = std::min(float(at.GetZ()), heard_z_) - 12.0F;
+    const float hi_z = std::max(float(at.GetZ()), heard_z_) + 12.0F;
+    traversal::AffordanceMap map;
+    map.scan(physics_,
+             AABox(Vec3(lo_x, std::min(feet, lead_floor_) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, lead_floor_) + 4.0F, hi_z)),
+             ignore);
+    const int from = map.region_at(Vec3(float(at.GetX()), feet, float(at.GetZ())));
+    const int to = map.region_near_top(lead_floor_, 0.3F);
+    if (from < 0 || to < 0 || from == to) {
+        return false;
+    }
+    const std::vector<int> plan = map.plan(from, to);
+    if (plan.empty()) {
+        return false;
+    }
+    journey_.clear();
+    for (const int e : plan) {
+        journey_.push_back(map.edges()[static_cast<std::size_t>(e)]);
+    }
+    if (climber_ == nullptr) {
+        climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
+    }
+    journey_at_ = 0;
+    journey_legs_.clear();
+    journey_leg_ = 0;
+    journey_leg_ticks_ = 0;
+    journey_moving_ = false;
+    journey_active_ = true;
+    ++climbs_done_;
+    return true;
+}
+
+void Matron::end_journey(const bool failed) {
+    if (climber_ != nullptr && journey_moving_) {
+        climber_->cancel();   // her hands off whatever they held: a fall if on steel
+    }
+    journey_active_ = false;
+    journey_moving_ = false;
+    journey_.clear();
+    journey_legs_.clear();
+    if (failed) {
+        journey_wait_ticks_ = kFoundClimbBlockTicks;
+    }
+}
+
+void Matron::step_journey(const float dt) {
+    if (journey_at_ >= journey_.size()) {
+        end_journey(false);
+        return;
+    }
+    const traversal::Edge &edge = journey_[journey_at_];
+    if (journey_moving_) {
+        const traversal::Climber::Status status = climber_->step(dt);
+        if (status == traversal::Climber::Status::Done) {
+            journey_moving_ = false;
+            ++journey_at_;
+            journey_legs_.clear();
+            journey_leg_ = 0;
+        } else if (status == traversal::Climber::Status::Failed) {
+            end_journey(true);   // a physical failure: she falls or stands where it left her
+        }
+        return;
+    }
+    // To the move's start over floor, round what is in the way, her feet
+    // out of the Climber's budget.
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    const Vec3 feet(float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
+    const Vec3 to = edge.kind == traversal::MoveKind::Walk ? edge.spec.goal : edge.spec.start;
+    if (journey_legs_.empty()) {
+        const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
+        journey_legs_ = traversal::grid_walk(physics_, ignore, climber_->limits(), feet, to);
+        journey_legs_.push_back(to);
+        journey_leg_ = 0;
+        journey_leg_ticks_ = 0;
+    }
+    // A pole within arm's reach of where she stands, on her floor: she grips
+    // it from here (its scanned foot spot can lie past it on a board her
+    // body cannot pass it on).
+    const bool pole = edge.kind == traversal::MoveKind::PoleUp || edge.kind == traversal::MoveKind::PoleDown;
+    const Vec3 to_line(edge.spec.line.GetX() - feet.GetX(), 0.0F, edge.spec.line.GetZ() - feet.GetZ());
+    if (pole && to_line.Length() <= climber_->limits().reach_out && std::abs(feet.GetY() - edge.spec.start.GetY()) < 0.3F &&
+        climber_->supported()) {
+        climber_->begin(edge.spec);   // its move grips from where she stands when she is in reach
+        journey_moving_ = true;
+        return;
+    }
+    if (journey_leg_ < journey_legs_.size()) {
+        const Vec3 leg = journey_legs_[journey_leg_];
+        const Vec3 off = leg - feet;
+        if (Vec3(off.GetX(), 0.0F, off.GetZ()).Length() < 0.12F) {
+            ++journey_leg_;
+            journey_leg_ticks_ = 0;
+        } else if (++journey_leg_ticks_ > 20 * 90) {
+            end_journey(true);   // no headway: a way that does not serve
+            return;
+        } else {
+            (void)climber_->walk_between(dt, leg, 1.2F);
+            yaw_ = std::atan2(off.GetX(), off.GetZ());
+        }
+        return;
+    }
+    if (edge.kind == traversal::MoveKind::Walk) {
+        ++journey_at_;
+        journey_legs_.clear();
+        return;
+    }
+    climber_->begin(edge.spec);
+    journey_moving_ = true;
 }
 
 } // namespace scraperx::sim
