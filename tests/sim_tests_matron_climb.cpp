@@ -156,12 +156,13 @@ void test_rungs() {
 }
 
 void test_rung_failures() {
-    // A missing rung: she climbs to the gap and can go no higher; she lets go and falls.
+    // A gap wider than her long reach and a throw cross (2.1 m): she climbs
+    // to it and can go no higher; she lets go and falls.
     {
         ClimbWorld w;
         w.deck(5.0F);
         w.rungs(0.3F, 1.8F);
-        w.rungs(3.3F, 4.9F);
+        w.rungs(3.9F, 4.9F);
         w.spawn(RVec3(0, 0, 1.0F));
         Climber climber(w.physics, w.her, {w.her, BodyID()});
         climber.begin(ladder_up(5.0F, 0.3F, 4.9F));
@@ -703,6 +704,127 @@ void test_wall_across_step() {
     std::cout << "PASS scraperx_sim matron climb wall across a step\n";
 }
 
+// Gaps of missing rungs on panels she has never seen (seeded height, pitch
+// and gap): her scan joins the rungs across a gap she can cross and no
+// wider; up, she crosses it with a long reach or a throw (a dyno) under the
+// one budget, with real misses (a short throw falls back past the rung she
+// left and snatches it, or she falls); down, from a full hang her other hand
+// reaches past the gap. Nothing here names a panel: the same skill on each.
+void test_rung_gaps() {
+    std::uint32_t rng = 0x2545F491U;
+    const auto uniform = [&](const float lo, const float hi) {
+        rng = rng * 1664525U + 1013904223U;
+        return lo + (hi - lo) * float(rng >> 8) / float(1U << 24);
+    };
+    const traversal::Limits limits{};
+    const float widest = limits.hand_above_center - 0.35F + limits.dyno_rise_m;
+    int crossed_up = 0, crossed_down = 0, joined = 0, refused = 0, throws = 0, caught = 0, missed = 0, runs = 0;
+    for (int run = 0; run < 10; ++run) {
+        const float height = uniform(5.0F, 7.0F);
+        const float pitch = uniform(0.28F, 0.42F);
+        const int missing = 1 + static_cast<int>(uniform(0.0F, 3.0F));   // 1 to 3 rungs gone
+        const float gap = float(missing + 1) * pitch;
+        const float gap_from = 0.3F + pitch * float(static_cast<int>(uniform(2.0F, 5.0F)));
+        ClimbWorld w;
+        w.deck(height);
+        const float top_rung = height - 0.1F;
+        w.rungs(0.3F, gap_from, pitch);
+        w.rungs(gap_from + gap, top_rung, pitch);
+        w.spawn(RVec3(0, 0, 1.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-6, -1, -8), Vec3(6, height + 3.0F, 4)), ignore);
+        bool spans = false;
+        for (const auto &l : map.ladders()) spans = spans || (l.bottom < 0.5F && l.top > top_rung - 0.5F);
+        const bool crossable = gap <= widest;
+        std::cout << "  matron rung gap run " << run << ": height " << height << " pitch " << pitch << " gap " << gap
+                  << " m (" << missing << " missing) scan " << (spans ? "joins it" : "splits it");
+        require(spans == crossable, "matron rung gap: the scan joins rungs across a gap she can cross, and only those");
+        if (!spans) {
+            ++refused;
+            std::cout << "\n";
+            continue;
+        }
+        ++joined;
+        ++runs;
+        Climber climber(w.physics, w.her, ignore);
+        float l_top = 0.0F;
+        float l_bottom = 0.0F;
+        for (const auto &l : map.ladders()) if (l.bottom < 0.5F) { l_top = l.top; l_bottom = l.bottom; }
+        climber.begin(ladder_up(height, l_bottom, l_top));
+        RVec3 last = w.at();
+        float worst = 0.0F;
+        const auto track = [&](int) {
+            const RVec3 now = w.at();
+            worst = std::max(worst, float((now - last).Length()));
+            last = now;
+        };
+        const auto up = w.run(climber, 60.0F, track);
+        const float top = w.settle(1.0F);
+        throws += int(climber.view().launches);
+        caught += int(climber.view().catches);
+        missed += int(climber.view().misses);
+        std::cout << "; up " << (up == Climber::Status::Done ? "done" : traversal::failure_name(climber.failure())) << " launches "
+                  << climber.view().launches << " catches " << climber.view().catches << " misses " << climber.view().misses
+                  << " peak " << climber.view().peak_force_n << " N " << climber.view().peak_power_w << " W";
+        require(worst <= 0.20F, "matron rung gap: no tick moves her more than 0.20 m");
+        require(climber.view().peak_power_w <= limits.power_w + 1.0F, "matron rung gap: power within the shared cap");
+        if (up != Climber::Status::Done) {
+            // A real miss: she fell, and is on her feet on the floor.
+            require(climber.view().misses > 0 && std::abs(top) < 0.06F, "matron rung gap: a failed crossing is a real miss, and she lands");
+            std::cout << "\n";
+            continue;
+        }
+        ++crossed_up;
+        require(std::abs(top - height) < 0.06F, "matron rung gap: up across the gap onto the deck");
+        MoveSpec down = ladder_up(height, l_bottom, l_top);
+        down.kind = MoveKind::RungDown;
+        down.start = Vec3(0, height, -1.35F);
+        down.goal = Vec3(0, 0, -0.5F);
+        down.goal_top = 0.0F;
+        climber.begin(down);
+        const auto dn = w.run(climber, 60.0F, track);
+        const float below = w.settle(1.0F);
+        std::cout << "; down " << (dn == Climber::Status::Done ? "done" : traversal::failure_name(climber.failure())) << ", worst step "
+                  << worst << " m\n";
+        require(worst <= 0.20F, "matron rung gap: no tick moves her more than 0.20 m (down)");
+        require(dn == Climber::Status::Done && std::abs(below) < 0.06F, "matron rung gap: down past the gap to the floor");
+        ++crossed_down;
+    }
+    // A real miss: high on a ladder, a gap at the edge of what she crosses,
+    // and a third of the Matron's power: the throw comes up short, she
+    // falls back past the rung she left and snatches at it; whatever her
+    // hands keep or lose, she ends on her feet on the floor, never snapped.
+    {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(0.3F, 3.0F, 0.3F);
+        w.rungs(4.45F, 5.95F, 0.3F);
+        w.spawn(RVec3(0, 0, 1.0F));
+        traversal::Limits weak;
+        weak.power_w = 3000.0F;
+        Climber climber(w.physics, w.her, {w.her, BodyID()}, weak);
+        climber.begin(ladder_up(6.0F, 0.3F, 5.95F));
+        RVec3 last = w.at();
+        float worst = 0.0F;
+        const auto st = w.run(climber, 60.0F, [&](int) {
+            const RVec3 now = w.at();
+            worst = std::max(worst, float((now - last).Length()));
+            last = now;
+        });
+        const float landed = w.settle(2.0F);
+        std::cout << "  matron rung gap, short throw: " << traversal::failure_name(climber.failure()) << " launches "
+                  << climber.view().launches << " catches " << climber.view().catches << " misses " << climber.view().misses
+                  << " landed " << landed << " worst step " << worst << "\n";
+        require(st == Climber::Status::Failed && climber.view().launches >= 1 && climber.view().misses >= 1,
+                "matron rung gap: a throw her arms cannot make is a real miss");
+        require(std::abs(landed) < 0.06F && worst <= 0.20F, "matron rung gap: after the miss she lands on her feet, never snapped");
+    }
+    std::cout << "PASS scraperx_sim matron rung gaps: joined " << joined << " refused " << refused << " up " << crossed_up << "/" << runs
+              << " down " << crossed_down << " throws " << throws << " catches " << caught << " misses " << missed << "\n";
+}
+
 } // namespace
 
 void run_matron_climb() {
@@ -717,6 +839,7 @@ void run_matron_climb() {
     test_mantle_moving_ledge();
     test_bump_mid_lower();
     test_wall_across_step();
+    test_rung_gaps();
 }
 
 namespace {

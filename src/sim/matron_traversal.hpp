@@ -64,6 +64,10 @@ struct Limits {
     // A catch: her grip arrests at most this much speed relative to the hold.
     float catch_arrest_mps = 4.5F;
     float catch_radius_m = 0.22F;
+    // A gap in the rungs: from a bent arm she reaches up to hand_above_center
+    // over her center; past that she throws for the next rung (a dyno), her
+    // arms' pull from a low hang giving at most this much more rise.
+    float dyno_rise_m = 0.45F;
     // Pole grip: squeeze (normal force) and the steel's friction on her.
     float pole_squeeze_n = 4600.0F;
     float pole_mu_static = 0.60F;
@@ -256,6 +260,13 @@ private:
     bool sliding_ = false;
     bool mantle_after_ = false;
     bool approach_near_ = false;
+    // A dyno across a gap in the rungs: 0 off, 1 sinking to a low hang, 2
+    // pulling, 3 in the air; the rung she throws for, and her tries.
+    int dyno_ = 0;
+    Hold dyno_hold_;
+    JPH::RVec3 dyno_world_ = JPH::RVec3::sZero();
+    int dyno_tries_ = 0;
+    Status step_dyno(float dt, Budget &budget);
     float rate_override_ = -1.0F;
     [[nodiscard]] float rate_mps() const noexcept { return rate_override_ >= 0.0F ? rate_override_ : limits_.climb_mps; }
     ClimbView view_;

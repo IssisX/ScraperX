@@ -480,6 +480,8 @@ void Climber::begin(const MoveSpec &spec) {
     sliding_ = false;
     mantle_after_ = false;
     approach_near_ = false;
+    dyno_ = 0;
+    dyno_tries_ = 0;
     view_.active = true;
     view_.kind = spec.kind;
     view_.last_failure = Failure::None;
@@ -604,6 +606,9 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     if (phase_ >= 3) {
         return step_mantle(dt, budget);
     }
+    if (dyno_ != 0) {
+        return step_dyno(dt, budget);
+    }
     if (!revalidate(hold_, hold_world_)) {
         fail(Failure::LostHold);
         return status_;
@@ -613,11 +618,29 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     RVec3 next_world;
     const float hold_y = float(hold_world_.GetY());
     const float top_reach = float(c.GetY()) + limits_.hand_above_center;
+    bool took = false;
     if (top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
         find_rung(hold_y + 0.12F, std::min(top_reach, hold_y + 0.65F), true, next, next_world)) {
         hold_ = next;
         hold_world_ = next_world;
         ++view_.grips;
+        took = true;
+    }
+    if (!took && hold_y < spec_.top_y - 0.05F && float(c.GetY()) >= hold_y - 0.35F - 0.25F &&
+        !find_rung(hold_y + 0.12F, hold_y + 0.65F, true, next, next_world)) {
+        // A gap in the rungs over her: her other hand up as far as it goes
+        // (a long reach), else a throw for the rung past it.
+        if (find_rung(hold_y + 0.65F, top_reach, true, next, next_world)) {
+            hold_ = next;
+            hold_world_ = next_world;
+            ++view_.grips;
+        } else if (find_rung(top_reach, top_reach + limits_.dyno_rise_m, true, next, next_world) && dyno_tries_ < 2) {
+            dyno_hold_ = next;
+            dyno_world_ = next_world;
+            dyno_ = 1;
+            phase_s_ = 0.0F;
+            return step_dyno(dt, budget);
+        }
     }
     const float hold_now = float(hold_world_.GetY());
     const float ceiling = hold_now - 0.35F;   // the hold at her chest, no higher
@@ -780,6 +803,121 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
     return status_;
 }
 
+// --- a throw across a gap in the rungs ----------------------------------------
+// Down to a low hang on the rung she holds, a pull with everything her one
+// budget gives (force-capped, power-capped, the reaction into the rung), the
+// hand off at a bent arm, and a catch on the rung over the gap if her hands
+// get there slowly enough. Short, she falls back past the rung she left and
+// tries to catch it; a second miss and she has failed (Missed).
+Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    const Vec3 line_pos = Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) + spec_.out * 0.45F;
+    const float hands = float(c.GetY()) + limits_.hand_above_center;
+    const float rung = float(dyno_world_.GetY());
+    if (dyno_ == 1 || dyno_ == 2) {
+        if (!revalidate(hold_, hold_world_)) {
+            dyno_ = 0;
+            fail(Failure::LostHold);
+            return status_;
+        }
+        const float hold_y = float(hold_world_.GetY());
+        if (dyno_ == 1) {
+            // As low as the hang goes, or as low as the floor under her lets her.
+            const bool standing = supported(nullptr);
+            const float low = standing ? float(c.GetY()) : hold_y - limits_.hang_below_hold + 0.15F;
+            drive(dt, Vec3(line_pos.GetX(), low, line_pos.GetZ()), Vec3::sZero(), 30.0F, budget, true, hold_world_);
+            if (float(c.GetY()) < low + 0.06F && std::abs(velocity().GetY()) < 0.3F) {
+                dyno_ = 2;
+                phase_s_ = 0.0F;
+            } else if (phase_s_ > 3.0F) {
+                dyno_ = 0;
+                fail(Failure::Stalled);
+            }
+            return status_;
+        }
+        // The pull: straight up, all she has, until her arm is bent or her
+        // speed carries her hands to the rung.
+        const float v_rel = (velocity() - bodies.GetPointVelocity(hold_.body, hold_world_)).GetY();
+        const float need = std::sqrt(2.0F * kGravity * std::max(rung + 0.06F - hands, 0.0F));
+        BodyID floor;
+        if (supported(nullptr, &floor)) {
+            // On her feet under the gap: her legs throw her (a jump, at most
+            // launch_dv), her hand off the low rung as she goes.
+            const float dv = need - velocity().GetY();
+            if (dv > limits_.launch_dv_mps) {
+                dyno_ = 0;
+                fail(Failure::OutOfRange);
+                return status_;
+            }
+            const Vec3 impulse(0.0F, dv * limits_.mass_kg, 0.0F);
+            bodies.AddImpulse(body_, impulse);
+            if (bodies.GetMotionType(floor) == EMotionType::Dynamic) {
+                bodies.AddImpulse(floor, -impulse, c - Vec3(0, limits_.center_above_feet(), 0));
+            }
+            ++view_.releases;
+            ++view_.launches;
+            hold_ = Hold{};
+            dyno_ = 3;
+            phase_s_ = 0.0F;
+            return status_;
+        }
+        if (v_rel >= need || float(c.GetY()) >= hold_y - 0.35F) {
+            ++view_.releases;
+            ++view_.launches;
+            hold_ = Hold{};
+            dyno_ = 3;
+            phase_s_ = 0.0F;
+            return status_;
+        }
+        const Vec3 pull = budget.take(Vec3(0.0F, limits_.total_force_n, 0.0F));
+        bodies.AddForce(body_, pull);
+        push_reaction(pull, hold_world_);
+        const Vec3 side = flat(line_pos - Vec3(c)) * 400.0F;
+        bodies.AddForce(body_, budget.take(side));
+        return status_;
+    }
+    // In the air: the rung over the gap, or (falling back) the one she left.
+    const Vec3 v = velocity();
+    const auto catch_at = [&](const float y, const RVec3 at_world) {
+        if (std::abs(hands - y) > 0.25F || v.GetY() > 0.8F) return false;
+        Hold h;
+        RVec3 p;
+        if (!take_hold(RVec3(at_world.GetX(), hands, at_world.GetZ()), limits_.catch_radius_m, true, h, &p)) return false;
+        if ((v - bodies.GetPointVelocity(h.body, p)).Length() > limits_.catch_arrest_mps) return false;
+        hold_ = h;
+        hold_world_ = p;
+        ++view_.grips;
+        ++view_.catches;
+        dyno_ = 0;
+        target_y_ = float(c.GetY());
+        best_progress_ = float(c.GetY());
+        stall_s_ = 0.0F;
+        return true;
+    };
+    if (catch_at(rung, dyno_world_)) {
+        dyno_tries_ = 0;
+        return status_;
+    }
+    if ((v.GetY() <= 0.0F && hands < rung - 0.3F) || phase_s_ > 2.0F) {
+        // Short: past the rung she let go of, her hands snatch at any rung.
+        Hold back;
+        RVec3 back_world;
+        if (find_rung(hands + 0.2F, hands - 0.25F, false, back, back_world) && catch_at(float(back_world.GetY()), back_world)) {
+            ++view_.misses;
+            ++dyno_tries_;
+            return status_;
+        }
+        if (hands < rung - 1.6F || phase_s_ > 2.0F || supported(nullptr)) {
+            ++view_.misses;
+            dyno_ = 0;
+            fail(Failure::Missed);
+        }
+    }
+    (void)dt;
+    return status_;
+}
+
 // --- rungs, down -------------------------------------------------------------
 // Phases: 0 to the head; 1 over the lip onto the top rung; 2 hand under hand;
 // done when her feet are on the floor below.
@@ -880,6 +1018,13 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         Hold next;
         RVec3 next_world;
         if (find_rung(hold_y - 0.12F, hold_y - 0.65F, false, next, next_world)) {
+            hold_ = next;
+            hold_world_ = next_world;
+            ++view_.grips;
+        } else if (hold_y - float(c.GetY()) > limits_.hang_below_hold - 0.1F &&
+                   find_rung(hold_y - 0.65F, float(c.GetY()) - 0.2F, false, next, next_world)) {
+            // A gap in the rungs under her: from a full hang her other hand
+            // reaches down past it to her hip.
             hold_ = next;
             hold_world_ = next_world;
             ++view_.grips;
@@ -1481,7 +1626,10 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             const float along = a.along_x ? std::abs(b.c.GetX() - a.c.GetX()) : std::abs(b.c.GetZ() - a.c.GetZ());
             if (along > 0.1F) continue;
             const float dy = b.c.GetY() - a.c.GetY();
-            if (dy >= 0.18F && dy <= 0.46F) {
+            // At a climbing pitch, or across a gap of missing rungs no wider
+            // than her long reach and a throw cross (the climb checks it).
+            const float widest = limits.hand_above_center - 0.35F + limits.dyno_rise_m;
+            if (dy >= 0.18F && (dy <= 0.46F || (dy <= widest && chain.size() >= 1))) {
                 chain.push_back(j);
                 used[j] = true;
             }
