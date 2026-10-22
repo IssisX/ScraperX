@@ -51,3 +51,6 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
 - The owner gets one universal prompt ("read the board, do your queue") to paste into any agent.
   The owner can also give orders as a plain comment on issue #3, and every agent follows them.
 - Keep offering better ways to manage the work when you see them.
+- Progress over testing (2026-10-22: *"we want them to figure out hard coding problems and make
+  progress, not just test shit"*). Give agents real problems to solve in code; tests are the proof,
+  not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
