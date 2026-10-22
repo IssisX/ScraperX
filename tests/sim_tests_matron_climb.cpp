@@ -825,6 +825,54 @@ void test_rung_gaps() {
               << " down " << crossed_down << " throws " << throws << " catches " << caught << " misses " << missed << "\n";
 }
 
+// A pole standing just off a deck, its head 0.8 m over the lip, between
+// the posts of a gap in the deck's rail (the shape of exam seeds 57, 77,
+// 81, 83 and 96). Her body is 0.60 m across. With the posts 0.95 m apart
+// the clearance between pole and post is 0.57 m: there is no way for her
+// body from the pole onto the deck, so her scan refuses the pole, for that
+// reason, both ways. With them 1.30 m apart (0.71 m clearance) the same
+// pole is usable and she climbs it onto the deck.
+void test_pole_head_clearance() {
+    for (const float opening : {0.95F, 1.30F}) {
+        ClimbWorld w;
+        w.box(Vec3(2.5F, 2.0F, 2.0F), RVec3(0, 2.0F, 2.4F));            // the deck: top 4.0, face at z 0.4
+        w.box(Vec3(0.05F, 2.4F, 0.05F), RVec3(0, 2.4F, 0));             // the pole: head 4.8
+        for (const float side : {-1.0F, 1.0F}) {
+            w.box(Vec3(0.03F, 0.5F, 0.03F), RVec3(side * 0.5F * opening, 4.5F, 0.45F));   // the rail's posts
+            w.box(Vec3(0.5F * (2.5F - 0.5F * opening), 0.03F, 0.03F),
+                  RVec3(side * (0.5F * opening + 0.5F * (2.5F - 0.5F * opening)), 5.0F, 0.45F));
+        }
+        w.spawn(RVec3(0, 0, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (e.kind == MoveKind::PoleUp) up = &e;
+            if (e.kind == MoveKind::PoleDown) down = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron pole head: the pole is found, up and down");
+        std::cout << "  matron pole head clearance, posts " << opening << " m apart: up usable " << up->usable << " (" << up->reason
+                  << ")\n";
+        if (opening < 1.0F) {
+            require(!up->usable && !down->usable && up->reason.find("past the pole's head") != std::string::npos,
+                    "matron pole head: no room for her body past the pole's head, refused both ways for that reason");
+            continue;
+        }
+        require(up->usable && down->usable, "matron pole head: with room past its head the pole is usable");
+        Climber climber(w.physics, w.her, ignore);
+        climber.begin(up->spec);
+        const auto st = w.run(climber, 40.0F);
+        const float top = w.settle(1.0F);
+        std::cout << "  matron pole head clearance, wide: up " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") feet " << top << "\n";
+        require(st == Climber::Status::Done && std::abs(top - 4.0F) < 0.06F, "matron pole head: up the pole, round its head, onto the deck");
+    }
+    std::cout << "PASS scraperx_sim matron pole head clearance\n";
+}
+
 } // namespace
 
 void run_matron_climb() {
@@ -840,6 +888,7 @@ void run_matron_climb() {
     test_bump_mid_lower();
     test_wall_across_step();
     test_rung_gaps();
+    test_pole_head_clearance();
 }
 
 namespace {

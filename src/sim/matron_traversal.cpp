@@ -1952,6 +1952,51 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 for (float y = fp.top + 0.5F; y < hp.top - 2.0F && climb_room; y += 2.0F) {
                     climb_room = capsule_free(physics, ignore, limits, axis + out * (limits.radius + 0.1F) + Vec3(0, y, 0));
                 }
+                // Over the head onto the floor: where the pole's head stands
+                // above the lip, her body has to get from beside the pole to
+                // her stand on the floor without passing through it or what
+                // flanks the way (a rail post): a search over the plane at
+                // the lip, her capsule tested at each step.
+                bool head_room = true;
+                if (pole.top > hp.top + limits.step_max_m && head_ok) {
+                    // Her whole width here (no squeeze allowance): a gap
+                    // narrower than her body is one she does not pass.
+                    Limits body = limits;
+                    body.radius += 0.02F;
+                    const float y = hp.top + 0.02F;
+                    const Vec3 from = axis + out * (limits.radius + 0.1F) + Vec3(0, y, 0);
+                    const Vec3 to(stand_head.GetX(), y, stand_head.GetZ());
+                    const float step = 0.05F;
+                    const float lo_x = std::min(from.GetX(), to.GetX()) - 0.8F, lo_z = std::min(from.GetZ(), to.GetZ()) - 0.8F;
+                    const int nx = static_cast<int>((std::max(from.GetX(), to.GetX()) + 0.8F - lo_x) / step) + 1;
+                    const int nz = static_cast<int>((std::max(from.GetZ(), to.GetZ()) + 0.8F - lo_z) / step) + 1;
+                    const auto at = [&](const int i, const int k) { return Vec3(lo_x + step * float(i), y, lo_z + step * float(k)); };
+                    const auto cell = [&](const Vec3 v) {
+                        return std::make_pair(std::clamp(static_cast<int>(std::lround((v.GetX() - lo_x) / step)), 0, nx - 1),
+                                              std::clamp(static_cast<int>(std::lround((v.GetZ() - lo_z) / step)), 0, nz - 1));
+                    };
+                    std::vector<std::uint8_t> state(static_cast<std::size_t>(nx * nz), 0);   // 0 new, 1 queued, 2 blocked
+                    const auto [si, sk] = cell(from);
+                    const auto [gi, gk] = cell(to);
+                    std::vector<int> queue{sk * nx + si};
+                    state[static_cast<std::size_t>(sk * nx + si)] = 1;
+                    bool reached = false;
+                    for (std::size_t q = 0; q < queue.size() && !reached; ++q) {
+                        const int i0 = queue[q] % nx, k0 = queue[q] / nx;
+                        for (int dk = -1; dk <= 1 && !reached; ++dk)
+                            for (int di = -1; di <= 1; ++di) {
+                                const int i = i0 + di, k = k0 + dk;
+                                if ((di == 0 && dk == 0) || i < 0 || k < 0 || i >= nx || k >= nz) continue;
+                                std::uint8_t &st = state[static_cast<std::size_t>(k * nx + i)];
+                                if (st != 0) continue;
+                                if (!capsule_free(physics, ignore, body, at(i, k))) { st = 2; continue; }
+                                st = 1;
+                                if (std::abs(i - gi) <= 1 && std::abs(k - gk) <= 1) { reached = true; break; }
+                                queue.push_back(k * nx + i);
+                            }
+                    }
+                    head_room = reached;
+                }
                 MoveSpec up;
                 up.kind = MoveKind::PoleUp;
                 up.line = axis;
@@ -1970,11 +2015,12 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 e.kind = MoveKind::PoleUp;
                 e.spec = up;
                 e.cost = (hp.top - fp.top) / limits.pole_up_mps + 2.0F;
-                e.usable = foot_ok && head_ok && climb_room;
+                e.usable = foot_ok && head_ok && climb_room && head_room;
                 e.reason = facts;
                 if (!foot_ok) e.reason += "; blocked: no room at the foot";
                 if (!head_ok) e.reason += "; blocked: no room at the head";
                 if (!climb_room) e.reason += "; blocked: capsule does not fit along the pole";
+                if (!head_room) e.reason += "; blocked: no way for her body past the pole's head onto the floor";
                 add_edge(e);
                 Edge d = e;
                 d.from = hp.region;
