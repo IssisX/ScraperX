@@ -1955,6 +1955,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             sound_count_ = 0;
             step_planks(dt);
             step_journey(dt);
+            // Her body's travel counts her strides and rungs (each rung rings).
+            stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;
             sense_near();
             return;
         }
@@ -1967,6 +1969,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             feel_floor(dt);
             settle_level();
             routecraft_.step(physics_, body_, dt);
+            stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;   // each rung rings
             if (routecraft_.report().force > 0) routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
             // A climb of her own: at its goal (standing over its head or at
             // its foot) her hands come off; ended short of it, the column is
