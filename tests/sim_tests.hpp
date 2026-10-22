@@ -856,6 +856,8 @@ void run_summit_arm();
 void run_matron();
 void run_water();
 void run_matron_pace();
+void run_matron_climb();
+void run_matron_climb_board();
 void run_matron_unstick();
 void run_matron_grab();
 void run_matron_arm();
