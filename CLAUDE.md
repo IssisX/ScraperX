@@ -31,3 +31,10 @@ rerun instead of rerunning everything all the time"*.
 End each message with one plain line saying what the owner should do now ("Nothing to do" is
 fine). If they need to give another agent something, put the complete prompt in one copyable code
 block in that same message, and name the agent it goes to.
+
+## Near misses: tweak the world, don't rework her
+
+Said more than once (2026-10-21, 2026-10-22: *"I don't like that so many tests fail for such
+minuscule distances ... yes, you can change geometry"*). When a test or route fails by a small
+distance (a few cm to about 0.2 m), a small, unnoticeable change to the world's geometry is allowed
+and preferred over reworking code. Say so when you use one. Test assertions still never weaken.
