@@ -761,6 +761,7 @@ bool pull_shop_domino(scraperx::sim::Simulation &simulation);
 void run_pulley_static_end();
 void run_matron_exam();
 void run_matron_exam_routecraft();
+void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();

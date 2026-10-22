@@ -1680,6 +1680,9 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Tests only: a sound she hears at `at` (feet level), and her body's gravity factor.
+    void debug_matron_hear(Vector3 at) noexcept;
+    [[nodiscard]] double debug_matron_gravity_factor() const noexcept;
 
 private:
     class PhysicsWorld;

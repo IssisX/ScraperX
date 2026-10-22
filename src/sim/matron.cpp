@@ -220,9 +220,18 @@ void Matron::spawn_body() {
     body_in_world_ = true;
 }
 
+void Matron::hear_for_test(const RVec3 at) {
+    take_lead(float(at.GetX()), float(at.GetZ()), float(at.GetY()), 1.0F, false);
+    if (state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Searching) {
+        state_ = State::Hunting;
+    }
+}
+
 void Matron::remove_body() {
     routecraft_.cancel();
     routecraft_recovering_ = false;
+    routecraft_mine_ = false;
+    found_ = FoundClimb{};
     if (!body_in_world_) {
         return;
     }
@@ -1713,6 +1722,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             settle_level();
             routecraft_.step(physics_, body_, dt);
             if (routecraft_.report().force > 0) routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
+            // A climb of her own: at its goal (standing over its head or at
+            // its foot) her hands come off; ended short of it, the column is
+            // left alone a while.
+            if (routecraft_mine_ && routecraft_.report().status == MatronRoutecraft::Status::Holding) {
+                routecraft_.cancel();
+                routecraft_mine_ = false;
+            } else if (routecraft_mine_ && !routecraft_.owns_motion()) {
+                block_climb(climbing_key_);
+                routecraft_mine_ = false;
+            }
             sense_near();
             return;
         }
@@ -2110,7 +2129,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere && (follow_pipe(dt, at) || follow_line(dt, at) || follow_climb(dt, at))) {
+            } else if (elsewhere && (follow_pipe(dt, at) || follow_line(dt, at) || follow_found_climb(dt, at) ||
+                                     follow_climb(dt, at))) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable) or up a climb (its foot, its
                 // rungs).
@@ -2610,6 +2630,10 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 void Matron::restore(const Saved &saved) {
     routecraft_.cancel();
     routecraft_recovering_ = false;
+    routecraft_mine_ = false;
+    found_ = FoundClimb{};
+    climb_blocks_ = {};
+    find_wait_ticks_ = 0;
     if (shared_survival_) shared_survival_->reset();
     if (!dead_) {
         remove_body();

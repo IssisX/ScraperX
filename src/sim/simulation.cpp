@@ -1109,6 +1109,16 @@ int Simulation::matron_climb_status() const { return int(physics_world_->matron(
 std::uint32_t Simulation::matron_climb_queries() const { return physics_world_->matron().climb_report().native_queries; }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
+void Simulation::debug_matron_hear(const Vector3 at) noexcept {
+    physics_world_->matron().hear_for_test(
+        JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
+}
+
+double Simulation::debug_matron_gravity_factor() const noexcept {
+    const Matron &matron = physics_world_->matron();
+    return physics_world_->physics_system().GetBodyInterfaceNoLock().GetGravityFactor(matron.body());
+}
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();

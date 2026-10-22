@@ -48,6 +48,7 @@ add_library(scraperx_sim STATIC
     src/sim/shared_survival.cpp
     src/sim/bay.cpp
     src/sim/matron_routecraft.cpp
+    src/sim/matron_found_climb.cpp
     src/sim/matron.cpp
     src/sim/loose_stock.cpp
     src/sim/fabricated.cpp
@@ -170,6 +171,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/matron_exam.cpp
         tests/sim_tests_matron_exam.cpp
         tests/sim_tests_matron_exam_runs.cpp
+        tests/sim_tests_matron_found_climb.cpp
         tests/sim_tests_crane.cpp
         tests/sim_tests_service.cpp
         tests/sim_tests_machines.cpp

@@ -815,6 +815,9 @@ public:
     // Opt-in native goal. Facing selects the approach side, never a route.
     bool request_climb_goal(JPH::RVec3 goal, JPH::Vec3 facing);
     void cancel_climb_goal() noexcept { routecraft_.cancel(); }
+    // Tests only: a sound as her ears would report it at `at` (its floor
+    // the y given), a lead taken there.
+    void hear_for_test(JPH::RVec3 at);
     const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
@@ -1183,6 +1186,27 @@ private:
     // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
+    // Her own way between levels, found in the world, no table
+    // (matron_found_climb.cpp): a column of level bars from her floor toward
+    // her lead's, real floor at its foot and head, climbed by routecraft.
+    struct FoundClimb {
+        bool active = false;
+        std::int64_t key = 0;
+        float start_x = 0.0F;
+        float start_z = 0.0F;
+        JPH::RVec3 goal = JPH::RVec3::sZero();
+        JPH::Vec3 facing = JPH::Vec3::sAxisZ();
+    };
+    struct ClimbBlock {
+        std::int64_t key = 0;
+        int ticks = 0;
+    };
+    static constexpr int kFoundClimbBlockTicks = 30 * 90;   // a refused or failed column left alone 30 s
+    bool follow_found_climb(float dt, JPH::RVec3 at);
+    [[nodiscard]] bool find_climb(JPH::RVec3 at, FoundClimb &out) const;
+    [[nodiscard]] bool found_floor(float x, float z, float from_y, float to_y, float &floor_y) const;
+    [[nodiscard]] bool climb_blocked(std::int64_t key) const;
+    void block_climb(std::int64_t key);
     // On a climb: up it, and over its head.
     void climb(float dt);
     // After a lead a storey away along the corner pipe (above): to the rail's
@@ -1251,6 +1275,11 @@ private:
 
     MatronRoutecraft routecraft_;
     bool routecraft_recovering_ = false;
+    bool routecraft_mine_ = false;            // a climb she started herself (released at its goal)
+    std::int64_t climbing_key_ = 0;
+    FoundClimb found_;
+    std::array<ClimbBlock, 8> climb_blocks_{};
+    int find_wait_ticks_ = 0;
     float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;

@@ -109,6 +109,7 @@ public:
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }
+    [[nodiscard]] const JPH::PhysicsSystem &physics_system() const noexcept { return physics_system_; }
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
