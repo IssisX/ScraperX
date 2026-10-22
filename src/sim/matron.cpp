@@ -46,6 +46,9 @@ constexpr float kWaySkinM = 0.1F;
 constexpr float kRampAheadM = 0.6F;
 // On a ramp's strip: this near its middle line (the ramp is 1 m across).
 constexpr float kRampStripM = 0.6F;
+// Held to a ramp she is on only until the stall watchdog has had her stalled this long on it (its clamber,
+// sidestep and reroute all tried): a blocked ramp is given up to her other ways.
+constexpr float kRampStallS = 3.0F;
 
 float turn_toward(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, 2.0F * kPi);
@@ -2489,8 +2492,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         follow_pipe(dt, at) ||
                         (guess_line_ >= 0 && follow_line(dt, at, false)) ||
                         // Started up a line's ramp, she finishes it: a way found from the ramp
-                        // would walk her off its side.
-                        (on_line_ramp(at) && follow_line(dt, at, true)) ||
+                        // would walk her off its side. Off the ramp, or stalled on it, she is not held.
+                        (on_line_ramp(at) && stall_s_ < kRampStallS && follow_line(dt, at, true)) ||
                         // Every other way is her own: bars she finds herself, else
                         // a way she plans over the steel her scan read
                         // (matron_found_climb.cpp), climbed by her own hands.
