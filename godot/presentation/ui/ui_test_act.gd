@@ -598,8 +598,17 @@ func _act_way_up(device: int) -> bool:
 	if _position().y < 150.0 and not await _act_up_riser(device):
 		return false
 	_act_log("back_on_her_deck")
-	# Over the bay on its leaf (src/sim/bay.hpp), then to the ladder's foot.
-	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, Vector2(3.5, -128.2), Vector2(3.5, -129.8), Vector2(5.0, -129.6)]:
+	# Over the bay on its leaf (src/sim/bay.hpp), then to the ladder's foot;
+	# set down east of the bay (spared, in the capture era), up the east band
+	# off the shaft's rail first, and along the north band.
+	var legs: Array[Vector2] = []
+	var me := _act_me_xz()
+	if me.x <= ACT_BAY_EAST.x:
+		legs.append_array([ACT_BAY_WEST, ACT_BAY_EAST])
+	elif me.y < ACT_143_EDGE_Z:
+		legs.append(Vector2(maxf(me.x, 17.6), -129.0))
+	legs.append_array([Vector2(3.5, -128.2), Vector2(3.5, -129.8), Vector2(5.0, -129.6)])
+	for leg in legs:
 		if not await _act_creep_to(device, leg, 0.08 if leg.x > 4.0 else 0.15, 10.0, 0.5):
 			return _fail("the creep to the ladder's foot stalled at %s (deaths %d)" % [str(_position()),
 				int(_native().get_death_count())])
@@ -669,6 +678,15 @@ func _act_way_up(device: int) -> bool:
 const HEAVE_BOX_PICK := Vector2(-4.4, -125.85)
 const MATRON_STATE_DOWN := 11
 
+# The view raised for the heave's arc to meet her at the chest `d` off: it
+# leaves the hands at 5.8 m/s, raised 0.14 rad over the view
+# (src/sim/physics_world_tuning.hpp); on a level view, from 3 m it comes
+# down at her shins, a blow she takes standing.
+func _heave_pitch(d: float) -> float:
+	var x := maxf(d - 0.65, 0.5)
+	return 0.5 * asin(minf(1.0, 9.81 * x / (5.8 * 5.8))) - 0.14
+
+
 func _matron_heave_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _sprint_to(device, Vector2(8.0, -128.5), 1.0, 6.0):
@@ -705,7 +723,7 @@ func _matron_heave_touch(device: int) -> bool:
 		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
 		if int(m["state"]) == MATRON_STATE_HUNTING and int(m["stage"]) == 0 and d < 9.0:
 			_main._yaw = atan2(-lead.x, -lead.z)
-			_main._pitch = 0.0
+			_main._pitch = _heave_pitch(d)
 			close = d < 3.4
 	if not close:
 		return _fail("no pest came for the climber (state %d, stage %d)" % [int(_matron_state()["state"]),

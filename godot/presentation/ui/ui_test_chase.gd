@@ -103,16 +103,22 @@ func _wake_matron(device: int) -> bool:
 # locker and gone back to her post across the shaft, out of earshot of one
 # run), up to eight times.
 func _call_her_to_band(device: int) -> bool:
+	return await _call_her_to(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), Vector2(MATRON_BAND_X, MATRON_MID_Z + 4.0))
+
+
+# The same call anywhere on her deck: off the crouch, a run from where the
+# climber waits to `run_to` and back, again until her lead is there (up to
+# eight times).
+func _call_her_to(device: int, at: Vector2, run_to: Vector2) -> bool:
 	await _crouch_on(device, false)
 	for call in 8:
-		if not (await _sprint_to(device, Vector2(MATRON_BAND_X, MATRON_MID_Z + 4.0), 0.5, 4.0) and \
-				await _go(device, Vector2(MATRON_BAND_X, MATRON_MID_Z), 0.5, 8.0)):
+		if not (await _sprint_to(device, run_to, 0.5, 4.0) and await _go(device, at, 0.5, 8.0)):
 			return false
 		var m := _matron_state()
 		var lead := Vector2(float(m["lead_x"]), float(m["lead_z"]))
 		print("SCRAPERX_CHASE call=%d state=%d her=%s lead=%s at %s age=%.1f" % [call, int(m["state"]),
 			str(m["position"]), str(m["lead_valid"]), str(lead), float(m["lead_age_s"])])
-		if bool(m["lead_valid"]) and lead.distance_to(Vector2(MATRON_BAND_X, MATRON_MID_Z)) < 8.0:
+		if bool(m["lead_valid"]) and lead.distance_to(at) < 8.0:
 			return true
 	return true
 
@@ -301,6 +307,23 @@ func _sprint_to(device: int, target: Vector2, tolerance: float, budget: float) -
 	return false
 
 
+# Until `condition` holds, jumping where the climber stands to be heard (a
+# landing is loud) every 1.5 s, up to `budget` seconds.
+func _wait_heard(condition: Callable, budget: float) -> bool:
+	var waited := 0.0
+	var next_jump := 0.0
+	while waited < budget:
+		if bool(condition.call()):
+			return true
+		# (Standing: a jump with a sprint still in the legs carries off an edge.)
+		if waited >= next_jump and bool(_ctx()["grounded"]) and Vector2(_velocity().x, _velocity().z).length() < 0.5:
+			_press(&"jump", 1)
+			next_jump = waited + 1.5
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	return false
+
+
 func _matron_line_touch(device: int) -> bool:
 	if not await _wake_matron(device):
 		return false
@@ -312,12 +335,21 @@ func _matron_line_touch(device: int) -> bool:
 	if not await _crouch_on(device, true):
 		return _fail("CROUCH did not crouch the climber")
 	if not (await _go(device, Vector2(-MATRON_BAND_X, MATRON_NORTH_Z), 0.5, 60.0) and \
-			await _go(device, Vector2(-MATRON_BAND_X, -138.0), 0.5, 40.0)):
+			await _go(device, Vector2(-MATRON_BAND_X, -150.0), 0.5, 40.0)):
 		return _fail("the crouched walk down the west band stalled at %s" % str(_position()))
-	var coming: bool = await _wait_until(func() -> bool:
+	# Out of her locker she looks where the sprint woke her (she knows only
+	# what she hears or sees, src/sim/matron.cpp hear). Called from the west
+	# band by jumps (the landings heard), looking down it; away round the deck
+	# once she comes, while still farther off than her Turn's reach
+	# (kTurnTriggerM, 13 m), whose cooldown would outlast the run to the ramp.
+	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 25.0):
+		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
+	await _crouch_on(device, false)
+	await _face(Vector2(0.0, -1.0))
+	var coming: bool = await _wait_heard(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
-		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 16.0, 45.0)
+		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 25.0, 60.0)
 	if not coming:
 		return _fail("she did not come for the player on the west band")
 	await _crouch_on(device, false)
@@ -327,20 +359,36 @@ func _matron_line_touch(device: int) -> bool:
 			Vector2(1.6, MATRON_NORTH_Z)]:
 		if not await _sprint_to(device, leg, 1.0, 12.0):
 			return _fail("the sprint round the deck stalled at %s" % str(_position()))
-	if not await _walk_to(device, Vector2(3.0, -132.36), 0.3, 4.0, true):
+		# She follows by ear: at each corner the climber waits for her to be
+		# coming, but not at the last (she would be at the ramp before her charge).
+		if leg.x < MATRON_BAND_X - 1.0 and leg.y > MATRON_NORTH_Z - 1.0:
+			continue
+		if not await _wait_heard(func() -> bool:
+			var m := _matron_state()
+			var at: Vector3 = m["position"]
+			return int(m["state"]) == MATRON_STATE_HUNTING and \
+				Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 25.0, 20.0):
+			var m := _matron_state()
+			return _fail("she lost the climber at %s (state %d at %s, deaths %d %s)" % [str(_position()), int(m["state"]),
+				str(m["position"]), int(_native().get_death_count()), str(_native().get_death_state())])
+	if not await _walk_to(device, Vector2(2.3, -132.36), 0.3, 4.0, true):
 		return _fail("the walk to the ramp's foot stalled at %s" % str(_position()))
 	_move_dir(device, Vector2.ZERO)
-	# At the ramp's foot, wait for her charge (her Turn); then up onto the
-	# stand and the jump for the bar, with her coming up the ramp behind.
-	var charging: bool = await _wait_until(func() -> bool:
+	# A step short of the ramp's foot, wait for her charge (her Turn),
+	# jumping to be heard, looking west along the rail (looking at it, the
+	# swipe up takes hold of it); then up onto the stand and the jump for the
+	# bar, with her coming up the ramp behind.
+	await _face(Vector2(-1.0, 0.0))
+	var charging: bool = await _wait_heard(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
 		return int(m["state"]) == MATRON_STATE_HUNTING and int(m["turn"]) != 0 and \
 			Vector2(at.x, at.z).distance_to(Vector2(_position().x, _position().z)) < 14.0, 30.0)
 	if not charging or int(_native().get_death_count()) != 0:
 		return _fail("she did not come for the player at the line's ramp (deaths %d)" % int(_native().get_death_count()))
-	if not await _walk_to(device, Vector2(6.0, -132.36), 0.15, 3.0, true) or _position().y < 155.0:
-		return _fail("up the ramp onto the line's stand stalled at %s" % str(_position()))
+	if not await _walk_to(device, Vector2(6.0, -132.36), 0.15, 4.0, true) or _position().y < 155.0:
+		return _fail("up the ramp onto the line's stand stalled at %s (she state %d at %s, turn %d)" % [str(_position()),
+			int(_matron_state()["state"]), str(_matron_state()["position"]), int(_matron_state()["turn"])])
 	_move_dir(device, Vector2.ZERO)
 	await _face(Vector2(0.0, -1.0))
 	_press(&"jump", 1)
