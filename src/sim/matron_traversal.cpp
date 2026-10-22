@@ -373,7 +373,7 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     push_reaction(force, at_hold);
 }
 
-void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget) {
+void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget, const float may_drop) {
     (void)dt;
     const RVec3 c = center();
     const Vec3 to = flat(feet_goal - c);
@@ -390,10 +390,11 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
             if (dir.LengthSq() < 1.0e-4F) return true;
             const RVec3 from = c + dir.Normalized() * (limits_.radius + 0.1F) +
                                Vec3(0.0F, limits_.step_max_m + 0.05F - limits_.center_above_feet(), 0.0F);
-            const float depth = 2.0F * limits_.step_max_m + 0.1F;
+            const float below = std::max(limits_.step_max_m, may_drop);
+            const float depth = limits_.step_max_m + below + 0.1F;
             RayCastResult hit;
             return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter) &&
-                   float(from.GetY()) - hit.mFraction * depth > feet_y - limits_.step_max_m;
+                   float(from.GetY()) - hit.mFraction * depth > feet_y - below;
         };
         if (!floor_ahead(want_v) || (v.Length() > 0.3F && !floor_ahead(v))) {
             want_dir_v = floor_ahead(want_v) ? want_v * 0.3F : Vec3::sZero();
@@ -760,9 +761,30 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
             return status_;
         }
         RVec3 where;
-        if (!find_rung(feet + 0.3F, feet - 0.8F, false, hold_, where)) {
-            fail(Failure::NoHold);
-            return status_;
+        // The top rung within her reach as she stands (no lower than she
+        // can keep hold of); else the lip she stands on, from which she goes
+        // over and down hand under hand to the rungs.
+        const float lowest = float(c.GetY()) - limits_.reach_low - 0.55F;
+        if (!find_rung(feet + 0.3F, std::max(feet - 0.8F, lowest), false, hold_, where)) {
+            const Vec3 toward = flat(Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) - Vec3(c)).NormalizedOr(-spec_.out);
+            bool found = false;
+            for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
+                found = take_hold(RVec3(c.GetX(), feet - 0.03F, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+            }
+            if (found) {
+                // Her hands at the edge itself, on the side she goes over.
+                BodyLockRead lock(physics_.GetBodyLockInterface(), hold_.body);
+                AABox bounds;
+                bool bar = false;
+                if (lock.Succeeded() && member_bounds(lock.GetBody(), hold_.sub, bounds, bar)) {
+                    where = bounds.GetClosestPoint(RVec3(c.GetX(), feet, c.GetZ()) + toward * 3.0F);
+                    hold_.local = lock.GetBody().GetInverseCenterOfMassTransform() * where;
+                }
+            }
+            if (!found) {
+                fail(Failure::NoHold);
+                return status_;
+            }
         }
         const Vec3 hang = Vec3(spec_.line.GetX(), float(where.GetY()) - limits_.hang_below_hold + 0.4F, spec_.line.GetZ()) +
                           spec_.out * 0.42F;
@@ -1167,7 +1189,8 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
         }
     }
     if (on && !hang) {
-        walk(dt, spec_.goal, 1.6F, budget);   // on over the edge
+        // On over the edge: the floor she steps down to counts as floor.
+        walk(dt, spec_.goal, 1.6F, budget, std::max(0.0F, support - spec_.goal_top) + 0.15F);
     }
     if (phase_s_ > 8.0F) {
         fail(Failure::NotSupported);

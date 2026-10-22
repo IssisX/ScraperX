@@ -220,7 +220,8 @@ private:
     bool find_lip(JPH::Vec3 toward, float near_y, Hold &out, JPH::RVec3 &where) const;
     void drive(float dt, JPH::Vec3 target_centre, JPH::Vec3 target_velocity, float stiffness, Budget &budget,
                bool carry_weight, JPH::RVec3 at_hold);
-    void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget);
+    // may_drop: how far below her feet a floor ahead still counts (a step down she means).
+    void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget, float may_drop = 0.0F);
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
