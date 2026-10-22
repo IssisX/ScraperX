@@ -1,9 +1,7 @@
-Code/test revision: d5898b3208a08a357b610e123bcdaf5aa34d0fea
+Code/test revision: 65c826bfd5d0ca507957fb5f8dca38b447bacb67
 Release configure: exit 0
-Controller Release build: exit 0
-Final acceptance test build: exit 0
-SCRAPERX_ONLY=matron-routecraft: exit 0
-SCRAPERX_ONLY=climb: exit 0
-SCRAPERX_ONLY=matron-grab: exit 0
-Other registered CTest executables: 2/2 passed, exit 0
-Final full native suite: RUNNING (not yet a verified full-suite delivery)
+Release build: exit 0
+SCRAPERX_ONLY=matron-routecraft: exit 0 (23 fixture/world runs, 22 groups)
+Pre-scalability baseline d5898b3 full native suite: exit 0, 177 PASS records
+Current targeted regressions and final full native suite: RUNNING
+Not yet a verified full-suite delivery.
