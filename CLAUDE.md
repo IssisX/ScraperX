@@ -54,3 +54,5 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
 - Progress over testing (2026-10-22: *"we want them to figure out hard coding problems and make
   progress, not just test shit"*). Give agents real problems to solve in code; tests are the proof,
   not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
+- This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
+  gets its own GitHub issue with its own short board in the same format, linked once from #3.
