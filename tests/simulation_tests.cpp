@@ -180,6 +180,18 @@ int main() {
         run_matron_climb_scan();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-towers") {
+        run_matron_towers();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-chain") {
+        run_matron_chain();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-tower") {
+        run_matron_tower_proof();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-narrow") {
         run_matron_narrow();
         return EXIT_SUCCESS;

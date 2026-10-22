@@ -1426,6 +1426,7 @@ private:
     std::array<ClimbBlock, 8> climb_blocks_{};
     int find_wait_ticks_ = 0;
     std::unique_ptr<traversal::Climber> climber_;
+    std::unique_ptr<traversal::AffordanceMap> own_scan_;   // her own read of a world no one read for her
     // Her whole-tower travel (travel_to, matron_journey.cpp).
     const traversal::AffordanceMap *scanned_ = nullptr;
     Journey travel_;
@@ -1436,6 +1437,7 @@ private:
     float travel_wp_best_ = 1.0e9F;
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
+    std::uint32_t travel_replans0_ = 0;
     float travel_wait_s_ = 0.0F;
     static constexpr float kYieldReachM = 1.3F;
     static constexpr float kYieldClearM = 1.6F;
@@ -1589,11 +1591,14 @@ private:
     std::uint32_t cable_slides_ = 0;
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.
-    std::vector<Climb> climbs_;
     // The bay (bay.hpp): its bracket as a level of hers, and its rungs.
     int bay_level_ = -1;
     int bay_climb_ = -1;
-    int c3_wall_climb_ = -1;
+    [[nodiscard]] int climb_count() const noexcept;
+    [[nodiscard]] bool climb_of(int edge, Climb &out) const noexcept;
+    [[nodiscard]] Climb climb_spec(int edge) const noexcept;
+    [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
+    [[nodiscard]] int bay_way_out() const noexcept;
     routes::Map routes_;          // her map of the tower (matron_routes.hpp)
     // Her way across it: the edges planned, the one she is on and its step,
     // started along it or not, and how her last climb ended.
@@ -1609,7 +1614,6 @@ private:
     float clock_s_ = 0.0F;
     std::uint32_t route_edges_done_ = 0, route_failures_ = 0;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
-    int c3_duct_climb_ = -1;
     JPH::BodyID bay_leaf_;
     bool bay_open_ = true;
     bool bay_hooked_ = false;

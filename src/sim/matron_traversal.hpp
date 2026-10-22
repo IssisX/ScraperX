@@ -260,6 +260,7 @@ private:
     float target_y_ = 0.0F;
     Hold hold_;
     JPH::RVec3 hold_world_ = JPH::RVec3::sZero();
+    JPH::Vec3 hang_off_ = JPH::Vec3::sZero();   // a hang drop's hang point, from its hold
     Hold lip_;
     JPH::RVec3 lip_world_ = JPH::RVec3::sZero();
     bool sliding_ = false;

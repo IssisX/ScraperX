@@ -49,7 +49,29 @@ int Matron::region_under() const {
         return -1;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    return scanned_->region_at(Vec3(float(at.GetX()), top, float(at.GetZ())));
+    const int exact = scanned_->region_at(Vec3(float(at.GetX()), top, float(at.GetZ())));
+    if (exact >= 0) {
+        return exact;
+    }
+    // On her feet on a bit of steel too small for a region of its own (a
+    // plinth, a foot plate): hers is the region round her at about that
+    // height, the one she walks off it onto.
+    int best = -1;
+    float best_d = 0.6F;
+    const float x = float(at.GetX());
+    const float z = float(at.GetZ());
+    for (const traversal::Region &r : scanned_->regions()) {
+        if (x < r.min_x - 0.5F || x > r.max_x + 0.5F || z < r.min_z - 0.5F || z > r.max_z + 0.5F ||
+            top < r.min_y - 0.6F || top > r.max_y + 0.6F) {
+            continue;
+        }
+        const float d = std::abs(r.top - top);
+        if (d < best_d) {
+            best_d = d;
+            best = r.id;
+        }
+    }
+    return best;
 }
 
 bool Matron::travel_to(const int region) {
@@ -75,6 +97,7 @@ bool Matron::travel_to(const int region) {
     travel_walk_.clear();
     travel_walk_i_ = 0;
     travel_wait_s_ = 0.0F;
+    travel_replans0_ = travel_.replans;   // her counts run on; this journey's replans from here
     climber_->cancel();
     drop_stock();
     return true;
@@ -159,7 +182,7 @@ void Matron::step_travel(const float dt) {
             }
             return;
         }
-        if (travel_.replans >= kMaxReplans) {
+        if (travel_.replans - travel_replans0_ >= kMaxReplans) {
             travel_.active = false;
             return;
         }
@@ -205,6 +228,14 @@ void Matron::step_travel(const float dt) {
         if (to_start < 40.0F) {
             travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)}, climber_->limits(), feet,
                                                  e.spec.start);
+        }
+        if (travel_walk_.empty() && to_start < 15.0F && to_start > 0.6F) {
+            // Close, and her feet find no floor that takes her there (a wall
+            // standing on the deck between): that start is not hers from
+            // here. She leaves that move out and plans again.
+            travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+            travel_.step = travel_.steps;
+            return;
         }
         if (travel_walk_.empty()) {
             travel_walk_ = scanned_->walk_path(feet, e.spec.start);

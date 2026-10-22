@@ -63,6 +63,9 @@ void test_matron_climb_support() {
     for (int scenario = 0; scenario < 6; ++scenario) {
         ClimbWorld world;
         if (scenario > 0) world.steel(scenario == 1, scenario == 5 ? 2.8F : 5.0F);
+        // Where the rungs lead: a landing at the climber's feet, past the
+        // column's head (no table names this climb; her scan reads it).
+        if (scenario >= 2) world.box(Vec3(0.8F, 0.1F, 0.8F), RVec3(5, Matron::kDeckTop + 4.9F, -127.9));
         if (scenario == 4) world.box(Vec3(0.3F, 0.5F, 0.02F), RVec3(5, 156.2, -129.2));
         if (scenario == 3) world.box(Vec3(1, 0.1F, 1), RVec3(5, 157, -129.55));
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
@@ -95,15 +98,24 @@ void test_matron_climb_support() {
             }
         }
         if (scenario < 2 || scenario == 4) {
-            require(!attached && matron.view().climb_releases > 0 && peak_force == 0,
+            // No authored table names a ladder here any more: her scan reads
+            // no rung edge from missing, sensor or obscured steel, so she
+            // never takes hold (or tries a hold that refuses her) and puts no
+            // force on anything.
+            require(!attached && peak_force == 0,
                     "matron support: missing/sensor/obscured rungs refuse real attempted attachment");
             require(std::abs(matron.view().y - (Matron::kDeckTop + Matron::kStandCentre)) < 0.05F,
-                    "matron support: authored route does not lift her through empty space");
+                    "matron support: nothing lifts her through empty space");
         } else if (scenario == 2) {
             require(attached && removed && released && falling && landed && peak_force > 2000,
                     "matron support: removed held steel releases force, falls under gravity, recovers floor");
         } else {
-            require(attached && released && falling && landed,
+            // Her scan may already refuse the blocked or incomplete column (no
+            // usable rung edge: she never takes hold); if she does take hold,
+            // she stalls, lets go and falls to floor she recovers on.
+            const bool refused = !attached && peak_force == 0 &&
+                                 std::abs(matron.view().y - (Matron::kDeckTop + Matron::kStandCentre)) < 0.05F;
+            require(refused || (attached && released && falling && landed),
                     "matron support: blocked or incomplete ascent stalls then releases to recoverable floor");
         }
         const auto &end = matron.view();

@@ -35,35 +35,80 @@ float turn_to(const float yaw, const float want, const float rate, const float d
 }
 } // namespace
 
-int Matron::climb_index(const routes::Connector which) const noexcept {
-    switch (which) {
-    case routes::Connector::HomeLadder: return 0;
-    case routes::Connector::RiserLadder: return 1;
-    case routes::Connector::BayRungs: return bay_climb_;
-    case routes::Connector::C3WallLadder: return c3_wall_climb_;
-    case routes::Connector::C3Duct: return c3_duct_climb_;
-    default: return -1;
-    }
+int Matron::climb_count() const noexcept {
+    return scanned_ == nullptr ? 0 : static_cast<int>(scanned_->edges().size());
 }
 
-routes::Connector Matron::connector_of(const int climb) const noexcept {
-    if (climb == 0) {
-        return routes::Connector::HomeLadder;
+// A way up as her own scan of the world found it: a usable rung edge of her
+// scanned map, read straight from the scan (no table of hers), faced toward
+// its rungs from the side she starts on.
+bool Matron::climb_of(const int edge, Climb &out) const noexcept {
+    if (edge < 0 || edge >= climb_count()) {
+        return false;
     }
-    if (climb == 1) {
-        return routes::Connector::RiserLadder;
+    const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(edge)];
+    if (!e.usable || e.kind != traversal::MoveKind::RungUp) {
+        return false;
     }
-    if (climb == bay_climb_) {
-        return routes::Connector::BayRungs;
-    }
-    if (climb == c3_wall_climb_) {
-        return routes::Connector::C3WallLadder;
-    }
-    if (climb == c3_duct_climb_) {
-        return routes::Connector::C3Duct;
-    }
-    return routes::Connector::Count;
+    const auto &regions = scanned_->regions();
+    const traversal::MoveSpec &m = e.spec;
+    const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+    const float standoff = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).Length();
+    const float head = regions[static_cast<std::size_t>(e.to)].top;
+    out = {m.start.GetX(), m.start.GetZ(), regions[static_cast<std::size_t>(e.from)].top, head, face.GetX(),
+           face.GetZ(), m.goal.GetX(), m.goal.GetZ(), true, std::clamp(standoff, 0.2F, 0.6F), head};
+    return true;
 }
+
+Matron::Climb Matron::climb_spec(const int edge) const noexcept {
+    Climb c{};
+    (void)climb_of(edge, c);
+    return c;
+}
+
+// Her nearest scanned way off this floor: up from its foot, or down from its
+// top. -1 when her scan found none.
+int Matron::nearest_climb(const float x, const float z, const float floor_y, const bool down) const noexcept {
+    int best = -1;
+    float best_d = std::numeric_limits<float>::max();
+    for (int i = 0; i < climb_count(); ++i) {
+        Climb c{};
+        if (!climb_of(i, c) || std::abs((down ? c.head_y : c.foot_y) - floor_y) > 0.6F) {
+            continue;
+        }
+        const float d = down ? std::hypot(x - c.top_x, z - c.top_z) : std::hypot(x - c.x, z - c.z);
+        if (d < best_d) {
+            best_d = d;
+            best = i;
+        }
+    }
+    return best;
+}
+
+// Out of her own trap: the scanned way up nearest her, off the floor she
+// stands on.
+int Matron::bay_way_out() const noexcept {
+    if (!body_in_world_) {
+        return -1;
+    }
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    return nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, false);
+}
+
+// A connector of the old map names a place, not a climb: the climb there is
+// the one her scan found nearest where that way starts.
+int Matron::climb_index(const routes::Connector which) const noexcept {
+    for (const bool down : {false, true}) {
+        const std::size_t way = routes_.find_way(which, down);
+        if (way < routes::kMaxEdges) {
+            const routes::Edge &e = routes_.edge(way);
+            return nearest_climb(e.entry_x, e.entry_z, routes_.region(e.from).top_y, down);
+        }
+    }
+    return -1;
+}
+
+routes::Connector Matron::connector_of(const int) const noexcept { return routes::Connector::Count; }
 
 std::size_t Matron::pipe_way(const float from_floor, const float to_floor) const noexcept {
     return routes_.find(routes_.region_at(kPipeDeckX, from_floor, kPipeDeckZ),
@@ -199,7 +244,7 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         route_failed(index, routes::Reason::Untested);
         return false;
     }
-    const Climb &c = climbs_[static_cast<std::size_t>(climb)];
+    const Climb c = climb_spec(climb);
     walk_toward(dt, ax, az, 0.0F, accel);
     yaw_ = turn_to(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     if (!travels() || climb_retry_s_ > 0.0F) {

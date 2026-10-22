@@ -18,8 +18,6 @@
 #include <cstdlib>
 #include <chrono>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <limits>
 #include <queue>
 #include <string>
@@ -516,7 +514,9 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         Vec3 to_floor;
         // Stepping across to floor her goal lies on (a board's end over a
         // drop, the next plank) is a step, not falling off: no balancing back.
-        const bool stepping_on = d > 0.05F && floor_under(c, to * (std::min(d, 0.3F) / d));
+        // Nor is stepping down off it on purpose (a drop the move allows).
+        const bool stepping_on =
+            d > 0.05F && (may_drop > limits_.step_max_m || floor_under(c, to * (std::min(d, 0.3F) / d)));
         if (!stepping_on && narrow_floor_lean(c, to_floor)) {
             const Vec3 across = to_floor.NormalizedOr(Vec3::sZero());
             const Vec3 along = want_dir_v - across * want_dir_v.Dot(across);
@@ -1430,10 +1430,18 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
             // The edge of what she stands on, under her hands as she goes over.
             Hold lip;
             RVec3 at;
-            const RVec3 probe = RVec3(spec_.start.GetX(), feet - 0.03F, spec_.start.GetZ());
+            // Felt for at her soles, and (her feet a little up or down on it)
+            // at the top her scan read for where she stands.
+            RVec3 probe = RVec3(spec_.start.GetX(), feet - 0.03F, spec_.start.GetZ());
             bool found = false;
-            for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
-                found = take_hold(probe + out * ahead, 0.05F, false, lip, &at);
+            for (const float y : {feet - 0.03F, spec_.start.GetY() - 0.03F}) {
+                probe = RVec3(spec_.start.GetX(), y, spec_.start.GetZ());
+                for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
+                    found = take_hold(probe + out * ahead, 0.05F, false, lip, &at);
+                }
+                if (found) {
+                    break;
+                }
             }
             if (found) {
                 BodyLockRead lock(physics_.GetBodyLockInterface(), lip.body);
@@ -1454,12 +1462,21 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
             if (float(hang_at.GetY()) < lowest) {
                 hang_at = RVec3(hang_at.GetX(), lowest, hang_at.GetZ());
             }
+            // No room to hang off the face there: the spot under the lip her
+            // scan found free to stand on (its goal), if her hands reach it.
+            if (!capsule_free(hang_at)) {
+                const RVec3 below = RVec3(spec_.goal) + Vec3(0.0F, limits_.center_above_feet() + 0.05F, 0.0F);
+                if (Vec3(below - at).Length() < limits_.hang_below_hold + limits_.radius + 0.6F && capsule_free(below)) {
+                    hang_at = below;
+                }
+            }
             if (!capsule_free(hang_at)) {
                 fail(Failure::BlockedSweep);
                 return status_;
             }
             hold_ = lip;
             hold_world_ = at;
+            hang_off_ = Vec3(hang_at - at);
             ++view_.grips;
             phase_ = 1;
             phase_s_ = 0.0F;
@@ -1470,7 +1487,8 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
             fail(Failure::LostHold);
             return status_;
         }
-        RVec3 hang_at = hold_world_ + out * (limits_.radius + 0.08F) - Vec3(0.0F, limits_.hang_below_hold, 0.0F);
+        // Where she chose to hang, kept on the hold (it may move).
+        RVec3 hang_at = hold_world_ + hang_off_;
         const float lowest = spec_.goal.GetY() + limits_.center_above_feet() + 0.05F;
         if (float(hang_at.GetY()) < lowest) {
             hang_at = RVec3(hang_at.GetX(), lowest, hang_at.GetZ());
@@ -1973,10 +1991,15 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     const Patch &hp = patches_[static_cast<std::size_t>(hi)];
                     if (hp.region == fp.region || hp.top < fp.top + 1.0F) continue;
                     Vec3 stand_foot{}, stand_head{};
-                    const bool foot_ok = free_spot(fp, foot_at, stand_foot);
+                    // Her foot spot on this side of the rungs: the side the
+                    // climb's own corridor is checked on.
+                    const bool foot_ok = free_spot(fp, foot_at, stand_foot) && (stand_foot - line).Dot(out) > 0.15F;
                     const bool head_ok = free_spot(hp, line - out * 0.6F, stand_head);
                     const Vec3 lip_in = closest_on(hp, line, limits.radius + 0.1F);
-                    const bool over_ok = capsule_free(physics, ignore, limits, lip_in);
+                    // The head's lip within her hands' reach of the top rung's
+                    // line (a deck there, not one a stride off it).
+                    const bool lip_near = horizontal(closest_on(hp, line, 0.0F) - line) <= 0.55F && hp.top - l.top <= 0.6F;
+                    const bool over_ok = lip_near && capsule_free(physics, ignore, limits, lip_in);
                     // The climb itself: her body on the rungs, foot to head,
                     // every half meter (a deck's edge over the ladder stops her).
                     bool corridor_ok = true;

@@ -1570,6 +1570,8 @@ public:
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
     // Out of her locker (patrolling), then off on a journey to the region of
     // the scanned map whose top is nearest `top`: false if she has no way.
+    // Tests: a journey to one region of her scanned map, by its id.
+    [[nodiscard]] bool debug_matron_travel_region(int region) noexcept;
     bool debug_matron_travel(double top) noexcept;
     // Her feet's floor search between two points (traversal::grid_walk), for tests.
     [[nodiscard]] std::size_t debug_matron_grid_walk(double fx, double fy, double fz, double tx, double ty, double tz,

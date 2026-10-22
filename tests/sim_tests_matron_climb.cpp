@@ -1,5 +1,6 @@
 #include <array>
 #include <chrono>
+#include <cstdio>
 // The Matron's climbing moves (matron_traversal.hpp) on small worlds of real
 // steel: each move up and down, and each way a move must fail physically
 // (a missing rung, a member that is no longer the one she took, a mantle her
@@ -1137,6 +1138,167 @@ KnockRun knock_run(const bool up, const float deck_h, const float upper, const f
     return r;
 }
 
+// The chained exam: one course of every skill in a row, then knocked off it.
+// From the floor: rungs up deck A's face; a 0.10 m standpipe off B's face
+// from A's top; a panel of rungs on C's face whose lowest bar is 3.0 m over
+// B (a gap she jumps to); along a 0.30 m board out from C; a 1.2 m ledge
+// (E) she mantles from the board's end. Beside the board, 1 m down, a deck
+// (D) with rungs up E's face. On the board she is shoved off sideways onto
+// D; from there she plans again (her scan, nothing named) and finishes. Down
+// is the same course from E to the floor, knocked off the board the same way.
+struct ChainRun : KnockRun {
+    std::string kinds;   // her first plan's moves, in order
+};
+// The course's seeded measures (seed 0: the fixed course).
+struct Course {
+    float a = 3.0F, b = 6.0F, c = 11.0F, gap = 3.0F, board = 0.30F, ledge = 1.2F, pole_x = 0.8F;
+};
+Course course_of(const std::uint32_t seed) {
+    Course k;
+    if (seed == 0) return k;
+    std::uint32_t rng = seed * 2654435761U + 0x9E3779B9U;
+    const auto uniform = [&](const float lo, const float hi) {
+        rng = rng * 1664525U + 1013904223U;
+        return lo + (hi - lo) * float(rng >> 8) / float(1U << 24);
+    };
+    k.a = uniform(2.4F, 3.6F);
+    k.b = k.a + uniform(2.6F, 3.6F);
+    k.gap = uniform(2.6F, 3.3F);
+    k.c = k.b + k.gap + uniform(1.6F, 2.4F);
+    k.board = uniform(0.25F, 0.40F);
+    k.ledge = uniform(1.0F, 1.5F);
+    k.pole_x = uniform(-0.9F, 0.9F);
+    return k;
+}
+ChainRun chain_run(const bool up, const std::uint32_t seed = 0, ChainRun *back = nullptr) {
+    ClimbWorld w;
+    const Course k = course_of(seed);
+    const float a = k.a, b = k.b, c = k.c, e = c + k.ledge;
+    w.box(Vec3(1.5F, 0.5F * a, 1.5F), RVec3(0, 0.5F * a, -2.5F));                 // A: z -1..-4
+    for (float y = 0.3F; y <= a - 0.1F + 1.0e-3F; y += 0.3F) w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F));
+    w.box(Vec3(1.5F, 0.5F * b, 1.5F), RVec3(0, 0.5F * b, -5.5F));                 // B: z -4..-7
+    // The pole on A, 0.45 m off B's face, its head 0.05 m under B's top.
+    w.box(Vec3(0.05F, 0.5F * (b - 0.05F - a), 0.05F), RVec3(k.pole_x, a + 0.5F * (b - 0.05F - a), -3.55F));
+    w.box(Vec3(1.5F, 0.5F * c, 1.5F), RVec3(0, 0.5F * c, -8.5F));                 // C: z -7..-10
+    for (float y = b + k.gap; y <= c - 0.1F + 1.0e-3F; y += 0.3F) w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -6.95F));
+    w.box(Vec3(0.5F * k.board, 0.1F, 1.5F), RVec3(0, c - 0.1F, -11.5F));          // the board: z -10..-13
+    w.box(Vec3(1.1F, 0.5F * (c - 1.0F), 1.5F), RVec3(2.0F, 0.5F * (c - 1.0F), -11.5F));   // D beside it, 1 m down
+    w.box(Vec3(2.5F, 0.5F * e, 1.5F), RVec3(1.0F, 0.5F * e, -14.5F));             // E: z -13..-16
+    for (float y = c - 0.7F; y <= e - 0.1F + 1.0e-3F; y += 0.3F) w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(2.0F, y, -12.95F));
+    const Vec3 bottom(0, 0, 1.2F), top_at(0, e, -14.7F);
+    const Vec3 board_at(0, c, -11.5F);
+    const Vec3 catch_at(2.0F, c - 1.0F, -11.5F);
+    w.spawn(RVec3(up ? bottom : top_at));
+    w.settle(0.3F);
+    const float shove_mps = 5.0F;
+    const traversal::Ignore ignore{w.her, BodyID()};
+    traversal::AffordanceMap map;
+    map.scan(w.physics, AABox(Vec3(-5, -1, -19), Vec3(6, e + 4.0F, 4)), ignore);
+    Climber climber(w.physics, w.her, ignore);
+    const auto feet = [&] { const RVec3 at = w.at(); return Vec3(float(at.GetX()), w.feet(), float(at.GetZ())); };
+    RVec3 last = w.at();
+    const auto drive = [&](const Vec3 goal, ChainRun &r) {
+        const int goal_region = map.region_at(goal);
+        const int catch_region = map.region_at(catch_at);
+        const int board_region = map.region_at(board_at);
+            std::vector<int> plan = map.plan(map.region_at(feet()), goal_region);
+        r.kinds.clear();
+        for (const int k : plan) r.kinds += std::string(r.kinds.empty() ? "" : ", ") + traversal::move_name(map.edges()[std::size_t(k)].kind);
+        if (plan.empty() || board_region < 0) return;
+        std::size_t next = 0, wp = 0;
+        std::vector<Vec3> path;
+        int region = map.region_at(feet());
+        const auto walk_to = [&](const Vec3 target) {
+            path = traversal::grid_walk(w.physics, ignore, climber.limits(), feet(), target);
+            if (path.empty()) path.push_back(target);
+            wp = 0;
+        };
+        enum { Walk, Move, Final } mode = Walk;
+        walk_to(map.edges()[std::size_t(plan[0])].spec.start);
+        float mode_s = 0.0F;
+        const auto replan = [&](const int from) {
+            const auto t0 = std::chrono::steady_clock::now();
+            plan = map.plan(from, goal_region);
+            next = 0;
+            if (!plan.empty()) walk_to(map.edges()[std::size_t(plan[0])].spec.start);
+            r.replan_us.push_back(std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count());
+            ++r.replans;
+            region = from;
+            mode = Walk;
+            mode_s = 0.0F;
+        };
+        for (int i = 0; i < 90 * 300; ++i) {
+            mode_s += ClimbWorld::dt;
+            const Vec3 f = feet();
+            float top = 0.0F;
+            const int under = climber.supported(&top) ? map.region_at(Vec3(f.GetX(), top, f.GetZ())) : -1;
+            // The knock: on deck A, partway along her way, a shove off its side.
+            if (!r.knocked && under == board_region && f.GetZ() < board_at.GetZ() + 0.6F && f.GetZ() > board_at.GetZ() - 0.6F &&
+                mode == Walk) {
+                w.physics.GetBodyInterface().AddImpulse(w.her, Vec3(1.0F, 0, 0) * (Matron::kMassKg * shove_mps));
+                r.knocked = true;
+            }
+            if (r.knocked && under == catch_region) r.on_board = true;
+            if (mode == Walk || mode == Final) {
+                // Off her plan, standing on somewhere else: plan from there.
+                if (under >= 0 && under != region && mode == Walk) {
+                    if (under == goal_region) { mode = Final; walk_to(goal); }
+                    else { replan(under); if (plan.empty()) break; }
+                }
+                while (wp + 1 < path.size() && Vec3(path[wp] - f).GetX() * Vec3(path[wp] - f).GetX() +
+                                                       Vec3(path[wp] - f).GetZ() * Vec3(path[wp] - f).GetZ() < 0.35F * 0.35F) ++wp;
+                (void)climber.walk_between(ClimbWorld::dt, path[wp], 1.2F);
+                const Vec3 d = path.back() - f;
+                const float left = std::sqrt(d.GetX() * d.GetX() + d.GetZ() * d.GetZ());
+                if (mode == Walk && under == region && ((wp + 1 == path.size() && left < 0.6F) || mode_s > 25.0F)) {
+                    climber.begin(map.edges()[std::size_t(plan[next])].spec);
+                    mode = Move;
+                    mode_s = 0.0F;
+                } else if (mode == Final && left < 0.3F && under == goal_region) {
+                    r.arrived = true;
+                    break;
+                }
+            } else {
+                const Climber::Status st = climber.step(ClimbWorld::dt);
+                if (st == Climber::Status::Done) {
+                    const int to = map.edges()[std::size_t(plan[next])].to;
+                    region = under >= 0 ? under : to;
+                    if (region == goal_region) { mode = Final; walk_to(goal); }
+                    else if (region == to && ++next < plan.size()) { mode = Walk; walk_to(map.edges()[std::size_t(plan[next])].spec.start); }
+                    else replan(region);
+                    mode_s = 0.0F;
+                } else if (st == Climber::Status::Failed) {
+                    // Fallen: plan again once she stands.
+                    for (int k = 0; k < 90 * 4 && !climber.supported(&top); ++k) {
+                        (void)climber.stand(ClimbWorld::dt);
+                        w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+                        const RVec3 fell = w.at();   // every tick of the fall counts its own step
+                        r.worst_step = std::max(r.worst_step, float((fell - last).Length()));
+                        last = fell;
+                    }
+                    const Vec3 g = feet();
+                    const int at = map.region_at(Vec3(g.GetX(), top, g.GetZ()));
+                    if (at < 0 || r.replans > 12) break;
+                    replan(at);
+                    if (plan.empty()) break;
+                }
+            }
+            r.peak_force = std::max(r.peak_force, climber.view().force_n);
+            require(climber.view().force_n <= climber.limits().total_force_n + 0.5F, "matron knock: every tick's force inside her one budget");
+            require(w.physics.GetBodyInterface().GetGravityFactor(w.her) == 1.0F, "matron knock: her gravity stays on");
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+            const RVec3 now = w.at();
+            r.worst_step = std::max(r.worst_step, float((now - last).Length()));
+            last = now;
+        }
+    };
+    ChainRun r;
+    drive(up ? top_at : bottom, r);
+    // Back the other way from where she stands: the same world, no reset.
+    if (back != nullptr && r.arrived) drive(up ? bottom : top_at, *back);
+    return r;
+}
+
 void test_knocked_onto_board() {
     std::uint32_t rng = 0x1B873593U;
     const auto uniform = [&](const float lo, const float hi) {
@@ -1390,6 +1552,54 @@ void test_tower_journeys() {
 }
 } // namespace
 
+void run_matron_chain() {
+    int done = 0;
+    for (const bool up : {true, false}) {
+        const ChainRun r = chain_run(up);
+        std::cout << "  matron chained exam " << (up ? "up" : "down") << ": plan [" << r.kinds << "], knocked " << r.knocked << " onto the side deck "
+                  << r.on_board << " replans " << r.replans << " (";
+        for (std::size_t k = 0; k < r.replan_us.size(); ++k) std::cout << (k ? ", " : "") << r.replan_us[k] << " us";
+        std::cout << ") arrived " << r.arrived << " worst step " << r.worst_step << " m peak " << r.peak_force << " N\n";
+        for (const char *skill : up ? std::vector<const char *>{"rung_up", "pole_up", "jump_catch", "mantle"}
+                                    : std::vector<const char *>{"rung_down", "pole_down", "hang_drop"}) {
+            require(r.kinds.find(skill) != std::string::npos, "matron chain: the course takes every skill");
+        }
+        require(r.knocked && r.on_board, "matron chain: knocked off the board onto the deck beside it");
+        require(r.replans >= 1 && r.arrived, "matron chain: she plans again from there and finishes the course");
+        require(r.worst_step <= 0.2F, "matron chain: no tick moves her more than 0.2 m");
+        for (const double us : r.replan_us) require(us < 1.0e4, "matron chain: a replan costs its tick under 10 ms");
+        ++done;
+    }
+    std::cout << "PASS scraperx_sim matron chained exam (ladder, pole, gap, board, ledge, knock-off, replan): " << done << " of 2\n";
+}
+
+// Ten unseen towers (seeded measures: deck heights, the pole's place, the
+// gap under the panel, the board's width, the ledge), each climbed from the
+// floor to its top and back down to the floor in one world with no reset,
+// knocked off its board each way, replanning from where she lands.
+void run_matron_towers() {
+    int done = 0;
+    std::cout << "  | tower | up | down | replans up/down | worst replan | worst step |\n";
+    for (std::uint32_t seed = 1; seed <= 10; ++seed) {
+        ChainRun down;
+        const ChainRun up = chain_run(true, seed, &down);
+        double worst_us = 0.0;
+        for (const double us : up.replan_us) worst_us = std::max(worst_us, us);
+        for (const double us : down.replan_us) worst_us = std::max(worst_us, us);
+        const float worst = std::max(up.worst_step, down.worst_step);
+        std::cout << "  | " << seed << " | " << (up.arrived ? "arrived" : "FAILED") << " [" << up.kinds << "] | "
+                  << (down.arrived ? "arrived" : "FAILED") << " [" << down.kinds << "] | " << up.replans << "/" << down.replans
+                  << " | " << worst_us << " us | " << worst << " m |\n";
+        require(up.arrived && down.arrived, "matron towers: up to the top and back down, no reset");
+        require(up.knocked && down.knocked && up.on_board && down.on_board, "matron towers: knocked off the board each way");
+        require(worst <= 0.2F, "matron towers: no tick moves her more than 0.2 m");
+        for (const double us : up.replan_us) require(us < 1.0e4, "matron towers: a replan costs its tick under 10 ms");
+        for (const double us : down.replan_us) require(us < 1.0e4, "matron towers: a replan costs its tick under 10 ms");
+        ++done;
+    }
+    std::cout << "PASS scraperx_sim matron unseen towers up and down without a reset: " << done << " of 10\n";
+}
+
 // The player's own climbing is untouched by her: the same ladder climb,
 // alone and with her climbing down the stack beside him, takes the
 // same holds to the same top in the same time. (Her body on the same
@@ -1441,4 +1651,123 @@ void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); }
 void run_matron_climb_scan() {
     test_tower_scan();
     test_tower_journeys();
+}
+
+// The whole tower, as her own scan reads it: every deck (a region of 6 m2 or
+// more, the largest at its height) and every pair of them her scan joins
+// with no other deck between, she travels up and back down, from wherever
+// the last leg left her. Each leg reports its outcome, its worst step a tick
+// and her gravity. Nothing here names a deck, a ladder or a route.
+void run_matron_tower_proof() {
+    Simulation s(InitialSpawn::Deck154);
+    (void)s.advance_frame(0.1);
+    const traversal::AffordanceMap &map = s.matron_affordances();
+    const auto &regions = map.regions();
+    std::vector<int> decks;
+    for (const traversal::Region &r : regions) {
+        if (r.area >= 6.0F && map.region_near_top(r.top, 0.3F) == r.id) decks.push_back(r.id);
+    }
+    // Only decks her scan joins to where she stands at the start (the
+    // tower's; the world's other ground she has no way to).
+    const auto p0 = s.matron_state().position;
+    int home = map.region_at(Vec3(float(p0.x), float(p0.y), float(p0.z)));
+    if (home < 0) home = map.region_at(Vec3(float(p0.x), float(p0.y) - Matron::kStandCentre, float(p0.z)));
+    require(home >= 0, "matron tower proof: she stands on a region her scan read");
+    decks.erase(std::remove_if(decks.begin(), decks.end(), [&](const int d) {
+        return d != home && (map.plan(home, d).empty() || map.plan(d, home).empty());
+    }), decks.end());
+    const auto is_deck = [&](const int id) { return std::find(decks.begin(), decks.end(), id) != decks.end(); };
+    struct Pair { int lo, hi; };
+    std::vector<Pair> pairs;
+    for (const int a : decks) {
+        for (const int b : decks) {
+            if (regions[std::size_t(a)].top >= regions[std::size_t(b)].top - 0.5F) continue;
+            const std::vector<int> up = map.plan(a, b);
+            const std::vector<int> down = map.plan(b, a);
+            if (up.empty() || down.empty()) continue;
+            bool direct = true;
+            for (std::size_t k = 0; k + 1 < up.size(); ++k) direct = direct && !is_deck(map.edges()[std::size_t(up[k])].to);
+            if (direct) pairs.push_back({a, b});
+        }
+    }
+    std::cout << "  matron tower proof: " << decks.size() << " decks, " << pairs.size() << " deck pairs her scan joins\n";
+    const auto leg = [&](const int goal, double &worst, double &gravity, double &secs) {
+        worst = 0.0;
+        gravity = 1.0;
+        secs = 0.0;
+        const unsigned failed0 = s.matron_journey().moves_failed;
+        if (std::getenv("SCRAPERX_TOWER_DEBUG") != nullptr) {
+            const Simulation::MatronJourney j0 = s.matron_journey();
+            for (const int k : map.plan(j0.region, goal)) {
+                const traversal::Edge &e = map.edges()[std::size_t(k)];
+                std::cout << "    plan edge " << k << " " << e.from << "->" << e.to << " " << traversal::move_name(e.kind)
+                          << " start " << e.spec.start.GetX() << "," << e.spec.start.GetY() << "," << e.spec.start.GetZ()
+                          << " line " << e.spec.line.GetX() << "," << e.spec.line.GetZ() << " " << e.reason << "\n";
+            }
+        }
+        if (!s.debug_matron_travel_region(goal)) return std::string("no plan");
+        auto last = s.matron_state().position;
+        Simulation::MatronJourney j = s.matron_journey();
+        const double cap = 60.0 + 60.0 * double(s.matron_journey().steps);   // a minute a move
+        while (j.active && secs < cap) {
+            (void)s.advance_frame(1.0 / 60.0);
+            secs += 1.0 / 60.0;
+            const auto p = s.matron_state().position;
+            worst = std::max(worst, std::hypot(p.x - last.x, p.y - last.y, p.z - last.z));
+            last = p;
+            j = s.matron_journey();
+            gravity = std::min(gravity, j.gravity_factor);
+        }
+        const bool there = !j.active && j.region >= 0 &&
+                           j.region == goal;
+        if (!there) {
+            return "did not arrive (at region " + std::to_string(j.region) + " of goal " + std::to_string(goal) +
+                   ", failure " + std::to_string(int(j.last_failure)) + ", moves " + std::to_string(j.moves_done) +
+                   " failed " + std::to_string(j.moves_failed - failed0) + " replans " + std::to_string(j.replans) + ", at " + std::to_string(last.x) + "," + std::to_string(last.y) + "," +
+                   std::to_string(last.z) + ")";
+        }
+        return std::string(j.moves_failed == failed0 ? "arrived clean" : "arrived after a replan");
+    };
+    int clean = 0;
+    const char *only_lo = std::getenv("SCRAPERX_TOWER_LO");   // debugging: one pair's lower deck height
+    for (const Pair &p : pairs) {
+        if (only_lo != nullptr && std::abs(regions[std::size_t(p.lo)].top - std::atof(only_lo)) > 0.5F) continue;
+        if (only_lo != nullptr) {
+            for (const int k : map.plan(p.lo, p.hi)) {
+                const traversal::Edge &e = map.edges()[std::size_t(k)];
+                std::cout << "    up edge " << k << " " << traversal::move_name(e.kind) << " start " << e.spec.start.GetX() << "," << e.spec.start.GetY() << "," << e.spec.start.GetZ() << " goal " << e.spec.goal.GetX() << "," << e.spec.goal.GetY() << "," << e.spec.goal.GetZ() << " " << e.reason << "\n";
+            }
+            for (const int k : map.plan(p.hi, p.lo)) {
+                const traversal::Edge &e = map.edges()[std::size_t(k)];
+                std::cout << "    down edge " << k << " " << traversal::move_name(e.kind) << " start " << e.spec.start.GetX() << "," << e.spec.start.GetY() << "," << e.spec.start.GetZ() << " goal " << e.spec.goal.GetX() << "," << e.spec.goal.GetY() << "," << e.spec.goal.GetZ() << " " << e.reason << "\n";
+            }
+            // Debugging only: put her on that pair's upper deck's own spot (a fixture placement).
+            const traversal::Edge *e0 = nullptr;
+            for (const int k : map.plan(p.hi, p.lo)) { e0 = &map.edges()[std::size_t(k)]; break; }
+            if (const char *from = std::getenv("SCRAPERX_TOWER_FROM"); from != nullptr) {
+                double fx = 0, fy = 0, fz = 0;
+                if (std::sscanf(from, "%lf,%lf,%lf", &fx, &fy, &fz) == 3) s.debug_place_matron(Vector3{fx, fy, fz});
+            } else if (e0 != nullptr) {
+                s.debug_place_matron(Vector3{e0->spec.start.GetX(), e0->spec.start.GetY() + 0.05, e0->spec.start.GetZ()});
+            }
+            for (int k = 0; k < 120; ++k) (void)s.advance_frame(1.0 / 60.0);
+        }
+        double w = 0.0, g = 1.0, t = 0.0;
+        const std::string pre = std::getenv("SCRAPERX_TOWER_FROM") != nullptr ? std::string("arrived") : leg(p.lo, w, g, t);   // to the pair's lower deck first (not judged)
+        if (pre.rfind("arrived", 0) != 0) std::cout << "    (to " << regions[std::size_t(p.lo)].top << " first: " << pre << ")\n";
+        for (const bool up : {true, false}) {
+            const int goal = up ? p.hi : p.lo;
+            const std::string out = leg(goal, w, g, t);
+            std::cout << "  | " << regions[std::size_t(p.lo)].top << " <-> " << regions[std::size_t(p.hi)].top << " | "
+                      << (up ? "up" : "down") << " | " << out << " | " << t << " s | worst step " << w << " m | gravity "
+                      << g << " |\n";
+            require(out.rfind("arrived", 0) == 0, "matron tower proof: every deck pair her scan joins, up and down");
+            require(w <= 0.20, "matron tower proof: no tick moves her more than 0.20 m");
+            require(g == 1.0, "matron tower proof: her gravity stays on");
+            clean += out == "arrived clean" ? 1 : 0;
+        }
+    }
+    require(!pairs.empty(), "matron tower proof: her scan joins decks");
+    std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
+              << " deck pairs, " << clean << " clean\n";
 }

@@ -175,6 +175,12 @@ Structure build(JPH::PhysicsSystem &physics, const std::uint64_t seed, const JPH
     // over the holds.
     {
         p.opening_m = rng.uniform(kMinOpeningM, 1.30F);
+        if (p.kind == Kind::Pole) {
+            // A pole's head stands over the lip: at least 0.60 m clear between
+            // it and each post of the rail's opening, room for her body past
+            // the head (the same draw, so every other exam is unchanged).
+            p.opening_m = std::max(p.opening_m, 2.0F * (0.60F + 0.03F + 0.5F * p.section_m));
+        }
         const float h = p.height_m;
         const float s = p.standoff_m;
         JPH::StaticCompoundShapeSettings goal;

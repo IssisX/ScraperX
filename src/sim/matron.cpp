@@ -129,10 +129,8 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     // side and topped out north over its head; and the riser from 143 up to
     // her deck, climbed from its plate over the shaft and left north down the
     // steps off its bridge, which she knows but does not take hold of.
-    climbs_ = {{kLadderX, kLadderFootZ, kDeckTop, kRingFloor, 0.0F, 1.0F, kLadderX, kLadderFootZ + kMantleOutM, true,
-                0.5F, kRingFloor},
-               {kRiserX, kRiserFootZ, kDeckTop - kStackPitch, kDeckTop, 0.0F, 1.0F, kRiserX, kRiserTopZ, false, 0.35F,
-                kRiserBridgeTop}};
+    // Her ways up are not listed here: each is a rung edge her own scan of
+    // the world found (climb_of), read when she needs one.
     // The bay's bracket (bay.hpp): where she holds the leaf and the foot of
     // its rungs, which she takes hold of whatever her stage (her own way out
     // of her own trap), topping out west onto her deck.
@@ -140,18 +138,6 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
               {{0, 1, Link::Floor}}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
-    climbs_.push_back({Bay::kRungsX, Bay::kRungsZ, Bay::kBracketTop, kDeckTop, -1.0F, 0.0F, Bay::kDropX, Bay::kDropZ,
-                       true, 0.27F, kDeckTop});
-    bay_climb_ = static_cast<int>(climbs_.size()) - 1;
-    // C3's lower half (band_stack.cpp build_c3): the wall ladder from the
-    // duct's top up to the 143 walkway plate, and the duct's own 1.7 m face
-    // from the catwalk landing, its edge the only hold.
-    climbs_.push_back({kC3WallX, kC3WallHangZ, kC3DuctTop, kStackPitch * 13.0F, 0.0F, 1.0F, kC3WallX,
-                       kC3WallHangZ + kMantleOutM + 0.1F, true, 0.35F, kStackPitch * 13.0F + 0.03F});
-    c3_wall_climb_ = static_cast<int>(climbs_.size()) - 1;
-    climbs_.push_back({kC3WallX, kC3DuctHangZ, kC3LandingTop, kC3DuctTop, 0.0F, 1.0F, kC3WallX,
-                       kC3DuctHangZ + kMantleOutM, true, 0.45F, kC3DuctTop});
-    c3_duct_climb_ = static_cast<int>(climbs_.size()) - 1;
     patrol_node_ = 2;
 
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -295,14 +281,12 @@ void Matron::let_go_for_test() {
 }
 
 bool Matron::climb_for_test(const routes::Connector which, const bool down) {
+    // The scanned way nearest her off her floor (the connector only says
+    // pipe or not: every climb is one her scan found).
     int index = -1;
-    switch (which) {
-    case routes::Connector::HomeLadder: index = 0; break;
-    case routes::Connector::RiserLadder: index = 1; break;
-    case routes::Connector::BayRungs: index = bay_climb_; break;
-    case routes::Connector::C3WallLadder: index = c3_wall_climb_; break;
-    case routes::Connector::C3Duct: index = c3_duct_climb_; break;
-    default: break;
+    if (body_in_world_ && which != routes::Connector::CornerPipe) {
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+        index = nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, down);
     }
     climb_retry_s_ = 0.0F;
     if (which == routes::Connector::CornerPipe) {
@@ -869,7 +853,7 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
                             : distance_xz(ax, az, float(line.stand.GetX()), float(line.stand.GetZ()));
         if (d < best_d) {
             best_d = d;
-            best = static_cast<int>(i);
+            best = i;
         }
     }
     if (best < 0) {
@@ -970,6 +954,9 @@ void Matron::ride_line() {
 
 bool Matron::follow_climb(const float dt, const RVec3 at) {
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    if (found_climbs_off_) {
+        return false;   // one way alone (a test): none of her own
+    }
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
@@ -977,22 +964,25 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     // the way): the one she saw taken, or the nearest.
     int best = -1;
     float best_d = std::numeric_limits<float>::max();
-    for (std::size_t i = 0; i < climbs_.size(); ++i) {
-        const Climb &c = climbs_[i];
+    for (int i = 0; i < climb_count(); ++i) {
+        Climb c{};
+        if (!climb_of(i, c)) {
+            continue;
+        }
         if (!c.hers || std::abs(c.foot_y - level_floor) > 0.6F || c.head_y > lead_floor_ + 0.6F ||
             c.head_y < level_floor + 0.6F) {
             continue;
         }
-        const float d = static_cast<int>(i) == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
+        const float d = i == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
         if (d < best_d) {
             best_d = d;
-            best = static_cast<int>(i);
+            best = i;
         }
     }
     if (best < 0) {
         return false;
     }
-    const Climb &c = climbs_[static_cast<std::size_t>(best)];
+    const Climb c = climb_spec(best);
     const float off = distance_xz(ax, az, c.x, c.z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
     if (off > 0.2F) {
@@ -1037,7 +1027,7 @@ using grip::RayHits;
 // above the hand she has; going down, the highest below it, never the floor
 // at the foot; starting down from the top, the first under its lip.
 bool Matron::find_climb_hold(const RVec3 at, const bool down) {
-    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
+    const Climb c = climb_spec(climb_);
     const bool holding = !climb_support_.IsInvalid();
     float top = 0.0F;
     float bottom = 0.0F;
@@ -1173,7 +1163,7 @@ void Matron::release_climb(const bool failed) {
 
 void Matron::climb(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
-    const Climb &c = climbs_[static_cast<std::size_t>(climb_)];
+    const Climb c = climb_spec(climb_);
     const RVec3 at = bodies.GetPosition(body_);
     const float feet = float(at.GetY()) - kStandCentre;
     if (climb_support_.IsInvalid() || !bodies.IsAdded(climb_support_)) {
@@ -1886,7 +1876,12 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
             trap_ = Trap::Off;
             return false;
         }
-        const Climb &c = climbs_[static_cast<std::size_t>(bay_climb_)];
+        bay_climb_ = bay_way_out();
+        if (bay_climb_ < 0) {
+            trap_ = Trap::Off;
+            return false;
+        }
+        const Climb c = climb_spec(bay_climb_);
         const float off = distance_xz(ax, az, c.x, c.z);
         if (off > 0.2F) {
             walk_toward(dt, c.x, c.z, std::min(1.0F, 0.3F + 2.0F * off));
@@ -2030,6 +2025,13 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             settle_level();
         }
     }
+    // Out in a world no one has read for her, she reads it herself, once:
+    // every way she climbs is one her own scan found.
+    if (wants_routes()) {
+        own_scan_ = std::make_unique<traversal::AffordanceMap>();
+        own_scan_->scan(physics_, physics_.GetBounds(), {body_, BodyID(), moving_layer()});
+        scanned_ = own_scan_.get();
+    }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
     if (body_in_world_ && travel_.active) {
         step_travel(dt);
@@ -2047,11 +2049,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // heard and seen up it, and where it goes is her guess.
     int player_climb = -1;
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
-    for (std::size_t i = 0; i < climbs_.size(); ++i) {
-        const Climb &c = climbs_[i];
+    for (int i = 0; i < climb_count(); ++i) {
+        Climb c{};
+        if (!climb_of(i, c)) {
+            continue;
+        }
         if (std::abs(c.foot_y - level_floor) < 0.6F && std::abs(px - c.x) < 1.0F && std::abs(pz - c.z) < 1.0F &&
             player.GetY() > c.foot_y + 1.3F && player.GetY() < c.head_y + 1.2F) {
-            player_climb = static_cast<int>(i);
+            player_climb = i;
         }
     }
     // Or on the deck her corner pipe is taking her to, or (no longer frail) a
@@ -2267,7 +2272,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // over its head. That lead is on another level: not a noise she
         // checks from a vantage (wary), but one she goes after by her way there.
         if (player_climb >= 0 && (saw || selected_player_sound)) {
-            const Climb &c = climbs_[static_cast<std::size_t>(player_climb)];
+            const Climb c = climb_spec(player_climb);
             heard_x_ = c.top_x;
             heard_z_ = c.top_z;
             lead_floor_ = c.head_y;
@@ -2379,7 +2384,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     // (one she never takes hold of, the riser from its plate
                     // over the shaft: at the place on her own lines by it).
                     if (guess_climb_ >= 0) {
-                        const Climb &c = climbs_[static_cast<std::size_t>(guess_climb_)];
+                        const Climb c = climb_spec(guess_climb_);
                         heard_x_ = c.x;
                         heard_z_ = c.z;
                         if (!c.hers) {
@@ -2414,17 +2419,18 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     break;
                 }
             } else if (elsewhere &&
-                       (follow_pipe(dt, at) ||
-                        // A line she knows the climber took, she takes after him when she can.
+                       (// After the climber the way he went, where she saw or heard
+                        // it: down the shaft's pipe, or a line he took.
+                        follow_pipe(dt, at) ||
                         (guess_line_ >= 0 && follow_line(dt, at, false)) ||
-                        // Her own way first: bars she finds herself, else a way she
-                        // plans over the steel round her (matron_found_climb.cpp),
-                        // climbed by her own hands. Her map's ways only where she
-                        // finds none; a line she would only wait at, last.
+                        // Every other way is her own: bars she finds herself, else
+                        // a way she plans over the steel her scan read
+                        // (matron_found_climb.cpp), climbed by her own hands.
                         follow_found_climb(dt, at) ||
-                        follow_route(dt, at) ||
-                        follow_line(dt, at, true) ||
-                        follow_climb(dt, at))) {
+                        // A rung way her scan found off her floor; a line she
+                        // would only wait at, last.
+                        follow_climb(dt, at) ||
+                        follow_line(dt, at, true))) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
                 // the tower (its ladders up and down), or up a climb.
