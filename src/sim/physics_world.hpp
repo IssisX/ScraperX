@@ -113,6 +113,7 @@ public:
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
+    void launch_matron_for_test(JPH::RVec3 at);
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }

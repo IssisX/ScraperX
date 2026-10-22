@@ -1673,6 +1673,13 @@ public:
     // a hold's point), nearest first; empty off the ground or on a hold.
     [[nodiscard]] std::vector<Vector3> route_ahead() const;
 
+// Native opt-in, intended for a planner calling between fixed steps.
+    bool request_matron_climb_goal(Vector3 goal, Vector3 facing);
+    void cancel_matron_climb_goal();
+    int matron_climb_status() const;
+    // Fixture setup only, never exposed to Godot.
+    void launch_matron_for_test(Vector3 at);
+
 private:
     class PhysicsWorld;
 

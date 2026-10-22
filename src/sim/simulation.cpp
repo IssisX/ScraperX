@@ -1100,6 +1100,14 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+bool Simulation::request_matron_climb_goal(Vector3 goal, Vector3 facing) {
+    return physics_world_->matron().request_climb_goal(JPH::RVec3(goal.x,goal.y,goal.z),
+        JPH::Vec3(float(facing.x),float(facing.y),float(facing.z)));
+}
+void Simulation::cancel_matron_climb_goal() { physics_world_->matron().cancel_climb_goal(); }
+int Simulation::matron_climb_status() const { return int(physics_world_->matron().climb_report().status); }
+void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
+
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();
     const auto &view = matron.view();

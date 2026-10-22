@@ -4,6 +4,7 @@
 #include "sim_tests.hpp"
 
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routecraft") { run_matron_routecraft(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;
@@ -457,6 +458,7 @@ int main() {
     run_c7();
     run_summit();
     run_summit_arm();
+    run_matron_routecraft();
     run_matron();
     run_matron_pace();
     run_matron_unstick();
