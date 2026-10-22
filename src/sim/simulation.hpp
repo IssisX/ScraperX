@@ -1677,6 +1677,7 @@ public:
     bool request_matron_climb_goal(Vector3 goal, Vector3 facing);
     void cancel_matron_climb_goal();
     int matron_climb_status() const;
+    std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
 

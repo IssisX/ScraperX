@@ -62,6 +62,7 @@ bool MatronRoutecraft::reach(PhysicsSystem &p, BodyID self, RVec3 at, const Grip
     const RVec3 shoulder = at + Vec3(0, 0.45F, 0);
     const Vec3 delta(g.point - shoulder);
     RayCastResult hit;
+    ++report_.native_queries;
     if (!p.GetNarrowPhaseQuery().CastRay(RRayCast(shoulder, delta), hit, {}, {}, SolidFilter(self))) return false;
     return hit.mBodyID == g.body && hit.mSubShapeID2 == g.sub && (1 - hit.mFraction) * delta.Length() <= 0.13F;
 }
@@ -69,12 +70,14 @@ bool MatronRoutecraft::clear(PhysicsSystem &p, BodyID self, RVec3 from, RVec3 to
     if (!budget()) return false;
     CapsuleShape capsule(Matron::kHalfHeight, Matron::kRadius);
     BoundedHits overlap;
+    ++report_.native_queries;
     p.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1), RMat44::sTranslation(to),
         CollideShapeSettings(), to, overlap, {}, {}, SolidFilter(self));
     if (overlap.overflow) return false;
     for (const auto &hit : overlap.hits) if (hit.mPenetrationDepth > 0.015F) return false;
     if (Vec3(to - from).LengthSq() < 1.0e-8F) return true;
     BoundedSweeps hits;
+    ++report_.native_queries;
     p.GetNarrowPhaseQuery().CastShape(RShapeCast(&capsule, Vec3::sReplicate(1), RMat44::sTranslation(from), Vec3(to-from)),
         ShapeCastSettings(), from, hits, {}, {}, SolidFilter(self));
     if (hits.overflow) return false;
@@ -113,6 +116,7 @@ bool MatronRoutecraft::plan(PhysicsSystem &p, BodyID self) {
     const RVec3 middle = (start + goal_) * 0.5;
     BoxShape region(span * 0.5F + Vec3(2, 2, 2));
     BoundedHits hits;
+    ++report_.native_queries;
     p.GetNarrowPhaseQuery().CollideShape(&region, Vec3::sReplicate(1), RMat44::sTranslation(middle),
         CollideShapeSettings(), middle, hits, {}, {}, SolidFilter(self));
     if (hits.overflow) { report_.status = Status::BudgetExceeded; return false; }
@@ -138,7 +142,7 @@ bool MatronRoutecraft::plan(PhysicsSystem &p, BodyID self) {
     });
     std::vector<Node> nodes;
     for (const auto &g : grips) {
-        for (float y : {-0.65F, 0.35F, 1.35F}) {
+        for (float y : {-0.65F, 0.35F, 1.45F}) {
             const RVec3 at = g.point - facing_ * 0.55F + Vec3(0,y,0);
             if (clear(p,self,at,at) && reach(p,self,at,g)) nodes.push_back({at,g});
         }

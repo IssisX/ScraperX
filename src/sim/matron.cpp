@@ -221,6 +221,7 @@ void Matron::spawn_body() {
 }
 
 void Matron::remove_body() {
+    if (routecraft_recovering_) physics_.GetBodyInterface().SetMotionQuality(body_, routecraft_previous_quality_);
     routecraft_.cancel();
     routecraft_recovering_ = false;
     if (!body_in_world_) {
@@ -1697,6 +1698,10 @@ bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
     const bool accepted = candidate.request(physics_, body_, goal, facing);
     if (accepted || !routecraft_.owns_motion()) routecraft_ = std::move(candidate);
     if (accepted) {
+        // Preserve collision honesty through a released fall as well as the
+        // controlled climb. Restore ordinary pursuit's quality on landing.
+        if (!routecraft_recovering_) routecraft_previous_quality_ = physics_.GetBodyInterface().GetMotionQuality(body_);
+        physics_.GetBodyInterface().SetMotionQuality(body_, EMotionQuality::LinearCast);
         routecraft_recovering_ = true;
         routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
     }
@@ -2305,10 +2310,19 @@ void Matron::post_step(const float dt) {
             RayCastResult floor;
             const RRayCast down(at, Vec3(0, -(kStandCentre + 0.08F), 0));
             if (physics_.GetNarrowPhaseQuery().CastRay(down, floor, {}, {}, IgnoreSingleBodyFilter(body_))) {
-                const BodyLockRead lock(physics_.GetBodyLockInterface(), floor.mBodyID);
-                if (lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(floor.mSubShapeID2, down.GetPointOnRay(floor.mFraction)).GetY() > 0.7F) {
+                bool walkable = false;
+                {
+                    const BodyLockRead lock(physics_.GetBodyLockInterface(), floor.mBodyID);
+                    walkable = lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(
+                        floor.mSubShapeID2, down.GetPointOnRay(floor.mFraction)).GetY() > 0.7F;
+                }
+                if (walkable) {
                     feet_y_ = float(down.GetPointOnRay(floor.mFraction).GetY());
-                    routecraft_recovering_ = false;
+                    if (std::abs(float(at.GetY()) - kStandCentre - feet_y_) < 0.025F &&
+                        std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F) {
+                        physics_.GetBodyInterface().SetMotionQuality(body_, routecraft_previous_quality_);
+                        routecraft_recovering_ = false;
+                    }
                 }
             }
             settle_level();
@@ -2600,6 +2614,7 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 }
 
 void Matron::restore(const Saved &saved) {
+    if (routecraft_recovering_) physics_.GetBodyInterface().SetMotionQuality(body_, routecraft_previous_quality_);
     routecraft_.cancel();
     routecraft_recovering_ = false;
     if (shared_survival_) shared_survival_->reset();

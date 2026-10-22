@@ -1106,6 +1106,7 @@ bool Simulation::request_matron_climb_goal(Vector3 goal, Vector3 facing) {
 }
 void Simulation::cancel_matron_climb_goal() { physics_world_->matron().cancel_climb_goal(); }
 int Simulation::matron_climb_status() const { return int(physics_world_->matron().climb_report().status); }
+std::uint32_t Simulation::matron_climb_queries() const { return physics_world_->matron().climb_report().native_queries; }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
 MatronSnapshot Simulation::matron_state() const noexcept {

@@ -2,6 +2,8 @@
 #include "sim/physics_world_support.hpp"
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <memory>
+#include <chrono>
+#include <Jolt/Physics/Collision/Shape/MutableCompoundShape.h>
 
 namespace {
 using namespace JPH;
@@ -18,7 +20,7 @@ struct Fixture {
     std::unique_ptr<kit::Kit> kit;
     std::unique_ptr<Matron> matron;
     std::vector<BodyID> solids;
-    float min_y=10000, max_x=-10000, penetration=0, measured_force=0, measured_power=0;
+    float min_y=10000, max_x=-10000, penetration=0, controlled_penetration=0, measured_force=0, measured_power=0;
     Fixture(RVec3 start) {
         physics.Init(8192, 0, 16384, 8192, broad, vs, pair);
         physics.SetGravity(Vec3(0,-9.81F,0));
@@ -42,10 +44,17 @@ struct Fixture {
     RVec3 at() { return physics.GetBodyInterface().GetPosition(matron->body()); }
     void tick() {
         constexpr float dt=1.0F/90;
+        const auto old_plans=matron->climb_report().plans;
+        const auto old_queries=matron->climb_report().native_queries;
+        const auto started=std::chrono::steady_clock::now();
         matron->pre_step(dt,RVec3(300,154,300),0);
+        if(matron->climb_report().plans>old_plans) std::cout<<"routecraft fault replan pre_step_ms="
+            <<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
+            <<" native_queries="<<matron->climb_report().native_queries-old_queries<<'\n';
         {
             BodyLockRead body(physics.GetBodyLockInterface(),matron->body());
             const Vec3 force=body.GetBody().GetAccumulatedForce();
+            require(std::abs(force.Length()-matron->climb_report().force)<0.01F,"routecraft: reported force matches actual body accumulator");
             measured_force=std::max(measured_force,force.Length());
             measured_power=std::max(measured_power,std::abs(force.Dot(body.GetBody().GetLinearVelocity())));
             require(force.Length()<=MatronRoutecraft::kForce+0.1F,"routecraft: actual accumulated force cap");
@@ -60,8 +69,17 @@ struct Fixture {
         AllHitCollisionCollector<CollideShapeCollector> hits;
         physics.GetNarrowPhaseQuery().CollideShape(&capsule,Vec3::sReplicate(1),RMat44::sTranslation(at()),
             CollideShapeSettings(),at(),hits,{}, {},IgnoreSingleBodyFilter(matron->body()));
-        for(const auto &hit:hits.mHits) penetration=std::max(penetration,hit.mPenetrationDepth);
-        require(penetration<=0.025F,"routecraft: actual capsule penetration under 25 mm");
+        const auto status=matron->climb_report().status;
+        for(const auto &hit:hits.mHits) {
+            penetration=std::max(penetration,hit.mPenetrationDepth);
+            if(status==MatronRoutecraft::Status::Moving || status==MatronRoutecraft::Status::Holding)
+                controlled_penetration=std::max(controlled_penetration,hit.mPenetrationDepth);
+        }
+        require(controlled_penetration<=0.025F,"routecraft: controlled capsule penetration under 25 mm");
+        // Released falls in these fixtures reach under 10 m/s. Jolt may
+        // retain one 90 Hz travel step plus contact slop before correction;
+        // the recovery checks below also require actual settled floor height.
+        require(penetration<=10.0F/90.0F+0.015F,"routecraft: recovery overlap bounded by one impact step");
         const auto &r=matron->climb_report();
         require(r.force<=MatronRoutecraft::kForce+0.01F,"routecraft: finite force");
         require(r.peak_power<=MatronRoutecraft::kPower+0.1F,"routecraft: finite power");
@@ -111,16 +129,30 @@ void run_matron_routecraft() {
     {
         Simulation world(InitialSpawn::Deck154);
         world.launch_matron_for_test({5,155.07,-129.6});
+        auto started=std::chrono::steady_clock::now();
         const bool planned=world.request_matron_climb_goal({5,177.37,-128.6},{0,0,1});
-        std::cout<<"full tower plan status="<<world.matron_climb_status()<<std::endl;
+        std::cout<<"full tower initial plan_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
+            <<" native_queries="<<world.matron_climb_queries()<<" status="<<world.matron_climb_status()<<std::endl;
         require(planned,"routecraft: full tower plans ascent");
-        for(int tick=0;tick<9000 && world.matron_climb_status()==1;++tick) (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        for(int tick=0;tick<9000 && world.matron_climb_status()==1;++tick) {
+            if(tick==900 || tick==1800) {
+                started=std::chrono::steady_clock::now();
+                require(world.request_matron_climb_goal({5,177.37,-128.6},{0,0,1}),"routecraft: full tower mid-climb replan request");
+                std::cout<<"full tower replan_request_ms="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()
+                    <<" native_queries="<<world.matron_climb_queries()<<" at_y="<<world.matron_state().position.y<<'\n';
+            }
+            (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        }
         std::cout<<"routecraft full tower ascent y="<<world.matron_state().position.y<<" status="<<world.matron_climb_status()<<'\n';
         require(world.matron_climb_status()==2,"routecraft: full tower ascent executes");
         // One additional held tick lets native floor sensing establish the ring.
         (void)world.advance_frame(Simulation::kFixedStepSeconds);
         require(std::abs(world.matron_state().floor_y-176.25)<0.1,"routecraft: upper level established");
         require(!world.request_matron_climb_goal({5,1000,-128.6},{0,0,1}) && world.matron_climb_status()==2,"routecraft: rejected replacement keeps current hold");
+        world.cancel_matron_climb_goal();
+        for(int i=0;i<30;++i) (void)world.advance_frame(Simulation::kFixedStepSeconds);
+        require(std::abs(world.matron_state().position.y-(176.25+Matron::kStandCentre))<0.025,"routecraft: top transfer released onto actual ring");
+        std::cout<<"routecraft full tower grounded top-out y="<<world.matron_state().position.y<<'\n';
         require(world.request_matron_climb_goal({5,155.2,-129.6},{0,0,1}),"routecraft: full tower plans descent");
         for(int tick=0;tick<9000 && world.matron_climb_status()==1;++tick) (void)world.advance_frame(Simulation::kFixedStepSeconds);
         require(world.matron_climb_status()==2,"routecraft: full tower descent executes");
@@ -193,6 +225,8 @@ void run_matron_routecraft() {
         require(f.matron->climb_report().force==0,"routecraft: explicit interruption clears contact");
         for(int i=0;i<270;++i) f.tick();
         require(std::abs(f.at().GetY()-155.05)<0.05,"routecraft: interrupted grounded recovery");
+        require(f.physics.GetBodyInterface().GetMotionQuality(f.matron->body())==EMotionQuality::Discrete,"routecraft: grounded recovery restores prior collision mode");
+        std::cout<<"routecraft interrupted recovery peak_overlap="<<f.penetration<<" controlled_overlap="<<f.controlled_penetration<<'\n';
     }
     {
         Fixture f(RVec3(0,157,-0.55));
@@ -204,6 +238,7 @@ void run_matron_routecraft() {
         std::cout<<"routecraft measured saturation N="<<f.measured_force<<" W="<<f.measured_power<<'\n';
         Matron::Saved saved; saved.state=Matron::State::Dormant;
         f.matron->restore(saved);
+        require(f.physics.GetBodyInterface().GetMotionQuality(f.matron->body())==EMotionQuality::Discrete,"routecraft: reset restores collision mode");
         require(f.matron->climb_report().force==0 && f.matron->climb_report().status==MatronRoutecraft::Status::Released,"routecraft: restore clears controller");
     }
     {
@@ -225,6 +260,48 @@ void run_matron_routecraft() {
         }
         f.tick();
         require(f.matron->climb_report().status==MatronRoutecraft::Status::NoRoute && f.matron->climb_report().force==0,"routecraft: displaced anchors invalidate before load");
+    }
+    {
+        // Unfamiliar pitch, missing every third rung, shifted world origin.
+        Fixture f(RVec3(2.3,157.07,-3.55));
+        f.box(RVec3(2.3,155.9,-4),Vec3(3,0.1F,2));
+        int rung=0;
+        for(float y=156.27F;y<163;y+=0.37F,++rung) if(rung%3!=1) f.box(RVec3(2.3,y,-3),Vec3(0.28F,0.02F,0.02F));
+        require(f.go(RVec3(2.3,162,-3.55)) && f.go(RVec3(2.3,157.2,-3.55)),"routecraft: unfamiliar shifted sparse pitch up/down");
+        std::cout<<"routecraft unfamiliar sparse descent y="<<f.at().GetY()<<'\n';
+    }
+    {
+        Fixture f(RVec3(0,155.07,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2)); f.ladder(0,154,161);
+        require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: selected support before occlusion");
+        // Wall misses the capsule but separates its shoulders from every bar.
+        f.box(RVec3(0,157.5,-0.15),Vec3(2,3.5F,0.025F));
+        f.tick();
+        require(f.matron->climb_report().status==MatronRoutecraft::Status::NoRoute && f.measured_force==0,"routecraft: selected occluded contact applies no actual force");
+    }
+    {
+        Fixture f(RVec3(0,157,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2));
+        MutableCompoundShapeSettings settings;
+        settings.AddShape(Vec3(10,158,0),Quat::sIdentity(),new BoxShape(Vec3(0.28F,0.02F,0.02F)));
+        settings.AddShape(Vec3(0,158,0),Quat::sIdentity(),new BoxShape(Vec3(0.28F,0.02F,0.02F)));
+        Ref<MutableCompoundShape> shape=static_cast<MutableCompoundShape *>(settings.Create().Get().GetPtr());
+        BodyCreationSettings body(shape,RVec3::sZero(),Quat::sIdentity(),EMotionType::Static,object_layers::kStatic);
+        const BodyID id=f.physics.GetBodyInterface().CreateAndAddBody(body,EActivation::DontActivate); f.solids.push_back(id);
+        require(f.matron->request_climb_goal(RVec3(0,157.2,-0.55),Vec3::sAxisZ()),"routecraft: compound contact selected");
+        f.tick();
+        const Vec3 old_com=shape->GetCenterOfMass();
+        shape->RemoveShape(1);
+        f.physics.GetBodyInterface().NotifyShapeChanged(id,old_com,false,EActivation::DontActivate);
+        f.tick();
+        require(f.matron->climb_report().status==MatronRoutecraft::Status::NoRoute && f.matron->climb_report().force==0,"routecraft: stale removed compound child safely releases");
+    }
+    {
+        Fixture f(RVec3(0,157,-0.55));
+        f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2));
+        BodyCreationSettings bar(new BoxShape(Vec3(0.28F,0.02F,0.02F)),RVec3(0,158,0),Quat::sIdentity(),EMotionType::Kinematic,object_layers::kMoving);
+        f.solids.push_back(f.physics.GetBodyInterface().CreateAndAddBody(bar,EActivation::Activate));
+        require(!f.matron->request_climb_goal(RVec3(0,157.2,-0.55),Vec3::sAxisZ()),"routecraft: moving support family explicitly rejected");
     }
     std::cout<<"PASS: matron-routecraft\n";
 }

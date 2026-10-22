@@ -16,7 +16,7 @@ public:
     static constexpr int kMaxNodes = 768;
     struct Report {
         Status status = Status::Idle;
-        unsigned plans = 0, acquisitions = 0, steps = 0, queries = 0;
+        unsigned plans = 0, acquisitions = 0, steps = 0, queries = 0, native_queries = 0;
         float force = 0, peak_force = 0, peak_power = 0, max_reach = 0;
         JPH::Vec3 reaction = JPH::Vec3::sZero(); // static world's reaction at hand
         JPH::RVec3 hand = JPH::RVec3::sZero();
