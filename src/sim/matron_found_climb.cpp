@@ -243,7 +243,7 @@ bool Matron::climb_blocked(const std::int64_t key) const {
     return false;
 }
 
-void Matron::block_climb(const std::int64_t key) {
+void Matron::block_climb(const std::int64_t key, const bool failed) {
     ClimbBlock *slot = &climb_blocks_[0];
     for (ClimbBlock &b : climb_blocks_) {
         if (b.ticks > 0 && b.key == key) {
@@ -254,8 +254,10 @@ void Matron::block_climb(const std::int64_t key) {
             slot = &b;
         }
     }
+    const bool failed_before = slot->ticks > 0 && slot->key == key && slot->failed;   // a refusal never clears a failure
     slot->key = key;
     slot->ticks = kFoundClimbBlockTicks;
+    slot->failed = failed || failed_before;
 }
 
 void Matron::block_climb_at(const float x, const float z) {
@@ -265,8 +267,11 @@ void Matron::block_climb_at(const float x, const float z) {
 bool Matron::column_blocked_near(const float x, const float z) const {
     for (const float dx : {-kColumnCellM, 0.0F, kColumnCellM}) {
         for (const float dz : {-kColumnCellM, 0.0F, kColumnCellM}) {
-            if (climb_blocked(cell_key(x + dx, z + dz))) {
-                return true;
+            const std::int64_t key = cell_key(x + dx, z + dz);
+            for (const ClimbBlock &b : climb_blocks_) {
+                if (b.ticks > 0 && b.failed && b.key == key) {
+                    return true;
+                }
             }
         }
     }
@@ -294,11 +299,12 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
             return !frail && still && start_journey(at);
         }
     }
-    // Still a way: from the floor she is on, toward where her lead now is,
-    // its start reached in time. Else left alone a while, and she looks again.
+    // Still a way: from the floor she is on, and not away from where her lead
+    // now is (a lead still on her floor, up its first rungs, keeps it). Else
+    // she looks again; a start not reached in time is left alone a while.
     const bool goes_up = float(found_.goal.GetY()) - kStandCentre > found_.from_y;
-    if (std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.6F || goes_up != (lead_floor_ > found_.from_y)) {
-        block_climb(found_.key);
+    const bool lead_away = goes_up ? lead_floor_ < found_.from_y - 1.0F : lead_floor_ > found_.from_y + 1.0F;
+    if (std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.6F || lead_away) {
         found_ = FoundClimb{};
         return false;
     }
@@ -308,7 +314,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
     if (off > kAtFootM) {
         if (++found_.walk_ticks > kFoundWalkTicks) {
-            block_climb(found_.key);
+            block_climb(found_.key, false);
             found_ = FoundClimb{};
             return false;
         }
@@ -339,7 +345,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         climb_back_tried_ = false;
         ++climbs_done_;
     } else {
-        block_climb(found_.key);   // her hands refuse it: a search's refusal, left a while
+        block_climb(found_.key, false);   // her hands refuse it: a search's refusal, left a while
     }
     found_ = FoundClimb{};
     return true;

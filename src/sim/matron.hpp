@@ -1289,16 +1289,18 @@ private:
     struct ClimbBlock {
         std::int64_t key = 0;
         int ticks = 0;
+        bool failed = false;   // it failed under her (not a search's refusal)
     };
     static constexpr int kFoundClimbBlockTicks = 30 * 90;   // a refused or failed column left alone 30 s
     bool follow_found_climb(float dt, JPH::RVec3 at);
     [[nodiscard]] bool find_climb(JPH::RVec3 at, FoundClimb &out) const;
     [[nodiscard]] bool found_floor(float x, float z, float from_y, float to_y, float &floor_y) const;
     [[nodiscard]] bool climb_blocked(std::int64_t key) const;
-    void block_climb(std::int64_t key);
+    void block_climb(std::int64_t key, bool failed = true);
     void block_climb_at(float x, float z);   // the column standing at (x, z)
-    // A column left alone at or beside (x, z): one her hands failed on is
-    // failed for every way of hers that takes it, her map's included.
+    // A column at or beside (x, z) that failed under her: failed for every
+    // way of hers that takes it, her map's included (a refusal by her own
+    // search is not: the bar climber refuses a column the player is on).
     [[nodiscard]] bool column_blocked_near(float x, float z) const;
     // A way she plans herself where no bar column serves (a pole, a lip, a
     // run of moves): the traversal scan of the steel round her and her lead
