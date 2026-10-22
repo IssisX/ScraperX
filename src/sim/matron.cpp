@@ -221,6 +221,8 @@ void Matron::spawn_body() {
 }
 
 void Matron::remove_body() {
+    routecraft_.cancel();
+    routecraft_recovering_ = false;
     if (!body_in_world_) {
         return;
     }
@@ -1687,7 +1689,34 @@ bool Matron::trap_lets_go(const RVec3 player, const float dt) {
     return trap_lost_s_ >= kTrapLostSeconds;
 }
 
+bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
+    if (!body_in_world_ || dead_ || holding_state(state_) || state_ == State::Down ||
+        state_ == State::Staggering || climb_ >= 0 || pipe_phase_ != PipePhase::Off || on_line_ || riding_ ||
+        held_ >= 0 || bracing_structure()) return false;
+    MatronRoutecraft candidate;
+    const bool accepted = candidate.request(physics_, body_, goal, facing);
+    if (accepted || !routecraft_.owns_motion()) routecraft_ = std::move(candidate);
+    if (accepted) {
+        routecraft_recovering_ = true;
+        routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
+    }
+    return accepted;
+}
+
 void Matron::pre_step(const float dt, const RVec3 player, const float loudness) {
+    if (routecraft_.owns_motion()) {
+        if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) routecraft_.cancel();
+        else {
+            sound_count_ = 0;
+            step_planks(dt);
+            feel_floor(dt);
+            settle_level();
+            routecraft_.step(physics_, body_, dt);
+            if (routecraft_.report().force > 0) routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
+            sense_near();
+            return;
+        }
+    }
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
     sound_count_ = 0;
@@ -2269,9 +2298,31 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
-    if (body_in_world_ && !dead_ && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
+    if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_.cancel();
+    if (body_in_world_ && !dead_ && !routecraft_.owns_motion() && !riding_ && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-        if (at.GetY() < levels_[static_cast<std::size_t>(level_)].floor_y - kFallenBelowM) {
+        if (routecraft_recovering_) {
+            RayCastResult floor;
+            const RRayCast down(at, Vec3(0, -(kStandCentre + 0.08F), 0));
+            if (physics_.GetNarrowPhaseQuery().CastRay(down, floor, {}, {}, IgnoreSingleBodyFilter(body_))) {
+                bool walkable = false;
+                {
+                    const BodyLockRead lock(physics_.GetBodyLockInterface(), floor.mBodyID);
+                    walkable = lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(
+                        floor.mSubShapeID2, down.GetPointOnRay(floor.mFraction)).GetY() > 0.7F;
+                }
+                if (walkable) {
+                    feet_y_ = float(down.GetPointOnRay(floor.mFraction).GetY());
+                    if (std::abs(float(at.GetY()) - kStandCentre - feet_y_) < 0.025F &&
+                        std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F) {
+                        routecraft_recovering_ = false;
+                    }
+                }
+            }
+            settle_level();
+        }
+        const float fall_from = routecraft_recovering_ ? routecraft_release_floor_ : levels_[static_cast<std::size_t>(level_)].floor_y;
+        if (at.GetY() < fall_from - kFallenBelowM) {
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -2557,6 +2608,8 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 }
 
 void Matron::restore(const Saved &saved) {
+    routecraft_.cancel();
+    routecraft_recovering_ = false;
     if (shared_survival_) shared_survival_->reset();
     if (!dead_) {
         remove_body();
@@ -3187,7 +3240,7 @@ void Matron::refresh_view() {
     view_.unrigs = unrigs_;
     view_.on_line = on_line_;
     view_.cable_slides = cable_slides_;
-    view_.climbing = climb_ >= 0;
+    view_.climbing = climb_ >= 0 || routecraft_.owns_motion();
     view_.climbs = climbs_done_;
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
@@ -3274,6 +3327,11 @@ void Matron::refresh_view() {
     view_.hand_x = float(hand_target_.GetX());
     view_.hand_y = float(hand_target_.GetY());
     view_.hand_z = float(hand_target_.GetZ());
+    if (routecraft_.owns_motion()) {
+        const auto &contact = routecraft_.report();
+        view_.hand_x = float(contact.hand.GetX()); view_.hand_y = float(contact.hand.GetY()); view_.hand_z = float(contact.hand.GetZ());
+        view_.support_n = contact.force;
+    }
     view_.aim_ledge = aim_ledge_;
     view_.aim_x = float(aim_.GetX());
     view_.aim_y = float(aim_.GetY());

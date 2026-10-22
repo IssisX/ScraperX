@@ -1348,3 +1348,11 @@ void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JP
 }
 
 } // namespace scraperx::sim
+
+namespace scraperx::sim {
+void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
+    Matron::Saved saved; saved.state = Matron::State::Hunting;
+    matron_->restore(saved);
+    physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
+}
+}

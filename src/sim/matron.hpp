@@ -103,6 +103,8 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_routecraft.hpp"
+
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -810,6 +812,10 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // Opt-in native goal. Facing selects the approach side, never a route.
+    bool request_climb_goal(JPH::RVec3 goal, JPH::Vec3 facing);
+    void cancel_climb_goal() noexcept { routecraft_.cancel(); }
+    const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
@@ -1243,6 +1249,9 @@ private:
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
 
+    MatronRoutecraft routecraft_;
+    bool routecraft_recovering_ = false;
+    float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;
     std::uint32_t steel_layer_;
