@@ -60,7 +60,8 @@ bool Matron::travel_to(const int region) {
     if (here < 0) {
         return false;
     }
-    journey_edges_ = routes_->plan(here, region);
+    journey_avoid_.clear();
+    journey_edges_ = routes_->plan(here, region, journey_avoid_);
     if (journey_edges_.empty() && here != region) {
         return false;
     }
@@ -106,6 +107,12 @@ void Matron::step_journey(const float dt) {
         } else if (climber_->status() == traversal::Climber::Status::Failed) {
             ++journey_.moves_failed;
             journey_.last_failure = climber_->failure();
+            // Failed before she left her floor (could not reach its start, no
+            // hold there): that way is closed to this journey; a physical
+            // failure on the way is not (it may go next time).
+            if (climber_->phase() == 0 && journey_.step < journey_.steps) {
+                journey_avoid_.push_back(journey_edges_[static_cast<std::size_t>(journey_.step)]);
+            }
             journey_.step = journey_.steps;
             journey_wait_s_ = 0.0F;
             climber_->cancel();
@@ -136,7 +143,7 @@ void Matron::step_journey(const float dt) {
             return;
         }
         ++journey_.replans;
-        journey_edges_ = routes_->plan(under, journey_.goal);
+        journey_edges_ = routes_->plan(under, journey_.goal, journey_avoid_);
         journey_.region = under;
         journey_.step = 0;
         journey_.steps = static_cast<int>(journey_edges_.size());

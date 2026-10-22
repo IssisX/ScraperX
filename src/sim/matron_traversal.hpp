@@ -220,7 +220,8 @@ private:
     bool find_lip(JPH::Vec3 toward, float near_y, Hold &out, JPH::RVec3 &where) const;
     void drive(float dt, JPH::Vec3 target_centre, JPH::Vec3 target_velocity, float stiffness, Budget &budget,
                bool carry_weight, JPH::RVec3 at_hold);
-    void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget);
+    // may_drop: how far below her feet a floor ahead still counts (a step down she means).
+    void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget, float may_drop = 0.0F);
     [[nodiscard]] JPH::RVec3 center() const;
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
@@ -328,7 +329,8 @@ public:
     [[nodiscard]] int region_near_top(float y, float tol = 0.2F) const;
     // Directed search: the edges, in order, from one region to another
     // (usable edges only). Empty if there is no way.
-    [[nodiscard]] std::vector<int> plan(int from, int to) const;
+    // avoid: edges not to take (ones this journey already found it cannot start).
+    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {}) const;
     // A walk inside one region: patch-to-patch waypoints (feet).
     [[nodiscard]] std::vector<JPH::Vec3> walk_path(JPH::Vec3 from, JPH::Vec3 to) const;
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;

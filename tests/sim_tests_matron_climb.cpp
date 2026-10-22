@@ -637,7 +637,10 @@ void test_tower_scan() {
 // stack 132 -> 143 -> 154 -> 176.25 and on up the standpipe to 198.25, then
 // back down every edge to 132, each leg planned over the scanned map and every
 // move physical, gravity on throughout.
+// A leg passes only clean: every move it took ended Done (no lost hold, no
+// fall caught by luck and replanned from).
 bool journey_leg(Simulation &s, const traversal::AffordanceMap &map, const double top, const double limit_s) {
+    const unsigned failed_before = s.matron_journey().moves_failed;
     if (!s.debug_matron_travel(top)) {
         std::cout << "  leg to " << top << ": no plan\n";
         return false;
@@ -659,6 +662,7 @@ bool journey_leg(Simulation &s, const traversal::AffordanceMap &map, const doubl
               << " slips " << j.slips << " peak force " << peak << " N\n";
     require(min_gravity == 1.0, "her gravity stays on through every journey");
     require(peak <= traversal::Limits{}.total_force_n + 1.0, "every journey force within her shared cap");
+    require(j.moves_failed == failed_before, "every move of a journey leg ends Done (no recovery counted as a climb)");
     return !j.active && j.arrivals > 0 && std::abs(got - top) < 0.3;
 }
 
@@ -681,6 +685,29 @@ void test_tower_journeys() {
     const traversal::AffordanceMap &m = e.matron_affordances();
     require(journey_leg(e, m, 176.25, 90.0), "Matron climbs to 176.25 for the standpipe exam");
     require(journey_leg(e, m, 198.25, 120.0), "Matron climbs the standpipe 176.25 -> 198.25 on her own");
+    // Held-out exam two (inventory: blocked, missing jump catch): the
+    // catwalk to the scaffold panel. Its lowest bar is 2.05 m over the
+    // catwalk and her body 2.10 m tall, the climbing side is behind it and the
+    // other 0.13 m off the 220 face: she cannot get to its foot. She must
+    // find that out on her own, close that way and give up standing on 198.25
+    // (never a fall, never forcing past).
+    {
+        const unsigned failed_before = e.matron_journey().moves_failed;
+        require(e.debug_matron_travel(220.25), "the 220 exam: a plan to try");
+        double t = 0.0;
+        Simulation::MatronJourney j = e.matron_journey();
+        while (j.active && t < 120.0) {
+            (void)e.advance_frame(1.0 / 60.0);
+            t += 1.0 / 60.0;
+            j = e.matron_journey();
+            require(j.gravity_factor == 1.0 && j.peak_force_n <= traversal::Limits{}.total_force_n + 1.0, "the 220 exam: laws hold");
+        }
+        const double at = j.region >= 0 ? m.regions()[static_cast<std::size_t>(j.region)].top : -1.0;
+        std::cout << "  matron 198.25 -> 220.25 panel: " << (j.arrivals > 0 && std::abs(at - 220.25) < 0.3 ? "arrived" : "refused")
+                  << " after " << t << " s, failed starts " << (j.moves_failed - failed_before) << ", standing on " << at << "\n";
+        require(!j.active && std::abs(at - 198.25) < 0.3 && j.moves_failed - failed_before <= 2,
+                "the 220 exam: she finds the panel's foot out of her reach and stays standing on 198.25");
+    }
 }
 } // namespace
 

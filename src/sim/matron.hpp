@@ -1429,6 +1429,7 @@ private:
     std::unique_ptr<traversal::Climber> climber_;
     Journey journey_;
     std::vector<int> journey_edges_;
+    std::vector<int> journey_avoid_;   // edges this journey found it could not start
     std::vector<JPH::Vec3> journey_walk_;
     std::size_t journey_walk_i_ = 0;
     float journey_wp_best_ = 1.0e9F;
