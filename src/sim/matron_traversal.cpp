@@ -1665,7 +1665,24 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 const Patch &hp = patches_[static_cast<std::size_t>(hi)];
                 if (hp.region == fp.region || hp.top < fp.top + 2.0F) continue;
                 const Vec3 lip = closest_on(hp, axis, 0.0F);
-                const Vec3 out = flat(axis - lip).NormalizedOr(Vec3::sAxisZ());
+                const Vec3 away = flat(axis - lip).NormalizedOr(Vec3::sAxisZ());
+                // Which side of it she hugs: away from the lip, unless its head
+                // stands above the lip (then her way over from there crosses the
+                // pole): from beside it, where her body fits along it.
+                Vec3 out = away;
+                if (pole.top > hp.top + 0.3F) {
+                    const Vec3 perp(-away.GetZ(), 0.0F, away.GetX());
+                    for (const Vec3 side : {perp, -perp}) {
+                        bool fits = true;
+                        for (float y = fp.top + 0.5F; y < hp.top + 0.5F && fits; y += 1.0F) {
+                            fits = capsule_free(physics, ignore, limits, axis + side * (limits.radius + 0.1F) + Vec3(0, y, 0));
+                        }
+                        if (fits) {
+                            out = side;
+                            break;
+                        }
+                    }
+                }
                 Vec3 stand_foot{}, stand_head{};
                 // Where she stands at its foot: the nearest of that floor to
                 // the pole (a board beside it as much as a deck round it).
