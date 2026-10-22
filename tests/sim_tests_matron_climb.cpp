@@ -342,11 +342,12 @@ void test_pole() {
 // integrates its forces. The older, higher jump remains an independent
 // acceptance case below.
 void test_capped_launches() {
-    for (const bool dyno : {false, true}) {
+    for (const int launch : {0, 1, 2}) {
+        const bool dyno = launch == 1;
         ClimbWorld w;
         w.deck(6.0F);
         if (dyno) w.rungs(1.3F, 1.3F);
-        const float first = 2.55F;
+        const float first = launch == 2 ? 3.13F : 2.55F;
         w.rungs(first, 5.9F);
         w.spawn(RVec3(0, 0, dyno ? -0.5F : -0.6F));
         w.settle(0.3F);
@@ -357,12 +358,15 @@ void test_capped_launches() {
         int drive_ticks = 0;
         float travel = 0.0F;
         float peak_power = 0.0F;
+        float peak_end_power = 0.0F;
         float takeoff_speed = 0.0F;
         float worst_step = 0.0F;
+        bool extended_contact = false;
         for (int tick = 0; tick < 90 * 8 && climber.status() == Climber::Status::Running; ++tick) {
             const auto launches = climber.view().launches;
             const RVec3 before = w.at();
             w.actuate(climber);
+            const Vec3 push = w.force(w.her);
             if (climber.view().launches > launches) {
                 takeoff_speed = w.physics.GetBodyInterface().GetLinearVelocity(w.her).GetY();
                 require(takeoff_speed > 0.0F && takeoff_speed <= climber.limits().launch_dv_mps + 0.001F,
@@ -378,10 +382,18 @@ void test_capped_launches() {
                 require(climber.view().leg_travel_m >= -0.001F &&
                             climber.view().leg_travel_m <= climber.limits().leg_travel_m + 0.001F,
                         "matron launch: drive stays within the named leg travel");
+                if (launch == 2 && climber.view().leg_travel_m > 0.15F) {
+                    require(!climber.supported(), "matron launch: extended legs do not widen ordinary standing probes");
+                    extended_contact = true;
+                }
             }
             w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
             worst_step = std::max(worst_step, float((w.at() - before).Length()));
             if (climber.view().leg_driving) {
+                const float end_power = std::max(push.Dot(climber.relative_velocity()), 0.0F);
+                peak_end_power = std::max(peak_end_power, end_power);
+                require(end_power <= climber.limits().power_w + 1.0F,
+                        "matron launch: actual end-of-tick power remains within the cap");
                 const float after_travel = climber.view().leg_travel_m + float(w.at().GetY() - before.GetY());
                 travel = std::max(travel, after_travel);
                 require(after_travel <= climber.limits().leg_travel_m + 0.001F,
@@ -389,8 +401,9 @@ void test_capped_launches() {
             }
             if (climber.view().catches != 0) break;
         }
-        std::cout << "  matron capped " << (dyno ? "dyno" : "jump") << ": drive_ticks " << drive_ticks
-                  << " travel " << travel << " power " << peak_power << " launches " << climber.view().launches
+        std::cout << "  matron capped " << (launch == 2 ? "full leg jump" : dyno ? "dyno" : "jump") << ": drive_ticks " << drive_ticks
+                  << " travel " << travel << " power " << peak_power << " end_power " << peak_end_power
+                  << " launches " << climber.view().launches
                   << " catches " << climber.view().catches << " takeoff_mps " << takeoff_speed
                   << " worst_step " << worst_step << " failure " << traversal::failure_name(climber.failure()) << "\n";
         require(drive_ticks > 1 && climber.view().launches == 1 && climber.view().catches == 1,
@@ -398,6 +411,12 @@ void test_capped_launches() {
         require(w.gravity_always, "matron launch: gravity stays on throughout the leg drive");
         require(worst_step < 0.20F, "matron launch: no step moves her more than 0.20 m");
         if (dyno) require(climber.view().releases >= 1, "matron launch: the dyno releases its old handhold");
+        if (launch == 2) {
+            require(extended_contact && travel > 0.35F && takeoff_speed >= climber.limits().launch_dv_mps - 0.01F,
+                    "matron launch: a real extended leg reaches the measured take-off limit");
+            require(peak_end_power > climber.limits().power_w - 1.0F,
+                    "matron launch: the longer drive exercises the power-limited phase");
+        }
     }
     // A real dynamic tread receives the opposite actuator force. Removing
     // that tread during extension must end the drive, even with other

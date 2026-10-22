@@ -59,12 +59,13 @@ struct Limits {
     float total_force_n = 5600.0F;
     float power_w = 9000.0F;   // actuator power: force along her own velocity, all actuators together
     float foot_force_n = 220.0F * 9.0F;   // her feet on a floor: kFootAccel
-    // The fixed capsule's short foot-supported extension. A deeper crouch
-    // would need a separate collision-pose lifecycle; it is not extra reach.
-    float leg_travel_m = 0.10F;
-    // At 90 Hz, nine 5600 N ticks on 220 kg give 1.564 m/s in 0.087 m.
-    // 1.5 m/s leaves room for the final tick and stays below 9 kW.
-    float launch_dv_mps = 1.5F;
+    // During push-off the planted foot can extend this far below the fixed
+    // capsule. Leg travel is independent of the ordinary standing probes.
+    float leg_travel_m = 0.40F;
+    // At 90 Hz, the force and end-of-tick power caps give 2.699 m/s in
+    // 0.3904 m over 21 ticks. Round down; the remaining stroke cannot fit
+    // another tick even without a push.
+    float launch_dv_mps = 2.69F;
     // A catch: her grip arrests at most this much speed relative to the hold.
     float catch_arrest_mps = 4.5F;
     float catch_radius_m = 0.22F;
@@ -246,6 +247,7 @@ private:
     [[nodiscard]] JPH::Vec3 velocity() const;
     void push_reaction(JPH::Vec3 force, JPH::RVec3 at);
     bool plant_leg(float target_hand_y);
+    [[nodiscard]] bool planted_leg_contact(JPH::RVec3 &at) const;
     bool drive_leg(float dt, Budget &budget);   // true at toe-off; no airborne thrust
     void release_leg();
 

@@ -62,6 +62,7 @@ const char *failure_name(const Failure failure) noexcept {
 
 namespace {
 constexpr float kGravity = 9.81F;
+constexpr float kSoleSupportProbeM = 0.10F;
 
 // Probes see real steel only: never her, never the player, never a sensor.
 class SteelFilter final : public BodyFilter {
@@ -195,7 +196,7 @@ Vec3 Climber::relative_velocity() const {
 bool Climber::supported(float *top, BodyID *by, RVec3 *point) const {
     const RVec3 c = center();
     const SteelFilter filter(ignore_);
-    const float reach = limits_.center_above_feet() + limits_.leg_travel_m;
+    const float reach = limits_.center_above_feet() + kSoleSupportProbeM;
     for (const Vec3 off : {Vec3::sZero(), Vec3(0.18F, 0, 0), Vec3(-0.18F, 0, 0), Vec3(0, 0, 0.18F), Vec3(0, 0, -0.18F)}) {
         RayCastResult hit;
         const RRayCast ray(c + off, Vec3(0.0F, -reach, 0.0F));
@@ -382,9 +383,9 @@ void Climber::push_reaction(const Vec3 force, const RVec3 at) {
     }
 }
 
-// The capsule has a short foot-supported extension, not a second, taller
-// standing pose. Keep one planted contact throughout it; a new floor under
-// an airborne body cannot restart the push.
+// The leg extends beneath the capsule while its foot remains planted.
+// Keep that contact throughout the stroke; a new floor under an airborne
+// body cannot restart the push.
 bool Climber::plant_leg(const float target_hand_y) {
     const RVec3 c = center();
     const float stroke = limits_.leg_travel_m;
@@ -400,7 +401,7 @@ bool Climber::plant_leg(const float target_hand_y) {
     const SteelFilter filter(ignore_);
     for (const Vec3 off : {Vec3::sZero(), Vec3(0.18F, 0, 0), Vec3(-0.18F, 0, 0), Vec3(0, 0, 0.18F), Vec3(0, 0, -0.18F)}) {
         RayCastResult hit;
-        const RRayCast ray(c + off, Vec3(0, -(limits_.center_above_feet() + limits_.leg_travel_m), 0));
+        const RRayCast ray(c + off, Vec3(0, -(limits_.center_above_feet() + kSoleSupportProbeM), 0));
         if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) continue;
         const RVec3 at = ray.GetPointOnRay(hit.mFraction);
         if (float(c.GetY() - at.GetY()) > limits_.center_above_feet() + 0.03F) continue;
@@ -426,6 +427,41 @@ bool Climber::plant_leg(const float target_hand_y) {
     return false;
 }
 
+bool Climber::planted_leg_contact(RVec3 &at) const {
+    if (!foot_.valid()) return false;
+    RVec3 anchor;
+    {
+        BodyLockRead lock(physics_.GetBodyLockInterface(), foot_.body);
+        if (!lock.Succeeded()) return false;
+        const Body &floor = lock.GetBody();
+        if (!floor.IsInBroadPhase() || floor.IsSensor()) return false;
+        AABox bounds;
+        bool bar = false;
+        if (!member_bounds(floor, foot_.sub, bounds, bar)) return false;
+        const AABox local = bounds.Transformed(floor.GetInverseCenterOfMassTransform());
+        if ((local.mMin - foot_.member_local.mMin).Length() > 0.02F ||
+            (local.mMax - foot_.member_local.mMax).Length() > 0.02F) return false;
+        anchor = floor.GetCenterOfMassTransform() * foot_.local;
+        bounds.ExpandBy(Vec3::sReplicate(0.04F));
+        if (!bounds.Contains(anchor)) return false;
+    }
+    const RVec3 c = center();
+    if (horizontal(c - anchor) > limits_.radius) return false;
+    // A leg has its own reach, not the lower reach of a handhold. Query
+    // outside the body lock and require the original member to remain the
+    // first real surface under that planted foot.
+    const float reach = limits_.center_above_feet() + limits_.leg_travel_m;
+    const RRayCast ray(RVec3(anchor.GetX(), c.GetY(), anchor.GetZ()), Vec3(0, -reach, 0));
+    RayCastResult hit;
+    const SteelFilter filter(ignore_);
+    if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter) ||
+        hit.mBodyID != foot_.body || hit.mSubShapeID2 != foot_.sub) return false;
+    at = ray.GetPointOnRay(hit.mFraction);
+    if ((at - anchor).Length() > 0.04F) return false;
+    BodyLockRead lock(physics_.GetBodyLockInterface(), foot_.body);
+    return lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(foot_.sub, at).GetY() >= 0.7F;
+}
+
 void Climber::release_leg() {
     foot_ = Hold{};
     view_.leg_driving = false;
@@ -444,7 +480,7 @@ bool Climber::drive_leg(const float dt, Budget &budget) {
         fail(Failure::Stalled);
         return false;
     }
-    if (!foot_.valid() || !revalidate(foot_, foot_world_) || horizontal(c - foot_world_) > limits_.radius) {
+    if (!planted_leg_contact(foot_world_)) {
         return toe_off();
     }
     float inverse_mass = 1.0F / limits_.mass_kg;
@@ -467,7 +503,8 @@ bool Climber::drive_leg(const float dt, Budget &budget) {
     }
     const float extension = float(c.GetY() - foot_world_.GetY()) - leg_start_m_;
     view_.leg_travel_m = std::max(extension, 0.0F);
-    const float remaining = limits_.leg_travel_m - view_.leg_travel_m;
+    const float remaining = std::min(limits_.leg_travel_m - view_.leg_travel_m,
+                                    limits_.center_above_feet() + limits_.leg_travel_m - float(c.GetY() - foot_world_.GetY()));
     const Vec3 support_v = bodies.GetPointVelocity(foot_.body, foot_world_);
     budget.velocity = velocity() - support_v;
     const float v = budget.velocity.GetY();
