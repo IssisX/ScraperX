@@ -39,6 +39,7 @@ constexpr float kPlayerHalfM = 0.9F;
 Vec3 Matron::shoulder_local() const noexcept { return Vec3(0.0F, kShoulderUpM - kStandCentre, 0.0F); }
 
 void Matron::begin_grab(const RVec3 player) {
+    routecraft_.cancel();
     if (!body_in_world_ || dead_ || holding()) {
         return;
     }

@@ -109,10 +109,12 @@ public:
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Matron &matron() const noexcept { return *matron_; }
     [[nodiscard]] Matron &matron() noexcept { return *matron_; }
+    [[nodiscard]] const JPH::PhysicsSystem &physics_system() const noexcept { return physics_system_; }
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
+    void launch_matron_for_test(JPH::RVec3 at);
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);

@@ -105,6 +105,8 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_routecraft.hpp"
+
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -865,6 +867,11 @@ public:
     // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
     // `player` is the body's centre.
     void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // Opt-in native goal. Facing selects the approach side, never a route.
+    bool request_climb_goal(JPH::RVec3 goal, JPH::Vec3 facing);
+    void cancel_climb_goal() noexcept { routecraft_.cancel(); }
+
+    const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
@@ -1262,6 +1269,29 @@ private:
     [[nodiscard]] bool travels() const noexcept;
     void route_clear() noexcept;
     void route_failed(std::size_t edge, routes::Reason reason);
+    // Her own way between levels, found in the world, no table
+    // (matron_found_climb.cpp): a column of level bars from her floor toward
+    // her lead's, real floor at its foot and head, climbed by routecraft.
+    struct FoundClimb {
+        bool active = false;
+        std::int64_t key = 0;
+        float start_x = 0.0F;
+        float start_z = 0.0F;
+        float from_y = 0.0F;   // the floor she starts from
+        JPH::RVec3 goal = JPH::RVec3::sZero();
+        JPH::Vec3 facing = JPH::Vec3::sAxisZ();
+    };
+    struct ClimbBlock {
+        std::int64_t key = 0;
+        int ticks = 0;
+    };
+    static constexpr int kFoundClimbBlockTicks = 30 * 90;   // a refused or failed column left alone 30 s
+    bool follow_found_climb(float dt, JPH::RVec3 at);
+    [[nodiscard]] bool find_climb(JPH::RVec3 at, FoundClimb &out) const;
+    [[nodiscard]] bool found_floor(float x, float z, float from_y, float to_y, float &floor_y) const;
+    [[nodiscard]] bool climb_blocked(std::int64_t key) const;
+    void block_climb(std::int64_t key);
+    void block_climb_at(float x, float z);   // the column standing at (x, z)
     // On a climb: up it, and over its head.
     void climb(float dt);
     bool begin_climb(int index, bool down = false);
@@ -1339,6 +1369,14 @@ private:
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
 
+    MatronRoutecraft routecraft_;
+    bool routecraft_recovering_ = false;
+    bool routecraft_mine_ = false;            // a climb she started herself (released at its goal)
+    std::int64_t climbing_key_ = 0;
+    FoundClimb found_;
+    std::array<ClimbBlock, 8> climb_blocks_{};
+    int find_wait_ticks_ = 0;
+    float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
     std::uint32_t moving_layer_;
     std::uint32_t steel_layer_;

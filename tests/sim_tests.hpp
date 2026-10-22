@@ -759,6 +759,10 @@ bool pull_shop_chock(scraperx::sim::Simulation &simulation);
 bool rig_shop_i(scraperx::sim::Simulation &simulation);
 bool pull_shop_domino(scraperx::sim::Simulation &simulation);
 void run_pulley_static_end();
+void run_matron_exam();
+void run_matron_exam_routecraft();
+void run_matron_exam_climber();
+void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();
@@ -853,6 +857,8 @@ void run_summit_arm();
 void run_matron();
 void run_water();
 void run_matron_pace();
+void run_matron_climb();
+void run_matron_climb_board();
 void run_matron_unstick();
 void run_matron_grab();
 void run_matron_routes();
@@ -892,3 +898,5 @@ void run_twin_geometry();
 void run_matron_remaining();
 
 void run_matron_player_independence();
+
+void run_matron_routecraft();

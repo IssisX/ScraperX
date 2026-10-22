@@ -30,6 +30,7 @@ int main() {
         run_matron_ladder();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routecraft") { run_matron_routecraft(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
         run_twin_geometry();
         return EXIT_SUCCESS;
@@ -173,6 +174,11 @@ int main() {
         run_matron_fatality();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb") {
+        run_matron_climb();
+        run_matron_climb_board();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-moves") {
         run_matron_pace();
         run_matron_unstick();
@@ -196,6 +202,22 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routes") {
         run_matron_routes();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-climber") {
+        run_matron_exam_climber();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-found-climb") {
+        run_matron_found_climb();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-routecraft") {
+        run_matron_exam_routecraft();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam") {
+        run_matron_exam();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
@@ -431,6 +453,7 @@ int main() {
     }
 
     run_pulley_static_end();
+    run_matron_exam();
     run_core_traversal();
     run_fall_checkpoint();
     run_world_solids();
@@ -505,6 +528,10 @@ int main() {
     run_summit();
     run_summit_arm();
     run_matron_player_independence();
+    run_matron_routecraft();
+    run_matron_exam_routecraft();
+    run_matron_exam_climber();
+    run_matron_found_climb();
     run_matron();
     run_matron_pace();
     run_matron_unstick();

@@ -1,0 +1,37 @@
+routecraft replay=0 ascent_y=158.98 descent_y=155.221 acquisitions=2 peak_force=3544.2 peak_power=1942.38
+routecraft replay=1 ascent_y=158.98 descent_y=155.221 acquisitions=2 peak_force=3544.2 peak_power=1942.38
+routecraft authored ascent/mantle y=177.37 grips=17
+routecraft authored descent y=155.22
+full tower initial plan_ms=6.83817 native_queries=6986 status=1
+full tower replan_request_ms=4.52942 native_queries=4666 at_y=162.802
+full tower replan_request_ms=2.46971 native_queries=2458 at_y=170.522
+routecraft full tower ascent y=177.37 status=2
+routecraft full tower grounded top-out y=177.3 standing_ticks=90
+routecraft full tower descent y=155.22
+routecraft full tower lower standing_ticks=90 maximum_step_m=0.0466674
+routecraft sideways x=1.1 y=160.98 penetration=0
+routecraft backtrack min_y=156.352 final_y=160.93
+routecraft fault replan pre_step_ms=0.004807 native_queries=1
+routecraft removal/recovery y=155.048
+routecraft fault replan pre_step_ms=1.51178 native_queries=3481
+routecraft fault replan pre_step_ms=1.41841 native_queries=3550
+routecraft replan count=3 detour_x=1.10655
+routecraft fault replan pre_step_ms=0.333734 native_queries=1307
+routecraft interrupted recovery peak_overlap=0.0694488 controlled_overlap=0
+routecraft measured saturation N=4500 W=9000
+routecraft measured force saturation N=6000 W=7800
+routecraft fault replan pre_step_ms=0.00696 native_queries=1
+routecraft unfamiliar sparse descent y=157.221
+routecraft fault replan pre_step_ms=0.098146 native_queries=67
+routecraft fault replan pre_step_ms=0.001763 native_queries=1
+panel goal_y=221.37 accepted=1 status=1 plan_ms=27.9307 native_queries=24340
+panel replan_ms=22.9661 native_queries=20136 at_y=206.758
+panel replan_ms=12.1098 native_queries=9958 at_y=213.864
+panel arrived_y=221.3 standing_ticks=90 max_step=0.012384
+panel goal_y=199.4 accepted=1 status=1 plan_ms=16.2267 native_queries=15083
+panel replan_ms=11.8846 native_queries=11462 at_y=214.871
+panel replan_ms=8.00875 native_queries=7871 at_y=207.859
+panel arrived_y=199.3 standing_ticks=90 max_step=0.0173981
+panel measured_force=3538.01 sampled_power=2069.13 controlled_overlap=0
+dense fixture min_x=19.0664 max_x=19.9999 final_y=155.22
+PASS: matron-routecraft

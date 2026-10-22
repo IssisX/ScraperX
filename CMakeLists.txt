@@ -50,7 +50,10 @@ add_library(scraperx_sim STATIC
     src/sim/summit.cpp
     src/sim/shared_survival.cpp
     src/sim/bay.cpp
+    src/sim/matron_routecraft.cpp
+    src/sim/matron_found_climb.cpp
     src/sim/matron.cpp
+    src/sim/matron_traversal.cpp
     src/sim/loose_stock.cpp
     src/sim/fabricated.cpp
     src/sim/physics_world_fabricated.cpp
@@ -169,6 +172,10 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_step2.cpp
         tests/sim_tests_wet.cpp
         tests/sim_tests_plate.cpp
+        tests/matron_exam.cpp
+        tests/sim_tests_matron_exam.cpp
+        tests/sim_tests_matron_exam_runs.cpp
+        tests/sim_tests_matron_found_climb.cpp
         tests/sim_tests_crane.cpp
         tests/sim_tests_service.cpp
         tests/sim_tests_machines.cpp
@@ -181,6 +188,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_up.cpp
         tests/sim_tests_summit.cpp
         tests/sim_tests_matron_player_independence.cpp
+        tests/sim_tests_matron_routecraft.cpp
         tests/sim_tests_matron.cpp
         tests/sim_tests_matron_hearing.cpp
         tests/sim_tests_matron_climb.cpp
@@ -199,6 +207,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_matron_routes.cpp
         tests/sim_tests_matron_traverse.cpp
         tests/sim_tests_matron_pursuit.cpp
+        tests/sim_tests_matron_traversal.cpp
     )
     add_dependencies(scraperx_sim_tests scraperx_shared_survival_tests)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)
