@@ -42,24 +42,29 @@ int Matron::climb_count() const noexcept {
 // A way up as her own scan of the world found it: a usable rung edge of her
 // scanned map, read straight from the scan (no table of hers), faced toward
 // its rungs from the side she starts on.
-bool Matron::climb_of(const int edge, Climb &out) const noexcept {
+bool Matron::climb_of(const int edge, Climb &out, const Ways ways) const noexcept {
     if (edge < 0 || edge >= climb_count()) {
         return false;
     }
     const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(edge)];
-    if (!e.usable || e.kind != traversal::MoveKind::RungUp) {
+    const bool mantle = e.kind == traversal::MoveKind::Mantle && ways == Ways::Any;
+    if (!e.usable || (e.kind != traversal::MoveKind::RungUp && !mantle)) {
         return false;
     }
     const auto &regions = scanned_->regions();
     const traversal::MoveSpec &m = e.spec;
-    const Vec3 face = Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+    const Vec3 face = mantle ? -m.out
+                             : Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+    // A lip from a floor is a way up for her hands as rungs are: the scan's line is her standing spot, so the lip is
+    // midway between it and the top she steps onto.
+    const float line_x = mantle ? 0.5F * (m.start.GetX() + m.goal.GetX()) : m.line.GetX();
+    const float line_z = mantle ? 0.5F * (m.start.GetZ() + m.goal.GetZ()) : m.line.GetZ();
     const float head = regions[static_cast<std::size_t>(e.to)].top;
     // She hangs against the rungs, not where she stood at the foot: her radius and a hand's clearance off the line.
     const float hang = kRadius + 0.05F;
     // The lip is the scan's own head patch, not the region's average: a bridge or fascia can stand above its deck.
-    out = {m.line.GetX() - face.GetX() * hang, m.line.GetZ() - face.GetZ() * hang,
-           regions[static_cast<std::size_t>(e.from)].top, head, face.GetX(), face.GetZ(), m.goal.GetX(), m.goal.GetZ(),
-           true, hang, m.goal_top};
+    out = {line_x - face.GetX() * hang, line_z - face.GetZ() * hang, m.start.GetY(), head, face.GetX(), face.GetZ(),
+           m.goal.GetX(), m.goal.GetZ(), true, hang, m.goal_top};
     return true;
 }
 
@@ -102,19 +107,6 @@ int Matron::bay_way_out() const noexcept {
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     return nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, false);
-}
-
-// A connector of the old map names a place, not a climb: the climb there is
-// the one her scan found nearest where that way starts.
-int Matron::climb_index(const routes::Connector which) const noexcept {
-    for (const bool down : {false, true}) {
-        const std::size_t way = routes_.find_way(which, down);
-        if (way < routes::kMaxEdges) {
-            const routes::Edge &e = routes_.edge(way);
-            return nearest_climb(e.entry_x, e.entry_z, routes_.region(e.from).top_y, down);
-        }
-    }
-    return -1;
 }
 
 routes::Connector Matron::connector_of(const int) const noexcept { return routes::Connector::Count; }
@@ -248,7 +240,8 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         }
         return true;
     }
-    const int climb = climb_index(step.climb);
+    // The climb at her feet: the step before stood her at its foot (or, going down, at its top).
+    const int climb = nearest_climb(ax, az, float(at.GetY()) - kStandCentre, step.what == routes::Step::Do::ClimbDown);
     if (climb < 0) {
         route_failed(index, routes::Reason::Untested);
         return false;

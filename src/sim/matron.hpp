@@ -1289,7 +1289,6 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // Her travel across the tower (matron_travel.cpp).
     bool follow_route(float dt, JPH::RVec3 at);
-    [[nodiscard]] int climb_index(routes::Connector which) const noexcept;
     // The other way round: the connector a climb of hers is (Count for none).
     [[nodiscard]] routes::Connector connector_of(int climb) const noexcept;
     // The corner pipe's way on her map from one deck to the other.
@@ -1600,7 +1599,9 @@ private:
     int bay_level_ = -1;
     int bay_climb_ = -1;
     [[nodiscard]] int climb_count() const noexcept;
-    [[nodiscard]] bool climb_of(int edge, Climb &out) const noexcept;
+    // The scanned ways climb_of reads: any a hand can take (a ladder, or a lip from a floor), or ladders only.
+    enum class Ways : std::uint8_t { Any, Ladders };
+    [[nodiscard]] bool climb_of(int edge, Climb &out, Ways ways = Ways::Any) const noexcept;
     [[nodiscard]] Climb climb_spec(int edge) const noexcept;
     [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
     [[nodiscard]] int bay_way_out() const noexcept;

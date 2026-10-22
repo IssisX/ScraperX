@@ -966,7 +966,8 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     float best_d = std::numeric_limits<float>::max();
     for (int i = 0; i < climb_count(); ++i) {
         Climb c{};
-        if (!climb_of(i, c)) {
+        // Her hand climb in the hunt is for ladders; a lip she takes by her own plan.
+        if (!climb_of(i, c, Ways::Ladders)) {
             continue;
         }
         if (!c.hers || std::abs(c.foot_y - level_floor) > 0.6F || c.head_y > lead_floor_ + 0.6F ||
@@ -2065,7 +2066,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
     for (int i = 0; i < climb_count(); ++i) {
         Climb c{};
-        if (!climb_of(i, c)) {
+        // Only a ladder has a middle he can be on: by a short lip's window he is standing on its top.
+        if (!climb_of(i, c, Ways::Ladders)) {
             continue;
         }
         if (std::abs(c.foot_y - level_floor) < 0.6F && std::abs(px - c.x) < 1.0F && std::abs(pz - c.z) < 1.0F &&
