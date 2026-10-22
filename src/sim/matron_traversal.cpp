@@ -15,6 +15,7 @@
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -794,8 +795,12 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         if (!find_rung(feet + 0.3F, std::max(feet - 0.8F, lowest), false, hold_, where)) {
             const Vec3 toward = flat(Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) - Vec3(c)).NormalizedOr(-spec_.out);
             bool found = false;
-            for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
-                found = take_hold(RVec3(c.GetX(), feet - 0.03F, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+            // The floor's edge where her soles meet it: she may stand a
+            // little high on a plate or a lip's kerb, so feel down for it.
+            for (const float under : {0.03F, 0.12F, 0.22F}) {
+                for (float ahead = 0.0F; ahead < 0.9F && !found; ahead += 0.1F) {
+                    found = take_hold(RVec3(c.GetX(), feet - under, c.GetZ()) + toward * ahead, 0.05F, false, hold_, &where);
+                }
             }
             if (found) {
                 // Her hands at the edge itself, on the side she goes over.
@@ -1361,6 +1366,29 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             patches_.push_back(p);
         }
     }
+    // A ladder's stile is no pole: an upright that two or more bars end at
+    // along its height is the side of a ladder, climbed by its rungs, not
+    // gripped round. (Geometry alone: any upright with rungs off it.)
+    poles_.erase(std::remove_if(poles_.begin(), poles_.end(),
+                                [&](const Pole &pole) {
+                                    int ends = 0;
+                                    for (const Bar &bar : bars) {
+                                        const float y = bar.c.GetY();
+                                        if (y < pole.bottom - 0.05F || y > pole.top + 0.05F) {
+                                            continue;
+                                        }
+                                        const Vec3 along = bar.along_x ? Vec3::sAxisX() : Vec3::sAxisZ();
+                                        for (const float side : {-1.0F, 1.0F}) {
+                                            const Vec3 end = bar.c + along * (side * bar.half);
+                                            if (std::hypot(end.GetX() - pole.x, end.GetZ() - pole.z) <=
+                                                0.5F * pole.section + 0.12F) {
+                                                ++ends;
+                                            }
+                                        }
+                                    }
+                                    return ends >= 2;
+                                }),
+                 poles_.end());
     stats_.patches = static_cast<std::uint32_t>(patches_.size());
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
