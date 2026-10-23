@@ -237,6 +237,10 @@ int main() {
         run_matron_exam_climber();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-descent") {
+        run_matron_exam_descent();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-found-climb") {
         run_matron_found_climb();
         return EXIT_SUCCESS;
@@ -560,6 +564,7 @@ int main() {
     run_matron_routecraft();
     run_matron_exam_routecraft();
     run_matron_exam_climber();
+    run_matron_exam_descent();
     run_matron_found_climb();
     run_matron();
     run_matron_pace();

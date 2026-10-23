@@ -10,6 +10,7 @@
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
@@ -39,6 +40,7 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::PoleDown: return "pole_down";
     case MoveKind::JumpCatch: return "jump_catch";
     case MoveKind::HangDrop: return "hang_drop";
+    case MoveKind::GapJump: return "gap_jump";
     }
     return "?";
 }
@@ -116,6 +118,95 @@ float leg_speed_cap(const Limits &limits) {
     if (acceleration <= 0.0F) return 0.0F;
     return std::max(0.0F, std::min({limits.launch_dv_mps, std::sqrt(2.0F * acceleration * limits.leg_travel_m),
                                    limits.power_w / (limits.mass_kg * kGravity)}));
+}
+
+constexpr float kGapHopM = 0.16F;
+constexpr float kGapRunMps = 3.2F;
+constexpr float kGapDropM = 1.25F;
+constexpr float kPlanTickS = 1.0F / 90.0F;
+
+struct GapSample {
+    float seconds = 0.0F;
+    float height = 0.0F;
+};
+struct GapFlight {
+    std::vector<GapSample> samples;
+    float seconds = 0.0F;
+    float drive_seconds = 0.0F;
+};
+
+// Predict a short push on stationary steel followed by gravity. This is
+// planning only: the executor uses the same planted-leg drive as every
+// other jump, and loses that push immediately if its real contact goes.
+GapFlight gap_flight(const Limits &limits, const float drop, const float initial_speed = 0.0F) {
+    GapFlight flight;
+    if (drop <= 0.0F || drop > kGapDropM || leg_speed_cap(limits) <= 0.0F) return flight;
+    float height = 0.0F, speed = initial_speed;
+    bool pushing = true;
+    flight.samples.push_back({0.0F, 0.0F});
+    for (int tick = 0; tick < 180; ++tick) {
+        const float remaining = limits.leg_travel_m - height;
+        const float coast_speed = speed - kGravity * kPlanTickS;
+        const float next_cap = std::min(limits.launch_dv_mps, remaining / kPlanTickS);
+        if (pushing && (remaining <= 0.0F ||
+            (tick > 0 && speed >= std::sqrt(2.0F * kGravity * std::max(kGapHopM - height, 0.0F))) ||
+            speed >= limits.launch_dv_mps - 0.001F || coast_speed >= next_cap)) {
+            pushing = false;
+            flight.drive_seconds = float(tick) * kPlanTickS;
+        }
+        float force = 0.0F;
+        if (pushing) {
+            const float q = kPlanTickS / limits.mass_kg;
+            const float end_power_force = (-coast_speed + std::sqrt(coast_speed * coast_speed +
+                                           4.0F * q * limits.power_w)) / (2.0F * q);
+            force = std::max(0.0F, std::min({limits.total_force_n, end_power_force,
+                                           (next_cap - coast_speed) / q}));
+        }
+        speed = coast_speed + force * (kPlanTickS / limits.mass_kg);
+        const float next = height + speed * kPlanTickS;
+        if (!pushing && next <= -drop) {
+            const float fraction = (height + drop) / (height - next);
+            flight.seconds = (float(tick) + fraction) * kPlanTickS;
+            flight.samples.push_back({flight.seconds, -drop});
+            return flight;
+        }
+        height = next;
+        flight.samples.push_back({float(tick + 1) * kPlanTickS, height});
+    }
+    return {};
+}
+
+bool gap_segment_free(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits,
+                      const Vec3 from, const Vec3 to) {
+    // This volume contains her whole capsule, including its bottom. The
+    // extra radius may touch a floor her real soles are just above; ignore
+    // only those upward floor contacts, never a raised obstacle or side.
+    const CapsuleShape room(limits.half_height, limits.radius + 0.02F);
+    const RVec3 centre = from + Vec3(0, limits.center_above_feet(), 0);
+    const RShapeCast sweep(&room, Vec3::sReplicate(1.0F), RMat44::sTranslation(centre), to - from);
+    AllHitCollisionCollector<CastShapeCollector> hits;
+    const FixedFilter filter(ignore);
+    physics.GetNarrowPhaseQuery().CastShape(sweep, ShapeCastSettings(), centre, hits,
+                                           Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), filter);
+    for (const ShapeCastResult &hit : hits.mHits) {
+        const float floor_y = float(centre.GetY()) + hit.mContactPointOn2.GetY();
+        if (hit.mPenetrationAxis.NormalizedOr(Vec3::sZero()).GetY() < -0.999F &&
+            std::min(from.GetY(), to.GetY()) >= floor_y - 0.005F) continue;
+        return false;
+    }
+    return true;
+}
+
+bool gap_floor_at(const PhysicsSystem &physics, const Ignore &ignore, const Vec3 feet) {
+    const RRayCast ray(feet + Vec3(0, 0.08F, 0), Vec3(0, -0.16F, 0));
+    RayCastResult hit;
+    const FixedFilter filter(ignore);
+    if (!physics.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), filter))
+        return false;
+    const RVec3 at = ray.GetPointOnRay(hit.mFraction);
+    const BodyLockRead lock(physics.GetBodyLockInterface(), hit.mBodyID);
+    return lock.Succeeded() && std::abs(float(at.GetY()) - feet.GetY()) < 0.03F &&
+           lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, at).GetY() > 0.99F;
 }
 
 // A member's world bounds (one leaf of a body), or false if the sub-shape no
@@ -844,6 +935,7 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::PoleDown: step_pole(dt, budget, false); break;
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
+    case MoveKind::GapJump: step_gap(dt, budget); break;
     }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
@@ -1524,6 +1616,124 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
     } else if ((stall_s_ += dt) > (sliding_ ? 6.0F : 4.0F)) {
         fail(sliding_ ? Failure::Slipped : Failure::Stalled);
     }
+    return status_;
+}
+
+// --- jump across to a lower floor ---------------------------------------------
+// All horizontal speed is earned on the run-up. The planted leg supplies
+// the short vertical push; once released there is no steering or thrust in
+// the air. Only a real landing permits her feet to brake again.
+Climber::Status Climber::step_gap(const float dt, Budget &budget) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    const Vec3 v = velocity();
+    const float feet = float(c.GetY()) - limits_.center_above_feet();
+    float floor_top = 0.0F;
+    BodyID floor;
+    RVec3 contact;
+    bool grounded = supported(&floor_top, &floor, &contact) && std::abs(feet - floor_top) < 0.035F;
+    Vec3 support_v = Vec3::sZero();
+    if (grounded) {
+        support_v = bodies.GetPointVelocity(floor, contact);
+        BodyLockRead lock(physics_.GetBodyLockInterface(), floor);
+        grounded = lock.Succeeded() && std::abs(v.GetY() - support_v.GetY()) < 0.3F;
+    }
+    const Vec3 direction = flat(spec_.goal - spec_.line).NormalizedOr(Vec3::sZero());
+    const auto traction = [&](const Vec3 wanted_velocity) {
+        if (!grounded) return;
+        budget.velocity = v - support_v;
+        Vec3 want = (wanted_velocity - flat(budget.velocity)) * (limits_.mass_kg * 16.0F);
+        if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
+        const Vec3 force = budget.take(want);
+        bodies.AddForce(body_, force);
+        if (bodies.GetMotionType(floor) == EMotionType::Dynamic) {
+            bodies.AddForce(floor, -force, contact);
+            view_.support_reaction_n += force.Length();
+        }
+    };
+    if (phase_ == 0) {
+        if (!grounded) {
+            if (phase_s_ > 1.0F) fail(Failure::NotSupported);
+            return status_;
+        }
+        if (horizontal(spec_.start - c) > 0.10F || flat(v - support_v).Length() > 0.3F) {
+            if (phase_s_ > 10.0F) { fail(Failure::Stalled); return status_; }
+            const Vec3 to = flat(spec_.start - c);
+            traction(to.NormalizedOr(Vec3::sZero()) * std::min(1.2F, to.Length() * 3.0F));
+            return status_;
+        }
+        const GapFlight flight = gap_flight(limits_, spec_.line.GetY() - spec_.goal_top);
+        gap_speed_mps_ = flight.seconds > 0.0F ? horizontal(spec_.goal - spec_.line) / flight.seconds : 0.0F;
+        if (gap_speed_mps_ <= 0.0F || gap_speed_mps_ > kGapRunMps ||
+            gap_speed_mps_ * flight.drive_seconds > limits_.radius - 0.02F) {
+            fail(Failure::OutOfRange);
+            return status_;
+        }
+        phase_ = 1;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 1) {
+        if (!grounded) { fail(Failure::NotSupported); return status_; }
+        const Vec3 to_takeoff = flat(spec_.line - c);
+        const float ahead = to_takeoff.Dot(direction);
+        if (ahead > 0.5F * gap_speed_mps_ * dt) {
+            if (phase_s_ > 4.0F) { fail(Failure::Stalled); return status_; }
+            const Vec3 across = to_takeoff - direction * ahead;
+            traction(direction * gap_speed_mps_ + across * 6.0F);
+            return status_;
+        }
+        if (horizontal(flat(v) - direction * gap_speed_mps_) > 0.25F) {
+            fail(Failure::OutOfRange);
+            return status_;
+        }
+        // The scan proposes a nominal arc. Check again from her measured
+        // pose and velocity, so an accepted run-up error cannot put her
+        // body outside the corridor that was actually checked.
+        const Vec3 from(c.GetX(), feet, c.GetZ());
+        const GapFlight flight = gap_flight(limits_, feet - spec_.goal_top, v.GetY());
+        Vec3 previous = from;
+        bool clear = flight.seconds > 0.0F && flat(v).Length() * flight.drive_seconds <= limits_.radius - 0.02F;
+        for (const GapSample &sample : flight.samples) {
+            if (!clear) break;
+            const Vec3 next = from + flat(v) * sample.seconds + Vec3(0, sample.height, 0);
+            clear = gap_segment_free(physics_, ignore_, limits_, previous, next);
+            previous = next;
+        }
+        const float acceleration = std::min(limits_.foot_force_n, limits_.total_force_n) / limits_.mass_kg;
+        const Vec3 runout = previous + flat(v).NormalizedOr(Vec3::sZero()) *
+                           (flat(v).LengthSq() / (2.0F * std::max(acceleration, 0.01F)) + 0.15F);
+        if (!clear || !gap_floor_at(physics_, ignore_, previous) || !gap_floor_at(physics_, ignore_, runout) ||
+            !gap_segment_free(physics_, ignore_, limits_, previous, runout)) {
+            fail(Failure::BlockedSweep);
+            return status_;
+        }
+        if (!plant_leg(float(c.GetY()) + limits_.hand_above_center + kGapHopM)) return status_;
+        phase_ = 2;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 2) {
+        if (drive_leg(dt, budget)) {
+            ++view_.launches;
+            phase_ = 3;
+            phase_s_ = 0.0F;
+        }
+        return status_;
+    }
+    if (phase_ == 3) {
+        if (grounded && phase_s_ > 0.1F) {
+            if (std::abs(floor_top - spec_.goal_top) > 0.08F) { fail(Failure::NotSupported); return status_; }
+            phase_ = 4;
+            phase_s_ = 0.0F;
+        } else {
+            if (feet < spec_.goal_top - 0.3F || phase_s_ > 2.0F) { ++view_.misses; fail(Failure::Missed); }
+            return status_;
+        }
+    }
+    if (!grounded) { fail(Failure::NotSupported); return status_; }
+    const Vec3 to = flat(spec_.goal - c);
+    traction(to.NormalizedOr(Vec3::sZero()) * std::min(1.2F, to.Length() * 3.0F));
+    if (to.Length() < 0.25F && flat(v - support_v).Length() < 0.2F) finish();
+    else if (phase_s_ > 4.0F) fail(Failure::Stalled);
     return status_;
 }
 
@@ -2547,11 +2757,72 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                         const Patch &hi = patches_[static_cast<std::size_t>(j)];
                         const float rise = hi.top - lo.top;
                         if (hi.region == lo.region || rise <= limits.step_max_m || rise > limits.drop_max_m) continue;
-                        if (gap_xz(lo, hi) > 0.6F) continue;
+                        const float gap = gap_xz(lo, hi);
+                        if (gap > 1.4F) continue;
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
                         Vec3 lip = closest_on(hi, lc, 0.0F);
+                        if (gap > 0.6F) {
+                            // A short downward jump between stationary broad
+                            // tops. Both the run-up and landing run-out must
+                            // fit on real steel; a nearby lower floor alone
+                            // does not make a usable jump.
+                            if (rise > kGapDropM || hi.narrow || lo.narrow ||
+                                physics.GetBodyInterface().GetMotionType(hi.body) != EMotionType::Static ||
+                                physics.GetBodyInterface().GetMotionType(lo.body) != EMotionType::Static) continue;
+                            const Vec3 landing = closest_on(lo, lip, limits.radius + 0.3F);
+                            const Vec3 direction = flat(landing - lip).NormalizedOr(Vec3::sZero());
+                            const Vec3 takeoff = lip - direction * 0.20F;
+                            const GapFlight flight = gap_flight(limits, rise);
+                            if (flight.seconds <= 0.0F) continue;
+                            const float speed = horizontal(landing - takeoff) / flight.seconds;
+                            const float acceleration = std::min(limits.foot_force_n, limits.total_force_n) / limits.mass_kg;
+                            if (acceleration <= 0.0F || speed > kGapRunMps ||
+                                speed * flight.drive_seconds > limits.radius - 0.02F) continue;
+                            const float stopping = speed * speed / (2.0F * acceleration);
+                            const Vec3 start = takeoff - direction * (stopping + 0.65F);
+                            const Vec3 runout = landing + direction * (stopping + 0.15F);
+                            const auto inside = [&](const Patch &p, const Vec3 at) {
+                                return at.GetX() >= p.min_x + limits.radius && at.GetX() <= p.max_x - limits.radius &&
+                                       at.GetZ() >= p.min_z + limits.radius && at.GetZ() <= p.max_z - limits.radius;
+                            };
+                            if (!inside(hi, start) || !inside(lo, landing) || !inside(lo, runout)) continue;
+                            // Sweep the full body, with 2 cm clearance,
+                            // through the run-up, each flight tick and the
+                            // braking distance on the destination.
+                            const auto clear_segment = [&](const Vec3 from, const Vec3 to) {
+                                ++stats_.capsule_queries;
+                                return gap_segment_free(physics, ignore, limits, from, to);
+                            };
+                            bool clear = clear_segment(start, takeoff);
+                            Vec3 previous = takeoff;
+                            for (const GapSample &sample : flight.samples) {
+                                if (!clear) break;
+                                const Vec3 next = takeoff + direction * (speed * sample.seconds) + Vec3(0, sample.height, 0);
+                                clear = clear_segment(previous, next);
+                                previous = next;
+                            }
+                            clear = clear && clear_segment(landing, runout);
+                            Edge jump;
+                            jump.from = hi.region;
+                            jump.to = lo.region;
+                            jump.kind = MoveKind::GapJump;
+                            jump.spec.kind = jump.kind;
+                            jump.spec.line = takeoff;
+                            jump.spec.out = direction;
+                            jump.spec.start = start;
+                            jump.spec.goal = landing;
+                            jump.spec.top_y = hi.top;
+                            jump.spec.bottom_y = lo.top;
+                            jump.spec.goal_top = lo.top;
+                            jump.cost = 3.0F + stopping + flight.seconds;
+                            jump.usable = clear;
+                            jump.reason = clear ? "supported run-up, capped hop and clear descent to a lower top"
+                                                : "blocked: downward jump capsule corridor";
+                            add_edge(jump);
+                            continue;
+                        }
                         Vec3 below = closest_on(lo, lip, limits.radius + 0.1F);
                         Vec3 above = closest_on(hi, lip, limits.radius + 0.1F);
                         bool below_ok = horizontal(below - lip) <= 0.9F && capsule_free(physics, ignore, limits, below);

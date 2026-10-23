@@ -983,7 +983,10 @@ public:
     [[nodiscard]] const traversal::AffordanceMap *scanned_routes() const noexcept { return scanned_; }
     // Out of her locker with the tower not yet looked over.
     [[nodiscard]] bool wants_routes() const noexcept { return scanned_ == nullptr && body_in_world_; }
-    bool travel_to(int region);   // false: no way there from where she stands
+    bool travel_to(JPH::Vec3 feet);   // reads the steel if needed, then resolves this destination
+    // True accepts the destination. A free, airborne body waits for real
+    // support before executing a route; acceptance does not promise arrival.
+    bool travel_to(int region);
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;

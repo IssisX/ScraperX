@@ -176,6 +176,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/matron_exam.cpp
         tests/sim_tests_matron_exam.cpp
         tests/sim_tests_matron_exam_runs.cpp
+        tests/sim_tests_matron_exam_descent.cpp
         tests/sim_tests_matron_found_climb.cpp
         tests/sim_tests_crane.cpp
         tests/sim_tests_service.cpp

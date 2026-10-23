@@ -3,17 +3,20 @@
 // between moves and climbed by her own hands, each move physical. A region is
 // hers only when she stands on it; a failed move is a fall, and she plans
 // again from where she lands. Nothing here sets her position.
-#include <cstdlib>
 #include "sim/matron.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace scraperx::sim {
 
@@ -22,8 +25,24 @@ using namespace JPH;
 namespace {
 constexpr int kMaxReplans = 6;
 constexpr float kLandWaitS = 6.0F;
+constexpr float kArrivalStandS = 1.0F;
+constexpr float kSupportProbeM = 0.03F;
+constexpr float kLandedVerticalMps = 0.30F;
+constexpr float kArrivalStillMps = 0.30F;
 constexpr float kTwoPi = 6.28318530718F;
 constexpr float kTurnRate = 7.0F;   // as matron.cpp
+
+class SupportFilter final : public BodyFilter {
+public:
+    SupportFilter(const BodyID self, const BodyID player) : self_(self), player_(player) {}
+    bool ShouldCollide(const BodyID &id) const override { return id != self_ && id != player_; }
+    bool ShouldCollideLocked(const Body &body) const override {
+        return !body.IsSensor() && body.GetID() != self_ && body.GetID() != player_;
+    }
+
+private:
+    BodyID self_, player_;
+};
 
 float turn_toward(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, kTwoPi);
@@ -40,62 +59,131 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
 void Matron::set_routes(const traversal::AffordanceMap *routes) { scanned_ = routes; }
 
 int Matron::region_under() const {
-    if (scanned_ == nullptr || !body_in_world_) {
+    if (scanned_ == nullptr || !body_in_world_ || lying_ || kneeling_) {
         return -1;
     }
-    float top = 0.0F;
-    if (!climber_->supported(&top)) {
-        return -1;
+    // A floor within the standing ray's lookahead is not a landing. Query
+    // her actual shape at contact tolerance, and accept only upward support
+    // after her vertical motion relative to that support has settled.
+    AllHitCollisionCollector<CollideShapeCollector> hits;
+    RVec3 at, base;
+    Vec3 velocity;
+    {
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), body_);
+        if (!lock.Succeeded()) return -1;
+        const Body &her = lock.GetBody();
+        at = her.GetPosition();
+        base = her.GetCenterOfMassPosition();
+        velocity = her.GetLinearVelocity();
+        const SupportFilter supports(body_, player_);
+        physics_.GetNarrowPhaseQuery().CollideShape(
+            her.GetShape(), Vec3::sReplicate(1.0F),
+            her.GetCenterOfMassTransform().PostTranslated(Vec3(0.0F, -kSupportProbeM, 0.0F)),
+            CollideShapeSettings(), base, hits,
+            physics_.GetDefaultBroadPhaseLayerFilter(her.GetObjectLayer()),
+            physics_.GetDefaultLayerFilter(her.GetObjectLayer()), supports);
     }
-    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    const int exact = scanned_->region_at(Vec3(float(at.GetX()), top, float(at.GetZ())));
-    if (exact >= 0) {
-        return exact;
-    }
-    // On her feet on a bit of steel too small for a region of its own (a
-    // plinth, a foot plate): hers is the region round her at about that
-    // height, the one she walks off it onto.
     int best = -1;
-    float best_d = 0.6F;
-    const float x = float(at.GetX());
-    const float z = float(at.GetZ());
-    for (const traversal::Region &r : scanned_->regions()) {
-        if (x < r.min_x - 0.5F || x > r.max_x + 0.5F || z < r.min_z - 0.5F || z > r.max_z + 0.5F ||
-            top < r.min_y - 0.6F || top > r.max_y + 0.6F) {
-            continue;
+    float best_gap = std::numeric_limits<float>::max();
+    for (const CollideShapeResult &hit : hits.mHits) {
+        if (hit.mPenetrationAxis.NormalizedOr(Vec3::sZero()).GetY() > -0.7F) continue;
+        const RVec3 contact = base + hit.mContactPointOn2;
+        {
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID2);
+            if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() || lock.GetBody().IsSensor() ||
+                std::abs((velocity - lock.GetBody().GetPointVelocity(contact)).GetY()) > kLandedVerticalMps)
+                continue;
         }
-        const float d = std::abs(r.top - top);
-        if (d < best_d) {
-            best_d = d;
-            best = r.id;
+        const float top = float(contact.GetY());
+        int region = scanned_->region_at(Vec3(float(at.GetX()), top, float(at.GetZ())));
+        if (region < 0) {
+            // On a narrow floor her middle may overhang its outline. The
+            // real capsule contact, not a projected middle, names her floor.
+            region = scanned_->region_at(Vec3(contact));
+        }
+        if (region < 0) {
+            // A small plinth or foot plate can support her without being a
+            // region of its own. Keep the existing nearby-region allowance,
+            // but measure it from this real support rather than a ray ahead.
+            float best_d = 0.6F;
+            const float x = float(contact.GetX()), z = float(contact.GetZ());
+            for (const traversal::Region &r : scanned_->regions()) {
+                if (x < r.min_x - 0.5F || x > r.max_x + 0.5F || z < r.min_z - 0.5F || z > r.max_z + 0.5F ||
+                    top < r.min_y - 0.6F || top > r.max_y + 0.6F) continue;
+                const float d = std::abs(r.top - top);
+                if (d < best_d || (d == best_d && (region < 0 || r.id < region))) {
+                    best_d = d;
+                    region = r.id;
+                }
+            }
+        }
+        const float gap = std::abs(float(at.GetY()) - kStandCentre - top);
+        if (region >= 0 && (gap < best_gap || (gap == best_gap && (best < 0 || region < best)))) {
+            best_gap = gap;
+            best = region;
         }
     }
     return best;
 }
 
+bool Matron::travel_to(const Vec3 feet) {
+    if (!body_in_world_ || dead_ || !std::isfinite(feet.GetX()) || !std::isfinite(feet.GetY()) ||
+        !std::isfinite(feet.GetZ())) return false;
+    if (wants_routes()) {
+        own_scan_ = std::make_unique<traversal::AffordanceMap>();
+        own_scan_->scan(physics_, physics_.GetBounds(), {body_, BodyID(), moving_layer()});
+        scanned_ = own_scan_.get();
+    }
+    const int region = scanned_->region_at(feet);
+    return region >= 0 && travel_to(region);
+}
+
 bool Matron::travel_to(const int region) {
-    if (scanned_ == nullptr || !body_in_world_ || dead_) {
+    if (scanned_ == nullptr || !body_in_world_ || dead_ || lying_ || kneeling_ ||
+        region < 0 || static_cast<std::size_t>(region) >= scanned_->regions().size()) {
         return false;
     }
-    // Her hands on this body (a respawn gives her a new one).
-    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     const int here = region_under();
-    if (here < 0) {
+    if (here < 0 && (routecraft_.owns_motion() || journey_active_ || climb_ >= 0 ||
+                     pipe_phase_ != PipePhase::Off || on_line_ || riding_ || held_ >= 0 ||
+                     bracing_structure())) {
         return false;
     }
+    // A new destination cannot take ownership away from hands or feet
+    // already executing a move, including a jump between supports.
+    if (climber_ != nullptr && (climber_->status() == traversal::Climber::Status::Running ||
+                                climber_->view().holding)) {
+        return false;
+    }
+    // Accept a free body's destination while she is airborne. A plan from
+    // her last real support can describe the work ahead, but remains
+    // provisional: region stays unknown and step_travel waits under gravity,
+    // then replans from her actual landing before executing any move.
+    std::vector<int> route;
+    const int from = here >= 0 ? here : travel_.region;
+    if (from >= 0) route = scanned_->plan(from, region);
+    if (here >= 0 && route.empty() && here != region) {
+        return false;
+    }
+    // Her hands on this body (a respawn gives her a new one). Invalid or
+    // unreachable requests above leave her existing controller untouched.
+    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     travel_avoid_.clear();
-    travel_edges_ = scanned_->plan(here, region, travel_avoid_);
-    if (travel_edges_.empty() && here != region) {
-        return false;
-    }
-    travel_.active = here != region;
+    travel_edges_ = std::move(route);
+    travel_.active = true;   // already there still earns a supported, quiet arrival
     travel_.goal = region;
     travel_.region = here;
     travel_.step = 0;
     travel_.steps = static_cast<int>(travel_edges_.size());
     travel_walk_.clear();
     travel_walk_i_ = 0;
+    travel_wp_best_ = 1.0e9F;
+    travel_wp_stall_s_ = 0.0F;
+    travel_rerouted_ = false;
     travel_stuck_ = 0;
+    travel_still_at_ = Vec3(physics_.GetBodyInterface().GetPosition(body_)) - Vec3(0.0F, kStandCentre, 0.0F);
+    travel_still_s_ = 0.0F;
+    travel_yield_s_ = 0.0F;
     travel_wait_s_ = 0.0F;
     travel_replans0_ = travel_.replans;   // her counts run on; this journey's replans from here
     climber_->cancel();
@@ -126,7 +214,9 @@ void Matron::step_travel(const float dt) {
         climber_->cancel();
     }
     // A move under way: her hands and feet on it, nothing else.
-    if (climber_->status() == traversal::Climber::Status::Running) {
+    const bool moving = climber_->status() == traversal::Climber::Status::Running;
+    if (moving) {
+        travel_wait_s_ = 0.0F;
         climber_->step(dt);
         travel_.move = climber_->view().kind;
         const Vec3 v = bodies.GetLinearVelocity(body_);
@@ -134,54 +224,80 @@ void Matron::step_travel(const float dt) {
             yaw_ = turn_toward(yaw_, std::atan2(v.GetX(), v.GetZ()), kTurnRate, dt);
         }
         stride_ += v.Length() * dt;
-        if (climber_->status() == traversal::Climber::Status::Done) {
-            ++travel_.moves_done;
-            // Hers only on its steel: the region under her feet now.
-            const int under = region_under();
-            const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])];
-            if (under == e.to) {
-                travel_.region = under;
-                ++travel_.step;
-            } else {
-                // Somewhere else (or not yet on anything): plan from where she is.
-                travel_.step = travel_.steps;   // forces a replan below
+    }
+    if (climber_->status() == traversal::Climber::Status::Done) {
+        // A move can release its last hold within landing reach. Keep its
+        // destination pending until real support, without throwing away a
+        // successful route or spending a replan on the final falling tick.
+        const int under = region_under();
+        if (under < 0) {
+            travel_wait_s_ = std::min(travel_wait_s_, 0.0F) - dt;
+            if (travel_wait_s_ < -kLandWaitS) {
+                travel_.active = false;
+                climber_->cancel();
             }
-            climber_->cancel();
-        } else if (climber_->status() == traversal::Climber::Status::Failed) {
-            ++travel_.moves_failed;
-            travel_.last_failure = climber_->failure();
-            // Failed before she left her floor (could not reach its start, no
-            // hold there): that way is closed to this journey; a physical
-            // failure on the way is not (it may go next time).
-            if (climber_->phase() == 0 && travel_.step < travel_.steps) {
-                travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
-            }
-            travel_.step = travel_.steps;
-            travel_wait_s_ = 0.0F;
-            climber_->cancel();
+            return;
+        }
+        ++travel_.moves_done;
+        const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])];
+        if (under == e.to) {
+            travel_.region = under;
+            ++travel_.step;
+        } else {
+            travel_.step = travel_.steps;   // landed elsewhere: replan from that support
+        }
+        travel_wait_s_ = 0.0F;
+        climber_->cancel();
+        return;
+    }
+    if (climber_->status() == traversal::Climber::Status::Failed) {
+        ++travel_.moves_failed;
+        travel_.last_failure = climber_->failure();
+        // Failed before she left her floor (could not reach its start, no
+        // hold there): that way is closed to this journey; a physical
+        // failure on the way is not (it may go next time).
+        if (climber_->phase() == 0 && travel_.step < travel_.steps) {
+            travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+        }
+        travel_.step = travel_.steps;
+        travel_wait_s_ = 0.0F;
+        climber_->cancel();
+        return;
+    }
+    if (moving) return;
+    // Arrival is a full second standing on real support without a grip.
+    // Keep the journey's capped standing controller in charge while she
+    // brakes; ordinary idle movement cannot end the journey early.
+    const int under = region_under();
+    if (under == travel_.goal) {
+        travel_.region = under;
+        travel_.step = travel_.steps;   // support lost during arrival must replan before any further move
+        const Vec3 velocity = bodies.GetLinearVelocity(body_);
+        (void)climber_->stand(dt);
+        const bool quiet = !climber_->view().holding && velocity.Length() < kArrivalStillMps &&
+                           std::abs(velocity.GetY()) < 0.1F && bodies.GetGravityFactor(body_) == 1.0F;
+        travel_wait_s_ = quiet ? std::max(travel_wait_s_, 0.0F) + dt : 0.0F;
+        if (travel_wait_s_ >= kArrivalStandS) {
+            ++travel_.arrivals;
+            travel_.active = false;
         }
         return;
     }
-    // Arrived?
-    const int under = region_under();
-    if (under == travel_.goal) {
-        ++travel_.arrivals;
-        travel_.active = false;
-        travel_.region = under;
-        climber_->walk_between(dt, Vec3(float(at.GetX()), float(at.GetY()), float(at.GetZ())), 0.0F);
-        return;
-    }
+    // Positive time belongs to quiet arrival; negative time to awaiting a
+    // landing. Crossing between them cannot carry elapsed time forward.
+    travel_wait_s_ = std::min(travel_wait_s_, 0.0F);
     // Off the plan (a fall, a move that ended elsewhere, knocked off her
     // floor partway along a walk): when she is on her feet again, plan from
     // there.
-    if (travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
+    if (travel_.region < 0 || travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
         if (under < 0) {
-            travel_wait_s_ += dt;
-            if (travel_wait_s_ > kLandWaitS) {
+            travel_wait_s_ -= dt;
+            if (travel_wait_s_ < -kLandWaitS) {
                 travel_.active = false;   // nothing under her she knows: she gives it up
             }
             return;
         }
+        travel_wait_s_ = 0.0F;
         if (travel_.replans - travel_replans0_ >= kMaxReplans) {
             travel_.active = false;
             return;
@@ -198,6 +314,7 @@ void Matron::step_travel(const float dt) {
         }
         return;
     }
+    travel_wait_s_ = 0.0F;
     // Walk her region to the next move's start, then begin it.
     const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])];
     const Vec3 feet(float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));

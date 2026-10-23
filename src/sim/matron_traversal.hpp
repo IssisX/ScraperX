@@ -122,6 +122,7 @@ enum class MoveKind : std::uint8_t {
     PoleDown = 6,
     JumpCatch = 7,  // a jump to a bar or the bottom of a ladder; then up it
     HangDrop = 8,
+    GapJump = 9,    // a supported run and short leg drive, then ballistic flight to a lower floor
 };
 [[nodiscard]] const char *move_name(MoveKind kind) noexcept;
 
@@ -143,7 +144,7 @@ enum class Failure : std::uint8_t {
 // What a move needs to know, all of it from the scanner (or a test).
 struct MoveSpec {
     MoveKind kind = MoveKind::Walk;
-    JPH::Vec3 line = JPH::Vec3::sZero();   // a ladder's or a pole's axis (x, z); y unused
+    JPH::Vec3 line = JPH::Vec3::sZero();   // a ladder/pole axis; a gap jump's take-off point (feet)
     JPH::Vec3 out = JPH::Vec3::sAxisZ();   // horizontal: from the steel toward her side
     float bottom_y = 0.0F;                 // lowest rung / pole foot / lip for drops
     float top_y = 0.0F;                    // highest rung / pole head / lip
@@ -255,6 +256,7 @@ private:
     Status step_mantle(float dt, Budget &budget);
     Status step_pole(float dt, Budget &budget, bool up);
     Status step_jump(float dt, Budget &budget);
+    Status step_gap(float dt, Budget &budget);
     Status step_drop(float dt, Budget &budget, bool hang);
     Status step_walk(float dt, Budget &budget);
     Status begin_mantle_from_hang();
@@ -291,6 +293,7 @@ private:
     float leg_start_m_ = 0.0F;
     float leg_target_y_ = 0.0F;
     int leg_push_ticks_ = 0;
+    float gap_speed_mps_ = 0.0F;
     float rate_override_ = -1.0F;
     [[nodiscard]] float rate_mps() const noexcept { return rate_override_ >= 0.0F ? rate_override_ : limits_.climb_mps; }
     ClimbView view_;
