@@ -851,6 +851,8 @@ void run_matron_routecraft() {
         std::cout << "panel measured_force=" << f.measured_force << " sampled_power=" << f.measured_power
             << " controlled_overlap=" << f.controlled_penetration << '\n';
         f.timings("production_panel");
+        require(f.max_published_after_ticks <= 211,
+            "routecraft: production panel planning wait is at most half the 4.70 s baseline");
     }
     {
         // Same generic search, translated dense members and unrelated nearby
