@@ -49,6 +49,7 @@ const ACT_RIM := Vector2(18.0, -158.0)
 # 3 m within which, dangerous, she aims her shove at it.
 const ACT_LAP_NORTH := Vector2(20.6, -134.5)
 const ACT_LAP_SOUTH := Vector2(20.6, -143.5)
+const ACT_GRAB_TRIES := 3   # her reaches at the ankle of the changed chase before it fails
 const WELL_A_CAGE_ENTITY := 2000
 # Frames a screenshot holds the simulation still: enough to draw a few after
 # drawing comes back on.
@@ -540,23 +541,32 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		# Only fully changed are her hands a death.
 		_act_stages_seen[STAGE_CHANGED] = true
 	_act_log("changed")
-	var caught: bool = await _act_watch_her(func() -> bool:
-		return int(_matron_state()["catches"]) > catches or int(_native().get_death_count()) >= 1, 30.0,
-		"changed_catch", "act_changed_coming", 3.0)
-	if not caught or int(_matron_state()["catches"]) <= catches:
-		return _fail("fully changed, her hands never closed on the climber (deaths %d)" % int(_native().get_death_count()))
-	# Her hands on, and off again: the hold runs its course.
-	var held: bool = await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "changed_grab")
-	var over: bool = held and await _act_wait(func() -> bool: return not _act_in_her_hands(), 120.0, "changed_hold")
-	if not over:
-		return _fail("fully changed, her hold on the climber never ended (state %d)" % int(_matron_state()["state"]))
-	if int(_native().get_death_count()) > 1:
-		return _fail("her hold cost more than the one death (deaths %d)" % int(_native().get_death_count()))
-	await _seconds(0.5)
-	var hold: Dictionary = _native().get_matron_hold_state()
-	_act_log("caught grabs=%d armplays=%d arm_tears=%d releases=%d spares=%d" % [int(hold.get("grabs", 0)),
-		int(hold.get("armplays", 0)), int(hold.get("arm_tears", 0)), int(hold.get("releases", 0)),
-		int(hold.get("spares", 0))])
+	# Her hand can miss the ankle of a climber still running when the change comes (a grab miss): she is
+	# after them again, and they stand for her next reach, as a player caught once would. A few tries.
+	var hold: Dictionary = {}
+	for attempt in ACT_GRAB_TRIES:
+		var caught: bool = await _act_watch_her(func() -> bool:
+			return int(_matron_state()["catches"]) > catches or int(_native().get_death_count()) >= 1, 30.0,
+			"changed_catch", "act_changed_coming", 3.0)
+		if not caught or int(_matron_state()["catches"]) <= catches:
+			return _fail("fully changed, her hands never closed on the climber (deaths %d)" % int(_native().get_death_count()))
+		# Her hands on, and off again: the hold runs its course.
+		var held: bool = await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "changed_grab")
+		var over: bool = held and await _act_wait(func() -> bool: return not _act_in_her_hands(), 120.0, "changed_hold")
+		if not over:
+			return _fail("fully changed, her hold on the climber never ended (state %d)" % int(_matron_state()["state"]))
+		if int(_native().get_death_count()) > 1:
+			return _fail("her hold cost more than the one death (deaths %d)" % int(_native().get_death_count()))
+		await _seconds(0.5)
+		hold = _native().get_matron_hold_state()
+		_act_log("caught grabs=%d armplays=%d arm_tears=%d releases=%d spares=%d" % [int(hold.get("grabs", 0)),
+			int(hold.get("armplays", 0)), int(hold.get("arm_tears", 0)), int(hold.get("releases", 0)),
+			int(hold.get("spares", 0))])
+		if int(hold.get("grabs", 0)) >= 1:
+			break
+		catches = int(_matron_state()["catches"])
+	if int(hold.get("grabs", 0)) < 1:
+		return _fail("fully changed, her hand never closed on the climber's ankle in %d reaches" % ACT_GRAB_TRIES)
 	return true
 
 

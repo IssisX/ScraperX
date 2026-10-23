@@ -1284,6 +1284,9 @@ private:
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
     bool follow_line(float dt, JPH::RVec3 at, bool wait_ok);
+    // The line follow_line goes to from here (-1 for none), and whether she is on its ramp.
+    [[nodiscard]] int line_to_take(float ax, float az) const;
+    [[nodiscard]] bool on_line_ramp(JPH::RVec3 at) const;
     // On a line's cable: her drag on it, and letting go at its end.
     void ride_line();
     // After a lead on a level above, up a climb of hers toward it (to it, or
