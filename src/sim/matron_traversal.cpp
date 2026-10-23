@@ -3,6 +3,7 @@
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/MotionProperties.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
@@ -61,6 +62,7 @@ const char *failure_name(const Failure failure) noexcept {
 
 namespace {
 constexpr float kGravity = 9.81F;
+constexpr float kSoleSupportProbeM = 0.10F;
 
 // Probes see real steel only: never her, never the player, never a sensor.
 class SteelFilter final : public BodyFilter {
@@ -108,6 +110,14 @@ private:
 float horizontal(const Vec3 v) { return std::sqrt(v.GetX() * v.GetX() + v.GetZ() * v.GetZ()); }
 Vec3 flat(const Vec3 v) { return Vec3(v.GetX(), 0.0F, v.GetZ()); }
 
+float leg_speed_cap(const Limits &limits) {
+    if (limits.mass_kg <= 0.0F || limits.leg_travel_m <= 0.0F || limits.power_w <= 0.0F) return 0.0F;
+    const float acceleration = limits.total_force_n / limits.mass_kg - kGravity;
+    if (acceleration <= 0.0F) return 0.0F;
+    return std::max(0.0F, std::min({limits.launch_dv_mps, std::sqrt(2.0F * acceleration * limits.leg_travel_m),
+                                   limits.power_w / (limits.mass_kg * kGravity)}));
+}
+
 // A member's world bounds (one leaf of a body), or false if the sub-shape no
 // longer names a member. `bar`: two of its dimensions small (a bar, a pole).
 bool member_bounds(const Body &body, const SubShapeID &sub, AABox &out, bool &bar) {
@@ -122,6 +132,17 @@ bool member_bounds(const Body &body, const SubShapeID &sub, AABox &out, bool &ba
     const float thin = std::min({size.GetX(), size.GetY(), size.GetZ()});
     const float mid = size.GetX() + size.GetY() + size.GetZ() - thin - std::max({size.GetX(), size.GetY(), size.GetZ()});
     bar = mid <= 0.16F;
+    return true;
+}
+
+// A leaf's bounds in its body's own frame. Transforming its world AABB
+// backward is not equivalent: the box grows when the same member rotates.
+bool member_local_bounds(const Body &body, const SubShapeID &sub, AABox &out) {
+    SubShapeID remainder;
+    const TransformedShape member = body.GetShape()->GetSubShapeTransformedShape(
+        sub, RVec3::sZero(), Quat::sIdentity(), Vec3::sReplicate(1.0F), remainder);
+    if (member.mShape == nullptr) return false;
+    out = member.GetWorldSpaceBounds();
     return true;
 }
 } // namespace
@@ -169,7 +190,9 @@ Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVel
 Vec3 Climber::relative_velocity() const {
     const BodyInterface &bodies = physics_.GetBodyInterface();
     Vec3 support = Vec3::sZero();
-    if (hold_.valid() && bodies.IsAdded(hold_.body)) {
+    if (foot_.valid() && bodies.IsAdded(foot_.body)) {
+        support = bodies.GetPointVelocity(foot_.body, foot_world_);
+    } else if (hold_.valid() && bodies.IsAdded(hold_.body)) {
         support = bodies.GetPointVelocity(hold_.body, hold_world_);
     } else {
         BodyID by;
@@ -181,19 +204,23 @@ Vec3 Climber::relative_velocity() const {
     return velocity() - support;
 }
 
-bool Climber::supported(float *top, BodyID *by) const {
+bool Climber::supported(float *top, BodyID *by, RVec3 *point) const {
     const RVec3 c = center();
     const SteelFilter filter(ignore_);
-    const float reach = limits_.center_above_feet() + 0.10F;
+    const float reach = limits_.center_above_feet() + kSoleSupportProbeM;
     for (const Vec3 off : {Vec3::sZero(), Vec3(0.18F, 0, 0), Vec3(-0.18F, 0, 0), Vec3(0, 0, 0.18F), Vec3(0, 0, -0.18F)}) {
         RayCastResult hit;
         const RRayCast ray(c + off, Vec3(0.0F, -reach, 0.0F));
         if (physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) {
+            const RVec3 contact = ray.GetPointOnRay(hit.mFraction);
             if (top != nullptr) {
-                *top = float(ray.GetPointOnRay(hit.mFraction).GetY());
+                *top = float(contact.GetY());
             }
             if (by != nullptr) {
                 *by = hit.mBodyID;
+            }
+            if (point != nullptr) {
+                *point = contact;
             }
             return true;
         }
@@ -365,6 +392,163 @@ void Climber::push_reaction(const Vec3 force, const RVec3 at) {
         bodies.AddForce(hold_.body, -force, at);
         view_.support_reaction_n += force.Length();
     }
+}
+
+// The leg extends beneath the capsule while its foot remains planted.
+// Keep that contact throughout the stroke; a new floor under an airborne
+// body cannot restart the push.
+bool Climber::plant_leg(const float target_hand_y, const bool required) {
+    const RVec3 c = center();
+    const float stroke = limits_.leg_travel_m;
+    const float speed_cap = leg_speed_cap(limits_);
+    if (speed_cap <= 0.0F) {
+        if (required) fail(Failure::OutOfRange);
+        return false;
+    }
+    if (target_hand_y > float(c.GetY()) + limits_.hand_above_center + stroke + speed_cap * speed_cap / (2.0F * kGravity)) {
+        if (required) fail(Failure::OutOfRange);
+        return false;
+    }
+    const SteelFilter filter(ignore_);
+    for (const Vec3 off : {Vec3::sZero(), Vec3(0.18F, 0, 0), Vec3(-0.18F, 0, 0), Vec3(0, 0, 0.18F), Vec3(0, 0, -0.18F)}) {
+        RayCastResult hit;
+        const RRayCast ray(c + off, Vec3(0, -(limits_.center_above_feet() + kSoleSupportProbeM), 0));
+        if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter)) continue;
+        const RVec3 at = ray.GetPointOnRay(hit.mFraction);
+        if (float(c.GetY() - at.GetY()) > limits_.center_above_feet() + 0.03F) continue;
+        BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+        if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, at).GetY() < 0.7F) continue;
+        const Body &floor = lock.GetBody();
+        AABox bounds;
+        bool bar = false;
+        if (!member_bounds(floor, hit.mSubShapeID2, bounds, bar)) continue;
+        AABox local_bounds;
+        if (!member_local_bounds(floor, hit.mSubShapeID2, local_bounds)) continue;
+        foot_.body = hit.mBodyID;
+        foot_.sub = hit.mSubShapeID2;
+        foot_.local = Vec3(floor.GetInverseCenterOfMassTransform() * at);
+        foot_.member_local = local_bounds;
+        foot_world_ = at;
+        leg_start_m_ = float(c.GetY() - at.GetY());
+        leg_target_y_ = target_hand_y;
+        leg_push_ticks_ = 0;
+        view_.leg_driving = true;
+        view_.leg_travel_m = 0.0F;
+        return true;
+    }
+    if (required) fail(Failure::NotSupported);
+    return false;
+}
+
+bool Climber::planted_leg_contact(RVec3 &at) const {
+    if (!foot_.valid()) return false;
+    RVec3 anchor;
+    {
+        BodyLockRead lock(physics_.GetBodyLockInterface(), foot_.body);
+        if (!lock.Succeeded()) return false;
+        const Body &floor = lock.GetBody();
+        if (!floor.IsInBroadPhase() || floor.IsSensor()) return false;
+        AABox bounds;
+        bool bar = false;
+        if (!member_bounds(floor, foot_.sub, bounds, bar)) return false;
+        AABox local;
+        if (!member_local_bounds(floor, foot_.sub, local)) return false;
+        if ((local.mMin - foot_.member_local.mMin).Length() > 0.02F ||
+            (local.mMax - foot_.member_local.mMax).Length() > 0.02F) return false;
+        anchor = floor.GetCenterOfMassTransform() * foot_.local;
+        bounds.ExpandBy(Vec3::sReplicate(0.04F));
+        if (!bounds.Contains(anchor)) return false;
+    }
+    const RVec3 c = center();
+    if (horizontal(c - anchor) > limits_.radius) return false;
+    // A leg has its own reach, not the lower reach of a handhold. Query
+    // outside the body lock and require the original member to remain the
+    // first real surface under that planted foot.
+    const float reach = limits_.center_above_feet() + limits_.leg_travel_m;
+    const RRayCast ray(RVec3(anchor.GetX(), c.GetY(), anchor.GetZ()), Vec3(0, -reach, 0));
+    RayCastResult hit;
+    const SteelFilter filter(ignore_);
+    if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter) ||
+        hit.mBodyID != foot_.body || hit.mSubShapeID2 != foot_.sub) return false;
+    at = ray.GetPointOnRay(hit.mFraction);
+    if ((at - anchor).Length() > 0.04F) return false;
+    BodyLockRead lock(physics_.GetBodyLockInterface(), foot_.body);
+    return lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(foot_.sub, at).GetY() >= 0.7F;
+}
+
+void Climber::release_leg() {
+    foot_ = Hold{};
+    view_.leg_driving = false;
+}
+
+bool Climber::drive_leg(const float dt, Budget &budget) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    const auto toe_off = [&]() {
+        const bool pushed = leg_push_ticks_ > 0;
+        release_leg();
+        if (!pushed) fail(Failure::NotSupported);
+        return pushed;
+    };
+    if (dt <= 0.0F || phase_s_ > 1.0F) {
+        fail(Failure::Stalled);
+        return false;
+    }
+    if (!planted_leg_contact(foot_world_)) {
+        return toe_off();
+    }
+    float inverse_mass = 1.0F / limits_.mass_kg;
+    float gravity_relative = -kGravity;
+    {
+        BodyLockRead lock(physics_.GetBodyLockInterface(), foot_.body);
+        if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(foot_.sub, foot_world_).GetY() < 0.7F) {
+            return toe_off();
+        }
+        const Body &floor = lock.GetBody();
+        if (floor.IsDynamic()) {
+            // The opposite push accelerates a free tread too, including its
+            // rotation about the contact. Account for both bodies when
+            // bounding extension and actuator power on that moving support.
+            const Vec3 arm = foot_world_ - floor.GetCenterOfMassPosition();
+            const Vec3 moment = arm.Cross(Vec3::sAxisY());
+            inverse_mass += floor.GetMotionProperties()->GetInverseMass() + moment.Dot(floor.GetInverseInertia() * moment);
+            gravity_relative += kGravity * floor.GetMotionProperties()->GetGravityFactor();
+        }
+    }
+    const float extension = float(c.GetY() - foot_world_.GetY()) - leg_start_m_;
+    view_.leg_travel_m = std::max(extension, 0.0F);
+    const float remaining = std::min(limits_.leg_travel_m - view_.leg_travel_m,
+                                    limits_.center_above_feet() + limits_.leg_travel_m - float(c.GetY() - foot_world_.GetY()));
+    const Vec3 support_v = bodies.GetPointVelocity(foot_.body, foot_world_);
+    budget.velocity = velocity() - support_v;
+    const float v = budget.velocity.GetY();
+    const float rise = std::max(leg_target_y_ - float(c.GetY()) - limits_.hand_above_center, 0.0F);
+    if (remaining <= 0.0F || extension < -limits_.leg_travel_m ||
+        (leg_push_ticks_ > 0 && velocity().GetY() >= std::sqrt(2.0F * kGravity * rise)) || v >= limits_.launch_dv_mps - 0.001F) {
+        return toe_off();
+    }
+    // Bound the next semi-implicit integration step, not a position corrected
+    // after it. Leave the foot before even coasting would overextend the leg.
+    const float next_without_push = v + gravity_relative * dt;
+    const float next_cap = std::min(limits_.launch_dv_mps, remaining / dt);
+    if (next_without_push >= next_cap) {
+        return toe_off();
+    }
+    float force_n = std::min(budget.left, (next_cap - next_without_push) / (inverse_mass * dt));
+    // Positive work is capped at the end of this accelerating tick as well
+    // as at its beginning. F * (v + (F/m - g) dt) <= P.
+    const float q = dt * inverse_mass;
+    const float power = std::max(budget.power_left, 0.0F);
+    const float power_force = (-next_without_push + std::sqrt(next_without_push * next_without_push + 4.0F * q * power)) / (2.0F * q);
+    force_n = std::min(force_n, power_force);
+    const Vec3 push = budget.take(Vec3(0, std::max(force_n, 0.0F), 0));
+    bodies.AddForce(body_, push);
+    if (push.GetY() > 0.0F) ++leg_push_ticks_;
+    if (bodies.GetMotionType(foot_.body) == EMotionType::Dynamic) {
+        bodies.AddForce(foot_.body, -push, foot_world_);
+        view_.support_reaction_n += push.Length();
+    }
+    return false;
 }
 
 void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_velocity, const float stiffness,
@@ -576,6 +760,7 @@ float Climber::walk_between(const float dt, const Vec3 feet_goal, const float sp
 }
 
 void Climber::begin(const MoveSpec &spec) {
+    release_leg();
     spec_ = spec;
     // Her side of a ladder is the side she starts (up) or ends (down) on.
     if (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::JumpCatch || spec_.kind == MoveKind::RungDown) {
@@ -604,6 +789,7 @@ void Climber::begin(const MoveSpec &spec) {
 }
 
 void Climber::cancel() {
+    release_leg();
     if (hold_.valid()) {
         ++view_.releases;
     }
@@ -614,6 +800,7 @@ void Climber::cancel() {
 }
 
 void Climber::fail(const Failure failure) {
+    release_leg();
     if (hold_.valid()) {
         ++view_.releases;
     }
@@ -626,6 +813,7 @@ void Climber::fail(const Failure failure) {
 }
 
 void Climber::finish() {
+    release_leg();
     if (hold_.valid()) {
         ++view_.releases;
     }
@@ -666,7 +854,7 @@ Climber::Status Climber::step(const float dt) {
     view_.sliding = sliding_;
     view_.holding = hold_.valid();
     view_.hand = hold_world_;
-    view_.airborne = !hold_.valid() && !supported();
+    view_.airborne = !foot_.valid() && !hold_.valid() && !supported();
     return status_;
 }
 
@@ -948,6 +1136,16 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
     const Vec3 line_pos = Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) + spec_.out * 0.45F;
     const float hands = float(c.GetY()) + limits_.hand_above_center;
     const float rung = float(dyno_world_.GetY());
+    if (dyno_ == 4) {
+        if (drive_leg(dt, budget)) {
+            if (hold_.valid()) ++view_.releases;
+            ++view_.launches;
+            hold_ = Hold{};
+            dyno_ = 3;
+            phase_s_ = 0.0F;
+        }
+        return status_;
+    }
     if (dyno_ == 1 || dyno_ == 2) {
         if (!revalidate(hold_, hold_world_)) {
             dyno_ = 0;
@@ -973,27 +1171,16 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
         // speed carries her hands to the rung.
         const float v_rel = (velocity() - bodies.GetPointVelocity(hold_.body, hold_world_)).GetY();
         const float need = std::sqrt(2.0F * kGravity * std::max(rung + 0.06F - hands, 0.0F));
-        BodyID floor;
-        if (supported(nullptr, &floor)) {
-            // On her feet under the gap: her legs throw her (a jump, at most
-            // launch_dv), her hand off the low rung as she goes.
-            const float dv = need - velocity().GetY();
-            if (dv > limits_.launch_dv_mps) {
-                dyno_ = 0;
-                fail(Failure::OutOfRange);
-                return status_;
+        if (supported()) {
+            // A support ray can hit a rung just below her sole even when
+            // there is no upward-bearing foothold. Only a verified plant
+            // drives her legs; otherwise she still has her original grip
+            // and makes the pull with her arms.
+            if (plant_leg(rung + 0.06F, false)) {
+                dyno_ = 4;
+                phase_s_ = 0.0F;
+                return step_dyno(dt, budget);
             }
-            const Vec3 impulse(0.0F, dv * limits_.mass_kg, 0.0F);
-            bodies.AddImpulse(body_, impulse);
-            if (bodies.GetMotionType(floor) == EMotionType::Dynamic) {
-                bodies.AddImpulse(floor, -impulse, c - Vec3(0, limits_.center_above_feet(), 0));
-            }
-            ++view_.releases;
-            ++view_.launches;
-            hold_ = Hold{};
-            dyno_ = 3;
-            phase_s_ = 0.0F;
-            return status_;
         }
         if (v_rel >= need || float(c.GetY()) >= hold_y - 0.35F) {
             ++view_.releases;
@@ -1341,7 +1528,7 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
 }
 
 // --- jump to a hold ------------------------------------------------------------
-// Phases: 0 to the take-off, 1 set, 2 in the air; caught, she goes on up it
+// Phases: 0 to the take-off, 1 set, 2 leg drive, 3 in the air; caught, she goes on up it
 // as a ladder (RungUp, from her hang).
 Climber::Status Climber::step_jump(const float dt, Budget &budget) {
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -1365,29 +1552,16 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
         if (phase_s_ < 0.25F) {
             return status_;   // set
         }
-        BodyID floor;
-        if (!supported(nullptr, &floor)) {
-            fail(Failure::NotSupported);
-            return status_;
-        }
-        // The launch that brings her hands to the bar at the top of the jump.
-        const float rise = spec_.bottom_y + 0.08F - (float(c.GetY()) + limits_.hand_above_center);
-        const float vy = rise > 0.0F ? std::sqrt(2.0F * kGravity * rise) : 0.0F;
-        const float t = std::max(vy / kGravity, 0.2F);
-        const Vec3 across = flat(bar + spec_.out * 0.42F - c);
-        const Vec3 dv = Vec3(across.GetX() / t, vy, across.GetZ() / t) - velocity();
-        if (dv.Length() > limits_.launch_dv_mps) {
-            fail(Failure::OutOfRange);
-            return status_;
-        }
-        const Vec3 impulse = dv * limits_.mass_kg;
-        bodies.AddImpulse(body_, impulse);
-        if (bodies.GetMotionType(floor) == EMotionType::Dynamic) {
-            bodies.AddImpulse(floor, -impulse, c - Vec3(0, limits_.center_above_feet(), 0));
-        }
-        ++view_.launches;
+        if (!plant_leg(spec_.bottom_y + 0.08F)) return status_;
         phase_ = 2;
         phase_s_ = 0.0F;
+    }
+    if (phase_ == 2) {
+        if (drive_leg(dt, budget)) {
+            ++view_.launches;
+            phase_ = 3;
+            phase_s_ = 0.0F;
+        }
         return status_;
     }
     const Vec3 v = velocity();
@@ -2119,6 +2293,9 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 const Patch &fp = patches_[static_cast<std::size_t>(fi)];
                 const float reach = l.bottom - fp.top;
                 const bool jump = reach > limits.hand_reach_standing() - 0.1F;
+                const float speed_cap = leg_speed_cap(limits);
+                const bool jump_ok = !jump || (speed_cap > 0.0F && reach + 0.08F <= limits.hand_reach_standing() +
+                                               limits.leg_travel_m + speed_cap * speed_cap / (2.0F * kGravity));
                 for (const int hi : heads) {
                     const Patch &hp = patches_[static_cast<std::size_t>(hi)];
                     if (hp.region == fp.region || hp.top < fp.top + 1.0F) continue;
@@ -2167,13 +2344,14 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     e.kind = up.kind;
                     e.spec = up;
                     e.cost = (l.top - l.bottom) / limits.climb_mps + (jump ? 6.0F : 2.0F);
-                    e.usable = foot_ok && head_ok && over_ok && corridor_ok;
+                    e.usable = foot_ok && head_ok && over_ok && corridor_ok && jump_ok;
                     e.reason = facts;
                     char corridor[96];
                     std::snprintf(corridor, sizeof corridor, "; blocked: her body does not fit on the rungs at %.2f",
                                   double(corridor_block));
                     if (!e.usable) {
-                        e.reason += !foot_ok ? "; blocked: no room to stand at the foot"
+                        e.reason += !jump_ok ? "; out of range: capped leg drive cannot reach the first rung"
+                                    : !foot_ok ? "; blocked: no room to stand at the foot"
                                     : !head_ok ? "; blocked: no room to stand at the head"
                                     : !over_ok ? "; blocked: capsule does not pass the lip"
                                                : corridor;
