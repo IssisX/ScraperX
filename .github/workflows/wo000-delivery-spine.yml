@@ -4,7 +4,9 @@ on:
   push:
     # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
     # own copy of this workflow, so listing it here was inert routing.
-    branches: [ScraperX-Claude]
+    # <agent>/integrate-* branches get the proof run on push, for agents that
+    # cannot dispatch it; off ScraperX-Claude it still stops at the signing step.
+    branches: [ScraperX-Claude, '*/integrate-*']
   workflow_dispatch:
 
 permissions:

@@ -17,8 +17,9 @@ rerun instead of rerunning everything all the time"*.
 3. A test that passed on this exact code is not run again. Nothing runs both in a scratch copy and
    in the tree being shipped.
 4. The full native suite, every touch scenario and the Android build are CI's job. Do not also run
-   them locally. Before a push to `ScraperX-Claude`, dispatch `wo000-delivery-spine.yml` once on the
-   `claude/*` branch: that run is the proof (off `ScraperX-Claude` it stops with the expected
+   them locally. Before a push to `ScraperX-Claude`, run `wo000-delivery-spine.yml` once on the
+   integration branch: name it `<agent>/integrate-<job>` and push it (such branches run the proof on
+   push), or dispatch it. That run is the proof (off `ScraperX-Claude` it stops with the expected
    KeyError at "Preserve Android updates"). Run the full native suite locally only when a change
    reaches the whole world (the kit's body order, the world's solids, shared physics or tuning,
    the contact listener, save layout) and no CI run is coming.
