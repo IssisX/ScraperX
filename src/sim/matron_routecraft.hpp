@@ -1,4 +1,7 @@
 #pragma once
+
+#include "sim/matron_traversal.hpp"
+
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <array>
@@ -17,8 +20,8 @@ public:
     enum class Status { Idle, Moving, Holding, NoRoute, Released, BudgetExceeded };
     enum class PlanPhase { None, Search, Validate };
     static constexpr float kReach = 1.65F;
-    static constexpr float kForce = 6000.0F;
-    static constexpr float kPower = 9000.0F;
+    static constexpr float kForce = traversal::Limits{}.total_force_n;
+    static constexpr float kPower = traversal::Limits{}.power_w;
     static constexpr int kMaxNodes = 1536;
     static constexpr unsigned kPlanningExpansionsPerTick = 64;
     static constexpr unsigned kPlanningTransitionsPerTick = 128;
