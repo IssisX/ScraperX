@@ -269,7 +269,7 @@ func contact(data: Dictionary, falling: bool) -> void:
 		return
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
-	var airborne := falling or float(view._fall_speed) > 1.0
+	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
 		var hand: Vector3 = data["climb_hand"]
 		_reach("r", skel.global_transform.affine_inverse() * hand)

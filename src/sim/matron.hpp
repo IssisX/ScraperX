@@ -761,6 +761,14 @@ public:
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
         JPH::RVec3 climb_hand = JPH::RVec3::sZero();
+        // The move that owns the pose, even while a jump or drop has no hold.
+        traversal::MoveKind climb_move = traversal::MoveKind::Walk;
+        int climb_phase = 0;
+        bool climb_move_active = false;
+        bool climb_airborne = false;
+        bool climb_sliding = false;
+        bool climb_leg_driving = false;
+        bool climb_bar_traverse = false;
         float climb_force_n = 0.0F;
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;

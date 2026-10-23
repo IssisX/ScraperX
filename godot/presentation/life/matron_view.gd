@@ -668,6 +668,13 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var still_on_post := state == STATE_GUARDING and speed < 0.3
 	# Going up a ladder after the player.
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
+	var climb_move_active := bool(data.get("climb_move_active", false))
+	var climb_move := str(data.get("climb_move", "walk"))
+	var climb_phase := int(data.get("climb_phase", 0))
+	var climb_airborne := bool(data.get("climb_airborne", false))
+	var climb_sliding := bool(data.get("climb_sliding", false))
+	var climb_leg_driving := bool(data.get("climb_leg_driving", false))
+	var climb_bar_traverse := bool(data.get("climb_bar_traverse", false))
 	var pipe_sliding := bool(data.get("pipe_sliding", false))
 	var pipe_stunned := bool(data.get("pipe_stunned", false))
 	var pipe_listening := bool(data.get("pipe_listening", false))
@@ -804,6 +811,215 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = 0.15
 		head_roll = 0.75
 		jaw_open = 0.2
+	elif climb_move_active and climb_move == "gap_jump":
+		# A gap is run, a short planted-leg drive, then a real ballistic arc.
+		if climb_leg_driving:
+			pitch = 0.65
+			hip_y = 0.82
+			arms_fwd = 0.9
+			arms_bend = 0.35
+			arms_splay = 0.2
+			legs_fwd = 1.35
+			legs_back = 0.55
+			knees = 1.45
+			head_pitch = -0.4
+			jaw_open = 0.35
+		elif climb_airborne:
+			pitch = 0.0
+			hip_y = 1.0
+			arms_fwd = 2.85
+			arms_alt = 0.25 * sin(_clock * 9.0)
+			arms_bend = 0.25
+			arms_splay = 0.45
+			legs_fwd = -0.65
+			legs_back = 0.9
+			knees = 1.15
+			head_pitch = -0.45
+			jaw_open = 0.65
+		elif climb_phase <= 1:
+			pitch = 0.45
+			hip_y = 0.92
+			arms_fwd = 0.75
+			arms_bend = 0.25
+			arms_splay = 0.15
+			legs_fwd = 0.45
+			legs_back = -0.2
+			knees = 0.45
+			head_pitch = -0.2
+		else:
+			pitch = 0.25
+			hip_y = 0.96
+			arms_fwd = 1.2
+			arms_bend = 0.35
+			arms_splay = 0.25
+			legs_fwd = 0.45
+			legs_back = 0.15
+			knees = 0.8
+			head_pitch = -0.35
+			jaw_open = 0.25
+	elif climb_move_active and climb_move == "jump_catch":
+		# Before the catch she winds up, drives off the planted leg, then
+		# reaches for the bar. Once caught, the native move becomes rung_up.
+		if climb_phase < 2:
+			pitch = 0.35
+			hip_y = 0.92
+			arms_fwd = 1.4
+			arms_bend = 0.4
+			arms_splay = 0.2
+			arms_alt = 0.3
+			legs_fwd = 0.5
+			legs_back = 0.1
+			knees = 0.65
+			head_pitch = -0.8
+		elif climb_leg_driving:
+			pitch = 0.3
+			hip_y = 0.82
+			arms_fwd = 2.35
+			arms_alt = 0.35
+			arms_bend = 0.35
+			legs_fwd = 1.2
+			legs_back = 0.55
+			knees = 1.35
+			head_pitch = -1.0
+		else:
+			pitch = 0.0
+			hip_y = 1.0
+			arms_fwd = 2.95
+			arms_alt = 0.35 * sin(_clock * 7.0)
+			arms_bend = 0.2
+			arms_splay = 0.3
+			legs_fwd = 0.8
+			legs_back = 0.35
+			knees = 0.9
+			head_pitch = -1.1
+			jaw_open = 0.45
+	elif climb_move_active and climb_move in ["pole_up", "pole_down"]:
+		if climb_phase == 0 and not climbing:
+			pitch = 0.35
+			hip_y = 0.95
+			arms_fwd = 0.8
+			arms_bend = 0.35
+			legs_fwd = 0.4
+			legs_back = -0.2
+			knees = 0.35
+			head_pitch = -0.4
+		elif climb_move == "pole_up" and climb_phase >= 3 and not climb_sliding:
+			# At the pole head, she transfers her hands onto the lip and mantles.
+			pitch = 0.9
+			hip_y = 0.78
+			arms_fwd = 2.5
+			arms_bend = 1.0
+			arms_splay = 0.25
+			legs_fwd = 1.0
+			legs_back = 0.5
+			knees = 1.25
+			head_pitch = -0.65
+			jaw_open = 0.3
+		elif climb_sliding:
+			# A slipping squeeze: limbs clamp, but her weight is dropping.
+			pitch = -0.1
+			hip_y = 1.0
+			arms_fwd = 2.9
+			arms_bend = 0.35
+			arms_splay = 0.4
+			legs_fwd = 1.0
+			legs_back = 0.8
+			knees = 1.5
+			head_pitch = -0.8
+			jaw_open = 0.8
+		else:
+			# Arms wrap close around the post and her knees pinch it.
+			var ph := stride / 0.6 * PI
+			pitch = 0.2
+			hip_y = 1.0
+			arms_fwd = 2.15
+			arms_alt = 0.12 * sin(ph)
+			arms_bend = 1.3
+			arms_splay = 0.55
+			legs_fwd = 0.95
+			legs_back = 0.95
+			knees = 1.4
+			head_pitch = -0.7
+			jaw_open = 0.3
+	elif climb_move_active and climb_move == "hang_drop" and climb_phase >= 1:
+		if climb_phase == 1 and not climb_airborne:
+			# Still on the lip: shoulders stretched, feet hanging clear.
+			pitch = 0.05
+			hip_y = 1.0
+			arms_fwd = 2.9
+			arms_bend = 1.2
+			arms_splay = 0.15
+			legs_fwd = 0.2
+			legs_back = 0.2
+			knees = 0.35
+			head_pitch = -0.65
+			jaw_open = 0.4
+		else:
+			# The hands have let go; the body drops away from the lip.
+			pitch = 0.15
+			hip_y = 1.0
+			arms_fwd = 2.75
+			arms_bend = 0.35
+			arms_splay = 0.45
+			legs_fwd = 0.85
+			legs_back = -0.55
+			knees = 1.0
+			head_pitch = -0.35
+			jaw_open = 0.6
+	elif climb_move_active and climb_move == "step_down" and climb_phase >= 2 and climb_airborne:
+		pitch = 0.15
+		hip_y = 1.0
+		arms_fwd = 2.7
+		arms_bend = 0.35
+		arms_splay = 0.45
+		legs_fwd = 0.8
+		legs_back = -0.45
+		knees = 0.9
+		head_pitch = -0.35
+		jaw_open = 0.55
+	elif climb_move_active and (climb_move == "mantle" or (climb_move == "rung_up" and climb_phase >= 3)):
+		# The last pull over the lip is a whole-body effort, not another rung.
+		pitch = 0.9
+		hip_y = 0.78
+		arms_fwd = 2.5
+		arms_bend = 1.0
+		arms_splay = 0.25
+		legs_fwd = 1.0
+		legs_back = 0.5
+		knees = 1.25
+		head_pitch = -0.65
+		jaw_open = 0.3
+	elif climb_move_active and climb_move == "rung_down" and climb_phase >= 1:
+		# Descending rungs: the hips stay close while she feels for the next step.
+		var ph := stride / 0.6 * PI
+		pitch = 0.3
+		hip_y = 1.0
+		arms_fwd = 2.25
+		arms_alt = 0.2 * sin(ph)
+		arms_bend = 0.9
+		arms_splay = 0.25
+		legs_fwd = 0.55
+		legs_back = 0.55
+		knees = 1.1
+		head_pitch = 0.35
+		jaw_open = 0.2
+	elif climb_bar_traverse:
+		# Across a web of horizontal members: chest low, arms alternating
+		# overhead, feet trailing instead of stepping as on a ladder.
+		var ph := stride / 0.45 * PI
+		pitch = 0.45
+		hip_y = 0.92
+		arms_fwd = 2.8
+		arms_alt = 0.35 * sin(ph)
+		arms_bend = 1.05
+		bend_alt = -0.2 * sin(ph)
+		arms_splay = 0.35
+		legs_fwd = 0.45 + 0.25 * sin(_clock * 3.0)
+		legs_back = 0.35 - 0.25 * sin(_clock * 3.0 + 0.8)
+		knees = 0.9
+		head_pitch = -0.75
+		head_roll = 0.15 * sin(_clock * 2.0)
+		jaw_open = 0.35
 	elif climbing:
 		# Up the ladder after the player, hand over hand: the higher hand
 		# reaching for the next rung while the lower one hauls, the other

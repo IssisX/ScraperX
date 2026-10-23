@@ -3679,8 +3679,21 @@ void Matron::refresh_view() {
     view_.cable_slides = cable_slides_;
     // A planned move counts as climbing once a hand of hers holds (walking
     // to its start, her hands are free).
-    const bool journey_hands = journey_moving_ && climber_ != nullptr && climber_->view().holding;
-    view_.climbing = climb_ >= 0 || routecraft_.owns_motion() || journey_hands;
+    const bool journey_move = journey_moving_ && climber_ != nullptr && climber_->view().active;
+    const bool journey_hands = journey_move && climber_->view().holding;
+    const bool routecraft_hands = routecraft_.owns_motion();
+    view_.climbing = climb_ >= 0 || routecraft_hands || journey_hands;
+    view_.climb_move_active = journey_move || routecraft_hands || climb_ >= 0 || mantling_;
+    view_.climb_bar_traverse = routecraft_hands;
+    view_.climb_move = journey_move ? climber_->view().kind
+                       : routecraft_hands ? traversal::MoveKind::RungUp
+                       : mantling_ ? traversal::MoveKind::Mantle
+                       : climb_ >= 0 ? (climb_down_ ? traversal::MoveKind::RungDown : traversal::MoveKind::RungUp)
+                       : traversal::MoveKind::Walk;
+    view_.climb_phase = journey_move ? climber_->view().phase : (mantling_ ? 3 : 0);
+    view_.climb_airborne = journey_move && climber_->view().airborne;
+    view_.climb_sliding = journey_move && climber_->view().sliding;
+    view_.climb_leg_driving = journey_move && climber_->view().leg_driving;
     view_.climbs = climbs_done_;
     // The hand and force of whichever of her climbs has her.
     view_.climb_hand = routecraft_.owns_motion() ? routecraft_.report().hand

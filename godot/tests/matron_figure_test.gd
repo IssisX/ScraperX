@@ -29,6 +29,17 @@ const POSES := [
 	["cling", {"state": 3, "speed": 0.0, "stride": 0.0, "clinging": true}],
 	["unrig", {"state": 9, "speed": 0.0, "stride": 0.0}],
 	["climb", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true}],
+	["bar_traverse", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "rung_up", "climb_bar_traverse": true}],
+	["pole_up", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "pole_up", "climb_phase": 2}],
+	["pole_slip", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "pole_up", "climb_phase": 2, "climb_sliding": true}],
+	["hang", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "hang_drop", "climb_phase": 1}],
+	["hang_drop", {"state": 3, "speed": 0.0, "stride": 0.45, "climb_move_active": true, "climb_move": "hang_drop", "climb_phase": 3, "climb_airborne": true}],
+	["gap_runup", {"state": 3, "speed": 0.0, "stride": 0.45, "climb_move_active": true, "climb_move": "gap_jump", "climb_phase": 1}],
+	["gap_launch", {"state": 3, "speed": 0.0, "stride": 0.45, "climb_move_active": true, "climb_move": "gap_jump", "climb_phase": 2, "climb_leg_driving": true}],
+	["gap_airborne", {"state": 3, "speed": 0.0, "stride": 0.45, "climb_move_active": true, "climb_move": "gap_jump", "climb_phase": 3, "climb_airborne": true}],
+	["jump_catch", {"state": 3, "speed": 0.0, "stride": 0.45, "climb_move_active": true, "climb_move": "jump_catch", "climb_phase": 3, "climb_airborne": true}],
+	["mantle", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "rung_up", "climb_phase": 3}],
+	["rung_down", {"state": 3, "speed": 0.0, "stride": 0.45, "climbing": true, "climb_move_active": true, "climb_move": "rung_down", "climb_phase": 2}],
 	["pipe_listen", {"state": 3, "speed": 0.0, "stride": 0.0, "pipe_listening": true}],
 	["stagger", {"state": 10, "speed": 0.0, "stride": 0.0, "fall": Vector2(0.0, -1.0)}],
 	["carry", {"state": 5, "speed": 1.0, "stride": 0.3, "carrying": 1}],
@@ -149,9 +160,14 @@ func _run() -> void:
 		DirAccess.make_dir_recursive_absolute(_out)
 	# Every pose: the body follows the pivots; standing, her soles on the floor.
 	_cam.global_position = Vector3(0.0, 1.5, 3.2)
+	var pose_fingerprints := {}
 	for entry in POSES:
 		var data := _data(entry[1], 0.0)
 		await _settle(data, 24)
+		pose_fingerprints[String(entry[0])] = Vector3(
+			(_view._p["torso"] as Node3D).rotation.x,
+			(_view._p["sh_l"] as Node3D).rotation.x,
+			(_view._p["hp_l"] as Node3D).rotation.x)
 		if entry[0] in STANDING:
 			var foot := INF
 			for s in ["l", "r"]:
@@ -161,6 +177,20 @@ func _run() -> void:
 		_view._figure.rotation.y = -0.45
 		await _settle(data, 2)
 		await _shot("pose_" + String(entry[0]), Vector3(0.0, 1.1, 4.4), Vector3(0.0, 0.9, 0.0), 32.0)
+	var ladder_pose: Vector3 = pose_fingerprints["climb"]
+	for name in ["bar_traverse", "pole_up", "hang_drop", "gap_launch", "gap_airborne", "jump_catch", "mantle", "rung_down"]:
+		var pose: Vector3 = pose_fingerprints[name]
+		var delta_angle := pose.distance_to(ladder_pose)
+		_check(delta_angle > 0.2, "pose_distinct_" + name, "joint-angle delta %.2f rad" % delta_angle)
+	var pole_up_pose: Vector3 = pose_fingerprints["pole_up"]
+	var pole_slip_pose: Vector3 = pose_fingerprints["pole_slip"]
+	_check(pole_up_pose.distance_to(pole_slip_pose) > 0.2, "pose_distinct_pole_slip", "sliding grip differs from a secure pole grip")
+	var hang_pose: Vector3 = pose_fingerprints["hang"]
+	var hang_drop_pose: Vector3 = pose_fingerprints["hang_drop"]
+	_check(hang_pose.distance_to(hang_drop_pose) > 0.2, "pose_distinct_hang_drop", "release differs from hanging")
+	var gap_launch_pose: Vector3 = pose_fingerprints["gap_launch"]
+	var gap_airborne_pose: Vector3 = pose_fingerprints["gap_airborne"]
+	_check(gap_launch_pose.distance_to(gap_airborne_pose) > 0.2, "pose_distinct_gap_flight", "leg drive differs from ballistic flight")
 	# Her eyes: stopped on the hunt, her head half turned to whoever she has
 	# found; a viewer anywhere her sockets can turn to is met by both eyes.
 	var data := _data({"state": 3, "stage": 1, "sees_player": true}, 0.0)

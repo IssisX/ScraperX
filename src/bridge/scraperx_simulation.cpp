@@ -1668,6 +1668,13 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["on_line"] = state.on_line;
     out["cable_slides"] = static_cast<std::int64_t>(state.cable_slides);
     out["climbing"] = state.climbing;
+    out["climb_move"] = godot::String(sim::traversal::move_name(state.climb_move));
+    out["climb_move_active"] = state.climb_move_active;
+    out["climb_phase"] = static_cast<std::int64_t>(state.climb_phase);
+    out["climb_airborne"] = state.climb_airborne;
+    out["climb_sliding"] = state.climb_sliding;
+    out["climb_leg_driving"] = state.climb_leg_driving;
+    out["climb_bar_traverse"] = state.climb_bar_traverse;
     out["climbs"] = static_cast<std::int64_t>(state.climbs);
     out["clinging"] = state.clinging;
     out["floor_y"] = state.floor_y;
