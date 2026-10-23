@@ -370,7 +370,19 @@ bool Matron::start_journey(const RVec3 at) {
     map.scan(physics_,
              AABox(Vec3(lo_x, std::min(feet, lead_floor_) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, lead_floor_) + 4.0F, hi_z)),
              ignore);
-    const int from = map.region_at(Vec3(float(at.GetX()), feet, float(at.GetZ())));
+    if (climber_ == nullptr) {
+        climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
+    }
+    int from = map.region_at(Vec3(float(at.GetX()), feet, float(at.GetZ())));
+    if (from < 0) {
+        // A fall can leave her balanced with her middle outside a narrow
+        // floor's outline. Her soles still bear on real steel: the new
+        // journey starts in that contact's region, from her actual pose.
+        RVec3 contact;
+        if (climber_->supported(nullptr, nullptr, &contact)) {
+            from = map.region_at(Vec3(contact));
+        }
+    }
     const int to = map.region_near_top(lead_floor_, 0.3F);
     if (from < 0 || to < 0 || from == to) {
         return false;
@@ -390,9 +402,6 @@ bool Matron::start_journey(const RVec3 at) {
     journey_.clear();
     for (const int e : plan) {
         journey_.push_back(map.edges()[static_cast<std::size_t>(e)]);
-    }
-    if (climber_ == nullptr) {
-        climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
     }
     journey_at_ = 0;
     journey_legs_.clear();
