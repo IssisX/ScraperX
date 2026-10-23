@@ -635,6 +635,18 @@ void run_matron_routecraft() {
         require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: disturbed load start");
         f.finish_plan();
         require(f.matron->climb_report().status==MatronRoutecraft::Status::Moving,"routecraft: disturbed load plan ready");
+        // Planning now publishes sooner, so do not let the power-law probe
+        // depend on how many physics ticks the search happened to consume.
+        // Apply the same disturbance only after the real controller is
+        // carrying the body on a reachable hand during loaded ascent.
+        const auto loaded_ascent=[&]() {
+            const auto &r=f.matron->climb_report();
+            return r.phase==MatronRoutecraft::PlanPhase::None && r.force>0 &&
+                f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()).GetY()>=0 &&
+                Vec3(r.hand-f.at()).Length()<MatronRoutecraft::kReach-0.20F;
+        };
+        for(int i=0;i<180 && !loaded_ascent();++i) f.tick();
+        require(loaded_ascent(),"routecraft: power-cap impulse starts during a physical loaded ascent");
         f.measured_force=0; f.measured_power=0;
         // The 3.0 m/s downward disturbance drives demand beyond 8 kN and 22 kW;
         // the shared power cap must bind after the force cap, without a velocity write.
