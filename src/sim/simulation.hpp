@@ -8,6 +8,7 @@
 namespace scraperx::sim {
 namespace traversal {
 class AffordanceMap;
+enum class MoveKind : std::uint8_t;
 }
 
 struct Vector3 final {
@@ -216,6 +217,13 @@ struct MatronSnapshot final {
     bool clinging = false;
     double floor_y = 154.0;
     Vector3 climb_hand{};
+    traversal::MoveKind climb_move{};
+    int climb_phase = 0;
+    bool climb_move_active = false;
+    bool climb_airborne = false;
+    bool climb_sliding = false;
+    bool climb_leg_driving = false;
+    bool climb_bar_traverse = false;
     double climb_force_n = 0.0;
     std::uint32_t climb_grips = 0, climb_releases = 0;
     bool mantling = false;
