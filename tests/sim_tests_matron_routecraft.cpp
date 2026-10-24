@@ -7,6 +7,11 @@
 #include <Jolt/Physics/Collision/Shape/MutableCompoundShape.h>
 
 namespace scraperx::sim {
+static_assert(MatronRoutecraft::kForce == traversal::Limits{}.total_force_n,
+    "routecraft force cap follows the shared traversal limits");
+static_assert(MatronRoutecraft::kPower == traversal::Limits{}.power_w,
+    "routecraft power cap follows the shared traversal limits");
+
 struct MatronRoutecraftTestAccess {
     struct Waypoint {
         JPH::RVec3 center;
@@ -630,13 +635,27 @@ void run_matron_routecraft() {
         require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: disturbed load start");
         f.finish_plan();
         require(f.matron->climb_report().status==MatronRoutecraft::Status::Moving,"routecraft: disturbed load plan ready");
+        // Planning now publishes sooner, so do not let the power-law probe
+        // depend on how many physics ticks the search happened to consume.
+        // Apply the same disturbance only after the real controller is
+        // carrying the body on a reachable hand during loaded ascent.
+        const auto loaded_ascent=[&]() {
+            const auto &r=f.matron->climb_report();
+            return r.phase==MatronRoutecraft::PlanPhase::None && r.force>0 &&
+                f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()).GetY()>=0 &&
+                Vec3(r.hand-f.at()).Length()<MatronRoutecraft::kReach-0.20F;
+        };
+        for(int i=0;i<180 && !loaded_ascent();++i) f.tick();
+        require(loaded_ascent(),"routecraft: power-cap impulse starts during a physical loaded ascent");
         f.measured_force=0; f.measured_power=0;
-        // Planning advances real physics; establish the same downward momentum
-        // as the original test through an impulse, never a velocity write.
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-440,0)-
+        // The 3.0 m/s downward disturbance drives demand beyond 8 kN and 22 kW;
+        // the shared power cap must bind after the force cap, without a velocity write.
+        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-660,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
-        require(f.measured_force>4400 && f.measured_power>8900,"routecraft: disturbed motion reaches power limit with finite force");
+        require(f.measured_force>MatronRoutecraft::kForce*0.9F &&
+            f.measured_power>MatronRoutecraft::kPower-1000.0F,
+            "routecraft: disturbed motion reaches shared power limit with finite force");
         std::cout<<"routecraft measured saturation N="<<f.measured_force<<" W="<<f.measured_power<<'\n';
         Matron::Saved saved; saved.state=Matron::State::Dormant;
         f.matron->restore(saved);
@@ -664,16 +683,20 @@ void run_matron_routecraft() {
         const RVec3 saturation_start=f.at();
         const auto saturation_report=f.matron->climb_report();
         f.measured_force=0; f.measured_power=0;
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-286,0)-
+        // -2.6 m/s demands just over 8 kN while 8 kN × 2.6 m/s stays below 22 kW.
+        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-572,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
-        if(!(f.measured_force>5999 && f.measured_power<9000))
+        if(!(f.measured_force>MatronRoutecraft::kForce-1.0F &&
+             f.measured_power<MatronRoutecraft::kPower-1000.0F))
             std::cerr<<"routecraft force saturation start="<<saturation_start<<" hand="<<saturation_report.hand
                 <<" initial_force="<<saturation_report.force<<" now="<<f.at()
                 <<" measured_force="<<f.measured_force<<" measured_power="<<f.measured_power
                 <<" status="<<int(f.matron->climb_report().status)<<" phase="<<int(f.matron->climb_report().phase)
                 <<" plans="<<f.matron->climb_report().plans<<'\n';
-        require(f.measured_force>5999 && f.measured_power<9000, "routecraft: actual 6000 N saturation independent of power cap");
+        require(f.measured_force>MatronRoutecraft::kForce-1.0F &&
+            f.measured_power<MatronRoutecraft::kPower-1000.0F,
+            "routecraft: actual force saturation independent of power cap");
         std::cout << "routecraft measured force saturation N=" << f.measured_force << " W=" << f.measured_power << '\n';
     }
     {
@@ -840,6 +863,8 @@ void run_matron_routecraft() {
         std::cout << "panel measured_force=" << f.measured_force << " sampled_power=" << f.measured_power
             << " controlled_overlap=" << f.controlled_penetration << '\n';
         f.timings("production_panel");
+        require(f.max_published_after_ticks <= 211,
+            "routecraft: production panel planning wait is at most half the 4.70 s baseline");
     }
     {
         // Same generic search, translated dense members and unrelated nearby

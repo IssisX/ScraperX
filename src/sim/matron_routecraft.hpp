@@ -1,4 +1,7 @@
 #pragma once
+
+#include "sim/matron_traversal.hpp"
+
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <array>
@@ -17,13 +20,17 @@ public:
     enum class Status { Idle, Moving, Holding, NoRoute, Released, BudgetExceeded };
     enum class PlanPhase { None, Search, Validate };
     static constexpr float kReach = 1.65F;
-    static constexpr float kForce = 6000.0F;
-    static constexpr float kPower = 9000.0F;
+    static constexpr float kForce = traversal::Limits{}.total_force_n;
+    static constexpr float kPower = traversal::Limits{}.power_w;
     static constexpr int kMaxNodes = 1536;
-    static constexpr unsigned kPlanningExpansionsPerTick = 64;
-    static constexpr unsigned kPlanningTransitionsPerTick = 128;
-    static constexpr unsigned kPlanningQueriesPerTick = 64;
-    static constexpr unsigned kPlanningNeighborChecksPerTick = 8192;
+    // The production panel previously waited 4.70 s at 64 queries/tick;
+    // measured host planning slices were 0.142 ms. Keep the work bounded but
+    // raise the per-tick budget to cut the in-game pause without changing
+    // search order, gravity, or physical execution.
+    static constexpr unsigned kPlanningExpansionsPerTick = 160;
+    static constexpr unsigned kPlanningTransitionsPerTick = 320;
+    static constexpr unsigned kPlanningQueriesPerTick = 160;
+    static constexpr unsigned kPlanningNeighborChecksPerTick = 16384;
     struct Report {
         Status status = Status::Idle;
         PlanPhase phase = PlanPhase::None;
