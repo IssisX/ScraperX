@@ -879,7 +879,9 @@ int Matron::line_to_take(const float ax, const float az) const {
     return best;
 }
 
-// On the ramp up to the line's stand: past its foot, on its strip, below the stand.
+// On the ramp up to the line's stand, and on the stand itself: past its
+// foot, on its strip. The top of the ramp counts. Stopping 0.3 m under
+// the stand handed her to a found climb, which walked her back down it.
 bool Matron::on_line_ramp(const RVec3 at) const {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
@@ -900,7 +902,7 @@ bool Matron::on_line_ramp(const RVec3 at) const {
     const float across = std::abs((ax - fx) * rz - (az - fz) * rx) / rlen;
     const float feet = float(at.GetY()) - kStandCentre;
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    return feet >= floor_y + 0.15F && feet < float(line.stand.GetY()) - 0.3F && along > 0.0F && along < rlen &&
+    return feet >= floor_y + 0.15F && feet < float(line.stand.GetY()) + 0.25F && along > 0.0F && along <= rlen &&
            across < kRampStripM;
 }
 
@@ -978,23 +980,20 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
         walk_toward(dt, wx, wz, kHuntMps, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
         return true;
     }
-    // On the stand under the cable, looking down the line. Frail, she cannot
-    // follow. In the Turn she jumps for the cable and goes; but not down a
-    // line nobody has ridden (its trolley still parked at the top): its
-    // buffer's block at rest far short of the end, she would stop on it and
-    // let go over the shaft.
-    // A stand she cannot ride from is not a way: outside her Turn she
-    // cannot clip on, and a parked line she cannot ride even in it.
-    // Waiting here held her at the stand until the chase clock ran out
-    // (a parked 374 stand, 150 s, the lead a floor below), while her
-    // other ways -- a climb, the scan's walk -- went untried. Saying
-    // no here drops her to the hunt's walk instead, and she comes back
-    // to the stand when a Turn or an unparked line makes it a way.
-    if (turn_ == Turn::None || line.parked) {
+    // On the stand under the cable, looking down the line. A parked line
+    // is not a way: its trolley is still at the top, and waiting there
+    // held her until the chase clock ran out (a parked 374 stand, 150 s,
+    // the lead a floor below) while her other ways went untried. Frail,
+    // a line that has been ridden, she stands and looks down it. She does
+    // not jump. In the Turn she does, and goes.
+    if (line.parked) {
         return false;
     }
     walk_toward(dt, ax, az, 0.0F);
     yaw_ = turn_toward(yaw_, std::atan2(line.direction.GetX(), line.direction.GetZ()), kTurnRate, dt);
+    if (turn_ == Turn::None) {
+        return true;
+    }
     const RVec3 cable = line.top + line.direction * Zipline::kParkM;
     const RVec3 hands = at + Vec3(0.0F, kHandsAboveCentre, 0.0F);
     if (Vec3(cable - hands).Length() < kCableReachM) {
