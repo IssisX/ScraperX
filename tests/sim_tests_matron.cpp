@@ -1319,7 +1319,9 @@ void run_matron() {
                   << " peered_short_m=" << closest << " fooled_twice_stayed_m=" << farthest << "\n";
     }
     run_matron_crash();
-    // ---- A: in the Turn she vaults what blocks her way; frail, she shoves it -------
+    // ---- A: in the Turn she vaults what blocks her way. This exam is that
+    //      vault, and the crate staying put. The throw, when the vault does
+    //      not happen, is the other case and is not what these requires measure. ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)

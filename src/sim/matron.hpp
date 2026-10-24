@@ -45,7 +45,10 @@
 // all, she only turns to it. Sight, or a noise close by, always does. What
 // she learns lasts the run: a restore (a death, a load) forgets it. In the
 // Turn she vaults what blocks her way (kVaultUpMps). When that vault does
-// not happen, she throws a loose crate off her line.
+// not happen, a loose crate that has stopped her is driven off her line
+// onto the side that still has floor, on the same force and power as the
+// rest of her. A band with a drop on both sides, she does not push the
+// crate on down it. The shove of the player, further down, is not this.
 //
 // Off her deck (decision 9's A: frail, she rides the lifts like anyone). A
 // floor that moves under her (a cage she stepped into as it left) she clings
@@ -267,6 +270,10 @@ public:
     // a row goes a rung further: 1 a clamber or a vault, 2 a sidestep along
     // the face in her way (kSidestepM, kSidestepS), 3 a reroute round the
     // node she could not reach (blocked kRerouteBlockS), then the rungs again.
+    // A loose crate is not one of those rungs. It is the case in the header:
+    // the vault did not take it, she has actually stopped, one side of her
+    // line still has floor, and she drives it onto that floor. Both sides a
+    // drop, she leaves it, and these rungs are how she gets round it.
     static constexpr float kStepUpM = 0.38F;
     static constexpr float kClamberMaxM = 1.9F;
     static constexpr float kClamberForwardMps = 1.4F;
@@ -474,7 +481,7 @@ public:
     // kShoveUpMps up, once in kShoveCooldownSeconds. A pest's shove is away
     // from her; dangerous, she aims it at the shaft's rim when the player is
     // within kShoveEdgeReachM of it (the owner: she tries to nudge him off a
-    // band).
+    // band). A crate is not this shove. That one is above, with getting unstuck.
     static constexpr float kShoveMps = 5.5F;
     static constexpr float kShoveUpMps = 2.0F;
     static constexpr float kShoveCooldownSeconds = 1.5F;

@@ -1765,11 +1765,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             }
         }
         clamber_now_ = false;
-        // The vault did not take her over it. A loose crate in front of her
-        // is thrown off her line, on the same force and power as the rest of
-        // her. It goes to the side that still has floor.
-        // Only once her feet have actually been stopped. A crate she is
-        // walking past at a real pace is left where it is.
+        // The crate case in matron.hpp: the vault did not take it, she has
+        // stopped, and one side of the line still has floor. Same force and
+        // power as the rest of her. Both sides a drop, she leaves it.
         if (!cleared && !climbed && length > 0.15F && speed > 0.3F && speed_now < 1.2F) {
             const Vec3 heading(dx / length, 0.0F, dz / length);
             const Vec3 side(-heading.GetZ(), 0.0F, heading.GetX());
@@ -1794,8 +1792,6 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const BodyID id = block.mBodyID;
                 const bool left_void = edge_at(side, 5.0F);
                 const bool right_void = edge_at(-side, 5.0F);
-                // Both sides a drop: the band is a bridge. Pushing the crate
-                // on down it leaves it in her way. She does not.
                 if (!left_void || !right_void) {
                     Vec3 dir = heading;
                     if (!left_void && right_void) {
