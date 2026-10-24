@@ -1368,10 +1368,18 @@ void run_matron() {
         // In her wind-up the player steps in behind the crate, on her line.
         const auto m = s.matron_state().position;
         const auto c = stock(s, LooseStock::kDeckCrateSouth);
+        // TEMPORARY diagnostic (removed before commit).
+        std::cout << "    DBG vault-test: her (" << m.x << ", " << m.z << ") crate (" << c.x << ", " << c.z << ")\n";
         const double run = std::hypot(c.x - m.x, c.z - m.z);
         const double ux = (c.x - m.x) / run;
         const double uz = (c.z - m.z) / run;
         (void)go(s, c.x + ux * 1.6, c.z + uz * 1.6, false, 3.0, 0.3);
+        // TEMPORARY diagnostic (removed before commit).
+        {
+            const auto pp = s.snapshot().player_position;
+            std::cout << "    DBG vault-test: hide target (" << c.x + ux * 1.6 << ", " << c.z + uz * 1.6
+                      << ") player now (" << pp.x << ", " << pp.z << ")\n";
+        }
         (void)s.set_move_input(0.0, 0.0);
         bool vaulted = false;
         for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !vaulted; ++i) {

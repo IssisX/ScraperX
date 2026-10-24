@@ -615,7 +615,7 @@ bool device_onto(Simulation &s, const std::uint64_t device, const double kg, con
     // Still for 2 s: the hook block swings on 50 m of rope, 15 s a swing, and
     // stands still for a moment at either end of it.
     const int hold = 2 * static_cast<int>(Simulation::kTickRateHz);
-    const auto settle = [&s, body, hold](const double tolerance, const double tx, const double tz) {
+    const auto settle = [&s, body](const double tolerance, const double tx, const double tz) {
         int still = 0;
         for (int tick = 0; tick < 90 * static_cast<int>(Simulation::kTickRateHz) && still < hold; ++tick) {
             const auto m = s.kit_body_position(body);

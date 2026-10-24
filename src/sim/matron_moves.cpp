@@ -163,7 +163,7 @@ bool Matron::node_blocked(const float x, const float z) const noexcept {
 // still ahead of her. Each kStallWindowS: progress under kStallMoveM is a
 // stall, and the rungs go up; progress is a reset.
 void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, const float heading_z,
-                         const bool wants, const float to_x, const float to_z) {
+                         const bool wants, const float to_x, const float to_z, const bool hold) {
     for (Blocked &b : blocked_) {
         b.s -= dt;
     }
@@ -174,12 +174,29 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
     }
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
-    if (!wants) {
+    // Held across a flight, and across the tick a remedy fires on: a
+    // remedy the watchdog itself set (a vault, a clamber) leaves the
+    // floor while it flies, and firing it sets climbed, which makes
+    // wants false; clearing the stall episode for either would put the
+    // next stall back on the first rung forever, so the watchdog could
+    // never reach its sidestep or its reroute. The episode freezes
+    // while she is airborne or remedying, and resumes when she lands;
+    // progress still clears it below.
+    if (hold) {
+        return;
+    }
+    // Not wanting, and not mid-sidestep: she arrived at a waypoint,
+    // or she is idle for a tick, and the stall timing ends — but the
+    // rung does not. Arriving at a waypoint is not leaving a wedge:
+    // waypoints are a metre or two apart inside the same stuck spot,
+    // so clearing the rung on every arrival keeps the reroute rung
+    // forever out of reach (two stalls per sidestep, reroutes zero).
+    // Only walking clear of the wedge (below, 4 m) resets the rung.
+    if (!wants && sidestep_s_ <= 0.0F) {
         stall_window_s_ = 0.0F;
         stall_x_ = ax;
         stall_z_ = az;
         stall_s_ = 0.0F;
-        stall_rung_ = 0;
         return;
     }
     stall_window_s_ += dt;
@@ -191,11 +208,27 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
     stall_x_ = ax;
     stall_z_ = az;
     if (moved >= kStallMoveM) {
-        stall_rung_ = 0;
+        // She moved, but only the rung's episode ends when she has
+        // walked clear of where it started: a sidestep's wiggle inside
+        // the same stuck spot is not leaving it, and starting the rung
+        // over for it would keep the reroute forever out of reach.
+        // Clear means clear of the whole wedge, not just past a
+        // sidestep: a sidestep is 1.8 m, and a sidestep plus a wiggle
+        // back toward the way is still inside the wedge, so a 2 m
+        // threshold resets the rung after every sidestep and the
+        // reroute rung is never reached. 4 m is past any single
+        // sidestep plus wiggle, and a real escape walks that far.
+        if (xz(ax, az, stall_episode_x_, stall_episode_z_) > 4.0F) {
+            stall_rung_ = 0;
+        }
         stall_s_ = 0.0F;
         return;
     }
     stall_s_ += kStallWindowS;
+    if (stall_s_ <= kStallWindowS) {
+        stall_episode_x_ = ax;
+        stall_episode_z_ = az;
+    }
     longest_stall_s_ = std::max(longest_stall_s_, stall_s_);
     ++stalls_;
     stall_rung_ = stall_rung_ % 3 + 1;
@@ -283,6 +316,16 @@ bool Matron::hush_step(const float dt, const bool saw, const float distance, con
     }
     quiet_s_ += dt;
     if (saw || distance < 4.0F) {
+        if (hush_s_ > 0.0F) {
+            hush_s_ = 0.0F;
+            ++creaks_;
+        }
+        return false;
+    }
+    // Standing still while sinking is not listening: she is sliding off
+    // a slope edge, and the hush would hold her there until she falls.
+    // End any hush, and do not start one, so she walks to solid ground.
+    if (physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() < -0.1F) {
         if (hush_s_ > 0.0F) {
             hush_s_ = 0.0F;
             ++creaks_;

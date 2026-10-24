@@ -208,7 +208,7 @@ void run_arm_break() {
     }
     // One good arm holds a hang at half two hands' grip: the deck's line
     // braked to 7.5 m/s into its end holds two hands and tears one.
-    const auto ride_to_the_stop = [hz](Simulation &s, const double brake_to) {
+    const auto ride_to_the_stop = [](Simulation &s, const double brake_to) {
         (void)s.set_facing(0.0, -1.0);
         const bool jumped = s.request_jump();
         const bool caught = advance_until(s, [](const Snapshot &n) { return n.zipline_riding; }, 1.2);

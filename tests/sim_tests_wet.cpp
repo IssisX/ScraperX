@@ -611,9 +611,8 @@ constexpr double kWetETopY = 298.25;
 // The skirt's edge reaches the vent collar's lower edge (296.85 m) at this
 // much of the cab's travel (the edge starts at 251.5 m).
 constexpr double kWetECollarTravel = 296.85 - 251.5;
-// The deck's top, as found: where it hangs, and the height it passes once it
-// has risen with the cab to the doorway's foot.
-constexpr double kWetEDeckHungY = 253.45;
+// The deck's top, as found: the height it passes once it has risen with the
+// cab to the doorway's foot.
 constexpr double kWetEDoorFootY = 256.0;
 // The rider's capsule (physics_world_tuning.hpp): radius and half height.
 constexpr double kRiderRadius = 0.35;

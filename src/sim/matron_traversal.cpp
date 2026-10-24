@@ -763,8 +763,14 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
             return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), hit, Layers(physics_, ignore_).bp(), Layers(physics_, ignore_).ol(), filter) &&
                    float(from.GetY()) - hit.mFraction * depth > feet_y - below;
         };
-        if (!floor_ahead(want_v) || (v.Length() > 0.3F && !floor_ahead(v))) {
-            want_dir_v = floor_ahead(want_v) ? want_v * 0.3F : Vec3::sZero();
+        // Do not look past a close goal: floor_ahead defaults to a
+        // radius-plus stride ahead, which overshoots a leg a quarter
+        // metre away on a small step and reports no floor, planting
+        // her feet even though the leg itself is on floor. Check
+        // floor at the goal when the goal is closer than a stride.
+        const float ahead_goal = std::min(limits_.radius + 0.1F, d);
+        if (!floor_ahead(want_v, ahead_goal) || (v.Length() > 0.3F && !floor_ahead(v))) {
+            want_dir_v = floor_ahead(want_v, ahead_goal) ? want_v * 0.3F : Vec3::sZero();
             if (want_dir_v.IsNearZero() && !want_v.IsNearZero()) {
                 // No floor straight on (a corner cut over a gap): along the
                 // edge instead, the nearest turn with floor that still gains.

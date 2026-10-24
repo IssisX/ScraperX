@@ -1275,7 +1275,7 @@ private:
     void drop_crumb(float px, float pz, float floor_y);
     bool crumb_ahead(float ax, float az, float &wx, float &wz);
     void watch_stall(float dt, JPH::RVec3 at, float heading_x, float heading_z, bool wants, float to_x = 0.0F,
-                     float to_z = 0.0F);
+                     float to_z = 0.0F, bool hold = false);
     bool hush_step(float dt, bool saw, float distance, float loudness);
     [[nodiscard]] float roll() noexcept;
     [[nodiscard]] bool node_blocked(float x, float z) const noexcept;
@@ -1442,6 +1442,16 @@ private:
     std::unique_ptr<traversal::AffordanceMap> own_scan_;   // her own read of a world no one read for her
     // Her whole-tower travel (travel_to, matron_journey.cpp).
     const traversal::AffordanceMap *scanned_ = nullptr;
+    // The chase-time scan plan, cached by its two ends (matron.cpp): a plan
+    // over her scanned map from where she stands to her lead's floor.
+    const traversal::AffordanceMap *chase_plan_map_ = nullptr;
+    int chase_plan_from_ = -1;
+    int chase_plan_to_ = -1;
+    bool chase_plan_ok_ = false;
+    // Held once a chase has had a way (matron.cpp): arriving on her lead's
+    // floor ends the ways, not the chase, so the extended window survives
+    // the arrival tick instead of dumping her into a search at the spot.
+    bool chase_way_held_ = false;
     Journey travel_;
     std::vector<int> travel_edges_;
     std::vector<int> travel_avoid_;   // edges this journey found it could not start
@@ -1465,9 +1475,11 @@ private:
     std::vector<JPH::Vec3> journey_legs_;
     std::size_t journey_at_ = 0;
     std::size_t journey_leg_ = 0;
+    // Where the current leg walk started (for the segment below).
     bool journey_active_ = false;
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
+    bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure
     float routecraft_release_floor_ = 0;
     JPH::PhysicsSystem &physics_;
@@ -1692,6 +1704,11 @@ private:
     float stall_x_ = 0.0F, stall_z_ = 0.0F;
     int stall_rung_ = 0;
     float stall_s_ = 0.0F;
+    // How long walk_toward has seen no support under her (below).
+    // Where the current stall episode started: the rung only starts over
+    // when she has walked clear of it (below), not for every sidestep
+    // wiggle inside it, or the watchdog would never reach its reroute.
+    float stall_episode_x_ = 0.0F, stall_episode_z_ = 0.0F;
     float longest_stall_s_ = 0.0F;
     std::uint32_t stalls_ = 0;
     std::uint32_t step_ups_ = 0;
@@ -1699,6 +1716,19 @@ private:
     std::uint32_t sidesteps_ = 0;
     std::uint32_t reroutes_ = 0;
     bool clamber_now_ = false;   // the watchdog's first rung: clamber or vault whatever her feet feel
+    // A clamber that lands her back where she started is no way: pressed
+    // against a face, contact kills her forward speed as she rises and
+    // she falls back to the same spot, then clambers again. Three of
+    // them from one spot in short order, and she leaves it alone a
+    // while, so the watchdog's sidestep and reroute can walk her round
+    // it instead of bouncing her on it forever. Temporary, like a
+    // failed climb's block, so a way that failed for a passing reason
+    // comes back.
+    float clamber_hist_x_[3] = {0.0F, 0.0F, 0.0F};
+    float clamber_hist_z_[3] = {0.0F, 0.0F, 0.0F};
+    float clamber_hist_t_[3] = {0.0F, 0.0F, 0.0F};
+    int clamber_hist_n_ = 0;
+    float clamber_refused_x_ = 0.0F, clamber_refused_z_ = 0.0F, clamber_refused_until_ = 0.0F;
     float sidestep_s_ = 0.0F;
     float sidestep_x_ = 0.0F, sidestep_z_ = 0.0F;
     struct Blocked {
