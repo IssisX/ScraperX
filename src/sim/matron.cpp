@@ -814,13 +814,40 @@ void Matron::settle_level() {
         return;
     }
     const RVec3 here = bodies.GetPosition(body_);
-    RayCastResult hit;
-    const IgnoreSingleBodyFilter self(body_);
+    // Her middle can sit past a lip while her soles still bear. The floor is
+    // the highest walkable hit within a step of her feet, not only the ray
+    // through her centre (that one misses a board she is standing on).
     const float reach = kStandCentre + 0.3F;
-    const bool supported =
-        physics_.GetNarrowPhaseQuery().CastRay(RRayCast(here, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self) &&
-        hit.mFraction > 1.0e-4F;
-    const float support_y = supported ? float(here.GetY()) - reach * hit.mFraction : feet_y_;
+    const float kinematic = float(here.GetY()) - kStandCentre;
+    const IgnoreSingleBodyFilter self(body_);
+    float support_y = feet_y_;
+    bool supported = false;
+    const Vec3 soles[] = {Vec3::sZero(), Vec3(kFootSpanM, 0.0F, 0.0F), Vec3(-kFootSpanM, 0.0F, 0.0F),
+                          Vec3(0.0F, 0.0F, kFootSpanM), Vec3(0.0F, 0.0F, -kFootSpanM)};
+    for (const Vec3 &sole : soles) {
+        RayCastResult one;
+        const RVec3 from = here + sole;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), one, {}, {}, self) ||
+            one.mFraction <= 1.0e-4F) {
+            continue;
+        }
+        const RVec3 point = from + Vec3(0.0F, -reach * one.mFraction, 0.0F);
+        const float y = float(point.GetY());
+        if (std::abs(y - kinematic) > 0.40F) {
+            continue;
+        }
+        {
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), one.mBodyID);
+            if (!lock.Succeeded() ||
+                lock.GetBody().GetWorldSpaceSurfaceNormal(one.mSubShapeID2, point).GetY() < 0.7F) {
+                continue;
+            }
+        }
+        if (!supported || y > support_y) {
+            supported = true;
+            support_y = y;
+        }
+    }
     if (supported) {
         feet_y_ = support_y;
     }
@@ -1427,13 +1454,36 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     target_x_ = wx;
     target_z_ = wz;
     Vec3 velocity = bodies.GetLinearVelocity(body_);
-    // Feet drive only on a floor, and not once she has jumped off it (rising
-    // off it faster than it rises): a vault or a leap flies until she lands.
-    RayCastResult hit;
+    // Feet drive on a floor under her soles, not only under her middle: she
+    // can be standing with her centre past a lip. Not once she has jumped
+    // off it (rising off it faster than it rises).
     const IgnoreSingleBodyFilter self(body_);
-    const bool floor = physics_.GetNarrowPhaseQuery().CastRay(
-                           RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), hit, {}, {}, self) &&
-                       velocity.GetY() < bodies.GetLinearVelocity(hit.mBodyID).GetY() + 1.0F;
+    const float kinematic = float(at.GetY()) - kStandCentre;
+    const float reach = kStandCentre + 0.3F;
+    bool floor = false;
+    const Vec3 soles[] = {Vec3::sZero(), Vec3(kFootSpanM, 0.0F, 0.0F), Vec3(-kFootSpanM, 0.0F, 0.0F),
+                          Vec3(0.0F, 0.0F, kFootSpanM), Vec3(0.0F, 0.0F, -kFootSpanM)};
+    for (const Vec3 &sole : soles) {
+        RayCastResult one;
+        const RVec3 from = at + sole;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), one, {}, {}, self) ||
+            one.mFraction <= 1.0e-4F) {
+            continue;
+        }
+        const float y = float(from.GetY()) - reach * one.mFraction;
+        if (std::abs(y - kinematic) > 0.40F) {
+            continue;
+        }
+        const RVec3 point = from + Vec3(0.0F, -reach * one.mFraction, 0.0F);
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), one.mBodyID);
+        if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(one.mSubShapeID2, point).GetY() < 0.7F) {
+            continue;
+        }
+        if (velocity.GetY() < bodies.GetLinearVelocity(one.mBodyID).GetY() + 1.0F) {
+            floor = true;
+            break;
+        }
+    }
     float dx = wx - float(at.GetX());
     float dz = wz - float(at.GetZ());
     const float length = std::hypot(dx, dz);
@@ -2589,24 +2639,63 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     const std::vector<Vec3> steps =
                         traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
                                              Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
-                    float pick_x = 0.0F;
-                    float pick_z = 0.0F;
-                    float pick_d = 1.0e9F;
-                    // The next step on that path, not a point a stride further:
-                    // the straight line to the further point can cut a pipe
-                    // the path itself walked around.
-                    for (const Vec3 &step : steps) {
-                        const float d = distance_xz(step.GetX(), step.GetZ(), ax, az);
-                        if (d >= 0.30F && d < pick_d) {
-                            pick_d = d;
-                            pick_x = step.GetX();
-                            pick_z = step.GetZ();
+                    float along = 0.0F;
+                    Vec3 prev(ax, feet_y_, az);
+                    const IgnoreSingleBodyFilter self(body_);
+                    const auto on_steel = [&](const float x, const float z) {
+                        RayCastResult down;
+                        const RVec3 from(x, feet_y_ + 0.45F, z);
+                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -0.9F, 0.0F)), down, {}, {},
+                                                                    self) ||
+                            down.mFraction <= 1.0e-4F) {
+                            return false;
                         }
-                    }
-                    if (pick_d < 10.0F) {
-                        sidestep_x_ = pick_x;
-                        sidestep_z_ = pick_z;
+                        const float y = float(from.GetY()) - 0.9F * down.mFraction;
+                        return std::abs(y - feet_y_) <= kStepUpM;
+                    };
+                    // A step counts only when the straight line to it stays on
+                    // steel. Her middle may already sit a hand's width past
+                    // the lip she is standing on, so the first span is not
+                    // judged. A later turn that is nearer across a gap is not
+                    // the next step.
+                    const auto segment_on = [&](const float x, const float z) {
+                        const float span = distance_xz(x, z, ax, az);
+                        const int n = std::max(1, static_cast<int>(span / 0.15F));
+                        for (int i = 1; i <= n; ++i) {
+                            const float t = float(i) / float(n);
+                            if (t * span < 0.12F) {
+                                continue;
+                            }
+                            if (!on_steel(ax + (x - ax) * t, az + (z - az) * t)) {
+                                return false;
+                            }
+                        }
+                        return on_steel(x, z);
+                    };
+                    for (const Vec3 &step : steps) {
+                        along += distance_xz(step.GetX(), step.GetZ(), prev.GetX(), prev.GetZ());
+                        prev = step;
+                        if (along < 0.30F || !segment_on(step.GetX(), step.GetZ())) {
+                            continue;
+                        }
+                        float px = step.GetX();
+                        float pz = step.GetZ();
+                        const float d = distance_xz(px, pz, ax, az);
+                        if (d > 1.2F) {
+                            const float cx = ax + (px - ax) * (1.2F / d);
+                            const float cz = az + (pz - az) * (1.2F / d);
+                            if (on_steel(cx, cz)) {
+                                px = cx;
+                                pz = cz;
+                            }
+                        }
+                        if (!on_steel(px, pz)) {
+                            continue;
+                        }
+                        sidestep_x_ = px;
+                        sidestep_z_ = pz;
                         sidestep_s_ = 0.45F;
+                        break;
                     }
                 }
                 route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
