@@ -836,22 +836,37 @@ void Matron::settle_level() {
     if (riding_) {
         return;
     }
-    // On a level is standing on it: not passing its height falling, and (where
-    // her map knows the deck's steel) inside its footprint.
+    // On a level is standing on it: not passing its height falling. Where her
+    // map knows the deck, the footprint still counts while she is in the air.
+    // Steel the ray actually finds is the floor even beside that footprint
+    // (a board or a lip the map does not contain).
     BodyInterface &bodies = physics_.GetBodyInterface();
     if (std::abs(bodies.GetLinearVelocity(body_).GetY()) > 0.6F) {
         return;
     }
     const RVec3 here = bodies.GetPosition(body_);
+    RayCastResult hit;
+    const IgnoreSingleBodyFilter self(body_);
+    const float reach = kStandCentre + 0.3F;
+    const bool supported =
+        physics_.GetNarrowPhaseQuery().CastRay(RRayCast(here, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self) &&
+        hit.mFraction > 1.0e-4F;
+    const float support_y = supported ? float(here.GetY()) - reach * hit.mFraction : feet_y_;
+    if (supported) {
+        feet_y_ = support_y;
+    }
     for (std::size_t i = 0; i < levels_.size(); ++i) {
-        if (static_cast<int>(i) != level_ && std::abs(feet_y_ - levels_[i].floor_y) < 0.6F &&
-            !off_its_steel(static_cast<int>(i), float(here.GetX()), feet_y_, float(here.GetZ()))) {
-            level_ = static_cast<int>(i);
-            commit_s_ = 0.0F;
-            const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-            pick_patrol(float(at.GetX()), float(at.GetZ()));
-            return;
+        if (static_cast<int>(i) == level_ || std::abs(support_y - levels_[i].floor_y) >= 0.6F) {
+            continue;
         }
+        if (!supported &&
+            off_its_steel(static_cast<int>(i), float(here.GetX()), support_y, float(here.GetZ()))) {
+            continue;
+        }
+        level_ = static_cast<int>(i);
+        commit_s_ = 0.0F;
+        pick_patrol(float(here.GetX()), float(here.GetZ()));
+        return;
     }
 }
 
@@ -1956,6 +1971,37 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         stride_ += speed_ * dt;
         return;
     }
+        // A board already under her feet, continuing ahead, is floor even when
+        // it is narrower than kFootSpanM. On her map's own deck the span check
+        // still refuses a step off that deck onto a post. Off the map (the
+        // landing a climb just put her on), the steel under her middle is the
+        // floor, including the step down onto the deck within kStepUpM.
+        const auto narrow_continues = [&](const Vec3 &dir, const float ahead_m) {
+            float here_top = 0.0F;
+            const float depth = 0.5F + kEdgeDropM;
+            const RVec3 mid(float(at.GetX()), feet + 0.5F, float(at.GetZ()));
+            if (!floor_under(mid, depth, here_top) || std::abs(here_top - feet) > 0.35F) {
+                return false;
+            }
+            const bool off_map = off_its_steel(level_, float(at.GetX()), feet, float(at.GetZ()));
+            if (!off_map) {
+                const Vec3 across(-dir.GetZ(), 0.0F, dir.GetX());
+                float side = 0.0F;
+                const bool left =
+                    floor_under(mid + across * kFootSpanM, depth, side) && std::abs(side - here_top) <= kStepUpM;
+                const bool right =
+                    floor_under(mid - across * kFootSpanM, depth, side) && std::abs(side - here_top) <= kStepUpM;
+                if (left && right) {
+                    return false;
+                }
+            }
+            float ahead_top = 0.0F;
+            const RVec3 from = at + dir * ahead_m + Vec3(0.0F, 0.5F - kStandCentre, 0.0F);
+            if (!floor_under(from, depth, ahead_top)) {
+                return false;
+            }
+            return std::abs(ahead_top - here_top) <= kStepUpM;
+        };
         bool leapt = false;
         if (turn_moves && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.0F) {
             // The Turn's leap: at an edge in her way, with floor again within
@@ -1993,15 +2039,18 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             // as far as she needs to stop from this speed), she plants them.
             const Vec3 way = flat_new / going;
             const float check = 0.3F + going * going / 40.0F + going * dt;
-            if (edge_at(way, 0.2F) || edge_at(way, check)) {
+            if ((edge_at(way, 0.2F) && !narrow_continues(way, 0.2F)) ||
+                (edge_at(way, check) && !narrow_continues(way, check))) {
                 velocity -= way * std::min(going, cut_limit);
             }
             // And no step that brings her within kEdgeMarginM of an edge to
             // either side (the tower's edges run along x and z): sliding along
-            // one at a slant she keeps her distance.
+            // one at a slant she keeps her distance. The board she is already
+            // on is not that edge.
             for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
                 const float toward = velocity.Dot(side);
-                if (toward > 0.0F && edge_at(side, toward * dt + kEdgeMarginM)) {
+                const float reach = toward * dt + kEdgeMarginM;
+                if (toward > 0.0F && edge_at(side, reach) && !narrow_continues(side, reach)) {
                     velocity -= side * toward;
                 }
             }
@@ -3419,7 +3468,36 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                                         break;
                                     }
                                 }
-                                if (!scan_walk) {
+                                // Steel her map does not contain (the board under a climb she
+                // just finished): a step along the real floor, not a straight
+                // line off it onto the authored ring. The edge guard still
+                // keeps her on what continues under her feet.
+                if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
+                    const traversal::Ignore ignore{body_, player_, moving_layer()};
+                    const std::vector<Vec3> steps =
+                        traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
+                                             Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
+                    float pick_x = 0.0F;
+                    float pick_z = 0.0F;
+                    float pick_d = 1.0e9F;
+                    // The next step on that path, not a point a stride further:
+                    // the straight line to the further point can cut a pipe
+                    // the path itself walked around.
+                    for (const Vec3 &step : steps) {
+                        const float d = distance_xz(step.GetX(), step.GetZ(), ax, az);
+                        if (d >= 0.30F && d < pick_d) {
+                            pick_d = d;
+                            pick_x = step.GetX();
+                            pick_z = step.GetZ();
+                        }
+                    }
+                    if (pick_d < 10.0F) {
+                        sidestep_x_ = pick_x;
+                        sidestep_z_ = pick_z;
+                        sidestep_s_ = 0.45F;
+                    }
+                }
+                if (!scan_walk) {
                                     wx = heard_x_;
                                     wz = heard_z_;
                                     scan_walk = true;

@@ -114,6 +114,100 @@ void report(const char *name, const Chase &c) {
 
 } // namespace
 
+// Down the well's route onto the 176 ring, then across that ring to the
+// evidence. The standpipe used to leave her in the gap beside its foot, and
+// the ring's map does not contain the boards, so she stood there. She must
+// arrive on the evidence floor, alive, without a step over 0.20 m. A shove
+// after she is already there can kill the player and restore the checkpoint;
+// that restore is not this climb, so the run stops at the arrival.
+void run_matron_ring_descent() {
+    constexpr double kHearEveryS = 8.0;
+    constexpr double kArriveM = 3.0;
+    Simulation settle(InitialSpawn::Deck154);
+    require(settle.advance_frame(1.0).accepted, "matron ring descent: settle");
+    const auto &map = settle.matron_affordances();
+    struct Spot {
+        int id = -1;
+        float top = 0.0F;
+        float x = 0.0F;
+        float z = 0.0F;
+        float area = 0.0F;
+    };
+    const auto spot_for = [&](const float want) {
+        Spot best;
+        for (const auto &region : map.regions()) {
+            if (std::abs(region.top - want) > 0.08F || region.area <= best.area) {
+                continue;
+            }
+            float area = 0.0F;
+            float x = 0.0F;
+            float z = 0.0F;
+            for (const int patch_index : region.patches) {
+                const auto &patch = map.patches()[static_cast<std::size_t>(patch_index)];
+                const float patch_area = (patch.max_x - patch.min_x) * (patch.max_z - patch.min_z);
+                if (patch_area > area) {
+                    area = patch_area;
+                    x = 0.5F * (patch.min_x + patch.max_x);
+                    z = 0.5F * (patch.min_z + patch.max_z);
+                }
+            }
+            if (area > 0.0F) {
+                best = Spot{region.id, region.top, x, z, area};
+            }
+        }
+        return best;
+    };
+    const Spot goal = spot_for(176.25F);
+    require(goal.id >= 0, "matron ring descent: the 176 ring");
+    for (const float from_top : {198.25F, 220.25F}) {
+        const Spot from = spot_for(from_top);
+        require(from.id >= 0, "matron ring descent: the start ring");
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "matron ring descent: world");
+        const Vector3 prey{goal.x, goal.top, goal.z};
+        s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
+        s.debug_place_matron(Vector3{from.x, from.top, from.z});
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        auto last = s.matron_state().position;
+        double worst = 0.0;
+        bool alive = true;
+        bool arrived = false;
+        double seconds = 0.0;
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        const int budget = (from_top > 210.0F ? 120 : 80) * hz;
+        for (int i = 0; i < budget; ++i) {
+            s.debug_set_matron_stage(1);
+            if (i % (static_cast<int>(kHearEveryS) * hz) == 0) {
+                s.debug_matron_hear(prey);
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = s.matron_state();
+            const double step = std::hypot(m.position.x - last.x, m.position.y - last.y, m.position.z - last.z);
+            worst = std::max(worst, step);
+            last = m.position;
+            if (!m.alive) {
+                alive = false;
+                seconds = static_cast<double>(i) / hz;
+                break;
+            }
+            const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+            const double horizontal = std::hypot(m.position.x - prey.x, m.position.z - prey.z);
+            if (!m.climbing && !m.on_pipe && horizontal < kArriveM && std::abs(feet - prey.y) < 0.6) {
+                arrived = true;
+                seconds = static_cast<double>(i) / hz;
+                break;
+            }
+        }
+        std::cout << "  matron ring descent: " << from.top << " -> " << goal.top << " arrived " << arrived
+                  << " in " << seconds << " s, worst step " << worst << " m, alive " << alive << '\n';
+        require(alive, "matron ring descent: she stays alive on the way down");
+        require(arrived, "matron ring descent: she reaches the evidence on its floor");
+        require(worst < 0.2, "matron ring descent: never carried or snapped");
+    }
+    std::cout << "PASS scraperx_sim matron ring descent\n";
+}
+
 void run_matron_pursuit() {
     // Up: from 132 by the corner pipe to 143 and 154, then the home ladder.
     {
