@@ -980,13 +980,16 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
         walk_toward(dt, wx, wz, kHuntMps, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
         return true;
     }
-    // On the stand under the cable, looking down the line. A parked line
-    // is not a way: its trolley is still at the top, and waiting there
+    // On the stand under the cable. A parked line is not a place to wait
+    // while she is frail: the trolley is still at the top, and waiting there
     // held her until the chase clock ran out (a parked 374 stand, 150 s,
-    // the lead a floor below) while her other ways went untried. Frail,
+    // the lead a floor below) while her other ways went untried. Frail, on
     // a line that has been ridden, she stands and looks down it. She does
-    // not jump. In the Turn she does, and goes.
-    if (line.parked) {
+    // not jump. In the Turn she jumps whether or not the trolley has left,
+    // and takes the bare cable. Refusing the parked line in the Turn too
+    // left her standing on the stand (the touch line: Turn, on the stand,
+    // never onto the cable).
+    if (line.parked && turn_ == Turn::None) {
         return false;
     }
     walk_toward(dt, ax, az, 0.0F);
