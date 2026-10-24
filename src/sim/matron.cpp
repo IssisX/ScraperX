@@ -1755,8 +1755,16 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const bool lands = physics_.GetNarrowPhaseQuery().CastRay(
                     RRayCast(at + ahead * 2.7F + Vec3(0.0F, 0.5F, 0.0F), Vec3(0.0F, -(kStandCentre + 1.2F), 0.0F)),
                     landing, {}, {}, not_us);
+                // A loose crate is not a vault. She drives that off her line.
+                bool loose = false;
+                if (low) {
+                    const BodyID id = knee.mBodyID;
+                    const std::uint64_t entity = bodies.GetUserData(id);
+                    loose = bodies.GetMotionType(id) == EMotionType::Dynamic &&
+                            (kit::is_stock_entity(entity) || kit::is_fabricated_entity(entity));
+                }
                 // Outside the Turn never over a gap: floor runs on under it.
-                if (low && !high && lands && !edge_at(heading, 0.45F) && !edge_at(heading, 1.5F)) {
+                if (low && !high && lands && !loose && !edge_at(heading, 0.45F) && !edge_at(heading, 1.5F)) {
                     velocity = Vec3(heading.GetX() * kVaultForwardMps, kVaultUpMps, heading.GetZ() * kVaultForwardMps);
                     vault_cooldown_s_ = kVaultCooldownS;
                     ++vaults_;
@@ -1765,9 +1773,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             }
         }
         clamber_now_ = false;
-        // The crate case in matron.hpp: the vault did not take it, she has
-        // stopped, and one side of the line still has floor. Same force and
-        // power as the rest of her. Both sides a drop, she leaves it.
+        // A loose crate that stopped her, off the side that has floor
+        // (matron.hpp). Same force and power as the rest of her. Both
+        // sides a drop, she leaves it. She does not vault it.
         if (!cleared && !climbed && length > 0.15F && speed > 0.3F && speed_now < 1.2F) {
             const Vec3 heading(dx / length, 0.0F, dz / length);
             const Vec3 side(-heading.GetZ(), 0.0F, heading.GetX());
