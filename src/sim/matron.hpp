@@ -44,7 +44,8 @@
 // a noise farther than kWaryNoiseM from her post does not draw her off it at
 // all, she only turns to it. Sight, or a noise close by, always does. What
 // she learns lasts the run: a restore (a death, a load) forgets it. In the
-// Turn she vaults what blocks her way (kVaultUpMps); frail, she shoves it.
+// Turn she vaults what blocks her way (kVaultUpMps). When that vault does
+// not happen, she throws a loose crate off her line.
 //
 // Off her deck (decision 9's A: frail, she rides the lifts like anyone). A
 // floor that moves under her (a cage she stepped into as it left) she clings

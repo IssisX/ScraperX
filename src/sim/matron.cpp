@@ -2,6 +2,7 @@
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/mechanism_kit.hpp"
 #include <cstdio>
 #include <cstdlib>
 
@@ -1567,6 +1568,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 }
             }
         }
+        bool cleared = leapt;
         const Vec3 flat_new(velocity.GetX(), 0.0F, velocity.GetZ());
         const float going = flat_new.Length();
         if (!leapt && going > 0.05F) {
@@ -1607,6 +1609,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 velocity = Vec3(dx / length * kVaultForwardMps, kVaultUpMps, dz / length * kVaultForwardMps);
                 vault_cooldown_s_ = kVaultCooldownS;
                 ++vaults_;
+                cleared = true;
             }
         }
         // Outside the Turn (matron.hpp, getting unstuck): her feet pressed
@@ -1762,6 +1765,55 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             }
         }
         clamber_now_ = false;
+        // The vault did not take her over it. A loose crate in front of her
+        // is thrown off her line, on the same force and power as the rest of
+        // her. It goes to the side that still has floor.
+        // Only once her feet have actually been stopped. A crate she is
+        // walking past at a real pace is left where it is.
+        if (!cleared && !climbed && length > 0.15F && speed > 0.3F && speed_now < 1.2F) {
+            const Vec3 heading(dx / length, 0.0F, dz / length);
+            const Vec3 side(-heading.GetZ(), 0.0F, heading.GetX());
+            RayCastResult block;
+            bool found = false;
+            for (const float lateral : {-0.8F, 0.0F, 0.8F}) {
+                RayCastResult hit;
+                if (!physics_.GetNarrowPhaseQuery().CastRay(
+                        RRayCast(at + side * lateral + Vec3(0.0F, 0.45F - kStandCentre, 0.0F), heading * 4.0F), hit,
+                        {}, {}, not_us)) {
+                    continue;
+                }
+                const std::uint64_t entity = bodies.GetUserData(hit.mBodyID);
+                if (bodies.GetMotionType(hit.mBodyID) == EMotionType::Dynamic &&
+                    (kit::is_stock_entity(entity) || kit::is_fabricated_entity(entity))) {
+                    block = hit;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                const BodyID id = block.mBodyID;
+                const bool left_void = edge_at(side, 5.0F);
+                const bool right_void = edge_at(-side, 5.0F);
+                // Both sides a drop: the band is a bridge. Pushing the crate
+                // on down it leaves it in her way. She does not.
+                if (!left_void || !right_void) {
+                    Vec3 dir = heading;
+                    if (!left_void && right_void) {
+                        dir = side;
+                    } else if (left_void && !right_void) {
+                        dir = -side;
+                    } else {
+                        dir = side;
+                    }
+                    const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
+                    const traversal::Limits budget;
+                    const float force_n = std::min(budget.total_force_n, budget.power_w / along);
+                    Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
+                    push /= push.Length();
+                    bodies.AddForce(id, push * force_n, EActivation::Activate);
+                }
+            }
+        }
         bodies.SetLinearVelocity(body_, velocity);
         // The watchdog: a way ahead of her (more than half a stride off, at a pace).
         // Held on a tick a remedy fires (climbed): firing it makes wants
