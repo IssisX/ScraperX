@@ -904,6 +904,35 @@ bool Matron::on_line_ramp(const RVec3 at) const {
            across < kRampStripM;
 }
 
+void Matron::notice_ridden_line(const RVec3 player) {
+    if (zipline_ == nullptr || !zipline_->riding() || !body_in_world_ || dead_) {
+        return;
+    }
+    const int line = zipline_->state().line;
+    if (line < 0 || static_cast<std::size_t>(line) >= zipline_->lines().size()) {
+        return;
+    }
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    // The same sight the hunt uses. A climb that owns her body used to
+    // return before that ran, so a player who took the line in front of
+    // her left no lead, and the Turn she had already started sat frozen
+    // until the climb let go.
+    if (Vec3(player - at).Length() > kSightM || !sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0))) {
+        return;
+    }
+    const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
+    heard_x_ = float(end.GetX());
+    heard_z_ = float(end.GetZ());
+    lead_floor_ = float(end.GetY());
+    guess_line_ = line;
+    guess_climb_ = -1;
+    since_heard_s_ = 0.0F;
+    pursuit_s_ = 0.0F;
+    lead_seen_ = true;
+    lead_valid_ = true;
+    wary_ = false;
+}
+
 bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
@@ -992,6 +1021,8 @@ void Matron::ride_line() {
     const Zipline::State &ride = zipline_->other_state();
     if (!ride.riding) {
         on_line_ = false;   // taken off it (a restore)
+        riding_ = false;
+        let_go_s_ = 0.0F;
         return;
     }
     // Down at the end (at the stop, or against the trolley or its rider
@@ -1007,21 +1038,47 @@ void Matron::ride_line() {
     const auto over_shaft = [](const RVec3 p) {
         return std::abs(float(p.GetX())) < kShaftHalfM + kRadius && std::abs(float(p.GetZ()) - kMidZ) < kShaftHalfM + kRadius;
     };
-    // Her forearms' drag: friction on her weight across the cable, as a
-    // squeeze of the line's brake.
-    const float across = std::sqrt(std::max(0.0F, 1.0F - line.direction.GetY() * line.direction.GetY()));
-    const float gravity = -physics_.GetGravity().GetY();
-    zipline_->set_other_brake(at_end && over_shaft(at)
-                                  ? 0.0F
-                                  : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
     // Where letting go puts her: on along the line as far as her swing
-    // carries her while she drops to the far floor.
+    // carries her while she drops to the far floor. The box around the
+    // shaft is a little smaller than the hole, so a point just outside it
+    // can still be open air. She lets go only when that swing comes down
+    // on a floor.
     const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
     const float drop = std::max(0.0F, float(at.GetY() - line.bottom_floor.GetY()) - kStandCentre);
-    const RVec3 lands = at + run * (kLetGoSwingMps * std::sqrt(2.0F * drop / gravity));
-    if (at_end && !over_shaft(lands) && std::abs(ride.speed_mps) < 0.3F) {
+    const float gravity = -physics_.GetGravity().GetY();
+    const RVec3 lands = at + run * (kLetGoSwingMps * std::sqrt(2.0F * drop / std::max(gravity, 0.1F)));
+    const auto deck_under = [&](const RVec3 p) {
+        RayCastResult hit;
+        const RRayCast ray(p, Vec3(0.0F, -3.0F, 0.0F));
+        if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, IgnoreSingleBodyFilter(body_))) {
+            return false;
+        }
+        const RVec3 on = ray.GetPointOnRay(hit.mFraction);
+        const float top = float(on.GetY());
+        if (top < float(line.bottom_floor.GetY()) - 0.4F || top > float(at.GetY()) - 0.2F) {
+            return false;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+        return lock.Succeeded() &&
+               lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, on).GetY() > 0.7F;
+    };
+    const bool deck = deck_under(lands);
+    // Her forearms' drag: friction on her weight across the cable, as a
+    // squeeze of the line's brake. At the end with the swing still over
+    // the hole, the drag comes off so she can come on as far as the cable
+    // lets her.
+    const float across = std::sqrt(std::max(0.0F, 1.0F - line.direction.GetY() * line.direction.GetY()));
+    zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
+                                  ? 0.0F
+                                  : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
+    if (at_end && deck && !over_shaft(lands) && std::abs(ride.speed_mps) < 0.3F) {
         zipline_->unclip_other();
         on_line_ = false;
+        // The cable was what riding_ meant. Leaving it has to clear that
+        // before the hunt runs this tick, or the cling stands her still
+        // and the swing never happens: she drops where she was, in the hole.
+        riding_ = false;
+        let_go_s_ = 0.0F;
         bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * kLetGoSwingMps);
     }
 }
@@ -2312,6 +2369,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             step_journey(dt);
             // Her body's travel counts her strides and rungs (each rung rings).
             stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;
+            notice_ridden_line(player);
             sense_near();
             return;
         }
@@ -2348,6 +2406,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     routecraft_mine_ = request_climb_goal(climb_back_, climb_back_facing_);
                 }
             }
+            notice_ridden_line(player);
             sense_near();
             return;
         }
@@ -2399,6 +2458,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
     if (body_in_world_ && travel_.active) {
+        notice_ridden_line(player);
         // Knocked off her feet on the way: she gets them back first, then
         // goes on (her journey plans again from where she gets up).
         if (state_ == State::Down || state_ == State::Staggering) {

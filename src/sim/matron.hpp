@@ -1302,6 +1302,11 @@ private:
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
     bool follow_line(float dt, JPH::RVec3 at, bool wait_ok);
+    // The player is on a line, and a journey or a climb owns her body this
+    // tick (those return before the hunt looks). She remembers which line,
+    // and where it lets off. She does not move for it, and the Turn's clock
+    // stays where it is until her feet are hers again.
+    void notice_ridden_line(JPH::RVec3 player);
     // The line follow_line goes to from here (-1 for none), and whether she is on its ramp.
     [[nodiscard]] int line_to_take(float ax, float az) const;
     [[nodiscard]] bool on_line_ramp(JPH::RVec3 at) const;
