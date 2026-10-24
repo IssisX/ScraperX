@@ -443,7 +443,7 @@ jobs:
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_figure_test.gd 2>&1 | tee artifacts/matron-figure.log
           ! grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log
-          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 10
+          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
 
       - name: Check Matron perception and physical contact presentation
         shell: bash
