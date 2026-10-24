@@ -1319,7 +1319,7 @@ void run_matron() {
                   << " peered_short_m=" << closest << " fooled_twice_stayed_m=" << farthest << "\n";
     }
     run_matron_crash();
-    // ---- A: in the Turn she vaults what blocks her way; frail, she shoves it -------
+    // ---- A: a loose crate in the Turn is driven off her line. Not vaulted. ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
@@ -1373,38 +1373,28 @@ void run_matron() {
         const double uz = (c.z - m.z) / run;
         (void)go(s, c.x + ux * 1.6, c.z + uz * 1.6, false, 3.0, 0.3);
         (void)s.set_move_input(0.0, 0.0);
-        bool vaulted = false;
-        for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !vaulted; ++i) {
+        const auto planted = stock(s, LooseStock::kDeckCrateSouth);
+        const auto vaults_before = s.matron_state().vaults;
+        const double lx = -uz;
+        const double lz = ux;
+        bool thrown = false;
+        double lateral = 0.0;
+        double along = 0.0;
+        for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !thrown; ++i) {
             tick(s);
-            vaulted = s.matron_state().vaults > 0;
-        }
-        require(vaulted, "matron vault: in the Turn she vaults the crate in her way");
-        // Over it, not through it: she comes down beyond its far face, the
-        // crate where it stood (until the catch puts her back in her locker).
-        const auto before = stock(s, LooseStock::kDeckCrateSouth);
-        const auto deaths = s.snapshot().death_count;
-        double beyond = -1.0e9;
-        double peak_y = 0.0;
-        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz); ++i) {
-            tick(s);
-            if (s.snapshot().death_count != deaths) {
-                break;
-            }
-            const auto at = s.matron_state().position;
-            beyond = std::max(beyond, (at.x - before.x) * ux + (at.z - before.z) * uz);
-            peak_y = std::max(peak_y, at.y);
+            const auto now = stock(s, LooseStock::kDeckCrateSouth);
+            lateral = std::abs((now.x - planted.x) * lx + (now.z - planted.z) * lz);
+            along = (now.x - planted.x) * ux + (now.z - planted.z) * uz;
+            thrown = lateral > 1.0 && std::abs(along) < lateral && now.y > planted.y - 0.5;
         }
         const auto after = stock(s, LooseStock::kDeckCrateSouth);
-        const double shoved = std::hypot(after.x - before.x, after.z - before.z);
-        std::cout << "  matron vault: over the crate at (" << before.x << ", " << before.z << "): her feet "
-                  << peak_y - Matron::kStandCentre - Matron::kDeckTop << " m up, " << beyond
-                  << " m past its middle; the crate moved " << shoved << " m\n";
-        require(peak_y - Matron::kStandCentre - Matron::kDeckTop > 0.88 && beyond > 0.8,
-                "matron vault: she clears the crate and comes down beyond it");
-        require(shoved < 0.3, "matron vault: vaulted, the crate is not shoved");
-        require(s.matron_state().alive, "matron vault: she lands on the deck, alive");
-        std::cout << "PASS scraperx_sim matron vault: feet_up_m=" << peak_y - Matron::kStandCentre - Matron::kDeckTop
-                  << " past_m=" << beyond << " crate_moved_m=" << shoved << "\n";
+        std::cout << "  matron vault: crate from (" << planted.x << ", " << planted.z << ") to (" << after.x << ", "
+                  << after.z << "), " << lateral << " m off her line, " << along << " m along it, vaults "
+                  << s.matron_state().vaults - vaults_before << "\n";
+        require(thrown, "matron vault: she drives the crate off her line, onto the deck");
+        require(s.matron_state().vaults == vaults_before, "matron vault: she does not vault the crate");
+        require(s.matron_state().alive, "matron vault: she is still on the deck, alive");
+        std::cout << "PASS scraperx_sim matron vault: off_line_m=" << lateral << " along_m=" << along << "\n";
     }
     // ---- off her deck: into the cage as it leaves she rides it up, clinging; at the top,
     //      frail, she cannot cross the gap to the ring; in the Turn she leaps it ----------

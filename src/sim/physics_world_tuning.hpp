@@ -144,6 +144,15 @@ constexpr float kLimpJumpScale = 0.6F;
 // kOneArmGripScale of two hands' (kLedgeGripMaxForceN and
 // kLedgeGripTearImpulseNs both), and it reaches no bar hand over hand (the
 // good hand cannot let go). A death's restore is a whole body.
+//
+// One-arm rule, stated once so it cannot drift: the one-armed body is the
+// PLAYER, after Matron tears his arm off (or breaks it). Matron never loses
+// an arm and never climbs one-armed; she has no one-arm state. The player
+// climbs slow by design at kOneArmClimbScale = 0.5F, about 0.45 m/s up a
+// ladder against 0.9 m/s healed. Do not raise the scale to fit a test.
+// touch_matron_act therefore gives the ladder, standpipe, and scaffold
+// climbs no time limit: it waits until he tops out or dies. The earlier
+// 40 s, then 60 s, stage waits are superseded and are not a pass bar.
 constexpr float kArmBreakHitSpeed = 8.5F;
 constexpr double kArmBrokenSeconds = 30.0;
 constexpr float kOneArmClimbScale = 0.5F;

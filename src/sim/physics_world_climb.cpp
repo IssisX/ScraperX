@@ -325,7 +325,8 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
     }
     climb_sliding_ = false;
     climb_slide_mps_ = 0.0F;
-    // One good arm hauls the body at kOneArmClimbScale.
+    // One good arm hauls the player's body at kOneArmClimbScale (slow by
+    // design, about 0.45 m/s; Matron never climbs one-armed).
     const float arm = one_arm() ? kOneArmClimbScale : 1.0F;
     JPH::RVec3 next = hold;
     Grip carries;

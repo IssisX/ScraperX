@@ -2,6 +2,9 @@
 // one-armed body still has, and what it no longer does. Members of
 // Simulation::PhysicsWorld.
 //
+// The one-armed body here is the PLAYER. Matron tears his arm off; she
+// does not lose one herself and never climbs one-armed.
+//
 //  * The grip is per hand: a hang hangs from the good hand's shoulder
 //    (hang_shoulder_offset leans the body under it), and holds
 //    kOneArmGripScale of two hands' (check_hang_grip). No hand over hand.

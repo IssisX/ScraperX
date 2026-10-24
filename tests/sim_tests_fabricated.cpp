@@ -169,7 +169,7 @@ void delivery(const std::vector<TestObject> &objects) {
                 "fabricated delivery: each test object's signature and model verify against the game's key");
     }
     const TestObject &o = objects.front();
-    const auto check = [&o](Bytes hull, Bytes signature, Bytes model) {
+    const auto check = [](Bytes hull, Bytes signature, Bytes model) {
         return check_delivery(hull.data(), hull.size(), signature.data(), signature.size(), model.data(), model.size());
     };
     Bytes hull = o.hull;

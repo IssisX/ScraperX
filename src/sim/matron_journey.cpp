@@ -171,6 +171,7 @@ bool Matron::travel_to(const int region) {
     travel_avoid_.clear();
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
+    chase_way_held_ = true;  // a travel taken holds the chase window past its own ticks
     travel_.goal = region;
     travel_.region = here;
     travel_.step = 0;

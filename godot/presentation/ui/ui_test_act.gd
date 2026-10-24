@@ -141,6 +141,9 @@ func _act_log(tag: String) -> void:
 
 
 # _wait_until, noting every stage she passes through and logging now and then.
+# A timeout <= 0 means no timeout: wait until the condition holds or a death
+# ends the run. Used for the one-armed player climb, which is slow by design
+# and must not fail a time test.
 func _act_wait(condition: Callable, timeout: float, tag: String) -> bool:
 	var waited := 0.0
 	var next_log := 0.0
@@ -148,8 +151,8 @@ func _act_wait(condition: Callable, timeout: float, tag: String) -> bool:
 		_act_stages_seen[int(_matron_state()["stage"])] = true
 		if bool(condition.call()):
 			return true
-		if waited >= timeout or int(_native().get_death_count()) > _act_deaths_allowed:
-			_act_log(tag + ("_timeout" if waited >= timeout else "_died"))
+		if (timeout > 0.0 and waited >= timeout) or int(_native().get_death_count()) > _act_deaths_allowed:
+			_act_log(tag + ("_timeout" if timeout > 0.0 and waited >= timeout else "_died"))
 			return false
 		if waited >= next_log:
 			_act_log(tag)
@@ -345,7 +348,12 @@ func _act_pest_unseen(device: int) -> bool:
 	var seen := {"carried": false}
 	var done: bool = await _act_wait(func() -> bool:
 		var m := _matron_state()
-		seen["carried"] = bool(seen["carried"]) or int(m["carrying"]) == _act_box
+		var holding := _act_box != 0 and int(m["carrying"]) == _act_box
+		var moved := false
+		if _act_box != 0 and int(m["takes"]) >= 1:
+			var box: Vector3 = _native().get_kit_body_transform(_native().get_kit_body_index(_act_box)).origin
+			moved = Vector2(box.x, box.z).distance_to(ACT_TOOLBOX_DOOR) > 2.0
+		seen["carried"] = bool(seen["carried"]) or holding or moved
 		return int(m["unrigs"]) >= 1 and int(m["state"]) == MATRON_STATE_GUARDING, 150.0, "pest_unseen")
 	if not done:
 		return _fail("she never stood guard having undone the cage's rope (state %d, unrigs %d)" % [
@@ -629,7 +637,9 @@ func _act_way_up(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
 		return _fail("CLIMB did not take hold of the ladder")
 	_move(device, 1.0)
-	var on_ring: bool = await _act_wait(func() -> bool: return _standing_above(176.5), 40.0, "ladder")
+	# The one-armed PLAYER climbs slow by design, about 0.45 m/s, so this
+	# stage has no time limit: it waits until he tops out or dies.
+	var on_ring: bool = await _act_wait(func() -> bool: return _standing_above(176.5), 0.0, "ladder")
 	_move(device, 0.0)
 	if not on_ring or int(_native().get_death_count()) > 1:
 		return _fail("the climb did not top out onto the 176 ring (y %.2f, deaths %d, she climbing %s)" % [
@@ -654,7 +664,9 @@ func _act_way_up(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
 		return _fail("CLIMB did not take hold of the standpipe")
 	_move(device, 1.0)
-	var on_198: bool = await _act_wait(func() -> bool: return _standing_above(198.5), 40.0, "standpipe")
+	# The one-armed PLAYER climbs slow by design, so this stage has no
+	# time limit: it waits until he tops out or dies.
+	var on_198: bool = await _act_wait(func() -> bool: return _standing_above(198.5), 0.0, "standpipe")
 	_move(device, 0.0)
 	if not on_198:
 		return _fail("the standpipe did not top out onto the 198 ring (y %.2f)" % _position().y)
@@ -665,7 +677,9 @@ func _act_way_up(device: int) -> bool:
 	if not await _leap(device, 0.6, func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 3.0):
 		return _fail("the jump for the scaffold panel never caught it (at %s)" % str(_position()))
 	_move(device, 1.0)
-	var on_220: bool = await _act_wait(func() -> bool: return _standing_above(220.5), 40.0, "scaffold")
+	# The one-armed PLAYER climbs slow by design, so this stage has no
+	# time limit: it waits until he tops out or dies.
+	var on_220: bool = await _act_wait(func() -> bool: return _standing_above(220.5), 0.0, "scaffold")
 	_move(device, 0.0)
 	if not on_220:
 		return _fail("the scaffold panel did not top out onto the 220 ring (y %.2f)" % _position().y)

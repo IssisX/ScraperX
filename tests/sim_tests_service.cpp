@@ -657,7 +657,6 @@ void run_service_c5() {
     // ---- A walking jump falls short of the gap, onto the plant floor ------------------
     Simulation walker(InitialSpawn::Deck706);
     (void)walker.advance_frame(1.0);
-    C5Notes ignored;
     require(c5_over_manifold(walker), "C5: over the manifold, for the walking jump");
     (void)walker.set_crouch_input(true);
     require(walk_to(walker, 5.6, -145.5, 8.0, 0.08), "C5: under the ducts, for the walking jump");

@@ -831,7 +831,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         if (matron_->kills()) {
             // Fully changed: no kill on touch. Her hand goes for the ankle
             // (matron_hold.cpp); what follows is physics.
-            if (matron_->grab_ready()) {
+            // A body already on a ladder is not an ankle to stoop for. Pulling
+            // him off the first rungs is what kept the climb from ever starting.
+            if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
                 matron_->count_catch();
                 matron_->begin_grab(bodies.GetPosition(player_id_));
             }

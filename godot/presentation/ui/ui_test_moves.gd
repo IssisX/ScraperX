@@ -1421,8 +1421,8 @@ func _touch_chute() -> bool:
 
 # touch_arm_break: on the 154 m deck, flat out on the stick along the north
 # band into the Matron's steel locker: the arm that took it breaks (named,
-# cried, felt, held to the body), and the ladder to the 176 ring is a
-# one-armed haul at half the climb's rate.
+# cried, felt, held to the body), and the ladder to the 176 ring is the
+# player's one-armed haul at half the climb's rate.
 func _touch_arm_break() -> bool:
 	var device := InputRouter.Device.TOUCH
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)

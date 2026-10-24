@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <vector>
 
@@ -261,7 +262,7 @@ void Matron::block_climb(const std::int64_t key, const bool failed) {
 }
 
 void Matron::block_climb_at(const float x, const float z) {
-    block_climb(cell_key(x, z));
+    block_climb(cell_key(x, z), true);
 }
 
 bool Matron::column_blocked_near(const float x, const float z) const {
@@ -296,7 +297,8 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
             // No bar column: a way she plans over the steel round her.
             const bool frail = stage_ == Stage::Pest && turn_ == Turn::None;
             const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
-            return !frail && still && start_journey(at);
+            const bool started = !frail && still && start_journey(at);
+            return started;
         }
     }
     // Still a way: from the floor she is on, and not away from where her lead
@@ -359,8 +361,7 @@ bool Matron::start_journey(const RVec3 at) {
     if (journey_wait_ticks_ > 0) {
         return false;
     }
-    journey_wait_ticks_ = 2 * 90;
-    const float feet = float(at.GetY()) - kStandCentre;
+    journey_wait_ticks_ = 2 * 90;    const float feet = float(at.GetY()) - kStandCentre;
     const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
     const float lo_x = std::min(float(at.GetX()), heard_x_) - 12.0F;
     const float hi_x = std::max(float(at.GetX()), heard_x_) + 12.0F;
@@ -383,7 +384,14 @@ bool Matron::start_journey(const RVec3 at) {
             from = map.region_at(Vec3(contact));
         }
     }
-    const int to = map.region_near_top(lead_floor_, 0.3F);
+    // The lead's region is the one under the place she heard them, not the
+    // largest region near that height: two surfaces can share a height band
+    // (a board beside the platform the sound came from), and aiming at the
+    // larger one strands her on the wrong surface with no way across.
+    int to = map.region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    if (to < 0) {
+        to = map.region_near_top(lead_floor_, 0.3F);
+    }
     if (from < 0 || to < 0 || from == to) {
         return false;
     }
@@ -408,21 +416,68 @@ bool Matron::start_journey(const RVec3 at) {
     journey_leg_ = 0;
     journey_leg_ticks_ = 0;
     journey_moving_ = false;
+    journey_retreating_ = false;
     journey_active_ = true;
+    chase_way_held_ = true;  // a journey taken holds the chase window past its own ticks
     ++climbs_done_;
     return true;
 }
 
 void Matron::end_journey(const bool failed) {
+    // A way that failed under her is left alone its block time, as a failed
+    // column is: the next plan avoids it and tries another route, instead
+    // of retrying the same failing move until the chase window ends. The
+    // block is temporary (30 s), so a way that failed for a passing
+    // reason comes back. Only non-Walk moves are checked against the
+    // block list.
+    if (failed && journey_at_ < journey_.size() && journey_[journey_at_].kind != traversal::MoveKind::Walk) {
+        const traversal::Edge &edge = journey_[journey_at_];
+        if (edge.spec.line.GetX() != 0.0F || edge.spec.line.GetZ() != 0.0F) {
+            block_climb_at(edge.spec.line.GetX(), edge.spec.line.GetZ());
+        }
+    }
     if (climber_ != nullptr && journey_moving_) {
         climber_->cancel();   // her hands off whatever they held: a fall if on steel
     }
     journey_active_ = false;
     journey_moving_ = false;
+    journey_retreating_ = false;
     journey_.clear();
     journey_legs_.clear();
     if (failed) {
         journey_wait_ticks_ = kFoundClimbBlockTicks;
+    } else {
+        // A journey ends where its plan put her, but her hand map's level
+        // can still name the floor she left: a scan climb down a ladder
+        // lands her on a step the map's footprint does not claim, so the
+        // settle pass never moves her level and every levels-based way
+        // after it (its graph, its climbs, its lines) reads the wrong
+        // floor. At a journey's end she stands where the plan put her, so
+        // a levels floor within a step of her feet is her floor,
+        // footprint or not. Only a levels floor is synced: on a scan-only
+        // surface (a board, a bridge) her level stays, and the scan's own
+        // floor reckoning carries her. Not while riding: a moving floor
+        // may carry her elsewhere next. No stillness guard: this runs
+        // once, at the plan's goal, and the feet-within-a-step check is
+        // the validation (a fall past a floor does not sit within a step
+        // of it at the goal).
+        if (!riding_) {
+            const BodyInterface &bodies = physics_.GetBodyInterface();
+            const float feet = float(bodies.GetPosition(body_).GetY()) - kStandCentre;
+            int best = -1;
+            float best_d = 0.6F;
+            for (std::size_t i = 0; i < levels_.size(); ++i) {
+                const float d = std::abs(feet - levels_[i].floor_y);
+                if (d < best_d) {
+                    best_d = d;
+                    best = static_cast<int>(i);
+                }
+            }
+            if (best >= 0 && best != level_) {
+                level_ = best;
+                commit_s_ = 0.0F;
+            }
+        }
     }
 }
 
@@ -455,6 +510,7 @@ void Matron::step_journey(const float dt) {
         journey_legs_.push_back(to);
         journey_leg_ = 0;
         journey_leg_ticks_ = 0;
+        journey_retreating_ = false;   // fresh legs for a fresh edge: no retreat is owed
     }
     // A pole within arm's reach of where she stands, on her floor: she grips
     // it from here (its scanned foot spot can lie past it on a board her
@@ -474,12 +530,35 @@ void Matron::step_journey(const float dt) {
             ++journey_leg_;
             journey_leg_ticks_ = 0;
         } else if (++journey_leg_ticks_ > 20 * 90) {
-            end_journey(true);   // no headway: a way that does not serve
+            if (!journey_retreating_ && journey_leg_ > 0) {
+                // Wedged on the way to a move's start (a wall's push, a
+                // lean off the verified line) with the leg timed out
+                // where she stands — often a perch edge, where the
+                // hunt's next way then walks her off it. Walk back
+                // along the legs she already reached, in reverse: each
+                // was stood on, so each is ground. The journey still
+                // ends failed when she is back on it; a retreat that
+                // itself stalls ends at once, so there is no second one.
+                std::vector<Vec3> back(journey_legs_.begin(), journey_legs_.begin() + static_cast<std::ptrdiff_t>(journey_leg_));
+                std::reverse(back.begin(), back.end());
+                journey_legs_ = std::move(back);
+                journey_leg_ = 0;
+                journey_leg_ticks_ = 0;
+                journey_retreating_ = true;
+            } else {
+                end_journey(true);   // no headway: a way that does not serve
+            }
             return;
         } else {
             (void)climber_->walk_between(dt, leg, 1.2F);
             yaw_ = std::atan2(off.GetX(), off.GetZ());
         }
+        return;
+    }
+    if (journey_retreating_) {
+        // Back on ground she stood on; the way still failed, and the
+        // move ahead is not started from here (it is what wedged her).
+        end_journey(true);
         return;
     }
     if (edge.kind == traversal::MoveKind::Walk) {
