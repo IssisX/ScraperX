@@ -638,9 +638,11 @@ public:
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
     static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
-    // A landing this hard (a fall of 2.5 m) puts her down a while; from
-    // kLethalLandingMps it kills her.
-    static constexpr float kHardLandingMps = 7.0F;
+    // A landing this hard puts her down a while; from kLethalLandingMps it
+    // kills her. Her own jump comes back near 7.2 m/s (the stroke plus the
+    // six-foot rise). The line sits above that return, so she stays up from
+    // a jump she was allowed to make. A longer fall still puts her down.
+    static constexpr float kHardLandingMps = 7.60F;
     // A lead a storey away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
