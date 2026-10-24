@@ -348,7 +348,9 @@ public:
     static constexpr float kLeapForwardMps = 5.0F;
     static constexpr float kLeapReachM = 3.0F;
     // Riding: her floor moving up or down faster than kRideMps, she clings;
-    // stopped, she lets go kLetGoSeconds later.
+    // stopped, she lets go kLetGoSeconds later. A machine floor she is
+    // headed onto, still within a clamber, she steps onto with the same
+    // force budget as the rest of her. A loose crate is not that floor.
     static constexpr float kRideMps = 0.3F;
     static constexpr float kLetGoSeconds = 1.0F;
     // An edge: no floor within kEdgeDropM below her feet ahead of her. She

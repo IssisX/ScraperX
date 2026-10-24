@@ -1464,6 +1464,86 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                        supported(at + facing * kFootSpanM) || supported(at - facing * kFootSpanM);
     float dx = wx - float(at.GetX());
     float dz = wz - float(at.GetZ());
+    // Where she is headed is on a machine's floor (a cage, a lift), and
+    // that floor is still a step or a clamber. She walks onto it. The
+    // push up is the shared force budget, held over the ticks it takes,
+    // so a floor that has started to rise does not leave her at the lip.
+    // A loose crate is not a machine.
+    bool boarding = false;
+    float board_top = 0.0F;
+    BodyID board_body;
+    if (floor) {
+        const float reach = std::hypot(dx, dz);
+        if (reach > 0.35F) {
+            const float feet_now = float(at.GetY()) - kStandCentre;
+            const Vec3 dir(dx / reach, 0.0F, dz / reach);
+            const auto machine = [&](const BodyID id) {
+                if (bodies.GetMotionType(id) != EMotionType::Dynamic) {
+                    return false;
+                }
+                const std::uint64_t entity = bodies.GetUserData(id);
+                return entity >= kit::kDynamicEntityBase && entity < kit::kEntityLimit &&
+                       !kit::is_stock_entity(entity) && !kit::is_fabricated_entity(entity);
+            };
+            IgnoreMultipleBodiesFilter not_us;
+            not_us.Reserve(2);
+            not_us.IgnoreBody(body_);
+            not_us.IgnoreBody(player_);
+            const auto top_at = [&](const float x, const float z, float &top, BodyID &id) {
+                const RVec3 from(x, feet_now + kClamberMaxM + 0.3F, z);
+                RayCastResult down;
+                const float depth = kClamberMaxM + 0.8F;
+                if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -depth, 0.0F)), down, {}, {},
+                                                            not_us)) {
+                    return false;
+                }
+                if (!machine(down.mBodyID)) {
+                    return false;
+                }
+                const BodyLockRead lock(physics_.GetBodyLockInterface(), down.mBodyID);
+                if (!lock.Succeeded()) {
+                    return false;
+                }
+                const RVec3 point = from + Vec3(0.0F, -depth * down.mFraction, 0.0F);
+                if (lock.GetBody().GetWorldSpaceSurfaceNormal(down.mSubShapeID2, point).GetY() < 0.7F) {
+                    return false;
+                }
+                top = feet_now + kClamberMaxM + 0.3F - depth * down.mFraction;
+                id = down.mBodyID;
+                return top >= feet_now - 0.05F && top <= feet_now + kClamberMaxM;
+            };
+            float goal_top = 0.0F;
+            BodyID goal_id;
+            if (top_at(wx, wz, goal_top, goal_id) && goal_top > feet_now + 0.08F) {
+                float lip = reach;
+                float lip_top = goal_top;
+                BodyID lip_id = goal_id;
+                for (float d = 0.3F; d < reach; d += 0.3F) {
+                    float sample = 0.0F;
+                    BodyID sample_id;
+                    if (top_at(float(at.GetX()) + dir.GetX() * d, float(at.GetZ()) + dir.GetZ() * d, sample,
+                               sample_id)) {
+                        lip = d;
+                        lip_top = sample;
+                        lip_id = sample_id;
+                        break;
+                    }
+                }
+                const float onto = std::min(reach, lip + 0.55F);
+                wx = float(at.GetX()) + dir.GetX() * onto;
+                wz = float(at.GetZ()) + dir.GetZ() * onto;
+                dx = wx - float(at.GetX());
+                dz = wz - float(at.GetZ());
+                // The push starts when the lip is a step away, not from
+                // across the deck: a force from six metres off throws her.
+                if (lip < 1.8F) {
+                    boarding = true;
+                    board_top = lip_top;
+                    board_body = lip_id;
+                }
+            }
+        }
+    }
     const float length = std::hypot(dx, dz);
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
@@ -1536,6 +1616,14 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                                 0.5F + kEdgeDropM, top)) {
                     return false;
                 }
+                // A top she can still clamber onto is not a drop. The low
+                // ray starts at her knees and misses a floor that has
+                // risen above them. A rail fails the full-width check.
+                float high_top = 0.0F;
+                if (floor_at(dir, ahead_m + on, kClamberMaxM + 0.3F, kClamberMaxM + 0.5F, high_top) &&
+                    high_top >= feet - 0.05F && high_top <= feet + kClamberMaxM) {
+                    return false;
+                }
             }
             return true;
         };
@@ -1591,7 +1679,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         // The Turn's vault: something lower than her chest close ahead in
         // her way (not the player), and nothing at her head: she jumps it.
-        if (turn_moves && !leapt && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
+        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
             const Vec3 ahead(dx / length * 1.1F, 0.0F, dz / length * 1.1F);
             RayCastResult knee;
             RayCastResult head;
@@ -1619,7 +1707,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         // or vaults. A finite push from her feet: the speed up that just
         // carries her feet over its top.
         bool climbed = false;
-        if (!turn_moves && !leapt && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.3F &&
+        if (!boarding && !turn_moves && !leapt && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.3F &&
             !edge_at(Vec3(dx / length, 0.0F, dz / length), 0.3F)) {
             // (Only with floor under the step: across a gap only the Turn's leap.)
             const Vec3 heading(dx / length, 0.0F, dz / length);
@@ -1815,6 +1903,21 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                     push /= push.Length();
                     bodies.AddForce(id, push * force_n, EActivation::Activate);
+                }
+            }
+        }
+        if (boarding && !board_body.IsInvalid()) {
+            const float feet_now = float(at.GetY()) - kStandCentre;
+            const float floor_vy = bodies.GetLinearVelocity(board_body).GetY();
+            if (feet_now < board_top - 0.02F && velocity.GetY() < floor_vy + 2.0F) {
+                const float gap = std::max(0.05F, board_top - feet_now);
+                const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
+                if (velocity.GetY() < need) {
+                    const traversal::Limits budget;
+                    const float speed_up = std::max(0.5F, std::abs(velocity.GetY()));
+                    const float cap = std::min(budget.total_force_n, budget.power_w / speed_up);
+                    const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
+                    bodies.AddForce(body_, Vec3(0.0F, std::min(cap, std::max(0.0F, want)), 0.0F), EActivation::Activate);
                 }
             }
         }
@@ -2834,7 +2937,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 // over or under it.
                 float tx = heard_x_;
                 float tz = heard_z_;
-                if (elsewhere) {
+                // A lead standing on a floor she can still step or clamber
+                // onto is not another deck. Projecting that spot onto her
+                // band strands her under a machine that is leaving (a cage
+                // she has not stepped into). Another level, or a floor
+                // already above a clamber, stays on the band.
+                const float lead_up = lead_floor_ - feet_y;
+                const bool step_to_lead = lead_up > -0.3F && lead_up <= kClamberMaxM &&
+                                          distance_xz(ax, az, heard_x_, heard_z_) < 8.0F;
+                if (elsewhere && !step_to_lead) {
                     onto_floor_lines(tx, tz);
                 }
                 // The scan's patch path, when the hand-drawn levels graph
