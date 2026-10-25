@@ -452,6 +452,12 @@ public:
     static constexpr float kTurnBurstMps = 9.0F;
     static constexpr float kTurnPauseMps = 3.5F;
     static constexpr float kTurnFootAccel = 70.0F;
+    // Lunge push only. Extra force past 9.8 kN did not raise the measured
+    // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
+    // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
+    // and shove stay on 8 kN and 22 kW.
+    static constexpr float kTurnLungeForceN = 9800.0F;
+    static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
     // (patch Item 3; moved here from matron.cpp so matron_found_climb.cpp can use the same value).
     static constexpr float kRampStallS = 3.0F;

@@ -74,7 +74,9 @@ void run_matron_pace() {
         }
         tick(s);
         const auto m = s.matron_state();
-        peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+        if (m.turn == 0) {
+            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+        }
         gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         if (m.state != kHunting) {
             last_speed = -1.0;
@@ -90,7 +92,9 @@ void run_matron_pace() {
         }
         last_pace = m.pace;
         top_speed = std::max(top_speed, m.speed);
-        peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+        if (m.turn == 0) {
+            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+        }
         gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         if (m.hushed && !was_hushed) {
             ++hushes;

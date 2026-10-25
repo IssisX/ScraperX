@@ -1612,10 +1612,10 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
     }
     const traversal::Limits limits{};
-    const float power_cap = (turn_ == Turn::Lunge && !foot_driving_)
-                                ? limits.power_w * (kTurnCycleSeconds / kTurnBurstSeconds)
-                                : limits.power_w;
-    traversal::Budget budget{limits.total_force_n, 0.0F, power_cap, 0.0F, velocity - support_v};
+    const bool lunge_push = turn_ == Turn::Lunge && !foot_driving_;
+    const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
+    const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
+    traversal::Budget budget{force_cap, 0.0F, power_cap, 0.0F, velocity - support_v};
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
         if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
@@ -2227,7 +2227,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
                     const traversal::Limits budget;
-                    const float force_n = std::min(budget.total_force_n, budget.power_w / along);
+                    const float shove_force = turn_ == Turn::Lunge ? kTurnLungeForceN : budget.total_force_n;
+                    const float shove_power = turn_ == Turn::Lunge ? kTurnLungePowerW : budget.power_w;
+                    const float force_n = std::min(shove_force, shove_power / along);
                     Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                     push /= push.Length();
                     bodies.AddForce(id, push * force_n, EActivation::Activate);
