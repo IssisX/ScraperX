@@ -53,8 +53,7 @@ bool Matron::climb_of(const int edge, Climb &out, const Ways ways) const noexcep
     }
     const auto &regions = scanned_->regions();
     const traversal::MoveSpec &m = e.spec;
-    const Vec3 face = mantle ? -m.out
-                             : Vec3(m.line.GetX() - m.start.GetX(), 0.0F, m.line.GetZ() - m.start.GetZ()).NormalizedOr(-m.out);
+    const Vec3 face = -m.out;
     // A lip from a floor is a way up for her hands as rungs are: the scan's line is her standing spot, so the lip is
     // midway between it and the top she steps onto.
     const float line_x = mantle ? 0.5F * (m.start.GetX() + m.goal.GetX()) : m.line.GetX();
