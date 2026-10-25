@@ -184,6 +184,26 @@ bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
         if (col.count < kMinMembers || climb_blocked(col.key)) {
             continue;
         }
+        // Her own scan already measured this column and refused it: her body
+        // does not fit on the rungs. A floor at the foot and the head is not
+        // a reason to pull on steel she cannot pass.
+        if (scanned_ != nullptr) {
+            bool saw = false;
+            bool open = false;
+            for (const traversal::Edge &e : scanned_->edges()) {
+                if (e.kind != traversal::MoveKind::RungUp && e.kind != traversal::MoveKind::JumpCatch) {
+                    continue;
+                }
+                if (std::hypot(e.spec.line.GetX() - col.x, e.spec.line.GetZ() - col.z) > 0.25F) {
+                    continue;
+                }
+                saw = true;
+                open = open || e.usable;
+            }
+            if (saw && !open) {
+                continue;
+            }
+        }
         // Up, its foot at her floor; down, any column that goes down from it
         // (to the lead's floor or to one between: the progress test below).
         if ((up ? col.min_y > feet + kFirstHoldReachM : col.min_y > feet - 1.0F) ||
