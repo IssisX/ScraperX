@@ -452,6 +452,9 @@ public:
     static constexpr float kTurnBurstMps = 9.0F;
     static constexpr float kTurnPauseMps = 3.5F;
     static constexpr float kTurnFootAccel = 70.0F;
+    // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
+    // (patch Item 3; moved here from matron.cpp so matron_found_climb.cpp can use the same value).
+    static constexpr float kRampStallS = 3.0F;
 
     // Her stages (the owner, 2026-10-19): a pest, dangerous, and fully
     // changed. Her rage moves her between them, both ways: only sound that
@@ -1834,6 +1837,25 @@ private:
     float pipe_peak_force_n_ = 0.0F;   // her grip's peak force on the pipe (budget-capped)
     float pipe_peak_power_w_ = 0.0F;
     JPH::Vec3 pipe_drive_dv_ = JPH::Vec3::sZero(); // what her drive changes her velocity by this step
+    // Her feet under the force law (walk_toward): a planted sole on a real
+    // support member during a vault, leap, step-up, or clamber stroke, and what
+    // her feet's force changes her velocity by this step (for sense_near).
+    bool foot_driving_ = false;
+    bool foot_prep_ = false;
+    JPH::BodyID foot_body_;
+    JPH::SubShapeID foot_sub_;
+    JPH::Vec3 foot_local_ = JPH::Vec3::sZero();
+    float foot_start_y_ = 0.0F;
+    float foot_stroke_m_ = 0.40F;
+    float foot_prep_dist_ = 0.0F;
+    JPH::RVec3 foot_obstacle_ = JPH::RVec3::sZero();
+    JPH::Vec3 foot_heading_ = JPH::Vec3::sAxisZ();
+    float foot_want_vx_ = 0.0F;
+    float foot_want_vy_ = 0.0F;
+    int foot_ticks_ = 0;
+    float foot_force_n_ = 0.0F;
+    float foot_power_w_ = 0.0F;
+    JPH::Vec3 foot_drive_dv_ = JPH::Vec3::sZero();
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;
     std::uint32_t pipe_flanges_ = 0;

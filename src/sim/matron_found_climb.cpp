@@ -124,6 +124,9 @@ bool Matron::found_floor(const float x, const float z, const float from_y, const
 bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
     const float feet = float(at.GetY()) - kStandCentre;
     const bool up = lead_floor_ > feet;
+    if (!up && stage_ == Stage::Pest && turn_ == Turn::None) {
+        return false;
+    }
     const float low = std::min(feet, lead_floor_) - 3.0F;
     const float high = std::max(feet, lead_floor_) + 4.0F;
     const RVec3 middle(at.GetX(), 0.5F * (low + high), at.GetZ());
@@ -231,15 +234,21 @@ bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
             if (!foot_ok || !head_ok || head_y - foot_y < 2.0F) {
                 continue;
             }
-            // Toward her lead: from her floor, ending nearer the lead's.
-            const float from_y = up ? foot_y : head_y;
-            const float to_y = up ? head_y : foot_y;
-            if (std::abs(from_y - feet) > 0.4F || std::abs(to_y - lead_floor_) >= std::abs(feet - lead_floor_) - 1.0F) {
-                continue;
-            }
+            // Toward her lead: from her floor, ending nearer the lead's. A
+            // column across the deck must start on her level's floor, not an
+            // isolated raised bridge or ramp stand at a similar height.
             const float sx = up ? fx : hx;
             const float sz = up ? fz : hz;
             const float d = distance_xz(float(at.GetX()), float(at.GetZ()), sx, sz);
+            const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
+            const float walk_floor =
+                (on_line_ramp(at) || (d > 2.2F && std::abs(feet - level_floor) < 2.0F)) ? level_floor : feet;
+            const float from_y = up ? foot_y : head_y;
+            const float to_y = up ? head_y : foot_y;
+            if (std::abs(from_y - walk_floor) > 0.4F ||
+                std::abs(to_y - lead_floor_) >= std::abs(walk_floor - lead_floor_) - 1.0F) {
+                continue;
+            }
             if (d < best) {
                 best = d;
                 out.active = true;
@@ -305,7 +314,8 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     }
     find_wait_ticks_ = std::max(0, find_wait_ticks_ - 1);
     journey_wait_ticks_ = std::max(0, journey_wait_ticks_ - 1);
-    if (found_climbs_off_) {
+    if (found_climbs_off_ || (on_line_ramp(at) && stall_s_ < kRampStallS)) {
+        found_ = FoundClimb{};
         return false;
     }
     if (!found_.active) {
