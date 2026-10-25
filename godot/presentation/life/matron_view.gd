@@ -1039,6 +1039,99 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -1.1
 		head_roll = 0.15 * sin(_clock * 1.4)
 		jaw_open = 0.45
+		# Gap-fillers for the climbing moves, one pose each. The main
+		# climb branches above own an active move; this block only runs
+		# inside the ladder branch, for the phases those branches do not
+		# cover (for example rung_down at phase 0, step_down before it
+		# is airborne). As written in the prep commit this block was
+		# dead: it read climb_move_phase / climb_move_airborne, which
+		# the bridge never sent, and CamelCase move names, while the
+		# bridge sends snake-case move_name(). Fixed here to the real
+		# bridge keys climb_phase / climb_airborne (the bridge also
+		# exports the climb_move_* aliases). With climb_move absent
+		# or "walk", no case matches and the ladder pose above is
+		# untouched. Hands: both arms pose together here because these
+		# moves hold with both hands; the rig reaches both wrists to
+		# the one climb_hand hold point, since MatronSnapshot carries
+		# no distinct second climb hold (see matron_rig.gd contact()).
+		# Feet: legs/knees above are the feet pose; the support under
+		# them is the bridge's floor_y / support_n, already exported.
+		var move_kind := String(data.get("climb_move", ""))
+		if move_kind != "" and move_kind != "walk":
+			var move_phase := int(data.get("climb_phase", data.get("climb_move_phase", 0)))
+			var move_air := bool(data.get("climb_airborne", data.get("climb_move_airborne", false)))
+			match move_kind:
+				"rung_down":
+					# Down the ladder, face to the rungs, hands working
+					# downward instead of up, eyes on where her feet go.
+					arms_alt = -0.45 * sin(ph)
+					bend_alt = 0.55 * sin(ph)
+					head_pitch = 0.6
+					pitch = 0.3
+				"pole_up", "pole_down":
+					# Hands close together round the pole, legs wrapped
+					# round it, not the wide ladder spread.
+					arms_splay = 0.05
+					arms_fwd = 2.9
+					arms_alt = 0.1 * sin(ph)
+					knees = 1.6
+					legs_fwd = 0.9
+					legs_back = 0.9
+					head_pitch = -1.1 if move_kind == "pole_up" else 0.5
+				"mantle":
+					# Hauling up over a lip: hips rise with the phase,
+					# arms pressing down on the lip, trunk leaning in.
+					var mant := clampf(float(move_phase) / 2.0, 0.0, 1.0)
+					hip_y = 0.7 + 0.3 * mant
+					pitch = 0.5 - 0.4 * mant
+					arms_fwd = 2.2
+					arms_bend = 1.0
+					knees = 1.6
+				"step_down":
+					# Off an edge onto what is under it: arms still up
+					# on the hold, legs reaching down, trunk upright.
+					arms_fwd = 2.7
+					legs_fwd = 1.1
+					legs_back = 0.2
+					knees = 0.6
+					pitch = 0.4
+				"jump_catch":
+					# Reaching for a bar or a ladder foot: both arms out
+					# high together, legs trailing, then the catch.
+					arms_fwd = 2.9
+					arms_splay = 0.15
+					arms_alt = 0.0
+					legs_fwd = 1.2
+					legs_back = -0.2
+					knees = 0.9
+					head_pitch = -0.8
+					jaw_open = 0.6
+				"gap_jump":
+					if move_air:
+						# Ballistic, over the gap: arms forward, one leg
+						# reaching for the landing, the other trailing.
+						arms_fwd = 2.7
+						legs_fwd = 0.9
+						legs_back = -0.4
+						knees = 0.7
+						pitch = -0.1
+					else:
+						# The leg drive before it: crouched, knees deep,
+						# arms back for the push.
+						hip_y = 0.75
+						knees = 1.8
+						arms_fwd = 1.8
+						arms_bend = 0.9
+				"hang_drop":
+					# Hanging, then dropping: arms straight up on the
+					# hold, legs dangling loose under her.
+					arms_fwd = 2.9
+					arms_bend = 0.4
+					arms_splay = 0.2
+					legs_fwd = 0.3 + 0.2 * sin(_clock * 2.0)
+					legs_back = 0.1
+					knees = 0.5
+					head_pitch = -0.3
 	elif clinging:
 		# Down on her haunches with a hand locked on the cage's frame either
 		# side, rocking with it, the head never off the player.

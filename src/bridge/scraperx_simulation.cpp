@@ -1672,6 +1672,18 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["climb_move_active"] = state.climb_move_active;
     out["climb_phase"] = static_cast<std::int64_t>(state.climb_phase);
     out["climb_airborne"] = state.climb_airborne;
+    // Aliases under the names the presentation prep originally read, so a
+    // view written against climb_move_phase / climb_move_airborne gets the
+    // same values. These are aliases, not new sim data.
+    out["climb_move_phase"] = static_cast<std::int64_t>(state.climb_phase);
+    out["climb_move_airborne"] = state.climb_airborne;
+    // Feet support for the pose, under climb_ names: the floor under her
+    // current level and the force on that support. Both are already
+    // exported as floor_y / support_n; these aliases keep the climb pose
+    // reading from one place. No distinct second climb hold exists in
+    // MatronSnapshot, so both hands pose to climb_hand (see matron_rig).
+    out["climb_feet_floor_y"] = state.floor_y;
+    out["climb_support_n"] = state.support_n;
     out["climb_sliding"] = state.climb_sliding;
     out["climb_leg_driving"] = state.climb_leg_driving;
     out["climb_bar_traverse"] = state.climb_bar_traverse;

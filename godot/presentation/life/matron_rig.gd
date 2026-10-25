@@ -273,6 +273,15 @@ func contact(data: Dictionary, falling: bool) -> void:
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
 		var hand: Vector3 = data["climb_hand"]
 		_reach("r", skel.global_transform.affine_inverse() * hand)
+		# Two-handed moves hold the same hold with both hands (mantle on
+		# the lip, jump_catch on the bar, pole with hands close together,
+		# hang_drop from the lip). MatronSnapshot carries no distinct
+		# second climb hold, so the left wrist poses to the same
+		# climb_hand point; it is a pose to the one hold, not a second
+		# hold invented by the view. Rung moves keep the alternating
+		# hand-over-hand pose from matron_view and are not forced here.
+		if bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]:
+			_reach("l", skel.global_transform.affine_inverse() * hand)
 		return
 	if climbing or on_line:
 		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
