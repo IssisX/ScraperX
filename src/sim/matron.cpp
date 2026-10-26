@@ -232,6 +232,7 @@ void Matron::spawn_body() {
     foot_body_ = BodyID();
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
 }
 
@@ -247,6 +248,7 @@ void Matron::place_for_test(const RVec3 feet) {
     foot_body_ = BodyID();
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     state_ = State::Hunting;
     turn_ = Turn::None;
@@ -1557,6 +1559,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     foot_drive_dv_ = Vec3::sZero();
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    foot_lunge_ = false;
     bool floor_boarding = false;
     // Feet drive only on a floor, and not once she has jumped off it (rising
     // off it faster than it rises): a vault or a leap flies until she lands.
@@ -1640,6 +1643,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             foot_drive_dv_ += (granted / kMassKg) * dt;
             foot_force_n_ = budget.used;
             foot_power_w_ = budget.power_used;
+            foot_lunge_ = lunge_push;
         }
         return granted;
     };
@@ -2659,6 +2663,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     acoustic_queries_ = 0;
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     if (dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering ||
         on_line_ || climb_ >= 0 || pipe_phase_ != PipePhase::Off || journey_active_ || routecraft_.owns_motion()) {
@@ -4042,6 +4047,7 @@ void Matron::restore(const Saved &saved) {
         foot_body_ = BodyID();
         foot_force_n_ = 0.0F;
         foot_power_w_ = 0.0F;
+        foot_lunge_ = false;
         foot_drive_dv_ = Vec3::sZero();
         pipe_links_ = 0;
         pipe_holds_ = 0;
@@ -4592,6 +4598,10 @@ void Matron::refresh_view() {
                           : journey_hands               ? climber_->view().force_n
                           : climb_ >= 0                 ? climb_force_n_
                                                         : foot_force_n_;
+    // The Turn lunge is its own move with its own cap (kTurnLungeForceN,
+    // kTurnLungePowerW); the report says when the force shown is that drive.
+    view_.climb_lunge_drive = pipe_phase_ == PipePhase::Off && !routecraft_.owns_motion() && !journey_hands &&
+                              climb_ < 0 && foot_lunge_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     view_.mantling = mantling_;

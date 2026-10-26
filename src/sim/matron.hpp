@@ -803,6 +803,7 @@ public:
         bool climb_leg_driving = false;
         bool climb_bar_traverse = false;
         float climb_force_n = 0.0F;
+        bool climb_lunge_drive = false;
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;
@@ -1875,6 +1876,7 @@ private:
     int foot_ticks_ = 0;
     float foot_force_n_ = 0.0F;
     float foot_power_w_ = 0.0F;
+    bool foot_lunge_ = false;
     JPH::Vec3 foot_drive_dv_ = JPH::Vec3::sZero();
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;

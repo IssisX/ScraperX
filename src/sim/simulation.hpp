@@ -229,6 +229,7 @@ struct MatronSnapshot final {
     bool climb_leg_driving = false;
     bool climb_bar_traverse = false;
     double climb_force_n = 0.0;
+    bool climb_lunge_drive = false;
     std::uint32_t climb_grips = 0, climb_releases = 0;
     bool mantling = false;
     double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;

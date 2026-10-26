@@ -28,6 +28,8 @@ using scraperx::sim::traversal::AffordanceMap;
 void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
 
 constexpr double kForceLimitN = 8000.5;  // traversal::Limits total_force_n, with float slack
+// The Turn lunge is its own move with its own cap (Matron kTurnLungeForceN), checked on its own.
+constexpr double kLungeForceLimitN = 9800.5;
 constexpr double kStepLimitM = 0.20;
 
 struct Seed {
@@ -254,6 +256,7 @@ struct Result {
     double final_feet_delta = 0.0;
     double worst_step = 0.0;
     double max_climb_force = 0.0;
+    double max_lunge_force = 0.0;
     double max_pipe_peak = 0.0;
     double max_journey_peak = 0.0;
     std::string fail_reason;
@@ -303,10 +306,18 @@ Result run_seed(const Seed &seed, const int mode) {
             r.laws_ok = false;
             r.fail_reason = "gravity off";
         }
-        r.max_climb_force = std::max(r.max_climb_force, m.climb_force_n);
-        if (r.max_climb_force > kForceLimitN && r.fail_reason.empty()) {
-            r.laws_ok = false;
-            r.fail_reason = "climb force over Limits";
+        if (m.climb_lunge_drive) {
+            r.max_lunge_force = std::max(r.max_lunge_force, m.climb_force_n);
+            if (m.climb_force_n > kLungeForceLimitN && r.fail_reason.empty()) {
+                r.laws_ok = false;
+                r.fail_reason = "lunge force over its cap";
+            }
+        } else {
+            r.max_climb_force = std::max(r.max_climb_force, m.climb_force_n);
+            if (m.climb_force_n > kForceLimitN && r.fail_reason.empty()) {
+                r.laws_ok = false;
+                r.fail_reason = "climb force over Limits";
+            }
         }
         r.max_pipe_peak = std::max(r.max_pipe_peak, m.pipe_peak_force_n);
         if (r.max_pipe_peak > kForceLimitN && r.fail_reason.empty()) {
