@@ -124,7 +124,11 @@ struct Fixture {
         {
             BodyLockRead body(physics.GetBodyLockInterface(),matron->body());
             const Vec3 force=body.GetBody().GetAccumulatedForce();
-            require(std::abs(force.Length()-r.force)<0.01F,"routecraft: reported force matches actual body accumulator");
+            // Every force on her is reported: the routecraft's, or (when it has
+            // let go of her body) her feet's drive, never both at once.
+            const float feet=planner ? 0.0F : matron->foot_force_n();
+            require(feet==0.0F || r.force==0.0F,"routecraft: her feet never drive while the routecraft pushes");
+            require(std::abs(force.Length()-(r.force+feet))<0.01F,"routecraft: reported force matches actual body accumulator");
             measured_force=std::max(measured_force,force.Length());
             measured_power=std::max(measured_power,std::abs(force.Dot(body.GetBody().GetLinearVelocity())));
             require(force.Length()<=MatronRoutecraft::kForce+0.1F,"routecraft: actual accumulated force cap");

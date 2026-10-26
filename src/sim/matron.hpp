@@ -918,6 +918,8 @@ public:
     void cancel_climb_goal() noexcept { routecraft_.cancel(); }
 
     const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
+    // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
+    float foot_force_n() const noexcept { return foot_force_n_; }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
