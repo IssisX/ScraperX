@@ -1186,10 +1186,20 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
         // Straight up on the climb line where she hangs if that is clear of the
         // lip's face, else just off it.
         const float off = horizontal(c - lip_world_);
-        const float hang_off = (off >= limits_.radius + 0.03F && off <= limits_.reach_out)
-                                   ? std::clamp((Vec3(c - lip_world_)).Dot(-in), limits_.radius + 0.03F, limits_.reach_out)
-                                   : (limits_.radius + 0.06F);
-        const Vec3 beside = Vec3(lip_world_) - in * hang_off;
+        // A rung column is pulled onto the rung line, so a split patch beside
+        // the rail cannot walk her off the ladder. Any other lip (a narrow
+        // shelf) rises where she already hangs when that spot is clear.
+        Vec3 beside;
+        if (on_rungs) {
+            const float hang_off = (off >= limits_.radius + 0.03F && off <= limits_.reach_out)
+                                       ? std::clamp((Vec3(c - lip_world_)).Dot(-in), limits_.radius + 0.03F, limits_.reach_out)
+                                       : (limits_.radius + 0.06F);
+            beside = Vec3(lip_world_) - in * hang_off;
+        } else {
+            beside = (off >= limits_.radius + 0.03F && off <= limits_.reach_out)
+                         ? Vec3(c)
+                         : Vec3(lip_world_) - in * (limits_.radius + 0.06F);
+        }
         drive(dt, Vec3(beside.GetX(), over_y, beside.GetZ()), Vec3(0.0F, limits_.mantle_mps, 0.0F), 25.0F, budget, true,
               hold_world_);
         progress = feet;

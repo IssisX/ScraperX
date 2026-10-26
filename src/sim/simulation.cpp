@@ -1312,6 +1312,11 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.floor_y = view.floor_y;
     result.lead_floor_y = view.lead_floor_y;
     result.climb_hand = {view.climb_hand.GetX(), view.climb_hand.GetY(), view.climb_hand.GetZ()};
+    result.climb_hand2 = {view.climb_hand2.GetX(), view.climb_hand2.GetY(), view.climb_hand2.GetZ()};
+    result.climb_hand2_known = view.climb_hand2_known;
+    result.climb_feet_support = {view.climb_feet_support.GetX(), view.climb_feet_support.GetY(),
+                                 view.climb_feet_support.GetZ()};
+    result.climb_feet_support_known = view.climb_feet_support_known;
     result.climb_move = view.climb_move;
     result.climb_phase = view.climb_phase;
     result.climb_move_active = view.climb_move_active;

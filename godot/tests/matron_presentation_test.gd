@@ -127,7 +127,7 @@ func _run() -> void:
 	if native != null:
 		native.advance_frame(1.0 / 90.0)
 		var state: Dictionary = native.get_matron_state()
-		for key in ["climb_move", "climb_phase", "climb_airborne", "climb_move_phase", "climb_move_airborne", "climb_hand", "climb_feet_floor_y", "climb_support_n", "support_n", "floor_y"]:
+		for key in ["climb_move", "climb_phase", "climb_airborne", "climb_move_phase", "climb_move_airborne", "climb_hand", "climb_hand2", "climb_hand2_known", "climb_feet_support", "climb_feet_support_known", "climb_feet_floor_y", "climb_support_n", "support_n", "floor_y"]:
 			_check(state.has(key), "bridge_" + key, "present" if state.has(key) else "missing")
 		_check(state.get("climb_move_phase") == state.get("climb_phase") and state.get("climb_move_airborne") == state.get("climb_airborne"), "bridge_alias", "climb_move_* aliases match canonical keys")
 	else:
@@ -157,8 +157,23 @@ func _run() -> void:
 		_check(true, "frame_" + String(entry[0]), "torso %.2f shoulder %.2f hip %.2f" % [fp.x, fp.y, fp.z])
 		if _cam != null:
 			_check(await _shot("pose_" + String(entry[0])), "png_" + String(entry[0]), _out.path_join("pose_" + String(entry[0]) + ".png"))
+			# A distinct-hold frame for every two-handed move: the same
+			# synthetic second hold the mantle assertions measure, so
+			# the frame shows what the rig does when the bridge reports
+			# a validated second hold (not what native play shows for
+			# moves whose second hold stays unvalidated).
+			if String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]:
+				var base: Vector3 = (rig._gpos("sh_l") + rig._gpos("sh_r")) * 0.5 + Vector3(0.0, 0.1, 0.35)
+				var wbase: Vector3 = rig.skel.global_transform * base
+				var wleft: Vector3 = rig.skel.global_transform * (base + Vector3(-0.45, 0.0, 0.0))
+				rig.contact({"state": 3, "climbing": true, "climb_hand": wbase, "climb_hand2": wleft,
+					"climb_hand2_known": true, "climb_move_active": true,
+					"climb_move": String(data.get("climb_move", ""))}, false)
+				_check(await _shot("distinct_" + String(entry[0])), "png_distinct_" + String(entry[0]), _out.path_join("distinct_" + String(entry[0]) + ".png"))
 		else:
 			print("MATRON_PRESENTATION NOT_RUN png_" + String(entry[0]) + " (no display)")
+			if String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]:
+				print("MATRON_PRESENTATION NOT_RUN png_distinct_" + String(entry[0]) + " (no display)")
 	var ladder: Vector3 = fingerprints["ladder"]
 	for name in DISTINCT:
 		var delta_angle := (fingerprints[name] as Vector3).distance_to(ladder)
@@ -187,6 +202,36 @@ func _run() -> void:
 	var dl: float = rig._gpos("wr_l").distance_to(target)
 	_check(dr < 0.05, "hand_right_mantle", "right wrist %.3f m from hold" % dr)
 	_check(dl < 0.05, "hand_left_mantle", "left wrist %.3f m from same hold" % dl)
+	# Distinct second hold + real feet support on a two-handed mantle.
+	# The left hold is one shoulder-width (0.45 m) to her left of the
+	# right hold, in skeleton space (her left is local -x, the side
+	# sh_l sits on); the feet support is 0.2 m above the lowest foot,
+	# inside the rig's lift clamp, so the lift-to-support mechanism is
+	# what is measured, not a support already at the feet.
+	var left_target: Vector3 = target + Vector3(-0.45, 0.0, 0.0)
+	var world_left: Vector3 = rig.skel.global_transform * left_target
+	var foot_before: float = rig._lowest_foot()
+	var support_skel := Vector3(0.0, foot_before + 0.2, 0.0)
+	var world_support: Vector3 = rig.skel.global_transform * support_skel
+	var distinct_data := {"state": 3, "climbing": true, "climb_hand": world_target, "climb_hand2": world_left,
+		"climb_hand2_known": true, "climb_feet_support": world_support, "climb_feet_support_known": true,
+		"climb_move_active": true, "climb_move": "mantle"}
+	rig.contact(distinct_data, false)
+	var dr2: float = rig._gpos("wr_r").distance_to(target)
+	var dl2: float = rig._gpos("wr_l").distance_to(left_target)
+	var foot_after: float = rig._lowest_foot()
+	_check(left_target.distance_to(target) > 0.3, "holds_distinct_mantle", "holds %.2f m apart" % left_target.distance_to(target))
+	_check(dr2 < 0.05, "hand_right_own_hold", "right wrist %.3f m from its own hold" % dr2)
+	_check(dl2 < 0.05, "hand_left_own_hold", "left wrist %.3f m from its own hold" % dl2)
+	_check(absf(foot_after - (foot_before + 0.2)) < 0.05, "feet_on_support_mantle", "lowest foot %.3f m, support %.3f m (skeleton space)" % [foot_after, foot_before + 0.2])
+	var sr: float = rig._gpos("sh_r").distance_to(target)
+	var sl: float = rig._gpos("sh_l").distance_to(left_target)
+	print("MATRON_PRESENTATION INFO shoulder_to_hold right %.3f m left %.3f m (arm max ~0.51 m)" % [sr, sl])
+	# An unvalidated second hold must NOT move the left wrist: with
+	# climb_hand2_known false the left wrist stays on the one hold.
+	rig.contact(contact_data, false)
+	var dl_fallback: float = rig._gpos("wr_l").distance_to(target)
+	_check(dl_fallback < 0.05, "hand_left_fallback_single_hold", "left wrist %.3f m from the one hold when second hold unvalidated" % dl_fallback)
 	var out_dir := _out if _out != "" else "artifacts"
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var f := FileAccess.open(out_dir.path_join("matron_presentation_frames.json"), FileAccess.WRITE)

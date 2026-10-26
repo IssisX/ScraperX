@@ -217,6 +217,10 @@ struct MatronSnapshot final {
     bool clinging = false;
     double floor_y = 154.0;
     Vector3 climb_hand{};
+    Vector3 climb_hand2{};
+    bool climb_hand2_known = false;
+    Vector3 climb_feet_support{};
+    bool climb_feet_support_known = false;
     traversal::MoveKind climb_move{};
     int climb_phase = 0;
     bool climb_move_active = false;

@@ -1680,10 +1680,17 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     // Feet support for the pose, under climb_ names: the floor under her
     // current level and the force on that support. Both are already
     // exported as floor_y / support_n; these aliases keep the climb pose
-    // reading from one place. No distinct second climb hold exists in
-    // MatronSnapshot, so both hands pose to climb_hand (see matron_rig).
+    // reading from one place. The second hold and the feet support point
+    // below are real MatronSnapshot fields (see Matron::refresh_view),
+    // not view-script derivations: when climb_hand2_known is false the
+    // rig keeps the single-hold pose.
     out["climb_feet_floor_y"] = state.floor_y;
     out["climb_support_n"] = state.support_n;
+    out["climb_hand2"] = godot::Vector3(state.climb_hand2.x, state.climb_hand2.y, state.climb_hand2.z);
+    out["climb_hand2_known"] = state.climb_hand2_known;
+    out["climb_feet_support"] =
+        godot::Vector3(state.climb_feet_support.x, state.climb_feet_support.y, state.climb_feet_support.z);
+    out["climb_feet_support_known"] = state.climb_feet_support_known;
     out["climb_sliding"] = state.climb_sliding;
     out["climb_leg_driving"] = state.climb_leg_driving;
     out["climb_bar_traverse"] = state.climb_bar_traverse;

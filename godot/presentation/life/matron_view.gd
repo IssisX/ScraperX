@@ -1051,11 +1051,13 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		# exports the climb_move_* aliases). With climb_move absent
 		# or "walk", no case matches and the ladder pose above is
 		# untouched. Hands: both arms pose together here because these
-		# moves hold with both hands; the rig reaches both wrists to
-		# the one climb_hand hold point, since MatronSnapshot carries
-		# no distinct second climb hold (see matron_rig.gd contact()).
+		# moves hold with both hands; the rig reaches the right wrist
+		# to climb_hand and the left wrist to the bridge's own second
+		# hold climb_hand2 when the native validated it, falling back
+		# to the one hold otherwise (see matron_rig.gd contact()).
 		# Feet: legs/knees above are the feet pose; the support under
-		# them is the bridge's floor_y / support_n, already exported.
+		# them is the bridge's climb_feet_support point when known,
+		# else the floor_y / support_n already exported.
 		var move_kind := String(data.get("climb_move", ""))
 		if move_kind != "" and move_kind != "walk":
 			var move_phase := int(data.get("climb_phase", data.get("climb_move_phase", 0)))

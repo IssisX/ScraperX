@@ -272,16 +272,35 @@ func contact(data: Dictionary, falling: bool) -> void:
 	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
 		var hand: Vector3 = data["climb_hand"]
+		# Two-handed moves (mantle on the lip, jump_catch on the bar,
+		# pole with hands close together, hang_drop from the lip).
+		# Rung moves are not two-handed here: they keep exactly the
+		# old contact behaviour, and their feet are never lifted.
+		var two_handed := bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]
+		# Feet first, so the hand reach is solved from where the body
+		# ends up: on a two-handed move, when the bridge reports a
+		# real feet support point within reach of the feet, the body
+		# rides just enough for the lowest foot to meet it. A support
+		# farther than that (feet in mid-air under a lip) lifts
+		# nothing, so the figure never floats toward a deck it has
+		# not reached. Without a known support point the feet pose
+		# is untouched.
+		if two_handed and bool(data.get("climb_feet_support_known", false)) and data.has("climb_feet_support"):
+			var sup: Vector3 = skel.global_transform.affine_inverse() * (data["climb_feet_support"] as Vector3)
+			var dy := sup.y - _lowest_foot()
+			if absf(dy) <= 0.3:
+				_lift_body(dy)
 		_reach("r", skel.global_transform.affine_inverse() * hand)
-		# Two-handed moves hold the same hold with both hands (mantle on
-		# the lip, jump_catch on the bar, pole with hands close together,
-		# hang_drop from the lip). MatronSnapshot carries no distinct
-		# second climb hold, so the left wrist poses to the same
-		# climb_hand point; it is a pose to the one hold, not a second
-		# hold invented by the view. Rung moves keep the alternating
-		# hand-over-hand pose from matron_view and are not forced here.
-		if bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]:
-			_reach("l", skel.global_transform.affine_inverse() * hand)
+		# On a two-handed move the left wrist goes to the bridge's own
+		# second hold when the native validated one
+		# (climb_hand2_known), and only then; an unvalidated second
+		# hold falls back to the one hold, exactly as before, never
+		# to a point the view invented.
+		if two_handed:
+			var hand_l: Vector3 = hand
+			if bool(data.get("climb_hand2_known", false)) and data.has("climb_hand2"):
+				hand_l = data["climb_hand2"]
+			_reach("l", skel.global_transform.affine_inverse() * hand_l)
 		return
 	if climbing or on_line:
 		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)

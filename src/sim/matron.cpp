@@ -4709,6 +4709,71 @@ void Matron::refresh_view() {
         view_.y = kDeckTop + kStandCentre;
         view_.z = kLockerZ;
     }
+    // Second climb hold + feet support: VIEW PLUMBING ONLY. Nothing here
+    // moves her, grips, or changes a climb: it only reports two points
+    // for the presentation to pose to, computed from the climb geometry
+    // and probed against the world. Movement code never reads these
+    // fields, and no climb state (climb_, climb_support_, climb_hand_)
+    // is written here.
+    view_.climb_hand2 = JPH::RVec3::sZero();
+    view_.climb_hand2_known = false;
+    view_.climb_feet_support = JPH::RVec3::sZero();
+    view_.climb_feet_support_known = false;
+    const bool legacy_climb = climb_ >= 0 && !climb_support_.IsInvalid();
+    const bool has_hand = legacy_climb || routecraft_.owns_motion() || journey_hands;
+    if (has_hand) {
+        // Her left, one shoulder-width (0.45 m) along the rung or lip
+        // from the first hold, at the same height. On a legacy climb
+        // the rung runs across her facing (out is steel-to-her-side),
+        // so her left is (out_z, 0, -out_x); otherwise it is her yaw's
+        // left, (-cos yaw, 0, sin yaw), matching the figure's local -x.
+        Vec3 left(0.0F, 0.0F, 0.0F);
+        if (legacy_climb) {
+            const Climb spec = climb_spec(climb_);
+            left = Vec3(spec.out_z, 0.0F, -spec.out_x);
+        } else {
+            left = Vec3(-std::cos(yaw_), 0.0F, std::sin(yaw_));
+        }
+        if (left.LengthSq() > 1.0e-6F) {
+            const RVec3 second = view_.climb_hand + left.Normalized() * 0.45F;
+            view_.climb_hand2 = second;
+            // A legacy climb can prove the second point: it must rest
+            // on the very support and member the first hand holds.
+            // Journey and routecraft climbs carry no support handle
+            // here, so their candidate stays reported-but-unknown and
+            // the rig keeps the single-hold pose rather than posing a
+            // wrist to a point no surface was ever shown under.
+            if (legacy_climb) {
+                const ClimbBodyFilter filter(body_, player_);
+                BodyID rests_body;
+                SubShapeID rests_member;
+                view_.climb_hand2_known =
+                    hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member) &&
+                    rests_body == climb_support_ && rests_member == climb_member_;
+            }
+        }
+    }
+    if (body_in_world_) {
+        // Feet: the surface straight under her body centre, probed like
+        // climb()'s floor check (centre down past her soles).
+        const RVec3 at(view_.x, view_.y, view_.z);
+        const ClimbBodyFilter filter(body_, player_);
+        RayCastResult floor_hit;
+        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor_hit,
+                                                    {}, {}, filter)) {
+            view_.climb_feet_support = RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)).GetPointOnRay(floor_hit.mFraction);
+            view_.climb_feet_support_known = true;
+        } else if (legacy_climb) {
+            // No surface under her (mid-mantle, feet in the air): the
+            // climb's top deck is where her feet land.
+            const Climb spec = climb_spec(climb_);
+            view_.climb_feet_support = RVec3(spec.top_x, spec.lip_y, spec.top_z);
+            view_.climb_feet_support_known = true;
+        } else {
+            view_.climb_feet_support = RVec3(view_.x, view_.floor_y, view_.z);
+            view_.climb_feet_support_known = false;
+        }
+    }
     BodyInterface &bodies = physics_.GetBodyInterface();
     for (std::size_t i = 0; i < planks_.size(); ++i) {
         PlankView &view = plank_views_[i];

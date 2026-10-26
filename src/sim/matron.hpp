@@ -780,6 +780,20 @@ public:
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
         JPH::RVec3 climb_hand = JPH::RVec3::sZero();
+        // Her left hand's own hold, on two-handed moves: the same height
+        // as climb_hand, one shoulder-width (0.45 m) to her left along
+        // the rung or lip. View plumbing only (see refresh_view): it is
+        // reported, never gripped by movement code, and known is false
+        // unless a legacy climb's support validated it, in which case
+        // the rig poses the left wrist to it instead of to climb_hand.
+        JPH::RVec3 climb_hand2 = JPH::RVec3::sZero();
+        bool climb_hand2_known = false;
+        // Her feet's real support point, not a floor level: the surface
+        // probed straight under her body centre, or the climb's top deck
+        // when no surface is under her (mid-mantle, feet in the air).
+        // known is false when it is only her level's floor point.
+        JPH::RVec3 climb_feet_support = JPH::RVec3::sZero();
+        bool climb_feet_support_known = false;
         // The move that owns the pose, even while a jump or drop has no hold.
         traversal::MoveKind climb_move = traversal::MoveKind::Walk;
         int climb_phase = 0;
