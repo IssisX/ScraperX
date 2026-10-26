@@ -576,7 +576,8 @@ int main() {
     run_matron_routes();
     run_matron_traverse();
     run_matron_pursuit();
-    run_matron_chase();
+    // run_matron_chase: its own ctest slice (scraperx_sim.matron-chase), so the
+    // whole suite's run stays inside its timeout. It still runs on every ctest.
     run_matron_ways();
     run_matron_climb();
     run_matron_grab();
