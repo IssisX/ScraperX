@@ -1024,7 +1024,7 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     const float hold_y = float(hold_world_.GetY());
     const float top_reach = float(c.GetY()) + limits_.hand_above_center;
     bool took = false;
-    if (top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
+    if (hold_y - float(c.GetY()) < 0.95F && top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
         find_rung(hold_y + 0.12F, std::min(top_reach, hold_y + 0.65F), true, next, next_world)) {
         hold_ = next;
         hold_world_ = next_world;
@@ -1076,7 +1076,8 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
 // A mantle from a hang: her capsule must fit over the lip and where she will
 // stand, or she does not go.
 Climber::Status Climber::begin_mantle_from_hang() {
-    const Vec3 in = flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
+    const bool on_rungs = spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::JumpCatch;
+    const Vec3 in = on_rungs ? -spec_.out : flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
     const float top = float(lip_world_.GetY());
     RVec3 over = lip_world_ + in * (limits_.radius + 0.08F) + Vec3(0.0F, limits_.center_above_feet() + 0.06F, 0.0F);
     RVec3 stand = RVec3(spec_.goal.GetX(), top + limits_.center_above_feet() + 0.04F, spec_.goal.GetZ());
@@ -1176,15 +1177,29 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
         }
     }
     const float top = float(lip_world_.GetY());
-    const Vec3 in = flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
+    const bool on_rungs = spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::JumpCatch;
+    const Vec3 in = on_rungs ? -spec_.out : flat(spec_.goal - lip_world_).NormalizedOr(-spec_.out);
     const float feet = float(c.GetY()) - limits_.center_above_feet();
     const float over_y = top + limits_.center_above_feet() + 0.08F;
     float progress = 0.0F;
     if (feet < top + 0.04F) {
-        // Straight up where she hangs if that is clear of the lip's face,
-        // else just off it.
+        // Straight up on the climb line where she hangs if that is clear of the
+        // lip's face, else just off it.
         const float off = horizontal(c - lip_world_);
-        const Vec3 beside = off >= limits_.radius + 0.03F && off <= limits_.reach_out ? Vec3(c) : lip_world_ - in * (limits_.radius + 0.06F);
+        // A rung column is pulled onto the rung line, so a split patch beside
+        // the rail cannot walk her off the ladder. Any other lip (a narrow
+        // shelf) rises where she already hangs when that spot is clear.
+        Vec3 beside;
+        if (on_rungs) {
+            const float hang_off = (off >= limits_.radius + 0.03F && off <= limits_.reach_out)
+                                       ? std::clamp((Vec3(c - lip_world_)).Dot(-in), limits_.radius + 0.03F, limits_.reach_out)
+                                       : (limits_.radius + 0.06F);
+            beside = Vec3(lip_world_) - in * hang_off;
+        } else {
+            beside = (off >= limits_.radius + 0.03F && off <= limits_.reach_out)
+                         ? Vec3(c)
+                         : Vec3(lip_world_) - in * (limits_.radius + 0.06F);
+        }
         drive(dt, Vec3(beside.GetX(), over_y, beside.GetZ()), Vec3(0.0F, limits_.mantle_mps, 0.0F), 25.0F, budget, true,
               hold_world_);
         progress = feet;
@@ -2559,7 +2574,9 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     e.to = hp.region;
                     e.kind = up.kind;
                     e.spec = up;
-                    e.cost = (l.top - l.bottom) / limits.climb_mps + (jump ? 6.0F : 2.0F);
+                    const float align_pen =
+                        0.01F * (horizontal(stand_foot - foot_at) + horizontal(stand_head - (line - out * 0.6F)));
+                    e.cost = (l.top - l.bottom) / limits.climb_mps + (jump ? 6.0F : 2.0F) + align_pen;
                     e.usable = foot_ok && head_ok && over_ok && corridor_ok && jump_ok;
                     e.reason = facts;
                     char corridor[96];
@@ -2590,7 +2607,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     const Vec3 hang_c = line + out * 0.42F + Vec3(0, l.top - limits.hang_below_hold + 0.4F, 0);
                     const bool hang_ok = capsule_free(physics, ignore, limits, hang_c - Vec3(0, limits.center_above_feet() + 0.04F, 0));
                     d.usable = over_ok && hang_ok && foot_ok && corridor_ok && (foot_reached || drop_ok);
-                    d.cost = (l.top - l.bottom) / limits.climb_mps + 2.0F;
+                    d.cost = (l.top - l.bottom) / limits.climb_mps + 2.0F + align_pen;
                     d.reason = facts;
                     if (!foot_reached) d.reason += drop_ok ? "; ends in a drop off the bottom rung" : "; blocked: drop off the bottom rung too far";
                     if (!hang_ok) d.reason += "; blocked: capsule does not fit going over the head";

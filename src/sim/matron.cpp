@@ -1224,10 +1224,12 @@ bool Matron::find_climb_hold(const RVec3 at, const bool down) {
     RayHits hits;
     physics_.GetNarrowPhaseQuery().CastRay(ray, settings, hits, {}, {}, filter);
     hits.sort();
+    for (const float step_cap : {0.65F, kClimbReachM}) {
     for (int i = 0; i < hits.count; ++i) {
         const RayCastResult &hit = hits.hits[static_cast<std::size_t>(i)];
         const RVec3 point = ray.GetPointOnRay(hit.mFraction);
-        if (Vec3(point - at).Length() > kClimbReachM) {
+        if ((!down && holding && float(point.GetY() - climb_hand_.GetY()) > step_cap) ||
+            Vec3(point - at).Length() > kClimbReachM) {
             continue;
         }
         PointHit fingers;
@@ -1263,6 +1265,10 @@ bool Matron::find_climb_hold(const RVec3 at, const bool down) {
         climb_hand_known_ = true;
         ++climb_grips_;
         return true;
+    }
+    if (down || !holding) {
+        break;
+    }
     }
     return false;
 }
@@ -1369,13 +1375,15 @@ void Matron::climb(const float dt) {
         // above the last rung is not a hold. Retain the old hand during a miss.
         // With none higher in reach yet, she pulls up higher on the one she
         // has (the hand at her chest), to reach further.
-        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 1.05F) {
+        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 0.85F) {
             reaching_up_ = !find_climb_hold(at, false);
         }
         // Over the top from a hand near the lip, or from the last hold under
         // a lip she cannot hold on its line (a plate's edge stands out from
-        // the rungs): up and over it, if her body fits all the way.
-        if (!mantling_ && (climb_hand_.GetY() > c.lip_y - 0.4F || (reaching_up_ && climb_hand_.GetY() > c.lip_y - 0.7F))) {
+        // the rungs): up and over it once her body has climbed up to that top
+        // hold, if her body fits all the way.
+        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 0.75F &&
+            (climb_hand_.GetY() > c.lip_y - 0.4F || (reaching_up_ && climb_hand_.GetY() > c.lip_y - 0.7F))) {
             // Reuse the same full-body clearance query as standing after a fall,
             // up over the lip, half way out and landed: collisions still
             // arbitrate every step in between.
@@ -2397,6 +2405,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         } else {
             sound_count_ = 0;
             step_planks(dt);
+            feel_floor(dt);
+            settle_level();
             step_journey(dt);
             // Her body's travel counts her strides and rungs (each rung rings).
             stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;

@@ -247,7 +247,7 @@ bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
                 out.start_x = sx;
                 out.start_z = sz;
                 out.from_y = from_y;
-                out.goal = RVec3(up ? hx : fx, to_y + kStandCentre + 0.02F, up ? hz : fz);
+                out.goal = RVec3(up ? hx : fx, to_y + kStandCentre + 0.07F, up ? hz : fz);
                 out.facing = -front;   // into the supports from the foot's side, both ways
             }
         }
