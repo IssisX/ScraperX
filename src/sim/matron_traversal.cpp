@@ -2542,12 +2542,25 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     const bool over_ok = lip_near && capsule_free(physics, ignore, limits, lip_in);
                     // The climb itself: her body on the rungs, foot to head,
                     // every half meter (a deck's edge over the ladder stops her).
+                    // The rise runs the full way to mantle clearance: standing
+                    // centre on the head (its top plus her centre height), not
+                    // just to the top rung. A deck over the column stops her
+                    // head before she can mantle, so a sample that ends below
+                    // it passes a climb she cannot finish. Only the climb
+                    // column is sampled: a mantle-rise column built from scan
+                    // data was tried three ways (full rise; top-only from
+                    // the inset lip point; top-only from the patch edge with
+                    // the executor's clamped hang offset) and each falsely
+                    // blocked ladders that climb clean -- the executor's lip
+                    // search and diagonal rise are dynamic, and no static
+                    // column from edge data models them. The head-hit that
+                    // blocks these climbs happens in the climb column itself.
                     bool corridor_ok = true;
                     float corridor_block = 0.0F;
                     {
                         const Vec3 on = line + out * 0.42F;
                         const float lo = fp.top + limits.center_above_feet() + 0.05F;
-                        const float hi = l.top - 0.35F;
+                        const float hi = hp.top + limits.center_above_feet();
                         for (float y = lo; y <= hi + 0.01F && corridor_ok; y += 0.5F) {
                             if (!capsule_free(physics, ignore, limits, on + Vec3(0.0F, y - limits.center_above_feet(), 0.0F))) {
                                 corridor_ok = false;
@@ -2966,10 +2979,30 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
         if (d > dist[static_cast<std::size_t>(r)]) continue;
         if (r == to) break;
         // edges_ is sorted by from: the run for r.
+        // A ladder's own route between two regions beats a cheaper shortcut
+        // that leaves the ladder's line (a pole beside it, a lip drop off a
+        // neighbouring strip): she climbs the ladder she means to climb, on
+        // its line, instead of sliding down something a metre to one side
+        // and drifting off the line the whole way down. Only a usable rung
+        // edge this plan may still take blocks the shortcuts: an avoided
+        // or unusable rung edge leaves them open, so a failed rung climb
+        // still falls back to the next way. Reachability is untouched: the
+        // shortcuts end in the same region the rung edge does.
+        const auto is_rung = [](const MoveKind kind) {
+            return kind == MoveKind::RungUp || kind == MoveKind::RungDown || kind == MoveKind::JumpCatch;
+        };
+        std::vector<int> rung_to;
+        for (auto jt = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
+             jt != edges_.end() && jt->from == r; ++jt) {
+            if (!jt->usable || !is_rung(jt->kind)) continue;
+            if (std::find(avoid.begin(), avoid.end(), static_cast<int>(jt - edges_.begin())) != avoid.end()) continue;
+            rung_to.push_back(jt->to);
+        }
         auto it = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
         for (; it != edges_.end() && it->from == r; ++it) {
             if (!it->usable) continue;
             if (std::find(avoid.begin(), avoid.end(), static_cast<int>(it - edges_.begin())) != avoid.end()) continue;
+            if (!is_rung(it->kind) && std::find(rung_to.begin(), rung_to.end(), it->to) != rung_to.end()) continue;
             const float nd = d + it->cost;
             if (nd < dist[static_cast<std::size_t>(it->to)]) {
                 dist[static_cast<std::size_t>(it->to)] = nd;

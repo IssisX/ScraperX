@@ -1,3 +1,4 @@
+#include <sstream>
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -2022,4 +2023,75 @@ void run_matron_tower_proof() {
     require(failed_legs.empty(), "matron tower proof: every deck pair her scan joins, up and down, arrived, no tick over 0.20 m, gravity on");
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
+}
+
+// Every ladder in the tower, as her own scan reads it: for each one her scan
+// gives a rung climb, she goes up it from where that climb starts and back
+// down it. On the rungs she keeps to the ladder's line (no drift along the
+// rungs beyond kLadderDriftM, the fault that once walked her off the first
+// ladder's top), tops out onto the deck, never loses a hold and never moves
+// more than 0.20 m a tick. Nothing here names a ladder.
+void run_matron_ladders() {
+    constexpr double kLadderDriftM = 0.30;
+    Simulation s(InitialSpawn::Deck154);
+    (void)s.advance_frame(0.1);
+    const traversal::AffordanceMap &map = s.matron_affordances();
+    const auto &edges = map.edges();
+    int tried = 0, passed = 0;
+    std::vector<std::string> failed;
+    for (const traversal::Ladder &l : map.ladders()) {
+        const auto on_line = [&](const traversal::Edge &e, MoveKind kind) {
+            return e.usable && e.kind == kind && std::abs(e.spec.line.GetX() - l.x) < 0.6F &&
+                   std::abs(e.spec.line.GetZ() - l.z) < 0.6F;
+        };
+        int up = -1;
+        for (std::size_t k = 0; k < edges.size() && up < 0; ++k) if (on_line(edges[k], MoveKind::RungUp)) up = int(k);
+        std::cout << "  matron ladder at (" << l.x << ", " << l.z << ") " << l.bottom << "->" << l.top << " m, " << l.rungs
+                  << " rungs: ";
+        if (up < 0) {
+            std::cout << "no rung climb in her scan\n";
+            continue;
+        }
+        const traversal::Edge eu = edges[std::size_t(up)];
+        ++tried;
+        const auto leg = [&](const int goal, const char *way) {
+            auto last = s.matron_state().position;
+            double worst = 0.0, drift = 0.0, gravity = 1.0, secs = 0.0;
+            const auto j0 = s.matron_journey();
+            if (!s.debug_matron_travel_region(goal)) return std::string(way) + " no plan";
+            Simulation::MatronJourney j = s.matron_journey();
+            while (j.active && secs < 120.0) {
+                (void)s.advance_frame(1.0 / 60.0);
+                secs += 1.0 / 60.0;
+                const auto p = s.matron_state().position;
+                worst = std::max(worst, std::hypot(p.x - last.x, p.y - last.y, p.z - last.z));
+                last = p;
+                const double feet = p.y - Matron::kStandCentre;
+                const double across = l.along_x ? p.x - l.x : p.z - l.z;
+                const double off = l.along_x ? p.z - l.z : p.x - l.x;
+                if (feet > l.bottom + 0.5 && feet < l.top - 0.3 && std::abs(off) < 1.2) drift = std::max(drift, std::abs(across));
+                j = s.matron_journey();
+                gravity = std::min(gravity, j.gravity_factor);
+            }
+            std::ostringstream o;
+            o << way << " drift " << drift << " m worst step " << worst << " m slips " << (j.slips - j0.slips) << " misses "
+              << (j.misses - j0.misses) << " failed " << (j.moves_failed - j0.moves_failed);
+            const bool ok = !j.active && j.region == goal && drift <= kLadderDriftM && worst <= 0.20 && gravity == 1.0 &&
+                            j.slips == j0.slips && j.misses == j0.misses && j.moves_failed == j0.moves_failed;
+            return o.str() + (ok ? " ok" : " FAILED");
+        };
+        const auto st = eu.spec.start;
+        s.debug_place_matron(Vector3{double(st.GetX()), double(st.GetY()), double(st.GetZ())});
+        for (int i = 0; i < 30; ++i) (void)s.advance_frame(1.0 / 60.0);
+        const std::string a = leg(eu.to, "up");
+        // Back down to where the climb began, by whatever way her scan gives.
+        const std::string b = leg(eu.from, "down");
+        std::cout << a << "; " << b << "\n";
+        const bool ok = a.find("FAILED") == std::string::npos && b.find("FAILED") == std::string::npos;
+        passed += ok ? 1 : 0;
+        if (!ok) failed.push_back(a + "; " + b);
+    }
+    std::cout << "  matron ladders: " << passed << "/" << tried << " ladders up and down clean\n";
+    require(tried > 0 && passed == tried, "matron ladders: up and down every ladder, on its line, no hold lost");
+    std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << "\n";
 }
