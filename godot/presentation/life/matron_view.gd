@@ -56,6 +56,7 @@ var _bolts_seen := 0
 var _knock_in := 0.6
 var _breath_in := 1.0
 var _shriek_in := 0.0
+var _player_d := 20.0   # her last distance to the player, for her dread
 var _last_step := 0
 var _last_pos := Vector3.ZERO
 var _fall_speed := 0.0
@@ -374,7 +375,7 @@ func _tear_door() -> void:
 	_vent_material.emission_energy_multiplier = 0.0
 	if _audio != null:
 		_audio.matron_cue(&"locker_burst", LOCKER_CENTRE, 3.0, 1.0)
-		_audio.matron_cue(&"matron_shriek", LOCKER_CENTRE, 0.0, 0.9)
+		_audio.matron_dread(LOCKER_CENTRE, _player_d)
 		_shriek_in = 6.0
 
 
@@ -1605,10 +1606,11 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 			if float(data["speed"]) > 0.3 and not falling:
 				_audio.matron_cue(&"matron_step", feet, lerpf(-14.0, -3.0, clampf(float(data["speed"]) / 6.8, 0.0, 1.0)), randf_range(0.85, 1.1) * (1.0 if state != STATE_HUNTING else 1.25))
 		# The shriek: the moment she sees you, and in the long fall.
+		_player_d = d
 		var sees := bool(data["sees_player"])
 		_shriek_in = maxf(0.0, _shriek_in - delta)
 		if sees and not _was_seen and _shriek_in <= 0.0 and d < 40.0:
-			_audio.matron_cue(&"matron_shriek", _hip_world(), -2.0, randf_range(0.95, 1.1))
+			_audio.matron_dread(_hip_world(), d)
 			_shriek_in = 7.0
 		_was_seen = sees
 		if falling and not _cry_fall:
