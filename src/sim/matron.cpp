@@ -1089,7 +1089,7 @@ void Matron::ride_line() {
     const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
     const float drop = std::max(0.0F, float(at.GetY() - line.bottom_floor.GetY()) - kStandCentre);
     const float gravity = -physics_.GetGravity().GetY();
-    const RVec3 lands = at + run * (kLetGoSwingMps * std::sqrt(2.0F * drop / std::max(gravity, 0.1F)));
+    const float fall_s = std::sqrt(2.0F * drop / std::max(gravity, 0.1F));
     const auto deck_under = [&](const RVec3 p) {
         RayCastResult hit;
         const RRayCast ray(p, Vec3(0.0F, -3.0F, 0.0F));
@@ -1105,7 +1105,18 @@ void Matron::ride_line() {
         return lock.Succeeded() &&
                lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, on).GetY() > 0.7F;
     };
-    const bool deck = deck_under(lands);
+    // Her swing on: full, half, or none (straight down) when the full swing
+    // would come down in steel (the end post, the buffer's housing) or the
+    // shaft. The largest that comes down on a floor is the one she takes.
+    float swing = -1.0F;
+    for (const float scale : {1.0F, 0.5F, 0.0F}) {
+        const RVec3 p = at + run * (kLetGoSwingMps * scale * fall_s);
+        if (!over_shaft(p) && deck_under(p)) {
+            swing = scale;
+            break;
+        }
+    }
+    const bool deck = swing >= 0.0F;
     // Her forearms' drag: friction on her weight across the cable, as a
     // squeeze of the line's brake. At the end with the swing still over
     // the hole, the drag comes off so she can come on as far as the cable
@@ -1114,7 +1125,7 @@ void Matron::ride_line() {
     zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
                                   ? 0.0F
                                   : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && deck && !over_shaft(lands) && std::abs(ride.speed_mps) < 0.3F) {
+    if (at_end && deck && std::abs(ride.speed_mps) < 0.3F) {
         zipline_->unclip_other();
         on_line_ = false;
         // The cable was what riding_ meant. Leaving it has to clear that
@@ -1127,7 +1138,7 @@ void Matron::ride_line() {
         // carries her onto the band.
         riding_ = false;
         let_go_s_ = 0.0F;
-        bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * kLetGoSwingMps);
+        bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * (kLetGoSwingMps * swing));
     }
 }
 
