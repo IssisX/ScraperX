@@ -17,6 +17,7 @@
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
 #include <algorithm>
+#include <utility>
 #include <cstdlib>
 #include <chrono>
 #include <cmath>
@@ -2987,23 +2988,41 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
         // edge this plan may still take blocks the shortcuts: an avoided
         // or unusable rung edge leaves them open, so a failed rung climb
         // still falls back to the next way. Reachability is untouched: the
-        // shortcuts end in the same region the rung edge does.
+        // shortcuts end in the same region the rung edge does. Nor does the
+        // preference change what any route costs: the rung edge is charged
+        // the cheapest price of the ways it replaces between those two
+        // regions. Blocking a cheap shortcut at its full price made every
+        // region with a ladder look dearer than it is, so the search went
+        // round the ladder's deck altogether (a drop onto a board beside it
+        // and off again) - the opposite of climbing the ladder she means to.
         const auto is_rung = [](const MoveKind kind) {
             return kind == MoveKind::RungUp || kind == MoveKind::RungDown || kind == MoveKind::JumpCatch;
         };
         std::vector<int> rung_to;
+        std::vector<std::pair<int, float>> cheapest_to;   // per neighbour region: the cheapest usable way there
         for (auto jt = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
              jt != edges_.end() && jt->from == r; ++jt) {
-            if (!jt->usable || !is_rung(jt->kind)) continue;
+            if (!jt->usable) continue;
             if (std::find(avoid.begin(), avoid.end(), static_cast<int>(jt - edges_.begin())) != avoid.end()) continue;
-            rung_to.push_back(jt->to);
+            const int t = jt->to;
+            const auto ct = std::find_if(cheapest_to.begin(), cheapest_to.end(), [t](const std::pair<int, float> &c) { return c.first == t; });
+            if (ct == cheapest_to.end()) cheapest_to.emplace_back(t, jt->cost);
+            else ct->second = std::min(ct->second, jt->cost);
+            if (is_rung(jt->kind)) rung_to.push_back(t);
         }
         auto it = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
         for (; it != edges_.end() && it->from == r; ++it) {
             if (!it->usable) continue;
             if (std::find(avoid.begin(), avoid.end(), static_cast<int>(it - edges_.begin())) != avoid.end()) continue;
-            if (!is_rung(it->kind) && std::find(rung_to.begin(), rung_to.end(), it->to) != rung_to.end()) continue;
-            const float nd = d + it->cost;
+            const bool to_ladder = std::find(rung_to.begin(), rung_to.end(), it->to) != rung_to.end();
+            if (!is_rung(it->kind) && to_ladder) continue;
+            float cost = it->cost;
+            if (to_ladder) {
+                const int t = it->to;
+                const auto ct = std::find_if(cheapest_to.begin(), cheapest_to.end(), [t](const std::pair<int, float> &c) { return c.first == t; });
+                if (ct != cheapest_to.end()) cost = std::min(cost, ct->second);
+            }
+            const float nd = d + cost;
             if (nd < dist[static_cast<std::size_t>(it->to)]) {
                 dist[static_cast<std::size_t>(it->to)] = nd;
                 via[static_cast<std::size_t>(it->to)] = static_cast<int>(it - edges_.begin());
