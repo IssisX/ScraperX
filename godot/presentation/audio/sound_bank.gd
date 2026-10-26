@@ -108,6 +108,8 @@ func build() -> void:
 	# is as it was: the body going in, and a stroke through it.
 	clips[&"splash"] = _variants(2, _splash)
 	clips[&"swim_stroke"] = _variants(3, _swim_stroke)
+	# Her waking dread, made last so every clip before it is as it was.
+	clips[&"matron_wake"] = _variants(4, _matron_wake)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -780,6 +782,77 @@ func _matron_shriek() -> PackedFloat32Array:
 		var env := sin(PI * clampf(u, 0.0, 1.0)) ** 0.6
 		var voice := sin(phase) + 0.5 * sin(2.0 * phase) + 0.3 * sin(3.0 * phase + 1.0)
 		out[i] = (voice * 0.35 + grit[i] * 0.9) * env
+	return out
+
+
+# Her waking: dread from wrongness, not loudness. A beat of near-silence; the
+# tower's steel taking a load it should not (a stick-slip groan, the
+# friction pulsing at an uneven rate, under a slow resonant strain); a sub
+# swell at 28 Hz with its 56/84 Hz partials, so a phone still carries its
+# weight in harmonics; a wet, uneven intake of breath with saliva ticks, mixed
+# dry so it reads as close; and two tones 6 Hz apart under a faint tritone,
+# beating like something out of tune. Every variant draws new timings, pitches
+# and breath shapes, so no two wakes are alike.
+func _matron_wake() -> PackedFloat32Array:
+	var length := 3.4
+	var out := _silence(length)
+	var n := out.size()
+	var hush := 0.3 + _rng.randf_range(0.0, 0.15)
+	var first := int(hush * MIX_RATE)
+	# Steel under strain: a groan sliding down, its friction pulsing unevenly.
+	var strain := _resonant_noise_buffer(n, _rng.randf_range(170.0, 240.0), 0.25, _rng.randf_range(0.6, 1.3))
+	var grind := _band_noise_buffer(n, 400.0, 2400.0)
+	var g_from := _rng.randf_range(190.0, 240.0)
+	var g_to := g_from * _rng.randf_range(0.68, 0.8)
+	var phase := 0.0
+	var slip := 0.0
+	var slip_rate := _rng.randf_range(8.0, 13.0)
+	for i in range(first, n):
+		var u := float(i - first) / float(n - first)
+		var swell := sin(PI * minf(1.0, u * 1.15)) ** 1.4
+		phase += TAU * lerpf(g_from, g_to, u) / float(MIX_RATE)
+		slip += slip_rate * (1.0 + 0.6 * sin(TAU * 0.7 * u * length)) / float(MIX_RATE)
+		var catch := 1.0 if fmod(slip, 1.0) < 0.35 else 0.25
+		var saw := fmod(phase / TAU, 1.0) * 2.0 - 1.0
+		out[i] += (saw * 0.22 * catch + grind[i] * 0.35 * catch + strain[i] * 2.2) * swell
+	# The sub swell and its partials.
+	var sub := _silence(length)
+	_add_tone(sub, 28.0, hush, length - hush, 0.5, 0.0)
+	_add_tone(sub, 56.0, hush, length - hush, 0.22, 0.0)
+	_add_tone(sub, 84.0, hush, length - hush, 0.12, 0.0)
+	# Out of tune: two tones beating, a tritone over them.
+	var root := _rng.randf_range(290.0, 330.0)
+	_add_tone(sub, root, hush + 0.4, length - hush - 0.4, 0.07, 0.0)
+	_add_tone(sub, root + _rng.randf_range(5.0, 7.0), hush + 0.4, length - hush - 0.4, 0.07, 0.0)
+	_add_tone(sub, root * 1.4142, hush + 0.9, length - hush - 0.9, 0.035, 0.0)
+	for i in range(first, n):
+		var u := float(i - first) / float(n - first)
+		out[i] += sub[i] * minf(1.0, u * 2.5) * (1.0 - u) ** 0.5
+	# The breath, too close: an uneven wet intake that catches twice.
+	var b_at := hush + _rng.randf_range(0.9, 1.4)
+	var b_len := _rng.randf_range(1.1, 1.5)
+	var breath := _resonant_noise_buffer(int(b_len * MIX_RATE), _rng.randf_range(850.0, 1100.0), 0.35, 1.7)
+	var air := _band_noise_buffer(breath.size(), 1800.0, 6000.0)
+	var b0 := int(b_at * MIX_RATE)
+	var catch1 := _rng.randf_range(0.3, 0.45)
+	var catch2 := _rng.randf_range(0.6, 0.75)
+	for j in breath.size():
+		var i := b0 + j
+		if i >= n:
+			break
+		var v := float(j) / float(breath.size())
+		var env := sin(PI * v) ** 0.8
+		if absf(v - catch1) < 0.03 or absf(v - catch2) < 0.025:
+			env *= 0.15
+		out[i] += (breath[j] * 3.0 + air[j] * 0.25) * env
+	for k in _rng.randi_range(4, 7):
+		_add_band_noise(out, b_at + _rng.randf_range(0.0, b_len), 0.006, 0.25, 0.002, 3000.0, 7000.0)
+	var peak := 0.0
+	for i in n:
+		peak = maxf(peak, absf(out[i]))
+	if peak > 0.0:
+		for i in n:
+			out[i] *= 0.9 / peak
 	return out
 
 

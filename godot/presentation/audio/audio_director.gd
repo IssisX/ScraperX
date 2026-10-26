@@ -377,6 +377,8 @@ func ui_tap(back: bool = false) -> void:
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
 		support_point_velocity: Vector3 = Vector3.ZERO) -> void:
+	if not _silent:
+		_update_dread(delta)
 	# Strides are the feet moving over what they stand on: a rider carried by a
 	# lift, a cab or a turning beam is not walking.
 	var foot_velocity := velocity - support_point_velocity if grounded else velocity
@@ -1087,6 +1089,40 @@ func forklift_cue(name: StringName, at: Vector3, strength: float) -> void:
 func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> void:
 	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
 	_play_at(name, at, volume_db, pitch)
+
+
+# Her waking dread (sound_bank _matron_wake) from `at`, `distance` metres from
+# the player. The ambience and her music box drop away first, so the world
+# goes quiet around it; nearer is louder and the duck is deeper. A fresh
+# variant and pitch every time, so it never repeats identically.
+const DREAD_DUCK_SECONDS := 3.6
+func matron_dread(at: Vector3, distance: float) -> void:
+	matron_cues[&"matron_wake"] = int(matron_cues.get(&"matron_wake", 0)) + 1
+	var near := 1.0 - clampf(distance / 40.0, 0.0, 1.0)
+	_dread_depth_db = lerpf(-8.0, -22.0, near)
+	_dread_s = DREAD_DUCK_SECONDS
+	_play_at(&"matron_wake", at, lerpf(-6.0, 4.0, near), randf_range(0.92, 1.04))
+
+
+var _dread_s := 0.0
+var _dread_depth_db := 0.0
+var _dread_amp: AudioEffectAmplify
+
+
+# The duck under her dread: in fast, held, then back slowly.
+func _update_dread(delta: float) -> void:
+	if _dread_amp == null:
+		var index := AudioServer.get_bus_index(BUS_AMBIENCE)
+		if index < 0:
+			return
+		_dread_amp = AudioEffectAmplify.new()
+		AudioServer.add_bus_effect(index, _dread_amp)
+	_dread_s = maxf(0.0, _dread_s - delta)
+	var u := _dread_s / DREAD_DUCK_SECONDS
+	var target := _dread_depth_db * clampf(u * 3.0, 0.0, 1.0)
+	_dread_amp.volume_db = move_toward(_dread_amp.volume_db, target, delta * (80.0 if target < _dread_amp.volume_db else 10.0))
+	if _matron_loop != null and _dread_s > 0.0:
+		_matron_loop.volume_db = minf(_matron_loop.volume_db, -60.0)
 
 
 # A flock flushed at `at`: its wings, heard from where it rose.
