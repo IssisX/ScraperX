@@ -11,18 +11,19 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # on it (touch_matron_pipe times it, and drops a drum on her). Through the
 # gate in 143's rail and up the riser to her deck meanwhile; off the pipe she
 # listens, and comes back up it after them. Round on her east band by the
-# rail, her shove throws the climber at the shaft. More noise and she is
-# fully changed: her hands kill. Back on 143 (the checkpoint: where the
-# climber stood as she turned dangerous over them), up the riser again
-# while she looks for the climber where she killed them, quietly to her
-# ladder and up it to the 176 ring, her Turn
-# bringing her up after; on by the climbing route (boards and standpipe,
-# catwalk and scaffold), where she cannot follow, to the 220 ring.
+# rail, dangerous, her hands take the climber (Cory, 2026-10-27: at any rage,
+# every time she catches you she grabs you and rips an arm off): held out
+# over the drop, an arm torn off, set back on her deck. Sprints beside her
+# while she walks off, and she is fully changed: her next catch takes the
+# second arm, and the run is hers (Claimed, the fatality). The run starts
+# again whole, her in her locker: quietly to her ladder and up it to the 176
+# ring; on by the climbing route (boards and standpipe, catwalk and
+# scaffold), where she cannot follow, to the 220 ring.
 #
 # With --capture, the screen at each stage: the cage she unrigged, her coming
-# dangerous and her shove at the rail, her coming fully changed, her coming up
-# the ladder after, and the 220 ring. Between those the drawing is
-# switched off (the simulation runs on), so the capture is quick.
+# dangerous and the arm she tears off at the rail, her coming fully changed,
+# and the 220 ring. Between those the drawing is switched off (the
+# simulation runs on), so the capture is quick.
 
 # Her hands on the climber (src/sim/matron.hpp State Grab..Claimed).
 const MATRON_STATE_GRAB := 12
@@ -49,7 +50,21 @@ const ACT_RIM := Vector2(18.0, -158.0)
 # 3 m within which, dangerous, she aims her shove at it.
 const ACT_LAP_NORTH := Vector2(20.6, -134.5)
 const ACT_LAP_SOUTH := Vector2(20.6, -143.5)
-const ACT_GRAB_TRIES := 3   # her reaches at the ankle of the changed chase before it fails
+const ACT_GRAB_TRIES := 3   # her reaches at the ankle at the rail before it fails
+# The sprints by the rail while she comes: 1 m in from the climber's spot by
+# it, 3 m either side; till she is this near, or her rage is this (short of
+# fully changed's 0.85, src/sim/matron.hpp kRageChangedUp).
+const ACT_RAIL_LAP_X := 19.0
+const ACT_RAIL_NEAR_M := 12.0
+const ACT_RAIL_RAGE := 0.70
+# Set back on her deck with one arm, the laps beside her as she walks off:
+# up and down her east band 4 m from the shaft's rim (past her shove's 3 m),
+# ACT_CALM_HALF either side of her, kept between the catwalk's end and the
+# south band.
+const ACT_CALM_X := 21.0
+const ACT_CALM_HALF := 4.0
+const ACT_CALM_NORTH_Z := -153.0
+const ACT_CALM_SOUTH_Z := -166.0
 # A climb stage with no time limit still ends when he is stuck: about six
 # times the one-armed climb (a 22 m stage at 0.45 m/s takes about 49 s).
 const ACT_STUCK_CAP_S := 300.0
@@ -63,7 +78,8 @@ var _act_stages_seen := {}
 var _act_drawing := true
 var _act_view_back := Vector2(NAN, NAN)   # the view's yaw and pitch before a screenshot aimed it
 var _act_running := false   # screenshots are the act's own while it plays
-# Deaths the act means at this point (her fully changed hands: one).
+# Deaths the act means at this point: none (her hands are no death on touch,
+# and the run she makes hers ends without one).
 var _act_deaths_allowed := 0
 
 
@@ -477,13 +493,15 @@ func _act_up_riser(device: int, off_its_head := true) -> bool:
 	return true
 
 
-# Dangerous, she comes up her pipe after the climber: by the shaft's rim on
-# her east band her shove throws the climber at it. More noise, and fully
-# changed her hands kill.
+# Dangerous, she comes up her pipe after the climber: by the shaft's rail on
+# her east band her hands take the climber (Cory, 2026-10-27: at any rage,
+# every time she catches you she grabs you and rips an arm off), and she sets
+# them back on her deck with one arm. More noise beside her, and she is fully
+# changed: her next catch takes the second arm, and the run is hers.
 func _act_dangerous_and_changed(device: int) -> bool:
 	# Round onto the east band while she climbs, beside the shaft's rail
-	# (whatever her hands do there throws the climber at the rail, not off the
-	# deck's open outer edge).
+	# (whatever her hands do there, they do at the rail, not off the deck's
+	# open outer edge).
 	# (Over the bay on its leaf, src/sim/bay.hpp: from the riser's head
 	# straight east runs off the leaf's south side into the bay.)
 	if not (await _walk_to(device, ACT_BAY_WEST, 0.3, 4.0, true) and \
@@ -491,8 +509,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 			await _sprint_to(device, ACT_LAP_NORTH, 1.0, 6.0)):
 		return _fail("the run round onto the east band stalled at %s" % str(_position()))
 	# Gone back to a pest on the way (her rage cools as she climbs): sprints up
-	# and down the band till she is dangerous again, and a few strides behind
-	# (at the climber's heels her shove throws them anywhere, not at the rail).
+	# and down the band till she is dangerous again, and a few strides behind.
 	if int(_matron_state()["stage"]) < STAGE_DANGEROUS:
 		var raged: bool = await _act_laps(device, ACT_LAP_SOUTH, ACT_LAP_NORTH,
 			func() -> bool: return int(_matron_state()["stage"]) >= STAGE_DANGEROUS and \
@@ -500,8 +517,8 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		if not raged:
 			return _fail("the chase never made her dangerous (rage %.3f)" % float(_matron_state()["rage"]))
 	_act_log("dangerous")
-	# By the rail, still: she comes (off her pipe, a listen, then on), and
-	# shoves at the shaft.
+	# By the rail, still: she comes (off her pipe, a listen, then on), and her
+	# hands take the climber.
 	# A sprint there, and jumps on the spot until she has heard where the
 	# climber is (she knows only what she hears or sees: src/sim/matron.cpp
 	# hear; across the shaft from her pipe one sprint may not carry).
@@ -511,75 +528,143 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		var m := _matron_state()
 		return _fail("at the rail she never heard the climber (state %d at %s, lead %s at (%.1f, %.1f))" % [
 			int(m["state"]), str(m["position"]), str(m["lead_valid"]), float(m["lead_x"]), float(m["lead_z"])])
-	var shoves := int(_matron_state()["shoves"])
-	var x0 := _position().x
-	var watch := {"nearest": x0}
-	var shoved: bool = await _act_watch_her(func() -> bool:
-		watch["nearest"] = minf(float(watch["nearest"]), _position().x)
-		return int(_matron_state()["shoves"]) > shoves and int(_matron_state()["stage"]) == STAGE_DANGEROUS, 60.0,
-		"dangerous_at_rail", "act_dangerous_coming", 4.0)
-	if not shoved:
-		return _fail("dangerous, she never shoved the climber at the rail (stage %d)" % int(_matron_state()["stage"]))
-	await _act_wait(func() -> bool:
-		watch["nearest"] = minf(float(watch["nearest"]), _position().x)
-		return false, 0.6, "rail")
-	await _act_frame_her()
-	await _act_pose("act_dangerous_shove")
-	_act_log("rail_shove dx=%.2f" % (float(watch["nearest"]) - x0))
-	if float(watch["nearest"]) > x0 - 0.3:
-		return _fail("dangerous, her shove did not throw the climber at the shaft (dx %.2f)" % (
-			float(watch["nearest"]) - x0))
-	# Away from the rail before her next shove (the next could put the climber
-	# over it), and away from her: come up her pipe north of the climber, she
-	# presses on along the rail, and straight out from it is into her.
-	var away := ((_act_me_xz() - _act_her_xz()).normalized() + Vector2(1.0, 0.0)).normalized()
-	if not await _sprint_to(device, _act_me_xz() + away * 5.0, 0.8, 4.0):
-		return _fail("the break away from the rail stalled at %s (she at %s)" % [str(_position()),
-			str(_matron_state()["position"])])
-	# Fully changed, her hands take the climber (src/sim/matron_hold.cpp): no
-	# death on touch; her hand closes on the ankle and what follows is physics,
-	# carried, held out over the drop, the arm played with, let go or set back.
-	# At most the one death the act allows, and only in her hands.
-	_act_deaths_allowed = 1
+	# While she comes, her rage banked: sprints up and down by the rail, heard
+	# from her pipe's head, till she is near or her rage is ACT_RAIL_RAGE (short
+	# of fully changed: she takes the climber dangerous), then back to the
+	# rail. Set back on her deck with one arm, a short spell of noise beside her
+	# then has her fully changed before her hands may take hold again.
 	var catches := int(_matron_state()["catches"])
-	var raged_more: bool = await _act_laps(device, ACT_LAP_SOUTH, ACT_LAP_NORTH,
-		func() -> bool: return int(_matron_state()["stage"]) == STAGE_CHANGED or int(_native().get_death_count()) >= 1,
-		150.0, "chase_to_changed")
-	if not raged_more:
-		return _fail("the chase never changed her fully (rage %.3f)" % float(_matron_state()["rage"]))
-	if int(_native().get_death_count()) >= 1:
-		if int(_matron_state()["catches"]) <= catches:
-			return _fail("the climber died in the chase, not in her hands (%s)" % str(_native().get_death_state()))
-		# Only fully changed are her hands a death.
-		_act_stages_seen[STAGE_CHANGED] = true
-	_act_log("changed")
-	# Her hand can miss the ankle of a climber still running when the change comes (a grab miss): she is
-	# after them again, and they stand for her next reach, as a player caught once would. A few tries.
-	var hold: Dictionary = {}
+	await _act_laps(device, Vector2(ACT_RAIL_LAP_X, ACT_RIM.y + 3.0), Vector2(ACT_RAIL_LAP_X, ACT_RIM.y - 3.0),
+		func() -> bool: return float(_matron_state()["rage"]) >= ACT_RAIL_RAGE or \
+			_act_her_xz().distance_to(_act_me_xz()) < ACT_RAIL_NEAR_M or int(_matron_state()["catches"]) > catches,
+		30.0, "rage_at_rail")
+	if int(_native().get_death_count()) > _act_deaths_allowed:
+		return _fail("the sprints by the rail cost a death (deaths %d)" % int(_native().get_death_count()))
+	if int(_matron_state()["catches"]) == catches:
+		await _walk_to(device, ACT_RIM, 0.3, 3.0)
+	# Her hold (src/sim/matron_hold.cpp): no death on touch. Her hand closes on
+	# the ankle, she holds the climber out over the drop and tears an arm off,
+	# then lets them go over a ledge below or, here, sets them back on her
+	# deck. Her hand can miss the ankle of a climber her lunge jostles (a grab
+	# miss): she is after them again, and they stand for her next reach. A few
+	# tries.
 	for attempt in ACT_GRAB_TRIES:
+		if attempt > 0:
+			catches = int(_matron_state()["catches"])
 		var caught: bool = await _act_watch_her(func() -> bool:
-			return int(_matron_state()["catches"]) > catches or int(_native().get_death_count()) >= 1, 30.0,
-			"changed_catch", "act_changed_coming", 3.0)
-		if not caught or int(_matron_state()["catches"]) <= catches:
-			return _fail("fully changed, her hands never closed on the climber (deaths %d)" % int(_native().get_death_count()))
-		# Her hands on, and off again: the hold runs its course.
-		var held: bool = await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "changed_grab")
-		var over: bool = held and await _act_wait(func() -> bool: return not _act_in_her_hands(), 120.0, "changed_hold")
-		if not over:
-			return _fail("fully changed, her hold on the climber never ended (state %d)" % int(_matron_state()["state"]))
-		if int(_native().get_death_count()) > 1:
-			return _fail("her hold cost more than the one death (deaths %d)" % int(_native().get_death_count()))
-		await _seconds(0.5)
-		hold = _native().get_matron_hold_state()
-		_act_log("caught grabs=%d armplays=%d arm_tears=%d releases=%d spares=%d" % [int(hold.get("grabs", 0)),
-			int(hold.get("armplays", 0)), int(hold.get("arm_tears", 0)), int(hold.get("releases", 0)),
-			int(hold.get("spares", 0))])
-		if int(hold.get("grabs", 0)) >= 1:
+			return int(_matron_state()["catches"]) > catches, 60.0,
+			"dangerous_at_rail", "act_dangerous_coming", 4.0)
+		if not caught:
+			return _fail("dangerous, her hands never took the climber at the rail (stage %d)" % int(_matron_state()["stage"]))
+		if int(_matron_state()["stage"]) != STAGE_DANGEROUS:
+			return _fail("at the rail her hands took the climber at stage %d, not dangerous" % int(_matron_state()["stage"]))
+		# Her state shows the catch a tick after it is counted: her hands on,
+		# then her fingers closed on the ankle, or the reach missed.
+		if not await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "rail_grab"):
+			return _fail("at the rail her hands never came on the climber (state %d)" % int(_matron_state()["state"]))
+		await _act_wait(func() -> bool:
+			return int(_native().get_matron_hold_state()["grabs"]) >= 1 or not _act_in_her_hands(), 5.0, "rail_grab")
+		if int(_native().get_matron_hold_state()["grabs"]) >= 1:
 			break
-		catches = int(_matron_state()["catches"])
-	if int(hold.get("grabs", 0)) < 1:
-		return _fail("fully changed, her hand never closed on the climber's ankle in %d reaches" % ACT_GRAB_TRIES)
+	if int(_native().get_matron_hold_state()["grabs"]) < 1:
+		return _fail("dangerous, her hand never closed on the climber's ankle at the rail in %d reaches" % ACT_GRAB_TRIES)
+	var torn: bool = await _act_wait(func() -> bool:
+		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
+		"rail_hold")
+	if torn and _act_in_her_hands():
+		await _act_frame_her()
+		await _act_pose("act_dangerous_arm")
+	var over: bool = torn and await _act_wait(func() -> bool: return not _act_in_her_hands(), 90.0, "rail_hold")
+	if not over:
+		return _fail("dangerous, her hold on the climber at the rail never ended (state %d)" % int(_matron_state()["state"]))
+	await _seconds(0.5)
+	var hold: Dictionary = _native().get_matron_hold_state()
+	_act_log("rail_grab grabs=%d armplays=%d arm_tears=%d releases=%d spares=%d one_arm=%s" % [int(hold["grabs"]),
+		int(hold["armplays"]), int(hold["arm_tears"]), int(hold["releases"]), int(hold["spares"]),
+		str(hold["one_arm"])])
+	if int(hold["grabs"]) < 1:
+		return _fail("dangerous, her hand never closed on the climber's ankle at the rail")
+	if int(hold["arm_tears"]) != 1 or not bool(hold["one_arm"]):
+		return _fail("dangerous, her hold at the rail did not tear one arm off (tears %d, one arm %s)" % [
+			int(hold["arm_tears"]), str(hold["one_arm"])])
+	if bool(hold["claimed"]) or int(hold["runs_ended_by_matron"]) != 0 or int(_native().get_death_count()) != 0:
+		return _fail("one arm gone at the rail was more than an arm (claimed %s, runs ended %d, deaths %d)" % [
+			str(hold["claimed"]), int(hold["runs_ended_by_matron"]), int(_native().get_death_count())])
+	if _position().y < 150.0:
+		return _fail("her hold at the rail let the climber go below her deck (at %s)" % str(_position()))
+	# One arm left: her next catch takes the second. Spared, she walks off, her
+	# hands off the climber a while (src/sim/matron.hpp kSpareCalmSeconds):
+	# sprints up and down the band beside her till she is fully changed.
+	if not await _act_rage_beside_her(device, int(_matron_state()["catches"]), 40.0):
+		return false
+	_act_log("changed")
+	# Fully changed, her hands take the climber again: the second arm torn
+	# off, and the run is hers (Claimed): her fatality plays out, and the run
+	# starts again, the body whole, her in her locker.
+	var seen := {"tears": int(hold["arm_tear_count"]), "claimed": false}
+	var ended_before := int(hold["runs_ended_by_matron"])
+	var ended: bool = await _act_watch_her(func() -> bool:
+		var h: Dictionary = _native().get_matron_hold_state()
+		if int(h["runs_ended_by_matron"]) > ended_before:
+			return true
+		seen["tears"] = maxi(int(seen["tears"]), int(h["arm_tear_count"]))
+		seen["claimed"] = bool(seen["claimed"]) or bool(h["claimed"])
+		return false, 240.0, "changed_catch", "act_changed_coming", 3.0)
+	_act_log("hers tears=%d claimed=%s" % [int(seen["tears"]), str(seen["claimed"])])
+	if not ended:
+		return _fail("fully changed, her hands never made the run hers (tears %d, claimed %s)" % [int(seen["tears"]),
+			str(seen["claimed"])])
+	if int(seen["tears"]) != 2 or not bool(seen["claimed"]):
+		return _fail("the run ended without her second arm and her fatality (tears %d, claimed %s)" % [
+			int(seen["tears"]), str(seen["claimed"])])
+	var whole: Dictionary = _native().get_matron_hold_state()
+	if bool(whole["left_arm_lost"]) or bool(whole["right_arm_lost"]):
+		return _fail("the run started again without the body whole")
 	return true
+
+
+# Sprints up and down her east band beside her (ACT_CALM_X, clear of the
+# shaft's rim), ACT_CALM_HALF either side of where she is at each turn, till
+# she is fully changed; a fail if `budget` seconds run out first, or her hands
+# come for the climber again before it (`catches` hers so far).
+func _act_rage_beside_her(device: int, catches: int, budget: float) -> bool:
+	var start := Engine.get_process_frames()
+	var leg := 0
+	while float(Engine.get_process_frames() - start) / 60.0 < budget:
+		var her := _act_her_xz()
+		var side := ACT_CALM_HALF if leg % 2 == 0 else -ACT_CALM_HALF
+		var target := Vector2(ACT_CALM_X, clampf(her.y + side, ACT_CALM_SOUTH_Z, ACT_CALM_NORTH_Z))
+		await _face(target - _act_me_xz())
+		if not _stick_sprint():
+			_move(device, 0.0)
+			return _fail("the stick pushed past its ring did not latch sprint")
+		var on_leg := 0.0
+		while on_leg < 4.0:
+			var m := _matron_state()
+			_act_stages_seen[int(m["stage"])] = true
+			if int(m["stage"]) == STAGE_CHANGED:
+				_move(device, 0.0)
+				return true
+			if int(m["catches"]) > catches or int(_native().get_death_count()) > _act_deaths_allowed:
+				_move(device, 0.0)
+				_act_log("chase_to_changed_caught")
+				return _fail("her hands came for the climber again before she was fully changed (stage %d, rage %.3f, deaths %d)" % [
+					int(m["stage"]), float(m["rage"]), int(_native().get_death_count())])
+			var to := target - _act_me_xz()
+			if to.length() <= 1.2:
+				break
+			var turn := 4.0 * get_process_delta_time()
+			_main._yaw = float(_main._yaw) + clampf(wrapf(atan2(-to.x, -to.y) - float(_main._yaw), -PI, PI), -turn, turn)
+			await get_tree().process_frame
+			on_leg += get_process_delta_time()
+		_move(device, 0.0)
+		leg += 1
+		_act_log("chase_to_changed")
+	_move(device, 0.0)
+	_act_log("chase_to_changed_timeout")
+	if int(_matron_state()["stage"]) == STAGE_CHANGED:
+		return true
+	return _fail("the sprints beside her never changed her fully (rage %.3f)" % float(_matron_state()["rage"]))
 
 
 # Her hands on the climber, or letting them go (Grab to Claimed).
@@ -608,12 +693,12 @@ func _act_call_her(budget: float) -> bool:
 	return false
 
 
-# Out of her hands: dead in them, back on 143 at the checkpoint (frozen once
-# she turned dangerous over the climber: a deck her pipe joins to hers is hers
-# too) and up the riser again; set back on her deck, on from there. Then
-# quietly to her ladder and up it to the 176 ring; on by the climbing route,
-# no lift, to the 220 ring (its boards are narrower than she is: she stays on
-# the ring).
+# Out of her hands: the run hers, it starts again on her deck, the body
+# whole and her in her locker (a death in them would put the climber back on
+# 143 at the checkpoint, and up the riser again; set back on her deck, on
+# from there). Then quietly to her ladder and up it to the 176 ring; on by the
+# climbing route, no lift, to the 220 ring (its boards are narrower than she
+# is: she stays on the ring).
 func _act_way_up(device: int) -> bool:
 	if int(_native().get_death_count()) >= 1 and _position().y > 150.0:
 		return _fail("the death did not put the climber back below her deck (at %s)" % str(_position()))
