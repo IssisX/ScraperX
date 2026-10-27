@@ -952,6 +952,10 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         }
     }
     std::vector<std::array<float, 2>> points;
+    // Where she lands across the first gap: never a way past it (she leaps
+    // only across, from its edge).
+    std::array<float, 2> landing{0.0F, 0.0F};
+    bool landing_set = false;
     for (std::size_t i = 1; i < route_chain_.size(); ++i) {
         if (in_line(route_chain_[i - 1], route_chain_[i])) {
             continue;
@@ -960,6 +964,39 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         crossing(route_chain_[i - 1], route_chain_[i], ax, az, bx, bz);
         points.push_back({ax, az});
         points.push_back({bx, bz});
+        for (const FloorLink &l : g.links[static_cast<std::size_t>(route_chain_[i - 1])]) {
+            if (l.to == route_chain_[i] && l.gap && !landing_set) {
+                // A leap whose way is shut (a frame over the gap): slid along
+                // the gap, the nearest pair either side with it open.
+                if (!leap_clear(ax, az, bx, bz)) {
+                    const FloorPatch &pa = g.patches[static_cast<std::size_t>(route_chain_[i - 1])];
+                    const FloorPatch &pb = g.patches[static_cast<std::size_t>(route_chain_[i])];
+                    const bool slide_x = std::abs(bz - az) >= std::abs(bx - ax);
+                    for (int k = 1; k <= 16; ++k) {
+                        bool done_slide = false;
+                        for (const float side : {-1.0F, 1.0F}) {
+                            const float d = side * 0.5F * static_cast<float>(k);
+                            const float sax = std::clamp(slide_x ? ax + d : ax, pa.min_x + 0.45F, pa.max_x - 0.45F);
+                            const float saz = std::clamp(slide_x ? az : az + d, pa.min_z + 0.45F, pa.max_z - 0.45F);
+                            const float sbx = std::clamp(slide_x ? bx + d : bx, pb.min_x + 0.45F, pb.max_x - 0.45F);
+                            const float sbz = std::clamp(slide_x ? bz : bz + d, pb.min_z + 0.45F, pb.max_z - 0.45F);
+                            if (!done_slide && leap_clear(sax, saz, sbx, sbz)) {
+                                points[points.size() - 2] = {sax, saz};
+                                points.back() = {sbx, sbz};
+                                bx = sbx;
+                                bz = sbz;
+                                done_slide = true;
+                            }
+                        }
+                        if (done_slide) {
+                            break;
+                        }
+                    }
+                }
+                landing = {bx, bz};
+                landing_set = true;
+            }
+        }
     }
     points.push_back({tx, tz});
     // In a square where two floors' middle lines meet, with the place on
@@ -970,7 +1007,12 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         const float qz = 0.5F * (q.min_z + q.max_z);
         const bool her_on_x_line = std::abs(fz - qz) <= std::abs(fx - qx);
         const bool place_on_x_line = std::abs(tz - qz) <= std::abs(tx - qx);
-        if (her_on_x_line != place_on_x_line && distance_xz(fx, fz, qx, qz) > 1.2F) {
+        // (Not for a place in the square's inner half, or nearer its middle
+        // than she is: that is at its middle already.)
+        const float inner = 0.25F * std::min(q.max_x - q.min_x, q.max_z - q.min_z);
+        const bool at_middle = (std::abs(tx - qx) <= inner && std::abs(tz - qz) <= inner) ||
+                               distance_xz(tx, tz, qx, qz) < distance_xz(fx, fz, qx, qz);
+        if (her_on_x_line != place_on_x_line && distance_xz(fx, fz, qx, qz) > 1.2F && !at_middle) {
             points.insert(points.begin(), {qx, qz});
         }
     }
@@ -1015,8 +1057,22 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         }
         pick = next;
     }
-    // The place on the floor next to hers, in a straight walk: straight there.
-    if (chain.size() == 2 && square(to) && rect_distance(tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
+    // The place on the floor next to hers (a held one, a cage; or a square
+    // where floors meet), in a straight walk: straight there.
+    // Near the place, through narrow in-line pieces (no turn in any) into
+    // its floor, with the way straight and clear: straight there.
+    if (pick < last && chain.size() > 2 && distance_xz(fx, fz, tx, tz) <= 8.0F &&
+        way_clear(fx, fz, tx, tz)) {
+        bool narrow = true;
+        for (std::size_t c = 0; c + 1 < chain.size(); ++c) {
+            narrow = narrow && !square(chain[c]) && g.patches[static_cast<std::size_t>(chain[c])].origin >= 0 &&
+                     g.patches[static_cast<std::size_t>(chain[c])].origin == g.patches[static_cast<std::size_t>(chain[0])].origin;
+        }
+        if (narrow) {
+            pick = last;
+        }
+    }
+    if (chain.size() == 2 && (square(to) || g.patches[static_cast<std::size_t>(to)].held) && rect_distance(tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
                                                   g.patches[static_cast<std::size_t>(to)].max_x,
                                                   g.patches[static_cast<std::size_t>(to)].min_z,
                                                   g.patches[static_cast<std::size_t>(to)].max_z) <= 0.0F &&
@@ -1030,12 +1086,22 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
                                      : std::abs(tx - 0.5F * (here.min_x + here.max_x));
         const float d_cross = along_x ? std::abs(tx - 0.5F * (there.min_x + there.max_x))
                                       : std::abs(tz - 0.5F * (there.min_z + there.max_z));
-        if (d_here <= d_cross + 0.01F) {
+        if (there.held || d_here <= d_cross + 0.01F) {
             pick = last;
         }
     }
     wx = points[static_cast<std::size_t>(pick)][0];
     wz = points[static_cast<std::size_t>(pick)][1];
+    if (landing_set) {
+        for (int k = 0; k < pick; ++k) {
+            if (points[static_cast<std::size_t>(k)] == landing) {
+                pick = k;
+                wx = landing[0];
+                wz = landing[1];
+                break;
+            }
+        }
+    }
     last_way_node_ = pick != last;
     last_way_x_ = wx;
     last_way_z_ = wz;
@@ -1060,6 +1126,34 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
                 found = true;
             }
         }
+        // Else as far toward the place, down the straight line to it, as she
+        // can walk (up to a cage's mouth by its post).
+        for (int k = 1; k <= 8 && !found && pick == last; ++k) {
+            const float f = 1.0F - 0.1F * static_cast<float>(k);
+            const float x = fx + f * (tx - fx);
+            const float z = fz + f * (tz - fz);
+            if (distance_xz(fx, fz, x, z) > 1.0F && way_round(x, z)) {
+                wx = x;
+                wz = z;
+                found = true;
+            }
+        }
+        // Else round what stands in it: the way turned a little either side
+        // (the smaller turn first, then her left), a reach long.
+        for (int k = 1; k <= 4 && !found; ++k) {
+            for (const float side : {1.0F, -1.0F}) {
+                const float a = side * 0.26F * static_cast<float>(k);
+                const float ux = (wx - fx) / std::max(distance_xz(fx, fz, wx, wz), 0.01F);
+                const float uz = (wz - fz) / std::max(distance_xz(fx, fz, wx, wz), 0.01F);
+                const float x = fx + 1.5F * (ux * std::cos(a) - uz * std::sin(a));
+                const float z = fz + 1.5F * (ux * std::sin(a) + uz * std::cos(a));
+                if (!found && floor_patch_at(g, x, z, 0.0F, true) >= 0 && way_round(x, z)) {
+                    wx = x;
+                    wz = z;
+                    found = true;
+                }
+            }
+        }
         for (int i = pick - 1; i >= 0 && !found; --i) {
             const float x = points[static_cast<std::size_t>(i)][0];
             const float z = points[static_cast<std::size_t>(i)][1];
@@ -1075,6 +1169,20 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         if (!found && distance_xz(fx, fz, hx, hz) > 0.15F) {
             wx = hx;
             wz = hz;
+        }
+    }
+    return true;
+}
+
+bool Matron::leap_clear(const float fx, const float fz, const float tx, const float tz) const {
+    IgnoreMultipleBodiesFilter not_us;
+    not_us.Reserve(1);
+    not_us.IgnoreBody(body_);
+    const Vec3 way(tx - fx, 0.0F, tz - fz);
+    for (const float rise : {0.5F, 1.5F}) {
+        RayCastResult hit;
+        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(fx, feet_y_ + rise, fz), way), hit, {}, {}, not_us)) {
+            return false;
         }
     }
     return true;

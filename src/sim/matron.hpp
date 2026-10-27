@@ -1283,6 +1283,8 @@ private:
     // Her width is swept, not sampled: a post thinner than the space between
     // two lines (the trip gantry's 0.1 m legs by her post) still stops her.
     [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
+    // A leap's way: nothing at all (built or loose, but her) at her knees or head.
+    [[nodiscard]] bool leap_clear(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
