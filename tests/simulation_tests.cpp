@@ -229,6 +229,10 @@ int main() {
         run_matron_pursuit();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-hoist") {
+        run_matron_hoist();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-chase") {
         run_matron_chase();
         return EXIT_SUCCESS;
