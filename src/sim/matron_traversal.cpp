@@ -2995,8 +2995,11 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
         // region with a ladder look dearer than it is, so the search went
         // round the ladder's deck altogether (a drop onto a board beside it
         // and off again) - the opposite of climbing the ladder she means to.
+        // A rung edge is a climb on the rungs from where she stands. A jump
+        // for the bottom rung is not one: it is her riskiest way up, and a
+        // walk or a mantle into the same region is never given up for it.
         const auto is_rung = [](const MoveKind kind) {
-            return kind == MoveKind::RungUp || kind == MoveKind::RungDown || kind == MoveKind::JumpCatch;
+            return kind == MoveKind::RungUp || kind == MoveKind::RungDown;
         };
         std::vector<int> rung_to;
         std::vector<std::pair<int, float>> cheapest_to;   // per neighbour region: the cheapest usable way there
