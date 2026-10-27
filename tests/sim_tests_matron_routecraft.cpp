@@ -654,9 +654,10 @@ void run_matron_routecraft() {
         for(int i=0;i<180 && !loaded_ascent();++i) f.tick();
         require(loaded_ascent(),"routecraft: power-cap impulse starts during a physical loaded ascent");
         f.measured_force=0; f.measured_power=0;
-        // The 3.0 m/s downward disturbance drives demand beyond 8 kN and 22 kW;
+        // The 6.0 m/s downward disturbance drives demand beyond 8 kN and 44 kW
+        // (8 kN x 6 m/s = 48 kW; it was 3.0 m/s against the old 22 kW);
         // the shared power cap must bind after the force cap, without a velocity write.
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-660,0)-
+        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-1320,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
         require(f.measured_force>MatronRoutecraft::kForce*0.9F &&
@@ -689,7 +690,7 @@ void run_matron_routecraft() {
         const RVec3 saturation_start=f.at();
         const auto saturation_report=f.matron->climb_report();
         f.measured_force=0; f.measured_power=0;
-        // -2.6 m/s demands just over 8 kN while 8 kN × 2.6 m/s stays below 22 kW.
+        // -2.6 m/s demands just over 8 kN while 8 kN × 2.6 m/s stays below 44 kW.
         f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-572,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
