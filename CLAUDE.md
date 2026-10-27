@@ -43,6 +43,11 @@ Every decision put to the owner is two or three short lines: what it is, Claude'
 the owner answers with. No block of text, no table of numbers or file names. The detail lives in the
 document the item links to, never in the message.
 
+2026-10-27, 4:00 PM Central: *"If I don't answer your questions within a reasonable amount of time
+to keep the coding flowing, go with your recommendations. Let's go with 5 or 10 minutes."* A
+question with no answer after 10 minutes is decided by the pick it carried: say so on the work's
+issue, go on, and the owner can still overturn it later.
+
 ## Times are Central, never UTC
 
 2026-10-18, again 2026-10-20 and 2026-10-27: *"Are you using UTC or Central Time Chicago like you
