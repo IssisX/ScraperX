@@ -7,8 +7,6 @@
 
 #include "sim_tests.hpp"
 
-#include "sim/matron_routes.hpp"
-
 #include <cmath>
 #include <iostream>
 
@@ -37,8 +35,8 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     require(s.advance_frame(1.0).accepted, "matron found climb: settle");
     s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
     s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
-    // Her authored map's ways all ruled out: the way she takes is one she finds.
-    s.debug_matron_only_way(scraperx::sim::routes::kMaxEdges);
+    // The corner pipe ruled out: the way she takes is one she finds.
+    s.debug_matron_rule_out_pipe();
     s.debug_set_matron_stage(1);
     const int hz = static_cast<int>(Simulation::kTickRateHz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);

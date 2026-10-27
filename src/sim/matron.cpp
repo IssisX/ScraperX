@@ -34,6 +34,8 @@
 namespace scraperx::sim {
 namespace {
 using namespace JPH;
+using grip::ClimbBodyFilter;
+using grip::hand_rests_on;
 
 constexpr float kPi = 3.14159265F;
 // How far a sound of full loudness carries.
@@ -43,10 +45,6 @@ constexpr float kTurnRate = 7.0F;
 // a post her side only brushes she slides past; one nearer her middle line
 // stops her body.
 constexpr float kWaySkinM = 0.1F;
-// Up a ramp (follow_line) she aims this far ahead along its middle.
-constexpr float kRampAheadM = 0.6F;
-// On a ramp's strip: this near its middle line (the ramp is 1 m across).
-constexpr float kRampStripM = 0.6F;
 // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it (its clamber,
 // sidestep and reroute all tried): a blocked ramp is given up to her other ways.
 // Value lives as Matron::kRampStallS in matron.hpp (see there).
@@ -147,6 +145,52 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
     patrol_node_ = 2;
+    // Her decks' steel (off_its_steel), as her authored map held it: the
+    // stack's decks a ring of bands 9 m deep round the 34 m shaft
+    // (physics_world_tuning.hpp kStackHalfExtent 26, kStackDeckBandDepth 9),
+    // the well's rings bands 4 m wide narrowing kRingStepIn a ring
+    // (world_solids.inc "UpperDeck"), the walkway plate at 143 under C3's
+    // riser, the bay's cut and the catwalk at 154, the bay's bracket, and
+    // the well's cages at their stops (3.0 x 2.8 m floors; her lines on the
+    // 176 ring run into both).
+    {
+        const auto bands = [](DeckSteel &d, const int level, const float top, const float outer, const float band) {
+            const float inner = outer - band;
+            d.level = level;
+            d.top = top;
+            d.patches[0] = {-outer, outer, kMidZ + inner, kMidZ + outer};   // north
+            d.patches[1] = {-outer, outer, kMidZ - outer, kMidZ - inner};   // south
+            d.patches[2] = {inner, outer, kMidZ - inner, kMidZ + inner};    // east
+            d.patches[3] = {-outer, -inner, kMidZ - inner, kMidZ + inner};  // west
+            d.count = 4;
+        };
+        constexpr float kStackOuter = 26.0F;
+        constexpr float kStackBand = 9.0F;
+        constexpr float kWellBand = 4.0F;
+        const int first_stack = 2 + kUpperRings;   // levels_: her deck, the 176 ring, the rings above, the stack
+        bands(deck_steel_[0], first_stack + 11, kStackPitch * 12.0F, kStackOuter, kStackBand);   // 132
+        bands(deck_steel_[1], first_stack + 12, kStackPitch * 13.0F, kStackOuter, kStackBand);   // 143
+        deck_steel_[1].patches[deck_steel_[1].count++] = {-11.5F, -5.0F, -135.35F, -133.0F};
+        bands(deck_steel_[2], 0, kDeckTop, kStackOuter, kStackBand);
+        const Steel north = deck_steel_[2].patches[0];
+        deck_steel_[2].patches[0] = {north.min_x, Bay::kWestX, north.min_z, north.max_z};
+        deck_steel_[2].patches[deck_steel_[2].count++] = {Bay::kEastX, north.max_x, north.min_z, north.max_z};
+        deck_steel_[2].patches[deck_steel_[2].count++] = {-16.94F, 16.94F, -150.8F, -149.2F};
+        deck_steel_[3].level = bay_level_;
+        deck_steel_[3].top = 152.22F;
+        deck_steel_[3].patches[0] = {Bay::kWestX, -2.9F, -131.25F, -129.35F};
+        deck_steel_[3].count = 1;
+        for (int k = 0; k < 3; ++k) {
+            const float mid = kRingX - kRingStepIn * static_cast<float>(k);
+            bands(deck_steel_[static_cast<std::size_t>(4 + k)], 1 + k, kRingFloor + kRingPitch * static_cast<float>(k),
+                 mid + 0.5F * kWellBand, kWellBand);
+        }
+        const Steel cage_a{-12.0F, -9.0F, -132.8F, -130.0F};
+        const Steel cage_b{-8.7F, -5.7F, -132.8F, -130.0F};
+        deck_steel_[4].patches[deck_steel_[4].count++] = cage_a;
+        deck_steel_[4].patches[deck_steel_[4].count++] = cage_b;
+        deck_steel_[5].patches[deck_steel_[5].count++] = cage_b;
+    }
 
     BodyInterface &bodies = physics_.GetBodyInterface();
     // Her body exists from the start but is only in the world once she is out.
@@ -272,46 +316,27 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
-void Matron::only_way_for_test(const std::size_t index) {
-    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
-        if (i != index) {
-            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
-        }
+void Matron::rule_out_pipe_for_test() {
+    for (PipeWayMemory &way : pipe_ways_) {
+        way.ruled_out = true;
     }
-    found_climbs_off_ = index < routes_.edge_count();   // one way alone: none of her own either (no way named: her own only)
 }
 
 void Matron::let_go_for_test() {
-    if (climb_ >= 0) {
-        release_climb(true);
-    } else if (pipe_phase_ != PipePhase::Off && pipe_phase_ != PipePhase::Slide) {
-        tear_off_pipe();
-    } else if (routecraft_.owns_motion()) {
-        // Her hands open on a climb of her own, as a hold giving way opens
-        // them: the column is left alone its block time, and no way back.
-        routecraft_.cancel();
-        if (routecraft_mine_) {
-            block_climb(climbing_key_);
-            routecraft_mine_ = false;
-        }
-        climb_back_tried_ = true;
-        ++climb_releases_;
-    } else if (journey_moving_) {
-        end_journey(true);
-        ++climb_releases_;
-    }
+    // Her hands open on the way that holds her, as a hold giving way opens them.
+    (void)(climb_way_.let_go() || pipe_way_.let_go() || routecraft_way_.let_go() || journey_way_.let_go());
 }
 
-bool Matron::climb_for_test(const routes::Connector which, const bool down) {
+bool Matron::climb_for_test(const bool pipe, const bool down) {
     // The scanned way nearest her off her floor (the connector only says
     // pipe or not: every climb is one her scan found).
     int index = -1;
-    if (body_in_world_ && which != routes::Connector::CornerPipe) {
+    if (body_in_world_ && !pipe) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         index = nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, down);
     }
     climb_retry_s_ = 0.0F;
-    if (which == routes::Connector::CornerPipe) {
+    if (pipe) {
         const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
@@ -785,7 +810,7 @@ void Matron::pick_patrol(const float ax, const float az) {
 }
 
 void Matron::feel_floor(const float dt) {
-    if (on_line_) {
+    if (const Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Rides) {
         // Hanging from a cable: held until she lets go of it.
         riding_ = true;
         let_go_s_ = kLetGoSeconds;
@@ -898,701 +923,30 @@ void Matron::settle_level() {
 }
 
 bool Matron::off_its_steel(const int level, const float x, const float feet, const float z) const {
-    for (std::size_t r = 0; r < routes::kRegionCount; ++r) {
-        const routes::RegionInfo &info = routes_.region(static_cast<routes::Region>(r));
-        if (info.level == level) {
-            return routes_.region_at(x, feet, z) != info.id;
-        }
-    }
-    return false;   // a level her map does not know: its height is all she has
-}
-
-// A line from her level down toward her lead's (to it, or to a level on the
-// way): the one she saw taken, or the nearest. -1 when none does.
-int Matron::line_to_take(const float ax, const float az) const {
-    if (zipline_ == nullptr) {
-        return -1;
-    }
-    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    const std::vector<Zipline::Line> &lines = zipline_->lines();
-    int best = -1;
-    float best_d = std::numeric_limits<float>::max();
-    for (std::size_t i = 0; i < lines.size(); ++i) {
-        const Zipline::Line &line = lines[i];
-        const float bottom = float(line.bottom_floor.GetY());
-        if (std::abs(float(line.top_floor.GetY()) - floor_y) > 0.6F || bottom > floor_y - 0.6F) {
+    // The level whose steel is under her: of the decks whose footprint holds
+    // (x, z), the one whose top is nearest her feet, within kOnSteelM.
+    int under = -1;
+    float best_dy = kOnSteelM;
+    for (const DeckSteel &deck : deck_steel_) {
+        const float dy = std::abs(feet - deck.top);
+        if (deck.level < 0 || dy > best_dy) {
             continue;
         }
-        // A line down to a floor below the lead's heard height is no way
-        // to a lead standing on that floor -- unless the lead was heard
-        // at this line's own stand and the line has been ridden (its
-        // trolley down the line): then the lead rode it down, and its
-        // bottom is where they went, not an overshoot past them. This
-        // is the case a way of her own leaves behind: a journey carries
-        // her to the stand after the ride, its early return skipping
-        // the ride-guess that would otherwise name the bottom floor,
-        // so the lead stays at the stand-top height they were heard at
-        // and every line down from her floor reads as below them.
-        const bool heard_at_stand =
-            distance_xz(heard_x_, heard_z_, float(line.stand.GetX()), float(line.stand.GetZ())) <= 1.0F;
-        if (bottom < lead_floor_ - 0.6F && !(heard_at_stand && !line.parked)) {
-            continue;
-        }
-        const float d = static_cast<int>(i) == guess_line_
-                            ? -1.0F
-                            : distance_xz(ax, az, float(line.stand.GetX()), float(line.stand.GetZ()));
-        if (d < best_d) {
-            best_d = d;
-            best = static_cast<int>(i);
-        }
-    }
-    return best;
-}
-
-// On the ramp up to the line's stand, and on the stand itself: past its
-// foot, on its strip. The top of the ramp counts. Stopping 0.3 m under
-// the stand handed her to a found climb, which walked her back down it.
-bool Matron::on_line_ramp(const RVec3 at) const {
-    const float ax = float(at.GetX());
-    const float az = float(at.GetZ());
-    const int best = line_to_take(ax, az);
-    if (best < 0) {
-        return false;
-    }
-    const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(best)];
-    const float fx = float(line.ramp_foot.GetX());
-    const float fz = float(line.ramp_foot.GetZ());
-    const float sx = float(line.stand.GetX());
-    const float sz = float(line.stand.GetZ());
-    const float rx = sx - fx;
-    const float rz = sz - fz;
-    const float rlen = std::hypot(rx, rz);
-    if (rlen < 0.1F) {
-        return false;
-    }
-    const float along = ((ax - fx) * rx + (az - fz) * rz) / rlen;
-    const float across = std::abs((ax - fx) * rz - (az - fz) * rx) / rlen;
-    const float feet = float(at.GetY()) - kStandCentre;
-    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    const bool on_strip = along > 0.0F && along <= rlen + 0.6F && across < kRampStripM;
-    const bool on_stand = distance_xz(ax, az, sx, sz) <= 0.85F;
-    return feet >= floor_y + 0.15F && feet <= float(line.stand.GetY()) + 0.25F && (on_strip || on_stand);
-}
-
-void Matron::notice_ridden_line(const RVec3 player) {
-    if (zipline_ == nullptr || !zipline_->riding() || !body_in_world_ || dead_) {
-        return;
-    }
-    const int line = zipline_->state().line;
-    if (line < 0 || static_cast<std::size_t>(line) >= zipline_->lines().size()) {
-        return;
-    }
-    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    // The same sight the hunt uses. A climb that owns her body used to
-    // return before that ran, so a player who took the line in front of
-    // her left no lead, and the Turn she had already started sat frozen
-    // until the climb let go.
-    if (Vec3(player - at).Length() > kSightM || !sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0))) {
-        return;
-    }
-    const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
-    heard_x_ = float(end.GetX());
-    heard_z_ = float(end.GetZ());
-    lead_floor_ = float(end.GetY());
-    guess_line_ = line;
-    guess_climb_ = -1;
-    since_heard_s_ = 0.0F;
-    pursuit_s_ = 0.0F;
-    lead_seen_ = true;
-    lead_valid_ = true;
-    wary_ = false;
-}
-
-bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
-    const float ax = float(at.GetX());
-    const float az = float(at.GetZ());
-    const int best = line_to_take(ax, az);
-    if (best < 0) {
-        return false;
-    }
-    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    const std::vector<Zipline::Line> &lines = zipline_->lines();
-    const Zipline::Line &line = lines[static_cast<std::size_t>(best)];
-    // A line she would only wait at (outside her Turn, or one nobody has
-    // ridden) is not a way yet: her own climbing goes first, and she comes
-    // to its stand only when she finds none.
-    if (!wait_ok && (turn_ == Turn::None || line.parked)) {
-        return false;
-    }
-    const float sx = float(line.stand.GetX());
-    const float sz = float(line.stand.GetZ());
-    const float stand_y = float(line.stand.GetY());
-    const float feet = float(at.GetY()) - kStandCentre;
-    // Not on her level at all: a full metre below its floor, she fell off
-    // it (a level her settle has not caught up with yet, as after letting
-    // go of a cable onto the floor below). Walking to this line's stand
-    // from there drives her across the floor she actually landed on and
-    // off its edge, chasing a stand on a floor she is no longer on. Say
-    // no here; the settle and the hunt's other ways take her from where
-    // she is once her level catches up.
-    if (feet < floor_y - 1.0F) {
-        return false;
-    }
-    if (feet < stand_y - 0.3F || distance_xz(ax, az, sx, sz) > 0.6F) {
-        // To the ramp's foot along her lines, then up the ramp to the stand.
-        float wx = sx;
-        float wz = sz;
-        const float fx = float(line.ramp_foot.GetX());
-        const float fz = float(line.ramp_foot.GetZ());
-        if (feet < floor_y + 0.15F && distance_xz(ax, az, fx, fz) > 0.5F) {
-            route_toward(ax, az, fx, fz, false, wx, wz);
-        } else {
-            // Up the ramp she keeps to its middle: she aims a little ahead along the line from its foot to
-            // the stand, not at the stand from wherever she is (a ramp is narrow, and a diagonal run at the
-            // stand walks her off its side).
-            const float rx = sx - fx;
-            const float rz = sz - fz;
-            const float rlen = std::hypot(rx, rz);
-            if (rlen > 0.1F) {
-                const float along = std::clamp(((ax - fx) * rx + (az - fz) * rz) / rlen, 0.0F, rlen);
-                const float ahead = std::min(along + kRampAheadM, rlen);
-                wx = fx + rx / rlen * ahead;
-                wz = fz + rz / rlen * ahead;
+        for (std::uint8_t i = 0; i < deck.count; ++i) {
+            const Steel &patch = deck.patches[i];
+            if (x >= patch.min_x && x <= patch.max_x && z >= patch.min_z && z <= patch.max_z) {
+                under = deck.level;
+                best_dy = dy;
+                break;
             }
         }
-        walk_toward(dt, wx, wz, kHuntMps, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
-        return true;
     }
-    // On the stand under the cable. A parked line is not a place to wait
-    // while she is frail: the trolley is still at the top, and waiting there
-    // held her until the chase clock ran out (a parked 374 stand, 150 s,
-    // the lead a floor below) while her other ways went untried. Frail, on
-    // a line that has been ridden, she stands and looks down it. She does
-    // not jump. In the Turn she jumps whether or not the trolley has left,
-    // and takes the bare cable. Refusing the parked line in the Turn too
-    // left her standing on the stand (the touch line: Turn, on the stand,
-    // never onto the cable).
-    if (line.parked && turn_ == Turn::None) {
-        return false;
-    }
-    walk_toward(dt, ax, az, 0.0F);
-    yaw_ = turn_toward(yaw_, std::atan2(line.direction.GetX(), line.direction.GetZ()), kTurnRate, dt);
-    if (turn_ == Turn::None) {
-        return true;
-    }
-    const RVec3 cable = line.top + line.direction * Zipline::kParkM;
-    const RVec3 hands = at + Vec3(0.0F, kHandsAboveCentre, 0.0F);
-    if (Vec3(cable - hands).Length() < kCableReachM) {
-        zipline_->clip_other(best, body_, Vec3(0.0F, kHandsAboveCentre, 0.0F), true);
-        on_line_ = true;
-        riding_ = true;
-        let_go_s_ = kLetGoSeconds;
-        ++cable_slides_;
-        return true;
-    }
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
-    if (feet < stand_y + 0.08F && std::abs(velocity.GetY()) < 0.2F) {
-        // Standing on it: the jump for the cable.
-        bodies.SetLinearVelocity(body_, Vec3(velocity.GetX(), kCableJumpMps, velocity.GetZ()));
-    }
-    return true;
-}
-
-void Matron::ride_line() {
-    if (!on_line_ || zipline_ == nullptr) {
-        return;
-    }
-    const Zipline::State &ride = zipline_->other_state();
-    if (!ride.riding) {
-        on_line_ = false;   // taken off it (a restore)
-        riding_ = false;
-        let_go_s_ = 0.0F;
-        return;
-    }
-    // Down at the end (at the stop, or against the trolley or its rider
-    // there) and still: she lets go, swinging on over the far band as she
-    // does. Never into the shaft: held still where her swing would come down
-    // with any of her over it (the buffer's clamp, a trolley left short in
-    // it, a rider still hanging at the stop ahead of her), she eases her
-    // forearms' drag and comes on as far as the cable lets her.
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(ride.line)];
-    const RVec3 at = bodies.GetPosition(body_);
-    const bool at_end = ride.along_m > line.length - Zipline::kStopMarginM - Zipline::kBufferM;
-    const auto over_shaft = [](const RVec3 p) {
-        return std::abs(float(p.GetX())) < kShaftHalfM + kRadius && std::abs(float(p.GetZ()) - kMidZ) < kShaftHalfM + kRadius;
-    };
-    // Where letting go puts her: on along the line as far as her swing
-    // carries her while she drops to the far floor. The box around the
-    // shaft is a little smaller than the hole, so a point just outside it
-    // can still be open air. She lets go only when that swing comes down
-    // on a floor.
-    const Vec3 run = Vec3(line.direction.GetX(), 0.0F, line.direction.GetZ()).NormalizedOr(Vec3::sZero());
-    const float drop = std::max(0.0F, float(at.GetY() - line.bottom_floor.GetY()) - kStandCentre);
-    const float gravity = -physics_.GetGravity().GetY();
-    const float fall_s = std::sqrt(2.0F * drop / std::max(gravity, 0.1F));
-    const auto deck_under = [&](const RVec3 p) {
-        RayCastResult hit;
-        const RRayCast ray(p, Vec3(0.0F, -3.0F, 0.0F));
-        if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, IgnoreSingleBodyFilter(body_))) {
-            return false;
-        }
-        const RVec3 on = ray.GetPointOnRay(hit.mFraction);
-        const float top = float(on.GetY());
-        if (top < float(line.bottom_floor.GetY()) - 0.4F || top > float(at.GetY()) - 0.2F) {
-            return false;
-        }
-        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-        return lock.Succeeded() &&
-               lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, on).GetY() > 0.7F;
-    };
-    // Her swing on: full, half, or none (straight down) when the full swing
-    // would come down in steel (the end post, the buffer's housing) or the
-    // shaft. The largest that comes down on a floor is the one she takes.
-    float swing = -1.0F;
-    for (const float scale : {1.0F, 0.5F, 0.0F}) {
-        const RVec3 p = at + run * (kLetGoSwingMps * scale * fall_s);
-        if (!over_shaft(p) && deck_under(p)) {
-            swing = scale;
-            break;
+    for (const DeckSteel &deck : deck_steel_) {
+        if (deck.level == level) {
+            return under != level;
         }
     }
-    const bool deck = swing >= 0.0F;
-    // Her forearms' drag: friction on her weight across the cable, as a
-    // squeeze of the line's brake. At the end with the swing still over
-    // the hole, the drag comes off so she can come on as far as the cable
-    // lets her.
-    const float across = std::sqrt(std::max(0.0F, 1.0F - line.direction.GetY() * line.direction.GetY()));
-    zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
-                                  ? 0.0F
-                                  : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && deck && std::abs(ride.speed_mps) < 0.3F) {
-        zipline_->unclip_other();
-        on_line_ = false;
-        // The cable was what riding_ meant. Leaving it has to clear that
-        // before the hunt runs this tick, or the cling stands her still
-        // and the swing never happens: she drops where she was, in the hole.
-        // Off the cable she is falling, not standing on a floor that just
-        // stopped: the riding hold (which brakes her to still for a second
-        // after a moving floor stops) would also brake the swing itself
-        // out of her while she drops. Clear both here so the swing
-        // carries her onto the band.
-        riding_ = false;
-        let_go_s_ = 0.0F;
-        bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * (kLetGoSwingMps * swing));
-    }
-}
-
-bool Matron::follow_climb(const float dt, const RVec3 at) {
-    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-    if (found_climbs_off_) {
-        return false;   // one way alone (a test): none of her own
-    }
-    const float ax = float(at.GetX());
-    const float az = float(at.GetZ());
-    const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
-    const float feet = float(at.GetY()) - kStandCentre;
-    // A climb from her level up toward her lead's (to it, or to a level on
-    // the way): the one she saw taken, or the nearest. Its foot must be
-    // under her own feet, not only under her level: her level can name a
-    // floor she left (a scan-only floor has no level), and a climb from
-    // that floor is far below her with its foot's x/z near hers — walking
-    // to it strands her on the edge above it, claimed every tick.
-    int best = -1;
-    float best_d = std::numeric_limits<float>::max();
-    for (int i = 0; i < climb_count(); ++i) {
-        Climb c{};
-        // Her hand climb in the hunt is for ladders; a lip she takes by her own plan.
-        if (!climb_of(i, c, Ways::Ladders)) {
-            continue;
-        }
-        if (!c.hers || std::abs(c.foot_y - level_floor) > 0.6F || std::abs(c.foot_y - feet) > 0.6F ||
-            c.head_y > lead_floor_ + 0.6F || c.head_y < level_floor + 0.6F) {
-            continue;
-        }
-        const float d = i == guess_climb_ ? -1.0F : distance_xz(ax, az, c.x, c.z);
-        if (d < best_d) {
-            best_d = d;
-            best = i;
-        }
-    }
-    if (best < 0) {
-        return false;
-    }
-    const Climb c = climb_spec(best);
-    const float off = distance_xz(ax, az, c.x, c.z);
-    const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
-    if (off > 0.2F) {
-        // To its foot along her lines, slowing into it.
-        float wx = c.x;
-        float wz = c.z;
-        route_toward(ax, az, c.x, c.z, false, wx, wz);
-        walk_toward(dt, wx, wz, std::min(kHuntMps, 1.0F + 3.0F * off), accel);
-        return true;
-    }
-    // At its foot, looking up it. Frail, she cannot take hold of it; in the
-    // Turn she does, and her hands have her weight. The bay's rungs she
-    // always does: they are her way out of her own trap.
-    walk_toward(dt, c.x, c.z, 0.0F, accel);
-    yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-    if (turn_ == Turn::None && best != bay_climb_) {
-        return true;
-    }
-    // One that failed under her a moment ago she leaves alone a while (her map).
-    const std::size_t way = routes_.find_way(connector_of(best), false);
-    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
-        return true;
-    }
-    begin_climb(best);
-    return true;
-}
-
-namespace {
-using grip::ClimbBodyFilter;
-using grip::hand_rests_on;
-using grip::PointHit;
-using grip::RayHits;
-} // namespace
-
-// A real upward-facing contact on the climb's line of holds, in hand reach,
-// visible from the chest, with room above it for her fingers (a rung buried
-// in a fascia plate is no hold). As in the player's physical hang, anchors
-// live in the support's frame and the support receives the reaction. The
-// mechanism kit's welded load grips cannot attach to static steel and
-// rigidly weld the bodies rather than allowing a climber to move relative to
-// a hand contact. Going up she takes the highest such hold she can reach
-// above the hand she has; going down, the highest below it, never the floor
-// at the foot; starting down from the top, the first under its lip.
-bool Matron::find_climb_hold(const RVec3 at, const bool down) {
-    const Climb c = climb_spec(climb_);
-    const bool holding = !climb_support_.IsInvalid();
-    float top = 0.0F;
-    float bottom = 0.0F;
-    if (!down && holding) {
-        top = std::min(c.lip_y + 0.04F, float(at.GetY()) + kClimbReachM);
-        bottom = float(climb_hand_.GetY()) + 0.1F;
-    } else if (!down) {
-        // Her first hold, from her feet: overhead, as far as a standing reach.
-        top = std::min(c.lip_y + 0.04F, float(at.GetY()) + kStandingReachM);
-        bottom = top - 0.6F;
-    } else if (holding) {
-        top = float(climb_hand_.GetY()) - 0.1F;
-        bottom = std::max(c.foot_y + 0.15F, float(at.GetY()) - 0.6F);
-    } else {
-        top = c.lip_y + 0.04F;
-        bottom = c.lip_y - 0.6F;
-    }
-    if (top <= bottom) {
-        return false;
-    }
-    const RVec3 origin(c.x + c.out_x * c.standoff, top, c.z + c.out_z * c.standoff);
-    const ClimbBodyFilter filter(body_, player_);
-    const RRayCast ray(origin, Vec3(0.0F, bottom - top, 0.0F));
-    RayCastSettings settings;
-    settings.mTreatConvexAsSolid = false; // a probe starting inside a rung must not invent a top normal
-    RayHits hits;
-    physics_.GetNarrowPhaseQuery().CastRay(ray, settings, hits, {}, {}, filter);
-    hits.sort();
-    for (const float step_cap : {0.65F, kClimbReachM}) {
-    for (int i = 0; i < hits.count; ++i) {
-        const RayCastResult &hit = hits.hits[static_cast<std::size_t>(i)];
-        const RVec3 point = ray.GetPointOnRay(hit.mFraction);
-        if ((!down && holding && float(point.GetY() - climb_hand_.GetY()) > step_cap) ||
-            Vec3(point - at).Length() > kClimbReachM) {
-            continue;
-        }
-        PointHit fingers;
-        physics_.GetNarrowPhaseQuery().CollidePoint(point + Vec3(0.0F, 0.04F, 0.0F), fingers, {}, {}, filter);
-        if (fingers.hit) {
-            continue;
-        }
-        // Her arm's way to it: up in front of the face to just over the hold
-        // (a hand goes over a lip's edge, not through its corner); the last
-        // few centimeters down onto it are the room above it, checked above.
-        const RVec3 chest = at + Vec3(0.0F, 0.6F, 0.0F);
-        const RVec3 over = point + Vec3(0.0F, 0.08F, 0.0F) - Vec3(c.out_x, 0.0F, c.out_z) * 0.12F;
-        const Vec3 reach(over - chest);
-        RayCastResult obstruction;
-        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(chest, reach), obstruction, {}, {}, filter) &&
-            (1.0F - obstruction.mFraction) * reach.Length() > 0.06F) {
-            continue;
-        }
-        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-        if (!lock.Succeeded() || lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point).GetY() < 0.7F) {
-            continue;
-        }
-        BodyID rests_body;
-        SubShapeID rests_member;
-        if (!hand_rests_on(physics_.GetNarrowPhaseQuery(), point, filter, rests_body, rests_member) ||
-            rests_body != hit.mBodyID) {
-            continue;
-        }
-        climb_support_ = hit.mBodyID;
-        climb_member_ = rests_member;
-        climb_local_hand_ = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * point);
-        climb_hand_ = point;
-        climb_hand_known_ = true;
-        ++climb_grips_;
-        return true;
-    }
-    if (down || !holding) {
-        break;
-    }
-    }
-    return false;
-}
-
-bool Matron::begin_climb(const int index, const bool down) {
-    if (climb_retry_s_ > 0.0F) {
-        return false;
-    }
-    climb_ = index;
-    climb_down_ = down;
-    lowering_ = down;
-    mantling_ = false;
-    climb_support_ = BodyID();
-    climb_member_ = SubShapeID();
-    climb_hand_known_ = false;
-    climb_force_n_ = 0.0F;
-    climb_stall_s_ = 0.0F;
-    climb_overload_s_ = 0.0F;
-    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    climb_best_y_ = -std::numeric_limits<float>::max();
-    // Up: a hold overhead. Down: from its top, the first hold under its lip.
-    reaching_up_ = false;
-    if (!find_climb_hold(at, down)) {
-        release_climb(true);
-        return false;
-    }
-    ++climbs_done_;
-    chase_way_held_ = true;  // a climb taken holds the chase window past its own ticks
-    return true;
-}
-
-void Matron::release_climb(const bool failed) {
-    // A climb she set out on by herself (not along her map's route, which
-    // records its own): done, her map knows it carried her; failed, her map
-    // leaves that way alone a while.
-    if (!route_on_edge_ && climb_ >= 0) {
-        const std::size_t way = routes_.find_way(connector_of(climb_), climb_down_);
-        if (way < routes::kMaxEdges && failed) {
-            routes_.fail(way, routes::Reason::Failed, clock_s_);
-            ++route_failures_;
-        } else if (way < routes::kMaxEdges) {
-            routes_.succeed(way);
-            ++route_edges_done_;
-        }
-    }
-    climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
-    climb_ = -1;
-    reaching_up_ = false;
-    climb_down_ = false;
-    lowering_ = false;
-    mantling_ = false;
-    climb_support_ = BodyID();
-    climb_member_ = SubShapeID();
-    climb_force_n_ = 0.0F;
-    if (failed) {
-        ++climb_releases_;
-        climb_retry_s_ = 2.0F;
-        // The column it dropped her from, her found ways leave alone as long
-        // (none when no hold of it was ever found).
-        if (climb_hand_known_) {
-            block_climb_at(float(climb_hand_.GetX()), float(climb_hand_.GetZ()));
-        }
-    }
-    // No velocity write: a missed hand or broken hold leaves her momentum
-    // and gravity to the same collision solver as every other falling body.
-}
-
-void Matron::climb(const float dt) {
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const Climb c = climb_spec(climb_);
-    const RVec3 at = bodies.GetPosition(body_);
-    const float feet = float(at.GetY()) - kStandCentre;
-    if (climb_support_.IsInvalid() || !bodies.IsAdded(climb_support_)) {
-        release_climb(true);
-        return;
-    }
-    climb_hand_ = bodies.GetCenterOfMassTransform(climb_support_) * climb_local_hand_;
-    climb_hand_known_ = true;
-    // The body can survive while a compound's rung disappears or moves.
-    // Revalidate the contact, the very part of the support she holds and not
-    // merely its body (a compound is many rungs), before applying load.
-    const ClimbBodyFilter support_filter(body_, player_);
-    BodyID rests_body;
-    SubShapeID rests_member;
-    if (!hand_rests_on(physics_.GetNarrowPhaseQuery(), climb_hand_, support_filter, rests_body, rests_member) ||
-        rests_body != climb_support_ || rests_member != climb_member_) {
-        release_climb(true);
-        return;
-    }
-
-    if (Vec3(climb_hand_ - at).Length() > kClimbReachM) {
-        release_climb(true);
-        return;
-    }
-    const auto floor_under = [&] {
-        RayCastResult floor;
-        return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor,
-                                                      {}, {}, support_filter);
-    };
-    Vec3 target(c.x, float(climb_hand_.GetY()) - (reaching_up_ ? 0.30F : 0.65F), c.z);
-    float progress = 0.0F;
-    if (!climb_down_) {
-        // The hand can only advance to another reachable surface; empty space
-        // above the last rung is not a hold. Retain the old hand during a miss.
-        // With none higher in reach yet, she pulls up higher on the one she
-        // has (the hand at her chest), to reach further.
-        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 0.85F) {
-            reaching_up_ = !find_climb_hold(at, false);
-        }
-        // Over the top from a hand near the lip, or from the last hold under
-        // a lip she cannot hold on its line (a plate's edge stands out from
-        // the rungs): up and over it once her body has climbed up to that top
-        // hold, if her body fits all the way.
-        if (!mantling_ && climb_hand_.GetY() - at.GetY() < 0.75F &&
-            (climb_hand_.GetY() > c.lip_y - 0.4F || (reaching_up_ && climb_hand_.GetY() > c.lip_y - 0.7F))) {
-            // Reuse the same full-body clearance query as standing after a fall,
-            // up over the lip, half way out and landed: collisions still
-            // arbitrate every step in between.
-            const RVec3 lifted(c.x, c.lip_y + kStandCentre + 0.12F, c.z);
-            const RVec3 half = lifted + Vec3(c.out_x, 0.0F, c.out_z) * (0.5F * kMantleOutM);
-            const RVec3 landed = lifted + Vec3(c.out_x, 0.0F, c.out_z) * kMantleOutM;
-            if (!shape_fits(shape_, lifted) || !shape_fits(shape_, half) || !shape_fits(shape_, landed)) {
-                release_climb(true);
-                return;
-            }
-            mantling_ = true;
-            climb_stall_s_ = 0.0F;
-        }
-        if (mantling_) {
-            target.SetY(c.lip_y + kStandCentre + 0.12F);
-            if (feet > c.lip_y + 0.03F) {
-                target.SetX(c.x + c.out_x * kMantleOutM);
-                target.SetZ(c.z + c.out_z * kMantleOutM);
-            }
-            const float out = (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z;
-            // Verify actual landing steel, not just the authored destination.
-            if (out > 0.8F && feet >= c.lip_y - 0.08F && floor_under()) {
-                release_climb(false);
-                return;
-            }
-        }
-        progress = float(at.GetY()) +
-                   (mantling_ ? (float(at.GetX()) - c.x) * c.out_x + (float(at.GetZ()) - c.z) * c.out_z : 0.0F);
-    } else if (lowering_) {
-        // Off the top backward onto its face, her hands on the hold under the
-        // lip: at the height she has, to its line, then down it.
-        target = Vec3(c.x, float(at.GetY()), c.z);
-        const float to_line = distance_xz(float(at.GetX()), float(at.GetZ()), c.x, c.z);
-        progress = -to_line;
-        if (to_line < 0.12F) {
-            // On its face: from here her progress is measured going down.
-            lowering_ = false;
-            climb_stall_s_ = 0.0F;
-            progress = -float(at.GetY());
-            climb_best_y_ = progress - 0.05F;
-        }
-    } else {
-        // Hand under hand: hanging off the hold she has, and with her hands
-        // high over her, the next one down at her chest. Her feet down onto
-        // its foot's support is the end of it; air under them is not.
-        if (climb_hand_.GetY() - at.GetY() > 0.95F) {
-            find_climb_hold(at, true);
-        }
-        target.SetY(std::max(float(climb_hand_.GetY()) - 1.15F, c.foot_y + kStandCentre));
-        if (feet <= c.foot_y + 0.06F && floor_under()) {
-            release_climb(false);
-            return;
-        }
-        progress = -float(at.GetY());
-    }
-    const Vec3 relative = bodies.GetLinearVelocity(body_) - bodies.GetPointVelocity(climb_support_, climb_hand_);
-    Vec3 wanted = (target - Vec3(at)) * 3.0F;
-    const float rate = mantling_ ? kMantleMps : kClimbMps;
-    if (wanted.Length() > rate) {
-        wanted *= rate / wanted.Length();
-    }
-    // Clearance is enforced by the real capsule and solver. A jam consumes
-    // finite force and times out; it never teleports through the lip/ceiling.
-    Vec3 force = kMassKg * ((wanted - relative) * 7.0F - physics_.GetGravity());
-    const float requested = force.Length();
-    climb_overload_s_ = requested > kClimbGripMaxN ? climb_overload_s_ + dt : 0.0F;
-    if (climb_overload_s_ > 0.18F) {
-        release_climb(true);
-        return;
-    }
-    if (requested > kClimbGripMaxN) {
-        force *= kClimbGripMaxN / requested;
-    }
-    if (progress > climb_best_y_ + 0.04F) {
-        climb_best_y_ = progress;
-        climb_stall_s_ = 0.0F;
-    } else {
-        climb_stall_s_ += dt;
-    }
-    if (climb_stall_s_ > 2.5F) {
-        release_climb(true);
-        return;
-    }
-    climb_force_n_ = force.Length();
-    bodies.AddForce(body_, force);
-    if (bodies.GetMotionType(climb_support_) == EMotionType::Dynamic) {
-        bodies.AddForce(climb_support_, -force, climb_hand_);
-    }
-    yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-    speed_ = 0.0F;
-    stride_ += bodies.GetLinearVelocity(body_).Length() * dt;
-}
-
-bool Matron::pipe_reaches(const float floor_y) noexcept {
-    if (floor_y < kPipeLowestFloor - 0.1F || floor_y > kDeckTop + 0.1F) {
-        return false;
-    }
-    const float storeys = floor_y / kStackPitch;
-    return std::abs(storeys - std::round(storeys)) < 0.02F;
-}
-
-bool Matron::follow_pipe(const float dt, const RVec3 at) {
-    // Frail, she cannot take hold of it.
-    if (stage_ == Stage::Pest) {
-        return false;
-    }
-    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    float next = floor_y;
-    if (lead_floor_ < floor_y - 0.6F) {
-        next = floor_y - kStackPitch;
-    } else if (lead_floor_ > floor_y + 0.6F) {
-        next = floor_y + kStackPitch;
-    }
-    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
-        return false;
-    }
-    // A way that failed under her a moment ago she leaves alone a while.
-    const std::size_t way = pipe_way(floor_y, next);
-    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
-        return false;
-    }
-    const float ax = float(at.GetX());
-    const float az = float(at.GetZ());
-    const float off = distance_xz(ax, az, kPipeDeckX, kPipeDeckZ);
-    const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
-    if (off > 0.25F) {
-        // To the rail's corner along her lines, slowing into it.
-        float wx = kPipeDeckX;
-        float wz = kPipeDeckZ;
-        route_toward(ax, az, kPipeDeckX, kPipeDeckZ, false, wx, wz);
-        walk_toward(dt, wx, wz, std::min(kHuntMps, 1.0F + 3.0F * off), accel);
-        return true;
-    }
-    // Her hands on the rail: over it and onto the pipe (matron_pipe.cpp).
-    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-    walk_toward(dt, ax, az, 0.0F, accel);
-    yaw_ = turn_toward(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
-    (void)get_on_pipe(floor_y, next);
-    return true;
+    return false;   // a level whose steel she does not know: its height is all she has
 }
 
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
@@ -1680,6 +1034,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
     const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
     traversal::Budget budget{force_cap, 0.0F, power_cap, 0.0F, velocity - support_v};
+    bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
         if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
@@ -1696,7 +1051,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             foot_drive_dv_ += (granted / kMassKg) * dt;
             foot_force_n_ = budget.used;
             foot_power_w_ = budget.power_used;
-            foot_lunge_ = lunge_push;
+            foot_lunge_ = lunge_draw;
         }
         return granted;
     };
@@ -2052,8 +1407,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         // The Turn's vault: something lower than her chest close ahead in
         // her way (not the player), and nothing at her head: she jumps it.
-        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F &&
-            !on_catwalk_line(float(at.GetX()), float(at.GetZ()), 0.5F)) {
+        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
             const Vec3 heading(dx / length, 0.0F, dz / length);
             const float look_m = std::clamp(1.55F + std::max(0.0F, speed_now - 3.5F) * 0.11F, 1.55F, 2.15F);
             const Vec3 ahead = heading * look_m;
@@ -2310,11 +1664,17 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float gap = std::max(0.05F, board_top - feet_now);
                 const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
                 if (velocity.GetY() < need) {
-                    const traversal::Limits budget;
-                    const float speed_up = std::max(0.5F, std::abs(velocity.GetY()));
-                    const float cap = std::min(budget.total_force_n, budget.power_w / speed_up);
+                    // Up onto it from this tick's one budget, the same as her
+                    // stride. Her feet are still under its top: they push
+                    // down on what they stand on (her sole contact), not on
+                    // the floor ahead she is stepping up to. A step up is
+                    // walking, never the lunge: in a lunge tick it stays on
+                    // her 8 kN and 22 kW, and is reported as her stride.
+                    budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
+                    budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
+                    lunge_draw = false;
                     const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
-                    bodies.AddForce(body_, Vec3(0.0F, std::min(cap, std::max(0.0F, want)), 0.0F), EActivation::Activate);
+                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), support_body, support_point);
                 }
             }
         }
@@ -2650,7 +2010,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         return true;
     }
     if (trap_ == Trap::ClimbOut) {
-        if (climb_ < 0 && level_ != bay_level_) {
+        if (climb_way_.status() == MoverStatus::Idle && level_ != bay_level_) {
             // Up and out (or off it some other way): done with it.
             trap_ = Trap::Off;
             return false;
@@ -2698,10 +2058,67 @@ bool Matron::trap_lets_go(const RVec3 player, const float dt, const bool perceiv
     return trap_lost_s_ >= kTrapLostSeconds;
 }
 
+Mover *Matron::holder() noexcept {
+    for (Mover *way : ways_) {
+        if (way->status() == MoverStatus::Running) {
+            return way;
+        }
+    }
+    return nullptr;
+}
+
+const Mover *Matron::holder() const noexcept {
+    for (const Mover *way : ways_) {
+        if (way->status() == MoverStatus::Running) {
+            return way;
+        }
+    }
+    return nullptr;
+}
+
+bool Matron::held_in_hunt() const noexcept {
+    const Mover *way = holder();
+    if (way == nullptr) {
+        return false;
+    }
+    const MoverView v = way->view();
+    return v.held && (v.tick == MoverTick::Hunt || v.tick == MoverTick::Rides);
+}
+
+bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget) {
+    MoverGoal goal{at, heard_x_, heard_z_, lead_floor_, true};
+    const auto ask = [&](Mover &way, const bool wait_ok) {
+        goal.wait_ok = wait_ok;
+        return way.begin(goal) && way.step(dt, budget) != MoverStatus::Idle;
+    };
+    // After the climber the way he went, where she saw or heard it: down the
+    // shaft's pipe, or a line he took.
+    if (ask(pipe_way_, true) || (guess_line_ >= 0 && ask(line_way_, false))) {
+        return true;
+    }
+    // Started up a line's ramp, she finishes it: a way found from the ramp
+    // would walk her off its side. Off the ramp, or stalled on it, she is not held.
+    const bool on_ramp = on_line_ramp(at) && stall_s_ < kRampStallS;
+    if (on_ramp && ask(line_way_, true)) {
+        return true;
+    }
+    // Every other way is her own: bars she finds herself, else a way she
+    // plans over the steel her scan read (matron_found_climb.cpp), climbed by
+    // her own hands. Held to a line's ramp, they stand aside.
+    if (on_ramp) {
+        routecraft_way_.stand_aside();
+    } else if (ask(routecraft_way_, true)) {
+        return true;
+    }
+    // A rung way her scan found off her floor (her clock to try a start again
+    // runs down here); a line she would only wait at, last.
+    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    return ask(climb_way_, true) || ask(line_way_, true);
+}
+
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
     if (!body_in_world_ || dead_ || holding_state(state_) || state_ == State::Down ||
-        state_ == State::Staggering || climb_ >= 0 || pipe_phase_ != PipePhase::Off || on_line_ || riding_ ||
-        held_ >= 0 || bracing_structure()) return false;
+        state_ == State::Staggering || held_in_hunt() || riding_ || held_ >= 0 || bracing_structure()) return false;
     MatronRoutecraft candidate = routecraft_.replacement();
     const bool accepted = candidate.request(physics_, body_, goal, facing);
     if (accepted || (!routecraft_.planning() && !routecraft_.owns_motion())) routecraft_ = std::move(candidate);
@@ -2720,8 +2137,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     foot_power_w_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
-    if (dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering ||
-        on_line_ || climb_ >= 0 || pipe_phase_ != PipePhase::Off || journey_active_ || routecraft_.owns_motion()) {
+    // Her tick's one account, handed to the way that has her (matron_mover.hpp).
+    const traversal::Limits law{};
+    traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
+    if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
+                                     state_ == State::Staggering || (way != nullptr && way->view().drives)) {
         foot_driving_ = false;
         foot_prep_ = false;
     }
@@ -2737,70 +2157,34 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // of them would otherwise leave the latch unset and the hunt would
     // end the tick the way ends, on arrival itself. The way-start sites
     // set it too; this covers any way whose start they miss.
-    if (stage_ != Stage::Pest &&
-        (journey_active_ || travel_.active || routecraft_.owns_motion() || climb_ >= 0)) {
+    if (const Mover *way = holder(); stage_ != Stage::Pest && way != nullptr && way->view().holds_chase) {
         chase_way_held_ = true;
     }
     // On her own journey (travel_to) nothing else has her body: a found
     // climb or a routecraft climb begun beside it gives way to it.
-    if (travel_.active && journey_active_) end_journey(false);
-    if (travel_.active && (routecraft_.planning() || routecraft_.owns_motion())) {
-        routecraft_.cancel();
-        routecraft_mine_ = false;
+    if (travel_way_.status() == MoverStatus::Running) {
+        if (journey_way_.status() == MoverStatus::Running) {
+            journey_way_.cancel();
+        }
+        if (routecraft_way_.status() == MoverStatus::Running) {
+            routecraft_way_.cancel();
+        }
     }
-    if (journey_active_) {
-        // A way she planned herself: its Climber has her body until it ends.
+    // A way she took herself (her journey, her bars) has her body until it
+    // ends, first in her tick; knocked about, held or dead, it ends.
+    for (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Owns; way = holder()) {
         if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) {
-            end_journey(false);
-        } else {
-            sound_count_ = 0;
-            step_planks(dt);
-            feel_floor(dt);
-            settle_level();
-            step_journey(dt);
-            // Her body's travel counts her strides and rungs (each rung rings).
-            stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;
-            notice_ridden_line(player);
-            sense_near();
-            return;
+            way->cancel();
+            continue;
         }
-    }
-    if (routecraft_.planning() || routecraft_.owns_motion()) {
-        if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) routecraft_.cancel();
-        else {
-            sound_count_ = 0;
-            step_planks(dt);
-            feel_floor(dt);
-            settle_level();
-            routecraft_.step(physics_, body_, dt);
-            stride_ += physics_.GetBodyInterface().GetLinearVelocity(body_).Length() * dt;   // each rung rings
-            if (routecraft_.report().force > 0) routecraft_release_floor_ = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
-            // A climb of her own: at its goal (standing over its head or at
-            // its foot) her hands come off; ended short of it, the column is
-            // left alone a while.
-            if (routecraft_mine_ && routecraft_.report().status == MatronRoutecraft::Status::Holding) {
-                routecraft_.cancel();
-                routecraft_mine_ = false;
-            } else if (routecraft_mine_ && !routecraft_.planning() && !routecraft_.owns_motion()) {
-                // Acceptance is provisional while the initial search runs.
-                // A refused route never took her off the foot of the column.
-                const bool refused = !climb_back_tried_ && routecraft_.report().steps == 0;
-                block_climb(climbing_key_, !refused);
-                routecraft_mine_ = false;
-                // Ended short of its goal (blocked at its end, a plan given
-                // out) with a hold still in her hands: back down the way she
-                // came, once, rather than let go. That failing too, she falls.
-                if (refused) {
-                    if (climbs_done_ > 0) --climbs_done_;
-                } else if (!climb_back_tried_) {
-                    climb_back_tried_ = true;
-                    routecraft_mine_ = request_climb_goal(climb_back_, climb_back_facing_);
-                }
-            }
-            notice_ridden_line(player);
-            sense_near();
-            return;
-        }
+        sound_count_ = 0;
+        step_planks(dt);
+        feel_floor(dt);
+        settle_level();
+        (void)way->step(dt, account);
+        notice_ridden_line(player);
+        sense_near();
+        return;
     }
     // This tick's sounds, taken now whatever she does with them.
     const std::size_t sound_count = sound_count_;
@@ -2833,9 +2217,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         return;
     }
     if (body_in_world_) {
-        ride_line();
+        // On a cable she rides it first.
+        if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Rides) {
+            (void)way->step(dt, account);
+        }
         // On the corner pipe her floor is the steel in her hands.
-        if (pipe_phase_ == PipePhase::Off) {
+        if (const Mover *way = holder(); way == nullptr || !way->view().floor_in_hands) {
             feel_floor(dt);
             settle_level();
         }
@@ -2848,7 +2235,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         scanned_ = own_scan_.get();
     }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
-    if (body_in_world_ && travel_.active) {
+    if (Mover *way = holder(); body_in_world_ && way != nullptr && way->view().tick == MoverTick::Travel) {
         notice_ridden_line(player);
         // Knocked off her feet on the way: she gets them back first, then
         // goes on (her journey plans again from where she gets up).
@@ -2856,7 +2243,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             if (climber_ && climber_->status() == traversal::Climber::Status::Running) climber_->cancel();
             step_knocked(dt, player);
         } else {
-            step_travel(dt);
+            (void)way->step(dt, account);
         }
         if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
         return;
@@ -2884,11 +2271,13 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
     }
     // Or on the deck her corner pipe is taking her to, or (no longer frail) a
-    // deck it joins to hers: a storey of it is a few seconds to her.
+    // deck it joins to hers: a story of it is a few seconds to her.
     const float player_floor_y = floor_of(float(player.GetY()));
+    const Mover *taking = holder();
     const bool by_her_pipe =
         body_in_world_ && in_footprint &&
-        ((pipe_phase_ != PipePhase::Off && std::abs(player_floor_y - pipe_to_) < 0.1F) ||
+        ((taking != nullptr && taking->view().has_goal &&
+          std::abs(player_floor_y - taking->view().goal_floor_y) < 0.1F) ||
          (stage_ != Stage::Pest && pipe_reaches(level_floor) && pipe_reaches(player_floor_y) &&
           std::abs(std::abs(player_floor_y - level_floor) - kStackPitch) < 0.1F));
     player_on_deck_ = on_deck || player_climb >= 0 || by_her_pipe;
@@ -2906,7 +2295,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     const RVec3 body_at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : RVec3::sZero();
     // Just off the corner pipe she stands listening (matron.hpp): every sound
     // carries farther to her.
-    const float hearing = body_in_world_ && pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F ? kListenReach : 1.0F;
+    const float hearing =
+        body_in_world_ && pipe_way_.status() == MoverStatus::Idle && pipe_listen_s_ > 0.0F ? kListenReach : 1.0F;
     float picked_carry = std::numeric_limits<float>::max();
     float picked_level = 0.0F;   // the picked sound's level at her ear, 0..1
     const auto pick = [&](const RVec3 ear, const float within) {
@@ -2965,8 +2355,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             state_ = State::Hunting;
         }
         const bool eligible = trap_ == Trap::Holding && body_in_world_ && out(state_) && state_ != State::Emerging &&
-            state_ != State::Down && state_ != State::Staggering && !riding_ && !on_line_ &&
-            climb_ < 0 && pipe_phase_ == PipePhase::Off && held_ < 0;
+            state_ != State::Down && state_ != State::Staggering && !riding_ && !held_in_hunt() && held_ < 0;
         shared_survival_->pre_step(body_, eligible, Quat::sRotation(Vec3::sAxisY(), yaw_));
         if (bracing_structure()) {
             // She keeps listening, but neither her feet nor hands pursue prey
@@ -3118,8 +2507,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // (matron.hpp, her mischief); else her hands keep it.
         if (held_ >= 0) {
             const bool at_player = saw && Vec3(player - at).Length() < kCatchM + 0.6F;
-            if (stage_ != Stage::Pest || turn_ != Turn::None || climb_ >= 0 || on_line_ || riding_ ||
-                pipe_phase_ != PipePhase::Off || state_ == State::Unrigging || state_ == State::Peering || at_player) {
+            if (stage_ != Stage::Pest || turn_ != Turn::None || held_in_hunt() || riding_ ||
+                state_ == State::Unrigging || state_ == State::Peering || at_player) {
                 drop_stock();
             } else {
                 hold_stock(dt);
@@ -3128,21 +2517,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         if (throw_windup_s_ >= 0.0F && (!saw || held_ < 0 || state_ != State::Hunting)) {
             throw_windup_s_ = -1.0F;
         }
-        // On the corner pipe she goes on along it, whatever else she is about.
-        if (pipe_phase_ != PipePhase::Off) {
-            ride_pipe(dt);
-            break;
-        }
-        // On a climb she is going up (or down) it, whatever else she is about;
+        // On a way the hunt steps (the corner pipe, a climb, her map's way
+        // across the tower) she goes on along it, whatever else she is about;
         // started along a way across the tower, she finishes it.
-        if (climb_ >= 0) {
-            climb(dt);
-            step_turn(dt, d, loudness, player_carry);
-            break;
-        }
-        if (route_on_edge_) {
-            (void)follow_route(dt, at);
-            step_turn(dt, d, loudness, player_carry);
+        if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Hunt) {
+            const bool turns = way->view().turns;
+            (void)way->step(dt, account);
+            if (turns) {
+                step_turn(dt, d, loudness, player_carry);
+            }
             break;
         }
         // Holding on to a floor that moves (or has only just stopped): she
@@ -3196,9 +2579,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            // So is one her map has a way to, that she is on her way along.
-            const bool by_pipe = (elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward)) ||
-                                 route_on_edge_ || (elsewhere && route_.count > 0 && route_goal_ == lead_region());
+            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -3229,20 +2610,17 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             };
             bool by_own_way = false;
             if (stage_ != Stage::Pest && elsewhere_own) {
-                if (found_.active && std::abs(feet_y - found_.from_y) <= 1.0F &&
-                    toward_lead(float(found_.goal.GetY()) - kStandCentre)) {
-                    by_own_way = true;
+                // A way of hers that knows the floor it takes her to (a found
+                // climb she is walking to, a journey, a travel), toward her
+                // lead from the floor it sets out from; or one that has her.
+                for (const Mover *way : ways_) {
+                    const MoverView v = way->view();
+                    if (v.has_goal && (!v.has_from || std::abs(feet_y - v.from_floor_y) <= 1.0F) &&
+                        toward_lead(v.goal_floor_y)) {
+                        by_own_way = true;
+                    }
                 }
-                if (journey_active_ && !journey_.empty() &&
-                    toward_lead(float(journey_.back().spec.goal.GetY()))) {
-                    by_own_way = true;
-                }
-                if (travel_.active && travel_.goal >= 0 && scanned_ != nullptr &&
-                    travel_.goal < static_cast<int>(scanned_->regions().size()) &&
-                    toward_lead(scanned_->regions()[static_cast<std::size_t>(travel_.goal)].top)) {
-                    by_own_way = true;
-                }
-                if (climb_ >= 0 || routecraft_.owns_motion() || journey_moving_ || on_line_) {
+                if (holder() != nullptr) {
                     by_own_way = true;
                 }
                 // Between ways, when the chase has already outrun the short
@@ -3349,25 +2727,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere &&
-                       (// After the climber the way he went, where she saw or heard
-                        // it: down the shaft's pipe, or a line he took.
-                        follow_pipe(dt, at) ||
-                        (guess_line_ >= 0 && follow_line(dt, at, false)) ||
-                        // Started up a line's ramp, she finishes it: a way found from the ramp
-                        // would walk her off its side. Off the ramp, or stalled on it, she is not held.
-                        (on_line_ramp(at) && stall_s_ < kRampStallS && follow_line(dt, at, true)) ||
-                        // Every other way is her own: bars she finds herself, else
-                        // a way she plans over the steel her scan read
-                        // (matron_found_climb.cpp), climbed by her own hands.
-                        follow_found_climb(dt, at) ||
-                        // The authored map's way alone, for the test that drives one of its
-                        // ways; in play she has none of it.
-                        (found_climbs_off_ && follow_route(dt, at)) ||
-                        // A rung way her scan found off her floor; a line she
-                        // would only wait at, last.
-                        follow_climb(dt, at) ||
-                        follow_line(dt, at, true))) {
+            } else if (elsewhere && take_way(dt, at, account)) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
                 // the tower (its ladders up and down), or up a climb.
@@ -3668,7 +3028,21 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 break;
             }
         }
-        // Shuffling: the stooped patrol round her level's loop.
+        // Shuffling: the stooped patrol round her level's loop. Her loop is
+        // one of this level's (a level reached by a way that picks none, as
+        // a journey's end, keeps the last level's): else she picks one here,
+        // and on a floor with no loop of hers (the bay's bracket) she stands.
+        const auto on_loop = [&] {
+            return patrol_ >= 0 && static_cast<std::size_t>(patrol_) < here.patrols.size() && patrol_node_ >= 0 &&
+                   static_cast<std::size_t>(patrol_node_) < here.patrols[static_cast<std::size_t>(patrol_)].size();
+        };
+        if (!on_loop()) {
+            pick_patrol(ax, az);
+        }
+        if (!on_loop()) {
+            walk_toward(dt, ax, az, 0.0F);
+            break;
+        }
         const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
         const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
@@ -3715,9 +3089,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
-    if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_.cancel();
-    if (body_in_world_ && !dead_ && !routecraft_.owns_motion() && !journey_moving_ && !riding_ && !on_line_ && climb_ < 0 &&
-        pipe_phase_ == PipePhase::Off && routecraft_recovering_) {
+    // Her bars let go of her at once (her journey ends in her next tick).
+    if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_way_.cancel();
+    const Mover *held_by = holder();
+    if (body_in_world_ && !dead_ && !(held_by != nullptr && held_by->view().held) && !riding_ &&
+        routecraft_recovering_) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         {
             RayCastResult floor;
@@ -3744,7 +3120,7 @@ void Matron::post_step(const float dt) {
     // kLethalLandingMps or more kills her, on a deck, on the ground or on a
     // plate that came down with her. No deck height counts against her on the
     // way (one she passes is no floor under her).
-    if (body_in_world_ && !dead_ && !routecraft_.owns_motion() && !on_line_ && climb_ < 0 && pipe_phase_ == PipePhase::Off) {
+    if (const Mover *way = holder(); body_in_world_ && !dead_ && !(way != nullptr && way->view().lands)) {
         BodyInterface &bodies = physics_.GetBodyInterface();
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
@@ -3771,8 +3147,8 @@ void Matron::post_step(const float dt) {
 bool Matron::caught(const RVec3 player) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
-    if (bracing_structure() || !body_in_world_ || dead_ || riding_ || pipe_phase_ != PipePhase::Off || climb_ >= 0 ||
-        routecraft_.owns_motion() || journey_moving_ ||
+    const Mover *way = holder();
+    if (bracing_structure() || !body_in_world_ || dead_ || riding_ || (way != nullptr && way->view().held) ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
@@ -4138,19 +3514,19 @@ void Matron::restore(const Saved &saved) {
         unrigs_ = 0;
         guess_line_ = -1;
         lead_floor_ = kDeckTop;
-        on_line_ = false;
-        cable_slides_ = 0;
+        restore_line();
         guess_climb_ = -1;
         release_climb(false);
         climb_retry_s_ = 0.0F;
         climb_grips_ = 0;
         climb_releases_ = 0;
         climbs_done_ = 0;
-        // A restore is a world changed: every way of her map is worth trying again.
-        route_clear();
-        routes_.unblock_all();
-        route_edges_done_ = 0;
-        route_failures_ = 0;
+        // A restore is a world changed: every way of her pipe is worth trying
+        // again (one ruled out stays out).
+        for (PipeWayMemory &way : pipe_ways_) {
+            way.failures = 0;
+            way.blocked_until_s = 0.0F;
+        }
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
         unrig_way_ = -1;
@@ -4161,10 +3537,7 @@ void Matron::restore(const Saved &saved) {
         feet_y_ = kDeckTop;
         riding_ = false;
         let_go_s_ = 0.0F;
-        // Off the pipe, whatever had her on it.
-        pipe_support_ = BodyID();
-        pipe_drive_dv_ = Vec3::sZero();
-        pipe_phase_ = PipePhase::Off;
+        restore_pipe();
         foot_driving_ = false;
         foot_prep_ = false;
         foot_body_ = BodyID();
@@ -4172,13 +3545,6 @@ void Matron::restore(const Saved &saved) {
         foot_power_w_ = 0.0F;
         foot_lunge_ = false;
         foot_drive_dv_ = Vec3::sZero();
-        pipe_links_ = 0;
-        pipe_holds_ = 0;
-        pipe_flanges_ = 0;
-        pipe_slams_ = 0;
-        pipe_slam_mps_ = 0.0F;
-        pipe_stun_s_ = 0.0F;
-        pipe_listen_s_ = 0.0F;
         // On her feet, whatever had her down.
         if (lying_) {
             BodyInterface &bodies = physics_.GetBodyInterface();
@@ -4260,8 +3626,9 @@ void Matron::sense_near() {
     const RVec3 at = bodies.GetPosition(body_);
     // Her own drive (feet or pipe) is a force the step applies, not a velocity
     // set: what it will change is hers, not a blow's.
+    const Mover *way = holder();
     set_velocity_ = bodies.GetLinearVelocity(body_) + foot_drive_dv_ +
-                    (pipe_phase_ != PipePhase::Off ? pipe_drive_dv_ : Vec3::sZero());
+                    (way != nullptr ? way->view().drive_dv : Vec3::sZero());
     sensed_ = true;
     const Vec3 centre(at);
     AllHitCollisionCollector<CollideShapeBodyCollector> found;
@@ -4328,9 +3695,10 @@ void Matron::take_blow(const float dt) {
     sensed_ = false;
     // On the pipe her hands hold her against her weight: a blow is read the
     // same way, but in all three directions, and only on the pipe itself.
-    const bool on_pipe = pipe_phase_ != PipePhase::Off;
-    if (!body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 || travel_.active || state_ == State::Down ||
-        state_ == State::Emerging || pipe_phase_ == PipePhase::Slide || pipe_phase_ == PipePhase::Stunned) {
+    const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
+    const Mover *held_by = holder();
+    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
+        state_ == State::Down || state_ == State::Emerging) {
         blow_quiet_ = kBlowQuietTicks;
         return;
     }
@@ -4425,18 +3793,7 @@ void Matron::take_blow(const float dt) {
     if (on_pipe) {
         if (blow >= kPipeTearMps) {
             blow_quiet_ = kBlowQuietTicks;
-            if (distance_xz(float(at.GetX()), float(at.GetZ()), kPipeLineX, kPipeLineZ) < 0.5F) {
-                tear_off_pipe();
-            } else {
-                // Still at a rail, over the band: her hands off it, down
-                // onto whatever steel her feet find.
-                get_off_pipe(true);
-                const Vec3 way = blow_impulse_.LengthSq() > 1.0e-4F ? Vec3(blow_impulse_.GetX(), 0.0F, blow_impulse_.GetZ())
-                                                                   : Vec3::sZero();
-                fall_x_ = way.LengthSq() > 1.0e-6F ? way.Normalized().GetX() : std::sin(yaw_);
-                fall_z_ = way.LengthSq() > 1.0e-6F ? way.Normalized().GetZ() : std::cos(yaw_);
-                knock_down();
-            }
+            pipe_struck(at);
         }
         return;
     }
@@ -4692,39 +4049,28 @@ void Matron::refresh_view() {
     view_.vaults = vaults_;
     view_.leaps = leaps_;
     view_.unrigs = unrigs_;
-    view_.on_line = on_line_;
-    view_.cable_slides = cable_slides_;
-    // A planned move counts as climbing once a hand of hers holds (walking
-    // to its start, her hands are free).
-    const bool journey_move = journey_moving_ && climber_ != nullptr && climber_->view().active;
-    const bool journey_hands = journey_move && climber_->view().holding;
-    const bool routecraft_hands = routecraft_.owns_motion();
-    view_.climbing = climb_ >= 0 || routecraft_hands || journey_hands;
-    view_.climb_move_active = journey_move || routecraft_hands || climb_ >= 0 || mantling_;
-    view_.climb_bar_traverse = routecraft_hands;
-    view_.climb_move = journey_move ? climber_->view().kind
-                       : routecraft_hands ? traversal::MoveKind::RungUp
-                       : mantling_ ? traversal::MoveKind::Mantle
-                       : climb_ >= 0 ? (climb_down_ ? traversal::MoveKind::RungDown : traversal::MoveKind::RungUp)
-                       : traversal::MoveKind::Walk;
-    view_.climb_phase = journey_move ? climber_->view().phase : (mantling_ ? 3 : 0);
-    view_.climb_airborne = journey_move && climber_->view().airborne;
-    view_.climb_sliding = journey_move && climber_->view().sliding;
-    view_.climb_leg_driving = (journey_move && climber_->view().leg_driving) || (foot_driving_ && !foot_prep_);
+    report_line();
+    // What the way that has her shows (matron_mover.hpp): a planned move
+    // counts as climbing once a hand of hers holds (walking to its start,
+    // her hands are free).
+    const Mover *way = holder();
+    const MoverView shown = way != nullptr ? way->view() : MoverView{};
+    view_.climbing = shown.hands;
+    view_.climb_move_active = shown.move_active;
+    view_.climb_bar_traverse = shown.bar_traverse;
+    view_.climb_move = shown.move_active ? shown.move : traversal::MoveKind::Walk;
+    view_.climb_phase = shown.phase;
+    view_.climb_airborne = shown.airborne;
+    view_.climb_sliding = shown.sliding;
+    view_.climb_leg_driving = shown.leg_driving || (foot_driving_ && !foot_prep_);
     view_.climbs = climbs_done_;
-    // The hand and force of whichever of her climbs or foot drives has her.
-    view_.climb_hand = routecraft_.owns_motion() ? routecraft_.report().hand
-                       : journey_hands           ? climber_->view().hand
-                                                 : climb_hand_;
-    view_.climb_force_n = pipe_phase_ != PipePhase::Off ? pipe_force_n_
-                          : routecraft_.owns_motion()   ? routecraft_.report().force
-                          : journey_hands               ? climber_->view().force_n
-                          : climb_ >= 0                 ? climb_force_n_
-                                                        : foot_force_n_;
+    // The hand and force of whichever of her climbs or foot drives has her
+    // (no way showing a hand: the last rung she held).
+    view_.climb_hand = shown.hand_shown ? shown.hand : climb_way_.view().hand;
+    view_.climb_force_n = shown.force_shown ? shown.force_n : foot_force_n_;
     // The Turn lunge is its own move with its own cap (kTurnLungeForceN,
     // kTurnLungePowerW); the report says when the force shown is that drive.
-    view_.climb_lunge_drive = pipe_phase_ == PipePhase::Off && !routecraft_.owns_motion() && !journey_hands &&
-                              climb_ < 0 && foot_lunge_;
+    view_.climb_lunge_drive = !shown.force_shown && foot_lunge_;
     view_.foot_power_w = foot_power_w_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
@@ -4751,20 +4097,7 @@ void Matron::refresh_view() {
     view_.kneeling = kneeling_;
     view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
-    view_.on_pipe = pipe_phase_ != PipePhase::Off;
-    view_.route_edges = route_edges_done_;
-    view_.route_failures = route_failures_;
-    view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
-    view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
-    view_.pipe_peak_force_n = pipe_peak_force_n_;
-    view_.pipe_peak_power_w = pipe_peak_power_w_;
-    view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;
-    view_.pipe_listening = pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F;
-    view_.pipe_links = pipe_links_;
-    view_.pipe_holds = pipe_holds_;
-    view_.pipe_flanges = pipe_flanges_;
-    view_.pipe_slams = pipe_slams_;
-    view_.pipe_slam_mps = pipe_slam_mps_;
+    report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
         view_.strain = 1.0F;
@@ -4824,10 +4157,9 @@ void Matron::refresh_view() {
     view_.hand_x = float(hand_target_.GetX());
     view_.hand_y = float(hand_target_.GetY());
     view_.hand_z = float(hand_target_.GetZ());
-    if (routecraft_.owns_motion()) {
-        const auto &contact = routecraft_.report();
-        view_.hand_x = float(contact.hand.GetX()); view_.hand_y = float(contact.hand.GetY()); view_.hand_z = float(contact.hand.GetZ());
-        view_.support_n = contact.force;
+    if (shown.bar_traverse) {
+        view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
+        view_.support_n = shown.force_n;
     }
     view_.aim_ledge = aim_ledge_;
     view_.aim_x = float(aim_.GetX());
@@ -4853,21 +4185,13 @@ void Matron::refresh_view() {
     view_.climb_hand2_known = false;
     view_.climb_feet_support = JPH::RVec3::sZero();
     view_.climb_feet_support_known = false;
-    const bool legacy_climb = climb_ >= 0 && !climb_support_.IsInvalid();
-    const bool has_hand = legacy_climb || routecraft_.owns_motion() || journey_hands;
-    if (has_hand) {
+    if (shown.hand_held) {
         // Her left, one shoulder-width (0.45 m) along the rung or lip
-        // from the first hold, at the same height. On a legacy climb
-        // the rung runs across her facing (out is steel-to-her-side),
-        // so her left is (out_z, 0, -out_x); otherwise it is her yaw's
-        // left, (-cos yaw, 0, sin yaw), matching the figure's local -x.
-        Vec3 left(0.0F, 0.0F, 0.0F);
-        if (legacy_climb) {
-            const Climb spec = climb_spec(climb_);
-            left = Vec3(spec.out_z, 0.0F, -spec.out_x);
-        } else {
-            left = Vec3(-std::cos(yaw_), 0.0F, std::sin(yaw_));
-        }
+        // from the first hold, at the same height. On rungs across her
+        // facing (a legacy climb) her left runs along them; otherwise it
+        // is her yaw's left, (-cos yaw, 0, sin yaw), matching the
+        // figure's local -x.
+        const Vec3 left = shown.rungs_across ? shown.rung_left : Vec3(-std::cos(yaw_), 0.0F, std::sin(yaw_));
         if (left.LengthSq() > 1.0e-6F) {
             const RVec3 second = view_.climb_hand + left.Normalized() * 0.45F;
             view_.climb_hand2 = second;
@@ -4877,13 +4201,13 @@ void Matron::refresh_view() {
             // here, so their candidate stays reported-but-unknown and
             // the rig keeps the single-hold pose rather than posing a
             // wrist to a point no surface was ever shown under.
-            if (legacy_climb) {
+            if (shown.rungs_across) {
                 const ClimbBodyFilter filter(body_, player_);
                 BodyID rests_body;
                 SubShapeID rests_member;
                 view_.climb_hand2_known =
                     hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member) &&
-                    rests_body == climb_support_ && rests_member == climb_member_;
+                    rests_body == shown.hold_body && rests_member == shown.hold_member;
             }
         }
     }
@@ -4897,11 +4221,10 @@ void Matron::refresh_view() {
                                                     {}, {}, filter)) {
             view_.climb_feet_support = RRayCast(at, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)).GetPointOnRay(floor_hit.mFraction);
             view_.climb_feet_support_known = true;
-        } else if (legacy_climb) {
+        } else if (shown.rungs_across) {
             // No surface under her (mid-mantle, feet in the air): the
             // climb's top deck is where her feet land.
-            const Climb spec = climb_spec(climb_);
-            view_.climb_feet_support = RVec3(spec.top_x, spec.lip_y, spec.top_z);
+            view_.climb_feet_support = shown.top;
             view_.climb_feet_support_known = true;
         } else {
             view_.climb_feet_support = RVec3(view_.x, view_.floor_y, view_.z);

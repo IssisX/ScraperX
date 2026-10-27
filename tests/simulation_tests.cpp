@@ -241,10 +241,6 @@ int main() {
         run_matron_ways();
         return EXIT_SUCCESS;
     }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routes") {
-        run_matron_routes();
-        return EXIT_SUCCESS;
-    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-climber") {
         run_matron_exam_climber();
         return EXIT_SUCCESS;
@@ -581,7 +577,6 @@ int main() {
     run_matron();
     run_matron_pace();
     run_matron_unstick();
-    run_matron_routes();
     run_matron_traverse();
     run_matron_pursuit();
     // run_matron_chase: its own ctest slice (scraperx_sim.matron-chase), so the
