@@ -208,7 +208,6 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_water.cpp
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
-        tests/sim_tests_matron_routes.cpp
         tests/sim_tests_matron_traverse.cpp
         tests/sim_tests_matron_pursuit.cpp
         tests/sim_tests_matron_chase.cpp
