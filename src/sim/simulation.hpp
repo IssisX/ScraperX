@@ -1573,6 +1573,12 @@ public:
     // values of sim/matron_routes.hpp), up or down. False if she found no hold.
     void debug_place_matron(Vector3 feet) noexcept;
     [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
+    // Tests only: the same, named without her map: the corner pipe, or the
+    // scanned ladder nearest her off her floor.
+    [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
+    // Tests only: the corner pipe ruled out for her, as a pipe way that has
+    // failed three times is (her own found ways tested alone).
+    void debug_matron_rule_out_pipe() noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.

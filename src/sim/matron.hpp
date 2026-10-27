@@ -1056,6 +1056,8 @@ public:
     void let_go_for_test();
     // Tests only: every way on her map but edge `index` ruled out.
     void only_way_for_test(std::size_t index);
+    // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
+    void rule_out_pipe_for_test();
     bool climb_for_test(routes::Connector which, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
