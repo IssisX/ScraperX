@@ -997,6 +997,9 @@ public:
     double kick_dir_x_ = 0.0, kick_dir_z_ = 0.0;
     int kick_cooldown_ticks_ = 0;
     bool kick_now_ = false;
+    // This grip fought by the player (a kick, a thrash, a brace on a rail):
+    // its tear is theirs, an escape; unfought, the world's (matron_hold.cpp).
+    bool grip_fought_ = false;
     std::uint64_t grip_count_ = 0;
     std::uint64_t grip_tear_count_ = 0;
     std::uint64_t grip_release_count_ = 0;
@@ -1009,6 +1012,8 @@ public:
     JPH::RVec3 hold_last_at_ = JPH::RVec3::sZero();
     bool grab_holds_player() const noexcept { return grip_ != nullptr; }
     bool grab_pre_step(JPH::BodyInterface &bodies, StepCommands &commands, float dt) noexcept;
+    // The player's ankle: the feet end of the body, however it lies.
+    [[nodiscard]] JPH::RVec3 player_ankle(const JPH::BodyInterface &bodies) const noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_reset(JPH::BodyInterface &bodies) noexcept;

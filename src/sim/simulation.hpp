@@ -303,6 +303,7 @@ struct MatronSnapshot final {
     std::uint32_t releases = 0;
     std::uint32_t spares = 0;
     std::uint32_t grips_torn = 0;
+    std::uint32_t retakes = 0;   // her grip torn by the world (not the player), her hand on them again
     std::uint32_t brace_losses = 0;
     std::uint32_t carry_drops = 0;
     std::uint32_t arm_tears = 0;
@@ -1558,8 +1559,12 @@ public:
     // rage it takes, so a test can meet what each stage does to the player.
     void debug_set_matron_stage(std::uint8_t stage) noexcept;
     // Tests only (never bound to the bridge): her hands held off the player
-    // for `seconds`, so a test can meet her body alone.
+    // for `seconds` (no grab, no shove), so a test can meet her body alone.
     void debug_hold_matron_hands(double seconds) noexcept;
+    // Tests only (never bound to the bridge): her hands never take hold (as
+    // in a grab's cooldown that does not end: a touch is her shove, not a
+    // catch), so a test can meet her Turn as a pest's hands left it.
+    void debug_hold_matron_grab(bool held) noexcept;
     // Tests only: her pace fixed (0 creep .. 3 hunt) with no hush; -1 free.
     void debug_fix_matron_pace(int pace) noexcept;
     // Tests only: her out of the locker and on her patrol loop.
@@ -1602,7 +1607,8 @@ public:
     [[nodiscard]] MatronJourney matron_journey() const noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
-    // Tests: ArmPlay after a dangle (-1 her roll, 0 never, 1 always); an arm already lost.
+    // Tests: ArmPlay in a hold (-1 or 1 her rule: every hold while an arm is left; 0 never, the
+    // hold alone); an arm already lost.
     void debug_matron_armplay(int armplay) noexcept;
     void debug_lose_arm(int side) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and

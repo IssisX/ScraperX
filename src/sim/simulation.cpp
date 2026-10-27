@@ -1169,6 +1169,10 @@ void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
 
+void Simulation::debug_hold_matron_grab(const bool held) noexcept {
+    physics_world_->matron().hold_grab_for_test(held);
+}
+
 void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 at, const Vector3 velocity) noexcept {
     physics_world_->launch_kit_body_for_test(
         body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
@@ -1291,6 +1295,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.releases = view.releases;
     result.spares = view.spares;
     result.grips_torn = view.grips_torn;
+    result.retakes = view.retakes;
     result.brace_losses = view.brace_losses;
     result.carry_drops = view.carry_drops;
     result.arm_tears = view.arm_tears;
