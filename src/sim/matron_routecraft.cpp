@@ -485,7 +485,7 @@ void MatronRoutecraft::advance_plan(PhysicsSystem &p, BodyID self, unsigned expa
         search_.current = -1;
     }
 }
-void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
+void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self, traversal::Budget &account) {
     if (!holding_) {
         // Her normal walking controller is paused during planning. The body
         // has no friction or damping, so retain standing through finite foot
@@ -526,10 +526,12 @@ void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
         if (force.Length() > limit) force *= limit / force.Length();
         const float power = std::abs(force.Dot(velocity));
         if (power > kPower) force *= kPower / power;
-        bodies.AddForce(self, force);
-        report_.force = force.Length(); report_.reaction = -force;
+        account.velocity = velocity;
+        const Vec3 granted = account.take(force);
+        bodies.AddForce(self, granted);
+        report_.force = granted.Length(); report_.reaction = -granted;
         report_.peak_force = std::max(report_.peak_force, report_.force);
-        report_.peak_power = std::max(report_.peak_power, std::abs(force.Dot(velocity)));
+        report_.peak_power = std::max(report_.peak_power, std::abs(granted.Dot(velocity)));
         return; // no vertical support, acquired hand, or body pose writes
     }
     const RVec3 at = p.GetBodyInterface().GetPosition(self);
@@ -541,9 +543,9 @@ void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
         holding_.reset();
         return;
     }
-    drive(p, self, *holding_);
+    drive(p, self, *holding_, account);
 }
-void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target) {
+void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target, traversal::Budget &account) {
     auto &bodies = p.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(self);
     Vec3 desired=Vec3(target.center-at)*3;
@@ -553,15 +555,23 @@ void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target) 
     if (force.Length()>kForce) force*=kForce/force.Length();
     const float power=std::abs(force.Dot(velocity));
     if (power>kPower) force*=kPower/power;
-    bodies.AddForce(self,force);
-    report_.force=force.Length(); report_.peak_force=std::max(report_.peak_force,report_.force);
-    report_.peak_power=std::max(report_.peak_power,std::abs(force.Dot(velocity)));
-    report_.hand=target.grip.point; report_.reaction=-force;
+    account.velocity = velocity;
+    const Vec3 granted = account.take(force);
+    bodies.AddForce(self,granted);
+    report_.force=granted.Length(); report_.peak_force=std::max(report_.peak_force,report_.force);
+    report_.peak_power=std::max(report_.peak_power,std::abs(granted.Dot(velocity)));
+    report_.hand=target.grip.point; report_.reaction=-granted;
     report_.max_reach=std::max(report_.max_reach,Vec3(target.grip.point-at).Length());
     ++report_.steps;
 }
 void MatronRoutecraft::step(PhysicsSystem &p, BodyID self, float dt, unsigned expansion_budget,
     unsigned transition_budget, unsigned query_budget) {
+    traversal::Budget account{kForce, 0.0F, kPower, 0.0F, Vec3::sZero()};
+    step(p, self, dt, account, expansion_budget, transition_budget, query_budget);
+}
+
+void MatronRoutecraft::step(PhysicsSystem &p, BodyID self, float dt, traversal::Budget &account,
+    unsigned expansion_budget, unsigned transition_budget, unsigned query_budget) {
     if (!planning() && !owns_motion()) return;
     report_.force=0; report_.reaction=Vec3::sZero(); report_.slice_expansions=0;
     report_.slice_queries=0; report_.slice_neighbor_checks=0;
@@ -576,14 +586,14 @@ void MatronRoutecraft::step(PhysicsSystem &p, BodyID self, float dt, unsigned ex
         unsigned credits = query_budget;
         advance_plan(p, self, expansion_budget, transition_budget, credits);
         report_.slice_queries = query_budget - credits;
-        if (planning()) { hold(p, self); return; }
+        if (planning()) { hold(p, self, account); return; }
         if (!owns_motion()) return;
     }
     Node &node=route_[cursor_];
     if (!valid(p,node.grip) || !transition(p,self,at,node) || stall_ > 2.5F) {
         if (valid(p,node.grip)) failed_.push_back({at,node.center});
         replan(p, self);
-        if (planning()) hold(p, self);
+        if (planning()) hold(p, self, account);
         return;
     }
     const float distance=Vec3(node.center-at).Length();
@@ -597,7 +607,7 @@ void MatronRoutecraft::step(PhysicsSystem &p, BodyID self, float dt, unsigned ex
     const Node &target=route_[cursor_];
     if (report_.published_after_ticks == 0) report_.published_after_ticks = report_.planning_ticks;
     holding_ = Node{at, target.grip};
-    drive(p, self, target);
+    drive(p, self, target, account);
     if (Vec3(at-last_).Length()>0.03F) { last_=at; stall_=0; } else if (report_.status!=Status::Holding) stall_+=dt;
 }
 }
