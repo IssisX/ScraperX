@@ -279,6 +279,14 @@ void Matron::only_way_for_test(const std::size_t index) {
     found_climbs_off_ = index < routes_.edge_count();   // one way alone: none of her own either (no way named: her own only)
 }
 
+void Matron::rule_out_pipe_for_test() {
+    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
+        if (routes_.edge(i).connector == routes::Connector::CornerPipe) {
+            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
+        }
+    }
+}
+
 void Matron::let_go_for_test() {
     // Her hands open on the way that holds her, as a hold giving way opens them.
     (void)(climb_way_.let_go() || pipe_way_.let_go() || routecraft_way_.let_go() || journey_way_.let_go());
@@ -932,6 +940,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
     const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
     traversal::Budget budget{force_cap, 0.0F, power_cap, 0.0F, velocity - support_v};
+    bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
         if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
@@ -948,7 +957,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             foot_drive_dv_ += (granted / kMassKg) * dt;
             foot_force_n_ = budget.used;
             foot_power_w_ = budget.power_used;
-            foot_lunge_ = lunge_push;
+            foot_lunge_ = lunge_draw;
         }
         return granted;
     };
@@ -1302,8 +1311,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         // The Turn's vault: something lower than her chest close ahead in
         // her way (not the player), and nothing at her head: she jumps it.
-        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F &&
-            !on_catwalk_line(float(at.GetX()), float(at.GetZ()), 0.5F)) {
+        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
             const Vec3 heading(dx / length, 0.0F, dz / length);
             const float look_m = std::clamp(1.55F + std::max(0.0F, speed_now - 3.5F) * 0.11F, 1.55F, 2.15F);
             const Vec3 ahead = heading * look_m;
@@ -1560,11 +1568,17 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float gap = std::max(0.05F, board_top - feet_now);
                 const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
                 if (velocity.GetY() < need) {
-                    const traversal::Limits budget;
-                    const float speed_up = std::max(0.5F, std::abs(velocity.GetY()));
-                    const float cap = std::min(budget.total_force_n, budget.power_w / speed_up);
+                    // Up onto it from this tick's one budget, the same as her
+                    // stride. Her feet are still under its top: they push
+                    // down on what they stand on (her sole contact), not on
+                    // the floor ahead she is stepping up to. A step up is
+                    // walking, never the lunge: in a lunge tick it stays on
+                    // her 8 kN and 22 kW, and is reported as her stride.
+                    budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
+                    budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
+                    lunge_draw = false;
                     const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
-                    bodies.AddForce(body_, Vec3(0.0F, std::min(cap, std::max(0.0F, want)), 0.0F), EActivation::Activate);
+                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), support_body, support_point);
                 }
             }
         }
@@ -2858,7 +2872,21 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 break;
             }
         }
-        // Shuffling: the stooped patrol round her level's loop.
+        // Shuffling: the stooped patrol round her level's loop. Her loop is
+        // one of this level's (a level reached by a way that picks none, as
+        // a journey's end, keeps the last level's): else she picks one here,
+        // and on a floor with no loop of hers (the bay's bracket) she stands.
+        const auto on_loop = [&] {
+            return patrol_ >= 0 && static_cast<std::size_t>(patrol_) < here.patrols.size() && patrol_node_ >= 0 &&
+                   static_cast<std::size_t>(patrol_node_) < here.patrols[static_cast<std::size_t>(patrol_)].size();
+        };
+        if (!on_loop()) {
+            pick_patrol(ax, az);
+        }
+        if (!on_loop()) {
+            walk_toward(dt, ax, az, 0.0F);
+            break;
+        }
         const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
         const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
