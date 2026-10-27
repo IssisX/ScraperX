@@ -519,8 +519,8 @@ bool Matron::pipe_reaches(const float floor_y) noexcept {
     if (floor_y < kPipeLowestFloor - 0.1F || floor_y > kDeckTop + 0.1F) {
         return false;
     }
-    const float storeys = floor_y / kStackPitch;
-    return std::abs(storeys - std::round(storeys)) < 0.02F;
+    const float stories = floor_y / kStackPitch;
+    return std::abs(stories - std::round(stories)) < 0.02F;
 }
 
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
@@ -563,7 +563,7 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
 }
 
 int Matron::pipe_way(const float from_floor, const float to_floor) noexcept {
-    // Its decks, 132, 143 and 154 (pipe_reaches): one storey up from 132 or
+    // Its decks, 132, 143 and 154 (pipe_reaches): one story up from 132 or
     // 143 (ways 0 and 1), or down from 143 or 154 (ways 2 and 3).
     const auto deck = [](const float floor_y) {
         for (int d = 0; d < 3; ++d) {

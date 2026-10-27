@@ -606,7 +606,7 @@ public:
     // and climbs it hand over hand; fully changed she comes down it head first
     // in jerks. Each kPipeHoldM her hands go is a knock on the pipe, each
     // flange passed a bong: she is heard on it from the moment she takes hold
-    // (an 11 m storey takes her at least 4 s). A blow on it past kPipeTearMps
+    // (an 11 m story takes her at least 4 s). A blow on it past kPipeTearMps
     // opens her hands: her legs alone slow her (kPipeSlideAccel, her squeeze
     // against her weight) until they meet the flange under her and she slams
     // onto it, stunned a while by how hard, alive; then she goes on.
@@ -641,7 +641,7 @@ public:
     // A landing this hard (a fall of 2.5 m) puts her down a while; from
     // kLethalLandingMps it kills her.
     static constexpr float kHardLandingMps = 7.0F;
-    // A lead a storey away by the pipe is worth chasing longer than one on her
+    // A lead a story away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
     static constexpr float kPipeChaseDangerousSeconds = 40.0F;
@@ -842,7 +842,7 @@ public:
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
         bool pipe_listening = false;    // just off it, still, listening
-        std::uint32_t pipe_links = 0;   // storeys she set out along it, this run
+        std::uint32_t pipe_links = 0;   // stories she set out along it, this run
         std::uint32_t pipe_holds = 0;   // her hands' holds on it (each a knock)
         std::uint32_t pipe_flanges = 0; // flanges she passed (each a bong)
         std::uint32_t pipe_slams = 0;   // flanges slammed onto, torn off
@@ -1286,7 +1286,7 @@ private:
     [[nodiscard]] float carry_m(JPH::RVec3 from, JPH::RVec3 to) const;
     [[nodiscard]] float muffled_distance(JPH::RVec3 from, JPH::RVec3 to) const;
     // The floor of the level a sound at height y is on (the highest under
-    // it, within a storey), or her own when it is on none.
+    // it, within a story), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
@@ -1390,7 +1390,7 @@ private:
     bool begin_climb(int index, bool down = false);
     bool find_climb_hold(JPH::RVec3 at, bool down);
     void release_climb(bool failed);
-    // After a lead a storey away along the corner pipe (above): to the rail's
+    // After a lead a story away along the corner pipe (above): to the rail's
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);

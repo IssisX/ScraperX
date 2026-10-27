@@ -2221,7 +2221,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
     }
     // Or on the deck her corner pipe is taking her to, or (no longer frail) a
-    // deck it joins to hers: a storey of it is a few seconds to her.
+    // deck it joins to hers: a story of it is a few seconds to her.
     const float player_floor_y = floor_of(float(player.GetY()));
     const Mover *taking = holder();
     const bool by_her_pipe =
