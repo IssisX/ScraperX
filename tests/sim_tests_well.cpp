@@ -18,6 +18,7 @@ void run_well_stage_a() {
     // skip again and takes the load off the rope, and the rope's end comes
     // off the bollard onto the cage as before -- the stage is not stranded.
     Simulation unlinked(InitialSpawn::Deck154);
+    unlinked.place_matron_home(154.0F);
     require(unlinked.advance_frame(1.0).accepted, "the stair-top settle interval must be accepted");
     const auto well_stair_top = unlinked.snapshot();
     require(well_stair_top.player_grounded && well_stair_top.player_position.y > 154.8 &&
@@ -93,6 +94,7 @@ void run_well_stage_a() {
     // ring; at no tick has the payload gained more energy than the skip
     // released.
     Simulation well(InitialSpawn::Deck154);
+    well.place_matron_home(154.0F);
     require(well.advance_frame(1.0).accepted, "the ride's settle interval must be accepted");
     require(board_well_a(well) && rig_well_a(well),
             "the player must rig Stage A from inside its cage");
@@ -595,6 +597,7 @@ void run_well_band() {
     // source re-arms A. Down again by parachute, the rider holds A's tip-out
     // handle down to dump the rubble on the deck and rides the re-armed A up.
     Simulation band(InitialSpawn::Deck154);
+    band.place_matron_home(154.0F);
     require(band.advance_frame(1.0).accepted, "the band's settle interval must be accepted");
     const double band_start = band.snapshot().simulation_time_seconds;
     require(board_well_a(band) && rig_well_a(band) && pull_well_a(band, 0.5, 3.0),

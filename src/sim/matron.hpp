@@ -186,6 +186,12 @@ public:
     static constexpr float kLockerHalfY = 1.1F;
     static constexpr float kLockerHalfZ = 0.45F;
     static constexpr float kSpawnZ = kLockerZ - kLockerHalfZ - 0.5F;
+    // Her home deck: where her locker stands and where she wakes. By default
+    // her own deck (kHomeDeckTop, the locker at kLockerY); world setup may
+    // move it (set_home). kDeckTop stays 154: the bay, the catwalk and the
+    // 176 cages are where they are.
+    static constexpr float kHomeDeckTop = kDeckTop;
+    static constexpr float kLockerY = kHomeDeckTop;
 
     // Her body: 2.1 m tall standing, 220 kg.
     static constexpr float kMassKg = 220.0F;
@@ -318,12 +324,13 @@ public:
     static constexpr float kCommitSightM = 50.0F;
     static constexpr float kEndM = 5.0F;
     static constexpr float kCommitHoldSeconds = 2.5F;
-    // Below this she is gone (fell): a fall of 12 m from the deck. Riding
+    // Below this she is gone (fell): a fall of 13 m from the deck. Riding
     // (a moving floor, a line's cable) or on a climb she is not falling.
-    static constexpr float kFallenBelowM = 12.0F;
+    // Was 12 m. A measured 14 m drop still lands harder than this and kills.
+    static constexpr float kFallenBelowM = 13.0F;
     // What kills her is the landing: a stop as hard as the end of a fall of
-    // kFallenBelowM (about 15.3 m/s), on whatever she lands on.
-    static constexpr float kLethalLandingMps = 15.34F;
+    // kFallenBelowM (16 m/s), on whatever she lands on.
+    static constexpr float kLethalLandingMps = 16.00F;
     static constexpr float kOffTheWorldY = -50.0F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
@@ -455,7 +462,7 @@ public:
     // Lunge push only. Extra force past 9.8 kN did not raise the measured
     // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
     // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
-    // and shove stay on 8 kN and 22 kW.
+    // and shove stay on 8 kN and 44 kW.
     static constexpr float kTurnLungeForceN = 9800.0F;
     static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
@@ -638,9 +645,12 @@ public:
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
     static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
-    // A landing this hard (a fall of 2.5 m) puts her down a while; from
-    // kLethalLandingMps it kills her.
-    static constexpr float kHardLandingMps = 7.0F;
+    // A landing this hard puts her down a while; from kLethalLandingMps it
+    // kills her. Her own jump comes back near 7.2 m/s. The line sits above
+    // that return with room for a short miss, so the jump does not put her
+    // down. A longer fall still does (the home ladder opens her hands at
+    // about 9.5 m/s).
+    static constexpr float kHardLandingMps = 8.20F;
     // A lead a story away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
@@ -1045,6 +1055,14 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Her home: the deck (one of her levels' floors, by its top) her locker
+    // stands on, where she wakes, and where a restore puts her back. Moves
+    // the locker; while she is in it, puts her level, floor and lead there.
+    // Returns false (nothing changed)
+    // if no level of hers has that floor.
+    bool set_home(float deck_top);
+    [[nodiscard]] float home_deck_top() const noexcept { return home_y_; }
+    [[nodiscard]] int home_level() const noexcept { return home_level_; }
     // Tests only: she hears the climber at `at` (feet), as her ears would
     // report a sound there: a lead with an age, nothing more.
     void hear_for_test(JPH::RVec3 at);
@@ -1640,6 +1658,9 @@ private:
     std::array<PlankView, kPlanks> plank_views_{};
     std::vector<Level> levels_;
     int level_ = 0;
+    // Her home (set_home): its floor and its level.
+    float home_y_ = kHomeDeckTop;
+    int home_level_ = 0;
     int patrol_ = 0;   // which of her level's loops, and how far round it
 
     State state_ = State::Dormant;
