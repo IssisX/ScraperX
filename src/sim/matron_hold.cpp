@@ -375,12 +375,15 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         } else {
             pose_hand(dt, hand_target_, kHandSpeedMps);
             if (hold_s_ >= dangle_s_) {
-                // Fully changed: now and then (or after thrashing that did
-                // not get them free), her other hand goes for an arm.
-                const bool play = armplay_for_test_ >= 0 ? armplay_for_test_ != 0
-                                                         : stage_ == Stage::Changed &&
-                                                               (thrash_failed_ || roll() < kArmPlayOdds);
-                if (play && player_arms_left_ > 0 && !armplay_done_) {
+                // Dangerous: now and then (or after thrashing that did not
+                // get them free), her other hand goes for an arm. Fully
+                // changed: always, arm after arm, to the fatality.
+                const bool changed = stage_ == Stage::Changed;
+                const bool play = armplay_for_test_ >= 0
+                                      ? armplay_for_test_ != 0
+                                      : changed || (stage_ == Stage::Dangerous &&
+                                                    (thrash_failed_ || roll() < kArmPlayOdds));
+                if (play && player_arms_left_ > 0 && (!armplay_done_ || (changed && armplay_for_test_ < 0))) {
                     ++armplays_;
                     state_ = State::ArmPlay;
                     hold_s_ = 0.0F;
