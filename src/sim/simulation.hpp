@@ -1566,8 +1566,10 @@ public:
     void debug_matron_patrol() noexcept;
     // Tests only (never bound to the bridge): her body put standing at `feet`,
     // awake and hunting; and one of her climbs begun from there, up or down:
-    // the corner pipe, or the scanned ladder nearest her off her floor.
-    // False if she found no hold.
+    // the corner pipe (false if she found no hold), or the scanned climb
+    // nearest her off her floor (false if there is none; her Climber steps in
+    // under its first hold from her next tick, and a hold not there is a
+    // failed climb, counted in climb_releases).
     void debug_place_matron(Vector3 feet) noexcept;
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
     // Tests only: the corner pipe ruled out for her, as a pipe way that has

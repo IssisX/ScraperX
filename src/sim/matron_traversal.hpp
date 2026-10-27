@@ -213,6 +213,8 @@ public:
     float stand(float dt);
     [[nodiscard]] const MoveSpec &spec() const noexcept { return spec_; }
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
+    // The hold her hand has now (its body and member; invalid when none).
+    [[nodiscard]] const Hold &hold() const noexcept { return hold_; }
     // Her velocity against what she pushes on (the hold at its anchor, else
     // the floor under her): the velocity her power budget is charged on.
     [[nodiscard]] JPH::Vec3 relative_velocity() const;
