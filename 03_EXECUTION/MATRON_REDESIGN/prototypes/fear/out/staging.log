@@ -1,0 +1,39 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.4 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+WARNING: All audio drivers failed, falling back to the dummy driver.
+     at: initialize (servers/audio/audio_server.cpp:258)
+
+SCRAPERX_AUDIO_VOICE lines=57
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2600
+SCRAPERX_AUDIO_BANK clips=60 msec=1828 driver=Dummy
+FEAR_TRACE t=0.1 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_TRACE t=1.2 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_STAGING pipe_peek_dusk her_head=(16.35, 144.68, -133.66) eye=(19.4, 144.65, -130.4) distance=4.47 head_height_over_deck=1.68
+SCRAPERX_UITEST_SCREENSHOT /tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/fear/renders/look_fear_pipe_peek_dusk.png
+FEAR_TRACE t=2.3 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_STAGING pipe_peek_day her_head=(16.35, 144.68, -133.66) eye=(19.4, 144.65, -130.4) distance=4.47 head_height_over_deck=1.68
+SCRAPERX_UITEST_SCREENSHOT /tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/fear/renders/look_fear_pipe_peek_day.png
+FEAR_TRACE t=3.3 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_STAGING pipe_peek_far_day her_head=(16.35, 144.68, -133.66) eye=(23.5, 144.65, -127.5) distance=9.44 head_height_over_deck=1.68
+SCRAPERX_UITEST_SCREENSHOT /tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/fear/renders/look_fear_pipe_peek_far_day.png
+FEAR_TRACE t=4.4 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_STAGING ladder_below_dusk her_head=(4.99, 156.97, -129.59) eye=(5.0, 158.9, -129.8) distance=1.95 head_height_over_deck=2.97
+SCRAPERX_UITEST_SCREENSHOT /tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/fear/renders/look_fear_ladder_below_dusk.png
+FEAR_TRACE t=5.5 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
+FEAR_STAGING ladder_below_day her_head=(5.0, 156.97, -129.59) eye=(5.0, 158.9, -129.8) distance=1.95 head_height_over_deck=2.97
+SCRAPERX_UITEST_SCREENSHOT /tmp/claude-0/-home-user-ScraperX/290f45ef-c41d-5b08-903d-c4b10970a44f/scratchpad/overhaul/fear/renders/look_fear_ladder_below_day.png
+SCRAPERX_UITEST PASS look_fear_staging 
+FEAR_TRACE t=6.5 d=21.6 state=0 stage=0 sees=false rage=0.000 her_y=155.1 you_y=154.9 speed=0.0 shoves=0 catches=0 deaths=0 radio=""
