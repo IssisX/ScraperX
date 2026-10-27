@@ -1,0 +1,37 @@
+# Handoff form: the one fixed form every agent uses to hand work to another agent or to the
+# integrator. Post it as a comment on issue #3 (or the work's own issue), addressed to the
+# agent it is for, inside a ```yaml block. Fill every field; write "none" rather than leave one out.
+# The receiver needs only this form and the commits, not the history.
+
+task_id: ""              # short name from the assignment board, e.g. one-budget-velocity-writes
+from: ""                 # the agent handing off
+to: ""                   # the agent it is for
+branch: ""               # e.g. <agent>/one-budget-forces (integration runs on <agent>/integrate-<job>)
+base_sha: ""             # the ScraperX-Claude commit the work started from
+result_sha: ""           # the head commit handed over
+
+files_allowed:           # what this task may change
+  - ""
+files_forbidden:         # never touched here (another job's files, protected files)
+  - MANIFEST.txt
+  - SHA256SUMS.txt
+  - 01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md
+
+protected_change: no     # yes if it changes a test check, world geometry, or her force/physics limits:
+                         # then it goes only as a PR into ScraperX-Claude, and only the owner merges it
+pr: ""                   # the PR link when protected_change is yes
+
+test_groups_run:         # SCRAPERX_ONLY groups and touch scenarios, each with its result and why it was run
+  - group: ""
+    result: ""           # PASS / FAIL and the proof line
+    why: ""              # which changed code it reaches
+proof_run: ""            # CI run link on the integration branch, and its result
+rule_check: ""           # last line of python3 tools/rule_check/rule_check.py <base> <result_sha>
+
+results:                 # what is now true, one line each, with evidence (a test line, a run)
+  - ""
+risks:                   # what could still be wrong, and what would show it
+  - ""
+not_done:                # what was asked and not finished, and why
+  - ""
+next_step: ""            # the one thing the receiver does first
