@@ -1038,12 +1038,11 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
         want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
-        if (!face_him_) {
-            yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
-        }
-    }
-    if (face_him_) {
-        yaw_ = turn_toward(yaw_, std::atan2(face_x_ - float(at.GetX()), face_z_ - float(at.GetZ())), kTurnRate, dt);
+        // Her one turn this tick: to him when she is facing him, else to her
+        // way. Standing, she turns only as her caller turns her.
+        const float face = face_him_ ? std::atan2(face_x_ - float(at.GetX()), face_z_ - float(at.GetZ()))
+                                     : std::atan2(dx, dz);
+        yaw_ = turn_toward(yaw_, face, kTurnRate, dt);
     }
     if (floor) {
         // Speeding up along her heading is slow (foot_accel); planting a foot to
