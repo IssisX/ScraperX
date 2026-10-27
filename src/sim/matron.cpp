@@ -886,7 +886,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const bool floor = supported(at) || supported(at + across * kFootSpanM) || supported(at - across * kFootSpanM) ||
                        supported(at + facing * kFootSpanM) || supported(at - facing * kFootSpanM);
     // Validated sole contact for the force-law foot drive (sole_contact):
-    // first hit, centre first, that is a real floor under her.
+    // first hit, center first, that is a real floor under her.
     Sole sole;
     const bool has_sole = sole_contact(at, velocity, yaw_, sole);
     const BodyID support_body = has_sole ? sole.body : BodyID();
@@ -3863,10 +3863,17 @@ void Matron::brace_at_edges(const float dt) {
     };
     // She plants her feet (or her hands, down) against what she is on: a
     // push from her one budget, never a velocity set.
+    // She looks ahead as far as she really needs to stop: v^2 / (2 a), where
+    // a is what her general budget (8 kN, and 22 kW at this speed) can brake
+    // her at, never less than this tick's travel; plus the margin.
+    const traversal::Limits limits{};
     Vec3 stop = Vec3::sZero();
     for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
         const float toward = velocity.Dot(side);
-        if (toward > 0.0F && !floor_near(side, toward * dt + kEdgeMarginM)) {
+        const float brake_n = std::min(limits.total_force_n, limits.power_w / std::max(toward, 1.0e-3F));
+        const float a_avail = std::max(brake_n / kMassKg, 1.0e-3F);
+        const float stop_m = std::max(toward * dt, toward * toward / (2.0F * a_avail));
+        if (toward > 0.0F && !floor_near(side, stop_m + kEdgeMarginM)) {
             stop -= side * toward;
         }
     }

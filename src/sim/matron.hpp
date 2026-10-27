@@ -1587,7 +1587,7 @@ private:
     // Off an edge she will not go, staggering or sliding on the steel: her
     // feet and hands take her at it (no floor within a step's drop ahead).
     void brace_at_edges(float dt);
-    // Her sole contact under her (centre first, then her feet's span): a real
+    // Her sole contact under her (center first, then her feet's span): a real
     // floor, not a sensor, not the player, facing up. False when there is none.
     struct Sole {
         JPH::BodyID body;
