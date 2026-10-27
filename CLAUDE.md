@@ -62,6 +62,15 @@ minuscule distances ... yes, you can change geometry"*). When a test or route fa
 distance (a few cm to about 0.2 m), a small, unnoticeable change to the world's geometry is allowed
 and preferred over reworking code. Say so when you use one. Test assertions still never weaken.
 
+## Human sounds are real, never synthesized in code
+
+2026-10-27, after listening to her new bank: *"you can't create a voice with some sort of synthesized
+shit like that. It never works. That's why I had you make new stuff, because we had the same shit.
+So you just did the same shit."* A human sound (a voice, a growl, a laugh, breath, a body's effort)
+and gore foley (a rip, a strain, a swallow) is a real recording cleared for the game (CC0, its source
+written down), or a voice made the way the climber's fear yells were (`src/voice/generate_fall_voice.py`).
+Code may still make steel, air, steps and beds. The owner picks the candidates by ear.
+
 ## Managing the agents for the owner
 
 2026-10-22: *"I need more management help from you telling the other agents what to do ... I'm on
