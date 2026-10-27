@@ -30,7 +30,6 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_fatality.cpp
     src/sim/physics_world_one_arm.cpp
     src/sim/matron_moves.cpp
-    src/sim/matron_routes.cpp
     src/sim/matron_travel.cpp
     src/sim/matron_pipe.cpp
     src/sim/matron_line.cpp

@@ -215,7 +215,6 @@ bool Matron::begin_climb(const int index, const bool down) {
 }
 
 void Matron::release_climb(const bool failed) {
-    climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
     climb_ = -1;
     reaching_up_ = false;
     climb_down_ = false;
