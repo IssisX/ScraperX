@@ -76,6 +76,13 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
 - Progress over testing (2026-10-22: *"we want them to figure out hard coding problems and make
   progress, not just test shit"*). Give agents real problems to solve in code; tests are the proof,
   not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
+- Hand out the hard work (2026-10-27, 6:00 PM: *"give them jobs that you would have to do if they
+  weren't here to do them for you, making progress quicker. And always do this. And don't give them
+  cheap, weak shit. They are intelligent ... know what they're handling ... always making progress
+  towards the difficult stuff. Efficiently"*). Whenever your own queue holds hard work another agent
+  can own, hand it out on issue #3, whole: the goal, why it is hard, the laws, the files, the finish
+  facts. Know what each agent holds before you assign. Check issue #3 often (every 15 minutes) and
+  post there whenever something changed.
 - This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
   gets its own GitHub issue with its own short board in the same format, linked once from #3.
 
