@@ -10,6 +10,10 @@
       "command": "uvx",
       "args": ["--from", "git+https://github.com/mcintalmo/godot-docs-mcp@db284cc2ddab9c486ec6430297215f92fa288ef4", "godot-docs-mcp"],
       "env": { "GODOT_DOCS_MCP_GODOT_VERSION": "4.7" }
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
     }
   }
 }
