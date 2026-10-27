@@ -98,7 +98,8 @@ void run_ascent() {
                 wait_for(run, 90.0, [&](const Snapshot &) { return run.shop_state().i_cage_travel >= 43.9; }),
                 "I to 462.25");
     (void)run.advance_frame(1.0);
-    require_leg(run, climb_wet_hold(run, -7.6, -145.6, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 ring");
+    require_leg(run, walk_to(run, -8.1, -145.6, 8.0) && walk_to(run, -8.1, -147.3, 8.0) && walk_to(run, -7.7, -147.85, 8.0) &&
+                         climb_wet_hold(run, -7.6, -148.1, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 ring");
     const double at_484 = run.snapshot().simulation_time_seconds - start;
 
     // B05, the Facade Crane Stack: J, K, L into TP-640.

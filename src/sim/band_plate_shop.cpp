@@ -390,9 +390,18 @@ void build_stage_i(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
     shop.i_eye = kit.add_anchor(shop.i_cage, kIEyeLocal, 1.2F);
     // The landing at the 462 ring's west band, and the band's way out: a
     // ladder up the 484 ring's inner face, reached from the parked cage.
-    frame.push_back(span({-ring_inner(462.0F) - 0.05F, 462.05F, kIZ - 0.15F},
+    // The ladder stands 2.5 m south of the cage's line, clear of its shaft
+    // (x > kIX - kPlatformHalf, z within kIZ +- kPlatformHalf), so its foot
+    // can have a board that reaches out past the rungs: the landing runs
+    // from the cage's west edge south to the ladder, and a foot board
+    // south of the shaft gives 0.6 m+ of standing room on the open side.
+    constexpr float kILadderZ = kIZ - 2.5F;
+    constexpr float kIFootHalfZ = 0.35F;
+    frame.push_back(span({-ring_inner(462.0F) - 0.05F, 462.05F, kILadderZ - kIFootHalfZ},
                          {kIX - kPlatformHalf - 0.05F, 462.25F, kIZ + 0.15F}, Material::Timber));
-    ladder(frame, -ring_inner(484.0F) + 0.14F, kIZ, false, 462.25F, 484.25F);
+    frame.push_back(span({kIX - kPlatformHalf - 0.05F, 462.05F, kILadderZ - kIFootHalfZ},
+                         {kIX - kPlatformHalf + 0.45F, 462.25F, kILadderZ + kIFootHalfZ}, Material::Timber));
+    ladder(frame, -ring_inner(484.0F) + 0.14F, kILadderZ, false, 462.25F, 484.25F);
 
     // The trip lever over the monolith's foot, its arm east toward the
     // domino; its counterweight, north of the domino's fall, holds the arm up
