@@ -1,6 +1,7 @@
 {
   "enabledMcpjsonServers": [
-    "godot"
+    "godot",
+    "deepwiki"
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000"
@@ -8,6 +9,7 @@
   "permissions": {
     "allow": [
       "mcp__godot",
+      "mcp__deepwiki",
       "Bash",
       "Edit",
       "Write",

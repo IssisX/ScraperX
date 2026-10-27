@@ -4,6 +4,10 @@
       "type": "stdio",
       "command": "bash",
       "args": ["${CLAUDE_PROJECT_DIR:-.}/.claude/godot-mcp.sh"]
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
     }
   }
 }
