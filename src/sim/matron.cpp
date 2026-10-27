@@ -145,53 +145,6 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
     patrol_node_ = 2;
-    // Her decks' steel (off_its_steel), as her authored map held it: the
-    // stack's decks a ring of bands 9 m deep round the 34 m shaft
-    // (physics_world_tuning.hpp kStackHalfExtent 26, kStackDeckBandDepth 9),
-    // the well's rings bands 4 m wide narrowing kRingStepIn a ring
-    // (world_solids.inc "UpperDeck"), the walkway plate at 143 under C3's
-    // riser, the bay's cut and the catwalk at 154, the bay's bracket, and
-    // the well's cages at their stops (3.0 x 2.8 m floors; her lines on the
-    // 176 ring run into both).
-    {
-        const auto bands = [](DeckSteel &d, const int level, const float top, const float outer, const float band) {
-            const float inner = outer - band;
-            d.level = level;
-            d.top = top;
-            d.patches[0] = {-outer, outer, kMidZ + inner, kMidZ + outer};   // north
-            d.patches[1] = {-outer, outer, kMidZ - outer, kMidZ - inner};   // south
-            d.patches[2] = {inner, outer, kMidZ - inner, kMidZ + inner};    // east
-            d.patches[3] = {-outer, -inner, kMidZ - inner, kMidZ + inner};  // west
-            d.count = 4;
-        };
-        constexpr float kStackOuter = 26.0F;
-        constexpr float kStackBand = 9.0F;
-        constexpr float kWellBand = 4.0F;
-        const int first_stack = 2 + kUpperRings;   // levels_: her deck, the 176 ring, the rings above, the stack
-        bands(deck_steel_[0], first_stack + 11, kStackPitch * 12.0F, kStackOuter, kStackBand);   // 132
-        bands(deck_steel_[1], first_stack + 12, kStackPitch * 13.0F, kStackOuter, kStackBand);   // 143
-        deck_steel_[1].patches[deck_steel_[1].count++] = {-11.5F, -5.0F, -135.35F, -133.0F};
-        bands(deck_steel_[2], 0, kDeckTop, kStackOuter, kStackBand);
-        const Steel north = deck_steel_[2].patches[0];
-        deck_steel_[2].patches[0] = {north.min_x, Bay::kWestX, north.min_z, north.max_z};
-        deck_steel_[2].patches[deck_steel_[2].count++] = {Bay::kEastX, north.max_x, north.min_z, north.max_z};
-        deck_steel_[2].patches[deck_steel_[2].count++] = {-16.94F, 16.94F, -150.8F, -149.2F};
-        deck_steel_[3].level = bay_level_;
-        deck_steel_[3].top = 152.22F;
-        deck_steel_[3].patches[0] = {Bay::kWestX, -2.9F, -131.25F, -129.35F};
-        deck_steel_[3].count = 1;
-        for (int k = 0; k < 3; ++k) {
-            const float mid = kRingX - kRingStepIn * static_cast<float>(k);
-            bands(deck_steel_[static_cast<std::size_t>(4 + k)], 1 + k, kRingFloor + kRingPitch * static_cast<float>(k),
-                 mid + 0.5F * kWellBand, kWellBand);
-        }
-        const Steel cage_a{-12.0F, -9.0F, -132.8F, -130.0F};
-        const Steel cage_b{-8.7F, -5.7F, -132.8F, -130.0F};
-        deck_steel_[4].patches[deck_steel_[4].count++] = cage_a;
-        deck_steel_[4].patches[deck_steel_[4].count++] = cage_b;
-        deck_steel_[5].patches[deck_steel_[5].count++] = cage_b;
-    }
-
     BodyInterface &bodies = physics_.GetBodyInterface();
     // Her body exists from the start but is only in the world once she is out.
     BodyCreationSettings settings(shape_, RVec3(kLockerX, kDeckTop + kStandCentre, kLockerZ), Quat::sIdentity(),
@@ -881,30 +834,37 @@ void Matron::settle_level() {
 }
 
 bool Matron::off_its_steel(const int level, const float x, const float feet, const float z) const {
-    // The level whose steel is under her: of the decks whose footprint holds
-    // (x, z), the one whose top is nearest her feet, within kOnSteelM.
-    int under = -1;
-    float best_dy = kOnSteelM;
-    for (const DeckSteel &deck : deck_steel_) {
-        const float dy = std::abs(feet - deck.top);
-        if (deck.level < 0 || dy > best_dy) {
-            continue;
-        }
-        for (std::uint8_t i = 0; i < deck.count; ++i) {
-            const Steel &patch = deck.patches[i];
-            if (x >= patch.min_x && x <= patch.max_x && z >= patch.min_z && z <= patch.max_z) {
-                under = deck.level;
-                best_dy = dy;
-                break;
-            }
-        }
+    if (scanned_ == nullptr || level < 0 || level >= static_cast<int>(levels_.size())) {
+        return false;   // nothing read yet: its height is all she has
     }
-    for (const DeckSteel &deck : deck_steel_) {
-        if (deck.level == level) {
-            return under != level;
-        }
+    const float floor_y = levels_[static_cast<std::size_t>(level)].floor_y;
+    const int region = scanned_->region_near_top(floor_y, 0.6F);
+    if (region < 0) {
+        return false;   // no steel of its own read at that height: its height is all she has
     }
-    return false;   // a level whose steel she does not know: its height is all she has
+    const traversal::Region &r = scanned_->regions()[static_cast<std::size_t>(region)];
+    // Her scan's steel under her feet.
+    const int under = scanned_->region_at(Vec3(x, feet, z));
+    if (under >= 0) {
+        return under != region;
+    }
+    // A floor her scan does not read (it reads what cannot move): what holds
+    // her feet, at rest, at that level's height and within its steel's bounds.
+    if (x < r.min_x - 0.5F || x > r.max_x + 0.5F || z < r.min_z - 0.5F || z > r.max_z + 0.5F) {
+        return true;
+    }
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    IgnoreMultipleBodiesFilter not_us;
+    not_us.Reserve(2);
+    not_us.IgnoreBody(body_);
+    not_us.IgnoreBody(player_);
+    RayCastResult hit;
+    const RRayCast ray(RVec3(x, feet + 0.3F, z), Vec3(0.0F, -(0.3F + kOnSteelM), 0.0F));
+    if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, not_us)) {
+        return true;
+    }
+    const float top = float(ray.GetPointOnRay(hit.mFraction).GetY());
+    return std::abs(top - floor_y) > 0.6F || bodies.GetLinearVelocity(hit.mBodyID).Length() > kRideMps;
 }
 
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,

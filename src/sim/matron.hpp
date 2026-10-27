@@ -1775,20 +1775,11 @@ private:
     [[nodiscard]] Climb climb_spec(int edge) const noexcept;
     [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
     [[nodiscard]] int bay_way_out() const noexcept;
-    // Her decks' steel: where a level is the floor under her (off_its_steel),
-    // the footprint of its steel at its top, for the levels whose steel she
-    // knows; at their height outside it she is not on them.
-    struct Steel {
-        float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
-    };
-    struct DeckSteel {
-        int level = -1;
-        float top = 0.0F;
-        std::array<Steel, 6> patches{};
-        std::uint8_t count = 0;
-    };
+    // A level is the floor under her (off_its_steel) when what holds her feet
+    // is that level's steel: her scan's walkable region at the level's height
+    // (the largest there), or a body at rest holding her within that region's
+    // bounds (a floor her scan cannot read: one that can fall or move).
     static constexpr float kOnSteelM = 0.35F;   // feet within this of a deck's top: on it
-    std::array<DeckSteel, 7> deck_steel_{};
     float clock_s_ = 0.0F;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
     JPH::BodyID bay_leaf_;
