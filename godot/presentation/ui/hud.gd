@@ -207,6 +207,8 @@ func _draw() -> void:
 	route_marks = 0
 	if not route_points.is_empty():
 		_draw_route_hint()
+	if not her_marker.is_empty():
+		_draw_her_marker()
 	if not _toasts.is_empty():
 		_draw_toasts()
 	if not caption.is_empty():
@@ -498,6 +500,31 @@ func _draw_radio() -> void:
 # Counted as drawn for the tests.
 var route_points := PackedVector3Array()
 var route_marks := 0
+
+# Where she is, while she is out: "bearing" off his view (radians, 0 ahead,
+# positive to his right), "dist" across the ground and "rise" above him, in
+# meters. Empty while she is in her locker or dead.
+var her_marker := {}
+
+func _draw_her_marker() -> void:
+	var u := _u
+	var outline := int(roundf(5.0 * u))
+	var c := Vector2(size.x * 0.5, _safe.position.y + 96.0 * u)
+	var bearing := float(her_marker["bearing"])
+	var way := Vector2(sin(bearing), -cos(bearing))
+	# A soft backing so the marker holds over snow, sky and sodium glare.
+	UiStyle.plate(self, Rect2(c - Vector2(230.0 * u, 56.0 * u), Vector2(460.0 * u, 160.0 * u)),
+		UiStyle.with_alpha(UiStyle.INK, 0.42), Color(0.0, 0.0, 0.0, 0.0), 0.0, 18.0 * u)
+	draw_arc(c, 40.0 * u, 0.0, TAU, 48, UiStyle.with_alpha(UiStyle.PAPER, 0.55), 3.0 * u, true)
+	UiStyle.triangle(self, c + way * 40.0 * u, 20.0 * u, way, UiStyle.HAZARD)
+	var rise := float(her_marker["rise"])
+	var height := ""
+	if rise >= 2.0:
+		height = "  %d M ABOVE" % int(roundf(rise))
+	elif rise <= -2.0:
+		height = "  %d M BELOW" % int(roundf(-rise))
+	UiStyle.text(self, UiStyle.font_label(), "HER %d M%s" % [int(roundf(float(her_marker["dist"]))), height],
+		c + Vector2(0.0, 88.0 * u), int(roundf(32.0 * u)), UiStyle.HAZARD, HORIZONTAL_ALIGNMENT_CENTER, outline)
 
 func _draw_route_hint() -> void:
 	var camera := get_viewport().get_camera_3d()
