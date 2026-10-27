@@ -53,10 +53,22 @@ void Matron::step_chute(const float dt) {
     const RVec3 at = bodies.GetPosition(body_);
     Vec3 v = bodies.GetLinearVelocity(body_);
     // What is under her feet now (and how far the floor is).
+    // Her centre and four points on her rim: a ring's edge under one side of
+    // her catches her as surely as a deck under her middle.
     RayCastResult hit;
-    const RRayCast down(at, Vec3(0.0F, -80.0F, 0.0F));
-    const bool any = physics_.GetNarrowPhaseQuery().CastRay(down, hit, {}, {}, IgnoreSingleBodyFilter(body_));
-    const float drop = any ? hit.mFraction * 80.0F - kStandCentre : std::numeric_limits<float>::infinity();
+    bool any = false;
+    float drop = std::numeric_limits<float>::infinity();
+    for (const Vec3 off : {Vec3::sZero(), Vec3(kRadius, 0, 0), Vec3(-kRadius, 0, 0), Vec3(0, 0, kRadius),
+                           Vec3(0, 0, -kRadius)}) {
+        RayCastResult h;
+        const RRayCast down(at + off, Vec3(0.0F, -80.0F, 0.0F));
+        if (physics_.GetNarrowPhaseQuery().CastRay(down, h, {}, {}, IgnoreSingleBodyFilter(body_)) &&
+            h.mFraction * 80.0F - kStandCentre < drop) {
+            drop = h.mFraction * 80.0F - kStandCentre;
+            hit = h;
+            any = true;
+        }
+    }
     if (any && drop < 0.3F && std::abs(fall_vy_) < 2.0F && std::abs(v.GetY()) < 2.0F) {   // standing, not landing
         // The catwalk (its rotten plates, and over the shaft beside it) is the
         // game's one designed kill: a fall from it is not flown and not netted.
