@@ -940,6 +940,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
     const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
     traversal::Budget budget{force_cap, 0.0F, power_cap, 0.0F, velocity - support_v};
+    bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
         if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
@@ -956,7 +957,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             foot_drive_dv_ += (granted / kMassKg) * dt;
             foot_force_n_ = budget.used;
             foot_power_w_ = budget.power_used;
-            foot_lunge_ = lunge_push;
+            foot_lunge_ = lunge_draw;
         }
         return granted;
     };
@@ -1570,7 +1571,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // Up onto it from this tick's one budget, the same as her
                     // stride. Her feet are still under its top: they push
                     // down on what they stand on (her sole contact), not on
-                    // the floor ahead she is stepping up to.
+                    // the floor ahead she is stepping up to. A step up is
+                    // walking, never the lunge: in a lunge tick it stays on
+                    // her 8 kN and 22 kW, and is reported as her stride.
+                    budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
+                    budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
+                    lunge_draw = false;
                     const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
                     (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), support_body, support_point);
                 }
