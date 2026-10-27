@@ -595,6 +595,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 			"broken_arm": _arm_broken_side,
 		}
 	return {
+		"strike": _ctx.get("strike", {}),
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
 		"ledge_point": _native.get_traversal_ledge_point(),
@@ -866,6 +867,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _launch_shot.active() and not _reduced_motion:
 		_camera.basis = _launch_shot.orient(_camera.basis, _camera.global_position)
 	_feel_hold(delta)
+	_feel_strike(delta)
 	if _death_cam_left > 0.0:
 		_ride_death()
 
@@ -882,7 +884,37 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
 		if absf(_cam_fov_offset - fov_target) < 0.005:
 			_cam_fov_offset = fov_target
-	_camera.fov = _fov_base + _cam_fov_offset + _hold_cam.fov_offset()
+	_camera.fov = _fov_base + _cam_fov_offset + _hold_cam.fov_offset() + \
+		_strike_feel.fov_offset(_ctx.get("strike", {}))
+
+# The punch, felt (life/strike_feel.gd): its edges to the arms' hit-stop,
+# her flinch (matron_view.gd), the gore at the knuckles (gore_view.gd) and
+# the audio's hooks; the kick over the camera. Viewer only.
+var _strike_feel: RefCounted = preload("res://presentation/life/strike_feel.gd").new()
+
+func _feel_strike(delta: float) -> void:
+	var strike: Dictionary = _ctx.get("strike", {})
+	if strike.is_empty():
+		return
+	var edges: Array = _strike_feel.update(strike, _camera.basis, delta, _reduced_motion)
+	for edge in edges:
+		var at: Vector3 = strike.get("hit_point", _camera.global_position)
+		var impulse := float(strike.get("impulse", 0.0))
+		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
+		if edge == &"landed":
+			var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
+			if _matron_view != null:
+				_matron_view.flinch(normal, impulse)
+			if _gore != null:
+				_gore._on_strike(at, normal, impulse)
+	if _matron_view != null:
+		_matron_view.hold_frame = _strike_feel.frozen()
+	if not _hold_cam.active():
+		_camera.basis = _strike_feel.kick() * _camera.basis
+
+## The drawn arms' step this frame: none while the punch's hit-stop holds.
+func _arms_delta(delta: float) -> float:
+	return 0.0 if _strike_feel.frozen() else delta
 
 # Her hands on the body (life/matron_hold_camera.gd): while held, dangled or
 # claimed the head is the body's quaternion with the free look clamped about

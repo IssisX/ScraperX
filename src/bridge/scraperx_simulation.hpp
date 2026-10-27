@@ -31,6 +31,8 @@ public:
     [[nodiscard]] std::int64_t get_precision_jump_count() const;
     [[nodiscard]] std::int64_t get_precision_landing_count() const;
     [[nodiscard]] bool request_jump();
+    bool request_strike();
+    [[nodiscard]] godot::Dictionary get_strike_state() const;
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_up();
     [[nodiscard]] std::int64_t get_up_move() const;

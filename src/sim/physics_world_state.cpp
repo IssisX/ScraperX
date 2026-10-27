@@ -684,6 +684,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wind_force_n = wind_force_n_;
     state_.wind_peak_force_n = wind_peak_force_n_;
     state_.shove_count = shove_count_;
+    read_strike_state();
     state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
     state_.grip_available = grip_affordance_.valid;
     state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;

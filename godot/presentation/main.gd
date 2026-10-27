@@ -456,7 +456,7 @@ func _process(delta: float) -> void:
 	_ctx = _read_context()
 	_save_climb()
 	_arms.visible = _death_cam_left <= 0.0
-	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	_arms.update_arms(_arms_state(intent), _camera.global_transform, _arms_delta(delta))
 	# The body under them: hidden while the view rides a death.
 	_body.visible = _death_cam_left <= 0.0
 	_body.update_body({
@@ -1090,6 +1090,8 @@ func _update_throw_arc(delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"punch":
+			_native.request_strike()
 		&"climb_up", &"climb":
 			_native.request_traversal()
 		&"let_go":

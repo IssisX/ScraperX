@@ -1491,6 +1491,19 @@ func _surface(entity: int, height: float) -> StringName:
 	return &"step_metal"
 
 
+# The player's punch (life/strike_feel.gd's edges): `thrown` at the wind-up,
+# `landed` on her at the knuckles with the blow's impulse (N*s), `missed`
+# when the reach ends on air. Counted for the scripted runs. Nothing plays
+# yet: no recording in the bank is good enough (a wet blow into flesh over
+# bone, the knuckles giving, her answer to it, the arm cutting air), and a
+# weak stand-in is worse than silence. Hook the recordings in here.
+var player_strikes := {&"thrown": 0, &"landed": 0, &"missed": 0}
+
+func player_strike(edge: StringName, _at: Vector3, _impulse_ns: float) -> void:
+	if player_strikes.has(edge):
+		player_strikes[edge] += 1
+
+
 # A death's bones: the run of cracks at the body, and over it a second,
 # lower run the harder it hit.
 var _cracks_due: Array = []   # [seconds until, place, loudness, pitch]

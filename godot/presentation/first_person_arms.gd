@@ -68,6 +68,19 @@ const POSE_BAR := 11
 const POSE_LINE := 12
 # A broken arm (the native's arm_broken): held across the belly, out of use.
 const POSE_SLING := 13
+# The punch (physics_world_strike.cpp): the right fist drawn back, driven
+# out along the line of sight (onto her, where the native says it landed),
+# and pulled back to guard; the left comes up as the guard meanwhile.
+const POSE_STRIKE := 14
+const POSE_GUARD := 15
+# The native's phases and their lengths in ticks (physics_world_strike.cpp).
+const STRIKE_WINDUP := 1
+const STRIKE_REACH := 2
+const STRIKE_RECOIL := 3
+const STRIKE_WINDUP_TICKS := 11.0
+const STRIKE_REACH_TICKS := 6.0
+const STRIKE_RECOIL_TICKS := 16.0
+const STRIKE_REACH_M := 0.62
 # Wrist to where the line leaves the closed fist.
 const LINE_GRIP_REACH := 0.09
 
@@ -404,8 +417,12 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		var pose := POSE_REST
 		var reachable := true
+		var strike: Dictionary = state.get("strike", {})
+		var striking := traversal == 0 and int(strike.get("phase", 0)) != 0
 		if int(state.get("broken_arm", -1)) == (1 if hand.side > 0.0 else 0):
 			pose = POSE_SLING
+		elif striking:
+			pose = POSE_STRIKE if hand.side > 0.0 else POSE_GUARD
 		elif traversal == TRAVERSAL_SWINGING:
 			pose = POSE_BAR
 		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
@@ -470,8 +487,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			hand.initialized = true
 		var blend := 1.0 - exp(-rate * delta)
 		# A climbing hand moves from hold to hold at a reach's speed too.
-		var reach_step := REACH_SPEED * delta if traversal == 0 or traversal == TRAVERSAL_CLIMBING \
-			else INF
+		var reach_step := REACH_SPEED * delta if (traversal == 0 or traversal == TRAVERSAL_CLIMBING) \
+			and pose != POSE_STRIKE else INF
 		if anchored:
 			# The chase closes on the hold, measured from where the hold was
 			# last frame, when the hold moved with the body (a zipline's bar at
@@ -574,6 +591,12 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 	var up := cam.y
 	var back := cam.z
 	match pose:
+		POSE_STRIKE:
+			return _strike_target(side, state.get("strike", {}), camera)
+		POSE_GUARD:
+			# The off hand up by the jaw, knuckles out: a guard.
+			var guard := camera.origin + right * (0.15 * side) + up * -0.17 - back * 0.30
+			return [guard, _hand_basis(up * 0.6 - back * 0.8, right * side), false, 26.0, 0.95, 0.9]
 		POSE_GRIP, POSE_PLANT:
 			var ledge: Vector3 = state["ledge_point"]
 			var along := _grip_forward.cross(Vector3.UP).normalized()
@@ -883,3 +906,41 @@ func remote_visible() -> bool:
 
 func risers_visible() -> bool:
 	return _risers[0].visible and _risers[1].visible
+
+
+# The punching fist's wrist for the native's phase: wind-up eases back to the
+# shoulder with the elbow out; the reach snaps out (ease-out, the fist closed
+# hard) to full reach, or to the landing point when it landed on her; the
+# recoil springs back to guard with a little overshoot, more for a harder
+# landing. Viewer only: the hit itself was the native's.
+func _strike_target(side: float, strike: Dictionary, camera: Transform3D) -> Array:
+	var cam := camera.basis
+	var right := cam.x
+	var up := cam.y
+	var back := cam.z
+	var phase := int(strike.get("phase", 0))
+	var ticks := float(strike.get("phase_ticks", 0))
+	var guard := camera.origin + right * (0.17 * side) + up * -0.19 - back * 0.28
+	var cocked := camera.origin + right * (0.24 * side) + up * -0.24 + back * 0.02
+	var out := camera.origin + right * (0.05 * side) + up * -0.08 - back * STRIKE_REACH_M
+	if bool(strike.get("landed", false)):
+		var landed: Vector3 = strike.get("hit_point", out)
+		var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
+		if landed.distance_to(camera.origin) < STRIKE_REACH_M + 0.25:
+			out = landed + normal * 0.05
+	var knuckles_fwd := _hand_basis(-back, right * side)
+	match phase:
+		STRIKE_WINDUP:
+			var t := clampf(ticks / STRIKE_WINDUP_TICKS, 0.0, 1.0)
+			var s := t * t * (3.0 - 2.0 * t)
+			return [guard.lerp(cocked, s), _hand_basis(-back * 0.6 - right * side * 0.4, up), false, 40.0, 1.0, 1.0]
+		STRIKE_REACH:
+			var t := clampf((ticks + 1.0) / 3.0, 0.0, 1.0)
+			var e := 1.0 - pow(1.0 - t, 3.0)
+			return [cocked.lerp(out, e), knuckles_fwd, false, 90.0, 1.0, 1.0]
+		STRIKE_RECOIL:
+			var t := clampf(ticks / STRIKE_RECOIL_TICKS, 0.0, 1.0)
+			var kick := clampf(float(strike.get("impulse", 0.0)) / 50.0, 0.0, 1.5)
+			var spring := 1.0 - exp(-6.0 * t) * cos(9.0 * t) * (1.0 + 0.25 * kick)
+			return [out.lerp(guard, clampf(spring, 0.0, 1.1)), knuckles_fwd, false, 45.0, 0.95, 0.95]
+	return [guard, knuckles_fwd, false, 26.0, 0.9, 0.9]

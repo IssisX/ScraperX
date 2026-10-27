@@ -182,6 +182,8 @@ func _read_context() -> Dictionary:
 	# and Crouch held hoist.
 	var crane: Dictionary = _native.get_yard_crane_state()
 	var crane_operating := bool(crane["operating"])
+	# Her body close in front (the native decides): Action is a punch.
+	var strike: Dictionary = _native.get_strike_state()
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if crane_operating:
 		var hook_at: Vector3 = crane["hook"]
@@ -222,6 +224,8 @@ func _read_context() -> Dictionary:
 		# Crouch held raise and lower the forks, Action lets go.
 		action = {"id": &"drive", "icon": &"down", "label": "STEP OFF",
 			"detail": "FORKS %.1f M" % float(forklift["lift_m"])}
+	elif bool(strike["offered"]) and carrying == 0:
+		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "HER"}
 	elif bool(forklift["at_controls"]) and carrying == 0:
 		action = {"id": &"drive", "icon": &"up", "label": "DRIVE", "detail": "THE FORKLIFT"}
 	elif bool(crane["remote_in_reach"]) and carrying == 0:
@@ -420,6 +424,7 @@ func _read_context() -> Dictionary:
 		"lethal": lethal,
 		"carrying": carrying,
 		"action": action,
+		"strike": strike,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),
 		"tower_height": float(_native.get_tower_height_meters()),
