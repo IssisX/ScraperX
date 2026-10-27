@@ -25,6 +25,10 @@
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/TransformedShape.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+#include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 
 #include <algorithm>
 #include <array>
@@ -60,16 +64,6 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
     return std::hypot(ax - bx, az - bz);
 }
 
-// The closest point to (x, z) on segment a-b, and how far along it (0..1).
-void project(const float ax, const float az, const float bx, const float bz, const float x, const float z,
-             float &px, float &pz, float &t) {
-    const float dx = bx - ax;
-    const float dz = bz - az;
-    const float length2 = dx * dx + dz * dz;
-    t = length2 > 0.0F ? std::clamp(((x - ax) * dx + (z - az) * dz) / length2, 0.0F, 1.0F) : 0.0F;
-    px = ax + dx * t;
-    pz = az + dz * t;
-}
 } // namespace
 
 Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const std::uint32_t moving_layer,
@@ -77,74 +71,35 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     : physics_(physics), moving_layer_(moving_layer), steel_layer_(steel_layer), player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
-    // Her deck: down the middle of each band, the catwalk across, and in off
-    // the north band round the ladder's west rail to its foot; her post in the
-    // mouth of Stage A's cage, facing out over the band; the cage's eye on its
-    // west face, reached from inside it facing west.
-    Level deck{kDeckTop, {}, {}, {}, {}, 0, {-11.35F, kCagesCenterZ, -0.5F * kPi}};
-    deck.nodes = {{-kBandX, kBandNorthZ},      {0.0F, kBandNorthZ},          {kBandX, kBandNorthZ},
-                  {kBandX, kMidZ},             {kBandX, kBandSouthZ},        {0.0F, kBandSouthZ},
-                  {-kBandX, kBandSouthZ},      {-kBandX, kMidZ},             {kLadderSideX, kBandNorthZ},
-                  {kLadderSideX, kLadderFootZ}, {kLadderX, kLadderFootZ}, {Bay::kWestX - 0.5F, kBandNorthZ}};
-    const std::vector<Edge> band_loop = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor},
-                                         {3, 4, Link::Floor}, {4, 5, Link::Floor}, {5, 6, Link::Floor},
-                                         {6, 7, Link::Floor}, {7, 0, Link::Floor}};
-    // The north band's line crosses the bay (bay.hpp) on its leaf.
-    deck.edges = {{0, 11, Link::Floor}, {11, 1, Link::Leaf}, {1, 8, Link::Floor}, {8, 2, Link::Floor}, {2, 3, Link::Floor},
-                  {3, 4, Link::Floor}, {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor},
-                  {7, 0, Link::Floor}, {7, 3, Link::Catwalk}, {8, 9, Link::Floor}, {9, 10, Link::Floor}};
-    deck.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}};
-    deck.posts = {{kPostX, kPostZ, 0.0F}};
-    // The 176 ring: down the middle of its band, and the two cages at its
-    // north edge, a step apart, a gap (1.09 m) off the ring. The gap is open
-    // air from the west half of A's mouth (the cascade striker's post stands
-    // on the ring's edge before its middle; B's gantry and its gear hang over
-    // B's). Its post is by B's cage, its way up: on the ring facing the cage,
-    // or in the cage's mouth; B's eye is on its east face.
-    Level ring{kRingFloor, {}, {}, {}, {}, 1, {-6.35F, kCagesCenterZ, 0.5F * kPi}};
-    ring.nodes = {{-kRingX, kRingNorthZ},       {kLeapX, kRingNorthZ},        {kCageBCenterX, kRingNorthZ},
-                  {kRingX, kRingNorthZ},        {kRingX, kMidZ},              {kRingX, kRingSouthZ},
-                  {-kRingX, kRingSouthZ},       {-kRingX, kMidZ},             {kCageACenterX, kCagesCenterZ},
-                  {kCageBCenterX, kCagesCenterZ}, {kLeapX + 0.5F, kCagesCenterZ + 0.9F}};
-    ring.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor},  {3, 4, Link::Floor},
-                  {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor},  {7, 0, Link::Floor},
-                  {8, 9, Link::Floor}, {8, 10, Link::Floor}, {10, 1, Link::Gap}};
-    ring.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}, {8, 9}};
-    ring.posts = {{kCageBCenterX, kRingNorthZ - 1.2F, kPi}, {kCageBCenterX, kCagesCenterZ + 0.9F, 0.0F}};
+    // Her levels: each one's floor, its posts and its cage's eye. Where she
+    // walks on each is her own scan's (floor_graph). Her deck: her post in
+    // the mouth of Stage A's cage, facing out over the band; the cage's eye
+    // on its west face, reached from inside it facing west.
+    Level deck{kDeckTop, {{kPostX, kPostZ, 0.0F}}, 0, {-11.35F, kCagesCenterZ, -0.5F * kPi}};
+    // The 176 ring: its post is by B's cage, its way up: on the ring facing
+    // the cage, or in the cage's mouth; B's eye is on its east face.
+    Level ring{kRingFloor,
+               {{kCageBCenterX, kRingNorthZ - 1.2F, kPi}, {kCageBCenterX, kCagesCenterZ + 0.9F, 0.0F}},
+               1,
+               {-6.35F, kCagesCenterZ, 0.5F * kPi}};
     levels_ = {deck, ring};
-    // The rings above: each down the middle of its band (the bands' inner
-    // edges close in 0.91 m a ring going up), with no way up of hers known.
+    // The rings above, with no way up of hers known.
     for (int k = 1; k <= kUpperRings; ++k) {
-        const float half = kRingX - kRingStepIn * static_cast<float>(k);
-        Level upper{kRingFloor + kRingPitch * static_cast<float>(k), {}, {}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
-        upper.nodes = {{-half, kMidZ + half}, {0.0F, kMidZ + half}, {half, kMidZ + half}, {half, kMidZ},
-                       {half, kMidZ - half},  {0.0F, kMidZ - half}, {-half, kMidZ - half}, {-half, kMidZ}};
-        upper.edges = {{0, 1, Link::Floor}, {1, 2, Link::Floor}, {2, 3, Link::Floor}, {3, 4, Link::Floor},
-                       {4, 5, Link::Floor}, {5, 6, Link::Floor}, {6, 7, Link::Floor}, {7, 0, Link::Floor}};
-        upper.patrols = {{0, 1, 2, 3, 4, 5, 6, 7}};
-        levels_.push_back(upper);
+        levels_.push_back({kRingFloor + kRingPitch * static_cast<float>(k), {}, -1, {0.0F, 0.0F, 0.0F}});
     }
-    // The stack's decks under hers, laid out as hers without the catwalk or
-    // the ladder: her deck's band loop.
+    // The stack's decks under hers.
     for (int k = 1; k <= kStackDecks; ++k) {
-        Level stack{kStackPitch * static_cast<float>(k), {}, band_loop, deck.patrols, {}, -1, {0.0F, 0.0F, 0.0F}};
-        stack.nodes.assign(deck.nodes.begin(), deck.nodes.begin() + 8);
-        levels_.push_back(stack);
+        levels_.push_back({kStackPitch * static_cast<float>(k), {}, -1, {0.0F, 0.0F, 0.0F}});
     }
-    // The ladder from her deck up to the 176 ring, climbed from its south
-    // side and topped out north over its head; and the riser from 143 up to
-    // her deck, climbed from its plate over the shaft and left north down the
-    // steps off its bridge, which she knows but does not take hold of.
     // Her ways up are not listed here: each is a rung edge her own scan of
     // the world found (climb_of), read when she needs one.
     // The bay's bracket (bay.hpp): where she holds the leaf and the foot of
     // its rungs, which she takes hold of whatever her stage (her own way out
     // of her own trap), topping out west onto her deck.
-    Level bay{Bay::kBracketTop, {{Bay::kBraceX, Bay::kBraceZ}, {Bay::kRungsX, Bay::kRungsZ}},
-              {{0, 1, Link::Floor}}, {}, {}, -1, {0.0F, 0.0F, 0.0F}};
-    levels_.push_back(bay);
+    levels_.push_back({Bay::kBracketTop, {}, -1, {0.0F, 0.0F, 0.0F}});
     bay_level_ = static_cast<int>(levels_.size()) - 1;
-    patrol_node_ = 2;
+    patrol_ = -1;
+    patrol_node_ = 0;
     BodyInterface &bodies = physics_.GetBodyInterface();
     // Her body exists from the start but is only in the world once she is out.
     BodyCreationSettings settings(shape_, RVec3(kLockerX, kDeckTop + kStandCentre, kLockerZ), Quat::sIdentity(),
@@ -442,30 +397,343 @@ float Matron::carry_m(const RVec3 from, const RVec3 to) const {
     return std::min(through, round);
 }
 
-void Matron::onto_floor_lines(float &x, float &z) const {
-    const Level &level = levels_[static_cast<std::size_t>(level_)];
-    float best = std::numeric_limits<float>::max();
-    float bx = x;
-    float bz = z;
-    for (const Edge &e : level.edges) {
-        if (e.link != Link::Floor) {
+namespace {
+// Plan distance from (x, z) to a floor's rectangle (0 inside it).
+float rect_distance(const float x, const float z, const float x0, const float x1, const float z0, const float z1) {
+    const float dx = std::max({x0 - x, 0.0F, x - x1});
+    const float dz = std::max({z0 - z, 0.0F, z - z1});
+    return std::hypot(dx, dz);
+}
+// The plan gap between two floors' rectangles (0 when they touch or overlap).
+float rect_gap(const float ax0, const float ax1, const float az0, const float az1, const float bx0, const float bx1,
+               const float bz0, const float bz1) {
+    const float dx = std::max({bx0 - ax1, 0.0F, ax0 - bx1});
+    const float dz = std::max({bz0 - az1, 0.0F, az0 - bz1});
+    return std::hypot(dx, dz);
+}
+} // namespace
+
+void Matron::held_floors(const Level &level, const float lo_x, const float hi_x, const float lo_z, const float hi_z,
+                         std::vector<FloorPatch> &out) const {
+    // What a constraint holds (a hinge, a guide's slider, a bolt, a rope),
+    // by body.
+    std::vector<std::pair<BodyID, const TwoBodyConstraint *>> held;
+    const Constraints constraints = physics_.GetConstraints();
+    for (const Ref<Constraint> &c : constraints) {
+        if (c == nullptr || !c->GetEnabled() || c->GetType() != EConstraintType::TwoBodyConstraint) {
             continue;
         }
-        const Node &a = level.nodes[static_cast<std::size_t>(e.a)];
-        const Node &b = level.nodes[static_cast<std::size_t>(e.b)];
-        float px = 0.0F;
-        float pz = 0.0F;
-        float t = 0.0F;
-        project(a.x, a.z, b.x, b.z, x, z, px, pz, t);
-        const float d = distance_xz(px, pz, x, z);
-        if (d < best) {
-            best = d;
-            bx = px;
-            bz = pz;
+        const TwoBodyConstraint *two = static_cast<const TwoBodyConstraint *>(c.GetPtr());
+        held.emplace_back(two->GetBody1()->GetID(), two);
+        held.emplace_back(two->GetBody2()->GetID(), two);
+    }
+    std::sort(held.begin(), held.end(), [](const std::pair<BodyID, const TwoBodyConstraint *> &a,
+                                           const std::pair<BodyID, const TwoBodyConstraint *> &b) {
+        return a.first < b.first;
+    });
+    const auto held_by = [&held](const BodyID id) {
+        const auto lo = std::lower_bound(held.begin(), held.end(), id,
+                                         [](const std::pair<BodyID, const TwoBodyConstraint *> &e, const BodyID v) {
+                                             return e.first < v;
+                                         });
+        std::vector<const TwoBodyConstraint *> out;
+        for (auto it = lo; it != held.end() && it->first == id; ++it) {
+            out.push_back(it->second);
+        }
+        return out;
+    };
+    // Whether a constraint carries her on what it holds: a hinge whose motor
+    // or brake out-torques her weight at the floor's far edge, a guide at its
+    // stop or driven harder than she weighs, a bolt stronger than her weight
+    // with the plate's (hers: kBoltShearN), a rigid pin to the world. Not a
+    // rope or a chain (it holds what hangs from it, not her stamping on it).
+    const float weight = kMassKg * 9.81F;
+    const auto carries_on = [&](const TwoBodyConstraint *c, const BodyID id, const float arm) {
+        // Tied to the world: a tie to something that itself swings (a
+        // shackle on a rope) does not carry her.
+        const Body *other = c->GetBody1()->GetID() == id ? c->GetBody2() : c->GetBody1();
+        if (other->IsDynamic()) {
+            return false;
+        }
+        switch (c->GetSubType()) {
+        case EConstraintSubType::Hinge: {
+            const HingeConstraint *h = static_cast<const HingeConstraint *>(c);
+            const float need = weight * arm;
+            return (h->GetMotorState() != EMotorState::Off &&
+                    h->GetMotorSettings().mMaxTorqueLimit >= need) ||
+                   h->GetMaxFrictionTorque() >= need;
+        }
+        case EConstraintSubType::Slider: {
+            const SliderConstraint *sl = static_cast<const SliderConstraint *>(c);
+            const float at = sl->GetCurrentPosition();
+            const bool stop = sl->HasLimits() && (at <= sl->GetLimitsMin() + 0.02F || at >= sl->GetLimitsMax() - 0.02F);
+            return stop || (sl->GetMotorState() != EMotorState::Off &&
+                            sl->GetMotorSettings().mMaxForceLimit >= weight);
+        }
+        case EConstraintSubType::Fixed:
+            for (const Plank &plank : planks_) {
+                if (plank.body == id && plank.bolted) {
+                    return kBoltShearN >= (kMassKg + kPlankMassKg) * 9.81F;
+                }
+            }
+            return true;
+        case EConstraintSubType::Point:
+        case EConstraintSubType::Cone:
+        case EConstraintSubType::SwingTwist:
+        case EConstraintSubType::SixDOF:
+            return true;
+        default:
+            return false;   // a rope, a chain, a tie she cannot judge: it holds what hangs, not her
+        }
+    };
+    const AABox box(Vec3(lo_x - 1.0F, level.floor_y - 1.0F, lo_z - 1.0F),
+                    Vec3(hi_x + 1.0F, level.floor_y + 0.6F, hi_z + 1.0F));
+    AllHitCollisionCollector<CollideShapeBodyCollector> found;
+    physics_.GetBroadPhaseQuery().CollideAABox(box, found);
+    std::vector<BodyID> ids;
+    for (const BodyID &id : found.mHits) {
+        if (id != body_ && id != player_ && !held_by(id).empty()) {
+            ids.push_back(id);
         }
     }
-    x = bx;
-    z = bz;
+    std::sort(ids.begin(), ids.end());   // a fixed order: the same world, the same graph
+    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+    const BodyLockInterface &locks = physics_.GetBodyLockInterface();
+    for (const BodyID &id : ids) {
+        const BodyLockRead lock(locks, id);
+        if (!lock.Succeeded()) {
+            continue;
+        }
+        const Body &body = lock.GetBody();
+        // At rest: a floor that moves is ridden, not walked to.
+        if (!body.IsDynamic() || body.IsSensor() || body.GetLinearVelocity().Length() > kRideMps) {
+            continue;
+        }
+        // Its flat top at the level's height, felt down from above it.
+        const AABox bounds = body.GetWorldSpaceBounds();
+        const float step = 0.4F;
+        const TransformedShape shape = body.GetTransformedShape();
+        float x0 = std::numeric_limits<float>::max(), x1 = -x0, z0 = x0, z1 = -x0, top_sum = 0.0F;
+        int hits = 0;
+        const float from_y = level.floor_y + 0.6F;
+        for (float x = bounds.mMin.GetX() + 0.5F * step; x < bounds.mMax.GetX(); x += step) {
+            for (float z = bounds.mMin.GetZ() + 0.5F * step; z < bounds.mMax.GetZ(); z += step) {
+                const RRayCast ray(RVec3(x, from_y, z), Vec3(0.0F, -1.2F, 0.0F));
+                RayCastResult hit;
+                if (!shape.CastRay(ray, hit) || hit.mFraction <= 1.0e-4F) {
+                    continue;
+                }
+                const float top = from_y - 1.2F * hit.mFraction;
+                if (std::abs(top - level.floor_y) > kStepUpM) {
+                    continue;
+                }
+                const Vec3 normal = body.GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction));
+                if (normal.GetY() < 0.9F) {
+                    continue;
+                }
+                x0 = std::min(x0, x - 0.5F * step);
+                x1 = std::max(x1, x + 0.5F * step);
+                z0 = std::min(z0, z - 0.5F * step);
+                z1 = std::max(z1, z + 0.5F * step);
+                top_sum += top;
+                ++hits;
+            }
+        }
+        if (hits < 2) {
+            continue;
+        }
+        FloorPatch p;
+        p.min_x = std::max(x0, bounds.mMin.GetX());
+        p.max_x = std::min(x1, bounds.mMax.GetX());
+        p.min_z = std::max(z0, bounds.mMin.GetZ());
+        p.max_z = std::min(z1, bounds.mMax.GetZ());
+        if (std::min(p.max_x - p.min_x, p.max_z - p.min_z) < 2.0F * kRadius) {
+            continue;   // not as wide as she is
+        }
+        p.top = top_sum / static_cast<float>(hits);
+        p.body = id;
+        p.held = true;
+        // What holds it carries her when any one of its ties does.
+        const float arm = std::hypot(bounds.mMax.GetX() - bounds.mMin.GetX(), bounds.mMax.GetZ() - bounds.mMin.GetZ());
+        p.carries = false;
+        for (const TwoBodyConstraint *c : held_by(id)) {
+            p.carries = p.carries || carries_on(c, id, arm);
+        }
+        out.push_back(p);
+    }
+}
+
+const Matron::FloorGraph &Matron::floor_graph() const {
+    FloorGraph &g = floor_graph_;
+    const bool scanned = scanned_ != nullptr;
+    const bool fresh_level = g.level != level_ || g.scanned != scanned;
+    if (!fresh_level && clock_s_ - g.held_at_s < 0.25F && clock_s_ >= g.held_at_s) {
+        return g;
+    }
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    // Her scan's walkable tops at the level's height.
+    std::vector<FloorPatch> patches;
+    std::vector<int> scan_of;
+    if (scanned) {
+        const std::vector<traversal::Patch> &tops = scanned_->patches();
+        for (std::size_t i = 0; i < tops.size(); ++i) {
+            const traversal::Patch &t = tops[i];
+            // A top narrower than she is (a beam's, a board's) is crossed by
+            // her board skill, not walked as a floor.
+            if (std::abs(t.top - level.floor_y) > kStepUpM ||
+                std::min(t.max_x - t.min_x, t.max_z - t.min_z) < 2.0F * kRadius) {
+                continue;
+            }
+            FloorPatch p;
+            p.min_x = t.min_x;
+            p.max_x = t.max_x;
+            p.min_z = t.min_z;
+            p.max_z = t.max_z;
+            p.top = t.top;
+            p.body = t.body;
+            patches.push_back(p);
+            scan_of.push_back(static_cast<int>(i));
+        }
+    }
+    const std::size_t statics = patches.size();
+    if (statics > 0) {
+        float lo_x = patches[0].min_x, hi_x = patches[0].max_x, lo_z = patches[0].min_z, hi_z = patches[0].max_z;
+        for (const FloorPatch &p : patches) {
+            lo_x = std::min(lo_x, p.min_x);
+            hi_x = std::max(hi_x, p.max_x);
+            lo_z = std::min(lo_z, p.min_z);
+            hi_z = std::max(hi_z, p.max_z);
+        }
+        held_floors(level, lo_x, hi_x, lo_z, hi_z, patches);
+    }
+    // The held floors as they are now, in a key: unchanged, the graph stands.
+    std::uint64_t key = 1469598103934665603ULL;
+    const auto mix = [&key](const std::uint64_t v) {
+        key ^= v;
+        key *= 1099511628211ULL;
+    };
+    for (std::size_t i = statics; i < patches.size(); ++i) {
+        const FloorPatch &p = patches[i];
+        mix(p.body.GetIndexAndSequenceNumber());
+        mix(static_cast<std::uint64_t>(std::lround(p.min_x * 5.0F)) & 0xffffffffULL);
+        mix(static_cast<std::uint64_t>(std::lround(p.max_z * 5.0F)) & 0xffffffffULL);
+        mix(static_cast<std::uint64_t>(std::lround(p.top * 5.0F)) & 0xffffffffULL);
+        mix(p.carries ? 1U : 2U);
+    }
+    g.held_at_s = clock_s_;
+    if (!fresh_level && key == g.held_key) {
+        return g;
+    }
+    g.level = level_;
+    g.scanned = scanned;
+    g.held_key = key;
+    g.patches = std::move(patches);
+    g.links.assign(g.patches.size(), {});
+    ++g.version;
+    const auto link = [&g](const int a, const int b, const bool gap) {
+        for (const FloorLink &l : g.links[static_cast<std::size_t>(a)]) {
+            if (l.to == b) {
+                return;
+            }
+        }
+        g.links[static_cast<std::size_t>(a)].push_back({b, gap});
+        g.links[static_cast<std::size_t>(b)].push_back({a, gap});
+    };
+    // On foot: the scan's own links between its tops, and a held floor to
+    // whatever it touches a step apart.
+    if (scanned) {
+        std::vector<int> local(scanned_->patches().size(), -1);
+        for (std::size_t i = 0; i < statics; ++i) {
+            local[static_cast<std::size_t>(scan_of[i])] = static_cast<int>(i);
+        }
+        const std::vector<std::vector<int>> &scan_links = scanned_->patch_links();
+        for (std::size_t i = 0; i < statics; ++i) {
+            for (const int q : scan_links[static_cast<std::size_t>(scan_of[i])]) {
+                const int j = local[static_cast<std::size_t>(q)];
+                if (j > static_cast<int>(i)) {
+                    link(static_cast<int>(i), j, false);
+                }
+            }
+        }
+    }
+    const auto gap_of = [&g](const std::size_t a, const std::size_t b) {
+        const FloorPatch &p = g.patches[a];
+        const FloorPatch &q = g.patches[b];
+        return rect_gap(p.min_x, p.max_x, p.min_z, p.max_z, q.min_x, q.max_x, q.min_z, q.max_z);
+    };
+    for (std::size_t i = statics; i < g.patches.size(); ++i) {
+        for (std::size_t j = 0; j < g.patches.size(); ++j) {
+            if (j != i && std::abs(g.patches[i].top - g.patches[j].top) <= kStepUpM && gap_of(i, j) <= 0.25F) {
+                link(static_cast<int>(i), static_cast<int>(j), false);
+            }
+        }
+    }
+    // Leapt: open air under the way between two floors at most a leap apart,
+    // and nothing built across it.
+    for (std::size_t i = 0; i < g.patches.size(); ++i) {
+        for (std::size_t j = i + 1; j < g.patches.size(); ++j) {
+            const float gap = gap_of(i, j);
+            if (gap <= 0.25F || gap > kLeapReachM || std::abs(g.patches[i].top - g.patches[j].top) > kStepUpM) {
+                continue;
+            }
+            bool linked = false;
+            for (const FloorLink &l : g.links[i]) {
+                linked = linked || l.to == static_cast<int>(j);
+            }
+            if (linked) {
+                continue;
+            }
+            const FloorPatch &p = g.patches[i];
+            const FloorPatch &q = g.patches[j];
+            const float qx = std::clamp(0.5F * (p.min_x + p.max_x), q.min_x, q.max_x);
+            const float qz = std::clamp(0.5F * (p.min_z + p.max_z), q.min_z, q.max_z);
+            const float px = std::clamp(qx, p.min_x, p.max_x);
+            const float pz = std::clamp(qz, p.min_z, p.max_z);
+            const float mx = 0.5F * (px + qx);
+            const float mz = 0.5F * (pz + qz);
+            const RRayCast down(RVec3(mx, std::max(p.top, q.top) + 0.3F, mz), Vec3(0.0F, -(kEdgeDropM + 0.3F), 0.0F));
+            RayCastResult under;
+            if (physics_.GetNarrowPhaseQuery().CastRay(down, under, {}, {}, IgnoreSingleBodyFilter(body_))) {
+                continue;   // a floor under the way: walked, not leapt
+            }
+            if (!way_clear(px, pz, qx, qz)) {
+                continue;
+            }
+            link(static_cast<int>(i), static_cast<int>(j), true);
+        }
+    }
+    return g;
+}
+
+int Matron::floor_patch_at(const FloorGraph &g, const float x, const float z, const float slack,
+                           const bool carrying_only) const {
+    int best = -1;
+    float best_d = std::numeric_limits<float>::max();
+    for (std::size_t i = 0; i < g.patches.size(); ++i) {
+        const FloorPatch &p = g.patches[i];
+        if (carrying_only && !p.carries) {
+            continue;
+        }
+        const float d = rect_distance(x, z, p.min_x, p.max_x, p.min_z, p.max_z);
+        if (d < best_d) {
+            best_d = d;
+            best = static_cast<int>(i);
+        }
+    }
+    return best_d <= slack ? best : -1;
+}
+
+void Matron::onto_floor_lines(float &x, float &z) const {
+    const FloorGraph &g = floor_graph();
+    const int i = floor_patch_at(g, x, z, std::numeric_limits<float>::max(), true);
+    if (i < 0) {
+        return;
+    }
+    const FloorPatch &p = g.patches[static_cast<std::size_t>(i)];
+    const float ix = std::min(kRadius, 0.5F * (p.max_x - p.min_x));
+    const float iz = std::min(kRadius, 0.5F * (p.max_z - p.min_z));
+    x = std::clamp(x, p.min_x + ix, p.max_x - ix);
+    z = std::clamp(z, p.min_z + iz, p.max_z - iz);
 }
 
 float Matron::floor_of(const float y) const {
@@ -487,176 +755,175 @@ bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
 
 bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
                           float &wx, float &wz, const bool allow_gaps) const {
-    const Level &level = levels_[static_cast<std::size_t>(level_)];
-    std::vector<Node> nodes = level.nodes;
-    std::vector<Edge> edges = level.edges;
-    const auto allowed = [&](const Edge &e) {
-        return (e.link != Link::Catwalk || allow_catwalk) && (e.link != Link::Gap || allow_gaps) &&
-               (e.link != Link::Leaf || bay_open_);
-    };
-    // She stands on a line she may take (the catwalk under her counts, but
-    // only once she is out on it: beside it on the band, the band's line is
-    // hers), and the place she heads for is put on one.
-    const auto insert = [&](const float x, const float z, const bool loop_only) {
-        int best = -1;
-        float best_d = std::numeric_limits<float>::max();
-        float bx = 0.0F;
-        float bz = 0.0F;
-        for (std::size_t e = 0; e < edges.size(); ++e) {
-            if ((loop_only && !allowed(edges[e])) || (edges[e].link == Link::Gap && !allow_gaps) ||
-                (edges[e].link == Link::Leaf && !bay_open_) ||
-                (!allowed(edges[e]) && !on_catwalk_line(x, z, 0.0F))) {
-                continue;
-            }
-            float px = 0.0F;
-            float pz = 0.0F;
-            float t = 0.0F;
-            const Node &a = nodes[static_cast<std::size_t>(edges[e].a)];
-            const Node &b = nodes[static_cast<std::size_t>(edges[e].b)];
-            project(a.x, a.z, b.x, b.z, x, z, px, pz, t);
-            const float d = distance_xz(px, pz, x, z);
-            if (d < best_d) {
-                best_d = d;
-                best = static_cast<int>(e);
-                bx = px;
-                bz = pz;
-            }
-        }
-        const Edge old = edges[static_cast<std::size_t>(best)];
-        nodes.push_back({bx, bz});
-        const int fresh = static_cast<int>(nodes.size()) - 1;
-        edges[static_cast<std::size_t>(best)] = {old.a, fresh, old.link};
-        edges.push_back({fresh, old.b, old.link});
-        return fresh;
-    };
-    const int from = insert(fx, fz, false);
-    const int to = insert(tx, tz, true);
-    // Dijkstra over at most a dozen nodes. Nodes she found no way to just
-    // now (matron_moves.cpp, the watchdog's reroute) are left out first; if
-    // that leaves no way at all, they are tried again.
-    const std::size_t n = nodes.size();
-    std::vector<float> dist(n, std::numeric_limits<float>::max());
-    std::vector<int> prev(n, -1);
-    std::vector<bool> done(n, false);
-    const auto blocked_node = [&](const int i) {
-        return i != from && i != to && node_blocked(nodes[static_cast<std::size_t>(i)].x,
-                                                    nodes[static_cast<std::size_t>(i)].z);
-    };
-    for (int attempt = blocked_.empty() ? 1 : 0; attempt < 2; ++attempt) {
-    std::fill(dist.begin(), dist.end(), std::numeric_limits<float>::max());
-    std::fill(prev.begin(), prev.end(), -1);
-    std::fill(done.begin(), done.end(), false);
-    dist[static_cast<std::size_t>(from)] = 0.0F;
-    for (std::size_t round = 0; round < n; ++round) {
-        int u = -1;
-        for (std::size_t i = 0; i < n; ++i) {
-            if (!done[i] && (u < 0 || dist[i] < dist[static_cast<std::size_t>(u)])) {
-                u = static_cast<int>(i);
-            }
-        }
-        if (u < 0 || dist[static_cast<std::size_t>(u)] == std::numeric_limits<float>::max()) {
-            break;
-        }
-        done[static_cast<std::size_t>(u)] = true;
-        for (const Edge &e : edges) {
-            if (!allowed(e)) {
-                continue;
-            }
-            int v = -1;
-            if (e.a == u) {
-                v = e.b;
-            } else if (e.b == u) {
-                v = e.a;
-            }
-            if (v < 0 || (attempt == 0 && blocked_node(v))) {
-                continue;
-            }
-            const Node &a = nodes[static_cast<std::size_t>(u)];
-            const Node &b = nodes[static_cast<std::size_t>(v)];
-            const float candidate = dist[static_cast<std::size_t>(u)] + distance_xz(a.x, a.z, b.x, b.z);
-            if (candidate < dist[static_cast<std::size_t>(v)]) {
-                dist[static_cast<std::size_t>(v)] = candidate;
-                prev[static_cast<std::size_t>(v)] = u;
-            }
-        }
-    }
-    if (prev[static_cast<std::size_t>(to)] >= 0 || to == from) {
-        break;
-    }
-    }
-    // The path from `from` to `to`, then its first point she is not already
-    // standing on (the start is inserted on whichever edge is nearest, often
-    // beside a real node: heading for that node would be heading nowhere).
-    if (prev[static_cast<std::size_t>(to)] < 0 && to != from) {
-        wx = tx;
-        wz = tz;
-        return false;
-    }
-    std::vector<int> path;
-    for (int at = to; at >= 0 && at != from; at = prev[static_cast<std::size_t>(at)]) {
-        path.push_back(at);
-    }
-    std::reverse(path.begin(), path.end());
-    constexpr float kReachM = 1.2F;
-    const auto point = [&](const int i, float &x, float &z) {
-        if (path[static_cast<std::size_t>(i)] == to) {
-            x = tx;
-            z = tz;
-        } else {
-            const Node &node = nodes[static_cast<std::size_t>(path[static_cast<std::size_t>(i)])];
-            x = node.x;
-            z = node.z;
-        }
-    };
     wx = tx;
     wz = tz;
-    int pick = static_cast<int>(path.size()) - 1;
-    for (int i = 0; i < static_cast<int>(path.size()); ++i) {
-        const Node &node = nodes[static_cast<std::size_t>(path[static_cast<std::size_t>(i)])];
-        if (path[static_cast<std::size_t>(i)] == to || distance_xz(fx, fz, node.x, node.z) > kReachM) {
+    const FloorGraph &g = floor_graph();
+    if (g.patches.empty()) {
+        return false;
+    }
+    // The floor under her (one that cannot carry her counts once she is
+    // on it), and the one she heads for: the nearest she may take.
+    const int from = floor_patch_at(g, fx, fz, std::numeric_limits<float>::max(), false);
+    const int to = floor_patch_at(g, tx, tz, std::numeric_limits<float>::max(), !allow_catwalk);
+    if (from < 0 || to < 0) {
+        return false;
+    }
+    const auto allowed = [&](const int i) {
+        return i == from || allow_catwalk || g.patches[static_cast<std::size_t>(i)].carries;
+    };
+    // Where a link is crossed: on foot, the middle of the stretch the two
+    // share, just inside each; leapt, the nearest edges across the gap.
+    const auto crossing = [&g](const int a, const int b, float &ax, float &az, float &bx, float &bz) {
+        const FloorPatch &p = g.patches[static_cast<std::size_t>(a)];
+        const FloorPatch &q = g.patches[static_cast<std::size_t>(b)];
+        const float x0 = std::max(p.min_x, q.min_x), x1 = std::min(p.max_x, q.max_x);
+        const float z0 = std::max(p.min_z, q.min_z), z1 = std::min(p.max_z, q.max_z);
+        const float cx = x0 <= x1 ? 0.5F * (x0 + x1) : 0.5F * (std::min(p.max_x, q.max_x) + std::max(p.min_x, q.min_x));
+        const float cz = z0 <= z1 ? 0.5F * (z0 + z1) : 0.5F * (std::min(p.max_z, q.max_z) + std::max(p.min_z, q.min_z));
+        // Down the middle of each floor: the crossing put on the floor's
+        // long middle line, just inside it.
+        const auto inside = [cx, cz](const FloorPatch &r, float &x, float &z) {
+            const float ix = std::min(0.45F, 0.5F * (r.max_x - r.min_x));
+            const float iz = std::min(0.45F, 0.5F * (r.max_z - r.min_z));
+            const bool along_x = r.max_x - r.min_x >= r.max_z - r.min_z;
+            x = std::clamp(along_x ? cx : 0.5F * (r.min_x + r.max_x), r.min_x + ix, r.max_x - ix);
+            z = std::clamp(along_x ? 0.5F * (r.min_z + r.max_z) : cz, r.min_z + iz, r.max_z - iz);
+        };
+        inside(p, ax, az);
+        inside(q, bx, bz);
+    };
+    // The chain of floors: Dijkstra, once per decision (the same ends, flags
+    // and graph reuse it). Floors whose way in she found blocked just now
+    // (matron_moves.cpp, the watchdog's reroute) are left out first; if that
+    // leaves no way at all, they are tried again.
+    const int flags = (allow_catwalk ? 1 : 0) | (allow_gaps ? 2 : 0) | (static_cast<int>(blocked_.size()) << 2);
+    if (from != route_from_ || to != route_to_ || flags != route_flags_ || g.version != route_version_) {
+        route_from_ = from;
+        route_to_ = to;
+        route_flags_ = flags;
+        route_version_ = g.version;
+        route_chain_.clear();
+        const std::size_t n = g.patches.size();
+        std::vector<float> dist(n);
+        std::vector<int> prev(n);
+        std::vector<bool> done(n);
+        for (int attempt = blocked_.empty() ? 1 : 0; attempt < 2; ++attempt) {
+            std::fill(dist.begin(), dist.end(), std::numeric_limits<float>::max());
+            std::fill(prev.begin(), prev.end(), -1);
+            std::fill(done.begin(), done.end(), false);
+            dist[static_cast<std::size_t>(from)] = 0.0F;
+            for (std::size_t round = 0; round < n; ++round) {
+                int u = -1;
+                for (std::size_t i = 0; i < n; ++i) {
+                    if (!done[i] && (u < 0 || dist[i] < dist[static_cast<std::size_t>(u)])) {
+                        u = static_cast<int>(i);
+                    }
+                }
+                if (u < 0 || dist[static_cast<std::size_t>(u)] == std::numeric_limits<float>::max() || u == to) {
+                    break;
+                }
+                done[static_cast<std::size_t>(u)] = true;
+                const FloorPatch &pu = g.patches[static_cast<std::size_t>(u)];
+                for (const FloorLink &l : g.links[static_cast<std::size_t>(u)]) {
+                    if (!allowed(l.to) || (l.gap && !allow_gaps)) {
+                        continue;
+                    }
+                    float ax = 0.0F, az = 0.0F, bx = 0.0F, bz = 0.0F;
+                    crossing(u, l.to, ax, az, bx, bz);
+                    if (attempt == 0 && l.to != to && node_blocked(bx, bz)) {
+                        continue;
+                    }
+                    const FloorPatch &pv = g.patches[static_cast<std::size_t>(l.to)];
+                    const float candidate =
+                        dist[static_cast<std::size_t>(u)] +
+                        distance_xz(0.5F * (pu.min_x + pu.max_x), 0.5F * (pu.min_z + pu.max_z),
+                                    0.5F * (pv.min_x + pv.max_x), 0.5F * (pv.min_z + pv.max_z));
+                    if (candidate < dist[static_cast<std::size_t>(l.to)]) {
+                        dist[static_cast<std::size_t>(l.to)] = candidate;
+                        prev[static_cast<std::size_t>(l.to)] = u;
+                    }
+                }
+            }
+            if (prev[static_cast<std::size_t>(to)] >= 0 || to == from) {
+                break;
+            }
+        }
+        if (prev[static_cast<std::size_t>(to)] >= 0 || to == from) {
+            for (int at = to; at >= 0; at = prev[static_cast<std::size_t>(at)]) {
+                route_chain_.push_back(at);
+            }
+            std::reverse(route_chain_.begin(), route_chain_.end());
+        }
+    }
+    if (route_chain_.empty()) {
+        return false;
+    }
+    // The points along the chain, then the place itself; she heads for the
+    // first she is not already standing on.
+    std::vector<std::array<float, 2>> points;
+    for (std::size_t i = 1; i < route_chain_.size(); ++i) {
+        float ax = 0.0F, az = 0.0F, bx = 0.0F, bz = 0.0F;
+        crossing(route_chain_[i - 1], route_chain_[i], ax, az, bx, bz);
+        points.push_back({ax, az});
+        points.push_back({bx, bz});
+    }
+    points.push_back({tx, tz});
+    constexpr float kReachM = 1.2F;
+    int pick = static_cast<int>(points.size()) - 1;
+    for (int i = 0; i + 1 < static_cast<int>(points.size()); ++i) {
+        // A point she is already past (nearer the next than it is) is behind her.
+        const std::array<float, 2> &p = points[static_cast<std::size_t>(i)];
+        const std::array<float, 2> &q = points[static_cast<std::size_t>(i + 1)];
+        if (distance_xz(fx, fz, q[0], q[1]) < distance_xz(p[0], p[1], q[0], q[1])) {
+            continue;
+        }
+        if (distance_xz(fx, fz, p[0], p[1]) > kReachM) {
             pick = i;
             break;
         }
     }
-    if (pick >= 0) {
-        point(pick, wx, wz);
-        last_way_node_ = path[static_cast<std::size_t>(pick)] != to;
-        last_way_x_ = wx;
-        last_way_z_ = wz;
-    }
+    const int last = static_cast<int>(points.size()) - 1;
+    wx = points[static_cast<std::size_t>(pick)][0];
+    wz = points[static_cast<std::size_t>(pick)][1];
+    last_way_node_ = pick != last;
+    last_way_x_ = wx;
+    last_way_z_ = wz;
     // Something built in the straight way (a post, a ladder's rail, a cage's
-    // corner by her post): when it is the place she is going to, first its
-    // own point on her line (from there the place is a step off it); else the
-    // nearest point before it on her path she can walk to straight; failing
-    // that, back onto her line, which runs clear. A point she already stands
-    // on is no way round.
+    // corner by her post): when it is the place she is going to, first that
+    // place put on its floor (from there the place is a step off it); else
+    // the nearest point before it on her path she can walk to straight;
+    // failing that, back into the middle of the floor under her. A point she
+    // already stands on is no way round.
     if (!way_clear(fx, fz, wx, wz)) {
         const auto way_round = [&](const float x, const float z) {
             return distance_xz(fx, fz, x, z) > 0.15F && way_clear(fx, fz, x, z);
         };
         bool found = false;
-        if (pick >= 0 && path[static_cast<std::size_t>(pick)] == to) {
-            const Node &place = nodes[static_cast<std::size_t>(to)];
-            if (way_round(place.x, place.z)) {
-                wx = place.x;
-                wz = place.z;
-                found = true;
-            }
-        }
-        for (int i = pick - 1; i >= 0 && !found; --i) {
-            float x = 0.0F;
-            float z = 0.0F;
-            point(i, x, z);
+        if (pick == last) {
+            const FloorPatch &p = g.patches[static_cast<std::size_t>(to)];
+            const float x = std::clamp(tx, std::min(p.min_x + kRadius, p.max_x), std::max(p.max_x - kRadius, p.min_x));
+            const float z = std::clamp(tz, std::min(p.min_z + kRadius, p.max_z), std::max(p.max_z - kRadius, p.min_z));
             if (way_round(x, z)) {
                 wx = x;
                 wz = z;
                 found = true;
             }
         }
-        const Node &on_line = nodes[static_cast<std::size_t>(from)];
-        if (!found && distance_xz(fx, fz, on_line.x, on_line.z) > 0.15F) {
-            wx = on_line.x;
-            wz = on_line.z;
+        for (int i = pick - 1; i >= 0 && !found; --i) {
+            const float x = points[static_cast<std::size_t>(i)][0];
+            const float z = points[static_cast<std::size_t>(i)][1];
+            if (way_round(x, z)) {
+                wx = x;
+                wz = z;
+                found = true;
+            }
+        }
+        const FloorPatch &here = g.patches[static_cast<std::size_t>(from)];
+        const float hx = std::clamp(fx, std::min(here.min_x + 0.45F, here.max_x), std::max(here.max_x - 0.45F, here.min_x));
+        const float hz = std::clamp(fz, std::min(here.min_z + 0.45F, here.max_z), std::max(here.max_z - 0.45F, here.min_z));
+        if (!found && distance_xz(fx, fz, hx, hz) > 0.15F) {
+            wx = hx;
+            wz = hz;
         }
     }
     return true;
@@ -739,27 +1006,65 @@ const Matron::Post *Matron::reachable_post(const float ax, const float az) const
 }
 
 void Matron::pick_patrol(const float ax, const float az) {
-    const Level &level = levels_[static_cast<std::size_t>(level_)];
-    for (std::size_t loop = 0; loop < level.patrols.size(); ++loop) {
-        const std::vector<int> &nodes = level.patrols[loop];
-        const Node &first = level.nodes[static_cast<std::size_t>(nodes.front())];
-        float wx = 0.0F;
-        float wz = 0.0F;
-        if (!route_toward(ax, az, first.x, first.z, false, wx, wz)) {
-            continue;
-        }
-        patrol_ = static_cast<int>(loop);
-        float best = std::numeric_limits<float>::max();
-        for (std::size_t i = 0; i < nodes.size(); ++i) {
-            const Node &node = level.nodes[static_cast<std::size_t>(nodes[i])];
-            const float d = distance_xz(ax, az, node.x, node.z);
-            if (d < best) {
-                best = d;
-                patrol_node_ = static_cast<int>(i);
-            }
-        }
+    // Her loop: the floors that carry her she can walk to from here (on
+    // foot, no leap), the wide ones' middles in order round their common
+    // middle (ties by floor), and the point of it nearest her.
+    patrol_ = -1;
+    patrol_node_ = 0;
+    patrol_points_.clear();
+    const FloorGraph &g = floor_graph();
+    const int from = floor_patch_at(g, ax, az, 1.0F, false);
+    if (from < 0) {
         return;
     }
+    std::vector<bool> seen(g.patches.size(), false);
+    std::vector<int> open{from};
+    seen[static_cast<std::size_t>(from)] = true;
+    for (std::size_t k = 0; k < open.size(); ++k) {
+        for (const FloorLink &l : g.links[static_cast<std::size_t>(open[k])]) {
+            if (!l.gap && !seen[static_cast<std::size_t>(l.to)] && g.patches[static_cast<std::size_t>(l.to)].carries) {
+                seen[static_cast<std::size_t>(l.to)] = true;
+                open.push_back(l.to);
+            }
+        }
+    }
+    struct Stop {
+        float x, z, angle;
+        int patch;
+    };
+    std::vector<Stop> stops;
+    float cx = 0.0F;
+    float cz = 0.0F;
+    for (const int i : open) {
+        const FloorPatch &p = g.patches[static_cast<std::size_t>(i)];
+        if (!p.carries || std::min(p.max_x - p.min_x, p.max_z - p.min_z) < 2.0F * kRadius + 0.2F) {
+            continue;
+        }
+        stops.push_back({0.5F * (p.min_x + p.max_x), 0.5F * (p.min_z + p.max_z), 0.0F, i});
+        cx += stops.back().x;
+        cz += stops.back().z;
+    }
+    if (stops.size() < 2) {
+        return;   // one floor (a bracket): she stands
+    }
+    cx /= static_cast<float>(stops.size());
+    cz /= static_cast<float>(stops.size());
+    for (Stop &s : stops) {
+        s.angle = std::atan2(s.z - cz, s.x - cx);
+    }
+    std::sort(stops.begin(), stops.end(), [](const Stop &a, const Stop &b) {
+        return a.angle < b.angle || (a.angle == b.angle && a.patch < b.patch);
+    });
+    float best = std::numeric_limits<float>::max();
+    for (std::size_t i = 0; i < stops.size(); ++i) {
+        patrol_points_.push_back({stops[i].x, stops[i].z});
+        const float d = distance_xz(ax, az, stops[i].x, stops[i].z);
+        if (d < best) {
+            best = d;
+            patrol_node_ = static_cast<int>(i);
+        }
+    }
+    patrol_ = level_;
 }
 
 void Matron::feel_floor(const float dt) {
@@ -861,6 +1166,7 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
 
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
                          const bool turn_moves) {
+
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     // A sidestep the stall watchdog set (matron_moves.cpp): along the face
@@ -2682,17 +2988,14 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     }
                     float nearest_line = std::numeric_limits<float>::max();
                     if (nearest_idx >= 0 && nearest_level <= 1.0F) {
+                        // Off her floors: no top of that level's under or
+                        // by the spot (the scan's own tops at its height).
                         const Level &lv = levels_[static_cast<std::size_t>(nearest_idx)];
-                        for (const Edge &e : lv.edges) {
-                            if (e.a < 0 || e.b < 0 || e.a >= static_cast<int>(lv.nodes.size()) ||
-                                e.b >= static_cast<int>(lv.nodes.size())) {
-                                continue;
+                        for (const traversal::Patch &t : scanned_->patches()) {
+                            if (std::abs(t.top - lv.floor_y) <= kStepUpM) {
+                                nearest_line = std::min(nearest_line, rect_distance(heard_x_, heard_z_, t.min_x,
+                                                                                    t.max_x, t.min_z, t.max_z));
                             }
-                            float px = 0.0F, pz = 0.0F, t = 0.0F;
-                            project(lv.nodes[static_cast<std::size_t>(e.a)].x, lv.nodes[static_cast<std::size_t>(e.a)].z,
-                                    lv.nodes[static_cast<std::size_t>(e.b)].x, lv.nodes[static_cast<std::size_t>(e.b)].z,
-                                    heard_x_, heard_z_, px, pz, t);
-                            nearest_line = std::min(nearest_line, distance_xz(heard_x_, heard_z_, px, pz));
                         }
                     }
                     const bool off_graph = nearest_level > 1.0F || nearest_line > 1.0F;
@@ -2862,13 +3165,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 break;
             }
         }
-        // Shuffling: the stooped patrol round her level's loop. Her loop is
-        // one of this level's (a level reached by a way that picks none, as
-        // a journey's end, keeps the last level's): else she picks one here,
-        // and on a floor with no loop of hers (the bay's bracket) she stands.
+        // Shuffling: the stooped patrol round her level's loop (pick_patrol:
+        // a level reached by a way keeps none, and she picks one here; on a
+        // floor with no loop of hers, the bay's bracket, she stands).
         const auto on_loop = [&] {
-            return patrol_ >= 0 && static_cast<std::size_t>(patrol_) < here.patrols.size() && patrol_node_ >= 0 &&
-                   static_cast<std::size_t>(patrol_node_) < here.patrols[static_cast<std::size_t>(patrol_)].size();
+            return patrol_ == level_ && patrol_node_ >= 0 &&
+                   static_cast<std::size_t>(patrol_node_) < patrol_points_.size();
         };
         if (!on_loop()) {
             pick_patrol(ax, az);
@@ -2877,13 +3179,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             walk_toward(dt, ax, az, 0.0F);
             break;
         }
-        const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
-        const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
-        if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
-            patrol_node_ = (patrol_node_ + 1) % static_cast<int>(loop.size());
+        if (distance_xz(ax, az, patrol_points_[static_cast<std::size_t>(patrol_node_)][0],
+                        patrol_points_[static_cast<std::size_t>(patrol_node_)][1]) < 1.5F) {
+            patrol_node_ = (patrol_node_ + 1) % static_cast<int>(patrol_points_.size());
         }
-        const Node &goal = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
-        route_toward(ax, az, goal.x, goal.z, on_catwalk, wx, wz);
+        const std::array<float, 2> goal = patrol_points_[static_cast<std::size_t>(patrol_node_)];
+        route_toward(ax, az, goal[0], goal[1], on_catwalk, wx, wz);
         walk_toward(dt, wx, wz, kShuffleMps);
         break;
     }
@@ -3366,8 +3667,8 @@ void Matron::restore(const Saved &saved) {
         unrig_way_ = -1;
         // Back on her deck, off whatever she rode.
         level_ = 0;
-        patrol_ = 0;
-        patrol_node_ = 2;
+        patrol_ = -1;
+        patrol_node_ = 0;
         feet_y_ = kDeckTop;
         riding_ = false;
         let_go_s_ = 0.0F;

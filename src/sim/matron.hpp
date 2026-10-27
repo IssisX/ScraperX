@@ -86,8 +86,8 @@
 // the cage rides as before. She never sends a cage away.
 //
 // The bay (bay.hpp, shared survival): a cut across her deck's north band,
-// spanned by a powered leaf. Her lines cross it on the leaf while it is a
-// floor (Link::Leaf). Her trap: on her deck west of the bay, with the player
+// spanned by a powered leaf. She walks over it on the leaf while it is a
+// floor (a held floor, FloorGraph). Her trap: on her deck west of the bay, with the player
 // across it to the east, she does not cross after them. She goes down onto
 // the bracket in the bay and puts her hands under the leaf's west end;
 // hands in its district stop its motor, and the leaf comes down onto her
@@ -401,14 +401,12 @@ public:
     static constexpr float kCageACenterX = -10.5F;
     static constexpr float kCageBCenterX = -7.2F;
     static constexpr float kCagesCenterZ = -131.4F;
-    static constexpr float kLeapX = -11.9F;   // across the open half of A's mouth
     // The ladder from her deck's north band to the 176 ring
-    // (band_counterweight_well.cpp: its rungs on x 5.00, z -129.05): where she
-    // hangs on it (the player's foot spot, 0.5 m off the rungs), and the way
-    // to there from the band, round its west rail.
+    // (band_counterweight_well.cpp: its rungs on x 5.00, z -129.05): where a
+    // climber hangs on it (the player's foot spot, 0.5 m off the rungs). She
+    // walks there by her scan; the climb test reads the spot.
     static constexpr float kLadderX = 5.0F;
     static constexpr float kLadderFootZ = -129.55F;
-    static constexpr float kLadderSideX = 3.9F;
     // The riser from 143 to her deck (band_stack.cpp C3: its rungs on x
     // -6.00, z -133.50 from 143's walkway plate out over the shaft, its head a
     // bridge over 154's rail and steps down onto the deck's runway): where a
@@ -1207,17 +1205,6 @@ public:
     [[nodiscard]] JPH::BodyID body() const noexcept { return body_; }
 
 private:
-    struct Node {
-        float x, z;
-    };
-    // How a walking line is taken: on foot, over the catwalk (only in sight
-    // of prey on it), or across a gap (only leapt, in the Turn).
-    enum class Link : std::uint8_t {
-        Floor,
-        Catwalk,
-        Gap,
-        Leaf,   // the bay's leaf: a floor while it is one (set_bay)
-    };
     // Her trap at the bay, phase by phase (see the head of this file).
     enum class Trap : std::uint8_t {
         Off,
@@ -1227,23 +1214,16 @@ private:
         Holding,
         ClimbOut,
     };
-    struct Edge {
-        int a, b;
-        Link link;
-    };
     // Where she stands guard, and the way she faces there.
     struct Post {
         float x, z, yaw;
     };
-    // A level she can hunt: its floor, its walking lines, the loops she
-    // patrols, the posts by its way up (guarded while ways_out_[way]: the
-    // first she can walk to is hers; -1, none), and where she stands to
-    // reach that cage's eye.
+    // A level she can hunt: its floor, the posts by its way up (guarded
+    // while ways_out_[way]: the first she can walk to is hers; -1, none), and
+    // where she stands to reach that cage's eye. Where she walks on it is her
+    // own scan's (FloorGraph), not listed here.
     struct Level {
         float floor_y;
-        std::vector<Node> nodes;
-        std::vector<Edge> edges;
-        std::vector<std::vector<int>> patrols;
         std::vector<Post> posts;
         int way;
         Post eye;
@@ -1288,13 +1268,14 @@ private:
     // The floor of the level a sound at height y is on (the highest under
     // it, within a storey), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
-    // (x, z) put on the nearest of her level's floor lines (not the
-    // catwalk's, not a gap's): somewhere on her level she can stand.
+    // (x, z) put on the nearest floor of her level that carries her (her
+    // scan's, or a held one): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
     [[nodiscard]] static bool on_catwalk_line(float x, float z, float margin);
-    // The next point to walk to, along the cheapest path on her level to
-    // (tx, tz), with the catwalk allowed or not and gaps (leapt) or not;
-    // false when no such path reaches it (she then heads straight for it).
+    // The next point to walk to, along the cheapest path over her level's
+    // floors (FloorGraph) to (tx, tz), with floors that cannot carry her
+    // allowed or not (only with prey on them) and gaps (leapt) or not; false
+    // when no such path reaches it (she then heads straight for it).
     bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
                       bool allow_gaps = false) const;
     // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
@@ -1322,9 +1303,37 @@ private:
     void settle_level();
     // The post on her level she can walk to, if its way out is there to guard.
     [[nodiscard]] const Post *reachable_post(float ax, float az) const;
-    // Of her level's patrol loops, the one she can walk onto from here, and
-    // its node nearest her.
+    // Her patrol loop: the floors she can walk to from here, round their
+    // middle; and the point of it nearest her.
     void pick_patrol(float ax, float az);
+    // Her level's floors, from her scan: its walkable tops at the level's
+    // height, and held floors (a dynamic body in a constraint, flat at that
+    // height, at rest) as they are now. A held floor carries her unless what
+    // holds it is known to give under her (a bolt weaker than her weight and
+    // the plate's): that one is crossed only with prey on it.
+    struct FloorPatch {
+        float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F, top = 0.0F;
+        JPH::BodyID body;
+        bool held = false;
+        bool carries = true;
+    };
+    struct FloorLink {
+        int to = -1;
+        bool gap = false;   // open air between: leapt, in the Turn
+    };
+    struct FloorGraph {
+        int level = -1;
+        bool scanned = false;
+        std::uint64_t held_key = 0;
+        float held_at_s = -1.0F;
+        std::vector<FloorPatch> patches;
+        std::vector<std::vector<FloorLink>> links;
+        std::uint32_t version = 0;
+    };
+    const FloorGraph &floor_graph() const;
+    void held_floors(const Level &level, float lo_x, float hi_x, float lo_z, float hi_z,
+                     std::vector<FloorPatch> &out) const;
+    [[nodiscard]] int floor_patch_at(const FloorGraph &g, float x, float z, float slack, bool carrying_only) const;
     // After a lead on a level below, down a line toward it (to it, or to a
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
@@ -1640,7 +1649,7 @@ private:
     std::array<PlankView, kPlanks> plank_views_{};
     std::vector<Level> levels_;
     int level_ = 0;
-    int patrol_ = 0;   // which of her level's loops, and how far round it
+    int patrol_ = 0;   // the floor graph's version her loop was picked on (-1: none), and how far round it
 
     State state_ = State::Dormant;
     float strain_s_ = 0.0F;
@@ -1655,6 +1664,7 @@ private:
     float speed_ = 0.0F;
     float yaw_ = 0.0F;
     int patrol_node_ = 0;
+    std::vector<std::array<float, 2>> patrol_points_;   // her loop (pick_patrol)
     bool patrol_only_ = false; // tests: no post to guard, the loop only
 
     // The hold (matron_hold.cpp).
@@ -1873,6 +1883,12 @@ private:
     std::vector<Blocked> blocked_;
     mutable float last_way_x_ = 0.0F, last_way_z_ = 0.0F;
     mutable bool last_way_node_ = false;
+    mutable FloorGraph floor_graph_;
+    // The last route's chain over floor_graph_ (cached per decision: the same
+    // from, to, flags and graph version reuse it).
+    mutable std::vector<int> route_chain_;
+    mutable int route_from_ = -1, route_to_ = -1, route_flags_ = -1;
+    mutable std::uint32_t route_version_ = 0;
     struct Crumb {
         float x, z, floor_y;
     };
