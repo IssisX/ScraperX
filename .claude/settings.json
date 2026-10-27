@@ -13,6 +13,7 @@
       "mcp__godot-docs",
       "mcp__deepwiki",
       "Bash",
+      "Bash(npx --yes skills@1.7.4 find *)",
       "Edit",
       "Write",
       "Read",

@@ -13,6 +13,9 @@ This skill helps you discover and install skills from the open agent skills ecos
 Copied from `vercel-labs/skills` at `533c7df` (`skills/find-skills/SKILL.md`). Runs only when the
 owner types `/find-skills`, so agents do not go looking for skills in the middle of a job.
 
+- Run the CLI pinned, as `npx --yes skills@1.7.4 find <query>`: `.claude/settings.json` approves
+  exactly that search ahead of time, so it runs even in Auto mode, which drops the blanket `Bash`
+  rule. `add` is not pre-approved: it installs instructions that run with full permissions.
 - Sessions run in a cloud container that is thrown away when the session ends, so `-g` (user-level)
   installs are lost. Install into the repo instead, from the repo root, then commit and push:
   `npx skills add <owner/repo> --skill <name> -a claude-code -y` writes `.claude/skills/<name>/`.
