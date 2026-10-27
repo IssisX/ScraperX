@@ -170,7 +170,7 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			TONE_DANGER if danger else TONE_NORMAL))
 	var action: Dictionary = ctx["action"]
 	match action["id"]:
-		&"climb", &"pick_up", &"set_down", &"hook", &"unhook", &"slingshot", &"swing", &"lift", \
+		&"punch", &"climb", &"pick_up", &"set_down", &"hook", &"unhook", &"slingshot", &"swing", &"lift", \
 				&"crane_take", &"crane_device":
 			out.append(_prompt(&"action", action["label"], action["detail"]))
 	# The yard crane's remote in hand: CRANE works it, and lets it go.

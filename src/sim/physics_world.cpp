@@ -714,6 +714,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
     grab_drive(bodies, delta_seconds);
+    strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
         // Off the ground in her hand (or righting after): the speed it
         // carries into contact, for the fall rules once she lets go.

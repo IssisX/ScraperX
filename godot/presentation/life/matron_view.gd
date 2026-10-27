@@ -1650,7 +1650,50 @@ func preview(data: Dictionary, delta: float, camera_position: Vector3, player_po
 func update_view(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
 	if previewing:
 		return
+	# The punch's hit-stop (strike_feel.gd): her drawn body holds its frame;
+	# the native under it does not stop.
+	if hold_frame:
+		return
 	_apply(data, delta, camera_position, player_position)
+	_apply_flinch(delta)
+
+
+# The player's punch landing on her (physics_world_strike.cpp): the sim
+# moved her body by the contact's force-time; the drawn body takes it from
+# the waist up, tipped away along the landing's normal, sized by its
+# impulse, and comes back on a stiff spring. Additive over her pose.
+const FLINCH_DEG_PER_NS := 0.16    # ~8 deg for a 50 N*s landing
+const FLINCH_MAX_DEG := 14.0
+const FLINCH_DECAY := 9.0
+const FLINCH_FREQ := 15.0
+var hold_frame := false
+var flinches := 0
+var _flinch_axis := Vector3.RIGHT
+var _flinch_deg := 0.0
+var _flinch_t := 10.0
+
+func flinch(normal: Vector3, impulse_ns: float) -> void:
+	var away := Vector3(-normal.x, 0.0, -normal.z)
+	if away.length_squared() < 1.0e-6:
+		return
+	_flinch_axis = Vector3.UP.cross(away.normalized()).normalized()
+	_flinch_deg = minf(FLINCH_MAX_DEG, maxf(impulse_ns, 45.0) * FLINCH_DEG_PER_NS)
+	_flinch_t = 0.0
+	flinches += 1
+
+func _apply_flinch(delta: float) -> void:
+	if _flinch_deg <= 0.0 or not _figure.visible:
+		return
+	_flinch_t += delta
+	var a := deg_to_rad(_flinch_deg) * exp(-FLINCH_DECAY * _flinch_t) * cos(FLINCH_FREQ * _flinch_t)
+	if _flinch_t > 1.0:
+		_flinch_deg = 0.0
+		return
+	# About her hips, not her feet: the legs stay planted.
+	var hips := _figure.global_position + Vector3(0.0, 1.0, 0.0)
+	var r := Basis(_flinch_axis, a)
+	_figure.global_basis = r * _figure.global_basis
+	_figure.global_position = hips + r * (_figure.global_position - hips)
 
 
 func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:

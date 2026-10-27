@@ -1129,6 +1129,20 @@ struct Snapshot final {
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;
+    // The player's strike (Action's punch): its phase (0 guard, 1 wind-up,
+    // 2 reach, 3 recoil) and ticks in it, whether Action offers it now, the
+    // strikes thrown and landed (a landing is an edge on strike_hit_count),
+    // and the last landing's point, her surface normal there and the
+    // impulse it put into her (N*s, force times time).
+    std::uint8_t strike_phase = 0;
+    std::uint32_t strike_phase_ticks = 0;
+    bool strike_offered = false;
+    bool strike_landed = false;   // this strike has landed on her
+    std::uint64_t strike_count = 0;
+    std::uint64_t strike_hit_count = 0;
+    Vector3 strike_hit_point{};
+    Vector3 strike_hit_normal{};
+    double strike_impulse_ns = 0.0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;
@@ -1426,6 +1440,8 @@ public:
     [[nodiscard]] bool set_look_pitch(double radians) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
+    // The Action button's punch, one-shot (physics_world_strike.cpp).
+    [[nodiscard]] bool request_strike() noexcept;
     // The gesture controls' "up", one-shot: the native picks the move, as
     // snapshot.up_move says (UpMove), and makes it through the same paths
     // as Jump and Action. Refused where up_move is None (a mantle, vault or
@@ -1782,6 +1798,7 @@ private:
     double facing_z_ = 0.0;
     double look_pitch_input_ = 0.0;
     bool jump_requested_ = false;
+    bool strike_requested_ = false;
     bool traversal_requested_ = false;
     bool up_requested_ = false;
     bool release_requested_ = false;

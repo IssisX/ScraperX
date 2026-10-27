@@ -241,6 +241,25 @@ func _on_tear(side: int, leg: bool, hold: Dictionary) -> void:
 		fx.splat(hit[0], hit[1], 0.55 if leg else 0.4)
 
 
+# The player's punch landing on her (strike_feel.gd's edge, the point and
+# normal the native gave): a burst off her skin at the knuckles, what lands
+# of it splatted where it falls, and her blood on his glove. Additive only:
+# the tears and the fatality are untouched by it.
+var strikes_shown := 0
+
+func _on_strike(at: Vector3, normal: Vector3, impulse_ns: float) -> void:
+	strikes_shown += 1
+	var k := clampf(maxf(impulse_ns, 45.0) / 50.0, 0.6, 1.4)
+	var n := normal.normalized() if normal.length_squared() > 1.0e-6 else Vector3.UP
+	fx.burst(at, n, 0.28 * k)
+	var hit: Array = fx.land(at, n * 1.5)
+	if not hit.is_empty():
+		fx.splat(hit[0], hit[1], 0.12 * k)
+	_hands = minf(1.0, _hands + 0.1 * k)
+	_lens_blood = minf(1.0, _lens_blood + 0.04 * k)
+	_lens_run = 0.0
+
+
 func _on_beat(beat: int, hold: Dictionary) -> void:
 	if beat == LAY:
 		_soak = maxf(_soak, 0.1)

@@ -36,6 +36,7 @@ public:
         // Jump, Action or the trapeze's request (resolve_up).
         bool up_requested = false;
         bool release_requested = false;
+        bool strike_requested = false;   // the Action button's punch (physics_world_strike.cpp)
         bool crouch_held = false;
         bool sprint_held = false;
         // The player's real room through the microphone, 0..1 (held; see
@@ -1010,6 +1011,20 @@ public:
     bool grab_pre_step(JPH::BodyInterface &bodies, StepCommands &commands, float dt) noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    // The player's strike (physics_world_strike.cpp).
+    enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
+    void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
+    void read_strike_state() noexcept;
+    StrikePhase strike_phase_ = StrikePhase::Guard;
+    int strike_ticks_ = 0;
+    int strike_contact_left_ = 0;
+    bool strike_landed_ = false;
+    bool strike_offered_ = false;
+    std::uint64_t strike_count_ = 0;
+    std::uint64_t strike_hit_count_ = 0;
+    JPH::RVec3 strike_point_ = JPH::RVec3::sZero();
+    JPH::Vec3 strike_normal_ = JPH::Vec3::sZero();
+    float strike_impulse_ns_ = 0.0F;
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
