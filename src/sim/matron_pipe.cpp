@@ -514,4 +514,52 @@ void Matron::ride_pipe(const float dt) {
     yaw_ = turn_to(yaw_, facing, kTurnRate, dt);
 }
 
+bool Matron::pipe_reaches(const float floor_y) noexcept {
+    if (floor_y < kPipeLowestFloor - 0.1F || floor_y > kDeckTop + 0.1F) {
+        return false;
+    }
+    const float storeys = floor_y / kStackPitch;
+    return std::abs(storeys - std::round(storeys)) < 0.02F;
+}
+
+bool Matron::follow_pipe(const float dt, const RVec3 at) {
+    // Frail, she cannot take hold of it.
+    if (stage_ == Stage::Pest) {
+        return false;
+    }
+    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    float next = floor_y;
+    if (lead_floor_ < floor_y - 0.6F) {
+        next = floor_y - kStackPitch;
+    } else if (lead_floor_ > floor_y + 0.6F) {
+        next = floor_y + kStackPitch;
+    }
+    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
+        return false;
+    }
+    // A way that failed under her a moment ago she leaves alone a while.
+    const std::size_t way = pipe_way(floor_y, next);
+    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
+        return false;
+    }
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const float off = distance_xz(ax, az, kPipeDeckX, kPipeDeckZ);
+    const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
+    if (off > 0.25F) {
+        // To the rail's corner along her lines, slowing into it.
+        float wx = kPipeDeckX;
+        float wz = kPipeDeckZ;
+        route_toward(ax, az, kPipeDeckX, kPipeDeckZ, false, wx, wz);
+        walk_toward(dt, wx, wz, std::min(kHuntMps, 1.0F + 3.0F * off), accel);
+        return true;
+    }
+    // Her hands on the rail: over it and onto the pipe (matron_pipe.cpp).
+    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    walk_toward(dt, ax, az, 0.0F, accel);
+    yaw_ = turn_to(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
+    (void)get_on_pipe(floor_y, next);
+    return true;
+}
+
 } // namespace scraperx::sim
