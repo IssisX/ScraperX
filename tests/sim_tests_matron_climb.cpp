@@ -2108,7 +2108,7 @@ void run_matron_ladders() {
             auto last = s.matron_state().position;
             double worst = 0.0, drift = 0.0, gravity = 1.0, secs = 0.0;
             const auto j0 = s.matron_journey();
-            if (!s.debug_matron_travel_region(goal)) return std::string(way) + " no plan";
+            if (!s.debug_matron_travel_region(goal)) return std::string(way) + " no plan FAILED";
             Simulation::MatronJourney j = s.matron_journey();
             while (j.active && secs < 120.0) {
                 (void)s.advance_frame(1.0 / 60.0);
