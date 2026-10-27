@@ -475,11 +475,24 @@ func _process(delta: float) -> void:
 	# The foreman's radio, from the native's state; his lines show whatever
 	# the captions setting, having no voice yet.
 	var climber: Vector3 = _native.get_player_position()
+	var her: Dictionary = _native.get_matron_state()
 	_radio.update(delta, {
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
-		"matron_released": bool(_native.get_matron_state()["released"]),
+		"matron_released": bool(her["released"]),
 	})
+	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
+	# her a few seconds after she burst out): her bearing off his view, how
+	# far across the ground, how far above or below.
+	if bool(her["released"]) and bool(her["alive"]) and int(her["state"]) >= MatronView.STATE_EMERGING:
+		var at: Vector3 = her["position"]
+		var flat := Vector2(at.x - climber.x, at.z - climber.z)
+		var view_ahead := Vector2(-sin(_yaw), -cos(_yaw))
+		var view_right := Vector2(cos(_yaw), -sin(_yaw))
+		_hud.her_marker = {"bearing": atan2(flat.dot(view_right), flat.dot(view_ahead)), "dist": flat.length(),
+			"rise": at.y - climber.y}
+	else:
+		_hud.her_marker = {}
 	_hud.radio_text = _radio.text
 	_hud.radio_who = _radio.who
 	# The faint route hint, asked of the native only while it is on.
