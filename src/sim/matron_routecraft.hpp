@@ -53,6 +53,12 @@ public:
               unsigned expansion_budget = kPlanningExpansionsPerTick,
               unsigned transition_budget = kPlanningTransitionsPerTick,
               unsigned query_budget = kPlanningQueriesPerTick);
+    // Production's mover hands in the tick's shared actuator allowance.
+    // The standalone overload above keeps its own allowance for lab fixtures.
+    void step(JPH::PhysicsSystem &, JPH::BodyID, float dt, traversal::Budget &,
+              unsigned expansion_budget = kPlanningExpansionsPerTick,
+              unsigned transition_budget = kPlanningTransitionsPerTick,
+              unsigned query_budget = kPlanningQueriesPerTick);
     void cancel() noexcept;
     bool planning() const noexcept { return report_.phase != PlanPhase::None; }
     bool owns_motion() const noexcept {
@@ -105,8 +111,8 @@ private:
     void finish_search(Status);
     void replan(JPH::PhysicsSystem &, JPH::BodyID);
     Cell cell(JPH::RVec3) const;
-    void hold(JPH::PhysicsSystem &, JPH::BodyID);
-    void drive(JPH::PhysicsSystem &, JPH::BodyID, const Node &);
+    void hold(JPH::PhysicsSystem &, JPH::BodyID, traversal::Budget &);
+    void drive(JPH::PhysicsSystem &, JPH::BodyID, const Node &, traversal::Budget &);
     bool valid(JPH::PhysicsSystem &, const Grip &) const;
     bool reach(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, const Grip &, bool count_budget = true) const;
     bool transition(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, const Node &, bool count_budget = true) const;
