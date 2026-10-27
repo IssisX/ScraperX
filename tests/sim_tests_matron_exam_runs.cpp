@@ -192,7 +192,7 @@ void run_matron_exam_routecraft() {
     std::cout << '\n';
 }
 
-// Grok's move library (src/sim/matron_traversal.*) through the same exam:
+// The move library (src/sim/matron_traversal.*) through the same exam:
 // its scanner reads the exam world, its planner chains moves region to
 // region, and its Climber does each move (rungs, a pole's friction grip, a
 // mantle, a jump-catch, a hang-drop) out of one capped budget. The journey

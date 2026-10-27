@@ -1,6 +1,6 @@
 extends Node3D
 
-# The ground slingshot as the player sees it (after the ChatGPT branch's
+# The ground slingshot as the player sees it (after a sibling branch's
 # slingshot_view): two thick rubber bands from the fork's tips to the pouch,
 # thinning as they stretch and sagging when slack; the leather pouch drawn
 # from the same surface the native pouch is built on; and, while a rider is

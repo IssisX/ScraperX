@@ -1,6 +1,6 @@
 #pragma once
 
-// The slingshot's rubber, as a constitutive law in SI units (from the ChatGPT
+// The slingshot's rubber, as a constitutive law in SI units (from a sibling
 // branch's slingshot_model, 2026-10-01). Jolt stays the authority for the
 // pouch, the rider and every contact: this never sets a velocity or
 // integrates a body of its own; it says what force the stretched bands put

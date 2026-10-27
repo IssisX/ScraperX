@@ -1,7 +1,7 @@
 #pragma once
 
 // The yard's forklift (the owner, 2026-10-17: the heavy stock is moved by a
-// machine, and a forklift first; ideas taken from the ChatGPT branch's truck
+// machine, and a forklift first; ideas taken from a sibling branch's truck
 // and kept lean here). A counterbalance truck of about 5.1 t: two driven
 // front wheels, two steered rear wheels, a counterweight behind the rear
 // axle, an overhead guard, and a mast whose carriage and forks ride up it on

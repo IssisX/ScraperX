@@ -1,4 +1,4 @@
-// The ground slingshot (from the ChatGPT branch, AS-023, 2026-10-01 to
+// The ground slingshot (from a sibling branch, AS-023, 2026-10-01 to
 // 2026-10-05, adapted to this branch's kit): a rooted timber fork, two
 // tension-only rubber bands, a ratcheted draw on a grade rail, an aim rail on
 // a gimbal, and the rider harnessed into a leather pouch.

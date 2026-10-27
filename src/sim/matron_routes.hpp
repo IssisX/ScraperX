@@ -1,8 +1,8 @@
 #pragma once
 
 // Her map of the tower (the owner, 2026-10-21: "I really want her to be able
-// to climb through more decks, up and down"; the multi-deck proposal on
-// grok/matron-multi-deck, 03_EXECUTION/MATRON_REDESIGN/MULTI_DECK_PROPOSAL.md).
+// to climb through more decks, up and down"; the multi-deck proposal,
+// 03_EXECUTION/MATRON_REDESIGN/MULTI_DECK_PROPOSAL.md).
 //
 // Regions are patches of real support: a deck's bands, a ring, a bracket. A
 // region is known by where it is, its footprint and the top of its steel,
