@@ -962,6 +962,18 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         points.push_back({bx, bz});
     }
     points.push_back({tx, tz});
+    // In a square where two floors' middle lines meet, with the place on
+    // the other line from hers: by its middle, as down those lines.
+    if (chain.size() == 1 && square(to)) {
+        const FloorPatch &q = g.patches[static_cast<std::size_t>(to)];
+        const float qx = 0.5F * (q.min_x + q.max_x);
+        const float qz = 0.5F * (q.min_z + q.max_z);
+        const bool her_on_x_line = std::abs(fz - qz) <= std::abs(fx - qx);
+        const bool place_on_x_line = std::abs(tz - qz) <= std::abs(tx - qx);
+        if (her_on_x_line != place_on_x_line && distance_xz(fx, fz, qx, qz) > 1.2F) {
+            points.insert(points.begin(), {qx, qz});
+        }
+    }
     constexpr float kReachM = 1.2F;
     int pick = static_cast<int>(points.size()) - 1;
     for (int i = 0; i + 1 < static_cast<int>(points.size()); ++i) {
@@ -977,8 +989,9 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         }
     }
     const int last = static_cast<int>(points.size()) - 1;
-    // Through a square where she turns: past its middle to the next point,
-    // when she can walk there straight (she cuts the corner as a line does).
+    // Through a square where she turns, onto the floor where the place is:
+    // past its middle to that floor, when she can walk there straight (she
+    // cuts the corner as a line does).
     const auto is_middle = [&](const std::array<float, 2> &q) {
         for (const int c : route_chain_) {
             const FloorPatch &r = g.patches[static_cast<std::size_t>(c)];
@@ -994,15 +1007,16 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         while (next < last && is_middle(points[static_cast<std::size_t>(next)])) {
             ++next;
         }
-        // (Into the place itself only by the rule below: the square is the end.)
-        if (next == last ||
+        // (Only onto the floor where the place is; into the place itself
+        // only by the rule below.)
+        if (next != last - 1 ||
             !way_clear(fx, fz, points[static_cast<std::size_t>(next)][0], points[static_cast<std::size_t>(next)][1])) {
             break;
         }
         pick = next;
     }
     // The place on the floor next to hers, in a straight walk: straight there.
-    if (chain.size() == 2 && rect_distance(tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
+        tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
                                                   g.patches[static_cast<std::size_t>(to)].max_x,
                                                   g.patches[static_cast<std::size_t>(to)].min_z,
                                                   g.patches[static_cast<std::size_t>(to)].max_z) <= 0.0F &&
@@ -1172,12 +1186,47 @@ void Matron::pick_patrol(const float ax, const float az) {
     std::vector<Stop> stops;
     float cx = 0.0F;
     float cz = 0.0F;
+    // A stop in the middle of each square where floors meet, and of each
+    // run of one floor's pieces between them; a held floor only where she
+    // has no floor of her own to pace.
+    const auto square = [&g](const int c) {
+        const FloorPatch &r = g.patches[static_cast<std::size_t>(c)];
+        const float a = r.max_x - r.min_x, b = r.max_z - r.min_z;
+        return std::max(a, b) < 1.5F * std::min(a, b) && std::min(a, b) > 2.0F;
+    };
+    bool own = false;
+    for (const int i : open) {
+        own = own || !g.patches[static_cast<std::size_t>(i)].held;
+    }
+    std::vector<bool> taken(g.patches.size(), false);
     for (const int i : open) {
         const FloorPatch &p = g.patches[static_cast<std::size_t>(i)];
-        if (!p.carries || std::min(p.max_x - p.min_x, p.max_z - p.min_z) < 2.0F * kRadius + 0.2F) {
+        if (taken[static_cast<std::size_t>(i)] || !p.carries || (own && p.held) ||
+            std::min(p.max_x - p.min_x, p.max_z - p.min_z) < 2.0F * kRadius + 0.2F) {
             continue;
         }
-        stops.push_back({0.5F * (p.min_x + p.max_x), 0.5F * (p.min_z + p.max_z), 0.0F, i});
+        FloorPatch run = p;
+        taken[static_cast<std::size_t>(i)] = true;
+        if (p.origin >= 0 && !square(i)) {
+            // Grow the run over the touching in-line pieces of its floor.
+            for (bool grew = true; grew;) {
+                grew = false;
+                for (const int j : open) {
+                    const FloorPatch &q = g.patches[static_cast<std::size_t>(j)];
+                    if (taken[static_cast<std::size_t>(j)] || q.origin != p.origin || square(j) ||
+                        rect_gap(run.min_x, run.max_x, run.min_z, run.max_z, q.min_x, q.max_x, q.min_z, q.max_z) > 0.01F) {
+                        continue;
+                    }
+                    run.min_x = std::min(run.min_x, q.min_x);
+                    run.max_x = std::max(run.max_x, q.max_x);
+                    run.min_z = std::min(run.min_z, q.min_z);
+                    run.max_z = std::max(run.max_z, q.max_z);
+                    taken[static_cast<std::size_t>(j)] = true;
+                    grew = true;
+                }
+            }
+        }
+        stops.push_back({0.5F * (run.min_x + run.max_x), 0.5F * (run.min_z + run.max_z), 0.0F, i});
         cx += stops.back().x;
         cz += stops.back().z;
     }
