@@ -1559,11 +1559,11 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float gap = std::max(0.05F, board_top - feet_now);
                 const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
                 if (velocity.GetY() < need) {
-                    const traversal::Limits budget;
-                    const float speed_up = std::max(0.5F, std::abs(velocity.GetY()));
-                    const float cap = std::min(budget.total_force_n, budget.power_w / speed_up);
+                    // Up onto it from this tick's one budget, the same as her
+                    // stride, and pushing down on the floor she boards.
                     const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
-                    bodies.AddForce(body_, Vec3(0.0F, std::min(cap, std::max(0.0F, want)), 0.0F), EActivation::Activate);
+                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), board_body,
+                                           RVec3(at.GetX(), board_top, at.GetZ()));
                 }
             }
         }
