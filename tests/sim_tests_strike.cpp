@@ -199,6 +199,14 @@ void run_strike() {
         const auto &snap = s.snapshot();
         require(snap.strike_phase == 0 && snap.strike_impulse_ns == 0.0,
                 "strike: a checkpoint load mid-strike leaves the fist at guard with no blow");
+        // No blow pending in her from before the load: a few ticks on, her
+        // balance has taken none.
+        for (int i = 0; i < 8; ++i) {
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        const auto m = s.matron_state();
+        require(m.staggers == 0 && m.knockdowns == 0 && m.blow_mps == 0.0,
+                "strike: a checkpoint load mid-strike carries no pending blow into her balance");
     }
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }

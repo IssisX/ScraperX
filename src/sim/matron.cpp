@@ -3317,6 +3317,9 @@ void Matron::restore(const Saved &saved) {
     end_journey(false);
     journey_wait_ticks_ = 0;
     if (shared_survival_) shared_survival_->reset();
+    // A blow pending from the player's fist when the save loads belongs to
+    // the world being left; it never reaches her after the load.
+    clear_player_blow();
     if (!dead_) {
         remove_body();
         state_ = saved.state;
