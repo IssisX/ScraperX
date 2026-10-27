@@ -66,3 +66,30 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
   not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
 - This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
   gets its own GitHub issue with its own short board in the same format, linked once from #3.
+
+## The shared workflow (2026-10-27)
+
+The owner, 2026-10-27, approving the workflow upgrades: *"All of it, docs included."*
+These hold for every agent; `AGENTS.md` points other agents here.
+
+- **Map first.** `REPO_MAP.md`: key files, key functions with line numbers, every test group and
+  touch scenario. Regenerate it with `python3 tools/repo_map/gen_repo_map.py` when it drifts.
+  Finished and superseded rows of `00_START_HERE.md` are in `00_START_HERE_ARCHIVE.md`.
+- **One handoff form.** Work handed to another agent or to the integrator uses
+  `03_EXECUTION/handoffs/TEMPLATE.yml`, posted as a comment on issue #3 (or the work's own issue)
+  addressed to the agent it is for. Not a prompt pasted to the owner.
+- **Rule check, then a second agent tries to break it.** Before landing, run
+  `python3 tools/rule_check/rule_check.py <base> <head>`. It flags removed or loosened test checks,
+  per-route special cases, velocity and position writes in her code, and changes to her budget
+  numbers. A BLOCK line means the change goes only as a PR into `ScraperX-Claude`, which only the
+  owner merges. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
+- **Protected changes.** Test checks, world geometry, and her force/physics limits change only by a
+  PR into `ScraperX-Claude`, merged by the owner. Everything else lands without a PR.
+- **Local tests match CI or do not count.** A local build used as evidence uses CI's compilers and
+  flags (host g++ 13.3 as on `ubuntu-24.04`; Android NDK `29.0.14206865` clang; the CMake flags in
+  `wo000-delivery-spine.yml`). Before a push, run only the groups the change reaches. CI stays the
+  final proof. CI uses ccache; a cache only skips identical compiles and changes no result.
+- **Progress, in small steps.** A job writes one line per real step to its progress log
+  (`HH:MM what`, Central time). Issue #3 gets a post only when something changed.
+- **Cheap agents.** A lower-cost agent may run tests, builds and the rule check. It may not delete
+  branches, force-push, push to `main`, or land work.
