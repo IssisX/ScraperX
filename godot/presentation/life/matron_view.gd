@@ -78,6 +78,10 @@ var _fall_speed := 0.0
 # swell and figure as last drawn. Fresh: drawn where the pose is (she has
 # just come into sight, or been put somewhere).
 var _drawn_yaw := 0.0
+# How far over she is drawn, toppled (0 standing, 1 laid flat), and the way
+# she went: eased at TOPPLE_S's pace (_topple).
+var _topple_k := 0.0
+var _topple_fall := Vector3(0.0, 0.0, 1.0)
 var _pose_pivots: Array[Node3D] = []
 var _pose_shown := PackedVector3Array()
 var _scale_shown := PackedVector3Array()
@@ -1436,8 +1440,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				arms_fwd = 1.9
 				arms_bend = 0.2
 				arms_splay = 0.35
-	body.position.y = hip_y
-	body.position += jolt
+	# The Turn's jolt shakes her hips about where the pose has them: an offset,
+	# never a drift.
+	body.position = Vector3(jolt.x, hip_y + jolt.y, jolt.z)
 	(_p["torso"] as Node3D).rotation.y = twist
 	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 if turn > 0 else 0.0
 	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
@@ -1511,22 +1516,27 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 # way the blow sent her (on her back, her face, her side, as she was facing),
 # laid over the lying body the simulation has under her middle; over
 # TOPPLE_S going down, and back up over the last of her time there.
-func _topple(data: Dictionary, centre: Vector3) -> void:
-	if int(data["state"]) != STATE_DOWN or bool(data.get("kneeling", false)):
+func _topple(data: Dictionary, centre: Vector3, delta: float) -> void:
+	var want := 0.0
+	if int(data["state"]) == STATE_DOWN and not bool(data.get("kneeling", false)):
+		var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
+		var fall_now := Vector3(fall_v.x, 0.0, fall_v.y)
+		if fall_now.length_squared() >= 1.0e-6:
+			_topple_fall = fall_now.normalized()
+			var down_s := float(data.get("down_s", 0.0))
+			# She rises on the simulation's clock: over the last TOPPLE_S of the
+			# time she lies there. None left and still down, she is pinned,
+			# crawling out flat to where she can stand.
+			var left_s := float(data.get("down_left_s", 0.0))
+			var rise := clampf(left_s / TOPPLE_S, 0.0, 1.0) if left_s > 0.0 else 1.0
+			want = clampf(down_s / TOPPLE_S, 0.0, 1.0) * rise
+	# Down or up at the topple's own pace, never at once: pinned, or let up
+	# off the steel, she goes over (or comes up) in TOPPLE_S, not in a frame.
+	_topple_k = want if _pose_fresh else move_toward(_topple_k, want, delta / TOPPLE_S)
+	if _topple_k <= 0.0:
 		return
-	var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
-	var fall := Vector3(fall_v.x, 0.0, fall_v.y)
-	if fall.length_squared() < 1.0e-6:
-		return
-	fall = fall.normalized()
-	var down_s := float(data.get("down_s", 0.0))
-	# She rises on the simulation's clock: over the last TOPPLE_S of the time
-	# she lies there. None left and still down, she is pinned, crawling out
-	# flat to where she can stand.
-	var left_s := float(data.get("down_left_s", 0.0))
-	var rise := clampf(left_s / TOPPLE_S, 0.0, 1.0) if left_s > 0.0 else 1.0
-	var k := clampf(down_s / TOPPLE_S, 0.0, 1.0) * rise
-	k = k * k * (3.0 - 2.0 * k)
+	var fall := _topple_fall
+	var k := _topple_k * _topple_k * (3.0 - 2.0 * _topple_k)
 	var axis := Vector3.UP.cross(fall).normalized()
 	_figure.global_basis = Basis(axis, 0.5 * PI * k) * Basis(Vector3.UP, _drawn_yaw)
 	var floor_y := centre.y - STAND_CENTRE
@@ -1555,8 +1565,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	var out := released and alive and state >= STATE_EMERGING and state != STATE_DEAD
 	# Where she is drawn: between the simulation's last two ticks, as the
 	# player is (an older native without it: the tick's own).
-	var centre: Vector3 = data.get("render_position", data["position"])
-	_drawn_yaw = float(data.get("render_yaw", data["yaw"]))
+	var centre: Vector3 = data["position"] if previewing else data.get("render_position", data["position"])
+	_drawn_yaw = float(data["yaw"] if previewing else data.get("render_yaw", data["yaw"]))
 	if centre.distance_to(_last_pos) > 1.5:
 		_pose_fresh = true
 	# Fall speed from her own height, for the plunge.
@@ -1577,7 +1587,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
 	_figure.rotation = Vector3(0.0, _drawn_yaw, 0.0)
 	_pose(data, delta, player_position, falling)
-	_topple(data, centre)
+	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
 	_ease_figure(centre, delta)
 	_ease_hands(data, delta)

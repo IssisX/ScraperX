@@ -331,7 +331,8 @@ func _prepare_her() -> void:
 	_native.prepare_matron()
 	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
 	card.queue_free()
-	get_tree().paused = was_paused
+	# A pause menu opened while she read (focus lost in those frames) stays paused.
+	get_tree().paused = was_paused or _paused
 
 func _process(delta: float) -> void:
 	if _native == null:
