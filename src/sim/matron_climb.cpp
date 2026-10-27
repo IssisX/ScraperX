@@ -38,10 +38,6 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
 } // namespace
 
 bool Matron::follow_climb(const float dt, const RVec3 at) {
-    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-    if (found_climbs_off_) {
-        return false;   // one way alone (a test): none of her own
-    }
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float level_floor = levels_[static_cast<std::size_t>(level_)].floor_y;
@@ -90,11 +86,6 @@ bool Matron::follow_climb(const float dt, const RVec3 at) {
     walk_toward(dt, c.x, c.z, 0.0F, accel);
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     if (turn_ == Turn::None && best != bay_climb_) {
-        return true;
-    }
-    // One that failed under her a moment ago she leaves alone a while (her map).
-    const std::size_t way = routes_.find_way(connector_of(best), false);
-    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
         return true;
     }
     begin_climb(best);
@@ -224,19 +215,6 @@ bool Matron::begin_climb(const int index, const bool down) {
 }
 
 void Matron::release_climb(const bool failed) {
-    // A climb she set out on by herself (not along her map's route, which
-    // records its own): done, her map knows it carried her; failed, her map
-    // leaves that way alone a while.
-    if (!route_on_edge_ && climb_ >= 0) {
-        const std::size_t way = routes_.find_way(connector_of(climb_), climb_down_);
-        if (way < routes::kMaxEdges && failed) {
-            routes_.fail(way, routes::Reason::Failed, clock_s_);
-            ++route_failures_;
-        } else if (way < routes::kMaxEdges) {
-            routes_.succeed(way);
-            ++route_edges_done_;
-        }
-    }
     climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
     climb_ = -1;
     reaching_up_ = false;
@@ -398,6 +376,72 @@ void Matron::climb(const float dt) {
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     speed_ = 0.0F;
     stride_ += bodies.GetLinearVelocity(body_).Length() * dt;
+}
+
+// The old rung climber as a way of hers (matron_mover.hpp): to a ladder's
+// foot and onto it (follow_climb), then up or down it (climb) inside her hunt.
+MoverStatus Matron::ClimbWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (m_.climb_ >= 0) {
+        m_.climb(dt);
+        return MoverStatus::Running;
+    }
+    if (!m_.follow_climb(dt, goal_.at)) {
+        return MoverStatus::Idle;
+    }
+    return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
+}
+
+void Matron::ClimbWay::cancel() {
+    if (m_.climb_ >= 0) {
+        m_.release_climb(false);
+    }
+}
+
+MoverStatus Matron::ClimbWay::status() const {
+    return m_.climb_ >= 0 ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::ClimbWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Hunt;
+    v.turns = true;
+    v.hand = m_.climb_hand_;   // her report's hand while no way shows one: the last she held
+    if (m_.climb_ < 0) {
+        return v;
+    }
+    v.drives = true;
+    v.held = true;
+    v.lands = true;
+    v.holds_chase = true;
+    v.blow_proof = true;
+    v.hands = true;
+    v.move_active = true;
+    v.move = m_.mantling_ ? traversal::MoveKind::Mantle
+                          : (m_.climb_down_ ? traversal::MoveKind::RungDown : traversal::MoveKind::RungUp);
+    v.phase = m_.mantling_ ? 3 : 0;
+    v.hand_shown = true;
+    v.force_shown = true;
+    v.force_n = m_.climb_force_n_;
+    v.hand_held = !m_.climb_support_.IsInvalid();
+    if (v.hand_held) {
+        // Its rungs run across her facing (out is steel-to-her-side), so her
+        // left is (out_z, 0, -out_x); her feet land on its top deck.
+        const Climb spec = m_.climb_spec(m_.climb_);
+        v.rungs_across = true;
+        v.rung_left = Vec3(spec.out_z, 0.0F, -spec.out_x);
+        v.hold_body = m_.climb_support_;
+        v.hold_member = m_.climb_member_;
+        v.top = RVec3(spec.top_x, spec.lip_y, spec.top_z);
+    }
+    return v;
+}
+
+bool Matron::ClimbWay::let_go() {
+    if (m_.climb_ < 0) {
+        return false;
+    }
+    m_.release_climb(true);
+    return true;
 }
 
 } // namespace scraperx::sim

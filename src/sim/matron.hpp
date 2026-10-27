@@ -109,6 +109,7 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_mover.hpp"
 #include "sim/matron_routecraft.hpp"
 #include "sim/matron_traversal.hpp"
 
@@ -1345,8 +1346,6 @@ private:
     bool follow_climb(float dt, JPH::RVec3 at);
     // Her travel across the tower (matron_travel.cpp).
     bool follow_route(float dt, JPH::RVec3 at);
-    // The other way round: the connector a climb of hers is (Count for none).
-    [[nodiscard]] routes::Connector connector_of(int climb) const noexcept;
     // The corner pipe's way on her map from one deck to the other.
     [[nodiscard]] std::size_t pipe_way(float from_floor, float to_floor) const noexcept;
     [[nodiscard]] routes::Region lead_region() const noexcept;
@@ -1402,13 +1401,137 @@ private:
     bool follow_pipe(float dt, JPH::RVec3 at);
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
     // Her hands on the rail of the deck she is leaving: false (and nothing
-    // started) when there is no rail top in her reach.
-    bool get_on_pipe(float from_floor, float to_floor);
+    // started) when there is no rail top in her reach. `own_way`: she set out
+    // on it by herself, and her map records how it went (her map's route
+    // records its own).
+    bool get_on_pipe(float from_floor, float to_floor, bool own_way);
     void ride_pipe(float dt);
     // Off it: her feet on the deck's steel, or (failed) her hands gone.
     void get_off_pipe(bool failed = false);
     // A blow on the pipe past kPipeTearMps: her hands open, her legs slide.
     void tear_off_pipe();
+    // Struck off the pipe by such a blow (take_blow): at the riser she
+    // slides; still at a rail, she goes down onto the steel her feet find.
+    void pipe_struck(JPH::RVec3 at);
+    // Her report of the pipe and of her cables (refresh_view), and both set
+    // back for a restore (matron_pipe.cpp, matron_line.cpp).
+    void report_pipe();
+    void report_line();
+    void restore_pipe() noexcept;
+    void restore_line() noexcept;
+
+    // Her ways between floors under one contract (matron_mover.hpp), each
+    // wrapping one executor of hers and defined in that executor's file.
+    // Each way's state is its own: the journey's journey_*, the routecraft's
+    // routecraft_* with the column it found (found_, find_wait_ticks_,
+    // climb_back_*, climbing_key_), the travel's travel_*, the pipe's pipe_*,
+    // the old climber's climb_ and its hold, the map way's route_*, the
+    // cable's on_line_. What they share by design is hers, no one way's:
+    // climb_retry_s_ (a start refused or a way failed: none started a
+    // while), climb_end_ (how the last way she was on ended), climb_blocks_
+    // and journey_wait_ticks_ (her own ways' search clocks), climb_releases_
+    // and climbs_done_ (her report's counts), routes_ with route_edges_done_
+    // and route_failures_ (her authored map and its counts, the pipe's
+    // failure memory too), climber_ and scanned_ (her Climber and her scan),
+    // riding_ and let_go_s_ (her cling), chase_way_held_.
+    class Way : public Mover {
+    public:
+        explicit Way(Matron &m) noexcept : m_(m) {}
+        bool begin(const MoverGoal &goal) override {
+            goal_ = goal;
+            return true;
+        }
+
+    protected:
+        Matron &m_;
+        MoverGoal goal_{};
+    };
+    // Her journey over her scan (matron_found_climb.cpp): its Climber's moves.
+    class JourneyWay final : public Way {
+    public:
+        using Way::Way;
+        bool begin(const MoverGoal &goal) override;   // a plan over the steel round her and her lead
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+        // Her hands open on a move, as a hold giving way opens them (false:
+        // no move of it under way).
+        bool let_go();
+    };
+    // Routecraft's bars, with the column she found for them and the walk to
+    // its foot (matron_found_climb.cpp).
+    class RoutecraftWay final : public Way {
+    public:
+        using Way::Way;
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+        // Not asked this tick: her search clocks still run, and the column
+        // she was walking to is forgotten.
+        void stand_aside();
+        bool let_go();
+    };
+    // Her travel across the tower (matron_journey.cpp).
+    class TravelWay final : public Way {
+    public:
+        using Way::Way;
+        bool begin(const MoverGoal &goal) override;   // travel_to the lead's place
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+    };
+    // The corner pipe (matron_pipe.cpp).
+    class PipeWay final : public Way {
+    public:
+        using Way::Way;
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+        bool let_go();
+    };
+    // The old rung climber (matron_climb.cpp).
+    class ClimbWay final : public Way {
+    public:
+        using Way::Way;
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+        bool let_go();
+    };
+    // The authored map's way, for the test that drives one of its ways
+    // (matron_travel.cpp).
+    class RouteWay final : public Way {
+    public:
+        using Way::Way;
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+    };
+    // A cable down toward a lead below (matron_line.cpp).
+    class LineWay final : public Way {
+    public:
+        using Way::Way;
+        MoverStatus step(float dt, traversal::Budget &budget) override;
+        void cancel() override;
+        [[nodiscard]] MoverStatus status() const override;
+        [[nodiscard]] MoverView view() const override;
+    };
+    // The way that has her body (its status Running), first in the order her
+    // tick steps them; nullptr when her feet are the hunt's.
+    [[nodiscard]] Mover *holder() noexcept;
+    [[nodiscard]] const Mover *holder() const noexcept;
+    // Held on the steel or cable of a way the hunt steps (the corner pipe, a
+    // climb, a cable).
+    [[nodiscard]] bool held_in_hunt() const noexcept;
+    // The planner, her follow chain made one call: her next way toward a lead
+    // on another floor, each asked in her order. True: one took the tick.
+    bool take_way(float dt, JPH::RVec3 at, traversal::Budget &budget);
     // A hold for her hands (matron_pipe.cpp): the rail's top over `deck`
     // beside her, or the riser's face at height y on her side of it.
     bool pipe_rail_hold(float deck, JPH::RVec3 at);
@@ -1838,6 +1961,7 @@ private:
     PipePhase pipe_phase_ = PipePhase::Off;
     float pipe_from_ = 0.0F;   // the floor she got on from, and the one she is going to
     float pipe_to_ = 0.0F;
+    bool pipe_own_way_ = true; // set out on by herself (get_on_pipe): her map records how it went
     int pipe_waypoint_ = 0;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
@@ -1886,6 +2010,16 @@ private:
     std::uint32_t pipe_flanges_ = 0;
     std::uint32_t pipe_slams_ = 0;
     View view_{};
+    // Her ways (above), in the order her tick steps them: holder's order.
+    JourneyWay journey_way_{*this};
+    RoutecraftWay routecraft_way_{*this};
+    TravelWay travel_way_{*this};
+    PipeWay pipe_way_{*this};
+    ClimbWay climb_way_{*this};
+    RouteWay route_way_{*this};
+    LineWay line_way_{*this};
+    std::array<Mover *, 7> ways_{&journey_way_, &routecraft_way_, &travel_way_, &pipe_way_,
+                                 &climb_way_, &route_way_, &line_way_};
 };
 
 } // namespace scraperx::sim

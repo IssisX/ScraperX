@@ -139,7 +139,7 @@ bool Matron::pipe_face_hold(const RVec3 at, const float y) {
 
 // Her hands on the rail where she stands, and room for all of her over it and
 // out at her line; else nothing starts and she tries again in a moment.
-bool Matron::get_on_pipe(const float from_floor, const float to_floor) {
+bool Matron::get_on_pipe(const float from_floor, const float to_floor, const bool own_way) {
     if (climb_retry_s_ > 0.0F) {
         return false;
     }
@@ -154,6 +154,7 @@ bool Matron::get_on_pipe(const float from_floor, const float to_floor) {
     drop_stock();
     pipe_from_ = from_floor;
     pipe_to_ = to_floor;
+    pipe_own_way_ = own_way;
     pipe_phase_ = PipePhase::Mount;
     pipe_over_ = false;
     pipe_s_ = 0.0F;
@@ -178,7 +179,7 @@ void Matron::get_off_pipe(const bool failed) {
         // this way alone a while. Her level is what her feet find
         // (settle_level), not where she meant to go.
         const std::size_t way = pipe_way(pipe_from_, pipe_to_);
-        if (!route_on_edge_ && way < routes::kMaxEdges) {
+        if (pipe_own_way_ && way < routes::kMaxEdges) {
             routes_.fail(way, routes::Reason::Failed, clock_s_);
             ++route_failures_;
         }
@@ -188,7 +189,7 @@ void Matron::get_off_pipe(const bool failed) {
     }
     // Along it by herself (a route records its own): her map knows it carried her.
     const std::size_t way = pipe_way(pipe_from_, pipe_to_);
-    if (!route_on_edge_ && way < routes::kMaxEdges) {
+    if (pipe_own_way_ && way < routes::kMaxEdges) {
         routes_.succeed(way);
         ++route_edges_done_;
     }
@@ -558,7 +559,105 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     walk_toward(dt, ax, az, 0.0F, accel);
     yaw_ = turn_to(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
-    (void)get_on_pipe(floor_y, next);
+    (void)get_on_pipe(floor_y, next, true);
+    return true;
+}
+
+void Matron::pipe_struck(const RVec3 at) {
+    if (distance_xz(float(at.GetX()), float(at.GetZ()), kPipeLineX, kPipeLineZ) < 0.5F) {
+        tear_off_pipe();
+        return;
+    }
+    // Still at a rail, over the band: her hands off it, down onto whatever
+    // steel her feet find.
+    get_off_pipe(true);
+    const Vec3 way = blow_impulse_.LengthSq() > 1.0e-4F ? Vec3(blow_impulse_.GetX(), 0.0F, blow_impulse_.GetZ())
+                                                       : Vec3::sZero();
+    fall_x_ = way.LengthSq() > 1.0e-6F ? way.Normalized().GetX() : std::sin(yaw_);
+    fall_z_ = way.LengthSq() > 1.0e-6F ? way.Normalized().GetZ() : std::cos(yaw_);
+    knock_down();
+}
+
+void Matron::report_pipe() {
+    view_.on_pipe = pipe_phase_ != PipePhase::Off;
+    view_.pipe_head_down = pipe_phase_ == PipePhase::Climb && stage_ == Stage::Changed && pipe_to_ < pipe_from_;
+    view_.pipe_sliding = pipe_phase_ == PipePhase::Slide;
+    view_.pipe_peak_force_n = pipe_peak_force_n_;
+    view_.pipe_peak_power_w = pipe_peak_power_w_;
+    view_.pipe_stunned = pipe_phase_ == PipePhase::Stunned;
+    view_.pipe_listening = pipe_phase_ == PipePhase::Off && pipe_listen_s_ > 0.0F;
+    view_.pipe_links = pipe_links_;
+    view_.pipe_holds = pipe_holds_;
+    view_.pipe_flanges = pipe_flanges_;
+    view_.pipe_slams = pipe_slams_;
+    view_.pipe_slam_mps = pipe_slam_mps_;
+}
+
+void Matron::restore_pipe() noexcept {
+    // Off the pipe, whatever had her on it.
+    pipe_support_ = BodyID();
+    pipe_drive_dv_ = Vec3::sZero();
+    pipe_phase_ = PipePhase::Off;
+    pipe_links_ = 0;
+    pipe_holds_ = 0;
+    pipe_flanges_ = 0;
+    pipe_slams_ = 0;
+    pipe_slam_mps_ = 0.0F;
+    pipe_stun_s_ = 0.0F;
+    pipe_listen_s_ = 0.0F;
+}
+
+// The corner pipe as a way of hers (matron_mover.hpp): to the rail's corner
+// and onto it (follow_pipe), then along it (ride_pipe) inside her hunt.
+MoverStatus Matron::PipeWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (m_.pipe_phase_ != PipePhase::Off) {
+        m_.ride_pipe(dt);
+        return MoverStatus::Running;
+    }
+    if (!m_.follow_pipe(dt, goal_.at)) {
+        return MoverStatus::Idle;
+    }
+    return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
+}
+
+void Matron::PipeWay::cancel() {
+    m_.pipe_phase_ = PipePhase::Off;
+    m_.pipe_support_ = BodyID();
+    m_.pipe_drive_dv_ = Vec3::sZero();
+    m_.pipe_force_n_ = 0.0F;
+}
+
+MoverStatus Matron::PipeWay::status() const {
+    return m_.pipe_phase_ != PipePhase::Off ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::PipeWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Hunt;
+    if (m_.pipe_phase_ == PipePhase::Off) {
+        return v;
+    }
+    v.drives = true;
+    v.held = true;
+    v.lands = true;
+    // Her legs sliding, or stunned on a flange: no blow is read. Else her
+    // hands hold her against her weight, and a blow is read in all three
+    // directions (take_blow).
+    v.blow_proof = m_.pipe_phase_ == PipePhase::Slide || m_.pipe_phase_ == PipePhase::Stunned;
+    v.floor_in_hands = true;
+    v.drive_dv = m_.pipe_drive_dv_;
+    v.force_shown = true;
+    v.force_n = m_.pipe_force_n_;
+    v.has_goal = true;
+    v.goal_floor_y = m_.pipe_to_;
+    return v;
+}
+
+bool Matron::PipeWay::let_go() {
+    if (m_.pipe_phase_ == PipePhase::Off || m_.pipe_phase_ == PipePhase::Slide) {
+        return false;
+    }
+    m_.tear_off_pipe();
     return true;
 }
 

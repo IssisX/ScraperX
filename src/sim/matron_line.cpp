@@ -317,4 +317,56 @@ void Matron::ride_line() {
     }
 }
 
+void Matron::report_line() {
+    view_.on_line = on_line_;
+    view_.cable_slides = cable_slides_;
+}
+
+void Matron::restore_line() noexcept {
+    on_line_ = false;
+    cable_slides_ = 0;
+}
+
+// A line as a way of hers (matron_mover.hpp): to its stand and onto its cable
+// (follow_line), then the ride (ride_line) at the top of her tick.
+MoverStatus Matron::LineWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (m_.on_line_) {
+        m_.ride_line();
+        return MoverStatus::Running;
+    }
+    if (!m_.follow_line(dt, goal_.at, goal_.wait_ok)) {
+        return MoverStatus::Idle;
+    }
+    return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
+}
+
+void Matron::LineWay::cancel() {
+    if (!m_.on_line_) {
+        return;
+    }
+    if (m_.zipline_ != nullptr) {
+        m_.zipline_->unclip_other();
+    }
+    m_.on_line_ = false;
+    m_.riding_ = false;
+    m_.let_go_s_ = 0.0F;
+}
+
+MoverStatus Matron::LineWay::status() const {
+    return m_.on_line_ ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::LineWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Rides;
+    if (!m_.on_line_) {
+        return v;
+    }
+    v.drives = true;
+    v.held = true;
+    v.lands = true;
+    v.blow_proof = true;
+    return v;
+}
+
 } // namespace scraperx::sim

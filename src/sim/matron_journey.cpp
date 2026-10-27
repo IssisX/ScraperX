@@ -144,9 +144,10 @@ bool Matron::travel_to(const int region) {
         return false;
     }
     const int here = region_under();
-    if (here < 0 && (routecraft_.owns_motion() || journey_active_ || climb_ >= 0 ||
-                     pipe_phase_ != PipePhase::Off || on_line_ || riding_ || held_ >= 0 ||
-                     bracing_structure())) {
+    // Off any floor she knows, a way that moves her body keeps it, as her
+    // cling, her hold on a load and her bracing do.
+    const Mover *way = holder();
+    if (here < 0 && ((way != nullptr && way->view().drives) || riding_ || held_ >= 0 || bracing_structure())) {
         return false;
     }
     // A new destination cannot take ownership away from hands or feet
@@ -479,6 +480,49 @@ void Matron::step_travel(const float dt) {
     travel_walk_.clear();
     travel_.move = e.kind;
     climber_->begin(e.spec);
+}
+
+// Her travel as a way of hers (matron_mover.hpp): to the lead's place (begin),
+// then its walks and moves after her clocks and her floor, nothing of the
+// hunt meanwhile.
+bool Matron::TravelWay::begin(const MoverGoal &goal) {
+    goal_ = goal;
+    return m_.travel_to(Vec3(goal.x, goal.floor_y, goal.z));
+}
+
+MoverStatus Matron::TravelWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (!m_.travel_.active) {
+        return MoverStatus::Idle;
+    }
+    m_.step_travel(dt);
+    return MoverStatus::Running;
+}
+
+void Matron::TravelWay::cancel() {
+    m_.travel_.active = false;
+    if (m_.climber_ != nullptr) {
+        m_.climber_->cancel();
+    }
+}
+
+MoverStatus Matron::TravelWay::status() const {
+    return m_.travel_.active ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::TravelWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Travel;
+    if (!m_.travel_.active) {
+        return v;
+    }
+    v.holds_chase = true;
+    v.blow_proof = true;
+    if (m_.travel_.goal >= 0 && m_.scanned_ != nullptr &&
+        m_.travel_.goal < static_cast<int>(m_.scanned_->regions().size())) {
+        v.has_goal = true;
+        v.goal_floor_y = m_.scanned_->regions()[static_cast<std::size_t>(m_.travel_.goal)].top;
+    }
+    return v;
 }
 
 } // namespace scraperx::sim
