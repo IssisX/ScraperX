@@ -1038,7 +1038,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
         want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
-        yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
+        if (!face_him_) {
+            yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
+        }
+    }
+    if (face_him_) {
+        yaw_ = turn_toward(yaw_, std::atan2(face_x_ - float(at.GetX()), face_z_ - float(at.GetZ())), kTurnRate, dt);
     }
     if (floor) {
         // Speeding up along her heading is slow (foot_accel); planting a foot to
@@ -2033,6 +2038,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     foot_power_w_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
+    face_him_ = false;
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
@@ -2316,6 +2322,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             saw = sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0));
         }
         sees_player_ = saw;
+        face_him_ = state_ == State::Hunting && saw && d <= kFaceHimM &&
+                    std::abs(float(player.GetY() - at.GetY())) < 1.4F;
+        face_x_ = px;
+        face_z_ = pz;
         // The straight line across the shaft: plain sight at long range.
         // (Low rays: a guard rail is bars, not a wall.)
         sees_far_ = perceivable && reach <= kCommitSightM &&

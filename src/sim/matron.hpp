@@ -224,6 +224,9 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    // Hunting a player she sees this close on her level, she faces him
+    // whatever way her feet go: her hands, her blows and her eyes are his.
+    static constexpr float kFaceHimM = 3.0F;
     static constexpr float kSightM = 9.0F;
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
     static constexpr float kLoseTrackSeconds = 9.0F;
@@ -1732,6 +1735,8 @@ private:
     bool sees_player_ = false;
     bool sees_far_ = false;
     float target_x_ = 0.0F, target_z_ = 0.0F;
+    bool face_him_ = false;   // this tick (pre_step): walk_toward turns her to (face_x_, face_z_)
+    float face_x_ = 0.0F, face_z_ = 0.0F;
     bool allow_catwalk_ = false;
     float commit_s_ = 0.0F;
     Turn turn_ = Turn::None;
