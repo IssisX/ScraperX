@@ -1,6 +1,8 @@
 {
   "enabledMcpjsonServers": [
-    "godot"
+    "godot",
+    "godot-docs",
+    "deepwiki"
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000"
@@ -8,7 +10,10 @@
   "permissions": {
     "allow": [
       "mcp__godot",
+      "mcp__godot-docs",
+      "mcp__deepwiki",
       "Bash",
+      "Bash(npx --yes skills@1.7.4 find *)",
       "Edit",
       "Write",
       "Read",
@@ -77,6 +82,9 @@
       "mcp__github__delete_file",
       "mcp__github__create_repository",
       "mcp__github__fork_repository"
+    ],
+    "additionalDirectories": [
+      "/tmp/claude-0"
     ]
   },
   "hooks": {
