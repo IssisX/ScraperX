@@ -212,6 +212,7 @@ public:
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
+    void prepare_matron();
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;

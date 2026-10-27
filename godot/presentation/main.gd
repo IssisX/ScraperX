@@ -79,6 +79,9 @@ var _continued_from_save := false
 static var _title_seen := false
 var _title: Control
 var _title_open := false
+# Her look over the tower (seconds of work on a phone) is made once, as play
+# starts, behind a card: never in the tick she leaves her locker.
+var _her_scan_pending := false
 var _capture_path := ""
 var _capture_scheduled := false
 var _fps_label: Label
@@ -298,6 +301,37 @@ func _ready() -> void:
 	# title when there is one.
 	if _should_ask_consent():
 		_show_consent()
+	if _uitest_scenario.is_empty() and not _ci_mode and _audit == null:
+		_her_scan_pending = true
+		if not _title_open:
+			_prepare_her.call_deferred()
+
+# Play starts: the card goes up over the frozen tower, she reads the steel,
+# the card comes down. A title closed on CONTINUE starts play here too; a NEW
+# CLIMB reloads the scene, and the new one starts it from _ready.
+func _prepare_her() -> void:
+	if not _her_scan_pending:
+		return
+	_her_scan_pending = false
+	var was_paused := get_tree().paused
+	get_tree().paused = true
+	var card := Label.new()
+	card.text = "LOADING"
+	card.add_theme_font_override("font", UiStyle.font_digits())
+	card.add_theme_font_size_override("font_size", 40)
+	card.add_theme_color_override("font_color", UiStyle.AMBER)
+	card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$PauseLayer.add_child(card)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var started := Time.get_ticks_msec()
+	_native.prepare_matron()
+	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
+	card.queue_free()
+	get_tree().paused = was_paused
 
 func _process(delta: float) -> void:
 	if _native == null:
@@ -746,6 +780,8 @@ func _close_title() -> void:
 	get_tree().paused = false
 	_router.clear_held()
 	_router.gameplay_active = true
+	if _her_scan_pending:
+		_prepare_her.call_deferred()
 
 # --- her chart: the profile, and the microphone's consent ---------------------
 
