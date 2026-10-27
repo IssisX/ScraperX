@@ -90,8 +90,9 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
   cheap, weak shit. They are intelligent ... know what they're handling ... always making progress
   towards the difficult stuff. Efficiently"*). Whenever your own queue holds hard work another agent
   can own, hand it out on issue #3, whole: the goal, why it is hard, the laws, the files, the finish
-  facts. Know what each agent holds before you assign. Check issue #3 often (every 15 minutes) and
-  post there whenever something changed.
+  facts. Know what each agent holds before you assign. Check issue #3 often (every 30 minutes: the
+  owner watches usage too) and post there only when something changed. ChatGPT is not one of the
+  agents (2026-10-27: *"ChatGPT is not part of this"*).
 - This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
   gets its own GitHub issue with its own short board in the same format, linked once from #3.
 
