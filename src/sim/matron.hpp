@@ -324,12 +324,13 @@ public:
     static constexpr float kCommitSightM = 50.0F;
     static constexpr float kEndM = 5.0F;
     static constexpr float kCommitHoldSeconds = 2.5F;
-    // Below this she is gone (fell): a fall of 12 m from the deck. Riding
+    // Below this she is gone (fell): a fall of 13 m from the deck. Riding
     // (a moving floor, a line's cable) or on a climb she is not falling.
-    static constexpr float kFallenBelowM = 12.0F;
+    // Was 12 m. A measured 14 m drop still lands harder than this and kills.
+    static constexpr float kFallenBelowM = 13.0F;
     // What kills her is the landing: a stop as hard as the end of a fall of
-    // kFallenBelowM (about 15.3 m/s), on whatever she lands on.
-    static constexpr float kLethalLandingMps = 15.34F;
+    // kFallenBelowM (16 m/s), on whatever she lands on.
+    static constexpr float kLethalLandingMps = 16.00F;
     static constexpr float kOffTheWorldY = -50.0F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
@@ -460,7 +461,7 @@ public:
     // Lunge push only. Extra force past 9.8 kN did not raise the measured
     // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
     // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
-    // and shove stay on 8 kN and 22 kW.
+    // and shove stay on 8 kN and 44 kW.
     static constexpr float kTurnLungeForceN = 9800.0F;
     static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
@@ -643,9 +644,12 @@ public:
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
     static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
-    // A landing this hard (a fall of 2.5 m) puts her down a while; from
-    // kLethalLandingMps it kills her.
-    static constexpr float kHardLandingMps = 7.0F;
+    // A landing this hard puts her down a while; from kLethalLandingMps it
+    // kills her. Her own jump comes back near 7.2 m/s. The line sits above
+    // that return with room for a short miss, so the jump does not put her
+    // down. A longer fall still does (the home ladder opens her hands at
+    // about 9.5 m/s).
+    static constexpr float kHardLandingMps = 8.20F;
     // A lead a story away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
