@@ -2,6 +2,7 @@
 // deck, her build-up, her hunt, the catch, and the one thing that kills her,
 // the rotten catwalk. Every leg is on player inputs from the deck spawn.
 #include "sim_tests.hpp"
+#include "sim_tests_decks.hpp"
 
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
@@ -2327,7 +2328,8 @@ void run_matron_ladder() {
                 held_at_y = held_at_y > 0.0 ? held_at_y : p.player_position.y;
                 peak_rate = std::max(peak_rate, (m.position.y - last_y) * static_cast<double>(Simulation::kTickRateHz));
             } else if (m.climbs == 0 &&
-                       std::hypot(m.position.x - Matron::kLadderX, m.position.z - Matron::kLadderFootZ) < 0.35) {
+                       std::hypot(m.position.x - scraperx_test_decks::kHerLadderX,
+                                  m.position.z - scraperx_test_decks::kHerLadderFootZ) < 0.35) {
                 frail_s += Simulation::kFixedStepSeconds;
             }
             last_y = m.position.y;

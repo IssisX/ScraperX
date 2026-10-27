@@ -322,6 +322,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
+    godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -1888,6 +1889,11 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
 }
 
 void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
+
+// Her look over the tower (every way she climbs is one her scan finds) is
+// seconds of work. The game asks for it before play, so it never lands in
+// the tick she leaves her locker; asked again, it does nothing.
+void ScraperXSimulation::prepare_matron() { (void)simulation_->matron_affordances(); }
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
     const sim::SwingSnapshot state = simulation_->swing_state();

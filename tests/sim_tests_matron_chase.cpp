@@ -298,8 +298,8 @@ Result run_seed(const Seed &seed, const int mode) {
                       << m.position.y << ", " << m.position.z << ") floor " << m.floor_y << " lead_floor "
                       << m.lead_floor_y << " state " << int(m.state) << " pipe " << m.on_pipe << " climbing "
                       << m.climbing << " lead (" << m.lead_x << ", " << m.lead_z << ") fooled " << m.fooled
-                      << " wary " << m.wary << " climbs " << m.climbs << " edges " << m.route_edges << " fails "
-                      << m.route_failures << " knockdowns " << m.knockdowns << " blow " << m.blow_mps << " down_s "
+                      << " wary " << m.wary << " climbs " << m.climbs << " knockdowns " << m.knockdowns << " blow "
+                      << m.blow_mps << " down_s "
                       << m.down_s << " stalls " << m.stalls << " sidesteps " << m.sidesteps << " reroutes "
                       << m.reroutes << " vaults " << m.vaults << " leaps " << m.leaps << " stepups "
                       << m.step_ups << " clambers " << m.clambers << '\n';
