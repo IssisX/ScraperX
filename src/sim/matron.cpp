@@ -1016,7 +1016,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         pick = next;
     }
     // The place on the floor next to hers, in a straight walk: straight there.
-        tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
+    if (chain.size() == 2 && square(to) && rect_distance(tx, tz, g.patches[static_cast<std::size_t>(to)].min_x,
                                                   g.patches[static_cast<std::size_t>(to)].max_x,
                                                   g.patches[static_cast<std::size_t>(to)].min_z,
                                                   g.patches[static_cast<std::size_t>(to)].max_z) <= 0.0F &&
