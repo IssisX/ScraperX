@@ -27,8 +27,6 @@ namespace scraperx::sim {
 using namespace JPH;
 
 namespace {
-constexpr float kLawForceN = 8000.0F;
-constexpr float kLawPowerW = 22000.0F;
 constexpr float kGlideRatio = 0.12F;    // horizontal metres per metre of drop she makes good (measured: the
                                         // 22 kW account leaves ~1 m/s^2 of pull at ~9 m/s)
 constexpr float kChuteFlyMps = 4.0F;    // horizontal speed she steers toward
@@ -92,7 +90,8 @@ void Matron::step_chute(const float dt) {
                      chute_has_goal_ ? "joined" : "NONE", double(chute_x_), double(chute_top_), double(chute_z_));
     }
     const float speed = v.Length();
-    const float cap = std::min(kLawForceN, kLawPowerW / std::max(speed, 0.1F));
+    const traversal::Limits law{};   // her one account (the owner's law), not a number of its own
+    const float cap = std::min(law.total_force_n, law.power_w / std::max(speed, 0.1F));
     Vec3 force = Vec3::sZero();
     if (speed > 1.0e-4F) {
         const float drag = std::min(kMassKg * detail::kParachuteDragCoefficient * speed * speed, cap);
