@@ -270,6 +270,7 @@ Result run_seed(const Seed &seed, const int mode) {
     const double limit_s = mode == 1 ? 180.0 : 600.0;
     const std::uint8_t stage = mode == 1 ? 2 : 1;
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron chase: settle");
     (void)s.matron_affordances();  // her own scan, as in play
     s.debug_launch_player(Vector3{seed.spot.x, seed.spot.y + 0.3, seed.spot.z}, Vector3{0.0, 0.0, 0.0});
@@ -393,6 +394,7 @@ void run_matron_chase() {
     std::vector<Seed> mode1, mode2;
     {
         Simulation probe(InitialSpawn::Deck154);
+        probe.place_matron_home(154.0F);
         require(probe.advance_frame(1.0).accepted, "matron chase: probe settle");
         const AffordanceMap &map = probe.matron_affordances();
         std::cout << "  matron chase: scan regions " << map.regions().size() << ", edges " << map.edges().size()
