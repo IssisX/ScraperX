@@ -36,13 +36,12 @@ edit, combine or fill in a prompt ("use the earlier prompt with one change"). Gi
 
 ## Decisions come pre-digested
 
-2026-10-27: *"I keep telling you you can't give me these dry blocks of text ... break the stuff down in
-simple terms for me every time from now on ... It's difficult for me to make decisions when I have to
-read a ton of shit and put it all together myself."*
-Every decision put to the owner is one short item: what it is in plain words, what each choice does
-to the game, Claude's pick and why in one line, and the one word or sentence the owner answers with.
-Never a table of numbers or file names to work through. The detail lives in the document the item
-links to, never in the message.
+2026-10-27: *"you can't give me these large blocks of text ... break the stuff down in simple terms
+for me every time from now on ... It's difficult for me to make decisions when I have to read a ton
+of shit and put it all together myself."*
+Every decision put to the owner is two or three short lines: what it is, Claude's pick, the word
+the owner answers with. No block of text, no table of numbers or file names. The detail lives in the
+document the item links to, never in the message.
 
 ## Near misses: tweak the world, don't rework her
 
