@@ -231,6 +231,8 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()
+    add_test(NAME scraperx_sim.matron-one-budget
+             COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -P ${CMAKE_SOURCE_DIR}/tests/matron_one_budget_check.cmake)
     add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
     target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_parkour_flow_tests PRIVATE
