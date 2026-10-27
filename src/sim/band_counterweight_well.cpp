@@ -1022,7 +1022,7 @@ constexpr float kBoardHalfWidth = 0.15F;
 constexpr float kBoardTop = 176.45F;
 constexpr float kPipeX = 7.60F;
 constexpr float kPipeZ = -130.30F;
-constexpr float kPipeHalf = 0.05F;       // the standpipe's box: the board stops 0.10 m off its face
+constexpr float kPipeHalf = 0.05F;       // the standpipe's half-width (the board stops 0.40 m off it)
 constexpr float kPipeTop = 198.20F;
 constexpr float kCatwalkX = 11.00F;
 constexpr float kPanelZ = -130.86F;      // 0.13 m off the 220 ring's face
@@ -1046,19 +1046,14 @@ void build_climbing_route(kit::Kit &kit) {
                          JPH::Quat::sIdentity(), Material::Steel});
     }
     // The boards: out south from the 176 ring, then east toward the standpipe.
-    // The east-west board used to stop 0.40 m short of the pipe. She is 0.60 m
-    // across, so that gap is not a place she can stand. The timber now stops
-    // 0.10 m short of the pipe's face: close enough that her feet bear on it,
-    // far enough that her body still fits on the pole. The board's south end
-    // is the north-south board's south end, so the corner overlaps.
+    // The east-west board stops 0.40 m short of the pipe. Her grip on the pole
+    // is a stance on that end; timber run into the gap puts the walk to the
+    // pole off the ring's lip.
     const float board_mid = kBoardTop - 0.10F;
     route.push_back({JPH::Vec3(kBoardHalfWidth, 0.10F, 1.225F),
                      JPH::Vec3(7.05F, board_mid, -129.825F), JPH::Quat::sIdentity(), Material::Timber});
-    const float ew_south = -131.05F;
-    const float ew_north = (kPipeZ - kPipeHalf) - 0.10F;
-    route.push_back({JPH::Vec3(0.80F, 0.10F, 0.5F * (ew_north - ew_south)),
-                     JPH::Vec3(7.70F, board_mid, 0.5F * (ew_north + ew_south)), JPH::Quat::sIdentity(),
-                     Material::Timber});
+    route.push_back({JPH::Vec3(0.80F, 0.10F, kBoardHalfWidth),
+                     JPH::Vec3(7.70F, board_mid, -130.90F), JPH::Quat::sIdentity(), Material::Timber});
     // The standpipe on its foot bracket, to just under the 198 deck's top.
     route.push_back({JPH::Vec3(kPipeHalf, 0.5F * (kPipeTop - kBoardTop), kPipeHalf),
                      JPH::Vec3(kPipeX, 0.5F * (kPipeTop + kBoardTop), kPipeZ), JPH::Quat::sIdentity(),

@@ -2823,15 +2823,6 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                                         break;
                                     }
                                 }
-                if (!scan_walk) {
-                                    wx = heard_x_;
-                                    wz = heard_z_;
-                                    scan_walk = true;
-                                }
-                            }
-                        }
-                    }
-                }
                 // Steel outside deck_steel_ (the board under a climb she
                 // just finished): a step along the real floor, not a straight
                 // line off it onto the ring. The edge guard still
@@ -2898,6 +2889,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         sidestep_z_ = pz;
                         sidestep_s_ = 0.45F;
                         break;
+                    }
+                }
+                if (!scan_walk) {
+                                    wx = heard_x_;
+                                    wz = heard_z_;
+                                    scan_walk = true;
+                                }
+                            }
+                        }
                     }
                 }
                 if (!scan_walk) {
