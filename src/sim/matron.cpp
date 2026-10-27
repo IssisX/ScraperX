@@ -2866,7 +2866,21 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 break;
             }
         }
-        // Shuffling: the stooped patrol round her level's loop.
+        // Shuffling: the stooped patrol round her level's loop. Her loop is
+        // one of this level's (a level reached by a way that picks none, as
+        // a journey's end, keeps the last level's): else she picks one here,
+        // and on a floor with no loop of hers (the bay's bracket) she stands.
+        const auto on_loop = [&] {
+            return patrol_ >= 0 && static_cast<std::size_t>(patrol_) < here.patrols.size() && patrol_node_ >= 0 &&
+                   static_cast<std::size_t>(patrol_node_) < here.patrols[static_cast<std::size_t>(patrol_)].size();
+        };
+        if (!on_loop()) {
+            pick_patrol(ax, az);
+        }
+        if (!on_loop()) {
+            walk_toward(dt, ax, az, 0.0F);
+            break;
+        }
         const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
         const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
