@@ -35,9 +35,9 @@ constexpr float kPipeOverloadS = 0.18F;
 constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
-// What they can take is her legs' strength, about four times her weight; past
-// it they give and she sinks, but they do not open.
-constexpr float kPipeLegsOnFlangeN = 9000.0F;
+// What they can take is her one budget (3.7 times her weight); past it they
+// give and she sinks, but they do not open.
+constexpr float kPipeLegsOnFlangeN = traversal::Limits{}.total_force_n;
 float turn_to(const float yaw, const float want, const float rate, const float dt) {
     float delta = std::remainder(want - yaw, 2.0F * kPiF);
     delta = std::clamp(delta, -rate * dt, rate * dt);
@@ -250,15 +250,27 @@ void Matron::ride_pipe(const float dt) {
             ++pipe_flanges_;
         }
     }
-    const auto apply = [&](const Vec3 force) {
-        pipe_force_n_ = force.Length();
+    // Her one budget on the pipe this tick: her hands' (or legs') force on
+    // the steel, and any swat of her arm, all drawn from it.
+    const traversal::Limits law{};
+    traversal::Budget budget{law.total_force_n, 0.0F, law.power_w, 0.0F, v};
+    Vec3 on_her = Vec3::sZero();
+    const auto report = [&](const Vec3 force, const Vec3 against) {
+        on_her += force;
+        pipe_force_n_ = budget.used;
         pipe_peak_force_n_ = std::max(pipe_peak_force_n_, pipe_force_n_);
-        pipe_peak_power_w_ = std::max(pipe_peak_power_w_, std::abs(force.Dot(v)));
+        pipe_peak_power_w_ = std::max(pipe_peak_power_w_, std::abs(force.Dot(against)));
+        pipe_drive_dv_ = (on_her / kMassKg + physics_.GetGravity()) * dt;
+    };
+    const auto apply = [&](const Vec3 wanted_force) {
+        const bool support = !pipe_support_.IsInvalid() && bodies.IsAdded(pipe_support_);
+        budget.velocity = v - (support ? bodies.GetPointVelocity(pipe_support_, pipe_hand_) : Vec3::sZero());
+        const Vec3 force = budget.take(wanted_force);
         bodies.AddForce(body_, force);
-        if (!pipe_support_.IsInvalid() && bodies.GetMotionType(pipe_support_) == EMotionType::Dynamic) {
+        if (support && bodies.GetMotionType(pipe_support_) == EMotionType::Dynamic) {
             bodies.AddForce(pipe_support_, -force, pipe_hand_);
         }
-        pipe_drive_dv_ = (force / kMassKg + physics_.GetGravity()) * dt;
+        report(force, budget.velocity);
     };
     // Her hands gone: on the riser her legs still hold it; at a rail, down.
     const auto lost = [&] {
@@ -465,23 +477,6 @@ void Matron::ride_pipe(const float dt) {
     default:
         return;
     }
-    // A loose piece lying in her way (a drum come to rest on a flange) she
-    // swats out into the shaft: a blow of her arm, its reaction hers.
-    const Vec3 swat = Vec3(-0.7F, 0.3F, -0.7F).Normalized();
-    for (std::size_t i = 0; i < near_count_; ++i) {
-        const Near &n = near_[i];
-        if (!bodies.IsAdded(n.body) || n.velocity.Length() > 0.5F) {
-            continue;
-        }
-        const RVec3 there = bodies.GetCenterOfMassPosition(n.body);
-        const float along = std::clamp(float(there.GetY() - at.GetY()), -kHalfHeight, kHalfHeight);
-        if ((Vec3(there - at) - Vec3(0.0F, along, 0.0F)).Length() > kRadius + n.radius + 0.1F) {
-            continue;
-        }
-        const float impulse = std::min(n.mass_kg * 1.6F, kPipeSwatNs);
-        bodies.AddImpulse(n.body, swat * impulse);
-        bodies.AddImpulse(body_, -swat * impulse);
-    }
     // One capped force toward where her hands take her (as on her ladders);
     // on the riser's face its hold along the steel is friction.
     const Vec3 support_v = bodies.GetPointVelocity(pipe_support_, pipe_hand_);
@@ -513,6 +508,48 @@ void Matron::ride_pipe(const float dt) {
     }
     apply(force);
     yaw_ = turn_to(yaw_, facing, kTurnRate, dt);
+    // A loose piece lying in her way (a drum come to rest on a flange) she
+    // swats out into the shaft: her arm's push on it over the ticks it is
+    // against her, from what her budget has left after her hold, the equal
+    // and opposite push on her. It ends when the piece has what her swat
+    // gives (1.6 m/s, at most kPipeSwatNs of momentum) or is out of reach.
+    const Vec3 swat = Vec3(-0.7F, 0.3F, -0.7F).Normalized();
+    bool swatting = false;
+    for (std::size_t i = 0; i < near_count_; ++i) {
+        const Near &n = near_[i];
+        if (!bodies.IsAdded(n.body) || n.mass_kg <= 0.0F) {
+            continue;
+        }
+        const bool on_it = n.body == pipe_swat_body_;
+        if (!on_it && n.velocity.Length() > 0.5F) {
+            continue;
+        }
+        const RVec3 there = bodies.GetCenterOfMassPosition(n.body);
+        const float along = std::clamp(float(there.GetY() - at.GetY()), -kHalfHeight, kHalfHeight);
+        if ((Vec3(there - at) - Vec3(0.0F, along, 0.0F)).Length() > kRadius + n.radius + 0.1F) {
+            continue;
+        }
+        const Vec3 its_v = bodies.GetLinearVelocity(n.body);
+        const float gives = std::min(1.6F, kPipeSwatNs / n.mass_kg);
+        const float has = its_v.Dot(swat);
+        if (has >= gives) {
+            continue;
+        }
+        budget.velocity = its_v - v;
+        const Vec3 push = budget.take(swat * (n.mass_kg * (gives - has) / dt));
+        if (push.LengthSq() <= 0.0F) {
+            break;
+        }
+        bodies.AddForce(n.body, push, EActivation::Activate);
+        bodies.AddForce(body_, -push);
+        report(-push, budget.velocity);
+        pipe_swat_body_ = n.body;
+        swatting = true;
+        break;
+    }
+    if (!swatting) {
+        pipe_swat_body_ = BodyID();
+    }
 }
 
 bool Matron::pipe_reaches(const float floor_y) noexcept {
