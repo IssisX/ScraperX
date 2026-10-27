@@ -81,6 +81,9 @@
       "mcp__github__delete_file",
       "mcp__github__create_repository",
       "mcp__github__fork_repository"
+    ],
+    "additionalDirectories": [
+      "/tmp/claude-0"
     ]
   },
   "hooks": {
