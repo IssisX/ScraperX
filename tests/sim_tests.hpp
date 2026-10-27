@@ -29,6 +29,21 @@ inline void require(const bool condition, const char *message) {
     }
 }
 
+// The Matron's laws, as the owner set them (2026-10-27), written out so that
+// raising a limit in the sim can never loosen a test by itself: the sim's
+// limits are held to these at compile time (sim_tests_matron_climb.cpp,
+// sim_tests_matron_routecraft.cpp), and the force and power checks read
+// them. A change here is the owner's decision, by its own pull request.
+namespace law {
+inline constexpr float kForceN = 8000.0F;        // every force of hers but the Turn lunge's (checked to 8,000.5 N)
+inline constexpr float kPowerW = 22000.0F;       // her shared power, every actuator together
+inline constexpr float kLungeForceN = 9800.0F;   // the Turn lunge: its own move, its own cap
+inline constexpr float kLungePowerW = 65000.0F;
+inline constexpr float kMassKg = 220.0F;
+inline constexpr float kLegTravelM = 0.40F;      // a push-off's stroke
+inline constexpr float kLaunchDvMps = 3.80F;     // the take-off speed a push-off may earn
+} // namespace law
+
 inline bool nearly_equal(const double a, const double b, const double epsilon = 1.0e-12) {
     return std::abs(a - b) <= epsilon;
 }

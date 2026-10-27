@@ -656,8 +656,7 @@ void run_matron_pipe() {
         require(r.warned_s >= 4.0, "matron pipe: heard on the pipe at least 4 s before she is on the climber's deck");
         require(r.flanges >= 1, "matron pipe: a flange passed on the way (a bong)");
         std::cout << "  matron pipe: her grip's peak " << r.peak_force_n << " N, " << r.peak_power_w << " W\n";
-        require(r.peak_force_n > 1000.0 && r.peak_force_n <= scraperx::sim::traversal::Limits{}.total_force_n + 0.5 &&
-                    r.peak_power_w <= scraperx::sim::traversal::Limits{}.power_w + 0.5,
+        require(r.peak_force_n > 1000.0 && r.peak_force_n <= law::kForceN + 0.5 && r.peak_power_w <= law::kPowerW + 0.5,
                 "matron pipe: gravity on her, her grip holds her within the shared force and power budget");
         std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
     }
@@ -1096,10 +1095,21 @@ void run_matron() {
         double lunge_at = -1.0;
         int turns_started = 0;
         std::uint8_t last_turn = 0;
+        // The lunge is its own move with its own cap; the rest of the Turn
+        // (the wind-up, a leap) stays on her shared one.
+        double lunge_force_peak = 0.0, lunge_power_peak = 0.0;
+        double turn_force_peak = 0.0, turn_power_peak = 0.0;
         for (int i = 0; i < 75 * static_cast<int>(Simulation::kTickRateHz); ++i) {  // her pace is her own (Pace): longer than at one speed
             tick(s);
             const auto m = s.matron_state();
             const double now = i / static_cast<double>(Simulation::kTickRateHz);
+            if (m.climb_lunge_drive) {
+                lunge_force_peak = std::max(lunge_force_peak, m.climb_force_n);
+                lunge_power_peak = std::max(lunge_power_peak, m.foot_power_w);
+            } else if (m.turn != 0) {
+                turn_force_peak = std::max(turn_force_peak, m.climb_force_n);
+                turn_power_peak = std::max(turn_power_peak, m.foot_power_w);
+            }
             if (m.turn == static_cast<std::uint8_t>(Matron::Turn::Windup)) {
                 if (last_turn == 0) {
                     ++turns_started;
@@ -1130,6 +1140,13 @@ void run_matron() {
         require(windup_still_s > 0.5, "matron: the wind-up stops her: the player's one warning");
         require(lunge_peak > 8.2, "matron: the lunges burst faster than a sprint");
         require(turns_started == 1, "matron: one Turn, then a long quiet spell");
+        std::cout << "  matron: the Turn's drive: lunge " << lunge_force_peak << " N, " << lunge_power_peak
+                  << " W; the rest of the Turn " << turn_force_peak << " N, " << turn_power_peak << " W\n";
+        require(lunge_force_peak > 0.0 && lunge_force_peak <= law::kLungeForceN + 0.5 &&
+                    lunge_power_peak <= law::kLungePowerW + 0.5,
+                "matron: the lunge is her feet's own drive, within its own 9,800 N and 65 kW");
+        require(turn_force_peak <= law::kForceN + 0.5 && turn_power_peak <= law::kPowerW + 0.5,
+                "matron: the rest of the Turn stays within her shared force and power cap");
     }
     // ---- the deck's loose stock: shoved by walking into it; the ingot dolly breaks a plate ----
     {
@@ -2257,9 +2274,7 @@ void run_matron_ladder() {
         double max_force = 0.0, max_reach = 0.0;
         const auto check_hold = [&] {
             const auto m = s.matron_state();
-            const float force_cap = std::max({Matron::kClimbGripMaxN, scraperx::sim::MatronRoutecraft::kForce,
-                                              scraperx::sim::traversal::Limits{}.total_force_n});
-            require(std::isfinite(m.climb_force_n) && m.climb_force_n <= force_cap + 0.01,
+            require(std::isfinite(m.climb_force_n) && m.climb_force_n <= law::kForceN + 0.01,
                     "matron climb: finite capped actuator force");
             if (m.climbing) {
                 const double reach = std::sqrt(std::pow(m.climb_hand.x - m.position.x, 2) +

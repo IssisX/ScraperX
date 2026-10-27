@@ -227,8 +227,6 @@ void run_matron_board_walls() {
 void test_matron_climb_support() {
     std::array<std::array<float, 6>, 6> recorded{};
     for (int replay = 0; replay < 2; ++replay) {
-    const float legal_force_cap = std::max({Matron::kClimbGripMaxN, MatronRoutecraft::kForce,
-                                             traversal::Limits{}.total_force_n});
     for (int scenario = 0; scenario < 6; ++scenario) {
         ClimbWorld world;
         if (scenario > 0) world.steel(scenario == 1, scenario == 5 ? 2.8F : 5.0F);
@@ -251,8 +249,8 @@ void test_matron_climb_support() {
                     "matron support: attachment and release preserve continuous physical motion");
             previous = position;
             peak_force = std::max(peak_force, view.climb_force_n);
-            require(view.climb_force_n <= legal_force_cap + 0.1F,
-                    "matron support: applied grip force is bounded by the active controller cap");
+            require(view.climb_force_n <= law::kForceN + 0.1F,
+                    "matron support: applied grip force is bounded by her law's force cap");
             if (view.climbing) attached = true;
             if (scenario == 2 && !removed && view.climbing && view.y > 155.6F) {
                 for (const BodyID rung : world.rungs) world.physics.GetBodyInterface().RemoveBody(rung);

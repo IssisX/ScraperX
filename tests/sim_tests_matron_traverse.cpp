@@ -106,7 +106,7 @@ void run_matron_traverse() {
                   << " m, releases " << r.releases << '\n';
         require(r.releases == 0, "matron traverse: no hold lost, no failed climb");
         require(std::abs(r.y - leg.end_y) < 0.08, "matron traverse: standing on the steel at its other end");
-        require(r.peak_force <= std::max(Matron::kClimbGripMaxN, scraperx::sim::MatronRoutecraft::kForce) + 0.1, "matron traverse: her hands never past their cap");
+        require(r.peak_force <= law::kForceN + 0.1, "matron traverse: her hands never past their cap");
         require(r.worst_step < 0.15, "matron traverse: never carried or snapped (a step a tick)");
         if (leg.end_region != Region::Count) {
             require(map.region_at(float(r.x), float(r.y), float(r.z)) == leg.end_region,

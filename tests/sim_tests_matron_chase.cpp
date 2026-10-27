@@ -27,9 +27,11 @@ using scraperx::sim::traversal::AffordanceMap;
 
 void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
 
-constexpr double kForceLimitN = 8000.5;  // traversal::Limits total_force_n, with float slack
-// The Turn lunge is its own move with its own cap (Matron kTurnLungeForceN), checked on its own.
-constexpr double kLungeForceLimitN = 9800.5;
+constexpr double kForceLimitN = law::kForceN + 0.5;  // the owner's law (sim_tests.hpp), with float slack
+constexpr double kPowerLimitW = law::kPowerW + 0.5;
+// The Turn lunge is its own move with its own cap, checked on its own.
+constexpr double kLungeForceLimitN = law::kLungeForceN + 0.5;
+constexpr double kLungePowerLimitW = law::kLungePowerW + 0.5;
 constexpr double kStepLimitM = 0.20;
 
 struct Seed {
@@ -257,6 +259,8 @@ struct Result {
     double worst_step = 0.0;
     double max_climb_force = 0.0;
     double max_lunge_force = 0.0;
+    double max_foot_power = 0.0;
+    double max_lunge_power = 0.0;
     double max_pipe_peak = 0.0;
     double max_journey_peak = 0.0;
     std::string fail_reason;
@@ -308,11 +312,21 @@ Result run_seed(const Seed &seed, const int mode) {
         }
         if (m.climb_lunge_drive) {
             r.max_lunge_force = std::max(r.max_lunge_force, m.climb_force_n);
+            r.max_lunge_power = std::max(r.max_lunge_power, m.foot_power_w);
             if (m.climb_force_n > kLungeForceLimitN && r.fail_reason.empty()) {
                 r.laws_ok = false;
                 r.fail_reason = "lunge force over its cap";
             }
+            if (m.foot_power_w > kLungePowerLimitW && r.fail_reason.empty()) {
+                r.laws_ok = false;
+                r.fail_reason = "lunge power over its cap";
+            }
         } else {
+            r.max_foot_power = std::max(r.max_foot_power, m.foot_power_w);
+            if (m.foot_power_w > kPowerLimitW && r.fail_reason.empty()) {
+                r.laws_ok = false;
+                r.fail_reason = "foot power over Limits";
+            }
             r.max_climb_force = std::max(r.max_climb_force, m.climb_force_n);
             if (m.climb_force_n > kForceLimitN && r.fail_reason.empty()) {
                 r.laws_ok = false;
@@ -389,8 +403,16 @@ void run_matron_chase() {
     std::cout << "  matron chase: mode 1 seeds " << mode1.size() << ", mode 2 seeds " << mode2.size()
               << (full ? " (full set)" : " (default subset)") << '\n';
     int pass1 = 0, pass2 = 0;
+    double peak_force = 0.0, peak_power = 0.0, peak_lunge_force = 0.0, peak_lunge_power = 0.0;
+    const auto peaks = [&](const Result &r) {
+        peak_force = std::max({peak_force, r.max_climb_force, r.max_pipe_peak, r.max_journey_peak});
+        peak_power = std::max(peak_power, r.max_foot_power);
+        peak_lunge_force = std::max(peak_lunge_force, r.max_lunge_force);
+        peak_lunge_power = std::max(peak_lunge_power, r.max_lunge_power);
+    };
     for (const Seed &seed : mode1) {
         const Result r = run_seed(seed, 1);
+        peaks(r);
         pass1 += r.pass && r.laws_ok && r.alive ? 1 : 0;
         std::cout << "  matron chase: mode 1 start " << seed.start_top << " spot " << seed.spot_top << " floors "
                   << seed.floors << (r.pass && r.laws_ok && r.alive ? " PASS" : " FAIL") << " in " << r.seconds << " s"
@@ -400,6 +422,7 @@ void run_matron_chase() {
     }
     for (const Seed &seed : mode2) {
         const Result r = run_seed(seed, 2);
+        peaks(r);
         pass2 += r.pass && r.laws_ok && r.alive ? 1 : 0;
         std::cout << "  matron chase: mode 2 start " << seed.start_top << " spot " << seed.spot_top << " floors "
                   << seed.floors << (r.pass && r.laws_ok && r.alive ? " PASS" : " FAIL") << " in " << r.seconds << " s"
@@ -409,9 +432,14 @@ void run_matron_chase() {
     }
     std::cout << "  matron chase summary: mode 1 " << pass1 << '/' << mode1.size() << ", mode 2 " << pass2 << '/'
               << mode2.size() << (full ? " (full set)" : " (default subset)") << '\n';
+    std::cout << "  matron chase peaks over every seed: force " << peak_force << " N, feet's power " << peak_power
+              << " W; lunge " << peak_lunge_force << " N, " << peak_lunge_power << " W\n";
     if (full) {
         require(mode1.size() >= 20, "matron chase: full set needs at least 20 silent seeds");
         require(mode2.size() >= 20, "matron chase: full set needs at least 20 repeated seeds");
+    } else {
+        // The bar below is a share of the seeds: with none it would pass.
+        require(mode1.size() >= 10 && mode2.size() >= 10, "matron chase: the default subset needs 10 seeds a mode");
     }
     // Owner bar, 2026-10-24, superseding the earlier 90% bar: 17/20 passes.
     // The owner is the creator of the documents, so this bar, not the old

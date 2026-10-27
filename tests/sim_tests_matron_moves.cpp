@@ -53,6 +53,21 @@ void run_matron_pace() {
     double worst_speed_step = 0.0;
     double last_speed = -1.0;
     double peak_foot_force_n = 0.0;
+    double peak_foot_power_w = 0.0;
+    double peak_lunge_force_n = 0.0;
+    double peak_lunge_power_w = 0.0;
+    // Her feet's force and power each tick, held to the cap of the drive
+    // that moves her: the Turn lunge's own when it is the lunge, the shared
+    // one for every other step, the Turn's wind-up included.
+    const auto sample_drive = [&](const auto &m) {
+        if (m.climb_lunge_drive) {
+            peak_lunge_force_n = std::max(peak_lunge_force_n, m.climb_force_n);
+            peak_lunge_power_w = std::max(peak_lunge_power_w, m.foot_power_w);
+        } else {
+            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+            peak_foot_power_w = std::max(peak_foot_power_w, m.foot_power_w);
+        }
+    };
     bool gravity_kept = true;
     bool hunted = false;
     std::uint32_t hushes = 0;
@@ -74,9 +89,7 @@ void run_matron_pace() {
         }
         tick(s);
         const auto m = s.matron_state();
-        if (m.turn == 0) {
-            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
-        }
+        sample_drive(m);
         gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         if (m.state != kHunting) {
             last_speed = -1.0;
@@ -92,9 +105,7 @@ void run_matron_pace() {
         }
         last_pace = m.pace;
         top_speed = std::max(top_speed, m.speed);
-        if (m.turn == 0) {
-            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
-        }
+        sample_drive(m);
         gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         if (m.hushed && !was_hushed) {
             ++hushes;
@@ -131,9 +142,13 @@ void run_matron_pace() {
     // landings add a little more. A snap between paces would be 1.5-6 m/s.
     require(worst_speed_step <= 0.3,
             "matron pace: from pace to pace by her feet's acceleration, never a snap");
-    require(gravity_kept && peak_foot_force_n > 500.0 &&
-                peak_foot_force_n <= scraperx::sim::traversal::Limits{}.total_force_n + 1.0,
-            "matron pace: her walking and running drive through her capped force budget with gravity on");
+    std::cout << "  matron pace: her feet's peak " << peak_foot_force_n << " N, " << peak_foot_power_w
+              << " W; the lunge's peak " << peak_lunge_force_n << " N, " << peak_lunge_power_w << " W\n";
+    require(gravity_kept && peak_foot_force_n > 500.0 && peak_foot_force_n <= law::kForceN + 0.5 &&
+                peak_foot_power_w <= law::kPowerW + 0.5,
+            "matron pace: her walking and running drive through her capped force and power budget with gravity on");
+    require(peak_lunge_force_n <= law::kLungeForceN + 0.5 && peak_lunge_power_w <= law::kLungePowerW + 0.5,
+            "matron pace: the Turn lunge drives within its own force and power cap");
     // Determinism: the same run again is the same run.
     std::cout << "PASS scraperx_sim matron pace: paces=" << paces.size() << " top_mps=" << top_speed
               << " worst_step=" << worst_speed_step << " hushes=" << hushes << "\n";
@@ -160,12 +175,20 @@ void run_matron_unstick() {
     double still_s = 0.0;
     double worst_still_s = 0.0;
     double peak_foot_force_n = 0.0;
+    double peak_foot_power_w = 0.0;
+    bool lunge_in_check = true;   // a Turn lunge here is held to its own cap
     bool gravity_kept = true;
     auto last = s.matron_state().position;
     for (int i = 0; i < 420 * 90 && reached.size() < 8; ++i) {
         tick(s);
         const auto m = s.matron_state();
-        peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+        if (m.climb_lunge_drive) {
+            lunge_in_check = lunge_in_check && m.climb_force_n <= law::kLungeForceN + 0.5 &&
+                             m.foot_power_w <= law::kLungePowerW + 0.5;
+        } else {
+            peak_foot_force_n = std::max(peak_foot_force_n, m.climb_force_n);
+            peak_foot_power_w = std::max(peak_foot_power_w, m.foot_power_w);
+        }
         gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         for (int n = 0; n < 8; ++n) {
             if (std::hypot(m.position.x - nodes[n][0], m.position.z - nodes[n][1]) < 2.0) {
@@ -187,9 +210,10 @@ void run_matron_unstick() {
     require(m.alive, "matron unstick: alive on her deck");
     require(reached.size() == 8, "matron unstick: her patrol reaches every node of the deck's loop");
     require(worst_still_s <= 10.0, "matron unstick: no stall she stays in");
-    require(gravity_kept && peak_foot_force_n > 500.0 &&
-                peak_foot_force_n <= scraperx::sim::traversal::Limits{}.total_force_n + 1.0,
-            "matron unstick: patrol and obstacle clamber/vault stay within her capped force budget with gravity on");
+    std::cout << "  matron unstick: her feet's peak " << peak_foot_force_n << " N, " << peak_foot_power_w << " W\n";
+    require(gravity_kept && peak_foot_force_n > 500.0 && peak_foot_force_n <= law::kForceN + 0.5 &&
+                peak_foot_power_w <= law::kPowerW + 0.5 && lunge_in_check,
+            "matron unstick: patrol and obstacle clamber/vault stay within her capped force and power budget with gravity on");
     std::cout << "PASS scraperx_sim matron unstick: nodes=" << reached.size() << " stalls=" << m.stalls
               << " longest_still_s=" << worst_still_s << "\n";
 }

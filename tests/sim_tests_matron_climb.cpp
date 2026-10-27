@@ -25,6 +25,17 @@ using traversal::Failure;
 using traversal::MoveKind;
 using traversal::MoveSpec;
 
+// Her limits in the sim stay inside the owner's laws (sim_tests.hpp): a
+// raise past them does not build until the law itself is changed.
+static_assert(traversal::Limits{}.total_force_n <= law::kForceN, "her shared force cap is the law's 8,000 N at most");
+static_assert(traversal::Limits{}.power_w <= law::kPowerW, "her shared power cap is the law's 22 kW at most");
+static_assert(traversal::Limits{}.leg_travel_m <= law::kLegTravelM, "a push-off's stroke is the law's 0.40 m at most");
+static_assert(traversal::Limits{}.launch_dv_mps <= law::kLaunchDvMps, "a push-off earns the law's 3.80 m/s at most");
+static_assert(traversal::Limits{}.mass_kg == law::kMassKg && Matron::kMassKg == law::kMassKg, "she weighs 220 kg");
+static_assert(Matron::kClimbGripMaxN <= law::kForceN, "her old climb's grip is inside the law's force cap");
+static_assert(Matron::kTurnLungeForceN <= law::kLungeForceN, "the Turn lunge's force cap is the law's 9,800 N at most");
+static_assert(Matron::kTurnLungePowerW <= law::kLungePowerW, "the Turn lunge's power cap is the law's 65 kW at most");
+
 struct ClimbWorld {
     detail::JoltRuntimeLease runtime;
     detail::BroadPhaseLayerInterface layers;

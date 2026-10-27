@@ -11,6 +11,8 @@ static_assert(MatronRoutecraft::kForce == traversal::Limits{}.total_force_n,
     "routecraft force cap follows the shared traversal limits");
 static_assert(MatronRoutecraft::kPower == traversal::Limits{}.power_w,
     "routecraft power cap follows the shared traversal limits");
+static_assert(MatronRoutecraft::kForce <= ::law::kForceN && MatronRoutecraft::kPower <= ::law::kPowerW,
+    "routecraft caps stay inside the owner's laws (sim_tests.hpp)");
 
 struct MatronRoutecraftTestAccess {
     struct Waypoint {

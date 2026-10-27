@@ -50,6 +50,9 @@ const ACT_RIM := Vector2(18.0, -158.0)
 const ACT_LAP_NORTH := Vector2(20.6, -134.5)
 const ACT_LAP_SOUTH := Vector2(20.6, -143.5)
 const ACT_GRAB_TRIES := 3   # her reaches at the ankle of the changed chase before it fails
+# A climb stage with no time limit still ends when he is stuck: about six
+# times the one-armed climb (a 22 m stage at 0.45 m/s takes about 49 s).
+const ACT_STUCK_CAP_S := 300.0
 const WELL_A_CAGE_ENTITY := 2000
 # Frames a screenshot holds the simulation still: enough to draw a few after
 # drawing comes back on.
@@ -141,18 +144,19 @@ func _act_log(tag: String) -> void:
 
 
 # _wait_until, noting every stage she passes through and logging now and then.
-# A timeout <= 0 means no timeout: wait until the condition holds or a death
+# A timeout <= 0 means no time limit: wait until the condition holds or a death
 # ends the run. Used for the one-armed player climb, which is slow by design
-# and must not fail a time test.
+# and must not fail a time test; a stuck climb still ends at ACT_STUCK_CAP_S.
 func _act_wait(condition: Callable, timeout: float, tag: String) -> bool:
 	var waited := 0.0
 	var next_log := 0.0
+	var cap := timeout if timeout > 0.0 else ACT_STUCK_CAP_S
 	while true:
 		_act_stages_seen[int(_matron_state()["stage"])] = true
 		if bool(condition.call()):
 			return true
-		if (timeout > 0.0 and waited >= timeout) or int(_native().get_death_count()) > _act_deaths_allowed:
-			_act_log(tag + ("_timeout" if timeout > 0.0 and waited >= timeout else "_died"))
+		if waited >= cap or int(_native().get_death_count()) > _act_deaths_allowed:
+			_act_log(tag + (("_timeout" if timeout > 0.0 else "_stuck") if waited >= cap else "_died"))
 			return false
 		if waited >= next_log:
 			_act_log(tag)
