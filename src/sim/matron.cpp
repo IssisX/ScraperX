@@ -208,7 +208,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
 
     // The locker: solid from the start, and for good.
     BodyCreationSettings cabinet(new BoxShape(Vec3(kLockerHalfX, kLockerHalfY, kLockerHalfZ)),
-                                 RVec3(kLockerX, kDeckTop + kLockerHalfY, kLockerZ), Quat::sIdentity(),
+                                 RVec3(kLockerX, kLockerY + kLockerHalfY, kLockerZ), Quat::sIdentity(),
                                  EMotionType::Static, static_cast<ObjectLayer>(static_layer));
     cabinet.mUserData = kLockerEntity;
     locker_body_ = bodies.CreateAndAddBody(cabinet, EActivation::DontActivate);
@@ -265,7 +265,7 @@ void Matron::spawn_body() {
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
-    bodies.SetPositionAndRotation(body_, RVec3(kLockerX, kDeckTop + kStandCentre + 0.02F, kSpawnZ), Quat::sIdentity(),
+    bodies.SetPositionAndRotation(body_, RVec3(kLockerX, home_y_ + kStandCentre + 0.02F, kSpawnZ), Quat::sIdentity(),
                                   EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
     bodies.AddBody(body_, EActivation::Activate);
@@ -278,6 +278,32 @@ void Matron::spawn_body() {
     foot_power_w_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
+}
+
+bool Matron::set_home(const float deck_top) {
+    int found = -1;
+    for (std::size_t i = 0; i < levels_.size(); ++i) {
+        if (static_cast<int>(i) != bay_level_ && std::abs(levels_[i].floor_y - deck_top) < 0.01F) {
+            found = static_cast<int>(i);
+            break;
+        }
+    }
+    if (found < 0) {
+        return false;
+    }
+    home_y_ = levels_[static_cast<std::size_t>(found)].floor_y;
+    home_level_ = found;
+    physics_.GetBodyInterface().SetPosition(locker_body_, RVec3(kLockerX, home_y_ + kLockerHalfY, kLockerZ),
+                                            EActivation::DontActivate);
+    if (!body_in_world_) {
+        level_ = home_level_;
+        feet_y_ = home_y_;
+        lead_floor_ = home_y_;
+        patrol_ = 0;
+        patrol_node_ = 2;
+    }
+    refresh_view();
+    return true;
 }
 
 void Matron::place_for_test(const RVec3 feet) {
@@ -2288,7 +2314,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     };
     // How far the player's noise carries to her ear this tick (none: 0 loud),
     // and how far it reaches.
-    const RVec3 locker_ear(kLockerX, kDeckTop + kLockerHalfY, kLockerZ);
+    const RVec3 locker_ear(kLockerX, home_y_ + kLockerHalfY, kLockerZ);
     const RVec3 ear = body_in_world_ ? body_at : locker_ear;
     const float player_reach = loudness * kFullHearingM * hearing;
     const float player_carry = loudness > 0.0F && Vec3(player - ear).Length() <= player_reach
@@ -3401,7 +3427,7 @@ void Matron::restore(const Saved &saved) {
         leaps_ = 0;
         unrigs_ = 0;
         guess_line_ = -1;
-        lead_floor_ = kDeckTop;
+        lead_floor_ = home_y_;
         restore_line();
         guess_climb_ = -1;
         release_climb(false);
@@ -3418,11 +3444,11 @@ void Matron::restore(const Saved &saved) {
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
         unrig_way_ = -1;
-        // Back on her deck, off whatever she rode.
-        level_ = 0;
+        // Back on her home deck, off whatever she rode.
+        level_ = home_level_;
         patrol_ = 0;
         patrol_node_ = 2;
-        feet_y_ = kDeckTop;
+        feet_y_ = home_y_;
         riding_ = false;
         let_go_s_ = 0.0F;
         restore_pipe();
@@ -4060,7 +4086,7 @@ void Matron::refresh_view() {
         view_.z = float(at.GetZ());
     } else {
         view_.x = kLockerX;
-        view_.y = kDeckTop + kStandCentre;
+        view_.y = home_y_ + kStandCentre;
         view_.z = kLockerZ;
     }
     // Second climb hold + feet support: VIEW PLUMBING ONLY. Nothing here
@@ -4089,13 +4115,24 @@ void Matron::refresh_view() {
             // here, so their candidate stays reported-but-unknown and
             // the rig keeps the single-hold pose rather than posing a
             // wrist to a point no surface was ever shown under.
+            const ClimbBodyFilter filter(body_, player_);
+            BodyID rests_body;
+            SubShapeID rests_member;
             if (shown.rungs_across) {
-                const ClimbBodyFilter filter(body_, player_);
-                BodyID rests_body;
-                SubShapeID rests_member;
                 view_.climb_hand2_known =
                     hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member) &&
                     rests_body == shown.hold_body && rests_member == shown.hold_member;
+            } else {
+                // Journey and routecraft climbs: both hands on the wall
+                // whenever a surface is really there, her left first, then
+                // her right; the point is only shown, never held.
+                const RVec3 right = view_.climb_hand - left.Normalized() * 0.45F;
+                if (hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member)) {
+                    view_.climb_hand2_known = true;
+                } else if (hand_rests_on(physics_.GetNarrowPhaseQuery(), right, filter, rests_body, rests_member)) {
+                    view_.climb_hand2 = right;
+                    view_.climb_hand2_known = true;
+                }
             }
         }
     }

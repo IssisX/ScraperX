@@ -1630,6 +1630,7 @@ void dump_scan(const traversal::AffordanceMap &map, const char *path) {
 
 void test_tower_scan() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     (void)s.advance_frame(0.1);
     const traversal::AffordanceMap &map = s.matron_affordances();
     const auto &st = map.stats();
@@ -1723,6 +1724,7 @@ bool journey_leg(Simulation &s, const traversal::AffordanceMap &map, const doubl
 
 void test_tower_journeys() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     (void)s.advance_frame(0.1);
     const traversal::AffordanceMap &map = s.matron_affordances();
     const double ups[] = {132.0, 143.0, 154.0, 176.25};
@@ -1736,6 +1738,7 @@ void test_tower_journeys() {
     // Held-out exam, a gap the inventory lists as blocked (no pole grip).
     // Nothing in the runtime path knows this pole.
     Simulation e(InitialSpawn::Deck154);
+    e.place_matron_home(154.0F);
     (void)e.advance_frame(0.1);
     const traversal::AffordanceMap &m = e.matron_affordances();
     require(journey_leg(e, m, 176.25, 90.0), "Matron climbs to 176.25 for the standpipe exam");
@@ -1818,6 +1821,7 @@ void run_matron_towers() {
 void test_player_unchanged() {
     const auto climb = [](const bool with_her, double &seconds, double &top) {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted, "player climb: settle");
         if (with_her) require(s.debug_matron_travel(132.0), "player climb: she sets off down the stack");
         const double t0 = s.snapshot().simulation_time_seconds;
@@ -1839,6 +1843,7 @@ void test_player_unchanged() {
     // climb is the same as alone.
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted, "player climb: settle");
         require(s.debug_matron_travel(176.25), "player climb: she sets off up the stack");
         const double t0 = s.snapshot().simulation_time_seconds;
@@ -1908,6 +1913,7 @@ void run_matron_climb_scan() {
 // and her gravity. Nothing here names a deck, a ladder or a route.
 void run_matron_tower_proof() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     (void)s.advance_frame(0.1);
     const traversal::AffordanceMap &map = s.matron_affordances();
     const auto &regions = map.regions();
@@ -2063,6 +2069,7 @@ void run_matron_ladders() {
         {4.5F, -119.25F, "under the solid tier 2 slab, 14.68-14.80 m: no hatch; no floor at the foot on the open side"},
     };
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     (void)s.advance_frame(0.1);
     const traversal::AffordanceMap &map = s.matron_affordances();
     const auto &edges = map.edges();

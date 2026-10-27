@@ -318,6 +318,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("place_matron_home", "deck_top"), &ScraperXSimulation::place_matron_home);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
@@ -393,6 +394,10 @@ bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spaw
     simulation_ = std::make_unique<sim::Simulation>(
         static_cast<sim::InitialSpawn>(static_cast<std::uint8_t>(initial_spawn)));
     return true;
+}
+
+bool ScraperXSimulation::place_matron_home(const double deck_top) {
+    return simulation_->place_matron_home(static_cast<float>(deck_top));
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {

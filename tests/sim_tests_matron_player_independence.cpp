@@ -82,6 +82,7 @@ void compare(const Frame &a, const Frame &b, const Trial &trial, int placement, 
 
 Tape replay(const Trial &trial, int placement, const Tape *reference) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     // Held waiting fixtures retain the native Pest stage, fixed creep pace,
     // and constructor seed (Matron 0x9E3779B9); only her anchor varies.
     s.debug_matron_patrol();
