@@ -43,6 +43,11 @@ Every decision put to the owner is two or three short lines: what it is, Claude'
 the owner answers with. No block of text, no table of numbers or file names. The detail lives in the
 document the item links to, never in the message.
 
+2026-10-27, 4:00 PM Central: *"If I don't answer your questions within a reasonable amount of time
+to keep the coding flowing, go with your recommendations. Let's go with 5 or 10 minutes."* A
+question with no answer after 10 minutes is decided by the pick it carried: say so on the work's
+issue, go on, and the owner can still overturn it later.
+
 ## Times are Central, never UTC
 
 2026-10-18, again 2026-10-20 and 2026-10-27: *"Are you using UTC or Central Time Chicago like you
@@ -56,6 +61,15 @@ Said more than once (2026-10-21, 2026-10-22: *"I don't like that so many tests f
 minuscule distances ... yes, you can change geometry"*). When a test or route fails by a small
 distance (a few cm to about 0.2 m), a small, unnoticeable change to the world's geometry is allowed
 and preferred over reworking code. Say so when you use one. Test assertions still never weaken.
+
+## Human sounds are real, never synthesized in code
+
+2026-10-27, after listening to her new bank: *"you can't create a voice with some sort of synthesized
+shit like that. It never works. That's why I had you make new stuff, because we had the same shit.
+So you just did the same shit."* A human sound (a voice, a growl, a laugh, breath, a body's effort)
+and gore foley (a rip, a strain, a swallow) is a real recording cleared for the game (CC0, its source
+written down), or a voice made the way the climber's fear yells were (`src/voice/generate_fall_voice.py`).
+Code may still make steel, air, steps and beds. The owner picks the candidates by ear.
 
 ## Managing the agents for the owner
 
@@ -71,6 +85,14 @@ a phone"*, then *"Way better ... keep trying to manage our processes in a more i
 - Progress over testing (2026-10-22: *"we want them to figure out hard coding problems and make
   progress, not just test shit"*). Give agents real problems to solve in code; tests are the proof,
   not the job. A blocker is reported only after a real attempt at the fix. Reports stay short.
+- Hand out the hard work (2026-10-27, 6:00 PM: *"give them jobs that you would have to do if they
+  weren't here to do them for you, making progress quicker. And always do this. And don't give them
+  cheap, weak shit. They are intelligent ... know what they're handling ... always making progress
+  towards the difficult stuff. Efficiently"*). Whenever your own queue holds hard work another agent
+  can own, hand it out on issue #3, whole: the goal, why it is hard, the laws, the files, the finish
+  facts. Know what each agent holds before you assign. Check issue #3 often (every 30 minutes: the
+  owner watches usage too) and post there only when something changed. ChatGPT is not one of the
+  agents (2026-10-27: *"ChatGPT is not part of this"*).
 - This holds for all work, not only climbing. Issue #3 is the climbing lab; work on anything else
   gets its own GitHub issue with its own short board in the same format, linked once from #3.
 

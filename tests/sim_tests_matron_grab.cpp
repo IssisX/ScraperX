@@ -1,8 +1,9 @@
-// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): fully changed,
+// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): at every stage,
 // her hand on a player is no death. She takes an ankle, carries them upside
-// down to the shaft's rail, holds them out over the drop and lets go aimed
-// at a ledge, or sets them back on the deck. Her grip is finite: a still
-// body hangs; a thrashing one tears free. Nothing teleports.
+// down to the shaft's rail, holds them out over the drop, tears an arm off,
+// and lets go aimed at a ledge, or sets them back on the deck. Her grip is
+// finite: a still body hangs; a thrashing one tears free. Nothing teleports.
+// These meet her fully changed, as written; her stage changes none of it.
 
 #include "sim_tests.hpp"
 
@@ -175,6 +176,7 @@ void run_matron_grab() {
     std::uint64_t hash_a = 0;
     for (int pass = 0; pass < 2; ++pass) {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(0, 3.0);
         const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
@@ -207,6 +209,7 @@ void run_matron_grab() {
     // ---- thrashing: the kicks strain her grip till it tears ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(0, 6.0);
         const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
@@ -225,6 +228,7 @@ void run_matron_grab() {
     // ---- spared: set back on the deck, and she walks off ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(1, 3.0);
         const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
@@ -240,6 +244,40 @@ void run_matron_grab() {
                 "matron grab: spared, she walks off and leaves them be a while");
         std::cout << "PASS scraperx_sim matron grab spare: player_y=" << r.p.player_position.y << "\n";
     }
+    // ---- a still body caught by the east band's rail, at nine spots 0.5 m
+    //      apart (the act's rail): her heave over it tears her grip at some
+    //      (the body hooked on the rail); there she takes the body again where
+    //      it lands and the arm comes off there. Every catch, one arm for sure
+    //      (Cory, 2026-10-27); no claim, no death ----
+    {
+        std::uint32_t retaken = 0;
+        for (int k = 0; k < 9; ++k) {
+            const double z = -160.0 + 0.5 * k;
+            Simulation s(InitialSpawn::Deck154);
+            s.place_matron_home(154.0F);
+            require(s.advance_frame(1.0).accepted, "matron rail: settle");
+            (void)s.matron_affordances();   // her own scan, as in play
+            s.debug_launch_player(scraperx::sim::Vector3{18.0, 154.95, z}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            for (int i = 0; i < 90; ++i) {
+                tick(s);
+            }
+            s.debug_place_matron(scraperx::sim::Vector3{18.3, 154.0, z + 1.6});
+            const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
+                s.debug_set_matron_stage(1);
+                (void)s.set_move_input(0.0, 0.0);
+            });
+            std::cout << "  matron rail: z " << z << ", grabs " << r.m.grabs << " torn " << r.m.grips_torn
+                      << " retakes " << r.m.retakes << " armplays " << r.m.armplays << " tears "
+                      << r.p.arm_tear_count << " claims " << r.m.claims << " deaths " << r.deaths_start << "->"
+                      << r.deaths_end << " (held " << r.deaths_held << "), ended " << r.ended << "\n";
+            require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm,
+                    "matron rail: a still body caught by the rail loses one arm, wherever her heave goes");
+            require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                    "matron rail: one arm gone, no claim and no death");
+            retaken += r.m.retakes > 0 ? 1U : 0U;
+        }
+        std::cout << "PASS scraperx_sim matron rail: 9 spots, one arm each, retaken at " << retaken << "\n";
+    }
 }
 
 void run_matron_arm() {
@@ -247,6 +285,7 @@ void run_matron_arm() {
     //      shown, thrown; the player one-armed till a death ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(0, 3.0);
         s.debug_matron_armplay(1);
@@ -331,6 +370,7 @@ void run_matron_arm() {
     // ---- the second arm: she has won; the run ends and starts again whole ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_lose_arm(0);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(0, 3.0);
@@ -366,6 +406,7 @@ void run_matron_arm() {
     // ---- two grabs, two tears, the ending: nothing faked between them ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         meet_her(s, -6.0, -129.0);
         s.debug_matron_hold(1, 3.0);   // the first: set back on her deck
         s.debug_matron_armplay(1);
@@ -435,6 +476,7 @@ void run_matron_arm() {
 // body in a new run. No death is counted: the run was hers.
 void run_matron_fatality() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_lose_arm(0);
     meet_her(s, -6.0, -129.0);
     s.debug_matron_hold(0, 3.0);
@@ -603,6 +645,7 @@ void run_one_arm_route() {
     // At the dead point: caught.
     {
         Simulation s(InitialSpawn::Deck154, one_arm_route());
+        s.place_matron_home(154.0F);
         s.debug_lose_arm(0);
         require(hang_on_lower(s), "one arm route: caught one-handed on the lower lip");
         const auto h = s.snapshot();
@@ -639,6 +682,7 @@ void run_one_arm_route() {
     // Early: the hand finds nothing, and the body falls.
     {
         Simulation s(InitialSpawn::Deck154, one_arm_route());
+        s.place_matron_home(154.0F);
         s.debug_lose_arm(1);
         require(hang_on_lower(s), "one arm route: caught (left hand)");
         require(s.snapshot().hang_hand_side == 0, "one arm route: the hang is on the left hand");
@@ -657,6 +701,7 @@ void run_one_arm_route() {
     // Two arms: no lunge or heel hook; the plain pull-up still.
     {
         Simulation s(InitialSpawn::Deck154, one_arm_route());
+        s.place_matron_home(154.0F);
         require(hang_on_lower(s) && s.snapshot().hang_hand_side == -1, "one arm route: two hands, centred");
         (void)s.request_traversal();
         for (int i = 0; i < 180; ++i) {

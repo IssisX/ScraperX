@@ -326,8 +326,8 @@ private:
         const JPH::Body &player = player_first ? first : second;
         const JPH::Body &other = player_first ? second : first;
         const std::uint64_t entity = other.GetUserData();
-        // Her body is not a blow: what her hands do decides (matron.hpp, the
-        // stages), a shove before she is fully changed.
+        // Her body is not a blow: what her hands do decides (matron.hpp, her
+        // hands): her hold, or while it cannot be, a shove.
         if (other.IsSensor() || (entity >= kCorpseEntityBase && entity < kCorpseEntityBase + 0x10000) ||
             entity == Matron::kEntity) {
             return;

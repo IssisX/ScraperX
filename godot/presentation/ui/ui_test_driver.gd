@@ -264,6 +264,10 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 		main.uncanny_profile_override = main.uncanny_profile_for_start(main._settings.start_at)
 	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[played]))):
 		return false
+	# Scenarios started on the 154 m deck were written with her home there:
+	# keep it there (the game's home is the stack's deck 1).
+	if int(SCENARIOS[played]) == 11:
+		main._native.place_matron_home(154.0)
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if played in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
 			"touch_wall_run", "touch_hang_drop",

@@ -207,11 +207,14 @@ public:
     [[nodiscard]] godot::Dictionary get_swing_state() const;
     [[nodiscard]] godot::Dictionary get_summit_state() const;
     [[nodiscard]] godot::Dictionary get_matron_state() const;
+    // Test setup: her home deck (Simulation::place_matron_home), after configure_initial_spawn.
+    bool place_matron_home(double deck_top);
     // Her hands on the player: the hold, the arms, the fatality and the
     // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
+    void prepare_matron();
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;

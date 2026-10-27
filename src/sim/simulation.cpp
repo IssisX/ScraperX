@@ -562,6 +562,9 @@ void Simulation::step_fixed() noexcept {
         // She won: the run ends and starts again, the body whole.
         physics_world_.reset();
         physics_world_ = std::make_unique<PhysicsWorld>(initial_spawn_, test_extra_solids_);
+        if (matron_home_ >= 0.0F) {
+            physics_world_->place_matron_home(matron_home_);
+        }
         ++runs_ended_by_matron_;
     }
     sling_action_ = false;
@@ -1072,17 +1075,17 @@ void Simulation::debug_place_matron(const Vector3 feet) noexcept {
         JPH::RVec3(static_cast<float>(feet.x), static_cast<float>(feet.y), static_cast<float>(feet.z)));
 }
 
-bool Simulation::debug_matron_climb(const int connector, const bool down) noexcept {
-    return physics_world_->matron().climb_for_test(static_cast<routes::Connector>(connector), down);
+bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexcept {
+    return physics_world_->matron().climb_for_test(pipe, down);
+}
+
+void Simulation::debug_matron_rule_out_pipe() noexcept {
+    physics_world_->matron().rule_out_pipe_for_test();
 }
 
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
-}
-
-void Simulation::debug_matron_only_way(const std::size_t index) noexcept {
-    physics_world_->matron().only_way_for_test(index);
 }
 
 void Simulation::debug_matron_let_go() noexcept {
@@ -1166,6 +1169,10 @@ void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
 }
 
+void Simulation::debug_hold_matron_grab(const bool held) noexcept {
+    physics_world_->matron().hold_grab_for_test(held);
+}
+
 void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 at, const Vector3 velocity) noexcept {
     physics_world_->launch_kit_body_for_test(
         body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
@@ -1236,6 +1243,10 @@ bool Simulation::request_matron_climb_goal(Vector3 goal, Vector3 facing) {
 void Simulation::cancel_matron_climb_goal() { physics_world_->matron().cancel_climb_goal(); }
 int Simulation::matron_climb_status() const { return int(physics_world_->matron().climb_report().status); }
 std::uint32_t Simulation::matron_climb_queries() const { return physics_world_->matron().climb_report().native_queries; }
+bool Simulation::place_matron_home(const float deck_top) {
+    matron_home_ = deck_top;
+    return physics_world_->place_matron_home(deck_top);
+}
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
 double Simulation::debug_matron_gravity_factor() const noexcept {
@@ -1284,6 +1295,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.releases = view.releases;
     result.spares = view.spares;
     result.grips_torn = view.grips_torn;
+    result.retakes = view.retakes;
     result.brace_losses = view.brace_losses;
     result.carry_drops = view.carry_drops;
     result.arm_tears = view.arm_tears;
@@ -1352,8 +1364,6 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.down_s = view.down_s;
     result.down_left_s = view.down_left_s;
     result.on_pipe = view.on_pipe;
-    result.route_edges = view.route_edges;
-    result.route_failures = view.route_failures;
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
