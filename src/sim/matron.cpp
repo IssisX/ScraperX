@@ -595,6 +595,81 @@ const Matron::FloorGraph &Matron::floor_graph() const {
             scan_of.push_back(static_cast<int>(i));
         }
     }
+    // The scan's own links between those tops (on foot, a step apart).
+    std::vector<std::pair<int, int>> scan_pairs;
+    if (scanned) {
+        std::vector<int> local(scanned_->patches().size(), -1);
+        for (std::size_t i = 0; i < patches.size(); ++i) {
+            local[static_cast<std::size_t>(scan_of[i])] = static_cast<int>(i);
+        }
+        const std::vector<std::vector<int>> &scan_links = scanned_->patch_links();
+        for (std::size_t i = 0; i < patches.size(); ++i) {
+            for (const int q : scan_links[static_cast<std::size_t>(scan_of[i])]) {
+                const int j = local[static_cast<std::size_t>(q)];
+                if (j > static_cast<int>(i)) {
+                    scan_pairs.emplace_back(static_cast<int>(i), j);
+                }
+            }
+        }
+    }
+    // A long floor is cut where another meets it along its side (a band
+    // where the next band joins it): the square they share is a floor of
+    // its own, so her way turns in its middle, down each one's middle line.
+    std::vector<FloorPatch> pieces;
+    std::vector<int> piece_of;
+    for (std::size_t i = 0; i < patches.size(); ++i) {
+        const FloorPatch &p = patches[i];
+        const bool along_x = p.max_x - p.min_x >= p.max_z - p.min_z;
+        const float lo = along_x ? p.min_x : p.min_z;
+        const float hi = along_x ? p.max_x : p.max_z;
+        std::vector<float> cuts;
+        for (const std::pair<int, int> &l : scan_pairs) {
+            if (l.first != static_cast<int>(i) && l.second != static_cast<int>(i)) {
+                continue;
+            }
+            const FloorPatch &q = patches[static_cast<std::size_t>(l.first == static_cast<int>(i) ? l.second : l.first)];
+            const float a = std::max(lo, along_x ? q.min_x : q.min_z);
+            const float b = std::min(hi, along_x ? q.max_x : q.max_z);
+            if (b - a < 2.0F * kRadius + 0.4F) {
+                continue;   // meets it end on, or by less than her width
+            }
+            for (const float c : {a, b}) {
+                if (c > lo + 1.0F && c < hi - 1.0F) {
+                    cuts.push_back(c);
+                }
+            }
+        }
+        std::sort(cuts.begin(), cuts.end());
+        float from = lo;
+        cuts.push_back(hi);
+        for (const float c : cuts) {
+            if (c - from < 0.5F && c < hi) {
+                continue;
+            }
+            FloorPatch piece = p;
+            (along_x ? piece.min_x : piece.min_z) = from;
+            (along_x ? piece.max_x : piece.max_z) = c;
+            pieces.push_back(piece);
+            piece_of.push_back(static_cast<int>(i));
+            from = c;
+        }
+    }
+    std::vector<std::pair<int, int>> static_links;
+    for (std::size_t a = 0; a < pieces.size(); ++a) {
+        for (std::size_t b = a + 1; b < pieces.size(); ++b) {
+            const int pa = piece_of[a];
+            const int pb = piece_of[b];
+            bool joined = pa == pb;
+            for (const std::pair<int, int> &l : scan_pairs) {
+                joined = joined || (l.first == std::min(pa, pb) && l.second == std::max(pa, pb));
+            }
+            if (joined && rect_gap(pieces[a].min_x, pieces[a].max_x, pieces[a].min_z, pieces[a].max_z, pieces[b].min_x,
+                                   pieces[b].max_x, pieces[b].min_z, pieces[b].max_z) <= (pa == pb ? 0.01F : 0.25F)) {
+                static_links.emplace_back(static_cast<int>(a), static_cast<int>(b));
+            }
+        }
+    }
+    patches = std::move(pieces);
     const std::size_t statics = patches.size();
     if (statics > 0) {
         float lo_x = patches[0].min_x, hi_x = patches[0].max_x, lo_z = patches[0].min_z, hi_z = patches[0].max_z;
@@ -639,22 +714,10 @@ const Matron::FloorGraph &Matron::floor_graph() const {
         g.links[static_cast<std::size_t>(a)].push_back({b, gap});
         g.links[static_cast<std::size_t>(b)].push_back({a, gap});
     };
-    // On foot: the scan's own links between its tops, and a held floor to
-    // whatever it touches a step apart.
-    if (scanned) {
-        std::vector<int> local(scanned_->patches().size(), -1);
-        for (std::size_t i = 0; i < statics; ++i) {
-            local[static_cast<std::size_t>(scan_of[i])] = static_cast<int>(i);
-        }
-        const std::vector<std::vector<int>> &scan_links = scanned_->patch_links();
-        for (std::size_t i = 0; i < statics; ++i) {
-            for (const int q : scan_links[static_cast<std::size_t>(scan_of[i])]) {
-                const int j = local[static_cast<std::size_t>(q)];
-                if (j > static_cast<int>(i)) {
-                    link(static_cast<int>(i), j, false);
-                }
-            }
-        }
+    // On foot: the scan's own links (cut floors to their pieces), and a
+    // held floor to whatever it touches a step apart.
+    for (const std::pair<int, int> &l : static_links) {
+        link(l.first, l.second, false);
     }
     const auto gap_of = [&g](const std::size_t a, const std::size_t b) {
         const FloorPatch &p = g.patches[a];
