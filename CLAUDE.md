@@ -43,6 +43,13 @@ Every decision put to the owner is two or three short lines: what it is, Claude'
 the owner answers with. No block of text, no table of numbers or file names. The detail lives in the
 document the item links to, never in the message.
 
+## Times are Central, never UTC
+
+2026-10-18, again 2026-10-20 and 2026-10-27: *"Are you using UTC or Central Time Chicago like you
+should? If using UTC, please switch permanently."* Every time given to the owner, in chat, on
+GitHub or in a document, is US Central, read with `TZ=America/Chicago date` ("4:41 PM Central"),
+never a fixed offset. CI, GitHub and `date` report UTC: convert before writing a time down.
+
 ## Near misses: tweak the world, don't rework her
 
 Said more than once (2026-10-21, 2026-10-22: *"I don't like that so many tests fail for such
