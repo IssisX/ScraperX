@@ -906,6 +906,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         feet_budget_lunge_ = true;
     }
     traversal::Budget &budget = feet_budget_;
+    bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
         if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
@@ -922,7 +923,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             foot_drive_dv_ += (granted / kMassKg) * dt;
             foot_force_n_ = budget.used;
             foot_power_w_ = budget.power_used;
-            foot_lunge_ = lunge_push;
+            foot_lunge_ = lunge_draw;
         }
         return granted;
     };
@@ -1536,8 +1537,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
                     const traversal::Limits budget;
-                    const float shove_force = turn_ == Turn::Lunge ? kTurnLungeForceN : budget.total_force_n;
-                    const float shove_power = turn_ == Turn::Lunge ? kTurnLungePowerW : budget.power_w;
+                    // A shove is never the lunge: it stays on her 8 kN and 22 kW.
+                    const float shove_force = budget.total_force_n;
+                    const float shove_power = budget.power_w;
                     const float force_n = std::min(shove_force, shove_power / along);
                     Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                     push /= push.Length();
@@ -1560,7 +1562,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 if (velocity.GetY() < need) {
                     // Up onto it. Her feet are still under its top: they push
                     // down on what they stand on (her sole contact), not on
-                    // the floor ahead she is stepping up to.
+                    // the floor ahead she is stepping up to. A step up is
+                    // walking, never the lunge: in a lunge tick it stays on
+                    // her 8 kN and 22 kW, and is reported as her stride.
+                    budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
+                    budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
+                    lunge_draw = false;
                     board_fy = std::max(0.0F, (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F));
                 }
             }
