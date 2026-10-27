@@ -824,20 +824,19 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
         precision_target_valid_ = false;
     }
-    // Her hands on the player. Fully changed, a death like a lethal fall;
-    // before that a shove (matron.hpp, the stages): a pest's away from her, a
-    // dangerous one's at the shaft's rim when it is near.
+    // Her hands on the player (matron.hpp, the stages): a pest's shove away
+    // from her; dangerous or changed, she takes hold.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
-        if (matron_->kills()) {
-            // Fully changed: no kill on touch. Her hand goes for the ankle
-            // (matron_hold.cpp); what follows is physics.
-            // A body already on a ladder is not an ankle to stoop for. Pulling
-            // him off the first rungs is what kept the climb from ever starting.
-            if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
-                matron_->count_catch();
-                matron_->begin_grab(bodies.GetPosition(player_id_));
-            }
-        } else if (matron_->shove_ready()) {
+        // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
+        // what follows is physics. A body already on a ladder is not an ankle
+        // to stoop for: pulling him off the first rungs is what kept the climb
+        // from ever starting.
+        if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
+            matron_->count_catch();
+            matron_->begin_grab(bodies.GetPosition(player_id_));
+        } else if (!matron_->kills() && matron_->shove_ready()) {
+            // A pest's shove; dangerous, while her hands cannot take hold (a
+            // grab's cooldown, a body on a ladder), the shove at the rim.
             matron_->count_shove();
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
         }
