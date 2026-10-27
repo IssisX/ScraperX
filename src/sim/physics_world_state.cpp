@@ -225,6 +225,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     matron_->drop_stock();
     grab_reset(bodies);
     arm_reset(bodies);   // a death: whole again
+    strike_reset();      // the fist back at guard, no blow pending on her
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();

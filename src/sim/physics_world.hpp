@@ -1021,6 +1021,8 @@ public:
     enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     void read_strike_state() noexcept;
+    void strike_reset() noexcept;
+    [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
     StrikePhase strike_phase_ = StrikePhase::Guard;
     int strike_ticks_ = 0;
     int strike_contact_left_ = 0;

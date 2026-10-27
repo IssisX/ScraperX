@@ -224,8 +224,6 @@ func _read_context() -> Dictionary:
 		# Crouch held raise and lower the forks, Action lets go.
 		action = {"id": &"drive", "icon": &"down", "label": "STEP OFF",
 			"detail": "FORKS %.1f M" % float(forklift["lift_m"])}
-	elif bool(strike["offered"]) and carrying == 0:
-		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "HER"}
 	elif bool(forklift["at_controls"]) and carrying == 0:
 		action = {"id": &"drive", "icon": &"up", "label": "DRIVE", "detail": "THE FORKLIFT"}
 	elif bool(crane["remote_in_reach"]) and carrying == 0:
@@ -366,6 +364,10 @@ func _read_context() -> Dictionary:
 	elif grounded and free and grip:
 		# A hold at hand height: a rung, a pipe, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
+	elif bool(strike["offered"]) and carrying == 0:
+		# Her body close in front and a strike able to start (the native
+		# decides: free, at guard, her hands not on him): Action is a punch.
+		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "HER"}
 	return {
 		"position": position,
 		"velocity": velocity,

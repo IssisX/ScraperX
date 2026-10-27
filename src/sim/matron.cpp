@@ -3,7 +3,6 @@
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
 #include "sim/mechanism_kit.hpp"
-#include <cstdio>
 #include <cstdlib>
 
 #include "sim/zipline.hpp"
@@ -3727,6 +3726,7 @@ void Matron::take_blow(const float dt) {
         state_ == State::Down || state_ == State::Emerging) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
+        clear_player_blow();
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -3793,6 +3793,29 @@ void Matron::take_blow(const float dt) {
             }
             blow_faced_ = blow_faced_ || (!its_low && !its_above && -flat.Dot(facing) >= kBraceCos);
         }
+    }
+    if (!player_blow_ns_.IsNearZero()) {
+        // The player's fist: a striker closing on her by definition, its
+        // impulse along the floor hers.
+        struck = true;
+        impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
+        if (blow_quiet_ >= kBlowQuietTicks) {
+            blow_low_ = false;
+            blow_from_above_ = false;
+            blow_faced_ = false;
+            blow_staggered_ = false;
+            blow_from_ = Vec3::sZero();
+        }
+        blow_low_ = blow_low_ || player_blow_low_;
+        Vec3 flat(float(at.GetX() - player_blow_at_.GetX()), 0.0F, float(at.GetZ() - player_blow_at_.GetZ()));
+        if (flat.LengthSq() > 1.0e-6F) {
+            flat = flat.Normalized();
+            if (blow_from_.IsNearZero()) {
+                blow_from_ = flat;
+            }
+            blow_faced_ = blow_faced_ || (!player_blow_low_ && -flat.Dot(facing) >= kBraceCos);
+        }
+        clear_player_blow();
     }
     if (!struck) {
         if (++blow_quiet_ >= kBlowQuietTicks) {

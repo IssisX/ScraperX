@@ -6,6 +6,10 @@
 #include "physics_world.hpp"
 #include "player_strike_limits.hpp"
 
+#include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -16,7 +20,7 @@ constexpr int kStrikeWindupTicks = 11;    // ~0.12 s drawn back
 constexpr int kStrikeReachTicks = 6;      // ~0.07 s the fist is out
 constexpr int kStrikeRecoilTicks = 16;    // ~0.18 s back to guard
 constexpr int kStrikeContactTicks = 3;    // ~1/30 s the force is held on a landing
-constexpr float kStrikeChestUpM = 0.25F;  // over his body's centre
+constexpr float kStrikeChestUpM = 0.25F;  // over his body's center
 constexpr float kStrikeReachM = 0.75F;    // shoulder to fist, the arm out
 constexpr float kStrikeFistRadiusM = 0.06F;
 constexpr float kStrikeOfferM = 1.6F;     // she is close enough for Action to say punch
@@ -24,11 +28,30 @@ constexpr float kStrikeOfferCos = 0.5F;   // within 60 degrees of his facing
 constexpr float kStrikeMinClosingMps = 0.5F;
 
 // The nearest point on her upright capsule's axis to `p`.
-JPH::RVec3 axis_point(const JPH::RVec3 centre, const float half, const JPH::RVec3 p) noexcept {
-    const double y = std::clamp(p.GetY(), centre.GetY() - half, centre.GetY() + half);
-    return JPH::RVec3(centre.GetX(), y, centre.GetZ());
+JPH::RVec3 axis_point(const JPH::RVec3 center, const float half, const JPH::RVec3 p) noexcept {
+    const double y = std::clamp(p.GetY(), center.GetY() - half, center.GetY() + half);
+    return JPH::RVec3(center.GetX(), y, center.GetZ());
+}
+double c_feet(const JPH::BodyInterface &bodies, const JPH::BodyID her) noexcept {
+    return bodies.GetPosition(her).GetY() - Matron::kHalfHeight - Matron::kRadius;
 }
 } // namespace
+
+// Nothing between his chest and her body: a rail, a bar or a wall in the
+// way takes the fist first.
+bool Simulation::PhysicsWorld::fist_path_clear(const JPH::RVec3 from, const JPH::RVec3 to) const noexcept {
+    const JPH::Vec3 span(to - from);
+    if (span.LengthSq() < 1.0e-6F) {
+        return true;
+    }
+    const JPH::RRayCast ray(from, span);
+    JPH::RayCastResult hit;
+    JPH::IgnoreMultipleBodiesFilter ignore;
+    ignore.Reserve(2);
+    ignore.IgnoreBody(player_id_);
+    ignore.IgnoreBody(matron_->body());
+    return !physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, ignore);
+}
 
 void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const StepCommands &commands,
                                            const float dt) noexcept {
@@ -41,18 +64,22 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     const bool her_here = !her.IsInvalid() && bodies.IsAdded(her);
     const JPH::RVec3 at = bodies.GetPosition(player_id_);
     const JPH::RVec3 chest = at + JPH::Vec3(0.0F, kStrikeChestUpM, 0.0F);
-    // Whether Action offers the punch: her body close in front.
+    const bool free = grip_ == nullptr && !player_free_rot_ && !matron_->claimed() &&
+                      traversal_state_ == TraversalState::None && carried_entity_ == 0;
+    // Whether Action offers the punch: one can start (free, at guard, his
+    // hands empty, her hands not on him or reaching for him) and her body
+    // is close in front.
     strike_offered_ = false;
-    if (her_here) {
+    if (her_here && free && strike_phase_ == StrikePhase::Guard && !matron_->holding() && !matron_->reaching()) {
         const JPH::RVec3 c = bodies.GetPosition(her);
         JPH::Vec3 to(static_cast<float>(c.GetX() - at.GetX()), 0.0F, static_cast<float>(c.GetZ() - at.GetZ()));
         const float d = to.Length();
         strike_offered_ = d < kStrikeOfferM && d > 1.0e-3F && to.Dot(facing) > kStrikeOfferCos * d &&
                           std::abs(static_cast<float>(c.GetY() - at.GetY())) < 1.5F;
     }
-    const bool free = grip_ == nullptr && !player_free_rot_ && !matron_->claimed() &&
-                      traversal_state_ == TraversalState::None;
-    if (commands.strike_requested && strike_phase_ == StrikePhase::Guard && free) {
+    const bool can_start = free && strike_phase_ == StrikePhase::Guard &&
+                           !(her_here && (matron_->holding() || matron_->reaching()));
+    if (commands.strike_requested && can_start) {
         strike_phase_ = StrikePhase::Windup;
         strike_ticks_ = 0;
         strike_landed_ = false;
@@ -74,7 +101,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
             const JPH::RVec3 c = bodies.GetPosition(her);
             const JPH::RVec3 q = axis_point(c, Matron::kHalfHeight, fist);
             const JPH::Vec3 off(fist - q);
-            if (off.Length() <= Matron::kRadius + kStrikeFistRadiusM) {
+            if (off.Length() <= Matron::kRadius + kStrikeFistRadiusM && fist_path_clear(chest, q)) {
                 strike_landed_ = true;
                 strike_contact_left_ = kStrikeContactTicks;
                 const float ol = off.Length();
@@ -98,12 +125,27 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         bodies.AddForce(her, dir * force_n, strike_point_, JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
         strike_impulse_ns_ += force_n * dt;
+        // Read by her balance as a blow (matron.cpp take_blow).
+        const bool low = static_cast<float>(strike_point_.GetY() - c_feet(bodies, her)) < 0.5F;
+        matron_->struck_by_player(dir * (force_n * dt), strike_point_, low);
         --strike_contact_left_;
     }
     if (strike_phase_ == StrikePhase::Recoil && strike_ticks_ >= kStrikeRecoilTicks) {
         strike_phase_ = StrikePhase::Guard;
         strike_ticks_ = 0;
     }
+}
+
+void Simulation::PhysicsWorld::strike_reset() noexcept {
+    strike_phase_ = StrikePhase::Guard;
+    strike_ticks_ = 0;
+    strike_contact_left_ = 0;
+    strike_landed_ = false;
+    strike_offered_ = false;
+    strike_point_ = JPH::RVec3::sZero();
+    strike_normal_ = JPH::Vec3::sZero();
+    strike_impulse_ns_ = 0.0F;
+    matron_->clear_player_blow();
 }
 
 void Simulation::PhysicsWorld::read_strike_state() noexcept {
