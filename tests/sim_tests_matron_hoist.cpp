@@ -19,6 +19,7 @@ using scraperx::sim::Vector3;
 
 void ride(const char *name, const Vector3 start, const double goal_y) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_place_matron(start);
     for (int i = 0; i < 30; ++i) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);

@@ -1379,6 +1379,8 @@ void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JP
 } // namespace scraperx::sim
 
 namespace scraperx::sim {
+bool Simulation::PhysicsWorld::place_matron_home(const float deck_top) { return matron_->set_home(deck_top); }
+
 void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     Matron::Saved saved; saved.state = Matron::State::Hunting;
     matron_->restore(saved);

@@ -113,6 +113,7 @@ void run_arm_break() {
     }
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted, "arm: settle on the deck");
         // Crouched, not to wake her, along the north band and up the line's ramp.
         (void)s.set_crouch_input(true);
@@ -155,6 +156,7 @@ void run_arm_break() {
         // then up the ladder to the 176 ring, one-armed until it heals. (The
         // sprint wakes her; she is out as the climb is well under way.)
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted && to_the_run_up(s), "arm: back along the band");
         bool struck = false;
         for (int i = 0; i < 6 * hz && !struck; ++i) {
@@ -234,6 +236,7 @@ void run_arm_break() {
     };
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         (void)s.set_crouch_input(true);
         require(s.advance_frame(1.0).accepted && walk_to(s, 1.0, -128.5, 20.0, 0.3) && walk_to(s, 3.0, -132.36, 8.0, 0.3) &&
                     walk_to(s, 6.0, -132.36, 10.0, 0.12),
@@ -245,6 +248,7 @@ void run_arm_break() {
     }
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted && to_the_run_up(s), "arm: back along the band again");
         bool struck = false;
         for (int i = 0; i < 6 * hz && !struck; ++i) {
