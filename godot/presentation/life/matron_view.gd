@@ -9,9 +9,11 @@ extends Node3D
 ## only what her state and the metres she has walked make of it.
 ##
 ## Her gaits: stooped and dragging when unaware, snapping her head about when
-## she has lost the player, and on the hunt down on all fours in a stuttering
-## scuttle (the pose is held and snaps from one to the next, as film that has
-## dropped frames does), head cocked on a neck that keeps looking at you.
+## she has lost the player, and on the hunt down on all fours in a fast,
+## jerking scuttle, head cocked on a neck that keeps looking at you. Every
+## move of hers is drawn through: her body between the simulation's ticks
+## (render_position, render_yaw), her joints never faster than a joint turns
+## (POSE_RAD_S), her hands reaching to each new hold. Nothing jumps a frame.
 
 const DECK := 154.0
 const LOCKER_CENTRE := Vector3(11.0, 155.1, -126.2)
@@ -38,6 +40,18 @@ const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
 const STEP_M := 0.7
 const HEARD_MUSIC_M := 55.0
+# How fast her drawn joints may go to the pose her state asks for: a body's
+# limbs whip round this fast, and a change of gait or state is that whip,
+# not a jump. Her hips' height and her limbs' swell likewise.
+const POSE_RAD_S := 20.0
+const POSE_HIP_M_S := 4.0
+const POSE_SCALE_S := 3.0
+# Her whole figure turned or laid over (toppled, head down her pipe).
+const FIGURE_RAD_S := 20.0
+# Her hands onto each new hold: most of the way in a tenth of a second.
+const HAND_EASE := 22.0
+const POSE_KEYS := ["torso", "neck", "head", "jaw", "sh_l", "sh_r", "el_l", "el_r",
+	"hp_l", "hp_r", "kn_l", "kn_r", "an_l", "an_r"]
 
 # Her proportions: long in the limb, narrow in the chest.
 const THIGH := 0.46
@@ -60,6 +74,20 @@ var _player_d := 20.0   # her last distance to the player, for her dread
 var _last_step := 0
 var _last_pos := Vector3.ZERO
 var _fall_speed := 0.0
+# Her facing as drawn this frame (between ticks), and her joints, hips, limb
+# swell and figure as last drawn. Fresh: drawn where the pose is (she has
+# just come into sight, or been put somewhere).
+var _drawn_yaw := 0.0
+var _pose_pivots: Array[Node3D] = []
+var _pose_shown := PackedVector3Array()
+var _scale_shown := PackedVector3Array()
+var _hip_shown := Vector3.ZERO
+var _figure_shown := Quaternion.IDENTITY
+var _pose_fresh := true
+# Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
+# for these).
+var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
+var _hands_fresh := true
 var _was_seen := false
 var _last_turn := 0
 var _cry_fall := false
@@ -600,10 +628,73 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	if _rig == null:
 		return
 	_crawl_retune(data, falling)
+	_ease_pose(delta)
 	_rig.apply()
-	_rig.contact(data, falling)
+	_rig.contact(data, falling, _held_shown)
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
+
+
+# Her joints, hips and limb swell go to this frame's pose no faster than
+# POSE_RAD_S (and its kin): her gait passes through, a change of state is a
+# whip of the limbs instead of a jump.
+func _ease_pose(delta: float) -> void:
+	if _pose_pivots.is_empty():
+		for key in POSE_KEYS:
+			_pose_pivots.append(_p[key] as Node3D)
+		_pose_shown.resize(_pose_pivots.size())
+		_scale_shown.resize(_pose_pivots.size())
+		_pose_fresh = true
+	var body: Node3D = _p["body"]
+	if _pose_fresh:
+		for i in _pose_pivots.size():
+			_pose_shown[i] = _pose_pivots[i].rotation
+			_scale_shown[i] = _pose_pivots[i].scale
+		_hip_shown = body.position
+		_pose_fresh = false
+		return
+	for i in _pose_pivots.size():
+		var pivot := _pose_pivots[i]
+		_pose_shown[i] = _pose_shown[i].move_toward(pivot.rotation, POSE_RAD_S * delta)
+		pivot.rotation = _pose_shown[i]
+		_scale_shown[i] = _scale_shown[i].move_toward(pivot.scale, POSE_SCALE_S * delta)
+		pivot.scale = _scale_shown[i]
+	_hip_shown = _hip_shown.move_toward(body.position, POSE_HIP_M_S * delta)
+	body.position = _hip_shown
+
+
+# Her figure turned and laid as her state says (upright, toppled, head down
+# her pipe), turned over about her middle no faster than FIGURE_RAD_S.
+func _ease_figure(centre: Vector3, delta: float) -> void:
+	var target := _figure.global_basis.get_rotation_quaternion()
+	var local := _figure.global_basis.inverse() * (_figure.global_position - centre)
+	if _pose_fresh:
+		_figure_shown = target
+	else:
+		var angle := _figure_shown.angle_to(target)
+		if angle > 1.0e-4:
+			_figure_shown = _figure_shown.slerp(target, minf(1.0, FIGURE_RAD_S * delta / angle))
+	var shown := Basis(_figure_shown)
+	_figure.global_basis = shown
+	_figure.global_position = centre + shown * local
+
+
+# Her hands on what she climbs: each reaches its new hold over a moment
+# (HAND_EASE); a new climb, or one far off, starts where its hold is.
+func _ease_hands(data: Dictionary, delta: float) -> void:
+	if not (bool(data.get("climbing", false)) and data.has("climb_hand")):
+		_hands_fresh = true
+		return
+	var want: Vector3 = data["climb_hand"]
+	var want2: Vector3 = data["climb_hand2"] if data.has("climb_hand2") else want
+	if _hands_fresh or _pose_fresh or _held_shown[0].distance_to(want) > 1.5 or _held_shown[1].distance_to(want2) > 1.5:
+		_held_shown[0] = want
+		_held_shown[1] = want2
+		_hands_fresh = false
+		return
+	var k := 1.0 - exp(-HAND_EASE * delta)
+	_held_shown[0] = _held_shown[0].lerp(want, k)
+	_held_shown[1] = _held_shown[1].lerp(want2, k)
 
 
 func _limb(up: Node3D, low: Node3D, fwd: float, bend: float, splay := 0.0) -> void:
@@ -611,9 +702,13 @@ func _limb(up: Node3D, low: Node3D, fwd: float, bend: float, splay := 0.0) -> vo
 	low.rotation = Vector3(bend, 0.0, 0.0)
 
 
-# A phase held and snapped: film that has dropped frames.
-func _stutter(x: float, rate: float) -> float:
-	return floorf(x * rate) / rate
+# A value in 0..1 that wanders, as quick as its rate, with no step anywhere:
+# _hash at each whole t, eased between.
+func _noise(t: float) -> float:
+	var i := floorf(t)
+	var f := t - i
+	f = f * f * (3.0 - 2.0 * f)
+	return lerpf(_hash(int(i)), _hash(int(i) + 1), f)
 
 
 func _hash(n: int) -> float:
@@ -661,7 +756,6 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var bend_alt := 0.0
 	var knees := 0.0
 	var wide := 0.0
-	var tick := int(floorf(_clock * 14.0))
 	var turn := int(data.get("turn", 0))
 	# Wary of a noise, she comes on as she searches: upright, slow, head snapping.
 	if state == STATE_HUNTING and turn == 0 and bool(data.get("wary", false)):
@@ -1154,7 +1248,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		# no old woman has, trunk tipped forward, both arms out stiff for
 		# you, one leg dragging a beat behind the other, the head craned
 		# forward and cocked, the mouth hanging.
-		var ph := _stutter(stride, 3.2) / 0.62 * PI
+		var ph := stride / 0.62 * PI
 		pitch = 0.55 + 0.05 * sin(ph * 2.0)
 		hip_y = 0.95 + 0.04 * sin(ph * 2.0)
 		legs_fwd = 0.55 * sin(ph)
@@ -1168,10 +1262,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		jaw_open = 0.6 if sees else 0.35
 	elif state == STATE_HUNTING and speed > 1.0:
 		# All fours (dangerous and fully changed): hips high, chest low, arms reaching and elbows out, a
-		# stuttering scuttle, the head up and cocked and always on you.
-		var ph := _stutter(stride, 2.6) / 0.42 * PI
+		# jerking scuttle, the head up and cocked and always on you.
+		var ph := stride / 0.42 * PI
 		pitch = 1.38 + 0.06 * sin(ph * 2.0)
-		hip_y = 0.8 + 0.07 * (0.5 + 0.5 * sin(ph * 2.0 + _hash(tick) * 0.6))
+		hip_y = 0.8 + 0.07 * (0.5 + 0.5 * sin(ph * 2.0 + _noise(_clock * 14.0) * 0.6))
 		legs_fwd = 0.95 + sin(ph) * 0.65
 		legs_back = 0.95 - sin(ph) * 0.65
 		knees = 1.5 + 0.4 * cos(ph)
@@ -1196,12 +1290,12 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_bend = 1.2
 		arms_splay = 0.7
 		head_pitch = -0.9
-		head_roll = 0.9 * (1.0 if _hash(int(_clock * 2.4)) > 0.5 else -1.0)
+		head_roll = 0.9 * clampf((2.0 * _noise(_clock * 2.4 + 53.0) - 1.0) * 3.0, -1.0, 1.0)
 		jaw_open = 0.5
 	elif state == STATE_EMERGING:
 		# Out of the locker: in stages, unfolding, arms flung wide, head back.
 		var stage := clampf(_state_age / 2.0, 0.0, 1.0)
-		var snap := floorf(stage * 4.0) / 4.0
+		var snap := stage * stage * (3.0 - 2.0 * stage)
 		pitch = lerpf(1.7, 0.4, snap)
 		hip_y = lerpf(0.55, 1.0, snap)
 		knees = lerpf(1.8, 0.2, snap)
@@ -1211,7 +1305,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_splay = lerpf(0.2, 1.5, snap)
 		arms_bend = 0.4
 		head_pitch = lerpf(-0.2, 0.6, snap)
-		head_roll = (1.0 if int(_state_age * 6.0) % 2 == 0 else -1.0) * 0.4
+		head_roll = 0.4 * clampf(sin(_state_age * 6.0 * PI) * 3.0, -1.0, 1.0)
 		jaw_open = 0.95
 	elif state == STATE_SEARCHING:
 		# Head snapping to one side then another, a hand cupped to an ear.
@@ -1281,13 +1375,13 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_fwd = 0.3 + 0.1 * sin(step)
 		arms_bend = 0.25
 		head_pitch = 0.3
-		head_roll = sin(_clock * 0.8) * 0.3 + (0.35 if _hash(int(floorf(_clock * 2.8))) > 0.93 else 0.0)
+		head_roll = sin(_clock * 0.8) * 0.3 + (0.35 * sin(PI * fposmod(_clock * 2.8, 1.0)) if _hash(int(floorf(_clock * 2.8))) > 0.93 else 0.0)
 		jaw_open = 0.1 + 0.05 * sin(_clock * 3.0)
 	# The Turn: something in her breaks. The spine bends where it should not
 	# (a hunch that throws the shoulders to one side and folds the chest the
 	# other way), the neck cracks round till the head looks back over her
 	# shoulder, the elbows fold backwards, one knee goes the wrong way, the
-	# jaw drops off its hinge. Poses snap at ten a second, no easing.
+	# jaw drops off its hinge. The joints wrench round ten times a second.
 	var twist := 0.0
 	var side_bend := 0.0
 	var elbow_flip := 1.0
@@ -1296,14 +1390,16 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var limb_scale := 1.0
 	var jolt := Vector3.ZERO
 	if turn > 0 and not falling:
-		var beat := int(floorf(_clock * 10.0))
-		var r1 := _hash(beat * 3 + 1) - 0.5
-		var r2 := _hash(beat * 3 + 2) - 0.5
-		var r3 := _hash(beat * 3 + 3) - 0.5
+		var beat := _clock * 10.0
+		var r1 := _noise(beat + 101.0) - 0.5
+		var r2 := _noise(beat + 211.0) - 0.5
+		var r3 := _noise(beat + 307.0) - 0.5
 		twist = 0.9 * r1
 		side_bend = 0.55 + 0.4 * r2
 		elbow_flip = -1.0
-		knee_flip = -1.0 if (beat % 3) != 0 else 1.0
+		# One beat in three the knee goes the right way.
+		var kp := fposmod(beat, 3.0)
+		knee_flip = 1.0 - 2.0 * smoothstep(0.7, 1.0, kp) + 2.0 * smoothstep(2.7, 3.0, kp)
 		head_back = 2.6 if turn == 1 else 1.5 + 1.2 * r3
 		limb_scale = 1.3
 		jaw_open = 1.35
@@ -1323,8 +1419,8 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			legs_back = 0.0
 			jolt *= 2.0
 		else:
-			# Lunging: on all fours as on the hunt, but the stutter is coarser
-			# and every few frames a joint is somewhere else.
+			# Lunging: on all fours as on the hunt, but wilder, and a joint
+			# always wrenching somewhere else.
 			pitch = 1.38 + 0.25 * r2
 			arms_fwd = 1.1 + r1
 			arms_splay = 1.0
@@ -1386,7 +1482,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		for f in fingers.size():
 			var c := curl
 			if turn > 0:
-				c = 0.1 + 1.5 * _hash(beat_f * 7 + f * 3 + (0 if hand == "l" else 11))
+				c = 0.1 + 1.5 * _noise(_clock * 9.0 + float(f * 3 + (0 if hand == "l" else 11)) * 13.0)
 			elif state == STATE_HUNTING and speed > 1.0:
 				# The planted hand spreads, the lifted one claws.
 				var phase := sin(stride / 0.42 * PI + (PI if hand == "l" else 0.0))
@@ -1432,7 +1528,7 @@ func _topple(data: Dictionary, centre: Vector3) -> void:
 	var k := clampf(down_s / TOPPLE_S, 0.0, 1.0) * rise
 	k = k * k * (3.0 - 2.0 * k)
 	var axis := Vector3.UP.cross(fall).normalized()
-	_figure.global_basis = Basis(axis, 0.5 * PI * k) * Basis(Vector3.UP, float(data["yaw"]))
+	_figure.global_basis = Basis(axis, 0.5 * PI * k) * Basis(Vector3.UP, _drawn_yaw)
 	var floor_y := centre.y - STAND_CENTRE
 	_figure.global_position = Vector3(centre.x, floor_y, centre.z) - fall * (1.0 * k) + Vector3(0.0, 0.18 * k, 0.0)
 
@@ -1442,7 +1538,7 @@ func _topple(data: Dictionary, centre: Vector3) -> void:
 func _pipe_head_down(data: Dictionary, centre: Vector3) -> void:
 	if not bool(data.get("pipe_head_down", false)):
 		return
-	var yaw := float(data["yaw"])
+	var yaw := _drawn_yaw
 	var across := Basis(Vector3.UP, yaw) * Vector3.RIGHT
 	_figure.global_basis = Basis(across, PI) * Basis(Vector3.UP, yaw)
 	_figure.global_position = Vector3(centre.x, centre.y + STAND_CENTRE, centre.z)
@@ -1457,7 +1553,12 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	var alive := bool(data["alive"])
 	var released := bool(data["released"])
 	var out := released and alive and state >= STATE_EMERGING and state != STATE_DEAD
-	var centre: Vector3 = data["position"]
+	# Where she is drawn: between the simulation's last two ticks, as the
+	# player is (an older native without it: the tick's own).
+	var centre: Vector3 = data.get("render_position", data["position"])
+	_drawn_yaw = float(data.get("render_yaw", data["yaw"]))
+	if centre.distance_to(_last_pos) > 1.5:
+		_pose_fresh = true
 	# Fall speed from her own height, for the plunge.
 	_fall_speed = (centre.y - _last_pos.y) / maxf(delta, 0.0001) if delta > 0.0 else 0.0
 	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
@@ -1468,15 +1569,18 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_sparks.global_position = centre + Vector3(0.0, 1.55, 0.0)
 	if not out or centre.distance_to(camera_position) > DRAW_RANGE_M:
 		_figure.visible = false
+		_pose_fresh = true
 		return
 	_figure.visible = true
 	figure_frames += 1
 	_apply_exposure(float(data.get("exposure", 0.0)))
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
-	_figure.rotation = Vector3(0.0, float(data["yaw"]), 0.0)
+	_figure.rotation = Vector3(0.0, _drawn_yaw, 0.0)
 	_pose(data, delta, player_position, falling)
 	_topple(data, centre)
 	_pipe_head_down(data, centre)
+	_ease_figure(centre, delta)
+	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
 	var feet := _figure.global_position
 	var d := feet.distance_to(player_position)

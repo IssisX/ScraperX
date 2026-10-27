@@ -1654,6 +1654,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["position"] = godot::Vector3(static_cast<real_t>(state.position.x), static_cast<real_t>(state.position.y),
                                      static_cast<real_t>(state.position.z));
     out["yaw"] = state.yaw;
+    // Where she is drawn between two ticks, as the player is (render_*).
+    out["render_position"] = to_godot(simulation_->render_matron_position());
+    out["render_yaw"] = simulation_->render_matron_yaw();
     out["speed"] = state.speed;
     out["stride"] = state.stride;
     out["strain"] = state.strain;

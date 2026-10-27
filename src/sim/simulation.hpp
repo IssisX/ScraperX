@@ -1482,6 +1482,10 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    // Hers the same way: where her body is drawn between two ticks, and her
+    // facing (the shorter way round). matron_state() stays her authority.
+    [[nodiscard]] Vector3 render_matron_position() const noexcept;
+    [[nodiscard]] double render_matron_yaw() const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -1818,6 +1822,10 @@ private:
     bool hook_take_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    Vector3 previous_matron_position_{};
+    double previous_matron_yaw_ = 0.0;
+    // Her body and facing at the start of this tick, for render_matron_*().
+    void keep_matron_render_start() noexcept;
 };
 
 } // namespace scraperx::sim
