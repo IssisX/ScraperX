@@ -1585,6 +1585,14 @@ public:
     // Tests: a journey to one region of her scanned map, by its id.
     [[nodiscard]] bool debug_matron_travel_region(int region) noexcept;
     bool debug_matron_travel(double top) noexcept;
+    // Her hoist leg (matron.hpp hoist_view): its phase (0 none .. 5 stepping
+    // off), the rides she finished, her hands' push this tick (N).
+    struct MatronHoist {
+        int phase = 0;
+        std::uint32_t rides = 0;
+        float hand_n = 0.0F;
+    };
+    [[nodiscard]] MatronHoist matron_hoist() const noexcept;
     // Her feet's floor search between two points (traversal::grid_walk), for tests.
     [[nodiscard]] std::size_t debug_matron_grid_walk(double fx, double fy, double fz, double tx, double ty, double tz,
                                                      float margin, int max_nodes);

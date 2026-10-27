@@ -163,7 +163,18 @@ bool Matron::travel_to(const int region) {
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
     if (from >= 0) route = scanned_->plan(from, region);
-    if (here >= 0 && route.empty() && here != region) {
+    // A new destination ends a hoist leg under way (not one the leg itself
+    // asks for, going on from its landing).
+    if (!hoist_inner_) {
+        hoist_ = {};
+    }
+    int target = region;
+    if (here >= 0 && route.empty() && here != region && plan_hoist(here, region)) {
+        // No way of her map joins them: a hoist does. First to its landing.
+        target = hoist_.board;
+        if (target != here) route = scanned_->plan(here, target);
+    }
+    if (here >= 0 && route.empty() && here != target) {
         return false;
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
@@ -173,7 +184,7 @@ bool Matron::travel_to(const int region) {
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
     chase_way_held_ = true;  // a travel taken holds the chase window past its own ticks
-    travel_.goal = region;
+    travel_.goal = target;
     travel_.region = here;
     travel_.step = 0;
     travel_.steps = static_cast<int>(travel_edges_.size());
@@ -194,6 +205,10 @@ bool Matron::travel_to(const int region) {
 }
 
 void Matron::step_travel(const float dt) {
+    if (hoist_.phase >= 2) {
+        step_hoist(dt);
+        return;
+    }
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     speed_ = 0.0F;
@@ -280,6 +295,12 @@ void Matron::step_travel(const float dt) {
                            std::abs(velocity.GetY()) < 0.1F && bodies.GetGravityFactor(body_) == 1.0F;
         travel_wait_s_ = quiet ? std::max(travel_wait_s_, 0.0F) + dt : 0.0F;
         if (travel_wait_s_ >= kArrivalStandS) {
+            if (hoist_.phase == 1 && travel_.goal == hoist_.board) {
+                hoist_.phase = 2;   // at the hoist's landing: onto it
+                hoist_.t = 0.0F;
+                travel_wait_s_ = 0.0F;
+                return;
+            }
             ++travel_.arrivals;
             travel_.active = false;
         }

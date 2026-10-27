@@ -704,6 +704,28 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
+    // The world's hoists as the kit holds them (matron.hpp set_hoists): every
+    // body on a vertical guide a catch holds, and what frees each catch.
+    {
+        std::vector<Matron::HoistFeed> hoists;
+        for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
+            Matron::HoistFeed f;
+            f.car = kit_->body_id(h.car);
+            f.axis_y = h.axis.GetY();
+            f.min_travel = h.min_travel;
+            f.max_travel = h.max_travel;
+            f.travel = h.travel;
+            f.held = h.held;
+            for (const kit::Kit::HoistPin &p : h.pins) {
+                f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
+            }
+            for (const kit::BodyIndex w : h.weights) {
+                f.weights.push_back(kit_->body_id(w));
+            }
+            hoists.push_back(std::move(f));
+        }
+        matron_->set_hoists(std::move(hoists));
+    }
     // Out of her locker, she looks the tower over once (her climbs are what
     // she finds).
     if (matron_->wants_routes()) {

@@ -1101,6 +1101,11 @@ bool Simulation::debug_matron_travel(const double top) noexcept {
     return goal >= 0 && matron.travel_to(goal);
 }
 
+Simulation::MatronHoist Simulation::matron_hoist() const noexcept {
+    const Matron::HoistView v = physics_world_->matron().hoist_view();
+    return {v.phase, v.rides, v.hand_n};
+}
+
 bool Simulation::debug_matron_travel_region(const int region) noexcept {
     (void)physics_world_->matron_affordances();
     Matron &matron = physics_world_->matron();
