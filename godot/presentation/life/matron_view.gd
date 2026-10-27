@@ -1675,7 +1675,7 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 
 # Her parachute (src/sim/matron_chute.cpp): the player's canopy, reused, over her
 # head and turned with her; its drag is the native's. No pose of her own yet.
-const CHUTE_HEAD_ABOVE_CENTRE := 0.75
+const CHUTE_HEAD_ABOVE_CENTER := 0.75
 var _chute: Node3D
 
 
@@ -1687,9 +1687,10 @@ func _update_chute(data: Dictionary, delta: float) -> void:
 		_chute = (load("res://presentation/canopy_view.gd") as GDScript).new()
 		_chute.name = "MatronChute"
 		add_child(_chute)
-	var centre: Vector3 = data["position"]
-	var yaw := float(data.get("yaw", 0.0))
-	var head := centre + Vector3.UP * CHUTE_HEAD_ABOVE_CENTRE
+	# Drawn where her body is drawn (the smoothing, d86a9dc3), not the raw sim pose.
+	var center: Vector3 = data.get("render_position", data["position"])
+	var yaw := float(data.get("render_yaw", data.get("yaw", 0.0)))
+	var head := center + Vector3.UP * CHUTE_HEAD_ABOVE_CENTER
 	var right := Basis(Vector3.UP, yaw) * Vector3.RIGHT
 	var risers := [head - right * 0.35 + Vector3.UP * 0.5, head + right * 0.35 + Vector3.UP * 0.5]
 	_chute.call("update", show, head, yaw, risers, delta)
