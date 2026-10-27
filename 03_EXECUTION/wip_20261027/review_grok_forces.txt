@@ -1,0 +1,47 @@
+Review of 5e6ac5c2 (grok/one-budget-forces) vs f572ba19
+(working notes, appended as found)
+
+rule_check (python3 -I rc.py f572ba19 5e6ac5c2, script from origin/ScraperX-Claude:tools/rule_check/rule_check.py):
+REVIEW src/sim/matron.cpp:1835 velocity-write: velocity += feet_push(dt, step_dv * (kMassKg / dt)) * (dt / kMassKg);
+REVIEW src/sim/matron.cpp:1873 velocity-write: velocity += feet_push(dt, place_dv * (kMassKg / dt)) * (dt / kMassKg);
+rule_check: 0 BLOCK, 2 REVIEW
+
+Static notes so far:
+- All SetLinearVelocity/AddImpulse on her body gone from matron.cpp, matron_line.cpp, matron_pipe.cpp (only spawn/place_for_test remain).
+- Both REVIEW lines (matron.cpp:1835, :1873) are local predictions: velocity += granted*dt/m, no body write. OK.
+- feet_budget_ reset each tick at the top of pre_step (matron.cpp:2036-2037); all feet_push/walk_toward callers run inside pre_step. No cross-tick carry found.
+- Lunge raise (matron.cpp:903-907) puts the lunge allowance into the shared tick account; the boarding step-up (matron.cpp:1569-1572) draws from it in a lunge tick -> up to 9,800 N on a step up (parent leaked the vertical part the same way).
+- Pipe swat/flange draw from a local Budget in ride_pipe (matron_pipe.cpp:258), not feet_budget_ (description inaccurate); no feet draw shares a pipe tick, so no double account found there.
+- pre_step still builds a second account (`account`, matron.cpp:2038) for ways beside feet_budget_ (pre-existing, not new).
+- Item 9: "centre" in new/moved comments: matron.hpp:1590, matron.cpp:889 (owner rule 2026-10-18: American spelling, convert as touched).
+Repro (scratch worktree at 5e6ac5c2 + one stderr print in follow_line, never committed; SCRAPERX_ONLY=matron-remaining, stopped after its line section passed):
+- Cable jump works: after landing on the stand her feet push (driving=1) and she rises in a sawtooth at ~0.9-1.27 m/s (walk_toward's floor gate pauses the stroke whenever she rises >= 1 m/s), 0.214 m up in 0.2 s, hands 0.598 m from the cable -> clipped. Inside the 0.40 m leg stroke, <= 8 kN. Not a defect.
+- Same run: matron line, unrig, below, shove, mischief, balance, heave PASS (balance reaches step_knocked/brace/crawl).
+
+
+==================== FINAL REPORT ====================
+Review of 5e6ac5c2 (parent f572ba19). The branch head is now 91986736 (not reviewed).
+
+rule_check: 0 BLOCK, 2 REVIEW
+- matron.cpp:1835 `velocity += feet_push(...)*(dt/kMassKg)`: a local estimate from the granted force, no body write. OK.
+- matron.cpp:1873, same. OK.
+
+1 PASS. No velocity, impulse or position write on her body is left in the touched files (only spawn and place_for_test). Every push is budget.take with the reaction on a dynamic support. feet_budget_ resets at the top of pre_step (:2036), and all callers run inside it. The pipe swat and flange use ride_pipe's own Budget (matron_pipe.cpp:256), not feet_budget_ as the handoff says; it is the only account on a pipe tick, so the law holds.
+2 FAIL matron.cpp:903-907 + :1568-1572. The lunge raise goes into the tick's shared account, and the boarding step up spends it. Path: Turn::Lunge, target a machine floor one step up within 1.8 m. The want is >= 23.8 kN up plus up to 15 kN of stride. take() grants all 9,800 N, of which 8.2 to 9.8 kN is the step up, and over 22 kW at burst speed. foot_lunge_ stays true (:925), so the Turn exam judges it against 9.8 kN / 65 kW. It should be 8 kN / 22 kW less what the tick used, reported as stride, as in e1086587. The parent had the vertical leak too; this rewrite keeps it. A cable jump or vault that starts in a lunge tick also reports as lunge (still <= 8 kN).
+3 PASS. Nothing new keyed on a place. The let-go reuses the existing shaft box (matron_line.cpp:262).
+4 PASS. No kick or snap. The let-go is her own momentum.
+5 PASS. No test file touched.
+6 PASS. CI step 15 (Android clang, -Werror on scraperx_sim) is green on this SHA. No structured bindings, no unused locals.
+7 PASS. The named groups reach the changes. `bay` (trap_step Down and ToSpot) wasn't named, but CI step 6 ran it green on this SHA.
+8 FAIL matron.cpp:1568-1572. This rewrites the boarding draw that the in-flight e1086587 caps (claude/integrate-boarding-lunge-20261027). Landing 5e6ac5c2 as-is undoes that fix.
+9 FAIL matron.hpp:1590 (new) and matron.cpp:889 (moved) say "centre". The owner's rule of 2026-10-18 is "center".
+
+What I tried and could not break:
+- Cable jump. I suspected walk_toward's floor gate (rising at 1 m/s or more) cuts the stroke short. In a scratch worktree at 5e6ac5c2 with one stderr print, I ran SCRAPERX_ONLY=matron-remaining, stopped it after line, balance and heave passed, and removed the worktree. The stroke runs as a sawtooth at about 1.1 m/s: 0.21 m up in 0.2 s, hands 0.598 m from the cable, and she clips on. Inside the 0.40 m stroke and 8 kN.
+- Let-go. No stuck state or teleport found. One case is lost: held behind a rider hanging at the stop over the shaft, she waits for them instead of swinging past.
+- Swat: same total momentum, now budget-bounded; its reaction is in pipe_drive_dv_, so no false blow.
+- No-sole ticks: no drive (the old code gave air control). Nothing stuck.
+- A risk, not a FAIL. brace_at_edges still looks only v*dt + 0.25 m ahead but stops at <= 36 m/s2. Above about 5 m/s toward an open edge she goes over, where the old write held her.
+- Pre-existing, outside the diff. The crate shove (:1544) is unbudgeted, has no reaction on her, and uses 9.8 kN in a lunge. pre_step still keeps a second account (`account`) beside feet_budget_.
+
+DO NOT LAND 5e6ac5c2. Fix: cap and report the boarding draw as e1086587 does, and write "center". Then review 91986736.

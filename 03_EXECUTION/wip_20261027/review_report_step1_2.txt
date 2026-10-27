@@ -1,0 +1,30 @@
+**PR #9 (95e8d0bf): FAIL, small fix → DO NOT LAND as is**
+- FAIL (law: no new coordinate constant in her code): `kHomeWayUpX = 10.0F` (matron.hpp:344) and the post it plants on any home deck lacking one (matron.cpp:253-257); also `kStartDeckTop = 11.0F` (matron.hpp:197), unused until #10. The post is dead data (`reachable_post` returns nothing on a way −1 deck, matron.cpp:769). Fix: delete the post block and kHomeWayUpX; pick the deck in world setup (physics_world.cpp, e.g. `kStackLevelHeight`). Then LAND.
+- PASS, coverage: all 81 base Deck154 starts get the hook on the next line; no check changed. No non-Deck154 start asserts on her home. The direct-`Matron` tests (hearing, climb_support, shared_survival, exam_*) never call set_home and stay at 154. The touch driver covers every spawn-11 scenario.
+- PASS, persistence: the run-end rebuild re-applies it (simulation.cpp:565). Restore uses home_y_/home_level_ (matron.cpp:3369, 3386-3389; spawn :222). She isn't in the save; a load restores her sealed at the world's home. No mid-play teleport: set_home moves only the static locker, and her level/floor only while sealed (:261-268).
+- Minor: the bridge binding lacks configure_initial_spawn's tick-0 guard (scraperx_simulation.cpp:387); physics_world.hpp:121-123 files it under "never bound to the bridge".
+
+**PR #10 (2736f7d6): FAIL → DO NOT LAND**
+1. Presentation: matron_view.gd:16-17 still draws the locker at (11, 155.1, −126.2). So do :219, the gauge (:259), the shake, knocks, bolts and burst (:314-377), the door falling to DECK−40 (:357) and chart_pages.gd:21. In play there's an invisible solid on deck 1 and a drawn locker with no collider at 154. Her strain and burst are heard 143 m above her. The view should read her home from the native. No CI step compares the two (Codex too).
+2. Deck 1 is a dead end for her: nothing goes up or down.
+   - find_climb needs a rung column footed on her floor within 14 m (matron_found_climb.cpp:34, 212, 248).
+   - The pipe serves 132–154 only (matron_pipe.cpp:519).
+   - A hang-drop is ≤4.6 m (matron_traversal.hpp:83), and her walk refuses drops over 1.2 m (matron.hpp:370).
+   - The inventory agrees: "Unreached decks: 11 … no authored way up" (MULTI_DECK_INVENTORY.md:90).
+   - Path: she hears him on deck 2+, take_way finds nothing, she waits under him and times out. She searches, then patrols deck 1's band loop forever. Every death-restore puts her back there (matron.cpp:3422).
+   - "Reaches 154 only by climbing" is false. Grade–22 is the connected low island.
+3. Start: a release build starts him at grade (6, 1.2, −25) (main.gd:192, physics_world_support.hpp:606), about 102 m away. S1 rides grade→22 without stopping at 11 (band_stack.cpp:53), so his route never touches deck 1. On deck 2 he's nearly straight above her, behind a ×10-muffling slab and about 50 m+ round the shaft (estimate), past her 30 m wake (matron.cpp:2307-2316). Debug "154 M DECK" and "HER CHART (FAST)" (settings_store.gd:42-53, "by her locker") now put him 143 m above her.
+4. Geometry PASS: the solid (x 10.4–11.6, y 11.0–13.2, z −126.65…−125.75) sits on deck 1's north slab (top 11.0) and hits nothing.
+   - Nearby but clear: the edge beam (top 10.85, z≥−124.3), the face braces (z≥−124.23), S1's steel (z≥−122.7) and the deck-1 stock on the shaft edge.
+   - Her spawn capsule is clear.
+   - There's no outer rail: the locker stands 0.9 m from an open 11 m edge.
+   - Ziplines and stock built after set_home come near neither locker position, so the kit list and save layout are unchanged (by geometry).
+
+**rule_check** (both heads): `rule_check: 0 BLOCK, 2 REVIEW`. The two lines are matron.cpp:222 (spawn y from home_y_) and :261 (static locker SetPosition). Both setup placement: OK.
+
+**Item 6 (merge-tree vs 481fa1fe)**
+- Textual conflict on both heads: `tests/sim_tests_matron_routes.cpp`, modify/delete. Keep it deleted. Everything else auto-merges.
+- New Deck154 starts without the hook: `tests/sim_tests_matron_pursuit.cpp:165` (`run_decks_are_steel`) and `:203` (`run_matron_ways`). run_matron_ways scans and drives every way in that same world, so after #10 it would run with the locker at 11 m. No others.
+- The LOADING-card scan runs only outside UI tests and after the world's set_home, so it isn't stale.
+
+**Not checked:** no build or run. Proof run 40570851933 (2736f7d6) was still in step 7 at 3:41 PM Central. I didn't run her scan to prove deck 1 has no way out, and the wake distances are hand estimates.
