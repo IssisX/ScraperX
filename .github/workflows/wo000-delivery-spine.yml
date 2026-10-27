@@ -27,6 +27,17 @@ env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
   ANDROID_NDK_VERSION: 29.0.14206865
+  # Compiler cache (ccache) for every native build in both jobs. CMake reads these
+  # two variables on first configure; the cache only skips recompiling identical
+  # inputs, so the binaries and every proof are unchanged. The Jolt build uses a
+  # precompiled header, which ccache accepts only with this sloppiness.
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CCACHE_DIR: /home/runner/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
+  CCACHE_COMPILERCHECK: content
+  CCACHE_MAXSIZE: 1500M
 
 jobs:
   moving-support-truth:
@@ -39,6 +50,14 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Restore the compiler cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/ccache
+          key: ccache-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.job }}-
+
       - name: Configure Java 17
         uses: actions/setup-java@v4
         with:
@@ -50,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          sudo apt-get install --yes ninja-build ccache xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
           SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
           test -x "${SDKMANAGER_PATH}"
           yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
@@ -555,6 +574,14 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Restore the compiler cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/ccache
+          key: ccache-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.job }}-
+
       - name: Configure Java 17
         uses: actions/setup-java@v4
         with:
@@ -566,7 +593,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --yes ninja-build
+          sudo apt-get install --yes ninja-build ccache
           SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
           test -x "${SDKMANAGER_PATH}"
           yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
