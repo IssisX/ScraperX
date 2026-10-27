@@ -108,8 +108,6 @@ int Matron::bay_way_out() const noexcept {
     return nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, false);
 }
 
-routes::Connector Matron::connector_of(const int) const noexcept { return routes::Connector::Count; }
-
 std::size_t Matron::pipe_way(const float from_floor, const float to_floor) const noexcept {
     return routes_.find(routes_.region_at(kPipeDeckX, from_floor, kPipeDeckZ),
                         routes_.region_at(kPipeDeckX, to_floor, kPipeDeckZ),
@@ -233,7 +231,7 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         climb_end_ = ClimbEnd::None;
         const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
         const float to = floor_y + (step.what == routes::Step::Do::ClimbDown ? -kStackPitch : kStackPitch);
-        if (!pipe_reaches(floor_y) || !pipe_reaches(to) || !get_on_pipe(floor_y, to)) {
+        if (!pipe_reaches(floor_y) || !pipe_reaches(to) || !get_on_pipe(floor_y, to, false)) {
             route_failed(index, routes::Reason::Failed);
             return false;
         }
@@ -258,6 +256,29 @@ bool Matron::follow_route(const float dt, const RVec3 at) {
         return false;
     }
     return true;
+}
+
+// Her map's way as a way of hers (matron_mover.hpp), for the test that drives
+// one of its ways: to its entry, then along its steps inside her hunt. A
+// climb or the pipe it starts has her body until it ends (holder's order).
+MoverStatus Matron::RouteWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (!m_.follow_route(dt, m_.physics_.GetBodyInterface().GetPosition(m_.body_))) {
+        return MoverStatus::Idle;
+    }
+    return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
+}
+
+void Matron::RouteWay::cancel() { m_.route_clear(); }
+
+MoverStatus Matron::RouteWay::status() const {
+    return m_.route_on_edge_ ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::RouteWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Hunt;
+    v.turns = true;
+    return v;
 }
 
 } // namespace scraperx::sim

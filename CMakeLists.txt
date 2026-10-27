@@ -33,6 +33,8 @@ add_library(scraperx_sim STATIC
     src/sim/matron_routes.cpp
     src/sim/matron_travel.cpp
     src/sim/matron_pipe.cpp
+    src/sim/matron_line.cpp
+    src/sim/matron_climb.cpp
     src/sim/physics_world_traversal.cpp
     src/sim/physics_world_climb.cpp
     src/sim/physics_world_state.cpp

@@ -314,10 +314,6 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     }
     find_wait_ticks_ = std::max(0, find_wait_ticks_ - 1);
     journey_wait_ticks_ = std::max(0, journey_wait_ticks_ - 1);
-    if (found_climbs_off_ || (on_line_ramp(at) && stall_s_ < kRampStallS)) {
-        found_ = FoundClimb{};
-        return false;
-    }
     if (!found_.active) {
         if (find_wait_ticks_ > 0) {
             return false;
@@ -327,7 +323,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
             // No bar column: a way she plans over the steel round her.
             const bool frail = stage_ == Stage::Pest && turn_ == Turn::None;
             const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
-            const bool started = !frail && still && start_journey(at);
+            const bool started = !frail && still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
             return started;
         }
     }
@@ -380,6 +376,114 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         block_climb(found_.key, false);   // her hands refuse it: a search's refusal, left a while
     }
     found_ = FoundClimb{};
+    return true;
+}
+
+// Routecraft's bars as a way of hers (matron_mover.hpp): a column found and
+// walked to (follow_found_climb, which plans a journey over her scan where no
+// column serves), then the bars themselves, first in her tick. A climb of
+// her own lets go at its goal; ended short of it, the column is left alone a
+// while, and she goes back down the way she came, once.
+MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (status() != MoverStatus::Running) {
+        if (!m_.follow_found_climb(dt, goal_.at)) {
+            return MoverStatus::Idle;
+        }
+        return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
+    }
+    BodyInterface &bodies = m_.physics_.GetBodyInterface();
+    m_.routecraft_.step(m_.physics_, m_.body_, dt);
+    m_.stride_ += bodies.GetLinearVelocity(m_.body_).Length() * dt;   // each rung rings
+    if (m_.routecraft_.report().force > 0) {
+        m_.routecraft_release_floor_ = float(bodies.GetPosition(m_.body_).GetY()) - kStandCentre;
+    }
+    if (m_.routecraft_mine_ && m_.routecraft_.report().status == MatronRoutecraft::Status::Holding) {
+        m_.routecraft_.cancel();
+        m_.routecraft_mine_ = false;
+    } else if (m_.routecraft_mine_ && !m_.routecraft_.planning() && !m_.routecraft_.owns_motion()) {
+        // Acceptance is provisional while the initial search runs.
+        // A refused route never took her off the foot of the column.
+        const bool refused = !m_.climb_back_tried_ && m_.routecraft_.report().steps == 0;
+        m_.block_climb(m_.climbing_key_, !refused);
+        m_.routecraft_mine_ = false;
+        // Ended short of its goal (blocked at its end, a plan given
+        // out) with a hold still in her hands: back down the way she
+        // came, once, rather than let go. That failing too, she falls.
+        if (refused) {
+            if (m_.climbs_done_ > 0) --m_.climbs_done_;
+        } else if (!m_.climb_back_tried_) {
+            m_.climb_back_tried_ = true;
+            m_.routecraft_mine_ = m_.request_climb_goal(m_.climb_back_, m_.climb_back_facing_);
+        }
+    }
+    return MoverStatus::Running;
+}
+
+void Matron::RoutecraftWay::cancel() {
+    m_.routecraft_.cancel();
+    m_.routecraft_mine_ = false;
+}
+
+MoverStatus Matron::RoutecraftWay::status() const {
+    if (m_.routecraft_.planning() || m_.routecraft_.owns_motion()) {
+        return MoverStatus::Running;
+    }
+    return m_.found_.active ? MoverStatus::Walking : MoverStatus::Idle;
+}
+
+MoverView Matron::RoutecraftWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Owns;
+    if (m_.found_.active) {
+        v.has_goal = true;
+        v.goal_floor_y = float(m_.found_.goal.GetY()) - kStandCentre;
+        v.has_from = true;
+        v.from_floor_y = m_.found_.from_y;
+    }
+    // Planning, she stands at the column's foot on her own feet: only her
+    // hands on its bars are the routecraft's.
+    if (!m_.routecraft_.owns_motion()) {
+        return v;
+    }
+    const MatronRoutecraft::Report &report = m_.routecraft_.report();
+    v.drives = true;
+    v.held = true;
+    v.lands = true;
+    v.holds_chase = true;
+    v.hands = true;
+    v.move_active = true;
+    v.bar_traverse = true;
+    v.move = traversal::MoveKind::RungUp;
+    v.hand_shown = true;
+    v.hand = report.hand;
+    v.force_shown = true;
+    v.force_n = report.force;
+    v.hand_held = true;
+    return v;
+}
+
+void Matron::RoutecraftWay::stand_aside() {
+    for (ClimbBlock &b : m_.climb_blocks_) {
+        b.ticks = std::max(0, b.ticks - 1);
+    }
+    m_.find_wait_ticks_ = std::max(0, m_.find_wait_ticks_ - 1);
+    m_.journey_wait_ticks_ = std::max(0, m_.journey_wait_ticks_ - 1);
+    m_.found_ = FoundClimb{};
+}
+
+bool Matron::RoutecraftWay::let_go() {
+    if (!m_.routecraft_.owns_motion()) {
+        return false;
+    }
+    // Her hands open on a climb of her own, as a hold giving way opens
+    // them: the column is left alone its block time, and no way back.
+    m_.routecraft_.cancel();
+    if (m_.routecraft_mine_) {
+        m_.block_climb(m_.climbing_key_);
+        m_.routecraft_mine_ = false;
+    }
+    m_.climb_back_tried_ = true;
+    ++m_.climb_releases_;
     return true;
 }
 
@@ -598,6 +702,73 @@ void Matron::step_journey(const float dt) {
     }
     climber_->begin(edge.spec);
     journey_moving_ = true;
+}
+
+// Her journey as a way of hers (matron_mover.hpp): planned when no column
+// serves (begin), then its legs and moves first in her tick.
+bool Matron::JourneyWay::begin(const MoverGoal &goal) {
+    goal_ = goal;
+    return m_.start_journey(goal.at);
+}
+
+MoverStatus Matron::JourneyWay::step(const float dt, traversal::Budget & /*budget*/) {
+    if (!m_.journey_active_) {
+        return MoverStatus::Idle;
+    }
+    m_.step_journey(dt);
+    // Her body's travel counts her strides and rungs (each rung rings).
+    m_.stride_ += m_.physics_.GetBodyInterface().GetLinearVelocity(m_.body_).Length() * dt;
+    return MoverStatus::Running;
+}
+
+void Matron::JourneyWay::cancel() { m_.end_journey(false); }
+
+MoverStatus Matron::JourneyWay::status() const {
+    return m_.journey_active_ ? MoverStatus::Running : MoverStatus::Idle;
+}
+
+MoverView Matron::JourneyWay::view() const {
+    MoverView v;
+    v.tick = MoverTick::Owns;
+    if (!m_.journey_active_) {
+        return v;
+    }
+    v.drives = true;
+    v.holds_chase = true;
+    v.held = m_.journey_moving_;
+    if (!m_.journey_.empty()) {
+        v.has_goal = true;
+        v.goal_floor_y = float(m_.journey_.back().spec.goal.GetY());
+    }
+    // A planned move counts as climbing once a hand of hers holds (walking
+    // to its start, her hands are free).
+    if (m_.journey_moving_ && m_.climber_ != nullptr && m_.climber_->view().active) {
+        const traversal::ClimbView &climber = m_.climber_->view();
+        v.move_active = true;
+        v.move = climber.kind;
+        v.phase = climber.phase;
+        v.airborne = climber.airborne;
+        v.sliding = climber.sliding;
+        v.leg_driving = climber.leg_driving;
+        if (climber.holding) {
+            v.hands = true;
+            v.hand_shown = true;
+            v.hand = climber.hand;
+            v.force_shown = true;
+            v.force_n = climber.force_n;
+            v.hand_held = true;
+        }
+    }
+    return v;
+}
+
+bool Matron::JourneyWay::let_go() {
+    if (!m_.journey_moving_) {
+        return false;
+    }
+    m_.end_journey(true);
+    ++m_.climb_releases_;
+    return true;
 }
 
 } // namespace scraperx::sim
