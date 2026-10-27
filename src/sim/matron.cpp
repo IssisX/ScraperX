@@ -1998,37 +1998,6 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         stride_ += speed_ * dt;
         return;
     }
-        // A board already under her feet, continuing ahead, is floor even when
-        // it is narrower than kFootSpanM. On her map's own deck the span check
-        // still refuses a step off that deck onto a post. Off the map (the
-        // landing a climb just put her on), the steel under her middle is the
-        // floor, including the step down onto the deck within kStepUpM.
-        const auto narrow_continues = [&](const Vec3 &dir, const float ahead_m) {
-            float here_top = 0.0F;
-            const float depth = 0.5F + kEdgeDropM;
-            const RVec3 mid(float(at.GetX()), feet + 0.5F, float(at.GetZ()));
-            if (!floor_under(mid, depth, here_top) || std::abs(here_top - feet) > 0.35F) {
-                return false;
-            }
-            const bool off_map = off_its_steel(level_, float(at.GetX()), feet, float(at.GetZ()));
-            if (!off_map) {
-                const Vec3 across(-dir.GetZ(), 0.0F, dir.GetX());
-                float side = 0.0F;
-                const bool left =
-                    floor_under(mid + across * kFootSpanM, depth, side) && std::abs(side - here_top) <= kStepUpM;
-                const bool right =
-                    floor_under(mid - across * kFootSpanM, depth, side) && std::abs(side - here_top) <= kStepUpM;
-                if (left && right) {
-                    return false;
-                }
-            }
-            float ahead_top = 0.0F;
-            const RVec3 from = at + dir * ahead_m + Vec3(0.0F, 0.5F - kStandCentre, 0.0F);
-            if (!floor_under(from, depth, ahead_top)) {
-                return false;
-            }
-            return std::abs(ahead_top - here_top) <= kStepUpM;
-        };
         bool leapt = false;
         if (turn_moves && vault_cooldown_s_ <= 0.0F && length > 0.15F && speed > 0.0F) {
             // The Turn's leap: at an edge in her way, with floor again within
@@ -2066,8 +2035,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             // as far as she needs to stop from this speed), she plants them.
             const Vec3 way = flat_new / going;
             const float check = 0.3F + going * going / 40.0F + going * dt;
-            if ((edge_at(way, 0.2F) && !narrow_continues(way, 0.2F)) ||
-                (edge_at(way, check) && !narrow_continues(way, check))) {
+            if (edge_at(way, 0.2F) || edge_at(way, check)) {
                 velocity -= way * std::min(going, cut_limit);
             }
             // And no step that brings her within kEdgeMarginM of an edge to
@@ -2077,7 +2045,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
                 const float toward = velocity.Dot(side);
                 const float reach = toward * dt + kEdgeMarginM;
-                if (toward > 0.0F && edge_at(side, reach) && !narrow_continues(side, reach)) {
+                if (toward > 0.0F && edge_at(side, reach)) {
                     velocity -= side * toward;
                 }
             }
@@ -3495,7 +3463,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                                         break;
                                     }
                                 }
-                                // Steel her map does not contain (the board under a climb she
+                if (!scan_walk) {
+                                    wx = heard_x_;
+                                    wz = heard_z_;
+                                    scan_walk = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                // Steel her map does not contain (the board under a climb she
                 // just finished): a step along the real floor, not a straight
                 // line off it onto the authored ring. The edge guard still
                 // keeps her on what continues under her feet.
@@ -3561,15 +3538,6 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         sidestep_z_ = pz;
                         sidestep_s_ = 0.45F;
                         break;
-                    }
-                }
-                if (!scan_walk) {
-                                    wx = heard_x_;
-                                    wz = heard_z_;
-                                    scan_walk = true;
-                                }
-                            }
-                        }
                     }
                 }
                 if (!scan_walk) {

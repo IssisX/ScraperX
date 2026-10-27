@@ -42,6 +42,17 @@
 namespace scraperx::sim::traversal {
 
 // Her body and her limits. All CHOSEN for a 2.1 m, 220 kg body.
+// The player's jump-and-hang reach over his feet, about 4.14 m: capsule
+// centre over the feet (kPlayerHalfHeight 0.9 + kPlayerRadius 0.35), a
+// standing jump's rise (kJumpSpeed 5.5 under 9.81 m/s^2: 1.54) and the hang
+// band's top over the centre (kHangMaximumRiseAboveCentre 1.35). Written out:
+// Limits is used in constant expressions, and physics_world_tuning.hpp
+// cannot be included here (it includes this header). The test
+// matron-climb's escape-margin check recomputes it from those constants.
+inline constexpr float kPlayerJumpHangReachM = 4.14F;
+// What the player keeps over her planned jump-catch.
+inline constexpr float kEscapeMarginM = 0.5F;
+
 struct Limits {
     float radius = 0.30F;
     float half_height = 0.75F;   // the capsule's cylinder half; center is radius + half above the feet
@@ -87,7 +98,10 @@ struct Limits {
     float mantle_max_m = 2.30F;
     float step_max_m = 0.36F;
     float drop_max_m = 4.60F;     // lip to landing; she hangs first (her feet 2.4 m under it)
-    float jump_hold_max_m = 4.0F; // a hold this high over her feet she can jump for
+    // A hold this high over her feet she can jump for: kept kEscapeMarginM
+    // under the player's own jump-and-hang reach (Cory, 2026-10-27 15:50 CT),
+    // so a hold he can reach from a jump is one she cannot follow him to.
+    float jump_hold_max_m = kPlayerJumpHangReachM - kEscapeMarginM;
     float climb_mps = 0.6F;
     float mantle_mps = 1.4F;
     float pole_up_mps = 0.5F;

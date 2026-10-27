@@ -790,6 +790,21 @@ void test_dynamic_support() {
 }
 // The shared power cap: work along her velocity is clamped, braking and
 // sideways force are not, and force never exceeds what is left.
+// Cory, 2026-10-27 15:50 CT: the player keeps at least 0.5 m of escape over
+// her planned jump-catch. His reach is worked out here from his own constants
+// (centre over feet, a standing jump's rise, the hang band's top), not read
+// back from the limit under test.
+void test_jump_catch_escape_margin() {
+    namespace d = scraperx::sim::detail;
+    const float jump_rise = d::kJumpSpeed * d::kJumpSpeed / (2.0F * 9.81F);
+    const float player_reach = d::kPlayerHalfHeight + d::kPlayerRadius + jump_rise + d::kHangMaximumRiseAboveCentre;
+    const traversal::Limits limits;
+    std::printf("matron jump-catch: plans to %.2f m, player's jump-and-hang reaches %.2f m (margin %.2f m)\n",
+                limits.jump_hold_max_m, player_reach, player_reach - limits.jump_hold_max_m);
+    require(player_reach - limits.jump_hold_max_m >= 0.5F - 1.0e-4F,
+            "matron jump-catch: her planned catch stays 0.5 m under the player's jump-and-hang reach");
+}
+
 void test_power_budget() {
     using traversal::Budget;
     const traversal::Limits limits;
@@ -1655,6 +1670,7 @@ void run_matron_narrow() {
 
 void run_matron_climb() {
     test_power_budget();
+    test_jump_catch_escape_margin();
     test_power_moving_bar();
     test_rungs();
     test_rung_failures();
