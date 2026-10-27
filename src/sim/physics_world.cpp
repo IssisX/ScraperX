@@ -286,7 +286,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // her locker with it, is the stack's deck 1: she starts low (playtest A).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving,
                                        object_layers::kOnSteel, player_id_);
-    matron_->set_home(Matron::kStartDeckTop);
+    matron_->set_home(11.0F);   // the stack's deck 1 (Matron::kStackPitch)
     // The ziplines (zipline.hpp): after everything they must keep clear of
     // (each line is swept against the world as built so far), before the
     // tower's loose stock, which keeps clear of their posts. From the lowest
