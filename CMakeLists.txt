@@ -30,7 +30,6 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_fatality.cpp
     src/sim/physics_world_one_arm.cpp
     src/sim/matron_moves.cpp
-    src/sim/matron_routes.cpp
     src/sim/matron_travel.cpp
     src/sim/matron_pipe.cpp
     src/sim/matron_line.cpp
@@ -208,7 +207,6 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_water.cpp
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
-        tests/sim_tests_matron_routes.cpp
         tests/sim_tests_matron_traverse.cpp
         tests/sim_tests_matron_pursuit.cpp
         tests/sim_tests_matron_chase.cpp
