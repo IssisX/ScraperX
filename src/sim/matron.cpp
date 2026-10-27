@@ -838,21 +838,13 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
         return false;   // nothing read yet: its height is all she has
     }
     const float floor_y = levels_[static_cast<std::size_t>(level)].floor_y;
-    const int region = scanned_->region_near_top(floor_y, 0.6F);
-    if (region < 0) {
-        return false;   // no steel of its own read at that height: its height is all she has
-    }
-    const traversal::Region &r = scanned_->regions()[static_cast<std::size_t>(region)];
-    // Her scan's steel under her feet.
-    const int under = scanned_->region_at(Vec3(x, feet, z));
-    if (under >= 0) {
-        return under != region;
+    // Her scan's steel under her feet, at that level's height.
+    const int patch = scanned_->patch_at(Vec3(x, feet, z), kOnSteelM);
+    if (patch >= 0) {
+        return std::abs(scanned_->patches()[static_cast<std::size_t>(patch)].top - floor_y) > 0.6F;
     }
     // A floor her scan does not read (it reads what cannot move): what holds
-    // her feet, at rest, at that level's height and within its steel's bounds.
-    if (x < r.min_x - 0.5F || x > r.max_x + 0.5F || z < r.min_z - 0.5F || z > r.max_z + 0.5F) {
-        return true;
-    }
+    // her feet, at rest, at that level's height.
     const BodyInterface &bodies = physics_.GetBodyInterface();
     IgnoreMultipleBodiesFilter not_us;
     not_us.Reserve(2);

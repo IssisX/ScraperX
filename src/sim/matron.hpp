@@ -1776,9 +1776,9 @@ private:
     [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
     [[nodiscard]] int bay_way_out() const noexcept;
     // A level is the floor under her (off_its_steel) when what holds her feet
-    // is that level's steel: her scan's walkable region at the level's height
-    // (the largest there), or a body at rest holding her within that region's
-    // bounds (a floor her scan cannot read: one that can fall or move).
+    // is steel at that level's height: a walkable top her scan read, or a
+    // body at rest holding her (a floor her scan cannot read: one that can
+    // fall or move).
     static constexpr float kOnSteelM = 0.35F;   // feet within this of a deck's top: on it
     float clock_s_ = 0.0F;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
