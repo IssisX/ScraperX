@@ -1072,13 +1072,8 @@ void Simulation::debug_place_matron(const Vector3 feet) noexcept {
         JPH::RVec3(static_cast<float>(feet.x), static_cast<float>(feet.y), static_cast<float>(feet.z)));
 }
 
-bool Simulation::debug_matron_climb(const int connector, const bool down) noexcept {
-    return physics_world_->matron().climb_for_test(static_cast<routes::Connector>(connector), down);
-}
-
 bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexcept {
-    return physics_world_->matron().climb_for_test(
-        pipe ? routes::Connector::CornerPipe : routes::Connector::HomeLadder, down);
+    return physics_world_->matron().climb_for_test(pipe, down);
 }
 
 void Simulation::debug_matron_rule_out_pipe() noexcept {
@@ -1088,10 +1083,6 @@ void Simulation::debug_matron_rule_out_pipe() noexcept {
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
-}
-
-void Simulation::debug_matron_only_way(const std::size_t index) noexcept {
-    physics_world_->matron().only_way_for_test(index);
 }
 
 void Simulation::debug_matron_let_go() noexcept {
@@ -1361,8 +1352,6 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.down_s = view.down_s;
     result.down_left_s = view.down_left_s;
     result.on_pipe = view.on_pipe;
-    result.route_edges = view.route_edges;
-    result.route_failures = view.route_failures;
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;

@@ -261,10 +261,6 @@ struct MatronSnapshot final {
     // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
-    // The ways of her map (matron_routes.hpp) she has been along this run,
-    // and those that failed under her.
-    std::uint32_t route_edges = 0;
-    std::uint32_t route_failures = 0;
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
@@ -1569,12 +1565,10 @@ public:
     // Tests only: her out of the locker and on her patrol loop.
     void debug_matron_patrol() noexcept;
     // Tests only (never bound to the bridge): her body put standing at `feet`,
-    // awake and hunting; and one of her climbs begun from there (Connector
-    // values of sim/matron_routes.hpp), up or down. False if she found no hold.
+    // awake and hunting; and one of her climbs begun from there, up or down:
+    // the corner pipe, or the scanned ladder nearest her off her floor.
+    // False if she found no hold.
     void debug_place_matron(Vector3 feet) noexcept;
-    [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
-    // Tests only: the same, named without her map: the corner pipe, or the
-    // scanned ladder nearest her off her floor.
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
@@ -1583,8 +1577,6 @@ public:
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
     void debug_matron_let_go() noexcept;
-    // Tests only: every way on her map but this one (matron_routes.hpp) ruled out.
-    void debug_matron_only_way(std::size_t index) noexcept;
     // The Matron's climbing (matron_traversal.hpp): what the tower's steel
     // offers her, scanned from the real collision geometry on first use.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();

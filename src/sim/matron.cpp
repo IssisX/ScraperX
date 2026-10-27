@@ -145,6 +145,52 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     levels_.push_back(bay);
     bay_level_ = static_cast<int>(levels_.size()) - 1;
     patrol_node_ = 2;
+    // Her decks' steel (off_its_steel), as her authored map held it: the
+    // stack's decks a ring of bands 9 m deep round the 34 m shaft
+    // (physics_world_tuning.hpp kStackHalfExtent 26, kStackDeckBandDepth 9),
+    // the well's rings bands 4 m wide narrowing kRingStepIn a ring
+    // (world_solids.inc "UpperDeck"), the walkway plate at 143 under C3's
+    // riser, the bay's cut and the catwalk at 154, the bay's bracket, and
+    // the well's cages at their stops (3.0 x 2.8 m floors; her lines on the
+    // 176 ring run into both).
+    {
+        const auto bands = [](DeckSteel &d, const int level, const float top, const float outer, const float band) {
+            const float inner = outer - band;
+            d.level = level;
+            d.top = top;
+            d.patches[0] = {-outer, outer, kMidZ + inner, kMidZ + outer};   // north
+            d.patches[1] = {-outer, outer, kMidZ - outer, kMidZ - inner};   // south
+            d.patches[2] = {inner, outer, kMidZ - inner, kMidZ + inner};    // east
+            d.patches[3] = {-outer, -inner, kMidZ - inner, kMidZ + inner};  // west
+            d.count = 4;
+        };
+        constexpr float kStackOuter = 26.0F;
+        constexpr float kStackBand = 9.0F;
+        constexpr float kWellBand = 4.0F;
+        const int first_stack = 2 + kUpperRings;   // levels_: her deck, the 176 ring, the rings above, the stack
+        bands(deck_steel_[0], first_stack + 11, kStackPitch * 12.0F, kStackOuter, kStackBand);   // 132
+        bands(deck_steel_[1], first_stack + 12, kStackPitch * 13.0F, kStackOuter, kStackBand);   // 143
+        deck_steel_[1].patches[deck_steel_[1].count++] = {-11.5F, -5.0F, -135.35F, -133.0F};
+        bands(deck_steel_[2], 0, kDeckTop, kStackOuter, kStackBand);
+        const Steel north = deck_steel_[2].patches[0];
+        deck_steel_[2].patches[0] = {north.min_x, Bay::kWestX, north.min_z, north.max_z};
+        deck_steel_[2].patches[deck_steel_[2].count++] = {Bay::kEastX, north.max_x, north.min_z, north.max_z};
+        deck_steel_[2].patches[deck_steel_[2].count++] = {-16.94F, 16.94F, -150.8F, -149.2F};
+        deck_steel_[3].level = bay_level_;
+        deck_steel_[3].top = 152.22F;
+        deck_steel_[3].patches[0] = {Bay::kWestX, -2.9F, -131.25F, -129.35F};
+        deck_steel_[3].count = 1;
+        for (int k = 0; k < 3; ++k) {
+            const float mid = kRingX - kRingStepIn * static_cast<float>(k);
+            bands(deck_steel_[static_cast<std::size_t>(4 + k)], 1 + k, kRingFloor + kRingPitch * static_cast<float>(k),
+                 mid + 0.5F * kWellBand, kWellBand);
+        }
+        const Steel cage_a{-12.0F, -9.0F, -132.8F, -130.0F};
+        const Steel cage_b{-8.7F, -5.7F, -132.8F, -130.0F};
+        deck_steel_[4].patches[deck_steel_[4].count++] = cage_a;
+        deck_steel_[4].patches[deck_steel_[4].count++] = cage_b;
+        deck_steel_[5].patches[deck_steel_[5].count++] = cage_b;
+    }
 
     BodyInterface &bodies = physics_.GetBodyInterface();
     // Her body exists from the start but is only in the world once she is out.
@@ -270,20 +316,9 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
-void Matron::only_way_for_test(const std::size_t index) {
-    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
-        if (i != index) {
-            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
-        }
-    }
-    found_climbs_off_ = index < routes_.edge_count();   // one way alone: none of her own either (no way named: her own only)
-}
-
 void Matron::rule_out_pipe_for_test() {
-    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
-        if (routes_.edge(i).connector == routes::Connector::CornerPipe) {
-            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
-        }
+    for (PipeWayMemory &way : pipe_ways_) {
+        way.ruled_out = true;
     }
 }
 
@@ -292,19 +327,19 @@ void Matron::let_go_for_test() {
     (void)(climb_way_.let_go() || pipe_way_.let_go() || routecraft_way_.let_go() || journey_way_.let_go());
 }
 
-bool Matron::climb_for_test(const routes::Connector which, const bool down) {
+bool Matron::climb_for_test(const bool pipe, const bool down) {
     // The scanned way nearest her off her floor (the connector only says
     // pipe or not: every climb is one her scan found).
     int index = -1;
-    if (body_in_world_ && which != routes::Connector::CornerPipe) {
+    if (body_in_world_ && !pipe) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         index = nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, down);
     }
     climb_retry_s_ = 0.0F;
-    if (which == routes::Connector::CornerPipe) {
+    if (pipe) {
         const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
-        return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to, !route_on_edge_);
+        return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
     return index >= 0 && begin_climb(index, down);
 }
@@ -846,13 +881,30 @@ void Matron::settle_level() {
 }
 
 bool Matron::off_its_steel(const int level, const float x, const float feet, const float z) const {
-    for (std::size_t r = 0; r < routes::kRegionCount; ++r) {
-        const routes::RegionInfo &info = routes_.region(static_cast<routes::Region>(r));
-        if (info.level == level) {
-            return routes_.region_at(x, feet, z) != info.id;
+    // The level whose steel is under her: of the decks whose footprint holds
+    // (x, z), the one whose top is nearest her feet, within kOnSteelM.
+    int under = -1;
+    float best_dy = kOnSteelM;
+    for (const DeckSteel &deck : deck_steel_) {
+        const float dy = std::abs(feet - deck.top);
+        if (deck.level < 0 || dy > best_dy) {
+            continue;
+        }
+        for (std::uint8_t i = 0; i < deck.count; ++i) {
+            const Steel &patch = deck.patches[i];
+            if (x >= patch.min_x && x <= patch.max_x && z >= patch.min_z && z <= patch.max_z) {
+                under = deck.level;
+                best_dy = dy;
+                break;
+            }
         }
     }
-    return false;   // a level her map does not know: its height is all she has
+    for (const DeckSteel &deck : deck_steel_) {
+        if (deck.level == level) {
+            return under != level;
+        }
+    }
+    return false;   // a level whose steel she does not know: its height is all she has
 }
 
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
@@ -2013,22 +2065,16 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     }
     // Every other way is her own: bars she finds herself, else a way she
     // plans over the steel her scan read (matron_found_climb.cpp), climbed by
-    // her own hands. Held to a line's ramp, or in the test of one map way
-    // alone, they stand aside.
-    if (on_ramp || found_climbs_off_) {
+    // her own hands. Held to a line's ramp, they stand aside.
+    if (on_ramp) {
         routecraft_way_.stand_aside();
     } else if (ask(routecraft_way_, true)) {
-        return true;
-    }
-    // The authored map's way alone, for the test that drives one of its
-    // ways; in play she has none of it.
-    if (found_climbs_off_ && ask(route_way_, true)) {
         return true;
     }
     // A rung way her scan found off her floor (her clock to try a start again
     // runs down here); a line she would only wait at, last.
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-    return (!found_climbs_off_ && ask(climb_way_, true)) || ask(line_way_, true);
+    return ask(climb_way_, true) || ask(line_way_, true);
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
@@ -2187,7 +2233,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
     }
     // Or on the deck her corner pipe is taking her to, or (no longer frail) a
-    // deck it joins to hers: a storey of it is a few seconds to her.
+    // deck it joins to hers: a story of it is a few seconds to her.
     const float player_floor_y = floor_of(float(player.GetY()));
     const Mover *taking = holder();
     const bool by_her_pipe =
@@ -2499,9 +2545,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            // So is one her map has a way to, that she is on her way along.
-            const bool by_pipe = (elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward)) ||
-                                 route_on_edge_ || (elsewhere && route_.count > 0 && route_goal_ == lead_region());
+            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -3375,11 +3419,12 @@ void Matron::restore(const Saved &saved) {
         climb_grips_ = 0;
         climb_releases_ = 0;
         climbs_done_ = 0;
-        // A restore is a world changed: every way of her map is worth trying again.
-        route_clear();
-        routes_.unblock_all();
-        route_edges_done_ = 0;
-        route_failures_ = 0;
+        // A restore is a world changed: every way of her pipe is worth trying
+        // again (one ruled out stays out).
+        for (PipeWayMemory &way : pipe_ways_) {
+            way.failures = 0;
+            way.blocked_until_s = 0.0F;
+        }
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
         unrig_way_ = -1;
@@ -3950,8 +3995,6 @@ void Matron::refresh_view() {
     view_.kneeling = kneeling_;
     view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
-    view_.route_edges = route_edges_done_;
-    view_.route_failures = route_failures_;
     report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
     if (view_.released) {
