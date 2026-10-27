@@ -11,6 +11,7 @@
 #include "sim/matron_traversal.hpp"
 #include "sim_tests_decks.hpp"
 
+#include <cmath>
 #include <cstdlib>
 #include <vector>
 
@@ -158,7 +159,47 @@ void run_matron_pursuit() {
 // her body: no other way of hers takes it), until she stands there with
 // every move of it done and none failed. Its walks, its climbs and its
 // top-outs are all her own body in the world, gravity on.
+// The tests' answer key against the world: every deck's outline is the steel
+// under it (the check the authored map's own test made of its regions).
+void run_decks_are_steel() {
+    Simulation s(InitialSpawn::Deck154);
+    int checked = 0;
+    for (const scraperx_test_decks::DeckInfo &d : scraperx_test_decks::decks()) {
+        for (std::uint8_t p = 0; p < d.count; ++p) {
+            const scraperx_test_decks::Patch &patch = d.patches[p];
+            if (patch.moving) {
+                continue;
+            }
+            const double top = double(d.top_y) + double(patch.rise);
+            const double cx = 0.5 * double(patch.min_x + patch.max_x);
+            const double cz = 0.5 * double(patch.min_z + patch.max_z);
+            const bool along_x = patch.max_x - patch.min_x >= patch.max_z - patch.min_z;
+            // Machines and posts stand on the bands; a sample that lands on one
+            // reads its top, so try points along the patch for the bare deck.
+            bool found = false;
+            double nearest = 1.0e9;
+            for (int k = 0; k < 9 && !found; ++k) {
+                const double t = 0.1 + 0.1 * k;
+                const double x = along_x ? double(patch.min_x) + double(patch.max_x - patch.min_x) * t : cx;
+                const double z = along_x ? cz : double(patch.min_z) + double(patch.max_z - patch.min_z) * t;
+                const double y = s.debug_support_y(Vector3{x, top + 0.05, z}, 0.5);
+                if (!std::isnan(y)) {
+                    nearest = std::min(nearest, std::abs(y - top));
+                    found = std::abs(y - top) < 0.03;
+                }
+            }
+            if (!found) {
+                std::cerr << "  " << d.name << " patch " << int(p) << ": nearest top off by " << nearest << '\n';
+            }
+            require(found, "matron ways: a deck's outline is the steel under it");
+            ++checked;
+        }
+    }
+    std::cout << "PASS scraperx_sim matron decks are steel: patches=" << checked << '\n';
+}
+
 void run_matron_ways() {
+    run_decks_are_steel();
     Simulation s(InitialSpawn::Deck154);
     require(s.advance_frame(1.0).accepted, "matron ways: settle");
     const traversal::AffordanceMap &map = s.matron_affordances();
@@ -171,6 +212,9 @@ void run_matron_ways() {
         }
         return Deck::None;
     };
+    const auto rung = [](const traversal::MoveKind kind) {
+        return kind == traversal::MoveKind::RungUp || kind == traversal::MoveKind::RungDown;
+    };
     std::vector<std::size_t> ways;
     for (std::size_t k = 0; k < map.edges().size(); ++k) {
         const traversal::Edge &e = map.edges()[k];
@@ -179,9 +223,22 @@ void run_matron_ways() {
         }
         const Deck from = deck_of(e.from);
         const Deck to = deck_of(e.to);
-        if (from != Deck::None && to != Deck::None && from != to) {
-            ways.push_back(k);
+        if (from == Deck::None || to == Deck::None || from == to) {
+            continue;
         }
+        // Her planner never takes another way where a ladder's rungs reach
+        // the same region: driving this one would climb the rungs instead.
+        bool by_rungs = false;
+        for (const traversal::Edge &o : map.edges()) {
+            by_rungs = by_rungs || (o.usable && rung(o.kind) && !rung(e.kind) && o.from == e.from && o.to == e.to);
+        }
+        if (by_rungs) {
+            std::cout << "  matron way " << scraperx_test_decks::deck(from).name << " to "
+                      << scraperx_test_decks::deck(to).name << " (" << traversal::move_name(e.kind)
+                      << "): not hers, a ladder's rungs reach the same region\n";
+            continue;
+        }
+        ways.push_back(k);
     }
     int taken = 0;
     for (std::size_t w = 0; w < ways.size(); ++w) {
@@ -210,7 +267,24 @@ void run_matron_ways() {
             j = s.matron_journey();
             gravity = std::min(gravity, j.gravity_factor);
         }
-        const bool arrived = planned && !j.active && j.region == e.to;
+        // Standing where it ends: an arrival her journey counts, then a second
+        // on the far deck's steel, off any rung or pipe.
+        int on_goal = 0;
+        if (planned && !j.active && j.region == e.to && j.arrivals > j0.arrivals) {
+            for (int i = 0; i < 120 && on_goal < 60; ++i) {
+                (void)s.advance_frame(1.0 / 60.0);
+                secs += 1.0 / 60.0;
+                const auto m = s.matron_state();
+                worst = std::max(worst, std::hypot(m.position.x - last.x, m.position.y - last.y, m.position.z - last.z));
+                last = m.position;
+                alive = alive && m.alive;
+                const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+                const bool there = !m.on_pipe && !m.climbing &&
+                                   deck_at(float(m.position.x), float(feet), float(m.position.z)) == deck_of(e.to);
+                on_goal = there ? on_goal + 1 : 0;
+            }
+        }
+        const bool arrived = on_goal >= 60;
         std::cout << "  matron way " << w << ": " << scraperx_test_decks::deck(deck_of(e.from)).name << " to "
                   << scraperx_test_decks::deck(deck_of(e.to)).name << " (" << traversal::move_name(e.kind)
                   << "): arrived " << arrived << " in " << secs << " s, moves " << (j.moves_done - j0.moves_done)

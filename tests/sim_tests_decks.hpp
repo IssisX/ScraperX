@@ -8,7 +8,11 @@
 // well's rings bands 4 m wide narrowing 0.91 m a ring (world_solids.inc
 // "UpperDeck"), with the walkway plate at 143 under C3's riser, the bay's cut
 // and the catwalk at 154, the bay's bracket at 152.22, and the well's cages
-// at their stops.
+// at their stops. Two additions the map never held, from
+// band_counterweight_well.cpp: the timber boards out from the 176 ring to the
+// standpipe's foot, where her pole climb down from the 198 ring stands her,
+// and the catwalk flush with the 198 ring, where the panel climb down from
+// the 220 ring stands her.
 
 #include <array>
 #include <cmath>
@@ -21,6 +25,8 @@ enum class Deck : std::uint8_t { Deck132, Deck143, Deck154, Bracket152, Ring176,
 
 struct Patch {
     float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
+    float rise = 0.0F;     // its top over the deck's (within kOnTopM)
+    bool moving = false;   // a machine's floor: steel there only while it is
     [[nodiscard]] bool holds(const float x, const float z) const noexcept {
         return x >= min_x && x <= max_x && z >= min_z && z <= max_z;
     }
@@ -30,7 +36,7 @@ struct DeckInfo {
     Deck id = Deck::None;
     const char *name = "";
     float top_y = 0.0F;
-    std::array<Patch, 6> patches{};
+    std::array<Patch, 8> patches{};
     std::uint8_t count = 0;
 };
 
@@ -41,10 +47,14 @@ inline constexpr float kRingBand = 4.0F;
 inline constexpr float kRing176Mid = 23.09F;
 inline constexpr float kRingStep = 0.91F;
 inline constexpr float kOnTopM = 0.35F;   // feet within this of a deck's top: on it
+// The ladder from her deck up to the 176 ring, as the world builds it: the
+// line its rungs stand on, and where a climber stands at its foot.
+inline constexpr float kHerLadderX = 5.0F;
+inline constexpr float kHerLadderFootZ = -129.55F;
 
 // The four bands of a square ring whose outer edge is `outer`, `band` deep,
 // round the shaft at (0, kShaftZ).
-inline std::uint8_t ring_patches(std::array<Patch, 6> &patches, const float outer, const float band) {
+inline std::uint8_t ring_patches(std::array<Patch, 8> &patches, const float outer, const float band) {
     const float inner = outer - band;
     patches[0] = {-outer, outer, kShaftZ + inner, kShaftZ + outer};   // north
     patches[1] = {-outer, outer, kShaftZ - outer, kShaftZ - inner};   // south
@@ -95,11 +105,17 @@ inline std::array<DeckInfo, 7> make_decks() {
     {
         // The Counterweight Well's cages at their stops: stage A's up at the
         // 176 ring, stage B's at the 176 ring below and the 198 ring above.
-        constexpr Patch kCageA{-12.0F, -9.0F, -132.8F, -130.0F};
-        constexpr Patch kCageB{-8.7F, -5.7F, -132.8F, -130.0F};
+        constexpr Patch kCageA{-12.0F, -9.0F, -132.8F, -130.0F, 0.0F, true};
+        constexpr Patch kCageB{-8.7F, -5.7F, -132.8F, -130.0F, 0.0F, true};
         d[4].patches[d[4].count++] = kCageA;
         d[4].patches[d[4].count++] = kCageB;
         d[5].patches[d[5].count++] = kCageB;
+        // The boards at 176.45 (0.2 m over the ring, within kOnTopM): out
+        // south from the ring, then east past the standpipe.
+        d[4].patches[d[4].count++] = {6.90F, 7.20F, -131.05F, -128.60F, 0.20F};
+        d[4].patches[d[4].count++] = {6.90F, 8.50F, -131.05F, -130.75F, 0.20F};
+        // The catwalk flush with the 198 ring, under the scaffold panel.
+        d[5].patches[d[5].count++] = {10.50F, 11.50F, -132.00F, -129.72F};
     }
     d[6] = ring(Deck::Ring220, "ring 220.25", 2);
     return d;
