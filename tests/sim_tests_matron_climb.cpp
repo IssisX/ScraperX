@@ -1,3 +1,4 @@
+#include <sstream>
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -2033,4 +2034,117 @@ void run_matron_tower_proof() {
     require(failed_legs.empty(), "matron tower proof: every deck pair her scan joins, up and down, arrived, no tick over 0.20 m, gravity on");
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
+}
+
+// Every ladder in the tower, as her own scan reads it: for each one her scan
+// gives a climb up (on the rungs, or a jump for the bottom rung), she goes up
+// it from where that climb starts and back down it. On the rungs she keeps to
+// the ladder's line (no drift along the rungs beyond kLadderDriftM, the fault
+// that once walked her off the first ladder's top), tops out onto the deck,
+// never loses a hold and never moves more than 0.20 m a tick. Her climbing
+// names no ladder. This test names only the ones her scan refuses today, each
+// for a reason in the world's steel (an answer key for the test, never read
+// by her): every refusal is printed with the scan's own reasons, and a refusal
+// outside that list fails, so the refused set cannot grow unseen.
+void run_matron_ladders() {
+    constexpr double kLadderDriftM = 0.30;
+    struct Refused {
+        float x, z;
+        const char *why;   // what in the world stops her, as measured 2026-10-27
+    };
+    static constexpr Refused kRefusedToday[] = {
+        {-8.21F, -145.6F, "foot: the 0.30 m plank (band_plate_shop.cpp) ends 0.46 m past the rungs, she needs 0.50 m; "
+                          "the wall side is under the 484 ring's deck"},
+        {8.7F, -161.8F, "the cradle's west rail (band_stack.cpp) 0.14 m inside her body on the rungs; "
+                        "the 82 m walkway starts 1.1 m along the rungs from the top"},
+        {25.8F, -123.8F, "the rungs are inside a 1.6 m tower column (entity 11, 22-33 m)"},
+        {2.4F, -122.45F, "under the solid tier 3 gantry slab, 21.88-22.00 m: no hatch"},
+        {2.4F, -120.1F, "under the solid tier 1 catwalk slab, 7.38-7.50 m: no hatch"},
+        {4.5F, -119.25F, "under the solid tier 2 slab, 14.68-14.80 m: no hatch; no floor at the foot on the open side"},
+    };
+    Simulation s(InitialSpawn::Deck154);
+    (void)s.advance_frame(0.1);
+    const traversal::AffordanceMap &map = s.matron_affordances();
+    const auto &edges = map.edges();
+    int tried = 0, passed = 0, refused = 0;
+    std::vector<std::string> failed, unexpected;
+    for (const traversal::Ladder &l : map.ladders()) {
+        const auto near_line = [&](const traversal::Edge &e) {
+            return std::abs(e.spec.line.GetX() - l.x) < 0.6F && std::abs(e.spec.line.GetZ() - l.z) < 0.6F;
+        };
+        const auto on_line = [&](const traversal::Edge &e, MoveKind kind) {
+            return e.usable && e.kind == kind && near_line(e);
+        };
+        int up = -1;
+        for (const MoveKind kind : {MoveKind::RungUp, MoveKind::JumpCatch}) {
+            for (std::size_t k = 0; k < edges.size() && up < 0; ++k) if (on_line(edges[k], kind)) up = int(k);
+        }
+        std::cout << "  matron ladder at (" << l.x << ", " << l.z << ") " << l.bottom << "->" << l.top << " m, " << l.rungs
+                  << " rungs: ";
+        if (up < 0) {
+            ++refused;
+            const Refused *known = nullptr;
+            for (const Refused &r : kRefusedToday) {
+                if (std::abs(r.x - l.x) < 0.05F && std::abs(r.z - l.z) < 0.05F) known = &r;
+            }
+            std::cout << "refused by her scan (" << (known != nullptr ? known->why : "NOT A KNOWN REFUSAL") << ")\n";
+            int ways = 0;
+            for (const traversal::Edge &e : edges) {
+                if (!near_line(e) || (e.kind != MoveKind::RungUp && e.kind != MoveKind::JumpCatch && e.kind != MoveKind::RungDown)) continue;
+                ++ways;
+                std::cout << "    " << traversal::move_name(e.kind) << " " << e.from << "->" << e.to << ": " << e.reason << "\n";
+            }
+            if (ways == 0) std::cout << "    no climb on its line at all: no floor at its foot or head in her reach\n";
+            if (known == nullptr) {
+                std::ostringstream o;
+                o << "(" << l.x << ", " << l.z << ")";
+                unexpected.push_back(o.str());
+            }
+            continue;
+        }
+        const traversal::Edge eu = edges[std::size_t(up)];
+        ++tried;
+        const auto leg = [&](const int goal, const char *way) {
+            auto last = s.matron_state().position;
+            double worst = 0.0, drift = 0.0, gravity = 1.0, secs = 0.0;
+            const auto j0 = s.matron_journey();
+            if (!s.debug_matron_travel_region(goal)) return std::string(way) + " no plan";
+            Simulation::MatronJourney j = s.matron_journey();
+            while (j.active && secs < 120.0) {
+                (void)s.advance_frame(1.0 / 60.0);
+                secs += 1.0 / 60.0;
+                const auto p = s.matron_state().position;
+                worst = std::max(worst, std::hypot(p.x - last.x, p.y - last.y, p.z - last.z));
+                last = p;
+                const double feet = p.y - Matron::kStandCentre;
+                const double across = l.along_x ? p.x - l.x : p.z - l.z;
+                const double off = l.along_x ? p.z - l.z : p.x - l.x;
+                if (feet > l.bottom + 0.5 && feet < l.top - 0.3 && std::abs(off) < 1.2) drift = std::max(drift, std::abs(across));
+                j = s.matron_journey();
+                gravity = std::min(gravity, j.gravity_factor);
+            }
+            std::ostringstream o;
+            o << way << " drift " << drift << " m worst step " << worst << " m slips " << (j.slips - j0.slips) << " misses "
+              << (j.misses - j0.misses) << " failed " << (j.moves_failed - j0.moves_failed);
+            const bool ok = !j.active && j.region == goal && drift <= kLadderDriftM && worst <= 0.20 && gravity == 1.0 &&
+                            j.slips == j0.slips && j.misses == j0.misses && j.moves_failed == j0.moves_failed;
+            return o.str() + (ok ? " ok" : " FAILED");
+        };
+        const auto st = eu.spec.start;
+        s.debug_place_matron(Vector3{double(st.GetX()), double(st.GetY()), double(st.GetZ())});
+        for (int i = 0; i < 30; ++i) (void)s.advance_frame(1.0 / 60.0);
+        const std::string a = leg(eu.to, eu.kind == MoveKind::JumpCatch ? "up (jump catch)" : "up");
+        // Back down to where the climb began, by whatever way her scan gives.
+        const std::string b = leg(eu.from, "down");
+        std::cout << a << "; " << b << "\n";
+        const bool ok = a.find("FAILED") == std::string::npos && b.find("FAILED") == std::string::npos;
+        passed += ok ? 1 : 0;
+        if (!ok) failed.push_back(a + "; " + b);
+    }
+    std::cout << "  matron ladders: " << passed << "/" << tried << " ladders up and down clean, " << refused
+              << " refused by her scan (" << unexpected.size() << " not known)\n";
+    for (const std::string &u : unexpected) std::cout << "  matron ladders: refused, not a known refusal: " << u << "\n";
+    require(tried > 0 && passed == tried, "matron ladders: up and down every ladder, on its line, no hold lost");
+    require(unexpected.empty(), "matron ladders: her scan refuses no ladder beyond the six refused for the world's steel");
+    std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << ", refused " << refused << "\n";
 }

@@ -192,6 +192,10 @@ int main() {
         run_matron_chain();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladders") {
+        run_matron_ladders();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-tower") {
         run_matron_tower_proof();
         return 0;

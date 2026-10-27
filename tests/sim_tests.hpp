@@ -877,6 +877,7 @@ void run_matron_climb();
 void run_matron_climb_board();
 void run_matron_climb_scan();
 void run_matron_tower_proof();
+void run_matron_ladders();
 void run_matron_chain();
 void run_matron_towers();
 void run_matron_board_walls();
