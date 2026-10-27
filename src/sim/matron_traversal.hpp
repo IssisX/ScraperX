@@ -42,6 +42,17 @@
 namespace scraperx::sim::traversal {
 
 // Her body and her limits. All CHOSEN for a 2.1 m, 220 kg body.
+// The player's jump-and-hang reach over his feet, about 4.14 m: capsule
+// centre over the feet (kPlayerHalfHeight 0.9 + kPlayerRadius 0.35), a
+// standing jump's rise (kJumpSpeed 5.5 under 9.81 m/s^2: 1.54) and the hang
+// band's top over the centre (kHangMaximumRiseAboveCentre 1.35). Written out:
+// Limits is used in constant expressions, and physics_world_tuning.hpp
+// cannot be included here (it includes this header). The test
+// matron-climb's escape-margin check recomputes it from those constants.
+inline constexpr float kPlayerJumpHangReachM = 4.14F;
+// What the player keeps over her planned jump-catch.
+inline constexpr float kEscapeMarginM = 0.5F;
+
 struct Limits {
     float radius = 0.30F;
     float half_height = 0.75F;   // the capsule's cylinder half; center is radius + half above the feet
@@ -55,18 +66,24 @@ struct Limits {
     float reach_out = 0.95F;
     float reach_low = 0.80F;   // pressing down on a lip, hands at her hips
     // The one budget every simultaneous actuator (hands, feet, squeeze)
-    // draws from: about 3.7 times her weight.
+    // draws from: about 3.7 times her weight. Left at 8 kN on purpose.
     float total_force_n = 8000.0F;
-    float power_w = 22000.0F;   // actuator power: force along her own velocity, all actuators together
+    // 8 kN still applied at the end of a 6 m/s push is nearly 50 kW. At 22 kW
+    // the leg had to let go while the stroke still had rise in it, and the
+    // earned jump stayed 0.74 m. 44 kW is the shared cap that keeps 8 kN on
+    // the floor long enough for the stroke below to finish.
+    float power_w = 44000.0F;   // actuator power: force along her own velocity, all actuators together
     float foot_force_n = 220.0F * 9.0F;   // her feet on a floor: kFootAccel
     // During push-off the planted foot can extend this far below the fixed
-    // capsule. Leg travel is independent of the ordinary standing probes.
-    float leg_travel_m = 0.40F;
-    // At 90 Hz, 8 kN / 22 kW can earn 3.80 m/s over a 0.40 m stroke.
-    // The limit is a measured take-off speed, never an applied impulse.
-    float launch_dv_mps = 3.80F;
-    // A catch: her grip arrests at most this much speed relative to the hold.
-    float catch_arrest_mps = 4.5F;
+    // capsule. 0.40 m at 8 kN tops out near 4.6 m/s before power even binds
+    // (about 3.5 ft). A 2.1 m body can spend 0.85 m and still be a body.
+    float leg_travel_m = 0.85F;
+    // Measured at 90 Hz from 8 kN, 44 kW and the 0.85 m stroke. A take-off
+    // speed the push earns. Never an impulse added at toe-off.
+    float launch_dv_mps = 6.30F;
+    // Her own jump comes back near 7.2 m/s. A catch that cannot stop that
+    // return rips her off a jump she was allowed to make.
+    float catch_arrest_mps = 7.60F;
     float catch_radius_m = 0.22F;
     // A gap in the rungs: from a bent arm she reaches up to hand_above_center
     // over her center; past that she throws for the next rung (a dyno), her
@@ -81,7 +98,10 @@ struct Limits {
     float mantle_max_m = 2.30F;
     float step_max_m = 0.36F;
     float drop_max_m = 4.60F;     // lip to landing; she hangs first (her feet 2.4 m under it)
-    float jump_hold_max_m = 4.0F; // a hold this high over her feet she can jump for
+    // A hold this high over her feet she can jump for: kept kEscapeMarginM
+    // under the player's own jump-and-hang reach (Cory, 2026-10-27 15:50 CT),
+    // so a hold he can reach from a jump is one she cannot follow him to.
+    float jump_hold_max_m = kPlayerJumpHangReachM - kEscapeMarginM;
     float climb_mps = 0.6F;
     float mantle_mps = 1.4F;
     float pole_up_mps = 0.5F;
