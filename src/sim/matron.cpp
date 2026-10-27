@@ -245,17 +245,6 @@ bool Matron::set_home(const float deck_top) {
     if (found < 0) {
         return false;
     }
-    if (home_post_level_ >= 0) {
-        levels_[static_cast<std::size_t>(home_post_level_)].posts.clear();
-        home_post_level_ = -1;
-    }
-    Level &home = levels_[static_cast<std::size_t>(found)];
-    if (home.posts.empty()) {
-        // Her post: her deck's way up, the foot of the stack's cage guide off
-        // the north band (band_stack.cpp), facing it.
-        home.posts = {{kHomeWayUpX, kBandNorthZ, kPi}};
-        home_post_level_ = found;
-    }
     home_y_ = levels_[static_cast<std::size_t>(found)].floor_y;
     home_level_ = found;
     physics_.GetBodyInterface().SetPosition(locker_body_, RVec3(kLockerX, home_y_ + kLockerHalfY, kLockerZ),
