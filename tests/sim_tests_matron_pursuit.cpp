@@ -38,6 +38,7 @@ Chase chase(const Vector3 from, const Vector3 prey, const Region goal, const dou
             const double let_go_at = 1.0e9, const std::size_t only_way = routes::kMaxEdges) {
     constexpr double kHearEveryS = 8.0;
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron pursuit: settle");
     s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
     s.debug_place_matron(from);

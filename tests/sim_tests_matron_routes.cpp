@@ -119,6 +119,7 @@ void run_blocked() {
 // (and its corners, 0.3 m in) the first thing met is at the region's top.
 void run_tops_are_steel() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     const routes::Map map;
     int checked = 0;
     for (std::size_t r = 0; r < routes::kRegionCount; ++r) {
