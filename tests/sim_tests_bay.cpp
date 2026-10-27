@@ -99,6 +99,7 @@ void run_bay() {
     //      fan's noise over the steps beside it ---------------------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted, "bay walkway: settle");
         (void)s.set_crouch_input(true);
         stand(s, 4.0);
@@ -137,6 +138,7 @@ void run_bay() {
     // ---- her trap: she holds the leaf; stepped onto, it goes down -------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(stage_hold(s), "bay trap: across the bay from her, the player heard: she holds the leaf from below");
         const auto held = s.bay_state();
         const auto her = s.matron_state();
@@ -201,6 +203,7 @@ void run_bay() {
     // ---- her trap beaten: the chain off its cleat onto the leaf's eye --------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         require(stage_hold(s), "bay chain: she holds the leaf");
         const std::vector<std::uint8_t> holding = s.save_game();
         require(walk_to(s, 0.4, -129.5, 6.0, 0.08), "bay chain: to the cleat on the rail's end post");
@@ -260,6 +263,7 @@ void run_bay() {
         // with it: the leaf up under its motor, the chain on its cleat, her
         // hands out of it.
         Simulation t(InitialSpawn::Deck154);
+        t.place_matron_home(154.0F);
         require(t.load_game(holding.data(), holding.size()), "bay chain: the save made while she held it loads");
         (void)t.advance_frame(0.5);
         const auto loaded = t.bay_state();

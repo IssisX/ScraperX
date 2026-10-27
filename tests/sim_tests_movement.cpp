@@ -1425,6 +1425,7 @@ void run_climb_moves() {
     };
     // The fireman's slide.
     Simulation slide(InitialSpawn::Deck154);
+    slide.place_matron_home(154.0F);
     up_the_ladder(slide, 4.0);
     const double top_y = slide.snapshot().player_position.y;
     require(slide.set_crouch_input(true), "climb moves: crouch held");
@@ -1450,6 +1451,7 @@ void run_climb_moves() {
             "climb moves: the slide ends on the deck at the ladder's foot, the legs taking it");
     // The side jump.
     Simulation side(InitialSpawn::Deck154);
+    side.place_matron_home(154.0F);
     up_the_ladder(side, 3.0);
     require(side.set_move_input(-1.0, 0.0) && side.request_jump() &&
                 side.advance_frame(Simulation::kFixedStepSeconds).accepted,

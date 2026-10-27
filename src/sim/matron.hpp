@@ -186,6 +186,12 @@ public:
     static constexpr float kLockerHalfY = 1.1F;
     static constexpr float kLockerHalfZ = 0.45F;
     static constexpr float kSpawnZ = kLockerZ - kLockerHalfZ - 0.5F;
+    // Her home deck: where her locker stands and where she wakes. By default
+    // her own deck (kHomeDeckTop, the locker at kLockerY); world setup may
+    // move it (set_home). kDeckTop stays 154: the bay, the catwalk and the
+    // 176 cages are where they are.
+    static constexpr float kHomeDeckTop = kDeckTop;
+    static constexpr float kLockerY = kHomeDeckTop;
 
     // Her body: 2.1 m tall standing, 220 kg.
     static constexpr float kMassKg = 220.0F;
@@ -1048,6 +1054,14 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Her home: the deck (one of her levels' floors, by its top) her locker
+    // stands on, where she wakes, and where a restore puts her back. Moves
+    // the locker; while she is in it, puts her level, floor and lead there.
+    // Returns false (nothing changed)
+    // if no level of hers has that floor.
+    bool set_home(float deck_top);
+    [[nodiscard]] float home_deck_top() const noexcept { return home_y_; }
+    [[nodiscard]] int home_level() const noexcept { return home_level_; }
     // Tests only: she hears the climber at `at` (feet), as her ears would
     // report a sound there: a lead with an age, nothing more.
     void hear_for_test(JPH::RVec3 at);
@@ -1648,6 +1662,9 @@ private:
     std::array<PlankView, kPlanks> plank_views_{};
     std::vector<Level> levels_;
     int level_ = 0;
+    // Her home (set_home): its floor and its level.
+    float home_y_ = kHomeDeckTop;
+    int home_level_ = 0;
     int patrol_ = 0;   // which of her level's loops, and how far round it
 
     State state_ = State::Dormant;

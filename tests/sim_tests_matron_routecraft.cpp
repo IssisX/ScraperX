@@ -495,6 +495,7 @@ void run_matron_routecraft() {
     }
     {
         Simulation world(InitialSpawn::Deck154);
+        world.place_matron_home(154.0F);
         world.launch_matron_for_test({5,155.07,-129.6});
         Vector3 previous{5,155.07,-129.6};
         float maximum_step=0;
@@ -809,6 +810,7 @@ void run_matron_routecraft() {
     }
     {
         Simulation world(InitialSpawn::Deck154);
+        world.place_matron_home(154.0F);
         world.launch_matron_for_test({11,199.32,-131.41});
         Vector3 previous{11,199.32,-131.41};
         double maximum_step = 0;

@@ -158,6 +158,7 @@ void up_ladder() {
         require(s.advance_frame(0.2).accepted && is_climbing(s.snapshot()), "up ladder: on it");
     };
     Simulation off(InitialSpawn::Deck154);
+    off.place_matron_home(154.0F);
     to_foot(off);
     for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
         require(off.set_move_input(0.0, 1.0) && off.advance_frame(Simulation::kFixedStepSeconds).accepted,
@@ -169,6 +170,7 @@ void up_ladder() {
     require(!is_climbing(sprung) && sprung.player_linear_velocity.y > 3.0, "up ladder: jumped off");
 
     Simulation top(InitialSpawn::Deck154);
+    top.place_matron_home(154.0F);
     to_foot(top);
     bool offered = false;
     for (int tick = 0; tick < 90 * static_cast<int>(Simulation::kTickRateHz) && !offered; ++tick) {
@@ -402,6 +404,7 @@ void up_trapeze() {
 // hold on the ladder ahead; turned away from it, not; in the air, nothing.
 void up_route_hint() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "route hint: settle");
     require(walk_to(s, 3.5, -128.2, 16.0) && walk_to(s, 3.5, -132.4, 6.0) && walk_to(s, 5.0, -132.4, 4.0, 0.08),
             "route hint: 3 m short of the ladder");
@@ -434,6 +437,7 @@ void up_route_hint() {
 void up_throw() {
     using scraperx::sim::LooseStock;
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(0.5).accepted, "up throw: settle");
     const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
     const auto throw_one = [&](const std::uint32_t piece, const double pick_x, const double pick_z, const double lo,

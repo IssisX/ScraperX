@@ -26,6 +26,7 @@ void run_ascent() {
     using scraperx::sim::Simulation;
     using scraperx::sim::Snapshot;
     Simulation run(InitialSpawn::Deck154);
+    run.place_matron_home(154.0F);
     (void)run.advance_frame(1.0);
     const double start = run.snapshot().simulation_time_seconds;
     const auto deaths = run.snapshot().death_count;

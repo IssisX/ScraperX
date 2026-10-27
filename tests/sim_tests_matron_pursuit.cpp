@@ -48,6 +48,7 @@ Chase chase(const Vector3 from, const Vector3 prey, const Deck goal, const doubl
             const double let_go_at = 1.0e9) {
     constexpr double kHearEveryS = 8.0;
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron pursuit: settle");
     s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
     s.debug_place_matron(from);
@@ -163,6 +164,7 @@ void run_matron_pursuit() {
 // under it (the check the authored map's own test made of its regions).
 void run_decks_are_steel() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     int checked = 0;
     for (const scraperx_test_decks::DeckInfo &d : scraperx_test_decks::decks()) {
         for (std::uint8_t p = 0; p < d.count; ++p) {
@@ -201,6 +203,7 @@ void run_decks_are_steel() {
 void run_matron_ways() {
     run_decks_are_steel();
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron ways: settle");
     const traversal::AffordanceMap &map = s.matron_affordances();
     const auto deck_of = [&](const int region) {

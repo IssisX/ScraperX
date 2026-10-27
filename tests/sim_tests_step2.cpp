@@ -16,6 +16,7 @@ void run_step2_movement() {
     // the air and carries past where a walking jump lands. Crouched, or with
     // the stick across the facing, it walks.
     Simulation sprint(InitialSpawn::Deck154);
+    sprint.place_matron_home(154.0F);
     require(sprint.advance_frame(1.0).accepted, "the sprint settle interval must be accepted");
     // Runs along the deck, east (+1) or west (-1).
     const auto run_east = [&](const double seconds, double &peak, bool &flag,
@@ -115,6 +116,7 @@ void run_step2_movement() {
     // shoulders; the top-out mantles onto the ring. A column too thick to
     // close a hand round is no hold.
     Simulation climb(InitialSpawn::Deck154);
+    climb.place_matron_home(154.0F);
     require(climb.advance_frame(1.0).accepted, "the climb settle interval must be accepted");
     require(walk_to(climb, -13.2, -128.2, 5.0) && walk_to(climb, -13.2, -131.6, 5.0, 0.08),
             "the player must reach Stage A's head post");
@@ -372,6 +374,7 @@ void run_step2_movement() {
     // by ladder, boards and standpipe, catwalk and scaffold, with every lift
     // in the band left where it was found.
     Simulation route(InitialSpawn::Deck154);
+    route.place_matron_home(154.0F);
     require(route.advance_frame(1.0).accepted, "the route settle interval must be accepted");
     const double route_start = route.snapshot().simulation_time_seconds;
     require(climb_route_ladder(route), "the route's ladder must take the player to the 176 ring");

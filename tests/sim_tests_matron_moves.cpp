@@ -38,6 +38,7 @@ bool steer_to(Simulation &s, const double x, const double z, const bool sprint) 
 
 void run_matron_pace() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron pace: settle");
     // Wake her with a sprint by her locker, then lead her round the deck's
     // bands: sprinting, walking, standing still and quiet, in turn.
@@ -159,6 +160,7 @@ void run_matron_unstick() {
     // (TP-340, out of her hearing): every node of the loop reached, and no
     // stall she does not get out of.
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron unstick: settle");
     s.debug_launch_player({12.0, 341.4, -136.8}, {0.0, 0.0, 0.0});
     (void)s.advance_frame(1.0);
