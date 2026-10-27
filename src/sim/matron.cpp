@@ -1669,7 +1669,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // down on what they stand on (her sole contact), not on
                     // the floor ahead she is stepping up to. A step up is
                     // walking, never the lunge: in a lunge tick it stays on
-                    // her 8 kN and 22 kW, and is reported as her stride.
+                    // her 8 kN and 44 kW, and is reported as her stride.
                     budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
                     budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
                     lunge_draw = false;
@@ -2832,9 +2832,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         }
                     }
                 }
-                // Steel her map does not contain (the board under a climb she
+                // Steel outside deck_steel_ (the board under a climb she
                 // just finished): a step along the real floor, not a straight
-                // line off it onto the authored ring. The edge guard still
+                // line off it onto the ring. The edge guard still
                 // keeps her on what continues under her feet.
                 if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
                     const traversal::Ignore ignore{body_, player_, moving_layer()};

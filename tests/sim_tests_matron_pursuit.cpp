@@ -117,7 +117,7 @@ void report(const char *name, const Chase &c) {
 
 // Down the well's route onto the 176 ring, then across that ring to the
 // evidence. The standpipe used to leave her in the gap beside its foot, and
-// the ring's map does not contain the boards, so she stood there. She must
+// her decks' steel does not contain the boards, so she stood there. She must
 // arrive on the evidence floor, alive, without a step over 0.20 m. A shove
 // after she is already there can kill the player and restore the checkpoint;
 // that restore is not this climb, so the run stops at the arrival.
