@@ -999,8 +999,11 @@ public:
         return edge;
     }
     void count_catch() noexcept { ++catches_; }
-    // Her hands on the player, by stage: a death only fully changed; else a
-    // shove, once in its cooldown, along shove_direction.
+    // Her hands on the player, by stage (Cory, 2026-10-27: medium). A pest
+    // shoves, once in its cooldown, along shove_direction. Dangerous or
+    // changed, she takes hold (grabs): the carry, the dangle and the arm she
+    // may tear off. Only fully changed does she kill: the Claimed fatality.
+    [[nodiscard]] bool grabs() const noexcept { return stage_ != Stage::Pest; }
     [[nodiscard]] bool kills() const noexcept { return stage_ == Stage::Changed; }
     [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F; }
     void count_shove() noexcept {
@@ -1058,7 +1061,7 @@ public:
     bool climb_for_test(bool pipe, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
-    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
+    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && grabs(); }
     void begin_grab(JPH::RVec3 player);
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
