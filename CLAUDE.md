@@ -34,6 +34,16 @@ fine). If they need to give another agent something, put the complete prompt in 
 block in that same message, and name the agent it goes to. The owner is on a phone: never ask them to
 edit, combine or fill in a prompt ("use the earlier prompt with one change"). Give the final text, whole.
 
+## Decisions come pre-digested
+
+2026-10-27: *"I keep telling you you can't give me these dry blocks of text ... break the stuff down in
+simple terms for me every time from now on ... It's difficult for me to make decisions when I have to
+read a ton of shit and put it all together myself."*
+Every decision put to the owner is one short item: what it is in plain words, what each choice does
+to the game, Claude's pick and why in one line, and the one word or sentence the owner answers with.
+Never a table of numbers or file names to work through. The detail lives in the document the item
+links to, never in the message.
+
 ## Near misses: tweak the world, don't rework her
 
 Said more than once (2026-10-21, 2026-10-22: *"I don't like that so many tests fail for such
