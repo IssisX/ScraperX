@@ -279,6 +279,14 @@ void Matron::only_way_for_test(const std::size_t index) {
     found_climbs_off_ = index < routes_.edge_count();   // one way alone: none of her own either (no way named: her own only)
 }
 
+void Matron::rule_out_pipe_for_test() {
+    for (std::size_t i = 0; i < routes_.edge_count(); ++i) {
+        if (routes_.edge(i).connector == routes::Connector::CornerPipe) {
+            routes_.set_status(i, routes::Status::Blocked, routes::Reason::Untested);
+        }
+    }
+}
+
 void Matron::let_go_for_test() {
     // Her hands open on the way that holds her, as a hold giving way opens them.
     (void)(climb_way_.let_go() || pipe_way_.let_go() || routecraft_way_.let_go() || journey_way_.let_go());

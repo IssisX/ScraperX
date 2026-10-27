@@ -1076,6 +1076,15 @@ bool Simulation::debug_matron_climb(const int connector, const bool down) noexce
     return physics_world_->matron().climb_for_test(static_cast<routes::Connector>(connector), down);
 }
 
+bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexcept {
+    return physics_world_->matron().climb_for_test(
+        pipe ? routes::Connector::CornerPipe : routes::Connector::HomeLadder, down);
+}
+
+void Simulation::debug_matron_rule_out_pipe() noexcept {
+    physics_world_->matron().rule_out_pipe_for_test();
+}
+
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
