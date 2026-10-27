@@ -1863,8 +1863,9 @@ void run_matron_remaining() {
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
     }
-    // ---- dangerous, her hands aim you at the shaft: a player standing by its
-    //      rim is shoved toward it, where a pest would only shove them away ----
+    // ---- dangerous, her hands take hold (Cory, 2026-10-27: she grabs and may
+    //      tear an arm off from her medium rage; only fully changed does she
+    //      kill): a player standing by the shaft's rim is taken, not shoved ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
@@ -1881,22 +1882,19 @@ void run_matron_remaining() {
         s.debug_set_matron_stage(1);
         require(wait_for_her(s, 14.0, 40.0), "matron shove: out and dangerous, she comes for the player at the rim");
         const auto before = s.snapshot();
-        double nearest_z = before.player_position.z;
-        bool shoved = false;
-        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !shoved; ++i) {
+        bool taken = false;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !taken; ++i) {
             tick(s);
-            nearest_z = std::min(nearest_z, s.snapshot().player_position.z);
-            shoved = s.matron_state().shoves >= 1 && (s.snapshot().player_position.z < before.player_position.z - 0.6 ||
-                                                      s.snapshot().death_count > before.death_count);
+            taken = s.matron_state().catches >= 1;
         }
         const auto after = s.snapshot();
-        std::cout << "  matron shove: dangerous, shoves=" << s.matron_state().shoves << " player z " << before.player_position.z
-                  << " -> " << after.player_position.z << " (nearest " << nearest_z << "), deaths " << before.death_count
-                  << " -> " << after.death_count << "\n";
-        require(shoved, "matron shove: dangerous, her shove throws the player toward the shaft's rim");
-        require(s.matron_state().catches == 0, "matron shove: dangerous, her hands are not yet a death");
-        std::cout << "PASS scraperx_sim matron shove: shoves=" << s.matron_state().shoves << " dz="
-                  << after.player_position.z - before.player_position.z << "\n";
+        const auto her = s.matron_state();
+        std::cout << "  matron shove: dangerous, catches=" << her.catches << " shoves=" << her.shoves << " claims="
+                  << her.claims << ", deaths " << before.death_count << " -> " << after.death_count << "\n";
+        require(taken && her.shoves == 0, "matron shove: dangerous, her hands take hold of the player at the rim");
+        require(her.claims == 0 && after.death_count == before.death_count,
+                "matron shove: dangerous, her hold is not the fatality");
+        std::cout << "PASS scraperx_sim matron shove: catches=" << her.catches << "\n";
     }
     run_matron_mischief();
     run_matron_collision();
