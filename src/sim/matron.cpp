@@ -1560,10 +1560,11 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
                 if (velocity.GetY() < need) {
                     // Up onto it from this tick's one budget, the same as her
-                    // stride, and pushing down on the floor she boards.
+                    // stride. Her feet are still under its top: they push
+                    // down on what they stand on (her sole contact), not on
+                    // the floor ahead she is stepping up to.
                     const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
-                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), board_body,
-                                           RVec3(at.GetX(), board_top, at.GetZ()));
+                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), support_body, support_point);
                 }
             }
         }
