@@ -804,6 +804,7 @@ public:
         bool climb_bar_traverse = false;
         float climb_force_n = 0.0F;
         bool climb_lunge_drive = false;
+        float foot_power_w = 0.0F;   // her feet's positive power this tick (lunge or walk), from their Budget
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;

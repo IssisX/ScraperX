@@ -4613,6 +4613,7 @@ void Matron::refresh_view() {
     // kTurnLungePowerW); the report says when the force shown is that drive.
     view_.climb_lunge_drive = pipe_phase_ == PipePhase::Off && !routecraft_.owns_motion() && !journey_hands &&
                               climb_ < 0 && foot_lunge_;
+    view_.foot_power_w = foot_power_w_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     view_.mantling = mantling_;
