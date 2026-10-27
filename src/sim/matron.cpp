@@ -2008,8 +2008,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         // The Turn's vault: something lower than her chest close ahead in
         // her way (not the player), and nothing at her head: she jumps it.
-        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F &&
-            !on_catwalk_line(float(at.GetX()), float(at.GetZ()), 0.5F)) {
+        if (turn_moves && !leapt && !boarding && vault_cooldown_s_ <= 0.0F && length > 0.15F) {
             const Vec3 heading(dx / length, 0.0F, dz / length);
             const float look_m = std::clamp(1.55F + std::max(0.0F, speed_now - 3.5F) * 0.11F, 1.55F, 2.15F);
             const Vec3 ahead = heading * look_m;
