@@ -562,6 +562,9 @@ void Simulation::step_fixed() noexcept {
         // She won: the run ends and starts again, the body whole.
         physics_world_.reset();
         physics_world_ = std::make_unique<PhysicsWorld>(initial_spawn_, test_extra_solids_);
+        if (matron_home_ >= 0.0F) {
+            physics_world_->place_matron_home(matron_home_);
+        }
         ++runs_ended_by_matron_;
     }
     sling_action_ = false;
@@ -1236,6 +1239,10 @@ bool Simulation::request_matron_climb_goal(Vector3 goal, Vector3 facing) {
 void Simulation::cancel_matron_climb_goal() { physics_world_->matron().cancel_climb_goal(); }
 int Simulation::matron_climb_status() const { return int(physics_world_->matron().climb_report().status); }
 std::uint32_t Simulation::matron_climb_queries() const { return physics_world_->matron().climb_report().native_queries; }
+bool Simulation::place_matron_home(const float deck_top) {
+    matron_home_ = deck_top;
+    return physics_world_->place_matron_home(deck_top);
+}
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
 double Simulation::debug_matron_gravity_factor() const noexcept {

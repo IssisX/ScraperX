@@ -1763,6 +1763,11 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Test setup: put her home (her locker, where she wakes) on the deck whose
+    // top is deck_top, kept across a world rebuilt after she ends a run. The
+    // game's home is the stack's deck 1 (11 m); tests written for her old
+    // start put it back at 154. Returns false if she has no such level.
+    bool place_matron_home(float deck_top);
     // Tests only: her body's gravity factor.
     [[nodiscard]] double debug_matron_gravity_factor() const noexcept;
 
@@ -1774,6 +1779,7 @@ private:
     std::unique_ptr<PhysicsWorld> physics_world_;
     // To start again whole (a run the Matron ended): how the world was made.
     InitialSpawn initial_spawn_ = InitialSpawn{};
+    float matron_home_ = -1.0F;   // place_matron_home's deck top; -1: the world's own
     std::vector<TestExtraSolid> test_extra_solids_;
     std::uint64_t runs_ended_by_matron_ = 0;
     std::uint64_t tick_index_ = 0;
