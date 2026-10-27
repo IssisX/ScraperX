@@ -384,7 +384,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
 // column serves), then the bars themselves, first in her tick. A climb of
 // her own lets go at its goal; ended short of it, the column is left alone a
 // while, and she goes back down the way she came, once.
-MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*budget*/) {
+MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget &budget) {
     if (status() != MoverStatus::Running) {
         if (!m_.follow_found_climb(dt, goal_.at)) {
             return MoverStatus::Idle;
@@ -392,7 +392,7 @@ MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*bu
         return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
     }
     BodyInterface &bodies = m_.physics_.GetBodyInterface();
-    m_.routecraft_.step(m_.physics_, m_.body_, dt);
+    m_.routecraft_.step(m_.physics_, m_.body_, dt, budget);
     m_.stride_ += bodies.GetLinearVelocity(m_.body_).Length() * dt;   // each rung rings
     if (m_.routecraft_.report().force > 0) {
         m_.routecraft_release_floor_ = float(bodies.GetPosition(m_.body_).GetY()) - kStandCentre;
