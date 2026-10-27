@@ -1212,8 +1212,20 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
         if (horizontal(dest - lip_world_) > span) {
             dest = Vec3(lip_world_) + flat(dest - Vec3(lip_world_)).Normalized() * span;
         }
+        // Over the floor she was going for: her soles on it, or her middle
+        // over it with her soles no higher than the clearance her pull holds
+        // them at over the lip (and their own feel for a floor). Her weight
+        // is her feet's, and her hands let go.
         float support = 0.0F;
-        if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(dest - c) < 0.35F) {
+        bool over_floor = supported(&support) && std::abs(support - top) < 0.25F;
+        if (!over_floor) {
+            RayCastResult under;
+            const RRayCast ray(c, Vec3(0.0F, -(over_y - top + kSoleSupportProbeM), 0.0F));
+            over_floor = physics_.GetNarrowPhaseQuery().CastRay(ray, under, Layers(physics_, ignore_).bp(),
+                                                                Layers(physics_, ignore_).ol(), SteelFilter(ignore_)) &&
+                         std::abs(float(ray.GetPointOnRay(under.mFraction).GetY()) - top) < 0.25F;
+        }
+        if (over_floor && horizontal(dest - c) < 0.35F) {
             finish();
             return status_;
         }
