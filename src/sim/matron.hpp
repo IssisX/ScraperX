@@ -1316,6 +1316,7 @@ private:
         JPH::BodyID body;
         bool held = false;
         bool carries = true;
+        int origin = -1;   // the floor it was cut from (pieces of one floor in line)
     };
     struct FloorLink {
         int to = -1;
