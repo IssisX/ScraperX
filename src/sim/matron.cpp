@@ -4089,13 +4089,24 @@ void Matron::refresh_view() {
             // here, so their candidate stays reported-but-unknown and
             // the rig keeps the single-hold pose rather than posing a
             // wrist to a point no surface was ever shown under.
+            const ClimbBodyFilter filter(body_, player_);
+            BodyID rests_body;
+            SubShapeID rests_member;
             if (shown.rungs_across) {
-                const ClimbBodyFilter filter(body_, player_);
-                BodyID rests_body;
-                SubShapeID rests_member;
                 view_.climb_hand2_known =
                     hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member) &&
                     rests_body == shown.hold_body && rests_member == shown.hold_member;
+            } else {
+                // Journey and routecraft climbs: both hands on the wall
+                // whenever a surface is really there, her left first, then
+                // her right; the point is only shown, never held.
+                const RVec3 right = view_.climb_hand - left.Normalized() * 0.45F;
+                if (hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member)) {
+                    view_.climb_hand2_known = true;
+                } else if (hand_rests_on(physics_.GetNarrowPhaseQuery(), right, filter, rests_body, rests_member)) {
+                    view_.climb_hand2 = right;
+                    view_.climb_hand2_known = true;
+                }
             }
         }
     }
