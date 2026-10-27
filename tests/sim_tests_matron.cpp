@@ -26,6 +26,8 @@ constexpr int kStateDead = static_cast<int>(Matron::State::Dead);
 constexpr int kStateGuarding = static_cast<int>(Matron::State::Guarding);
 constexpr int kStatePeering = static_cast<int>(Matron::State::Peering);
 constexpr int kStateSearching = static_cast<int>(Matron::State::Searching);
+constexpr int kStateGrab = static_cast<int>(Matron::State::Grab);
+constexpr int kStateClaimed = static_cast<int>(Matron::State::Claimed);
 
 // One tick of a stick held toward (x, z); true once within `tolerance` of it.
 bool steer(Simulation &s, const double x, const double z, const bool sprint, const double tolerance = 0.4) {
@@ -94,6 +96,41 @@ void wake_and_wait_east(Simulation &s) {
     tick(s);
     require(s.matron_state().noise_heard > 0.0, "matron: she actually hears the east waiting-point cue");
     require(s.set_room_loudness(0.0), "matron: quiet after the waiting-point cue");
+}
+
+// Her hold on a still player (matron_hold.cpp), run to its end: her hands
+// off them and the body back on its feet, within `seconds`. With `stage` >= 0
+// her stage is held there each tick.
+struct HoldEnd {
+    bool held = false;               // her fingers closed on the ankle
+    bool over = false;               // her hands off them, the body on its feet
+    int stage_held = -1;             // her stage as her fingers closed
+    std::uint64_t deaths_held = 0;   // deaths while in her hands
+};
+HoldEnd through_her_hold(Simulation &s, const double seconds, const int stage) {
+    HoldEnd end;
+    const auto deaths = s.snapshot().death_count;
+    const auto ticks = static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (int i = 0; i < ticks && !end.over; ++i) {
+        if (stage >= 0) {
+            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        tick(s);
+        const auto p = s.snapshot();
+        const int state = s.matron_state().state;
+        if (p.held_by_matron && !end.held) {
+            end.stage_held = s.matron_state().stage;
+        }
+        end.held = end.held || p.held_by_matron;
+        if (p.held_by_matron && p.death_count != deaths) {
+            ++end.deaths_held;
+        }
+        end.over = end.held && !p.held_by_matron && !p.player_free_rotation &&
+                   (state < kStateGrab || state > kStateClaimed);
+    }
+    return end;
 }
 
 // Waits (quietly, still) until she is hunting within `within` metres.
@@ -694,7 +731,7 @@ void run_matron_pipe() {
 void run_matron_mischief() {
     // ---- a pest's mischief (the owner, 2026-10-19): a toolbox the player has
     //      handled is theirs to her; she goes for it, takes it and throws it at
-    //      them; then her hands shove them ----
+    //      them; then her hands take hold of them ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
@@ -760,13 +797,15 @@ void run_matron_mischief() {
         require(m.throws >= 1 && (nearest < 1.2 || s.snapshot().hit_count > before.hit_count),
                 "matron mischief: and throws it at the player");
         require(s.snapshot().death_count == 0 && m.stage == 0, "matron mischief: a pest's throw is no death");
-        // Then at the player: her hands shove them.
-        bool shoved = false;
-        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !shoved; ++i) {
+        // Then at the player: her hands take hold of them (Cory, 2026-10-27:
+        // at any rage, every catch is a grab).
+        bool taken = false;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && !taken; ++i) {
             tick(s);
-            shoved = s.matron_state().shoves > 0;
+            taken = s.matron_state().grabs > 0;
         }
-        require(shoved && s.snapshot().death_count == 0, "matron mischief: then her hands shove the player, no death");
+        require(taken && s.matron_state().shoves == 0 && s.snapshot().death_count == 0,
+                "matron mischief: then her hands take hold of the player, no shove, no death");
         std::cout << "PASS scraperx_sim matron mischief: took_s=" << took_at << " throws=" << m.throws
                   << " nearest_m=" << nearest << "\n";
     }
@@ -973,15 +1012,21 @@ void run_matron() {
                 released_at = i / static_cast<double>(Simulation::kTickRateHz);
             }
         }
-        std::cout << "  matron: released " << released_at << " s after the wake\n";
+        std::cout << "  matron: released " << released_at << " s after the wake; state "
+                  << int(s.matron_state().state) << " catches " << s.matron_state().catches << "\n";
         require(released_at > 10.0 && released_at < 18.0, "matron: she bursts out about sixteen seconds after the wake");
+        // Out, she is about; and the player standing by her door is hers to
+        // take (Cory, 2026-10-27: at any rage, every catch is a grab).
         require(s.matron_state().state == kStateHunting || s.matron_state().state == kStateEmerging ||
                     s.matron_state().state == static_cast<int>(Matron::State::Searching) ||
-                    s.matron_state().state == static_cast<int>(Matron::State::Shuffling),
-                "matron: after the burst she is out and about");
+                    s.matron_state().state == static_cast<int>(Matron::State::Shuffling) ||
+                    (s.matron_state().catches >= 1 && s.matron_state().state >= kStateGrab &&
+                     s.matron_state().state <= kStateClaimed),
+                "matron: after the burst she is out and about, or has the player by her door in her hands");
     }
     // ---- the hunt: she runs faster than a walk, slower than a sprint; a pest's hands
-    //      shove a still player off their feet, and only fully changed is a catch a death ----
+    //      take hold of a still player and tear an arm off (Cory, 2026-10-27: at any
+    //      rage, every time she catches you she grabs you and rips an arm off) ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
@@ -989,38 +1034,27 @@ void run_matron() {
         require(wait_for_her(s, 14.0, 40.0), "matron: she comes for a player waiting in the east band");
         const auto met = s.snapshot();
         // Her pace is hers (matron.hpp, Pace): she may creep the last of it.
-        // Still until her hands are on the player, then the shove's flight.
+        // Still until her hands are on the player, then her hold, all of it.
         (void)s.set_move_input(0.0, 0.0);
         (void)s.set_sprint_input(false);
-        (void)wait_for(s, 8.0, [&](const scraperx::sim::Snapshot &) { return s.matron_state().shoves >= 1; });
-        stand_still(s, 1.0);
-        const auto shoved = s.snapshot();
+        (void)wait_for(s, 8.0, [&](const scraperx::sim::Snapshot &) { return s.matron_state().catches >= 1; });
         const auto pest = s.matron_state();
-        std::cout << "  matron: a pest's hands: shoves=" << pest.shoves << " catches=" << pest.catches << " moved="
-                  << std::hypot(shoved.player_position.x - met.player_position.x, shoved.player_position.z - met.player_position.z)
-                  << " m, deaths " << met.death_count << " -> " << shoved.death_count << "\n";
-        require(pest.stage == 0 && pest.shoves >= 1 && pest.catches == 0 && shoved.death_count == met.death_count,
-                "matron: a pest who reaches a player standing still shoves them, and it is no death");
-        require(std::hypot(shoved.player_position.x - met.player_position.x,
-                           shoved.player_position.z - met.player_position.z) > 0.8,
-                "matron: the shove throws the player off their feet and away");
-        require(shoved.stumble_count > met.stumble_count && shoved.hit_count > met.hit_count,
-                "matron: the shove is a stumble and a hit the body feels");
-        s.debug_set_matron_stage(2);
-        const auto start = s.snapshot();
-        // Fully changed: her hand on them is no longer a death on touch. It
-        // is her hold (run_matron_grab): her fingers close on an ankle.
-        bool grabbed = false;
-        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !grabbed; ++i) {
-            (void)s.set_move_input(0.0, 0.0);
-            tick(s);
-            grabbed = s.matron_state().grabs > 0;
-            require(s.snapshot().death_count == start.death_count, "matron: her hand on a player is no death on touch");
-        }
-        std::cout << "  matron: fully changed, catches " << s.matron_state().catches << " grabs "
-                  << s.matron_state().grabs << " misses " << s.matron_state().grab_misses << "\n";
-        require(s.matron_state().catches > 0 && grabbed,
-                "matron: fully changed, a player who just stands there is caught: her hand closes on them");
+        std::cout << "  matron: a pest's hands: catches=" << pest.catches << " shoves=" << pest.shoves << " stage "
+                  << int(pest.stage) << ", deaths " << met.death_count << " -> " << s.snapshot().death_count << "\n";
+        require(pest.stage == 0 && pest.catches >= 1 && pest.shoves == 0 && s.snapshot().death_count == met.death_count,
+                "matron: a pest who reaches a player standing still takes hold of them, no shove, and it is no death");
+        const HoldEnd hold = through_her_hold(s, 90.0, -1);
+        const auto after = s.snapshot();
+        const auto her = s.matron_state();
+        std::cout << "  matron: a pest's hold: grabs " << her.grabs << " armplays " << her.armplays << " tears "
+                  << after.arm_tear_count << " one_arm " << after.one_arm << " releases " << her.releases << " spares "
+                  << her.spares << " claims " << her.claims << " deaths " << after.death_count << " (held "
+                  << hold.deaths_held << "), over " << hold.over << " stage " << hold.stage_held << "\n";
+        require(hold.held && her.grabs >= 1 && hold.stage_held == 0 && hold.deaths_held == 0,
+                "matron: a pest's hand closes on the ankle, and her hand on a player is no death on touch");
+        require(hold.over && after.arm_tear_count == 1 && after.one_arm && her.claims == 0 &&
+                    after.death_count == met.death_count,
+                "matron: a pest's hold tears one arm off; one arm left, alive, it is not the fatality");
     }
     // ---- the checkpoint stops being renewed while she hunts ----------------------
     {
@@ -1322,7 +1356,7 @@ void run_matron() {
         }
         require(hunted, "matron mind: a noise close to her post draws her");
         const auto deaths = s.snapshot().death_count;
-        s.debug_set_matron_stage(2);   // a catch is a death only fully changed
+        s.debug_set_matron_stage(2);   // as written, fully changed (every stage takes hold)
         stand_still(s, 0.0);
         // Caught: her hand closes on them (her hold, run_matron_grab); then a
         // death (a fall into the shaft) for what a death forgets.
@@ -1382,6 +1416,9 @@ void run_matron() {
             tick(s);
             winding = s.matron_state().turn == static_cast<std::uint8_t>(Matron::Turn::Windup);
         }
+        std::cout << "  matron vault: wind-up " << winding << ", state " << int(s.matron_state().state) << " catches "
+                  << s.matron_state().catches << " grabs " << s.matron_state().grabs << " shoves "
+                  << s.matron_state().shoves << "\n";
         require(winding, "matron vault: in plain sight up the band she snaps");
         // In her wind-up the player steps in behind the crate, on her line.
         const auto m = s.matron_state().position;
@@ -1840,37 +1877,80 @@ void run_matron_remaining() {
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
     }
-    // ---- dangerous, her hands take hold (Cory, 2026-10-27: she grabs and may
-    //      tear an arm off from her medium rage; only fully changed does she
-    //      kill): a player standing by the shaft's rim is taken, not shoved ----
+    // ---- dangerous, every catch takes hold and tears an arm off (Cory, 2026-10-27:
+    //      at any rage, every time she catches you she grabs you and rips an arm off;
+    //      your second arm gone is the fatality): a player standing by the shaft's
+    //      rim is taken, not shoved, and set back on her deck with one arm; caught
+    //      again, still dangerous, the second arm goes and the run is hers ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
-        require(s.advance_frame(1.0).accepted, "matron shove: settle");
+        require(s.advance_frame(1.0).accepted, "matron hands: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
-                "matron shove: a sprint toward her locker wakes her");
+                "matron hands: a sprint toward her locker wakes her");
         // Crouched, to 1.5 m north of the shaft's north rim in the north band,
         // in plain sight of her locker's door.
         (void)s.set_crouch_input(true);
         require(go(s, 0.0, Matron::kMidZ + Matron::kShaftHalfM + 1.5, false, 20.0, 0.3),
-                "matron shove: a crouched walk to the shaft's north rim");
+                "matron hands: a crouched walk to the shaft's north rim");
         (void)s.set_crouch_input(false);
         s.debug_set_matron_stage(1);
-        require(wait_for_her(s, 14.0, 40.0), "matron shove: out and dangerous, she comes for the player at the rim");
+        // Her hold's own choice fixed: set back on her deck at its end (spared),
+        // so her next catch is on the same deck.
+        s.debug_matron_hold(1, 3.0);
+        require(wait_for_her(s, 14.0, 40.0), "matron hands: out and dangerous, she comes for the player at the rim");
         const auto before = s.snapshot();
-        bool taken = false;
-        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz) && !taken; ++i) {
-            tick(s);
-            taken = s.matron_state().catches >= 1;
-        }
+        // The first catch, her stage held dangerous: her hold, all of it.
+        const HoldEnd first = through_her_hold(s, 90.0, 1);
         const auto after = s.snapshot();
         const auto her = s.matron_state();
-        std::cout << "  matron shove: dangerous, catches=" << her.catches << " shoves=" << her.shoves << " claims="
-                  << her.claims << ", deaths " << before.death_count << " -> " << after.death_count << "\n";
-        require(taken && her.shoves == 0, "matron shove: dangerous, her hands take hold of the player at the rim");
-        require(her.claims == 0 && after.death_count == before.death_count,
-                "matron shove: dangerous, her hold is not the fatality");
-        std::cout << "PASS scraperx_sim matron shove: catches=" << her.catches << "\n";
+        std::cout << "  matron hands: dangerous, first catch: catches " << her.catches << " grabs " << her.grabs
+                  << " shoves " << her.shoves << " armplays " << her.armplays << " tears " << after.arm_tear_count
+                  << " L/R " << after.left_arm_lost << "/" << after.right_arm_lost << " one_arm " << after.one_arm
+                  << " claims " << her.claims << ", deaths " << before.death_count << " -> " << after.death_count
+                  << " (held " << first.deaths_held << "), stage " << first.stage_held << ", over " << first.over
+                  << ", player y " << after.player_position.y << "\n";
+        require(first.held && her.grabs >= 1 && her.shoves == 0 && first.stage_held == 1,
+                "matron hands: dangerous, her hands take hold of the player at the rim");
+        require(first.over && after.arm_tear_count == 1 && after.left_arm_lost != after.right_arm_lost && after.one_arm,
+                "matron hands: dangerous, her first catch tears one arm off");
+        require(her.claims == 0 && first.deaths_held == 0 && after.death_count == before.death_count &&
+                    after.runs_ended_by_matron == 0,
+                "matron hands: dangerous, one arm gone is not the fatality: alive, with one arm left");
+        // Set back on her deck, one-armed, standing still: she comes again on
+        // her own, still dangerous. Her second catch: the second arm, and the
+        // run is hers (Claimed), short of fully changed.
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        std::uint64_t most_tears = after.arm_tear_count;
+        std::uint64_t deaths_seen = after.death_count;
+        bool claimed = false;
+        int stage_claimed = -1;
+        std::uint64_t ended = 0;
+        for (int i = 0; i < 300 * hz && ended == 0; ++i) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto q = s.snapshot();
+            ended = q.runs_ended_by_matron;
+            if (ended != 0) {
+                break;
+            }
+            most_tears = std::max<std::uint64_t>(most_tears, q.arm_tear_count);
+            deaths_seen = std::max<std::uint64_t>(deaths_seen, q.death_count);
+            if (q.claimed_by_matron && !claimed) {
+                claimed = true;
+                stage_claimed = s.matron_state().stage;
+            }
+        }
+        const auto whole = s.snapshot();
+        std::cout << "  matron hands: dangerous, second catch: tears " << most_tears << " claimed " << claimed
+                  << " at stage " << stage_claimed << ", run ended " << ended << ", deaths " << deaths_seen
+                  << ", new run L/R " << whole.left_arm_lost << "/" << whole.right_arm_lost << "\n";
+        require(deaths_seen == before.death_count, "matron hands: dangerous, no death on the way");
+        require(most_tears == 2 && claimed && stage_claimed == 1 && ended == 1,
+                "matron hands: dangerous, her second catch tears the second arm off and the run is hers");
+        require(!whole.left_arm_lost && !whole.right_arm_lost, "matron hands: the new run starts whole");
+        std::cout << "PASS scraperx_sim matron hands: dangerous, two catches, two arms, the run hers\n";
     }
     run_matron_mischief();
     run_matron_collision();

@@ -2792,10 +2792,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 }
                 step_turn(dt, d, loudness, player_carry);
-                // Her hands on the player do what her stage has them do (a
-                // shove, once in its cooldown; fully changed, a death): her
-                // feet stand meanwhile, and do not drive her body on into the
-                // player, carrying them off along a rail between shoves.
+                // Her hands on the player take hold (or, while they cannot,
+                // shove, short of fully changed): her feet stand meanwhile,
+                // and do not drive her body on into the player, carrying them
+                // off along a rail between shoves.
                 const bool hands_on = d < kCatchM && std::abs(float(player.GetY() - at.GetY())) < 1.4F;
                 if (turn_ == Turn::Windup || hands_on) {
                     walk_toward(dt, wx, wz, 0.0F, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
@@ -3383,7 +3383,6 @@ void Matron::restore(const Saved &saved) {
         grip_was_on_ = false;
         player_braced_ = false;
         thrash_ = 0.0F;
-        thrash_failed_ = false;
         let_go_ = false;
         hold_phase_ = 0;
         pull_n_ = kHandReachPullN;

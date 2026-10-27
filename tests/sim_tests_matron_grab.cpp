@@ -1,8 +1,9 @@
-// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): fully changed,
+// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): at every stage,
 // her hand on a player is no death. She takes an ankle, carries them upside
-// down to the shaft's rail, holds them out over the drop and lets go aimed
-// at a ledge, or sets them back on the deck. Her grip is finite: a still
-// body hangs; a thrashing one tears free. Nothing teleports.
+// down to the shaft's rail, holds them out over the drop, tears an arm off,
+// and lets go aimed at a ledge, or sets them back on the deck. Her grip is
+// finite: a still body hangs; a thrashing one tears free. Nothing teleports.
+// These meet her fully changed, as written; her stage changes none of it.
 
 #include "sim_tests.hpp"
 
