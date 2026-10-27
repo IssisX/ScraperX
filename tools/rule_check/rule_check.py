@@ -82,21 +82,24 @@ def loosened(old, new):
 
 
 def parse(diff):
-    files, cur, hunk, newno = {}, None, None, 0
+    files, cur, hunk, newno, old_path, deleted = {}, None, None, 0, None, False
     for line in diff.splitlines():
         if line.startswith("diff --git"):
-            cur = None
+            cur, old_path, deleted = None, None, False
         elif line.startswith("+++ "):
             path = line[4:]
-            cur = None if path == "/dev/null" else path[2:] if path.startswith("b/") else path
+            # A deleted file is checked under its old path: every check in it is removed.
+            deleted = path == "/dev/null"
+            cur = old_path if deleted else path[2:] if path.startswith("b/") else path
             if cur:
                 files.setdefault(cur, [])
         elif line.startswith("--- "):
             old = line[4:]
             if old != "/dev/null":
-                files.setdefault("__old__", []).append(old[2:] if old.startswith("a/") else old)
+                old_path = old[2:] if old.startswith("a/") else old
+                files.setdefault("__old__", []).append(old_path)
         elif line.startswith("@@"):
-            m = re.search(r"\+(\d+)", line)
+            m = re.search(r"-(\d+)" if deleted else r"\+(\d+)", line)
             newno = int(m.group(1)) if m else 0
             hunk = []
             if cur:
@@ -106,6 +109,7 @@ def parse(diff):
                 hunk.append(("+", newno, line[1:])); newno += 1
             elif line.startswith("-"):
                 hunk.append(("-", newno, line[1:]))
+                newno += 1 if deleted else 0
             else:
                 hunk.append((" ", newno, line[1:])); newno += 1
     return files
