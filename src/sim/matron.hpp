@@ -1406,6 +1406,23 @@ private:
     // Struck off the pipe by such a blow (take_blow): at the riser she
     // slides; still at a rail, she goes down onto the steel her feet find.
     void pipe_struck(JPH::RVec3 at);
+public:
+    // The player's fist on her (physics_world_strike.cpp): the impulse it
+    // gave her body, read as a blow in take_blow against her balance like
+    // any striker's (the force itself is already on her body).
+    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low) noexcept {
+        player_blow_ns_ += impulse_ns;
+        player_blow_at_ = fist;
+        player_blow_low_ = player_blow_low_ || low;
+    }
+    void clear_player_blow() noexcept {
+        player_blow_ns_ = JPH::Vec3::sZero();
+        player_blow_low_ = false;
+    }
+private:
+    JPH::Vec3 player_blow_ns_ = JPH::Vec3::sZero();
+    JPH::RVec3 player_blow_at_ = JPH::RVec3::sZero();
+    bool player_blow_low_ = false;
     // Her report of the pipe and of her cables (refresh_view), and both set
     // back for a restore (matron_pipe.cpp, matron_line.cpp).
     void report_pipe();

@@ -909,8 +909,11 @@ func _feel_strike(delta: float) -> void:
 				_gore._on_strike(at, normal, impulse)
 	if _matron_view != null:
 		_matron_view.hold_frame = _strike_feel.frozen()
-	if not _hold_cam.active():
-		_camera.basis = _strike_feel.kick() * _camera.basis
+	# Only while the kick is live: writing the basis re-reads the camera's
+	# Euler angles and would fold a roll's pitch past a quarter turn.
+	var kick: Basis = _strike_feel.kick()
+	if not _hold_cam.active() and not kick.is_equal_approx(Basis.IDENTITY):
+		_camera.basis = kick * _camera.basis
 
 ## The drawn arms' step this frame: none while the punch's hit-stop holds.
 func _arms_delta(delta: float) -> float:
