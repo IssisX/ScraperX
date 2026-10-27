@@ -3004,6 +3004,8 @@ void Matron::post_step(const float dt) {
             settle_level();
         }
     }
+    // A long fall: her parachute (matron_chute.cpp), before the landing decides.
+    step_chute(dt);
     // A fall ends where she lands, and the landing decides it: a stop from
     // kLethalLandingMps or more kills her, on a deck, on the ground or on a
     // plate that came down with her. No deck height counts against her on the
@@ -3013,7 +3015,10 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if ((landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) && !last_on_plank_) {
+            // Not the catwalk's designed kill: the safety net (loud; a bug to find).
+            chute_respawn(landed_hard ? "a landing that would have killed her" : "off the world");
+        } else if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -3936,6 +3941,9 @@ void Matron::refresh_view() {
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
     view_.leaps = leaps_;
+    view_.chute_open = chute_open_;
+    view_.chutes = chutes_;
+    view_.respawns = respawns_;
     view_.unrigs = unrigs_;
     report_line();
     // What the way that has her shows (matron_mover.hpp): a planned move

@@ -1303,6 +1303,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.wary = view.wary;
     result.vaults = view.vaults;
     result.leaps = view.leaps;
+    result.chute_open = view.chute_open;
+    result.chutes = view.chutes;
+    result.respawns = view.respawns;
     result.unrigs = view.unrigs;
     result.on_line = view.on_line;
     result.cable_slides = view.cable_slides;

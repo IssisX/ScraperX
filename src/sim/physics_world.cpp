@@ -710,9 +710,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         (void)matron_affordances();
     }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
-    matron_->pre_step(delta_seconds, player_at,
-                      std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
-                               static_cast<float>(commands.room_loudness)));
+    if (!matron_->chute_open()) {   // under her canopy she only flies (matron_chute.cpp)
+        matron_->pre_step(delta_seconds, player_at,
+                          std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
+                                   static_cast<float>(commands.room_loudness)));
+    }
     grab_drive(bodies, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
         // Off the ground in her hand (or righting after): the speed it

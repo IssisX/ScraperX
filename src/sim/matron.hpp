@@ -776,6 +776,9 @@ public:
         bool wary = false;          // checking the present noise from a vantage first
         std::uint32_t vaults = 0;   // things vaulted in the Turn, this run
         std::uint32_t leaps = 0;    // gaps leapt in the Turn, this run
+        bool chute_open = false;    // her parachute out (matron_chute.cpp)
+        std::uint32_t chutes = 0;   // parachutes she opened, this world
+        std::uint32_t respawns = 0; // last-resort respawns (the safety net), this world
         std::uint32_t unrigs = 0;   // ropes she took off a way out's eye, this run
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
@@ -1060,6 +1063,11 @@ public:
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
     void begin_grab(JPH::RVec3 player);
+    // Her parachute (matron_chute.cpp): a long fall is flown down to a deck
+    // that joins the player's, not a death. Open, her own tick is skipped.
+    [[nodiscard]] bool chute_open() const noexcept { return chute_open_; }
+    [[nodiscard]] std::uint32_t chutes() const noexcept { return chutes_; }
+    [[nodiscard]] std::uint32_t respawns() const noexcept { return respawns_; }
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
     [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
@@ -1751,6 +1759,23 @@ private:
     std::array<Sound, kMaxSounds> sounds_{};
     std::size_t sound_count_ = 0;
     bool dead_ = false;
+    // matron_chute.cpp. Deploy no later than kChuteDeployMps falling (Cory,
+    // 2026-10-27 16:01 CT: the drag is on her 8,000 N / 22 kW account, and
+    // holding her weight takes m*g*v, so it must open under ~10 m/s).
+    static constexpr float kChuteDeployMps = 7.0F;
+    static constexpr float kChuteDropM = 6.0F;      // floor further below than this: a fall, not a step down
+    static constexpr float kChuteSteerAccel = 3.0F; // most horizontal pull wanted, m/s^2 (inside the account)
+    bool chute_open_ = false;
+    bool chute_has_goal_ = false;
+    float chute_x_ = 0.0F, chute_z_ = 0.0F, chute_top_ = 0.0F;
+    float chute_s_ = 0.0F;
+    float lost_s_ = 0.0F;      // seconds below the world or unsupported with nowhere to land
+    std::uint32_t chutes_ = 0;
+    std::uint32_t respawns_ = 0;
+    void step_chute(float dt);
+    bool chute_pick(JPH::RVec3 at);
+    void chute_respawn(const char *why);
+    bool last_on_plank_ = false;   // her last floor was a catwalk plate (the designed kill: no chute)
     // Her floor (feel_floor): its top under her, and riding it.
     float feet_y_ = kDeckTop;
     bool riding_ = false;
