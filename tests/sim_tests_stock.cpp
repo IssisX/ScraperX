@@ -219,6 +219,7 @@ void run_loose_stock() {
 // the deck under the feet, not the player's own body; nonsense is refused.
 void run_look_target() {
     Simulation s(scraperx::sim::InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     for (int i = 0; i < 30; ++i) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
     }

@@ -276,6 +276,7 @@ std::uint32_t line_from(const Simulation &s, const double floor) {
 // lethal hit's speed, is no death; her hands decide, a pest's shove.
 void run_matron_collision() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "matron collision: settle");
     require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -339,6 +340,7 @@ void run_matron_balance() {
     constexpr int kStaggering = static_cast<int>(Matron::State::Staggering);
     constexpr int kDown = static_cast<int>(Matron::State::Down);
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "matron balance: settle");
     require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -465,6 +467,7 @@ void run_matron_balance() {
     //      down; up again a few seconds later, nobody dead ----
     {
         Simulation h(InitialSpawn::Deck154);
+        h.place_matron_home(154.0F);
         h.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(h.advance_frame(1.0).accepted, "matron heave: settle");
         require(go(h, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && h.matron_state().state == kStateStraining,
@@ -558,6 +561,7 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
                  const std::uint32_t piece = 2) {
     PipeRun r;
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "matron pipe: settle");
     require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -697,6 +701,7 @@ void run_matron_mischief() {
     //      them; then her hands shove them ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron mischief: settle");
         // The toolbox by the north band's outer rail, picked up and set down
@@ -774,6 +779,7 @@ void run_matron_mischief() {
     //      player's toolbox off to her post and drops it there ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron hoard: settle");
         require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "matron hoard: to the toolbox");
@@ -823,6 +829,7 @@ void run_matron_crash() {
     //      hit and goes to it, not wary, finds nobody, and is the warier ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron crash: settle");
         (void)s.set_crouch_input(true);
@@ -934,6 +941,7 @@ void run_matron() {
     // ---- asleep: quiet or alone, she stays sealed ------------------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         (void)s.advance_frame(1.0);
         (void)s.advance_frame(20.0);
@@ -954,6 +962,7 @@ void run_matron() {
     // ---- the build-up: a noise, the gauge, the burst ----------------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         (void)s.advance_frame(1.0);
         require(go(s, 10.0, -128.5, true, 4.0, 1.0), "matron: a sprint toward her locker");
@@ -984,6 +993,7 @@ void run_matron() {
     //      shove a still player off their feet, and only fully changed is a catch a death ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         wake_and_wait_east(s);
         require(wait_for_her(s, 14.0, 40.0), "matron: she comes for a player waiting in the east band");
@@ -1025,6 +1035,7 @@ void run_matron() {
     // ---- the checkpoint stops being renewed while she hunts ----------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         wake_and_wait_east(s);
         // She is straining or out; the checkpoint was set where she burst out.
@@ -1047,6 +1058,7 @@ void run_matron() {
     // ---- the catwalk holds a climber ----------------------------------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         (void)s.advance_frame(1.0);
         (void)s.set_crouch_input(true);
@@ -1065,6 +1077,7 @@ void run_matron() {
     // ---- the one kill: she follows across the catwalk and a plate gives way under her ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         wake_and_wait_east(s);
         require(wait_for_her(s, 14.0, 40.0), "matron: she comes for the player at the catwalk's east end");
@@ -1083,6 +1096,7 @@ void run_matron() {
     // ---- the Turn: she stops dead, then lunges in jerks, and not again for a while ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         wake_and_wait_east(s);
         // Her pace is her own (Pace): the Turn is met on her first approach
@@ -1152,6 +1166,7 @@ void run_matron() {
     // ---- the deck's loose stock: shoved by walking into it; the ingot dolly breaks a plate ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         (void)s.advance_frame(2.0);
         (void)s.set_crouch_input(true);
@@ -1177,6 +1192,7 @@ void run_matron() {
     // check's business ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         (void)s.advance_frame(2.0);
         // Round behind it and shoved out onto the catwalk.
@@ -1225,6 +1241,7 @@ void run_matron() {
     // her off her post, a close one does; a death forgets it all ------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         const auto post_distance = [&s] {
             const auto m = s.matron_state();
@@ -1340,6 +1357,7 @@ void run_matron() {
     // ---- A: a loose crate in the Turn is driven off her line. Not vaulted. ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron vault: settle");
         // Quietly round to the east band's south crate and shove it into the band's middle.
@@ -1421,6 +1439,7 @@ void run_matron() {
         double alone_s = 0.0;
         {
             Simulation s(InitialSpawn::Deck154);
+            s.place_matron_home(154.0F);
             s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
             require(s.advance_frame(1.0).accepted && board_well_a(s) && rig_well_a(s) && pull_well_a(s, 0.5, 3.0),
                     "matron ride: Stage A ridden alone");
@@ -1432,6 +1451,7 @@ void run_matron() {
             require(s.matron_state().state == kStateDormant, "matron ride: the ride alone did not wake her");
         }
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron ride: settle");
         require(board_well_a(s) && rig_well_a(s), "matron ride: Stage A's cage rigged");
@@ -1568,6 +1588,7 @@ void run_matron_remaining() {
     //      it rides ---------------------------------------------------------------------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron unrig: settle");
         require(board_well_a(s) && rig_well_a(s), "matron unrig: Stage A's cage rigged");
@@ -1662,6 +1683,7 @@ void run_matron_remaining() {
     // ---- lines: seen riding a line away, in the Turn she goes down its cable after ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         // The sprint that wakes her, then an audible escape west after she
         // emerges, and down the west band: the run round below
@@ -1761,6 +1783,7 @@ void run_matron_remaining() {
     //      the line down to it and stands on it looking down ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron below: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -1844,6 +1867,7 @@ void run_matron_remaining() {
     //      rim is shoved toward it, where a pest would only shove them away ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron shove: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -1884,6 +1908,7 @@ void run_matron_remaining() {
     //      rage is well under the mark it rose past ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron rage: settle");
         require(s.matron_state().rage == 0.0 && s.matron_state().stage == 0, "matron rage: asleep, she has none");
@@ -1953,6 +1978,7 @@ void run_matron_remaining() {
     //      to the deck between) and stands on it ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron two below: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
@@ -2038,6 +2064,7 @@ void run_matron_remaining() {
     //      end, over the shaft.) ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron no way: settle");
         require(go(s, 10.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron no way: a sprint toward her locker");
@@ -2101,6 +2128,7 @@ void run_matron_remaining() {
     //      a deck), and she hears it ----
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron beside: settle");
         require(go(s, 10.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron beside: a sprint toward her locker");
@@ -2149,6 +2177,7 @@ void run_matron_remaining() {
     {
         const auto run = [] {
             Simulation s(InitialSpawn::Deck154);
+            s.place_matron_home(154.0F);
             s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
             wake_and_wait_east(s);
             (void)wait_for_her(s, 14.0, 40.0);
@@ -2172,6 +2201,7 @@ void run_matron_remaining() {
 // and a bark carries as far as a hard landing.
 void run_matron_room() {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "matron room: settle");
     require(!s.set_room_loudness(std::nan("")) && s.set_room_loudness(0.0),
@@ -2249,6 +2279,7 @@ void run_matron_ladder() {
     //      hold and comes up it after the player, and over its head onto the ring --------
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron climb: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron climb: a sprint toward her locker");
