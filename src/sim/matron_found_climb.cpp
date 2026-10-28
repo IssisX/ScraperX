@@ -685,7 +685,7 @@ void Matron::step_journey(const float dt) {
             return;
         } else {
             (void)climber_->walk_between(dt, leg, 1.2F);
-            yaw_ = std::atan2(off.GetX(), off.GetZ());
+            yaw_ = turn_toward(yaw_, std::atan2(off.GetX(), off.GetZ()), kTurnRate, dt);
         }
         return;
     }

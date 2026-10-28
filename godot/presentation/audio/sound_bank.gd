@@ -132,7 +132,7 @@ const HER_DIR := "res://presentation/audio/matron/"
 # ending _loop plays as a loop (each file's end is crossfaded into its head).
 const HER_RECORDED := {&"matron_growl_loop": 1, &"matron_growl_rage_loop": 1, &"matron_strain_loop": 1,
 	&"matron_breath": 3, &"matron_shriek": 2, &"matron_laugh": 1, &"matron_effort": 1, &"matron_hit": 1,
-	&"matron_swallow": 1, &"matron_rip": 2}
+	&"matron_swallow": 1, &"matron_rip": 2, &"matron_plant": 3}
 
 
 func build_her() -> void:

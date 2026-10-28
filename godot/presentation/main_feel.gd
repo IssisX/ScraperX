@@ -928,7 +928,7 @@ func _feel_hold(delta: float) -> void:
 # hear_hold).
 var _gore: Node3D = null
 
-func _feel_gore(her_state: Dictionary, delta: float) -> void:
+func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 	if not _native.has_method("get_matron_hold_state"):
 		return
 	if _gore == null:
@@ -936,7 +936,6 @@ func _feel_gore(her_state: Dictionary, delta: float) -> void:
 		add_child(_gore)
 		_gore.attach_arms(_arms)
 		_gore.matron_view = _matron_view
-	var hold: Dictionary = _native.get_matron_hold_state()
 	_gore.update_view(hold, her_state, delta, _camera, float(her_state.get("floor_y", 0.0)))
 	_matron_view.hear_hold(hold)
 
@@ -979,9 +978,13 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
 		var her_state: Dictionary = _native.get_matron_state()
+		# Her hold, read once: her hand drawn on the ankle it has, her gore and
+		# her sounds of it.
+		var her_hold: Dictionary = _native.get_matron_hold_state() if _native.has_method("get_matron_hold_state") else {}
+		_matron_view.set_hold(her_hold)
 		_matron_view.update_view(her_state, delta, _camera.global_position, position)
 		_feel_her(her_state, position)
-		_feel_gore(her_state, delta)
+		_feel_gore(her_state, delta, her_hold)
 	if _forklift_view != null:
 		_feel_forklift(delta)
 	if _crane_view != null:
