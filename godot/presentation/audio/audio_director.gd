@@ -1234,7 +1234,7 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 		volume_db = HER_SHRIEK_DB
 	if not _bank_ready or _silent:
 		return 0.0
-	var stream: AudioStreamWAV = _her_bank.pick(name) if _her_ready and _her_bank.clips.has(name) else _bank.pick(name)
+	var stream: AudioStream = _her_bank.pick(name) if _her_ready and _her_bank.clips.has(name) else _bank.pick(name)
 	if stream == null:
 		return 0.0
 	var voice := name in HER_VOICE_CLIPS
