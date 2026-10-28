@@ -710,6 +710,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         (void)matron_affordances();
     }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
+    matron_->set_player_ankle(player_ankle(bodies));
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
@@ -770,6 +771,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->post_step();
     grab_post_step(bodies, delta_seconds);
     matron_->post_step(delta_seconds);
+    if (arms_lost() == 2 && !matron_->claimed() && !matron_->claim_armless()) {
+        // No body goes on armless (Cory, 2026-10-27: your second arm gone is
+        // the fatality). She claims it (matron_hold.cpp); when she cannot
+        // (dead, or out of the world), the run ends all the same.
+        run_ended_by_matron_ = true;
+    }
     if (matron_->take_released_edge()) {
         matron_checkpoint_pending_ = true;
     }
@@ -824,20 +831,20 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
         precision_target_valid_ = false;
     }
-    // Her hands on the player. Fully changed, a death like a lethal fall;
-    // before that a shove (matron.hpp, the stages): a pest's away from her, a
-    // dangerous one's at the shaft's rim when it is near.
+    // Her hands on the player (matron.hpp, her hands): at every stage, she
+    // takes hold.
     if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
-        if (matron_->kills()) {
-            // Fully changed: no kill on touch. Her hand goes for the ankle
-            // (matron_hold.cpp); what follows is physics.
-            // A body already on a ladder is not an ankle to stoop for. Pulling
-            // him off the first rungs is what kept the climb from ever starting.
-            if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
-                matron_->count_catch();
-                matron_->begin_grab(bodies.GetPosition(player_id_));
-            }
-        } else if (matron_->shove_ready()) {
+        // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
+        // what follows is physics. A body already on a ladder is not an ankle
+        // to stoop for: pulling him off the first rungs is what kept the climb
+        // from ever starting.
+        if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
+            matron_->count_catch();
+            matron_->begin_grab(bodies.GetPosition(player_id_));
+        } else if (matron_->shoves() && matron_->shove_ready()) {
+            // While her hands cannot take hold (a grab's cooldown, a body on
+            // a ladder), short of fully changed: a pest's shove away from her,
+            // a dangerous one's at the rim. Not a catch.
             matron_->count_shove();
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
         }
@@ -1339,9 +1346,10 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
     death_side_on_ = side_on;
 }
 
-// Her hands on the player before she is fully changed: thrown off the feet
-// along `direction` (Matron::kShoveMps, and kShoveUpMps up), a stumble to
-// recover from, and a hit the body feels, on the side she came from.
+// Her hands on the player while they cannot take hold, short of fully
+// changed: thrown off the feet along `direction` (Matron::kShoveMps, and
+// kShoveUpMps up), a stumble to recover from, and a hit the body feels, on the
+// side she came from.
 void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JPH::Vec3 direction) noexcept {
     const JPH::Vec3 velocity = direction * Matron::kShoveMps + JPH::Vec3(0.0F, Matron::kShoveUpMps, 0.0F);
     bodies.SetLinearVelocity(player_id_, velocity);

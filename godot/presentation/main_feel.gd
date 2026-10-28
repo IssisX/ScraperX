@@ -923,7 +923,9 @@ func _feel_hold(delta: float) -> void:
 		_hold_veil.color.a = veil
 
 # Gore (life/gore/gore_view.gd): wounds, blood and the lens, from the hold
-# state. Always full: there is no setting that softens it.
+# state. Always full: there is no setting that softens it. The same read of
+# the hold is what her hands on the body are heard from (matron_view.gd
+# hear_hold).
 var _gore: Node3D = null
 
 func _feel_gore(her_state: Dictionary, delta: float) -> void:
@@ -934,8 +936,9 @@ func _feel_gore(her_state: Dictionary, delta: float) -> void:
 		add_child(_gore)
 		_gore.attach_arms(_arms)
 		_gore.matron_view = _matron_view
-	_gore.update_view(_native.get_matron_hold_state(), her_state, delta, _camera,
-		float(her_state.get("floor_y", 0.0)))
+	var hold: Dictionary = _native.get_matron_hold_state()
+	_gore.update_view(hold, her_state, delta, _camera, float(her_state.get("floor_y", 0.0)))
+	_matron_view.hear_hold(hold)
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()

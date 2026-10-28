@@ -1197,6 +1197,14 @@ void Simulation::debug_lose_arm(const int side) noexcept {
     physics_world_->lose_arm_for_test(side);
 }
 
+void Simulation::debug_snag_player(const double max_n) noexcept {
+    physics_world_->snag_player_for_test(static_cast<float>(max_n));
+}
+
+bool Simulation::debug_player_snagged() const noexcept { return physics_world_->player_snagged_for_test(); }
+
+void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
+
 void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
     physics_world_->matron().set_spare_for_test(spare);
     physics_world_->matron().set_dangle_seconds_for_test(static_cast<float>(dangle_seconds));
@@ -1204,6 +1212,10 @@ void Simulation::debug_matron_hold(const int spare, const double dangle_seconds)
 
 void Simulation::debug_hold_matron_hands(const double seconds) noexcept {
     physics_world_->matron().hold_hands_for_test(static_cast<float>(seconds));
+}
+
+void Simulation::debug_hold_matron_grab(const bool held) noexcept {
+    physics_world_->matron().hold_grab_for_test(held);
 }
 
 void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 at, const Vector3 velocity) noexcept {
@@ -1328,6 +1340,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.releases = view.releases;
     result.spares = view.spares;
     result.grips_torn = view.grips_torn;
+    result.retakes = view.retakes;
+    result.arm_reposes = view.arm_reposes;
     result.brace_losses = view.brace_losses;
     result.carry_drops = view.carry_drops;
     result.arm_tears = view.arm_tears;

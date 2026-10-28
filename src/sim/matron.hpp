@@ -137,20 +137,33 @@ public:
         Unrigging = 9, // at the way out's eye, taking the player's rope off it
         Staggering = 10, // a blow took her balance: her feet catching her up, no hands
         Down = 11,     // a blow took her off her feet: on the steel, no hands, no eyes
-        // Her hands on the player, fully changed (matron_hold.cpp): no kill on
-        // touch. Her hand goes for the ankle and closes on it (Grab), she
+        // Her hands on the player, at every stage (matron_hold.cpp): no kill
+        // on touch. Her hand goes for the ankle and closes on it (Grab), she
         // walks them upside down to the shaft's rail (Carry), holds them out
-        // over the drop (Dangle), plays with the arm (ArmPlay), lets go aimed
+        // over the drop (Dangle), tears an arm off (ArmPlay), lets go aimed
         // at a ledge that will not kill them (Release) or sets them back on
-        // the deck (Spare).
+        // the deck (Spare). Caught, he is hers (Cory, 2026-10-27, 6:51 PM):
+        // only his own blow landed on her (his punch, or the stagger or
+        // knockdown it causes) frees him, and only before the rip begins
+        // (her other hand going for his arm); from then on no blow breaks
+        // it. Any other blow, and her own hard landing, she takes on her feet
+        // with him in her hand (take_blow). Before her other hand has his
+        // wrist, a body that fights its way out of her ankle hand (kicks,
+        // thrashing) gets away whole, and one the world tears from it she
+        // takes again (grip_lost). Once she has the wrist, nothing breaks the
+        // rip (Cory, through PE): her ankle grip lost however (his kick, his
+        // thrashing, the world), the arm stays in her hand as the body pulls
+        // away (physics_world_grab.cpp tear_grip), and he goes on one-armed,
+        // or, his last, the run is hers.
         Grab = 12,
         Carry = 13,
         Dangle = 14,
         ArmPlay = 15,
         Release = 16,
         Spare = 17,
-        // Both the player's arms gone: she has won (matron_hold.cpp, the
-        // physics_world fatality); the run ends, and starts again whole.
+        // Both the player's arms gone, at any stage: she has won
+        // (matron_hold.cpp, the physics_world fatality); the run ends, and
+        // starts again whole.
         Claimed = 18,
     };
     [[nodiscard]] static constexpr bool holding_state(const State state) noexcept {
@@ -493,12 +506,14 @@ public:
     // Her look follows the exposure, one way: how long she has been out,
     // over this, is how far the source's work shows on her.
     static constexpr float kExposureFullSeconds = 600.0F;
-    // What her hands on the player are, by stage (physics_world.cpp): fully
-    // changed, a death; before that a shove, kShoveMps along the floor and
-    // kShoveUpMps up, once in kShoveCooldownSeconds. A pest's shove is away
-    // from her; dangerous, she aims it at the shaft's rim when the player is
-    // within kShoveEdgeReachM of it (the owner: she tries to nudge him off a
-    // band). A crate is not this shove. That one is above, with getting unstuck.
+    // What her hands on the player are (physics_world.cpp): at every stage
+    // they take hold (her hold, below). Only while they cannot (a grab's
+    // cooldown, a body on a ladder), and short of fully changed, a shove,
+    // kShoveMps along the floor and kShoveUpMps up, once in
+    // kShoveCooldownSeconds. A pest's shove is away from her; dangerous, she
+    // aims it at the shaft's rim when the player is within kShoveEdgeReachM of
+    // it (the owner: she tries to nudge him off a band). A crate is not this
+    // shove. That one is above, with getting unstuck.
     static constexpr float kShoveMps = 5.5F;
     static constexpr float kShoveUpMps = 2.0F;
     static constexpr float kShoveCooldownSeconds = 1.5F;
@@ -677,7 +692,9 @@ public:
     // grip itself is a SwingTwist hand-to-ankle; its load over
     // kGripMaxForceN, or its strain (load past kGripStrainFloorN, over time,
     // less kGripStrainDecay a second) past kGripTearNs, tears it out of her
-    // hand. A calm hang is 0.83 kN; only the player's thrashing gets there.
+    // hand. A calm hang is 0.83 kN; the player's thrashing gets there, and so
+    // can the world (her heave hooking a still body on a rail), a tear she
+    // takes them again from (grip_lost).
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
@@ -698,6 +715,11 @@ public:
     static constexpr float kGrabLiftSeconds = 0.9F;
     static constexpr float kGrabCooldownSeconds = 1.5F;   // after a miss
     static constexpr float kAfterReleaseSeconds = 20.0F;  // no new grab for this long after a hold ends
+    // A grip the world tears from her hand before the arm she takes again
+    // where they land, and the arm comes off where she stands (grip_lost,
+    // retake): at most kMaxRetakes times in one hold. Torn once more, it is
+    // a Release: no hold loops on the same steel.
+    static constexpr int kMaxRetakes = 2;
     // Carry: at kCarryPaceScale of her hunt, the body upside down at her
     // side, her hand over her head (kCarryHandUpM over her feet), at most
     // kCarryMaxSeconds to the rail; past it she drops them where she is.
@@ -728,18 +750,25 @@ public:
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
 
-    // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): fully
-    // changed, after a dangle (one in kArmPlayOdds, or the player thrashed
-    // and stayed in her hand), her other hand takes a wrist and pulls it away
-    // from the body, her pull rising from kArmPullStartN at kRipRampNps to
-    // kArmPullMaxN (the ankle hand then holds the pull and the weight: under
-    // its cap; she grips it hard, the strain counted only past
-    // kGripRipFloorN). The shoulder tears (physics) at kArmTearNs of the
-    // wrist's load past kArmHoldN; the arm (kArmMassKg) is hers: lifted to
-    // her face, swung, thrown (kArmThrowMps) onto the deck behind her. The
-    // whole of it kArmPlaySeconds from the tear; no tear in kArmPullGiveUpS
-    // and she gives it up.
-    static constexpr float kArmPlayOdds = 1.0F / 3.0F;
+    // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
+    // hold, at every stage (Cory, 2026-10-27: every time she catches you she
+    // rips an arm off, for sure), while the player has an arm: after the
+    // dangle (or where she stands, when she cannot get them to the rail), her
+    // other hand takes a wrist and pulls it away from the body, her pull
+    // rising from kArmPullStartN at kRipRampNps to kArmPullMaxN (the ankle
+    // hand then holds the pull and the weight: under its cap; she grips it
+    // hard, the strain counted only past kGripRipFloorN). She does not give
+    // it up: her hand not at the wrist in kArmReachSeconds, or the shoulder
+    // not torn kArmPullSeconds into the pull, she re-poses (arm_repose: a
+    // step of kArmReposeStepM back from the body, hauling it after her, her
+    // weight in it; out of reach, her hand for the nearer wrist again), as
+    // often as it takes. Once her other hand goes for his arm, no blow
+    // breaks it; once it has the wrist, nothing does: her ankle grip lost,
+    // the arm stays in that hand (the State comment). The shoulder tears
+    // (physics) at kArmTearNs of the wrist's load past kArmHoldN; the arm
+    // (kArmMassKg) is hers: lifted to her face, swung, thrown (kArmThrowMps)
+    // onto the deck behind her. The whole of it kArmPlaySeconds from the
+    // tear. The last arm gone, the run is hers (Claimed).
     static constexpr float kArmPullStartN = 1500.0F;
     static constexpr float kArmPullMaxN = 2600.0F;
     static constexpr float kGripRipFloorN = 3500.0F;
@@ -748,9 +777,10 @@ public:
     static constexpr float kArmMassKg = 4.5F;
     static constexpr float kArmThrowMps = 7.5F;
     static constexpr float kArmPlaySeconds = 4.5F;
-    static constexpr float kArmReachSeconds = 3.5F;
-    static constexpr float kArmPullGiveUpS = 4.0F;
     static constexpr float kArmPullMoveMps = 0.5F;
+    static constexpr float kArmReachSeconds = 3.5F;
+    static constexpr float kArmPullSeconds = 4.0F;
+    static constexpr float kArmReposeStepM = 1.0F;
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -883,7 +913,9 @@ public:
         std::uint32_t armplays = 0;
         std::uint32_t releases = 0;
         std::uint32_t spares = 0;
-        std::uint32_t grips_torn = 0;   // torn out of her hand by the player
+        std::uint32_t grips_torn = 0;   // torn out of her hand, by the player or the world
+        std::uint32_t retakes = 0;      // of those, the world's before the arm: taken again
+        std::uint32_t arm_reposes = 0;  // ArmPlay re-posed: the wrist out of reach, or the pull not telling
         std::uint32_t brace_losses = 0; // stepped back from the rail, unbraced
         std::uint32_t carry_drops = 0;  // carried too long: dropped on the deck
         std::uint32_t arm_tears = 0;    // arms she tore off
@@ -1008,9 +1040,15 @@ public:
         return edge;
     }
     void count_catch() noexcept { ++catches_; }
-    // Her hands on the player, by stage: a death only fully changed; else a
-    // shove, once in its cooldown, along shove_direction.
-    [[nodiscard]] bool kills() const noexcept { return stage_ == Stage::Changed; }
+    // Her hands on the player (Cory, 2026-10-27: at any rage, every time she
+    // catches you she grabs you and rips an arm off, for sure; your second
+    // arm gone is the fatality). At every stage they take hold (grab_ready:
+    // the grab, the carry, the dangle, an arm torn off; the last arm gone,
+    // Claimed). Her stage changes how she hunts, not what a catch is. Only
+    // while her hands cannot take hold (a grab's cooldown, a body on a
+    // ladder) do they shove, once in its cooldown, along shove_direction: a
+    // pest's or a dangerous Matron's; fully changed, never.
+    [[nodiscard]] bool shoves() const noexcept { return stage_ != Stage::Changed; }
     [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F; }
     void count_shove() noexcept {
         ++shoves_;
@@ -1075,7 +1113,7 @@ public:
     bool climb_for_test(bool pipe, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
-    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && kills(); }
+    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
     void begin_grab(JPH::RVec3 player);
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
@@ -1087,7 +1125,14 @@ public:
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
-    void grip_lost(bool torn) noexcept;
+    // Her grip gone: `torn` out of her hand (else let go); `fought` when the
+    // player fought it this hold (kicked, thrashed, braced on a rail). Torn
+    // with no fight (the world's doing: her heave against the rail, a snag),
+    // she takes them again where they land and the arm comes off there.
+    void grip_lost(bool torn, bool fought = false) noexcept;
+    // Where the player's ankle is (the feet end of the body, however it
+    // lies), given before pre_step: her hand goes there.
+    void set_player_ankle(const JPH::RVec3 ankle) noexcept { player_ankle_ = ankle; }
     // She lets go this tick: the push to give them (world), once.
     [[nodiscard]] bool take_let_go(JPH::Vec3 &push) noexcept {
         if (!let_go_) {
@@ -1116,6 +1161,19 @@ public:
     }
     void wrist_taken() noexcept;
     void arm_torn() noexcept;
+    // She re-posed (arm_repose): the world lets go of the wrist in her hand,
+    // if any, and her hand goes for the nearer whole arm again. Once.
+    [[nodiscard]] bool take_wrist_reseat() noexcept {
+        if (!wrist_reseat_) {
+            return false;
+        }
+        wrist_reseat_ = false;
+        return true;
+    }
+    // His own blow landed on her (the player's punch): the world tags it as
+    // it lands, and take_blow reads it with the blow it is part of. Only such
+    // a blow, before the rip begins, takes her out of her hold (State).
+    void player_blow_landed() noexcept { player_blow_tag_ = true; }
     [[nodiscard]] bool take_arm_throw(JPH::Vec3 &velocity) noexcept {
         if (!arm_throw_) {
             return false;
@@ -1126,6 +1184,11 @@ public:
     }
     void set_armplay_for_test(const int armplay) noexcept { armplay_for_test_ = armplay; }
     [[nodiscard]] bool claimed() const noexcept { return state_ == State::Claimed; }
+    // The body has no arm left and is not hers yet (a grip torn after the
+    // tear, a blow that took her mid-hold): she claims it now, or once she is
+    // back on her feet. False when she cannot (dead, or out of the world):
+    // the world ends the run all the same. No body goes on armless.
+    bool claim_armless() noexcept;
 
     // ---- Claimed: the fatality (matron_fatality.cpp) -----------------------
     // Her beats, in order. Each is a physical act on kit and body: nothing in
@@ -1207,9 +1270,15 @@ public:
     void set_spare_for_test(const int spare) noexcept { spare_for_test_ = spare; }
     void set_dangle_seconds_for_test(const float seconds) noexcept { dangle_for_test_s_ = seconds; }
     void set_stage_for_test(Stage stage) noexcept;
-    // Tests only: her hands held off the player for `seconds` (no shove), so
-    // a test can meet her body alone.
-    void hold_hands_for_test(const float seconds) noexcept { shove_cooldown_s_ = seconds; }
+    // Tests only: her hands held off the player for `seconds` (no grab, no
+    // shove), so a test can meet her body alone.
+    void hold_hands_for_test(const float seconds) noexcept {
+        shove_cooldown_s_ = seconds;
+        grab_cooldown_s_ = seconds;
+    }
+    // Tests only: her hands never take hold (a grab's cooldown that does not
+    // end, a death's restore too): a touch is her shove, not a catch.
+    void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
         // A hold is never saved: a checkpoint has her after the player.
         return {state_ >= State::Grab ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
@@ -1545,6 +1614,23 @@ private:
     void step_hold(float dt, JPH::RVec3 player);
     void end_hold(State next);
     void finish_dangle(JPH::RVec3 player);
+    bool begin_armplay(State then);
+    void stand_in_for_rim(JPH::RVec3 at, JPH::RVec3 player, JPH::Vec3 fwd) noexcept;
+    void carry_drop();
+    void claim() noexcept;
+    void retake() noexcept;
+    void arm_repose(JPH::RVec3 at, JPH::RVec3 player, bool reseat);
+    [[nodiscard]] JPH::Vec3 spare_side(JPH::RVec3 at, float feet, JPH::Vec3 right, JPH::Vec3 out, bool &deck) const;
+    // The body in her hand, or hers already: from her fingers closing on the
+    // ankle till she lets go, and the whole of the fatality.
+    [[nodiscard]] bool body_in_hold() const noexcept {
+        return state_ == State::Claimed || (holding_state(state_) && grip_on_);
+    }
+    // The rip begun: her other hand on its way to his arm (ArmPlay), an arm
+    // off already this hold, or the fatality.
+    [[nodiscard]] bool rip_begun() const noexcept {
+        return state_ == State::ArmPlay || state_ == State::Claimed || armplay_done_ || arm_tears_ != hold_tears_at_;
+    }
     void step_armplay(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     void step_claimed(float dt, JPH::RVec3 at, float feet);
     void fatal_next(int beat) noexcept;
@@ -1703,7 +1789,6 @@ private:
     bool grip_was_on_ = false;
     bool player_braced_ = false;
     float thrash_ = 0.0F;
-    bool thrash_failed_ = false;
     float pull_n_ = kHandReachPullN;
     float arm_reach_m_ = kArmReachM;
     JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
@@ -1730,7 +1815,19 @@ private:
     bool arm_throw_ = false;
     JPH::Vec3 arm_throw_v_ = JPH::Vec3::sZero();
     int armplay_for_test_ = -1;
+    bool grab_held_for_test_ = false;
     bool armplay_done_ = false;   // this hold's ArmPlay is over
+    State armplay_then_ = State::Dangle;   // what follows it: the dangle's end, a Spare, or the carry's drop
+    bool retake_ = false;                  // her hand on them again after a grip the world tore: the arm here
+    int hold_retakes_ = 0;                 // this hold's re-takes (kMaxRetakes)
+    int armplay_reposes_ = 0;              // this ArmPlay's re-poses (the way back she steps turns with each)
+    bool wrist_reseat_ = false;            // re-posed: the world lets go of the wrist (take_wrist_reseat)
+    JPH::Vec3 spare_side_ = JPH::Vec3::sZero();   // Spare: where beside her she sets them down (spare_side)
+    bool spare_side_set_ = false;
+    bool spare_deck_ = false;              // her deck under it
+    int spare_tries_ = 0;                  // set-downs that ran out of time, this hold
+    std::uint32_t hold_tears_at_ = 0;      // arm_tears_ as this hold began
+    JPH::RVec3 player_ankle_ = JPH::RVec3::sZero();
     int fatal_beat_ = 0;          // Fatal, while Claimed
     int fatal_sub_ = 0;           // within a beat: 0 her hand going to it, 1 on it
     bool fatal_at_work_ = false;  // at the bollard or the trip handle, until pushed out of reach
@@ -1744,7 +1841,7 @@ private:
     std::uint32_t arm_tears_ = 0, arm_throws_ = 0, claims_ = 0;
     float dangle_for_test_s_ = -1.0F;
     std::uint32_t grabs_ = 0, grab_misses_ = 0, carries_ = 0, dangles_ = 0, armplays_ = 0, releases_ = 0,
-                  spares_ = 0, grips_torn_ = 0, brace_losses_ = 0, carry_drops_ = 0;
+                  spares_ = 0, grips_torn_ = 0, retakes_ = 0, arm_reposes_ = 0, brace_losses_ = 0, carry_drops_ = 0;
     float noise_heard_ = 0.0F;
     bool sees_player_ = false;
     bool sees_far_ = false;
@@ -1950,6 +2047,8 @@ private:
     bool blow_from_above_ = false;
     bool blow_faced_ = false;
     bool blow_staggered_ = false;   // this blow has already staggered her (and may yet put her down)
+    bool player_blow_tag_ = false;  // his blow landed, for the blow take_blow reads next (player_blow_landed)
+    bool blow_by_player_ = false;   // this blow has his in it
     JPH::Vec3 blow_from_ = JPH::Vec3::sZero();
     bool sensed_ = false;                           // near_ and set_velocity_ are this tick's
     State resume_state_ = State::Hunting;           // what she was about when a blow staggered her
