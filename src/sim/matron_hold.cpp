@@ -59,6 +59,7 @@ void Matron::begin_grab(const RVec3 player) {
     hold_retakes_ = 0;
     spare_side_set_ = false;
     spare_tries_ = 0;
+    deck_only_ = false;
     hold_tears_at_ = arm_tears_;
     pull_n_ = kHandReachPullN;
     arm_reach_m_ = kStoopReachM;
@@ -453,7 +454,17 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         step_claimed(dt, at, feet);
         break;
     case State::Spare: {
-        stand();
+        if (deck_only_ && spare_side_set_ && !spare_deck_) {
+            // No deck beside her for them: back along her lines, the body in
+            // her fist, looking again as she goes.
+            walk_toward_line(dt, ax, az, on_catwalk);
+            if (hold_s_ > 1.0F) {
+                spare_side_set_ = false;
+                hold_s_ = 0.0F;
+            }
+        } else {
+            stand();
+        }
         const Vec3 out(rim_nx_, 0.0F, rim_nz_);
         if (hold_phase_ == 0) {
             // Back up over the rail.
@@ -479,14 +490,14 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // of it).
             const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
                                   (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
-            if (Vec3(down - hand_target_).Length() < 0.02F && (spare_deck_ || rail_in > 0.5F) &&
+            if (Vec3(down - hand_target_).Length() < 0.02F && (spare_deck_ || (rail_in > 0.5F && !deck_only_)) &&
                 (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_))) {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
                 hold_phase_ = 2;
                 hold_s_ = 0.0F;
-            } else if (hold_s_ > 8.0F) {
+            } else if (hold_s_ > 8.0F && !(deck_only_ && !spare_deck_)) {
                 ++spare_tries_;
                 hold_phase_ = 0;
                 hold_s_ = 0.0F;
@@ -722,17 +733,19 @@ void Matron::stand_in_for_rim(const RVec3 at, const RVec3 player, const Vec3 fwd
 // where she is.
 void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
     if (armplay_reposes_ >= kMaxArmReposes) {
-        // Past her re-poses, the arm still not hers: she lets go where she
-        // stands, the arm on, her hand out a while (no loop on the steel).
+        // Past her re-poses, the arm still not hers (Cory, 2026-10-28): she
+        // keeps the ankle and sets them down on her deck (Spare, deck_only_),
+        // never over the drop: no deck beside her, she walks them back along
+        // her lines till there is one. The arm on, no loop on the steel.
         armplay_done_ = true;
         wrist_on_ = false;
-        let_go_ = true;
-        let_go_push_ = Vec3::sZero();
-        state_ = State::Release;
+        deck_only_ = true;
+        ++spares_;
+        state_ = State::Spare;
         hold_s_ = 0.0F;
         hold_phase_ = 0;
-        grip_on_ = false;
-        grab_cooldown_s_ = kAfterReleaseSeconds;
+        spare_side_set_ = false;
+        pick_patrol(float(at.GetX()), float(at.GetZ()));
         return;
     }
     ++arm_reposes_;
@@ -796,6 +809,22 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
     }
     deck = false;
     return first;
+}
+
+// Her feet toward the nearest node of her patrol (pick_patrol): her walking
+// lines are her deck. Her own drive (walk_toward), so lawful.
+void Matron::walk_toward_line(const float dt, const float ax, const float az, const bool on_catwalk) {
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    if (patrol_ < 0 || static_cast<std::size_t>(patrol_) >= level.patrols.size()) {
+        walk_toward(dt, ax, az, 0.0F);
+        return;
+    }
+    const std::vector<int> &nodes = level.patrols[static_cast<std::size_t>(patrol_)];
+    const Node &node = level.nodes[static_cast<std::size_t>(nodes[static_cast<std::size_t>(patrol_node_) % nodes.size()])];
+    float wx = node.x;
+    float wz = node.z;
+    (void)route_toward(ax, az, node.x, node.z, on_catwalk, wx, wz);
+    walk_toward(dt, wx, wz, std::min(kHuntMps * kCarryPaceScale, 0.6F + 2.0F * xz(ax, az, wx, wz)));
 }
 
 // Too long with them on the way to the rail: dropped where she is.

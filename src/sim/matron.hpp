@@ -1646,6 +1646,7 @@ private:
     void claim() noexcept;
     void retake() noexcept;
     void arm_repose(JPH::RVec3 at, JPH::RVec3 player, bool reseat);
+    void walk_toward_line(float dt, float ax, float az, bool on_catwalk);
     [[nodiscard]] JPH::Vec3 spare_side(JPH::RVec3 at, float feet, JPH::Vec3 right, JPH::Vec3 out, bool &deck) const;
     // The body in her hand, or hers already: from her fingers closing on the
     // ankle till she lets go, and the whole of the fatality.
@@ -1835,6 +1836,7 @@ private:
     JPH::Vec3 spare_side_ = JPH::Vec3::sZero();   // Spare: where beside her she sets them down (spare_side)
     bool spare_side_set_ = false;
     bool spare_deck_ = false;              // her deck under it
+    bool deck_only_ = false;               // set down on her deck only (the re-pose cap)
     int spare_tries_ = 0;                  // set-downs that ran out of time, this hold
     std::uint32_t hold_tears_at_ = 0;      // arm_tears_ as this hold began
     JPH::RVec3 player_ankle_ = JPH::RVec3::sZero();
