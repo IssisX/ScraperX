@@ -161,6 +161,7 @@ func room_loudness() -> float:
 func update(delta: float, ctx: Dictionary, camera: Camera3D, attending: bool) -> void:
 	if _native == null or camera == null:
 		return
+	pages._sync_locker_home()
 	clock += delta
 	var eye := camera.global_position
 	var forward := -camera.global_transform.basis.z

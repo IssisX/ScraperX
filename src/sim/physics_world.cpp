@@ -282,9 +282,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                                                     -21.5F, -147.5F, JPH::JPH_PI, 44.0F));
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
-    // The Matron, on the 154 m deck: last, like the crew (not in the kit, not saved).
+    // The Matron, on deck 1 (11 m): last, like the crew (not in the kit, not saved).
+    // The 154 m deck stays where it is. Tests that need her there call place_matron_home(154).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving,
                                        object_layers::kOnSteel, player_id_);
+    matron_->set_home(Matron::kStackPitch);   // deck 1, 11 m. Same place on the band, lower deck.
     // The ziplines (zipline.hpp): after everything they must keep clear of
     // (each line is swept against the world as built so far), before the
     // tower's loose stock, which keeps clear of their posts. From the lowest
