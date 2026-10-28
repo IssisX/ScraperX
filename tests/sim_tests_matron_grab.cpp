@@ -518,6 +518,10 @@ void run_matron_arm() {
         require(p.severed_arm_present, "matron arm: the arm is a body in the world");
         require(r.deaths_held == 0 && r.deaths_end == r.deaths_start && p.one_arm,
                 "matron arm: one-armed and alive; no health, a body");
+        // The idle leg checks the thrown arm's lifetime, not her hands: her
+        // grab held off for it (as #11 did for the burst and vault legs), so
+        // a second catch, now the fatality, does not end it (Claude, #3).
+        s.debug_hold_matron_grab(true);
         {
             std::uint64_t d0 = s.snapshot().death_count;
             int st0 = -1;
@@ -541,6 +545,7 @@ void run_matron_arm() {
                 d0 = q.death_count;
             }
         }
+        s.debug_hold_matron_grab(false);
         std::cout << "  matron arm: after 95 s present " << s.snapshot().severed_arm_present << " despawns "
                   << s.snapshot().severed_arm_despawn_count << " L/R " << s.snapshot().left_arm_lost
                   << s.snapshot().right_arm_lost << " deaths " << s.snapshot().death_count << " state "
