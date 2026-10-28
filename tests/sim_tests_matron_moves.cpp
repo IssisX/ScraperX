@@ -17,6 +17,10 @@ using scraperx::sim::Simulation;
 using scraperx::sim::Snapshot;
 
 constexpr int kHunting = static_cast<int>(Matron::State::Hunting);
+constexpr int kSearching = static_cast<int>(Matron::State::Searching);
+constexpr int kShuffling = static_cast<int>(Matron::State::Shuffling);
+constexpr int kGuarding = static_cast<int>(Matron::State::Guarding);
+constexpr int kPeering = static_cast<int>(Matron::State::Peering);
 
 void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
 
@@ -82,7 +86,14 @@ void run_matron_pace() {
         // 12 s a phase: sprint, walk, stand silent.
         phase_s += Simulation::kFixedStepSeconds;
         const int phase = static_cast<int>(phase_s / 12.0) % 3;
-        if (phase == 2) {
+        const auto her = s.matron_state();
+        const int her_state = static_cast<int>(her.state);
+        if (her_state == kSearching || her_state == kShuffling || her_state == kGuarding || her_state == kPeering) {
+            // She has lost him (a hold ends with him set down on her deck, and
+            // she leaves him a while): he comes back to her, at a run, as a
+            // player leading her would, till she is after him again.
+            (void)steer_to(s, her.position.x, her.position.z, true);
+        } else if (phase == 2) {
             (void)s.set_move_input(0.0, 0.0);
             (void)s.set_sprint_input(false);
         } else if (steer_to(s, corners[corner][0], corners[corner][1], phase == 0)) {
