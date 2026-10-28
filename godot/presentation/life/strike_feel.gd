@@ -9,6 +9,9 @@ extends RefCounted
 # slowed in the simulation (no launch_shot time scale is used).
 
 const HIT_STOP_S := 0.07           # 60-80 ms, scaled a little by the blow
+# The baseline blow: a full landing's force-time as the native measures it
+# (strike group: 1,500 N held 3 ticks at 90 Hz = 50 N*s).
+const FULL_BLOW_NS := 50.0
 const KICK_DEG_PER_NS := 0.03      # ~1.5 deg for a 50 N*s landing
 const KICK_MAX_DEG := 3.0
 const KICK_DECAY := 14.0           # 1/s: the jolt's spring
@@ -55,8 +58,8 @@ func update(strike: Dictionary, camera_basis: Basis, delta: float, reduced_motio
 		var impulse := float(strike.get("impulse", 0.0))
 		# The sim's impulse is the whole contact's; at the first frame it is
 		# the first tick's. Size the jolt for the blow's full force-time.
-		var blow := maxf(impulse, 45.0)
-		_stop_left = HIT_STOP_S * clampf(blow / 50.0, 0.85, 1.15)
+		var blow := maxf(impulse, FULL_BLOW_NS)
+		_stop_left = HIT_STOP_S * clampf(blow / FULL_BLOW_NS, 0.85, 1.15)
 		_kick_deg = 0.0 if reduced_motion else minf(KICK_MAX_DEG, blow * KICK_DEG_PER_NS)
 		_kick_t = 0.0
 		# The head goes back and a little off the striking side: about the
