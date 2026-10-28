@@ -229,6 +229,10 @@ const SOFT_REACH := 0.08
 # last word on every frame (govern).
 const GOVERN_RAD_S := 11.5
 const GOVERN_BURST_RAD_S := 19.0
+# and no bone of hers slides (her hips' ride, her arm drawn out, her shoulder
+# pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
+const GOVERN_M_S := 3.0
+const GOVERN_BURST_M_S := 5.0
 var _ride_y := 0.0
 var _ride_v := 0.0
 var _ankle_y := 0.097
@@ -237,6 +241,7 @@ var _plants := {}
 var _pole := {}
 var _governed_bones: Array[int] = []
 var _govern_last: Array[Quaternion] = []
+var _govern_pos: Array[Vector3] = []
 var governed := 0
 var _ik_frame := 0
 # This frame: the limbs she put down on all fours ({limb: "an_l" / "wr_l" /
@@ -346,9 +351,11 @@ func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, ke
 # her feet, never jumped a frame to whichever foot is lowest.
 func _ride(dy: float) -> void:
 	var dt: float = float(view._dt) if view != null else 0.0
-	if view == null or bool(view.fresh_frame) or dt <= 0.0:
+	if view == null or bool(view.fresh_frame):
 		_ride_y = dy
 		_ride_v = 0.0
+	elif dt <= 0.0:
+		pass   # a frame of no time: held
 	else:
 		var r: Array = view.spring(_ride_y, _ride_v, dy, RIDE_W, dt)
 		_ride_y = float(r[0])
@@ -470,23 +477,35 @@ func govern() -> void:
 				_governed_bones.append(int(bone_idx[bn]))
 	governed = 0
 	var dt: float = float(view._dt) if view != null else 0.0
-	var reset: bool = view == null or bool(view.fresh_frame) or dt <= 0.0 or _govern_last.size() != _governed_bones.size()
+	var reset: bool = view == null or bool(view.fresh_frame) or _govern_last.size() != _governed_bones.size()
 	if reset:
 		_govern_last.resize(_governed_bones.size())
+		_govern_pos.resize(_governed_bones.size())
 		for j in _governed_bones.size():
 			_govern_last[j] = skel.get_bone_pose_rotation(_governed_bones[j])
+			_govern_pos[j] = skel.get_bone_pose_position(_governed_bones[j])
 		return
-	var cap := (GOVERN_BURST_RAD_S if bool(view.burst_active) else GOVERN_RAD_S) * dt
+	# a frame of no time holds her as she was
+	var burst := bool(view.burst_active)
+	var cap := (GOVERN_BURST_RAD_S if burst else GOVERN_RAD_S) * maxf(dt, 0.0)
+	var cap_m := (GOVERN_BURST_M_S if burst else GOVERN_M_S) * maxf(dt, 0.0)
 	for j in _governed_bones.size():
 		var i: int = _governed_bones[j]
 		var q := skel.get_bone_pose_rotation(i)
 		var was: Quaternion = _govern_last[j]
 		var ang := was.angle_to(q)
 		if ang > cap:
-			q = was.slerp(q, cap / ang)
+			q = was.slerp(q, cap / ang) if ang > 1.0e-6 else was
 			skel.set_bone_pose_rotation(i, q)
 			governed += 1
 		_govern_last[j] = q
+		var at := skel.get_bone_pose_position(i)
+		var was_at: Vector3 = _govern_pos[j]
+		if at.distance_to(was_at) > cap_m:
+			at = was_at + (at - was_at).limit_length(cap_m)
+			skel.set_bone_pose_position(i, at)
+			governed += 1
+		_govern_pos[j] = at
 
 
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
@@ -498,6 +517,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	# Laid out on the steel, or turned over head first down her pipe: the figure
 	# itself is turned, and the deck is not under her soles.
 	if (state == 11 and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
+		_plants.clear()
 		return
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
@@ -524,11 +544,15 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		# nothing, so the figure never floats toward a deck it has
 		# not reached. Without a known support point the feet pose
 		# is untouched.
+		var lift := 0.0
 		if two_handed and bool(data.get("climb_feet_support_known", false)) and data.has("climb_feet_support"):
 			var sup: Vector3 = skel.global_transform.affine_inverse() * (data["climb_feet_support"] as Vector3)
 			var dy := sup.y - _lowest_foot()
 			if absf(dy) <= 0.3:
-				_lift_body(dy)
+				lift = dy
+		# her body's ride on its spring here too: onto the support, and off
+		# the deck's ride as the climb starts, never in a frame
+		_ride(lift)
 		if wf > 0.001:
 			_plant_limbs(data, wf)
 		var wc := float(view._w_climb) if view != null else 1.0

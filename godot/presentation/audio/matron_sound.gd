@@ -92,6 +92,7 @@ var _plant_gap := 0.0
 # Set by matron_view.gd each frame: on all fours (her steps are her plants),
 # and the limbs she put down this frame ({limb, at, surface}, matron_rig.gd).
 var crawling := false
+# (read by her sounds' own variation, L6: every contact cue on a real plant)
 var plants: Array = []
 var _rattle_in := 0.0
 var _pipe_scrape_in := 0.0
