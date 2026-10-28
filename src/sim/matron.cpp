@@ -1253,17 +1253,29 @@ bool Matron::way_clear(const float fx, const float fz, const float tx, const flo
     // slides aside; a post does not.
     class BuiltOnly final : public BodyFilter {
     public:
+        BuiltOnly(const Vec3 from, const Vec3 me) : from_(from), me_(me) {}
         // And a machine at rest too heavy for her to shove aside (a parked
-        // cage: half again her own mass), standing in the way as a post does.
+        // cage: half again her own mass), standing in the way as a post does;
+        // not the one she stands in or on (her way starts inside it).
         bool ShouldCollideLocked(const Body &body) const override {
             if (body.IsStatic()) {
                 return true;
             }
             const float inv = body.GetMotionPropertiesUnchecked() != nullptr ? body.GetMotionPropertiesUnchecked()->GetInverseMass() : 0.0F;
-            return inv > 0.0F && inv < 1.0F / (1.5F * kMassKg) && body.GetLinearVelocity().LengthSq() < 0.01F;
+            if (!(inv > 0.0F && inv < 1.0F / (1.5F * kMassKg) && body.GetLinearVelocity().LengthSq() < 0.01F)) {
+                return false;
+            }
+            AABox around = body.GetWorldSpaceBounds();
+            around.ExpandBy(Vec3(0.1F, 1.0F, 0.1F));
+            return !around.Contains(from_) && !around.Contains(me_);
         }
+
+    private:
+        Vec3 from_;
+        Vec3 me_;
     };
-    const BuiltOnly built;
+    const RVec3 me = physics_.GetBodyInterface().GetPosition(body_);
+    const BuiltOnly built(Vec3(fx, feet_y_, fz), Vec3(float(me.GetX()), feet_y_, float(me.GetZ())));
     // Her width at her hips, swept the whole way.
     const RVec3 start(fx, feet_y_ + 0.9F, fz);
     const RShapeCast sweep(hips_, Vec3::sReplicate(1.0F), RMat44::sTranslation(start), Vec3(dx, 0.0F, dz));
