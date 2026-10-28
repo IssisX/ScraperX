@@ -70,16 +70,22 @@ const SIM_HZ := 90.0
 # (a joint's ceiling).
 const YAW_W := 16.0
 const YAW_MAX_RAD_S := 11.5
-# Standing (under STAND_MPS) her body holds and she twists to face: her neck
-# round to NECK_TWIST_MAX, her chest the rest, to TWIST_MAX in all; her limbs
-# are about LIMB_REACH_M out from her middle as her body goes round.
+# Standing (under STAND_MPS) with empty hands her body holds and she twists to
+# look: her neck round to NECK_TWIST_MAX, her chest the rest, to TWIST_MAX in
+# all. Her limbs are about LIMB_REACH_M out from her middle: her body going
+# round walks them round (her gait's clock).
 const STAND_MPS := 0.15
+# A shove, a throw or a take keeps her working (no twist) this long after.
+const WORK_S := 0.8
 const NECK_TWIST_MAX := 1.92
 const TWIST_MAX := 2.62
 const LIMB_REACH_M := 0.85
 const UNWIND_FROM := 0.17
 const UNWIND_AFTER_S := 1.5
 const UNWIND_RAD_S := 1.2
+# Her fingers' spring (rad/s), and her twist laid on her neck and chest.
+const FINGER_W := 18.0
+const TWIST_W := 14.0
 const HOLD_BLEND_W := 16.0
 # On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
 # never twice within FOURS_HOLD_S.
@@ -130,7 +136,14 @@ var _fall_speed := 0.0
 # swell and figure as last drawn. Fresh: drawn where the pose is (she has
 # just come into sight, or been put somewhere).
 var _drawn_yaw := 0.0
-var _yaw_v := 0.0
+var _yaw_lag := 0.0
+var _sim_yaw_was := 0.0
+var _twist_shown := 0.0
+var _twist_v := 0.0
+var _work_s := 0.0
+var _work_counts := Vector3i(-1, -1, -1)
+var _gait_mps := 0.0
+var _finger_shown := {}
 var _twist := 0.0
 var _unwind_s := 0.0
 var _yaw_rate := 0.0
@@ -804,54 +817,51 @@ func _tick_reach(delta: float) -> float:
 	return ROOT_TICK_M * SIM_HZ * maxf(delta, 0.0)
 
 
-# Her drawn body's facing. Standing on the deck (under STAND_MPS) her body
-# holds where it faces and the simulation's turn goes into her neck and then
-# her upper body instead (_twist, up to TWIST_MAX: _pose lays it on the neck
-# to NECK_TWIST_MAX, the rest on her chest). Her body follows only when that
-# is not enough, or she moves off: on a spring (YAW_W), no faster than her
-# limbs may go round with it (2.5 times her speed, or 5 cm a frame, at a
-# limb's reach) unless the twist is at its limit, and never faster than
-# YAW_MAX_RAD_S; the twist unwinds as it does. A teleport cuts; a frame of no
-# time holds.
+# Her drawn body's facing. The twist is a look: only while she stands on the
+# deck (under STAND_MPS) with empty hands and is not working (carrying,
+# unrigging, bracing, her hands on the climber, the Turn, a shove or a throw)
+# does her body hold where it faces while the simulation's turn goes into her
+# neck and then her chest (_twist, to TWIST_MAX: matron_rig.gd turns them
+# about the vertical, so her face keeps its pitch). A twist held past
+# UNWIND_FROM for UNWIND_AFTER_S her body comes round under at UNWIND_RAD_S;
+# past TWIST_MAX it goes round as far as it must. Otherwise her body faces the
+# simulation's facing at up to YAW_MAX_RAD_S. The lag is kept unwrapped (a
+# long frame never flips it round); a teleport cuts; a frame of no time holds.
 func _turn_yaw(sim_yaw: float, delta: float, data: Dictionary) -> void:
 	if _pose_fresh or previewing:
 		_drawn_yaw = sim_yaw
-		_yaw_v = 0.0
+		_sim_yaw_was = sim_yaw
+		_yaw_lag = 0.0
 		_yaw_rate = 0.0
 		_twist = 0.0
+		_unwind_s = 0.0
 		return
+	_yaw_lag += wrapf(sim_yaw - _sim_yaw_was, -PI, PI)
+	_sim_yaw_was = sim_yaw
 	if delta <= 0.0:
 		_yaw_rate = 0.0
 		return
-	var speed := float(data.get("speed", 0.0))
 	var state := int(data["state"])
-	var on_deck := state in [STATE_HUNTING, STATE_SEARCHING, STATE_SHUFFLING, STATE_GUARDING, STATE_PEERING,
-		STATE_UNRIGGING] and not (bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
-		or bool(data.get("on_line", false)) or bool(data.get("clinging", false)) or _fall_speed < -6.0)
-	var was := _drawn_yaw
-	var lag := wrapf(sim_yaw - was, -PI, PI)
-	# a twist held long (over UNWIND_FROM for UNWIND_AFTER_S) her body comes
-	# round under, slowly (UNWIND_RAD_S): the look stays quick, the stance not
-	_unwind_s = _unwind_s + delta if absf(lag) > UNWIND_FROM else 0.0
-	var unwinding := _unwind_s > UNWIND_AFTER_S
-	var hold := TWIST_MAX if on_deck and speed < STAND_MPS and not unwinding else 0.0
-	var want := lag - clampf(lag, -hold, hold)
-	var s := spring(0.0, _yaw_v, want, YAW_W, delta)
-	var rate := YAW_MAX_RAD_S
-	if on_deck:
-		# what a limb may move in a frame, less what her going carries it
-		var spare := maxf(0.6 * maxf(2.5 * speed * delta, 0.05) - (0.5 * speed + absf(_fall_speed)) * delta, 0.0)
-		rate = minf(rate, spare / (LIMB_REACH_M * delta))
-		if unwinding and speed < STAND_MPS:
-			rate = minf(rate, UNWIND_RAD_S)
-	var step := clampf(float(s[0]), -rate * delta, rate * delta)
-	# past the twist she has, her body goes round just as far as it must
-	if on_deck and absf(lag - step) > TWIST_MAX:
-		step = clampf(lag - signf(lag) * TWIST_MAX, -YAW_MAX_RAD_S * delta, YAW_MAX_RAD_S * delta)
-	_yaw_v = step / delta if absf(step - float(s[0])) > 1.0e-6 else float(s[1])
-	_drawn_yaw = wrapf(was + step, -PI, PI)
+	var looking := state in [STATE_HUNTING, STATE_SEARCHING, STATE_SHUFFLING, STATE_GUARDING, STATE_PEERING] \
+		and float(data.get("speed", 0.0)) < STAND_MPS and int(data.get("carrying", 0)) == 0 \
+		and not bool(data.get("bracing", false)) and int(data.get("turn", 0)) == 0 and _work_s <= 0.0 \
+		and not (bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
+			or bool(data.get("on_line", false)) or bool(data.get("clinging", false)) or _fall_speed < -6.0)
+	_unwind_s = _unwind_s + delta if looking and absf(_yaw_lag) > UNWIND_FROM else 0.0
+	var step := 0.0
+	if looking:
+		if _unwind_s > UNWIND_AFTER_S:
+			step = clampf(_yaw_lag, -UNWIND_RAD_S * delta, UNWIND_RAD_S * delta)
+		if absf(_yaw_lag - step) > TWIST_MAX:
+			step = clampf(_yaw_lag - signf(_yaw_lag) * TWIST_MAX, -YAW_MAX_RAD_S * delta, YAW_MAX_RAD_S * delta)
+	else:
+		step = clampf(_yaw_lag, -YAW_MAX_RAD_S * delta, YAW_MAX_RAD_S * delta)
+	_yaw_lag -= step
+	_drawn_yaw = wrapf(_drawn_yaw + step, -PI, PI)
+	# her face holds its heading while her body comes round under it
+	_twist_shown -= step
 	_yaw_rate = step / delta
-	_twist = clampf(wrapf(sim_yaw - _drawn_yaw, -PI, PI), -TWIST_MAX, TWIST_MAX) if on_deck else 0.0
+	_twist = clampf(_yaw_lag, -TWIST_MAX, TWIST_MAX)
 
 
 # The hold as the native has it this frame (main_feel.gd reads it once and
@@ -1057,6 +1067,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_gait_cycle_m = clampf(1.0 + 0.2 * speed, GAIT_CYCLE_MIN_M, GAIT_CYCLE_MAX_M)
 	# her body going round walks her limbs round too, as the ground would
 	stride_step += absf(_yaw_rate) * delta * LIMB_REACH_M * _w_fours
+	_gait_mps = stride_step / delta if delta > 0.0 else 0.0
 	_gait_phase = fposmod(_gait_phase + TAU * stride_step / _gait_cycle_m, TAU)
 	var gait_rate := TAU * speed / _gait_cycle_m
 	# A gait limb swings no faster than GAIT_MAX_RAD_S, and the swing grows in
@@ -1088,7 +1099,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var head_roll := 0.0
 	var jaw_open := 0.08
 	var yaw_to_player := 0.0
-	var figure_yaw := _figure.rotation.y
+	var figure_yaw := _figure.rotation.y + _twist_shown
 	var to_player := perceived_target(data, player_position) - _figure.global_position
 	yaw_to_player = clampf(wrapf(atan2(to_player.x, to_player.z) - figure_yaw, -PI, PI), -1.4, 1.4)
 	var legs_fwd := 0.0
@@ -1863,15 +1874,14 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	body.position = Vector3(0.0, hip_y, 0.0)
 	# standing, the turn she has not made with her body: her neck round first,
 	# her chest the rest (_turn_yaw)
-	var neck_twist := clampf(_twist, -NECK_TWIST_MAX, NECK_TWIST_MAX)
-	(_p["torso"] as Node3D).rotation.y = twist + (_twist - neck_twist)
+	(_p["torso"] as Node3D).rotation.y = twist
 	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 + hold_bend
 	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
 	(_p["sh_r"] as Node3D).scale = Vector3.ONE * limb_scale
 	(_p["hp_l"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	torso.rotation.x = pitch
-	neck.rotation = Vector3(head_pitch * 0.4, head_back + neck_twist, head_roll * 0.3)
+	neck.rotation = Vector3(head_pitch * 0.4, head_back, head_roll * 0.3)
 	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING or still_on_post else yaw_to_player * (1.0 if clinging else 0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)
 	jaw.rotation.x = jaw_open
 	_limb(_p["hp_l"], _p["kn_l"], legs_fwd, knees * knee_flip)
@@ -1950,7 +1960,17 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				c = lerpf(0.5, 1.4, 0.5 + 0.5 * phase)
 			var chain: Array = fingers[f]
 			for seg in chain.size():
-				(chain[seg] as Node3D).rotation.x = -c * (1.0 + 0.15 * float(seg)) * (0.8 if f == fingers.size() - 1 else 1.0)
+				# on a spring like her other joints (a state's change of
+				# grip, never a frame's)
+				var node := chain[seg] as Node3D
+				var want_c := -c * (1.0 + 0.15 * float(seg)) * (0.8 if f == fingers.size() - 1 else 1.0)
+				var fs: Array = _finger_shown.get(node, [want_c, 0.0])
+				if not _pose_fresh:
+					fs = spring(float(fs[0]), float(fs[1]), want_c, FINGER_W, delta)
+				else:
+					fs = [want_c, 0.0]
+				_finger_shown[node] = fs
+				node.rotation.x = float(fs[0])
 	# What swells under the cloth in the Turn: the hump and a ridge of spine.
 	var swell := 1.0 if turn > 0 else 0.0
 	(_p["hump"] as Node3D).scale = (_p["hump"] as Node3D).scale.lerp(Vector3.ONE * (1.0 + 0.5 * swell), 1.0 - exp(-18.0 * delta))
@@ -2027,7 +2047,20 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_last_step = step_now
 	# Fall speed from her own height, for the plunge.
 	_fall_speed = (centre.y - _last_pos.y) / maxf(delta, 0.0001) if delta > 0.0 else 0.0
+	var counts := Vector3i(int(data.get("shoves", 0)), int(data.get("throws", 0)), int(data.get("takes", 0)))
+	if _work_counts.x >= 0 and counts != _work_counts:
+		_work_s = WORK_S
+	_work_counts = counts
+	_work_s = maxf(0.0, _work_s - delta)
 	_turn_yaw(sim_yaw, delta, data)
+	# the twist laid on, on its spring
+	if _pose_fresh:
+		_twist_shown = _twist
+		_twist_v = 0.0
+	elif delta > 0.0:
+		var ts := spring(_twist_shown, _twist_v, _twist, TWIST_W, delta)
+		_twist_shown = float(ts[0])
+		_twist_v = float(ts[1])
 	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
 	_last_pos = centre
 	# Her body as the simulation moves it, followed exactly: a run, a fall,
@@ -2055,6 +2088,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_sparks.global_position = centre + Vector3(0.0, 1.55, 0.0)
 	if not out or centre.distance_to(camera_position) > DRAW_RANGE_M:
 		_figure.visible = false
+		if _rig != null:
+			_rig.down_mask = 0
 		_pose_fresh = true
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, falling)
 		return
