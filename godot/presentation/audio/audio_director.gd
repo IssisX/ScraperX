@@ -1142,7 +1142,10 @@ const HER_SHRIEK_DB := -3.0
 const HER_SHRIEK_GAP_S := 0.6
 # Her loops come up at most HER_RISE_DB_S (so never the jump in the game's
 # output that blinds the microphone: voice_keeper.gd ROOM_MASK_JUMP_DB) and go
-# down at HER_FALL_DB_S; at HER_PAUSED_DB a loop is paused.
+# down at HER_FALL_DB_S; at HER_PAUSED_DB a loop is paused: stopped where it
+# was, and played on from there when it comes up again. (Not stream_paused: a
+# 3D player only starts its playback on its next physics tick, and a pause
+# asked for before then is lost, so a loop "started paused" mixed on unheard.)
 const HER_RISE_DB_S := 20.0
 const HER_FALL_DB_S := 240.0
 const HER_PAUSED_DB := -79.0
@@ -1189,6 +1192,7 @@ var _her_clip: Array[StringName] = [&"", &"", &"", &""]
 var _her_db := PackedFloat32Array([HER_OFF_DB, HER_OFF_DB, HER_OFF_DB, HER_OFF_DB])
 var _her_written := PackedFloat32Array([HER_OFF_DB, HER_OFF_DB, HER_OFF_DB, HER_OFF_DB])
 var _her_paused: Array[bool] = [true, true, true, true]
+var _her_from := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])   # where each paused loop was
 var _her_shots: Array[AudioStreamPlayer3D] = []
 var _her_shot_rank := PackedInt32Array()
 var _her_shot_t := PackedFloat64Array()
@@ -1406,31 +1410,38 @@ func _her_level(k: int, clip: StringName, target_db: float, delta: float, cut: b
 		_her_swap(k, clip)
 	var paused := level <= HER_PAUSED_DB
 	var player: Node = _her_loops[k]
+	if k != HER_BED and not paused:
+		(player as Node3D).position = at
 	if paused != _her_paused[k]:
 		_her_paused[k] = paused
-		player.stream_paused = paused
+		if paused:
+			_her_from[k] = player.get_playback_position()
+			player.stop()
+		elif player.stream != null:
+			_her_written[k] = level
+			player.volume_db = level
+			player.play(_her_from[k])
 	if paused:
 		return
 	if absf(level - _her_written[k]) > 0.05:
 		_her_written[k] = level
 		player.volume_db = level
-	if k != HER_BED:
-		(player as Node3D).position = at
 
 
-# Loop `k` onto `clip`, started again at the level it is at (paused there if
-# that is silence).
+# Loop `k` onto `clip` from its start, playing at the level it is at (or
+# paused there if that is silence: not started).
 func _her_swap(k: int, clip: StringName) -> void:
 	_her_clip[k] = clip
+	_her_from[k] = 0.0
 	var player: Node = _her_loops[k]
 	player.stream = _her_bank.pick(clip)
 	if player.stream == null:
 		return
 	player.volume_db = _her_db[k]
 	_her_written[k] = _her_db[k]
-	player.play()
 	_her_paused[k] = _her_db[k] <= HER_PAUSED_DB
-	player.stream_paused = _her_paused[k]
+	if not _her_paused[k]:
+		player.play()
 
 
 var _dread_s := 0.0
