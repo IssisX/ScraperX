@@ -253,12 +253,54 @@ func _act_laps(device: int, a: Vector2, b: Vector2, done: Callable, budget: floa
 
 
 func _matron_act_touch(device: int) -> bool:
+	if not _act_punch_rule():
+		return false
 	_act_running = true
 	_act_draw(false)
 	var played: bool = await _act_play(device)
 	_act_draw(true)
 	_act_running = false
 	return played
+
+
+# His punch over every other action (main_context.gd punch_action, the
+# owner's "no button to punch"): offered by the native, it is the Action
+# button whatever else is on offer (the strike group finds the toolbox's PICK
+# UP and her body in reach offered at once); not offered, with no fist to
+# throw or a load in his hands, it is not; in the fatality's hang window, the
+# seconds left.
+const MainContext := preload("res://presentation/main_context.gd")
+
+func _act_punch_rule() -> bool:
+	var offered := {"offered": true, "held": false, "arm": 1}
+	if String(MainContext.punch_action(offered, {}, 0).get("label", "")) != "PUNCH":
+		return _fail("offered by the native, the punch did not take the Action button")
+	if not MainContext.punch_action({"offered": false, "held": false, "arm": 1}, {}, 0).is_empty():
+		return _fail("not offered, the punch took the Action button")
+	if not MainContext.punch_action({"offered": true, "held": false, "arm": -1}, {}, 0).is_empty():
+		return _fail("with no fist to throw, the punch took the Action button")
+	if not MainContext.punch_action(offered, {}, 5322).is_empty():
+		return _fail("with a load in his hands, the punch took the Action button")
+	var hang: Dictionary = MainContext.punch_action({"offered": false, "held": true, "arm": 0},
+		{"fatal_hang": true, "fatal_window_s": 1.0, "fatal_window_total_s": 2.5}, 0)
+	if String(hang.get("detail", "")) != "BREAK FREE  1.5 S":
+		return _fail("in the fatality's hang window the punch read '%s'" % str(hang.get("detail", "")))
+	return true
+
+
+# Every frame it is watched: the native offering the punch, the Action button
+# reads PUNCH (over whatever else was on offer: _act_punch_over).
+var _act_punch_missed := 0
+var _act_punch_over := 0
+
+func _act_punch_watch() -> void:
+	var c := _ctx()
+	if not bool((c.get("strike", {}) as Dictionary).get("offered", false)):
+		return
+	if StringName(c["action"]["id"]) != &"punch":
+		_act_punch_missed += 1
+	elif StringName(c.get("under_punch", &"")) != &"":
+		_act_punch_over += 1
 
 
 func _act_play(device: int) -> bool:
@@ -552,6 +594,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		if attempt > 0:
 			catches = int(_matron_state()["catches"])
 		var caught: bool = await _act_watch_her(func() -> bool:
+			_act_punch_watch()
 			return int(_matron_state()["catches"]) > catches, 60.0,
 			"dangerous_at_rail", "act_dangerous_coming", 4.0)
 		if not caught:
@@ -576,8 +619,12 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		return _fail("in her hand before the rip, Action read '%s', not PUNCH" % _action_label())
 	_act_log("punch_in_her_hand")
 	var torn: bool = await _act_wait(func() -> bool:
+		_act_punch_watch()
 		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
 		"rail_hold")
+	_act_log("punch_watch missed=%d over=%d" % [_act_punch_missed, _act_punch_over])
+	if _act_punch_missed > 0:
+		return _fail("the native offered the punch on %d frames the Action button did not read PUNCH" % _act_punch_missed)
 	if torn and _act_in_her_hands():
 		await _act_frame_her()
 		await _act_pose("act_dangerous_arm")

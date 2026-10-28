@@ -419,8 +419,11 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var reachable := true
 		var strike: Dictionary = state.get("strike", {})
 		var striking := traversal == 0 and int(strike.get("phase", 0)) != 0
-		# The right throws it; the left, the right gone (her rip) or slung.
+		# The fist the native throws it with (1 the right, 0 the left); an
+		# older native: the right, else the left with the right gone or slung.
 		var fist_side := -1.0 if lost[1] or int(state.get("broken_arm", -1)) == 1 else 1.0
+		if strike.has("arm"):
+			fist_side = 1.0 if int(strike["arm"]) == 1 else -1.0
 		if int(state.get("broken_arm", -1)) == (1 if hand.side > 0.0 else 0):
 			pose = POSE_SLING
 		elif striking:

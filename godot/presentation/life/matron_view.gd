@@ -2208,13 +2208,16 @@ func _apply_flinch(delta: float) -> void:
 	# In _drive_body, over this frame's eased pose and before the rig puts the
 	# pivots on her bones: her torso tipped away from the waist up, her legs
 	# planted (the rig keeps the thighs' angle). _pose sets the torso afresh
-	# next frame, so it adds nothing to her pose.
+	# next frame, so it adds nothing to her pose. A blow's jolt is a burst:
+	# the rig's ceiling (govern) lets it through at its burst rate this frame
+	# (_step_bursts sets the flag afresh each frame).
 	if _flinch_deg <= 0.0 or not _figure.visible or not _p.has("torso"):
 		return
 	_flinch_t += delta
 	if _flinch_t > 1.0:
 		_flinch_deg = 0.0
 		return
+	burst_active = true
 	var a := deg_to_rad(_flinch_deg) * exp(-FLINCH_DECAY * _flinch_t) * cos(FLINCH_FREQ * _flinch_t)
 	var torso: Node3D = _p["torso"]
 	torso.global_basis = Basis(_flinch_axis, a) * torso.global_basis

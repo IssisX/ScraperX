@@ -1139,6 +1139,8 @@ struct Snapshot final {
     std::uint8_t strike_phase = 0;
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
+    std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
+
     bool strike_landed = false;   // this strike has landed on her
     std::uint64_t strike_count = 0;
     std::uint64_t strike_hit_count = 0;
@@ -1634,6 +1636,9 @@ public:
     // hold alone); an arm already lost.
     void debug_matron_armplay(int armplay) noexcept;
     void debug_lose_arm(int side) noexcept;
+    // Tests only (never bound to the bridge): an arm broken as a hard hit
+    // breaks it (0 the left, 1 the right), out of use a while.
+    void debug_break_arm(int side) noexcept;
     // Tests only (never bound to the bridge): the player's body caught on
     // steel where it is (a point at its middle fixed to the world) till the
     // load on it passes `max_n`: a body pinned on a rail's edge.

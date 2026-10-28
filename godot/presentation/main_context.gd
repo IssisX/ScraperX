@@ -103,6 +103,26 @@ var _down_hold_counts := false
 var _tucked_this_flight := false
 var _trapeze_was_hanging := false
 
+# The Action button's punch (the owner, 2026-10-28: "there was no way to
+# punch. I didn't see a button"): whenever the native offers one (her body
+# close in front, nothing between; or her hand on him before the rip, his
+# escape), PUNCH takes the button over every other action. Also in the
+# fatality's hang window when her hold reports one (`hold` empty or without
+# it: the native's offer alone). With no fist to throw (one arm torn off, the
+# other broken), none. Empty when there is no punch.
+static func punch_action(strike: Dictionary, hold: Dictionary, carrying: int) -> Dictionary:
+	if int(strike.get("arm", 1)) < 0:
+		return {}
+	var in_her_hand := bool(strike.get("held", false))
+	if in_her_hand and bool(hold.get("fatal_hang", false)):
+		var detail := "BREAK FREE"
+		if hold.has("fatal_window_s") and hold.has("fatal_window_total_s"):
+			detail = "BREAK FREE  %.1f S" % maxf(0.0, float(hold["fatal_window_total_s"]) - float(hold["fatal_window_s"]))
+		return {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": detail}
+	if not bool(strike.get("offered", false)) or (carrying != 0 and not in_her_hand):
+		return {}
+	return {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "BREAK FREE" if in_her_hand else "HER"}
+
 func _read_context() -> Dictionary:
 	var landing_state: Dictionary = _native.get_landing_state()
 	var position: Vector3 = _native.get_player_position()
@@ -182,24 +202,15 @@ func _read_context() -> Dictionary:
 	# and Crouch held hoist.
 	var crane: Dictionary = _native.get_yard_crane_state()
 	var crane_operating := bool(crane["operating"])
-	# Her body close in front, or her hand on him before the rip (his escape),
-	# the native decides: Action is a punch. In the fatality's hang window too
-	# when her hold reports one (a native without it: the strike's offer).
+	# His punch, whenever the native offers it, over every other action
+	# (punch_action).
 	var strike: Dictionary = _native.get_strike_state()
-	var in_her_hand := bool(strike.get("held", false))
-	var punch_ok := bool(strike["offered"])
-	var hang_left := -1.0
-	if in_her_hand and _native.has_method("get_matron_hold_state"):
-		var her_hold: Dictionary = _native.get_matron_hold_state()
-		if bool(her_hold.get("fatal_hang", false)):
-			punch_ok = true
-			if her_hold.has("fatal_window_s") and her_hold.has("fatal_window_total_s"):
-				hang_left = maxf(0.0, float(her_hold["fatal_window_total_s"]) - float(her_hold["fatal_window_s"]))
+	var her_hold: Dictionary = {}
+	if bool(strike.get("held", false)) and _native.has_method("get_matron_hold_state"):
+		her_hold = _native.get_matron_hold_state()
+	var punch := punch_action(strike, her_hold, carrying)
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if in_her_hand and punch_ok:
-		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH",
-			"detail": "BREAK FREE" if hang_left < 0.0 else "BREAK FREE  %.1f S" % hang_left}
-	elif crane_operating:
+	if crane_operating:
 		var hook_at: Vector3 = crane["hook"]
 		var reading := "HOOK %d M  PULL %.1f T" % [roundi(hook_at.y), float(crane["hoist_n"]) / 9810.0]
 		if bool(crane["hoist_stalled"]):
@@ -378,10 +389,11 @@ func _read_context() -> Dictionary:
 	elif grounded and free and grip:
 		# A hold at hand height: a rung, a pipe, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
-	elif punch_ok and carrying == 0:
-		# Her body close in front and a strike able to start (the native
-		# decides: free, at guard, her hands not on him): Action is a punch.
-		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "HER"}
+	# His punch over all of it; what it took the button from, for the tests.
+	var under_punch: StringName = &""
+	if not punch.is_empty():
+		under_punch = StringName(action["id"])
+		action = punch
 	return {
 		"position": position,
 		"velocity": velocity,
@@ -440,6 +452,7 @@ func _read_context() -> Dictionary:
 		"lethal": lethal,
 		"carrying": carrying,
 		"action": action,
+		"under_punch": under_punch,
 		"strike": strike,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),

@@ -1022,7 +1022,16 @@ public:
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     void read_strike_state() noexcept;
     void strike_reset() noexcept;
+    // A punch under way: no other hand action starts till its recoil ends;
+    // the world taking his hands from it (her fingers, a fall) ends it.
+    void strike_owns_hands(StepCommands &commands) const noexcept;
+    void strike_cancel() noexcept;
+    // The fist he can throw with: 1 the right, 0 the left, -1 none (one torn
+    // off, the other broken).
+    [[nodiscard]] int strike_arm() const noexcept;
+    [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    bool strike_in_hand_ = false;   // this strike began with him in her hand
     StrikePhase strike_phase_ = StrikePhase::Guard;
     int strike_ticks_ = 0;
     int strike_contact_left_ = 0;
@@ -1119,6 +1128,7 @@ public:
         return ended;
     }
     void lose_arm_for_test(const int side) noexcept { arm_lost_[static_cast<std::size_t>(side & 1)] = true; }
+    void break_arm_for_test(const int side) noexcept { break_arm(side & 1); }
     // Tests only: the player's body caught on steel where it is (a point at
     // its middle fixed to the world), till the load on it passes `max_n`.
     void snag_player_for_test(float max_n) noexcept;

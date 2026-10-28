@@ -499,6 +499,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    // A punch under way owns his hands (physics_world_strike.cpp).
+    strike_owns_hands(commands);
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;

@@ -453,6 +453,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
+    out["arm"] = static_cast<std::int64_t>(p.strike_arm);   // the fist: 1 right, 0 left, -1 none usable
     out["landed"] = p.strike_landed;
     out["strikes"] = static_cast<std::int64_t>(p.strike_count);
     out["hits"] = static_cast<std::int64_t>(p.strike_hit_count);

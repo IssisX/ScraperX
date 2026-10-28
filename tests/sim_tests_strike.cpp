@@ -20,6 +20,7 @@ using scraperx::sim::Vector3;
 
 struct Thrown {
     bool offered = false;
+    int arm = 1;
     std::uint64_t strikes = 0;
     std::uint64_t hits = 0;
     double impulse_ns = 0.0;
@@ -29,11 +30,21 @@ struct Thrown {
     Vector3 point{};
 };
 
-Thrown throw_one(const double her_ahead_m) {
-    Simulation s(InitialSpawn::Deck154);
+// Her `her_ahead_m` in front of him on the Deck154 start, one press: what it
+// threw. `solids`: test steel in the world; `lost`, `broken`: an arm torn off,
+// an arm broken (0 the left, 1 the right, -1 none) before she comes.
+Thrown throw_one(const double her_ahead_m, const std::vector<Simulation::TestExtraSolid> &solids = {},
+                 const int lost = -1, const int broken = -1) {
+    Simulation s(InitialSpawn::Deck154, solids);
     s.place_matron_home(154.0F);
     for (int i = 0; i < 30; ++i) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    if (lost >= 0) {
+        s.debug_lose_arm(lost);
+    }
+    if (broken >= 0) {
+        s.debug_break_arm(broken);
     }
     const Vector3 p = s.snapshot().player_position;
     (void)s.set_facing(0.0, 1.0);
@@ -41,6 +52,7 @@ Thrown throw_one(const double her_ahead_m) {
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
     Thrown out;
     out.offered = s.snapshot().strike_offered;
+    out.arm = s.snapshot().strike_arm;
     const Vector3 her_before = s.matron_state().position;
     (void)s.request_strike();
     Vector3 last = s.snapshot().player_position;
@@ -191,18 +203,24 @@ void run_strike() {
                 "strike: she carries him in her hand (setup)");
         require(s.snapshot().strike_offered, "strike: in her hand before the rip Action offers the punch (his escape)");
         const std::uint64_t hits = s.snapshot().strike_hit_count;
+        const std::uint64_t tears = s.snapshot().grip_tear_count;
+        double grip_peak_n = 0.0;
         (void)s.request_strike();
         for (int i = 0; i < 40; ++i) {
             tick(s);
+            grip_peak_n = std::max(grip_peak_n, s.snapshot().grip_load_n);
         }
         const auto &snap = s.snapshot();
         const double most = kPlayerStrikeForceN * 3.0 * Simulation::kFixedStepSeconds + 1.0e-3;
         std::cout << "  strike in her hand: strikes=" << snap.strike_count - before << " hits=" << snap.strike_hit_count - hits
-                  << " impulse_ns=" << snap.strike_impulse_ns << "\n";
+                  << " impulse_ns=" << snap.strike_impulse_ns << " grip_peak_n=" << grip_peak_n
+                  << " grip_tears=" << snap.grip_tear_count - tears << "\n";
         require(snap.strike_count == before + 1 && snap.strike_hit_count == hits + 1,
                 "strike: thrown in her hand, the punch lands on her");
         require(snap.strike_impulse_ns > 0.0 && snap.strike_impulse_ns <= most,
                 "strike: the punch in her hand is his force held over the contact, within his limit");
+        require(snap.grip_tear_count == tears && grip_peak_n < scraperx::sim::Matron::kGripMaxForceN,
+                "strike: his punch in her hand tears nothing: her grip's load stays under its limit");
     }
     {
         Simulation s(InitialSpawn::Deck154);
@@ -249,5 +267,115 @@ void run_strike() {
         require(m.staggers == 0 && m.knockdowns == 0 && m.blow_mps == 0.0,
                 "strike: a checkpoint load mid-strike carries no pending blow into her balance");
     }
+    // At the toolbox by the north band's rail (PICK UP on offer), her body in
+    // reach in front: the native offers the punch and the pick-up at once, so
+    // the Action button's priority picks, and it picks PUNCH
+    // (main_context.gd punch_action, checked in touch_matron_act).
+    const auto at_the_box = [](Simulation &s) {
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "strike: settle");
+        s.debug_launch_player(Vector3{-4.4, 154.95, -125.85}, Vector3{0.0, 0.0, 0.0});
+        (void)s.set_facing(0.0, 1.0);
+        for (int i = 0; i < 90; ++i) {
+            tick(s);
+        }
+    };
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_box(s);
+        const Vector3 p = s.snapshot().player_position;
+        s.launch_matron_for_test(Vector3{p.x + 0.6, p.y - 0.20, p.z + 0.9});
+        tick(s);
+        require(s.snapshot().carry_target_entity_id != 0 && s.snapshot().strike_offered,
+                "strike: at the toolbox with her body in reach in front, the native offers the punch and the pick-up");
+    }
+    // A punch under way owns his hands: thrown on air at the toolbox, Action
+    // pressed for the pick-up and the climb every tick of its wind-up, reach
+    // and recoil starts neither; at guard again, the pick-up takes it.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_box(s);
+        require(s.snapshot().carry_target_entity_id != 0, "strike: the toolbox in reach (setup)");
+        const std::uint64_t before = s.snapshot().strike_count;
+        (void)s.request_strike();
+        tick(s);
+        require(s.snapshot().strike_count == before + 1 && s.snapshot().strike_phase != 0, "strike: thrown on air (setup)");
+        bool other = false;
+        for (int i = 0; i < 60 && s.snapshot().strike_phase != 0; ++i) {
+            (void)s.request_pick_up();
+            (void)s.request_traversal();
+            tick(s);
+            other = other || s.snapshot().carrying_entity_id != 0 ||
+                    s.snapshot().traversal_state != scraperx::sim::TraversalState::None;
+        }
+        require(!other && s.snapshot().strike_phase == 0,
+                "strike: while his punch is under way no pick-up or climb starts (his hands are the punch's)");
+        for (int i = 0; i < 30 && s.snapshot().carrying_entity_id == 0; ++i) {
+            (void)s.request_pick_up();
+            tick(s);
+        }
+        require(s.snapshot().carrying_entity_id != 0, "strike: at guard again, the pick-up takes the toolbox");
+    }
+    // The world takes his hands from a punch under way: his left torn off and
+    // his right broken in its wind-up, no fist left; it ends there and lands
+    // nothing, her body in reach in front all the while.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        s.debug_lose_arm(0);
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        tick(s);
+        const std::uint64_t hits = s.snapshot().strike_hit_count;
+        (void)s.request_strike();
+        for (int i = 0; i < 4; ++i) {
+            tick(s);
+        }
+        require(s.snapshot().strike_phase == 1, "strike: in its wind-up (setup)");
+        s.debug_break_arm(1);
+        tick(s);
+        const bool ended = s.snapshot().strike_phase == 0;
+        for (int i = 0; i < 40; ++i) {
+            tick(s);
+        }
+        require(ended && s.snapshot().strike_hit_count == hits,
+                "strike: his last fist broken in its wind-up, the punch ends there and lands nothing");
+    }
+    // The fist is a fist, not a line: a post 1 cm thick 4.5 cm off its way
+    // (inside its 6 cm) takes it, no landing; 10 cm off, it lands.
+    Vector3 start{};
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        start = s.snapshot().player_position;
+    }
+    const auto post = [&start](const double off_x) {
+        return std::vector<Simulation::TestExtraSolid>{
+            Simulation::TestExtraSolid{start.x + off_x, start.y + 0.25, start.z + 0.40, 0.005F, 0.5F, 0.005F, true}};
+    };
+    const Thrown grazed = throw_one(1.05, post(0.045));
+    const Thrown clear = throw_one(1.05, post(0.10));
+    std::cout << "  strike by a post: 4.5 cm off offered=" << grazed.offered << " hits=" << grazed.hits
+              << ", 10 cm off offered=" << clear.offered << " hits=" << clear.hits << "\n";
+    require(grazed.strikes == 1 && grazed.hits == 0 && !grazed.offered,
+            "strike: a thin post within the fist's breadth of its way takes the fist (none offered, none landed)");
+    require(clear.offered && clear.hits == 1, "strike: the same post clear of the fist's breadth, it lands");
+    // No fist to throw, no punch: his right torn off and his left broken,
+    // none offered and a press throws none; the right off alone, the left
+    // throws it and it lands.
+    const Thrown none = throw_one(1.05, {}, 1, 0);
+    const Thrown left = throw_one(1.05, {}, 1, -1);
+    std::cout << "  strike arms: torn and broken arm=" << none.arm << " offered=" << none.offered
+              << " strikes=" << none.strikes << ", right torn arm=" << left.arm << " hits=" << left.hits << "\n";
+    require(none.arm == -1 && !none.offered && none.strikes == 0,
+            "strike: one arm torn off and the other broken, no fist: no punch offered or thrown");
+    require(left.arm == 0 && left.offered && left.hits == 1, "strike: the right torn off, the left throws it and it lands");
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }
