@@ -7,8 +7,9 @@
 // kept); no force is infinite (her muscle is a capped spring-damper, the grip
 // tears over kGripMaxForceN or on its strain, the player's brace on a rail
 // tears on the ledge grip's limits); recovery is always possible (thrashing
-// strains the grip till it tears; a brace holds her off a while); no health
-// numbers (what happens is a fall, judged by the fall rules).
+// strains the grip till it tears, though once she has a wrist the arm stays
+// in her hand; a brace holds her off a while); no health numbers (what
+// happens is a fall, judged by the fall rules).
 
 #include "sim/physics_world.hpp"
 
@@ -44,6 +45,8 @@ constexpr int kKickGapTicks = 11;
 // Of a kick's impulse, what comes onto her fingers as a slip (the strain).
 constexpr float kKickSlipNs = 12.0F;
 constexpr float kThrashTorqueNm = 40.0F;
+// A thrash past this share of a full one is the player fighting her grip.
+constexpr float kFoughtThrash = 0.15F;
 // And the legs' pull against her hand while thrashing, along the body.
 constexpr float kThrashPullN = 600.0F;
 // The handback: a PD torque to upright, capped; the DOFs lock under
@@ -128,6 +131,15 @@ void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
     if (grip_ == nullptr) {
         return;
     }
+    if (wrist_ != nullptr && matron_->pulling_wrist()) {
+        // Her other hand has his wrist: once the rip has begun nothing breaks
+        // it (Cory, 2026-10-27). Her ankle grip lost, however (his kick, his
+        // thrashing, the world), the arm stays in her hand as the body pulls
+        // away.
+        JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+        sever_arm(bodies);
+        matron_->arm_torn();
+    }
     destroy_grab_constraint(grip_);
     grip_strain_ns_ = 0.0F;
     grip_over_ticks_ = 0;
@@ -137,12 +149,34 @@ void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
         ++grip_release_count_;
     }
     destroy_grab_constraint(brace_);
-    matron_->grip_lost(torn);
+    matron_->grip_lost(torn, grip_fought_);
+}
+
+void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept {
+    destroy_grab_constraint(snag_);
+    const JPH::RVec3 at = physics_system_.GetBodyInterface().GetPosition(player_id_);
+    JPH::PointConstraintSettings snag;
+    snag.mSpace = JPH::EConstraintSpace::WorldSpace;
+    snag.mPoint1 = at;
+    snag.mPoint2 = at;
+    JPH::BodyLockWrite lock(physics_system_.GetBodyLockInterface(), player_id_);
+    if (lock.Succeeded()) {
+        snag_ = static_cast<JPH::TwoBodyConstraint *>(snag.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+    }
+    if (snag_ != nullptr) {
+        physics_system_.AddConstraint(snag_);
+        snag_max_n_ = max_n;
+    }
+}
+
+JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodies) const noexcept {
+    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(kPlayerHalfHeight - 0.08F), 0.0F);
 }
 
 void Simulation::PhysicsWorld::grab_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(grip_);
     destroy_grab_constraint(brace_);
+    destroy_grab_constraint(snag_);
     destroy_grab_constraint(hand_arm_);
     if (!hand_id_.IsInvalid()) {
         remove_and_destroy(bodies, hand_id_);
@@ -300,7 +334,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     // Her fingers close on the ankle when the hand is at it.
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     if (matron_->reaching() && grip_ == nullptr) {
-        const JPH::RVec3 ankle = player_at - JPH::Vec3(0.0F, kPlayerHalfHeight - 0.08F, 0.0F);
+        const JPH::RVec3 ankle = player_ankle(bodies);
         if (JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
             set_player_free_rotation(bodies, true);
             // First a bare point: the body comes over into the hang about it
@@ -313,6 +347,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             grip_swing_ = false;
             if (grip_ != nullptr) {
                 ++grip_count_;
+                grip_fought_ = false;
                 grip_strain_ns_ = 0.0F;
                 grip_peak_n_ = 0.0F;
                 hold_last_at_ = player_at;
@@ -361,6 +396,8 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 grip_swing_ = true;
             }
         }
+        // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).
+        grip_fought_ = grip_fought_ || kick_now_ || thrash_ > kFoughtThrash || brace_ != nullptr;
         // Thrash: a kick along the body, away from her hand; a twist.
         if (kick_now_) {
             bodies.AddImpulse(player_id_, up * kKickNs);
@@ -413,6 +450,11 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         }
     } else {
         grip_load_n_ = 0.0F;
+    }
+    if (snag_ != nullptr &&
+        static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F) >
+            snag_max_n_) {
+        destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
     }
     if (brace_ != nullptr) {
         auto *point = static_cast<JPH::PointConstraint *>(brace_.GetPtr());

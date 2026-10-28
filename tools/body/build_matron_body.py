@@ -1105,15 +1105,6 @@ def build():
     if nrm_h[1] < 0:
         nrm_h = -nrm_h
     in_hair = ((V - p_front) @ nrm_h > 0) & (headw > 0.6) & is_body
-    # ---- the music box on its cord at her hip ----
-    Wb = np.zeros(len(names))
-    Wb[col["box"]] = 1.0
-    bxp = byname["box"]["pos"]
-    mb = h.Part("music_box", "wood")
-    h.cylinder_mesh(mb, bxp + np.array([0, -0.15, 0]), [0, 1, 0], 0.0025, 0.3, Wb, 6)
-    h.box_mesh(mb, bxp + np.array([0, -0.33, 0]), [0.075, 0.055, 0.06], np.eye(3), Wb)
-    parts.append(mb)
-    mat("wood", linear("4f3622"), 0.6)
 
     # ---- the skin: the body less what clothes hide; legs below the hem in torn stockings ----
     vi, ti, Tc = h.split_corners(V, VT, body_tris, keep)

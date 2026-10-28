@@ -6,9 +6,10 @@ extends Node
 # is heard is what happened.
 #
 # Buses (created here): Effects, Ambience, Interface into Master, each with a
-# player volume on the AUDIO page; Voice, the climber's own, into Effects.
-# Master ends in a hard limiter, so the mix can sit loud enough for a phone
-# speaker without clipping.
+# player volume on the AUDIO page; Voice, the climber's own, into Effects;
+# Matron, her throat and mouth through a waveshaper her heat drives, into
+# Effects. Master ends in a hard limiter, so the mix can sit loud enough for a
+# phone speaker without clipping.
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const VoiceLines := preload("res://presentation/audio/voice_lines.gd")
@@ -18,6 +19,7 @@ const BUS_EFFECTS := &"Effects"
 const BUS_AMBIENCE := &"Ambience"
 const BUS_INTERFACE := &"Interface"
 const BUS_VOICE := &"Voice"
+const BUS_MATRON := &"Matron"
 const EFFECT_VOICES := 6
 const POSITIONAL_VOICES := 5
 
@@ -148,9 +150,8 @@ const WELD_LOOPS := 2
 var _weld_loops: Array[AudioStreamPlayer3D] = []
 var _weld_owner: Array[int] = []
 var welds_heard := 0
-# The Matron's music box, a loop that follows her; her one-shots, counted by
-# name for the scripted runs.
-var _matron_loop: AudioStreamPlayer3D
+# The Matron's cues, counted by name for the scripted runs (her own bank and
+# players are with matron_cue, below).
 var matron_cues := {}
 var radio_cues := 0      # the foreman's radio opened or closed, counted for the tests
 # The forklift, heard where it stands: its engine, its pump and its valve
@@ -217,12 +218,21 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_silent = AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty()
 	for pair in [[BUS_EFFECTS, &"Master"], [BUS_AMBIENCE, &"Master"], [BUS_INTERFACE, &"Master"],
-			[BUS_VOICE, BUS_EFFECTS]]:
+			[BUS_VOICE, BUS_EFFECTS], [BUS_MATRON, BUS_EFFECTS]]:
 		if AudioServer.get_bus_index(pair[0]) < 0:
 			AudioServer.add_bus()
 			var index := AudioServer.bus_count - 1
 			AudioServer.set_bus_name(index, pair[0])
 			AudioServer.set_bus_send(index, pair[1])
+	var her_bus := AudioServer.get_bus_index(BUS_MATRON)
+	for i in AudioServer.get_bus_effect_count(her_bus):
+		if AudioServer.get_bus_effect(her_bus, i) is AudioEffectDistortion:
+			_her_rasp = AudioServer.get_bus_effect(her_bus, i)
+	if _her_rasp == null:
+		_her_rasp = AudioEffectDistortion.new()
+		_her_rasp.mode = AudioEffectDistortion.MODE_WAVESHAPE
+		_her_rasp.drive = 0.15
+		AudioServer.add_bus_effect(her_bus, _her_rasp)
 	var master := AudioServer.get_bus_index(&"Master")
 	var has_limiter := false
 	for i in AudioServer.get_bus_effect_count(master):
@@ -256,7 +266,22 @@ func _ready() -> void:
 		_weld_owner.append(-1)
 	for i in IMPACT_PLAYERS:
 		_impact_players.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, IMPACT_REACH_M))
-	_matron_loop = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
+	# Hers alone: the bed (the air she presses on, not placed), her growl and
+	# her mouth at her head (the mouth unfiltered: dry, in your ear), the
+	# strain at her hand; then her body's one-shots and her voice's.
+	_her_loops.append(_looping_player(BUS_EFFECTS))
+	_her_loops.append(_her_player(BUS_MATRON, 3.0, 40.0, true))
+	_her_loops.append(_her_player(BUS_MATRON, 1.0, 6.0, false))
+	_her_loops.append(_her_player(BUS_EFFECTS, 2.0, 20.0, true))
+	# Her loops stop with the game: under the pause menu or the title she is not heard.
+	for loop in _her_loops:
+		loop.process_mode = Node.PROCESS_MODE_PAUSABLE
+	for i in HER_BODY_PLAYERS:
+		_her_shots.append(_her_player(BUS_EFFECTS, 6.0, 90.0, true))
+	for i in HER_VOICE_PLAYERS:
+		_her_shots.append(_her_player(BUS_MATRON, 4.0, 60.0, true))
+	_her_shot_rank.resize(_her_shots.size())
+	_her_shot_t.resize(_her_shots.size())
 	_fork_engine = _positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 120.0)
 	_fork_pump = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
 	_fork_valve = _positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0)
@@ -270,9 +295,9 @@ func _ready() -> void:
 	_crane_hoist = _positional_player(BUS_EFFECTS, Vector3.ZERO, 14.0, 280.0)
 	_crane_stall = _positional_player(BUS_EFFECTS, Vector3.ZERO, 12.0, 240.0)
 	_crane_magnet = _positional_player(BUS_EFFECTS, Vector3.ZERO, 4.0, 70.0)
-	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
-	# first frames are not held up; cues before it finishes are counted but
-	# silent.
+	# GDScript synthesis, the world's bank then hers: off the main thread, so
+	# the first frames are not held up; cues before a bank finishes are
+	# counted but silent.
 	_bank_task = WorkerThreadPool.add_task(_build_bank)
 
 
@@ -285,6 +310,7 @@ func _exit_tree() -> void:
 			child.stop()
 			child.stream = null
 	_bank.clips.clear()
+	_her_bank.clips.clear()
 	_voice_clips.clear()
 
 
@@ -299,9 +325,13 @@ func quiesce() -> void:
 			child.stop()
 
 
+# The world's bank first, so _bank_ready never waits on hers; hers after, in
+# the same task (one to wait on at exit).
 func _build_bank() -> void:
 	_bank.build()
 	_on_bank_ready.call_deferred()
+	_her_bank.build_her()
+	_on_her_ready.call_deferred()
 
 
 func _on_bank_ready() -> void:
@@ -329,9 +359,20 @@ func _on_bank_ready() -> void:
 		player.stream = _bank.pick(&"arc_loop")
 		player.volume_db = -80.0
 		player.play()
-	_matron_loop.stream = _bank.pick(&"matron_lullaby_loop")
-	_matron_loop.volume_db = -80.0
-	_matron_loop.play()
+
+
+func _on_her_ready() -> void:
+	_her_ready = true
+	var streams := 0
+	for clip in _her_bank.clips:
+		streams += (_her_bank.clips[clip] as Array).size()
+	print("SCRAPERX_MATRON_BANK clips=%d streams=%d msec=%d" % [_her_bank.clips.size(), streams,
+		_her_bank.build_msec])
+	if _silent:
+		return
+	# Her loops start paused, at silence: matron_layers wakes them.
+	for k in _her_loops.size():
+		_her_swap(k, HER_LOOP_CLIPS[k])
 
 
 func set_volumes(master: float, effects: float, ambience: float, interface: float, voice: float = 1.0) -> void:
@@ -823,16 +864,6 @@ func worker_weld(w: int, at: Vector3, on: bool) -> void:
 	_weld_loops[slot].volume_db = -7.0
 
 
-# The Matron's music box, heard from `at` at `volume_db` (below -60: off), its
-# pitch dragging as she nears (`pitch`, 1.0 true).
-func matron_music(at: Vector3, volume_db: float, pitch: float) -> void:
-	if not _bank_ready or _silent:
-		return
-	_matron_loop.position = at
-	_matron_loop.volume_db = volume_db
-	_matron_loop.pitch_scale = pitch
-
-
 # The forklift this frame (sim/forklift.hpp, its state as the native gives
 # it; `body` its frame in the world), every part heard from what the native
 # measured it doing:
@@ -1084,24 +1115,336 @@ func forklift_cue(name: StringName, at: Vector3, strength: float) -> void:
 			_play_at(&"creak", at, db - 3.0, randf_range(0.6, 0.72))
 
 
-# One of her sounds (locker_knock, bolt_pop, locker_burst, matron_breath,
-# matron_step, matron_shriek, plank_crack), from `at`.
+# --- the Matron --------------------------------------------------------------
+# Her own bank (sound_bank.gd build_her) on her own players, so she never
+# takes the world's; presentation/audio/matron_sound.gd matches what she does
+# to them. Her throat and mouth go through the Matron bus; the bed, her body
+# and the strain straight into Effects; nothing of hers into Ambience.
+#
+# Her loops, by slot: the bed, the growl (or the rage growl), her mouth, the
+# strain in her hand, each started paused at silence.
+const HER_BED := 0
+const HER_GROWL := 1
+const HER_MOUTH := 2
+const HER_STRAIN := 3
+const HER_LOOP_CLIPS := [&"matron_bed_loop", &"matron_growl_loop", &"matron_mouth_loop", &"matron_strain_loop"]
+# Her one-shots: a pool of HER_BODY_PLAYERS for her body, then one of
+# HER_VOICE_PLAYERS for her voice, each played where it happens. A cue takes a
+# free player, else the one playing the least (HER_RANK, 1 when not named;
+# the oldest of those); it never cuts off one that matters more, and is
+# counted either way. Her voice is never pitched outside HER_PITCH.
+const HER_BODY_PLAYERS := 3
+const HER_VOICE_PLAYERS := 2
+const HER_RANK := {&"matron_shriek": 3, &"matron_wake": 3, &"matron_rip": 3, &"matron_effort": 3,
+	&"matron_hit": 2, &"matron_laugh": 2}
+const HER_VOICE_CLIPS := [&"matron_breath", &"matron_shriek", &"matron_croak", &"matron_cluck",
+	&"matron_swallow", &"matron_sniff", &"matron_effort", &"matron_hit", &"matron_laugh"]
+const HER_PITCH := Vector2(0.85, 1.15)
+# Every shriek at HER_SHRIEK_DB, never two within HER_SHRIEK_GAP_S.
+const HER_SHRIEK_DB := -3.0
+const HER_SHRIEK_GAP_S := 0.6
+# Her loops come up at most HER_RISE_DB_S (so never the jump in the game's
+# output that blinds the microphone: voice_keeper.gd ROOM_MASK_JUMP_DB) and go
+# down at HER_FALL_DB_S; at HER_PAUSED_DB a loop is paused: stopped where it
+# was, and played on from there when it comes up again. (Not stream_paused: a
+# 3D player only starts its playback on its next physics tick, and a pause
+# asked for before then is lost, so a loop "started paused" mixed on unheard.)
+const HER_RISE_DB_S := 20.0
+const HER_FALL_DB_S := 240.0
+const HER_PAUSED_DB := -79.0
+const HER_OFF_DB := -80.0
+# Her heat: her rage, HER_HUNT_HEAT more on the hunt, all of it in the Turn,
+# moving at most HER_HEAT_PER_S. It drives the waveshaper on her bus and the
+# growl's level.
+const HER_HUNT_HEAT := 0.3
+const HER_HEAT_PER_S := 0.5
+# Her 3D players: inverse distance, at most +3 dB, the far ones dulled above
+# HER_CUTOFF_HZ; a deck between her and the listener (her floor more than
+# HER_DECK_M from their height) dulls them from HER_DECK_CUTOFF_HZ and takes
+# HER_DECK_DB off her loops.
+const HER_CUTOFF_HZ := 3000.0
+const HER_FILTER_DB := -18.0
+const HER_DECK_M := 4.5
+const HER_DECK_CUTOFF_HZ := 1500.0
+const HER_DECK_DB := -8.0
+# Her reach: the bed out to HER_BED_M; a pest's breath within HER_BREATH_M,
+# her mouth under HER_MOUTH_M; at her post and still, only her breath within
+# HER_POST_M; listening, the yard held HER_HUSH_DB down within HER_HUSH_M. A
+# breath runs HER_BREATH_S when no clip says how long.
+const HER_BED_M := 55.0
+const HER_BREATH_M := 24.0
+const HER_MOUTH_M := 3.0
+const HER_POST_M := 6.0
+const HER_HUSH_M := 30.0
+const HER_HUSH_DB := -10.0
+const HER_BREATH_S := 1.7
+# Her states (sim/matron.hpp): hunting, at her post, peering, down, and the
+# holds (Grab to Claimed).
+const HER_HUNTING := 3
+const HER_GUARDING := 7
+const HER_PEERING := 8
+const HER_DOWN := 11
+const HER_GRAB := 12
+const HER_CLAIMED := 18
+
+var _her_bank := SoundBank.new()
+var _her_ready := false
+var _her_rasp: AudioEffectDistortion
+var _her_loops: Array[Node] = []
+var _her_clip: Array[StringName] = [&"", &"", &"", &""]
+var _her_db := PackedFloat32Array([HER_OFF_DB, HER_OFF_DB, HER_OFF_DB, HER_OFF_DB])
+var _her_written := PackedFloat32Array([HER_OFF_DB, HER_OFF_DB, HER_OFF_DB, HER_OFF_DB])
+var _her_paused: Array[bool] = [true, true, true, true]
+var _her_from := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])   # where each paused loop was
+var _her_shots: Array[AudioStreamPlayer3D] = []
+var _her_shot_rank := PackedInt32Array()
+var _her_shot_t := PackedFloat64Array()
+var _her_clock := 0.0
+var _her_heat := 0.0
+var _her_heat_written := -1.0
+var _her_shriek_t := -INF
+var _her_deck := false
+var _her_turn := 0
+var _her_breath_in := 0.0
+var _her_wake_s := 0.0
+var _her_hush_db := 0.0
+var _her_strain_db := HER_OFF_DB
+var _her_strain_at := Vector3.ZERO
+var _her_strain_pitch := 1.0
+
+
+func _her_player(bus: StringName, unit_size: float, reach: float, filtered: bool) -> AudioStreamPlayer3D:
+	var player := _positional_player(bus, Vector3.ZERO, unit_size, reach)
+	player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
+	player.max_db = 3.0
+	player.attenuation_filter_cutoff_hz = HER_CUTOFF_HZ
+	player.attenuation_filter_db = HER_FILTER_DB if filtered else 0.0
+	player.area_mask = 0   # nothing in the tower has a reverb area
+	return player
+
+
+# One of her sounds (her own bank's, or the world's: the locker, the steel
+# under her, the knock of a rung) from `at`.
 func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> void:
+	_her_cue(name, at, volume_db, pitch)
+
+
+# The same, and how long what started runs (0: nothing did). Counted before
+# anything else, so the scripted runs count what was cued whether or not a
+# bank or a device plays it; a clip no bank has plays nothing.
+func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> float:
 	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
-	_play_at(name, at, volume_db, pitch)
+	if name == &"matron_shriek":
+		if _her_clock - _her_shriek_t < HER_SHRIEK_GAP_S:
+			return 0.0
+		_her_shriek_t = _her_clock
+		volume_db = HER_SHRIEK_DB
+	if not _bank_ready or _silent:
+		return 0.0
+	var stream: AudioStream = _her_bank.pick(name) if _her_ready and _her_bank.clips.has(name) else _bank.pick(name)
+	if stream == null:
+		return 0.0
+	var voice := name in HER_VOICE_CLIPS
+	var rank := int(HER_RANK.get(name, 1))
+	var i := _her_free(HER_BODY_PLAYERS if voice else 0, HER_VOICE_PLAYERS if voice else HER_BODY_PLAYERS, rank)
+	if i < 0:
+		return 0.0
+	var player := _her_shots[i]
+	player.stream = stream
+	player.position = at
+	player.volume_db = volume_db
+	player.pitch_scale = clampf(pitch, HER_PITCH.x, HER_PITCH.y) if voice else pitch
+	player.play()
+	_her_shot_rank[i] = rank
+	_her_shot_t[i] = _her_clock
+	return stream.get_length()
+
+
+# One of her one-shot players for a cue of `rank`: a free one, else the one
+# playing the least (the oldest of those), unless all play something more.
+func _her_free(first: int, count: int, rank: int) -> int:
+	var low := first
+	for i in range(first, first + count):
+		if not _her_shots[i].playing:
+			return i
+		if _her_shot_rank[i] < _her_shot_rank[low] or \
+				(_her_shot_rank[i] == _her_shot_rank[low] and _her_shot_t[i] < _her_shot_t[low]):
+			low = i
+	return low if _her_shot_rank[low] <= rank else -1
 
 
 # Her waking dread (sound_bank _matron_wake) from `at`, `distance` metres from
-# the player. The ambience and her music box drop away first, so the world
-# goes quiet around it; nearer is louder and the duck is deeper. A fresh
-# variant and pitch every time, so it never repeats identically.
+# the player. The ambience drops away first, so the world goes quiet around
+# it; nearer is louder and the duck is deeper; her own loops are held under
+# it. A fresh variant and pitch every time, so it never repeats identically.
+# Fully changed (`stage` 2) it is her shriek instead, over the same duck.
 const DREAD_DUCK_SECONDS := 3.6
-func matron_dread(at: Vector3, distance: float) -> void:
-	matron_cues[&"matron_wake"] = int(matron_cues.get(&"matron_wake", 0)) + 1
+func matron_dread(at: Vector3, distance: float, stage: int = 0) -> void:
 	var near := 1.0 - clampf(distance / 40.0, 0.0, 1.0)
 	_dread_depth_db = lerpf(-8.0, -22.0, near)
 	_dread_s = DREAD_DUCK_SECONDS
-	_play_at(&"matron_wake", at, lerpf(-6.0, 4.0, near), randf_range(0.92, 1.04))
+	if stage >= 2:
+		_her_cue(&"matron_shriek", at, HER_SHRIEK_DB, randf_range(0.9, 1.1))
+		return
+	_her_wake_s = DREAD_DUCK_SECONDS
+	_her_cue(&"matron_wake", at, lerpf(-6.0, 4.0, near), randf_range(0.92, 1.04))
+
+
+# The strain in her hand on the player's arm (matron_sound.gd hear_hold): the
+# loop at `at`, toward `volume_db` (HER_OFF_DB: let go), pitched with the pull.
+func matron_strain(at: Vector3, volume_db: float, pitch: float) -> void:
+	_her_strain_at = at
+	_her_strain_db = volume_db
+	if _her_ready and not _silent and absf(pitch - _her_strain_pitch) > 0.01:
+		_her_strain_pitch = pitch
+		(_her_loops[HER_STRAIN] as AudioStreamPlayer3D).pitch_scale = pitch
+
+
+# Her layers, once a frame (matron_sound.gd), from her state as the native
+# gives it (`data`): `out` while she is out, alive and near; `head` where her
+# mouth is; `distance` her feet to the player; `listener_y` the player's
+# height. What is heard by her stage: a pest breathes (and close, her mouth
+# works), dangerous she growls, fully changed (and in the Turn's lunge) the
+# rage growl over a rough bed. Held on her hands: her mouth and her breath;
+# down: her breath, fast; at her post and still: her breath, close. Silent
+# while she listens (exactly when the microphone hears the room clean), at
+# the start of the Turn, and whenever she is not out.
+func matron_layers(delta: float, data: Dictionary, out: bool, head: Vector3, distance: float,
+		listener_y: float) -> void:
+	_her_clock += delta
+	_her_wake_s = maxf(0.0, _her_wake_s - delta)
+	_her_breath_in = maxf(0.0, _her_breath_in - delta)
+	var state := int(data["state"])
+	var stage := int(data.get("stage", 0))
+	var turn := int(data.get("turn", 0))
+	var still := float(data.get("speed", 0.0)) < 0.3
+	var listening := state == HER_PEERING or bool(data.get("pipe_listening", false))
+	_her_hush_db = HER_HUSH_DB if out and listening and distance < HER_HUSH_M else 0.0
+	var heat_to := 1.0 if turn > 0 else clampf(float(data.get("rage", 0.0)) + (HER_HUNT_HEAT if state == HER_HUNTING else 0.0),
+		0.0, 1.0)
+	_her_heat = move_toward(_her_heat, heat_to, HER_HEAT_PER_S * delta)
+	var windup := turn == 1 and _her_turn != 1
+	var lunge := turn == 2 and _her_turn != 2
+	_her_turn = turn
+	var bed := HER_OFF_DB
+	var growl := HER_OFF_DB
+	var mouth := HER_OFF_DB
+	var breath := 0   # 0 none, 1 one after another, 2 held, 3 down
+	if out and not listening and turn != 1:
+		var holding := state >= HER_GRAB and state <= HER_CLAIMED
+		if holding:
+			mouth = 0.0
+			breath = 2
+		elif state == HER_GUARDING and still:
+			breath = 1 if distance < HER_POST_M else 0
+		else:
+			if distance < HER_BED_M:
+				bed = _her_bed_db(distance) + (2.3 if stage >= 2 else 0.0)
+			if state == HER_DOWN:
+				breath = 3
+			elif stage >= 1 or turn == 2:
+				growl = lerpf(-20.0, -4.0, 1.0 if turn == 2 else _her_heat)
+			elif distance < HER_BREATH_M:
+				breath = 1
+			if stage == 0 and turn == 0 and distance < HER_MOUTH_M:
+				mouth = lerpf(3.0, -10.0, distance / HER_MOUTH_M)
+	if breath > 0 and _her_breath_in <= 0.0:
+		var u := clampf(distance / HER_BREATH_M, 0.0, 1.0)
+		var length := _her_cue(&"matron_breath", head, lerpf(-1.0, -14.0, u) if breath == 1 else 0.0,
+			randf_range(0.92, 1.06))
+		if breath == 1:
+			_her_breath_in = (length if length > 0.0 else HER_BREATH_S) + lerpf(0.15, 1.4, u)
+		else:
+			_her_breath_in = randf_range(2.0, 3.0) if breath == 2 else randf_range(1.0, 1.6)
+	if not _her_ready or _silent:
+		return
+	if absf(_her_heat - _her_heat_written) > 0.01:
+		_her_heat_written = _her_heat
+		_her_rasp.drive = 0.15 + 0.3 * _her_heat
+		_her_rasp.post_gain = -3.0 * _her_heat
+	var deck := absf(float(data.get("floor_y", listener_y)) - listener_y) > HER_DECK_M
+	if deck != _her_deck:
+		_her_deck = deck
+		var cutoff := HER_DECK_CUTOFF_HZ if deck else HER_CUTOFF_HZ
+		(_her_loops[HER_GROWL] as AudioStreamPlayer3D).attenuation_filter_cutoff_hz = cutoff
+		(_her_loops[HER_STRAIN] as AudioStreamPlayer3D).attenuation_filter_cutoff_hz = cutoff
+		for player in _her_shots:
+			player.attenuation_filter_cutoff_hz = cutoff
+	# The growl and her mouth never together; under the climber's voice, and
+	# under a deck, all of it quieter; under her waking, held down.
+	if growl > HER_OFF_DB:
+		mouth = HER_OFF_DB
+	var trim := -0.75 * _duck_db + (HER_DECK_DB if deck else 0.0)
+	var cap := -60.0 if _her_wake_s > 0.0 else 0.0
+	var strain := _her_strain_db if out else HER_OFF_DB
+	_her_level(HER_BED, &"matron_bed_rough_loop" if stage >= 2 else &"matron_bed_loop",
+		minf(bed + trim, cap), delta, windup, false, head)
+	_her_level(HER_GROWL, &"matron_growl_rage_loop" if stage >= 2 or turn == 2 else &"matron_growl_loop",
+		minf(growl + trim, cap), delta, windup, lunge, head)
+	_her_level(HER_MOUTH, &"matron_mouth_loop", minf(mouth + trim, cap), delta, windup or growl > HER_OFF_DB, false, head)
+	_her_level(HER_STRAIN, &"matron_strain_loop", minf(strain + trim, cap), delta, windup, false, _her_strain_at)
+
+
+# The bed by her distance: -20 dB close (her voice is what is heard there),
+# -12 at 15 m, -30 at HER_BED_M.
+static func _her_bed_db(distance: float) -> float:
+	if distance <= 15.0:
+		return lerpf(-20.0, -12.0, clampf((distance - 3.0) / 12.0, 0.0, 1.0))
+	return lerpf(-12.0, -30.0, clampf((distance - 15.0) / (HER_BED_M - 15.0), 0.0, 1.0))
+
+
+# Loop `k` toward `target_db` on `clip`, a 3D one at `at`: up at most
+# HER_RISE_DB_S and down HER_FALL_DB_S, or `cut` to silence or `jump` straight
+# to it; paused at HER_PAUSED_DB; each property written only when it changes.
+func _her_level(k: int, clip: StringName, target_db: float, delta: float, cut: bool, jump: bool, at: Vector3) -> void:
+	var level: float = _her_db[k]
+	var want := maxf(target_db, HER_OFF_DB)
+	if cut:
+		level = HER_OFF_DB
+	elif jump:
+		level = want
+	elif want > level:
+		level = minf(want, level + HER_RISE_DB_S * delta)
+	else:
+		level = maxf(want, level - HER_FALL_DB_S * delta)
+	_her_db[k] = level
+	# A loop going quiet keeps its clip to the end; one wanted swaps at once.
+	if clip != _her_clip[k] and want > HER_PAUSED_DB and level > HER_PAUSED_DB:
+		_her_swap(k, clip)
+	var paused := level <= HER_PAUSED_DB
+	var player: Node = _her_loops[k]
+	if k != HER_BED and not paused:
+		(player as Node3D).position = at
+	if paused != _her_paused[k]:
+		_her_paused[k] = paused
+		if paused:
+			_her_from[k] = player.get_playback_position()
+			player.stop()
+		elif player.stream != null:
+			_her_written[k] = level
+			player.volume_db = level
+			player.play(_her_from[k])
+	if paused:
+		return
+	if absf(level - _her_written[k]) > 0.05:
+		_her_written[k] = level
+		player.volume_db = level
+
+
+# Loop `k` onto `clip` from its start, playing at the level it is at (or
+# paused there if that is silence: not started).
+func _her_swap(k: int, clip: StringName) -> void:
+	_her_clip[k] = clip
+	_her_from[k] = 0.0
+	var player: Node = _her_loops[k]
+	player.stream = _her_bank.pick(clip)
+	if player.stream == null:
+		return
+	player.volume_db = _her_db[k]
+	_her_written[k] = _her_db[k]
+	_her_paused[k] = _her_db[k] <= HER_PAUSED_DB
+	if not _her_paused[k]:
+		player.play()
 
 
 var _dread_s := 0.0
@@ -1109,7 +1452,8 @@ var _dread_depth_db := 0.0
 var _dread_amp: AudioEffectAmplify
 
 
-# The duck under her dread: in fast, held, then back slowly.
+# The duck under her dread: in fast, held, then back slowly; and while she
+# listens near, the yard held down with it.
 func _update_dread(delta: float) -> void:
 	if _dread_amp == null:
 		var index := AudioServer.get_bus_index(BUS_AMBIENCE)
@@ -1119,10 +1463,8 @@ func _update_dread(delta: float) -> void:
 		AudioServer.add_bus_effect(index, _dread_amp)
 	_dread_s = maxf(0.0, _dread_s - delta)
 	var u := _dread_s / DREAD_DUCK_SECONDS
-	var target := _dread_depth_db * clampf(u * 3.0, 0.0, 1.0)
+	var target := minf(_dread_depth_db * clampf(u * 3.0, 0.0, 1.0), _her_hush_db)
 	_dread_amp.volume_db = move_toward(_dread_amp.volume_db, target, delta * (80.0 if target < _dread_amp.volume_db else 10.0))
-	if _matron_loop != null and _dread_s > 0.0:
-		_matron_loop.volume_db = minf(_matron_loop.volume_db, -60.0)
 
 
 # A flock flushed at `at`: its wings, heard from where it rose.

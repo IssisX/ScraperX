@@ -1,11 +1,13 @@
-// The Matron's hold (matron.hpp, "Her hold"): her hand goes for the player's
-// ankle, closes on it, she walks them upside down to the shaft's rail, holds
-// them out over the drop, and then lets go -- aimed at a ledge whose fall
-// will not kill them -- or sets them back on the deck. No kill on touch: a
-// grip she can lose (physics_world_grab.cpp tears it on its load and strain),
-// a hand that moves at a finite speed with a finite pull, a hold she has to
-// brace for. Members of Matron; pre_step calls step_hold in the hold's states.
-// Every choice is simulation state and her seeded roll: deterministic.
+// The Matron's hold (matron.hpp, "Her hold"), at every stage: her hand goes
+// for the player's ankle, closes on it, she walks them upside down to the
+// shaft's rail, holds them out over the drop, tears an arm off (ArmPlay),
+// and then lets go -- aimed at a ledge whose fall will not kill them -- or
+// sets them back on the deck. The last arm gone, the run is hers (Claimed).
+// No kill on touch: a grip she can lose (physics_world_grab.cpp tears it on
+// its load and strain), a hand that moves at a finite speed with a finite
+// pull, a hold she has to brace for. Members of Matron; pre_step calls
+// step_hold in the hold's states. Every choice is simulation state and her
+// seeded roll: deterministic.
 
 #include "sim/matron.hpp"
 
@@ -16,6 +18,7 @@
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 
 #include <algorithm>
 #include <cmath>
@@ -51,8 +54,12 @@ void Matron::begin_grab(const RVec3 player) {
     hold_phase_ = 0;
     grip_on_ = false;
     grip_was_on_ = false;
-    thrash_failed_ = false;
     armplay_done_ = false;
+    retake_ = false;
+    hold_retakes_ = 0;
+    spare_side_set_ = false;
+    spare_tries_ = 0;
+    hold_tears_at_ = arm_tears_;
     pull_n_ = kHandReachPullN;
     arm_reach_m_ = kStoopReachM;
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -71,15 +78,45 @@ void Matron::grip_taken() noexcept {
     }
 }
 
-void Matron::grip_lost(const bool torn) noexcept {
+void Matron::grip_lost(const bool torn, const bool fought) noexcept {
     const bool had = grip_on_;
     grip_on_ = false;
     if (torn && had) {
         ++grips_torn_;
     }
+    if (had && state_ == State::Claimed) {
+        // Out of her hand on the way to her spot: she goes to it where it
+        // lies. The run stays hers.
+        if (fatal_beat_ == static_cast<int>(Fatal::Lay)) {
+            fatal_next(static_cast<int>(Fatal::Pin));
+        }
+        return;
+    }
     if (had && holding_state(state_)) {
-        // Torn out of her hand (or the hold given up): the hand stays out a
-        // moment, then she is after them again.
+        if (player_arms_left_ <= 0) {
+            // Torn out of her hand with no arm left: the run is hers all
+            // the same.
+            claim();
+            return;
+        }
+        if (state_ == State::ArmPlay && hold_phase_ >= 2) {
+            // The arm hers already (left in her other hand as the body
+            // pulled away, tear_grip, or torn before): its beats go on, the
+            // body away; the hold ends after them (step_armplay).
+            return;
+        }
+        if (torn && !fought && arm_tears_ == hold_tears_at_ && armplay_for_test_ != 0 &&
+            hold_retakes_ < kMaxRetakes) {
+            // Torn out of her hand by the world, not by them (her heave
+            // against the rail, a snag), before their arm: no escape. She
+            // takes them again where they land, no cooldown, and the arm
+            // comes off there (at most kMaxRetakes times a hold).
+            retake();
+            return;
+        }
+        // Torn out of her hand (by them, or by the world past her
+        // re-takes): the hand stays out a moment, then she is after them
+        // again.
         state_ = State::Release;
         hold_s_ = 0.0F;
         hold_phase_ = 0;
@@ -259,10 +296,6 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         pull_n_ = player_braced_ ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
         arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
     }
-    // Thrashing that does not tear the grip she remembers (ArmPlay's cue).
-    if (grip_on_ && thrash_ > 0.5F && hold_s_ > 2.0F) {
-        thrash_failed_ = true;
-    }
     const auto carry_pose = [&] {
         return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
     };
@@ -270,8 +303,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     switch (state_) {
     case State::Grab: {
         if (!grip_on_) {
-            // The reach: down to the ankle, stooping for it.
-            const RVec3 ankle = player - RVec3(0.0, kPlayerHalfM - 0.08, 0.0);
+            // The reach: down to the ankle (the feet end of the body, however
+            // it lies), stooping for it.
+            const RVec3 ankle = player_ankle_;
             Vec3 to = Vec3(ankle - shoulder);
             const float length = to.Length();
             if (length > kStoopReachM) {
@@ -282,6 +316,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             pose_hand(dt, shoulder + to, kHandReachSpeedMps);
             if (hold_s_ > kGrabReachSeconds || length > kStoopReachM + 0.4F) {
                 ++grab_misses_;
+                retake_ = false;
                 grab_cooldown_s_ = kGrabCooldownSeconds;
                 end_hold(State::Hunting);
             }
@@ -292,13 +327,33 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         // A slow first heave: the body coming off its feet and over.
         pose_hand(dt, carry_pose(), 0.6F * kHandSpeedMps);
         if (hold_s_ >= kGrabLiftSeconds && Vec3(carry_pose() - hand_target_).Length() < 0.05F) {
-            if (!choose_rim(ax, az)) {
-                // No rail to take them to: back on the deck.
+            if (retake_) {
+                // Taken again where the world tore them out of her hand: no
+                // second heave. The arm here (her spot and the way to the
+                // body stand in for the rail's), then back on the deck.
+                retake_ = false;
                 aim_ledge_ = false;
-                ++spares_;
-                state_ = State::Spare;
-                hold_s_ = 0.0F;
-                hold_phase_ = 1;
+                stand_in_for_rim(at, player, fwd);
+                if (!begin_armplay(State::Spare)) {
+                    ++spares_;
+                    state_ = State::Spare;
+                    hold_s_ = 0.0F;
+                    hold_phase_ = 1;
+                }
+                break;
+            }
+            if (!choose_rim(ax, az)) {
+                // No rail to take them to: the arm where she stands (her spot
+                // and the way to the body stand in for the rail's), then back
+                // on the deck.
+                aim_ledge_ = false;
+                stand_in_for_rim(at, player, fwd);
+                if (!begin_armplay(State::Spare)) {
+                    ++spares_;
+                    state_ = State::Spare;
+                    hold_s_ = 0.0F;
+                    hold_phase_ = 1;
+                }
                 break;
             }
             ++carries_;
@@ -333,14 +388,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         }
         pose_hand(dt, carry_pose(), kHandSpeedMps);
         if (hold_s_ > kCarryMaxSeconds && state_ == State::Carry) {
-            // Too long with them: dropped where she is.
-            ++carry_drops_;
-            let_go_ = true;
-            let_go_push_ = Vec3::sZero();
-            state_ = State::Release;
-            hold_s_ = 0.0F;
-            grip_on_ = false;
-            grab_cooldown_s_ = kAfterReleaseSeconds;
+            // Too long with them: the arm where she stands, then dropped
+            // where she is.
+            stand_in_for_rim(at, player, fwd);
+            if (!begin_armplay(State::Release)) {
+                carry_drop();
+            }
         }
         break;
     }
@@ -375,21 +428,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         } else {
             pose_hand(dt, hand_target_, kHandSpeedMps);
             if (hold_s_ >= dangle_s_) {
-                // Fully changed: now and then (or after thrashing that did
-                // not get them free), her other hand goes for an arm.
-                const bool play = armplay_for_test_ >= 0 ? armplay_for_test_ != 0
-                                                         : stage_ == Stage::Changed &&
-                                                               (thrash_failed_ || roll() < kArmPlayOdds);
-                if (play && player_arms_left_ > 0 && !armplay_done_) {
-                    ++armplays_;
-                    state_ = State::ArmPlay;
-                    hold_s_ = 0.0F;
-                    hold_phase_ = 0;
-                    wrist_on_ = false;
-                    pull2_n_ = kHandReachPullN;
-                    hand2_target_ = shoulder;
-                    hand2_target_v_ = Vec3::sZero();
-                } else {
+                // Every hold, at every stage: while they have an arm, her
+                // other hand goes for it (no roll); with none left, the run
+                // is hers.
+                if (player_arms_left_ <= 0) {
+                    claim();
+                } else if (!begin_armplay(State::Dangle)) {
                     finish_dangle(player);
                 }
             }
@@ -418,21 +462,32 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             if (Vec3(over - hand_target_).Length() < 0.02F) {
                 hold_phase_ = 1;
             }
+            spare_side_set_ = false;
         } else if (hold_phase_ == 1) {
-            // Down beside her till their head is on the deck.
-            const RVec3 down = RVec3(at.GetX(), feet + 2.0F * kPlayerHalfM + 0.1F, at.GetZ()) + right * 0.6F - out * 0.4F;
+            // Down beside her till their head is on the deck: on the side of
+            // her with her deck under it (spare_side), chosen as she starts.
+            if (!spare_side_set_) {
+                spare_side_ = spare_side(at, feet, right, out, spare_deck_);
+                spare_side_set_ = true;
+            }
+            const RVec3 down = RVec3(at.GetX(), feet + 2.0F * kPlayerHalfM + 0.1F, at.GetZ()) + spare_side_;
             pose_hand(dt, down, 0.5F * kHandSpeedMps);
-            // Over the deck (in from the rail), the head on it: let go. Never
-            // over the drop: past the time, back up and over again.
+            // Over the deck (her deck under the spot, or in from the rail),
+            // the head on it: let go. Never over the drop: past the time, back
+            // up and over again; tried once already, her deck under them, she
+            // lets go once her hand is there (a body hung against her short
+            // of it).
             const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
                                   (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
-            if (Vec3(down - hand_target_).Length() < 0.02F && player.GetY() < feet + 1.2 && rail_in > 0.5F) {
+            if (Vec3(down - hand_target_).Length() < 0.02F && (spare_deck_ || rail_in > 0.5F) &&
+                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_))) {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
                 hold_phase_ = 2;
                 hold_s_ = 0.0F;
             } else if (hold_s_ > 8.0F) {
+                ++spare_tries_;
                 hold_phase_ = 0;
                 hold_s_ = 0.0F;
             }
@@ -504,6 +559,10 @@ void Matron::wrist_taken() noexcept {
 void Matron::arm_torn() noexcept {
     if (state_ == State::ArmPlay && hold_phase_ == 1) {
         ++arm_tears_;
+        // The world's count is the truth (set_player_body, every tick, from
+        // the arms it has torn); this keeps hers right until it next tells
+        // her: a grip torn later this same tick (grip_lost) reads it.
+        player_arms_left_ = std::max(0, player_arms_left_ - 1);
         hold_phase_ = 2;
         hold_s_ = 0.0F;
         pull2_n_ = kHandPullN;
@@ -525,10 +584,13 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
     };
     switch (hold_phase_) {
     case 0:
+        // To the wrist. Not at it in kArmReachSeconds (out of her reach: the
+        // body caught on steel, or hung past her arm), she re-poses and goes
+        // for it again: she does not give it up.
         pull2_n_ = kHandReachPullN;
         pose_hand2(dt, reach(player_wrist_), kHandReachSpeedMps);
         if (hold_s_ > kArmReachSeconds) {
-            hold_phase_ = 5;   // could not get it: on with the dangle's end
+            arm_repose(at, player, true);
         }
         break;
     case 1: {
@@ -540,11 +602,12 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         // out between her two hands, whichever side the arm is on.
         Vec3 away = Vec3(player_wrist_ - hand_target_);
         away = away.Length() > 1.0e-3F ? away.Normalized() : Vec3(0.0F, -1.0F, 0.0F);
-        (void)player;
         pose_hand2(dt, player_wrist_ + away * 0.8F, 8.0F * kArmPullMoveMps);
-        if (hold_s_ > kArmPullGiveUpS) {
-            hold_phase_ = 5;
-            wrist_on_ = false;
+        // No give-up: the shoulder not torn kArmPullSeconds into the pull
+        // (her pull spent on her own arm's reach, not on it), she re-poses
+        // with the wrist in her hand, her weight put into it.
+        if (hold_s_ > kArmPullSeconds) {
+            arm_repose(at, player, false);
         }
         break;
     }
@@ -582,22 +645,190 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         break;
     }
     if (hold_phase_ == 5) {
-        if (player_arms_left_ == 0) {
-            ++claims_;
-            state_ = State::Claimed;
+        armplay_done_ = true;
+        if (player_arms_left_ <= 0) {
+            // The last arm gone: at any stage, she finishes them (Claimed).
+            claim();
+        } else if (!grip_on_) {
+            // The body out of her ankle hand (it pulled away, the arm left in
+            // her other): one-armed and alive, away from her. The hold over:
+            // her hand out a moment, then she is after them again.
+            state_ = State::Release;
             hold_s_ = 0.0F;
             hold_phase_ = 0;
-            fatal_beat_ = 0;
-            fatal_sub_ = 0;
-        } else {
+            grab_cooldown_s_ = kAfterReleaseSeconds;
+        } else if (armplay_then_ == State::Dangle) {
             // Back down over the drop, then the dangle's end.
             state_ = State::Dangle;
             hold_phase_ = 1;
             hold_s_ = 0.0F;
             dangle_s_ = 0.8F;
-            armplay_done_ = true;
+        } else if (armplay_then_ == State::Spare) {
+            // No rail: set back on the deck beside her.
+            ++spares_;
+            state_ = State::Spare;
+            hold_s_ = 0.0F;
+            hold_phase_ = 1;
+        } else {
+            carry_drop();
         }
     }
+}
+
+// Her other hand for an arm (ArmPlay), when they have one and this hold has
+// not had it (and no test has her leave it); `then` follows it. False when
+// there is none to take.
+bool Matron::begin_armplay(const State then) {
+    if (armplay_for_test_ == 0 || player_arms_left_ <= 0 || armplay_done_) {
+        return false;
+    }
+    ++armplays_;
+    state_ = State::ArmPlay;
+    armplay_then_ = then;
+    armplay_reposes_ = 0;
+    hold_s_ = 0.0F;
+    hold_phase_ = 0;
+    wrist_on_ = false;
+    pull2_n_ = kHandReachPullN;
+    hand2_target_ = physics_.GetBodyInterface().GetPosition(body_) + shoulder_local();
+    hand2_target_v_ = Vec3::sZero();
+    return true;
+}
+
+// No rail for the arm (none to walk to, or not reached in time): her own spot
+// stands in for the rail's, and the way to the body for the way out over the
+// drop, so it is hauled up where it already hangs.
+void Matron::stand_in_for_rim(const RVec3 at, const RVec3 player, const Vec3 fwd) noexcept {
+    rim_x_ = float(at.GetX());
+    rim_z_ = float(at.GetZ());
+    Vec3 to(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+    to = to.LengthSq() > 1.0e-4F ? to.Normalized() : fwd;
+    rim_nx_ = to.GetX();
+    rim_nz_ = to.GetZ();
+}
+
+// ArmPlay not getting there (step_armplay): the wrist out of her reach
+// (`reseat`: her hand goes for the nearer whole arm again, the world told by
+// take_wrist_reseat), or her pull not telling on the shoulder (the wrist
+// kept, and its strain). Either way a step of kArmReposeStepM back from the
+// body, the way to it her new "out" (as where there is no rail): she hauls
+// it after her and up, her weight in it; each time turned another way
+// (straight back, then 60 degrees to one side, then to the other), so a body
+// caught on steel is dragged off it. No floor there for her feet: she stays
+// where she is.
+void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
+    ++arm_reposes_;
+    const int k = armplay_reposes_++;
+    hold_s_ = 0.0F;
+    if (reseat) {
+        wrist_reseat_ = true;
+        wrist_on_ = false;
+        hold_phase_ = 0;
+        pull2_n_ = kHandReachPullN;
+    }
+    const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    Vec3 away(float(at.GetX() - player.GetX()), 0.0F, float(at.GetZ() - player.GetZ()));
+    away = away.LengthSq() > 1.0e-4F ? away.Normalized() : -fwd;
+    const float turn = k % 3 == 0 ? 0.0F : (k % 3 == 1 ? 1.0F : -1.0F) * (kPiF / 3.0F);
+    RVec3 spot = at + (Quat::sRotation(Vec3::sAxisY(), turn) * away) * kArmReposeStepM;
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    RayCastResult floor;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(spot, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), floor, {},
+                                                {}, skip)) {
+        spot = at;
+    }
+    stand_in_for_rim(spot, player, fwd);
+}
+
+// Where she sets them down beside her (Spare): at her right, a little back
+// from the way out, else (that spot taken) the first of the ways round her
+// with her deck under the whole breadth of the body (her own floor or a step
+// below it, met first: not a rail, a post, a kerb or a crate, and not the
+// drop); `deck` false when none has, and her right it is.
+Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, const Vec3 out, bool &deck) const {
+    const Vec3 first = right * 0.6F - out * 0.4F;
+    constexpr float kBreadthM = 0.35F;   // the body's, as in choose_rim
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    SphereShape breadth(kBreadthM);
+    breadth.SetEmbedded();
+    const auto on_deck = [&](const float y) { return y <= feet + 0.15F && y >= feet - 0.6F; };
+    deck = true;
+    for (int k = 0; k < 8; ++k) {
+        // Her right first; then round her an eighth of a turn at a time,
+        // a little farther out (clear of her).
+        const Vec3 side =
+            k == 0 ? first : Quat::sRotation(Vec3::sAxisY(), 0.25F * kPiF * static_cast<float>(k)) * first.Normalized() * 0.85F;
+        const RVec3 from(at.GetX() + side.GetX(), feet + 1.2F, at.GetZ() + side.GetZ());
+        RayCastResult under;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -2.0F, 0.0F)), under, {}, {}, skip) ||
+            !on_deck(feet + 1.2F - 2.0F * under.mFraction)) {
+            continue;
+        }
+        RShapeCast cast(&breadth, Vec3::sReplicate(1.0F), RMat44::sTranslation(from), Vec3(0.0F, -2.0F, 0.0F));
+        ShapeCastSettings settings;
+        ClosestHitCollisionCollector<CastShapeCollector> met;
+        physics_.GetNarrowPhaseQuery().CastShape(cast, settings, from, met, {}, {}, skip);
+        if (met.HadHit() && on_deck(feet + 1.2F - 2.0F * met.mHit.mFraction - kBreadthM)) {
+            return side;
+        }
+    }
+    deck = false;
+    return first;
+}
+
+// Too long with them on the way to the rail: dropped where she is.
+void Matron::carry_drop() {
+    ++carry_drops_;
+    let_go_ = true;
+    let_go_push_ = Vec3::sZero();
+    state_ = State::Release;
+    hold_s_ = 0.0F;
+    grip_on_ = false;
+    grab_cooldown_s_ = kAfterReleaseSeconds;
+}
+
+// The last arm gone: the run is hers (Claimed, matron_fatality.cpp), at every
+// stage. The body still in her hand, she takes it by the ankle to her spot
+// (Lay); out of it, she goes to it where it lies (Pin).
+void Matron::claim() noexcept {
+    ++claims_;
+    state_ = State::Claimed;
+    hold_phase_ = 0;
+    player_arms_left_ = 0;
+    fatal_next(static_cast<int>(grip_on_ ? Fatal::Lay : Fatal::Pin));
+}
+
+// Her grip torn by the world before their arm (grip_lost): her hand goes
+// for the ankle again where they land, at once; closed on it, the arm comes
+// off where she stands (step_hold, Grab).
+void Matron::retake() noexcept {
+    ++retakes_;
+    ++hold_retakes_;
+    retake_ = true;
+    spare_side_set_ = false;
+    state_ = State::Grab;
+    hold_s_ = 0.0F;
+    hold_phase_ = 0;
+    pull_n_ = kHandReachPullN;
+    arm_reach_m_ = kStoopReachM;
+}
+
+bool Matron::claim_armless() noexcept {
+    player_arms_left_ = 0;
+    if (!body_in_world_ || dead_) {
+        return false;
+    }
+    // Her arm play runs on to it (matron_hold.cpp); knocked about, she
+    // claims it once she is on her feet again.
+    if (state_ != State::Claimed && state_ != State::ArmPlay && state_ != State::Staggering &&
+        state_ != State::Down) {
+        claim();
+    }
+    return true;
 }
 
 void Matron::pose_hand2(const float dt, const RVec3 target, const float speed) {

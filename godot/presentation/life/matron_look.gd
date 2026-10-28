@@ -125,9 +125,6 @@ func build() -> void:
 	var button := StandardMaterial3D.new()
 	button.albedo_color = Color("b9b2a2")
 	button.roughness = 0.35
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("4f3622")
-	wood.roughness = 0.6
 	_eye = StandardMaterial3D.new()
 	_eye.albedo_texture = _texture("eye_a.jpg")
 	_eye.roughness = 0.08
@@ -166,16 +163,20 @@ func build() -> void:
 	lash.albedo_texture = _texture("lash_a.png")
 	_parts = {"skin": _skin, "stockings": stocking, "tunic": _cloth, "collar": _cloth, "pocket": _cloth,
 		"placket": _cloth, "skirt_cloth": _cloth, "belt": _cloth, "cap": _cloth, "buttons": button, "buckle": steel,
-		"penlight": steel, "pins": steel, "music_box": wood, "shoes": shoe, "eyes": _eye, "cornea": cornea, "mouth": mouth, "teeth": teeth,
+		"penlight": steel, "pins": steel, "shoes": shoe, "eyes": _eye, "cornea": cornea, "mouth": mouth, "teeth": teeth,
 		"brows": brow, "lashes": lash, "hair": _hair}
 
 
 # Each of the body's meshes gets its part's material (a mesh the look does
-# not know keeps the file's own, and says so).
+# not know keeps the file's own, and says so). The music box she carried is
+# gone for good: a body built while she still had it loses it here.
 func dress(root: Node) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		var part := String(mesh.name)
+		if part == "music_box":
+			mesh.free()
+			continue
 		if _parts.has(part):
 			mesh.material_override = _parts[part]
 		else:

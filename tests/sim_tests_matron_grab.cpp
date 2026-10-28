@@ -1,11 +1,15 @@
-// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): fully changed,
+// Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): at every stage,
 // her hand on a player is no death. She takes an ankle, carries them upside
-// down to the shaft's rail, holds them out over the drop and lets go aimed
-// at a ledge, or sets them back on the deck. Her grip is finite: a still
-// body hangs; a thrashing one tears free. Nothing teleports.
+// down to the shaft's rail, holds them out over the drop, tears an arm off,
+// and lets go aimed at a ledge, or sets them back on the deck. Her grip is
+// finite: a still body hangs; a thrashing one tears free (once she has its
+// wrist, leaving the arm in her other hand). Nothing teleports. Caught, a
+// blow that is not his own frees nobody. These meet her fully changed, as
+// written; her stage changes none of it.
 
 #include "sim_tests.hpp"
 
+#include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
 
 #include <array>
@@ -168,6 +172,22 @@ void report(const char *name, const HoldRun &r) {
               << " free " << r.p.player_free_rotation << " kicks " << r.p.thrash_kick_count << " state "
               << int(r.m.state) << "\n";
 }
+
+// A still player on her deck at (x, z), her out at (her_x, her_z) beside
+// them, her own scan made as in play.
+void caught_at(Simulation &s, const double x, const double z, const double her_x, const double her_z) {
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "matron caught: settle");
+    (void)s.matron_affordances();
+    s.debug_launch_player(scraperx::sim::Vector3{x, 154.95, z}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+    for (int i = 0; i < 90; ++i) {
+        tick(s);
+    }
+    s.debug_place_matron(scraperx::sim::Vector3{her_x, 154.0, her_z});
+}
+
+// By the east band's rail at `z` (x 18), her 1.6 m along the band.
+void at_the_rail(Simulation &s, const double z) { caught_at(s, 18.0, z, 18.3, z + 1.6); }
 } // namespace
 
 void run_matron_grab() {
@@ -242,6 +262,212 @@ void run_matron_grab() {
         require(s.matron_state().grabs == grabs && s.matron_state().state != kHunting,
                 "matron grab: spared, she walks off and leaves them be a while");
         std::cout << "PASS scraperx_sim matron grab spare: player_y=" << r.p.player_position.y << "\n";
+    }
+    // ---- a still body caught by the east band's rail, at nine spots 0.5 m
+    //      apart (the act's rail): her heave over it tears her grip at some
+    //      (the body hooked on the rail); there she takes the body again where
+    //      it lands and the arm comes off there. Every catch, one arm for sure
+    //      (Cory, 2026-10-27); no claim, no death ----
+    {
+        std::uint32_t retaken = 0;
+        for (int k = 0; k < 9; ++k) {
+            const double z = -160.0 + 0.5 * k;
+            Simulation s(InitialSpawn::Deck154);
+            s.place_matron_home(154.0F);
+            require(s.advance_frame(1.0).accepted, "matron rail: settle");
+            (void)s.matron_affordances();   // her own scan, as in play
+            s.debug_launch_player(scraperx::sim::Vector3{18.0, 154.95, z}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            for (int i = 0; i < 90; ++i) {
+                tick(s);
+            }
+            s.debug_place_matron(scraperx::sim::Vector3{18.3, 154.0, z + 1.6});
+            const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
+                s.debug_set_matron_stage(1);
+                (void)s.set_move_input(0.0, 0.0);
+            });
+            std::cout << "  matron rail: z " << z << ", grabs " << r.m.grabs << " torn " << r.m.grips_torn
+                      << " retakes " << r.m.retakes << " armplays " << r.m.armplays << " tears "
+                      << r.p.arm_tear_count << " claims " << r.m.claims << " deaths " << r.deaths_start << "->"
+                      << r.deaths_end << " (held " << r.deaths_held << "), ended " << r.ended << "\n";
+            require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm,
+                    "matron rail: a still body caught by the rail loses one arm, wherever her heave goes");
+            require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                    "matron rail: one arm gone, no claim and no death");
+            require(r.m.retakes <= static_cast<std::uint32_t>(Matron::kMaxRetakes),
+                    "matron rail: at most two re-takes in a hold, no loop on the same steel");
+            retaken += r.m.retakes > 0 ? 1U : 0U;
+        }
+        std::cout << "PASS scraperx_sim matron rail: 9 spots, one arm each, retaken at " << retaken << "\n";
+    }
+    // ---- the wrist out of her reach: as her arm play begins, the body (held
+    //      out over the drop at the east band's rail) caught on the steel by a
+    //      snag that holds more than her arm's pull (kHandPullN) and less than
+    //      her hard grip in arm play (kGripRipFloorN). She does not give it
+    //      up: kArmReachSeconds without the wrist, she re-poses, a step back
+    //      with her weight in it, the snag gives, and the arm comes off within
+    //      10 s of her arm play's start; no claim, no death ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        s.debug_matron_hold(0, 3.0);
+        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        double snagged_at = -1.0;
+        double torn_at = -1.0;
+        bool held_past_reach = false;
+        const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            if (snagged_at < 0.0 && m.state == kArmPlay) {
+                s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
+                snagged_at = i / 90.0;
+            }
+            if (snagged_at >= 0.0 && m.arm_reposes == 0 && s.debug_player_snagged()) {
+                // The snag holds while she reaches from where she stands.
+                held_past_reach = i / 90.0 - snagged_at > Matron::kArmReachSeconds - 0.1;
+            }
+            if (torn_at < 0.0 && s.snapshot().arm_tear_count > 0) {
+                torn_at = i / 90.0;
+            }
+        });
+        std::cout << "  matron arm snagged: snagged at " << snagged_at << " s, held past her reach " << held_past_reach
+                  << ", re-poses " << r.m.arm_reposes << ", snag left " << s.debug_player_snagged() << ", torn at "
+                  << torn_at << " s, tears " << r.p.arm_tear_count << " claims " << r.m.claims << " deaths "
+                  << r.deaths_start << "->" << r.deaths_end << ", ended " << r.ended << "\n";
+        require(snagged_at >= 0.0 && held_past_reach && r.m.arm_reposes >= 1 && !s.debug_player_snagged(),
+                "matron arm snagged: the wrist out of her reach, she re-poses and her weight pulls the body off the snag");
+        require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm && torn_at - snagged_at < 10.0,
+                "matron arm snagged: the arm comes off within 10 s of her arm play's start");
+        require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                "matron arm snagged: one arm gone, no claim and no death");
+        std::cout << "PASS scraperx_sim matron arm snagged: torn " << torn_at - snagged_at << " s into her arm play\n";
+    }
+    // ---- kicked free once her hand has his wrist (Cory, through PE: once
+    //      the rip starts nothing breaks it, his struggling neither): his
+    //      kicks tear her ankle grip, the body pulls away and the arm stays
+    //      in her other hand, torn as it goes; no re-take, no claim, no
+    //      death, alive with one arm ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        s.debug_matron_hold(0, 3.0);
+        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        int kicks_from = -1;
+        double torn_at = -1.0;
+        double arm_at = -1.0;
+        const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
+            s.debug_set_matron_stage(1);
+            if (kicks_from < 0 && m.state == kArmPlay && m.armplay_beat == 1) {
+                kicks_from = i;   // her other hand has the wrist: he kicks
+            }
+            const bool kick = kicks_from >= 0 && m.grip_on;
+            (void)s.set_move_input(kick ? (((i - kicks_from) / 11) % 2 == 0 ? 1.0 : -1.0) : 0.0, 0.0);
+            const auto p = s.snapshot();
+            if (torn_at < 0.0 && p.grip_tear_count > 0) {
+                torn_at = i / 90.0;
+            }
+            if (arm_at < 0.0 && p.arm_tear_count > 0) {
+                arm_at = i / 90.0;
+            }
+        });
+        std::cout << "  matron arm kicked free: kicks from " << kicks_from / 90.0 << " s, " << r.p.thrash_kick_count
+                  << " kicks, grip torn at " << torn_at << " s, arm at " << arm_at << " s, tears "
+                  << r.p.arm_tear_count << " one_arm " << r.p.one_arm << " retakes " << r.m.retakes << " claims "
+                  << r.m.claims << " deaths " << r.deaths_start << "->" << r.deaths_end << "\n";
+        require(kicks_from >= 0 && r.m.grips_torn >= 1 && r.p.grip_tear_count >= 1,
+                "matron arm kicked free: his kicks tear her ankle grip once she has his wrist");
+        require(r.p.arm_tear_count == 1 && r.p.one_arm && arm_at == torn_at,
+                "matron arm kicked free: the arm stays in her hand, torn as the body pulls away");
+        require(r.m.retakes == 0 && r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                "matron arm kicked free: no re-take, no claim, no death: alive with one arm");
+        std::cout << "PASS scraperx_sim matron arm kicked free: torn " << torn_at - kicks_from / 90.0
+                  << " s into his kicking\n";
+    }
+    // ---- set down by the north band's rail: a still body caught there, her
+    //      grip torn on the rail and taken again, the arm off where she
+    //      stands; she sets it down on the first spot round her with her deck
+    //      under the body's breadth (to her right the rail, to her left a
+    //      post), and the hold is over ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        caught_at(s, -12.0, -132.0, -10.4, -131.7);
+        const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+        });
+        report("matron set down", r);
+        require(r.grabbed && r.ended && r.m.spares >= 1 && r.p.arm_tear_count == 1 && r.p.one_arm,
+                "matron set down: the arm off, set down on her deck beside her, the hold over");
+        require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                "matron set down: no claim and no death");
+        std::cout << "PASS scraperx_sim matron set down: spares=" << r.m.spares << " player_y=" << r.p.player_position.y
+                  << "\n";
+    }
+    // ---- a blow mid-hold (Cory, 2026-10-27, 6:51 PM): a toolbox thrown at her
+    //      back as she holds him out over the drop (one that staggers her at
+    //      her post, run_matron_balance) is not his: she takes it on her feet,
+    //      him in her hand, and the arm comes off. The same blow tagged as his
+    //      own (his punch's tag) before the rip staggers her and frees him,
+    //      whole; once the rip has begun, it frees nothing ----
+    {
+        constexpr int kStaggering = static_cast<int>(Matron::State::Staggering);
+        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        struct Blown {
+            HoldRun r;
+            bool thrown = false;
+            bool staggered = false;
+            bool freed_whole = false;
+        };
+        // `his`: the blow tagged as his; thrown at her once she is in `when`.
+        const auto blow_mid_hold = [&](const bool his, const int when) {
+            Blown b;
+            Simulation s(InitialSpawn::Deck154);
+            at_the_rail(s, -159.5);
+            s.debug_matron_hold(0, 3.0);
+            const std::uint32_t first =
+                s.loose_stock_count() - static_cast<std::uint32_t>(scraperx::sim::LooseStock::kMatronThrowables);
+            const std::uint32_t toolbox = s.kit_body_index(scraperx::sim::LooseStock::kFirstEntity + first);
+            const auto staggers = s.matron_state().staggers;
+            b.r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &m) {
+                s.debug_set_matron_stage(1);
+                (void)s.set_move_input(0.0, 0.0);
+                if (!b.thrown && m.state == when && s.snapshot().held_by_matron) {
+                    b.thrown = true;
+                    if (his) {
+                        s.debug_matron_player_blow();
+                    }
+                    const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+                    const double fx = std::sin(m.yaw);
+                    const double fz = std::cos(m.yaw);
+                    s.debug_launch_kit_body(toolbox, {m.position.x - 2.0 * fx, feet + 1.3, m.position.z - 2.0 * fz},
+                                            {5.8 * fx, 0.0, 5.8 * fz});
+                }
+                const auto p = s.snapshot();
+                b.staggered = b.staggered || m.state == kStaggering;
+                b.freed_whole = b.freed_whole || (b.thrown && !p.held_by_matron && p.arm_tear_count == 0 &&
+                                                  m.state == kStaggering);
+            });
+            b.staggered = b.staggered || b.r.m.staggers != staggers;
+            std::cout << "  matron hold blow: " << (his ? "his" : "not his") << " in state " << when << ", thrown "
+                      << b.thrown << ", blow " << b.r.m.blow_mps << " m/s, staggered " << b.staggered
+                      << ", freed whole " << b.freed_whole << ", tears " << b.r.p.arm_tear_count << " claims "
+                      << b.r.m.claims << " deaths " << b.r.deaths_start << "->" << b.r.deaths_end << "\n";
+            return b;
+        };
+        const Blown world = blow_mid_hold(false, kDangle);
+        require(world.thrown && world.r.m.blow_mps > 0.0 && !world.staggered && !world.freed_whole,
+                "matron hold blow: a blow not his, mid-hold, takes neither her feet nor him");
+        require(world.r.ended && world.r.p.arm_tear_count == 1 && world.r.p.one_arm && world.r.m.claims == 0 &&
+                    world.r.deaths_end == world.r.deaths_start,
+                "matron hold blow: him still in her hand, the arm comes off; no claim, no death");
+        const Blown punch = blow_mid_hold(true, kDangle);
+        require(punch.thrown && punch.staggered && punch.freed_whole && punch.r.p.arm_tear_count == 0 &&
+                    punch.r.deaths_end == punch.r.deaths_start,
+                "matron hold blow: his own blow before the rip staggers her and frees him, whole");
+        const Blown late = blow_mid_hold(true, kArmPlay);
+        require(late.thrown && late.r.m.blow_mps > 0.0 && !late.staggered && late.r.p.arm_tear_count == 1 &&
+                    late.r.p.one_arm && late.r.deaths_end == late.r.deaths_start,
+                "matron hold blow: once the rip has begun, his blow breaks nothing; the arm comes off");
+        std::cout << "PASS scraperx_sim matron hold blow: not his, held; his before the rip, freed; after, held\n";
     }
 }
 
