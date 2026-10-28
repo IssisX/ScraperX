@@ -14,11 +14,12 @@ extends "res://presentation/ui/ui_test_chase.gd"
 # rail, dangerous, her hands take the climber (Cory, 2026-10-27: at any rage,
 # every time she catches you she grabs you and rips an arm off): held out
 # over the drop, an arm torn off, set back on her deck. Sprints beside her
-# while she walks off, and she is fully changed: her next catch takes the
-# second arm, and the run is hers (Claimed, the fatality). The run starts
-# again whole, her in her locker: quietly to her ladder and up it to the 176
-# ring; on by the climbing route (boards and standpipe, catwalk and
-# scaffold), where she cannot follow, to the 220 ring.
+# while she walks off, and she is fully changed: her next catch is the
+# fatality (the owner, 2026-10-28): held out over the shaft and let go, the
+# fall kills the climber, and the run restarts from the last save, the body
+# whole: up the riser again, quietly to her ladder and up it to the 176 ring;
+# on by the climbing route (boards and standpipe, catwalk and scaffold),
+# where she cannot follow, to the 220 ring.
 #
 # With --capture, the screen at each stage: the cage she unrigged, her coming
 # dangerous and the arm she tears off at the rail, her coming fully changed,
@@ -598,25 +599,31 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if not await _act_rage_beside_her(device, int(_matron_state()["catches"]), 40.0):
 		return false
 	_act_log("changed")
-	# Fully changed, her hands take the climber again: the second arm torn
-	# off, and the run is hers (Claimed): her fatality plays out, and the run
-	# starts again, the body whole, her in her locker.
-	var seen := {"tears": int(hold["arm_tear_count"]), "claimed": false}
-	var ended_before := int(hold["runs_ended_by_matron"])
-	var ended: bool = await _act_watch_her(func() -> bool:
-		var h: Dictionary = _native().get_matron_hold_state()
-		if int(h["runs_ended_by_matron"]) > ended_before:
+	# Fully changed, her hands take the climber again (not before
+	# src/sim/matron.hpp kRegrabAfterTearS after the arm): her second catch is
+	# the fatality (kFatalTargetS). Held out over the shaft upside down by the
+	# ankle and let go (the release beat), the fall kills the climber, and the
+	# run restarts from the last save with the body whole; with no edge in her
+	# reach, her floor version, the same end. No second arm is torn.
+	var seen := {"tears": int(hold["arm_tear_count"]), "path": 0, "released": false}
+	var releases_before := int(hold["fatal_release_beat"])
+	var deaths_before := int(_native().get_death_count())
+	_act_deaths_allowed = deaths_before + 1
+	var died: bool = await _act_watch_her(func() -> bool:
+		if int(_native().get_death_count()) > deaths_before:
 			return true
+		var h: Dictionary = _native().get_matron_hold_state()
 		seen["tears"] = maxi(int(seen["tears"]), int(h["arm_tear_count"]))
-		seen["claimed"] = bool(seen["claimed"]) or bool(h["claimed"])
+		seen["path"] = maxi(int(seen["path"]), int(h["fatal_path"]))
+		seen["released"] = bool(seen["released"]) or int(h["fatal_release_beat"]) > releases_before
 		return false, 240.0, "changed_catch", "act_changed_coming", 3.0)
-	_act_log("hers tears=%d claimed=%s" % [int(seen["tears"]), str(seen["claimed"])])
-	if not ended:
-		return _fail("fully changed, her hands never made the run hers (tears %d, claimed %s)" % [int(seen["tears"]),
-			str(seen["claimed"])])
-	if int(seen["tears"]) != 2 or not bool(seen["claimed"]):
-		return _fail("the run ended without her second arm and her fatality (tears %d, claimed %s)" % [
-			int(seen["tears"]), str(seen["claimed"])])
+	_act_log("hers tears=%d path=%d released=%s" % [int(seen["tears"]), int(seen["path"]), str(seen["released"])])
+	if not died:
+		return _fail("fully changed, her second catch never ended in the fatality's death (tears %d, path %d, released %s)" % [
+			int(seen["tears"]), int(seen["path"]), str(seen["released"])])
+	if int(seen["tears"]) != 1 or int(seen["path"]) == 0 or (int(seen["path"]) == 1 and not bool(seen["released"])):
+		return _fail("the death came without her fatality (tears %d, path %d, released %s)" % [int(seen["tears"]),
+			int(seen["path"]), str(seen["released"])])
 	var whole: Dictionary = _native().get_matron_hold_state()
 	if bool(whole["left_arm_lost"]) or bool(whole["right_arm_lost"]):
 		return _fail("the run started again without the body whole")
