@@ -161,9 +161,11 @@ func apply() -> void:
 		var hunch := Quaternion(Vector3(1.0, 0.0, 0.0), KYPHOSIS * (0.6 if n == "chest" else 0.4 if n == "spine_mid" else 0.0))
 		_bone(n, _t(n), Quaternion.IDENTITY.slerp(tq, float(by_name[n]["share"])) * hunch)
 	_bone("hump", _t("hump"), Quaternion.IDENTITY, (p["hump"] as Node3D).scale)
-	var nq := _q("neck")
-	_bone("neck_lo", _t("neck_lo"), Quaternion(Vector3(1.0, 0.0, 0.0), -KYPHOSIS * 0.8) * Quaternion.IDENTITY.slerp(nq, 0.5))
-	_bone("neck_hi", _t("neck_hi"), Quaternion.IDENTITY.slerp(nq, 0.5))
+	# each neck bone half the neck's turn, halved by angle (the Turn's look
+	# back over her shoulder goes past half a turn: never the short way round)
+	var nq := Quaternion.from_euler((p["neck"] as Node3D).rotation * 0.5)
+	_bone("neck_lo", _t("neck_lo"), Quaternion(Vector3(1.0, 0.0, 0.0), -KYPHOSIS * 0.8) * nq)
+	_bone("neck_hi", _t("neck_hi"), nq)
 	_bone("head", _t("head"), _q("head"))
 	_bone("jaw", _t("jaw"), _q("jaw"))
 	for s in ["l", "r"]:
@@ -193,6 +195,22 @@ func apply() -> void:
 	_bone("box", _t("box"), pel.inverse() * _q("box_cord"))
 
 
+# Her look (matron_view.gd _turn_yaw): the turn her body has not made, laid
+# on her neck first and her chest the rest, each about the vertical, so her
+# face keeps its pitch on her stooped trunk.
+	_twist_look()
+
+
+func _twist_look() -> void:
+	var tw: float = float(view._twist_shown) if view != null else 0.0
+	if absf(tw) < 1.0e-4:
+		return
+	var on_neck := clampf(tw, -LOOK_NECK_MAX, LOOK_NECK_MAX)
+	if absf(tw - on_neck) > 1.0e-4:
+		_turn_bone_global("chest", Quaternion(Vector3.UP, tw - on_neck))
+	_turn_bone_global("neck_lo", Quaternion(Vector3.UP, on_neck))
+
+
 func point(bone: String, key: String) -> Vector3:
 	var i: int = bone_idx[bone]
 	var local := _v(contacts[bone][key])
@@ -217,6 +235,9 @@ const PLANT_LIFT_M := 0.12
 const POLE_RAD_S := 6.0
 # Her gripping arm drawn out to the held ankle, at most this many times its length.
 const HOLD_STRETCH_MAX := 2.7
+# Her look laid on her neck to this far (matron_view.gd NECK_TWIST_MAX), the
+# rest on her chest.
+const LOOK_NECK_MAX := 1.92
 # and past that, her shoulder pulled out toward it at most this far
 const HOLD_SHOULDER_M := 0.4
 # drawn out so the arm is this far out to its length at the ankle (bent a
@@ -379,7 +400,8 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 	var xf := skel.global_transform
 	var inv := xf.affine_inverse()
 	var fresh: bool = bool(view.fresh_frame) or _plants.is_empty()
-	var lift_h := PLANT_LIFT_M * clampf(speed / 1.5, 0.0, 1.0)
+	var gait_mps: float = float(view._gait_mps)
+	var lift_h := PLANT_LIFT_M * clampf(gait_mps / 1.5, 0.0, 1.0)
 	down_mask = 0
 	var bit := 1
 	var surface := String(data.get("surface", "steel"))
@@ -413,7 +435,7 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 				# down: where the swing has it now (at its end, unless her gait
 				# changed under it)
 				st["lock"] = xf * (st["at"] as Vector3)
-				if w > 0.5 and speed > 0.8:
+				if w > 0.5 and gait_mps > 0.8:
 					landed.append({"limb": bone, "at": st["lock"], "surface": surface})
 			target = inv * (st["lock"] as Vector3)
 			# dragged too far from under her (a turn, a stop): it slides back
@@ -525,6 +547,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	# itself is turned, and the deck is not under her soles.
 	if (state == 11 and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
 		_plants.clear()
+		down_mask = 0
 		return
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
