@@ -273,6 +273,9 @@ func _ready() -> void:
 	_her_loops.append(_her_player(BUS_MATRON, 3.0, 40.0, true))
 	_her_loops.append(_her_player(BUS_MATRON, 1.0, 6.0, false))
 	_her_loops.append(_her_player(BUS_EFFECTS, 2.0, 20.0, true))
+	# Her loops stop with the game: under the pause menu or the title she is not heard.
+	for loop in _her_loops:
+		loop.process_mode = Node.PROCESS_MODE_PAUSABLE
 	for i in HER_BODY_PLAYERS:
 		_her_shots.append(_her_player(BUS_EFFECTS, 6.0, 90.0, true))
 	for i in HER_VOICE_PLAYERS:

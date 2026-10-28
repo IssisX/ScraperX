@@ -127,7 +127,7 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	_dt = delta
 	var on := out_near
 	var state := int(data["state"])
-	var centre: Vector3 = data["position"]
+	var center: Vector3 = data["position"]
 	var speed := float(data["speed"])
 	var turn := int(data.get("turn", 0))
 	var stage := int(data.get("stage", 0))
@@ -148,7 +148,7 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	# wind-up; the shriek as she lunges, and a slam at every burst of it.
 	if turn != _turn_seen:
 		if on and turn == 1:
-			_due(TURN_JOINTS_S, &"matron_joints", centre, 3.0, randf_range(0.9, 1.1))
+			_due(TURN_JOINTS_S, &"matron_joints", center, 3.0, randf_range(0.9, 1.1))
 		elif on and turn == 2:
 			_cue(&"matron_shriek", head, SHRIEK_DB, _pitch())
 		_turn_seen = turn
@@ -162,8 +162,8 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	# A vault: her hands slamming down on what she goes over, her joints.
 	var vaults := int(data.get("vaults", 0))
 	if on and _vaults_seen >= 0 and vaults > _vaults_seen:
-		_cue(&"matron_step", centre, 2.0, 0.7)
-		_cue(&"matron_joints", centre, -1.0, randf_range(0.9, 1.1))
+		_cue(&"matron_step", center, 2.0, 0.7)
+		_cue(&"matron_joints", center, -1.0, randf_range(0.9, 1.1))
 	_vaults_seen = vaults
 	# A blow off her feet: her body booming onto the steel and the breath
 	# knocked out of her (unless a slam on the pipe made it, heard below).
@@ -172,12 +172,12 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	_pipe_slams_seen = pipe_slams
 	var knockdowns := int(data.get("knockdowns", 0))
 	if on and _knockdowns_seen >= 0 and knockdowns > _knockdowns_seen and not slammed:
-		_cue(&"hit_heavy", centre, 4.0, randf_range(0.55, 0.65))
+		_cue(&"hit_heavy", center, 4.0, randf_range(0.55, 0.65))
 		_cue(&"matron_hit", head, -2.0, _pitch())
 	_knockdowns_seen = knockdowns
 	# Up off the steel: her joints.
 	if on and _state_seen == STATE_DOWN and state != STATE_DOWN:
-		_cue(&"matron_joints", centre, 1.0, randf_range(0.9, 1.1))
+		_cue(&"matron_joints", center, 1.0, randf_range(0.9, 1.1))
 	_state_seen = state
 	# Off her balance: her feet stamping and slewing, and the blow in her.
 	var staggers := int(data.get("staggers", 0))
@@ -219,10 +219,10 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		_rattle_in -= delta
 		if _rattle_in <= 0.0:
 			_rattle_in = randf_range(0.35, 0.55)
-			_cue(&"scrape", centre, -10.0, randf_range(1.3, 1.6))
+			_cue(&"scrape", center, -10.0, randf_range(1.3, 1.6))
 	var unrigs := int(data.get("unrigs", 0))
 	if on and _unrigs_seen >= 0 and unrigs > _unrigs_seen:
-		_cue(&"clang", centre, -2.0, randf_range(1.1, 1.25))
+		_cue(&"clang", center, -2.0, randf_range(1.1, 1.25))
 	_unrigs_seen = unrigs
 	# Climbing: every rung rings under her hands and feet, louder while the
 	# Turn has her.
@@ -231,11 +231,11 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		if rung != _last_rung:
 			_last_rung = rung
 			if on:
-				_cue(&"clang", centre + Vector3(0.0, 1.2, 0.0), -9.0 if turn == 0 else -3.0, randf_range(1.35, 1.6))
+				_cue(&"clang", center + Vector3(0.0, 1.2, 0.0), -9.0 if turn == 0 else -3.0, randf_range(1.35, 1.6))
 	# On the corner pipe: each hold a hollow knock up and down the riser, each
 	# flange passed a deep bong, the slam onto one a boom, her joints and her
 	# shriek; torn off and sliding, her skin and cloth shrieking on it.
-	var hands := centre + Vector3(0.0, 1.0, 0.0)
+	var hands := center + Vector3(0.0, 1.0, 0.0)
 	var pipe_holds := int(data.get("pipe_holds", 0))
 	if on and _pipe_holds_seen >= 0 and pipe_holds > _pipe_holds_seen:
 		_cue(&"clang", hands, -4.0 if turn == 0 else 0.0, randf_range(0.5, 0.62))
@@ -259,7 +259,7 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		_screech_in -= delta
 		if _screech_in <= 0.0:
 			_screech_in = randf_range(0.1, 0.16)
-			_cue(&"scrape", centre + Vector3(0.0, 1.55, 0.0), -3.0, randf_range(1.7, 2.0))
+			_cue(&"scrape", center + Vector3(0.0, 1.55, 0.0), -3.0, randf_range(1.7, 2.0))
 	# Steps: a dragged slipper, or on the hunt hands and feet slapping.
 	_step_gap = maxf(0.0, _step_gap - delta)
 	var steps := int(float(data["stride"]) / (STEP_M * (0.55 if state == STATE_HUNTING else 1.0)))
@@ -279,10 +279,11 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	# Her end: her body onto the steel, and then nothing of her.
 	var alive := 1 if bool(data["alive"]) else 0
 	if _alive_seen == 1 and alive == 0 and d <= REACH_M:
-		_cue(&"hit_heavy", centre, 4.0, 0.5)
+		_cue(&"hit_heavy", center, 4.0, 0.5)
 	_alive_seen = alive
 	# Listening: silent, and after a while, now and then, a croak.
-	if on and (state == STATE_PEERING or bool(data.get("pipe_listening", false))):
+	var listening := on and (state == STATE_PEERING or bool(data.get("pipe_listening", false)))
+	if listening:
 		_listen_s += delta
 		if _listen_s >= LISTEN_CROAK_S and not _listen_rolled:
 			_listen_rolled = true
@@ -291,12 +292,12 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	else:
 		_listen_s = 0.0
 		_listen_rolled = false
-	# Idle, now and then: searching, a sniff or a croak; shuffling, or at her
-	# post and still, a cluck or a swallow.
+	# Idle, now and then (never while she listens): searching, a sniff or a
+	# croak; shuffling, or at her post and still, a cluck or a swallow.
 	var idle := 0
-	if on and state == STATE_SEARCHING and d < SEARCH_M:
+	if on and not listening and state == STATE_SEARCHING and d < SEARCH_M:
 		idle = 1
-	elif on and (state == STATE_SHUFFLING or (state == STATE_GUARDING and speed < 0.3)) and d < IDLE_M:
+	elif on and not listening and (state == STATE_SHUFFLING or (state == STATE_GUARDING and speed < 0.3)) and d < IDLE_M:
 		idle = 2
 	if idle != _idle_kind:
 		_idle_kind = idle
