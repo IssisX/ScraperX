@@ -7,6 +7,14 @@
 // in her movement reads these fields back.
 
 #include "sim/matron.hpp"
+#include "sim/matron_grip.hpp"
+
+#include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+
+#include <cmath>
 
 namespace scraperx::sim {
 using namespace JPH;
@@ -25,6 +33,9 @@ void Matron::refresh_contact_view() {
     view_.contact_hand2_sub = SubShapeID();
     view_.contact_hand2 = RVec3::sZero();
     view_.contact_line = on_line_;
+    view_.contact_braced = false;
+    view_.contact_brace_body = BodyID();
+    view_.contact_brace = RVec3::sZero();
     if (!body_in_world_) {
         return;
     }
@@ -64,6 +75,34 @@ void Matron::refresh_contact_view() {
         view_.contact_hand_body = body;
         view_.contact_hand_sub = sub;
         view_.contact_hand = bodies.GetCenterOfMassTransform(body) * local;
+    }
+    // On her pipe, hand over hand (her hand on its face): her squeeze is her
+    // hands' pull against her feet's push, so her feet are on the riser too.
+    // Level from her shins toward the riser's axis, the first steel within
+    // her legs' reach, a standing face of static steel: the face they press.
+    if (view_.on_pipe && pipe_phase_ == PipePhase::Climb && pipe_on_face_ && view_.contact_hand_held) {
+        const RVec3 at = bodies.GetPosition(body_);
+        const RVec3 shins(at.GetX(), at.GetY() - kStandCentre + kBraceShinM, at.GetZ());
+        Vec3 in(kPipeCentreX - float(shins.GetX()), 0.0F, kPipeCentreZ - float(shins.GetZ()));
+        if (in.LengthSq() > 1.0e-6F) {
+            in = in.Normalized();
+            const grip::ClimbBodyFilter filter(body_, player_);
+            const RRayCast ray(shins, in * kBraceReachM);
+            RayCastSettings settings;
+            settings.mTreatConvexAsSolid = false;
+            ClosestHitCollisionCollector<CastRayCollector> hit;
+            physics_.GetNarrowPhaseQuery().CastRay(ray, settings, hit, {}, {}, filter);
+            if (hit.HadHit()) {
+                const RVec3 point = ray.GetPointOnRay(hit.mHit.mFraction);
+                const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mHit.mBodyID);
+                if (lock.Succeeded() && lock.GetBody().IsStatic() &&
+                    std::abs(lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mHit.mSubShapeID2, point).GetY()) < 0.3F) {
+                    view_.contact_braced = true;
+                    view_.contact_brace_body = hit.mHit.mBodyID;
+                    view_.contact_brace = point;
+                }
+            }
+        }
     }
 }
 

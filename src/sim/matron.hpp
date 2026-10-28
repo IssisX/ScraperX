@@ -643,6 +643,11 @@ public:
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
     static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
+    // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
+    // her shins, this far over her soles, level toward its axis, within her
+    // legs' reach (her line is 0.6 m off the riser's west face).
+    static constexpr float kBraceShinM = 0.45F;
+    static constexpr float kBraceReachM = 1.0F;
     static constexpr float kPipeDownMps = 2.6F;
     static constexpr float kPipeUpMps = 0.7F;
     static constexpr float kPipeChangedDownBurstMps = 4.2F;
@@ -845,7 +850,8 @@ public:
         // presentation only: nothing reads them back, nothing is pushed.
         // Supported: her feet on a floor. Hand held: her hand's grip.
         // Hand 2: a second grip, which no mover takes today. Line: her
-        // forearms on a line's cable.
+        // forearms on a line's cable. Brace: on her pipe, the riser's face
+        // her feet press against (the other side of her hands' squeeze).
         bool contact_supported = false;
         JPH::BodyID contact_feet_body;
         JPH::SubShapeID contact_feet_sub;
@@ -859,6 +865,9 @@ public:
         JPH::SubShapeID contact_hand2_sub;
         JPH::RVec3 contact_hand2 = JPH::RVec3::sZero();
         bool contact_line = false;
+        bool contact_braced = false;
+        JPH::BodyID contact_brace_body;
+        JPH::RVec3 contact_brace = JPH::RVec3::sZero();
         bool climb_sliding = false;
         bool climb_leg_driving = false;
         bool climb_bar_traverse = false;

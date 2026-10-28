@@ -10,12 +10,16 @@
 //    span, no lower than her legs reach);
 //  - her grip within her reach, and where the mover that has her shows its
 //    hand (on a hold that does not move, the same point);
+//  - on her pipe, hand over hand, her feet's brace on the riser: level with
+//    her shins, within her legs' reach, at the riser (and how often she has
+//    one, for the pipe's own check);
 // Counted, not failed: at rest with no grip and no floor exported (a body
 // holding her up that walk_toward does not stand on), and, during a
 // two-handed move, the old inferences the view drew from before S6 (a second
 // hand the simulation does not hold, a floor under her feet it does not have).
 
 #include "sim_tests.hpp"
+#include "sim/matron.hpp"
 #include "sim/matron_traversal.hpp"
 
 #include <algorithm>
@@ -34,6 +38,9 @@ struct MatronContactAudit {
     long grip_out_of_reach = 0; // FAIL: the exported grip out of her reach
     long grip_off_mover = 0;    // FAIL: the exported grip not where the mover shows her hand
     long resting_unowned = 0;   // counted: still, holding nothing, no floor exported
+    long pipe_face = 0;         // on her pipe hand over hand, her hand on the riser (not a deck's rail)
+    long braced = 0;            // ... with her feet's brace exported
+    long brace_off_her = 0;     // FAIL: the brace not level with her shins, in her legs' reach, at the riser
     double worst_grip_mover_m = 0.0;
     int still_ticks = 0;
     bool have_last = false;
@@ -46,6 +53,9 @@ struct MatronContactAudit {
     static constexpr double kFootSpanM = 0.24;
     static constexpr double kReachM = 2.5;      // her arm out from her middle, with room for a grip on her pipe
     static constexpr double kMoverHandM = 0.05;
+    static constexpr double kShinM = static_cast<double>(scraperx::sim::Matron::kBraceShinM);
+    static constexpr double kBraceReachM = static_cast<double>(scraperx::sim::Matron::kBraceReachM);
+    static constexpr double kRiserOffAxisM = 0.8;   // the riser's 0.35 m half and its flange to 0.55 m, and room
 
     void tick(const scraperx::sim::MatronSnapshot &m) {
         using scraperx::sim::traversal::MoveKind;
@@ -78,6 +88,24 @@ struct MatronContactAudit {
                 if (d > kMoverHandM) ++grip_off_mover;
             }
         }
+        const double hand_off_axis =
+            std::hypot(m.contact_hand.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
+                       m.contact_hand.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
+        if (m.on_pipe && m.contact_hand_held && hand_off_axis <= kRiserOffAxisM && !m.pipe_sliding && !m.pipe_stunned &&
+            !m.pipe_head_down) {
+            ++pipe_face;
+            if (m.contact_braced) ++braced;
+        }
+        if (m.contact_braced) {
+            const double shin_y = m.position.y - kStandCenterM + kShinM;
+            const double reach = std::hypot(m.contact_brace.x - m.position.x, m.contact_brace.z - m.position.z);
+            const double off_axis = std::hypot(m.contact_brace.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
+                                               m.contact_brace.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
+            if (!m.on_pipe || std::abs(m.contact_brace.y - shin_y) > 0.02 || reach > kBraceReachM + 0.02 ||
+                off_axis > kRiserOffAxisM) {
+                ++brace_off_her;
+            }
+        }
         const bool still = have_last && std::hypot(m.position.x - last.x, m.position.y - last.y, m.position.z - last.z) < 0.001;
         still_ticks = still ? still_ticks + 1 : 0;
         if (still_ticks >= 30 && m.alive && !m.contact_hand_held && !m.contact_line && !m.contact_supported) ++resting_unowned;
@@ -86,7 +114,8 @@ struct MatronContactAudit {
     }
 
     [[nodiscard]] bool clean() const {
-        return second_grip == 0 && floor_off_her == 0 && grip_out_of_reach == 0 && grip_off_mover == 0;
+        return second_grip == 0 && floor_off_her == 0 && grip_out_of_reach == 0 && grip_off_mover == 0 &&
+               brace_off_her == 0;
     }
 
     void report(const char *name) const {
@@ -95,6 +124,7 @@ struct MatronContactAudit {
                   << ", invented floor " << invented_feet << "); second grips " << second_grip << ", floor off her "
                   << floor_off_her << ", grip out of reach " << grip_out_of_reach << ", grip off the mover's hand "
                   << grip_off_mover << " (worst " << worst_grip_mover_m << " m), still with no floor or grip "
-                  << resting_unowned << '\n';
+                  << resting_unowned << "; on her pipe's face " << pipe_face << ", braced " << braced
+                  << ", brace off her " << brace_off_her << '\n';
     }
 };

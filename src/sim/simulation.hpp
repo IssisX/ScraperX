@@ -236,6 +236,10 @@ struct MatronSnapshot final {
     Vector3 contact_hand2{};
     std::uint32_t contact_hand2_body = 0xffffffffU;
     bool contact_line = false;
+    // On her pipe: the riser's face her feet press against.
+    bool contact_braced = false;
+    Vector3 contact_brace{};
+    std::uint32_t contact_brace_body = 0xffffffffU;
     traversal::MoveKind climb_move{};
     int climb_phase = 0;
     bool climb_move_active = false;

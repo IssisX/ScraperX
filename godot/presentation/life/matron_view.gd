@@ -908,6 +908,8 @@ func _check_contacts(data: Dictionary) -> void:
 		unowned_now = true
 	if (c & MatronRig.CLAIM_HANG) != 0 and not hung:
 		unowned_now = true
+	if (c & MatronRig.CLAIM_BRACE) != 0 and not bool(data.get("contact_braced", false)):
+		unowned_now = true
 	if unowned_now:
 		unowned_frames += 1
 

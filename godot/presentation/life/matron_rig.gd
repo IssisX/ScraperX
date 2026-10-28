@@ -280,6 +280,7 @@ const CLAIM_HAND2 := 4      # her second hand on a second hold
 const CLAIM_FEET := 8       # her body lifted onto a floor under her feet in a climb
 const CLAIM_HAND := 16      # her hand reaching to a climb's hold (or its target)
 const CLAIM_HANG := 32      # her body hung from her hands (rungs, pipe, line)
+const CLAIM_BRACE := 64     # her feet against her pipe's riser
 var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
@@ -640,6 +641,29 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
+		return
+	if truth and bool(data.get("on_pipe", false)) and bool(data.get("contact_hand_held", false)) \
+			and not bool(data.get("pipe_sliding", false)) and not bool(data.get("pipe_stunned", false)):
+		# On her pipe: her hands round its face at her grip, her feet against
+		# it where her legs press (contact_brace), her body where the
+		# simulation has it: laid back between them, never hung in the air.
+		var wp := float(view._w_climb) if view != null else 1.0
+		var inv := skel.global_transform.affine_inverse()
+		var grip: Vector3 = data["contact_hand"]
+		var into := grip - skel.global_position
+		into.y = 0.0
+		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
+		_ride(0.0)
+		_reach("r", inv * (grip + side * 0.08), wp)
+		_reach("l", inv * (grip - side * 0.08), wp)
+		claims |= CLAIM_HAND | CLAIM_HANG
+		if bool(data.get("contact_braced", false)):
+			var brace: Vector3 = data["contact_brace"]
+			_reach_chain("hp_r", "kn_r", "an_r", inv * (brace + side * 0.12), wp)
+			_reach_chain("hp_l", "kn_l", "an_l", inv * (brace - side * 0.12), wp)
+			claims |= CLAIM_BRACE
+		_plants.clear()
+		down_mask = 0
 		return
 	if climbing or on_line:
 		# her body hung from her hands only on a grip (or a line) the

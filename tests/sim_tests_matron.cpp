@@ -3,6 +3,7 @@
 // the rotten catwalk. Every leg is on player inputs from the deck spawn.
 #include "sim_tests.hpp"
 #include "sim_tests_decks.hpp"
+#include "matron_contact_audit.hpp"
 
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
@@ -593,6 +594,7 @@ struct PipeRun {
     double peak_power_w = 0.0;
     bool alive = true;
     std::uint64_t deaths = 0;
+    MatronContactAudit contacts;   // her exported contacts, every tick on the way (S6)
 };
 PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const double seconds,
                  const std::uint32_t piece = 2) {
@@ -631,6 +633,7 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
         s.debug_set_matron_stage(stage);   // her rage held at the stage (it cools as she goes)
         tick(s);
         const auto m = s.matron_state();
+        r.contacts.tick(m);
         r.took = r.took || m.pipe_links > 0;
         r.head_down = r.head_down || m.pipe_head_down;
         if (first_hold < 0 && m.pipe_holds > 0) {
@@ -700,6 +703,10 @@ void run_matron_pipe() {
         std::cout << "  matron pipe: her grip's peak " << r.peak_force_n << " N, " << r.peak_power_w << " W\n";
         require(r.peak_force_n > 1000.0 && r.peak_force_n <= law::kForceN + 0.5 && r.peak_power_w <= law::kPowerW + 0.5,
                 "matron pipe: gravity on her, her grip holds her within the shared force and power budget");
+        r.contacts.report("pipe, dangerous");
+        require(r.contacts.clean(), "matron pipe: her exported contacts are hers on the way down (S6)");
+        require(r.contacts.pipe_face > 0 && r.contacts.braced == r.contacts.pipe_face,
+                "matron pipe: hand over hand on the riser, her feet braced on it every tick (S6)");
         std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
     }
     // Fully changed: head first, and still heard 4 s ahead.
