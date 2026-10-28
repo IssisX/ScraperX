@@ -7,8 +7,9 @@
 // kept); no force is infinite (her muscle is a capped spring-damper, the grip
 // tears over kGripMaxForceN or on its strain, the player's brace on a rail
 // tears on the ledge grip's limits); recovery is always possible (thrashing
-// strains the grip till it tears; a brace holds her off a while); no health
-// numbers (what happens is a fall, judged by the fall rules).
+// strains the grip till it tears, though once she has a wrist the arm stays
+// in her hand; a brace holds her off a while); no health numbers (what
+// happens is a fall, judged by the fall rules).
 
 #include "sim/physics_world.hpp"
 
@@ -129,6 +130,15 @@ bool Simulation::PhysicsWorld::upright_pose_clear(const JPH::RVec3 centre) const
 void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
     if (grip_ == nullptr) {
         return;
+    }
+    if (wrist_ != nullptr && matron_->pulling_wrist()) {
+        // Her other hand has his wrist: once the rip has begun nothing breaks
+        // it (Cory, 2026-10-27). Her ankle grip lost, however (his kick, his
+        // thrashing, the world), the arm stays in her hand as the body pulls
+        // away.
+        JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+        sever_arm(bodies);
+        matron_->arm_torn();
     }
     destroy_grab_constraint(grip_);
     grip_strain_ns_ = 0.0F;

@@ -99,6 +99,12 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             claim();
             return;
         }
+        if (state_ == State::ArmPlay && hold_phase_ >= 2) {
+            // The arm hers already (left in her other hand as the body
+            // pulled away, tear_grip, or torn before): its beats go on, the
+            // body away; the hold ends after them (step_armplay).
+            return;
+        }
         if (torn && !fought && arm_tears_ == hold_tears_at_ && armplay_for_test_ != 0 &&
             hold_retakes_ < kMaxRetakes) {
             // Torn out of her hand by the world, not by them (her heave
@@ -643,6 +649,14 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         if (player_arms_left_ <= 0) {
             // The last arm gone: at any stage, she finishes them (Claimed).
             claim();
+        } else if (!grip_on_) {
+            // The body out of her ankle hand (it pulled away, the arm left in
+            // her other): one-armed and alive, away from her. The hold over:
+            // her hand out a moment, then she is after them again.
+            state_ = State::Release;
+            hold_s_ = 0.0F;
+            hold_phase_ = 0;
+            grab_cooldown_s_ = kAfterReleaseSeconds;
         } else if (armplay_then_ == State::Dangle) {
             // Back down over the drop, then the dangle's end.
             state_ = State::Dangle;

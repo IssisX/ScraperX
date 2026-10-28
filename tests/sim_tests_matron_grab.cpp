@@ -2,9 +2,10 @@
 // her hand on a player is no death. She takes an ankle, carries them upside
 // down to the shaft's rail, holds them out over the drop, tears an arm off,
 // and lets go aimed at a ledge, or sets them back on the deck. Her grip is
-// finite: a still body hangs; a thrashing one tears free. Nothing teleports.
-// Caught, a blow that is not his own frees nobody. These meet her fully
-// changed, as written; her stage changes none of it.
+// finite: a still body hangs; a thrashing one tears free (once she has its
+// wrist, leaving the arm in her other hand). Nothing teleports. Caught, a
+// blow that is not his own frees nobody. These meet her fully changed, as
+// written; her stage changes none of it.
 
 #include "sim_tests.hpp"
 
@@ -339,6 +340,47 @@ void run_matron_grab() {
         require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
                 "matron arm snagged: one arm gone, no claim and no death");
         std::cout << "PASS scraperx_sim matron arm snagged: torn " << torn_at - snagged_at << " s into her arm play\n";
+    }
+    // ---- kicked free once her hand has his wrist (Cory, through PE: once
+    //      the rip starts nothing breaks it, his struggling neither): his
+    //      kicks tear her ankle grip, the body pulls away and the arm stays
+    //      in her other hand, torn as it goes; no re-take, no claim, no
+    //      death, alive with one arm ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        s.debug_matron_hold(0, 3.0);
+        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        int kicks_from = -1;
+        double torn_at = -1.0;
+        double arm_at = -1.0;
+        const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
+            s.debug_set_matron_stage(1);
+            if (kicks_from < 0 && m.state == kArmPlay && m.armplay_beat == 1) {
+                kicks_from = i;   // her other hand has the wrist: he kicks
+            }
+            const bool kick = kicks_from >= 0 && m.grip_on;
+            (void)s.set_move_input(kick ? (((i - kicks_from) / 11) % 2 == 0 ? 1.0 : -1.0) : 0.0, 0.0);
+            const auto p = s.snapshot();
+            if (torn_at < 0.0 && p.grip_tear_count > 0) {
+                torn_at = i / 90.0;
+            }
+            if (arm_at < 0.0 && p.arm_tear_count > 0) {
+                arm_at = i / 90.0;
+            }
+        });
+        std::cout << "  matron arm kicked free: kicks from " << kicks_from / 90.0 << " s, " << r.p.thrash_kick_count
+                  << " kicks, grip torn at " << torn_at << " s, arm at " << arm_at << " s, tears "
+                  << r.p.arm_tear_count << " one_arm " << r.p.one_arm << " retakes " << r.m.retakes << " claims "
+                  << r.m.claims << " deaths " << r.deaths_start << "->" << r.deaths_end << "\n";
+        require(kicks_from >= 0 && r.m.grips_torn >= 1 && r.p.grip_tear_count >= 1,
+                "matron arm kicked free: his kicks tear her ankle grip once she has his wrist");
+        require(r.p.arm_tear_count == 1 && r.p.one_arm && arm_at == torn_at,
+                "matron arm kicked free: the arm stays in her hand, torn as the body pulls away");
+        require(r.m.retakes == 0 && r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
+                "matron arm kicked free: no re-take, no claim, no death: alive with one arm");
+        std::cout << "PASS scraperx_sim matron arm kicked free: torn " << torn_at - kicks_from / 90.0
+                  << " s into his kicking\n";
     }
     // ---- set down by the north band's rail: a still body caught there, her
     //      grip torn on the rail and taken again, the arm off where she

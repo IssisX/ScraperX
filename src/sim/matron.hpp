@@ -147,9 +147,14 @@ public:
         // knockdown it causes) frees him, and only before the rip begins
         // (her other hand going for his arm); from then on no blow breaks
         // it. Any other blow, and her own hard landing, she takes on her feet
-        // with him in her hand (take_blow). A body that fights its way out of
-        // her ankle hand (kicks, thrashing) before its arm is off gets away
-        // too; one the world tears from it she takes again (grip_lost).
+        // with him in her hand (take_blow). Before her other hand has his
+        // wrist, a body that fights its way out of her ankle hand (kicks,
+        // thrashing) gets away whole, and one the world tears from it she
+        // takes again (grip_lost). Once she has the wrist, nothing breaks the
+        // rip (Cory, through PE): her ankle grip lost however (his kick, his
+        // thrashing, the world), the arm stays in her hand as the body pulls
+        // away (physics_world_grab.cpp tear_grip), and he goes on one-armed,
+        // or, his last, the run is hers.
         Grab = 12,
         Carry = 13,
         Dangle = 14,
@@ -758,11 +763,12 @@ public:
     // step of kArmReposeStepM back from the body, hauling it after her, her
     // weight in it; out of reach, her hand for the nearer wrist again), as
     // often as it takes. Once her other hand goes for his arm, no blow
-    // breaks it (the State comment). The shoulder tears (physics) at
-    // kArmTearNs of the wrist's load past kArmHoldN; the arm (kArmMassKg) is
-    // hers: lifted to her face, swung, thrown (kArmThrowMps) onto the deck
-    // behind her. The whole of it kArmPlaySeconds from the tear. The last arm
-    // gone, the run is hers (Claimed).
+    // breaks it; once it has the wrist, nothing does: her ankle grip lost,
+    // the arm stays in that hand (the State comment). The shoulder tears
+    // (physics) at kArmTearNs of the wrist's load past kArmHoldN; the arm
+    // (kArmMassKg) is hers: lifted to her face, swung, thrown (kArmThrowMps)
+    // onto the deck behind her. The whole of it kArmPlaySeconds from the
+    // tear. The last arm gone, the run is hers (Claimed).
     static constexpr float kArmPullStartN = 1500.0F;
     static constexpr float kArmPullMaxN = 2600.0F;
     static constexpr float kGripRipFloorN = 3500.0F;

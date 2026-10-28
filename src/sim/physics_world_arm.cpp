@@ -1,10 +1,12 @@
 // Arm loss (matron.hpp "ArmPlay"): her second hand on a wrist, pulling it
 // away from the body her other hand holds by the ankle. The wrist's load
 // past kArmHoldN, over time, past kArmTearNs tears the arm from the
-// shoulder: a body of its own (kArmMassKg) in her hand, lifted, swung and
-// thrown; the player is lighter by it, and one-armed (one_arm) until a death
-// or a restart. Both gone, she has won (Claimed): the run ends and starts
-// again whole. Members of Simulation::PhysicsWorld.
+// shoulder (and the body pulling out of her ankle hand while she has the
+// wrist leaves it in her hand at once: tear_grip): a body of its own
+// (kArmMassKg) in her hand, lifted, swung and thrown; the player is lighter
+// by it, and one-armed (one_arm) until a death or a restart. Both gone, she
+// has won (Claimed): the run ends and starts again whole. Members of
+// Simulation::PhysicsWorld.
 
 #include "sim/physics_world.hpp"
 
@@ -148,7 +150,10 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     if (matron_->reaching_wrist()) {
         wrist_side_ = side;
     }
-    const bool active = matron_->hand2_active() && (grip_ != nullptr || matron_->claimed());
+    // Her second hand works while her first has the body, in the fatality,
+    // and while it holds an arm the body pulled away from (tear_grip).
+    const bool active =
+        matron_->hand2_active() && (grip_ != nullptr || matron_->claimed() || arm_in_hand_ != nullptr);
     if (!active && !hand2_id_.IsInvalid()) {
         destroy_grab_constraint(wrist_);
         destroy_grab_constraint(hand2_arm_);
