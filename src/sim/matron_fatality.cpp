@@ -1,9 +1,11 @@
-// Claimed (matron.hpp "Fatal"): the second arm gone, she has won, and she
-// finishes it with her hands and the machine on her deck. Every beat is a
-// physical act: her knee and fist are capped muscles on bodies
-// (physics_world_fatality.cpp), the legs tear by the same strain law as the
-// arms, the torso goes up on the Counterweight Well's stage-A rope as the
-// 800 kg skip drops, and it comes back down when her knot parts at the jerk.
+// Claimed (matron.hpp "Fatal"): the fatality's floor version (no edge in
+// reach for the hang, matron_hold.cpp), and a body left armless. She lays
+// him down on the steel where she stands, her knee on his chest, her palms
+// down her apron, black: about kFatalFloorS, and the world's death and the
+// checkpoint's restore end it (physics_world_fatality.cpp). Every beat is a
+// physical act: her knee and fist are capped muscles on bodies. The beats
+// that were between (the legs by the strain law, the Counterweight Well's
+// rope and its 800 kg skip) are no longer begun; their steps are kept below.
 // Nothing here moves the player; it moves her and poses her hands.
 
 #include "sim/matron.hpp"
@@ -71,8 +73,11 @@ void Matron::fatal_next(const int beat) noexcept {
 }
 
 void Matron::fatal_pinned() noexcept {
-    if (claimed() && fatal_beat_ == static_cast<int>(Fatal::Pin)) {
-        fatal_next(static_cast<int>(Fatal::Leg0));
+    if (claimed() && fatal_beat_ == static_cast<int>(Fatal::Pin) && fatal_sub_ == 0) {
+        // Her knee on his chest: kFloorPinSeconds of her weight, then her
+        // apron (step_claimed).
+        fatal_sub_ = 1;
+        hold_s_ = 0.0F;
     }
 }
 void Matron::fatal_leg_taken() noexcept {
@@ -200,30 +205,22 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     }
     switch (beat) {
     case Fatal::Lay: {
-        // Still by its ankle: to the spot, and down on the steel.
+        // Still by its ankle: down on the steel where she stands (no edge in
+        // her reach), lowered at her arm's pace; her fingers open
+        // kFloorLaySeconds into it.
         arm_reach_m_ = kStoopReachM;
         pull_n_ = kHandPullN;
-        if (fatal_sub_ == 0) {
-            const bool there = go_to(kPinSpotX, kPinSpotZ, kHuntMps * kCarryPaceScale);
-            pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM, kHandSpeedMps);
-            if (there) {
-                fatal_sub_ = 1;
-                hold_s_ = 0.0F;
-            }
-        } else {
-            stand();
-            // Lowered until the head and shoulders are on the deck.
-            pose_hand(dt, RVec3(at.GetX(), feet + 1.15F, at.GetZ()) + right * kCarrySideM + fwd * 0.4F,
-                      0.5F * kHandSpeedMps);
-            if (grip_on_ && hold_s_ > 1.6F) {
-                grip_on_ = false;           // her fingers open: not a Release
-                let_go_ = true;
-                let_go_push_ = Vec3::sZero();
-                hold_s_ = 0.0F;
-            }
-            if (!grip_on_ && hold_s_ > 1.0F && p.torso_grounded) {
-                fatal_next(static_cast<int>(Fatal::Pin));
-            }
+        stand();
+        pose_hand(dt, RVec3(at.GetX(), feet + 1.15F, at.GetZ()) + right * kCarrySideM + fwd * 0.4F, kHandSpeedMps);
+        if (grip_on_ && hold_s_ > kFloorLaySeconds) {
+            grip_on_ = false;           // her fingers open: not a Release
+            let_go_ = true;
+            let_go_push_ = Vec3::sZero();
+            hold_s_ = 0.0F;
+        }
+        // Down on it (or not settling in kFloorBeatGiveUpS): her knee.
+        if (!grip_on_ && ((hold_s_ > 0.2F && p.torso_grounded) || hold_s_ > kFloorBeatGiveUpS)) {
+            fatal_next(static_cast<int>(Fatal::Pin));
         }
         break;
     }
@@ -239,6 +236,11 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         arm_reach_m_ = kStoopReachM;
         if (beat == Fatal::Pin) {
             pose_hand(dt, rest_hand, kHandSpeedMps);
+            // Her weight on his chest kFloorPinSeconds (fatal_pinned); a knee
+            // that cannot get there in kFloorBeatGiveUpS, she leaves it.
+            if ((fatal_sub_ == 1 && hold_s_ >= kFloorPinSeconds) || (fatal_sub_ == 0 && hold_s_ > kFloorBeatGiveUpS)) {
+                fatal_next(static_cast<int>(Fatal::Wipe));
+            }
             break;
         }
         const int side = leg_side();

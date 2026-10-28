@@ -805,11 +805,19 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // always sets a support-relative landing velocity first -- so no
     // separate traversal exemption is needed.
     bool died_this_tick = false;
+    if (fatality_death_) {
+        // The fatality's floor version is over (black): a death where the
+        // body lies, and the checkpoint's restore, as after the hang's fall.
+        fatality_death_ = false;
+        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), 0.0F, false);
+        restore_from_checkpoint(bodies);
+        died_this_tick = true;
+    }
     // While she is finishing it (Claimed) the run is hers: its end is the
-    // fatality's, not a death and a checkpoint.
+    // fatality's (above), not a fall's death.
     const bool hers = matron_->claimed();
-    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None && !takeoff &&
-        grip_ == nullptr && !hers) {
+    if (!died_this_tick && grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
+        !takeoff && grip_ == nullptr && !hers) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.

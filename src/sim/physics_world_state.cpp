@@ -225,6 +225,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     matron_->drop_stock();
     grab_reset(bodies);
     arm_reset(bodies);   // a death: whole again
+    fatality_death_ = false;
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
@@ -785,9 +786,14 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.upright_count = upright_count_;
         state_.upright_wedged_count = upright_wedged_count_;
         state_.max_hold_step_m = max_hold_step_m_;
+        state_.matron_hand_present = !hand_id_.IsInvalid();
         if (!hand_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
             state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+        if (grip_ != nullptr) {
+            const JPH::RVec3 held = bodies.GetWorldTransform(player_id_) * grip_on_body_;
+            state_.held_ankle = Vector3{held.GetX(), held.GetY(), held.GetZ()};
         }
         if (!hand2_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);

@@ -346,6 +346,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             grip_ = create_constraint(grip, hand_id_, player_id_, false);
             grip_swing_ = false;
             if (grip_ != nullptr) {
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * hand);
                 ++grip_count_;
                 grip_fought_ = false;
                 grip_strain_ns_ = 0.0F;
@@ -394,6 +395,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 destroy_grab_constraint(grip_);
                 grip_ = made;
                 grip_swing_ = true;
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
             }
         }
         // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).

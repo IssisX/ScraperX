@@ -983,6 +983,9 @@ public:
     JPH::Ref<JPH::TwoBodyConstraint> brace_;   // the player's hands on a rail against her pull
     bool player_free_rot_ = false;
     bool grip_swing_ = false;   // the grip's hinge taken on (else a bare point)
+    // Where her fingers hold him, in his body's frame (set as they close,
+    // and again as the hinge is taken on): the held ankle point.
+    JPH::Vec3 grip_on_body_ = JPH::Vec3::sZero();
     int upright_contact_ticks_ = 0;
     float upright_s_ = 0.0F;
     float grip_load_n_ = 0.0F;
@@ -1043,6 +1046,9 @@ public:
     std::uint64_t severed_arm_despawn_count_ = 0;
     float claimed_s_ = 0.0F;
     bool run_ended_by_matron_ = false;
+    // The fatality's floor version over (Matron::fatality_over): a death, and
+    // the checkpoint's restore (step), as after the hang's lethal landing.
+    bool fatality_death_ = false;
     std::uint64_t claimed_count_ = 0;
     [[nodiscard]] int arms_lost() const noexcept { return int(arm_lost_[0]) + int(arm_lost_[1]); }
     // One good arm: one lost, or one broken (a hang holds half, a climb hauls

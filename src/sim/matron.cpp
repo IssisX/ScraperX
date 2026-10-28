@@ -2396,6 +2396,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             return;
         }
     }
+    if (!holding_state(state_)) {
+        // His blow's tag frees him only from her hold (step_hold): outside
+        // one, it is spent.
+        player_blow_tag_ = false;
+    }
     switch (state_) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
@@ -3529,6 +3534,17 @@ void Matron::restore(const Saved &saved) {
         wrist_on_ = false;
         arm_throw_ = false;
         pull2_n_ = kHandReachPullN;
+        // The fatality's hold forgotten (a death mid-fatality, a load): only
+        // its counts, like the hold's, run on.
+        fatal_hold_ = false;
+        fatal_path_ = FatalPath::None;
+        fatal_carry_s_ = 0.0F;
+        fatal_window_s_ = 0.0F;
+        fatal_hang_ = false;
+        fatal_dropped_ = false;
+        fatal_edge_ = RVec3::sZero();
+        reel_ = false;
+        player_blow_tag_ = false;
         crumb_head_ = 0;
         crumb_on_ = -1;
         crumbs_walked_ = 0;
@@ -3809,10 +3825,15 @@ void Matron::take_blow(const float dt) {
         blow_by_player_ = false;
     }
     // His own blow, tagged as it landed (player_blow_landed): read with the
-    // blow it lands in.
+    // blow it lands in. In her hold before the rip it frees him whatever its
+    // size (his_blow; step_hold reads a tag no blow came with).
+    const bool tagged = player_blow_tag_;
     blow_by_player_ = blow_by_player_ || player_blow_tag_;
     player_blow_tag_ = false;
     blow_quiet_ = 0;
+    if (tagged && his_blow()) {
+        return;
+    }
     // Her own change is the blow's only while the player's body is not
     // against her too (their push is a shove, not a blow).
     if (!physics_.WereBodiesInContact(body_, player_)) {
@@ -3855,15 +3876,11 @@ void Matron::take_blow(const float dt) {
     }
     if (body_in_hold()) {
         // Caught, he is hers (Cory, 2026-10-27, 6:51 PM): only his own blow,
-        // landed before the rip begins, takes her off her feet and him out
-        // of her hand. Any other she takes on her feet, him in her hand.
-        if (!blow_by_player_ || rip_begun()) {
-            return;
-        }
-        // Freed by it, whole: she is after him once her feet have her, her
-        // hand held off a while (as after a grip he tears out of it).
-        end_hold(State::Searching);
-        grab_cooldown_s_ = kAfterReleaseSeconds;
+        // landed before the rip begins, takes him out of her hand (his_blow,
+        // above: set down on her deck, never over open air). Any other she
+        // takes on her feet, him in her hand; and his, once the rip has
+        // begun, or while she is already setting him down after one.
+        return;
     }
     // The way it sends her: along the impulse, else her change, else away
     // from the striker.
@@ -4194,6 +4211,17 @@ void Matron::refresh_view() {
     view_.arm_tears = arm_tears_;
     view_.arm_throws = arm_throws_;
     view_.claims = claims_;
+    view_.fatal_path = static_cast<std::uint8_t>(fatal_path_);
+    view_.fatal_hang = fatal_hang_;
+    view_.fatal_window_s = fatal_hang_ ? fatal_window_s_ : 0.0F;
+    view_.fatal_edge_x = float(fatal_edge_.GetX());
+    view_.fatal_edge_y = float(fatal_edge_.GetY());
+    view_.fatal_edge_z = float(fatal_edge_.GetZ());
+    view_.fatal_out_x = fatal_path_ == FatalPath::Hang ? rim_nx_ : 0.0F;
+    view_.fatal_out_z = fatal_path_ == FatalPath::Hang ? rim_nz_ : 0.0F;
+    view_.fatal_release_beat = fatal_release_beat_;
+    view_.fatal_escapes = fatal_escapes_;
+    view_.reels = reels_;
     view_.fatal_beat = state_ == State::Claimed ? static_cast<std::uint8_t>(fatal_beat_) : 0;
     view_.waste_not = waste_not_;
     view_.armplay_beat = state_ == State::ArmPlay ? static_cast<std::uint8_t>(hold_phase_) : 0;

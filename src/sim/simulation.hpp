@@ -310,6 +310,20 @@ struct MatronSnapshot final {
     std::uint32_t arm_tears = 0;
     std::uint32_t arm_throws = 0;
     std::uint32_t claims = 0;
+    // The fatality (Matron::kFatalTargetS): its path (Matron::FatalPath: 0
+    // none, 1 the hang over the drop, 2 the floor), the hang's window and its
+    // seconds, the edge and the way out over the drop, the release beat (a
+    // count that rises as she lets go of him over the drop: the viewer's
+    // slow motion, pull-out and fade), his escapes by his blow in it, and his
+    // blows out over the drop in any hold that she reeled back from.
+    std::uint8_t fatal_path = 0;
+    bool fatal_hang = false;
+    double fatal_window_s = 0.0;
+    Vector3 fatal_edge{};
+    double fatal_out_x = 0.0, fatal_out_z = 0.0;
+    std::uint32_t fatal_release_beat = 0;
+    std::uint32_t fatal_escapes = 0;
+    std::uint32_t reels = 0;
     std::uint8_t armplay_beat = 0;
     std::uint8_t fatal_beat = 0;     // Matron::Fatal while Claimed
     std::uint32_t waste_not = 0;     // the 'Waste not.' voice hook
@@ -1043,7 +1057,13 @@ struct Snapshot final {
     std::uint64_t upright_count = 0;
     std::uint64_t upright_wedged_count = 0;
     double max_hold_step_m = 0.0;
+    // Her hand (the body her muscle drives) while it is out; and, while her
+    // fingers hold him, the held ankle point: where on his body they hold,
+    // in the world (her hand is on it, by the grip). The drawing's arm goes
+    // from her shoulder to matron_hand, his leg's end to held_ankle.
     Vector3 matron_hand{};
+    bool matron_hand_present = false;
+    Vector3 held_ankle{};
     // Arms (physics_world_arm.cpp): lost per side until a death or a
     // restart; the severed arm's body; her win.
     bool left_arm_lost = false;
@@ -1585,6 +1605,9 @@ public:
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
     void debug_matron_rule_out_pipe() noexcept;
+    // Tests only (never bound to the bridge): no edge of her floor counts for
+    // the fatality's hang (Matron::rule_out_hang_for_test): its floor version.
+    void debug_matron_rule_out_hang() noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.

@@ -1784,7 +1784,24 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["arm_tears"] = static_cast<std::int64_t>(m.arm_tears);
     out["claims"] = static_cast<std::int64_t>(m.claims);
     out["waste_not"] = static_cast<std::int64_t>(m.waste_not);
-    // The body in her hand.
+    // The fatality (sim/matron.hpp kFatalTargetS): its path (0 none, 1 the
+    // hang over the drop, 2 the floor), the hang's window, the edge and the
+    // way out over the drop, and the release beat: a count that rises by one
+    // as she lets go of him over the drop (slow motion, the pull-out down the
+    // drop, the fade).
+    out["fatal_path"] = static_cast<std::int64_t>(m.fatal_path);
+    out["fatal_hang"] = m.fatal_hang;
+    out["fatal_window_s"] = m.fatal_window_s;
+    out["fatal_window_total_s"] = static_cast<double>(sim::Matron::kFatalHangWindowS);
+    out["fatal_edge"] = to_godot(m.fatal_edge);
+    out["fatal_out"] = godot::Vector2(static_cast<real_t>(m.fatal_out_x), static_cast<real_t>(m.fatal_out_z));
+    out["fatal_release_beat"] = static_cast<std::int64_t>(m.fatal_release_beat);
+    out["fatal_escapes"] = static_cast<std::int64_t>(m.fatal_escapes);
+    out["reels"] = static_cast<std::int64_t>(m.reels);
+    // The body in her hand: her hand (the body her muscle drives, while it is
+    // out) and the held ankle point (where her fingers hold him, while they do).
+    out["matron_hand_present"] = p.matron_hand_present;
+    out["held_ankle"] = to_godot(p.held_ankle);
     out["held"] = p.held_by_matron;
     out["free_rotation"] = p.player_free_rotation;
     out["body_rotation"] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);
