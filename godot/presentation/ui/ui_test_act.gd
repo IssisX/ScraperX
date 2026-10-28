@@ -568,6 +568,13 @@ func _act_dangerous_and_changed(device: int) -> bool:
 			break
 	if int(_native().get_matron_hold_state()["grabs"]) < 1:
 		return _fail("dangerous, her hand never closed on the climber's ankle at the rail in %d reaches" % ACT_GRAB_TRIES)
+	# In her hand before the rip, Action is the climber's punch, his escape
+	# (the owner's design): read on the button, not pressed, so her hold goes on.
+	if not await _wait_until(func() -> bool: return StringName(_ctx()["action"]["id"]) == &"punch" and \
+			(device != InputRouter.Device.TOUCH or (_main._touch.is_button_shown(&"action") and \
+			_main._touch.button_label(&"action") == "PUNCH")), 3.0):
+		return _fail("in her hand before the rip, Action read '%s', not PUNCH" % _action_label())
+	_act_log("punch_in_her_hand")
 	var torn: bool = await _act_wait(func() -> bool:
 		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
 		"rail_hold")

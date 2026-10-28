@@ -42,7 +42,9 @@ func update(strike: Dictionary, camera_basis: Basis, delta: float, reduced_motio
 	var strikes := int(strike.get("strikes", 0))
 	var hits := int(strike.get("hits", 0))
 	var phase := int(strike.get("phase", 0))
-	if _strikes < 0:
+	if _strikes < 0 or strikes < _strikes or hits < _hits:
+		# The first frame, or a world built again under it (a run she
+		# ended): its counts start over, and so do the edges.
 		_strikes = strikes
 		_hits = hits
 	if strikes > _strikes:

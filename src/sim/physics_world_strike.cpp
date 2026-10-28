@@ -63,22 +63,29 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     const JPH::BodyID her = matron_->body();
     const bool her_here = !her.IsInvalid() && bodies.IsAdded(her);
     const JPH::RVec3 at = bodies.GetPosition(player_id_);
-    const JPH::RVec3 chest = at + JPH::Vec3(0.0F, kStrikeChestUpM, 0.0F);
+    // His chest along his body's up: over his middle on his feet, under it
+    // hung head down in her hand.
+    const JPH::RVec3 chest = at + bodies.GetRotation(player_id_) * JPH::Vec3(0.0F, kStrikeChestUpM, 0.0F);
     const bool free = grip_ == nullptr && !player_free_rot_ && !matron_->claimed() &&
-                      traversal_state_ == TraversalState::None && carried_entity_ == 0;
-    // Whether Action offers the punch: one can start (free, at guard, his
-    // hands empty, her hands not on him or reaching for him) and her body
-    // is close in front.
+                      traversal_state_ == TraversalState::None && carried_entity_ == 0 && !rolling();
+    // In her hand before the rip begins his fist is his escape (the owner's
+    // design: his own blow frees him then, Matron::State); during her reach,
+    // before her fingers close, the brace has Action.
+    const bool in_her_hand = her_here && grip_ != nullptr && matron_->his_blow_can_free();
+    const bool can_start = strike_phase_ == StrikePhase::Guard &&
+                           ((free && !(her_here && (matron_->holding() || matron_->reaching()))) || in_her_hand);
+    // Whether Action offers the punch: one can start, and her body is close
+    // in front, or she has him in her hand.
     strike_offered_ = false;
-    if (her_here && free && strike_phase_ == StrikePhase::Guard && !matron_->holding() && !matron_->reaching()) {
+    if (can_start && in_her_hand) {
+        strike_offered_ = true;
+    } else if (can_start && her_here) {
         const JPH::RVec3 c = bodies.GetPosition(her);
         JPH::Vec3 to(static_cast<float>(c.GetX() - at.GetX()), 0.0F, static_cast<float>(c.GetZ() - at.GetZ()));
         const float d = to.Length();
         strike_offered_ = d < kStrikeOfferM && d > 1.0e-3F && to.Dot(facing) > kStrikeOfferCos * d &&
                           std::abs(static_cast<float>(c.GetY() - at.GetY())) < 1.5F;
     }
-    const bool can_start = free && strike_phase_ == StrikePhase::Guard &&
-                           !(her_here && (matron_->holding() || matron_->reaching()));
     if (commands.strike_requested && can_start) {
         strike_phase_ = StrikePhase::Windup;
         strike_ticks_ = 0;
@@ -96,9 +103,16 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     }
     if (strike_phase_ == StrikePhase::Reach) {
         if (!strike_landed_ && her_here) {
-            const float out = kStrikeReachM * std::min(1.0F, static_cast<float>(strike_ticks_ + 1) / 3.0F);
-            const JPH::RVec3 fist = chest + facing * out;
             const JPH::RVec3 c = bodies.GetPosition(her);
+            // Hung in her hand his arm swings at her (the view turns with his
+            // body there, not with his facing); on his feet, along his facing.
+            JPH::Vec3 line = facing;
+            if (grip_ != nullptr) {
+                const JPH::Vec3 to(axis_point(c, Matron::kHalfHeight, chest) - chest);
+                line = to.LengthSq() > 1.0e-6F ? to.Normalized() : facing;
+            }
+            const float out = kStrikeReachM * std::min(1.0F, static_cast<float>(strike_ticks_ + 1) / 3.0F);
+            const JPH::RVec3 fist = chest + line * out;
             const JPH::RVec3 q = axis_point(c, Matron::kHalfHeight, fist);
             const JPH::Vec3 off(fist - q);
             if (off.Length() <= Matron::kRadius + kStrikeFistRadiusM && fist_path_clear(chest, q)) {

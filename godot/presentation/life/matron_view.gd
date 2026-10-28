@@ -617,9 +617,9 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 		return
 	_crawl_retune(data, falling)
 	_ease_pose(delta)
+	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
-	_apply_flinch(delta)
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
 
@@ -1655,8 +1655,10 @@ func flinch(normal: Vector3, impulse_ns: float) -> void:
 	flinches += 1
 
 func _apply_flinch(delta: float) -> void:
-	# In _drive_body, over this frame's pose: her torso tipped away from the
-	# waist up, her legs planted (no turn of the whole figure after _apply).
+	# In _drive_body, over this frame's eased pose and before the rig puts the
+	# pivots on her bones: her torso tipped away from the waist up, her legs
+	# planted (the rig keeps the thighs' angle). _pose sets the torso afresh
+	# next frame, so it adds nothing to her pose.
 	if _flinch_deg <= 0.0 or not _figure.visible or not _p.has("torso"):
 		return
 	_flinch_t += delta

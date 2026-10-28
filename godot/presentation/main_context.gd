@@ -182,10 +182,24 @@ func _read_context() -> Dictionary:
 	# and Crouch held hoist.
 	var crane: Dictionary = _native.get_yard_crane_state()
 	var crane_operating := bool(crane["operating"])
-	# Her body close in front (the native decides): Action is a punch.
+	# Her body close in front, or her hand on him before the rip (his escape),
+	# the native decides: Action is a punch. In the fatality's hang window too
+	# when her hold reports one (a native without it: the strike's offer).
 	var strike: Dictionary = _native.get_strike_state()
+	var in_her_hand := bool(strike.get("held", false))
+	var punch_ok := bool(strike["offered"])
+	var hang_left := -1.0
+	if in_her_hand and _native.has_method("get_matron_hold_state"):
+		var her_hold: Dictionary = _native.get_matron_hold_state()
+		if bool(her_hold.get("fatal_hang", false)):
+			punch_ok = true
+			if her_hold.has("fatal_window_s") and her_hold.has("fatal_window_total_s"):
+				hang_left = maxf(0.0, float(her_hold["fatal_window_total_s"]) - float(her_hold["fatal_window_s"]))
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if crane_operating:
+	if in_her_hand and punch_ok:
+		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH",
+			"detail": "BREAK FREE" if hang_left < 0.0 else "BREAK FREE  %.1f S" % hang_left}
+	elif crane_operating:
 		var hook_at: Vector3 = crane["hook"]
 		var reading := "HOOK %d M  PULL %.1f T" % [roundi(hook_at.y), float(crane["hoist_n"]) / 9810.0]
 		if bool(crane["hoist_stalled"]):
@@ -364,7 +378,7 @@ func _read_context() -> Dictionary:
 	elif grounded and free and grip:
 		# A hold at hand height: a rung, a pipe, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
-	elif bool(strike["offered"]) and carrying == 0:
+	elif punch_ok and carrying == 0:
 		# Her body close in front and a strike able to start (the native
 		# decides: free, at guard, her hands not on him): Action is a punch.
 		action = {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "HER"}

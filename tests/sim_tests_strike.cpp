@@ -31,6 +31,7 @@ struct Thrown {
 
 Thrown throw_one(const double her_ahead_m) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     for (int i = 0; i < 30; ++i) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
     }
@@ -131,6 +132,7 @@ void run_strike() {
     std::uint64_t blow_hits = 0;
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         for (int i = 0; i < 30; ++i) {
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
         }
@@ -159,28 +161,67 @@ void run_strike() {
     require(blow_hits == 1 && dv > 0.0 && blow_mps >= 0.8 * dv && blow_mps <= 1.5 * dv + 0.05,
             "strike: her velocity change is about the impulse over her 220 kg");
 
-    // Her hands on him: no punch offered, and a press throws nothing.
-    {
-        Simulation s(InitialSpawn::Deck154);
-        meet_her(s, -6.0, -129.0);
-        s.debug_matron_hold(0, 3.0);
-        bool held = false;
-        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !held; ++i) {
+    // Her hands on him (the owner's design): during her reach, before her
+    // fingers close, the brace keeps Action, no punch; in her hand before
+    // the rip the punch is offered and thrown, his escape, and lands on her
+    // within his limit; once the rip has begun, none.
+    constexpr int kGrab = static_cast<int>(scraperx::sim::Matron::State::Grab);
+    constexpr int kCarry = static_cast<int>(scraperx::sim::Matron::State::Carry);
+    constexpr int kArmPlay = static_cast<int>(scraperx::sim::Matron::State::ArmPlay);
+    const auto until = [](Simulation &s, const auto &done) {
+        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !done(); ++i) {
             (void)s.set_move_input(0.0, 0.0);
             tick(s);
-            held = s.snapshot().held_by_matron;
         }
-        require(held, "strike: she took hold of him (setup)");
+        return done();
+    };
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        meet_her(s, -6.0, -129.0);
+        s.debug_matron_hold(0, 3.0);
+        require(until(s, [&] { return s.matron_state().state == kGrab && !s.snapshot().held_by_matron; }),
+                "strike: her reach for him (setup)");
         const std::uint64_t before = s.snapshot().strike_count;
-        require(!s.snapshot().strike_offered, "strike: Action does not offer the punch while she holds him");
+        require(!s.snapshot().strike_offered, "strike: during her reach Action does not offer the punch (the brace)");
         (void)s.request_strike();
-        (void)s.advance_frame(Simulation::kFixedStepSeconds);
-        require(s.snapshot().strike_count == before, "strike: no strike starts in her hands");
+        tick(s);
+        require(s.snapshot().strike_count == before, "strike: no strike starts during her reach");
+        require(until(s, [&] { return s.matron_state().state == kCarry && s.snapshot().held_by_matron; }),
+                "strike: she carries him in her hand (setup)");
+        require(s.snapshot().strike_offered, "strike: in her hand before the rip Action offers the punch (his escape)");
+        const std::uint64_t hits = s.snapshot().strike_hit_count;
+        (void)s.request_strike();
+        for (int i = 0; i < 40; ++i) {
+            tick(s);
+        }
+        const auto &snap = s.snapshot();
+        const double most = kPlayerStrikeForceN * 3.0 * Simulation::kFixedStepSeconds + 1.0e-3;
+        std::cout << "  strike in her hand: strikes=" << snap.strike_count - before << " hits=" << snap.strike_hit_count - hits
+                  << " impulse_ns=" << snap.strike_impulse_ns << "\n";
+        require(snap.strike_count == before + 1 && snap.strike_hit_count == hits + 1,
+                "strike: thrown in her hand, the punch lands on her");
+        require(snap.strike_impulse_ns > 0.0 && snap.strike_impulse_ns <= most,
+                "strike: the punch in her hand is his force held over the contact, within his limit");
+    }
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        meet_her(s, -6.0, -129.0);
+        s.debug_matron_hold(0, 3.0);
+        require(until(s, [&] { return s.matron_state().state == kArmPlay && s.snapshot().held_by_matron; }),
+                "strike: her rip begun, him in her hand (setup)");
+        const std::uint64_t before = s.snapshot().strike_count;
+        require(!s.snapshot().strike_offered, "strike: once the rip has begun Action does not offer the punch");
+        (void)s.request_strike();
+        tick(s);
+        require(s.snapshot().strike_count == before, "strike: no strike starts once the rip has begun");
     }
 
     // A checkpoint load mid-strike: the fist back at guard, nothing lands.
     {
         Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
         for (int i = 0; i < 30; ++i) {
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
         }

@@ -156,7 +156,8 @@ public:
         // away (physics_world_grab.cpp tear_grip), and he goes on one-armed,
         // or, his last, the run is hers. Only her own giving up past
         // kMaxArmReposes re-poses (the arm out of her reach) ends it with
-        // the arm on: she lets go where she stands (Release).
+        // the arm on: she keeps the ankle and sets him down on her deck
+        // (Spare, deck only), never over the drop.
         Grab = 12,
         Carry = 13,
         Dangle = 14,
@@ -764,9 +765,11 @@ public:
     // not torn kArmPullSeconds into the pull, she re-poses (arm_repose: a
     // step of kArmReposeStepM back from the body, hauling it after her, her
     // weight in it; out of reach, her hand for the nearer wrist again), up
-    // to kMaxArmReposes times; past that, the arm still not hers, she lets
-    // go where she stands (Release), no arm off, so a body caught on steel
-    // never loops her. Once her other hand goes for his arm, no blow
+    // to kMaxArmReposes times; past that, the arm still not hers, she keeps
+    // the ankle and sets him down on her deck (Spare, deck only: her deck
+    // close under his body, not only under her hand; none, she walks him
+    // on along her lines), no arm off, so a body caught on steel never
+    // loops her. Once her other hand goes for his arm, no blow
     // breaks it; once it has the wrist, nothing does: her ankle grip lost,
     // the arm stays in that hand (the State comment). The shoulder tears
     // (physics) at kArmTearNs of the wrist's load past kArmHoldN; the arm
@@ -1179,6 +1182,9 @@ public:
     // it lands, and take_blow reads it with the blow it is part of. Only such
     // a blow, before the rip begins, takes her out of her hold (State).
     void player_blow_landed() noexcept { player_blow_tag_ = true; }
+    // His blow can still free him: the body in her hand, the rip not begun
+    // (State). His punch's offer in her hand (physics_world_strike.cpp).
+    [[nodiscard]] bool his_blow_can_free() const noexcept { return body_in_hold() && !rip_begun(); }
     [[nodiscard]] bool take_arm_throw(JPH::Vec3 &velocity) noexcept {
         if (!arm_throw_) {
             return false;
@@ -1188,7 +1194,9 @@ public:
         return true;
     }
     // 0: no ArmPlay; 2: ArmPlay whose pull never tears the arm (the re-pose
-    // cap's test); otherwise as in play.
+    // cap's test); 3: as 2, her re-pose cap reached at her first re-pose
+    // (the deck-only set-down begun where the arm play began, out over the
+    // drop); otherwise as in play.
     void set_armplay_for_test(const int armplay) noexcept { armplay_for_test_ = armplay; }
     [[nodiscard]] bool claimed() const noexcept { return state_ == State::Claimed; }
     // The body has no arm left and is not hers yet (a grip torn after the
@@ -1648,6 +1656,7 @@ private:
     void arm_repose(JPH::RVec3 at, JPH::RVec3 player, bool reseat);
     void walk_toward_line(float dt, float ax, float az, bool on_catwalk);
     [[nodiscard]] JPH::Vec3 spare_side(JPH::RVec3 at, float feet, JPH::Vec3 right, JPH::Vec3 out, bool &deck) const;
+    [[nodiscard]] bool deck_under_him(JPH::RVec3 player, float feet) const;
     // The body in her hand, or hers already: from her fingers closing on the
     // ankle till she lets go, and the whole of the fatality.
     [[nodiscard]] bool body_in_hold() const noexcept {

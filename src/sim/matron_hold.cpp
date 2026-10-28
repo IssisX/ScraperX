@@ -491,7 +491,15 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
                                   (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
             if (Vec3(down - hand_target_).Length() < 0.02F && (spare_deck_ || (rail_in > 0.5F && !deck_only_)) &&
-                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_))) {
+                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_)) && deck_only_ &&
+                !deck_under_him(player, feet)) {
+                // Deck only: her hand over her deck is not enough, his body
+                // may hang elsewhere (caught past the rail). She keeps him
+                // and walks on along her lines, looking again as she goes.
+                spare_deck_ = false;
+                hold_s_ = 0.0F;
+            } else if (Vec3(down - hand_target_).Length() < 0.02F && (spare_deck_ || (rail_in > 0.5F && !deck_only_)) &&
+                       (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_))) {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
@@ -607,7 +615,7 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
     case 1: {
         // Away from the body, up and out: the shoulder takes it.
         pull2_n_ = std::min(kArmPullMaxN, pull2_n_ + kRipRampNps * dt);
-        if (armplay_for_test_ == 2) {
+        if (armplay_for_test_ == 2 || armplay_for_test_ == 3) {
             // A test's arm that will not come: her pull kept under the hold.
             pull2_n_ = std::min(pull2_n_, 0.5F * kArmHoldN);
         }
@@ -732,7 +740,7 @@ void Matron::stand_in_for_rim(const RVec3 at, const RVec3 player, const Vec3 fwd
 // caught on steel is dragged off it. No floor there for her feet: she stays
 // where she is.
 void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
-    if (armplay_reposes_ >= kMaxArmReposes) {
+    if (armplay_reposes_ >= (armplay_for_test_ == 3 ? 0 : kMaxArmReposes)) {
         // Past her re-poses, the arm still not hers (Cory, 2026-10-28): she
         // keeps the ankle and sets them down on her deck (Spare, deck_only_),
         // never over the drop: no deck beside her, she walks them back along
@@ -811,16 +819,40 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
     return first;
 }
 
-// Her feet toward the nearest node of her patrol (pick_patrol): her walking
-// lines are her deck. Her own drive (walk_toward), so lawful.
+// Her deck close under his body (the deck-only set-down's let-go): straight
+// down from his middle, within a body's length and a step, the first thing
+// met is her own floor or a step below it: not a rail, a crate or the drop.
+bool Matron::deck_under_him(const RVec3 player, const float feet) const {
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    const float reach = 2.0F * kPlayerHalfM + 0.6F;
+    RayCastResult under;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(player, Vec3(0.0F, -reach, 0.0F)), under, {}, {}, skip)) {
+        return false;
+    }
+    const float top = float(player.GetY()) - reach * under.mFraction;
+    return top <= feet + 0.15F && top >= feet - 0.6F;
+}
+
+// Her feet toward her patrol's next node (pick_patrol), and on round her loop
+// as she reaches each (her patrol's 1.5 m): her walking lines are her deck.
+// Her own drive (walk_toward), so lawful.
 void Matron::walk_toward_line(const float dt, const float ax, const float az, const bool on_catwalk) {
     const Level &level = levels_[static_cast<std::size_t>(level_)];
-    if (patrol_ < 0 || static_cast<std::size_t>(patrol_) >= level.patrols.size()) {
+    if (patrol_ < 0 || static_cast<std::size_t>(patrol_) >= level.patrols.size() ||
+        level.patrols[static_cast<std::size_t>(patrol_)].empty()) {
         walk_toward(dt, ax, az, 0.0F);
         return;
     }
     const std::vector<int> &nodes = level.patrols[static_cast<std::size_t>(patrol_)];
-    const Node &node = level.nodes[static_cast<std::size_t>(nodes[static_cast<std::size_t>(patrol_node_) % nodes.size()])];
+    const int count = static_cast<int>(nodes.size());
+    patrol_node_ = ((patrol_node_ % count) + count) % count;
+    if (const Node &here = level.nodes[static_cast<std::size_t>(nodes[static_cast<std::size_t>(patrol_node_)])];
+        xz(ax, az, here.x, here.z) < 1.5F) {
+        patrol_node_ = (patrol_node_ + 1) % count;
+    }
+    const Node &node = level.nodes[static_cast<std::size_t>(nodes[static_cast<std::size_t>(patrol_node_)])];
     float wx = node.x;
     float wz = node.z;
     (void)route_toward(ax, az, node.x, node.z, on_catwalk, wx, wz);
