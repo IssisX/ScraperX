@@ -21,11 +21,16 @@ const STATE_GUARDING := 7
 const STATE_PEERING := 8
 const STATE_UNRIGGING := 9
 const STATE_DOWN := 11
-# Her strides (matron_view.gd STEP_M): one footfall each, a scuttle's
-# shorter; never two within STEP_GAP_S. A rung each RUNG_M of a climb.
+# Her strides upright (matron_view.gd STEP_M): one footfall each, never two
+# within STEP_GAP_S. A rung each RUNG_M of a climb. On all fours, no stride
+# counted off: a palm or a foot going down (matron_rig.gd plants it), heard
+# as flesh on the steel, quiet and low (matron_plant, real recordings), never
+# two within PLANT_GAP_S.
 const STEP_M := 0.7
 const STEP_GAP_S := 0.09
 const RUNG_M := 0.3
+const PLANT_GAP_S := 0.34
+const PLANT_DB := Vector2(-17.0, -9.0)   # walking, and at a run
 # Seeing the player: her dread (or fully changed, her shriek) within
 # DREAD_M, at most once in DREAD_REST_S.
 const DREAD_M := 40.0
@@ -83,6 +88,11 @@ var _pipe_slams_seen := -1
 var _last_rung := 0
 var _last_step := 0
 var _step_gap := 0.0
+var _plant_gap := 0.0
+# Set by matron_view.gd each frame: on all fours (her steps are her plants),
+# and the limbs she put down this frame ({limb, at, surface}, matron_rig.gd).
+var crawling := false
+var plants: Array = []
 var _rattle_in := 0.0
 var _pipe_scrape_in := 0.0
 var _screech_in := 0.0
@@ -260,15 +270,15 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		if _screech_in <= 0.0:
 			_screech_in = randf_range(0.1, 0.16)
 			_cue(&"scrape", center + Vector3(0.0, 1.55, 0.0), -3.0, randf_range(1.7, 2.0))
-	# Steps: a dragged slipper, or on the hunt hands and feet slapping.
+	# Steps upright: a dragged slipper (on all fours, her plants: plant()).
 	_step_gap = maxf(0.0, _step_gap - delta)
-	var steps := int(float(data["stride"]) / (STEP_M * (0.55 if state == STATE_HUNTING else 1.0)))
+	_plant_gap = maxf(0.0, _plant_gap - delta)
+	var steps := int(float(data["stride"]) / STEP_M)
 	if steps != _last_step:
 		_last_step = steps
-		if on and speed > 0.3 and not falling and _step_gap <= 0.0:
+		if on and speed > 0.3 and not falling and not crawling and _step_gap <= 0.0:
 			_step_gap = STEP_GAP_S
-			_cue(&"matron_step", feet, lerpf(-11.0, 0.0, clampf(speed / 6.8, 0.0, 1.0)),
-				randf_range(0.85, 1.1) * (1.25 if state == STATE_HUNTING else 1.0))
+			_cue(&"matron_step", feet, lerpf(-11.0, 0.0, clampf(speed / 6.8, 0.0, 1.0)), randf_range(0.85, 1.1))
 	# The long fall: her shriek as she goes.
 	if falling and not _cry_fall:
 		_cry_fall = true
@@ -325,7 +335,6 @@ func hear_hold(hold: Dictionary) -> void:
 	# Her hand closing on the ankle: the slap of it, and a cluck.
 	var grabs := int(hold.get("grabs", 0))
 	if on and _grabs_seen >= 0 and grabs > _grabs_seen:
-		_cue(&"matron_step", hand, -2.0, 1.4)
 		_cue(&"matron_cluck", _head, 0.0, _pitch())
 	_grabs_seen = grabs
 	# Playing with the arm: the joint creaking in her hand with the strain on
@@ -369,6 +378,16 @@ func hear_hold(hold: Dictionary) -> void:
 	if on and _claims_seen >= 0 and claims > _claims_seen:
 		_cue(&"matron_laugh", _head, 0.0, _pitch())
 	_claims_seen = claims
+
+
+# One of her limbs put down on the steel on all fours (matron_view.gd hands
+# on what matron_rig.gd planted), heard while she is drawn: quiet, low, at
+# most one in PLANT_GAP_S.
+func plant(at: Vector3, speed: float) -> void:
+	if not _on or _plant_gap > 0.0:
+		return
+	_plant_gap = PLANT_GAP_S
+	_cue(&"matron_plant", at, lerpf(PLANT_DB.x, PLANT_DB.y, clampf(speed / 7.0, 0.0, 1.0)), randf_range(0.8, 0.95))
 
 
 func _cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> void:

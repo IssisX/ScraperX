@@ -136,6 +136,7 @@ func _place_pivots() -> void:
 	stand_body_y = hip_drop + thigh + shin + _pos("an_l").y
 	# _pose's hip_y is in units of standing (1.0 = standing): scaled to her.
 	k_height = stand_body_y
+	_ankle_y = _pos("an_l").y
 
 
 func _bone(n: String, pos: Vector3, rot: Quaternion, scl := Vector3.ONE) -> void:
@@ -207,6 +208,27 @@ func bone_world(bone: String) -> Transform3D:
 # bends them just enough to touch what the native says is there.
 const DECK_WRIST_Y := 0.075        # a planted palm's wrist over the deck
 const HANDS_ON_RUNG_Y := 2.6       # the native's kHandsAboveCentre + kStandCentre
+const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-passed
+# On all fours, the order her limbs go down in a cycle of her gait (hind
+# left, fore left, hind right, fore right) and how high a limb is lifted.
+const PLANT_LIMBS := [["an_l", 0.0], ["wr_l", 0.25], ["an_r", 0.5], ["wr_r", 0.75]]
+const PLANT_LIFT_M := 0.12
+# Her gripping arm drawn out to the held ankle, at most this many times its length.
+const HOLD_STRETCH_MAX := 2.7
+# and past that, her shoulder pulled out toward it at most this far
+const HOLD_SHOULDER_M := 0.3
+var _ride_y := 0.0
+var _ride_v := 0.0
+var _ankle_y := 0.097
+var _plants := {}
+# Each limb's middle joint as the reach last bent it (frame, offset from its root).
+var _bend_last := {}
+var _ik_frame := 0
+# This frame: the limbs she put down on all fours ({limb: "an_l" / "wr_l" /
+# "an_r" / "wr_r", at: the world point, surface: what it went down on}), and
+# each arm's stretch.
+var landed: Array[Dictionary] = []
+var stretch := {"l": 1.0, "r": 1.0}
 
 
 func _gpos(n: String) -> Vector3:
@@ -227,6 +249,14 @@ func _lift_body(dy: float) -> void:
 	skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) + Vector3(0.0, dy, 0.0))
 
 
+# Moves a bone by `delta` in skeleton space (through its parent's frame).
+func _shift_bone_global(n: String, delta: Vector3) -> void:
+	var i: int = bone_idx[n]
+	var parent := skel.get_bone_parent(i)
+	var pb := skel.get_bone_global_pose(parent).basis if parent >= 0 else Basis.IDENTITY
+	skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) + pb.inverse() * delta)
+
+
 func _turn_bone_global(n: String, q_world: Quaternion) -> void:
 	var i: int = bone_idx[n]
 	var parent := skel.get_bone_parent(i)
@@ -237,34 +267,172 @@ func _turn_bone_global(n: String, q_world: Quaternion) -> void:
 
 
 # Two-bone reach: the wrist to `target`, the elbow kept in the plane it bent in.
-func _reach(s: String, target: Vector3) -> void:
-	var sh := _gpos("sh_" + s)
-	var el := _gpos("el_" + s)
-	var wr := _gpos("wr_" + s)
+func _reach(s: String, target: Vector3, w := 1.0, key := "") -> void:
+	_reach_chain("sh_" + s, "el_" + s, "wr_" + s, target, w, key)
+
+
+# The same for any two-bone limb: `c` (wrist, ankle) to `target`, the middle
+# joint (elbow, knee) kept in the plane it bent in, on the side it bent to
+# last frame (the pose's own side the first time): it never flips round.
+# `w` below 1 turns each joint only that far from the pose's toward the reach.
+func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, key := "") -> void:
+	if key == "":
+		key = c
+	var ia: int = bone_idx[a]
+	var ib: int = bone_idx[b]
+	var pose_a := skel.get_bone_pose_rotation(ia)
+	var pose_b := skel.get_bone_pose_rotation(ib)
+	var sh := _gpos(a)
+	var el := _gpos(b)
+	var wr := _gpos(c)
 	var l1 := sh.distance_to(el)
 	var l2 := el.distance_to(wr)
 	var to_t := target - sh
 	var d := clampf(to_t.length(), absf(l1 - l2) + 0.01, l1 + l2 - 0.005)
 	var n := (el - sh).cross(wr - sh)
 	if n.length() < 1e-5:
-		n = skel.get_bone_global_pose(bone_idx["el_" + s]).basis.x
+		n = skel.get_bone_global_pose(bone_idx[b]).basis.x
 	n = n.normalized()
-	var a := acos(clampf((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d), -1.0, 1.0))
+	var ang := acos(clampf((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d), -1.0, 1.0))
 	var dir := to_t.normalized()
-	var e_new := sh + dir.rotated(n, a) * l1
-	if (e_new - sh).cross(target - sh).dot(n) < 0.0:
-		e_new = sh + dir.rotated(n, -a) * l1
-	_turn_bone_global("sh_" + s, Quaternion((el - sh).normalized(), (e_new - sh).normalized()))
-	var el2 := _gpos("el_" + s)
-	var wr2 := _gpos("wr_" + s)
-	_turn_bone_global("el_" + s, Quaternion((wr2 - el2).normalized(), (target - el2).normalized()))
+	var e_new := sh + dir.rotated(n, ang) * l1
+	var e_alt := sh + dir.rotated(n, -ang) * l1
+	# the side the joint stands out to, off the line to the target: last
+	# frame's, unless the limb was straight then; else the pose's own
+	var side: Vector3 = (el - sh) - dir * (el - sh).dot(dir)
+	var last: Array = _bend_last.get(key, [])
+	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
+		var was: Vector3 = last[1]
+		var off: Vector3 = was - dir * was.dot(dir)
+		if off.length() > 0.03:
+			side = off
+	if (e_alt - sh).dot(side) > (e_new - sh).dot(side):
+		e_new = e_alt
+	_bend_last[key] = [_ik_frame, e_new - sh]
+	_turn_bone_global(a, Quaternion((el - sh).normalized(), (e_new - sh).normalized()))
+	var el2 := _gpos(b)
+	var wr2 := _gpos(c)
+	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (target - el2).normalized()))
+	if w < 0.999:
+		skel.set_bone_pose_rotation(ia, pose_a.slerp(skel.get_bone_pose_rotation(ia), w))
+		skel.set_bone_pose_rotation(ib, pose_b.slerp(skel.get_bone_pose_rotation(ib), w))
+
+
+# Her body's ride onto what is under her (her lower foot on the deck, her
+# hands up to the rung), low-passed (RIDE_W): her hips carried smoothly over
+# her feet, never jumped a frame to whichever foot is lowest.
+func _ride(dy: float) -> void:
+	var dt: float = float(view._dt) if view != null else 0.0
+	if view == null or bool(view.fresh_frame) or dt <= 0.0:
+		_ride_y = dy
+		_ride_v = 0.0
+	else:
+		var r: Array = view.spring(_ride_y, _ride_v, dy, RIDE_W, dt)
+		_ride_y = float(r[0])
+		_ride_v = float(r[1])
+	_lift_body(_ride_y)
+
+
+# On all fours, her four limbs walk (matron_view.gd's gait phase and cycle):
+# each one planted on the deck and held where it was put (world-locked) while
+# her body goes over it, lifted when the pose is behind it, and swung along a
+# low arc to where it goes down next, ahead. As much as she is on all fours
+# (`w`): from the pose's own limb toward the plant. A limb put down is
+# reported in `landed`, for her sound.
+func _plant_limbs(data: Dictionary, w: float) -> void:
+	var phase: float = view._gait_phase
+	var cycle: float = view._gait_cycle_m
+	var dt: float = view._dt
+	var speed := float(data.get("speed", 0.0))
+	var xf := skel.global_transform
+	var inv := xf.affine_inverse()
+	var fresh: bool = bool(view.fresh_frame) or _plants.is_empty()
+	var lift_h := PLANT_LIFT_M * clampf(speed / 1.5, 0.0, 1.0)
+	var surface := String(data.get("surface", "steel"))
+	for limb in PLANT_LIMBS:
+		var bone: String = limb[0]
+		var hand := bone.begins_with("wr")
+		var s := bone.substr(3)
+		var root_b := ("sh_" if hand else "hp_") + s
+		var mid_b := ("el_" if hand else "kn_") + s
+		var root := _gpos(root_b)
+		var mid := _gpos(mid_b)
+		var tip := _gpos(bone)
+		var length := root.distance_to(mid) + mid.distance_to(tip)
+		var floor_y := DECK_WRIST_Y if hand else _ankle_y
+		var neutral := Vector3(root.x * 1.1, floor_y, root.z + (0.1 if hand else -0.02))
+		var reach_h := sqrt(maxf(0.0, pow(0.92 * length, 2.0) - pow(maxf(0.0, root.y - floor_y), 2.0)))
+		var s_half := clampf(0.8 * reach_h, 0.05, 0.45)
+		var duty := clampf(2.0 * s_half / maxf(cycle, 0.1), 0.25, 0.7)
+		var u := fposmod(phase / TAU + float(limb[1]), 1.0)
+		var now := u < duty
+		var down := neutral + Vector3(0.0, 0.0, s_half)
+		var st: Dictionary = _plants.get(bone, {})
+		var target: Vector3
+		if fresh or st.is_empty():
+			# no walk before: each limb where its phase has it
+			var x := s_half - 2.0 * s_half * (u / duty) if now else -s_half + 2.0 * s_half * ((u - duty) / (1.0 - duty))
+			target = neutral + Vector3(0.0, 0.0, x)
+			st = {"stance": now, "lock": xf * target, "from": target, "at": target}
+		elif now:
+			if not bool(st["stance"]):
+				# down: where the swing has it now (at its end, unless her gait
+				# changed under it)
+				st["lock"] = xf * (st["at"] as Vector3)
+				if w > 0.5 and speed > 0.8:
+					landed.append({"limb": bone, "at": st["lock"], "surface": surface})
+			target = inv * (st["lock"] as Vector3)
+			# dragged too far from under her (a turn, a stop): it slides back
+			if Vector2(target.x - neutral.x, target.z - neutral.z).length() > 1.6 * s_half + 0.1:
+				st["lock"] = (st["lock"] as Vector3).lerp(xf * neutral, 1.0 - exp(-6.0 * dt))
+				target = inv * (st["lock"] as Vector3)
+		else:
+			if bool(st["stance"]):
+				st["from"] = inv * (st["lock"] as Vector3)
+			var sw := clampf((u - duty) / (1.0 - duty), 0.0, 1.0)
+			var e := sw * sw * (3.0 - 2.0 * sw)
+			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, lift_h * sin(PI * sw), 0.0)
+		st["stance"] = now
+		st["at"] = target
+		_plants[bone] = st
+		_reach_chain(root_b, mid_b, bone, target, w, "plant_" + bone)
+
+
+# Her hand on what she holds (the hold: his ankle, and in the rip his arm):
+# the wrist from where her pose has it toward `at_world` as far as `w`, the
+# arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
+# that reach needs, never past HOLD_STRETCH_MAX its own length.
+func hold_reach(s: String, at_world: Vector3, w: float) -> void:
+	var target := skel.global_transform.affine_inverse() * at_world
+	var sh := _gpos("sh_" + s)
+	var el := _gpos("el_" + s)
+	var wr := _gpos("wr_" + s)
+	var arm := sh.distance_to(el) + el.distance_to(wr)
+	var base_s := (p["sh_" + s] as Node3D).scale.y if p.has("sh_" + s) else 1.0
+	var k_max := HOLD_STRETCH_MAX / maxf(base_s, 0.01)
+	var need := sh.distance_to(target)
+	var k := lerpf(1.0, clampf(need / maxf(0.985 * arm, 0.01), 1.0, k_max), w)
+	var beyond := need - 0.985 * arm * k_max
+	if beyond > 0.0:
+		# the arm out as far as it goes: her shoulder pulled up out of her
+		# toward it
+		_shift_bone_global("sh_" + s, (target - sh).normalized() * minf(beyond, HOLD_SHOULDER_M) * w)
+	if k > 1.0001:
+		for bn in ["sh_%s_x" % s, "el_%s_x" % s]:
+			var i: int = bone_idx[bn]
+			skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) * k)
+	stretch[s] = base_s * k
+	_reach(s, target, w, "hold_" + s)
 
 
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
+	stretch["l"] = 1.0
+	stretch["r"] = 1.0
+	landed.clear()
+	_ik_frame += 1
 	var state := int(data.get("state", 0))
-	var turn := int(data.get("turn", 0))
 	# Laid out on the steel, or turned over head first down her pipe: the figure
 	# itself is turned, and the deck is not under her soles.
 	if (state == 11 and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
@@ -272,6 +440,13 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
 	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
+	# On all fours (only the dangerous and the changed, and the Turn's lunge:
+	# a pest hurries after you upright), as much as the view has her down;
+	# whatever she goes on to (a climb, a leap), her limbs leave their plants
+	# as that weight goes, never in a frame.
+	var wf := float(view._w_fours) if view != null else 0.0
+	if wf <= 0.001:
+		_plants.clear()
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
 		var hand: Vector3 = held[0] if held.size() >= 1 else data["climb_hand"]
 		# Two-handed moves (mantle on the lip, jump_catch on the bar,
@@ -292,6 +467,8 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			var dy := sup.y - _lowest_foot()
 			if absf(dy) <= 0.3:
 				_lift_body(dy)
+		if wf > 0.001:
+			_plant_limbs(data, wf)
 		_reach("r", skel.global_transform.affine_inverse() * hand)
 		# On a two-handed move the left wrist goes to the bridge's own
 		# second hold when the native validated one
@@ -306,24 +483,25 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		return
 	if climbing or on_line:
 		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
-		_lift_body(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
+		_ride(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
+		if wf > 0.001:
+			_plant_limbs(data, wf)
 		return
 	if airborne:
+		_ride(0.0)
+	else:
+		# feet on the deck: the body rides up or down to the lower foot
+		_ride(clampf(-_lowest_foot(), -0.15, 0.3))
+	if view == null:
 		return
-	# feet on the deck: the body rides up or down to the lower foot
-	_lift_body(clampf(-_lowest_foot(), -0.15, 0.3))
-	# (A pest hurries after you upright: only the dangerous and the changed run
-	# on all fours, and the Turn's lunge.)
-	var on_all_fours := state == 3 and not bool(data.get("clinging", false)) and \
-		((float(data.get("speed", 0.0)) > 1.0 and int(data.get("stage", 0)) > 0) or turn == 2)
-	if not on_all_fours:
-		return
-	for s in ["l", "r"]:
-		var w := _gpos("wr_" + s)
-		var sh := _gpos("sh_" + s)
-		if w.y < 0.8:
-			# the palm goes down where the arm was swinging, not far ahead of the shoulder
-			_reach(s, Vector3(lerpf(sh.x, w.x, 0.6), DECK_WRIST_Y, lerpf(sh.z + 0.08, w.z, 0.5)))
+	if wf > 0.001:
+		_plant_limbs(data, wf)
+	# Her hand on the climber's ankle, and in the rip her other on his arm
+	# (the view keeps the last of each while her hand comes off it).
+	if float(view._w_hold) > 0.001:
+		hold_reach("r", view._hold_at, float(view._w_hold))
+	if float(view._w_hold2) > 0.001:
+		hold_reach("l", view._hold_at2, float(view._w_hold2))
 
 
 # --- her eyes: each turned in its socket onto `target` (the player's eye), as

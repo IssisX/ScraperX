@@ -42,3 +42,12 @@ own pages.
 | `matron_breath_0.ogg` | https://freesound.org/people/Vampirella17/sounds/82429/ | Old lady breathing - panic | Vampirella17 | CC0 1.0 (LAION Freesound, test row 49349) | 0.25-1.83 |
 | `matron_breath_1.ogg` | https://freesound.org/people/Vampirella17/sounds/82429/ | Old lady breathing - panic | Vampirella17 | CC0 1.0 (LAION Freesound, test row 49349) | 2.50-4.12 |
 | `matron_breath_2.ogg` | https://freesound.org/people/Vampirella17/sounds/82429/ | Old lady breathing - panic | Vampirella17 | CC0 1.0 (LAION Freesound, test row 49349) | 8.70-10.40 |
+| `matron_plant_0.ogg` | https://opengameart.org/content/12-wet-towel-hittingfallingpunching-floor-sounds | 12 wet towel hitting/falling/punching floor sounds (wet_towel_on_floor-05.flac) | qubodup | CC0 1.0 | 0.00-0.40 (whole) |
+| `matron_plant_1.ogg` | https://opengameart.org/content/12-wet-towel-hittingfallingpunching-floor-sounds | 12 wet towel hitting/falling/punching floor sounds (wet_towel_on_floor-09.flac) | qubodup | CC0 1.0 | 0.00-0.63 (whole) |
+| `matron_plant_2.ogg` | https://freesound.org/people/sagetyrtle/sounds/98155/ | washcloth | sagetyrtle | CC0 1.0 (LAION Freesound, test row 48691) | 4.65-5.00, at 0.00 |
+|  | https://opengameart.org/content/37-hitspunches | 37 hits/punches (hit05) | qubodup (Independent nu ljudbank) | CC0 1.0 | 0.17-0.50, at 0.00, 10 dB under |
+
+Her palms and feet on the steel on all fours (`matron_plant_*`, 2026-10-28): each cut is slowed 15%
+(pitch and speed), high-passed at 50 Hz and low-passed at 2.5 kHz so no click is left at its head,
+faded in over 4 ms and out over 60 ms, and peak-normalized to -1 dBFS; `matron_sound.gd` plays them
+quietly (-17 to -9 dB) and low (pitch 0.80-0.95), at most one every 0.34 s.

@@ -9,11 +9,14 @@ extends Node3D
 ## only what her state and the metres she has walked make of it.
 ##
 ## Her gaits: stooped and dragging when unaware, snapping her head about when
-## she has lost the player, and on the hunt down on all fours in a fast,
-## jerking scuttle, head cocked on a neck that keeps looking at you. Every
-## move of hers is drawn through: her body between the simulation's ticks
-## (render_position, render_yaw), her joints never faster than a joint turns
-## (POSE_RAD_S), her hands reaching to each new hold. Nothing jumps a frame.
+## she has lost the player, and on the hunt down on all fours in a slow, heavy
+## walk of her four limbs, each planted and pulled under her, head cocked on a
+## neck that keeps looking at you; in the Turn something in her breaks, slowly,
+## a joint at a time. Every move of hers is drawn through: her body between the
+## simulation's ticks (render_position, render_yaw), her joints on critically
+## damped springs no faster than a joint turns (POSE_W_*, POSE_MAX_RAD_S), every
+## contact (all fours, palms, her hand on the climber) brought in by a weight,
+## her hands reaching to each new hold. Nothing jumps a frame.
 
 const DECK := 154.0
 const LOCKER_CENTRE := Vector3(11.0, 155.1, -126.2)
@@ -38,14 +41,41 @@ const STATE_DOWN := 11        # a blow took her off her feet
 const BRACE_FULL_N := 930.0
 const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
-# How fast her drawn joints may go to the pose her state asks for: a body's
-# limbs whip round this fast, and a change of gait or state is that whip,
-# not a jump. Her hips' height and her limbs' swell likewise.
-const POSE_RAD_S := 20.0
-const POSE_HIP_M_S := 4.0
-const POSE_SCALE_S := 3.0
-# Her whole figure turned or laid over (toppled, head down her pipe).
-const FIGURE_RAD_S := 20.0
+# Her drawn joints go to the pose her state asks for on critically damped
+# springs (solved exactly each frame, so the same at 20 fps as at 60): a
+# change of state eases out of the old pose and into the new one, with no
+# start or stop in a frame. The natural frequencies, rad/s: her limbs, her
+# spine and head, her hips' height, her limbs' swell; and no joint of hers
+# faster than POSE_MAX_RAD_S, POSE_BURST_RAD_S inside a contortion burst.
+const POSE_W_LIMB := 16.0
+const POSE_W_SPINE := 10.0
+const POSE_W_HIP := 9.0
+const POSE_W_SCALE := 7.0
+const POSE_MAX_RAD_S := 11.0
+const POSE_BURST_RAD_S := 19.0
+# Her whole figure laid over (toppled, head down her pipe), about her yaw.
+const FIGURE_W := 9.0
+# Weights that bring a contact in or out (on all fours, palms on the deck,
+# her hand on the held ankle): most of the way in about 0.35 s.
+const BLEND_W := 13.5
+const HOLD_BLEND_W := 10.0
+# On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
+# never twice within FOURS_HOLD_S.
+const FOURS_ON_MPS := 1.3
+const FOURS_OFF_MPS := 0.7
+const FOURS_HOLD_S := 0.4
+# Her gait: metres of ground a whole cycle of her limbs covers, longer the
+# faster she goes (2-3 strides a second at a run, never a scuttle), and no
+# limb of the gait swinging faster than GAIT_MAX_RAD_S.
+const GAIT_CYCLE_MIN_M := 1.4
+const GAIT_CYCLE_MAX_M := 2.6
+const GAIT_MAX_RAD_S := 8.0
+# The hold's states (src/sim/matron.hpp): her hand on the climber's ankle.
+const STATE_GRAB := 12
+const STATE_CARRY := 13
+const STATE_DANGLE := 14
+const STATE_ARMPLAY := 15
+const STATE_SPARE := 17
 # Her hands onto each new hold: most of the way in a tenth of a second.
 const HAND_EASE := 22.0
 const POSE_KEYS := ["torso", "neck", "head", "jaw", "sh_l", "sh_r", "el_l", "el_r",
@@ -87,7 +117,46 @@ var _pose_shown := PackedVector3Array()
 var _scale_shown := PackedVector3Array()
 var _hip_shown := Vector3.ZERO
 var _figure_shown := Quaternion.IDENTITY
+var _figure_v := 0.0
 var _pose_fresh := true
+var _pose_vel := PackedVector3Array()
+var _scale_vel := PackedVector3Array()
+var _hip_vel := Vector3.ZERO
+# The gait's oscillation, added after the springs (they would eat its swing).
+var _gait_add := PackedVector3Array()
+var _gait_hip := 0.0
+var _gait_phase := 0.0
+var _gait_cycle_m := GAIT_CYCLE_MIN_M
+var _last_stride := 0.0
+# On all fours (with hysteresis) and its weight; her hand on the ankle.
+var _fours := false
+var _fours_since := 1.0
+var _w_fours := 0.0
+var _w_fours_v := 0.0
+var _hold := {}
+var _w_hold := 0.0
+var _w_hold_v := 0.0
+var _w_hold2 := 0.0
+var _w_hold2_v := 0.0
+var _hold_at := Vector3.ZERO
+var _hold_at2 := Vector3.ZERO
+var _w_gait := 0.0
+var _w_gait_v := 0.0
+var _dt := 0.0
+var fresh_frame := true
+# The contortion layer: slow, wrong, and now and then a burst held a moment.
+var _contort_k := 0.0
+var _burst_left := 0.0
+var _burst_next := 1.5
+var _burst_kind := 0
+var _burst_n := 0
+var burst_active := false
+# Her limbs put down this frame on all fours (matron_rig.gd landed: limb, world
+# point, surface), for her sounds.
+var plants: Array = []
+var _box_rot := Vector3.ZERO
+var _box_v := Vector3.ZERO
+var _burst_tail := 0.0
 # Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
 # for these).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
@@ -590,23 +659,101 @@ func _apply_exposure(exposure: float) -> void:
 		_look.apply_exposure(exposure)
 
 
+# A critically damped spring, solved exactly over `dt` (stable at any frame
+# rate): `x` toward `target` at natural frequency `w`, its velocity `v`.
+# Returns [x, v].
+static func spring(x: Variant, v: Variant, target: Variant, w: float, dt: float) -> Array:
+	var d: Variant = x - target
+	var e := exp(-w * dt)
+	var tmp: Variant = (v + d * w) * dt
+	return [target + (d + tmp) * e, (v - tmp * w) * e]
+
+
+# On all fours, with hysteresis, and the weight that takes her down onto her
+# hands and back up over BLEND_W (the pose's own springs carry the rest).
+func _fours_gate(data: Dictionary, falling: bool, delta: float) -> void:
+	var turn := int(data.get("turn", 0))
+	var speed := float(data["speed"])
+	var stage := int(data.get("stage", 0))
+	var eligible := int(data["state"]) == STATE_HUNTING and not falling and _fall_speed <= 1.0 \
+		and not (bool(data.get("clinging", false)) or bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
+			or bool(data.get("on_line", false)) or (turn == 0 and bool(data.get("wary", false))))
+	_fours_since += delta
+	if not eligible:
+		if _fours:
+			_fours_since = 0.0
+		_fours = false
+	elif _fours_since >= FOURS_HOLD_S:
+		if not _fours and ((speed > FOURS_ON_MPS and stage > 0) or turn == 2):
+			_fours = true
+			_fours_since = 0.0
+		elif _fours and turn != 2 and (speed < FOURS_OFF_MPS or stage == 0):
+			_fours = false
+			_fours_since = 0.0
+	var want := 1.0 if _fours else 0.0
+	if _pose_fresh:
+		_w_fours = want
+		_w_fours_v = 0.0
+	else:
+		var s := spring(_w_fours, _w_fours_v, want, BLEND_W, delta)
+		_w_fours = clampf(float(s[0]), 0.0, 1.0)
+		_w_fours_v = float(s[1])
+
+
+# Her hand on the climber (the hold, matron_hold.cpp): the weight of her
+# gripping hand on the held ankle, and in the rip of her other hand on his
+# arm, each brought in over HOLD_BLEND_W.
+func _hold_gate(data: Dictionary, delta: float) -> void:
+	var state := int(data["state"])
+	var holding := state >= STATE_GRAB and state <= STATE_SPARE and _hold.has("hand")
+	var want := 1.0 if holding else 0.0
+	var want2 := 1.0 if holding and state == STATE_ARMPLAY and _hold.has("hand2") \
+		and (_hold["hand2"] as Vector3).length_squared() > 1.0e-6 else 0.0
+	# what her hands are on, kept as they come off it
+	if holding:
+		_hold_at = _hold["hand"]
+	if want2 > 0.0:
+		_hold_at2 = _hold["hand2"]
+	if _pose_fresh:
+		_w_hold = want
+		_w_hold_v = 0.0
+		_w_hold2 = want2
+		_w_hold2_v = 0.0
+		return
+	var s := spring(_w_hold, _w_hold_v, want, HOLD_BLEND_W, delta)
+	_w_hold = clampf(float(s[0]), 0.0, 1.0)
+	_w_hold_v = float(s[1])
+	s = spring(_w_hold2, _w_hold2_v, want2, HOLD_BLEND_W, delta)
+	_w_hold2 = clampf(float(s[0]), 0.0, 1.0)
+	_w_hold2_v = float(s[1])
+
+
+# How far forward her arm goes for a point she holds: out ahead for one at her
+# chest, straight up for one over her head.
+func _hold_arm(at: Vector3) -> float:
+	var rel := _figure.global_transform.affine_inverse() * at
+	return lerpf(1.5, 2.85, clampf((rel.y - 1.2) / 1.4, 0.0, 1.0))
+
+
+# The hold as the native has it this frame (main_feel.gd reads it once and
+# hands it on before update_view).
+func set_hold(hold: Dictionary) -> void:
+	_hold = hold
+
+
 # Her real arms are shorter than her old figure's: on all fours her chest
 # comes down to arm's length (a head-down bear crawl, hips high), the arms and
-# the head keeping their angle in the world, so her palms reach the deck.
-func _crawl_retune(data: Dictionary, falling: bool) -> void:
-	var turn := int(data.get("turn", 0))
-	if int(data["state"]) != STATE_HUNTING or falling or _fall_speed > 1.0:
+# the head keeping their angle in the world, so her palms reach the deck. As
+# much of it as she is on all fours (_w_fours), never all at once.
+func _crawl_retune() -> void:
+	if _w_fours <= 0.0:
 		return
-	if bool(data.get("clinging", false)) or bool(data.get("climbing", false)) or bool(data.get("on_pipe", false)) \
-			or bool(data.get("on_line", false)) or (turn == 0 and bool(data.get("wary", false))):
-		return
-	if not ((float(data["speed"]) > 1.0 and int(data.get("stage", 0)) > 0) or turn == 2):
-		return
-	(_p["torso"] as Node3D).rotation.x += 0.75
+	var w := _w_fours
+	(_p["torso"] as Node3D).rotation.x += 0.75 * w
 	for s in ["l", "r"]:
-		(_p["sh_" + s] as Node3D).rotation.x -= 0.75
-	(_p["head"] as Node3D).rotation.x -= 0.55
-	(_p["neck"] as Node3D).rotation.x -= 0.2
+		(_p["sh_" + s] as Node3D).rotation.x -= 0.75 * w
+	(_p["head"] as Node3D).rotation.x -= 0.55 * w
+	(_p["neck"] as Node3D).rotation.x -= 0.2 * w
 
 
 # After the pose and wherever the figure was laid (toppled, head down): the
@@ -615,54 +762,87 @@ func _crawl_retune(data: Dictionary, falling: bool) -> void:
 func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falling: bool) -> void:
 	if _rig == null:
 		return
-	_crawl_retune(data, falling)
+	_crawl_retune()
 	_ease_pose(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
 
 
-# Her joints, hips and limb swell go to this frame's pose no faster than
-# POSE_RAD_S (and its kin): her gait passes through, a change of state is a
-# whip of the limbs instead of a jump.
+# Her joints, hips and limb swell go to this frame's pose on their springs
+# (POSE_W_*), no joint faster than POSE_MAX_RAD_S (POSE_BURST_RAD_S in a held
+# burst of the contortion layer); the gait's own swing is added after.
 func _ease_pose(delta: float) -> void:
 	if _pose_pivots.is_empty():
 		for key in POSE_KEYS:
 			_pose_pivots.append(_p[key] as Node3D)
 		_pose_shown.resize(_pose_pivots.size())
 		_scale_shown.resize(_pose_pivots.size())
+		_pose_vel.resize(_pose_pivots.size())
+		_scale_vel.resize(_pose_pivots.size())
 		_pose_fresh = true
+	if _gait_add.size() != _pose_pivots.size():
+		_gait_add.resize(_pose_pivots.size())
+		_gait_add.fill(Vector3.ZERO)
 	var body: Node3D = _p["body"]
 	if _pose_fresh:
 		for i in _pose_pivots.size():
 			_pose_shown[i] = _pose_pivots[i].rotation
 			_scale_shown[i] = _pose_pivots[i].scale
+			_pose_vel[i] = Vector3.ZERO
+			_scale_vel[i] = Vector3.ZERO
+			_pose_pivots[i].rotation += _gait_add[i]
 		_hip_shown = body.position
+		_hip_vel = Vector3.ZERO
+		body.position += Vector3(0.0, _gait_hip, 0.0)
 		_pose_fresh = false
 		return
+	var cap := POSE_BURST_RAD_S if burst_active else POSE_MAX_RAD_S
 	for i in _pose_pivots.size():
 		var pivot := _pose_pivots[i]
-		_pose_shown[i] = _pose_shown[i].move_toward(pivot.rotation, POSE_RAD_S * delta)
-		pivot.rotation = _pose_shown[i]
-		_scale_shown[i] = _scale_shown[i].move_toward(pivot.scale, POSE_SCALE_S * delta)
+		var s := spring(_pose_shown[i], _pose_vel[i], pivot.rotation, POSE_W_SPINE if i < 4 else POSE_W_LIMB, delta)
+		var v: Vector3 = s[1]
+		if v.length() > cap:
+			# the ceiling: no faster than a body's joint; the step taken at it
+			v = v.normalized() * cap
+			var to: Vector3 = pivot.rotation - _pose_shown[i]
+			_pose_shown[i] = _pose_shown[i] + to.limit_length(cap * delta)
+		else:
+			_pose_shown[i] = s[0]
+		_pose_vel[i] = v
+		pivot.rotation = _pose_shown[i] + _gait_add[i]
+		var sc := spring(_scale_shown[i], _scale_vel[i], pivot.scale, POSE_W_SCALE, delta)
+		_scale_shown[i] = sc[0]
+		_scale_vel[i] = sc[1]
 		pivot.scale = _scale_shown[i]
-	_hip_shown = _hip_shown.move_toward(body.position, POSE_HIP_M_S * delta)
-	body.position = _hip_shown
+	var h := spring(_hip_shown, _hip_vel, body.position, POSE_W_HIP, delta)
+	_hip_shown = h[0]
+	_hip_vel = h[1]
+	body.position = _hip_shown + Vector3(0.0, _gait_hip, 0.0)
 
 
-# Her figure turned and laid as her state says (upright, toppled, head down
-# her pipe), turned over about her middle no faster than FIGURE_RAD_S.
+# Her figure laid as her state says (upright, toppled, head down her pipe):
+# the lay about her yaw on a spring (FIGURE_W); the yaw itself is the
+# simulation's, already drawn between its ticks.
 func _ease_figure(centre: Vector3, delta: float) -> void:
-	var target := _figure.global_basis.get_rotation_quaternion()
+	var yaw_q := Quaternion(Vector3.UP, _drawn_yaw)
+	var target := yaw_q.inverse() * _figure.global_basis.get_rotation_quaternion()
 	var local := _figure.global_basis.inverse() * (_figure.global_position - centre)
 	if _pose_fresh:
 		_figure_shown = target
+		_figure_v = 0.0
 	else:
 		var angle := _figure_shown.angle_to(target)
 		if angle > 1.0e-4:
-			_figure_shown = _figure_shown.slerp(target, minf(1.0, FIGURE_RAD_S * delta / angle))
-	var shown := Basis(_figure_shown)
+			var s := spring(angle, _figure_v, 0.0, FIGURE_W, delta)
+			_figure_v = float(s[1])
+			_figure_shown = _figure_shown.slerp(target, clampf(1.0 - float(s[0]) / angle, 0.0, 1.0))
+		else:
+			_figure_shown = target
+			_figure_v = 0.0
+	var shown := Basis(yaw_q * _figure_shown)
 	_figure.global_basis = shown
 	_figure.global_position = centre + shown * local
 
@@ -683,6 +863,37 @@ func _ease_hands(data: Dictionary, delta: float) -> void:
 	var k := 1.0 - exp(-HAND_EASE * delta)
 	_held_shown[0] = _held_shown[0].lerp(want, k)
 	_held_shown[1] = _held_shown[1].lerp(want2, k)
+
+
+# The contortion layer's bursts: every 1.4-3.6 s one wrong thing (kind 0 the
+# neck cranked round, 1 a knee gone the wrong way, 2 the spine wrung, 3 an
+# elbow folded back; less than the Turn, only 0 and 2), held 0.4-1.2 s and let
+# go. burst_active covers the burst and its easing out (the joints may then go
+# at POSE_BURST_RAD_S).
+func _step_bursts(delta: float, amount: float) -> void:
+	if amount <= 0.0:
+		if _burst_left > 0.0:
+			_burst_left = 0.0
+			_burst_next = 0.6
+		_burst_tail = maxf(0.0, _burst_tail - delta)
+		burst_active = _burst_tail > 0.0
+		return
+	if _burst_left > 0.0:
+		_burst_left -= delta
+		_burst_tail = 0.45
+		if _burst_left <= 0.0:
+			_burst_next = 1.4 + 2.2 * _hash(_burst_n * 7 + 3)
+	else:
+		_burst_tail = maxf(0.0, _burst_tail - delta)
+		_burst_next -= delta
+		if _burst_next <= 0.0:
+			_burst_n += 1
+			_burst_kind = int(_hash(_burst_n * 13 + 1) * 4.0) % 4
+			if amount < 1.0:
+				_burst_kind = 0 if _burst_kind < 2 else 2
+			_burst_left = 0.4 + 0.8 * _hash(_burst_n * 5 + 2)
+			_burst_tail = 0.45
+	burst_active = _burst_left > 0.0 or _burst_tail > 0.0
 
 
 func _limb(up: Node3D, low: Node3D, fwd: float, bend: float, splay := 0.0) -> void:
@@ -718,6 +929,32 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var state := int(data["state"])
 	var speed := float(data["speed"])
 	var stride := float(data["stride"])
+	# The gait's phase, by the ground she covers over a cycle that lengthens
+	# with her speed: continuous whatever her speed does.
+	var stride_step := stride - _last_stride
+	_last_stride = stride
+	if stride_step < 0.0 or stride_step > 1.5 or _pose_fresh:
+		stride_step = 0.0
+	_gait_cycle_m = clampf(1.0 + 0.2 * speed, GAIT_CYCLE_MIN_M, GAIT_CYCLE_MAX_M)
+	_gait_phase = fposmod(_gait_phase + TAU * stride_step / _gait_cycle_m, TAU)
+	var gait_rate := TAU * speed / _gait_cycle_m
+	# A gait limb swings no faster than GAIT_MAX_RAD_S, and the swing grows in
+	# from a standstill.
+	var gait_amp := clampf((speed - 0.3) / 1.2, 0.0, 1.0)
+	var gait_lim := GAIT_MAX_RAD_S / maxf(gait_rate, 0.001)
+	if _gait_add.size() != POSE_KEYS.size():
+		_gait_add.resize(POSE_KEYS.size())
+	_gait_add.fill(Vector3.ZERO)
+	# The gait's swing, each limb's own (+ forward, + bent more).
+	var g_leg_l := 0.0
+	var g_leg_r := 0.0
+	var g_knee_l := 0.0
+	var g_knee_r := 0.0
+	var g_arm_l := 0.0
+	var g_arm_r := 0.0
+	var g_pitch := 0.0
+	var g_hip := 0.0
+	var gait_on := false
 	var sees := bool(data["sees_player"])
 	var body: Node3D = _p["body"]
 	var torso: Node3D = _p["torso"]
@@ -769,6 +1006,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var on_line := bool(data.get("on_line", false))
 	# Her hands up under the bay's leaf, holding it (her trap).
 	var bracing := bool(data.get("bracing", false))
+	# Her hand on the climber (the hold): Grab, Carry, Dangle, ArmPlay, and
+	# letting him go.
+	var holding := state >= STATE_GRAB and state <= STATE_SPARE
+	var hold_bend := 0.0
 	if falling:
 		pitch = 0.2
 		hip_y = 1.0
@@ -1231,42 +1472,67 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.85
 		head_roll = 0.25 * sin(_clock * 1.7)
 		jaw_open = 0.55
-	elif state == STATE_HUNTING and speed > 1.0 and int(data.get("stage", 0)) == 0:
-		# A pest hurries after you upright: an old woman's hobble at a speed
-		# no old woman has, trunk tipped forward, both arms out stiff for
-		# you, one leg dragging a beat behind the other, the head craned
-		# forward and cocked, the mouth hanging.
-		var ph := stride / 0.62 * PI
-		pitch = 0.55 + 0.05 * sin(ph * 2.0)
-		hip_y = 0.95 + 0.04 * sin(ph * 2.0)
-		legs_fwd = 0.55 * sin(ph)
-		legs_back = -0.35 * sin(ph - 0.6)
-		knees = 0.35 + 0.35 * maxf(0.0, cos(ph))
-		arms_fwd = 1.35 + 0.08 * sin(ph * 2.0 + 1.0)
-		arms_bend = 0.2
-		arms_splay = 0.12
-		head_pitch = -0.55
-		head_roll = 0.45 + 0.1 * sin(_clock * 2.6)
-		jaw_open = 0.6 if sees else 0.35
-	elif state == STATE_HUNTING and speed > 1.0:
-		# All fours (dangerous and fully changed): hips high, chest low, arms reaching and elbows out, a
-		# jerking scuttle, the head up and cocked and always on you.
-		var ph := stride / 0.42 * PI
-		pitch = 1.38 + 0.06 * sin(ph * 2.0)
-		hip_y = 0.8 + 0.07 * (0.5 + 0.5 * sin(ph * 2.0 + _noise(_clock * 14.0) * 0.6))
-		legs_fwd = 0.95 + sin(ph) * 0.65
-		legs_back = 0.95 - sin(ph) * 0.65
-		knees = 1.5 + 0.4 * cos(ph)
-		arms_fwd = 1.05 + sin(ph + PI) * 0.55
-		arms_bend = 1.35 - 0.5 * sin(ph + PI)
+	elif state == STATE_HUNTING and _fours:
+		# All fours (dangerous and fully changed, on with FOURS_ON_MPS and off
+		# below FOURS_OFF_MPS): hips high, chest low, arms reaching and elbows
+		# out, the head up and cocked and always on you. A slow, heavy walk of
+		# her four limbs one after another (hind left, fore left, hind right,
+		# fore right), each planted, pulled under her and lifted (matron_rig.gd
+		# plants them): her body low and level over them.
+		var ph := _gait_phase
+		gait_on = true
+		var a_leg := minf(0.45, gait_lim) * gait_amp
+		var a_arm := minf(0.4, gait_lim) * gait_amp
+		pitch = 1.38
+		hip_y = 0.8
+		legs_fwd = 0.95
+		legs_back = 0.95
+		knees = 1.5
+		g_leg_l = a_leg * cos(ph)
+		g_leg_r = a_leg * cos(ph + PI)
+		g_knee_l = 0.6 * a_leg * sin(ph)
+		g_knee_r = 0.6 * a_leg * sin(ph + PI)
+		g_arm_l = a_arm * cos(ph + 0.5 * PI)
+		g_arm_r = a_arm * cos(ph + 1.5 * PI)
+		g_pitch = 0.03 * gait_amp * sin(ph * 2.0)
+		g_hip = 0.006 * gait_amp * sin(ph * 2.0 + 0.8)
+		arms_fwd = 1.05
+		arms_bend = 1.35
 		arms_splay = 0.7
 		head_pitch = -1.05
-		head_roll = 0.65 + 0.3 * sin(_clock * 3.0)
+		head_roll = 0.65 + 0.3 * sin(_clock * 1.3)
 		if sees:
 			head_roll = 1.35
 			jaw_open = 0.75
 		else:
 			jaw_open = 0.35
+	elif state == STATE_HUNTING and speed > 1.0 and int(data.get("stage", 0)) == 0:
+		# A pest hurries after you upright: an old woman's hobble at a speed
+		# no old woman has, trunk tipped forward, both arms out stiff for
+		# you, one leg dragging a beat behind the other, the head craned
+		# forward and cocked, the mouth hanging.
+		var ph := _gait_phase
+		gait_on = true
+		var a_leg := minf(0.55, gait_lim) * gait_amp
+		pitch = 0.55
+		hip_y = 0.95
+		legs_fwd = 0.0
+		legs_back = 0.0
+		knees = 0.35
+		g_leg_l = a_leg * sin(ph)
+		g_leg_r = -0.65 * a_leg * sin(ph - 0.6)
+		g_knee_l = 0.3 * a_leg * (1.0 + cos(ph))
+		g_knee_r = 0.3 * a_leg * (1.0 + cos(ph + PI - 0.6))
+		g_arm_l = 0.06 * gait_amp * sin(ph * 2.0 + 1.0)
+		g_arm_r = g_arm_l
+		g_pitch = 0.04 * gait_amp * sin(ph * 2.0)
+		g_hip = 0.006 * gait_amp * sin(ph * 2.0)
+		arms_fwd = 1.35
+		arms_bend = 0.2
+		arms_splay = 0.12
+		head_pitch = -0.55
+		head_roll = 0.45 + 0.1 * sin(_clock * 2.6)
+		jaw_open = 0.6 if sees else 0.35
 	elif state == STATE_HUNTING:
 		# Stopped on the hunt (cornered by a wall, or listening): low, head snapping.
 		pitch = 1.2
@@ -1352,6 +1618,32 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -0.75
 		head_roll = 0.55 * sin(_clock * 0.9)
 		jaw_open = 0.28
+	elif holding:
+		# Her hand on the climber's ankle (matron_rig.gd reaches it there,
+		# her arm drawn out as long as the reach needs): going for it low
+		# and out (Grab), held up over her head with him upside down at her
+		# side (Carry, and the rip, ArmPlay), leant out over the rail with
+		# him hanging below it (Dangle). Her trunk straightens and leans into
+		# the reach, the gripping shoulder hitched up; her face on him.
+		var at: Vector3 = _hold.get("hand", _figure.global_position + _figure.global_basis.z + Vector3(0.0, 1.4, 0.0))
+		var rel := _figure.global_transform.affine_inverse() * at
+		var up := clampf((rel.y - 1.2) / 1.4, 0.0, 1.0)
+		var out := clampf(Vector2(rel.x, rel.z).length() / 1.4, 0.0, 1.0)
+		var step := stride / 0.42 * PI
+		pitch = lerpf(0.75 + 0.35 * out, 0.08 + 0.15 * out, up)
+		hip_y = 0.97
+		knees = 0.2 + 0.25 * (1.0 - up)
+		legs_fwd = 0.25 * (1.0 - up) + 0.18 * sin(step) * clampf(speed, 0.0, 1.0)
+		legs_back = -0.3 * (1.0 - up) - 0.18 * sin(step) * clampf(speed, 0.0, 1.0)
+		# the arms hang till her hands go to him (below: _hold_arm)
+		arms_fwd = 0.55
+		arms_alt = 0.0
+		arms_bend = 0.35
+		arms_splay = 0.2
+		hold_bend = 0.22 * up * _w_hold
+		head_pitch = -0.35 - 0.75 * up
+		head_roll = 0.45 + 0.25 * sin(_clock * 0.8)
+		jaw_open = 0.9 if state == STATE_ARMPLAY else 0.5
 	else:
 		# Shuffling: stooped, dragging, a head that lolls and twitches.
 		var step := stride / 0.42 * PI
@@ -1368,36 +1660,60 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	# The Turn: something in her breaks. The spine bends where it should not
 	# (a hunch that throws the shoulders to one side and folds the chest the
 	# other way), the neck cracks round till the head looks back over her
-	# shoulder, the elbows fold backwards, one knee goes the wrong way, the
-	# jaw drops off its hinge. The joints wrench round ten times a second.
+	# shoulder, the elbows fold backwards, the jaw drops off its hinge. Slowly:
+	# the wrongness wanders at 0.3-1 Hz, and now and then a burst (a knee gone
+	# the wrong way, the neck cranked round, the spine wrung, an elbow folded
+	# back) is held a moment before it lets go (_step_bursts). Her changed body,
+	# and her hands on the climber, have the same layer, less of it.
 	var twist := 0.0
 	var side_bend := 0.0
 	var elbow_flip := 1.0
 	var knee_flip := 1.0
 	var head_back := 0.0
 	var limb_scale := 1.0
-	var jolt := Vector3.ZERO
+	var contort := 0.0
+	if not falling and not climbing:
+		if turn > 0:
+			contort = 1.0
+		elif holding:
+			contort = 0.6
+		elif state == STATE_HUNTING and int(data.get("stage", 0)) >= 2:
+			contort = 0.5
+	_contort_k = contort
+	_step_bursts(delta, contort)
+	var n1 := _noise(_clock * 0.45 + 101.0) - 0.5
+	var n2 := _noise(_clock * 0.7 + 211.0) - 0.5
+	var n3 := _noise(_clock * 0.33 + 307.0) - 0.5
+	var burst_sign := 1.0 if _hash(_burst_n * 3 + 11) > 0.5 else -1.0
+	var bursting := _burst_left > 0.0
+	if contort > 0.0:
+		twist = 0.6 * contort * n1
+		side_bend = 0.4 * contort * n2
+		head_back = 0.6 * contort * n3
+		if bursting and _burst_kind == 0:
+			head_back += 1.1 * burst_sign * contort
+			head_roll += 0.5 * burst_sign
+		elif bursting and _burst_kind == 2:
+			twist += 0.9 * burst_sign * contort
+			side_bend += 0.35 * contort
 	if turn > 0 and not falling:
-		var beat := _clock * 10.0
-		var r1 := _noise(beat + 101.0) - 0.5
-		var r2 := _noise(beat + 211.0) - 0.5
-		var r3 := _noise(beat + 307.0) - 0.5
-		twist = 0.9 * r1
-		side_bend = 0.55 + 0.4 * r2
+		twist += 0.2 * n1
+		side_bend += 0.55
 		elbow_flip = -1.0
-		# One beat in three the knee goes the right way.
-		var kp := fposmod(beat, 3.0)
-		knee_flip = 1.0 - 2.0 * smoothstep(0.7, 1.0, kp) + 2.0 * smoothstep(2.7, 3.0, kp)
-		head_back = 2.6 if turn == 1 else 1.5 + 1.2 * r3
+		if bursting and _burst_kind == 1:
+			knee_flip = -1.0
+		if bursting and _burst_kind == 3:
+			arms_bend += 0.8
+			arms_splay += 0.3
+		head_back += 2.6 if turn == 1 else 1.4 + 0.8 * n3
 		limb_scale = 1.3
 		jaw_open = 1.35
-		jolt = Vector3(r1, r2 * 0.5, r3) * 0.05
 		if climbing:
 			# On the rungs the Turn breaks her where she hangs: the climb's
 			# pose holds, the joints go wrong.
 			pass
 		elif turn == 1:
-			# The wind-up: still, folded forward at the waist, and shaking.
+			# The wind-up: still, folded forward at the waist, slowly.
 			pitch = 0.55 + 0.9 * (0.5 + 0.5 * sin(_clock * 3.0))
 			hip_y = 0.95
 			arms_fwd = 0.3
@@ -1405,14 +1721,13 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			knees = 0.35
 			legs_fwd = 0.0
 			legs_back = 0.0
-			jolt *= 2.0
 		else:
-			# Lunging: on all fours as on the hunt, but wilder, and a joint
-			# always wrenching somewhere else.
-			pitch = 1.38 + 0.25 * r2
-			arms_fwd = 1.1 + r1
+			# Lunging: on all fours as on the hunt, but wilder, a joint
+			# going somewhere it should not.
+			pitch = 1.38 + 0.4 * n2
+			arms_fwd = 1.1 + 0.8 * n1
 			arms_splay = 1.0
-			knees = 1.6 + r3
+			knees = 1.6 + 0.6 * n3
 			if vaulting:
 				# Over what was in her way: knees tucked up under her, both
 				# hands planted down ahead on it.
@@ -1424,11 +1739,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				arms_fwd = 1.9
 				arms_bend = 0.2
 				arms_splay = 0.35
-	# The Turn's jolt shakes her hips about where the pose has them: an offset,
-	# never a drift.
-	body.position = Vector3(jolt.x, hip_y + jolt.y, jolt.z)
+	body.position = Vector3(0.0, hip_y, 0.0)
 	(_p["torso"] as Node3D).rotation.y = twist
-	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 if turn > 0 else 0.0
+	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 + hold_bend
 	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
 	(_p["sh_r"] as Node3D).scale = Vector3.ONE * limb_scale
 	(_p["hp_l"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
@@ -1449,12 +1762,47 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_splay = 0.08
 		arms_alt = 0.0
 		bend_alt = 0.0
+	# Her arms toward what her hands hold (the ankle, his arm), as much as her
+	# hands are on them: the reach (matron_rig.gd hold_reach) turns each joint
+	# from here, never the long way round.
+	if _w_hold > 0.0 or _w_hold2 > 0.0:
+		var arm_l_now := lerpf(arms_fwd + arms_alt, _hold_arm(_hold_at2), _w_hold2)
+		var arm_r_now := lerpf(arms_fwd - arms_alt, _hold_arm(_hold_at), _w_hold)
+		arms_fwd = 0.5 * (arm_l_now + arm_r_now)
+		arms_alt = 0.5 * (arm_l_now - arm_r_now)
 	_limb(_p["sh_l"], _p["el_l"], arms_fwd + arms_alt + (0.2 * sin(stride * 4.0) if state == STATE_SHUFFLING else 0.0), -(arms_bend + bend_alt) * elbow_flip, -arms_splay)
 	_limb(_p["sh_r"], _p["el_r"], arms_fwd - arms_alt, -(arms_bend - bend_alt) * elbow_flip, arms_splay)
 	if state == STATE_SEARCHING and turn == 0:
 		# The right hand cupped to the ear.
 		_limb(_p["sh_r"], _p["el_r"], 1.6, -2.0, 0.5)
-	_p["box_cord"].rotation = Vector3(sin(stride * 3.0) * 0.4 + 0.2 * (pitch - 0.7), 0.0, sin(stride * 2.2) * 0.3)
+	# The gait's swing, on top of whatever the springs have drawn, coming in
+	# and going out with its gait (_w_gait), never all at once.
+	if _pose_fresh:
+		_w_gait = 1.0 if gait_on else 0.0
+		_w_gait_v = 0.0
+	else:
+		var wg := spring(_w_gait, _w_gait_v, 1.0 if gait_on else 0.0, BLEND_W, delta)
+		_w_gait = clampf(float(wg[0]), 0.0, 1.0)
+		_w_gait_v = float(wg[1])
+	var gk := _w_gait
+	_gait_add[0] = Vector3(g_pitch * gk, 0.0, 0.0)
+	_gait_add[4] = Vector3(-g_arm_l * gk, 0.0, 0.0)
+	_gait_add[5] = Vector3(-g_arm_r * gk, 0.0, 0.0)
+	_gait_add[8] = Vector3(-g_leg_l * gk, 0.0, 0.0)
+	_gait_add[9] = Vector3(-g_leg_r * gk, 0.0, 0.0)
+	_gait_add[10] = Vector3(g_knee_l * knee_flip * gk, 0.0, 0.0)
+	_gait_add[11] = Vector3(g_knee_r * gk, 0.0, 0.0)
+	_gait_hip = g_hip * gk
+	# the box on its cord swings, on a spring, never snapped round
+	var box_want := Vector3(sin(stride * 3.0) * 0.4 + 0.2 * (pitch - 0.7), 0.0, sin(stride * 2.2) * 0.3)
+	if _pose_fresh:
+		_box_rot = box_want
+		_box_v = Vector3.ZERO
+	else:
+		var bs := spring(_box_rot, _box_v, box_want, POSE_W_LIMB, delta)
+		_box_rot = bs[0]
+		_box_v = bs[1]
+	_p["box_cord"].rotation = _box_rot
 	# Fingers: relaxed hooks that curl into claws on the hunt, twitching in the Turn.
 	var curl := 0.35
 	if state == STATE_HUNTING:
@@ -1465,16 +1813,16 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		curl = 1.3
 	if falling:
 		curl = 0.05
-	var beat_f := int(floorf(_clock * 9.0))
+	var beat_f := int(floorf(_clock * 1.5))
 	for hand in ["l", "r"]:
 		var fingers: Array = _p["fingers_" + hand]
 		for f in fingers.size():
 			var c := curl
 			if turn > 0:
-				c = 0.1 + 1.5 * _noise(_clock * 9.0 + float(f * 3 + (0 if hand == "l" else 11)) * 13.0)
-			elif state == STATE_HUNTING and speed > 1.0:
+				c = 0.1 + 1.5 * _noise(_clock * 1.6 + float(f * 3 + (0 if hand == "l" else 11)) * 13.0)
+			elif state == STATE_HUNTING and _fours:
 				# The planted hand spreads, the lifted one claws.
-				var phase := sin(stride / 0.42 * PI + (PI if hand == "l" else 0.0))
+				var phase := cos(_gait_phase + (0.5 * PI if hand == "l" else 1.5 * PI))
 				c = lerpf(0.5, 1.4, 0.5 + 0.5 * phase)
 			var chain: Array = fingers[f]
 			for seg in chain.size():
@@ -1567,6 +1915,10 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_apply_exposure(float(data.get("exposure", 0.0)))
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
 	_figure.rotation = Vector3(0.0, _drawn_yaw, 0.0)
+	_dt = delta
+	fresh_frame = _pose_fresh
+	_fours_gate(data, falling, delta)
+	_hold_gate(data, delta)
 	_pose(data, delta, player_position, falling)
 	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
@@ -1585,7 +1937,14 @@ func _hear(data: Dictionary, delta: float, near: bool, feet: Vector3, player_pos
 	if _sound == null or previewing:
 		return
 	_player_d = feet.distance_to(player_position)
+	# On all fours her steps are her limbs going down (matron_rig.gd plants),
+	# not her stride counted off.
+	_sound.crawling = near and _w_fours > 0.5
+	plants = _rig.landed.duplicate() if near and _rig != null else []
+	_sound.plants = plants
 	_sound.update(data, delta, near, feet, head_world_position(), player_position, falling)
+	for event in plants:
+		_sound.plant(event["at"], float(data["speed"]))
 
 
 # Her hands on the player heard, once a frame after _hear, from the hold
