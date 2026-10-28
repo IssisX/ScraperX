@@ -888,6 +888,7 @@ void run_matron_grab();
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_chase();
+void run_matron_stand();
 void run_matron_ring_descent();
 void run_matron_ways();
 void run_matron_arm();

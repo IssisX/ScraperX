@@ -2164,8 +2164,6 @@ void run_matron_ladders() {
         const char *why;   // what in the world stops her, as measured 2026-10-27
     };
     static constexpr Refused kRefusedToday[] = {
-        {-8.21F, -145.6F, "foot: the 0.30 m plank (band_plate_shop.cpp) ends 0.46 m past the rungs, she needs 0.50 m; "
-                          "the wall side is under the 484 ring's deck"},
         {8.7F, -161.8F, "the cradle's west rail (band_stack.cpp) 0.14 m inside her body on the rungs; "
                         "the 82 m walkway starts 1.1 m along the rungs from the top"},
         {25.8F, -123.8F, "the rungs are inside a 1.6 m tower column (entity 11, 22-33 m)"},

@@ -157,6 +157,13 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     if (!wait_ok && (turn_ == Turn::None || line.parked)) {
         return false;
     }
+    // Frail, a parked line is refused on its stand (below); refused before
+    // the walk there too, or she walks to the stand, refuses it, walks off,
+    // and is sent back to it the next tick: a lead a floor or more below
+    // held her on the 154 stand for 41 s of 60 (sim_tests_matron_stand.cpp).
+    if (line.parked && turn_ == Turn::None) {
+        return false;
+    }
     const float sx = float(line.stand.GetX());
     const float sz = float(line.stand.GetZ());
     const float stand_y = float(line.stand.GetY());

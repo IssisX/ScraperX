@@ -427,7 +427,8 @@ void run_plate_band() {
             "band: the cascade hauls I's cage to 462.25");
     (void)band.advance_frame(1.0);
     require(on_support(band.snapshot(), Simulation::kShopICageEntityId), "band: the rider rides I");
-    require(climb_wet_hold(band, -7.6, -145.6, -1.0, 0.0, false, 484.5),
+    require(walk_to(band, -8.1, -145.6, 8.0) && walk_to(band, -8.1, -147.3, 8.0) && walk_to(band, -7.7, -147.85, 8.0) &&
+                climb_wet_hold(band, -7.6, -148.1, -1.0, 0.0, false, 484.5),
             "band: up the ladder from the cage onto the 484 ring");
     const auto top = band.snapshot();
     std::cout << "PASS scraperx_sim AS-008 band: to_484_s=" << top.simulation_time_seconds - start
