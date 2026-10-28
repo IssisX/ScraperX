@@ -323,6 +323,8 @@ struct MatronSnapshot final {
     double fatal_out_x = 0.0, fatal_out_z = 0.0;
     std::uint32_t fatal_release_beat = 0;
     std::uint32_t fatal_escapes = 0;
+    double fatal_foreseen_mps = 0.0;   // in the hang: his fall from now foreseen to meet steel at this speed down
+    double fatal_toss_mps = 0.0;       // her toss out with the let-go it needs
     std::uint32_t reels = 0;
     std::uint8_t armplay_beat = 0;
     std::uint8_t fatal_beat = 0;     // Matron::Fatal while Claimed
@@ -1608,6 +1610,9 @@ public:
     // Tests only (never bound to the bridge): no edge of her floor counts for
     // the fatality's hang (Matron::rule_out_hang_for_test): its floor version.
     void debug_matron_rule_out_hang() noexcept;
+    // Tests only (never bound to the bridge): every let-go of the hang
+    // foreseen as a fall he would live (Matron::foresee_no_kill_for_test).
+    void debug_matron_foresee_no_kill() noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.

@@ -74,7 +74,8 @@ void project(const float ax, const float az, const float bx, const float bz, con
 
 Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const std::uint32_t moving_layer,
                const std::uint32_t steel_layer, const BodyID player)
-    : physics_(physics), moving_layer_(moving_layer), steel_layer_(steel_layer), player_(player) {
+    : physics_(physics), static_layer_(static_layer), moving_layer_(moving_layer), steel_layer_(steel_layer),
+      player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
     // Her deck: down the middle of each band, the catwalk across, and in off
@@ -3543,7 +3544,18 @@ void Matron::restore(const Saved &saved) {
         fatal_hang_ = false;
         fatal_dropped_ = false;
         fatal_edge_ = RVec3::sZero();
+        fatal_s_ = 0.0F;
+        fatal_damp_ = Vec3::sZero();
+        fatal_check_ticks_ = 0;
+        fatal_lethal_ = false;
+        fatal_toss_ = 0.0F;
+        fatal_lethal_mps_ = 0.0F;
+        fatal_rim0_ = Vec3::sZero();
+        watch_still_s_ = 0.0F;
+        watch_y_ = 0.0F;
         reel_ = false;
+        reel_to_floor_ = false;
+        spare_walk_ = false;
         player_blow_tag_ = false;
         crumb_head_ = 0;
         crumb_on_ = -1;
@@ -4221,6 +4233,8 @@ void Matron::refresh_view() {
     view_.fatal_out_z = fatal_path_ == FatalPath::Hang ? rim_nz_ : 0.0F;
     view_.fatal_release_beat = fatal_release_beat_;
     view_.fatal_escapes = fatal_escapes_;
+    view_.fatal_foreseen_mps = fatal_hang_ ? fatal_lethal_mps_ : 0.0F;
+    view_.fatal_toss_mps = fatal_toss_;
     view_.reels = reels_;
     view_.fatal_beat = state_ == State::Claimed ? static_cast<std::uint8_t>(fatal_beat_) : 0;
     view_.waste_not = waste_not_;

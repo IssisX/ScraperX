@@ -15,9 +15,11 @@
 
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <set>
+#include <string>
 
 namespace {
 using scraperx::sim::InitialSpawn;
@@ -863,9 +865,18 @@ struct FatalRun {
     double least_down = 1.0;      // least: how far his body's up points down (1 straight down), in the hang
     double least_past = 1.0e9;    // least: how far out past the edge his body hangs, in the hang
     double let_go_past = 0.0;     // how far past the edge he was as her fingers opened (< 0: over her deck)
+    // Set down (not her fatality's let-go): in the 1.5 s after her fingers
+    // opened, his fastest fall and his lowest middle.
+    double set_down_fall_mps = 0.0, set_down_low_y = 1.0e9;
     double fall_mps_1s = -1.0;    // his speed down one second after she let go of him over the drop
     double fall_m_1s = 0.0;       // and how far he had fallen by then
     double max_step = 0.0;        // his biggest move in a tick while held
+    double claimed_step = 0.0;    // and while hers (the floor version's beats)
+    // From her let-go to his death: landings he lived and hits he felt (none:
+    // the first meeting kills), and the death's speed and kind.
+    std::uint64_t fall_landings = 0, fall_hits = 0, pins = 0;
+    double death_speed = 0.0;
+    bool death_side_on = false;
     int path = 0;
     bool staggered = false;
     std::vector<int> beats;
@@ -881,6 +892,16 @@ double past_edge(const FatalRun &r, const scraperx::sim::Vector3 &at) {
     return (at.x - r.edge.x) * r.out_x + (at.z - r.edge.z) * r.out_z;
 }
 
+// Her let-go was into a fall that kills: from her fingers opening to his
+// death, no landing he lived and no hit he felt, and the death's speed past
+// the world's lethal one (a landing's, or side-on a hit's).
+bool lethal_first_meeting(const FatalRun &r) {
+    constexpr double kLethalHitMps = 10.0;   // kHitLethalSpeed
+    const double lethal = r.death_side_on ? kLethalHitMps : Simulation::kLethalImpactSpeedMps;
+    return r.release_s >= 0.0 && r.death_s > r.release_s && r.fall_landings == 0 && r.fall_hits == 0 &&
+           r.death_speed >= lethal;
+}
+
 // Her fatality tick by tick, till his death (and its restore, that same
 // tick) or the hold's end with him alive and on his feet. `input(i, m)` runs
 // before each tick.
@@ -892,9 +913,12 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
     r.releases_start = s.matron_state().fatal_release_beat;
     r.escapes_start = s.matron_state().fatal_escapes;
     const auto catches = s.matron_state().catches;
+    const std::uint64_t pins_start = s.snapshot().knee_pin_count;
     bool held_before = false;
+    bool claimed_before = false;
     scraperx::sim::Vector3 last{};
     double release_y = 0.0;
+    std::uint64_t landings_at_release = 0, hits_at_release = 0;
     for (int i = 0; i < static_cast<int>(seconds * Simulation::kTickRateHz); ++i) {
         input(i, s.matron_state());
         tick(s);
@@ -907,10 +931,26 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
         if (p.death_count != r.deaths_start) {
             r.death_s = t;
             r.deaths_held += held_before ? 1U : 0U;
+            r.death_speed = p.death_speed_mps;
+            r.death_side_on = p.death_side_on;
             break;
         }
+        if (r.release_s >= 0.0) {
+            r.fall_landings = p.landing_count - landings_at_release;
+            r.fall_hits = p.hit_count - hits_at_release;
+        }
+        if (p.claimed_by_matron) {
+            r.pins = std::max(r.pins, p.knee_pin_count - pins_start);
+            if (claimed_before) {
+                r.claimed_step = std::max(r.claimed_step, dist3(p.player_position, last));
+            }
+        }
+        claimed_before = p.claimed_by_matron;
         if (m.fatal_path != 0) {
             r.path = m.fatal_path;
+        }
+        if (m.fatal_path == static_cast<int>(Matron::FatalPath::Hang)) {
+            // The edge of the hang (kept once she has hauled him back in).
             r.edge = m.fatal_edge;
             r.out_x = m.fatal_out_x;
             r.out_z = m.fatal_out_z;
@@ -946,10 +986,16 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
         if (r.release_s < 0.0 && m.fatal_release_beat != r.releases_start) {
             r.release_s = t;
             release_y = p.player_position.y;
+            landings_at_release = p.landing_count;
+            hits_at_release = p.hit_count;
         }
         if (r.release_s >= 0.0 && r.fall_mps_1s < 0.0 && t >= r.release_s + 1.0) {
             r.fall_mps_1s = -p.player_linear_velocity.y;
             r.fall_m_1s = release_y - p.player_position.y;
+        }
+        if (r.let_go_s >= 0.0 && r.release_s < 0.0 && t <= r.let_go_s + 1.5) {
+            r.set_down_fall_mps = std::max(r.set_down_fall_mps, -p.player_linear_velocity.y);
+            r.set_down_low_y = std::min(r.set_down_low_y, p.player_position.y);
         }
         if (p.claimed_by_matron) {
             if (r.claimed_s < 0.0) {
@@ -991,8 +1037,10 @@ void report_fatal(const char *name, const FatalRun &r) {
               << r.escapes_start << "->" << r.m.fatal_escapes << ", claims " << r.m.claims << ", player "
               << r.p.player_position.x << "," << r.p.player_position.y << "," << r.p.player_position.z
               << " (checkpoint " << r.checkpoint.x << "," << r.checkpoint.y << "," << r.checkpoint.z << "), arms L/R "
-              << r.p.left_arm_lost << "/" << r.p.right_arm_lost << ", max step " << r.max_step << " m, state "
-              << int(r.m.state) << "\n";
+              << r.p.left_arm_lost << "/" << r.p.right_arm_lost << ", max step " << r.max_step << " m (claimed "
+              << r.claimed_step << " m), pins " << r.pins << ", falling: landings " << r.fall_landings << " hits "
+              << r.fall_hits << ", death " << r.death_speed << " m/s" << (r.death_side_on ? " side-on" : "")
+              << ", state " << int(r.m.state) << "\n";
 }
 } // namespace
 
@@ -1022,25 +1070,81 @@ void run_matron_fatality() {
                 "matron fatality hang: gravity takes him down: a second on, 9.8 m/s and 4.9 m");
         require(r.death_s > r.release_s && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0,
                 "matron fatality hang: the landing kills him, out of her hand");
+        require(lethal_first_meeting(r), "matron fatality hang: the first thing he meets kills him");
         require(dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.held_by_matron && !r.p.left_arm_lost &&
                     !r.p.right_arm_lost && r.p.runs_ended_by_matron == 0 && r.m.claims == 0,
                 "matron fatality hang: the run restarts from the checkpoint, the body whole");
         require(r.m.fatal_path == 0 && !r.m.fatal_hang && !Matron::holding_state(static_cast<Matron::State>(r.m.state)),
                 "matron fatality hang: the restore forgets her fatality");
-        const double length = r.release_s - r.catch_s;
-        require(std::abs(length - static_cast<double>(Matron::kFatalTargetS)) <= 1.0,
-                "matron fatality length: from her hands on him to her letting go, about kFatalTargetS");
-        std::cout << "PASS scraperx_sim matron fatality hang: catch_to_release_s=" << length
-                  << " grip_to_release_s=" << r.release_s - r.grip_s << " release_to_death_s="
+        // The owner's bar (2026-10-28): her fingers closed to her letting go,
+        // 5 to 7 s (the view fades a second after: 6 to 8 s from the catch).
+        const double length = r.release_s - r.grip_s;
+        require(length >= 5.0 && length <= 7.0,
+                "matron fatality length: from her fingers closing on him to her letting go, 5 to 7 s");
+        std::cout << "PASS scraperx_sim matron fatality hang: catch_to_release_s=" << r.release_s - r.catch_s
+                  << " grip_to_release_s=" << length << " release_to_death_s="
                   << r.death_s - r.release_s << " catch_to_death_s=" << r.death_s - r.catch_s
                   << " hand_to_ankle_m=" << r.hand_to_ankle << "\n";
     }
+    // ---- across her band, off the rail: caught where he stands (the review's
+    //      spots, east band, and one on the north band), her 1.6 m along from
+    //      him. At each, the same hang and the same bar: she lets go 5 to 7 s
+    //      after her fingers close, into a fall whose first meeting kills;
+    //      every step in her hand a real move; the release beat once; the
+    //      checkpoint's restore, the body whole ----
+    {
+        const std::array<std::array<double, 2>, 7> spots{{{19.5, -140.0},
+                                                          {20.0, -150.0},
+                                                          {21.0, -155.0},
+                                                          {21.5, -145.0},
+                                                          {21.5, -150.0},
+                                                          {22.5, -145.0},
+                                                          {-6.0, -129.0}}};
+        for (const auto &spot : spots) {
+            Simulation s(InitialSpawn::Deck154);
+            s.place_matron_home(154.0F);
+            s.debug_lose_arm(0);
+            caught_at(s, spot[0], spot[1], spot[0] + 0.3, spot[1] + 1.6);
+            const FatalRun r = fatal_run(s, 40.0, [&](int, const scraperx::sim::MatronSnapshot &) { still_dangerous(s); });
+            std::array<char, 32> name{};
+            (void)std::snprintf(name.data(), name.size(), "(%.1f, %.1f)", spot[0], spot[1]);
+            const std::string at(name.data());
+            report_fatal(("matron fatality band " + at).c_str(), r);
+            const double length = r.release_s - r.grip_s;
+            require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.release_s > 0.0,
+                    ("matron fatality band " + at + ": held out over a drop that kills, and let go").c_str());
+            require(length >= 5.0 && length <= 7.0,
+                    ("matron fatality band " + at + ": her fingers closing to her letting go, 5 to 7 s").c_str());
+            require(lethal_first_meeting(r) && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0,
+                    ("matron fatality band " + at + ": the first thing he meets kills him").c_str());
+            require(r.max_step < 0.2, ("matron fatality band " + at + ": no teleport while held").c_str());
+            require(r.m.fatal_release_beat == r.releases_start + 1,
+                    ("matron fatality band " + at + ": the release beat, once").c_str());
+            require(dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.held_by_matron && !r.p.left_arm_lost &&
+                        !r.p.right_arm_lost && r.p.runs_ended_by_matron == 0 && r.m.claims == 0 && r.m.fatal_path == 0,
+                    ("matron fatality band " + at + ": the run restarts from the checkpoint, whole").c_str());
+            std::cout << "PASS scraperx_sim matron fatality band " << at << ": grip_to_release_s=" << length
+                      << " catch_to_release_s=" << r.release_s - r.catch_s << " release_to_death_s="
+                      << r.death_s - r.release_s << " death_mps=" << r.death_speed << " max_step_m=" << r.max_step
+                      << "\n";
+        }
+    }
     // ---- his blow in the window (his punch's tag, a blow too small to shift
     //      her): she reels back and sets him down on her deck, not into the
-    //      shaft; alive, his one arm left ----
-    {
+    //      shaft; alive, his one arm left. At the act's rail, and at the
+    //      tower's outside off the east band (its deck's edge beam out past
+    //      the lip). Her fingers open only with her deck close under his body:
+    //      he drops onto it, slow, and lies on it ----
+    for (int where = 0; where < 2; ++where) {
         Simulation s(InitialSpawn::Deck154);
-        one_armed_at_the_rail(s, -159.5);
+        if (where == 0) {
+            one_armed_at_the_rail(s, -159.5);
+        } else {
+            s.place_matron_home(154.0F);
+            s.debug_lose_arm(0);
+            caught_at(s, 22.5, -145.0, 22.8, -143.4);
+        }
+        const std::string name = where == 0 ? "matron fatality blow" : "matron fatality blow (22.5, -145.0)";
         bool thrown = false;
         const FatalRun r = fatal_run(s, 40.0, [&](int, const scraperx::sim::MatronSnapshot &m) {
             still_dangerous(s);
@@ -1049,16 +1153,21 @@ void run_matron_fatality() {
                 s.debug_matron_player_blow();
             }
         });
-        report_fatal("matron fatality blow", r);
+        report_fatal(name.c_str(), r);
+        std::cout << "  " << name << ": set down, fastest fall " << r.set_down_fall_mps << " m/s, lowest "
+                  << r.set_down_low_y << "\n";
         require(thrown && r.path == static_cast<int>(Matron::FatalPath::Hang) && r.m.fatal_escapes == r.escapes_start + 1,
-                "matron fatality blow: his blow lands in the window, and frees him");
+                (name + ": his blow lands in the window, and frees him").c_str());
         require(r.m.fatal_release_beat == r.releases_start && r.let_go_past < 0.0,
-                "matron fatality blow: she sets him down on her deck, never lets go of him over the drop");
-        require(r.staggered, "matron fatality blow: she staggers");
+                (name + ": she sets him down on her deck, never lets go of him over the drop").c_str());
+        require(r.set_down_fall_mps < 4.0 && r.set_down_low_y > 153.5,
+                (name + ": her fingers open with her deck close under him: a short drop onto it").c_str());
+        require(r.staggered, (name + ": she staggers").c_str());
         require(r.deaths_end == r.deaths_start && r.p.one_arm && r.p.left_arm_lost && !r.p.right_arm_lost &&
                     r.p.player_position.y > 153.5 && r.p.player_position.y < 156.5 && past_edge(r, r.p.player_position) < -0.2,
-                "matron fatality blow: alive on her deck, his one arm left");
-        std::cout << "PASS scraperx_sim matron fatality blow: let_go_past_m=" << r.let_go_past << "\n";
+                (name + ": alive on her deck, his one arm left").c_str());
+        std::cout << "PASS scraperx_sim " << name << ": let_go_past_m=" << r.let_go_past
+                  << " set_down_fall_mps=" << r.set_down_fall_mps << "\n";
     }
     // ---- no edge in her reach: the floor version, her beats cut short (Lay,
     //      Pin, Wipe, Black), about kFatalFloorS, and the same restart ----
@@ -1073,6 +1182,9 @@ void run_matron_fatality() {
                 "matron fatality floor: no edge, her floor version: laid down, her knee, her apron, black");
         require(r.p.leg_tear_count == 0 && r.m.fatal_release_beat == r.releases_start,
                 "matron fatality floor: no leg torn, nobody let go over a drop");
+        require(r.pins == 1, "matron fatality floor: her knee on the chest");
+        require(r.max_step < 0.2 && r.claimed_step < 0.2,
+                "matron fatality floor: no teleport -- his every step in her hand and under her knee a real move");
         require(r.death_s > r.claimed_s && r.deaths_end == r.deaths_start + 1 &&
                     dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.left_arm_lost && !r.p.right_arm_lost &&
                     r.p.runs_ended_by_matron == 0,
@@ -1083,6 +1195,35 @@ void run_matron_fatality() {
         std::cout << "PASS scraperx_sim matron fatality floor: beats_s=" << beats_s
                   << " grip_to_death_s=" << r.death_s - r.grip_s << " catch_to_death_s=" << r.death_s - r.catch_s
                   << "\n";
+    }
+    // ---- no let-go foreseen to kill him (as if the fall under him were one
+    //      he would live): she never lets go over the drop; by kFatalLetGoByS
+    //      she hauls him back in, sets him down on her deck, and her floor
+    //      version ends it, the same restart ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        one_armed_at_the_rail(s, -159.5);
+        s.debug_matron_foresee_no_kill();
+        const FatalRun r = fatal_run(s, 40.0, [&](int, const scraperx::sim::MatronSnapshot &) { still_dangerous(s); });
+        report_fatal("matron fatality held on", r);
+        std::cout << "  matron fatality held on: set down, fastest fall " << r.set_down_fall_mps << " m/s, lowest "
+                  << r.set_down_low_y << "\n";
+        require(r.hang_ticks > 0 && r.m.fatal_release_beat == r.releases_start,
+                "matron fatality held on: out over the drop, and never let go there");
+        require(r.let_go_s - r.grip_s >= static_cast<double>(Matron::kFatalLetGoByS) && r.let_go_past < 0.0 &&
+                    r.set_down_fall_mps < 4.0 && r.set_down_low_y > 153.5,
+                "matron fatality held on: by kFatalLetGoByS hauled back in, set down on her deck");
+        const std::vector<int> pin_beats{1, 8, 9};
+        require(r.path == static_cast<int>(Matron::FatalPath::Floor) && r.claimed_s >= r.let_go_s &&
+                    r.beats == pin_beats && r.pins == 1,
+                "matron fatality held on: then her floor version where he lies: her knee, her apron, black");
+        require(r.max_step < 0.2 && r.claimed_step < 0.2, "matron fatality held on: no teleport");
+        require(r.death_s > r.claimed_s && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0 &&
+                    dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.left_arm_lost && !r.p.right_arm_lost &&
+                    r.p.runs_ended_by_matron == 0,
+                "matron fatality held on: a death, and the run restarts from the checkpoint, whole");
+        std::cout << "PASS scraperx_sim matron fatality held on: grip_to_set_down_s=" << r.let_go_s - r.grip_s
+                  << " grip_to_death_s=" << r.death_s - r.grip_s << "\n";
     }
     // ---- a save and a load mid-hang: what the death would have been. Two
     //      runs alike to the window's middle save the same bytes; one plays

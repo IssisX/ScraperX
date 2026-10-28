@@ -210,9 +210,18 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         // kFloorLaySeconds into it.
         arm_reach_m_ = kStoopReachM;
         pull_n_ = kHandPullN;
-        stand();
+        const bool deck_under = deck_close_below(p.torso, feet);
+        if (grip_on_ && hold_s_ > kFloorLaySeconds && !deck_under) {
+            // Her deck not close under him (an edge by her): she keeps hold
+            // and walks him on, back from where she faces.
+            const float facing = yaw_;
+            walk_toward(dt, ax - 0.6F * fwd.GetX(), az - 0.6F * fwd.GetZ(), 0.8F);
+            yaw_ = facing;
+        } else {
+            stand();
+        }
         pose_hand(dt, RVec3(at.GetX(), feet + 1.15F, at.GetZ()) + right * kCarrySideM + fwd * 0.4F, kHandSpeedMps);
-        if (grip_on_ && hold_s_ > kFloorLaySeconds) {
+        if (grip_on_ && hold_s_ > kFloorLaySeconds && deck_under) {
             grip_on_ = false;           // her fingers open: not a Release
             let_go_ = true;
             let_go_push_ = Vec3::sZero();

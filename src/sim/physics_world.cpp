@@ -710,7 +710,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         (void)matron_affordances();
     }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
-    matron_->set_player_ankle(player_ankle(bodies));
+    // His ankle; in her fingers, the point of it they hold.
+    matron_->set_player_ankle(grip_ != nullptr ? bodies.GetWorldTransform(player_id_) * grip_on_body_
+                                               : player_ankle(bodies));
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
@@ -819,6 +821,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     if (!died_this_tick && grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
         !takeoff && grip_ == nullptr && !hers) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
+        // Her fatality lets go only into a fall foreseen to land past this.
+        static_assert(static_cast<double>(Matron::kFatalLandMps) > kLethalImpactSpeedMps,
+                      "the fatality's let-go must be foreseen to kill");
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.
             leave_corpse(bodies, pre_contact_velocity_, pre_contact_velocity_.Length(), false);

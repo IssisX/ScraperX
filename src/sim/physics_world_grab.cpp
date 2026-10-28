@@ -289,11 +289,23 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     matron_->set_thrash(grip_ != nullptr ? thrash_ : 0.0F);
     const bool holding = matron_->holding();
     if (!holding && !hand_id_.IsInvalid()) {
-        // Her hand is her own again (the hold over, or a blow took her).
+        // Her hand is her own again (the hold over, or a blow took her). A
+        // let-go she made as the hold ended (the fatality's, with its toss
+        // out; her flinch from his blow) is made here, with its push.
+        JPH::Vec3 push;
+        const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
+        if (let_go) {
+            bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+        }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
         hand_id_ = JPH::BodyID();
+    }
+    if (!holding) {
+        // No hand to let go with: no let-go left over for the next hold.
+        JPH::Vec3 stale;
+        (void)matron_->take_let_go(stale);
     }
     if (holding && hand_id_.IsInvalid()) {
         // Her hand starts where it is: at her shoulder.

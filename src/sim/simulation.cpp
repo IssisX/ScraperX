@@ -1124,6 +1124,10 @@ void Simulation::debug_matron_rule_out_hang() noexcept {
     physics_world_->matron().rule_out_hang_for_test();
 }
 
+void Simulation::debug_matron_foresee_no_kill() noexcept {
+    physics_world_->matron().foresee_no_kill_for_test();
+}
+
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
@@ -1359,6 +1363,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.fatal_out_z = view.fatal_out_z;
     result.fatal_release_beat = view.fatal_release_beat;
     result.fatal_escapes = view.fatal_escapes;
+    result.fatal_foreseen_mps = view.fatal_foreseen_mps;
+    result.fatal_toss_mps = view.fatal_toss_mps;
     result.reels = view.reels;
     result.armplay_beat = view.armplay_beat;
     result.fatal_beat = view.fatal_beat;

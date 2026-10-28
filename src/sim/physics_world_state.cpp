@@ -791,6 +791,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
             const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
             state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
         }
+        // The held ankle only while her fingers hold him (cleared, not left
+        // where it last was).
+        state_.held_ankle = Vector3{};
         if (grip_ != nullptr) {
             const JPH::RVec3 held = bodies.GetWorldTransform(player_id_) * grip_on_body_;
             state_.held_ankle = Vector3{held.GetX(), held.GetY(), held.GetZ()};
