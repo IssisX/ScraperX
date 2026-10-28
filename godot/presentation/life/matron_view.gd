@@ -77,6 +77,9 @@ const STAND_MPS := 0.15
 const NECK_TWIST_MAX := 1.92
 const TWIST_MAX := 2.62
 const LIMB_REACH_M := 0.85
+const UNWIND_FROM := 0.17
+const UNWIND_AFTER_S := 1.5
+const UNWIND_RAD_S := 1.2
 const HOLD_BLEND_W := 16.0
 # On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
 # never twice within FOURS_HOLD_S.
@@ -129,6 +132,7 @@ var _fall_speed := 0.0
 var _drawn_yaw := 0.0
 var _yaw_v := 0.0
 var _twist := 0.0
+var _unwind_s := 0.0
 var _yaw_rate := 0.0
 # How far over she is drawn, toppled (0 standing, 1 laid flat), and the way
 # she went: eased at TOPPLE_S's pace (_topple).
@@ -826,7 +830,11 @@ func _turn_yaw(sim_yaw: float, delta: float, data: Dictionary) -> void:
 		or bool(data.get("on_line", false)) or bool(data.get("clinging", false)) or _fall_speed < -6.0)
 	var was := _drawn_yaw
 	var lag := wrapf(sim_yaw - was, -PI, PI)
-	var hold := TWIST_MAX if on_deck and speed < STAND_MPS else 0.0
+	# a twist held long (over UNWIND_FROM for UNWIND_AFTER_S) her body comes
+	# round under, slowly (UNWIND_RAD_S): the look stays quick, the stance not
+	_unwind_s = _unwind_s + delta if absf(lag) > UNWIND_FROM else 0.0
+	var unwinding := _unwind_s > UNWIND_AFTER_S
+	var hold := TWIST_MAX if on_deck and speed < STAND_MPS and not unwinding else 0.0
 	var want := lag - clampf(lag, -hold, hold)
 	var s := spring(0.0, _yaw_v, want, YAW_W, delta)
 	var rate := YAW_MAX_RAD_S
@@ -834,6 +842,8 @@ func _turn_yaw(sim_yaw: float, delta: float, data: Dictionary) -> void:
 		# what a limb may move in a frame, less what her going carries it
 		var spare := maxf(0.6 * maxf(2.5 * speed * delta, 0.05) - (0.5 * speed + absf(_fall_speed)) * delta, 0.0)
 		rate = minf(rate, spare / (LIMB_REACH_M * delta))
+		if unwinding and speed < STAND_MPS:
+			rate = minf(rate, UNWIND_RAD_S)
 	var step := clampf(float(s[0]), -rate * delta, rate * delta)
 	# past the twist she has, her body goes round just as far as it must
 	if on_deck and absf(lag - step) > TWIST_MAX:

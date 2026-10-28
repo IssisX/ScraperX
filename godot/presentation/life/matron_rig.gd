@@ -248,6 +248,8 @@ var _ik_frame := 0
 # "an_r" / "wr_r", at: the world point, surface: what it went down on}), and
 # each arm's stretch.
 var landed: Array[Dictionary] = []
+# The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
+var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
 
 
@@ -378,6 +380,8 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 	var inv := xf.affine_inverse()
 	var fresh: bool = bool(view.fresh_frame) or _plants.is_empty()
 	var lift_h := PLANT_LIFT_M * clampf(speed / 1.5, 0.0, 1.0)
+	down_mask = 0
+	var bit := 1
 	var surface := String(data.get("surface", "steel"))
 	for limb in PLANT_LIMBS:
 		var bone: String = limb[0]
@@ -423,6 +427,9 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 			var e := sw * sw * (3.0 - 2.0 * sw)
 			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, lift_h * sin(PI * sw), 0.0)
 		st["stance"] = now
+		if now:
+			down_mask |= bit
+		bit *= 2
 		st["at"] = target
 		_plants[bone] = st
 		_reach_chain(root_b, mid_b, bone, target, w, "plant_" + bone)
@@ -529,6 +536,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	var wf := float(view._w_fours) if view != null else 0.0
 	if wf <= 0.001:
 		_plants.clear()
+		down_mask = 0
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
 		var hand: Vector3 = held[0] if held.size() >= 1 else data["climb_hand"]
 		# Two-handed moves (mantle on the lip, jump_catch on the bar,
