@@ -1482,6 +1482,10 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    // Hers the same way: where her body is drawn between two ticks, and her
+    // facing (the shorter way round). matron_state() stays her authority.
+    [[nodiscard]] Vector3 render_matron_position() const noexcept;
+    [[nodiscard]] double render_matron_yaw() const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -1566,8 +1570,10 @@ public:
     void debug_matron_patrol() noexcept;
     // Tests only (never bound to the bridge): her body put standing at `feet`,
     // awake and hunting; and one of her climbs begun from there, up or down:
-    // the corner pipe, or the scanned ladder nearest her off her floor.
-    // False if she found no hold.
+    // the corner pipe (false if she found no hold), or the scanned climb
+    // nearest her off her floor (false if there is none; her Climber steps in
+    // under its first hold from her next tick, and a hold not there is a
+    // failed climb, counted in climb_releases).
     void debug_place_matron(Vector3 feet) noexcept;
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
@@ -1841,6 +1847,10 @@ private:
     bool hook_take_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    Vector3 previous_matron_position_{};
+    double previous_matron_yaw_ = 0.0;
+    // Her body and facing at the start of this tick, for render_matron_*().
+    void keep_matron_render_start() noexcept;
 };
 
 } // namespace scraperx::sim

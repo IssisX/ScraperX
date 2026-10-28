@@ -890,11 +890,19 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 # vignette and the closing black.
 var _hold_cam: RefCounted = preload("res://presentation/life/matron_hold_camera.gd").new()
 var _hold_veil: ColorRect = null
+# The runs she has ended (the native's count). Each one builds the world
+# again, her look over it with it: main.gd has that made behind its card.
+var _runs_she_ended := -1
+var _her_world_new := false
 
 func _feel_hold(delta: float) -> void:
 	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
 		return
 	var hold: Dictionary = _native.get_matron_hold_state()
+	var ended := int(hold.get("runs_ended_by_matron", 0))
+	if _runs_she_ended >= 0 and ended > _runs_she_ended:
+		_her_world_new = true
+	_runs_she_ended = ended
 	var held_basis: Basis = _hold_cam.orient(hold, _camera.basis, _yaw, _pitch, delta, _reduced_motion)
 	# Only while she has the body: written back every frame, an unchanged
 	# basis still re-reads the camera's angles inside +-90 deg of pitch, and a

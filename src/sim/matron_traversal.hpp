@@ -198,6 +198,10 @@ struct ClimbView {
     float leg_travel_m = 0.0F;    // extension of the planted leg during this push
     Failure last_failure = Failure::None;
     JPH::RVec3 hand = JPH::RVec3::sZero();
+    // This tick a top-out has her up: her middle over the floor it was going
+    // for, her soles within the clearance it pulled them to over the lip. Only
+    // her weight is left to come onto her feet (its own Done waits for that).
+    bool topped = false;
 };
 
 // Bodies her probes never see: herself, the player, anything else named.
@@ -233,6 +237,8 @@ public:
     float stand(float dt);
     [[nodiscard]] const MoveSpec &spec() const noexcept { return spec_; }
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
+    // The hold her hand has now (its body and member; invalid when none).
+    [[nodiscard]] const Hold &hold() const noexcept { return hold_; }
     // Her velocity against what she pushes on (the hold at its anchor, else
     // the floor under her): the velocity her power budget is charged on.
     [[nodiscard]] JPH::Vec3 relative_velocity() const;

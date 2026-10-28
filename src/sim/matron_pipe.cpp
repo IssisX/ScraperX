@@ -3,7 +3,7 @@
 // she goes to. Gravity is on all the way and she meets every steel she
 // passes. Her hands are one capped force at a real contact, the rail's top or
 // the riser's face, kept in that body's frame and checked every step, as on
-// her ladders (matron.cpp climb()); a dynamic support takes the reaction. On
+// her ladders (her Climber's holds); a dynamic support takes the reaction. On
 // the riser's face the grip is friction: what holds her up or lets her down
 // is at most her squeeze times kPipeFriction. A hand that loses its steel, a
 // load past her grip for a moment, or no headway for 2.5 s lets go: on the

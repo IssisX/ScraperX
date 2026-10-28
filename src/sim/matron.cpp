@@ -275,7 +275,7 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
-    return index >= 0 && begin_climb(index, down);
+    return index >= 0 && take_climb(index, down);
 }
 
 void Matron::remove_body() {
@@ -2643,7 +2643,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         walk_toward(dt, c.x, c.z, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
         climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-        begin_climb(bay_climb_);
+        take_climb(bay_climb_);
         return true;
     }
     return false;
@@ -4683,7 +4683,10 @@ void Matron::refresh_view() {
     view_.foot_power_w = foot_power_w_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
-    view_.mantling = mantling_;
+    // Over a climb's head: her rung way's move pushing her up over its lip.
+    view_.mantling = way == &climb_way_ && shown.move_active &&
+                     (shown.move == traversal::MoveKind::Mantle ||
+                      (shown.move == traversal::MoveKind::RungUp && shown.phase >= 3));
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.lead_floor_y = lead_floor_;
@@ -4788,8 +4791,8 @@ void Matron::refresh_view() {
     // moves her, grips, or changes a climb: it only reports two points
     // for the presentation to pose to, computed from the climb geometry
     // and probed against the world. Movement code never reads these
-    // fields, and no climb state (climb_, climb_support_, climb_hand_)
-    // is written here.
+    // fields, and no climb state (climb_, climber_, climb_hand_) is
+    // written here.
     view_.climb_hand2 = JPH::RVec3::sZero();
     view_.climb_hand2_known = false;
     view_.climb_feet_support = JPH::RVec3::sZero();
@@ -4797,14 +4800,14 @@ void Matron::refresh_view() {
     if (shown.hand_held) {
         // Her left, one shoulder-width (0.45 m) along the rung or lip
         // from the first hold, at the same height. On rungs across her
-        // facing (a legacy climb) her left runs along them; otherwise it
+        // facing (her rung way's climb) her left runs along them; otherwise it
         // is her yaw's left, (-cos yaw, 0, sin yaw), matching the
         // figure's local -x.
         const Vec3 left = shown.rungs_across ? shown.rung_left : Vec3(-std::cos(yaw_), 0.0F, std::sin(yaw_));
         if (left.LengthSq() > 1.0e-6F) {
             const RVec3 second = view_.climb_hand + left.Normalized() * 0.45F;
             view_.climb_hand2 = second;
-            // A legacy climb can prove the second point: it must rest
+            // Her rung way's climb can prove the second point: it must rest
             // on the very support and member the first hand holds.
             // Journey and routecraft climbs carry no support handle
             // here, so their candidate stays reported-but-unknown and
@@ -4832,8 +4835,8 @@ void Matron::refresh_view() {
         }
     }
     if (body_in_world_) {
-        // Feet: the surface straight under her body centre, probed like
-        // climb()'s floor check (centre down past her soles).
+        // Feet: the surface straight under her body centre, probed from
+        // her centre down past her soles.
         const RVec3 at(view_.x, view_.y, view_.z);
         const ClimbBodyFilter filter(body_, player_);
         RayCastResult floor_hit;
