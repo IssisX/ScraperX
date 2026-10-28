@@ -1253,7 +1253,15 @@ bool Matron::way_clear(const float fx, const float fz, const float tx, const flo
     // slides aside; a post does not.
     class BuiltOnly final : public BodyFilter {
     public:
-        bool ShouldCollideLocked(const Body &body) const override { return body.IsStatic(); }
+        // And a machine at rest too heavy for her to shove aside (a parked
+        // cage: half again her own mass), standing in the way as a post does.
+        bool ShouldCollideLocked(const Body &body) const override {
+            if (body.IsStatic()) {
+                return true;
+            }
+            const float inv = body.GetMotionPropertiesUnchecked() != nullptr ? body.GetMotionPropertiesUnchecked()->GetInverseMass() : 0.0F;
+            return inv > 0.0F && inv < 1.0F / (1.5F * kMassKg) && body.GetLinearVelocity().LengthSq() < 0.01F;
+        }
     };
     const BuiltOnly built;
     // Her width at her hips, swept the whole way.
