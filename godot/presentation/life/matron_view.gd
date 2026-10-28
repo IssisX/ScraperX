@@ -767,8 +767,10 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	# what her hands are on, kept as they come off it; a jump in it eased
 	if holding:
 		# the ankle in her hand (held_ankle, from a native that reports it,
-		# PR #20), else her hand's own point
-		var raw: Vector3 = _hold["held_ankle"] if _hold.has("held_ankle") else _hold["hand"]
+		# PR #20, once her fingers are on it: zero before), else her hand's
+		# own point
+		var ankle: Vector3 = _hold.get("held_ankle", Vector3.ZERO)
+		var raw: Vector3 = ankle if ankle.length_squared() > 1.0e-6 else _hold["hand"]
 		if _w_hold > 0.001 and not _pose_fresh and raw.distance_to(_hold_raw) > _tick_reach(delta):
 			_hold_off += _hold_raw - raw
 		_hold_raw = raw
@@ -2144,6 +2146,14 @@ func _hear(data: Dictionary, delta: float, near: bool, feet: Vector3, player_pos
 func hear_hold(hold: Dictionary) -> void:
 	if _sound != null and not previewing:
 		_sound.hear_hold(hold)
+
+
+## Her holding hand's wrist (the one on the ankle), drawn, while it is on
+## him; INF otherwise. His drawn ankle is put in it (gore_victim.gd).
+func holding_hand_world() -> Vector3:
+	if _rig == null or _w_hold < 0.5:
+		return Vector3.INF
+	return _rig.bone_world("wr_r").origin
 
 
 # For a test and the look scenes: where her head is, and how far gone the

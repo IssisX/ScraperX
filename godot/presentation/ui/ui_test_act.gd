@@ -275,6 +275,95 @@ func _act_punch_watch() -> void:
 		_act_punch_over += 1
 
 
+# The view while her hands have the climber (matron_hold_camera.gd), watched
+# every frame of her holds and logged: the frames held, those in third
+# person, the farthest her drawn hand is from his drawn held ankle, the least
+# free run past the camera. With --capture, a still at each moment of it
+# (grab, mid-hold, the hang window, the let-go, black, the fade in), taken
+# without holding the simulation still, so the run is the same with or
+# without pictures.
+var _act_cam := {"held": 0, "third": 0, "gap_max": 0.0, "gap_frames": 0, "clear_min": INF, "held_s": 0.0}
+var _act_snapped := {}
+
+func _act_cam_watch() -> void:
+	var hold: Dictionary = _native().get_matron_hold_state()
+	var cam: RefCounted = _main._hold_cam
+	var third := bool(cam.third_person())
+	if bool(hold["held"]):
+		_act_cam["held"] = int(_act_cam["held"]) + 1
+		_act_cam["held_s"] = float(_act_cam["held_s"]) + get_process_delta_time()
+		if third:
+			_act_cam["third"] = int(_act_cam["third"]) + 1
+		var gore: Node = _main._gore
+		if gore != null and gore.victim.visible and _main._matron_view._rig != null:
+			var ankle: Vector3 = gore.victim.held_ankle_drawn()
+			if ankle.is_finite():
+				var hand: Vector3 = _main._matron_view._rig.bone_world("wr_r").origin
+				_act_cam["gap_max"] = maxf(float(_act_cam["gap_max"]), hand.distance_to(ankle))
+				_act_cam["gap_frames"] = int(_act_cam["gap_frames"]) + 1
+		if float(_act_cam["held_s"]) >= 0.5:
+			_act_snap("act_hold_grab")
+		if float(_act_cam["held_s"]) >= 2.5:
+			_act_snap("act_hold_mid")
+	else:
+		_act_cam["held_s"] = 0.0
+	if third and float(cam.black()) < 0.01 and float(cam.clearance) < INF:
+		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
+	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
+		_act_snap("act_hold_hang_window")
+	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
+		_act_snap("act_hold_let_go")
+	if float(cam.since_let_go()) >= 0.42 and float(cam.black()) < 0.05:
+		_act_snap("act_hold_pull_out")
+	if int(cam.lets_go_seen) > 0 and float(cam.black()) >= 0.999 and int(cam.deaths_waited) == 0:
+		_act_snap("act_hold_black")
+	if int(cam.deaths_waited) > 0 and float(cam.black()) > 0.3 and float(cam.black()) < 0.7:
+		_act_snap("act_hold_fade_in")
+
+
+func _act_cam_log() -> void:
+	var cam: RefCounted = _main._hold_cam
+	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f" % [
+		int(_act_cam["held"]), int(_act_cam["third"]), int(_act_cam["gap_frames"]), float(_act_cam["gap_max"]),
+		float(_act_cam["clear_min"]), int(cam.lets_go_seen), int(cam.deaths_waited), float(cam.slow_ticks_s),
+		float(cam.black_full_after), float(cam.death_after)])
+
+
+# A still of this frame (once a pose), drawn and written two frames' ends
+# on; the simulation runs on.
+var _act_snaps_due: Array = []   # [pose, frame ends left]
+var _act_snap_drawing_was := true
+
+func _act_snap(pose: String) -> void:
+	if not _act_capturing() or _act_snapped.has(pose):
+		return
+	_act_snapped[pose] = true
+	if _act_snaps_due.is_empty():
+		_act_snap_drawing_was = _act_drawing
+	_act_draw(true)
+	_act_snaps_due.append([pose, 2])
+	if not RenderingServer.frame_post_draw.is_connected(_act_snap_post_draw):
+		RenderingServer.frame_post_draw.connect(_act_snap_post_draw)
+
+
+func _act_snap_post_draw() -> void:
+	if _act_snaps_due.is_empty():
+		return
+	var due: Array = []
+	for item in _act_snaps_due:
+		var left := int(item[1]) - 1
+		if left > 0:
+			due.append([item[0], left])
+			continue
+		var path := "%s_%s.png" % [_capture_prefix, String(item[0])]
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		if get_viewport().get_texture().get_image().save_png(path) == OK:
+			print("SCRAPERX_UITEST_SCREENSHOT %s" % path)
+	_act_snaps_due = due
+	if due.is_empty():
+		_act_draw(_act_snap_drawing_was)
+
+
 func _act_play(device: int) -> bool:
 	if not await _act_asleep(device):
 		return false
@@ -578,6 +667,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		if not await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "rail_grab"):
 			return _fail("at the rail her hands never came on the climber (state %d)" % int(_matron_state()["state"]))
 		await _act_wait(func() -> bool:
+			_act_cam_watch()
 			return int(_native().get_matron_hold_state()["grabs"]) >= 1 or not _act_in_her_hands(), 5.0, "rail_grab")
 		if int(_native().get_matron_hold_state()["grabs"]) >= 1:
 			break
@@ -593,6 +683,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	_act_log("punch_in_her_hand")
 	var torn: bool = await _act_wait(func() -> bool:
 		_act_punch_watch()
+		_act_cam_watch()
 		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
 		"rail_hold")
 	_act_log("punch_watch action_punch=%d button_hidden=%d" % [_act_punch_missed, _act_punch_over])
@@ -602,7 +693,9 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if torn and _act_in_her_hands():
 		await _act_frame_her()
 		await _act_pose("act_dangerous_arm")
-	var over: bool = torn and await _act_wait(func() -> bool: return not _act_in_her_hands(), 90.0, "rail_hold")
+	var over: bool = torn and await _act_wait(func() -> bool:
+		_act_cam_watch()
+		return not _act_in_her_hands(), 90.0, "rail_hold")
 	if not over:
 		return _fail("dangerous, her hold on the climber at the rail never ended (state %d)" % int(_matron_state()["state"]))
 	await _seconds(0.5)
@@ -637,6 +730,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	var deaths_before := int(_native().get_death_count())
 	_act_deaths_allowed = deaths_before + 1
 	var died: bool = await _act_watch_her(func() -> bool:
+		_act_cam_watch()
 		if int(_native().get_death_count()) > deaths_before:
 			return true
 		var h: Dictionary = _native().get_matron_hold_state()
@@ -645,6 +739,11 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		seen["released"] = bool(seen["released"]) or int(h["fatal_release_beat"]) > releases_before
 		return false, 240.0, "changed_catch", "act_changed_coming", 3.0)
 	_act_log("hers tears=%d path=%d released=%s" % [int(seen["tears"]), int(seen["path"]), str(seen["released"])])
+	# The view comes up out of black on the restored body (watched, not a check).
+	await _act_wait(func() -> bool:
+		_act_cam_watch()
+		return float(_main._hold_cam.black()) < 0.01, 3.0, "fade_in")
+	_act_cam_log()
 	if not died:
 		return _fail("fully changed, her second catch never ended in the fatality's death (tears %d, path %d, released %s)" % [
 			int(seen["tears"]), int(seen["path"]), str(seen["released"])])
