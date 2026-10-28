@@ -1375,6 +1375,18 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.climb_feet_support = {view.climb_feet_support.GetX(), view.climb_feet_support.GetY(),
                                  view.climb_feet_support.GetZ()};
     result.climb_feet_support_known = view.climb_feet_support_known;
+    result.contact_supported = view.contact_supported;
+    result.contact_feet = {view.contact_feet.GetX(), view.contact_feet.GetY(), view.contact_feet.GetZ()};
+    result.contact_feet_body = view.contact_feet_body.GetIndexAndSequenceNumber();
+    result.contact_feet_sub = view.contact_feet_sub.GetValue();
+    result.contact_hand_held = view.contact_hand_held;
+    result.contact_hand = {view.contact_hand.GetX(), view.contact_hand.GetY(), view.contact_hand.GetZ()};
+    result.contact_hand_body = view.contact_hand_body.GetIndexAndSequenceNumber();
+    result.contact_hand_sub = view.contact_hand_sub.GetValue();
+    result.contact_hand2_held = view.contact_hand2_held;
+    result.contact_hand2 = {view.contact_hand2.GetX(), view.contact_hand2.GetY(), view.contact_hand2.GetZ()};
+    result.contact_hand2_body = view.contact_hand2_body.GetIndexAndSequenceNumber();
+    result.contact_line = view.contact_line;
     result.climb_move = view.climb_move;
     result.climb_phase = view.climb_phase;
     result.climb_move_active = view.climb_move_active;

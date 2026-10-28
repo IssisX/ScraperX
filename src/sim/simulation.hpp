@@ -221,6 +221,21 @@ struct MatronSnapshot final {
     bool climb_hand2_known = false;
     Vector3 climb_feet_support{};
     bool climb_feet_support_known = false;
+    // Her contacts as the simulation has them (Matron::View contact_*): her
+    // feet's floor, her hand's grip, a second grip, a line under her arms.
+    // Bodies and members are Jolt ids (0xffffffff: none).
+    bool contact_supported = false;
+    Vector3 contact_feet{};
+    std::uint32_t contact_feet_body = 0xffffffffU;
+    std::uint32_t contact_feet_sub = 0xffffffffU;
+    bool contact_hand_held = false;
+    Vector3 contact_hand{};
+    std::uint32_t contact_hand_body = 0xffffffffU;
+    std::uint32_t contact_hand_sub = 0xffffffffU;
+    bool contact_hand2_held = false;
+    Vector3 contact_hand2{};
+    std::uint32_t contact_hand2_body = 0xffffffffU;
+    bool contact_line = false;
     traversal::MoveKind climb_move{};
     int climb_phase = 0;
     bool climb_move_active = false;

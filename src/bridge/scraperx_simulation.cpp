@@ -1700,6 +1700,25 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["climb_feet_support"] =
         godot::Vector3(state.climb_feet_support.x, state.climb_feet_support.y, state.climb_feet_support.z);
     out["climb_feet_support_known"] = state.climb_feet_support_known;
+    // Her contacts as the simulation has them: the presentation plants a limb
+    // only on these, and lets every plant go when she is not supported.
+    out["contact_supported"] = state.contact_supported;
+    out["contact_feet"] = godot::Vector3(static_cast<real_t>(state.contact_feet.x),
+                                         static_cast<real_t>(state.contact_feet.y),
+                                         static_cast<real_t>(state.contact_feet.z));
+    out["contact_feet_body"] = static_cast<std::int64_t>(state.contact_feet_body);
+    out["contact_feet_sub"] = static_cast<std::int64_t>(state.contact_feet_sub);
+    out["contact_hand_held"] = state.contact_hand_held;
+    out["contact_hand"] = godot::Vector3(static_cast<real_t>(state.contact_hand.x),
+                                         static_cast<real_t>(state.contact_hand.y),
+                                         static_cast<real_t>(state.contact_hand.z));
+    out["contact_hand_body"] = static_cast<std::int64_t>(state.contact_hand_body);
+    out["contact_hand_sub"] = static_cast<std::int64_t>(state.contact_hand_sub);
+    out["contact_hand2_held"] = state.contact_hand2_held;
+    out["contact_hand2"] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
+                                          static_cast<real_t>(state.contact_hand2.y),
+                                          static_cast<real_t>(state.contact_hand2.z));
+    out["contact_line"] = state.contact_line;
     out["climb_sliding"] = state.climb_sliding;
     out["climb_leg_driving"] = state.climb_leg_driving;
     out["climb_bar_traverse"] = state.climb_bar_traverse;
