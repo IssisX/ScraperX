@@ -2470,8 +2470,14 @@ int AffordanceMap::region_near_top(const float y, const float tol) const {
 }
 
 void AffordanceMap::add_edge(Edge edge) {
+    // One way per pair of floors and kind, except ladders: two ladders
+    // between the same floors are two ways (each its own line), so one
+    // never hides the other from her plan.
+    const bool ladder = edge.kind == MoveKind::RungUp || edge.kind == MoveKind::RungDown ||
+                        edge.kind == MoveKind::JumpCatch;
     for (Edge &e : edges_) {
-        if (e.from == edge.from && e.to == edge.to && e.kind == edge.kind) {
+        if (e.from == edge.from && e.to == edge.to && e.kind == edge.kind &&
+            (!ladder || horizontal(e.spec.line - edge.spec.line) < 0.6F)) {
             if ((edge.usable && !e.usable) || (edge.usable == e.usable && edge.cost < e.cost)) {
                 e = std::move(edge);
             }

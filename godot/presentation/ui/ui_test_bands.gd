@@ -650,8 +650,12 @@ func _shop_i(device: int) -> bool:
 
 # Up the ladder from I's cage onto the 484 ring.
 func _shop_ladder(device: int) -> bool:
-	if not await _walk_to(device, Vector2(-7.6, -145.6), 0.08, 6.0):
-		return _fail("the step to the ladder in I's cage stalled at %s" % str(_position()))
+	# The 462 ladder stands 2.5 m south of the cage's line (kILadderZ = kIZ - 2.5
+	# in band_plate_shop.cpp): west off the cage, south along the landing, onto
+	# the foot board, as the sim's band and ascent tests walk it.
+	for waypoint: Vector2 in [Vector2(-8.1, -145.6), Vector2(-8.1, -147.3), Vector2(-7.7, -147.85), Vector2(-7.6, -148.1)]:
+		if not await _walk_to(device, waypoint, 0.08, 8.0):
+			return _fail("the step to the ladder in I's cage stalled at %s" % str(_position()))
 	await _face(Vector2(-1.0, 0.0))
 	if not await _offered(&"climb", "CLIMB", "HOLD"):
 		return _fail("Action read '%s %s' facing the ladder from I's cage, not CLIMB HOLD" % [_action_label(),

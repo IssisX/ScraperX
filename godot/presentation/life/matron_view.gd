@@ -38,8 +38,6 @@ const STATE_DOWN := 11        # a blow took her off her feet
 const BRACE_FULL_N := 930.0
 const TOPPLE_S := 0.35   # her fall to the steel, and her rise off it
 const BOLT_COUNT := 4
-const STEP_M := 0.7
-const HEARD_MUSIC_M := 55.0
 # How fast her drawn joints may go to the pose her state asks for: a body's
 # limbs whip round this fast, and a change of gait or state is that whip,
 # not a jump. Her hips' height and her limbs' swell likewise.
@@ -61,17 +59,19 @@ const FOREARM := 0.5
 const TORSO := 0.62
 const NECK := 0.16
 
+const MatronSound := preload("res://presentation/audio/matron_sound.gd")
+
 var _native: Object
 var _audio: Object
+# What she does heard (presentation/audio/matron_sound.gd): made with the
+# director, none without one.
+var _sound: RefCounted
 var _clock := 0.0
 var _last_state := -1
 var _state_age := 0.0
 var _bolts_seen := 0
 var _knock_in := 0.6
-var _breath_in := 1.0
-var _shriek_in := 0.0
 var _player_d := 20.0   # her last distance to the player, for her dread
-var _last_step := 0
 var _last_pos := Vector3.ZERO
 var _fall_speed := 0.0
 # Her facing as drawn this frame (between ticks), and her joints, hips, limb
@@ -92,26 +92,8 @@ var _pose_fresh := true
 # for these).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
 var _hands_fresh := true
-var _was_seen := false
-var _last_turn := 0
-var _cry_fall := false
-var _vaults_seen := -1
-var _knockdowns_seen := -1
-var _staggers_seen := -1
-var _shoves_seen := -1
-var _throws_seen := -1
-var _leaps_seen := -1
-var _unrigs_seen := -1
-var _climbs_seen := -1
-var _last_rung := 0
-var _pipe_holds_seen := -1
-var _pipe_flanges_seen := -1
-var _pipe_slams_seen := -1
-var _pipe_scrape_in := 0.0
-var _rattle_in := 0.0
-# Going down a line's bare cable: the sparks off her forearms and the screech.
+# Going down a line's bare cable: the sparks off her forearms.
 var _sparks: CPUParticles3D
-var _screech_in := 0.0
 var _planks: Array[MeshInstance3D] = []
 var _plank_bolted: Array[bool] = []
 # The locker.
@@ -144,6 +126,8 @@ func setup(native: Object, audio: Object = null) -> void:
 	name = "MatronView"
 	_native = native
 	_audio = audio
+	if audio != null:
+		_sound = MatronSound.new(audio)
 	_build_locker()
 	_build_figure()
 	_build_planks()
@@ -408,7 +392,7 @@ func _tear_door() -> void:
 	if _audio != null:
 		_audio.matron_cue(&"locker_burst", LOCKER_CENTRE, 3.0, 1.0)
 		_audio.matron_dread(LOCKER_CENTRE, _player_d)
-		_shriek_in = 6.0
+		_sound.dread_in = 6.0
 
 
 func _seal_locker() -> void:
@@ -1554,10 +1538,6 @@ func _pipe_head_down(data: Dictionary, centre: Vector3) -> void:
 	_figure.global_position = Vector3(centre.x, centre.y + STAND_CENTRE, centre.z)
 
 
-func _hip_world() -> Vector3:
-	return (_p["body"] as Node3D).global_position
-
-
 func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
 	var state := int(data["state"])
 	var alive := bool(data["alive"])
@@ -1580,6 +1560,7 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	if not out or centre.distance_to(camera_position) > DRAW_RANGE_M:
 		_figure.visible = false
 		_pose_fresh = true
+		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, falling)
 		return
 	_figure.visible = true
 	figure_frames += 1
@@ -1592,146 +1573,26 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_ease_figure(centre, delta)
 	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
-	var feet := _figure.global_position
-	var d := feet.distance_to(player_position)
-	# Her music box: heard from far off, slowing as she nears.
-	if _audio != null:
-		var volume := lerpf(-4.0, -42.0, clampf(d / HEARD_MUSIC_M, 0.0, 1.0))
-		var pitch := lerpf(0.84, 1.0, clampf(d / 30.0, 0.0, 1.0))
-		var turn := int(data.get("turn", 0))
-		var stage := int(data.get("stage", 0))
-		if turn > 0 or stage >= 2:
-			# The music box warps and stutters while she is broken: in the
-			# Turn, and all the while once she is fully changed.
-			pitch = 0.55 + 0.25 * _hash(int(floorf(_clock * 12.0)))
-		elif stage == 1:
-			# Dangerous, it runs fast and a shade off, wound too tight: one
-			# of the ways the player reads her stage, never told it.
-			pitch *= 1.08
-		# At her post the music box is still: she is only seen, or heard
-		# breathing from close by.
-		var still_on_post := state == STATE_GUARDING and float(data["speed"]) < 0.3
-		if still_on_post:
-			volume = -80.0
-		_audio.matron_music(_hip_world(), volume, pitch)
-		# A vault: her hands slamming down on what she goes over.
-		var vaults := int(data.get("vaults", 0))
-		if _vaults_seen >= 0 and vaults > _vaults_seen:
-			_audio.matron_cue(&"matron_step", _hip_world(), 2.0, 0.7)
-			_audio.matron_cue(&"bone_crack", _hip_world(), -4.0, randf_range(1.2, 1.35))
-		_vaults_seen = vaults
-		# A blow off her feet: her body booming onto the steel and the breath
-		# knocked out of her; off her balance, her feet stamping and slewing.
-		var knockdowns := int(data.get("knockdowns", 0))
-		if _knockdowns_seen >= 0 and knockdowns > _knockdowns_seen:
-			_audio.matron_cue(&"hit_heavy", _hip_world(), 4.0, randf_range(0.55, 0.65))
-			_audio.matron_cue(&"bone_crack", _hip_world(), -3.0, randf_range(0.8, 0.95))
-			_audio.matron_cue(&"matron_breath", _hip_world(), 2.0, randf_range(0.7, 0.8))
-		_knockdowns_seen = knockdowns
-		var staggers := int(data.get("staggers", 0))
-		if _staggers_seen >= 0 and staggers > _staggers_seen:
-			_audio.matron_cue(&"matron_step", feet, 3.0, randf_range(0.6, 0.7))
-			_audio.matron_cue(&"scrape", feet, -4.0, randf_range(0.9, 1.1))
-		_staggers_seen = staggers
-		# Her hands on the player before she is a killer: a shove, with a
-		# cry as she throws her weight in and the thud of it landing.
-		var shoves := int(data.get("shoves", 0))
-		if _shoves_seen >= 0 and shoves > _shoves_seen:
-			_audio.matron_cue(&"matron_shriek", _hip_world(), -2.0, randf_range(0.6, 0.72))
-			_audio.matron_cue(&"matron_step", _hip_world(), 3.0, 0.6)
-		_shoves_seen = shoves
-		# A throw: her shriek as it leaves her hands.
-		var throws := int(data.get("throws", 0))
-		if _throws_seen >= 0 and throws > _throws_seen:
-			_audio.matron_cue(&"matron_shriek", _hip_world(), 0.0, randf_range(0.9, 1.05))
-		_throws_seen = throws
-		# A leap over a gap: the shriek as she goes.
-		var leaps := int(data.get("leaps", 0))
-		if _leaps_seen >= 0 and leaps > _leaps_seen:
-			_audio.matron_cue(&"matron_shriek", _hip_world(), 0.0, randf_range(0.75, 0.9))
-		_leaps_seen = leaps
-		# At a rigged cage's eye: the shackle rattled, then its clang off.
-		if state == STATE_UNRIGGING and float(data["speed"]) < 0.3:
-			_rattle_in -= delta
-			if _rattle_in <= 0.0:
-				_rattle_in = randf_range(0.35, 0.55)
-				_audio.matron_cue(&"scrape", _hip_world(), -10.0, randf_range(1.3, 1.6))
-		var unrigs := int(data.get("unrigs", 0))
-		if _unrigs_seen >= 0 and unrigs > _unrigs_seen:
-			_audio.matron_cue(&"clang", _hip_world(), -2.0, randf_range(1.1, 1.25))
-		_unrigs_seen = unrigs
-		# Taking hold of a ladder after the player: a shriek; then every rung
-		# rings under her hands and feet, louder while the Turn has her.
-		var climbs := int(data.get("climbs", 0))
-		if _climbs_seen >= 0 and climbs > _climbs_seen:
-			_audio.matron_cue(&"matron_shriek", _hip_world(), 1.0, randf_range(0.8, 0.95))
-		_climbs_seen = climbs
-		if bool(data.get("climbing", false)):
-			var rung := int(float(data["stride"]) / 0.3)
-			if rung != _last_rung:
-				_last_rung = rung
-				_audio.matron_cue(&"clang", centre + Vector3(0.0, 1.2, 0.0), -9.0 if turn == 0 else -3.0, randf_range(1.35, 1.6))
-		# On the corner pipe: each hold a hollow knock up and down the riser,
-		# each flange passed a deep bong, the slam onto one a boom and her
-		# scream; torn off and sliding, her skin and cloth shrieking on it.
-		var hands := centre + Vector3(0.0, 1.0, 0.0)
-		var pipe_holds := int(data.get("pipe_holds", 0))
-		if _pipe_holds_seen >= 0 and pipe_holds > _pipe_holds_seen:
-			_audio.matron_cue(&"clang", hands, -4.0 if turn == 0 else 0.0, randf_range(0.5, 0.62))
-		_pipe_holds_seen = pipe_holds
-		var pipe_flanges := int(data.get("pipe_flanges", 0))
-		if _pipe_flanges_seen >= 0 and pipe_flanges > _pipe_flanges_seen:
-			_audio.matron_cue(&"hit_heavy", hands, 0.0, randf_range(0.42, 0.5))
-			_audio.matron_cue(&"clang", hands, -2.0, randf_range(0.36, 0.42))
-		_pipe_flanges_seen = pipe_flanges
-		var pipe_slams := int(data.get("pipe_slams", 0))
-		if _pipe_slams_seen >= 0 and pipe_slams > _pipe_slams_seen:
-			_audio.matron_cue(&"hit_heavy", hands, 5.0, randf_range(0.5, 0.58))
-			_audio.matron_cue(&"bone_crack", hands, 0.0, randf_range(0.85, 1.0))
-			_audio.matron_cue(&"matron_shriek", hands, 2.0, randf_range(0.6, 0.7))
-		_pipe_slams_seen = pipe_slams
-		if bool(data.get("pipe_sliding", false)):
-			_pipe_scrape_in -= delta
-			if _pipe_scrape_in <= 0.0:
-				_pipe_scrape_in = randf_range(0.08, 0.12)
-				_audio.matron_cue(&"scrape", hands, 0.0, randf_range(1.4, 1.8))
-		# Down a cable on her forearms: steel shrieking under them.
-		if on_line:
-			_screech_in -= delta
-			if _screech_in <= 0.0:
-				_screech_in = randf_range(0.1, 0.16)
-				_audio.matron_cue(&"scrape", centre + Vector3(0.0, 1.55, 0.0), -3.0, randf_range(1.7, 2.0))
-		if turn != _last_turn:
-			if turn == 1:
-				_audio.matron_cue(&"bone_crack", _hip_world(), 1.0, randf_range(0.9, 1.1))
-			elif turn == 2:
-				_audio.matron_cue(&"matron_shriek", _hip_world(), 2.0, randf_range(0.7, 0.85))
-				_audio.matron_cue(&"bone_crack", _hip_world(), -2.0, randf_range(1.0, 1.2))
-			_last_turn = turn
-		# Her breath, closer and quicker the nearer she is.
-		_breath_in -= delta
-		if _breath_in <= 0.0 and d < (6.0 if still_on_post else 24.0) and state != STATE_PEERING:
-			_breath_in = lerpf(0.7, 2.0, clampf(d / 24.0, 0.0, 1.0))
-			_audio.matron_cue(&"matron_breath", _hip_world(), lerpf(-1.0, -14.0, clampf(d / 24.0, 0.0, 1.0)), randf_range(0.9, 1.05))
-		# Steps: a dragged slipper, or on the hunt hands and feet slapping.
-		var steps := int(float(data["stride"]) / (STEP_M * (0.55 if state == STATE_HUNTING else 1.0)))
-		if steps != _last_step:
-			_last_step = steps
-			if float(data["speed"]) > 0.3 and not falling:
-				_audio.matron_cue(&"matron_step", feet, lerpf(-14.0, -3.0, clampf(float(data["speed"]) / 6.8, 0.0, 1.0)), randf_range(0.85, 1.1) * (1.0 if state != STATE_HUNTING else 1.25))
-		# The shriek: the moment she sees you, and in the long fall.
-		_player_d = d
-		var sees := bool(data["sees_player"])
-		_shriek_in = maxf(0.0, _shriek_in - delta)
-		if sees and not _was_seen and _shriek_in <= 0.0 and d < 40.0:
-			_audio.matron_dread(_hip_world(), d)
-			_shriek_in = 7.0
-		_was_seen = sees
-		if falling and not _cry_fall:
-			_cry_fall = true
-			_audio.matron_cue(&"matron_shriek", _hip_world(), 2.0, 0.8)
-		elif not falling:
-			_cry_fall = false
+	_hear(data, delta, true, _figure.global_position, player_position, falling)
+
+
+# Her sounds (presentation/audio/matron_sound.gd), every frame whether she
+# is drawn or not, so what she did out of sight is never heard late and her
+# loops fall silent the moment she is gone. `near`: out, alive and drawn;
+# `feet` her soles.
+func _hear(data: Dictionary, delta: float, near: bool, feet: Vector3, player_position: Vector3,
+		falling: bool) -> void:
+	if _sound == null or previewing:
+		return
+	_player_d = feet.distance_to(player_position)
+	_sound.update(data, delta, near, feet, head_world_position(), player_position, falling)
+
+
+# Her hands on the player heard, once a frame after _hear, from the hold
+# main_feel.gd _feel_gore read for the gore.
+func hear_hold(hold: Dictionary) -> void:
+	if _sound != null and not previewing:
+		_sound.hear_hold(hold)
 
 
 # For a test and the look scenes: where her head is, and how far gone the
@@ -1779,6 +1640,8 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 	visible = near
 	if not near:
 		_last_state = state
+		var centre: Vector3 = data.get("render_position", data["position"])
+		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, false)
 		return
 	_update_planks(data)
 	_update_locker(data, delta)

@@ -43,6 +43,9 @@ struct Fall {
 Fall drop_her(const Vector3 at, const double seconds, const bool keep_him_airborne = false) {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
+    // This measures the chute, not a catch: since #11 every catch grabs and
+    // spares him, so hold her grab off (as #11 did for its burst and vault legs).
+    s.debug_hold_matron_grab(true);
     for (int i = 0; i < 30; ++i) (void)s.advance_frame(Simulation::kFixedStepSeconds);
     s.launch_matron_for_test(at);
     Fall f;
