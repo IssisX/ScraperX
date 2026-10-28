@@ -1750,6 +1750,11 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["eye"] = godot::Vector3(static_cast<real_t>(state.eye.x), static_cast<real_t>(state.eye.y),
                                 static_cast<real_t>(state.eye.z));
     out["eye_yaw"] = state.eye_yaw;
+    out["watched"] = state.watched;
+    out["stalking"] = state.stalking;
+    out["stalk_s"] = state.stalk_s;
+    out["ambush"] = state.ambush;
+    out["ambush_waiting"] = state.ambush_waiting;
     out["lead_valid"] = state.lead_valid;
     out["acoustic_queries"] = static_cast<std::int64_t>(state.acoustic_queries);
     out["rage"] = state.rage;

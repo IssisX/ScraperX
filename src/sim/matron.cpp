@@ -859,6 +859,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
 }
 
 void Matron::stand_down() {
+    end_encounter();
     lead_valid_ = false;
     chase_way_held_ = false;
     turn_ = Turn::None;
@@ -1831,7 +1832,10 @@ void Matron::step_turn(const float dt, const float distance_to_player, const flo
     sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
     if (turn_ == Turn::None) {
         turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
-        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM;
+        // In a stalk her sight does not start the Turn: she is watching him
+        // on purpose (matron_stalk.cpp). His noise still can.
+        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM &&
+                                     !stalk_encounter();
         const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
         if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
             turn_ = Turn::Windup;
@@ -2316,6 +2320,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     sees_player_ = false;
     sees_far_ = false;
     glimpsed_ = false;
+    watched_ = false;
+    stalking_ = false;
     noise_heard_ = 0.0F;
     heard_level_ = 0.0F;
     if (dead_) {
@@ -2540,6 +2546,15 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         }
         sees_player_ = saw;
         glimpsed_ = glimpsed;
+        // His face turned to her, seen: he knows she is there.
+        watched_ = saw && face_turned_to_her(player);
+        noticed_ = noticed_ || watched_;
+        // Prey that runs is chased: his run heard (as loud as a run reels her
+        // in, choose_pace) spends this encounter's stalk.
+        if (stalk_encounter() && player_reach >= player_carry && loudness >= kStalkRunLoudness) {
+            stalk_spent_ = true;
+            ++stalk_attacks_;
+        }
         // The straight line across the shaft: plain sight at long range, by
         // the same eyes.
         sees_far_ = perceivable && reach <= kCommitSightM &&
@@ -2632,6 +2647,29 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             guess_climb_ = player_climb;
             wary_ = false;
         }
+        // Seen up a ladder in a stalk: round to its head by another way, if
+        // hers is the shorter (matron_stalk.cpp).
+        if (player_climb >= 0 && saw) {
+            watch_climber(player_climb, float(player.GetY()), dt);
+            if (state_ == State::Hunting && stalk_encounter() && turn_ == Turn::None && !ambush_.active &&
+                !held_in_hunt() && holder() == nullptr) {
+                if (seen_climb_rate_ < 0.0F) {
+                    // Still judging his pace up it: she stands and watches him.
+                    walk_toward(dt, ax, az, 0.0F);
+                    yaw_ = turn_toward(yaw_, std::atan2(px - ax, pz - az), kTurnRate, dt);
+                    break;
+                }
+                // Weighed again each time his pace is read afresh.
+                if (seen_climb_t_ != ambush_weighed_t_) {
+                    ambush_weighed_t_ = seen_climb_t_;
+                    if (start_ambush(player_climb, at, float(player.GetY()))) {
+                        break;
+                    }
+                }
+            }
+        } else if (!saw) {
+            seen_climb_ = -1;
+        }
         // What she holds she lets go when it no longer fits what she is doing
         // (matron.hpp, her mischief); else her hands keep it.
         if (held_ >= 0) {
@@ -2702,6 +2740,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         allow_catwalk_ = allow;
         float wx = ax;
         float wz = az;
+        if (state_ == State::Hunting && ambush_.active &&
+            ambush_step(dt, ax, az, float(at.GetY()) - kStandCentre, saw)) {
+            break;
+        }
         if (state_ == State::Hunting) {
             // Going to look from a vantage is not losing track: she goes on to it.
             const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
@@ -3051,6 +3093,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 }
                 if (!scan_walk) {
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
+                }
+                // The stalk: his face turned to her, she freezes; turned
+                // away, she closes to her band and holds (matron_stalk.cpp).
+                if (stalk_step(dt, ax, az, feet_y, wx, wz)) {
+                    step_turn(dt, d, loudness, player_carry);
+                    break;
                 }
                 step_turn(dt, d, loudness, player_carry);
                 // Her hands on the player take hold (or, while they cannot,
@@ -3621,6 +3669,7 @@ void Matron::restore(const Saved &saved) {
         lead_seen_ = false;
         lead_sense_ = Sense::None;
         glimpsed_ = false;
+        end_encounter();
         lead_valid_ = false;
         peer_s_ = 0.0F;
         look_s_ = 0.0F;
@@ -4408,6 +4457,14 @@ void Matron::refresh_view() {
     view_.lead_seen = lead_seen_;
     view_.lead_sense = lead_sense_;
     view_.glimpsed = glimpsed_;
+    view_.watched = watched_;
+    view_.noticed = noticed_;
+    view_.stalking = stalking_;
+    view_.stalk_s = stalk_s_;
+    view_.stalk_attacks = stalk_attacks_;
+    view_.ambush = ambush_.active;
+    view_.ambush_waiting = ambush_.active && ambush_.waiting;
+    view_.ambushes = ambushes_;
     {
         const Eyes e = eyes();
         view_.eye_x = float(e.at.GetX());
