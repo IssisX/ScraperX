@@ -142,3 +142,21 @@ Each was stopped before it changed a file. Its brief is below in short.
   - `strike`: PASS. touch_matron_act: PASS. rule_check 0/0.
   - The re-review of `984102f4` was FIX; both its blockers are fixed in `b112e0b3`. Next: a lean re-review, then land right after #20.
 - **This session:** its hourly check-in task is deleted and its PR subscriptions are dropped. The new session creates its own hourly check of issue #3 and subscribes to #20 and #23.
+
+## Update, 6:30 PM Central (second integrator session, session_01W3SSMzd2B3XVud5A3NxhSk)
+
+Trunk is `d28d348`: PR #21 (locker on deck 1) landed as `488b7ff`; the trunk `playtest-apk` job now runs only on a manual dispatch (owner: playtests use a local build, START_HERE). PRs #10 and #18 are closed (superseded / already in).
+
+**Landing order now:**
+1. **#20 + #23 together**: `claude/integrate-fatality-and-punch-20261028` @ `969e793` (proving). Second-agent reviews: #20 LAND, #23 LAND. Built from #20 `96188c4c` + #23 `b112e0b3` (conflict in the set-down resolved to #20's design, `eda7d6d`) + trunk + two #20 fixes on `claude/matron-fatality-hang-20261028`: `0fa7b84` (matron pace: the leader comes back to her, test drift; the old fatality's run restart made the second "down") and `9e793da` (matron-grab its own ctest slice: #20 took the unsliced run past 1500 s). Land by merging `969e793` into trunk when steps 1-19 are green; that closes #20 and #23.
+2. **Third-person hold camera**: `claude/hold-third-person-20261028` @ `d21462a`, proof on `claude/integrate-hold-third-person-20261028`. Viewer only. Stills in the old session's scratchpad. Needs a lean second-agent review, then a merge of `969e793`'s successor, then land.
+3. **L6 her sounds**: PR #24, `claude/matron-sound-variation-20261028` @ `d0361c9` (protected: new checks). No new clips (freesound.org blocked here). Owner question open: add the rest of his round-2 takes (42 CC0 files on `claude/wip-notes-20261027` @ `b0fb4e0b`, `03_EXECUTION/wip_20261027/her_real/`, his picks listed there) as variants. Wait for his yes; he picks by ear. Needs a second-agent review.
+4. **S6 contacts + the pipe brace**: `claude/matron-contact-truth-20261028` @ `c2483f8` (protected). S6 `d9c04100` was green; `c2483f8` adds her feet's brace on the riser (`contact_braced/contact_brace`) and the rig's hands/feet on the pipe; matron-pipe 328/328 braced. Not yet seen rendered (touch_matron_pipe dies at the drum in the cloud container; CI does not run it). rule_check's 1 BLOCK is the extended `clean()` line (stricter). Needs a review and a look at her on the pipe (the camera branch's `--capture` stills path is the cheap way).
+5. **Her sight (part 1)**: `4389133`, proof run 40781485121 on `claude/integrate-matron-sight-20261028`. 120° eyes at 1.69 m to 16 m, 100° peripheral to 4 m (head turn only), hearing labelled; all reached groups pass. Needs a review.
+6. **Her stalk (part 2)**: `claude/matron-stalk-20261028` @ `caf33b0`, parked. Breaks `matron pace` and the matron vault crate leg: their scripted player faces her, so she stalks instead of attacking. Next: retarget those scripts (the player looks where he runs) or scope the stalk tighter.
+
+**Assigned on #3 (3:17 PM post):** PE, the #20 follow-up (rip 4-6 s, 30 s back-off, no edge push); Grok, the ladder pull after #15 and the grip PR.
+
+**Old integrator's extra list (its message, 4:07 PM):** mix note (ambience and footsteps too loud, 10-27); her drawn hand reading the sim's held ankle (the camera branch now puts his ankle in her drawn hand); Builder's `grok/integrate-both-arms` @ `a8cfd840` (rework or drop); C2 cradle ladder (pick: leave it); PE's early-fall root cause; her ledge jump-hang-mantle (parked); a narrow-board test; HOW_SHE_MOVES after L1; issue #2 untouched; "ominous signals" pocketed. Standing asks: tell Cory when to open a new session; always tell him when he is wrong.
+
+**Local tooling:** Android NDK `29.0.14206865` is at `/root/android/ndk/29.0.14206865` in this container (lost on a new container). The playtest zip: build `scraperx_native` for arm64 with CI's flags, then zip `godot/` without `.godot/` and the linux lib.
