@@ -566,8 +566,11 @@ jobs:
   # simulation suite, Fold-aspect runtime proof, real touch
   # control paths (from grade to +221 m Stack ascent), Android arm64 cross-compile,
   # and the APK's ScraperX-Claude identity read back from it.
+  # Owner, 2026-10-28: no APK on every trunk push; playtests use a local
+  # build. A manual dispatch still makes one.
   playtest-apk:
     needs: moving-support-truth
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
