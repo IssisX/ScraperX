@@ -235,6 +235,12 @@ struct MatronSnapshot final {
     bool mantling = false;
     double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;
     bool lead_seen = false, lead_valid = false;
+    // How she had her lead (Matron::Sense): 0 none, 1 sight, 2 the edge of
+    // her eye, 3 hearing, 4 her hands. Her eyes, and where her head faces.
+    std::uint8_t lead_sense = 0;
+    bool glimpsed = false;
+    Vector3 eye{};
+    double eye_yaw = 0.0;
     std::uint32_t acoustic_queries = 0;
     double lead_floor_y = 154.0;   // the level of her lead: its floor's top
     // Her stages (matron.hpp): her rage, 0..1, the stage it has her in (0 a

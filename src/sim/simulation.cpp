@@ -1422,6 +1422,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.lead_z = view.lead_z;
     result.lead_age_s = view.lead_age_s;
     result.lead_seen = view.lead_seen;
+    result.lead_sense = static_cast<std::uint8_t>(view.lead_sense);
+    result.glimpsed = view.glimpsed;
+    result.eye = Vector3{view.eye_x, view.eye_y, view.eye_z};
+    result.eye_yaw = view.eye_yaw;
     result.lead_valid = view.lead_valid;
     result.acoustic_queries = view.acoustic_queries;
     result.rage = view.rage;
