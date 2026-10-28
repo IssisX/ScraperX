@@ -451,6 +451,14 @@ jobs:
             --script res://tests/footstep_contact_test.gd 2>&1 | tee artifacts/footstep-contact.log
           test "$(grep -c '^FOOTSTEP_CONTACT PASS' artifacts/footstep-contact.log)" -eq 5
 
+      - name: Her takes never repeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
+          grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
+
       - name: The Matron's figure, eyes and hair
         shell: bash
         run: |

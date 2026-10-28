@@ -21,6 +21,8 @@ const STATE_GUARDING := 7
 const STATE_PEERING := 8
 const STATE_UNRIGGING := 9
 const STATE_DOWN := 11
+const STATE_GRAB := 12
+const STATE_CLAIMED := 18
 # Her strides upright (matron_view.gd STEP_M): one footfall each, never two
 # within STEP_GAP_S. A rung each RUNG_M of a climb. On all fours, no stride
 # counted off: a palm or a foot going down (matron_rig.gd plants it), heard
@@ -51,8 +53,8 @@ const SEARCH_M := 30.0
 const SEARCH_GAP_S := Vector2(4.0, 8.0)
 const IDLE_M := 8.0
 const IDLE_GAP_S := Vector2(5.0, 9.0)
-# Her hands on his arm: an effort every EFFORT_GAP_S while she plays with it.
-const EFFORT_GAP_S := 1.4
+# Her laugh after an arm parts: late enough that the tear is heard first.
+const LAUGH_AFTER_TEAR_S := 0.9
 # The thud of her end heard within this of the player (matron_view.gd
 # DRAW_RANGE_M).
 const REACH_M := 140.0
@@ -102,15 +104,27 @@ var _listen_s := 0.0
 var _listen_rolled := false
 var _idle_kind := 0
 var _idle_in := 0.0
-# Her hold (get_matron_hold_state).
+# Her hold (get_matron_hold_state), heard only on what it does (the spec's
+# "events authorize; clocks only inhibit"): her hand closing, the lift, the
+# hang, the pull, the arm in her hand, a tear, the let-go. Holds are numbered
+# (`_encounter`), each one laugh at most; a cue due in a hold dies with it.
+var _encounter := 0
+var _holding := false
+var _laughed := false
 var _grabs_seen := -1
+var _carries_seen := -1
+var _dangles_seen := -1
 var _beat_seen := -1
 var _tears_seen := -1
+var _leg_tears_seen := -1
 var _releases_seen := -1
 var _spares_seen := -1
 var _claims_seen := -1
-var _effort_in := 0.0
-# Cues due later, by slot (a slot whose time is under 0 is free).
+var _hang_seen := false
+var _let_go_seen := -1
+# Cues due later, by slot (a slot whose time is under 0 is free), each with
+# the hold it belongs to (0: none).
+var _due_enc := PackedInt32Array()
 var _due_s := PackedFloat32Array()
 var _due_name: Array[StringName] = []
 var _due_at := PackedVector3Array()
@@ -122,6 +136,7 @@ func _init(audio: Object) -> void:
 	_audio = audio
 	_due_s.resize(DUE_SLOTS)
 	_due_s.fill(-1.0)
+	_due_enc.resize(DUE_SLOTS)
 	_due_name.resize(DUE_SLOTS)
 	_due_at.resize(DUE_SLOTS)
 	_due_db.resize(DUE_SLOTS)
@@ -327,58 +342,93 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 
 
 # Once a frame after update(), with her hold (get_matron_hold_state, the one
-# read main_feel.gd makes for the gore too).
+# read main_feel.gd makes for the gore too). Every cue on an edge of it, at
+# most once; nothing on a clock, and no loop of her voice: a steady hold is
+# quiet.
 func hear_hold(hold: Dictionary) -> void:
 	if hold.is_empty():
 		return
 	var on := _on
 	var hand: Vector3 = hold.get("matron_hand", _head)
-	# Her hand closing on the ankle: the slap of it, and a cluck.
+	# A hold begins with her hands on him and ends when they leave him (let
+	# go, set down, or the run hers): what was due in it is dropped.
+	var state := int(hold.get("state", 0))
+	var holding := state >= STATE_GRAB and state <= STATE_CLAIMED
+	if holding and not _holding:
+		_encounter += 1
+		_laughed = false
+	elif _holding and not holding:
+		_drop_due(_encounter)
+	_holding = holding
+	_audio.matron_encounter = _encounter if holding else 0
+	# Her hand closing on the ankle: a cluck.
 	var grabs := int(hold.get("grabs", 0))
 	if on and _grabs_seen >= 0 and grabs > _grabs_seen:
-		_cue(&"matron_cluck", _head, 0.0, _pitch())
+		_cue(&"matron_cluck", _head, 0.0, 1.0)
 	_grabs_seen = grabs
-	# Playing with the arm: the joint creaking in her hand with the strain on
-	# the wrist, higher and louder toward the tear; her effort now and then.
+	# Lifted (a carry), then held out (a dangle): a breath each.
+	var carries := int(hold.get("carries", 0))
+	if on and _carries_seen >= 0 and carries > _carries_seen:
+		_cue(&"matron_breath", _head, -2.0, 1.0)
+	_carries_seen = carries
+	var dangles := int(hold.get("dangles", 0))
+	if on and _dangles_seen >= 0 and dangles > _dangles_seen:
+		_cue(&"matron_breath", _head, -4.0, 1.0)
+	_dangles_seen = dangles
+	# Playing with the arm: the leather of her grip creaking with the strain
+	# on the wrist, louder toward the tear (pitched only within her strain's
+	# own few percent), and one effort as the pull begins.
 	var beat := int(hold.get("armplay_beat", 0))
 	if on and beat == 1:
 		var s := clampf(float(hold.get("wrist_strain_ns", 0.0)) / maxf(float(hold.get("wrist_tear_ns", 1.0)), 1.0),
 			0.0, 1.0)
-		_audio.matron_strain(hand, lerpf(-18.0, -2.0, s), lerpf(0.7, 1.6, s))
-		_effort_in -= _dt
-		if _effort_in <= 0.0:
-			_effort_in = EFFORT_GAP_S
-			_cue(&"matron_effort", _head, -3.0, _pitch())
+		_audio.matron_strain(hand, lerpf(-18.0, -2.0, s), lerpf(0.96, 1.04, s))
+		if _beat_seen >= 0 and _beat_seen != 1:
+			_cue(&"matron_effort", _head, -3.0, 1.0)
 	else:
 		_audio.matron_strain(hand, -80.0, 1.0)
-		_effort_in = 0.5
-	# The arm gone to her: a sniff at it, and a swallow.
+	# The arm gone to her: a sniff at it, or a swallow, never both.
 	if on and beat == 2 and _beat_seen >= 0 and _beat_seen != 2:
-		_cue(&"matron_sniff", _head, 0.0, _pitch())
-		_due(0.9, &"matron_swallow", _head, 0.0, _pitch())
+		_audio.matron_cue_one_of([&"matron_sniff", &"matron_swallow"], _head, 0.0)
 	_beat_seen = beat
-	# The arm torn off: the rip where it parted, his crack and his cry, then
-	# her laugh.
+	# An arm torn off: the rip where it parted, his crack and his cry, then
+	# (the hold's one) her laugh.
 	var tears := int(hold.get("arm_tear_count", 0))
 	if on and _tears_seen >= 0 and tears > _tears_seen:
-		_cue(&"matron_rip", hold.get("severed_arm_position", hand), 4.0, randf_range(0.95, 1.05))
+		_cue(&"matron_rip", hold.get("severed_arm_position", hand), 4.0, 1.0)
 		_audio.arm_break(hold.get("player_position", hand))
-		_due(0.6, &"matron_laugh", _head, 0.0, _pitch())
+		if not _laughed:
+			_laughed = true
+			_due(LAUGH_AFTER_TEAR_S, &"matron_laugh", _head, 0.0, 1.0, _encounter)
 	_tears_seen = tears
-	# Let go at a ledge, set back on the deck, or claimed: a laugh, a cluck,
-	# a laugh.
+	# A leg torn off (her floor fatality): the rip at her hand.
+	var leg_tears := int(hold.get("leg_tear_count", 0))
+	if on and _leg_tears_seen >= 0 and leg_tears > _leg_tears_seen:
+		_cue(&"matron_rip", hand, 4.0, 1.0)
+	_leg_tears_seen = leg_tears
+	# Over the drop in her fatality, hung by the ankle: her effort.
+	var hang := bool(hold.get("fatal_hang", false))
+	if on and hang and not _hang_seen:
+		_cue(&"matron_effort", _head, -3.0, 1.0)
+	_hang_seen = hang
+	# Let go over the drop, at a ledge, set back on the deck, or claimed: the
+	# hold's laugh if it has not had it, else a breath (a spare: a cluck).
+	var let_go := int(hold.get("fatal_release_beat", 0))
 	var releases := int(hold.get("releases", 0))
-	if on and _releases_seen >= 0 and releases > _releases_seen:
-		_cue(&"matron_laugh", _head, 0.0, _pitch())
+	var claims := int(hold.get("claims", 0))
+	if on and ((_let_go_seen >= 0 and let_go > _let_go_seen) or (_releases_seen >= 0 and releases > _releases_seen)
+			or (_claims_seen >= 0 and claims > _claims_seen)):
+		if not _laughed:
+			_laughed = _cue(&"matron_laugh", _head, 0.0, 1.0)
+		if not _laughed:
+			_cue(&"matron_breath", _head, -2.0, 1.0)
+	_let_go_seen = let_go
 	_releases_seen = releases
+	_claims_seen = claims
 	var spares := int(hold.get("spares", 0))
 	if on and _spares_seen >= 0 and spares > _spares_seen:
-		_cue(&"matron_cluck", _head, 0.0, _pitch())
+		_cue(&"matron_cluck", _head, 0.0, 1.0)
 	_spares_seen = spares
-	var claims := int(hold.get("claims", 0))
-	if on and _claims_seen >= 0 and claims > _claims_seen:
-		_cue(&"matron_laugh", _head, 0.0, _pitch())
-	_claims_seen = claims
 
 
 # One of her limbs put down on the steel on all fours (matron_view.gd hands
@@ -391,20 +441,21 @@ func plant(at: Vector3, speed: float) -> void:
 	_cue(&"matron_plant", at, lerpf(PLANT_DB.x, PLANT_DB.y, clampf(speed / 7.0, 0.0, 1.0)), randf_range(0.8, 0.95))
 
 
-func _cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> void:
-	_audio.matron_cue(name, at, volume_db, pitch)
+func _cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> bool:
+	return _audio.matron_cue(name, at, volume_db, pitch)
 
 
 # Her voice's own pitch, a little off every time (the director keeps it
-# within its HER_PITCH).
+# within its HER_PITCH; a take of her own bank is pitched by her_takes.gd).
 func _pitch() -> float:
 	return randf_range(0.92, 1.08)
 
 
-func _due(after: float, name: StringName, at: Vector3, volume_db: float, pitch: float) -> void:
+func _due(after: float, name: StringName, at: Vector3, volume_db: float, pitch: float, encounter: int = 0) -> void:
 	for i in DUE_SLOTS:
 		if _due_s[i] < 0.0:
 			_due_s[i] = after
+			_due_enc[i] = encounter
 			_due_name[i] = name
 			_due_at[i] = at
 			_due_db[i] = volume_db
@@ -412,7 +463,8 @@ func _due(after: float, name: StringName, at: Vector3, volume_db: float, pitch: 
 			return
 
 
-# Cues come due: each plays only if she is still out and near.
+# Cues come due: each plays only if she is still out and near, and one due in
+# a hold only while that hold goes on.
 func _tick_due(delta: float) -> void:
 	for i in DUE_SLOTS:
 		if _due_s[i] < 0.0:
@@ -420,5 +472,12 @@ func _tick_due(delta: float) -> void:
 		_due_s[i] -= delta
 		if _due_s[i] <= 0.0:
 			_due_s[i] = -1.0
-			if _on:
+			if _on and (_due_enc[i] == 0 or (_holding and _due_enc[i] == _encounter)):
 				_cue(_due_name[i], _due_at[i], _due_db[i], _due_pitch[i])
+
+
+# Every cue due in hold `encounter` dropped (the hold is over).
+func _drop_due(encounter: int) -> void:
+	for i in DUE_SLOTS:
+		if _due_s[i] >= 0.0 and _due_enc[i] == encounter:
+			_due_s[i] = -1.0

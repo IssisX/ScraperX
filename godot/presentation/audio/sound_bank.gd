@@ -123,10 +123,12 @@ func build() -> void:
 # Her voice, and what her hands do to a body, are real recordings
 # (HER_RECORDED, CC0, each one's source in HER_DIR's CREDITS.md), never made
 # here. Made here, from their own seed: the air she presses on (the beds), her
-# mouth working, her weight on the steel, her joints, and her croak, cluck and
-# sniff -- struck flesh and the deck under it, weight a phone can play
-# (_add_thump), wet mouth sounds (_add_grains, _add_glide), joints (_slip),
-# and the croak a glottal source (_glottal) through a throat (_formants).
+# weight on the steel, her joints, and (until recordings replace them: the
+# spec's shortlist, HER_SOUND_VARIATION_SPEC.md) her croak, cluck and sniff --
+# struck flesh and the deck under it, weight a phone can play (_add_thump),
+# wet mouth sounds (_add_grains, _add_glide), joints (_slip), and the croak a
+# glottal source (_glottal) through a throat (_formants). Her mouth working is
+# no longer a loop made here: it is retired.
 const HER_DIR := "res://presentation/audio/matron/"
 # Her recordings by clip name: how many takes, each <name>_<take>.ogg. A name
 # ending _loop plays as a loop (each file's end is crossfaded into its head).
@@ -156,7 +158,6 @@ func build_her() -> void:
 	clips[&"matron_bed_loop"] = [_loop(bed, 0.4)]
 	_rough(bed, 38.0, 0.6)
 	clips[&"matron_bed_rough_loop"] = [_loop(bed, 0.4)]
-	clips[&"matron_mouth_loop"] = [_loop(_her_mouth(2.0), 0.3)]
 	clips[&"matron_step"] = _variants(3, _her_step)
 	clips[&"matron_joints"] = _variants(3, _her_joints)
 	clips[&"matron_croak"] = _variants(1, _her_croak)
@@ -895,22 +896,6 @@ func _her_bed(length: float) -> PackedFloat32Array:
 		var u := float(i % cycle) / float(cycle)
 		var swell := 4.0 * u * (1.0 - u)
 		out[i] = body[i] * (0.75 + 0.25 * swell) + air[i] * 1.4 * swell * swell
-	return out
-
-
-# Close: her mouth working. Crackle 20-70/s of 0.3-1.5 ms in 2-6 kHz; six
-# saliva strings (click pairs 3-8 ms apart); two lip smacks.
-func _her_mouth(length: float) -> PackedFloat32Array:
-	var out := _silence(length)
-	_add_grains(out, 0.0, length, 20.0, 70.0, 0.3, 1.5, 2000.0, 6000.0, 0.5)
-	for k in 6:
-		var t := _rng.randf_range(0.0, length - 0.05)
-		var g := _rng.randf_range(0.4, 0.9)
-		_add_band_noise(out, t, 0.002, g, 0.0006, 2500.0, 6500.0)
-		_add_band_noise(out, t + _rng.randf_range(0.003, 0.008), 0.002, g * 0.7, 0.0006, 2500.0, 6500.0)
-	for k in 2:
-		_add_glide(out, _rng.randf_range(0.0, length - 0.1), 0.02, 2.0, 1800.0, 700.0, 0.3)
-	_peak(out, 0.9)
 	return out
 
 
