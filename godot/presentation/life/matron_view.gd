@@ -1,5 +1,7 @@
 extends Node3D
-## The Matron, drawn (src/sim/matron.hpp): her locker on the 154 m deck, the
+## The Matron, drawn (src/sim/matron.hpp): her locker on her home deck
+## (the game's is deck 1 at 11 m; a test may put it back at 154). The
+## cabinet and the gauge beside it follow that home: the
 ## gauge that climbs while she strains, the bolts that pop and the door that
 ## tears off; her figure, a real old woman built from MakeHuman's scanned body
 ## (life/matron/, tools/body/build_matron_body.py) in the first-aid
@@ -19,7 +21,9 @@ extends Node3D
 ## her hands reaching to each new hold. Nothing jumps a frame.
 
 const DECK := 154.0
-const LOCKER_CENTRE := Vector3(11.0, 155.1, -126.2)
+# Same place on the band as the native locker (x 11, z -126.2). Height is her
+# home: deck 1 until a dormant/straining state says otherwise (place_matron_home).
+var _locker_centre := Vector3(11.0, 12.1, -126.2)
 const LOCKER_SIZE := Vector3(1.2, 2.2, 0.9)
 const PLANKS := 11
 const PLANK_FLOATS := 9
@@ -356,7 +360,7 @@ func _build_locker() -> void:
 	var rust := _material(Color("5a3a24"), 0.95)
 	var bolt_metal := _material(Color("6f6a60"), 0.5, 0.8)
 	_vent_material = _material(Color("0b0807"), 0.9, 0.0, Color("ff7a1c"), 0.0)
-	_locker = _pivot(self, LOCKER_CENTRE)
+	_locker = _pivot(self, _locker_centre)
 	# The shell: back and sides and top and base, the door left to _door.
 	var s := LOCKER_SIZE
 	_box(Vector3(s.x, s.y, 0.05), steel, _locker, Vector3(0.0, 0.0, s.z * 0.5 - 0.025))
@@ -396,7 +400,8 @@ func _build_locker() -> void:
 	stencil.double_sided = false
 	_door.add_child(stencil)
 	# The strain gauge on the wall beside it: a dial, a needle and a red zone.
-	var gauge := _pivot(self, Vector3(LOCKER_CENTRE.x - LOCKER_SIZE.x * 0.5 - 0.03, DECK + 1.5, LOCKER_CENTRE.z - 0.05))
+	# Beside the cabinet, so a home move carries the dial with it.
+	var gauge := _pivot(_locker, Vector3(-LOCKER_SIZE.x * 0.5 - 0.03, 0.4, -0.05))
 	gauge.rotation.y = PI * 0.5
 	_box(Vector3(0.5, 0.5, 0.05), worn, gauge)
 	var face := _cyl(0.2, 0.2, 0.03, _material(Color("cfc9b6"), 0.7), gauge, Vector3(0.0, 0.0, -0.035), 20)
@@ -442,7 +447,22 @@ func _build_locker() -> void:
 	_locker.add_child(_lamp_light)
 
 
+# Sealed, the native reports the centre she would step out at: home floor
+# plus the stand centre. The cabinet's centre is half its height over that
+# floor, the same spot set_home moves the solid to. Once she is out, her
+# position is her body and the cabinet stays.
+func _sync_locker_home(data: Dictionary) -> void:
+	var state := int(data.get("state", -1))
+	if state != 0 and state != STATE_STRAINING:
+		return
+	var p: Vector3 = data.get("position", Vector3.ZERO)
+	if p.y < 1.0:
+		return
+	_locker_centre = Vector3(11.0, p.y - STAND_CENTRE + LOCKER_SIZE.y * 0.5, -126.2)
+
+
 func _update_locker(data: Dictionary, delta: float) -> void:
+	_sync_locker_home(data)
 	var state := int(data["state"])
 	var strain := float(data["strain"])
 	var popped := int(data["bolts"])
@@ -451,7 +471,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 		_seal_locker()
 	if state == STATE_STRAINING and not _door_gone:
 		var shake := 0.003 + 0.022 * strain
-		_locker.position = LOCKER_CENTRE + Vector3(sin(_clock * 73.0), 0.0, cos(_clock * 61.0)) * shake * (0.5 + 0.5 * sin(_clock * 9.0))
+		_locker.position = _locker_centre + Vector3(sin(_clock * 73.0), 0.0, cos(_clock * 61.0)) * shake * (0.5 + 0.5 * sin(_clock * 9.0))
 		_door.rotation.y = sin(_clock * 47.0) * (0.004 + 0.02 * strain) + 0.012 * float(popped)
 		_vent_material.emission_enabled = true
 		_vent_material.emission = Color("ff7a1c")
@@ -474,9 +494,9 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 		if _knock_in <= 0.0:
 			_knock_in = lerpf(1.5, 0.16, strain)
 			if _audio != null:
-				_audio.matron_cue(&"locker_knock", LOCKER_CENTRE, lerpf(-9.0, 0.0, strain), randf_range(0.85, 1.1))
+				_audio.matron_cue(&"locker_knock", _locker_centre, lerpf(-9.0, 0.0, strain), randf_range(0.85, 1.1))
 	if state != STATE_STRAINING and not _door_gone:
-		_locker.position = LOCKER_CENTRE
+		_locker.position = _locker_centre
 		_lamp_light.light_energy = 0.0
 		_lamp_glass_material.emission_energy_multiplier = 0.0
 	_needle.rotation.z = lerpf(2.2, -2.2, strain) if state == STATE_STRAINING or _door_gone else 2.2
@@ -486,7 +506,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 		_bolts_seen += 1
 		bolts_shown_popped = _bolts_seen
 		if _audio != null:
-			_audio.matron_cue(&"bolt_pop", LOCKER_CENTRE + Vector3(0.5, 0.0, -0.5), -2.0, randf_range(0.9, 1.15))
+			_audio.matron_cue(&"bolt_pop", _locker_centre + Vector3(0.5, 0.0, -0.5), -2.0, randf_range(0.9, 1.15))
 	# The burst: the door goes, into the shaft.
 	if state == STATE_EMERGING and _last_state == STATE_STRAINING and not _door_gone:
 		_tear_door()
@@ -494,7 +514,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 		_door_vel.y -= 9.81 * delta
 		_door.global_position += _door_vel * delta
 		_door.rotation += _door_spin * delta
-		if _door.global_position.y < DECK - 40.0:
+		if _door.global_position.y < _locker_centre.y - LOCKER_SIZE.y * 0.5 - 40.0:
 			_door.visible = false
 		_lamp_light.light_energy = maxf(0.0, _lamp_light.light_energy - 8.0 * delta)
 
@@ -510,12 +530,12 @@ func _tear_door() -> void:
 	_door_vel = Vector3(0.0, 4.0, -16.0)
 	_door_spin = Vector3(3.5, 1.2, 4.0)
 	_door.visible = true
-	_locker.position = LOCKER_CENTRE
+	_locker.position = _locker_centre
 	_lamp_glass_material.emission_energy_multiplier = 0.0
 	_vent_material.emission_energy_multiplier = 0.0
 	if _audio != null:
-		_audio.matron_cue(&"locker_burst", LOCKER_CENTRE, 3.0, 1.0)
-		_audio.matron_dread(LOCKER_CENTRE, _player_d)
+		_audio.matron_cue(&"locker_burst", _locker_centre, 3.0, 1.0)
+		_audio.matron_dread(_locker_centre, _player_d)
 		_sound.dread_in = 6.0
 
 
@@ -2155,7 +2175,9 @@ func head_world_position() -> Vector3:
 
 
 func locker_front_position() -> Vector3:
-	return LOCKER_CENTRE + Vector3(0.0, -0.2, -0.5)
+	if _native != null:
+		_sync_locker_home(_native.get_matron_state())
+	return _locker_centre + Vector3(0.0, -0.2, -0.5)
 
 
 func figure_shown() -> bool:
@@ -2231,7 +2253,8 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 	if state != _last_state:
 		_state_age = 0.0
 	_state_age += delta
-	var near := camera_position.distance_to(LOCKER_CENTRE) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M
+	_sync_locker_home(data)
+	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M
 	visible = near
 	if not near:
 		_last_state = state
