@@ -924,6 +924,7 @@ void Climber::finish() {
 Climber::Status Climber::step(const float dt) {
     view_.force_n = 0.0F;
     view_.support_reaction_n = 0.0F;
+    view_.topped = false;
     if (status_ != Status::Running) {
         // A move done (or none begun) and nothing else asked: she stands,
         // balanced on whatever narrow floor she is on.
@@ -1211,6 +1212,17 @@ Climber::Status Climber::step_mantle(const float dt, Budget &budget) {
         const float span = limits_.reach_out - 0.1F;
         if (horizontal(dest - lip_world_) > span) {
             dest = Vec3(lip_world_) + flat(dest - Vec3(lip_world_)).Normalized() * span;
+        }
+        if (horizontal(dest - c) < 0.35F) {
+            // Up: her middle over the floor she was going for, her soles no
+            // higher over it than the clearance her pull holds them at over
+            // the lip (and their own feel for a floor). Reported only; this
+            // move still waits for her weight on her feet below.
+            RayCastResult under;
+            const RRayCast ray(c, Vec3(0.0F, -(over_y - top + kSoleSupportProbeM), 0.0F));
+            view_.topped = physics_.GetNarrowPhaseQuery().CastRay(ray, under, Layers(physics_, ignore_).bp(),
+                                                                  Layers(physics_, ignore_).ol(), SteelFilter(ignore_)) &&
+                           std::abs(float(ray.GetPointOnRay(under.mFraction).GetY()) - top) < 0.25F;
         }
         float support = 0.0F;
         if (supported(&support) && std::abs(support - top) < 0.25F && horizontal(dest - c) < 0.35F) {

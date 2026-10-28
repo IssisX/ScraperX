@@ -2,8 +2,8 @@
 
 // One contract for every way of hers between floors (issue #3, Board v5,
 // step 1). Each executor she has (the Climber's journey over her scan, the
-// routecraft's bars with the column it found, a travel, the corner pipe, the
-// old rung climber, the authored map's way, a cable) is a Mover. pre_step
+// routecraft's bars with the column it found, a travel, the corner pipe, a
+// rung way in her hunt, a cable) is a Mover. pre_step
 // holds at most one that has her body (Matron::holder), steps it at the
 // place in the tick its kind has always been stepped, and asks one planner
 // call (Matron::take_way) for the next. No mover reads another's state: what
@@ -48,7 +48,7 @@ enum class MoverStatus : std::uint8_t {
 enum class MoverTick : std::uint8_t {
     Owns,     // first in her tick, and nothing of the hunt runs (a journey, routecraft)
     Travel,   // after her clocks and her floor, nothing of the hunt runs (travel_to)
-    Hunt,     // inside the hunt, after she hears and sees (the corner pipe, the old climber, her map's way)
+    Hunt,     // inside the hunt, after she hears and sees (the corner pipe, her rung way)
     Rides,    // on its cable at the top of her tick; the hunt holds her still meanwhile
 };
 
@@ -66,7 +66,7 @@ struct MoverView {
     bool floor_in_hands = false;   // her floor is the steel in her hands, not what her feet find
     JPH::Vec3 drive_dv = JPH::Vec3::sZero();   // what its drive changes her velocity by this tick, where it keeps that count
     // What her report shows of it:
-    bool hands = false;            // a hand of hers on its hold: she is climbing
+    bool hands = false;            // a hand of hers on its hold (her rung way: or reaching for it): she is climbing
     bool move_active = false;      // a move of it under way (walking to its start excluded)
     bool bar_traverse = false;     // hand over hand along bars
     bool airborne = false;
