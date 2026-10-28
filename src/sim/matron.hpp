@@ -71,10 +71,10 @@
 // next (the 154 m deck's to the 176 ring). Seen or heard on it, the player
 // is where it tops out (her guess where they are going). Frail, she cannot
 // take hold of it: she stands at its foot looking up, and gives up there. In
-// the Turn she reaches for real rung tops and pulls at kClimbMps, under
-// gravity with finite reach and grip force. Missing holds, overload and
-// blocked clearance can release her; a reachable last hold lets her push
-// over the lip onto verified floor. The riser from
+// the Turn she climbs it by her Climber's rung moves (matron_traversal.hpp):
+// real rungs in her reach, a capped pull out of her one budget, gravity on.
+// A missing rung, a hold gone and blocked clearance release her; at its head
+// she goes over the lip onto verified floor. The riser from
 // 143 up to her deck she knows the same way (heard or seen on it, the player
 // is going up to her deck), but never takes hold of: her way between those
 // two decks is her corner pipe.
@@ -186,6 +186,12 @@ public:
     static constexpr float kLockerHalfY = 1.1F;
     static constexpr float kLockerHalfZ = 0.45F;
     static constexpr float kSpawnZ = kLockerZ - kLockerHalfZ - 0.5F;
+    // Her home deck: where her locker stands and where she wakes. By default
+    // her own deck (kHomeDeckTop, the locker at kLockerY); world setup may
+    // move it (set_home). kDeckTop stays 154: the bay, the catwalk and the
+    // 176 cages are where they are.
+    static constexpr float kHomeDeckTop = kDeckTop;
+    static constexpr float kLockerY = kHomeDeckTop;
 
     // Her body: 2.1 m tall standing, 220 kg.
     static constexpr float kMassKg = 220.0F;
@@ -318,12 +324,13 @@ public:
     static constexpr float kCommitSightM = 50.0F;
     static constexpr float kEndM = 5.0F;
     static constexpr float kCommitHoldSeconds = 2.5F;
-    // Below this she is gone (fell): a fall of 12 m from the deck. Riding
+    // Below this she is gone (fell): a fall of 13 m from the deck. Riding
     // (a moving floor, a line's cable) or on a climb she is not falling.
-    static constexpr float kFallenBelowM = 12.0F;
+    // Was 12 m. A measured 14 m drop still lands harder than this and kills.
+    static constexpr float kFallenBelowM = 13.0F;
     // What kills her is the landing: a stop as hard as the end of a fall of
-    // kFallenBelowM (about 15.3 m/s), on whatever she lands on.
-    static constexpr float kLethalLandingMps = 15.34F;
+    // kFallenBelowM (16 m/s), on whatever she lands on.
+    static constexpr float kLethalLandingMps = 16.00F;
     static constexpr float kOffTheWorldY = -50.0F;
 
     // The way out she guards: the mouth of Stage A's cage (its open north
@@ -371,15 +378,14 @@ public:
     static constexpr float kCableFriction = 0.3F;
     // Letting go of a cable at its end, she swings on this fast over the band.
     static constexpr float kLetGoSwingMps = 1.6F;
-    // A climb: steady pull (the player climbs at 0.9), finite hand reach
-    // from the body centre and combined grip rating; a push over its head
-    // until her middle is this far out over actual landing steel.
+    // Her hands on the corner pipe: steady pull (the player climbs at 0.9),
+    // finite hand reach from the body centre and combined grip rating, and
+    // her push over a rail. (Her ladders are her Climber's moves, with its
+    // own reach and pace, traversal::Limits, inside the same reach.)
     static constexpr float kClimbMps = 0.6F;
     static constexpr float kClimbReachM = 1.9F;
     static constexpr float kClimbGripMaxN = 5500.0F;
-    static constexpr float kStandingReachM = 1.5F;   // her centre to a first hold, standing
     static constexpr float kMantleMps = 1.4F;
-    static constexpr float kMantleOutM = 1.0F;
     // How long her hands are at a rigged cage's eye before the rope is off it.
     static constexpr float kUnrigSeconds = 2.0F;
     // The 176 ring (world_solids.inc, UpperDeck): its band's middle line, and
@@ -455,7 +461,7 @@ public:
     // Lunge push only. Extra force past 9.8 kN did not raise the measured
     // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
     // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
-    // and shove stay on 8 kN and 22 kW.
+    // and shove stay on 8 kN and 44 kW.
     static constexpr float kTurnLungeForceN = 9800.0F;
     static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
@@ -638,9 +644,12 @@ public:
     static constexpr float kPipeStunPerMps = 0.25F;   // and this per m/s she slams past kPipeStunFromMps
     static constexpr float kPipeStunFromMps = 5.0F;
     static constexpr float kPipeSwatNs = 120.0F;      // the most her swat gives a loose piece in her way
-    // A landing this hard (a fall of 2.5 m) puts her down a while; from
-    // kLethalLandingMps it kills her.
-    static constexpr float kHardLandingMps = 7.0F;
+    // A landing this hard puts her down a while; from kLethalLandingMps it
+    // kills her. Her own jump comes back near 7.2 m/s. The line sits above
+    // that return with room for a short miss, so the jump does not put her
+    // down. A longer fall still does (the home ladder opens her hands at
+    // about 9.5 m/s).
+    static constexpr float kHardLandingMps = 8.20F;
     // A lead a story away by the pipe is worth chasing longer than one on her
     // own deck: a dangerous Matron keeps after it this long since she last
     // heard the climber, fully changed this long.
@@ -1045,6 +1054,14 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Her home: the deck (one of her levels' floors, by its top) her locker
+    // stands on, where she wakes, and where a restore puts her back. Moves
+    // the locker; while she is in it, puts her level, floor and lead there.
+    // Returns false (nothing changed)
+    // if no level of hers has that floor.
+    bool set_home(float deck_top);
+    [[nodiscard]] float home_deck_top() const noexcept { return home_y_; }
+    [[nodiscard]] int home_level() const noexcept { return home_level_; }
     // Tests only: she hears the climber at `at` (feet), as her ears would
     // report a sound there: a lead with an age, nothing more.
     void hear_for_test(JPH::RVec3 at);
@@ -1255,7 +1272,7 @@ private:
     // hold of it herself. Her ladder she does (its foot a node of her deck's
     // lines); the riser from 143 to her deck she does not (its foot is on
     // 143's walkway plate out over the shaft, through the gate in the rail).
-    // A climb (matron.cpp climb()): she hangs on the line (x, z), standoff
+    // A climb (matron_climb.cpp): she hangs on the line (x, z), standoff
     // short of its holds, between the support at its foot and the deck at its
     // head; the steel she goes over at the top is lip_y (a bridge or a fascia
     // can stand above the deck it leads to). out is the way over the top;
@@ -1385,10 +1402,11 @@ private:
     void step_journey(float dt);
     void end_journey(bool failed);
     [[nodiscard]] bool journeying() const noexcept { return journey_active_; }
-    // On a climb: up it, and over its head.
-    void climb(float dt);
-    bool begin_climb(int index, bool down = false);
-    bool find_climb_hold(JPH::RVec3 at, bool down);
+    // On a climb her scan found (matron_climb.cpp), by her Climber's moves:
+    // onto it (false: none to take, or her hands are on another move), its
+    // tick, and off it (failed: her hands opened on it).
+    bool take_climb(int index, bool down = false);
+    void step_climb(float dt);
     void release_climb(bool failed);
     // After a lead a story away along the corner pipe (above): to the rail's
     // corner on her level and onto it. False when it does not go that way, or
@@ -1435,7 +1453,7 @@ private:
     // Each way's state is its own: the journey's journey_*, the routecraft's
     // routecraft_* with the column it found (found_, find_wait_ticks_,
     // climb_back_*, climbing_key_), the travel's travel_*, the pipe's pipe_*,
-    // the old climber's climb_ and its hold, the cable's on_line_. What they
+    // the rung way's climb_ (its move is her Climber's), the cable's on_line_. What they
     // share by design is hers, no one way's: climb_retry_s_ (a start refused
     // or a way failed: none started a while), climb_blocks_ and
     // journey_wait_ticks_ (her own ways' search clocks), climb_releases_ and
@@ -1500,7 +1518,8 @@ private:
         [[nodiscard]] MoverView view() const override;
         bool let_go();
     };
-    // The old rung climber (matron_climb.cpp).
+    // Her rung way in the hunt (matron_climb.cpp): a ladder of her level's
+    // (the bay's rungs, a climb a test names), by her Climber's moves.
     class ClimbWay final : public Way {
     public:
         using Way::Way;
@@ -1657,6 +1676,9 @@ private:
     std::array<PlankView, kPlanks> plank_views_{};
     std::vector<Level> levels_;
     int level_ = 0;
+    // Her home (set_home): its floor and its level.
+    float home_y_ = kHomeDeckTop;
+    int home_level_ = 0;
     int patrol_ = 0;   // which of her level's loops, and how far round it
 
     State state_ = State::Dormant;
@@ -1823,19 +1845,9 @@ private:
     bool trap_step(float dt, JPH::RVec3 at, JPH::RVec3 player, bool saw, bool heard, bool on_deck);
     bool trap_lets_go(JPH::RVec3 player, float dt, bool perceived);
     int guess_climb_ = -1;
-    int climb_ = -1;
-    bool mantling_ = false;
-    bool climb_down_ = false;   // this climb goes down it: from its top to its foot
-    bool lowering_ = false;     // climbing down: off the top onto its face, still at the top's height
-    bool reaching_up_ = false;  // climbing up with no higher hold in reach: pulled up high on hers
-    JPH::BodyID climb_support_;
-    JPH::SubShapeID climb_member_;   // which of the support's parts the hand is on
-    JPH::Vec3 climb_local_hand_ = JPH::Vec3::sZero();
-    JPH::RVec3 climb_hand_ = JPH::RVec3::sZero();
-    float climb_force_n_ = 0.0F;
-    float climb_stall_s_ = 0.0F;
-    float climb_overload_s_ = 0.0F;
-    float climb_best_y_ = 0.0F;
+    int climb_ = -1;                 // the scanned climb her rung way has her on (-1: none)
+    JPH::RVec3 climb_hand_ = JPH::RVec3::sZero();   // her hand on it: the hold she has, reaches for, or last had
+    float climb_force_n_ = 0.0F;     // its move's force this tick
     float climb_retry_s_ = 0.0F;
     std::uint32_t climb_grips_ = 0;
     std::uint32_t climb_releases_ = 0;
@@ -1977,8 +1989,8 @@ private:
     float pipe_stun_s_ = 0.0F;
     float pipe_listen_s_ = 0.0F; // off the pipe, still and listening
     float pipe_slam_mps_ = 0.0F;
-    // Her hand on the pipe's steel (as climb_support_): the rail's top or the
-    // riser's face, kept in the support's frame.
+    // Her hand on the pipe's steel: the rail's top or the riser's face, kept
+    // in the support's frame.
     JPH::BodyID pipe_support_;
     JPH::SubShapeID pipe_member_;
     JPH::Vec3 pipe_local_hand_ = JPH::Vec3::sZero();

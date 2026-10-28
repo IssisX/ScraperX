@@ -121,6 +121,7 @@ public:
     [[nodiscard]] Bay &bay() noexcept { return *bay_; }
     // Tests only (never bound to the bridge): a kit body put at `at` moving at
     // `velocity`, not heard as a hit where it was put.
+    bool place_matron_home(float deck_top);
     void launch_matron_for_test(JPH::RVec3 at);
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;

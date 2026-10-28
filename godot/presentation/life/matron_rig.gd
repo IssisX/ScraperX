@@ -260,7 +260,9 @@ func _reach(s: String, target: Vector3) -> void:
 	_turn_bone_global("el_" + s, Quaternion((wr2 - el2).normalized(), (target - el2).normalized()))
 
 
-func contact(data: Dictionary, falling: bool) -> void:
+# `held`: her holds as the view draws them, eased onto each new one (the
+# view's _ease_hands); without it, the native's own holds.
+func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
 	var state := int(data.get("state", 0))
 	var turn := int(data.get("turn", 0))
 	# Laid out on the steel, or turned over head first down her pipe: the figure
@@ -271,7 +273,7 @@ func contact(data: Dictionary, falling: bool) -> void:
 	var on_line := bool(data.get("on_line", false))
 	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
 	if bool(data.get("climbing", false)) and data.has("climb_hand"):
-		var hand: Vector3 = data["climb_hand"]
+		var hand: Vector3 = held[0] if held.size() >= 1 else data["climb_hand"]
 		# Two-handed moves (mantle on the lip, jump_catch on the bar,
 		# pole with hands close together, hang_drop from the lip).
 		# Rung moves are not two-handed here: they keep exactly the
@@ -299,7 +301,7 @@ func contact(data: Dictionary, falling: bool) -> void:
 		if two_handed:
 			var hand_l: Vector3 = hand
 			if bool(data.get("climb_hand2_known", false)) and data.has("climb_hand2"):
-				hand_l = data["climb_hand2"]
+				hand_l = held[1] if held.size() >= 2 else data["climb_hand2"]
 			_reach("l", skel.global_transform.affine_inverse() * hand_l)
 		return
 	if climbing or on_line:

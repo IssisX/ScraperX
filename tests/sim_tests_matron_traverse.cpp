@@ -36,6 +36,7 @@ struct Result {
 
 Result take(const Leg &leg) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron traverse: settle");
     s.debug_place_matron(leg.start);
     for (int i = 0; i < 30; ++i) {

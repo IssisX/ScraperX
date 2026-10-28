@@ -207,7 +207,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
 
     // The locker: solid from the start, and for good.
     BodyCreationSettings cabinet(new BoxShape(Vec3(kLockerHalfX, kLockerHalfY, kLockerHalfZ)),
-                                 RVec3(kLockerX, kDeckTop + kLockerHalfY, kLockerZ), Quat::sIdentity(),
+                                 RVec3(kLockerX, kLockerY + kLockerHalfY, kLockerZ), Quat::sIdentity(),
                                  EMotionType::Static, static_cast<ObjectLayer>(static_layer));
     cabinet.mUserData = kLockerEntity;
     locker_body_ = bodies.CreateAndAddBody(cabinet, EActivation::DontActivate);
@@ -264,7 +264,7 @@ void Matron::spawn_body() {
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
-    bodies.SetPositionAndRotation(body_, RVec3(kLockerX, kDeckTop + kStandCentre + 0.02F, kSpawnZ), Quat::sIdentity(),
+    bodies.SetPositionAndRotation(body_, RVec3(kLockerX, home_y_ + kStandCentre + 0.02F, kSpawnZ), Quat::sIdentity(),
                                   EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
     bodies.AddBody(body_, EActivation::Activate);
@@ -277,6 +277,32 @@ void Matron::spawn_body() {
     foot_power_w_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
+}
+
+bool Matron::set_home(const float deck_top) {
+    int found = -1;
+    for (std::size_t i = 0; i < levels_.size(); ++i) {
+        if (static_cast<int>(i) != bay_level_ && std::abs(levels_[i].floor_y - deck_top) < 0.01F) {
+            found = static_cast<int>(i);
+            break;
+        }
+    }
+    if (found < 0) {
+        return false;
+    }
+    home_y_ = levels_[static_cast<std::size_t>(found)].floor_y;
+    home_level_ = found;
+    physics_.GetBodyInterface().SetPosition(locker_body_, RVec3(kLockerX, home_y_ + kLockerHalfY, kLockerZ),
+                                            EActivation::DontActivate);
+    if (!body_in_world_) {
+        level_ = home_level_;
+        feet_y_ = home_y_;
+        lead_floor_ = home_y_;
+        patrol_ = 0;
+        patrol_node_ = 2;
+    }
+    refresh_view();
+    return true;
 }
 
 void Matron::place_for_test(const RVec3 feet) {
@@ -340,7 +366,7 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
-    return index >= 0 && begin_climb(index, down);
+    return index >= 0 && take_climb(index, down);
 }
 
 void Matron::remove_body() {
@@ -860,22 +886,64 @@ void Matron::settle_level() {
     if (riding_) {
         return;
     }
-    // On a level is standing on it: not passing its height falling, and (where
-    // her map knows the deck's steel) inside its footprint.
+    // On a level is standing on it: not passing its height falling. Where her
+    // map knows the deck, the footprint still counts while she is in the air.
+    // Steel the ray actually finds is the floor even beside that footprint
+    // (a board or a lip the map does not contain).
     BodyInterface &bodies = physics_.GetBodyInterface();
     if (std::abs(bodies.GetLinearVelocity(body_).GetY()) > 0.6F) {
         return;
     }
     const RVec3 here = bodies.GetPosition(body_);
-    for (std::size_t i = 0; i < levels_.size(); ++i) {
-        if (static_cast<int>(i) != level_ && std::abs(feet_y_ - levels_[i].floor_y) < 0.6F &&
-            !off_its_steel(static_cast<int>(i), float(here.GetX()), feet_y_, float(here.GetZ()))) {
-            level_ = static_cast<int>(i);
-            commit_s_ = 0.0F;
-            const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-            pick_patrol(float(at.GetX()), float(at.GetZ()));
-            return;
+    // Her middle can sit past a lip while her soles still bear. The floor is
+    // the highest walkable hit within a step of her feet, not only the ray
+    // through her centre (that one misses a board she is standing on).
+    const float reach = kStandCentre + 0.3F;
+    const float kinematic = float(here.GetY()) - kStandCentre;
+    const IgnoreSingleBodyFilter self(body_);
+    float support_y = feet_y_;
+    bool supported = false;
+    const Vec3 soles[] = {Vec3::sZero(), Vec3(kFootSpanM, 0.0F, 0.0F), Vec3(-kFootSpanM, 0.0F, 0.0F),
+                          Vec3(0.0F, 0.0F, kFootSpanM), Vec3(0.0F, 0.0F, -kFootSpanM)};
+    for (const Vec3 &sole : soles) {
+        RayCastResult one;
+        const RVec3 from = here + sole;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), one, {}, {}, self) ||
+            one.mFraction <= 1.0e-4F) {
+            continue;
         }
+        const RVec3 point = from + Vec3(0.0F, -reach * one.mFraction, 0.0F);
+        const float y = float(point.GetY());
+        if (std::abs(y - kinematic) > 0.40F) {
+            continue;
+        }
+        {
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), one.mBodyID);
+            if (!lock.Succeeded() ||
+                lock.GetBody().GetWorldSpaceSurfaceNormal(one.mSubShapeID2, point).GetY() < 0.7F) {
+                continue;
+            }
+        }
+        if (!supported || y > support_y) {
+            supported = true;
+            support_y = y;
+        }
+    }
+    if (supported) {
+        feet_y_ = support_y;
+    }
+    for (std::size_t i = 0; i < levels_.size(); ++i) {
+        if (static_cast<int>(i) == level_ || std::abs(support_y - levels_[i].floor_y) >= 0.6F) {
+            continue;
+        }
+        if (!supported &&
+            off_its_steel(static_cast<int>(i), float(here.GetX()), support_y, float(here.GetZ()))) {
+            continue;
+        }
+        level_ = static_cast<int>(i);
+        commit_s_ = 0.0F;
+        pick_patrol(float(here.GetX()), float(here.GetZ()));
+        return;
     }
 }
 
@@ -1352,10 +1420,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             }
             // And no step that brings her within kEdgeMarginM of an edge to
             // either side (the tower's edges run along x and z): sliding along
-            // one at a slant she keeps her distance.
+            // one at a slant she keeps her distance. The board she is already
+            // on is not that edge.
             for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
                 const float toward = velocity.Dot(side);
-                if (toward > 0.0F && edge_at(side, toward * dt + kEdgeMarginM)) {
+                const float reach = toward * dt + kEdgeMarginM;
+                if (toward > 0.0F && edge_at(side, reach)) {
                     velocity -= side * toward;
                 }
             }
@@ -1624,7 +1694,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // down on what they stand on (her sole contact), not on
                     // the floor ahead she is stepping up to. A step up is
                     // walking, never the lunge: in a lunge tick it stays on
-                    // her 8 kN and 22 kW, and is reported as her stride.
+                    // her 8 kN and 44 kW, and is reported as her stride.
                     budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
                     budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
                     lunge_draw = false;
@@ -1984,7 +2054,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         walk_toward(dt, c.x, c.z, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
         climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
-        begin_climb(bay_climb_);
+        take_climb(bay_climb_);
         return true;
     }
     return false;
@@ -2287,7 +2357,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     };
     // How far the player's noise carries to her ear this tick (none: 0 loud),
     // and how far it reaches.
-    const RVec3 locker_ear(kLockerX, kDeckTop + kLockerHalfY, kLockerZ);
+    const RVec3 locker_ear(kLockerX, home_y_ + kLockerHalfY, kLockerZ);
     const RVec3 ear = body_in_world_ ? body_at : locker_ear;
     const float player_reach = loudness * kFullHearingM * hearing;
     const float player_carry = loudness > 0.0F && Vec3(player - ear).Length() <= player_reach
@@ -2778,7 +2848,75 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                                         break;
                                     }
                                 }
-                                if (!scan_walk) {
+                // Steel outside deck_steel_ (the board under a climb she
+                // just finished): a step along the real floor, not a straight
+                // line off it onto the ring. The edge guard still
+                // keeps her on what continues under her feet.
+                if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
+                    const traversal::Ignore ignore{body_, player_, moving_layer()};
+                    const std::vector<Vec3> steps =
+                        traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
+                                             Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
+                    float along = 0.0F;
+                    Vec3 prev(ax, feet_y_, az);
+                    const IgnoreSingleBodyFilter self(body_);
+                    const auto on_steel = [&](const float x, const float z) {
+                        RayCastResult down;
+                        const RVec3 from(x, feet_y_ + 0.45F, z);
+                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -0.9F, 0.0F)), down, {}, {},
+                                                                    self) ||
+                            down.mFraction <= 1.0e-4F) {
+                            return false;
+                        }
+                        const float y = float(from.GetY()) - 0.9F * down.mFraction;
+                        return std::abs(y - feet_y_) <= kStepUpM;
+                    };
+                    // A step counts only when the straight line to it stays on
+                    // steel. Her middle may already sit a hand's width past
+                    // the lip she is standing on, so the first span is not
+                    // judged. A later turn that is nearer across a gap is not
+                    // the next step.
+                    const auto segment_on = [&](const float x, const float z) {
+                        const float span = distance_xz(x, z, ax, az);
+                        const int n = std::max(1, static_cast<int>(span / 0.15F));
+                        for (int i = 1; i <= n; ++i) {
+                            const float t = float(i) / float(n);
+                            if (t * span < 0.12F) {
+                                continue;
+                            }
+                            if (!on_steel(ax + (x - ax) * t, az + (z - az) * t)) {
+                                return false;
+                            }
+                        }
+                        return on_steel(x, z);
+                    };
+                    for (const Vec3 &step : steps) {
+                        along += distance_xz(step.GetX(), step.GetZ(), prev.GetX(), prev.GetZ());
+                        prev = step;
+                        if (along < 0.30F || !segment_on(step.GetX(), step.GetZ())) {
+                            continue;
+                        }
+                        float px = step.GetX();
+                        float pz = step.GetZ();
+                        const float d = distance_xz(px, pz, ax, az);
+                        if (d > 1.2F) {
+                            const float cx = ax + (px - ax) * (1.2F / d);
+                            const float cz = az + (pz - az) * (1.2F / d);
+                            if (on_steel(cx, cz)) {
+                                px = cx;
+                                pz = cz;
+                            }
+                        }
+                        if (!on_steel(px, pz)) {
+                            continue;
+                        }
+                        sidestep_x_ = px;
+                        sidestep_z_ = pz;
+                        sidestep_s_ = 0.45F;
+                        break;
+                    }
+                }
+                if (!scan_walk) {
                                     wx = heard_x_;
                                     wz = heard_z_;
                                     scan_walk = true;
@@ -3403,7 +3541,7 @@ void Matron::restore(const Saved &saved) {
         leaps_ = 0;
         unrigs_ = 0;
         guess_line_ = -1;
-        lead_floor_ = kDeckTop;
+        lead_floor_ = home_y_;
         restore_line();
         guess_climb_ = -1;
         release_climb(false);
@@ -3420,11 +3558,11 @@ void Matron::restore(const Saved &saved) {
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
         unrig_way_ = -1;
-        // Back on her deck, off whatever she rode.
-        level_ = 0;
+        // Back on her home deck, off whatever she rode.
+        level_ = home_level_;
         patrol_ = 0;
         patrol_node_ = 2;
-        feet_y_ = kDeckTop;
+        feet_y_ = home_y_;
         riding_ = false;
         let_go_s_ = 0.0F;
         restore_pipe();
@@ -3988,7 +4126,10 @@ void Matron::refresh_view() {
     view_.foot_power_w = foot_power_w_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
-    view_.mantling = mantling_;
+    // Over a climb's head: her rung way's move pushing her up over its lip.
+    view_.mantling = way == &climb_way_ && shown.move_active &&
+                     (shown.move == traversal::MoveKind::Mantle ||
+                      (shown.move == traversal::MoveKind::RungUp && shown.phase >= 3));
     view_.clinging = riding_;
     view_.floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     view_.lead_floor_y = lead_floor_;
@@ -4086,15 +4227,15 @@ void Matron::refresh_view() {
         view_.z = float(at.GetZ());
     } else {
         view_.x = kLockerX;
-        view_.y = kDeckTop + kStandCentre;
+        view_.y = home_y_ + kStandCentre;
         view_.z = kLockerZ;
     }
     // Second climb hold + feet support: VIEW PLUMBING ONLY. Nothing here
     // moves her, grips, or changes a climb: it only reports two points
     // for the presentation to pose to, computed from the climb geometry
     // and probed against the world. Movement code never reads these
-    // fields, and no climb state (climb_, climb_support_, climb_hand_)
-    // is written here.
+    // fields, and no climb state (climb_, climber_, climb_hand_) is
+    // written here.
     view_.climb_hand2 = JPH::RVec3::sZero();
     view_.climb_hand2_known = false;
     view_.climb_feet_support = JPH::RVec3::sZero();
@@ -4102,32 +4243,43 @@ void Matron::refresh_view() {
     if (shown.hand_held) {
         // Her left, one shoulder-width (0.45 m) along the rung or lip
         // from the first hold, at the same height. On rungs across her
-        // facing (a legacy climb) her left runs along them; otherwise it
+        // facing (her rung way's climb) her left runs along them; otherwise it
         // is her yaw's left, (-cos yaw, 0, sin yaw), matching the
         // figure's local -x.
         const Vec3 left = shown.rungs_across ? shown.rung_left : Vec3(-std::cos(yaw_), 0.0F, std::sin(yaw_));
         if (left.LengthSq() > 1.0e-6F) {
             const RVec3 second = view_.climb_hand + left.Normalized() * 0.45F;
             view_.climb_hand2 = second;
-            // A legacy climb can prove the second point: it must rest
+            // Her rung way's climb can prove the second point: it must rest
             // on the very support and member the first hand holds.
             // Journey and routecraft climbs carry no support handle
             // here, so their candidate stays reported-but-unknown and
             // the rig keeps the single-hold pose rather than posing a
             // wrist to a point no surface was ever shown under.
+            const ClimbBodyFilter filter(body_, player_);
+            BodyID rests_body;
+            SubShapeID rests_member;
             if (shown.rungs_across) {
-                const ClimbBodyFilter filter(body_, player_);
-                BodyID rests_body;
-                SubShapeID rests_member;
                 view_.climb_hand2_known =
                     hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member) &&
                     rests_body == shown.hold_body && rests_member == shown.hold_member;
+            } else {
+                // Journey and routecraft climbs: both hands on the wall
+                // whenever a surface is really there, her left first, then
+                // her right; the point is only shown, never held.
+                const RVec3 right = view_.climb_hand - left.Normalized() * 0.45F;
+                if (hand_rests_on(physics_.GetNarrowPhaseQuery(), second, filter, rests_body, rests_member)) {
+                    view_.climb_hand2_known = true;
+                } else if (hand_rests_on(physics_.GetNarrowPhaseQuery(), right, filter, rests_body, rests_member)) {
+                    view_.climb_hand2 = right;
+                    view_.climb_hand2_known = true;
+                }
             }
         }
     }
     if (body_in_world_) {
-        // Feet: the surface straight under her body centre, probed like
-        // climb()'s floor check (centre down past her soles).
+        // Feet: the surface straight under her body centre, probed from
+        // her centre down past her soles.
         const RVec3 at(view_.x, view_.y, view_.z);
         const ClimbBodyFilter filter(body_, player_);
         RayCastResult floor_hit;

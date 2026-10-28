@@ -36,12 +36,12 @@ inline void require(const bool condition, const char *message) {
 // them. A change here is the owner's decision, by its own pull request.
 namespace law {
 inline constexpr float kForceN = 8000.0F;        // every force of hers but the Turn lunge's (checked to 8,000.5 N)
-inline constexpr float kPowerW = 22000.0F;       // her shared power, every actuator together
+inline constexpr float kPowerW = 44000.0F;       // her shared power, every actuator together (22 kW until the stronger Matron, 2026-10-27)
 inline constexpr float kLungeForceN = 9800.0F;   // the Turn lunge: its own move, its own cap
 inline constexpr float kLungePowerW = 65000.0F;
 inline constexpr float kMassKg = 220.0F;
-inline constexpr float kLegTravelM = 0.40F;      // a push-off's stroke
-inline constexpr float kLaunchDvMps = 3.80F;     // the take-off speed a push-off may earn
+inline constexpr float kLegTravelM = 0.85F;      // a push-off's stroke (0.40 m until the stronger Matron)
+inline constexpr float kLaunchDvMps = 6.30F;     // the take-off speed a push-off may earn (3.80 m/s until the stronger Matron)
 } // namespace law
 
 inline bool nearly_equal(const double a, const double b, const double epsilon = 1.0e-12) {
@@ -889,6 +889,7 @@ void run_strike();
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_chase();
+void run_matron_ring_descent();
 void run_matron_ways();
 void run_matron_arm();
 void run_matron_fatality();

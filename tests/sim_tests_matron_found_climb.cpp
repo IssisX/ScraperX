@@ -32,6 +32,7 @@ struct Leg {
 // 8 s. Until she stands a second on the prey's floor.
 Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const double let_go_at = 1.0e9) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron found climb: settle");
     s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
     s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
