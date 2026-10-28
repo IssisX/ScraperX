@@ -588,9 +588,10 @@ int main() {
     run_matron_ring_descent();
     run_matron_ways();
     run_matron_climb();
-    run_matron_grab();
-    run_matron_arm();
-    run_matron_fatality();
+    // run_matron_grab, run_matron_arm, run_matron_fatality: their own ctest
+    // slice (scraperx_sim.matron-grab), as matron-chase, since her fatality's
+    // runs took the whole suite's run past its timeout. They still run on
+    // every ctest.
     run_one_arm_route();
     run_bay();
     run_loose_stock();
