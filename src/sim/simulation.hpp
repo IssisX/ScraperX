@@ -261,10 +261,6 @@ struct MatronSnapshot final {
     // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
-    // The ways of her map (matron_routes.hpp) she has been along this run,
-    // and those that failed under her.
-    std::uint32_t route_edges = 0;
-    std::uint32_t route_failures = 0;
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
@@ -1486,6 +1482,10 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    // Hers the same way: where her body is drawn between two ticks, and her
+    // facing (the shorter way round). matron_state() stays her authority.
+    [[nodiscard]] Vector3 render_matron_position() const noexcept;
+    [[nodiscard]] double render_matron_yaw() const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -1569,16 +1569,20 @@ public:
     // Tests only: her out of the locker and on her patrol loop.
     void debug_matron_patrol() noexcept;
     // Tests only (never bound to the bridge): her body put standing at `feet`,
-    // awake and hunting; and one of her climbs begun from there (Connector
-    // values of sim/matron_routes.hpp), up or down. False if she found no hold.
+    // awake and hunting; and one of her climbs begun from there, up or down:
+    // the corner pipe (false if she found no hold), or the scanned climb
+    // nearest her off her floor (false if there is none; her Climber steps in
+    // under its first hold from her next tick, and a hold not there is a
+    // failed climb, counted in climb_releases).
     void debug_place_matron(Vector3 feet) noexcept;
-    [[nodiscard]] bool debug_matron_climb(int connector, bool down) noexcept;
+    [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
+    // Tests only: the corner pipe ruled out for her, as a pipe way that has
+    // failed three times is (her own found ways tested alone).
+    void debug_matron_rule_out_pipe() noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
     void debug_matron_let_go() noexcept;
-    // Tests only: every way on her map but this one (matron_routes.hpp) ruled out.
-    void debug_matron_only_way(std::size_t index) noexcept;
     // The Matron's climbing (matron_traversal.hpp): what the tower's steel
     // offers her, scanned from the real collision geometry on first use.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
@@ -1763,6 +1767,11 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Test setup: put her home (her locker, where she wakes) on the deck whose
+    // top is deck_top, kept across a world rebuilt after she ends a run. The
+    // game's home is the stack's deck 1 (11 m); tests written for her old
+    // start put it back at 154. Returns false if she has no such level.
+    bool place_matron_home(float deck_top);
     // Tests only: her body's gravity factor.
     [[nodiscard]] double debug_matron_gravity_factor() const noexcept;
 
@@ -1774,6 +1783,7 @@ private:
     std::unique_ptr<PhysicsWorld> physics_world_;
     // To start again whole (a run the Matron ended): how the world was made.
     InitialSpawn initial_spawn_ = InitialSpawn{};
+    float matron_home_ = -1.0F;   // place_matron_home's deck top; -1: the world's own
     std::vector<TestExtraSolid> test_extra_solids_;
     std::uint64_t runs_ended_by_matron_ = 0;
     std::uint64_t tick_index_ = 0;
@@ -1820,6 +1830,10 @@ private:
     bool hook_take_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    Vector3 previous_matron_position_{};
+    double previous_matron_yaw_ = 0.0;
+    // Her body and facing at the start of this tick, for render_matron_*().
+    void keep_matron_render_start() noexcept;
 };
 
 } // namespace scraperx::sim

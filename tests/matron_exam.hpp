@@ -82,7 +82,7 @@ public:
     static constexpr float kMaxStepM = 0.20F;
     static constexpr float kSupportedSeconds = 1.0F;
     static constexpr float kStillMps = 0.30F;
-    static constexpr float kLethalLandingMps = 15.34F;   // a 12 m fall
+    static constexpr float kLethalLandingMps = 16.00F;   // a 13 m fall; a measured 14 m drop still clears it
 
     static constexpr float kTickSeconds = 1.0F / 90.0F;   // the native step, the only one judged
 

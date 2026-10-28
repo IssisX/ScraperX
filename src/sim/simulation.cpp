@@ -47,6 +47,7 @@ Simulation::Simulation(const InitialSpawn initial_spawn, std::vector<TestExtraSo
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
     previous_player_position_ = snapshot_.player_position;
+    keep_matron_render_start();
 }
 
 Simulation::~Simulation() = default;
@@ -511,6 +512,7 @@ void Simulation::step_fixed() noexcept {
     const bool previous_crouched = snapshot_.player_crouched;
     const std::uint64_t previous_step_up_count = snapshot_.step_up_count;
     previous_player_position_ = snapshot_.player_position;
+    keep_matron_render_start();
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
 
@@ -562,6 +564,9 @@ void Simulation::step_fixed() noexcept {
         // She won: the run ends and starts again, the body whole.
         physics_world_.reset();
         physics_world_ = std::make_unique<PhysicsWorld>(initial_spawn_, test_extra_solids_);
+        if (matron_home_ >= 0.0F) {
+            physics_world_->place_matron_home(matron_home_);
+        }
         ++runs_ended_by_matron_;
     }
     sling_action_ = false;
@@ -600,6 +605,17 @@ void Simulation::step_fixed() noexcept {
         snapshot_.step_up_count != previous_step_up_count ||
         render_dx * render_dx + render_dy * render_dy + render_dz * render_dz > 1.0) {
         previous_player_position_ = snapshot_.player_position;
+    }
+    {
+        // Placed, restored or a new world: she is drawn where she is, not
+        // swept there from where she was.
+        const auto &her = physics_world_->matron().view();
+        const double mdx = her.x - previous_matron_position_.x;
+        const double mdy = her.y - previous_matron_position_.y;
+        const double mdz = her.z - previous_matron_position_.z;
+        if (mdx * mdx + mdy * mdy + mdz * mdz > 1.0) {
+            keep_matron_render_start();
+        }
     }
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds =
@@ -657,6 +673,30 @@ Vector3 Simulation::render_player_position() const noexcept {
         previous_player_position_.z +
             (snapshot_.player_position.z - previous_player_position_.z) * alpha,
     };
+}
+
+void Simulation::keep_matron_render_start() noexcept {
+    const auto &her = physics_world_->matron().view();
+    previous_matron_position_ = Vector3{her.x, her.y, her.z};
+    previous_matron_yaw_ = her.yaw;
+}
+
+Vector3 Simulation::render_matron_position() const noexcept {
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    const auto &her = physics_world_->matron().view();
+    return {
+        previous_matron_position_.x + (her.x - previous_matron_position_.x) * alpha,
+        previous_matron_position_.y + (her.y - previous_matron_position_.y) * alpha,
+        previous_matron_position_.z + (her.z - previous_matron_position_.z) * alpha,
+    };
+}
+
+double Simulation::render_matron_yaw() const noexcept {
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    const double now = physics_world_->matron().view().yaw;
+    // The shorter way round from her facing at the tick's start.
+    const double turn = std::remainder(now - previous_matron_yaw_, 2.0 * 3.14159265358979323846);
+    return previous_matron_yaw_ + turn * alpha;
 }
 
 bool Simulation::set_slingshot_input(const double draw, const double yaw, const double elevation) noexcept {
@@ -1072,17 +1112,17 @@ void Simulation::debug_place_matron(const Vector3 feet) noexcept {
         JPH::RVec3(static_cast<float>(feet.x), static_cast<float>(feet.y), static_cast<float>(feet.z)));
 }
 
-bool Simulation::debug_matron_climb(const int connector, const bool down) noexcept {
-    return physics_world_->matron().climb_for_test(static_cast<routes::Connector>(connector), down);
+bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexcept {
+    return physics_world_->matron().climb_for_test(pipe, down);
+}
+
+void Simulation::debug_matron_rule_out_pipe() noexcept {
+    physics_world_->matron().rule_out_pipe_for_test();
 }
 
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
-}
-
-void Simulation::debug_matron_only_way(const std::size_t index) noexcept {
-    physics_world_->matron().only_way_for_test(index);
 }
 
 void Simulation::debug_matron_let_go() noexcept {
@@ -1236,6 +1276,10 @@ bool Simulation::request_matron_climb_goal(Vector3 goal, Vector3 facing) {
 void Simulation::cancel_matron_climb_goal() { physics_world_->matron().cancel_climb_goal(); }
 int Simulation::matron_climb_status() const { return int(physics_world_->matron().climb_report().status); }
 std::uint32_t Simulation::matron_climb_queries() const { return physics_world_->matron().climb_report().native_queries; }
+bool Simulation::place_matron_home(const float deck_top) {
+    matron_home_ = deck_top;
+    return physics_world_->place_matron_home(deck_top);
+}
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
 double Simulation::debug_matron_gravity_factor() const noexcept {
@@ -1352,8 +1396,6 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.down_s = view.down_s;
     result.down_left_s = view.down_left_s;
     result.on_pipe = view.on_pipe;
-    result.route_edges = view.route_edges;
-    result.route_failures = view.route_failures;
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
@@ -1488,6 +1530,7 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
     snapshot_.simulation_time_seconds = static_cast<double>(tick_index_) * kFixedStepSeconds;
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
     previous_player_position_ = snapshot_.player_position;
+    keep_matron_render_start();
     return true;
 }
 

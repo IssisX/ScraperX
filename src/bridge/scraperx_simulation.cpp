@@ -318,9 +318,11 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_summit_state"), &ScraperXSimulation::get_summit_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("place_matron_home", "deck_top"), &ScraperXSimulation::place_matron_home);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
+    godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -392,6 +394,10 @@ bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spaw
     simulation_ = std::make_unique<sim::Simulation>(
         static_cast<sim::InitialSpawn>(static_cast<std::uint8_t>(initial_spawn)));
     return true;
+}
+
+bool ScraperXSimulation::place_matron_home(const double deck_top) {
+    return simulation_->place_matron_home(static_cast<float>(deck_top));
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -1653,6 +1659,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["position"] = godot::Vector3(static_cast<real_t>(state.position.x), static_cast<real_t>(state.position.y),
                                      static_cast<real_t>(state.position.z));
     out["yaw"] = state.yaw;
+    // Where she is drawn between two ticks, as the player is (render_*).
+    out["render_position"] = to_godot(simulation_->render_matron_position());
+    out["render_yaw"] = simulation_->render_matron_yaw();
     out["speed"] = state.speed;
     out["stride"] = state.stride;
     out["strain"] = state.strain;
@@ -1883,6 +1892,11 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
 }
 
 void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
+
+// Her look over the tower (every way she climbs is one her scan finds) is
+// seconds of work. The game asks for it before play, so it never lands in
+// the tick she leaves her locker; asked again, it does nothing.
+void ScraperXSimulation::prepare_matron() { (void)simulation_->matron_affordances(); }
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
     const sim::SwingSnapshot state = simulation_->swing_state();

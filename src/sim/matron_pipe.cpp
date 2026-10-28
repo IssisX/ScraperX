@@ -3,7 +3,7 @@
 // she goes to. Gravity is on all the way and she meets every steel she
 // passes. Her hands are one capped force at a real contact, the rail's top or
 // the riser's face, kept in that body's frame and checked every step, as on
-// her ladders (matron.cpp climb()); a dynamic support takes the reaction. On
+// her ladders (her Climber's holds); a dynamic support takes the reaction. On
 // the riser's face the grip is friction: what holds her up or lets her down
 // is at most her squeeze times kPipeFriction. A hand that loses its steel, a
 // load past her grip for a moment, or no headway for 2.5 s lets go: on the
@@ -139,7 +139,7 @@ bool Matron::pipe_face_hold(const RVec3 at, const float y) {
 
 // Her hands on the rail where she stands, and room for all of her over it and
 // out at her line; else nothing starts and she tries again in a moment.
-bool Matron::get_on_pipe(const float from_floor, const float to_floor, const bool own_way) {
+bool Matron::get_on_pipe(const float from_floor, const float to_floor) {
     if (climb_retry_s_ > 0.0F) {
         return false;
     }
@@ -154,7 +154,6 @@ bool Matron::get_on_pipe(const float from_floor, const float to_floor, const boo
     drop_stock();
     pipe_from_ = from_floor;
     pipe_to_ = to_floor;
-    pipe_own_way_ = own_way;
     pipe_phase_ = PipePhase::Mount;
     pipe_over_ = false;
     pipe_s_ = 0.0F;
@@ -162,7 +161,6 @@ bool Matron::get_on_pipe(const float from_floor, const float to_floor, const boo
     pipe_best_ = -std::numeric_limits<float>::max();
     pipe_stall_s_ = 0.0F;
     pipe_overload_s_ = 0.0F;
-    climb_end_ = ClimbEnd::None;
     ++pipe_links_;
     ++pipe_holds_;   // her hands on the rail: a knock
     return true;
@@ -173,25 +171,27 @@ void Matron::get_off_pipe(const bool failed) {
     pipe_support_ = BodyID();
     pipe_drive_dv_ = Vec3::sZero();
     pipe_force_n_ = 0.0F;
-    climb_end_ = failed ? ClimbEnd::Failed : ClimbEnd::Done;
+    const int way = pipe_way(pipe_from_, pipe_to_);
     if (failed) {
-        // Set out on by herself (a route records its own): her map leaves
-        // this way alone a while. Her level is what her feet find
+        // This way of the pipe she leaves alone a while (past its retries,
+        // until the world changes). Her level is what her feet find
         // (settle_level), not where she meant to go.
-        const std::size_t way = pipe_way(pipe_from_, pipe_to_);
-        if (pipe_own_way_ && way < routes::kMaxEdges) {
-            routes_.fail(way, routes::Reason::Failed, clock_s_);
-            ++route_failures_;
+        if (way >= 0) {
+            PipeWayMemory &memory = pipe_ways_[static_cast<std::size_t>(way)];
+            if (memory.failures < 255) {
+                ++memory.failures;
+            }
+            memory.blocked_until_s = memory.failures > kPipeWayRetries ? std::numeric_limits<float>::infinity()
+                                                                       : clock_s_ + kPipeWayBlockS;
         }
         ++climb_releases_;
         climb_retry_s_ = 2.0F;
         return;
     }
-    // Along it by herself (a route records its own): her map knows it carried her.
-    const std::size_t way = pipe_way(pipe_from_, pipe_to_);
-    if (pipe_own_way_ && way < routes::kMaxEdges) {
-        routes_.succeed(way);
-        ++route_edges_done_;
+    // Along it: this way of the pipe carried her, and is worth trying again.
+    if (way >= 0) {
+        pipe_ways_[static_cast<std::size_t>(way)].failures = 0;
+        pipe_ways_[static_cast<std::size_t>(way)].blocked_until_s = 0.0F;
     }
     for (std::size_t i = 0; i < levels_.size(); ++i) {
         if (std::abs(levels_[i].floor_y - pipe_to_) < 0.3F) {
@@ -556,8 +556,8 @@ bool Matron::pipe_reaches(const float floor_y) noexcept {
     if (floor_y < kPipeLowestFloor - 0.1F || floor_y > kDeckTop + 0.1F) {
         return false;
     }
-    const float storeys = floor_y / kStackPitch;
-    return std::abs(storeys - std::round(storeys)) < 0.02F;
+    const float stories = floor_y / kStackPitch;
+    return std::abs(stories - std::round(stories)) < 0.02F;
 }
 
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
@@ -576,8 +576,7 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         return false;
     }
     // A way that failed under her a moment ago she leaves alone a while.
-    const std::size_t way = pipe_way(floor_y, next);
-    if (way < routes::kMaxEdges && !routes_.usable(way, clock_s_)) {
+    if (const int way = pipe_way(floor_y, next); way >= 0 && !pipe_way_open(way)) {
         return false;
     }
     const float ax = float(at.GetX());
@@ -596,8 +595,38 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     walk_toward(dt, ax, az, 0.0F, accel);
     yaw_ = turn_to(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
-    (void)get_on_pipe(floor_y, next, true);
+    (void)get_on_pipe(floor_y, next);
     return true;
+}
+
+int Matron::pipe_way(const float from_floor, const float to_floor) noexcept {
+    // Its decks, 132, 143 and 154 (pipe_reaches): one story up from 132 or
+    // 143 (ways 0 and 1), or down from 143 or 154 (ways 2 and 3).
+    const auto deck = [](const float floor_y) {
+        for (int d = 0; d < 3; ++d) {
+            if (std::abs(floor_y - (kPipeLowestFloor + kStackPitch * float(d))) <= kOnSteelM) {
+                return d;
+            }
+        }
+        return -1;
+    };
+    const int from = deck(from_floor);
+    const int to = deck(to_floor);
+    if (from < 0 || to < 0) {
+        return -1;
+    }
+    if (to == from + 1) {
+        return from;
+    }
+    if (to == from - 1) {
+        return 1 + from;
+    }
+    return -1;
+}
+
+bool Matron::pipe_way_open(const int way) const noexcept {
+    const PipeWayMemory &memory = pipe_ways_[static_cast<std::size_t>(way)];
+    return !memory.ruled_out && clock_s_ >= memory.blocked_until_s;
 }
 
 void Matron::pipe_struck(const RVec3 at) {

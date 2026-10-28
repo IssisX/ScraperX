@@ -79,6 +79,9 @@ var _continued_from_save := false
 static var _title_seen := false
 var _title: Control
 var _title_open := false
+# Her look over the tower (seconds of work on a phone) is made once, as play
+# starts, behind a card: never in the tick she leaves her locker.
+var _her_scan_pending := false
 var _capture_path := ""
 var _capture_scheduled := false
 var _fps_label: Label
@@ -298,10 +301,50 @@ func _ready() -> void:
 	# title when there is one.
 	if _should_ask_consent():
 		_show_consent()
+	if _uitest_scenario.is_empty() and not _ci_mode and _audit == null:
+		_her_scan_pending = true
+		if not _title_open:
+			_prepare_her.call_deferred()
+
+# Play starts: the card goes up over the frozen tower, she reads the steel,
+# the card comes down. A title closed on CONTINUE starts play here too; a NEW
+# CLIMB reloads the scene, and the new one starts it from _ready.
+func _prepare_her() -> void:
+	if not _her_scan_pending:
+		return
+	_her_scan_pending = false
+	var was_paused := get_tree().paused
+	get_tree().paused = true
+	var card := Label.new()
+	card.text = "LOADING"
+	card.add_theme_font_override("font", UiStyle.font_digits())
+	card.add_theme_font_size_override("font_size", 40)
+	card.add_theme_color_override("font_color", UiStyle.AMBER)
+	card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$PauseLayer.add_child(card)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var started := Time.get_ticks_msec()
+	_native.prepare_matron()
+	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
+	card.queue_free()
+	# A pause menu opened while she read (focus lost in those frames) stays paused.
+	get_tree().paused = was_paused or _paused
 
 func _process(delta: float) -> void:
 	if _native == null:
 		return
+	# She ended his run and the world was built again: her look over the new
+	# one is made now, once his death has played, not in the tick she leaves
+	# her locker.
+	if _her_world_new and _death_cam_left <= 0.0:
+		_her_world_new = false
+		if _uitest_scenario.is_empty() and not _ci_mode and _audit == null:
+			_her_scan_pending = true
+			_prepare_her.call_deferred()
 	if _fps_label.visible:
 		_fps_clock -= delta
 		if _fps_clock <= 0.0:
@@ -441,11 +484,24 @@ func _process(delta: float) -> void:
 	# The foreman's radio, from the native's state; his lines show whatever
 	# the captions setting, having no voice yet.
 	var climber: Vector3 = _native.get_player_position()
+	var her: Dictionary = _native.get_matron_state()
 	_radio.update(delta, {
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
-		"matron_released": bool(_native.get_matron_state()["released"]),
+		"matron_released": bool(her["released"]),
 	})
+	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
+	# her a few seconds after she burst out): her bearing off his view, how
+	# far across the ground, how far above or below.
+	if bool(her["released"]) and bool(her["alive"]) and int(her["state"]) >= MatronView.STATE_EMERGING:
+		var at: Vector3 = her["position"]
+		var flat := Vector2(at.x - climber.x, at.z - climber.z)
+		var view_ahead := Vector2(-sin(_yaw), -cos(_yaw))
+		var view_right := Vector2(cos(_yaw), -sin(_yaw))
+		_hud.her_marker = {"bearing": atan2(flat.dot(view_right), flat.dot(view_ahead)), "dist": flat.length(),
+			"rise": at.y - climber.y}
+	else:
+		_hud.her_marker = {}
 	_hud.radio_text = _radio.text
 	_hud.radio_who = _radio.who
 	# The faint route hint, asked of the native only while it is on.
@@ -746,6 +802,8 @@ func _close_title() -> void:
 	get_tree().paused = false
 	_router.clear_held()
 	_router.gameplay_active = true
+	if _her_scan_pending:
+		_prepare_her.call_deferred()
 
 # --- her chart: the profile, and the microphone's consent ---------------------
 
