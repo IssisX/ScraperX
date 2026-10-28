@@ -17,8 +17,8 @@ extends RefCounted
 ##
 ## His death in her hand (fatal_release_beat rising at the let-go, the hang
 ## over the drop): RELEASE_SLOW_S of slow motion (the sim stepped fewer ticks
-## a frame, its step unchanged), the view pulled out over the edge looking down
-## the drop at him, the fade to black complete FADE_DONE_S after the let-go,
+## a frame, its step unchanged), the view pulled up over her shoulder at the
+## edge looking down the drop at him, the fade to black complete FADE_DONE_S after the let-go,
 ## the sim stepped fast while black until the death's restore lands (the
 ## native's death count), then the fade in on the restored body's eye. Her
 ## floor version (claimed, the Black beat) fades the same way.
@@ -58,9 +58,9 @@ const RELEASE_SLOW_SCALE := 0.3
 const FADE_FROM_S := 0.5
 const FADE_DONE_S := 1.0
 const PULL_S := 0.7
-const PULL_OUT_M := 1.6         # out over the drop from the edge
-const PULL_UP_M := 2.2
-const PULL_RISE_M := 2.4        # risen more over the pull-out
+const PULL_BACK_M := 1.3        # back from the edge, over her shoulder
+const PULL_UP_M := 3.4          # over her head
+const PULL_RISE_M := 1.8        # risen more over the pull-out
 const FAST_FORWARD := 6.0       # the sim's speed while black, waiting on the death
 const AWAIT_DEATH_MAX_S := 12.0 # real seconds black before it gives up waiting
 const BLACK_HOLD_S := 0.12
@@ -309,10 +309,10 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var goal := _pivot + dir * fit
 	var look_at := _pivot
 	if falling:
-		# The pull-out down the drop: up and out over the edge from where the
-		# camera was, looking down at him going.
+		# The pull-out down the drop: up from where the camera was to over her
+		# shoulder at the edge, rising, looking down the drop at him going.
 		var k := smoothstep(0.0, PULL_S, _since_release)
-		var over := _edge + _out * PULL_OUT_M + Vector3.UP * (PULL_UP_M + PULL_RISE_M * smoothstep(0.0, FADE_DONE_S, _since_release))
+		var over := _edge - _out * PULL_BACK_M + Vector3.UP * (PULL_UP_M + PULL_RISE_M * smoothstep(0.0, FADE_DONE_S, _since_release))
 		goal = _pull_from.lerp(over, k)
 		look_at = _pivot.lerp(him, k)
 	# The sphere cast from the pivot (a camera's radius past the goal): in at
