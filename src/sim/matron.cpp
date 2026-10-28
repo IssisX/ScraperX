@@ -3546,7 +3546,6 @@ void Matron::restore(const Saved &saved) {
         fatal_dropped_ = false;
         fatal_edge_ = RVec3::sZero();
         fatal_s_ = 0.0F;
-        fatal_damp_ = Vec3::sZero();
         fatal_check_ticks_ = 0;
         fatal_lethal_ = false;
         fatal_toss_ = 0.0F;

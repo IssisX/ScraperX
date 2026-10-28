@@ -410,6 +410,12 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
             }
         }
+        if (grip_swing_) {
+            // The fatality's grip is firm on the ankle: his swing about her
+            // fingers meets their friction (Matron::kFatalGripFrictionNm).
+            static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr())
+                ->SetMaxFrictionTorque(matron_->fatal_holding() ? Matron::kFatalGripFrictionNm : 0.0F);
+        }
         // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).
         grip_fought_ = grip_fought_ || kick_now_ || thrash_ > kFoughtThrash || brace_ != nullptr;
         // Thrash: a kick along the body, away from her hand; a twist.

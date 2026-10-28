@@ -802,9 +802,10 @@ public:
     // to the first steel it meets; that meeting's speed down must be
     // kFatalLandMps, past kLethalImpactSpeedMps (20 m/s, simulation.hpp) with
     // room: the first landing kills, and nothing on the way breaks the fall.
-    // Choosing the edge she foresees it from where he will really hang
-    // (kFatalHangOutM past her middle, still) with kFatalChooseMarginM; at
-    // the let-go, from his real state, with kFatalLetGoMarginM.
+    // Choosing the edge she foresees it from where he will really hang at
+    // her let-go (kFatalDropOutM past her middle, still) with
+    // kFatalChooseMarginM; at the let-go, from his real state, with
+    // kFatalLetGoMarginM.
     // Steel may stand out under the edge (the beams under the decks below, a
     // deck's edge beam), so her arm gives him a toss out as her fingers open:
     // the least of kFatalTossMps out over the drop that the foreseen fall
@@ -814,7 +815,6 @@ public:
     // A first meeting side-on (a wall, a beam's edge he would graze) is
     // foreseen not to kill: how hard a graze closes is not foreseeable.
     static constexpr float kFatalLandMps = 23.0F;
-    static constexpr float kFatalHangOutM = 1.25F;
     static constexpr float kFatalChooseMarginM = 0.15F;
     static constexpr float kFatalLetGoMarginM = 0.12F;
     static constexpr float kFatalSwayM = 0.3F;
@@ -830,14 +830,6 @@ public:
     static constexpr float kFatalLetGoByS = 6.8F;
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
-    // Out over the edge her hand rides his swing (ride_swing: the pivot drawn
-    // toward his middle's offset from the point of his ankle she holds, at
-    // kFatalDampRate of it a second, back to her pose at kFatalDampReturn, at
-    // most kFatalDampMaxM off it): the swing dies down before she lowers him
-    // and before she lets go.
-    static constexpr float kFatalDampRate = 4.0F;
-    static constexpr float kFatalDampReturn = 1.0F;
-    static constexpr float kFatalDampMaxM = 0.35F;
     // Let go, she watches him fall at least kFatalWatchS, and on until he is
     // still kFatalStillS (his fall over: the death's restore usually comes
     // first), kFatalWatchMaxS at most; then she is after him.
@@ -846,12 +838,42 @@ public:
     static constexpr float kFatalWatchMaxS = 20.0F;
     // Her hand's pace (of kHandSpeedMps) taking him out and down over the
     // edge (an ordinary hold's: 0.6 of it). His lift is her carry's, on the
-    // way. Out first at the heave's height; down only while his swing cannot
-    // bring his middle back within kFatalClearM of the lip (his breadth, 0.35
-    // m, and a hand's width: his swing back in over the rail would lay him
-    // across it), and up again if it does.
+    // way. Past the rail's height she takes him down only while his swing
+    // cannot bring his middle back within kFatalClearM of the lip (his
+    // breadth, 0.35 m, and a hand's width: his swing back in over the rail
+    // would lay him across it), and up again if it does.
     static constexpr float kFatalLowerScale = 1.0F;
     static constexpr float kFatalClearM = 0.40F;
+    // His window (the owner, 2026-10-28: a punch of his landed in it frees
+    // him). She stands with her front to the rail (her middle kFatalStandM in
+    // from the lip) and holds him at his window's pose: her hand
+    // kFatalWindowOutM out from her middle and kFatalWindowUpM over her
+    // feet, him head down under it, the whole of him above her rail's top,
+    // his shoulder level with hers and within his punch's reach of her body
+    // (0.75 m, shoulder to fist). Her fingers are firm on his ankle: his swing
+    // about them meets kFatalGripFrictionNm of friction (his weight about the
+    // ankle is 640 N m a radian), so he comes to hang still. Easing into the
+    // pose (kFatalEaseRate of what is left, a second), she opens the window
+    // once his middle is kFatalWindowPastM out past the lip and his shoulder
+    // stays within kFatalReachM of her (the punch's reach less a hand's
+    // width) as he swings. His shoulder, the punch's start, is
+    // kShoulderOfMiddleM along his body's up from his middle.
+    static constexpr float kFatalStandM = 0.30F;
+    static constexpr float kFatalWindowOutM = 0.85F;
+    static constexpr float kFatalWindowUpM = 2.9F;
+    static constexpr float kFatalGripFrictionNm = 80.0F;
+    static constexpr float kFatalEaseRate = 3.0F;
+    static constexpr float kFatalWindowPastM = 0.20F;
+    static constexpr float kFatalReachM = 0.70F;
+    static constexpr float kShoulderOfMiddleM = 0.25F;
+    // His window over, she takes him out over the drop toward her let-go's
+    // pose (kFatalDropOutM out from her middle and kFatalDropUpM over her
+    // feet: her arm's length that high), and lets go on the way once his
+    // middle is kFatalOpenAirM out past the lip (over open air) and his fall
+    // from there, as he moves, kills.
+    static constexpr float kFatalDropOutM = 1.35F;
+    static constexpr float kFatalDropUpM = 2.1F;
+    static constexpr float kFatalOpenAirM = 0.5F;
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
     // hold, at every stage (Cory, 2026-10-27: every time she catches you she
@@ -1236,6 +1258,8 @@ public:
     void foresee_no_kill_for_test() noexcept { no_kill_foreseen_ = true; }
     // The fatality's hold (kFatalTargetS): its path, and the release beat.
     [[nodiscard]] FatalPath fatal_path() const noexcept { return fatal_path_; }
+    // Her hold is the fatality's (her grip firm on his ankle: kFatalGripFrictionNm).
+    [[nodiscard]] bool fatal_holding() const noexcept { return fatal_hold_ && holding_state(state_); }
     [[nodiscard]] std::uint32_t fatal_release_beat() const noexcept { return fatal_release_beat_; }
     // Tests only: one of her climbs begun from where she stands, up or down:
     // the corner pipe, or the scanned ladder nearest her off her floor.
@@ -1823,8 +1847,14 @@ private:
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed, JPH::Vec3 carried = JPH::Vec3::sZero());
-    // The fatality's hand riding his swing (fatal_damp_); returns his swing.
-    JPH::Vec3 ride_swing(float dt, JPH::RVec3 player);
+    // His shoulder's distance from her body (her at `at`, his middle at
+    // `player`), and so as far as his swing (`swing_v`) carries it: what his
+    // punch must reach (kFatalReachM).
+    [[nodiscard]] float fist_reach_m(JPH::RVec3 at, JPH::RVec3 player, float swing_v) const;
+    // His fall foreseen from his middle at `player` as he moves, with the
+    // least of her tosses out along `out` that kills: fatal_lethal_,
+    // fatal_toss_ and fatal_lethal_mps_.
+    void foresee_fall(JPH::RVec3 player, JPH::Vec3 out);
     void pose_hand2(float dt, JPH::RVec3 target, float speed);
     // The Turn's clock: `distance_to_player` across, `carried_m` how far the
     // player's noise carried to her.
@@ -2028,7 +2058,6 @@ private:
     bool reel_to_floor_ = false;           // no lethal let-go in time: hauled back in for the floor version
     bool fatal_dropped_ = false;           // let go over the drop (or lost there): she watches him go
     float fatal_s_ = 0.0F;                 // since her fingers closed on his ankle (the fatality's hold)
-    JPH::Vec3 fatal_damp_ = JPH::Vec3::sZero();   // her hand riding his swing, off her pose
     int fatal_check_ticks_ = 0;            // till the let-go is foreseen again
     bool fatal_lethal_ = false;            // the let-go foreseen: it kills
     float fatal_lethal_mps_ = 0.0F;        // and the speed of its first meeting with steel
