@@ -229,6 +229,10 @@ int main() {
         run_matron_pursuit();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-pipe-ways") {
+        run_matron_pipe_ways();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-hoist") {
         run_matron_hoist();
         return EXIT_SUCCESS;
@@ -583,6 +587,7 @@ int main() {
     run_matron_unstick();
     run_matron_traverse();
     run_matron_pursuit();
+    run_matron_pipe_ways();
     // run_matron_chase: its own ctest slice (scraperx_sim.matron-chase), so the
     // whole suite's run stays inside its timeout. It still runs on every ctest.
     run_matron_ring_descent();

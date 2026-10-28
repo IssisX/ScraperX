@@ -587,6 +587,27 @@ int Matron::pipe_way(const float from_floor, const float to_floor) noexcept {
     return -1;
 }
 
+void Matron::fail_pipe_way_for_test(const float from_floor, const float to_floor) {
+    pipe_from_ = from_floor;
+    pipe_to_ = to_floor;
+    get_off_pipe(true);
+}
+
+Matron::PipeWayView Matron::pipe_way_view(const float from_floor, const float to_floor) const noexcept {
+    PipeWayView v;
+    const int way = pipe_way(from_floor, to_floor);
+    if (way < 0) {
+        v.open = false;
+        return v;
+    }
+    const PipeWayMemory &memory = pipe_ways_[static_cast<std::size_t>(way)];
+    v.failures = memory.failures;
+    v.blocked_for_s = std::max(0.0F, memory.blocked_until_s - clock_s_);
+    v.ruled_out = memory.ruled_out;
+    v.open = pipe_way_open(way);
+    return v;
+}
+
 bool Matron::pipe_way_open(const int way) const noexcept {
     const PipeWayMemory &memory = pipe_ways_[static_cast<std::size_t>(way)];
     return !memory.ruled_out && clock_s_ >= memory.blocked_until_s;

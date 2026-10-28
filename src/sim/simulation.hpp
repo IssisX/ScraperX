@@ -1573,6 +1573,15 @@ public:
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
     void debug_matron_rule_out_pipe() noexcept;
+    // Tests: a failed go at her pipe's way between two floors, and its memory.
+    void debug_matron_fail_pipe_way(double from_floor, double to_floor);
+    struct MatronPipeWay {
+        int failures = 0;
+        double blocked_for_s = 0.0;
+        bool ruled_out = false;
+        bool open = true;
+    };
+    [[nodiscard]] MatronPipeWay matron_pipe_way(double from_floor, double to_floor) const;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.

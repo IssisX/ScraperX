@@ -1098,6 +1098,18 @@ public:
     void let_go_for_test();
     // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
     void rule_out_pipe_for_test();
+    // Tests: a failed go at the pipe's way from `from_floor` to `to_floor`
+    // (as get_off_pipe(true) counts one), and what she keeps of that way.
+    void fail_pipe_way_for_test(float from_floor, float to_floor);
+    static constexpr float kPipeWayBlockS = 30.0F;
+    static constexpr std::uint8_t kPipeWayRetries = 2;
+    struct PipeWayView {
+        int failures = 0;
+        float blocked_for_s = 0.0F;   // from now; infinite: until a restore
+        bool ruled_out = false;
+        bool open = true;
+    };
+    [[nodiscard]] PipeWayView pipe_way_view(float from_floor, float to_floor) const noexcept;
     // Tests only: one of her climbs begun from where she stands, up or down:
     // the corner pipe, or the scanned ladder nearest her off her floor.
     bool climb_for_test(bool pipe, bool down);
@@ -2029,8 +2041,6 @@ private:
         float blocked_until_s = 0.0F;
         bool ruled_out = false;
     };
-    static constexpr float kPipeWayBlockS = 30.0F;
-    static constexpr std::uint8_t kPipeWayRetries = 2;
     std::array<PipeWayMemory, 4> pipe_ways_{};
     int pipe_waypoint_ = 0;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
