@@ -88,6 +88,13 @@ void run_matron_pace() {
         } else if (steer_to(s, corners[corner][0], corners[corner][1], phase == 0)) {
             corner = (corner + 1) % 4;
         }
+        // The leader keeps to the deck's bands: put on a ladder's rungs (her
+        // shove at its foot while her hands are off him after a hold), he lets
+        // go of them, as a player leading her would, rather than wait on them
+        // where her hands do not take him.
+        if (s.snapshot().traversal_state == scraperx::sim::TraversalState::Climbing) {
+            (void)s.request_release();
+        }
         tick(s);
         const auto m = s.matron_state();
         sample_drive(m);
