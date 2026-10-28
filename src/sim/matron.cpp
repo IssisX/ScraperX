@@ -989,10 +989,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     target_z_ = wz;
     Vec3 velocity = bodies.GetLinearVelocity(body_);
     const Vec3 start_v = velocity;
-    foot_drive_dv_ = Vec3::sZero();
-    foot_force_n_ = 0.0F;
-    foot_power_w_ = 0.0F;
-    foot_lunge_ = false;
+    // Her feet's drive this call: the tick's account (feet_budget_, reset in
+    // pre_step) may already carry an earlier push of hers this tick.
+    const Vec3 dv_before = foot_drive_dv_;
     bool floor_boarding = false;
     // Feet drive only on a floor, and not once she has jumped off it (rising
     // off it faster than it rises): a vault or a leap flies until she lands.
@@ -1014,52 +1013,27 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
     const bool floor = supported(at) || supported(at + across * kFootSpanM) || supported(at - across * kFootSpanM) ||
                        supported(at + facing * kFootSpanM) || supported(at - facing * kFootSpanM);
-    // Validated sole contact for the force-law foot drive (patch Item 4, adapted to dadee's
-    // supported() cross-ray): first hit, centre first, that is a real floor under her.
-    BodyID support_body;
-    SubShapeID support_sub;
-    RVec3 support_point = at;
-    Vec3 support_local = Vec3::sZero();
-    Vec3 support_normal = Vec3::sAxisY();
-    Vec3 support_v = Vec3::sZero();
-    {
-        IgnoreMultipleBodiesFilter support_filter;
-        support_filter.Reserve(2);
-        support_filter.IgnoreBody(body_);
-        support_filter.IgnoreBody(player_);
-        for (const Vec3 off : {Vec3::sZero(), across * kFootSpanM, -across * kFootSpanM, facing * kFootSpanM,
-                               -facing * kFootSpanM}) {
-            RayCastResult hit;
-            const RRayCast ray(at + off, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F));
-            if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, support_filter)) {
-                continue;
-            }
-            const RVec3 contact = ray.GetPointOnRay(hit.mFraction);
-            const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-            if (!lock.Succeeded() || lock.GetBody().IsSensor()) {
-                continue;
-            }
-            const Vec3 normal = lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, contact);
-            if (normal.GetY() < 0.5F) {
-                continue;
-            }
-            const Vec3 sv = bodies.GetPointVelocity(hit.mBodyID, contact);
-            if (velocity.GetY() < sv.GetY() + 1.0F) {
-                support_body = hit.mBodyID;
-                support_sub = hit.mSubShapeID2;
-                support_point = contact;
-                support_local = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * contact);
-                support_normal = normal;
-                support_v = sv;
-                break;
-            }
-        }
-    }
+    // Validated sole contact for the force-law foot drive (sole_contact):
+    // first hit, center first, that is a real floor under her.
+    Sole sole;
+    const bool has_sole = sole_contact(at, velocity, yaw_, sole);
+    const BodyID support_body = has_sole ? sole.body : BodyID();
+    const SubShapeID support_sub = sole.sub;
+    const RVec3 support_point = has_sole ? sole.point : at;
+    const Vec3 support_local = sole.local;
+    const Vec3 support_normal = sole.normal;
     const traversal::Limits limits{};
     const bool lunge_push = turn_ == Turn::Lunge && !foot_driving_;
     const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
     const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
-    traversal::Budget budget{force_cap, 0.0F, power_cap, 0.0F, velocity - support_v};
+    // The tick's one account for her feet: the lunge raises it to its own
+    // caps (once a tick), never adds a second account beside it.
+    if (lunge_push && !feet_budget_lunge_) {
+        feet_budget_.left += force_cap - limits.total_force_n;
+        feet_budget_.power_left += power_cap - limits.power_w;
+        feet_budget_lunge_ = true;
+    }
+    traversal::Budget &budget = feet_budget_;
     bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
@@ -1371,10 +1345,29 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         foot_ticks_ = 0;
         (void)step_planted_foot();
     };
+    // A standing jump asked of her (follow_line: the jump for a cable): her
+    // planted foot drives it, a leg stroke from her one budget, the take-off
+    // what that stroke earns. Nothing under her, no jump.
+    if (leg_jump_vy_ > 0.0F && !foot_driving_ && !support_body.IsInvalid()) {
+        foot_driving_ = true;
+        foot_prep_ = false;
+        foot_body_ = support_body;
+        foot_sub_ = support_sub;
+        foot_local_ = support_local;
+        foot_start_y_ = float(at.GetY() - support_point.GetY());
+        foot_stroke_m_ = limits.leg_travel_m;
+        foot_prep_dist_ = 0.0F;
+        foot_obstacle_ = at;
+        foot_heading_ = facing;
+        foot_want_vx_ = 0.0F;
+        foot_want_vy_ = leg_jump_vy_;
+        foot_ticks_ = 0;
+    }
+    leg_jump_vy_ = 0.0F;
     if (step_planted_foot()) {
         clamber_now_ = false;
         watch_stall(dt, at, 0.0F, 0.0F, false);
-        const Vec3 after_v = start_v + foot_drive_dv_;
+        const Vec3 after_v = start_v + (foot_drive_dv_ - dv_before);
         speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
         stride_ += speed_ * dt;
         return;
@@ -1674,8 +1667,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
                     const traversal::Limits budget;
-                    const float shove_force = turn_ == Turn::Lunge ? kTurnLungeForceN : budget.total_force_n;
-                    const float shove_power = turn_ == Turn::Lunge ? kTurnLungePowerW : budget.power_w;
+                    // A shove is never the lunge: it stays on her 8 kN and 22 kW.
+                    const float shove_force = budget.total_force_n;
+                    const float shove_power = budget.power_w;
                     const float force_n = std::min(shove_force, shove_power / along);
                     Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                     push /= push.Length();
@@ -1683,6 +1677,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 }
             }
         }
+        // Her feet's one push this tick, onto the floor ahead or along her
+        // own: from the tick's one budget, against her sole contact (the
+        // equal and opposite force on it if it moves), reported like her
+        // stride. Nothing validated under her, no push: she cannot drive
+        // off nothing.
+        float board_fy = 0.0F;
         if (boarding && !board_body.IsInvalid()) {
             const float feet_now = float(at.GetY()) - kStandCentre;
             const float floor_vy = bodies.GetLinearVelocity(board_body).GetY();
@@ -1690,8 +1690,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float gap = std::max(0.05F, board_top - feet_now);
                 const float need = std::max(floor_vy + 1.2F, gap / 0.25F);
                 if (velocity.GetY() < need) {
-                    // Up onto it from this tick's one budget, the same as her
-                    // stride. Her feet are still under its top: they push
+                    // Up onto it. Her feet are still under its top: they push
                     // down on what they stand on (her sole contact), not on
                     // the floor ahead she is stepping up to. A step up is
                     // walking, never the lunge: in a lunge tick it stays on
@@ -1699,16 +1698,16 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     budget.left = std::min(budget.left, std::max(0.0F, limits.total_force_n - budget.used));
                     budget.power_left = std::min(budget.power_left, std::max(0.0F, limits.power_w - budget.power_used));
                     lunge_draw = false;
-                    const float want = (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F);
-                    (void)apply_foot_force(Vec3(0.0F, std::max(0.0F, want), 0.0F), support_body, support_point);
+                    board_fy = std::max(0.0F, (need - velocity.GetY()) * kMassKg / std::max(dt, 1.0e-3F));
                 }
             }
         }
         if (boarding) {
-            bodies.SetLinearVelocity(body_, velocity);
+            const Vec3 cur = bodies.GetLinearVelocity(body_);
+            const Vec3 want_horiz(velocity.GetX() - cur.GetX(), 0.0F, velocity.GetZ() - cur.GetZ());
+            const Vec3 want_force = want_horiz * (kMassKg / dt) + Vec3(0.0F, board_fy, 0.0F);
+            (void)apply_foot_force(want_force, support_body, support_point);
         } else if (!leapt && !cleared && !climbed) {
-            const Vec3 dv_horiz(velocity.GetX() - bodies.GetLinearVelocity(body_).GetX(), 0.0F,
-                                velocity.GetZ() - bodies.GetLinearVelocity(body_).GetZ());
             // Planned velocity is `velocity`; the force that earns it through her sole contact.
             const Vec3 cur = bodies.GetLinearVelocity(body_);
             const Vec3 want_horiz(velocity.GetX() - cur.GetX(), 0.0F, velocity.GetZ() - cur.GetZ());
@@ -1724,12 +1723,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float dvy_slope = want_vy_slope - cur.GetY();
                 want_force = Vec3(want_horiz.GetX(), dvy_slope, want_horiz.GetZ()) * (kMassKg / dt) - slope_slide;
             }
-            if (support_body.IsInvalid()) {
-                bodies.SetLinearVelocity(body_, velocity);
-            } else {
-                (void)apply_foot_force(want_force, support_body, support_point, slope_slide);
-            }
-            (void)dv_horiz;
+            (void)apply_foot_force(want_force, support_body, support_point, slope_slide);
         }
         floor_boarding = boarding;
         // The watchdog: a way ahead of her (more than half a stride off, at a pace).
@@ -1745,7 +1739,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         watch_stall(dt, at, 0.0F, 0.0F, false, 0.0F, 0.0F, true);
     }
     if (floor && !floor_boarding) {
-        const Vec3 after_v = start_v + foot_drive_dv_;
+        const Vec3 after_v = start_v + (foot_drive_dv_ - dv_before);
         speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
     } else {
         speed_ = std::hypot(velocity.GetX(), velocity.GetZ());
@@ -1969,11 +1963,13 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         Vec3 velocity = bodies.GetLinearVelocity(body_);
         // Off the edge at 0.8 m/s, gained at her walking accel. Writing 0.8
         // in one tick is a snap the pace exam rejects, and it skips the force law.
+        // Her feet push it out of the deck while they are on it (her one
+        // budget); off the edge she falls with what they gave her.
         const float want_vx = feet > kDeckTop - 0.6F ? 0.8F : 0.0F;
         const float step = kFootAccel * dt;
-        const float vx = velocity.GetX() + std::clamp(want_vx - velocity.GetX(), -step, step);
-        velocity = Vec3(vx, velocity.GetY(), 0.0F);
-        bodies.SetLinearVelocity(body_, velocity);
+        const Vec3 step_dv(std::clamp(want_vx - velocity.GetX(), -step, step), 0.0F,
+                           std::clamp(-velocity.GetZ(), -step, step));
+        velocity += feet_push(dt, step_dv * (kMassKg / dt)) * (dt / kMassKg);
         yaw_ = turn_toward(yaw_, 0.5F * kPi, kTurnRate, dt);
         speed_ = std::abs(velocity.GetX());
         stride_ += speed_ * dt;
@@ -2009,9 +2005,11 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         const float want_x = std::clamp((Bay::kBraceX - ax) * 4.0F, -0.6F, 0.6F);
         const float want_z = std::clamp((Bay::kBraceZ - az) * 4.0F, -0.6F, 0.6F);
         const float step = kFootAccel * dt;
-        const float gx = velocity.GetX() + std::clamp(want_x - velocity.GetX(), -step, step);
-        const float gz = velocity.GetZ() + std::clamp(want_z - velocity.GetZ(), -step, step);
-        bodies.SetLinearVelocity(body_, Vec3(gx, velocity.GetY(), gz));
+        const Vec3 place_dv(std::clamp(want_x - velocity.GetX(), -step, step), 0.0F,
+                            std::clamp(want_z - velocity.GetZ(), -step, step));
+        velocity += feet_push(dt, place_dv * (kMassKg / dt)) * (dt / kMassKg);
+        const float gx = velocity.GetX();
+        const float gz = velocity.GetZ();
         target_x_ = Bay::kBraceX;
         target_z_ = Bay::kBraceZ;
         yaw_ = turn_toward(yaw_, Bay::kBraceYaw, kTurnRate, dt);
@@ -2163,8 +2161,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     foot_power_w_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
+    leg_jump_vy_ = 0.0F;
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
+    feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
+    feet_budget_lunge_ = false;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
                                      state_ == State::Staggering || (way != nullptr && way->view().drives)) {
@@ -3998,10 +3999,74 @@ void Matron::stand_up() {
     search_trip_s_ = 0.0F;
 }
 
+bool Matron::sole_contact(const RVec3 at, const Vec3 velocity, const float yaw, Sole &sole) const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const Vec3 facing(std::sin(yaw), 0.0F, std::cos(yaw));
+    const Vec3 across(std::cos(yaw), 0.0F, -std::sin(yaw));
+    IgnoreMultipleBodiesFilter support_filter;
+    support_filter.Reserve(2);
+    support_filter.IgnoreBody(body_);
+    support_filter.IgnoreBody(player_);
+    for (const Vec3 off : {Vec3::sZero(), across * kFootSpanM, -across * kFootSpanM, facing * kFootSpanM,
+                           -facing * kFootSpanM}) {
+        RayCastResult hit;
+        const RRayCast ray(at + off, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F));
+        if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, support_filter)) {
+            continue;
+        }
+        const RVec3 contact = ray.GetPointOnRay(hit.mFraction);
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
+        if (!lock.Succeeded() || lock.GetBody().IsSensor()) {
+            continue;
+        }
+        const Vec3 normal = lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, contact);
+        if (normal.GetY() < 0.5F) {
+            continue;
+        }
+        const Vec3 sv = bodies.GetPointVelocity(hit.mBodyID, contact);
+        if (velocity.GetY() < sv.GetY() + 1.0F) {
+            sole.body = hit.mBodyID;
+            sole.sub = hit.mSubShapeID2;
+            sole.point = contact;
+            sole.local = Vec3(lock.GetBody().GetInverseCenterOfMassTransform() * contact);
+            sole.normal = normal;
+            sole.velocity = sv;
+            return true;
+        }
+    }
+    return false;
+}
+
+Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    if (!body_in_world_ || dt <= 0.0F || want_force.LengthSq() <= 1.0e-8F) {
+        return Vec3::sZero();
+    }
+    const RVec3 at = bodies.GetPosition(body_);
+    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    Sole sole;
+    if (!sole_contact(at, velocity, yaw_, sole) || !bodies.IsAdded(sole.body)) {
+        return Vec3::sZero();   // nothing under her to push on
+    }
+    feet_budget_.velocity = velocity - sole.velocity;
+    const Vec3 granted = feet_budget_.take(want_force);
+    if (granted.LengthSq() > 0.0F) {
+        bodies.AddForce(body_, granted);
+        if (bodies.GetMotionType(sole.body) == EMotionType::Dynamic) {
+            bodies.AddForce(sole.body, -granted, sole.point);
+        }
+        foot_drive_dv_ += (granted / kMassKg) * dt;
+        foot_force_n_ = feet_budget_.used;
+        foot_power_w_ = feet_budget_.power_used;
+    }
+    return granted;
+}
+
 void Matron::brace_at_edges(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
-    Vec3 velocity = bodies.GetLinearVelocity(body_);
+    // Where she is going once this tick's pushes of her feet so far act.
+    const Vec3 velocity = bodies.GetLinearVelocity(body_) + foot_drive_dv_;
     IgnoreMultipleBodiesFilter not_us;
     not_us.Reserve(2);
     not_us.IgnoreBody(body_);
@@ -4019,16 +4084,24 @@ void Matron::brace_at_edges(const float dt) {
         }
         return false;
     };
-    bool braced = false;
+    // She plants her feet (or her hands, down) against what she is on: a
+    // push from her one budget, never a velocity set.
+    // She looks ahead as far as she really needs to stop: v^2 / (2 a), where
+    // a is what her general budget (8 kN, and 22 kW at this speed) can brake
+    // her at, never less than this tick's travel; plus the margin.
+    const traversal::Limits limits{};
+    Vec3 stop = Vec3::sZero();
     for (const Vec3 &side : {Vec3::sAxisX(), -Vec3::sAxisX(), Vec3::sAxisZ(), -Vec3::sAxisZ()}) {
         const float toward = velocity.Dot(side);
-        if (toward > 0.0F && !floor_near(side, toward * dt + kEdgeMarginM)) {
-            velocity -= side * toward;
-            braced = true;
+        const float brake_n = std::min(limits.total_force_n, limits.power_w / std::max(toward, 1.0e-3F));
+        const float a_avail = std::max(brake_n / kMassKg, 1.0e-3F);
+        const float stop_m = std::max(toward * dt, toward * toward / (2.0F * a_avail));
+        if (toward > 0.0F && !floor_near(side, stop_m + kEdgeMarginM)) {
+            stop -= side * toward;
         }
     }
-    if (braced) {
-        bodies.SetLinearVelocity(body_, velocity);
+    if (stop.LengthSq() > 0.0F) {
+        (void)feet_push(dt, stop * (kMassKg / dt));
     }
 }
 
@@ -4044,9 +4117,9 @@ void Matron::step_knocked(const float dt, const RVec3 player) {
         // she was sent.
         const float going = flat.Length();
         if (going > 1.0e-4F) {
-            flat -= flat / going * std::min(going, recover_accel() * dt);
+            const Vec3 catch_dv = -flat / going * std::min(going, recover_accel() * dt);
+            flat += feet_push(dt, catch_dv * (kMassKg / dt)) * (dt / kMassKg);
         }
-        bodies.SetLinearVelocity(body_, Vec3(flat.GetX(), velocity.GetY(), flat.GetZ()));
         brace_at_edges(dt);
         speed_ = flat.Length();
         stride_ += speed_ * dt;
@@ -4076,7 +4149,8 @@ void Matron::step_knocked(const float dt, const RVec3 player) {
         const float a = fall + kPi * 0.25F * static_cast<float>((k + 1) / 2) * (k % 2 == 0 ? 1.0F : -1.0F);
         const Vec3 dir(std::sin(a), 0.0F, std::cos(a));
         if (room_to_stand(at + dir * 0.6F)) {
-            bodies.SetLinearVelocity(body_, Vec3(dir.GetX() * kCrawlMps, velocity.GetY(), dir.GetZ() * kCrawlMps));
+            const Vec3 crawl_dv = dir * kCrawlMps - flat;
+            (void)feet_push(dt, crawl_dv * (kMassKg / dt));
             brace_at_edges(dt);
             stride_ += kCrawlMps * dt;
             return;

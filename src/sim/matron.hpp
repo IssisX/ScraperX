@@ -1696,6 +1696,22 @@ private:
     // Off an edge she will not go, staggering or sliding on the steel: her
     // feet and hands take her at it (no floor within a step's drop ahead).
     void brace_at_edges(float dt);
+    // Her sole contact under her (center first, then her feet's span): a real
+    // floor, not a sensor, not the player, facing up. False when there is none.
+    struct Sole {
+        JPH::BodyID body;
+        JPH::SubShapeID sub;
+        JPH::RVec3 point = JPH::RVec3::sZero();
+        JPH::Vec3 local = JPH::Vec3::sZero();
+        JPH::Vec3 normal = JPH::Vec3::sAxisY();
+        JPH::Vec3 velocity = JPH::Vec3::sZero();
+    };
+    bool sole_contact(JPH::RVec3 at, JPH::Vec3 velocity, float yaw, Sole &sole) const;
+    // A push of her feet against her sole contact: the force she wants,
+    // granted from this tick's feet_budget_, the equal and opposite force on
+    // what she stands on (if it moves), and reported like her stride. Nothing
+    // under her, no push. Returns what was granted.
+    JPH::Vec3 feet_push(float dt, JPH::Vec3 want_force);
     [[nodiscard]] float step_reach() const noexcept;
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
@@ -2130,6 +2146,17 @@ private:
     float foot_power_w_ = 0.0F;
     bool foot_lunge_ = false;
     JPH::Vec3 foot_drive_dv_ = JPH::Vec3::sZero();
+    // Her feet's one account for the tick (reset in pre_step): her stride,
+    // her leg drives, her boarding push, her stagger's catch, her brace and
+    // her crawl all draw from it, so together they stay within her Budget.
+    traversal::Budget feet_budget_{};
+    bool feet_budget_lunge_ = false;   // the Turn's lunge has raised it to its own caps this tick
+    // A standing jump asked of her legs (follow_line): the take-off speed it
+    // wants, driven through her planted foot by walk_toward, 0 for none.
+    float leg_jump_vy_ = 0.0F;
+    // The loose piece her pipe swat is pushing out of her way (a force over
+    // the ticks her arm is on it, from her pipe's budget).
+    JPH::BodyID pipe_swat_body_;
     std::uint32_t pipe_links_ = 0;
     std::uint32_t pipe_holds_ = 0;
     std::uint32_t pipe_flanges_ = 0;
