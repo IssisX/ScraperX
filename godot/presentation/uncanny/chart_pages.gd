@@ -1,6 +1,6 @@
 extends Node3D
 ## Her chart's pages in the tower (HER_CHART.md). The first is on a clipboard
-## hung inside her locker on the 154 m deck: a printed observation chart,
+## hung inside her locker, on whatever deck her home is: a printed observation chart,
 ## blank until she writes on it, seen once the locker stands open. Later
 ## pages are left on the decks the route crosses, above where the player is,
 ## each weighted by a nut against the wind. Paper and board only: drawn,
@@ -18,9 +18,10 @@ const FONT_PATH := "res://presentation/uncanny/Cedarville-Cursive.ttf"
 const LOCKER_SPOT := "locker"
 # Her locker (matron_view.gd): the clipboard on its back wall, facing out
 # through the door.
-const LOCKER_CENTRE := Vector3(11.0, 155.1, -126.2)
 const LOCKER_SIZE := Vector3(1.2, 2.2, 0.9)
-const CLIPBOARD_AT := Vector3(11.0, 155.35, -125.84)
+# Deck 1 until the native says she is still sealed somewhere else.
+var locker_centre := Vector3(11.0, 12.1, -126.2)
+var clipboard_at := Vector3(11.0, 12.35, -125.84)
 # Where the route puts a rider down (the native's spawns, simulation.hpp's
 # InitialSpawn, physics_world_support.hpp's spawn_position), each a place the
 # climb passes. A page is left on the floor the native reports near one,
@@ -106,7 +107,8 @@ func _build_clipboard() -> void:
 	clipboard = Node3D.new()
 	clipboard.name = "LockerClipboard"
 	add_child(clipboard)
-	clipboard.position = CLIPBOARD_AT
+	_sync_locker_home()
+	clipboard.position = clipboard_at
 	# Its face toward the door (-z), so the page is read from in front of
 	# the locker.
 	clipboard.rotation.y = PI
@@ -199,6 +201,24 @@ static func _paper_texture() -> ImageTexture:
 # --- placing -------------------------------------------------------------------
 
 
+# Same rule as matron_view.gd: sealed, position is the step-out centre
+# (home floor + 1.05). Clipboard sits where it did relative to the cabinet.
+func _sync_locker_home() -> void:
+	if _native == null or not _native.has_method("get_matron_state"):
+		return
+	var data: Dictionary = _native.get_matron_state()
+	var state := int(data.get("state", -1))
+	if state != 0 and state != 1:
+		return
+	var p: Vector3 = data.get("position", Vector3.ZERO)
+	if p.y < 1.0:
+		return
+	locker_centre = Vector3(11.0, p.y - 1.05 + LOCKER_SIZE.y * 0.5, -126.2)
+	clipboard_at = locker_centre + Vector3(0.0, 0.25, 0.36)
+	if clipboard != null:
+		clipboard.position = clipboard_at
+
+
 # The spot for the next page: the locker's for the first she ever writes;
 # after that, the lowest route spot ahead of the player, not used yet.
 func spot_for(page_index: int, feet_y: float, used: Array) -> String:
@@ -215,10 +235,11 @@ func spot_for(page_index: int, feet_y: float, used: Array) -> String:
 
 # Whether a page may appear at `spot` now: never in sight, never close.
 func can_place(spot: String, eye: Vector3, forward: Vector3, locker_shut: bool) -> bool:
+	_sync_locker_home()
 	if spot == LOCKER_SPOT:
 		if locker_shut:
 			return true
-		var to_board := CLIPBOARD_AT - eye
+		var to_board := clipboard_at - eye
 		return to_board.length() >= LOCKER_WRITE_MIN_M or forward.angle_to(to_board) > UNSEEN_RAD
 	var at := spot_point(spot)
 	if at == Vector3.INF:
@@ -228,8 +249,9 @@ func can_place(spot: String, eye: Vector3, forward: Vector3, locker_shut: bool) 
 
 
 func spot_point(spot: String) -> Vector3:
+	_sync_locker_home()
 	if spot == LOCKER_SPOT:
-		return CLIPBOARD_AT
+		return clipboard_at
 	for entry in ROUTE_SPOTS:
 		if String(entry[0]) == spot:
 			return entry[1]
