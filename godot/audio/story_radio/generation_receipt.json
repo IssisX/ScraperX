@@ -1,0 +1,326 @@
+{
+  "receiving_iona_recovery": {
+    "event_id": "7091093bee394cb986ba493394e1d02a",
+    "text": "Find your footing. You can try another way up.",
+    "clean_sha256": "893de819779b4e91e8b2020b61c38f3b7dba660ecdcb4b378c4854eb0136594b",
+    "radio_sha256": "05a2689a99c45ab03f3784d35682c6e441e929c09233fe559817bfc493ce3d02"
+  },
+  "receiving_iona_come_look": {
+    "event_id": "04b69063058f479eb84a77048211a2dc",
+    "text": "Ro. You’re in Receiving. Your name’s still on the handover. Come look at what it calls empty.",
+    "clean_sha256": "c506c71b8393e414e3bf06124fa75d78b0477708d4fd46025d242302b6485395",
+    "radio_sha256": "164710bf0c9f48c9999b0ce30723968fd0815c4814599dbf94122c377c767ecc"
+  },
+  "receiving_iona_freight_one": {
+    "event_id": "4a14f252b17e4d3882974b44836af064",
+    "text": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
+    "clean_sha256": "4e19bad3520cd95e6de493c4f36b9bb74a62a81951a8373ce5066b12cf8fc5ed",
+    "radio_sha256": "d0c60e870ebf7c7d1d84f08e35f8103ba8a98eef62fe1ac14ce8f72e9ca29238"
+  },
+  "freight_one_iona_crown": {
+    "event_id": "58489907625b4939832b162455975b0e",
+    "text": "Our freight line still shares the construction return at the Crown. They remove that, we lose the way up. We need it separated.",
+    "clean_sha256": "018af133095f8ca2c09bdd1661dce322e3d810e3907c436cc713f90115159388",
+    "radio_sha256": "404e1a6c2d183ec4cadb5485d467f344fbbde7253ea2df4bfe7b24a3077faa18"
+  },
+  "receiving_iona_keep_the_height": {
+    "event_id": "47f31830c98b4793b027acc7e72c9f9e",
+    "text": "You’ve found your way up. Keep the height. The Crown is still above you.",
+    "clean_sha256": "cc7f00a79f8372944d43f969976e565c3b766763248b82a3824073e023ce7adc",
+    "radio_sha256": "85212339e91d3ab045ca71b3c364ba6651d7edcf49c06bdce73e99bf8ac2a8ad"
+  },
+  "vale_contact_ro": {
+    "event_id": "2e1369c8a58044e2982b8b91ae968464",
+    "text": "You kept me as your emergency contact?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "357aad5a55c7e796fed5ebaa4e71d2ca68d071632fc6335ba1c8f0b22e6b98b0",
+    "radio_sha256": "96d3ffd245d6ef2bdd17aa282bc2cacf231c3051d5ade45a250660196812f800"
+  },
+  "vale_contact_iona": {
+    "event_id": "98cf40085ed942c3af939e8b0ba171c5",
+    "text": "They asked for next of kin. Not a fucking recommendation.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "37ed4b1a540162dd6a4296353aec4ddc5c1377225f2a468c5c36175690fb2a26",
+    "radio_sha256": "4c272fa671b274ea6d1771d6f4f18b1ed6a5d36627fbff4f74d297f94720efa3"
+  },
+  "double_ro_who": {
+    "event_id": "5623dc7d390b4facb7aaf0522b464d04",
+    "text": "Who the fuck are you?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "fb957bee47bb77e3bce2f8b8aaf1f586c68e3c718ff07cde0f86e93921544be9",
+    "radio_sha256": "73bc1a423ddc34def9464798ba8e1f7f974038ad603e74f57d5024e63c859114"
+  },
+  "double_ari_name": {
+    "event_id": "c1d1ce333da249ea98b993d5b1769db6",
+    "text": "Ari Ward.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "43fa14145410219f47dd758934d8a6ed2133aa981824a7e9987c1e462e1d7002",
+    "radio_sha256": "0aec53e44783d1db06a65a562f64ded55ec274235fd8e97797a3afcaf1530e30"
+  },
+  "double_ro_face": {
+    "event_id": "54d63f99e38340af965fd8860711b2c7",
+    "text": "That's my face.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "2ce66115bfb3b68c705b48cc4ade153ba58ab5e2c74de946b028cc8ce371a048",
+    "radio_sha256": "a435cbfcd05acaaa8b7806ef4e41b64f5ca90e84eae0e113886729e1752cc77a"
+  },
+  "double_ari_job": {
+    "event_id": "c0203df1e8e84bd699e7547d0704bf3e",
+    "text": "I was hired to attend your handovers.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "fadbba9b9f1e3546c4c946f7d022a59e5d348d4d583471d451d76536e6cf4198",
+    "radio_sha256": "e1f0793ed195cf8a518be3441a709f9ced7d2149f08af2b2036ba4b0b204a349"
+  },
+  "double_ro_empty": {
+    "event_id": "6fdd10cd53e34b23a29bd51f7d9ac01f",
+    "text": "You told them the rooms were empty.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "73d7cecb480ebf8a902277c7221af7444325170b660151f5e6cdd4033f8b4205",
+    "radio_sha256": "336873ecde0e6c4cfeaf84b2d11e789e843d38384987475489d4d3af57fe465b"
+  },
+  "double_ari_told": {
+    "event_id": "ca0ee742ad5a4e7889db52aad26c2b01",
+    "text": "I was told they were.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "f4bdb0669be8e2fd87f4fd47e5d56b99619057d0eeb99b4ff2a2d2455947e182",
+    "radio_sha256": "dd46250c0df1afc31bbbe2576d4b7b990f47ccb3faf3dc26aba04a64420f232c"
+  },
+  "double_ro_when": {
+    "event_id": "78cb483af1494a8aa4e001c07c8b8e1b",
+    "text": "When did you find out?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "68ae6c8570c809250e3e33b91380a5ed0c7085d2df1f2de41ad5e6d467597621",
+    "radio_sha256": "a2d56ff6acc2eddbd3173477260b5de93a5eda60c60fe86d647c0308b0c03c80"
+  },
+  "double_ari_before": {
+    "event_id": "ad1eecebf8414bd68c50393dbdd4417f",
+    "text": "Before the last recording.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "7d2f61c175ddc189e944adfd5e1b1622f9cc9c8f447118e9e28f63b5d9533b9a",
+    "radio_sha256": "f5eac9d91afbbe414116b834884d788a4592ae467e3f663d59c5bf241f82ca23"
+  },
+  "double_ro_name": {
+    "event_id": "48d259ba7df74a569303279674dff5c6",
+    "text": "Stop using my name.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "edc6506719cff904b5864a7bec7875351b15651906b847ea6d94cff0457e8083",
+    "radio_sha256": "d865265bae3c7b99a6750bac10fdae1f9fe175afef86437e3a5af1a41a144e06"
+  },
+  "double_ari_will": {
+    "event_id": "3773e2998367422baaa33a9801052e2a",
+    "text": "I will.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "edee4ec593266e7ae3cc40ba1cdb1604be1f99a80f7ea00e926eaa2370ddfa61",
+    "radio_sha256": "a256380002dfc6cbd73b2a826c68c96c5645351680439ec2a6b7a489a1338bc4"
+  },
+  "double_ro_and_face": {
+    "event_id": "05639078c4c14d21bcf902b71dd3223e",
+    "text": "And the face?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "2e66b5c998f1db33c85de41bcce0a79b297496fbb19276bc0994575fa86b09ef",
+    "radio_sha256": "8c212de6acf728481d3b1712fd8c127f3ce98ab723c42741395d188aa7e842a9"
+  },
+  "double_ari_cannot": {
+    "event_id": "250d08534c584998962cfe3cc72c6181",
+    "text": "That's not something I can hand back.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "clean_sha256": "2289f2f1a8141ef3582331597cec67aa2f144dab5f82963fe80416a5a7cff9ab",
+    "radio_sha256": "97328416987751fab15ea074bdd6b2176819222356eda31798e87926eb928a6b"
+  },
+  "double_iona_here": {
+    "event_id": "4fc4e8c02aa34eb7917516de55341598",
+    "text": "Ro. I'm here.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "ceee657b5989991c9dc3ed18ce1539580087b221bed5c20d702d37d7261c71cc",
+    "radio_sha256": "e96fbbde7e4342cf15d76442a246a1f47acb93bfbe9f60378529c5de0ca50d79"
+  },
+  "handover_record_assurance": {
+    "event_id": "486dc26c8fd945088caafa0b9dbd0e1d",
+    "text": "No occupied areas remain within the handover boundary.",
+    "speaker": "RECORD",
+    "voice_id": "am_michael",
+    "clean_sha256": "b77c552bcdc3985c8173809dacfb644beed05d5ad7a928d292abca078fc32183",
+    "radio_sha256": "e413774fc5f0304a3ad5a06c3cc2d0ed4dc92b615711efc2e6ae2a3ecc510ce9"
+  },
+  "handover_ro_denial": {
+    "event_id": "6c19d904009946e9a864f9351f25785d",
+    "text": "I didn't record that.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "5b2c17bf02c49141c5f0ae16c2bc8068099c5c33d23c5d8d6e01e7b3f6c3ad65",
+    "radio_sha256": "b422edc99ad22389bf772d69bc2fe422cbd67308ae8c52f473b0e1c45b2d33eb"
+  },
+  "handover_iona_revision": {
+    "event_id": "f95faf3331e241cd9004759c5230cae5",
+    "text": "Your survey says access withdrawn. Occupancy not assessed. They changed the conclusion and kept your name.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "86435028075200e127dce633165dea65b11183f9ca02bc375fe60f0935e63f5f",
+    "radio_sha256": "5cfa47b25a212765608f618c19ee3b3be27fe725da55e632bac241dc8a7cdc78"
+  },
+  "handover_ro_witness": {
+    "event_id": "e1b9f21a18064e2aa06f4d5b51cee3ea",
+    "text": "Who delivered the final handover?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "clean_sha256": "becb18e17701ee3162b1516c8d753094607f9fb61bf8f44e642d0951b7677878",
+    "radio_sha256": "7c76a93712a9fa8bac5b7bbe3ca5dd24b75c42658e76c806ab6bc71bf25c3ad7"
+  },
+  "handover_iona_gallery": {
+    "event_id": "f744251a2d0246039a018ef7de5ce67a",
+    "text": "Ari Ward. Barrel Helix landing, two hundred and fifty-three metres. Find them. Ask what they were told.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "clean_sha256": "80e73cb5593c86455310b183728e6aab0308cb5118101fc971bf2d4ab1be16a2",
+    "radio_sha256": "fefeea122b20ff6bd9ecfdef41d47c4a106b364f33b27fb52877253692ec9c7d"
+  },
+  "handover_source_survey": {
+    "event_id": "ffd122b962824c55b7cf8c7fff902394",
+    "text": "Temporary construction access withdrawn. Occupancy not assessed.",
+    "speaker": "SOURCE",
+    "voice_id": "am_michael",
+    "clean_sha256": "dee276d36052a1688da786e2a98af597012f0bd585d97fd279e286865aff006d",
+    "radio_sha256": "5d4cefed9e37eedc2338e613ba935ede1a33d07841eade749c253613e30a284d"
+  },
+  "arrival_iona_empty_record": {
+    "event_id": "3fe743a54e4d45f3b70ed309a73761f9",
+    "text": "Ro. They used your name to call this yard empty. That man is still working. Get to Freight One, eleven metres up. We need the original handover.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:30:56.443056+00:00",
+    "clean_sha256": "6409e8284a68fafb3fe7e0774440ad9fb755f9e2f9ad0746b0001a13429bab37",
+    "radio_sha256": "3daf15ba618b0fca6de917bde7fd8f91eb33cb0f60836a99087792c9bba97556"
+  },
+  "arrival_iona_personnel_way": {
+    "event_id": "0a7b22016e234c64829d6acce1a500c7",
+    "text": "The hanging mesh on the front of the tower gets the crew up to Freight One. Follow the open ground around the steel stores.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:05.909495+00:00",
+    "clean_sha256": "bc6497821659d7a674fc12677d6ee78e1749bdd38544ebbd07f553e18621dc09",
+    "radio_sha256": "63d8a67539cee3130fc083db5ff6c7ce03e21aa92d53783aa425e89ab4d3915f"
+  },
+  "arrival_iona_mesh_lip": {
+    "event_id": "3471a8464515476bac31e8c724a32826",
+    "text": "There's a steel lip above you. Stay close to the mesh and climb until you can reach over it.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:14.776750+00:00",
+    "clean_sha256": "526be4cca8df09fc0ef61aeca0598fc54bc1b238add5b41f839f8d4b8fc2cd51",
+    "radio_sha256": "83683c1c5694bcc4e66b1f19ce4f2a56c6883c34ef37827908a199b3dd890d34"
+  },
+  "arrival_iona_first_ring": {
+    "event_id": "ddd2f7e6450b4519a16f8577cdd54b40",
+    "text": "That's Freight One. The cabinet against the wall gets you onto the duct. Follow it to the vent. The next ring is above it. Keep heading for the original handover.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:31:26.360599+00:00",
+    "clean_sha256": "60a59a99e176b81f7d393d90207e916b425815c0467ffdfd77eac60c68afaaa7",
+    "radio_sha256": "7dc9ba059a631145aabf0b8bfd8f287182d2ea1644e8528ea2cf9919aa99860e"
+  },
+  "service_iona_inspection_rail": {
+    "event_id": "45bb8ec29c45427bacd34ab157d02c01",
+    "text": "Along the wall, there's a narrow rail under a hanging ladder. Walk out beneath it, then jump for a rung. This is still a working access route, Ro. The handover says it isn't.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T18:52:55.038125+00:00",
+    "clean_sha256": "9d497f4701619301b30ce41e066c54194d326a07cdf1ae18311d91a9e63cdc27",
+    "radio_sha256": "faeb660f77294ba07da89e0bf5588971e20b18ff01b9dc04b4e1d9592585f98f"
+  },
+  "service_iona_swing_stair": {
+    "event_id": "05a1ba4a424f4960a30e1db6bf6ad647",
+    "text": "Across this ring, the big stair reaches the next floor. If it's still upright, pull the chain on its landing. Give it room to settle before you cross.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T19:22:28.406274+00:00",
+    "clean_sha256": "942c91b5ba26a1e636a149631e4aea475a0c7911ace9ef54a7d8f10f1c9a7902",
+    "radio_sha256": "50bfefe0ab0ec4116a5f90190622d1addf4fd40b5cd74ae5e3e3a0d3f132e59d"
+  },
+  "double_ro_original_scope": {
+    "event_id": "0fa954e8f9c641d29137e90f466639d4",
+    "text": "I have the original survey. It says occupancy was never assessed. Whose inspection did you read into that camera?",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:13.602238+00:00",
+    "clean_sha256": "8c3bbae8c0f83e061a5febca0ab248204be0c387e9eb291c64a44bb636f81ddc",
+    "radio_sha256": "a96738f3e4ba98b56ba7d3ee285bbe6d448aa6e689762e353a8d8692677f8b74"
+  },
+  "double_ari_original_scope": {
+    "event_id": "9eb6a27f80f24973ac61a508a9fc6914",
+    "text": "It was a statement they gave me. I read it as you. There was no inspection.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "generated_utc": "2026-10-21T20:00:21.021083+00:00",
+    "clean_sha256": "8d17a85e909dff3600e2ac6361ad3e5a4450d85fb5e4abb16601e45e32f01cdc",
+    "radio_sha256": "9b1194877d0b0f8547d39ab81a9cec8fdd1220134aa3608db1e80c62b3490c95"
+  },
+  "double_ro_dev_has_scope": {
+    "event_id": "6ebf48aac1f54e0e9cbe9a4f8c835d34",
+    "text": "Dev has the original survey. Your handover calls this place empty. Mine never did.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:28.871356+00:00",
+    "clean_sha256": "9cf4251ef4e4625273113c6fcd1c7adcf6ea48e08485dc2ed42bb51fb5829dd2",
+    "radio_sha256": "0c17610fb6690c422bf7bc82bec56fe9d65302ca786106cc5804b8aaefb4d012"
+  },
+  "double_ari_dev_has_scope": {
+    "event_id": "a86b9bb297084533b7710b8a7d0203cb",
+    "text": "Then he has the proof. They wrote the statement. I read it as you. There was no inspection.",
+    "speaker": "ARI",
+    "voice_id": "am_adam",
+    "generated_utc": "2026-10-21T20:00:36.087706+00:00",
+    "clean_sha256": "b29fe99c7e6a179472fe22d26989b7a39f664f01fdcb11081c10349c2e600440",
+    "radio_sha256": "1654fdf353be7f207b435b3697ed534ef47924130a086a6b733bd0dd525fed22"
+  },
+  "handover_ro_send_scope": {
+    "event_id": "18c645c790cf487284b38d1b92221e07",
+    "text": "Send both versions to Dev. Let him see exactly what they changed.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:00:42.851601+00:00",
+    "clean_sha256": "10dbb610d7712cdda6ba3f39415741c7f5a9d0ed6e137df4393a9962fed1e588",
+    "radio_sha256": "6b1457a26f41db2325a33750043373ded6c924f2abf97ba727f6a0931dff5022"
+  },
+  "handover_dev_received": {
+    "event_id": "cf6ac74ee4db4c7c8988d4835a83e9cf",
+    "text": "Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature.",
+    "speaker": "DEV",
+    "voice_id": "bm_george",
+    "generated_utc": "2026-10-21T20:00:52.823701+00:00",
+    "clean_sha256": "9f66b1506aea536dc3f0e943d9d84e03749e3d3e631ac9d0a6cbd1de369da7cf",
+    "radio_sha256": "5b5bc70f937e0ec3a57f6107e7030384c86f71c81245571690d62c41aa68ef30"
+  },
+  "handover_ro_ari_first": {
+    "event_id": "b7798ffa58b4408fa93b175b7bc7bd60",
+    "text": "Keep both versions. I want Ari's account before Dev gets another version of it.",
+    "speaker": "RO",
+    "voice_id": "am_michael",
+    "generated_utc": "2026-10-21T20:01:01.442022+00:00",
+    "clean_sha256": "b724cc35d03d8aaed7a147e7892bba17fb97f896571e7c3208a86dcdb68a79d0",
+    "radio_sha256": "d26bd366f2b9181c0568146904c9b1e4aff8ad530541eb9c5be3b42fb1b86503"
+  },
+  "handover_iona_ari_first": {
+    "event_id": "71d37adf50194059b2e348047007fa51",
+    "text": "Then ask Ari what they actually saw. Not what they were told to say.",
+    "speaker": "IONA",
+    "voice_id": "af_heart",
+    "generated_utc": "2026-10-21T20:01:08.102179+00:00",
+    "clean_sha256": "459ded1c0c037b27417de07b7b5e2e39eadc35574eb7b1ea513d4954b4dc7381",
+    "radio_sha256": "9300dba7c7aa14f5a1b6738f138b9c4f7b2d18c73e3fb72b9019ee7c5b4855d4"
+  }
+}
