@@ -208,26 +208,31 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     if (line.parked && turn_ == Turn::None) {
         return false;
     }
+    const RVec3 cable = line.top + line.direction * Zipline::kParkM;
+    const RVec3 hands = at + Vec3(0.0F, kHandsAboveCentre, 0.0F);
+    const bool in_reach = Vec3(cable - hands).Length() < kCableReachM;
+    if (turn_ != Turn::None && !in_reach) {
+        // Standing on it: the jump for the cable, a leg stroke of her feet
+        // against the stand (walk_toward drives it from her one budget).
+        const Vec3 velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+        if (feet < stand_y + 0.08F && std::abs(velocity.GetY()) < 0.2F) {
+            leg_jump_vy_ = kCableJumpMps;
+        }
+    }
     walk_toward(dt, ax, az, 0.0F);
     yaw_ = turn_toward(yaw_, std::atan2(line.direction.GetX(), line.direction.GetZ()), kTurnRate, dt);
     if (turn_ == Turn::None) {
         return true;
     }
-    const RVec3 cable = line.top + line.direction * Zipline::kParkM;
-    const RVec3 hands = at + Vec3(0.0F, kHandsAboveCentre, 0.0F);
-    if (Vec3(cable - hands).Length() < kCableReachM) {
+    if (in_reach) {
         zipline_->clip_other(best, body_, Vec3(0.0F, kHandsAboveCentre, 0.0F), true);
         on_line_ = true;
         riding_ = true;
         let_go_s_ = kLetGoSeconds;
+        foot_driving_ = false;
+        foot_prep_ = false;
         ++cable_slides_;
         return true;
-    }
-    BodyInterface &bodies = physics_.GetBodyInterface();
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
-    if (feet < stand_y + 0.08F && std::abs(velocity.GetY()) < 0.2F) {
-        // Standing on it: the jump for the cable.
-        bodies.SetLinearVelocity(body_, Vec3(velocity.GetX(), kCableJumpMps, velocity.GetZ()));
     }
     return true;
 }
@@ -280,18 +285,23 @@ void Matron::ride_line() {
         return lock.Succeeded() &&
                lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, on).GetY() > 0.7F;
     };
-    // Her swing on: full, half, or none (straight down) when the full swing
-    // would come down in steel (the end post, the buffer's housing) or the
-    // shaft. The largest that comes down on a floor is the one she takes.
-    float swing = -1.0F;
-    for (const float scale : {1.0F, 0.5F, 0.0F}) {
-        const RVec3 p = at + run * (kLetGoSwingMps * scale * fall_s);
-        if (!over_shaft(p) && deck_under(p)) {
-            swing = scale;
-            break;
-        }
-    }
-    const bool deck = swing >= 0.0F;
+    // Her swing on is her own momentum: no push when she lets go (there is
+    // nothing to push on but the trolley she hangs from). Where her motion
+    // carries her while she drops is where letting go puts her: she lets go
+    // still, straight down, onto a floor under her, or while the trolley
+    // still carries her on (no faster than kLetGoSwingMps) when that motion
+    // comes down on a floor, clear of the shaft.
+    const Vec3 vel = bodies.GetLinearVelocity(body_);
+    const Vec3 flat(vel.GetX(), 0.0F, vel.GetZ());
+    const float on_run = flat.Dot(run);
+    const bool still = std::abs(ride.speed_mps) < 0.3F;
+    const bool down_here = !over_shaft(at) && deck_under(at);
+    const RVec3 carried = at + flat * fall_s;
+    const bool carried_lands = on_run > 0.0F && on_run <= kLetGoSwingMps && !over_shaft(carried) && deck_under(carried);
+    // Where a full swing on would come down: whether braking to a stop is
+    // worth it here (the deck is ahead) or the drag comes off.
+    const RVec3 full = at + run * (kLetGoSwingMps * fall_s);
+    const bool deck = down_here || carried_lands || (!over_shaft(full) && deck_under(full));
     // Her forearms' drag: friction on her weight across the cable, as a
     // squeeze of the line's brake. At the end with the swing still over
     // the hole, the drag comes off so she can come on as far as the cable
@@ -300,20 +310,18 @@ void Matron::ride_line() {
     zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
                                   ? 0.0F
                                   : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && deck && std::abs(ride.speed_mps) < 0.3F) {
+    if (at_end && ((still && down_here) || (!still && carried_lands))) {
         zipline_->unclip_other();
         on_line_ = false;
         // The cable was what riding_ meant. Leaving it has to clear that
         // before the hunt runs this tick, or the cling stands her still
-        // and the swing never happens: she drops where she was, in the hole.
-        // Off the cable she is falling, not standing on a floor that just
-        // stopped: the riding hold (which brakes her to still for a second
-        // after a moving floor stops) would also brake the swing itself
-        // out of her while she drops. Clear both here so the swing
-        // carries her onto the band.
+        // and her swing on never happens: she drops where she was, in the
+        // hole. Off the cable she is falling, not standing on a floor that
+        // just stopped: the riding hold (which brakes her to still for a
+        // second after a moving floor stops) would also brake the motion
+        // she carries out of her while she drops. Clear both here.
         riding_ = false;
         let_go_s_ = 0.0F;
-        bodies.SetLinearVelocity(body_, bodies.GetLinearVelocity(body_) + run * (kLetGoSwingMps * swing));
     }
 }
 
