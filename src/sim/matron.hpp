@@ -1125,6 +1125,8 @@ public:
     void begin_grab(JPH::RVec3 player);
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
+    // Knocked off her feet: her body's capsule stands over where she lies.
+    [[nodiscard]] bool down() const noexcept { return state_ == State::Down; }
     [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
     [[nodiscard]] JPH::Vec3 hand_target_velocity() const noexcept { return hand_target_v_; }
     [[nodiscard]] JPH::Vec3 shoulder_local() const noexcept;

@@ -41,6 +41,8 @@ const B_TURN := &"turn"
 # The yard crane's remote, once taken: its switch puts the stick and the two
 # held buttons on the crane, and takes them back.
 const B_CRANE := &"crane"
+# The punch, its own button, always on screen: greyed when none can be thrown.
+const B_PUNCH := &"punch"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -129,7 +131,8 @@ var gesture_counts := {&"up": 0, &"down": 0, &"turn": 0}
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK, B_TURN, B_CRANE]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK, B_TURN, B_CRANE,
+	B_PUNCH]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -178,6 +181,8 @@ func _ready() -> void:
 	_buttons[B_TURN].icon = &"turn"
 	_buttons[B_TURN].label = "TURN"
 	_buttons[B_CRANE].icon = &"hook"
+	_buttons[B_PUNCH].icon = &"fist"
+	_buttons[B_PUNCH].label = "PUNCH"
 	resized.connect(_layout)
 	_layout()
 
@@ -248,6 +253,8 @@ func _layout() -> void:
 	_place(B_TURN, jump + Vector2(40.0, -430.0) * _u, 64.0)
 	# Inboard of Action, clear of the stick: the remote's switch.
 	_place(B_CRANE, jump + Vector2(-470.0, -110.0) * _u, 80.0)
+	# Inboard of Drop, clear of the stick and the crane's switch: the punch.
+	_place(B_PUNCH, jump + Vector2(-480.0, 110.0) * _u, 80.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
@@ -281,6 +288,8 @@ func _verb_for(id: StringName) -> StringName:
 			return &"turn"
 		B_CRANE:
 			return &"crane"
+		B_PUNCH:
+			return &"punch"
 	return &""
 
 
@@ -563,6 +572,16 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	action.icon = act["icon"]
 	action.label = act["label"]
 	action.tone = TONE_PRIMARY if action.enabled else TONE_GHOST
+
+	# The punch: never moves, never goes. Greyed when none can be thrown (in
+	# the air, a lunge, no fist: a press then is ignored); in her hand before
+	# the rip it reads BREAK FREE, its fill pulsing.
+	var punch: TouchButton = _buttons[B_PUNCH]
+	var fist: Dictionary = ctx.get("punch", {})
+	punch.shown = true
+	punch.enabled = bool(fist.get("ready", false))
+	punch.label = String(fist.get("label", "PUNCH"))
+	punch.tone = TONE_DANGER if bool(fist.get("break_free", false)) else (TONE_PRIMARY if punch.enabled else TONE_NORMAL)
 
 	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
 	# body lowers it over into a hang.

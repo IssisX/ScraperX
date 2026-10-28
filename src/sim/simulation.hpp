@@ -1140,6 +1140,7 @@ struct Snapshot final {
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
     std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
+    bool strike_ready = false;    // a punch can be thrown now: the PUNCH button lit, else greyed
 
     bool strike_landed = false;   // this strike has landed on her
     std::uint64_t strike_count = 0;

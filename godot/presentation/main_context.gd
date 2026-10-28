@@ -103,25 +103,17 @@ var _down_hold_counts := false
 var _tucked_this_flight := false
 var _trapeze_was_hanging := false
 
-# The Action button's punch (the owner, 2026-10-28: "there was no way to
-# punch. I didn't see a button"): whenever the native offers one (her body
-# close in front, nothing between; or her hand on him before the rip, his
-# escape), PUNCH takes the button over every other action. Also in the
-# fatality's hang window when her hold reports one (`hold` empty or without
-# it: the native's offer alone). With no fist to throw (one arm torn off, the
-# other broken), none. Empty when there is no punch.
-static func punch_action(strike: Dictionary, hold: Dictionary, carrying: int) -> Dictionary:
-	if int(strike.get("arm", 1)) < 0:
-		return {}
-	var in_her_hand := bool(strike.get("held", false))
-	if in_her_hand and bool(hold.get("fatal_hang", false)):
-		var detail := "BREAK FREE"
-		if hold.has("fatal_window_s") and hold.has("fatal_window_total_s"):
-			detail = "BREAK FREE  %.1f S" % maxf(0.0, float(hold["fatal_window_total_s"]) - float(hold["fatal_window_s"]))
-		return {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": detail}
-	if not bool(strike.get("offered", false)) or (carrying != 0 and not in_her_hand):
-		return {}
-	return {"id": &"punch", "icon": &"fist", "label": "PUNCH", "detail": "BREAK FREE" if in_her_hand else "HER"}
+# His punch has its own button, always there (the owner, 2026-10-28: "an
+# appearing and disappearing punch button ... is going to be frustrating"):
+# lit when the native says one can be thrown (on his feet, not in a lunge, a
+# fist to throw), greyed otherwise; in her hand before the rip it reads BREAK
+# FREE (and in the fatality's hang window when her hold reports one). Action
+# stays the world's (PICK UP, CLIMB, HAUL and the rest).
+static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
+	var ready := bool(strike.get("ready", false)) and int(strike.get("arm", 1)) >= 0
+	var break_free := bool(strike.get("held", false)) and (ready or bool(hold.get("fatal_hang", false)))
+	return {"ready": ready or break_free, "break_free": break_free, "label": "BREAK FREE" if break_free else "PUNCH",
+		"lands": bool(strike.get("offered", false))}
 
 func _read_context() -> Dictionary:
 	var landing_state: Dictionary = _native.get_landing_state()
@@ -202,13 +194,12 @@ func _read_context() -> Dictionary:
 	# and Crouch held hoist.
 	var crane: Dictionary = _native.get_yard_crane_state()
 	var crane_operating := bool(crane["operating"])
-	# His punch, whenever the native offers it, over every other action
-	# (punch_action).
+	# His punch's own button (punch_button).
 	var strike: Dictionary = _native.get_strike_state()
 	var her_hold: Dictionary = {}
 	if bool(strike.get("held", false)) and _native.has_method("get_matron_hold_state"):
 		her_hold = _native.get_matron_hold_state()
-	var punch := punch_action(strike, her_hold, carrying)
+	var punch := punch_button(strike, her_hold)
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if crane_operating:
 		var hook_at: Vector3 = crane["hook"]
@@ -389,11 +380,6 @@ func _read_context() -> Dictionary:
 	elif grounded and free and grip:
 		# A hold at hand height: a rung, a pipe, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
-	# His punch over all of it; what it took the button from, for the tests.
-	var under_punch: StringName = &""
-	if not punch.is_empty():
-		under_punch = StringName(action["id"])
-		action = punch
 	return {
 		"position": position,
 		"velocity": velocity,
@@ -452,7 +438,7 @@ func _read_context() -> Dictionary:
 		"lethal": lethal,
 		"carrying": carrying,
 		"action": action,
-		"under_punch": under_punch,
+		"punch": punch,
 		"strike": strike,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),

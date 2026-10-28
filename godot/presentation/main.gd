@@ -922,6 +922,9 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"action":
 				_crouch_toggled = false
 				_perform_action()
+			&"punch":
+				# Its own button: the native throws it, or ignores it greyed.
+				_native.request_strike()
 			&"turn":
 				if _quickturn_left <= 0.0:
 					_quickturn_left = PI
@@ -1090,8 +1093,6 @@ func _update_throw_arc(delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
-		&"punch":
-			_native.request_strike()
 		&"climb_up", &"climb":
 			_native.request_traversal()
 		&"let_go":

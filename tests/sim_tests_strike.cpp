@@ -267,10 +267,9 @@ void run_strike() {
         require(m.staggers == 0 && m.knockdowns == 0 && m.blow_mps == 0.0,
                 "strike: a checkpoint load mid-strike carries no pending blow into her balance");
     }
-    // At the toolbox by the north band's rail (PICK UP on offer), her body in
-    // reach in front: the native offers the punch and the pick-up at once, so
-    // the Action button's priority picks, and it picks PUNCH
-    // (main_context.gd punch_action, checked in touch_matron_act).
+    // At the toolbox by the north band's rail (PICK UP on offer), her body
+    // dead ahead in reach: the punch (it would land) and the pick-up are both
+    // there, each on its own button.
     const auto at_the_box = [](Simulation &s) {
         s.place_matron_home(154.0F);
         require(s.advance_frame(1.0).accepted, "strike: settle");
@@ -284,10 +283,10 @@ void run_strike() {
         Simulation s(InitialSpawn::Deck154);
         at_the_box(s);
         const Vector3 p = s.snapshot().player_position;
-        s.launch_matron_for_test(Vector3{p.x + 0.6, p.y - 0.20, p.z + 0.9});
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
         tick(s);
-        require(s.snapshot().carry_target_entity_id != 0 && s.snapshot().strike_offered,
-                "strike: at the toolbox with her body in reach in front, the native offers the punch and the pick-up");
+        require(s.snapshot().carry_target_entity_id != 0 && s.snapshot().strike_offered && s.snapshot().strike_ready,
+                "strike: at the toolbox with her body in reach ahead, the punch and the pick-up are both on offer");
     }
     // A punch under way owns his hands: thrown on air at the toolbox, Action
     // pressed for the pick-up and the climb every tick of its wind-up, reach
@@ -377,5 +376,26 @@ void run_strike() {
     require(none.arm == -1 && !none.offered && none.strikes == 0,
             "strike: one arm torn off and the other broken, no fist: no punch offered or thrown");
     require(left.arm == 0 && left.offered && left.hits == 1, "strike: the right torn off, the left throws it and it lands");
+    // In the air no punch: the PUNCH button greyed and a press ignored, so a
+    // lunge's catch and a wall run's kick are never eaten by one.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        s.debug_launch_player(Vector3{p.x, p.y + 0.05, p.z}, Vector3{0.0, 4.0, 0.0});
+        for (int i = 0; i < 6; ++i) {
+            tick(s);
+        }
+        const std::uint64_t before = s.snapshot().strike_count;
+        const bool airborne = !s.snapshot().player_grounded;
+        const bool ready = s.snapshot().strike_ready;
+        (void)s.request_strike();
+        tick(s);
+        require(airborne && !ready && s.snapshot().strike_count == before,
+                "strike: in the air the punch is greyed and a press throws none");
+    }
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }

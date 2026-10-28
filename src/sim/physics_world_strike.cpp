@@ -72,11 +72,26 @@ bool Simulation::PhysicsWorld::fist_path_clear(const JPH::RVec3 from, const JPH:
 
 // The fist he can throw with: the right, else the left; none when each is
 // torn off or broken (a broken arm is out of use, held across the belly).
+bool Simulation::PhysicsWorld::fist_usable(const int side) const noexcept {
+    return side >= 0 && !arm_lost_[static_cast<std::size_t>(side & 1)] && !(arm_broken() && broken_arm_side_ == side);
+}
+
 int Simulation::PhysicsWorld::strike_arm() const noexcept {
-    const auto usable = [this](const int side) {
-        return !arm_lost_[static_cast<std::size_t>(side)] && !(arm_broken() && broken_arm_side_ == side);
-    };
-    return usable(1) ? 1 : (usable(0) ? 0 : -1);
+    return fist_usable(1) ? 1 : (fist_usable(0) ? 0 : -1);
+}
+
+// A punch thrown now along `line` from his chest would land on her (`c` her
+// body's middle): the reach as strike_step sweeps it, the fist within her
+// capsule and its way clear of steel. What the offer of a free punch asks.
+bool Simulation::PhysicsWorld::strike_would_land(const JPH::RVec3 chest, const JPH::Vec3 line,
+                                                 const JPH::RVec3 c) const noexcept {
+    for (int t = 0; t < 3; ++t) {
+        const JPH::RVec3 fist = chest + line * (kStrikeReachM * static_cast<float>(t + 1) / 3.0F);
+        if (JPH::Vec3(fist - axis_point(c, Matron::kHalfHeight, fist)).Length() <= Matron::kRadius + kStrikeFistRadiusM) {
+            return fist_path_clear(chest, fist);
+        }
+    }
+    return false;
 }
 
 // His hands on a machine's controls, its seat or its line: no punch from there.
@@ -143,10 +158,13 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     // His hands his own for a punch: not in her fingers or tumbling, not on
     // a climb, a load, a machine or the hook, not rolling out of a landing,
     // and a fist to throw it with.
+    // A free punch is thrown from his feet on support (not in a flight, a
+    // lunge or a wall run, whose presses are their own), the haul line out
+    // of his hands.
     const int arm = strike_arm();
     const bool free = grip_ == nullptr && !player_free_rot_ && !matron_->claimed() &&
                       traversal_state_ == TraversalState::None && carried_entity_ == 0 && !rolling() &&
-                      !hands_on_a_machine() && arm >= 0;
+                      !hands_on_a_machine() && !commands.lift_haul && grounded_ && !dyno_active_ && arm >= 0;
     // In her hand before the rip begins his fist is his escape (the owner's
     // design: his own blow frees him then, Matron::State); during her reach,
     // before her fingers close, the brace has Action.
@@ -154,28 +172,26 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     // Under way, the world can take his hands from it: begun free, her
     // fingers on him, a fall or a catch; begun in her hand, out of it. It
     // ends there, so it never lands undrawn.
-    if (strike_phase_ != StrikePhase::Guard && !(strike_in_hand_ ? her_here && grip_ != nullptr : free)) {
+    if (strike_phase_ != StrikePhase::Guard &&
+        (!(strike_in_hand_ ? her_here && grip_ != nullptr : free) || !fist_usable(strike_side_))) {
         strike_cancel();
     }
     const bool can_start = strike_phase_ == StrikePhase::Guard &&
                            ((free && !(her_here && (matron_->holding() || matron_->reaching()))) || in_her_hand);
-    // Whether Action offers the punch: one can start, and her body is close
-    // in front with nothing between, or she has him in her hand.
+    strike_ready_ = can_start;
+    // Whether Action offers the punch: one can start, and thrown now along
+    // his facing it would land on her, on her feet (down, her body's capsule
+    // stands over where she lies: nothing there to hit); or she has him in
+    // her hand.
     strike_offered_ = false;
     if (can_start && in_her_hand) {
         strike_offered_ = true;
-    } else if (can_start && her_here) {
+    } else if (can_start && her_here && !matron_->down()) {
         const JPH::RVec3 c = bodies.GetPosition(her);
         JPH::Vec3 to(static_cast<float>(c.GetX() - at.GetX()), 0.0F, static_cast<float>(c.GetZ() - at.GetZ()));
         const float d = to.Length();
         strike_offered_ = d < kStrikeOfferM && d > 1.0e-3F && to.Dot(facing) > kStrikeOfferCos * d &&
-                          std::abs(static_cast<float>(c.GetY() - at.GetY())) < 1.5F;
-        if (strike_offered_) {
-            const JPH::Vec3 in(axis_point(c, Matron::kHalfHeight, chest) - chest);
-            const float l = in.Length();
-            const float stop = Matron::kRadius + kStrikeFistRadiusM;
-            strike_offered_ = l <= stop || fist_path_clear(chest, chest + in * ((l - stop) / l));
-        }
+                          std::abs(static_cast<float>(c.GetY() - at.GetY())) < 1.5F && strike_would_land(chest, facing, c);
     }
     if (commands.strike_requested && can_start) {
         strike_phase_ = StrikePhase::Windup;
@@ -183,6 +199,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         strike_landed_ = false;
         strike_contact_left_ = 0;
         strike_in_hand_ = in_her_hand;
+        strike_side_ = arm;   // the fist it is thrown with, till its recoil ends
         ++strike_count_;
     }
     if (strike_phase_ == StrikePhase::Guard) {
@@ -194,7 +211,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         strike_ticks_ = 0;
     }
     if (strike_phase_ == StrikePhase::Reach) {
-        if (!strike_landed_ && her_here) {
+        if (!strike_landed_ && her_here && !matron_->down()) {
             const JPH::RVec3 c = bodies.GetPosition(her);
             // Hung in her hand his arm swings at her (the view turns with his
             // body there, not with his facing); on his feet, along his facing.
@@ -248,6 +265,7 @@ void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_contact_left_ = 0;
     strike_landed_ = false;
     strike_offered_ = false;
+    strike_ready_ = false;
     strike_in_hand_ = false;
     strike_point_ = JPH::RVec3::sZero();
     strike_normal_ = JPH::Vec3::sZero();
@@ -259,7 +277,8 @@ void Simulation::PhysicsWorld::read_strike_state() noexcept {
     state_.strike_phase = static_cast<std::uint8_t>(strike_phase_);
     state_.strike_phase_ticks = static_cast<std::uint32_t>(strike_ticks_);
     state_.strike_offered = strike_offered_;
-    state_.strike_arm = static_cast<std::int8_t>(strike_arm());
+    state_.strike_ready = strike_ready_;
+    state_.strike_arm = static_cast<std::int8_t>(strike_phase_ != StrikePhase::Guard ? strike_side_ : strike_arm());
     state_.strike_landed = strike_landed_;
     state_.strike_count = strike_count_;
     state_.strike_hit_count = strike_hit_count_;

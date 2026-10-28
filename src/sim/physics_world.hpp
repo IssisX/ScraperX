@@ -1029,6 +1029,10 @@ public:
     // The fist he can throw with: 1 the right, 0 the left, -1 none (one torn
     // off, the other broken).
     [[nodiscard]] int strike_arm() const noexcept;
+    [[nodiscard]] bool fist_usable(int side) const noexcept;
+    [[nodiscard]] bool strike_would_land(JPH::RVec3 chest, JPH::Vec3 line, JPH::RVec3 c) const noexcept;
+    int strike_side_ = 1;           // the fist this strike is thrown with
+    bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
     bool strike_in_hand_ = false;   // this strike began with him in her hand

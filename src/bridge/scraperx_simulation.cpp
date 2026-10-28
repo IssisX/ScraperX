@@ -454,6 +454,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
     out["arm"] = static_cast<std::int64_t>(p.strike_arm);   // the fist: 1 right, 0 left, -1 none usable
+    out["ready"] = p.strike_ready;   // the PUNCH button lit (else greyed: in the air, a lunge, no fist)
     out["landed"] = p.strike_landed;
     out["strikes"] = static_cast<std::int64_t>(p.strike_count);
     out["hits"] = static_cast<std::int64_t>(p.strike_hit_count);
