@@ -858,6 +858,8 @@ func _turn_yaw(sim_yaw: float, delta: float, data: Dictionary) -> void:
 		step = clampf(_yaw_lag, -YAW_MAX_RAD_S * delta, YAW_MAX_RAD_S * delta)
 	_yaw_lag -= step
 	_drawn_yaw = wrapf(_drawn_yaw + step, -PI, PI)
+	# her face holds its heading while her body comes round under it
+	_twist_shown -= step
 	_yaw_rate = step / delta
 	_twist = clampf(_yaw_lag, -TWIST_MAX, TWIST_MAX)
 
