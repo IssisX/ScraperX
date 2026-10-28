@@ -66,6 +66,7 @@ const AWAIT_DEATH_MAX_S := 12.0 # real seconds black before it gives up waiting
 const BLACK_HOLD_S := 0.12
 const FADE_IN_S := 0.6
 const FLOOR_BLACK_BEAT := 9     # Matron::Fatal Black (her floor version)
+const FLOOR_FADE_S := 0.35      # her floor version's fade: full inside its 0.5 s Black beat
 
 var _w := 0.0                   # third person's share of the view, 0..1
 var _engaged := false
@@ -90,6 +91,9 @@ var _pull_from := Vector3.ZERO
 var _edge := Vector3.ZERO
 var _out := Vector3.ZERO
 var _floor_black := 0.0
+var _floor_fade := false        # her floor version's fade under way
+var _landed_pending := false    # the death landed before the black was full: the view held till it is
+var _last_view := Transform3D()
 var _fatal_edges := PackedInt64Array()
 var beat_cuts := 0              # fatality beat edges seen: a hook for tests and the sound
 # For tests: the last frame's facts.
@@ -100,6 +104,9 @@ var deaths_waited := 0
 var black_full_after := -1.0    # seconds from the let-go to full black
 var death_after := -1.0         # seconds from the let-go to the death's restore
 var slow_ticks_s := 0.0         # seconds of the let-go's slow motion
+var floor_black_full_after := -1.0   # seconds from her floor Black beat to full black
+var floor_black_at_death := -1.0     # the black when her floor version's death landed (before the wait to full)
+var _floor_s := 0.0
 
 
 func active() -> bool:
@@ -186,15 +193,20 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 			_out = Vector3.FORWARD
 		_out = _out.normalized()
 	# Her floor version: its Black beat is the fade, and the death follows.
-	if claimed and int(hold.get("fatality_beat", -1)) == FLOOR_BLACK_BEAT and not _awaiting_death:
+	if claimed and int(hold.get("fatality_beat", -1)) == FLOOR_BLACK_BEAT and not _awaiting_death \
+			and not _landed_pending and _black_after < 0.0:
 		_awaiting_death = true
 		_deaths_at = deaths
 		_await_s = 0.0
+		_floor_fade = true
+		_floor_s = 0.0
 	if _since_release >= 0.0:
 		if _since_release < RELEASE_SLOW_S:
 			slow_ticks_s += minf(delta, RELEASE_SLOW_S - _since_release)
 		_since_release += delta
 	# The death landed (the native's restore with it): black a moment, then in.
+	# Landed before the black is full (her floor version's short Black beat,
+	# or a short fall), the view holds its last frame while the fade finishes.
 	if _awaiting_death:
 		_await_s += delta
 		if deaths != _deaths_at or (_await_s > AWAIT_DEATH_MAX_S and not held and not claimed):
@@ -202,19 +214,31 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 				deaths_waited += 1
 				if _since_release >= 0.0:
 					death_after = _since_release
+				if _floor_fade:
+					floor_black_at_death = black()
 			_awaiting_death = false
-			_since_release = -1.0
-			_black_after = 0.0
-	var want := (held or claimed or _awaiting_death) and _black_after < 0.0
+			_landed_pending = true
+	var want := (held or claimed or _awaiting_death or _landed_pending) and _black_after < 0.0
 	# The fade.
-	if _awaiting_death:
+	if _awaiting_death or _landed_pending:
 		if _since_release >= 0.0:
 			_black = smoothstep(FADE_FROM_S, FADE_DONE_S, _since_release)
 			if _since_release >= FADE_DONE_S:
 				_black = 1.0
 				if black_full_after < 0.0:
 					black_full_after = _since_release
-		_floor_black = move_toward(_floor_black, 1.0 if claimed else _floor_black, delta / 1.5)
+		if _floor_fade:
+			_floor_s += delta
+			_floor_black = move_toward(_floor_black, 1.0, delta / FLOOR_FADE_S)
+			if _floor_black >= 1.0 and floor_black_full_after < 0.0:
+				floor_black_full_after = _floor_s
+		if _landed_pending and black() >= 0.999:
+			_landed_pending = false
+			_floor_fade = false
+			_since_release = -1.0
+			_black_after = 0.0
+		elif _landed_pending:
+			return _last_view if _w > 0.001 else eye
 	elif _black_after >= 0.0:
 		_black_after += delta
 		var k := clampf((_black_after - BLACK_HOLD_S) / FADE_IN_S, 0.0, 1.0)
@@ -364,6 +388,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		basis = Basis.looking_at(to_look, up)
 	var out := Transform3D(basis, cam)
 	if _w >= 0.999:
+		_last_view = out
 		return out
 	# Easing between his eye and the third person: the blended point is cast
 	# to from the pivot as well, so the way out never passes through steel.
@@ -375,7 +400,8 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		if f - CAM_RADIUS < to_mid.length():
 			mid = _pivot + to_mid.normalized() * maxf(0.0, f - CAM_RADIUS)
 	var q := eye.basis.get_rotation_quaternion().slerp(basis.get_rotation_quaternion(), s)
-	return Transform3D(Basis(q), mid)
+	_last_view = Transform3D(Basis(q), mid)
+	return _last_view
 
 
 static func _orbit(yaw: float, pitch: float) -> Vector3:
