@@ -6,6 +6,7 @@
 // climb (gravity off) never runs. Up and down are separate runs.
 
 #include "sim_tests.hpp"
+#include "matron_contact_audit.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -26,6 +27,13 @@ struct Leg {
     bool let_go = false;       // her hands opened on a climb (as a hold giving way opens them)
     double fell_mps = 0.0;     // her fastest fall after
     double let_go_s = 0.0;
+    // Her exported contacts (S6): checked every tick; the ticks from the let
+    // go to her hand's grip gone; the fall's ticks with no floor and no grip
+    // exported; on arrival, her floor exported at the climber's level.
+    MatronContactAudit contacts;
+    int grip_gone_ticks = -1;
+    int fall_free_ticks = 0;
+    bool arrived_on_floor = false;
 };
 
 // Her at `from` (feet), dangerous; the climber heard at `prey` (feet) every
@@ -45,6 +53,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     auto last = s.matron_state().position;
     const auto climbs0 = s.matron_state().climbs;
     int on_goal = 0;
+    int let_go_tick = -1;
     for (int i = 0; i < static_cast<int>(seconds) * hz; ++i) {
         if (i % (8 * hz) == 0) {
             s.debug_matron_hear(prey);
@@ -56,12 +65,16 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
                                                              m.position.z - last.z));
         const double vy = (m.position.y - last.y) * hz;
         last = m.position;
+        out.contacts.tick(m);
         if (!out.let_go && m.climbing && m.position.y - 1.05 >= let_go_at) {
             s.debug_matron_let_go();
             out.let_go = true;
             out.let_go_s = static_cast<double>(i) / hz;
+            let_go_tick = i;
         } else if (out.let_go) {
             out.fell_mps = std::max(out.fell_mps, -vy);
+            if (out.grip_gone_ticks < 0 && !m.contact_hand_held) out.grip_gone_ticks = i - let_go_tick;
+            if (vy < -3.0 && !m.contact_supported && !m.contact_hand_held) ++out.fall_free_ticks;
         }
         out.gravity_kept = out.gravity_kept && s.debug_matron_gravity_factor() == 1.0;
         out.her_hands = out.her_hands || m.climbing;
@@ -74,6 +87,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
         if (on_goal >= hz) {
             out.arrived = true;
             out.seconds = static_cast<double>(i) / hz;
+            out.arrived_on_floor = m.contact_supported && std::abs(m.contact_feet.y - prey.y) < 0.35;
             break;
         }
     }
@@ -85,6 +99,14 @@ void report(const char *name, const Leg &l) {
     std::cout << "  matron found climb: " << name << ": arrived " << l.arrived << " in " << l.seconds << " s, climbs "
               << l.climbs << ", worst step " << l.worst_step << " m, gravity kept " << l.gravity_kept
               << ", by her hands " << l.her_hands << ", alive " << l.alive << '\n';
+    l.contacts.report(name);
+}
+
+// S6: what the presentation plants her limbs on is hers, every tick, and on
+// arrival she stands on the climber's floor by her own exported contact.
+void require_contacts(const Leg &l) {
+    require(l.contacts.clean(), "matron found climb: her exported floor and grip are hers every tick (S6)");
+    require(!l.arrived || l.arrived_on_floor, "matron found climb: arrived, her exported floor is the climber's level (S6)");
 }
 
 } // namespace
@@ -93,6 +115,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{1.0, 154.0, -129.0}, Vector3{5.0, 176.25, -127.5}, 120.0);
         report("154 up to the 176.25 ring", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: up to the climber's level, a way she found herself");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on (not the old climb)");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -100,6 +123,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{5.0, 176.25, -127.5}, Vector3{1.0, 154.0, -129.0}, 120.0);
         report("the 176.25 ring down to 154", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: down to the climber's level, a way she found herself");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on (not the old climb)");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -109,6 +133,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{7.05, 176.25, -128.4}, Vector3{8.0, 198.25, -129.3}, 240.0);
         report("176.25 up to 198.25 (the standpipe)", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: up the standpipe to the climber's level");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -116,6 +141,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{8.0, 198.25, -129.3}, Vector3{7.05, 176.25, -128.4}, 240.0);
         report("198.25 down to 176.25 (the standpipe)", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: down the standpipe to the climber's level");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -123,6 +149,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{8.0, 198.25, -129.3}, Vector3{11.0, 220.25, -129.0}, 240.0);
         report("198.25 up to 220.25 (the scaffold panel)", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: up the panel to the climber's level");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -130,6 +157,7 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{11.0, 220.25, -129.0}, Vector3{8.0, 198.25, -129.3}, 240.0);
         report("220.25 down to 198.25 (the scaffold panel)", l);
+        require_contacts(l);
         require(l.alive && l.arrived, "matron found climb: down the panel to the climber's level");
         require(l.gravity_kept && l.her_hands, "matron found climb: by her own hands, gravity on");
         require(l.worst_step < 0.2, "matron found climb: never carried or snapped");
@@ -141,8 +169,13 @@ void run_matron_found_climb() {
     {
         const Leg l = leg(Vector3{1.0, 154.0, -129.0}, Vector3{8.0, 198.25, -129.3}, 420.0, 185.25);
         report("154 to 198.25, ladder then standpipe, knocked off the pipe", l);
+        require_contacts(l);
         std::cout << "    let go at " << l.let_go_s << " s, fell at " << l.fell_mps << " m/s\n";
         require(l.let_go && l.fell_mps > 5.0 && l.alive, "matron found climb: knocked off mid-chain, she falls for real and lives");
+        std::cout << "    her grip gone " << l.grip_gone_ticks << " ticks after the let go; " << l.fall_free_ticks
+                  << " ticks of the fall with no floor and no grip exported\n";
+        require(l.grip_gone_ticks >= 0 && l.grip_gone_ticks <= 3, "matron found climb: her exported grip goes within 3 ticks of her hands opening (S6)");
+        require(l.fall_free_ticks > 0, "matron found climb: her fall exported as a fall, no floor and no grip under her (S6)");
         require(l.arrived, "matron found climb: and plans again from where she landed, and reaches the climber");
         require(l.gravity_kept && l.worst_step < 0.2, "matron found climb: gravity on, never carried or snapped");
     }
