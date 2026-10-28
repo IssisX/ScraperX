@@ -1048,7 +1048,18 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         // A point she is already past (nearer the next than it is) is behind her.
         const std::array<float, 2> &p = points[static_cast<std::size_t>(i)];
         const std::array<float, 2> &q = points[static_cast<std::size_t>(i + 1)];
-        if (distance_xz(fx, fz, q[0], q[1]) < distance_xz(p[0], p[1], q[0], q[1])) {
+        // A leap's take-off is behind her only when she is on its line (the
+        // take-off to the landing, her width either side of it) and the way
+        // from her to the landing is as open as a leap needs (leap_clear):
+        // else she goes back to it, and runs at the gap from there.
+        bool take_off = false;
+        if (landing_set && q == landing) {
+            const float lx = q[0] - p[0], lz = q[1] - p[1];
+            const float len = std::max(std::hypot(lx, lz), 0.01F);
+            const float off = std::abs((fx - p[0]) * lz - (fz - p[1]) * lx) / len;
+            take_off = off > kRadius || !leap_clear(fx, fz, q[0], q[1]);
+        }
+        if (!take_off && distance_xz(fx, fz, q[0], q[1]) < distance_xz(p[0], p[1], q[0], q[1])) {
             continue;
         }
         if (distance_xz(fx, fz, p[0], p[1]) > kReachM) {
@@ -1136,8 +1147,11 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     // place put on its floor (from there the place is a step off it); else
     // the nearest point before it on her path she can walk to straight;
     // failing that, back into the middle of the floor under her. A point she
-    // already stands on is no way round.
-    if (!way_clear(fx, fz, wx, wz)) {
+    // already stands on is no way round. A leap's landing whose way is as
+    // open as her leap asks (leap_clear) is no walk: what the hip and knee
+    // sweep meet there (the far floor's own edge) her leap flies over.
+    const bool leap_way = landing_set && wx == landing[0] && wz == landing[1] && leap_clear(fx, fz, wx, wz);
+    if (!leap_way && !way_clear(fx, fz, wx, wz)) {
         const auto way_round = [&](const float x, const float z) {
             return distance_xz(fx, fz, x, z) > 0.15F && way_clear(fx, fz, x, z);
         };
@@ -1201,14 +1215,28 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
 }
 
 bool Matron::leap_clear(const float fx, const float fz, const float tx, const float tz) const {
+    // The same open way her leap itself asks for (walk_toward, the Turn's
+    // leap): nothing across her width, at her middle and at her head, for a
+    // leap's reach along the way. A pair whose thin middle line is open but
+    // whose way is shut at her shoulder (a cage mouth's post) is no leap.
     IgnoreMultipleBodiesFilter not_us;
-    not_us.Reserve(1);
+    not_us.Reserve(2);
     not_us.IgnoreBody(body_);
-    const Vec3 way(tx - fx, 0.0F, tz - fz);
-    for (const float rise : {0.5F, 1.5F}) {
-        RayCastResult hit;
-        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(fx, feet_y_ + rise, fz), way), hit, {}, {}, not_us)) {
-            return false;
+    not_us.IgnoreBody(player_);
+    Vec3 heading(tx - fx, 0.0F, tz - fz);
+    if (heading.LengthSq() < 1.0e-6F) {
+        return true;
+    }
+    heading = heading.Normalized();
+    const Vec3 across(-heading.GetZ(), 0.0F, heading.GetX());
+    const RVec3 middle(fx, feet_y_ + kStandCentre, fz);
+    for (const float side : {-kRadius, 0.0F, kRadius}) {
+        for (const float rise : {0.0F, 0.9F}) {
+            RayCastResult hit;
+            if (physics_.GetNarrowPhaseQuery().CastRay(
+                    RRayCast(middle + across * side + Vec3(0.0F, rise, 0.0F), heading * kLeapReachM), hit, {}, {}, not_us)) {
+                return false;
+            }
         }
     }
     return true;
