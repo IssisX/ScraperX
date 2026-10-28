@@ -15,8 +15,10 @@
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/PointConstraint.h>
@@ -63,6 +65,26 @@ constexpr int kUprightContactTicks = 3;
 constexpr float kBraceReachM = 0.75F;
 constexpr float kBraceChestUpM = 0.45F;
 constexpr float kBraceStrainFloorN = 1000.0F;
+
+// Her fingers, and the reach that leads them, stop on anything solid that is
+// not her, him, or the hand. The hand's own layer collides with nothing, so
+// this cast is what keeps a rail between them from becoming a grip.
+class HandPathFilter final : public JPH::BodyFilter {
+public:
+    HandPathFilter(const JPH::BodyID matron, const JPH::BodyID player, const JPH::BodyID hand)
+        : matron_(matron), player_(player), hand_(hand) {}
+
+    bool ShouldCollide(const JPH::BodyID &id) const override {
+        return id != matron_ && id != player_ && id != hand_;
+    }
+
+    bool ShouldCollideLocked(const JPH::Body &body) const override { return !body.IsSensor(); }
+
+private:
+    JPH::BodyID matron_;
+    JPH::BodyID player_;
+    JPH::BodyID hand_;
+};
 } // namespace
 
 void Simulation::PhysicsWorld::destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept {
@@ -331,11 +353,39 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     }
     const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
     const JPH::Vec3 hand_v = bodies.GetLinearVelocity(hand_id_);
-    // Her fingers close on the ankle when the hand is at it.
+    // How far the hand's own 6 cm sphere gets toward `to` before a solid.
+    // A deck under the target (an upward face at or below it) is the floor
+    // he stands on, not a wall in the way.
+    const auto clear_reach = [&](const JPH::RVec3 from, const JPH::RVec3 to) -> float {
+        const JPH::Vec3 delta(to - from);
+        const float length = delta.Length();
+        if (!(length > 1.0e-4F) || hand_shape_ == nullptr) {
+            return length;
+        }
+        JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> hit;
+        const JPH::RShapeCast cast(hand_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F), JPH::RMat44::sTranslation(from),
+                                   delta);
+        physics_system_.GetNarrowPhaseQuery().CastShape(cast, JPH::ShapeCastSettings(), from, hit, {}, {},
+                                                        HandPathFilter(matron_->body(), player_id_, hand_id_));
+        if (!hit.HadHit()) {
+            return length;
+        }
+        const float traveled = length * hit.mHit.mFraction;
+        const JPH::Vec3 axis = hit.mHit.mPenetrationAxis;
+        const float ny = axis.Length() > 1.0e-6F ? (-axis.Normalized()).GetY() : 0.0F;
+        const float hit_y = float((from + delta * hit.mHit.mFraction).GetY());
+        if (ny > 0.65F && hit_y <= float(to.GetY()) + 0.12F) {
+            return length;
+        }
+        return traveled;
+    };
+    // Her fingers close on the ankle when the hand is at it, and only along
+    // a path the hand itself could have taken. A solid in between is a miss.
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     if (matron_->reaching() && grip_ == nullptr) {
         const JPH::RVec3 ankle = player_ankle(bodies);
-        if (JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
+        const float gap = JPH::Vec3(ankle - hand).Length();
+        if (gap <= Matron::kGripCloseM && clear_reach(hand, ankle) + 0.02F >= gap) {
             set_player_free_rotation(bodies, true);
             // First a bare point: the body comes over into the hang about it
             // (the hinge's cone is taken on once it is in it).
@@ -355,8 +405,20 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             }
         }
     }
-    // Her muscle: the hand to its pose, capped; its reaction on her.
-    const JPH::RVec3 target = matron_->hand_target();
+    // Her muscle: the hand to its pose, capped; its reaction on her. Until the
+    // grip exists, the pose stops short of a solid so the hand never travels
+    // through it. Once she has him, the grip is the constraint and this cast
+    // does not pull the hand back off the ankle.
+    JPH::RVec3 target = matron_->hand_target();
+    if (grip_ == nullptr) {
+        const float allowed = clear_reach(hand, target);
+        const JPH::Vec3 to_target(target - hand);
+        const float span = to_target.Length();
+        if (allowed + 1.0e-3F < span) {
+            const float stop = std::max(0.0F, allowed - 0.02F);
+            target = hand + to_target * (stop / span);
+        }
+    }
     JPH::Vec3 force = kHandSpringNpm * JPH::Vec3(target - hand) +
                       kHandDampNspm * (matron_->hand_target_velocity() - hand_v);
     // She holds the weight in her hand (the body's, while she has it).
