@@ -3,7 +3,7 @@
 **L3 design for the audio owner to review and implement. No runtime behavior or assets changed.**
 Base: `ScraperX-Claude` at `3af6fbcc2a8b173f90f5a1b6cf2fd09be3366253`.
 Brief: [issue #3, PE orchestration](https://github.com/IssisX/ScraperX/issues/3#issuecomment-6469372644), 2026-10-28.
-The owner's request to do this section authorizes this document. The merged fatality in that brief's section 3 remains **pending approval**; its sound design below is conditional.
+The owner's request to do this section authorizes this document. **Update (integrator, 2026-10-28 9:20 AM Central):** the owner approved the merged fatality of that brief's section 3 at 8:20 AM. Its numbers are a 2.5 s escape window, 6-8 s from the second tear to the fade, and no re-grab for 30 s after a tear. Her gripping arm stretches to hold him in the hang. The design below for it now applies, bound to L5's and L4's edges once they exist.
 
 ## Result to aim for
 
