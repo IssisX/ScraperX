@@ -142,6 +142,23 @@ void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
     matron_->grip_lost(torn, grip_fought_);
 }
 
+void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept {
+    destroy_grab_constraint(snag_);
+    const JPH::RVec3 at = physics_system_.GetBodyInterface().GetPosition(player_id_);
+    JPH::PointConstraintSettings snag;
+    snag.mSpace = JPH::EConstraintSpace::WorldSpace;
+    snag.mPoint1 = at;
+    snag.mPoint2 = at;
+    JPH::BodyLockWrite lock(physics_system_.GetBodyLockInterface(), player_id_);
+    if (lock.Succeeded()) {
+        snag_ = static_cast<JPH::TwoBodyConstraint *>(snag.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+    }
+    if (snag_ != nullptr) {
+        physics_system_.AddConstraint(snag_);
+        snag_max_n_ = max_n;
+    }
+}
+
 JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodies) const noexcept {
     return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(kPlayerHalfHeight - 0.08F), 0.0F);
 }
@@ -149,6 +166,7 @@ JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodi
 void Simulation::PhysicsWorld::grab_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(grip_);
     destroy_grab_constraint(brace_);
+    destroy_grab_constraint(snag_);
     destroy_grab_constraint(hand_arm_);
     if (!hand_id_.IsInvalid()) {
         remove_and_destroy(bodies, hand_id_);
@@ -422,6 +440,11 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         }
     } else {
         grip_load_n_ = 0.0F;
+    }
+    if (snag_ != nullptr &&
+        static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F) >
+            snag_max_n_) {
+        destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
     }
     if (brace_ != nullptr) {
         auto *point = static_cast<JPH::PointConstraint *>(brace_.GetPtr());

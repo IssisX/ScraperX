@@ -304,6 +304,7 @@ struct MatronSnapshot final {
     std::uint32_t spares = 0;
     std::uint32_t grips_torn = 0;
     std::uint32_t retakes = 0;   // her grip torn by the world (not the player), her hand on them again
+    std::uint32_t arm_reposes = 0;   // ArmPlay re-posed: the wrist out of reach, or the pull not telling
     std::uint32_t brace_losses = 0;
     std::uint32_t carry_drops = 0;
     std::uint32_t arm_tears = 0;
@@ -1617,6 +1618,14 @@ public:
     // hold alone); an arm already lost.
     void debug_matron_armplay(int armplay) noexcept;
     void debug_lose_arm(int side) noexcept;
+    // Tests only (never bound to the bridge): the player's body caught on
+    // steel where it is (a point at its middle fixed to the world) till the
+    // load on it passes `max_n`: a body pinned on a rail's edge.
+    void debug_snag_player(double max_n) noexcept;
+    [[nodiscard]] bool debug_player_snagged() const noexcept;
+    // Tests only (never bound to the bridge): the blow she takes next tagged
+    // as the player's own (his punch's tag, Matron::player_blow_landed).
+    void debug_matron_player_blow() noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

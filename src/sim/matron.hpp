@@ -142,7 +142,14 @@ public:
         // walks them upside down to the shaft's rail (Carry), holds them out
         // over the drop (Dangle), tears an arm off (ArmPlay), lets go aimed
         // at a ledge that will not kill them (Release) or sets them back on
-        // the deck (Spare).
+        // the deck (Spare). Caught, he is hers (Cory, 2026-10-27, 6:51 PM):
+        // only his own blow landed on her (his punch, or the stagger or
+        // knockdown it causes) frees him, and only before the rip begins
+        // (her other hand going for his arm); from then on no blow breaks
+        // it. Any other blow, and her own hard landing, she takes on her feet
+        // with him in her hand (take_blow). A body that fights its way out of
+        // her ankle hand (kicks, thrashing) before its arm is off gets away
+        // too; one the world tears from it she takes again (grip_lost).
         Grab = 12,
         Carry = 13,
         Dangle = 14,
@@ -703,6 +710,11 @@ public:
     static constexpr float kGrabLiftSeconds = 0.9F;
     static constexpr float kGrabCooldownSeconds = 1.5F;   // after a miss
     static constexpr float kAfterReleaseSeconds = 20.0F;  // no new grab for this long after a hold ends
+    // A grip the world tears from her hand before the arm she takes again
+    // where they land, and the arm comes off where she stands (grip_lost,
+    // retake): at most kMaxRetakes times in one hold. Torn once more, it is
+    // a Release: no hold loops on the same steel.
+    static constexpr int kMaxRetakes = 2;
     // Carry: at kCarryPaceScale of her hunt, the body upside down at her
     // side, her hand over her head (kCarryHandUpM over her feet), at most
     // kCarryMaxSeconds to the rail; past it she drops them where she is.
@@ -740,13 +752,17 @@ public:
     // other hand takes a wrist and pulls it away from the body, her pull
     // rising from kArmPullStartN at kRipRampNps to kArmPullMaxN (the ankle
     // hand then holds the pull and the weight: under its cap; she grips it
-    // hard, the strain counted only past kGripRipFloorN). She reaches and
-    // pulls until it gives: only a body that tears out of her ankle hand gets
-    // away whole. The shoulder tears (physics) at kArmTearNs of the wrist's
-    // load past kArmHoldN; the arm (kArmMassKg) is hers: lifted to her face,
-    // swung, thrown (kArmThrowMps) onto the deck behind her. The whole of it
-    // kArmPlaySeconds from the tear. The last arm gone, the run is hers
-    // (Claimed).
+    // hard, the strain counted only past kGripRipFloorN). She does not give
+    // it up: her hand not at the wrist in kArmReachSeconds, or the shoulder
+    // not torn kArmPullSeconds into the pull, she re-poses (arm_repose: a
+    // step of kArmReposeStepM back from the body, hauling it after her, her
+    // weight in it; out of reach, her hand for the nearer wrist again), as
+    // often as it takes. Once her other hand goes for his arm, no blow
+    // breaks it (the State comment). The shoulder tears (physics) at
+    // kArmTearNs of the wrist's load past kArmHoldN; the arm (kArmMassKg) is
+    // hers: lifted to her face, swung, thrown (kArmThrowMps) onto the deck
+    // behind her. The whole of it kArmPlaySeconds from the tear. The last arm
+    // gone, the run is hers (Claimed).
     static constexpr float kArmPullStartN = 1500.0F;
     static constexpr float kArmPullMaxN = 2600.0F;
     static constexpr float kGripRipFloorN = 3500.0F;
@@ -756,6 +772,9 @@ public:
     static constexpr float kArmThrowMps = 7.5F;
     static constexpr float kArmPlaySeconds = 4.5F;
     static constexpr float kArmPullMoveMps = 0.5F;
+    static constexpr float kArmReachSeconds = 3.5F;
+    static constexpr float kArmPullSeconds = 4.0F;
+    static constexpr float kArmReposeStepM = 1.0F;
     struct Throwable {
         JPH::BodyID body;
         std::uint64_t entity = 0;
@@ -890,6 +909,7 @@ public:
         std::uint32_t spares = 0;
         std::uint32_t grips_torn = 0;   // torn out of her hand, by the player or the world
         std::uint32_t retakes = 0;      // of those, the world's before the arm: taken again
+        std::uint32_t arm_reposes = 0;  // ArmPlay re-posed: the wrist out of reach, or the pull not telling
         std::uint32_t brace_losses = 0; // stepped back from the rail, unbraced
         std::uint32_t carry_drops = 0;  // carried too long: dropped on the deck
         std::uint32_t arm_tears = 0;    // arms she tore off
@@ -1135,6 +1155,19 @@ public:
     }
     void wrist_taken() noexcept;
     void arm_torn() noexcept;
+    // She re-posed (arm_repose): the world lets go of the wrist in her hand,
+    // if any, and her hand goes for the nearer whole arm again. Once.
+    [[nodiscard]] bool take_wrist_reseat() noexcept {
+        if (!wrist_reseat_) {
+            return false;
+        }
+        wrist_reseat_ = false;
+        return true;
+    }
+    // His own blow landed on her (the player's punch): the world tags it as
+    // it lands, and take_blow reads it with the blow it is part of. Only such
+    // a blow, before the rip begins, takes her out of her hold (State).
+    void player_blow_landed() noexcept { player_blow_tag_ = true; }
     [[nodiscard]] bool take_arm_throw(JPH::Vec3 &velocity) noexcept {
         if (!arm_throw_) {
             return false;
@@ -1580,6 +1613,18 @@ private:
     void carry_drop();
     void claim() noexcept;
     void retake() noexcept;
+    void arm_repose(JPH::RVec3 at, JPH::RVec3 player, bool reseat);
+    [[nodiscard]] JPH::Vec3 spare_side(JPH::RVec3 at, float feet, JPH::Vec3 right, JPH::Vec3 out, bool &deck) const;
+    // The body in her hand, or hers already: from her fingers closing on the
+    // ankle till she lets go, and the whole of the fatality.
+    [[nodiscard]] bool body_in_hold() const noexcept {
+        return state_ == State::Claimed || (holding_state(state_) && grip_on_);
+    }
+    // The rip begun: her other hand on its way to his arm (ArmPlay), an arm
+    // off already this hold, or the fatality.
+    [[nodiscard]] bool rip_begun() const noexcept {
+        return state_ == State::ArmPlay || state_ == State::Claimed || armplay_done_ || arm_tears_ != hold_tears_at_;
+    }
     void step_armplay(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     void step_claimed(float dt, JPH::RVec3 at, float feet);
     void fatal_next(int beat) noexcept;
@@ -1752,6 +1797,13 @@ private:
     bool armplay_done_ = false;   // this hold's ArmPlay is over
     State armplay_then_ = State::Dangle;   // what follows it: the dangle's end, a Spare, or the carry's drop
     bool retake_ = false;                  // her hand on them again after a grip the world tore: the arm here
+    int hold_retakes_ = 0;                 // this hold's re-takes (kMaxRetakes)
+    int armplay_reposes_ = 0;              // this ArmPlay's re-poses (the way back she steps turns with each)
+    bool wrist_reseat_ = false;            // re-posed: the world lets go of the wrist (take_wrist_reseat)
+    JPH::Vec3 spare_side_ = JPH::Vec3::sZero();   // Spare: where beside her she sets them down (spare_side)
+    bool spare_side_set_ = false;
+    bool spare_deck_ = false;              // her deck under it
+    int spare_tries_ = 0;                  // set-downs that ran out of time, this hold
     std::uint32_t hold_tears_at_ = 0;      // arm_tears_ as this hold began
     JPH::RVec3 player_ankle_ = JPH::RVec3::sZero();
     int fatal_beat_ = 0;          // Fatal, while Claimed
@@ -1767,7 +1819,7 @@ private:
     std::uint32_t arm_tears_ = 0, arm_throws_ = 0, claims_ = 0;
     float dangle_for_test_s_ = -1.0F;
     std::uint32_t grabs_ = 0, grab_misses_ = 0, carries_ = 0, dangles_ = 0, armplays_ = 0, releases_ = 0,
-                  spares_ = 0, grips_torn_ = 0, retakes_ = 0, brace_losses_ = 0, carry_drops_ = 0;
+                  spares_ = 0, grips_torn_ = 0, retakes_ = 0, arm_reposes_ = 0, brace_losses_ = 0, carry_drops_ = 0;
     float noise_heard_ = 0.0F;
     bool sees_player_ = false;
     bool sees_far_ = false;
@@ -1973,6 +2025,8 @@ private:
     bool blow_from_above_ = false;
     bool blow_faced_ = false;
     bool blow_staggered_ = false;   // this blow has already staggered her (and may yet put her down)
+    bool player_blow_tag_ = false;  // his blow landed, for the blow take_blow reads next (player_blow_landed)
+    bool blow_by_player_ = false;   // this blow has his in it
     JPH::Vec3 blow_from_ = JPH::Vec3::sZero();
     bool sensed_ = false;                           // near_ and set_velocity_ are this tick's
     State resume_state_ = State::Hunting;           // what she was about when a blow staggered her

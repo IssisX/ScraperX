@@ -119,6 +119,12 @@ void Simulation::PhysicsWorld::sever_arm(JPH::BodyInterface &bodies) noexcept {
 }
 
 void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float /*dt*/) noexcept {
+    if (matron_->take_wrist_reseat()) {
+        // She re-posed with the wrist out of her reach: her hand goes for the
+        // nearer whole arm again.
+        destroy_grab_constraint(wrist_);
+        wrist_side_ = -1;
+    }
     // Which wrist she goes for: a whole arm, the nearer her.
     const JPH::RMat44 frame = bodies.GetWorldTransform(player_id_);
     const JPH::RVec3 her = bodies.GetPosition(matron_->body());

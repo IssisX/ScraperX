@@ -1102,7 +1102,13 @@ public:
         return ended;
     }
     void lose_arm_for_test(const int side) noexcept { arm_lost_[static_cast<std::size_t>(side & 1)] = true; }
+    // Tests only: the player's body caught on steel where it is (a point at
+    // its middle fixed to the world), till the load on it passes `max_n`.
+    void snag_player_for_test(float max_n) noexcept;
+    [[nodiscard]] bool player_snagged_for_test() const noexcept { return snag_ != nullptr; }
 private:
+    JPH::Ref<JPH::TwoBodyConstraint> snag_;   // snag_player_for_test
+    float snag_max_n_ = 0.0F;
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

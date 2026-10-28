@@ -3157,8 +3157,9 @@ void Matron::post_step(const float dt) {
             state_ = State::Dead;
             remove_body();
         } else if (falling >= kHardLandingMps && vy - fall_vy_ > 0.5F * falling && state_ != State::Down &&
-                   state_ != State::Staggering) {
-            // Down hard, alive: down a while, the way she was going.
+                   state_ != State::Staggering && !body_in_hold()) {
+            // Down hard, alive: down a while, the way she was going (in her
+            // hold her own landing takes neither her feet nor him: State).
             const Vec3 v = bodies.GetLinearVelocity(body_);
             const Vec3 way(v.GetX(), 0.0F, v.GetZ());
             fall_x_ = way.LengthSq() > 1.0e-4F ? way.Normalized().GetX() : std::sin(yaw_);
@@ -3725,6 +3726,7 @@ void Matron::take_blow(const float dt) {
     if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
         state_ == State::Down || state_ == State::Emerging) {
         blow_quiet_ = kBlowQuietTicks;
+        player_blow_tag_ = false;
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -3804,7 +3806,12 @@ void Matron::take_blow(const float dt) {
         blow_change_ = Vec3::sZero();
         blow_impulse_ = Vec3::sZero();
         blow_above_ = 0.0F;
+        blow_by_player_ = false;
     }
+    // His own blow, tagged as it landed (player_blow_landed): read with the
+    // blow it lands in.
+    blow_by_player_ = blow_by_player_ || player_blow_tag_;
+    player_blow_tag_ = false;
     blow_quiet_ = 0;
     // Her own change is the blow's only while the player's body is not
     // against her too (their push is a shove, not a blow).
@@ -3845,6 +3852,18 @@ void Matron::take_blow(const float dt) {
     const bool braced = blow_faced_ && stage_ == Stage::Changed && turn_ != Turn::Windup;
     if (blow < takes || (state_ == State::Staggering && (blow < fells || braced))) {
         return;   // taken; or staggering already, and no worse than that
+    }
+    if (body_in_hold()) {
+        // Caught, he is hers (Cory, 2026-10-27, 6:51 PM): only his own blow,
+        // landed before the rip begins, takes her off her feet and him out
+        // of her hand. Any other she takes on her feet, him in her hand.
+        if (!blow_by_player_ || rip_begun()) {
+            return;
+        }
+        // Freed by it, whole: she is after him once her feet have her, her
+        // hand held off a while (as after a grip he tears out of it).
+        end_hold(State::Searching);
+        grab_cooldown_s_ = kAfterReleaseSeconds;
     }
     // The way it sends her: along the impulse, else her change, else away
     // from the striker.
@@ -4169,6 +4188,7 @@ void Matron::refresh_view() {
     view_.spares = spares_;
     view_.grips_torn = grips_torn_;
     view_.retakes = retakes_;
+    view_.arm_reposes = arm_reposes_;
     view_.brace_losses = brace_losses_;
     view_.carry_drops = carry_drops_;
     view_.arm_tears = arm_tears_;
