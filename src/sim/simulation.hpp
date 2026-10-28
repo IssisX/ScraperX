@@ -209,6 +209,12 @@ struct MatronSnapshot final {
     // Off her deck: gaps leapt in the Turn, holding on to a floor that moves,
     // and the level she hunts (its floor's top).
     std::uint32_t leaps = 0;
+    bool chute_open = false;          // her parachute out
+    std::uint32_t chutes = 0;         // parachutes she opened
+    std::uint32_t respawns = 0;       // last-resort respawns (safety net)
+    std::uint32_t respawn_waits = 0;  // seconds the net waited for a hidden spot
+    bool respawn_pending = false;
+    double chute_peak_force_n = 0.0, chute_peak_power_w = 0.0, chute_open_mps = 0.0;
     std::uint32_t unrigs = 0;   // ropes she took off a way out's eye
     bool on_line = false;       // going down a line's bare cable after the player
     std::uint32_t cable_slides = 0;
