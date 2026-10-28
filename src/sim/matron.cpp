@@ -3526,6 +3526,22 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 if (!scan_walk) {
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 }
+                // A machine floor she is already on (a cage, a hoist car) is
+                // one walking line: its middle. The spot on it is a body, and
+                // walking onto that body shoves it into the closed side and a
+                // catch there holds it. The middle leaves the open side a way
+                // past her. A spot on another floor is unchanged, so a leap
+                // off this one still aims at that floor.
+                {
+                    const FloorGraph &floors = floor_graph();
+                    const int stood = floor_patch_at(floors, ax, az, 0.05F, false);
+                    if (stood >= 0 && floors.patches[static_cast<std::size_t>(stood)].held &&
+                        floor_patch_at(floors, wx, wz, 0.05F, false) == stood) {
+                        const FloorPatch &q = floors.patches[static_cast<std::size_t>(stood)];
+                        wx = 0.5F * (q.min_x + q.max_x);
+                        wz = 0.5F * (q.min_z + q.max_z);
+                    }
+                }
                 step_turn(dt, d, loudness, player_carry);
                 // Her hands on the player take hold (or, while they cannot,
                 // shove, short of fully changed): her feet stand meanwhile,
