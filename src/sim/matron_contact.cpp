@@ -8,14 +8,6 @@
 
 #include "sim/matron.hpp"
 
-#include <Jolt/Physics/Body/BodyFilter.h>
-#include <Jolt/Physics/Body/BodyLock.h>
-#include <Jolt/Physics/Collision/CastResult.h>
-#include <Jolt/Physics/Collision/RayCast.h>
-
-#include <array>
-#include <cmath>
-
 namespace scraperx::sim {
 using namespace JPH;
 
@@ -37,42 +29,16 @@ void Matron::refresh_contact_view() {
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
-    const RVec3 at = bodies.GetPosition(body_);
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
-    // Her feet: walk_toward's own test of a floor under her, in its order
-    // (her middle first, then her feet's span across and fore-aft): the first
-    // hit that is a body's floor (not a sensor, its normal at least half up)
-    // she is not rising off faster than it rises.
-    IgnoreMultipleBodiesFilter filter;
-    filter.Reserve(2);
-    filter.IgnoreBody(body_);
-    filter.IgnoreBody(player_);
-    const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
-    const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
-    const std::array<Vec3, 5> offsets{Vec3::sZero(), across * kFootSpanM, -across * kFootSpanM, facing * kFootSpanM,
-                                      -facing * kFootSpanM};
-    for (const Vec3 &off : offsets) {
-        RayCastResult hit;
-        const RRayCast ray(at + off, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F));
-        if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)) {
-            continue;
-        }
-        const RVec3 contact = ray.GetPointOnRay(hit.mFraction);
-        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID);
-        if (!lock.Succeeded() || lock.GetBody().IsSensor()) {
-            continue;
-        }
-        const Vec3 normal = lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, contact);
-        if (normal.GetY() < 0.5F) {
-            continue;
-        }
-        if (velocity.GetY() < lock.GetBody().GetPointVelocity(contact).GetY() + 1.0F) {
-            view_.contact_supported = true;
-            view_.contact_feet_body = hit.mBodyID;
-            view_.contact_feet_sub = hit.mSubShapeID2;
-            view_.contact_feet = contact;
-            break;
-        }
+    // Her feet: walk_toward's own floor under her, the one her feet push on
+    // (sole_contact: her middle first, then her feet's span; a body's floor,
+    // not a sensor, its normal at least half up, she not rising off it faster
+    // than it rises). Not a second test of it.
+    Sole sole;
+    if (sole_contact(bodies.GetPosition(body_), bodies.GetLinearVelocity(body_), yaw_, sole)) {
+        view_.contact_supported = true;
+        view_.contact_feet_body = sole.body;
+        view_.contact_feet_sub = sole.sub;
+        view_.contact_feet = sole.point;
     }
     // Her hand: the grip of the mover that has her, where it is now on its
     // body (it moves with what it holds).

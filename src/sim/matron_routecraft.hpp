@@ -61,7 +61,7 @@ public:
     }
     const Report &report() const noexcept { return report_; }
     // The hold her hand has while it holds (its body, member and the point in
-    // the body's centre-of-mass frame); false when it holds none.
+    // the body's center-of-mass frame); false when it holds none.
     bool grip(JPH::BodyID &body, JPH::SubShapeID &sub, JPH::Vec3 &local) const noexcept {
         if (!holding_.has_value() || holding_->grip.body.IsInvalid()) {
             return false;

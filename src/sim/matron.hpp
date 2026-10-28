@@ -840,7 +840,7 @@ public:
         bool climb_airborne = false;
         // Her contacts as the simulation itself has them this tick
         // (refresh_contact_view): what her feet stand on by walk_toward's own
-        // test (centre and foot-span rays, a floor's normal, her fall against
+        // test (center and foot-span rays, a floor's normal, her fall against
         // it), and what the mover that has her really holds. Facts for the
         // presentation only: nothing reads them back, nothing is pushed.
         // Supported: her feet on a floor. Hand held: her hand's grip.
