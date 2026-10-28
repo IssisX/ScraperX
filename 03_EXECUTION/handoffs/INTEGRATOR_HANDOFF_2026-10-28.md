@@ -122,3 +122,23 @@ Each was stopped before it changed a file. Its brief is below in short.
 - He is on a phone, so give him short messages and no tables of numbers.
 - Human sounds are real recordings, never synthesized in code.
 - Test only what a change reaches; CI runs the rest.
+
+## Update at handoff (3:00 PM Central): both helpers finished and pushed
+
+- **PR #20 head `96188c4c`, proving** on `claude/integrate-matron-fatality-hang-20261028`.
+  - Trunk `9899ca3e` is merged in. REPO_MAP.md took trunk's version and still needs regenerating.
+  - In the window she holds him close and high, within his reach: 0.54-0.71 m, against 0.75 m. Her grip has 80 N·m of swing friction, so he hangs still.
+  - Fingers to let-go is 5.20-6.12 s at the rail plus 7 spots, and every let-go is lethal. The blow hook lands and frees him onto her deck.
+  - `matron-grab`: 28 PASS. touch_matron_act: PASS.
+  - Not run locally: `matron`, `matron-moves`, `matron-pipe`. CI covers them.
+  - rule_check gives 2 BLOCK, both this PR's own not-yet-landed hang checks, retargeted to the design:
+    - "least past ≥ 0.5 m every hang tick" became ≥ 0.5 m at the let-go and ≥ 0.1 m in the window, which holds him close on purpose;
+    - "gravity a second on" now measures the speed gained since the let-go.
+  - New check: the window reach is ≤ 0.75 m on every window tick and at the blow.
+  - The integrator's call: both retargets follow from the owner's punch-to-break-free design. Next: one lean review, then land on green.
+- **PR #23 head `b112e0b3`, proving** on `claude/integrate-matron-punch-20261028`.
+  - PUNCH has its own always-visible button: V, and the pad's d-pad up.
+  - Action never shows PUNCH. The button greys in the air, mid-lunge or with no usable arm, and pulses BREAK FREE in her hand before the rip. It is offered only where a punch would land on her standing.
+  - `strike`: PASS. touch_matron_act: PASS. rule_check 0/0.
+  - The re-review of `984102f4` was FIX; both its blockers are fixed in `b112e0b3`. Next: a lean re-review, then land right after #20.
+- **This session:** its hourly check-in task is deleted and its PR subscriptions are dropped. The new session creates its own hourly check of issue #3 and subscribes to #20 and #23.
