@@ -341,6 +341,49 @@ void run_matron_grab() {
                 "matron arm snagged: one arm gone, no claim and no death");
         std::cout << "PASS scraperx_sim matron arm snagged: torn " << torn_at - snagged_at << " s into her arm play\n";
     }
+    // ---- the arm never hers: her pull kept under the shoulder's hold (a
+    //      test's arm that will not come). She re-poses at most
+    //      Matron::kMaxArmReposes times, then lets go where she stands
+    //      (Release), the arm on: no loop, no tear, no claim, no death ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        s.debug_matron_hold(0, 3.0);
+        s.debug_matron_armplay(2);
+        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        constexpr int kReleaseState = static_cast<int>(Matron::State::Release);
+        bool in_armplay = false;
+        bool released = false;
+        std::uint32_t reposes_at_release = 0;
+        std::uint32_t tears_at_release = 0;
+        for (int i = 0; i < 90 * 90 && !released; ++i) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto m = s.matron_state();
+            in_armplay = in_armplay || m.state == kArmPlay;
+            if (in_armplay && m.state == kReleaseState) {
+                released = true;
+                reposes_at_release = m.arm_reposes;
+                tears_at_release = s.snapshot().arm_tear_count;
+            }
+        }
+        for (int i = 0; i < 90; ++i) {
+            tick(s);
+        }
+        const auto end = s.matron_state();
+        std::cout << "  matron arm never hers: arm play " << in_armplay << ", released " << released << ", re-poses "
+                  << reposes_at_release << " (then " << end.arm_reposes << "), tears " << tears_at_release
+                  << ", grips torn " << end.grips_torn << ", claims " << end.claims << "\n";
+        require(in_armplay && released, "matron arm never hers: past her re-poses she lets go (Release)");
+        require(reposes_at_release == static_cast<std::uint32_t>(Matron::kMaxArmReposes) &&
+                    end.arm_reposes == reposes_at_release,
+                "matron arm never hers: exactly kMaxArmReposes re-poses, then no more");
+        require(tears_at_release == 0 && s.snapshot().arm_tear_count == 0 && !s.snapshot().held_by_matron &&
+                    end.claims == 0,
+                "matron arm never hers: let go with the arm on, out of her hand, no claim");
+        std::cout << "PASS scraperx_sim matron arm never hers: let go after " << reposes_at_release << " re-poses\n";
+    }
     // ---- kicked free once her hand has his wrist (Cory, through PE: once
     //      the rip starts nothing breaks it, his struggling neither): his
     //      kicks tear her ankle grip, the body pulls away and the arm stays

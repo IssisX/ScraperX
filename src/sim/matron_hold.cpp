@@ -596,6 +596,10 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
     case 1: {
         // Away from the body, up and out: the shoulder takes it.
         pull2_n_ = std::min(kArmPullMaxN, pull2_n_ + kRipRampNps * dt);
+        if (armplay_for_test_ == 2) {
+            // A test's arm that will not come: her pull kept under the hold.
+            pull2_n_ = std::min(pull2_n_, 0.5F * kArmHoldN);
+        }
         // Her hand drawn on past where her arm reaches: the arm's limit and
         // her muscle (capped) put the pull on the wrist.
         // Away from her other hand, which keeps the ankle: the body drawn
@@ -717,6 +721,20 @@ void Matron::stand_in_for_rim(const RVec3 at, const RVec3 player, const Vec3 fwd
 // caught on steel is dragged off it. No floor there for her feet: she stays
 // where she is.
 void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
+    if (armplay_reposes_ >= kMaxArmReposes) {
+        // Past her re-poses, the arm still not hers: she lets go where she
+        // stands, the arm on, her hand out a while (no loop on the steel).
+        armplay_done_ = true;
+        wrist_on_ = false;
+        let_go_ = true;
+        let_go_push_ = Vec3::sZero();
+        state_ = State::Release;
+        hold_s_ = 0.0F;
+        hold_phase_ = 0;
+        grip_on_ = false;
+        grab_cooldown_s_ = kAfterReleaseSeconds;
+        return;
+    }
     ++arm_reposes_;
     const int k = armplay_reposes_++;
     hold_s_ = 0.0F;
