@@ -1116,6 +1116,16 @@ bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexce
     return physics_world_->matron().climb_for_test(pipe, down);
 }
 
+void Simulation::debug_matron_fail_pipe_way(const double from_floor, const double to_floor) {
+    physics_world_->matron().fail_pipe_way_for_test(static_cast<float>(from_floor), static_cast<float>(to_floor));
+}
+
+Simulation::MatronPipeWay Simulation::matron_pipe_way(const double from_floor, const double to_floor) const {
+    const Matron::PipeWayView v =
+        physics_world_->matron().pipe_way_view(static_cast<float>(from_floor), static_cast<float>(to_floor));
+    return MatronPipeWay{v.failures, static_cast<double>(v.blocked_for_s), v.ruled_out, v.open};
+}
+
 void Simulation::debug_matron_rule_out_pipe() noexcept {
     physics_world_->matron().rule_out_pipe_for_test();
 }
@@ -1139,6 +1149,11 @@ bool Simulation::debug_matron_travel(const double top) noexcept {
     matron.patrol_for_test();
     const int goal = map.region_near_top(static_cast<float>(top), 0.3F);
     return goal >= 0 && matron.travel_to(goal);
+}
+
+Simulation::MatronHoist Simulation::matron_hoist() const noexcept {
+    const Matron::HoistView v = physics_world_->matron().hoist_view();
+    return {v.phase, v.rides, v.hand_n};
 }
 
 bool Simulation::debug_matron_travel_region(const int region) noexcept {

@@ -86,8 +86,8 @@
 // the cage rides as before. She never sends a cage away.
 //
 // The bay (bay.hpp, shared survival): a cut across her deck's north band,
-// spanned by a powered leaf. Her lines cross it on the leaf while it is a
-// floor (Link::Leaf). Her trap: on her deck west of the bay, with the player
+// spanned by a powered leaf. She walks over it on the leaf while it is a
+// floor (a held floor, FloorGraph). Her trap: on her deck west of the bay, with the player
 // across it to the east, she does not cross after them. She goes down onto
 // the bracket in the bay and puts her hands under the leaf's west end;
 // hands in its district stop its motor, and the leaf comes down onto her
@@ -407,14 +407,12 @@ public:
     static constexpr float kCageACenterX = -10.5F;
     static constexpr float kCageBCenterX = -7.2F;
     static constexpr float kCagesCenterZ = -131.4F;
-    static constexpr float kLeapX = -11.9F;   // across the open half of A's mouth
     // The ladder from her deck's north band to the 176 ring
-    // (band_counterweight_well.cpp: its rungs on x 5.00, z -129.05): where she
-    // hangs on it (the player's foot spot, 0.5 m off the rungs), and the way
-    // to there from the band, round its west rail.
+    // (band_counterweight_well.cpp: its rungs on x 5.00, z -129.05): where a
+    // climber hangs on it (the player's foot spot, 0.5 m off the rungs). She
+    // walks there by her scan; the climb test reads the spot.
     static constexpr float kLadderX = 5.0F;
     static constexpr float kLadderFootZ = -129.55F;
-    static constexpr float kLadderSideX = 3.9F;
     // The riser from 143 to her deck (band_stack.cpp C3: its rungs on x
     // -6.00, z -133.50 from 143's walkway plate out over the shaft, its head a
     // bridge over 154's rail and steps down onto the deck's runway): where a
@@ -1039,6 +1037,35 @@ public:
     // True accepts the destination. A free, airborne body waits for real
     // support before executing a route; acceptance does not promise arrival.
     bool travel_to(int region);
+    // The world's hoists (matron_hoist.cpp), given before pre_step: each a
+    // body on a vertical guide a catch holds, its travel, and what frees the
+    // catch (a pin on its own guide, or a trip line's hanging handle). Her
+    // journeys take one when no way of her map joins two floors: she boards
+    // it, frees it from inside with her hands (a pin shoved clear, a handle
+    // weighed down), rides it and steps off. Read from the kit, never named.
+    struct HoistFeed {
+        struct Pin {
+            JPH::BodyID body;
+            JPH::Vec3 axis = JPH::Vec3::sAxisZ();
+            float travel = 0.0F, clear = 0.0F;
+        };
+        JPH::BodyID car;
+        float axis_y = 1.0F;
+        float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
+        bool held = false;
+        std::vector<Pin> pins;
+        std::vector<JPH::BodyID> weights;
+    };
+    void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    struct HoistView {
+        int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
+        int hoist = -1;
+        std::uint32_t rides = 0;    // rides she finished, this life
+        float hand_n = 0.0F;        // her hands' push on what frees it, this tick
+    };
+    [[nodiscard]] HoistView hoist_view() const noexcept {
+        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_};
+    }
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;
@@ -1070,6 +1097,18 @@ public:
     void let_go_for_test();
     // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
     void rule_out_pipe_for_test();
+    // Tests: a failed go at the pipe's way from `from_floor` to `to_floor`
+    // (as get_off_pipe(true) counts one), and what she keeps of that way.
+    void fail_pipe_way_for_test(float from_floor, float to_floor);
+    static constexpr float kPipeWayBlockS = 30.0F;
+    static constexpr std::uint8_t kPipeWayRetries = 2;
+    struct PipeWayView {
+        int failures = 0;
+        float blocked_for_s = 0.0F;   // from now; infinite: until a restore
+        bool ruled_out = false;
+        bool open = true;
+    };
+    [[nodiscard]] PipeWayView pipe_way_view(float from_floor, float to_floor) const noexcept;
     // Tests only: one of her climbs begun from where she stands, up or down:
     // the corner pipe, or the scanned ladder nearest her off her floor.
     bool climb_for_test(bool pipe, bool down);
@@ -1224,17 +1263,6 @@ public:
     [[nodiscard]] JPH::BodyID body() const noexcept { return body_; }
 
 private:
-    struct Node {
-        float x, z;
-    };
-    // How a walking line is taken: on foot, over the catwalk (only in sight
-    // of prey on it), or across a gap (only leapt, in the Turn).
-    enum class Link : std::uint8_t {
-        Floor,
-        Catwalk,
-        Gap,
-        Leaf,   // the bay's leaf: a floor while it is one (set_bay)
-    };
     // Her trap at the bay, phase by phase (see the head of this file).
     enum class Trap : std::uint8_t {
         Off,
@@ -1244,23 +1272,16 @@ private:
         Holding,
         ClimbOut,
     };
-    struct Edge {
-        int a, b;
-        Link link;
-    };
     // Where she stands guard, and the way she faces there.
     struct Post {
         float x, z, yaw;
     };
-    // A level she can hunt: its floor, its walking lines, the loops she
-    // patrols, the posts by its way up (guarded while ways_out_[way]: the
-    // first she can walk to is hers; -1, none), and where she stands to
-    // reach that cage's eye.
+    // A level she can hunt: its floor, the posts by its way up (guarded
+    // while ways_out_[way]: the first she can walk to is hers; -1, none), and
+    // where she stands to reach that cage's eye. Where she walks on it is her
+    // own scan's (FloorGraph), not listed here.
     struct Level {
         float floor_y;
-        std::vector<Node> nodes;
-        std::vector<Edge> edges;
-        std::vector<std::vector<int>> patrols;
         std::vector<Post> posts;
         int way;
         Post eye;
@@ -1305,13 +1326,14 @@ private:
     // The floor of the level a sound at height y is on (the highest under
     // it, within a story), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
-    // (x, z) put on the nearest of her level's floor lines (not the
-    // catwalk's, not a gap's): somewhere on her level she can stand.
+    // (x, z) put on the nearest floor of her level that carries her (her
+    // scan's, or a held one): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
     [[nodiscard]] static bool on_catwalk_line(float x, float z, float margin);
-    // The next point to walk to, along the cheapest path on her level to
-    // (tx, tz), with the catwalk allowed or not and gaps (leapt) or not;
-    // false when no such path reaches it (she then heads straight for it).
+    // The next point to walk to, along the cheapest path over her level's
+    // floors (FloorGraph) to (tx, tz), with floors that cannot carry her
+    // allowed or not (only with prey on them) and gaps (leapt) or not; false
+    // when no such path reaches it (she then heads straight for it).
     bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
                       bool allow_gaps = false) const;
     // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
@@ -1319,6 +1341,8 @@ private:
     // Her width is swept, not sampled: a post thinner than the space between
     // two lines (the trip gantry's 0.1 m legs by her post) still stops her.
     [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
+    // A leap's way: nothing at all (built or loose, but her) at her knees or head.
+    [[nodiscard]] bool leap_clear(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
@@ -1339,9 +1363,38 @@ private:
     void settle_level();
     // The post on her level she can walk to, if its way out is there to guard.
     [[nodiscard]] const Post *reachable_post(float ax, float az) const;
-    // Of her level's patrol loops, the one she can walk onto from here, and
-    // its node nearest her.
+    // Her patrol loop: the floors she can walk to from here, round their
+    // middle; and the point of it nearest her.
     void pick_patrol(float ax, float az);
+    // Her level's floors, from her scan: its walkable tops at the level's
+    // height, and held floors (a dynamic body in a constraint, flat at that
+    // height, at rest) as they are now. A held floor carries her unless what
+    // holds it is known to give under her (a bolt weaker than her weight and
+    // the plate's): that one is crossed only with prey on it.
+    struct FloorPatch {
+        float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F, top = 0.0F;
+        JPH::BodyID body;
+        bool held = false;
+        bool carries = true;
+        int origin = -1;   // the floor it was cut from (pieces of one floor in line)
+    };
+    struct FloorLink {
+        int to = -1;
+        bool gap = false;   // open air between: leapt, in the Turn
+    };
+    struct FloorGraph {
+        int level = -1;
+        bool scanned = false;
+        std::uint64_t held_key = 0;
+        float held_at_s = -1.0F;
+        std::vector<FloorPatch> patches;
+        std::vector<std::vector<FloorLink>> links;
+        std::uint32_t version = 0;
+    };
+    const FloorGraph &floor_graph() const;
+    void held_floors(const Level &level, float lo_x, float hi_x, float lo_z, float hi_z,
+                     std::vector<FloorPatch> &out) const;
+    [[nodiscard]] int floor_patch_at(const FloorGraph &g, float x, float z, float slack, bool carrying_only) const;
     // After a lead on a level below, down a line toward it (to it, or to a
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
@@ -1633,6 +1686,26 @@ private:
     static constexpr float kYieldReachM = 1.3F;
     static constexpr float kYieldClearM = 1.6F;
     void step_travel(float dt);
+    // matron_hoist.cpp
+    struct HoistLeg {
+        int phase = 0;
+        int hoist = -1;
+        int board = -1, exit = -1, goal = -1;   // regions: its stop's landing, the other's, the journey's end
+        JPH::Vec3 board_at = JPH::Vec3::sZero(), exit_at = JPH::Vec3::sZero();   // the landings' nearest points
+        float from_travel = 0.0F, to_travel = 0.0F;
+        float t = 0.0F, still_s = 0.0F;
+    };
+    [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
+    [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;
+    bool plan_hoist(int from, int goal);
+    void step_hoist(float dt);
+    std::vector<HoistFeed> hoists_;
+    HoistLeg hoist_;
+    std::uint32_t hoist_rides_ = 0;
+    std::vector<JPH::Vec3> hoist_path_;
+    std::size_t hoist_path_i_ = 0;
+    float hoist_hand_n_ = 0.0F;
+    bool hoist_inner_ = false;   // travel_to from the hoist leg itself
     [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;
     std::vector<JPH::Vec3> journey_legs_;
@@ -1662,7 +1735,7 @@ private:
     // Her home (set_home): its floor and its level.
     float home_y_ = kHomeDeckTop;
     int home_level_ = 0;
-    int patrol_ = 0;   // which of her level's loops, and how far round it
+    int patrol_ = 0;   // the floor graph's version her loop was picked on (-1: none), and how far round it
 
     State state_ = State::Dormant;
     float strain_s_ = 0.0F;
@@ -1677,6 +1750,7 @@ private:
     float speed_ = 0.0F;
     float yaw_ = 0.0F;
     int patrol_node_ = 0;
+    std::vector<std::array<float, 2>> patrol_points_;   // her loop (pick_patrol)
     bool patrol_only_ = false; // tests: no post to guard, the loop only
 
     // The hold (matron_hold.cpp).
@@ -1797,20 +1871,11 @@ private:
     [[nodiscard]] Climb climb_spec(int edge) const noexcept;
     [[nodiscard]] int nearest_climb(float x, float z, float floor_y, bool down) const noexcept;
     [[nodiscard]] int bay_way_out() const noexcept;
-    // Her decks' steel: where a level is the floor under her (off_its_steel),
-    // the footprint of its steel at its top, for the levels whose steel she
-    // knows; at their height outside it she is not on them.
-    struct Steel {
-        float min_x = 0.0F, max_x = 0.0F, min_z = 0.0F, max_z = 0.0F;
-    };
-    struct DeckSteel {
-        int level = -1;
-        float top = 0.0F;
-        std::array<Steel, 6> patches{};
-        std::uint8_t count = 0;
-    };
+    // A level is the floor under her (off_its_steel) when what holds her feet
+    // is steel at that level's height: a walkable top her scan read, or a
+    // body at rest holding her (a floor her scan cannot read: one that can
+    // fall or move).
     static constexpr float kOnSteelM = 0.35F;   // feet within this of a deck's top: on it
-    std::array<DeckSteel, 7> deck_steel_{};
     float clock_s_ = 0.0F;
     float fall_vy_ = 0.0F;        // her vertical speed at the end of the last step
     JPH::BodyID bay_leaf_;
@@ -1894,6 +1959,12 @@ private:
     std::vector<Blocked> blocked_;
     mutable float last_way_x_ = 0.0F, last_way_z_ = 0.0F;
     mutable bool last_way_node_ = false;
+    mutable FloorGraph floor_graph_;
+    // The last route's chain over floor_graph_ (cached per decision: the same
+    // from, to, flags and graph version reuse it).
+    mutable std::vector<int> route_chain_;
+    mutable int route_from_ = -1, route_to_ = -1, route_flags_ = -1;
+    mutable std::uint32_t route_version_ = 0;
     struct Crumb {
         float x, z, floor_y;
     };
@@ -1961,8 +2032,6 @@ private:
         float blocked_until_s = 0.0F;
         bool ruled_out = false;
     };
-    static constexpr float kPipeWayBlockS = 30.0F;
-    static constexpr std::uint8_t kPipeWayRetries = 2;
     std::array<PipeWayMemory, 4> pipe_ways_{};
     int pipe_waypoint_ = 0;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)

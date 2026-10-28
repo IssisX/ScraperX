@@ -1579,6 +1579,15 @@ public:
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
     void debug_matron_rule_out_pipe() noexcept;
+    // Tests: a failed go at her pipe's way between two floors, and its memory.
+    void debug_matron_fail_pipe_way(double from_floor, double to_floor);
+    struct MatronPipeWay {
+        int failures = 0;
+        double blocked_for_s = 0.0;
+        bool ruled_out = false;
+        bool open = true;
+    };
+    [[nodiscard]] MatronPipeWay matron_pipe_way(double from_floor, double to_floor) const;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
@@ -1591,6 +1600,14 @@ public:
     // Tests: a journey to one region of her scanned map, by its id.
     [[nodiscard]] bool debug_matron_travel_region(int region) noexcept;
     bool debug_matron_travel(double top) noexcept;
+    // Her hoist leg (matron.hpp hoist_view): its phase (0 none .. 5 stepping
+    // off), the rides she finished, her hands' push this tick (N).
+    struct MatronHoist {
+        int phase = 0;
+        std::uint32_t rides = 0;
+        float hand_n = 0.0F;
+    };
+    [[nodiscard]] MatronHoist matron_hoist() const noexcept;
     // Her feet's floor search between two points (traversal::grid_walk), for tests.
     [[nodiscard]] std::size_t debug_matron_grid_walk(double fx, double fy, double fz, double tx, double ty, double tz,
                                                      float margin, int max_nodes);
