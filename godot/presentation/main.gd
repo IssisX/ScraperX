@@ -331,11 +331,20 @@ func _prepare_her() -> void:
 	_native.prepare_matron()
 	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
 	card.queue_free()
-	get_tree().paused = was_paused
+	# A pause menu opened while she read (focus lost in those frames) stays paused.
+	get_tree().paused = was_paused or _paused
 
 func _process(delta: float) -> void:
 	if _native == null:
 		return
+	# She ended his run and the world was built again: her look over the new
+	# one is made now, once his death has played, not in the tick she leaves
+	# her locker.
+	if _her_world_new and _death_cam_left <= 0.0:
+		_her_world_new = false
+		if _uitest_scenario.is_empty() and not _ci_mode and _audit == null:
+			_her_scan_pending = true
+			_prepare_her.call_deferred()
 	if _fps_label.visible:
 		_fps_clock -= delta
 		if _fps_clock <= 0.0:

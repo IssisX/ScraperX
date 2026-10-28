@@ -1,5 +1,6 @@
-// Her hands on steel (matron.cpp climb(), matron_pipe.cpp): the queries both
-// her ladders and her corner pipe take and keep holds by. Bounded, no heap.
+// Her hands on steel (matron_pipe.cpp; her report's second hand on a rung):
+// the queries her corner pipe takes and keeps holds by, and her report proves
+// a second hold with. Bounded, no heap.
 #pragma once
 
 #include <Jolt/Jolt.h>
