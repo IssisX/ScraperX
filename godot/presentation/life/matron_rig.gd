@@ -213,16 +213,31 @@ const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-pa
 # left, fore left, hind right, fore right) and how high a limb is lifted.
 const PLANT_LIMBS := [["an_l", 0.0], ["wr_l", 0.25], ["an_r", 0.5], ["wr_r", 0.75]]
 const PLANT_LIFT_M := 0.12
+# How fast a limb's pole turns to the side its pose bends to (rad/s).
+const POLE_RAD_S := 6.0
 # Her gripping arm drawn out to the held ankle, at most this many times its length.
 const HOLD_STRETCH_MAX := 2.7
 # and past that, her shoulder pulled out toward it at most this far
-const HOLD_SHOULDER_M := 0.3
+const HOLD_SHOULDER_M := 0.4
+# drawn out so the arm is this far out to its length at the ankle (bent a
+# little: never locked straight)
+const HOLD_ARM_OUT := 0.93
+# The last SOFT_REACH of a limb's length it comes out to only softly (_reach_chain).
+const SOFT_REACH := 0.08
+# No bone of her body turns faster than this a second (GOVERN_BURST_RAD_S in
+# a held burst of the contortion layer), whatever the reaches asked: the
+# last word on every frame (govern).
+const GOVERN_RAD_S := 11.5
+const GOVERN_BURST_RAD_S := 19.0
 var _ride_y := 0.0
 var _ride_v := 0.0
 var _ankle_y := 0.097
 var _plants := {}
-# Each limb's middle joint as the reach last bent it (frame, offset from its root).
-var _bend_last := {}
+# Each reach's pole (frame, the unit side its middle joint stands out to).
+var _pole := {}
+var _governed_bones: Array[int] = []
+var _govern_last: Array[Quaternion] = []
+var governed := 0
 var _ik_frame := 0
 # This frame: the limbs she put down on all fours ({limb: "an_l" / "wr_l" /
 # "an_r" / "wr_r", at: the world point, surface: what it went down on}), and
@@ -271,51 +286,59 @@ func _reach(s: String, target: Vector3, w := 1.0, key := "") -> void:
 	_reach_chain("sh_" + s, "el_" + s, "wr_" + s, target, w, key)
 
 
-# The same for any two-bone limb: `c` (wrist, ankle) to `target`, the middle
-# joint (elbow, knee) kept in the plane it bent in, on the side it bent to
-# last frame (the pose's own side the first time): it never flips round.
-# `w` below 1 turns each joint only that far from the pose's toward the reach.
+# The same for any two-bone limb: `c` (wrist, ankle) to `target` (from where
+# the pose has it, as far as `w`). The middle joint (elbow, knee) stands out
+# toward the limb's pole: the side it stood out to last frame, turned toward
+# the pose's own side no faster than POLE_RAD_S (the pose's side the first
+# time). No choice between two ways to bend, so it never flips round.
 func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, key := "") -> void:
 	if key == "":
 		key = c
-	var ia: int = bone_idx[a]
-	var ib: int = bone_idx[b]
-	var pose_a := skel.get_bone_pose_rotation(ia)
-	var pose_b := skel.get_bone_pose_rotation(ib)
 	var sh := _gpos(a)
 	var el := _gpos(b)
 	var wr := _gpos(c)
+	var want := wr.lerp(target, clampf(w, 0.0, 1.0))
 	var l1 := sh.distance_to(el)
 	var l2 := el.distance_to(wr)
-	var to_t := target - sh
-	var d := clampf(to_t.length(), absf(l1 - l2) + 0.01, l1 + l2 - 0.005)
-	var n := (el - sh).cross(wr - sh)
-	if n.length() < 1e-5:
-		n = skel.get_bone_global_pose(bone_idx[b]).basis.x
-	n = n.normalized()
-	var ang := acos(clampf((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d), -1.0, 1.0))
+	var to_t := want - sh
+	if to_t.length() < 1.0e-4 or l1 < 1.0e-4 or l2 < 1.0e-4:
+		return
 	var dir := to_t.normalized()
-	var e_new := sh + dir.rotated(n, ang) * l1
-	var e_alt := sh + dir.rotated(n, -ang) * l1
-	# the side the joint stands out to, off the line to the target: last
-	# frame's, unless the limb was straight then; else the pose's own
-	var side: Vector3 = (el - sh) - dir * (el - sh).dot(dir)
-	var last: Array = _bend_last.get(key, [])
-	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
-		var was: Vector3 = last[1]
-		var off: Vector3 = was - dir * was.dot(dir)
-		if off.length() > 0.03:
-			side = off
-	if (e_alt - sh).dot(side) > (e_new - sh).dot(side):
-		e_new = e_alt
-	_bend_last[key] = [_ik_frame, e_new - sh]
+	# a soft end to the reach: the limb comes out toward straight ever more
+	# slowly and never quite gets there, so a target at the end of its reach
+	# never spins the middle joint round
+	var reach := l1 + l2
+	var soft := SOFT_REACH * reach
+	var d := to_t.length()
+	if d > reach - soft:
+		d = reach - soft + soft * (1.0 - exp(-(d - reach + soft) / soft))
+	d = maxf(d, absf(l1 - l2) + 0.01)
+	var pose_side := (el - sh) - dir * (el - sh).dot(dir)
+	var last: Array = _pole.get(key, [])
+	var q: Vector3
+	if last.is_empty() or int(last[0]) < _ik_frame - 1:
+		q = pose_side
+	else:
+		q = last[1]
+		q -= dir * q.dot(dir)
+		if pose_side.length() > 0.02 * l1 and q.length() > 1.0e-6:
+			var to := pose_side.normalized()
+			var qn := q.normalized()
+			var turn := atan2(dir.dot(qn.cross(to)), qn.dot(to))
+			var dt: float = float(view._dt) if view != null else 0.0
+			q = qn.rotated(dir, clampf(turn, -POLE_RAD_S * dt, POLE_RAD_S * dt))
+	if q.length() < 1.0e-6:
+		# no side to stand out to (a limb straight at its target): any
+		# square to it
+		q = dir.cross(Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT)
+	q = (q - dir * q.dot(dir)).normalized()
+	_pole[key] = [_ik_frame, q]
+	var ang := acos(clampf((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d), -1.0, 1.0))
+	var e_new := sh + (dir * cos(ang) + q * sin(ang)) * l1
 	_turn_bone_global(a, Quaternion((el - sh).normalized(), (e_new - sh).normalized()))
 	var el2 := _gpos(b)
 	var wr2 := _gpos(c)
-	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (target - el2).normalized()))
-	if w < 0.999:
-		skel.set_bone_pose_rotation(ia, pose_a.slerp(skel.get_bone_pose_rotation(ia), w))
-		skel.set_bone_pose_rotation(ib, pose_b.slerp(skel.get_bone_pose_rotation(ib), w))
+	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (want - el2).normalized()))
 
 
 # Her body's ride onto what is under her (her lower foot on the deck, her
@@ -410,24 +433,63 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	var arm := sh.distance_to(el) + el.distance_to(wr)
 	var base_s := (p["sh_" + s] as Node3D).scale.y if p.has("sh_" + s) else 1.0
 	var k_max := HOLD_STRETCH_MAX / maxf(base_s, 0.01)
-	var need := sh.distance_to(target)
-	var k := lerpf(1.0, clampf(need / maxf(0.985 * arm, 0.01), 1.0, k_max), w)
-	var beyond := need - 0.985 * arm * k_max
+	var want := wr.lerp(target, w)
+	var need := sh.distance_to(want)
+	var k := clampf(need / maxf(HOLD_ARM_OUT * arm, 0.01), 1.0, k_max)
+	var beyond := need - HOLD_ARM_OUT * arm * k_max
 	if beyond > 0.0:
 		# the arm out as far as it goes: her shoulder pulled up out of her
 		# toward it
-		_shift_bone_global("sh_" + s, (target - sh).normalized() * minf(beyond, HOLD_SHOULDER_M) * w)
+		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, HOLD_SHOULDER_M))
 	if k > 1.0001:
 		for bn in ["sh_%s_x" % s, "el_%s_x" % s]:
 			var i: int = bone_idx[bn]
 			skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) * k)
 	stretch[s] = base_s * k
-	_reach(s, target, w, "hold_" + s)
+	_reach(s, want, 1.0, "hold_" + s)
 
 
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
+	_contact(data, falling, held)
+	govern()
+
+
+# Every bone of her body (not her hair, eyes or fingers) turned this frame
+# no further than GOVERN_RAD_S allows from where it was drawn last frame. The
+# springs, weights and poles keep her well inside it; this is the ceiling
+# that holds whatever they missed. `governed`: the bones it held back.
+func govern() -> void:
+	if _governed_bones.is_empty():
+		for bn in bone_idx.keys():
+			var name := String(bn)
+			if name.begins_with("hair") or name.begins_with("eye") or (name.length() >= 2 and (name[0] == "f" or name[0] == "t") and name[1].is_valid_int()):
+				continue
+			if int(bone_idx[bn]) >= 0:
+				_governed_bones.append(int(bone_idx[bn]))
+	governed = 0
+	var dt: float = float(view._dt) if view != null else 0.0
+	var reset: bool = view == null or bool(view.fresh_frame) or dt <= 0.0 or _govern_last.size() != _governed_bones.size()
+	if reset:
+		_govern_last.resize(_governed_bones.size())
+		for j in _governed_bones.size():
+			_govern_last[j] = skel.get_bone_pose_rotation(_governed_bones[j])
+		return
+	var cap := (GOVERN_BURST_RAD_S if bool(view.burst_active) else GOVERN_RAD_S) * dt
+	for j in _governed_bones.size():
+		var i: int = _governed_bones[j]
+		var q := skel.get_bone_pose_rotation(i)
+		var was: Quaternion = _govern_last[j]
+		var ang := was.angle_to(q)
+		if ang > cap:
+			q = was.slerp(q, cap / ang)
+			skel.set_bone_pose_rotation(i, q)
+			governed += 1
+		_govern_last[j] = q
+
+
+func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
 	landed.clear()
@@ -469,7 +531,8 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 				_lift_body(dy)
 		if wf > 0.001:
 			_plant_limbs(data, wf)
-		_reach("r", skel.global_transform.affine_inverse() * hand)
+		var wc := float(view._w_climb) if view != null else 1.0
+		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
 		# On a two-handed move the left wrist goes to the bridge's own
 		# second hold when the native validated one
 		# (climb_hand2_known), and only then; an unvalidated second
@@ -479,7 +542,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			var hand_l: Vector3 = hand
 			if bool(data.get("climb_hand2_known", false)) and data.has("climb_hand2"):
 				hand_l = held[1] if held.size() >= 2 else data["climb_hand2"]
-			_reach("l", skel.global_transform.affine_inverse() * hand_l)
+			_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
 		return
 	if climbing or on_line:
 		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)

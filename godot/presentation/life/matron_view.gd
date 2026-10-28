@@ -58,7 +58,12 @@ const FIGURE_W := 9.0
 # Weights that bring a contact in or out (on all fours, palms on the deck,
 # her hand on the held ankle): most of the way in about 0.35 s.
 const BLEND_W := 13.5
-const HOLD_BLEND_W := 10.0
+# Down onto all fours and up off them, and her gait's swing in and out: slower,
+# a body's weight going over (most of the way in about 0.7 s).
+const FOURS_BLEND_W := 7.0
+# A jump in where the simulation has her, eased out (rad/s).
+const ROOT_W := 5.0
+const HOLD_BLEND_W := 16.0
 # On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
 # never twice within FOURS_HOLD_S.
 const FOURS_ON_MPS := 1.3
@@ -140,6 +145,18 @@ var _w_hold2 := 0.0
 var _w_hold2_v := 0.0
 var _hold_at := Vector3.ZERO
 var _hold_at2 := Vector3.ZERO
+# What her hands hold, drawn: a jump of it (the ankle first in her hand, a
+# re-take) eased out over HOLD_BLEND_W, its motion followed as it is.
+var _hold_raw := Vector3.ZERO
+var _hold_raw2 := Vector3.ZERO
+var _hold_off := Vector3.ZERO
+var _hold_off_v := Vector3.ZERO
+var _hold_off2 := Vector3.ZERO
+var _hold_off2_v := Vector3.ZERO
+# Her hands onto a climb's holds as a new climb starts (1 outside the game,
+# so a pose posed directly reaches at once).
+var _w_climb := 1.0
+var _w_climb_v := 0.0
 var _w_gait := 0.0
 var _w_gait_v := 0.0
 var _dt := 0.0
@@ -155,6 +172,10 @@ var burst_active := false
 # point, surface), for her sounds.
 var plants: Array = []
 var _box_rot := Vector3.ZERO
+var _root_raw := Vector3.ZERO
+var _root_drawn := Vector3.ZERO
+var _root_off := Vector3.ZERO
+var _root_off_v := Vector3.ZERO
 var _box_v := Vector3.ZERO
 var _burst_tail := 0.0
 # Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
@@ -695,7 +716,7 @@ func _fours_gate(data: Dictionary, falling: bool, delta: float) -> void:
 		_w_fours = want
 		_w_fours_v = 0.0
 	else:
-		var s := spring(_w_fours, _w_fours_v, want, BLEND_W, delta)
+		var s := spring(_w_fours, _w_fours_v, want, FOURS_BLEND_W, delta)
 		_w_fours = clampf(float(s[0]), 0.0, 1.0)
 		_w_fours_v = float(s[1])
 
@@ -709,11 +730,25 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	var want := 1.0 if holding else 0.0
 	var want2 := 1.0 if holding and state == STATE_ARMPLAY and _hold.has("hand2") \
 		and (_hold["hand2"] as Vector3).length_squared() > 1.0e-6 else 0.0
-	# what her hands are on, kept as they come off it
+	# what her hands are on, kept as they come off it; a jump in it eased
 	if holding:
-		_hold_at = _hold["hand"]
+		var raw: Vector3 = _hold["hand"]
+		if _w_hold > 0.001 and not _pose_fresh and raw.distance_to(_hold_raw) > 0.25:
+			_hold_off += _hold_raw - raw
+		_hold_raw = raw
 	if want2 > 0.0:
-		_hold_at2 = _hold["hand2"]
+		var raw2: Vector3 = _hold["hand2"]
+		if _w_hold2 > 0.001 and not _pose_fresh and raw2.distance_to(_hold_raw2) > 0.25:
+			_hold_off2 += _hold_raw2 - raw2
+		_hold_raw2 = raw2
+	var o := spring(_hold_off, _hold_off_v, Vector3.ZERO, HOLD_BLEND_W, delta)
+	_hold_off = o[0]
+	_hold_off_v = o[1]
+	o = spring(_hold_off2, _hold_off2_v, Vector3.ZERO, HOLD_BLEND_W, delta)
+	_hold_off2 = o[0]
+	_hold_off2_v = o[1]
+	_hold_at = _hold_raw + _hold_off
+	_hold_at2 = _hold_raw2 + _hold_off2
 	if _pose_fresh:
 		_w_hold = want
 		_w_hold_v = 0.0
@@ -1781,7 +1816,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		_w_gait = 1.0 if gait_on else 0.0
 		_w_gait_v = 0.0
 	else:
-		var wg := spring(_w_gait, _w_gait_v, 1.0 if gait_on else 0.0, BLEND_W, delta)
+		var wg := spring(_w_gait, _w_gait_v, 1.0 if gait_on else 0.0, FOURS_BLEND_W, delta)
 		_w_gait = clampf(float(wg[0]), 0.0, 1.0)
 		_w_gait_v = float(wg[1])
 	var gk := _w_gait
@@ -1901,6 +1936,27 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_fall_speed = (centre.y - _last_pos.y) / maxf(delta, 0.0001) if delta > 0.0 else 0.0
 	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
 	_last_pos = centre
+	# A step of her body faster than she goes (out of her locker, a hard
+	# step down) drawn over a moment (ROOT_W) instead of in a frame; on the
+	# deck only (on a climb, a pipe or a line her speed is not her travel).
+	var on_ground := not (falling or bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
+		or bool(data.get("on_line", false)) or bool(data.get("clinging", false)))
+	if _pose_fresh or not _figure.visible or not on_ground:
+		_root_off = Vector3.ZERO
+		_root_off_v = Vector3.ZERO
+	else:
+		var ro := spring(_root_off, _root_off_v, Vector3.ZERO, ROOT_W, delta)
+		_root_off = ro[0]
+		_root_off_v = ro[1]
+		# drawn no further this frame than she goes (half again her speed, or
+		# 5 cm): the rest of a jump stays in the offset and eases out
+		var allow := 0.98 * maxf(1.5 * float(data["speed"]) * delta, 0.05)
+		var step: Vector3 = centre + _root_off - _root_drawn
+		if step.length() > allow:
+			_root_off -= step - step.limit_length(allow)
+	_root_raw = centre
+	centre += _root_off
+	_root_drawn = centre
 	var on_line := bool(data.get("on_line", false))
 	_sparks.emitting = out and on_line
 	if on_line:
@@ -1919,6 +1975,14 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	fresh_frame = _pose_fresh
 	_fours_gate(data, falling, delta)
 	_hold_gate(data, delta)
+	var climb_want := 1.0 if bool(data.get("climbing", false)) and data.has("climb_hand") else 0.0
+	if _pose_fresh:
+		_w_climb = climb_want
+		_w_climb_v = 0.0
+	else:
+		var wc := spring(_w_climb, _w_climb_v, climb_want, BLEND_W, delta)
+		_w_climb = clampf(float(wc[0]), 0.0, 1.0)
+		_w_climb_v = float(wc[1])
 	_pose(data, delta, player_position, falling)
 	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
