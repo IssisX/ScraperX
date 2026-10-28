@@ -22,6 +22,10 @@ int main() {
         run_matron_crash();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-chute") {
+        run_matron_chute();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-hearing") {
         test_matron_hearing();
         return EXIT_SUCCESS;

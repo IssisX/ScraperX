@@ -2166,7 +2166,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
-    if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
+    if (const Mover *way = holder(); dead_ || !body_in_world_ || chute_open_ || holding_state(state_) || state_ == State::Down ||
                                      state_ == State::Staggering || (way != nullptr && way->view().drives)) {
         foot_driving_ = false;
         foot_prep_ = false;
@@ -2199,7 +2199,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     // A way she took herself (her journey, her bars) has her body until it
     // ends, first in her tick; knocked about, held or dead, it ends.
     for (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Owns; way = holder()) {
-        if (dead_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) {
+        if (dead_ || chute_open_ || holding_state(state_) || state_ == State::Down || state_ == State::Staggering) {
             way->cancel();
             continue;
         }
@@ -2240,6 +2240,19 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     heard_level_ = 0.0F;
     if (dead_) {
         if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
+        return;
+    }
+    // Out of the world while the net finds a hidden spot (matron_chute.cpp).
+    if (respawn_pending_ && !body_in_world_) {
+        if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
+        return;
+    }
+    // Under her canopy (matron_chute.cpp) her tick's bookkeeping above has
+    // run; the rest of it is flying, on this tick's one account.
+    if (chute_open_ && body_in_world_) {
+        chute_drive(dt, account);
+        if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
+        sense_near();
         return;
     }
     if (body_in_world_) {
@@ -3142,6 +3155,8 @@ void Matron::post_step(const float dt) {
             settle_level();
         }
     }
+    // A long fall: her parachute (matron_chute.cpp), before the landing decides.
+    chute_watch(dt);
     // A fall ends where she lands, and the landing decides it: a stop from
     // kLethalLandingMps or more kills her, on a deck, on the ground or on a
     // plate that came down with her. No deck height counts against her on the
@@ -3151,7 +3166,10 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if ((landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) && !floor_gave_way_) {
+            // Not the catwalk's designed kill: the safety net (loud; a bug to find).
+            chute_respawn(landed_hard ? "a landing that would have killed her" : "off the world");
+        } else if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -3175,7 +3193,7 @@ bool Matron::caught(const RVec3 player) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
-    if (bracing_structure() || !body_in_world_ || dead_ || riding_ || (way != nullptr && way->view().held) ||
+    if (bracing_structure() || !body_in_world_ || dead_ || riding_ || chute_open_ || respawn_pending_ || (way != nullptr && way->view().held) ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
@@ -3457,6 +3475,10 @@ void Matron::restore(const Saved &saved) {
     end_journey(false);
     journey_wait_ticks_ = 0;
     if (shared_survival_) shared_survival_->reset();
+    // Her parachute and the net are not saved: a checkpoint has her on her
+    // feet, canopy packed, whatever she was doing (finding 5). A Matron killed
+    // by the floor giving way stays dead (sim_tests_matron: "dead, she stays dead").
+    chute_reset();
     if (!dead_) {
         remove_body();
         state_ = saved.state;
@@ -4092,6 +4114,14 @@ void Matron::refresh_view() {
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
     view_.leaps = leaps_;
+    view_.chute_open = chute_open_;
+    view_.chutes = chutes_;
+    view_.respawns = respawns_;
+    view_.respawn_waits = respawn_waits_;
+    view_.respawn_pending = respawn_pending_;
+    view_.chute_peak_force_n = chute_peak_force_n_;
+    view_.chute_peak_power_w = chute_peak_power_w_;
+    view_.chute_open_mps = chute_open_mps_;
     view_.unrigs = unrigs_;
     report_line();
     // What the way that has her shows (matron_mover.hpp): a planned move

@@ -815,6 +815,12 @@ public:
         bool wary = false;          // checking the present noise from a vantage first
         std::uint32_t vaults = 0;   // things vaulted in the Turn, this run
         std::uint32_t leaps = 0;    // gaps leapt in the Turn, this run
+        bool chute_open = false;    // her parachute out (matron_chute.cpp)
+        std::uint32_t chutes = 0;   // parachutes she opened, this world
+        std::uint32_t respawns = 0; // last-resort respawns (the safety net), this world
+        std::uint32_t respawn_waits = 0;   // seconds the net waited for a hidden, valid spot
+        bool respawn_pending = false;
+        float chute_peak_force_n = 0.0F, chute_peak_power_w = 0.0F, chute_open_mps = 0.0F;
         std::uint32_t unrigs = 0;   // ropes she took off a way out's eye, this run
         bool on_line = false;       // going down a line's bare cable
         std::uint32_t cable_slides = 0;   // lines she went down after the player, this run
@@ -1115,6 +1121,11 @@ public:
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
     void begin_grab(JPH::RVec3 player);
+    // Her parachute (matron_chute.cpp): a long fall is flown down to a deck
+    // that joins the player's, not a death. Open, her tick flies it (chute_drive).
+    [[nodiscard]] bool chute_open() const noexcept { return chute_open_; }
+    [[nodiscard]] std::uint32_t chutes() const noexcept { return chutes_; }
+    [[nodiscard]] std::uint32_t respawns() const noexcept { return respawns_; }
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
     [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
@@ -1870,6 +1881,40 @@ private:
     std::array<Sound, kMaxSounds> sounds_{};
     std::size_t sound_count_ = 0;
     bool dead_ = false;
+    // matron_chute.cpp. Deploy no later than kChuteDeployMps falling (Cory,
+    // 2026-10-27 16:01 CT: the drag is on her 8,000 N / 22 kW account, and
+    // holding her weight takes m*g*v, so it must open under ~10 m/s).
+    static constexpr float kChuteDeployMps = 7.0F;
+    static constexpr float kChuteDropM = 6.0F;      // floor further below than this: a fall, not a step down
+    static constexpr float kChuteSteerAccel = 3.0F; // most horizontal pull wanted, m/s^2 (inside the account)
+    bool chute_open_ = false;
+    bool chute_has_goal_ = false;
+    float chute_x_ = 0.0F, chute_z_ = 0.0F, chute_top_ = 0.0F;
+    float chute_s_ = 0.0F;
+    std::uint32_t chutes_ = 0;
+    std::uint32_t respawns_ = 0;
+    // The general rule for no chute (finding 8): her fall began with the
+    // floor under her giving way (a dynamic floor body falling with her).
+    JPH::BodyID stood_on_;          // the body under her feet when she last stood
+    bool floor_gave_way_ = false;
+    float air_s_ = 0.0F;            // seconds off her floor
+    int player_region_ = -1;        // the player's last standing region in her scan
+    // The safety net waits rather than pop into his sight (finding 6).
+    bool respawn_pending_ = false;
+    const char *respawn_why_ = "";
+    float respawn_retry_s_ = 0.0F;
+    std::uint32_t respawn_waits_ = 0;
+    // What the tests read: the canopy's worst draw on her account, the speed it opened at.
+    float chute_peak_force_n_ = 0.0F, chute_peak_power_w_ = 0.0F, chute_open_mps_ = 0.0F;
+    void chute_watch(float dt);                               // post_step: open, land, lost
+    void chute_drive(float dt, traversal::Budget &account);  // pre_step: drag and steer, through take()
+    bool chute_pick(JPH::RVec3 at);
+    void chute_respawn(const char *why);   // asks for the net; it fires when a hidden, valid spot is found
+    bool chute_try_respawn();
+    void chute_stand_up();                 // the death path's and restore()'s teardown
+    void chute_reset();
+    [[nodiscard]] bool chute_hidden_from_player(JPH::RVec3 feet) const;
+    [[nodiscard]] bool joined_to_player(int region) const;
     // Her floor (feel_floor): its top under her, and riding it.
     float feet_y_ = kDeckTop;
     bool riding_ = false;
