@@ -1,7 +1,8 @@
 extends RefCounted
-# Every sound the presentation plays, synthesised once at startup from
-# seeded noise, filters and decaying partials -- no audio files ship. The
-# seed is fixed, so the bank is identical on every run and every device.
+# Every sound the presentation plays, synthesized once at startup from
+# seeded noise, filters and decaying partials. The seed is fixed, so the bank
+# is identical on every run and every device. Human sounds are the exception
+# (below): they are recordings.
 #
 # Voiced for a phone speaker first. Those reproduce little under ~300 Hz, so
 # every clip carries its identity in the 300 Hz - 6 kHz band -- the grit of a
@@ -15,13 +16,15 @@ extends RefCounted
 # bell ("ting") rather than a boot on plate or a mass landing on steel
 # (observed on the first bank's metal steps, grabs, clangs and UI taps).
 #
-# The human fear voice on large falls (GDD 8.4) is not synthesised here: it is
-# generated speech, presentation/audio/voice/, played by the director.
+# The human fear voice on large falls (GDD 8.4) is not synthesized here: it is
+# generated speech, presentation/audio/voice/, played by the director. Nor
+# are the Matron's voice and what her hands do to a body: those are real
+# recordings, presentation/audio/matron/, read by build_her.
 
 const MIX_RATE := 22050
 const STEP_VARIANTS := 4
 
-var clips := {}   # StringName -> Array[AudioStreamWAV] (variants)
+var clips := {}   # StringName -> Array[AudioStream] (variants)
 var build_msec := 0
 
 var _rng := RandomNumberGenerator.new()
@@ -60,15 +63,13 @@ func build() -> void:
 	# Last, so every clip above draws the same seeded noise it always has.
 	clips[&"drip"] = _variants(3, _drip)
 	clips[&"arc_loop"] = [_loop(_arc(1.6), 0.3)]
-	# The Matron's (sim/matron.hpp), after everything else for the same reason.
+	# The Matron's locker and catwalk (sim/matron.hpp), after everything else
+	# for the same reason. Her own body is her own bank (build_her).
 	clips[&"locker_knock"] = _variants(3, _locker_knock)
 	clips[&"bolt_pop"] = _variants(2, _bolt_pop)
 	clips[&"locker_burst"] = [_wav(_locker_burst())]
-	clips[&"matron_lullaby_loop"] = [_loop(_lullaby(9.6), 0.4)]
-	clips[&"matron_breath"] = _variants(3, _matron_breath)
-	clips[&"matron_step"] = _variants(3, _matron_step)
-	clips[&"matron_shriek"] = _variants(2, _matron_shriek)
 	clips[&"plank_crack"] = _variants(2, _plank_crack)
+	# A body's bones giving way: the climber's.
 	clips[&"bone_crack"] = _variants(3, _bone_crack)
 	# The forklift's (sim/forklift.hpp), after everything else for the same reason.
 	clips[&"engine_loop"] = [_loop(_engine(2.0), 0.3)]
@@ -113,7 +114,60 @@ func build() -> void:
 	build_msec = Time.get_ticks_msec() - started
 
 
-func pick(name: StringName) -> AudioStreamWAV:
+# The Matron's own bank, made on a second instance after the world's. She
+# sounds like a body: breath, throat, mouth, weight and hands, and no tune,
+# bell or chord. Her stage is in which of them plays (audio_director.gd
+# matron_layers): breath a pest, a growl dangerous, the rage growl over a
+# rough bed fully changed.
+#
+# Her voice, and what her hands do to a body, are real recordings
+# (HER_RECORDED, CC0, each one's source in HER_DIR's CREDITS.md), never made
+# here. Made here, from their own seed: the air she presses on (the beds), her
+# mouth working, her weight on the steel, her joints, and her croak, cluck and
+# sniff -- struck flesh and the deck under it, weight a phone can play
+# (_add_thump), wet mouth sounds (_add_grains, _add_glide), joints (_slip),
+# and the croak a glottal source (_glottal) through a throat (_formants).
+const HER_DIR := "res://presentation/audio/matron/"
+# Her recordings by clip name: how many takes, each <name>_<take>.ogg. A name
+# ending _loop plays as a loop (each file's end is crossfaded into its head).
+const HER_RECORDED := {&"matron_growl_loop": 1, &"matron_growl_rage_loop": 1, &"matron_strain_loop": 1,
+	&"matron_breath": 3, &"matron_shriek": 2, &"matron_laugh": 1, &"matron_effort": 1, &"matron_hit": 1,
+	&"matron_swallow": 1, &"matron_rip": 2}
+
+
+func build_her() -> void:
+	var started := Time.get_ticks_msec()
+	# Ogg pages, read whole and decoded as they play (the climber's voice
+	# lines are loaded the same way, audio_director.gd _load_voice).
+	for clip in HER_RECORDED:
+		var takes: Array = []
+		for take in int(HER_RECORDED[clip]):
+			var path := "%s%s_%d.ogg" % [HER_DIR, clip, take]
+			var stream := AudioStreamOggVorbis.load_from_file(path)
+			if stream == null:
+				push_error("matron bank: cannot read %s" % path)
+				continue
+			stream.loop = String(clip).ends_with("_loop")
+			takes.append(stream)
+		if not takes.is_empty():
+			clips[clip] = takes
+	_rng.seed = 0x4D4154
+	var bed := _her_bed(3.4)
+	clips[&"matron_bed_loop"] = [_loop(bed, 0.4)]
+	_rough(bed, 38.0, 0.6)
+	clips[&"matron_bed_rough_loop"] = [_loop(bed, 0.4)]
+	clips[&"matron_mouth_loop"] = [_loop(_her_mouth(2.0), 0.3)]
+	clips[&"matron_step"] = _variants(3, _her_step)
+	clips[&"matron_joints"] = _variants(3, _her_joints)
+	clips[&"matron_croak"] = _variants(1, _her_croak)
+	clips[&"matron_cluck"] = _variants(1, _her_cluck)
+	clips[&"matron_sniff"] = _variants(1, _her_sniff)
+	build_msec = Time.get_ticks_msec() - started
+
+
+# One of a clip's variants (the world's are all made here; hers are made here
+# or read from her recordings).
+func pick(name: StringName) -> AudioStream:
 	var list: Array = clips.get(name, [])
 	if list.is_empty():
 		return null
@@ -615,50 +669,6 @@ func _locker_burst() -> PackedFloat32Array:
 	return out
 
 
-# A music box that has run down: a plain minor phrase in tinkling bells, the
-# pitch wobbling as the spring tires, a few notes late and a few flat. This is
-# hers; she carries it, and it is how she is heard before she is seen.
-func _lullaby(length: float) -> PackedFloat32Array:
-	var out := _silence(length)
-	# Scale degrees (semitones above the tonic), each in beats.
-	var tune := [[0, 1.0], [3, 1.0], [7, 2.0], [5, 1.0], [3, 1.0], [2, 2.0],
-		[0, 1.0], [2, 1.0], [3, 1.5], [-2, 0.5], [0, 3.0]]
-	var tonic := 523.25
-	var beat := 0.52
-	var at := 0.2
-	for note in tune:
-		var detune := 1.0 + _rng.randf_range(-0.012, 0.012)
-		var freq: float = tonic * pow(2.0, float(note[0]) / 12.0) * detune
-		var late := _rng.randf_range(0.0, 0.05)
-		var tau := 0.55 * float(note[1]) ** 0.5
-		_add_tone(out, freq, at + late, 1.6, 0.30, tau)
-		_add_tone(out, freq * 2.76, at + late, 0.5, 0.08, 0.1)
-		_add_tone(out, freq * 5.4, at + late, 0.2, 0.04, 0.04)
-		_add_band_noise(out, at + late, 0.012, 0.12, 0.003, 2500.0, 7000.0)
-		at += beat * float(note[1])
-	# The comb's drag: a faint rasp under it all.
-	var rasp := _band_noise_buffer(out.size(), 1200.0, 4200.0)
-	for i in out.size():
-		var t := float(i) / float(MIX_RATE)
-		out[i] += rasp[i] * 0.025 * (0.6 + 0.4 * sin(TAU * 9.0 * t))
-	return out
-
-
-# Her breath: a dry wheeze in, a rattle out, thin and close.
-func _matron_breath() -> PackedFloat32Array:
-	var out := _silence(1.7)
-	var n := out.size()
-	var air := _band_noise_buffer(n, 700.0, 3800.0)
-	var wheeze := _band_noise_buffer(n, 1700.0, 2600.0)
-	for i in n:
-		var t := float(i) / float(MIX_RATE)
-		var inhale := sin(PI * clampf(t / 0.7, 0.0, 1.0)) if t < 0.7 else 0.0
-		var exhale := sin(PI * clampf((t - 0.85) / 0.8, 0.0, 1.0)) if t > 0.85 else 0.0
-		var rattle := 0.5 + 0.5 * sin(TAU * 31.0 * t)
-		out[i] = air[i] * (0.9 * inhale + 0.7 * exhale * rattle) + wheeze[i] * 0.8 * inhale
-	return out
-
-
 # The climber's own breath, one half of it: air drawn in through the mouth
 # (brighter, rising) or pushed out (darker, falling, with a little voice in
 # the throat). The director paces the halves by the effort.
@@ -757,34 +767,6 @@ func _hit_machine() -> PackedFloat32Array:
 	return out
 
 
-# A slipper dragged and a bare knuckle on the deck: a scuff and a dry tap.
-func _matron_step() -> PackedFloat32Array:
-	var out := _silence(0.22)
-	_add_band_noise(out, 0.0, 0.16, 0.8, 0.05, 900.0, 3800.0)
-	_add_band_noise(out, 0.0, 0.01, 0.7, 0.003, 2000.0, 6500.0)
-	_add_tone(out, _rng.randf_range(160.0, 230.0), 0.0, 0.06, 0.25, 0.012)
-	return out
-
-
-# A thin old throat tearing: a harsh rising shriek, cracking up and down,
-# with the grit of a voice that has not been used in years.
-func _matron_shriek() -> PackedFloat32Array:
-	var out := _silence(1.5)
-	var n := out.size()
-	var phase := 0.0
-	var grit := _band_noise_buffer(n, 1500.0, 5200.0)
-	for i in n:
-		var t := float(i) / float(MIX_RATE)
-		var u := t / 1.5
-		var freq := lerpf(520.0, 1350.0, minf(1.0, u * 1.6)) * (1.0 + 0.05 * sin(TAU * 7.5 * t)) \
-			* (1.0 + (0.18 if fmod(t * 11.0, 1.0) > 0.88 else 0.0))
-		phase += TAU * freq / float(MIX_RATE)
-		var env := sin(PI * clampf(u, 0.0, 1.0)) ** 0.6
-		var voice := sin(phase) + 0.5 * sin(2.0 * phase) + 0.3 * sin(3.0 * phase + 1.0)
-		out[i] = (voice * 0.35 + grit[i] * 0.9) * env
-	return out
-
-
 # Her waking: dread from wrongness, not loudness. A beat of near-silence; the
 # tower's steel taking a load it should not (a stick-slip groan, the
 # friction pulsing at an uneven rate, under a slow resonant strain); a sub
@@ -879,6 +861,139 @@ func _bone_crack() -> PackedFloat32Array:
 		_add_tone(out, _rng.randf_range(90.0, 140.0), at, 0.08, 0.3, 0.02)
 		at += _rng.randf_range(0.05, 0.16)
 	_add_band_noise(out, 0.0, 0.8, 0.12, 0.35, 300.0, 1400.0)
+	return out
+
+
+# --- the Matron's own (build_her) ------------------------------------------------
+
+
+# Far: the pressure she puts on the air. Saws at 146.67 and 151 Hz (4.33 Hz
+# apart) and 207.33 Hz (a tritone up), each a whole number of cycles in the
+# 3.0 s loop, driven (SAT 3), held to 450-2200 Hz, under air 400-1400 Hz
+# that swells twice a loop like slow breathing.
+func _her_bed(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var saws := PackedFloat32Array()
+	saws.resize(n)
+	var pa := _rng.randf()
+	var pb := _rng.randf()
+	var pc := _rng.randf()
+	var ia := (440.0 / 3.0) / float(MIX_RATE)
+	var ib := 151.0 / float(MIX_RATE)
+	var ic := (622.0 / 3.0) / float(MIX_RATE)
+	for i in n:
+		pa = fmod(pa + ia, 1.0)
+		pb = fmod(pb + ib, 1.0)
+		pc = fmod(pc + ic, 1.0)
+		saws[i] = (pa * 2.0 - 1.0) * 0.3 + (pb * 2.0 - 1.0) * 0.3 + (pc * 2.0 - 1.0) * 0.22
+	_saturate(saws, 3.0)
+	var body := _bandpass(_bandpass(saws, 450.0, 2200.0), 450.0, 2200.0)
+	var air := _band_noise_buffer(n, 400.0, 1400.0)
+	var cycle := int(1.5 * MIX_RATE)
+	for i in n:
+		var u := float(i % cycle) / float(cycle)
+		var swell := 4.0 * u * (1.0 - u)
+		out[i] = body[i] * (0.75 + 0.25 * swell) + air[i] * 1.4 * swell * swell
+	return out
+
+
+# Close: her mouth working. Crackle 20-70/s of 0.3-1.5 ms in 2-6 kHz; six
+# saliva strings (click pairs 3-8 ms apart); two lip smacks.
+func _her_mouth(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	_add_grains(out, 0.0, length, 20.0, 70.0, 0.3, 1.5, 2000.0, 6000.0, 0.5)
+	for k in 6:
+		var t := _rng.randf_range(0.0, length - 0.05)
+		var g := _rng.randf_range(0.4, 0.9)
+		_add_band_noise(out, t, 0.002, g, 0.0006, 2500.0, 6500.0)
+		_add_band_noise(out, t + _rng.randf_range(0.003, 0.008), 0.002, g * 0.7, 0.0006, 2500.0, 6500.0)
+	for k in 2:
+		_add_glide(out, _rng.randf_range(0.0, length - 0.1), 0.02, 2.0, 1800.0, 700.0, 0.3)
+	_peak(out, 0.9)
+	return out
+
+
+# A 220 kg footfall: the slap, a 60 Hz thump with its harmonics, the deck's
+# low modes (boom, never bell), the flesh settling after, and one time in
+# three the sole peeling off the steel.
+func _her_step() -> PackedFloat32Array:
+	var out := _silence(0.4)
+	_add_band_noise(out, 0.0, 0.006, 1.2, 0.0015, 700.0, 5000.0)
+	_add_thump(out, 0.0, 60.0 * _rng.randf_range(0.9, 1.1), 0.15, 0.07)
+	for f in [190.0, 430.0, 720.0]:
+		_add_mode(out, f * _rng.randf_range(0.92, 1.08), 0.0, 0.25, 0.9, _rng.randf_range(0.05, 0.09), 3.0)
+	_add_band_noise(out, 0.08, 0.03, 0.3, 0.008, 300.0, 2000.0)
+	_add_band_noise(out, 0.15, 0.03, 0.2, 0.008, 300.0, 2000.0)
+	_rough(out, 11.0, 0.25)
+	if _rng.randf() < 0.34:
+		_add_glide(out, 0.06, 0.025, 1.5, 900.0, 2000.0, 0.3)
+	return out
+
+
+# Joints: 3-8 cavitation pops, the gaps closing 160 -> 40 ms, each a click,
+# a 3 kHz tick and a knock 250-450 Hz; gristle grinding between.
+func _her_joints() -> PackedFloat32Array:
+	var out := _silence(0.7)
+	var gap := 0.16
+	var at := 0.02
+	for k in _rng.randi_range(3, 8):
+		if at > 0.62:
+			break
+		_add_band_noise(out, at, 0.002, 1.0, 0.0007, 2000.0, 6000.0)
+		_add_mode(out, 3000.0 * _rng.randf_range(0.85, 1.15), at, 0.03, 0.5, 0.004, 8.0)
+		_add_mode(out, _rng.randf_range(250.0, 450.0), at, 0.1, 0.6, 0.02, 4.0)
+		at += gap * _rng.randf_range(0.8, 1.2)
+		gap = maxf(0.04, gap * 0.7)
+	var grist := _resonate(_slip(out.size(), 25.0, 35.0), 1200.0, 2.0)
+	for i in out.size():
+		out[i] += grist[i] * 0.5 * (1.0 - float(i) / float(out.size()))
+	return out
+
+
+# The croak (a death rattle, Ju-On's): GLOT at 32-40 -> 20-26 Hz, jitter
+# 25%, every pulse its own, into 450/1100/2600 Hz at Q x1.3; two swells; a
+# wet click to end.
+func _her_croak() -> PackedFloat32Array:
+	var length := _rng.randf_range(1.0, 1.4)
+	var n := int(length * MIX_RATE)
+	var out := _bandpass(_formants(_glottal(n, _rng.randf_range(32.0, 40.0), _rng.randf_range(20.0, 26.0), 0.25,
+		0.4, 0.3, 1500.0, 0.08), 450.0, 1100.0, 2600.0, 1.3), 350.0, 4500.0)
+	for i in n:
+		var u := float(i) / float(n)
+		out[i] *= minf(1.0, 4.0 * u * (1.0 - u) * 2.0) * (0.55 + 0.45 * absf(fmod(u * 2.0, 1.0) * 2.0 - 1.0))
+	_peak(out, 0.9)
+	_add_band_noise(out, length - 0.08, 0.003, 0.6, 0.001, 2500.0, 6000.0)
+	return out
+
+
+# A cluck of the tongue off the palate: a 2.2 kHz knock (Q 5, 8 ms), a
+# click, a 3.5 kHz tick 30 ms after.
+func _her_cluck() -> PackedFloat32Array:
+	var out := _silence(0.18)
+	_add_mode(out, 2200.0, 0.0, 0.06, 1.0, 0.008, 5.0)
+	_add_band_noise(out, 0.0, 0.0015, 0.8, 0.0005, 1500.0, 6000.0)
+	_add_mode(out, 3500.0, 0.03, 0.03, 0.4, 0.004, 6.0)
+	return out
+
+
+# A sniff at something she likes: 3-5 pulls of 60-120 ms (noise into 2.8
+# kHz Q 3 under a 70 Hz flutter), then a wet snort.
+func _her_sniff() -> PackedFloat32Array:
+	var out := _silence(0.8)
+	var at := 0.0
+	for k in _rng.randi_range(3, 5):
+		var d := _rng.randf_range(0.06, 0.12)
+		var count := int(d * MIX_RATE)
+		var pull := _resonate(_band_noise_buffer(count, 1500.0, 5000.0), 2800.0, 3.0)
+		_rough(pull, 70.0, 0.5)
+		var first := int(at * MIX_RATE)
+		for j in count:
+			if first + j < out.size():
+				out[first + j] += pull[j] * 4.0 * sin(PI * float(j) / float(count))
+		at += d + _rng.randf_range(0.02, 0.05)
+	_add_band_noise(out, minf(at + 0.03, 0.65), 0.08, 0.6, 0.03, 300.0, 1500.0)
+	_add_grains(out, minf(at + 0.03, 0.65), 0.1, 40.0, 40.0, 0.5, 2.0, 2000.0, 5000.0, 0.3)
 	return out
 
 
@@ -1317,6 +1432,214 @@ func _loop(samples: PackedFloat32Array, fade_seconds: float) -> AudioStreamWAV:
 		var w := float(i) / float(fade)
 		out[i] = out[i] * w + samples[body + i] * (1.0 - w)
 	return _wav(out, out.size())
+
+
+# --- her primitives (build_her) ----------------------------------------------
+
+
+# A throat: glottal pulses (a smoothstep opening over 60% of the period, a
+# sharper closing over 20%, closed for the rest), differentiated as the lips
+# radiate it, then tilted by a one-pole low-pass at `tilt_hz`. f0 glides
+# exponentially f0_a -> f0_b. Per period: f0 x (1 +- jitter), amplitude x
+# (1 +- shimmer), and every second period x (1 - sub) (period doubling).
+# `breath`: noise 1-4 kHz gated by the open phase.
+func _glottal(n: int, f0_a: float, f0_b: float, jitter: float, shimmer: float, sub: float,
+		tilt_hz: float, breath: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var asp := _band_noise_buffer(n, 1000.0, 4000.0) if breath > 0.0 else PackedFloat32Array()
+	var a := _alpha(tilt_hz)
+	var glide := pow(f0_b / f0_a, 1.0 / float(maxi(n, 1)))
+	var f0 := f0_a
+	var phase := 0.0
+	var k := 0
+	var f_mul := 1.0
+	var amp := 1.0
+	var g_prev := 0.0
+	var lp := 0.0
+	for i in n:
+		var f := f0 * f_mul
+		phase += f / float(MIX_RATE)
+		if phase >= 1.0:
+			phase -= 1.0
+			k += 1
+			f_mul = 1.0 + jitter * _rng.randf_range(-1.0, 1.0)
+			amp = (1.0 + shimmer * _rng.randf_range(-1.0, 1.0)) * ((1.0 - sub) if k % 2 == 1 else 1.0)
+		var g := 0.0
+		if phase < 0.6:
+			var s := phase / 0.6
+			g = s * s * (3.0 - 2.0 * s)
+		elif phase < 0.8:
+			var s := (phase - 0.6) / 0.2
+			g = 1.0 - s * s * (3.0 - 2.0 * s)
+		g *= amp
+		var d := (g - g_prev) * float(MIX_RATE) / (7.5 * f)
+		g_prev = g
+		lp += a * (d - lp)
+		out[i] = lp + (asp[i] * breath * g if breath > 0.0 else 0.0)
+		f0 *= glide
+	return out
+
+
+# A throat's tract: three formants in parallel (Q 5/6/8, each times `q_mul`;
+# gains 1/0.6/0.35), normalized to a peak of 1.
+func _formants(src: PackedFloat32Array, f1: float, f2: float, f3: float, q_mul: float = 1.0) -> PackedFloat32Array:
+	var c := PackedFloat32Array()   # per formant: b0, a1, a2, gain
+	for spec in [[f1, 5.0, 1.0], [f2, 6.0, 0.6], [f3, 8.0, 0.35]]:
+		var w := TAU * minf(float(spec[0]), 0.45 * MIX_RATE) / float(MIX_RATE)
+		var alpha := sin(w) / (2.0 * float(spec[1]) * q_mul)
+		var a0 := 1.0 + alpha
+		c.append_array([alpha / a0, -2.0 * cos(w) / a0, (1.0 - alpha) / a0, float(spec[2])])
+	var out := PackedFloat32Array()
+	out.resize(src.size())
+	var x1 := 0.0
+	var x2 := 0.0
+	var p1 := 0.0
+	var p2 := 0.0
+	var q1 := 0.0
+	var q2 := 0.0
+	var r1 := 0.0
+	var r2 := 0.0
+	var peak := 0.0
+	for i in src.size():
+		var x := src[i]
+		var dx := x - x2
+		var p := c[0] * dx - c[1] * p1 - c[2] * p2
+		var q := c[4] * dx - c[5] * q1 - c[6] * q2
+		var r := c[8] * dx - c[9] * r1 - c[10] * r2
+		x2 = x1
+		x1 = x
+		p2 = p1
+		p1 = p
+		q2 = q1
+		q1 = q
+		r2 = r1
+		r1 = r
+		var y := p * c[3] + q * c[7] + r * c[11]
+		out[i] = y
+		peak = maxf(peak, absf(y))
+	if peak > 0.0:
+		var s := 1.0 / peak
+		for i in out.size():
+			out[i] *= s
+	return out
+
+
+func _peak(buf: PackedFloat32Array, to: float) -> void:
+	var peak := 0.0
+	for x in buf:
+		peak = maxf(peak, absf(x))
+	if peak > 0.0:
+		var s := to / peak
+		for i in buf.size():
+			buf[i] *= s
+
+
+# Soft clipping, in place, after a normalization to peak 1 (symmetric: an
+# asymmetric curve demodulates a flutter into the lows).
+func _saturate(buf: PackedFloat32Array, drive: float) -> void:
+	_peak(buf, 1.0)
+	var scale := 1.0 / tanh(drive)
+	for i in buf.size():
+		buf[i] = tanh(drive * buf[i]) * scale
+
+
+# Roughness, in place: amplitude flutter, a triangle at `rate_hz` (each cycle
+# +-20%), `depth` 0..1.
+func _rough(buf: PackedFloat32Array, rate_hz: float, depth: float) -> void:
+	var ph := 0.0
+	var r := rate_hz
+	for i in buf.size():
+		ph += r / float(MIX_RATE)
+		if ph >= 1.0:
+			ph -= 1.0
+			r = rate_hz * _rng.randf_range(0.8, 1.2)
+		buf[i] *= 1.0 - depth * absf(ph * 2.0 - 1.0)
+
+
+# The input between two corners (the band noise's filter, on a signal).
+func _bandpass(input: PackedFloat32Array, low_hz: float, high_hz: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(input.size())
+	var a_hi := _alpha(high_hz)
+	var a_lo := _alpha(low_hz)
+	var h1 := 0.0
+	var h2 := 0.0
+	var l1 := 0.0
+	var l2 := 0.0
+	for i in input.size():
+		var x := input[i]
+		h1 += a_hi * (x - h1)
+		h2 += a_hi * (h1 - h2)
+		l1 += a_lo * (x - l1)
+		l2 += a_lo * (l1 - l2)
+		out[i] = h2 - l2
+	return out
+
+
+# Noise through a band-pass sweeping f_from -> f_to (exponential), damping
+# 1/Q (its coefficient updated every 16 samples), in one parabolic swell
+# 4u(1-u).
+func _add_glide(out: PackedFloat32Array, start: float, length: float, gain: float, f_from: float,
+		f_to: float, damping: float) -> void:
+	var first := int(start * MIX_RATE)
+	var last := mini(out.size(), first + int(length * MIX_RATE))
+	if last <= first:
+		return
+	var count := last - first
+	var step := pow(f_to / f_from, 1.0 / float(count))
+	var f := f_from
+	var low := 0.0
+	var band := 0.0
+	var norm := 0.6 * damping * gain   # resonance gain is about 1/damping
+	var k := 0.0
+	for i in range(first, last):
+		var j := i - first
+		if j % 16 == 0:
+			k = 2.0 * sin(PI * f / float(MIX_RATE))
+		low += k * band
+		var high := _rng.randf_range(-1.0, 1.0) - low - damping * band
+		band += k * high
+		var u := float(j) / float(count)
+		out[i] += band * norm * 4.0 * u * (1.0 - u)
+		f *= step
+
+
+# Poisson noise bursts (crackle, mucus, fibers): rate ramps rate_a -> rate_b
+# per second over the span; each burst ms_lo..ms_hi long in [low, high] Hz at
+# a random level up to `gain`.
+func _add_grains(out: PackedFloat32Array, start: float, length: float, rate_a: float, rate_b: float,
+		ms_lo: float, ms_hi: float, low_hz: float, high_hz: float, gain: float) -> void:
+	var t := start
+	while t < start + length:
+		var dur := _rng.randf_range(ms_lo, ms_hi) / 1000.0
+		_add_band_noise(out, t, dur, gain * _rng.randf_range(0.25, 1.0), dur * 0.35, low_hz, high_hz)
+		var rate := lerpf(rate_a, rate_b, (t - start) / length)
+		t += -log(maxf(_rng.randf(), 0.0001)) / rate
+
+
+# Stick-slip: a click (+a, -0.75a, +0.5a, -0.25a) of random level 0.4..1 at
+# intervals of 1/rate x 0.7..1.3, the rate ramping rate_a -> rate_b over the
+# buffer. Run it through _resonate for a creak, a squeal, a grind.
+func _slip(n: int, rate_a: float, rate_b: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var i := 0
+	while i < n:
+		var a := _rng.randf_range(0.4, 1.0)
+		for k in 4:
+			if i + k < n:
+				out[i + k] += a * (1.0 - 0.25 * float(k)) * (1.0 if k % 2 == 0 else -1.0)
+		var rate := lerpf(rate_a, rate_b, float(i) / float(n))
+		i += maxi(4, int(float(MIX_RATE) / (rate * _rng.randf_range(0.7, 1.3))))
+	return out
+
+
+# Weight a phone can carry: a thump at f0 with its harmonics 2..8 (gain
+# 1/k^0.7), so a speaker that drops everything under 300 Hz still hears it.
+func _add_thump(out: PackedFloat32Array, start: float, f0: float, gain: float, tau: float) -> void:
+	for k in range(1, 9):
+		_add_tone(out, f0 * float(k), start, tau * 6.0, gain / pow(float(k), 0.7), tau)
 
 
 # A body going into deep water: the slap of the surface (broadband, a few
