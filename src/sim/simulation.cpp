@@ -93,6 +93,11 @@ bool Simulation::request_jump() noexcept {
     return true;
 }
 
+bool Simulation::request_strike() noexcept {
+    strike_requested_ = true;
+    return true;
+}
+
 bool Simulation::request_traversal() noexcept {
     if (snapshot_.traversal_state == TraversalState::Mantling ||
         snapshot_.traversal_state == TraversalState::Vaulting) {
@@ -524,6 +529,7 @@ void Simulation::step_fixed() noexcept {
     commands.look_pitch = look_pitch_input_;
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
+    commands.strike_requested = strike_requested_;
     commands.traversal_requested = traversal_requested_;
     commands.up_requested = up_requested_;
     commands.release_requested = release_requested_;
@@ -584,6 +590,7 @@ void Simulation::step_fixed() noexcept {
     hook_release_ = false;
     hook_take_ = false;
     jump_requested_ = false;
+    strike_requested_ = false;
     traversal_requested_ = false;
     up_requested_ = false;
     release_requested_ = false;
@@ -1203,6 +1210,10 @@ void Simulation::debug_matron_armplay(const int armplay) noexcept {
 
 void Simulation::debug_lose_arm(const int side) noexcept {
     physics_world_->lose_arm_for_test(side);
+}
+
+void Simulation::debug_break_arm(const int side) noexcept {
+    physics_world_->break_arm_for_test(side);
 }
 
 void Simulation::debug_snag_player(const double max_n) noexcept {

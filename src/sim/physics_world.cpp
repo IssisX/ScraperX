@@ -499,6 +499,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    // A punch under way owns his hands (physics_world_strike.cpp).
+    strike_owns_hands(commands);
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;
@@ -717,6 +719,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
     grab_drive(bodies, delta_seconds);
+    strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
         // Off the ground in her hand (or righting after): the speed it
         // carries into contact, for the fall rules once she lets go.

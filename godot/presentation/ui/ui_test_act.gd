@@ -262,6 +262,19 @@ func _matron_act_touch(device: int) -> bool:
 	return played
 
 
+# Every frame it is watched: Action is never the punch (it has its own
+# button, the owner's), and on touch that button is always on screen.
+var _act_punch_missed := 0
+var _act_punch_over := 0
+
+func _act_punch_watch() -> void:
+	var c := _ctx()
+	if StringName(c["action"]["id"]) == &"punch":
+		_act_punch_missed += 1
+	if not _main._touch.is_button_shown(&"punch"):
+		_act_punch_over += 1
+
+
 func _act_play(device: int) -> bool:
 	if not await _act_asleep(device):
 		return false
@@ -553,6 +566,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		if attempt > 0:
 			catches = int(_matron_state()["catches"])
 		var caught: bool = await _act_watch_her(func() -> bool:
+			_act_punch_watch()
 			return int(_matron_state()["catches"]) > catches, 60.0,
 			"dangerous_at_rail", "act_dangerous_coming", 4.0)
 		if not caught:
@@ -569,9 +583,22 @@ func _act_dangerous_and_changed(device: int) -> bool:
 			break
 	if int(_native().get_matron_hold_state()["grabs"]) < 1:
 		return _fail("dangerous, her hand never closed on the climber's ankle at the rail in %d reaches" % ACT_GRAB_TRIES)
+	# In her hand before the rip, the punch's own button is his escape (the
+	# owner's design): lit and reading BREAK FREE; read, not pressed, so her
+	# hold goes on.
+	if not await _wait_until(func() -> bool: return bool(_ctx()["punch"]["ready"]) and \
+			bool(_ctx()["punch"]["break_free"]) and (device != InputRouter.Device.TOUCH or \
+			(_main._touch.is_button_shown(&"punch") and _main._touch.button_label(&"punch") == "BREAK FREE")), 3.0):
+		return _fail("in her hand before the rip, the PUNCH button was not lit for BREAK FREE (%s)" % str(_ctx()["punch"]))
+	_act_log("punch_in_her_hand")
 	var torn: bool = await _act_wait(func() -> bool:
+		_act_punch_watch()
 		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
 		"rail_hold")
+	_act_log("punch_watch action_punch=%d button_hidden=%d" % [_act_punch_missed, _act_punch_over])
+	if _act_punch_missed > 0 or _act_punch_over > 0:
+		return _fail("Action read PUNCH on %d frames, the PUNCH button was off screen on %d" % [_act_punch_missed,
+			_act_punch_over])
 	if torn and _act_in_her_hands():
 		await _act_frame_her()
 		await _act_pose("act_dangerous_arm")

@@ -1119,6 +1119,10 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
     case 1: {
         // Away from the body, up and out: the shoulder takes it.
         pull2_n_ = std::min(kArmPullMaxN, pull2_n_ + kRipRampNps * dt);
+        if (armplay_for_test_ == 2 || armplay_for_test_ == 3) {
+            // A test's arm that will not come: her pull kept under the hold.
+            pull2_n_ = std::min(pull2_n_, 0.5F * kArmHoldN);
+        }
         // Her hand drawn on past where her arm reaches: the arm's limit and
         // her muscle (capped) put the pull on the wrist.
         // Away from her other hand, which keeps the ankle: the body drawn
@@ -1236,6 +1240,21 @@ void Matron::stand_in_for_rim(const RVec3 at, const RVec3 player, const Vec3 fwd
 // caught on steel is dragged off it. No floor there for her feet: she stays
 // where she is.
 void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
+    if (armplay_reposes_ >= (armplay_for_test_ == 3 ? 0 : kMaxArmReposes)) {
+        // Past her re-poses, the arm still not hers (Cory, 2026-10-28): she
+        // keeps the ankle and sets them down on her deck (Spare: only with her
+        // deck close under him, else she walks him on: spare_walk_), never over
+        // the drop. The arm on, no loop on the steel.
+        armplay_done_ = true;
+        wrist_on_ = false;
+        ++spares_;
+        state_ = State::Spare;
+        hold_s_ = 0.0F;
+        hold_phase_ = 0;
+        spare_side_set_ = false;
+        pick_patrol(float(at.GetX()), float(at.GetZ()));
+        return;
+    }
     ++arm_reposes_;
     const int k = armplay_reposes_++;
     hold_s_ = 0.0F;

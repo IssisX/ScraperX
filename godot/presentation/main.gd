@@ -456,7 +456,7 @@ func _process(delta: float) -> void:
 	_ctx = _read_context()
 	_save_climb()
 	_arms.visible = _death_cam_left <= 0.0
-	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	_arms.update_arms(_arms_state(intent), _camera.global_transform, _arms_delta(delta))
 	# The body under them: hidden while the view rides a death.
 	_body.visible = _death_cam_left <= 0.0
 	_body.update_body({
@@ -922,6 +922,9 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"action":
 				_crouch_toggled = false
 				_perform_action()
+			&"punch":
+				# Its own button: the native throws it, or ignores it greyed.
+				_native.request_strike()
 			&"turn":
 				if _quickturn_left <= 0.0:
 					_quickturn_left = PI

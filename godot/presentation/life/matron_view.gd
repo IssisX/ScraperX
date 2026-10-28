@@ -893,6 +893,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 		return
 	_crawl_retune()
 	_ease_pose(delta)
+	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
 	fresh_frame = false
@@ -2175,7 +2176,51 @@ func preview(data: Dictionary, delta: float, camera_position: Vector3, player_po
 func update_view(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
 	if previewing:
 		return
-	_apply(data, delta, camera_position, player_position)
+	# The punch's hit-stop (strike_feel.gd): her drawn body holds its frame;
+	# the native under it does not stop.
+	_apply(data, 0.0 if hold_frame else delta, camera_position, player_position)
+
+
+# The player's punch landing on her (physics_world_strike.cpp): the sim
+# moved her body by the contact's force-time; the drawn body takes it from
+# the waist up, tipped away along the landing's normal, sized by its
+# impulse, and comes back on a stiff spring. Additive over her pose.
+const FLINCH_DEG_PER_NS := 0.16    # ~8 deg for a full landing (strike_feel.FULL_BLOW_NS)
+const FLINCH_MAX_DEG := 14.0
+const FLINCH_DECAY := 9.0
+const FLINCH_FREQ := 15.0
+var hold_frame := false
+var flinches := 0
+var _flinch_axis := Vector3.RIGHT
+var _flinch_deg := 0.0
+var _flinch_t := 10.0
+
+func flinch(normal: Vector3, impulse_ns: float) -> void:
+	var away := Vector3(-normal.x, 0.0, -normal.z)
+	if away.length_squared() < 1.0e-6:
+		return
+	_flinch_axis = Vector3.UP.cross(away.normalized()).normalized()
+	_flinch_deg = minf(FLINCH_MAX_DEG, maxf(impulse_ns, 50.0) * FLINCH_DEG_PER_NS)
+	_flinch_t = 0.0
+	flinches += 1
+
+func _apply_flinch(delta: float) -> void:
+	# In _drive_body, over this frame's eased pose and before the rig puts the
+	# pivots on her bones: her torso tipped away from the waist up, her legs
+	# planted (the rig keeps the thighs' angle). _pose sets the torso afresh
+	# next frame, so it adds nothing to her pose. A blow's jolt is a burst:
+	# the rig's ceiling (govern) lets it through at its burst rate this frame
+	# (_step_bursts sets the flag afresh each frame).
+	if _flinch_deg <= 0.0 or not _figure.visible or not _p.has("torso"):
+		return
+	_flinch_t += delta
+	if _flinch_t > 1.0:
+		_flinch_deg = 0.0
+		return
+	burst_active = true
+	var a := deg_to_rad(_flinch_deg) * exp(-FLINCH_DECAY * _flinch_t) * cos(FLINCH_FREQ * _flinch_t)
+	var torso: Node3D = _p["torso"]
+	torso.global_basis = Basis(_flinch_axis, a) * torso.global_basis
 
 
 func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:

@@ -103,6 +103,18 @@ var _down_hold_counts := false
 var _tucked_this_flight := false
 var _trapeze_was_hanging := false
 
+# His punch has its own button, always there (the owner, 2026-10-28: "an
+# appearing and disappearing punch button ... is going to be frustrating"):
+# lit when the native says one can be thrown (on his feet, not in a lunge, a
+# fist to throw), greyed otherwise; in her hand before the rip it reads BREAK
+# FREE (and in the fatality's hang window when her hold reports one). Action
+# stays the world's (PICK UP, CLIMB, HAUL and the rest).
+static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
+	var ready := bool(strike.get("ready", false)) and int(strike.get("arm", 1)) >= 0
+	var break_free := bool(strike.get("held", false)) and (ready or bool(hold.get("fatal_hang", false)))
+	return {"ready": ready or break_free, "break_free": break_free, "label": "BREAK FREE" if break_free else "PUNCH",
+		"lands": bool(strike.get("offered", false))}
+
 func _read_context() -> Dictionary:
 	var landing_state: Dictionary = _native.get_landing_state()
 	var position: Vector3 = _native.get_player_position()
@@ -182,6 +194,12 @@ func _read_context() -> Dictionary:
 	# and Crouch held hoist.
 	var crane: Dictionary = _native.get_yard_crane_state()
 	var crane_operating := bool(crane["operating"])
+	# His punch's own button (punch_button).
+	var strike: Dictionary = _native.get_strike_state()
+	var her_hold: Dictionary = {}
+	if bool(strike.get("held", false)) and _native.has_method("get_matron_hold_state"):
+		her_hold = _native.get_matron_hold_state()
+	var punch := punch_button(strike, her_hold)
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if crane_operating:
 		var hook_at: Vector3 = crane["hook"]
@@ -420,6 +438,8 @@ func _read_context() -> Dictionary:
 		"lethal": lethal,
 		"carrying": carrying,
 		"action": action,
+		"punch": punch,
+		"strike": strike,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),
 		"tower_height": float(_native.get_tower_height_meters()),

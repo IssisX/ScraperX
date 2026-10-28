@@ -36,6 +36,7 @@ public:
         // Jump, Action or the trapeze's request (resolve_up).
         bool up_requested = false;
         bool release_requested = false;
+        bool strike_requested = false;   // the Action button's punch (physics_world_strike.cpp)
         bool crouch_held = false;
         bool sprint_held = false;
         // The player's real room through the microphone, 0..1 (held; see
@@ -1019,6 +1020,35 @@ public:
     [[nodiscard]] JPH::RVec3 player_ankle(const JPH::BodyInterface &bodies) const noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    // The player's strike (physics_world_strike.cpp).
+    enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
+    void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
+    void read_strike_state() noexcept;
+    void strike_reset() noexcept;
+    // A punch under way: no other hand action starts till its recoil ends;
+    // the world taking his hands from it (her fingers, a fall) ends it.
+    void strike_owns_hands(StepCommands &commands) const noexcept;
+    void strike_cancel() noexcept;
+    // The fist he can throw with: 1 the right, 0 the left, -1 none (one torn
+    // off, the other broken).
+    [[nodiscard]] int strike_arm() const noexcept;
+    [[nodiscard]] bool fist_usable(int side) const noexcept;
+    [[nodiscard]] bool strike_would_land(JPH::RVec3 chest, JPH::Vec3 line, JPH::RVec3 c) const noexcept;
+    int strike_side_ = 1;           // the fist this strike is thrown with
+    bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
+    [[nodiscard]] bool hands_on_a_machine() const noexcept;
+    [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    bool strike_in_hand_ = false;   // this strike began with him in her hand
+    StrikePhase strike_phase_ = StrikePhase::Guard;
+    int strike_ticks_ = 0;
+    int strike_contact_left_ = 0;
+    bool strike_landed_ = false;
+    bool strike_offered_ = false;
+    std::uint64_t strike_count_ = 0;
+    std::uint64_t strike_hit_count_ = 0;
+    JPH::RVec3 strike_point_ = JPH::RVec3::sZero();
+    JPH::Vec3 strike_normal_ = JPH::Vec3::sZero();
+    float strike_impulse_ns_ = 0.0F;
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
@@ -1108,6 +1138,7 @@ public:
         return ended;
     }
     void lose_arm_for_test(const int side) noexcept { arm_lost_[static_cast<std::size_t>(side & 1)] = true; }
+    void break_arm_for_test(const int side) noexcept { break_arm(side & 1); }
     // Tests only: the player's body caught on steel where it is (a point at
     // its middle fixed to the world), till the load on it passes `max_n`.
     void snag_player_for_test(float max_n) noexcept;

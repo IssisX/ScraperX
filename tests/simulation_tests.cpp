@@ -168,6 +168,10 @@ int main() {
         run_matron_arm();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
+        run_strike();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-grab") {
         run_matron_grab();
         run_matron_arm();
@@ -591,6 +595,7 @@ int main() {
     run_matron_grab();
     run_matron_arm();
     run_matron_fatality();
+    run_strike();
     run_one_arm_route();
     run_bay();
     run_loose_stock();
