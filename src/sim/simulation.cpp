@@ -1119,6 +1119,10 @@ void Simulation::debug_place_matron(const Vector3 feet) noexcept {
         JPH::RVec3(static_cast<float>(feet.x), static_cast<float>(feet.y), static_cast<float>(feet.z)));
 }
 
+void Simulation::debug_face_matron(const double yaw) noexcept {
+    physics_world_->matron().face_for_test(static_cast<float>(yaw));
+}
+
 bool Simulation::debug_matron_climb_way(const bool pipe, const bool down) noexcept {
     return physics_world_->matron().climb_for_test(pipe, down);
 }

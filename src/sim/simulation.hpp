@@ -1628,6 +1628,8 @@ public:
     // under its first hold from her next tick, and a hold not there is a
     // failed climb, counted in climb_releases).
     void debug_place_matron(Vector3 feet) noexcept;
+    // Tests only: her head and body turned to face `yaw` (her heading; no force, no pose).
+    void debug_face_matron(double yaw) noexcept;
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down) noexcept;
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
