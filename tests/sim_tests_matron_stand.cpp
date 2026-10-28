@@ -21,6 +21,7 @@ constexpr double kOnStandY = 155.9;   // her centre on the stand (155.05 on the 
 
 void lead_below(const char *name, const Vector3 lead) {
     Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
     for (int i = 0; i < 45; ++i) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
     }
