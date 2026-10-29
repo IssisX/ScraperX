@@ -798,14 +798,54 @@ void run_matron_arm() {
         // the ledge below), she would come for him again once her hands may,
         // and that catch is the fatality, whose death makes him whole: her
         // hands kept off him while the arm's own time runs.
+        // The idle leg checks the thrown arm's lifetime, not her hands: her
+        // grab held off for it (as #11 did for the burst and vault legs), so
+        // a second catch, now the fatality, does not end it (Claude, #3).
         s.debug_hold_matron_grab(true);
         {
-            std::uint64_t d0 = s.snapshot().death_count;
-            int st0 = -1;
+            // The idle leg's only job is the thrown arm's lifetime. Proof
+            // 40769882771 still ends it with a death (the loss then clears).
+            // One record of that death: the tick before it, and the death
+            // itself. The check below is unchanged.
+            const auto arm_idle = [](const char *tag, const double t, const scraperx::sim::Snapshot &q,
+                                     const scraperx::sim::MatronSnapshot &m) {
+                const double clear_her = std::hypot(q.player_position.x - m.position.x, q.player_position.z - m.position.z);
+                const double clear_goal = std::hypot(q.player_position.x - m.target_x, q.player_position.z - m.target_z);
+                std::cout << "    arm-idle " << tag << " t=" << t << " st=" << int(m.state) << " pace=" << int(m.pace)
+                          << " her_mps=" << m.speed << " shoves=" << m.shoves << " turn=" << int(m.turn)
+                          << " floor=" << m.floor_y << " her=" << m.position.x << "," << m.position.y << ","
+                          << m.position.z << " goal=" << m.target_x << "," << m.target_z << " p=" << q.player_position.x
+                          << "," << q.player_position.y << "," << q.player_position.z << " v=" << q.player_linear_velocity.x
+                          << "," << q.player_linear_velocity.y << "," << q.player_linear_velocity.z
+                          << " gnd=" << q.player_grounded << " fall=" << int(q.fall_state)
+                          << " impact=" << q.last_impact_speed_mps << " hit=" << q.hit_speed_mps
+                          << " support=" << q.support_entity_id << " contact=" << q.support_contact_point.x << ","
+                          << q.support_contact_point.y << "," << q.support_contact_point.z << " clear_her=" << clear_her
+                          << " clear_goal=" << clear_goal << " deaths=" << q.death_count << "\n";
+            };
+            auto prev = s.snapshot();
+            auto prev_m = s.matron_state();
+            arm_idle("start", 0.0, prev, prev_m);
+            std::uint64_t d0 = prev.death_count;
+            int st0 = int(prev_m.state);
+            bool death_told = false;
             for (int i = 0; i < 95 * 90; ++i) {
                 tick(s);
                 const auto q = s.snapshot();
-                const int st = s.matron_state().state;
+                const auto m = s.matron_state();
+                const int st = int(m.state);
+                if (!death_told && q.death_count != d0) {
+                    arm_idle("before", (i - 1) / 90.0, prev, prev_m);
+                    arm_idle("death", i / 90.0, q, m);
+                    std::cout << "    arm-idle cause death_point=" << q.death_point.x << "," << q.death_point.y << ","
+                              << q.death_point.z << " death_mps=" << q.death_speed_mps << " side_on=" << q.death_side_on
+                              << " peak_fall=" << q.fall_peak_speed_mps << " arm=" << q.severed_arm_position.x << ","
+                              << q.severed_arm_position.y << "," << q.severed_arm_position.z
+                              << " arm_present=" << q.severed_arm_present << "\n";
+                    death_told = true;
+                } else if (i > 0 && i % (5 * 90) == 0) {
+                    arm_idle("mark", i / 90.0, q, m);
+                }
                 if (std::getenv("ARM_DEBUG") != nullptr && (st != st0 || q.death_count != d0)) {
                     std::cout << "    idle t=" << i / 90.0 << " st " << st << " deaths " << q.death_count << " impact "
                               << q.last_impact_speed_mps << " tears " << q.arm_tear_count << " p " << q.player_position.x
@@ -814,14 +854,17 @@ void run_matron_arm() {
                 if (std::getenv("ARM_DEBUG") != nullptr && i > int(25.0 * 90) && i < int(31.7 * 90) && i % 18 == 0) {
                     std::cout << "      t=" << i / 90.0 << " p " << q.player_position.x << "," << q.player_position.y << ","
                               << q.player_position.z << " free " << q.player_free_rotation << " held " << q.held_by_matron
-                              << " gnd " << q.player_grounded << " torn " << s.matron_state().grips_torn << " drops "
-                              << s.matron_state().carry_drops << " brace " << s.matron_state().brace_losses << " her "
-                              << s.matron_state().position.x << "," << s.matron_state().position.z << "\n";
+                              << " gnd " << q.player_grounded << " torn " << m.grips_torn << " drops "
+                              << m.carry_drops << " brace " << m.brace_losses << " her "
+                              << m.position.x << "," << m.position.z << "\n";
                 }
                 st0 = st;
                 d0 = q.death_count;
+                prev = q;
+                prev_m = m;
             }
         }
+        s.debug_hold_matron_grab(false);
         std::cout << "  matron arm: after 95 s present " << s.snapshot().severed_arm_present << " despawns "
                   << s.snapshot().severed_arm_despawn_count << " L/R " << s.snapshot().left_arm_lost
                   << s.snapshot().right_arm_lost << " deaths " << s.snapshot().death_count << " state "
