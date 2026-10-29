@@ -79,8 +79,8 @@ Matron::StanceCapsule Matron::stance_capsule(const Stance stance) noexcept {
         // 1.82 m over her soles.
         return {kFoot, 0.0F, 0.47F, 0.0F, kRadius};
     case Stance::Lift:
-        // Carrying him, tearing his arm: her shoulder and upper arm raised
-        // with him over her head (to 2.6 m): all her old capsule.
+        // Carrying him, holding him out, tearing his arm: her shoulder and
+        // upper arm raised with him (to 2.6 m carried): all her old capsule.
         return {kFoot, 0.0F, kHalfHeight, 0.0F, kRadius};
     case Stance::Hold:
     case Stance::Pipe:
@@ -129,8 +129,13 @@ Matron::Stance Matron::wanted_stance() const {
     if (lying_) {
         return Stance::Down;
     }
-    if (state_ == State::Carry || state_ == State::ArmPlay) {
-        return Stance::Lift;   // him up in her hand, her arm and shoulder raised with him
+    // Him up in her hand (carried, held out over the drop, his arm torn):
+    // her old height. Held out (Dangle) her drawn arm is level with her
+    // shoulder, but his hanging body rests against that height, and it holds
+    // his wrist out of her reach until her holds are staged at her real arm's
+    // length (issue #3, the hold restaging); then Dangle goes to Hold.
+    if (state_ == State::Carry || state_ == State::Dangle || state_ == State::ArmPlay) {
+        return Stance::Lift;
     }
     if (holding_state(state_)) {
         return Stance::Hold;
