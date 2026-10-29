@@ -10,6 +10,9 @@ int main() {
     // still shows every result up to that moment (fully buffered, a group
     // stopped at 90 s showed only its first 14 of 24 passes).
     std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+    // Her collision body audited every tick of every run (matron shape: no
+    // tick in the steel, checked at exit; sim_tests_matron_shape.cpp).
+    start_matron_shape_audit();
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-remaining") {
         run_matron_remaining();
         return EXIT_SUCCESS;
@@ -288,6 +291,10 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
         run_matron();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-shape") {
+        run_matron_shape();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stand") {
