@@ -8,6 +8,7 @@
 #include "sim/twin_tower.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/summit.hpp"
 #include "sim/yard_crane.hpp"
 #include "sim_tests.hpp"
 
@@ -20,6 +21,7 @@ using scraperx::sim::Bay;
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
+using scraperx::sim::Summit;
 using scraperx::sim::YardCrane;
 
 namespace {
