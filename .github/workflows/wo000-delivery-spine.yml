@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin ScraperX-Claude
+          git fetch --no-tags --depth=50 origin ScraperX-Claude "${GITHUB_REF_NAME}"
           python3 tools/rule_check/rule_check.py origin/ScraperX-Claude HEAD
 
       - name: Restore the compiler cache
