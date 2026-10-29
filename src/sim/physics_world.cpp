@@ -725,9 +725,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                      ? JPH::Vec3::sZero()
                                      : JPH::Vec3(facing_.GetX() * cos_p, std::sin(look_pitch_), facing_.GetZ() * cos_p));
     }
-    matron_->pre_step(delta_seconds, player_at,
-                      std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
-                               static_cast<float>(commands.room_loudness)));
+    // His true state, which she cannot open: her perception (matron_perception.hpp)
+    // makes her evidence of it.
+    matron_->pre_step(delta_seconds,
+                      Stimulus(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
+                                                   static_cast<float>(commands.room_loudness))));
     grab_drive(bodies, delta_seconds);
     strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
