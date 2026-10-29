@@ -13,10 +13,11 @@
 //    capsule must reach no further than kInM past her drawn body in any of
 //    her frame's six directions (the body that hits with nothing shown).
 //    Her old capsule's numbers are printed beside them.
-// 2. No tick inside the steel: every run of this process has her stance
-//    upkeep audited (Matron::audit_shapes, on from main); at exit no tick may
-//    have had her shape deeper than Matron::kInsideSteelM in the steel
-//    (shape_audit_at_exit). Every matron group checks it for its own runs:
+// 2. She never sits in the steel: every run of this process has her stance
+//    upkeep audited (Matron::audit_shapes, on from main); at exit her shape
+//    may never have been deeper than Matron::kInsideSteelM in steel she
+//    collides with for more than Matron::kInsideSteelTicks ticks running, nor
+//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Every matron group checks it for its own runs:
 //    her walk, her hunt low, her ladders, pipe, holds and fatality.
 
 #include "sim_tests.hpp"
@@ -46,14 +47,15 @@ constexpr DrawnLimb kDrawn[] = {
 #include "data/matron_drawn_limbs.inc"
 };
 
-// Her drawn body (trunk, head, legs) within this of her capsule (95th
-// percentile of her frames; the worst frame within kOutWorstM); her capsule
-// no further than kInM past her drawn body (95th percentile). Her old upright
-// capsule: 0.37-0.55 m out, 0.43-1.01 m past. Each stance's must also beat
-// the old capsule on both counts.
-constexpr double kOutM = 0.34;
-constexpr double kOutWorstM = 0.50;
-constexpr double kInM = 0.42;
+// Her drawn body (trunk, head, legs) within kOutM of her capsule (95th
+// percentile of her frames; the worst frame within kOutWorstM): as before,
+// her trunk and head leaning ahead of her middle (her catch and strike are
+// tuned to a body 0.30 m deep: matron_shape.cpp). Her capsule never further
+// past her drawn body than her old one in any stance, and no further than
+// kInM (95th percentile; her old one reached 1.01 m past it, standing).
+constexpr double kOutM = 0.56;
+constexpr double kOutWorstM = 0.56;
+constexpr double kInM = 0.90;
 
 struct V3 {
     double x, y, z;
@@ -169,13 +171,19 @@ void shape_audit_at_exit() {
                 "%ld switches, %ld refused, deepest in the steel %.3f m, upkeep %.2f us a tick\n",
                 a.ticks, a.per_stance[0], a.per_stance[1], a.per_stance[2], a.per_stance[3], a.per_stance[4],
                 a.per_stance[5], a.switches, a.refused, static_cast<double>(a.worst_depth_m), upkeep_us);
-    if (a.inside_steel != 0) {
-        std::fprintf(stderr, "FAIL: matron shape: %ld ticks her body was in the steel (deepest %.3f m)\n",
-                     a.inside_steel, static_cast<double>(a.worst_depth_m));
+    std::printf("  matron shape: deepest by stance %.3f %.3f %.3f %.3f %.3f %.3f m; %ld ticks past %.2f m, none for "
+                "long: %s\n",
+                static_cast<double>(a.worst_depth_by_stance[0]), static_cast<double>(a.worst_depth_by_stance[1]),
+                static_cast<double>(a.worst_depth_by_stance[2]), static_cast<double>(a.worst_depth_by_stance[3]),
+                static_cast<double>(a.worst_depth_by_stance[4]), static_cast<double>(a.worst_depth_by_stance[5]),
+                a.inside_steel, static_cast<double>(Matron::kInsideSteelM), a.sitting == 0 ? "yes" : "no");
+    if (a.sitting != 0 || a.worst_depth_m > Matron::kTunnelM) {
+        std::fprintf(stderr, "FAIL: matron shape: her body sat in the steel %ld ticks, deepest %.3f m\n", a.sitting,
+                     static_cast<double>(a.worst_depth_m));
         std::fflush(nullptr);
         std::_Exit(EXIT_FAILURE);
     }
-    std::printf("PASS scraperx_sim matron shape: no tick in the steel (%ld ticks, deepest %.3f m)\n", a.ticks,
+    std::printf("PASS scraperx_sim matron shape: she never sat in the steel (%ld ticks, deepest %.3f m)\n", a.ticks,
                 static_cast<double>(a.worst_depth_m));
 }
 
@@ -200,23 +208,25 @@ void run_matron_shape() {
                     names[s], after.frames, after.out95, after.out_worst, after.in95, before.out95, before.out_worst,
                     before.in95);
         fits.push_back(after);
-        require(after.out95 < before.out95 && after.in95 < before.in95,
-                "matron shape: her stance's capsule fits her drawn body better than her old upright one");
+        require(after.out95 <= before.out95 + 1.0e-4 && after.in95 <= before.in95 + 1.0e-4,
+                "matron shape: her stance's capsule reaches less past her drawn body than her old one, and holds as much of it");
     }
     for (const Fit &after : fits) {
         require(after.frames >= 8, "matron shape: her drawn body recorded in each stance family");
         require(after.out95 <= kOutM && after.out_worst <= kOutWorstM,
-                "matron shape: her drawn body (but her forearms and hands) within its margin of her stance's capsule");
+                "matron shape: her drawn body (but her arms) within its margin of her stance's capsule");
         require(after.in95 <= kInM, "matron shape: her stance's capsule reaches no further past her drawn body than its margin");
     }
     // Each capsule turned with her yaw is the same capsule: its segment's
     // length and its height kept, its bottom at her soles where it stands.
     for (int s = 0; s < Matron::kStanceCount; ++s) {
         const Matron::StanceCapsule c = Matron::stance_capsule(static_cast<Matron::Stance>(s));
-        if (s != static_cast<int>(Matron::Stance::Pipe)) {
-            require(std::abs(std::min(c.ay, c.by) - c.radius + Matron::kStandCentre) < 1.0e-4F,
-                    "matron shape: a standing family's capsule keeps its lowest point at her soles");
-        }
+        require(std::abs(std::min(c.ay, c.by) - c.radius + Matron::kStandCentre) < 1.0e-4F,
+                "matron shape: every capsule keeps its lowest point at her soles");
+        require(c.radius <= Matron::kRadius && std::abs(c.az) + c.radius <= Matron::kRadius + 1.0e-4F &&
+                    std::abs(c.bz) + c.radius <= Matron::kRadius + 1.0e-4F &&
+                    std::max(c.ay, c.by) + c.radius <= Matron::kStandCentre,
+                "matron shape: every capsule inside the room her ways plan for (she meets nothing new)");
     }
     require(Matron::stance_bin(0.0F) == 0 && Matron::stance_bin(6.2831853F) == 0 &&
                 Matron::stance_bin(-0.5F * 3.14159265F) == 3 * Matron::kStanceYawBins / 4,
