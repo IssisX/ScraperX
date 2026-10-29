@@ -120,7 +120,7 @@ func build() -> void:
 # matron_layers): breath a pest, a growl dangerous, the rage growl over a
 # rough bed fully changed.
 #
-# Her voice, her croak, her tongue cluck and her sniff, and what her hands
+# Her voice, her sniff, and what her hands
 # do to a body, are real recorded CC0 takes in HER_DIR (sources and exact
 # recording intervals in CREDITS.md). Only nonhuman beds, footfalls and
 # joints remain made here. Her synthesized mouth loop stays retired.
@@ -133,7 +133,7 @@ const HER_DIR := "res://presentation/audio/matron/"
 const HER_RECORDED := {&"matron_growl_loop": 3, &"matron_growl_rage_loop": 3, &"matron_strain_loop": 3,
 	&"matron_breath": 3, &"matron_shriek": 6, &"matron_laugh": 3, &"matron_effort": 3, &"matron_hit": 3,
 	&"matron_swallow": 3, &"matron_rip": 6, &"matron_plant": 3,
-	&"matron_croak": 4, &"matron_cluck": 4, &"matron_sniff": 4}
+	&"matron_sniff": 4}
 
 
 func build_her() -> void:

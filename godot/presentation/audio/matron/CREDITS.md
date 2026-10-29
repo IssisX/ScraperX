@@ -63,8 +63,8 @@ the laugh above was (varispeed, pitch and speed together): `matron_growl_loop_1`
 `matron_laugh_2` and `matron_effort_1` by 10%, `matron_growl_rage_loop_2`, `matron_shriek_3` and
 `matron_laugh_1` by 8%; `matron_effort_1` also has its hiss taken out. Each is its own performance,
 not a pitched copy of another take. The breath already had three takes of the pick and gets none.
-Croak, cluck and sniff are now real, individually recorded, nonoverlapping CC0 takes
-documented in the Mouth takes section below. No source is pitch-shifted into
+Sniff takes are real, individually recorded, nonoverlapping CC0 performances
+documented in the Sniff takes section below. No source is pitch-shifted into
 a second performance.
 
 | File | Source | Title | Author | License | Part used (s of the source, placed at) |
@@ -111,49 +111,21 @@ a second performance.
 |  | https://freesound.org/people/spookymodem/sounds/249811/ | Crunching Bones.wav | spookymodem | CC0 1.0 (FSD50K) | 0.75-1.35, at 0.70 |
 |  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 3.40-3.63, at 1.27 |
 
-## Mouth takes: croak, cluck, sniff (2026-10-29)
+## Sniff takes (2026-10-29)
 
-These replace the three formerly code-generated sound families, which have been
-removed from `sound_bank.gd`. Each take is a different, nonoverlapping human
-performance from its CC0 recording (not a rate-, pitch-, time- or segment-shift
-of another take). Each is at most 1.2 s. The first three croaks are from a
-woman recording genuine phlegmy throat-clear attempts; her unaltered human
-source recordings are the candidate until the owner chooses by ear. The
-fourth croak is a separate throat performance from the spec shortlist. The
-four clucks are isolated tongue clicks, **never bird recordings**. Three
-sniffs are separate nose-inhales from a three-performance recording and the
-fourth is independent.
+Four independent human nose-inhales are retained: three separate performances
+from padpad and one from OwlStorm. The owner rejected the other two proposed
+mouth-sound families; their recordings and cue registrations are removed.
 
-Freesound pages and uploader names below establish source provenance and CC0
-1.0 dedications. The actual bytes fetched for preparation were Freesound's
-public **HQ Ogg previews** (not the original uncompressed WAV downloads).
-Their exact SHA-256 hashes and URL paths are pinned in
-`tools/audio/matron_mouth_takes.py`; source changes are rejected. The
-delivery files are short mono 22,050 Hz Ogg Vorbis takes like this bank's
-existing recordings, decoded and cut at the listed source times, with only
-the existing convention's light 75 Hz high-pass, brief boundary fades and
-peak-gain alignment. **No voice synthesis, layering, pitch shift or
-time-stretch.** The cuts are natural nonoverlapping performance intervals;
-do not equate source preview bytes with the encoded delivery file bytes.
-The owner still auditions and may replace individual takes.
+The sources below are Freesound CC0 1.0 dedications. Delivery clips came from
+public HQ Ogg previews, not uncompressed WAVs; source SHA-256 and exact cuts
+are pinned in `tools/audio/matron_mouth_takes.py`. Clips are mono 22,050 Hz,
+high-passed at 75 Hz, boundary-faded and peak-aligned without pitch shifting.
+The owner has not yet auditioned these retained takes.
 
 | File | Source URL | Uploader | License | Exact source interval (seconds) |
 |---|---|---|---|---|
-| `matron_croak_0.ogg` | https://freesound.org/people/RavenWolfProds/sounds/586979/ | RavenWolfProds | CC0 1.0 | 0.38–1.08 |
-| `matron_croak_1.ogg` | https://freesound.org/people/RavenWolfProds/sounds/586979/ | RavenWolfProds | CC0 1.0 | 10.50–11.18 |
-| `matron_croak_2.ogg` | https://freesound.org/people/RavenWolfProds/sounds/586979/ | RavenWolfProds | CC0 1.0 | 22.32–23.45 |
-| `matron_croak_3.ogg` | https://freesound.org/people/CreepyKing/sounds/842294/ | CreepyKing | CC0 1.0 | 0.16–1.17 |
-| `matron_cluck_0.ogg` | https://freesound.org/people/Vein_Adams/sounds/711535/ | Vein_Adams | CC0 1.0 | 0.14–0.39 |
-| `matron_cluck_1.ogg` | https://freesound.org/people/Vein_Adams/sounds/711535/ | Vein_Adams | CC0 1.0 | 0.92–1.20 |
-| `matron_cluck_2.ogg` | https://freesound.org/people/Vein_Adams/sounds/711535/ | Vein_Adams | CC0 1.0 | 1.73–2.00 |
-| `matron_cluck_3.ogg` | https://freesound.org/people/Vein_Adams/sounds/711535/ | Vein_Adams | CC0 1.0 | 4.03–4.36 |
 | `matron_sniff_0.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 0.62–1.33 |
 | `matron_sniff_1.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 2.51–3.35 |
 | `matron_sniff_2.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 4.35–5.20 |
 | `matron_sniff_3.ogg` | https://freesound.org/people/OwlStorm/sounds/151218/ | OwlStorm | CC0 1.0 | 0.05–0.59 |
-
-Source shortlist S22 (`florianreichelt`, 447496) and S23
-(`CreepyKing`, 842294) were also acquired and checked for natural
-performance intervals. S22 has only one isolated throat-clear and is not
-part of the chosen female-leaning bank. S23 supplies one additional source
-performance as `croak_3`; it is not divided into fake variants.

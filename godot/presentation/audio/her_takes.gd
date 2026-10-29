@@ -33,8 +33,6 @@ const FAMILIES := {
 	&"matron_laugh": [2, 12.0, Vector2(0.97, 1.02), Vector2(-2.0, 0.0), true, false],
 	&"matron_rip": [2, 0.25, Vector2(0.97, 1.03), Vector2(-1.0, 0.0), true, true],
 	&"matron_hit": [2, 0.35, Vector2(0.97, 1.04), Vector2(-1.5, 0.0), true, true],
-	&"matron_croak": [2, 7.0, Vector2(0.96, 1.02), Vector2(-2.0, 0.0), true, false],
-	&"matron_cluck": [2, 6.0, Vector2(0.98, 1.03), Vector2(-2.0, 0.0), true, false],
 	&"matron_sniff": [2, 5.0, Vector2(0.97, 1.04), Vector2(-2.0, 0.0), true, false],
 	&"matron_step": [3, 0.065, Vector2.ZERO, Vector2.ZERO, false, false],
 	&"matron_plant": [3, 0.065, Vector2.ZERO, Vector2.ZERO, false, false],

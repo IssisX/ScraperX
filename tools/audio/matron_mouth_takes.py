@@ -21,15 +21,6 @@ IMPORT = BANK / "matron_breath_0.ogg.import"
 
 # id -> (uploader, URL to CC0 Freesound page, HQ preview URL, SHA256 of HQ preview).
 SOURCES = {
-    711535: ("Vein_Adams", "https://freesound.org/people/Vein_Adams/sounds/711535/",
-             "https://cdn.freesound.org/previews/711/711535_14535773-hq.ogg",
-             "942f21d4be754d3de11bedc5dac21f4862ff0566b30208a133e2025a391fd509"),
-    842294: ("CreepyKing", "https://freesound.org/people/CreepyKing/sounds/842294/",
-             "https://cdn.freesound.org/previews/842/842294_14303554-hq.ogg",
-             "f0a0d6484da09adf0c13c8bf28680f3446d476c009bb69d37cbc4328f4032120"),
-    586979: ("RavenWolfProds", "https://freesound.org/people/RavenWolfProds/sounds/586979/",
-             "https://cdn.freesound.org/previews/586/586979_9619518-hq.ogg",
-             "b23171c6d424784814e11f0500a4125190a2c479c69acf46340217989a19dcbd"),
     516473: ("padpad", "https://freesound.org/people/padpad/sounds/516473/",
              "https://cdn.freesound.org/previews/516/516473_7345129-hq.ogg",
              "433d804d1f636bdcd2eb19dbe68cacedc473fa383915a13b9d83226a7c81f248"),
@@ -39,18 +30,8 @@ SOURCES = {
 }
 
 # filename, source id, first second, last second.
-# Independent throat-clearing efforts: RavenWolfProds (0, 1, 2);
-# CreepyKing (3). Distinct human tongue clicks: Vein_Adams (0..3).
 # Three separate sniff performances by padpad; fourth by OwlStorm.
 TAKES = (
-    ("matron_croak_0.ogg", 586979, 0.38, 1.08),
-    ("matron_croak_1.ogg", 586979, 10.50, 11.18),
-    ("matron_croak_2.ogg", 586979, 22.32, 23.45),
-    ("matron_croak_3.ogg", 842294, 0.16, 1.17),
-    ("matron_cluck_0.ogg", 711535, 0.14, 0.39),
-    ("matron_cluck_1.ogg", 711535, 0.92, 1.20),
-    ("matron_cluck_2.ogg", 711535, 1.73, 2.00),
-    ("matron_cluck_3.ogg", 711535, 4.03, 4.36),
     ("matron_sniff_0.ogg", 516473, 0.62, 1.33),
     ("matron_sniff_1.ogg", 516473, 2.51, 3.35),
     ("matron_sniff_2.ogg", 516473, 4.35, 5.20),
@@ -114,7 +95,7 @@ def main() -> None:
             print(f"REAL_TAKE {filename} source={sid} {begin:.2f}-{end:.2f}s "
                   f"duration={got:.3f}s peak={peak:.3f} gain={gain:.2f} "
                   f"sha256={hashlib.sha256(output.read_bytes()).hexdigest()}",flush=True)
-    print("MAT_RON_CC0_TAKES PASS 4 croak 4 cluck 4 sniff",flush=True)
+    print("MAT_RON_CC0_TAKES PASS 4 sniff",flush=True)
 
 if __name__ == "__main__":
     main()
