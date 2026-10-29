@@ -14,6 +14,7 @@ const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const PlayerIdentityStore := preload("res://presentation/identity/player_identity_store.gd")
 const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
+const StoryRadioTriggerWatcher := preload("res://presentation/audio/story_radio_triggers.gd")
 const TitleScreen := preload("res://presentation/ui/title_screen.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
@@ -94,6 +95,7 @@ var _throw_path := PackedVector3Array()
 var _pause_menu: Control
 var _player_identity := PlayerIdentityStore.new()
 var _story_radio: Node
+var _story_triggers: Node
 var _uitest: Node
 var _force_touch := false
 var _uitest_scenario := ""
@@ -194,6 +196,10 @@ func _ready() -> void:
 	_radio.name = "ForemanRadio"
 	add_child(_radio)
 	_radio.setup(_audio)
+	_story_triggers = StoryRadioTriggerWatcher.new()
+	_story_triggers.name = "StoryRadioTriggers"
+	_audio.add_child(_story_triggers)
+	_story_triggers.setup(_native, _story_radio)
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.
@@ -498,6 +504,8 @@ func _process(delta: float) -> void:
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
 	})
+	# Optional story samples observe the same native world; neither writes simulation state.
+	_story_triggers.watch(delta)
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how
 	# far across the ground, how far above or below.

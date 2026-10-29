@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "triggers": [
+    {
+      "key": "receiving_iona_freight_one",
+      "kind": "zone",
+      "center_xz": [
+        10,
+        -117.3
+      ],
+      "radius_m": 4.5,
+      "max_y": 3,
+      "support": 1
+    },
+    {
+      "key": "receiving_iona_keep_the_height",
+      "kind": "first_reach",
+      "min_y": 22.5,
+      "support": 11
+    },
+    {
+      "key": "receiving_iona_recovery",
+      "kind": "landing_drop",
+      "min_drop_m": 3
+    }
+  ]
+}
