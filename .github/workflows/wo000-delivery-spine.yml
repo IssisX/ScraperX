@@ -50,6 +50,12 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Verify story radio source assets and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
+
       - name: Restore the compiler cache
         uses: actions/cache@v4
         with:
@@ -381,7 +387,7 @@ jobs:
               touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons \
               touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons touch_wall_kick_buttons touch_ladder_buttons \
               touch_rig touch_boom touch_debris \
-              touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper \
+              touch_photo_id_radio touch_story_radio_triggers touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper \
               touch_stack touch_wet \
               touch_shop touch_crane \
               touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
@@ -519,6 +525,13 @@ jobs:
           # package, and nothing that would stop it installing beside the other
           # AI branches' builds. Permanent for this branch.
           .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
+
+      - name: Verify exported story-radio package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}"
 
       - name: Record evidence boundaries
         shell: bash

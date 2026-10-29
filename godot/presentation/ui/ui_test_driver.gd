@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_uncanny.gd"
+extends "res://presentation/ui/ui_test_story_radio.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -219,6 +219,8 @@ const SCENARIOS := {
 	"touch_stack": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
 	"touch_radio": 8,
+	"touch_photo_id_radio": 8,
+	"touch_story_radio_triggers": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
 	# The fear voice on a ~12 m drop lived through: a yelp, then the cry for
@@ -531,6 +533,10 @@ func _run() -> void:
 			ok = await _stack_upper(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_radio":
 			ok = await _touch_radio(InputRouter.Device.TOUCH)
+		"touch_photo_id_radio":
+			ok = await _touch_photo_id_radio()
+		"touch_story_radio_triggers":
+			ok = await _touch_story_radio_triggers()
 		"touch_stack":
 			ok = await _stack(InputRouter.Device.TOUCH)
 		"pad_stack":
