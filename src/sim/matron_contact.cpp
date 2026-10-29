@@ -64,7 +64,8 @@ void Matron::refresh_contact_view() {
         held = true;
     } else if (routecraft_.owns_motion() && routecraft_.grip(body, sub, local)) {
         held = true;
-    } else if (view_.on_pipe && !pipe_support_.IsInvalid()) {
+    } else if (view_.on_pipe && pipe_phase_ != PipePhase::Stunned && !pipe_support_.IsInvalid()) {
+        // (Stunned on a flange it is her legs that hold it, not a hand.)
         body = pipe_support_;
         sub = pipe_member_;
         local = pipe_local_hand_;
@@ -78,12 +79,14 @@ void Matron::refresh_contact_view() {
     }
     // On her pipe, hand over hand (her hand on its face): her squeeze is her
     // hands' pull against her feet's push, so her feet are on the riser too.
-    // Level from her shins toward the riser's axis, the first steel within
-    // her legs' reach, a standing face of static steel: the face they press.
+    // Level from her shins toward the steel her hand holds, the first steel
+    // within her legs' reach, a standing face of static steel: the face they
+    // press.
     if (view_.on_pipe && pipe_phase_ == PipePhase::Climb && pipe_on_face_ && view_.contact_hand_held) {
         const RVec3 at = bodies.GetPosition(body_);
         const RVec3 shins(at.GetX(), at.GetY() - kStandCentre + kBraceShinM, at.GetZ());
-        Vec3 in(kPipeCentreX - float(shins.GetX()), 0.0F, kPipeCentreZ - float(shins.GetZ()));
+        const RVec3 grip = view_.contact_hand;
+        Vec3 in(float(grip.GetX() - shins.GetX()), 0.0F, float(grip.GetZ() - shins.GetZ()));
         if (in.LengthSq() > 1.0e-6F) {
             in = in.Normalized();
             const grip::ClimbBodyFilter filter(body_, player_);

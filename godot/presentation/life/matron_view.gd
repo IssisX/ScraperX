@@ -2163,7 +2163,9 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	fresh_frame = _pose_fresh
 	_fours_gate(data, falling, delta)
 	_hold_gate(data, delta)
-	var climb_want := 1.0 if bool(data.get("climbing", false)) and data.has("climb_hand") else 0.0
+	# her limbs reach for a climb's holds, and on her pipe for the riser at her grip and brace
+	var on_riser := bool(data.get("on_pipe", false)) and bool(data.get("contact_hand_held", false))
+	var climb_want := 1.0 if (bool(data.get("climbing", false)) and data.has("climb_hand")) or on_riser else 0.0
 	if _pose_fresh:
 		_w_climb = climb_want
 		_w_climb_v = 0.0
