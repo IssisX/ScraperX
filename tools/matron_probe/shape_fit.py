@@ -58,7 +58,7 @@ def family_of(rows, i):
     state = int(g("state"))
     if state == 11:
         return "down"
-    if state in (13, 15):   # Carry, ArmPlay
+    if state in (13, 14, 15):   # Carry, Dangle, ArmPlay (Matron::wanted_stance)
         return "lift"
     if 12 <= state <= 18:
         return "hold"
