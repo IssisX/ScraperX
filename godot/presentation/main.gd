@@ -166,7 +166,7 @@ func _ready() -> void:
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle
 	add_child(_audio)
-	# The unapproved Kokoro voices must not reach the player.
+	# Unapproved stock voice recordings must not reach the player.
 	_story_radio = StoryRadioPlayer.new()
 	_story_radio.name = "StoryRadio"
 	_audio.add_child(_story_radio)
