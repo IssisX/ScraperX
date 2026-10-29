@@ -1833,6 +1833,17 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		arms_bend = 0.35
 		arms_splay = 0.2
 		hold_bend = 0.22 * up * _w_hold
+		if _hold.has("hold_lean"):
+			# Her real reach (sim/matron.hpp kArmReachM): leant from the hips
+			# and down in the knees as far as the simulation has her, so her
+			# arm, never longer than its bones, comes to what she holds.
+			var crouch := clampf(float(_hold["hold_crouch"]), 0.0, 0.6)
+			var bend := acos(clampf(1.0 - crouch / 0.86, -1.0, 1.0))
+			pitch = float(_hold["hold_lean"])
+			hip_y = 0.97 * (1.0 - crouch / 0.98)
+			legs_fwd = bend
+			legs_back = bend
+			knees = 2.0 * bend
 		head_pitch = -0.35 - 0.75 * up
 		head_roll = 0.45 + 0.25 * sin(_clock * 0.8)
 		jaw_open = 0.9 if state == STATE_ARMPLAY else 0.5
@@ -1936,8 +1947,10 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	# her chest the rest (_turn_yaw)
 	(_p["torso"] as Node3D).rotation.y = twist
 	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 + hold_bend
-	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
-	(_p["sh_r"] as Node3D).scale = Vector3.ONE * limb_scale
+	# (her arms at their own length while her hands are on him)
+	var arm_scale := 1.0 if holding else limb_scale
+	(_p["sh_l"] as Node3D).scale = Vector3.ONE * arm_scale
+	(_p["sh_r"] as Node3D).scale = Vector3.ONE * arm_scale
 	(_p["hp_l"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
 	torso.rotation.x = pitch
@@ -2216,7 +2229,10 @@ func hear_hold(hold: Dictionary) -> void:
 func holding_hand_world() -> Vector3:
 	if _rig == null or _w_hold < 0.5:
 		return Vector3.INF
-	return _rig.bone_world("wr_r").origin
+	# the point in her palm what she holds is in (matron_rig.gd HOLD_PALM_M)
+	var wr: Vector3 = _rig.bone_world("wr_r").origin
+	var el: Vector3 = _rig.bone_world("el_r").origin
+	return wr + (wr - el).normalized() * 0.09
 
 
 # For a test and the look scenes: where her head is, and how far gone the

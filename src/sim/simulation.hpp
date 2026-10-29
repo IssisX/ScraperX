@@ -364,6 +364,8 @@ struct MatronSnapshot final {
     bool hold_braced = false;
     double hold_s = 0.0;
     Vector3 hand{};
+    double hold_lean = 0.0;     // her trunk leant from the hips to reach, rad
+    double hold_crouch = 0.0;   // her hips down to reach, m
     bool aim_ledge = false;
     Vector3 aim{};
     static constexpr int kPlanks = 11;
@@ -1096,6 +1098,12 @@ struct Snapshot final {
     Vector3 matron_hand{};
     bool matron_hand_present = false;
     Vector3 held_ankle{};
+    // Her shoulders (right: the ankle hand's; left: her second hand's), where
+    // her body's lean and crouch have them now: her hands are never further
+    // from them than her arm (Matron::kArmReachM).
+    Vector3 matron_shoulder{};
+    Vector3 matron_shoulder2{};
+    bool matron_hand2_present = false;
     // Arms (physics_world_arm.cpp): lost per side until a death or a
     // restart; the severed arm's body; her win.
     bool left_arm_lost = false;

@@ -804,6 +804,14 @@ void Simulation::PhysicsWorld::read_state() noexcept {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
             state_.matron_hand2 = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
         }
+        state_.matron_hand2_present = !hand2_id_.IsInvalid();
+        {
+            const JPH::RVec3 her = bodies.GetPosition(matron_->body());
+            const JPH::RVec3 right = her + matron_->shoulder_local();
+            const JPH::RVec3 left = her + matron_->shoulder2_local();
+            state_.matron_shoulder = Vector3{right.GetX(), right.GetY(), right.GetZ()};
+            state_.matron_shoulder2 = Vector3{left.GetX(), left.GetY(), left.GetZ()};
+        }
         state_.left_arm_lost = arm_lost_[0];
         state_.right_arm_lost = arm_lost_[1];
         state_.last_severed_side = last_severed_side_;

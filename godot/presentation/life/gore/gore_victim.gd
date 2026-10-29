@@ -81,7 +81,7 @@ var held_side := -1            # the leg her fingers have: 2 left, 3 right
 var _clock := 0.0
 
 
-func hang(hold: Dictionary, lost: Array, delta: float, grip_at := Vector3.INF) -> void:
+func hang(hold: Dictionary, lost: Array, delta: float, _grip_at := Vector3.INF) -> void:
 	hanging = true
 	_clock += delta
 	var skel := body.skel
@@ -102,12 +102,9 @@ func hang(hold: Dictionary, lost: Array, delta: float, grip_at := Vector3.INF) -
 			continue
 		var s := "l" if k == 2 else "r"
 		if k == held_side:
-			# Into her drawn hand where it is on him (it is put on this same
-			# native point, drawn by her own reach), else the native point.
-			var at := ankle
-			if grip_at.is_finite() and grip_at.distance_to(ankle) < GRIP_TRUST_M:
-				at = grip_at
-			_leg_to(s, at, q * Vector3.FORWARD)
+			# Held by the thigh (sim/matron.hpp kHeldBelowMiddleM): the leg
+			# straight along his body, her drawn hand closed on its thigh.
+			_aim_dir("hp_" + s, "an_" + s, body_down)
 			continue
 		var sway := Vector3(sin(_clock * 2.3 + float(k)), 0.0, cos(_clock * 1.9 + float(k))) * SWAY
 		var dir := body_down

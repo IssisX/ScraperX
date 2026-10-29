@@ -155,7 +155,8 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     // short of it with the thing already in her reach. One walk a tick.
     const auto at_work = [&](const float x, const float z, const float pace, const RVec3 thing,
                              const float reach) {
-        const float to_thing = Vec3(thing - shoulder).Length();
+        // How far it is from her shoulder however she leans and crouches.
+        const float to_thing = reach_to(thing);
         if (fatal_at_work_ && to_thing > reach + kWorkSlackM) {
             fatal_work_reset();
         }
@@ -208,7 +209,6 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         // Still by its ankle: down on the steel where she stands (no edge in
         // her reach), lowered at her arm's pace; her fingers open
         // kFloorLaySeconds into it.
-        arm_reach_m_ = kStoopReachM;
         pull_n_ = kHandPullN;
         const bool deck_under = deck_close_below(p.torso, feet);
         if (grip_on_ && hold_s_ > kFloorLaySeconds && !deck_under) {
@@ -242,7 +242,6 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
             (void)face(p.torso);
         }
         knee_target_ = p.torso + Vec3(0.0F, 0.12F, 0.0F);
-        arm_reach_m_ = kStoopReachM;
         if (beat == Fatal::Pin) {
             pose_hand(dt, rest_hand, kHandSpeedMps);
             // Her weight on his chest kFloorPinSeconds (fatal_pinned); a knee
@@ -269,7 +268,6 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         break;
     }
     case Fatal::Drag: {
-        arm_reach_m_ = kStoopReachM;
         if (fatal_sub_ == 0) {
             // To it, wherever the last leg left it, and her fist in the collar.
             const RVec3 beside = beside_torso();
@@ -282,7 +280,7 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
         }
         // Dragged on its back to the bollard; the collar up to the shackle.
         pull_n_ = kHandPullN;
-        const bool there = at_work(kBollardStandX, kBollardStandZ, 1.1F, p.shackle, arm_reach_m_);
+        const bool there = at_work(kBollardStandX, kBollardStandZ, 1.1F, p.shackle, kArmReachM);
         if (!there) {
             pose_hand(dt, RVec3(at.GetX(), feet + 0.9F, at.GetZ()) - fwd * 0.6F + right * 0.3F, kHandSpeedMps);
         } else {
@@ -294,7 +292,6 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     }
     case Fatal::Kick: {
         // To the catch's trip handle under the gantry, and down with it.
-        arm_reach_m_ = kArmReachM;
         pose_hand(dt, rest_hand, kHandSpeedMps);
         const bool there = at_work(kTripStandX, kTripStandZ, 1.4F, p.handle, kArmReachM);
         if (there) {

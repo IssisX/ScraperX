@@ -127,9 +127,18 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         destroy_grab_constraint(wrist_);
         wrist_side_ = -1;
     }
-    // Which wrist she goes for: a whole arm, the nearer her.
+    // Which arm she goes for: a whole one, the nearer her; and where on it
+    // her hand takes it: the point of it (shoulder to wrist) nearest her
+    // other shoulder, the most of it her arm reaches.
     const JPH::RMat44 frame = bodies.GetWorldTransform(player_id_);
     const JPH::RVec3 her = bodies.GetPosition(matron_->body());
+    const JPH::RVec3 her_shoulder = her + matron_->shoulder2_local();
+    const auto arm_point = [&](const int k) {
+        const JPH::RVec3 root = frame * JPH::Vec3(k == 0 ? -kArmSideM : kArmSideM, kShoulderUp, 0.0F);
+        const JPH::Vec3 along = JPH::Vec3(frame * wrist_local(k) - root);
+        const float t = std::clamp(JPH::Vec3(her_shoulder - root).Dot(along) / along.LengthSq(), 0.0F, 1.0F);
+        return root + along * t;
+    };
     int side = wrist_side_;
     if (side < 0 || arm_lost_[static_cast<std::size_t>(side)]) {
         side = -1;
@@ -138,14 +147,14 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
             if (arm_lost_[static_cast<std::size_t>(k)]) {
                 continue;
             }
-            const float d = static_cast<float>(JPH::Vec3(frame * wrist_local(k) - her).Length());
+            const float d = static_cast<float>(JPH::Vec3(arm_point(k) - her_shoulder).Length());
             if (d < best) {
                 best = d;
                 side = k;
             }
         }
     }
-    const JPH::RVec3 wrist = side >= 0 ? frame * wrist_local(side) : bodies.GetPosition(player_id_);
+    const JPH::RVec3 wrist = side >= 0 ? arm_point(side) : bodies.GetPosition(player_id_);
     matron_->set_player_body(wrist, 2 - arms_lost());
     if (matron_->reaching_wrist()) {
         wrist_side_ = side;
@@ -169,7 +178,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     }
     if (active && hand2_id_.IsInvalid()) {
         JPH::Ref<JPH::Shape> sphere = new JPH::SphereShape(0.06F);
-        const JPH::RVec3 shoulder = her + matron_->shoulder_local();
+        const JPH::RVec3 shoulder = her + matron_->shoulder2_local();
         JPH::BodyCreationSettings settings(sphere, shoulder, JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
                                            object_layers::kHand);
         settings.mAllowedDOFs =
@@ -186,13 +195,17 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         arm.mPoint2 = shoulder;
         arm.mMinDistance = 0.0F;
         arm.mMaxDistance = Matron::kArmReachM;
-        arm.mLimitsSpringSettings.mFrequency = 6.0F;
-        arm.mLimitsSpringSettings.mDamping = 0.8F;
+        // Stiff (Matron::kArmLimitHz): her arm gives a few centimetres under a
+        // jolt, never past her arm's length.
+        arm.mLimitsSpringSettings.mFrequency = Matron::kArmLimitHz;
+        arm.mLimitsSpringSettings.mDamping = 1.0F;
         hand2_arm_ = create_constraint(arm, matron_->body(), hand2_id_, false);
+        hand2_arm_at_ = matron_->shoulder2_local();
     }
     if (hand2_id_.IsInvalid()) {
         return;
     }
+    rehang_arm(bodies, hand2_arm_, hand2_arm_at_, hand2_id_, matron_->shoulder2_local());
     const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
     if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 &&
         JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {

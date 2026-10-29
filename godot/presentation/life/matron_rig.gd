@@ -236,16 +236,11 @@ const PLANT_LIFT_M := 0.12
 const RELEASE_TAU := 0.05
 # How fast a limb's pole turns to the side its pose bends to (rad/s).
 const POLE_RAD_S := 6.0
-# Her gripping arm drawn out to the held ankle, at most this many times its length.
-const HOLD_STRETCH_MAX := 2.7
+# What she holds sits in her palm this far past her wrist.
+const HOLD_PALM_M := 0.09
 # Her look laid on her neck to this far (matron_view.gd NECK_TWIST_MAX), the
 # rest on her chest.
 const LOOK_NECK_MAX := 1.92
-# and past that, her shoulder pulled out toward it at most this far
-const HOLD_SHOULDER_M := 0.4
-# drawn out so the arm is this far out to its length at the ankle (bent a
-# little: never locked straight)
-const HOLD_ARM_OUT := 0.93
 # The last SOFT_REACH of a limb's length it comes out to only softly (_reach_chain).
 const SOFT_REACH := 0.08
 # No bone of her body turns faster than this a second (GOVERN_BURST_RAD_S in
@@ -285,6 +280,7 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+var overreach := 0
 
 
 func _gpos(n: String) -> Vector3:
@@ -478,32 +474,26 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 		_reach_chain(root_b, mid_b, bone, target, w, "plant_" + bone)
 
 
-# Her hand on what she holds (the hold: his ankle, and in the rip his arm):
+# Her hand on what she holds (the hold: his thigh, and in the rip his arm):
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
-# arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
-# that reach needs, never past HOLD_STRETCH_MAX its own length.
+# held point in her palm (HOLD_PALM_M past the wrist). Her arm is never drawn
+# longer than its bones (the owner, 2026-10-29: "the matron's arm is like 12
+# feet long"): no stretch, no shoulder pulled out of her; the simulation keeps
+# what she holds within her real reach (sim/matron.hpp kArmReachM).
+# `overreach`: the frames her drawn shoulder-to-wrist came out past its bones.
 func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	var target := skel.global_transform.affine_inverse() * at_world
 	var sh := _gpos("sh_" + s)
-	var el := _gpos("el_" + s)
 	var wr := _gpos("wr_" + s)
-	var arm := sh.distance_to(el) + el.distance_to(wr)
-	var base_s := (p["sh_" + s] as Node3D).scale.y if p.has("sh_" + s) else 1.0
-	var k_max := HOLD_STRETCH_MAX / maxf(base_s, 0.01)
 	var want := wr.lerp(target, w)
-	var need := sh.distance_to(want)
-	var k := clampf(need / maxf(HOLD_ARM_OUT * arm, 0.01), 1.0, k_max)
-	var beyond := need - HOLD_ARM_OUT * arm * k_max
-	if beyond > 0.0:
-		# the arm out as far as it goes: her shoulder pulled up out of her
-		# toward it
-		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, HOLD_SHOULDER_M))
-	if k > 1.0001:
-		for bn in ["sh_%s_x" % s, "el_%s_x" % s]:
-			var i: int = bone_idx[bn]
-			skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) * k)
-	stretch[s] = base_s * k
+	var to := want - sh
+	if to.length() > HOLD_PALM_M:
+		want -= to.normalized() * HOLD_PALM_M * w
+	stretch[s] = 1.0
 	_reach(s, want, 1.0, "hold_" + s)
+	var bones := sh.distance_to(_gpos("el_" + s)) + _gpos("el_" + s).distance_to(_gpos("wr_" + s))
+	if _gpos("sh_" + s).distance_to(_gpos("wr_" + s)) > bones + 0.01:
+		overreach += 1
 
 
 # `held`: her holds as the view draws them, eased onto each new one (the

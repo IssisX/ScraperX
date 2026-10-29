@@ -33,7 +33,62 @@ constexpr int kRelease = static_cast<int>(Matron::State::Release);
 constexpr int kSpare = static_cast<int>(Matron::State::Spare);
 constexpr int kHunting = static_cast<int>(Matron::State::Hunting);
 
-void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
+// Her arm's length, every tick her hands are out (the owner, 2026-10-29: her
+// arm was drawn 12 feet long): each hand no further from its shoulder than
+// her arm (law::kArmLengthM), and the ankle in her fingers where her hand is
+// (a real grip, not one held at a distance).
+struct ArmReach {
+    double max_m = 0.0;     // shoulder to hand (or to the held ankle), the most
+    double max_grip_m = 0.0;   // her hand to the ankle it holds, the most
+    int ticks = 0;
+    int held_ticks = 0;
+    int state_at_max = -1;
+};
+ArmReach g_reach;
+
+void track_arm_reach(const Simulation &s) {
+    const auto p = s.snapshot();
+    const auto dist = [](const scraperx::sim::Vector3 &a, const scraperx::sim::Vector3 &b) {
+        return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+    };
+    const auto note = [&](const double d) {
+        if (d > g_reach.max_m) {
+            g_reach.max_m = d;
+            g_reach.state_at_max = int(s.matron_state().state);
+        }
+    };
+    if (p.matron_hand_present) {
+        ++g_reach.ticks;
+        note(dist(p.matron_hand, p.matron_shoulder));
+        if (p.held_by_matron) {
+            ++g_reach.held_ticks;
+            note(dist(p.held_ankle, p.matron_shoulder));
+            g_reach.max_grip_m = std::max(g_reach.max_grip_m, dist(p.held_ankle, p.matron_hand));
+        }
+    }
+    if (p.matron_hand2_present) {
+        note(dist(p.matron_hand2, p.matron_shoulder2));
+    }
+}
+
+// The group's verdict on her arm: within its length every tick, the grip on him real.
+void require_arm_reach(const char *group) {
+    std::cout << "  " << group << " arm reach: max shoulder to hand " << g_reach.max_m << " m (state "
+              << g_reach.state_at_max << "), hand to held ankle " << g_reach.max_grip_m << " m, over "
+              << g_reach.ticks << " ticks, " << g_reach.held_ticks << " held\n";
+    require(g_reach.held_ticks > 0, "matron arm reach: she held him");
+    require(g_reach.max_m <= law::kArmLengthM,
+            "matron arm reach: no hand of hers further from her shoulder than her arm, any tick");
+    require(g_reach.max_grip_m <= 0.10, "matron arm reach: the ankle in her fingers is where her hand is");
+    std::cout << "PASS scraperx_sim matron arm reach " << group << ": max_m=" << g_reach.max_m
+              << " grip_m=" << g_reach.max_grip_m << "\n";
+    g_reach = ArmReach{};
+}
+
+void tick(Simulation &s) {
+    (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    track_arm_reach(s);
+}
 
 bool steer(Simulation &s, const double x, const double z, const bool sprint) {
     const auto p = s.snapshot().player_position;
@@ -748,6 +803,7 @@ void run_matron_grab() {
         std::cout << "PASS scraperx_sim matron regrab: blocked " << Matron::kRegrabAfterTearS << " s, grabbed at "
                   << grabbed_at << " s\n";
     }
+    require_arm_reach("matron-grab");
 }
 
 void run_matron_arm() {
@@ -942,6 +998,7 @@ void run_matron_arm() {
                 "matron two tears: the run restarts from the last save, whole");
         std::cout << "PASS scraperx_sim matron two tears: regrab_after_s=" << second_grab_s - set_down_s << "\n";
     }
+    require_arm_reach("matron-arm");
 }
 
 // The fatality (the owner, 2026-10-28; sim/matron.hpp kFatalTargetS): her
@@ -978,7 +1035,7 @@ struct FatalRun {
     int hang_ticks = 0;
     bool hand_out = true;         // her hand out and on him every tick of the hang
     double hand_to_ankle = 0.0;   // most: her hand to the held ankle point, in the hang
-    double ankle_to_feet = 0.0;   // most: the held ankle point to his body's feet end, in the hang
+    double ankle_to_feet = 0.0;   // most: the held point to the thigh her hand takes (kHeldBelowMiddleM), in the hang
     double least_down = 1.0;      // least: how far his body's up points down (1 straight down), in the hang
     double least_past = 1.0e9;    // least: how far out past the edge his body hangs, in the hang
     // His window (the hang's first kFatalHangWindowS): its ticks, the most
@@ -1106,14 +1163,17 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
             ++r.hang_ticks;
             r.hand_out = r.hand_out && p.matron_hand_present && p.held_by_matron;
             r.hand_to_ankle = std::max(r.hand_to_ankle, dist3(p.matron_hand, p.held_ankle));
-            // His body's up in the world, from its rotation; its feet end 0.82
-            // m down it from its middle (the ankle the world gives her).
+            // His body's up in the world, from its rotation; the thigh her
+            // hand takes, Matron::kHeldBelowMiddleM down it from its middle
+            // (a real arm's hold: the owner, 2026-10-29, her arm was "like 12
+            // feet long"; by the ankle a 0.6 m arm drags his head on her deck).
             const double qx = p.player_rot_x, qy = p.player_rot_y, qz = p.player_rot_z, qw = p.player_rot_w;
             const double ux = 2.0 * (qx * qy - qw * qz);
             const double uy = up_y(p);
             const double uz = 2.0 * (qy * qz + qw * qx);
-            const scraperx::sim::Vector3 feet{p.player_position.x - 0.82 * ux, p.player_position.y - 0.82 * uy,
-                                              p.player_position.z - 0.82 * uz};
+            const double held = static_cast<double>(Matron::kHeldBelowMiddleM);
+            const scraperx::sim::Vector3 feet{p.player_position.x - held * ux, p.player_position.y - held * uy,
+                                              p.player_position.z - held * uz};
             r.ankle_to_feet = std::max(r.ankle_to_feet, dist3(p.held_ankle, feet));
             r.least_down = std::min(r.least_down, -uy);
             r.least_past = std::min(r.least_past, past_edge(r, p.player_position));
@@ -1206,7 +1266,7 @@ void run_matron_fatality() {
                 "matron fatality hang: his second catch at the act's rail, held out over the drop the whole window");
         require(r.hand_out && r.hand_to_ankle <= 0.10,
                 "matron fatality hang: her hand within 0.10 m of the held ankle every tick of the hang");
-        require(r.ankle_to_feet <= 0.20, "matron fatality hang: the held ankle point is his body's feet end");
+        require(r.ankle_to_feet <= 0.20, "matron fatality hang: the held point is the thigh her hand takes, a point of his body");
         require(r.least_down >= 0.8, "matron fatality hang: upside down every tick of the hang");
         // His window (the owner, 2026-10-28: a punch of his landed in it frees
         // him): held close, out past the edge, within his punch's reach; over
@@ -1441,6 +1501,7 @@ void run_matron_fatality() {
                 "matron fatality save: a load mid-hang gives what the death gave (deterministic)");
         std::cout << "PASS scraperx_sim matron fatality save: load mid-hang == the death's restore\n";
     }
+    require_arm_reach("matron-fatality");
 }
 
 // One good arm, on a built route (a stub out from a wall, the wall's lip

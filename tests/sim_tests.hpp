@@ -42,6 +42,11 @@ inline constexpr float kLungePowerW = 65000.0F;
 inline constexpr float kMassKg = 220.0F;
 inline constexpr float kLegTravelM = 0.85F;      // a push-off's stroke (0.40 m until the stronger Matron)
 inline constexpr float kLaunchDvMps = 6.30F;     // the take-off speed a push-off may earn (3.80 m/s until the stronger Matron)
+// Her arm, as her body is drawn (godot/presentation/life/matron/matron_rig.json:
+// upper arm 0.262 m, forearm 0.248 m, hand 0.228 m): no hand of hers is ever
+// further from her shoulder than this (the owner, 2026-10-29: "the matron's arm
+// is like 12 feet long").
+inline constexpr float kArmLengthM = 0.738F;
 } // namespace law
 
 inline bool nearly_equal(const double a, const double b, const double epsilon = 1.0e-12) {
