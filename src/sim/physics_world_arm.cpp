@@ -99,6 +99,9 @@ void Simulation::PhysicsWorld::sever_arm(JPH::BodyInterface &bodies) noexcept {
     settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
     settings.mMassPropertiesOverride.mMass = Matron::kArmMassKg;
     settings.mAllowSleeping = false;
+    // Flesh, not a pipe: a limb on the steel comes to rest, it does not roll
+    // on for metres (and off the deck's edge) as a bare capsule would.
+    settings.mAngularDamping = 2.0F;
     settings.mUserData = Simulation::kSeveredArmEntityId;
     settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
     severed_arm_id_ = bodies.CreateAndAddBody(settings, JPH::EActivation::Activate);
