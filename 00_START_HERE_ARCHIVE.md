@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-10-29 | Said in chat, on finding reference voices for her: *"We shouldn't be trying to find real voices because it's not gonna work. They need to be all AI generated."* | `00_START_HERE.md` rule 43 |
 | 2026-10-29 | Said in chat, on her first draft lines: *"Yeah, I want to see some lines from her. And they need to be adult, creepy, ominous, profane, vulgar, ugly, nasty weird type shit"*; then *"you know exactly what we're looking for"*; then *"I liked them all, so let's have variety. We don't want repetitive sounds. That ruins everything. We want a deeply immersive, engaging environment."* | `00_START_HERE.md` rule 43 |
 | 2026-10-29 | Said in chat: *"it's not just a third person view. It is supposed to be a whole cinematic, dramatic experience."* | `00_START_HERE.md` rule 33 |
 | 2026-10-29 | Said in chat, after a helper was told to restage her holds any real way it likes: *"Yes, that is the way I want to code, where the helpers get to pick any way of doing something within our constraints and such, just like you did here that helps me tremendously"* | `00_START_HERE.md` rule 60 |
