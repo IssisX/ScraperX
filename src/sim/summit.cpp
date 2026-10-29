@@ -331,13 +331,16 @@ void Summit::build_ending() {
     }
     // A drive shaft brings the brake outboard of the load. Working beside
     // the beam lets the climber see both bearings while the steel settles.
+    // Keep the wheel and its supports clear of the deck's south-side walk
+    // (z=-185) to the parachute arm. The handle is reached from that walk.
     constexpr float brake_dx = kWorkX - kBeamX;
+    constexpr float brake_z = -0.25F;
     steel.push_back(box(Vec3(-brake_dx * 0.5F, 0.08F, 0.08F),
-                        Vec3(brake_dx * 0.5F, 1.2F, -0.75F), Material::Steel, 0));
+                        Vec3(brake_dx * 0.5F, 1.2F, brake_z), Material::Steel, 0));
     // The shaft bears on a pedestal at either end, rather than floating.
-    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(0, 0.6F, -0.75F), Material::Steel, 0));
-    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(brake_dx, 0.6F, -0.75F), Material::Steel, 0));
-    steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(brake_dx, 1.2F, -0.75F), Material::Yellow, 0));
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(0, 0.6F, brake_z), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(brake_dx, 0.6F, brake_z), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(brake_dx, 1.2F, brake_z), Material::Yellow, 0));
     ending_frame_ = kit_.add_body(kEndingFrameEntity, steel, origin, Quat::sIdentity(), 0, 0.8F);
     const std::vector<Part> beam{
         box(Vec3(3.35F, 0.06F, 0.3F), Vec3(0, -0.24F, 0), Material::Steel, 300),

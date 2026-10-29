@@ -69,3 +69,8 @@ unrigged again. Radio and the final descent replay per launch.
   the four new summit bodies. Its original 595-body hash still matched. Extended the guard
   to require the exact four new suffix entities after the existing eight; did not relax
   the old prefix, hash, zipline or loose-stock assertions. Rerun pending.
+- 15:56: CI 40947568828 passed host compilation, then the original summit arm-walk
+  assertion failed. The newly outboard brake pedestal occupied the original
+  south-side walking line at z=-185. Its wheel/shaft/pedestals are now 0.5 m
+  farther north, away from that line, with the work point and gameplay commands
+  preserved. The original arm-walk check remains intact; current proof pending.
