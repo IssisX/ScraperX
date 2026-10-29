@@ -1940,8 +1940,11 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	(_p["torso"] as Node3D).rotation.z = side_bend * 0.5 + hold_bend
 	(_p["sh_l"] as Node3D).scale = Vector3.ONE * limb_scale
 	(_p["sh_r"] as Node3D).scale = Vector3.ONE * limb_scale
-	(_p["hp_l"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
-	(_p["hp_r"] as Node3D).scale = Vector3.ONE * (1.0 + 0.2 * (limb_scale - 1.0))
+	# her legs keep their own length (the Turn's long limbs are her arms): a
+	# leg drawn longer than her rest skeleton lifts her soles off the floor
+	# the sim stands her on and slides her planted feet
+	(_p["hp_l"] as Node3D).scale = Vector3.ONE
+	(_p["hp_r"] as Node3D).scale = Vector3.ONE
 	torso.rotation.x = pitch
 	neck.rotation = Vector3(head_pitch * 0.4, head_back, head_roll * 0.3)
 	head.rotation = Vector3(head_pitch * 0.6 - pitch * 0.25, _head_yaw if state == STATE_SEARCHING or still_on_post else yaw_to_player * (1.0 if clinging else 0.6 if state == STATE_HUNTING else 0.0), head_roll * 0.7)

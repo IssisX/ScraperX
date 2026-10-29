@@ -282,6 +282,16 @@ const CLAIM_HAND := 16      # her hand reaching to a climb's hold (or its target
 const CLAIM_HANG := 32      # her body hung from her hands (rungs, pipe, line)
 const CLAIM_BRACE := 64     # her feet against her pipe's riser
 var claims := 0
+# Her feet held where they stood (world points) while she stands still on her
+# floor, each with the yaw she had when it was put down.
+var _stand_pins := {}
+const PIN_MPS := 0.2               # faster than this her gait has her feet
+const PIN_SLIDE_M := 0.25          # a pose that has a foot this far off its pin steps it there
+const PIN_TURN_RAD := 0.5          # turned this far on a foot, it is put down afresh
+const PIN_STEP_S := 0.3            # such a step, lifted and put down, takes this long
+const PIN_STEP_LIFT_M := 0.1
+const HANG_REACH := 0.9            # her hand to its grip within this much of her arm's length
+const HANG_MAX_M := 1.3            # her body hung (or crouched) toward a grip no farther than this
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
@@ -558,6 +568,89 @@ func govern() -> void:
 		_govern_pos[j] = at
 
 
+# Her hand on a grip the simulation has (a rung, the pipe, a rail): her body
+# drawn toward it, as far as it takes for that arm (side `s`) to reach it
+# (HANG_REACH of its length; never past HANG_MAX_M), hung from it when it is
+# over her and crouched to it when it is under her. The simulation's grip is
+# where her hand is; her drawn arm is shorter than the reach her capsule is
+# given, so it is her body that comes to the hand, never the hand that stops
+# short of the steel. Feet on a floor stay where they are (her knees bend).
+func _hang_to(s: String, target: Vector3, supported: bool) -> void:
+	var sh := _gpos("sh_" + s)
+	var el := _gpos("el_" + s)
+	var arm := sh.distance_to(el) + el.distance_to(_gpos("wr_" + s))
+	var need := sh.distance_to(target) - HANG_REACH * arm
+	if need <= 0.0 or arm < 1.0e-4:
+		return
+	var feet := [_gpos("an_l"), _gpos("an_r")]
+	_shift_bone_global("body", (target - sh).normalized() * minf(need, HANG_MAX_M))
+	if supported:
+		_reach_chain("hp_l", "kn_l", "an_l", feet[0], 1.0, "hang_an_l")
+		_reach_chain("hp_r", "kn_r", "an_r", feet[1], 1.0, "hang_an_r")
+
+
+# Standing still on her floor, her feet stay where they were put down: each
+# ankle held to its world point (her knees and hips take her sway and her
+# pose), stepped afresh when her pose has it far off or she has turned on it.
+func _pin_feet(data: Dictionary) -> void:
+	if float(data.get("speed", 0.0)) > PIN_MPS or bool(view.fresh_frame):
+		_stand_pins.clear()
+		return
+	var xf := skel.global_transform
+	var inv := xf.affine_inverse()
+	var yaw := xf.basis.get_euler().y
+	var dt: float = float(view._dt)
+	var targets := {}
+	var drop := 0.0
+	for s in ["l", "r"]:
+		var an: String = "an_" + s
+		var here: Vector3 = xf * _gpos(an)
+		var turn: Basis = xf.basis * skel.get_bone_global_pose(bone_idx[an]).basis
+		var pin: Dictionary = _stand_pins.get(s, {})
+		if pin.is_empty():
+			pin = {"at": here, "yaw": yaw, "q": turn.get_rotation_quaternion(), "step": -1.0, "from": here}
+		elif float(pin["step"]) < 0.0 and (here.distance_to(pin["at"]) > PIN_SLIDE_M or absf(angle_difference(yaw, float(pin["yaw"]))) > PIN_TURN_RAD):
+			# a step: lifted off its pin and put down where her pose has it
+			pin["step"] = 0.0
+			pin["from"] = pin["at"]
+		var target: Vector3 = pin["at"]
+		if float(pin["step"]) >= 0.0:
+			var u := minf(1.0, float(pin["step"]) + dt / PIN_STEP_S)
+			pin["step"] = u
+			var e := u * u * (3.0 - 2.0 * u)
+			target = (pin["from"] as Vector3).lerp(here, e) + Vector3(0.0, PIN_STEP_LIFT_M * sqrt(sin(PI * u)), 0.0)
+			if u >= 1.0:
+				pin["at"] = here
+				pin["yaw"] = yaw
+				pin["q"] = turn.get_rotation_quaternion()
+				pin["step"] = -1.0
+				target = here
+		_stand_pins[s] = pin
+		targets[s] = inv * target
+		# a pin out of her leg's reach (her hips lifted or swung off it): her
+		# body down until it is in reach, never the foot pulled off it
+		var hip := _gpos("hp_" + s)
+		var kn := _gpos("kn_" + s)
+		var leg := hip.distance_to(kn) + kn.distance_to(_gpos(an))
+		var off: Vector3 = targets[s] - hip
+		var h2 := pow(0.97 * leg, 2.0) - (off.x * off.x + off.z * off.z)
+		if h2 > 0.0 and -off.y > sqrt(h2):
+			drop = maxf(drop, -off.y - sqrt(h2))
+	if drop > 0.0:
+		_lift_body(-minf(drop, 0.3))
+	for s in ["l", "r"]:
+		var an: String = "an_" + s
+		var pin: Dictionary = _stand_pins[s]
+		_reach_chain("hp_" + s, "kn_" + s, an, targets[s], 1.0, "pin_" + an)
+		if float(pin["step"]) >= 0.0:
+			continue
+		# and the foot turned as it was put down (heel and toe where they stood)
+		var now_q := (xf.basis * skel.get_bone_global_pose(bone_idx[an]).basis).get_rotation_quaternion()
+		var want_q: Quaternion = pin["q"]
+		var sk_q := xf.basis.get_rotation_quaternion()
+		_turn_bone_global(an, sk_q.inverse() * (want_q * now_q.inverse()) * sk_q)
+
+
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
@@ -573,6 +666,8 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		return
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
+	if climbing or on_line:
+		_stand_pins.clear()
 	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
 	# What the simulation itself has her standing on and holding (its
 	# contact_* facts, matron_contact.cpp): a limb is planted, and her body
@@ -623,6 +718,8 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		if wf > 0.001:
 			_plant_limbs(data, wf, feet_free)
 		var wc := float(view._w_climb) if view != null else 1.0
+		if not truth or bool(data.get("contact_hand_held", false)):
+			_hang_to("r", skel.global_transform.affine_inverse() * hand, supported and truth)
 		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
 		claims |= CLAIM_HAND
 		# On a two-handed move the left wrist goes to a second hold
@@ -654,8 +751,10 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		into.y = 0.0
 		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
 		_ride(0.0)
-		_reach("r", inv * (grip + side * 0.08), wp)
-		_reach("l", inv * (grip - side * 0.08), wp)
+		# her two hands side by side on it, the grip between them
+		_hang_to("r", inv * grip, supported)
+		_reach("r", inv * (grip + side * 0.035), wp)
+		_reach("l", inv * (grip - side * 0.035), wp)
 		claims |= CLAIM_HAND | CLAIM_HANG
 		if bool(data.get("contact_braced", false)):
 			var brace: Vector3 = data["contact_brace"]
@@ -681,6 +780,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		return
 	if airborne or feet_free:
 		_ride(0.0)
+		_stand_pins.clear()
 	else:
 		# feet on her floor: the body rides up or down to the lower foot
 		_ride(clampf(-_lowest_foot(), -0.15, 0.3))
@@ -689,6 +789,11 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		return
 	if wf > 0.001:
 		_plant_limbs(data, wf, feet_free)
+	# standing still, on her feet or part down on all fours, her feet stay put
+	if not (airborne or feet_free):
+		_pin_feet(data)
+	else:
+		_stand_pins.clear()
 	if down_mask != 0:
 		claims |= CLAIM_PLANTS
 	# Her hand on the climber's ankle, and in the rip her other on his arm

@@ -59,7 +59,6 @@ CHECKS = ("stretch_arm", "stretch_leg", "grip_hold", "grip_climb", "plant", "hai
 EXPECTED = {
     "stretch_arm": "exit item 4, holds at a real arm's length (PR #37)",
     "grip_hold": "exit item 4, holds at a real arm's length (PR #37)",
-    "stretch_leg": "no exit item yet: her legs are drawn 6% over (reported 2026-10-29)",
     "grip_climb": "no exit item yet: her drawn hands are off the climb's grip (reported 2026-10-29)",
     "plant": "no exit item yet: a foot slides up to 8.5 cm while she is nearly still (reported 2026-10-29)",
     "hair": "exit item 10, hair",
