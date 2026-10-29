@@ -175,7 +175,8 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	_step_beats(hold, delta)
 	# The let-go over the drop: its count rises once.
 	var release := int(hold.get("fatal_release_beat", 0))
-	if _release_seen < 0:
+	if _release_seen < 0 or release < _release_seen:
+		# (a new run builds her again, her count from 0)
 		_release_seen = release
 	if release > _release_seen:
 		_release_seen = release
