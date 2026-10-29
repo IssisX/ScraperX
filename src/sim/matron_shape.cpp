@@ -17,10 +17,11 @@
 //    stock's hands, her journey's support probe) reads what it did, and her
 //    standing families keep their lowest point at her soles (kStandCentre
 //    under her middle);
-//  - a switch is made only where the new capsule fits (shape_fits, a collide
-//    query at her middle with the steel and every other body but hers and
-//    the player's); otherwise she keeps the shape she has and her own
-//    movement takes her to where it fits. Nothing here moves her: no force,
+//  - every capsule stands on her soles about her middle's axis, so a lower
+//    one is inside the one she has and is taken at once; a taller one only
+//    where it fits (stance_fits: a collide query at her middle with the steel
+//    and every body, the player's too); otherwise she keeps the shape she has
+//    and her own movement takes her to where it fits. Nothing here moves her: no force,
 //    no velocity, no position is written.
 // Down (lie_down, stand_up) keeps its own lying and kneeling shapes.
 
@@ -165,7 +166,13 @@ void Matron::step_stance(const float dt) {
         const bool family_change = want != stance_;
         if (have.GetPtr() != target && (!family_change || stance_want_s_ >= kStanceDwellS || on_planning_shape())) {
             const RVec3 at = bodies.GetPosition(body_);
-            if (shape_fits(target, at)) {
+            // Every stance capsule stands on her soles about her middle's
+            // axis with her radius: one no taller than hers is inside it and
+            // is taken at once; a taller one only where all of it is free of
+            // the steel and of every body, the player's too (grown into him,
+            // her body would throw him off her hand).
+            const float have_top = on_planning_shape() ? kHalfHeight : stance_capsule(stance_).by;
+            if (stance_capsule(want).by <= have_top + 1.0e-4F || stance_fits(target, at)) {
                 bodies.SetShape(body_, target, false, EActivation::Activate);
                 if (family_change) {
                     stance_ = want;
@@ -187,6 +194,16 @@ void Matron::step_stance(const float dt) {
         ++g_shape_audit.ticks;
         ++g_shape_audit.per_stance[static_cast<std::size_t>(stance_)];
         const float depth = steel_depth();
+        if (on_planning_shape()) {
+            // Not yet on a stance shape (none has fitted where she was put):
+            // her old capsule, counted apart.
+            ++g_shape_audit.planning_ticks;
+            g_shape_audit.planning_worst_m = std::max(g_shape_audit.planning_worst_m, depth);
+            steel_ticks_ = 0;
+            g_shape_audit.query_s +=
+                std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            return;
+        }
         g_shape_audit.worst_depth_m = std::max(g_shape_audit.worst_depth_m, depth);
         float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
         worst = std::max(worst, depth);
@@ -201,6 +218,29 @@ void Matron::step_stance(const float dt) {
         g_shape_audit.query_s +=
             std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     }
+}
+
+// A taller capsule's room: free of everything but her own body (sensors
+// aside), resting on a floor allowed.
+bool Matron::stance_fits(const Shape *shape, const RVec3 at) const {
+    AllHitCollisionCollector<CollideShapeCollector> hits;
+    CollideShapeSettings settings;
+    settings.mMaxSeparationDistance = 0.0F;
+    const IgnoreSingleBodyFilter not_her(body_);
+    physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F),
+                                                RMat44::sTranslation(at + RVec3(shape->GetCenterOfMass())), settings,
+                                                at, hits, {}, {}, not_her);
+    for (const CollideShapeResult &hit : hits.mHits) {
+        if (hit.mPenetrationDepth <= 0.03F) {
+            continue;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID2);
+        if (lock.Succeeded() && lock.GetBody().IsSensor()) {
+            continue;
+        }
+        return false;
+    }
+    return true;
 }
 
 // She still has the capsule her ways plan for (shape_: just up off the steel,

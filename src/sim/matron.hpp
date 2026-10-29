@@ -257,6 +257,8 @@ public:
         long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
         long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
         float worst_depth_by_stance[kStanceCount] = {};
+        long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
+        float planning_worst_m = 0.0F;
         float worst_depth_m = 0.0F;
         long switches = 0;          // family changes made
         long refused = 0;           // ticks a wanted shape did not fit and she kept hers
@@ -2152,6 +2154,7 @@ private:
     [[nodiscard]] const JPH::Shape *stance_shape(Stance stance, float yaw) const;
     void step_stance(float dt);
     [[nodiscard]] bool on_planning_shape() const;
+    [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
     [[nodiscard]] float steel_depth() const;
     void refresh_shape_view();
     // Off an edge she will not go, staggering or sliding on the steel: her
