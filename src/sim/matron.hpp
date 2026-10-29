@@ -250,6 +250,14 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    // Her closing on him, short of her hand's grip (rule 29: he can always
+    // recover). Within her braking distance of him her feet keep the speed she
+    // closes on him at to what her braking (kCutAccel, inside her force cap)
+    // can shed in the gap left before her body meets his:
+    // sqrt(kSafeCloseMps^2 + 2 a gap). kSafeCloseMps is a bump he stays on his
+    // feet through. kHisRadiusM is his capsule's (physics_world_tuning.hpp).
+    static constexpr float kSafeCloseMps = 1.5F;
+    static constexpr float kHisRadiusM = 0.35F;
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 

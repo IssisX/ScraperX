@@ -1220,6 +1220,28 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
         yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
     }
+    // Her closing on him before her hand has him (a chase, or her reach for
+    // the ankle): no faster than her braking can shed in the gap left before
+    // her body meets his, so a reach that misses ends in a bump, not a body
+    // check. Her feet's target only, through her feet's usual limits; once
+    // her grip closes, holds and carries are their own.
+    const bool closing_on_him = !grip_on_ && (state_ == State::Hunting || state_ == State::Grab);
+    if (closing_on_him && !player_.IsInvalid() && bodies.IsAdded(player_)) {
+        const RVec3 him = bodies.GetPosition(player_);
+        Vec3 line(float(him.GetX() - at.GetX()), 0.0F, float(him.GetZ() - at.GetZ()));
+        const float apart = line.Length();
+        if (std::abs(him.GetY() - at.GetY()) < 1.4 && apart > 1.0e-3F) {
+            line /= apart;
+            const float gap = std::max(0.0F, apart - (kRadius + kHisRadiusM));
+            const float brake = std::min(kCutAccel, limits.total_force_n / kMassKg);
+            const float most = std::sqrt(kSafeCloseMps * kSafeCloseMps + 2.0F * brake * gap);
+            const Vec3 his_v = bodies.GetLinearVelocity(player_);
+            const float closing = (want - Vec3(his_v.GetX(), 0.0F, his_v.GetZ())).Dot(line);
+            if (closing > most) {
+                want -= line * (closing - most);
+            }
+        }
+    }
     if (floor) {
         // Speeding up along her heading is slow (foot_accel); planting a foot to
         // Speeding up along her heading is slow (foot_accel); planting a foot to
