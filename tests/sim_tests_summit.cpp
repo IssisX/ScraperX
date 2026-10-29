@@ -190,3 +190,97 @@ void run_summit_arm() {
     }
 }
 
+
+// The crew's last beam: no test repositioning, gravity retained, and every
+// operation uses the same native commands as the touch controls.
+void run_summit_ending() {
+    Simulation s(InitialSpawn::Summit);
+    (void)s.advance_frame(1.0);
+    const auto beam = s.kit_body_index(Summit::kLastBeamEntity);
+    require(beam < s.kit_body_count(), "ending: the last beam exists in the player's world");
+    const auto beam_y = [&]() { return s.kit_body_position(static_cast<std::uint32_t>(beam)).y; };
+    const double hanging_y = beam_y();
+    const auto hanging_save = s.save_game();
+    require(!s.request_summit_unrig(), "ending: a hanging load cannot be unrigged");
+    (void)s.set_summit_lower(true);
+    (void)s.advance_frame(12.0);
+    (void)s.set_summit_lower(false);
+    require(std::abs(beam_y() - hanging_y) < 0.02 && s.summit_state().chain_paid_m == 0.0 &&
+                !s.summit_state().beam_seated && s.summit_state().ending == 0,
+            "ending falsifier: time, summit arrival and remote commands cannot seat the beam");
+    require(walk_to(s, 8.0, -185.0, 5.0, 0.15) &&
+                walk_to(s, Summit::kBeamX, Summit::kWorkZ, 12.0, 0.12),
+            "ending: walk to the chain block through the existing summit");
+    (void)s.set_move_input(0, 0);
+    require(s.summit_state().work_in_reach, "ending: the hands can reach the chain block");
+    (void)s.set_summit_lower(true);
+    (void)s.advance_frame(2.0);
+    (void)s.set_summit_lower(false);
+    (void)s.advance_frame(1.0);
+    const double halfway_y = beam_y();
+    const double paid = s.summit_state().chain_paid_m;
+    require(paid > 0.35 && paid < 0.45 && hanging_y - halfway_y > 0.3 &&
+                !s.summit_state().beam_seated && !s.request_summit_unrig(),
+            "ending: easing the chain lowers the real load, but a partial lower is no finish");
+    (void)s.advance_frame(2.0);
+    require(std::abs(beam_y() - halfway_y) < 0.02 && s.summit_state().chain_paid_m == paid,
+            "ending: releasing the control brakes the load above its bearings");
+    (void)s.set_summit_lower(true);
+    (void)s.advance_frame(3.95);
+    (void)s.set_summit_lower(false);
+    (void)s.advance_frame(1.0);
+    require(beam_y() > Summit::kBeamSeatY + 0.005 && beam_y() < Summit::kBeamSeatY + 0.025 &&
+                s.summit_state().chain_tension_n > 8000.0 && !s.summit_state().beam_seated &&
+                s.summit_state().ending == 0 && !s.request_summit_unrig(),
+            "ending falsifier: a motionless load just above both bearings is still hanging, not seated");
+    (void)s.set_summit_lower(true);
+    (void)s.advance_frame(3.0);
+    (void)s.set_summit_lower(false);
+    const auto seated = s.summit_state();
+    std::cout << "  ending: beam_y=" << beam_y() << " paid=" << seated.chain_paid_m
+              << " left=" << seated.left_bearing << " right=" << seated.right_bearing
+              << " pull=" << seated.chain_tension_n << " N\n";
+    require(seated.beam_seated && seated.left_bearing && seated.right_bearing && seated.ending == 1 &&
+                std::abs(beam_y() - Summit::kBeamSeatY) < 0.02 && seated.chain_tension_n < 100.0,
+            "ending: both flanges rest on real steel, motion settled and the chain unloaded");
+    require(s.request_summit_unrig(), "ending: free the slack sling with the second player action");
+    (void)s.advance_frame(3.0);
+    require(s.summit_state().sling_free && s.summit_state().beam_seated && s.summit_state().ending == 2 &&
+                std::abs(beam_y() - Summit::kBeamSeatY) < 0.02,
+            "ending: the beam stays seated after both load-bearing ropes are removed");
+    require(walk_to_arm(s) && walk_to(s, Summit::kArmEndX + 6.0, Summit::kArmCentreZ, 14.0, 0.15),
+            "ending: walk to the existing parachute runway");
+    require(hold_stick(s, -1, 0, -1, 0, 6.0, [](const Snapshot &state) {
+                return !state.player_grounded && state.player_position.x < Summit::kArmEndX;
+            }), "ending: jump clear of the tower by player input");
+    bool canopy_seen = false;
+    bool stowed = false;
+    bool stow_refused_finish = false;
+    for (int tick = 0; tick < 260 * 90; ++tick) {
+        const auto now = s.snapshot();
+        const bool stow_this_tick = s.summit_state().ending == 3 && !stowed;
+        if (stow_this_tick) {
+            require(s.request_parachute(), "ending: the real chute control stows the canopy");
+            stowed = true;
+        } else if (now.player_linear_velocity.y < -12.0 && !now.parachute_deployed) {
+            (void)s.request_parachute();
+        }
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        canopy_seen = canopy_seen || s.summit_state().ending == 3;
+        if (stow_this_tick) {
+            require(!s.snapshot().parachute_deployed && s.summit_state().ending == 2, "ending falsifier: a stowed canopy clears the flight proof");
+            stow_refused_finish = true;
+        }
+        if (s.snapshot().player_grounded || s.snapshot().death_count != 0) break;
+    }
+    const auto home = s.snapshot();
+    require(canopy_seen && stow_refused_finish && home.player_grounded && home.player_position.y < 5.0 && home.death_count == 0 &&
+                s.summit_state().ending == 4,
+            "ending: only the live canopy descent to ground reaches the quiet end card");
+    require(s.load_game(hanging_save.data(), hanging_save.size()), "ending restore: load the unfinished summit save");
+    (void)s.advance_frame(2.0);
+    require(!s.summit_state().sling_free && s.summit_state().ending == 0 &&
+                !s.summit_state().beam_seated && std::abs(beam_y() - hanging_y) < 0.02,
+            "ending restore: a previous unrig cannot leave the restored hanging load without its chains");
+    std::cout << "PASS scraperx_sim summit-ending: physical beam, slack unrig, canopy, home, restore\n";
+}

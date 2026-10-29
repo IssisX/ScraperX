@@ -1331,3 +1331,92 @@ func _pipe_drum_onto_her(device: int) -> bool:
 		return _fail("the drop killed someone (she alive %s, deaths %d)" % [str(_matron_state()["alive"]),
 			int(_native().get_death_count())])
 	return true
+
+
+# The last beam, the foreman's admission and the way home. Only the initial
+# summit spawn is a fixture; every later move is real touch input.
+func _summit_ending() -> bool:
+	_act_running = true
+	_act_draw(false)
+	var ok: bool = await _play_summit_ending()
+	_act_draw(true)
+	_act_running = false
+	return ok
+
+
+func _play_summit_ending() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0):
+		return _fail("ending: the summit spawn never stood on the deck")
+	await _seconds(2.0)
+	if int(_native().get_summit_state()["ending"]) != 0:
+		return _fail("ending: arrival alone completed the beam")
+	if not (await _go(device, Vector2(8.0, -185.0), 0.15, 6.0) and
+			await _go(device, Vector2(-7.0, -185.25), 0.12, 12.0)):
+		return _fail("ending: the walk to the chain block stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	await _tilt(0.3)
+	if not await _offered(&"summit_lower", "LOWER LAST BEAM"):
+		return _fail("ending: the chain block did not offer LOWER LAST BEAM")
+	await _pose("ending_hanging_beam")
+	var at := _center(&"action")
+	_touch(4, at, true)
+	await _seconds(2.0)
+	_touch(4, at, false)
+	await _seconds(0.6)
+	var paid := float(_native().get_summit_state()["chain_paid"])
+	if paid < 0.3 or paid > 0.5 or bool(_native().get_summit_state()["beam_seated"]):
+		return _fail("ending: partial lowering was not physical (paid %.3f)" % paid)
+	await _seconds(1.0)
+	if absf(float(_native().get_summit_state()["chain_paid"]) - paid) > 0.005:
+		return _fail("ending: the chain kept paying out after the thumb lifted")
+	at = _center(&"action")
+	_touch(4, at, true)
+	var seated: bool = await _wait_until(func() -> bool:
+		return _ctx()["action"]["id"] == &"summit_unrig", 8.0)
+	_touch(4, at, false)
+	if not seated:
+		return _fail("ending: the beam never unloaded both chains: %s" % str(_native().get_summit_state()))
+	var state: Dictionary = _native().get_summit_state()
+	if not (bool(state["left_bearing"]) and bool(state["right_bearing"]) and bool(state["beam_seated"])):
+		return _fail("ending: FREE SLING offered without two physical bearings")
+	if not await _wait_until(func() -> bool: return _main._radio.text == _main._radio.LINES[&"last_beam"], 1.0):
+		return _fail("ending: the foreman's final caption never followed seating")
+	var said := int(_main._radio.lines_said)
+	await _pose("ending_seated_foreman")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_summit_state()["sling_free"]), 0.5):
+		return _fail("ending: FREE SLING did not release the unloaded hoist")
+	await _seconds(2.0)
+	if not bool(_native().get_summit_state()["beam_seated"]) or int(_native().get_summit_state()["ending"]) != 2:
+		return _fail("ending: the beam lost its steel after unrigging")
+	await _tilt(0.0)
+	if not (await _go(device, Vector2(-10.5, -185.0), 0.2, 8.0) and
+			await _go(device, Vector2(-11.0, -187.5), 0.15, 4.0) and
+			await _go(device, Vector2(SUMMIT_ARM_END_X + 6.0, -187.5), 0.2, 14.0)):
+		return _fail("ending: the existing runway could not be reached")
+	await _face(Vector2(-1.0, 0.0))
+	await _pose("ending_city")
+	_move(device, 1.0)
+	var off: bool = await _wait_until(func() -> bool:
+		return not bool(_ctx()["grounded"]) and _position().x < SUMMIT_ARM_END_X - 0.5, 4.0)
+	_move(device, 0.0)
+	if not off:
+		return _fail("ending: the run never cleared the runway")
+	if not await _wait_until(func() -> bool:
+		return _main._touch.is_button_shown(&"chute") and -_velocity().y > 12.0, 4.0):
+		return _fail("ending: the falling player could not deploy a chute")
+	_tap(0, _center(&"chute"))
+	if not await _wait_until(func() -> bool: return int(_native().get_summit_state()["ending"]) == 3, 2.0):
+		return _fail("ending: the native never observed the live canopy descent")
+	await _pose("ending_parachute")
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 160.0):
+		return _fail("ending: the parachute never reached the ground")
+	await _frames(2)
+	if int(_native().get_death_count()) != 0 or int(_native().get_summit_state()["ending"]) != 4:
+		return _fail("ending: the end card was not earned by a living descent")
+	if int(_main._radio.lines_said) != said:
+		return _fail("ending: the final radio line repeated during the descent")
+	await _pose("ending_home")
+	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
+	return true

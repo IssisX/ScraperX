@@ -73,6 +73,8 @@ public:
         // (the device's on the sling: the magnet on or off, the spreader's
         // LOCK or UNLOCK), one-shot; the hoist's buttons, held (-1 lowering ..
         // 1 raising). Working it, the stick sends the hook.
+        bool summit_lower = false;
+        bool summit_unrig = false;
         bool yard_crane_take = false;
         bool yard_crane_operate = false;
         bool yard_crane_device = false;

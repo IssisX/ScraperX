@@ -112,6 +112,7 @@ const SCENARIOS := {
 	# swung out over the drop, four hang-ups and the block.
 	"touch_c7": 36,
 	"touch_summit": 42,
+	"touch_summit_ending": 42,
 	# The Matron on the 154 m deck: wake her, creep away while she strains,
 	# run her over the rotten catwalk (look_matron_*: renders only, not in CI).
 	"touch_matron": 11,
@@ -433,6 +434,8 @@ func _run() -> void:
 			ok = await _c6(InputRouter.Device.TOUCH)
 		"touch_c7":
 			ok = await _c7(InputRouter.Device.TOUCH)
+		"touch_summit_ending":
+			ok = await _summit_ending()
 		"touch_summit":
 			ok = await _summit(InputRouter.Device.TOUCH)
 		"touch_matron":

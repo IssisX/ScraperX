@@ -19,6 +19,8 @@
 
 #include "sim/mechanism_kit.hpp"
 
+#include <array>
+
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 
@@ -71,7 +73,31 @@ public:
     static constexpr float kLampSpeedRadPerS = 0.35F;
     static constexpr float kLampTorqueNm = 30000.0F;
 
+    // The overtime crew's last beam: a tandem chain block left on its
+    // erection strongback. Its two bearing stools carry it after lowering.
+    static constexpr std::uint64_t kEndingFrameEntity = 1901;
+    static constexpr std::uint64_t kLastBeamEntity = 2968;
+    static constexpr std::uint64_t kLeftBearingEntity = 1902;
+    static constexpr std::uint64_t kRightBearingEntity = 1903;
+    static constexpr float kBeamX = -7.0F;
+    static constexpr float kBeamZ = -184.0F;
+    static constexpr float kBearingTop = kDeckTop + 2.4F;
+    static constexpr float kBeamSeatY = kBearingTop + 0.3F;
+    static constexpr float kChainTop = kDeckTop + 5.0F;
+    static constexpr float kBeamLift = 1.2F;
+    static constexpr float kChainRate = 0.2F;
+    static constexpr float kChainSlack = 0.25F;
+    static constexpr float kWorkZ = -185.25F;
+    enum class Ending : std::uint8_t { Unfinished, Seated, Unrigged, Canopy, Home };
+
     struct State final {
+        Ending ending = Ending::Unfinished;
+        bool beam_seated = false;
+        bool sling_free = false;
+        bool left_bearing = false;
+        bool right_bearing = false;
+        float chain_paid_m = 0.0F;
+        float chain_tension_n = 0.0F;
         bool lit = false;
         float striker_travel_m = 0.0F;    // down from its rest
         float striker_peak_m = 0.0F;      // the deepest it has been
@@ -86,6 +112,15 @@ public:
 
     // Before the step: the lamp's motor is on once it is lit. After it: the
     // plate's angle is read, and the lamp is latched lit by it, never unlit.
+    // Appended after existing bodies, preserving their save indices.
+    void build_ending();
+    [[nodiscard]] bool work_in_reach(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] bool can_unrig() const noexcept;
+    void work(float dt, bool lower, bool unrig, bool able, JPH::RVec3 player);
+    void read_ending(float dt, bool grounded, bool chute, JPH::RVec3 player,
+                     std::uint64_t deaths);
+    // Reconcile the hoist with restored physical bodies, without moving them.
+    void restore_ending();
     void pre_step();
     void post_step();
     [[nodiscard]] const State &state() const noexcept { return state_; }
@@ -100,6 +135,14 @@ private:
     kit::BodyIndex lamp_{};
     JPH::Ref<JPH::SliderConstraint> striker_slide_;
     JPH::Ref<JPH::HingeConstraint> lamp_hinge_;
+    kit::BodyIndex ending_frame_{};
+    kit::BodyIndex last_beam_{};
+    std::array<kit::BodyIndex, 2> bearings_{};
+    std::array<JPH::Ref<kit::RopeConstraint>, 2> chains_{};
+    float bearing_seconds_ = 0.0F;
+    std::uint64_t flight_deaths_ = 0;
+    [[nodiscard]] bool bearing(int side) const;
+    void rig_chains(float slack);
     State state_{};
 };
 

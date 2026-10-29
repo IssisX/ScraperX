@@ -420,6 +420,8 @@ func _process(delta: float) -> void:
 	# A hand line (the pitman lift's) is hauled while ACTION is held.
 	_hauling = bool(intent.get("action_held", false)) and _ctx.get("action", {}).get("id", &"") == &"haul"
 	_native.set_lift_haul(_hauling)
+	_native.set_summit_lower(bool(intent.get("action_held", false)) and
+		_ctx.get("action", {}).get("id", &"") == &"summit_lower")
 	# The forklift's forks, while driving: Jump held raises, Crouch held lowers.
 	var forks := 0.0
 	if bool(_ctx.get("forklift_driving", false)):
@@ -495,6 +497,7 @@ func _process(delta: float) -> void:
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
+		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how
@@ -1105,6 +1108,10 @@ func _perform_action() -> void:
 			_native.request_release()
 		&"hook_take":
 			_native.request_hook_take()
+		&"summit_unrig":
+			_native.request_summit_unrig()
+		&"summit_lower":
+			pass # Held through the input router, like the existing hand line.
 		&"haul":
 			pass   # held, not tapped: see _process
 		&"pick_up":

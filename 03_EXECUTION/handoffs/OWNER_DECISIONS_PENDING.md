@@ -38,9 +38,9 @@ edge of the view, which makes her felt before she is seen.
 Answer: **dread**, **limbs**, **return**, **tower**, **chiller** or **governors**.
 
 **5. What happens at the top?**
-Landing on the summit gives a "THE TOP" toast and then nothing. He said the ending is his.
-Pick: the ending he already told us: seat the crew's last beam, the foreman's last line, then stop.
-Answer: **beam**, or say what you want instead.
+**Decided 2026-10-29: beam.** The owner assigned the physical last-beam task,
+the foreman's last caption, and the parachute return. Implementation and proof:
+`SUMMIT_ENDING.md`. No further choice is blocking it.
 
 **6. How far does she wreck your work?**
 He asked for her to shove stock he placed off edges and to jam machines he set. She only takes two

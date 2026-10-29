@@ -216,6 +216,8 @@ public:
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
+    bool set_summit_lower(bool held);
+    bool request_summit_unrig();
     void prepare_matron();
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();

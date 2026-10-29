@@ -553,6 +553,8 @@ void Simulation::step_fixed() noexcept {
     commands.lift_haul = lift_haul_;
     commands.forklift_action = forklift_action_;
     commands.forklift_lift = forklift_lift_;
+    commands.summit_lower = summit_lower_;
+    commands.summit_unrig = summit_unrig_;
     commands.yard_crane_take = yard_crane_take_;
     commands.yard_crane_operate = yard_crane_operate_;
     commands.yard_crane_device = yard_crane_device_;
@@ -583,6 +585,7 @@ void Simulation::step_fixed() noexcept {
     trapeze_drop_ = false;
     lift_action_ = false;
     forklift_action_ = false;
+    summit_unrig_ = false;
     yard_crane_take_ = false;
     yard_crane_operate_ = false;
     yard_crane_device_ = false;
@@ -1531,6 +1534,16 @@ BaySnapshot Simulation::bay_state() const noexcept {
 SummitSnapshot Simulation::summit_state() const noexcept {
     const auto &state = physics_world_->summit().state();
     SummitSnapshot result;
+    result.ending = static_cast<std::uint8_t>(state.ending);
+    result.beam_seated = state.beam_seated;
+    result.sling_free = state.sling_free;
+    result.left_bearing = state.left_bearing;
+    result.right_bearing = state.right_bearing;
+    result.can_unrig = physics_world_->summit().can_unrig();
+    result.chain_paid_m = state.chain_paid_m;
+    result.chain_tension_n = state.chain_tension_n;
+    const auto player = snapshot_.player_position;
+    result.work_in_reach = physics_world_->summit().work_in_reach(JPH::RVec3(player.x, player.y, player.z));
     result.lit = state.lit;
     result.striker_travel_m = state.striker_travel_m;
     result.striker_peak_m = state.striker_peak_m;
@@ -1541,6 +1554,18 @@ SummitSnapshot Simulation::summit_state() const noexcept {
 }
 
 void Simulation::light_summit() noexcept { physics_world_->summit().light(); }
+
+bool Simulation::set_summit_lower(const bool held) noexcept {
+    summit_lower_ = held;
+    return true;
+}
+
+bool Simulation::request_summit_unrig() noexcept {
+    const auto state = summit_state();
+    if (!state.work_in_reach || !state.can_unrig) return false;
+    summit_unrig_ = true;
+    return true;
+}
 
 SwingSnapshot Simulation::swing_state() const noexcept {
     const auto to_vector = [](const JPH::RVec3 p) {

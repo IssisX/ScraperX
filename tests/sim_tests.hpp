@@ -870,6 +870,7 @@ void run_workers();
 void run_c7();
 void run_summit();
 void run_summit_arm();
+void run_summit_ending();
 void run_matron();
 void run_water();
 void run_matron_pace();

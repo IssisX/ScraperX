@@ -398,6 +398,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
 
+    summit_->build_ending();
+
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
 
@@ -679,6 +681,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
 
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
+    summit_->work(delta_seconds, commands.summit_lower, commands.summit_unrig,
+                  grounded_ && traversal_state_ == TraversalState::None && carried_id_.IsInvalid() &&
+                  !matron_->holding() && !matron_->claimed(), bodies.GetPosition(player_id_));
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
@@ -913,6 +918,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             summit_deaths_ = death_count_;
         }
     }
+    summit_->read_ending(delta_seconds, grounded_, parachute_deployed_, bodies.GetPosition(player_id_), death_count_);
     if (grounded_) {
         fall_peak_speed_mps_ = 0.0F;
         parachute_deployed_ = false;
