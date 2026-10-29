@@ -249,8 +249,49 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
-    static constexpr float kSightM = 9.0F;
+    static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
+
+    // Her eyes: the sensory frame her sight is cast from (Matron::eyes). No
+    // sight of the player is had any other way: not round her, not from her
+    // knees. CHOSEN, each a human's:
+    // - where: 1.69 m over her soles standing (the rig's authored eye height,
+    //   her centre at kStandCentre 1.05 m), a face's depth forward of her
+    //   middle, turned with her head;
+    // - her head: her body's facing (yaw_), turned up to kHeadTurnRad (a neck's
+    //   70 degrees) toward a place she is looking at (look_s_);
+    // - sight: within kSightHalfFovRad either side of where her head faces
+    //   (60: the binocular field a person picks out a figure in, 120 wide),
+    //   out to kEyeRangeM. 16 m over 120 degrees covers about the floor her old 9 m
+    //   all-round sight did (268 against 254 square metres), now only where
+    //   her eyes point. The tower has no light model: range is her only dark.
+    //   Up or down her head tips as far as kHeadPitchRad (70) and the cone
+    //   goes with it: a climber straight over her head is seen.
+    // - peripheral, weaker and labeled so (Sense::Peripheral): past that, to
+    //   kPeripheralHalfFovRad (100: the edge of a person's 200-degree field),
+    //   only within kPeripheralM. It is no sighting: it turns her head and is
+    //   a lead with an age, as a sound is.
+    // Behind her (past 100 degrees) she has her ears only: his noise, and
+    // within kBreathM his breath and the steel taking his weight (hearing,
+    // labeled so; a person knows someone stands at their back).
+    static constexpr float kBreathM = 2.0F;
+    static constexpr float kEyeAboveCentreM = 0.64F;
+    static constexpr float kEyeForwardM = 0.12F;
+    static constexpr float kHeadTurnRad = 1.22F;
+    static constexpr float kSightHalfFovRad = 1.047F;
+    static constexpr float kHeadPitchRad = 1.22F;
+    static constexpr float kEyeRangeM = 16.0F;
+    static constexpr float kPeripheralHalfFovRad = 1.745F;
+    static constexpr float kPeripheralM = 4.0F;
+    // What she has of him, and how: the provenance of a lead.
+    enum class Sense : std::uint8_t { None = 0, Sight = 1, Peripheral = 2, Hearing = 3, Touch = 4 };
+    // One look at a point: unseen, at the edge of her eye, or seen.
+    enum class Glimpse : std::uint8_t { None = 0, Peripheral = 1, Sight = 2 };
+    struct Eyes {
+        JPH::RVec3 at = JPH::RVec3::sZero();
+        JPH::Vec3 forward = JPH::Vec3::sAxisZ();   // level: where her head faces
+        bool open = false;
+    };
     static constexpr float kLoseTrackSeconds = 9.0F;
     static constexpr float kSearchSeconds = 8.0F;
     // Her way to a place she searches may take kSearchTripSeconds and twice
@@ -1022,6 +1063,10 @@ public:
         float lead_x = 0.0F, lead_z = 0.0F;
         float lead_age_s = 0.0F;
         bool lead_seen = false;
+        Sense lead_sense = Sense::None;   // how she had it: sight, the edge of her eye, hearing, her hands
+        bool glimpsed = false;            // the player at the edge of her eye this tick (not a sighting)
+        float eye_x = 0.0F, eye_y = 0.0F, eye_z = 0.0F;   // her eyes (Matron::eyes)
+        float eye_yaw = 0.0F;                            // where her head faces
         bool lead_valid = false;
         std::uint32_t acoustic_queries = 0;
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
@@ -1271,6 +1316,9 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Tests only: her head and body turned to face `yaw` (a test's start: her
+    // heading, never a force or a pose of her body).
+    void face_for_test(float yaw) noexcept { yaw_ = yaw; look_s_ = 0.0F; }
     // Her home: the deck (one of her levels' floors, by its top) her locker
     // stands on, where she wakes, and where a restore puts her back. Moves
     // the locker; while she is in it, puts her level, floor and lead there.
@@ -1580,6 +1628,12 @@ private:
     void spawn_body();
     void remove_body();
     [[nodiscard]] bool sees(JPH::RVec3 from, JPH::RVec3 to) const;
+    // Her sensory frame (kEyeAboveCentreM above): where her eyes are and
+    // where her head faces. Closed out of the world, dead, or knocked about.
+    [[nodiscard]] Eyes eyes() const;
+    // One look from her eyes at `target`, out to `range`: the cone, then a
+    // real line through the world's solids.
+    [[nodiscard]] Glimpse look_at(JPH::RVec3 target, float range) const;
     // How far a sound at `from` has to carry to an ear at `to` (above); and
     // the decks (static floors) the straight line between passes through.
     [[nodiscard]] float carry_m(JPH::RVec3 from, JPH::RVec3 to) const;
@@ -1601,6 +1655,8 @@ private:
     // Her width is swept, not sampled: a post thinner than the space between
     // two lines (the trip gantry's 0.1 m legs by her post) still stops her.
     [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
+    // way_clear, and steel under her feet all along, within a step of hers.
+    [[nodiscard]] bool straight_to(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
@@ -1840,7 +1896,7 @@ private:
     void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
     // whose floor is `floor`, at that loudness.
-    void take_lead(float x, float z, float floor, float loudness, bool seen);
+    void take_lead(float x, float z, float floor, float loudness, Sense sense);
     // Back to her post if there is a way out to guard, else the patrol.
     void stand_down();
     void step_hold(float dt, JPH::RVec3 player);
@@ -2266,6 +2322,8 @@ private:
     bool lead_valid_ = false;
     mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
+    Sense lead_sense_ = Sense::None;
+    bool glimpsed_ = false;
     bool wary_ = false;
     float peer_s_ = 0.0F;
     std::uint32_t fooled_ = 0;

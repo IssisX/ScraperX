@@ -1765,6 +1765,14 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["lead_z"] = state.lead_z;
     out["lead_age_s"] = state.lead_age_s;
     out["lead_seen"] = state.lead_seen;
+    {
+        static constexpr const char *kSenses[] = {"none", "sight", "peripheral", "hearing", "touch"};
+        out["lead_sense"] = kSenses[state.lead_sense < 5 ? state.lead_sense : 0];
+    }
+    out["glimpsed"] = state.glimpsed;
+    out["eye"] = godot::Vector3(static_cast<real_t>(state.eye.x), static_cast<real_t>(state.eye.y),
+                                static_cast<real_t>(state.eye.z));
+    out["eye_yaw"] = state.eye_yaw;
     out["lead_valid"] = state.lead_valid;
     out["acoustic_queries"] = static_cast<std::int64_t>(state.acoustic_queries);
     out["rage"] = state.rage;

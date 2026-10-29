@@ -336,7 +336,7 @@ void Matron::place_for_test(const RVec3 feet) {
 }
 
 void Matron::hear_for_test(const RVec3 at) {
-    take_lead(float(at.GetX()), float(at.GetZ()), float(at.GetY()), 1.0F, false);
+    take_lead(float(at.GetX()), float(at.GetZ()), float(at.GetY()), 1.0F, Sense::Hearing);
     if (state_ == State::Shuffling || state_ == State::Guarding || state_ == State::Searching) {
         state_ = State::Hunting;
     }
@@ -407,6 +407,58 @@ bool Matron::sees(const RVec3 from, const RVec3 to) const {
         }
     }
     return false;
+}
+
+Matron::Eyes Matron::eyes() const {
+    Eyes out;
+    if (!body_in_world_ || dead_ || state_ == State::Down || state_ == State::Staggering) {
+        return out;
+    }
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    // Her head: her body's facing, turned (a neck's reach) toward what she
+    // is looking at.
+    float head = yaw_;
+    if (look_s_ > 0.0F) {
+        const float want = std::atan2(look_x_ - float(at.GetX()), look_z_ - float(at.GetZ()));
+        float off = std::remainder(want - yaw_, 2.0F * kPi);
+        off = std::clamp(off, -kHeadTurnRad, kHeadTurnRad);
+        head = yaw_ + off;
+    }
+    out.forward = Vec3(std::sin(head), 0.0F, std::cos(head));
+    out.at = at + RVec3(0.0, kEyeAboveCentreM, 0.0) + RVec3(out.forward * kEyeForwardM);
+    out.open = true;
+    return out;
+}
+
+Matron::Glimpse Matron::look_at(const RVec3 target, const float range) const {
+    const Eyes e = eyes();
+    if (!e.open) {
+        return Glimpse::None;
+    }
+    const Vec3 run(target - e.at);
+    const float length = run.Length();
+    if (length > range) {
+        return Glimpse::None;
+    }
+    if (length < 0.5F) {
+        return Glimpse::Sight;   // at her face
+    }
+    // Her head tips up or down toward it (a neck's reach); her field is a
+    // cone round where it then faces.
+    const float flat = std::hypot(run.GetX(), run.GetZ());
+    const float pitch = std::clamp(std::atan2(run.GetY(), flat), -kHeadPitchRad, kHeadPitchRad);
+    const Vec3 view(e.forward.GetX() * std::cos(pitch), std::sin(pitch), e.forward.GetZ() * std::cos(pitch));
+    const float bearing = std::acos(std::clamp(view.Dot(run / length), -1.0F, 1.0F));
+    Glimpse cone = Glimpse::None;
+    if (bearing <= kSightHalfFovRad) {
+        cone = Glimpse::Sight;
+    } else if (bearing <= kPeripheralHalfFovRad && length <= kPeripheralM) {
+        cone = Glimpse::Peripheral;
+    }
+    if (cone == Glimpse::None || !sees(e.at, target)) {
+        return Glimpse::None;
+    }
+    return cone;
 }
 
 float Matron::muffled_distance(const RVec3 from, const RVec3 to) const {
@@ -735,6 +787,29 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     return true;
 }
 
+bool Matron::straight_to(const float fx, const float fz, const float tx, const float tz) const {
+    if (!way_clear(fx, fz, tx, tz)) {
+        return false;
+    }
+    // Floor under her the whole way, within a step of the floor she stands on.
+    const IgnoreSingleBodyFilter self(body_);
+    const float length = std::hypot(tx - fx, tz - fz);
+    const int n = std::max(1, static_cast<int>(length / 0.4F));
+    for (int i = 1; i <= n; ++i) {
+        const float t = float(i) / float(n);
+        RayCastResult down;
+        const RVec3 from(fx + (tx - fx) * t, feet_y_ + 0.6F, fz + (tz - fz) * t);
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.2F, 0.0F)), down, {}, {}, self)) {
+            return false;
+        }
+        const float y = float(from.GetY()) - 1.2F * down.mFraction;
+        if (std::abs(y - feet_y_) > kStepUpM) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Matron::way_clear(const float fx, const float fz, const float tx, const float tz) const {
     const float dx = tx - fx;
     const float dz = tz - fz;
@@ -766,7 +841,7 @@ bool Matron::way_clear(const float fx, const float fz, const float tx, const flo
     return !knee_hit.HadHit();
 }
 
-void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const bool seen) {
+void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const Sense sense) {
     noise_heard_ = loudness;
     heard_x_ = x;
     heard_z_ = z;
@@ -775,7 +850,10 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     guess_climb_ = -1;
     since_heard_s_ = 0.0F;
     pursuit_s_ = 0.0F;
-    lead_seen_ = seen;
+    // Seen, or in her hands: a lead she is sure of. The edge of her eye and
+    // her ears are not.
+    lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
+    lead_sense_ = sense;
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
@@ -2237,6 +2315,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     look_s_ = std::max(0.0F, look_s_ - dt);
     sees_player_ = false;
     sees_far_ = false;
+    glimpsed_ = false;
     noise_heard_ = 0.0F;
     heard_level_ = 0.0F;
     if (dead_) {
@@ -2373,8 +2452,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const bool support_heard = player_reach >= player_carry &&
             (!support_sound.heard || loudness / std::max(player_carry, 0.1F) >=
                                      support_sound.loudness / std::max(picked_carry, 0.1F));
-        const bool support_saw = trap_ == Trap::Holding && Vec3(player - ear).Length() <= kSightM &&
-            sees(ear + RVec3(0, -0.5, 0), player - RVec3(0, 0.3, 0));
+        const bool support_saw = trap_ == Trap::Holding && look_at(player - RVec3(0, 0.3, 0), kSightM) == Glimpse::Sight;
         if (trap_ == Trap::Holding && trap_lets_go(player, dt, support_saw || support_heard)) {
             trap_ = Trap::ClimbOut;
             trap_s_ = 0.0F;
@@ -2406,11 +2484,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, false);
+            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (player_carry <= kWakeNoiseM && loudness * kFullHearingM >= player_carry) {
-            take_lead(px, pz, floor_of(float(player.GetY())), loudness, false);
+            take_lead(px, pz, floor_of(float(player.GetY())), loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         }
@@ -2446,16 +2524,26 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         // player mostly up it); heard wherever the noise carries to her.
         const bool perceivable = on_deck || player_climb >= 0;
         const float reach = on_deck ? d : std::hypot(d, float(player.GetY() - at.GetY()));
-        const bool heard = player_reach >= player_carry;
+        // Heard: his noise carried to her, or, within kBreathM of her, his
+        // breath and the steel taking his weight (still and silent).
+        const bool breath = Vec3(player - at).Length() <= kBreathM && carry_m(player, at) <= kBreathM;
+        const bool heard = player_reach >= player_carry || breath;
+        // Her eyes (eyes(): her head's height and facing, her field of view,
+        // a real line through the solids) on his body; nothing else is sight.
         bool saw = false;
-        if (perceivable && reach <= kSightM) {
-            saw = sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0));
+        bool glimpsed = false;
+        const RVec3 his_body = player - RVec3(0.0, 0.3, 0.0);
+        if (perceivable && reach <= kEyeRangeM) {
+            const Glimpse g = look_at(his_body, kEyeRangeM);
+            saw = g == Glimpse::Sight;
+            glimpsed = g == Glimpse::Peripheral;
         }
         sees_player_ = saw;
-        // The straight line across the shaft: plain sight at long range.
-        // (Low rays: a guard rail is bars, not a wall.)
+        glimpsed_ = glimpsed;
+        // The straight line across the shaft: plain sight at long range, by
+        // the same eyes.
         sees_far_ = perceivable && reach <= kCommitSightM &&
-                    (saw || sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0)));
+                    (saw || look_at(his_body, kCommitSightM) == Glimpse::Sight);
         // A sound louder at her ear than the player draws her to it instead.
         const Sound crash = pick(at, std::numeric_limits<float>::max());
         const bool crash_heard = crash.heard;
@@ -2478,7 +2566,16 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             // at most 0.3 low for a crouched player, inside every
             // floor tolerance here. A sound's lead keeps floor_of: a
             // noise's height is not a floor she can see.
-            take_lead(px, pz, float(player.GetY()) - 0.9F, heard ? loudness : 0.3F, true);
+            take_lead(px, pz, float(player.GetY()) - 0.9F, heard ? loudness : 0.3F, Sense::Sight);
+            wary_ = false;
+            state_ = State::Hunting;
+        } else if (glimpsed) {
+            // At the edge of her eye, close: no sighting. Her head turns to it
+            // and she has a lead with an age, as a sound gives her.
+            look_x_ = px;
+            look_z_ = pz;
+            look_s_ = 1.0F;
+            take_lead(px, pz, player_floor, 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2495,7 +2592,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
-                take_lead(sx, sz, sfloor, loud, false);
+                take_lead(sx, sz, sfloor, loud, Sense::Hearing);
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2508,7 +2605,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 // A fresh lead: once fooled, checked from a vantage first (on
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
-                take_lead(sx, sz, sfloor, loud, false);
+                take_lead(sx, sz, sfloor, loud, Sense::Hearing);
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -2751,7 +2848,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             } else if (wary_) {
                 // Wary: up to where she can see the place, then she looks.
                 if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
-                    sees(at + RVec3(0.0, -0.5, 0.0), RVec3(heard_x_, at.GetY() - 0.5, heard_z_))) {
+                    eyes().open && sees(eyes().at, RVec3(heard_x_, at.GetY() - 0.5, heard_z_))) {
                     state_ = State::Peering;
                     peer_s_ = 0.0F;
                 } else {
@@ -2831,14 +2928,34 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                         const Vec3 goal(heard_x_, lead_floor_, heard_z_);
                         const int foot_patch = scanned_->patch_at(feet, 0.4F);
                         const int goal_patch = scanned_->patch_at(goal, 0.4F);
-                        if (foot_patch >= 0 && foot_patch == goal_patch) {
+                        if (saw && std::abs(lead_floor_ - feet_y) <= kStepUpM && straight_to(ax, az, heard_x_, heard_z_)) {
+                            // Him in sight, a step from her floor, and the
+                            // steel straight to him clear and under her feet
+                            // all the way: straight at him (her patches'
+                            // crossings can send her round the far side).
+                            wx = heard_x_;
+                            wz = heard_z_;
+                            scan_walk = true;
+                        } else if (foot_patch >= 0 && foot_patch == goal_patch) {
                             // The spot is on the very surface under her feet.
                             wx = heard_x_;
                             wz = heard_z_;
                             scan_walk = true;
                         } else {
                             const std::vector<Vec3> path = scanned_->walk_path(feet, goal);
-                            if (path.size() > 1) {
+                            // Her patches are joined fewest-first, not
+                            // shortest: a way round the shaft to a place a
+                            // few metres off her own line is no way to it.
+                            // Far longer than the straight line, her lines
+                            // take her nearer first.
+                            float along = 0.0F;
+                            Vec3 last = feet;
+                            for (const Vec3 &p : path) {
+                                along += distance_xz(last.GetX(), last.GetZ(), p.GetX(), p.GetZ());
+                                last = p;
+                            }
+                            const float straight = distance_xz(ax, az, heard_x_, heard_z_);
+                            if (path.size() > 1 && along <= 3.0F * straight + 10.0F) {
                                 // First point she is not already standing
                                 // on: 1.2 m, as route_toward uses, not
                                 // 0.35 m. At 0.35 m a path recomputed
@@ -3094,7 +3211,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     case State::Claimed:
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
         // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+        take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
         step_hold(dt, player);
         break;
     case State::Staggering:
@@ -3502,6 +3619,8 @@ void Matron::restore(const Saved &saved) {
         traps_ = 0;
         wary_ = false;
         lead_seen_ = false;
+        lead_sense_ = Sense::None;
+        glimpsed_ = false;
         lead_valid_ = false;
         peer_s_ = 0.0F;
         look_s_ = 0.0F;
@@ -4047,6 +4166,7 @@ void Matron::stand_up() {
     heard_x_ = float(at.GetX());
     heard_z_ = float(at.GetZ());
     lead_seen_ = true;
+    lead_sense_ = Sense::Touch;   // the blow she felt
     state_ = State::Searching;
     search_s_ = 0.0F;
     search_budget_s_ = 1.0e9F;
@@ -4286,6 +4406,15 @@ void Matron::refresh_view() {
     view_.lead_z = heard_z_;
     view_.lead_age_s = since_heard_s_;
     view_.lead_seen = lead_seen_;
+    view_.lead_sense = lead_sense_;
+    view_.glimpsed = glimpsed_;
+    {
+        const Eyes e = eyes();
+        view_.eye_x = float(e.at.GetX());
+        view_.eye_y = float(e.at.GetY());
+        view_.eye_z = float(e.at.GetZ());
+        view_.eye_yaw = std::atan2(e.forward.GetX(), e.forward.GetZ());
+    }
     view_.lead_valid = lead_valid_ && since_heard_s_ <= (lead_seen_ ? kPipeChaseChangedSeconds : kAcousticMemorySeconds);
     view_.acoustic_queries = acoustic_queries_;
     view_.sees_player = sees_player_;
