@@ -489,6 +489,31 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest-touch-2.log; then exit 1; fi
 
+      # Her drawn body, not the sim's: the probe records the skeleton the renderer poses for her (and her hair)
+      # frame by frame while a scenario plays, and check.py fails on a bone drawn longer than its rest length
+      # by more than 5%, a drawn hand more than 5 cm off the grip the sim says it holds, a foot that slides
+      # more than 5 cm while she stands, and hair or skirt more than 3 mm inside her body. A known defect is
+      # an expected failure there, naming the exit-board item that fixes it. The owner, 2026-10-29: "I don't
+      # think her arms should have passed the tests. That means the tests weren't sufficient."
+      - name: Her drawn body (bones, grips, plants, hair and skirt)
+        if: matrix.shard == 'touch-2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet "numpy==2.5.3"
+          : > artifacts/godot-uitest-matron-drawn.log
+          runs=()
+          for scenario in touch_matron_act look_matron_moves look_matron_hold look_matron_fatal; do
+            timeout 600s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -s "${GITHUB_WORKSPACE}/tools/matron_probe/probe.gd" -- "--uitest=${scenario}" \
+              "--probe-out=${RUNNER_TEMP}/drawn/${scenario}" 2>&1 | tee -a artifacts/godot-uitest-matron-drawn.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest-matron-drawn.log
+            runs+=("${RUNNER_TEMP}/drawn/${scenario}")
+          done
+          python3 tools/matron_probe/check.py "${runs[@]}" --stride 10 \
+            --report artifacts/godot-uitest-matron-drawn-report.log 2>&1 | tee -a artifacts/godot-uitest-matron-drawn.log
+          grep -E "^MATRON_DRAWN PASS" artifacts/godot-uitest-matron-drawn.log
+
       - name: Upload shard touch logs
         uses: actions/upload-artifact@v4
         with:
