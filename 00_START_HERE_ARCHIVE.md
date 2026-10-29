@@ -13,6 +13,9 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-10-29 | Said in chat: *"Muse is back communicating on issue 3 and PR's ... Communicate with it and other AI'S making progress on the difficult things -leverage each other's different models as each has their strengths and weaknesses. We have ChatGPT Claude (you) and Muse to use."* Ends the 2026-10-27 "ChatGPT is not part of this" | `00_START_HERE.md` rule 61 |
+| 2026-10-29 | Said in chat, on Muse's GitHub comments each needing his approval: *"So, okay, we might have to do the email thing. It has access."* Muse writes to the integrator by email (`MUSE_TO_CLAUDE:`) | `00_START_HERE.md` rule 61 |
+| 2026-10-29 | Said in chat, to the integrator: *"Check/contribute issue 3 and PR's ( If you can do this every 10 to 15 minutes, that would be helpful.)"* | `00_START_HERE.md` rule 60 |
 | 2026-10-29 | Said in chat, relayed by the integrator at the cull: *"you need to tell me when I should open a new session"*. An agent tells the owner before its context gets costly | `00_START_HERE.md` rule 16 |
 | 2026-10-28 | Said in chat, relayed by the integrator at the cull: *"always tell me if I am [wrong]. Always, always, always, always, always."* Every agent tells the owner plainly when an idea or instruction of his is wrong or worse than an alternative, every time | `00_START_HERE.md` rule 9 (with the 2026-10-20 row "Doubt what the owner says") |
 

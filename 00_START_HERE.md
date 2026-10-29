@@ -84,12 +84,13 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 59. It's a game: weapons and violence welcome, no moralizing (10-19).
 
 **Agents and the board**
-60. Manage through issue #3 as `CLAUDE.md` says: its ASSIGNMENT BOARD holds every queue and who integrates whose work (never their own); agents work it without waiting, as thinking partners; his comments there are orders; hard jobs go out whole, never cheap work; tests are the proof, not the job; a blocker only after a real try; check #3 hourly, post only on change; other work gets its own issue; ChatGPT is not an agent here (10-22, 10-27).
-61. The master integrator seat is Claude's (assignments, landing order, merges); PE's posts are proposals (10-28).
-62. This file never names the next job: it comes from him and the board (10-22).
+60. Manage through issue #3 as `CLAUDE.md` says: its ASSIGNMENT BOARD holds every queue and who integrates whose work (never their own); agents work it without waiting, as thinking partners; his comments there are orders; hard jobs go out whole, never cheap work; tests are the proof, not the job; a blocker only after a real try; the integrator checks #3 and the PRs every 10-15 minutes, posting only on change; other work gets its own issue (10-22, 10-27, 10-29).
+61. ChatGPT, Claude and Muse all work here, each on its strengths, until we get her past authored routes (10-29: *"We have ChatGPT Claude (you) and Muse to use"*; it ends 10-27's "ChatGPT is not part of this"). Muse writes to the integrator by email (`MUSE_TO_CLAUDE:`), since each of its GitHub comments needs his approval; the integrator answers by email (`CLAUDE_TO_MUSE:`) or on #3 (10-29).
+62. The master integrator seat is Claude's (assignments, landing order, merges); PE's posts are proposals (10-28).
+63. This file never names the next job: it comes from him and the board (10-22).
 
 **Waiting on him** (talked through before anything is built; menu: `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`)
-63. Dread before she is seen, kept for later (10-27); her limbs torn off, her death and return (*"she's done this before"*), a laser welder and nail gun instead of a harpoon (10-20); tower two, earned by believable architecture only, and its property-damage climb (10-21); the chiller drop and glass tube, untouched (10-20); lift governors (plan §11).
+64. Dread before she is seen, kept for later (10-27); her limbs torn off, her death and return (*"she's done this before"*), a laser welder and nail gun instead of a harpoon (10-20); tower two, earned by believable architecture only, and its property-damage climb (10-21); the chiller drop and glass tube, untouched (10-20); lift governors (plan §11).
 
 ## Current position
 

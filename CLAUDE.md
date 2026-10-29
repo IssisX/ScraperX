@@ -64,8 +64,11 @@ Code may still make steel, air, steps and beds. The owner picks the candidates b
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
   post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  Check #3 every hour from a server-side scheduled task (it also resumes the work after a quota stop
-  or restart); post only when something changed. ChatGPT is not one of the agents.
+  The integrator checks #3 and the PRs every 10-15 minutes from a server-side scheduled task (it also
+  resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
+  and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
+  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
+  GitHub comments each need the owner's approval (10-29).
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from #3.
 
