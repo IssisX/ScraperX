@@ -3674,8 +3674,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // one walking line: its middle. The spot on it is a body, and
                 // walking onto that body shoves it into the closed side and a
                 // catch there holds it. The middle leaves the open side a way
-                // past her. A spot on another floor is unchanged, so a leap
-                // off this one still aims at that floor.
+                // past her. A place on another floor is unchanged, even where
+                // her way to it still crosses this one (its way off, a leap's
+                // take-off, lies just inside this floor's edge), so she walks
+                // off it and a leap off it still aims at that floor.
                 // The middle counts only when a ray finds that floor there,
                 // and the line to it stays clear of him by a catch. A line
                 // through him shoves him off the side (the well, past a
@@ -3685,7 +3687,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     const FloorGraph &floors = floor_graph();
                     const int stood = floor_patch_at(floors, ax, az, 0.05F, false);
                     if (stood >= 0 && floors.patches[static_cast<std::size_t>(stood)].held &&
-                        floor_patch_at(floors, wx, wz, 0.05F, false) == stood) {
+                        floor_patch_at(floors, wx, wz, 0.05F, false) == stood &&
+                        floor_patch_at(floors, tx, tz, 0.05F, false) == stood) {
                         const FloorPatch &q = floors.patches[static_cast<std::size_t>(stood)];
                         const float mx = 0.5F * (q.min_x + q.max_x);
                         const float mz = 0.5F * (q.min_z + q.max_z);
