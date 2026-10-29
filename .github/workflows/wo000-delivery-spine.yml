@@ -50,8 +50,18 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
-      - name: Verify packaged story-radio assets and provenance
-        run: python3 ci/verify_story_radio_package.py
+      - name: Verify story radio source assets and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
+
+      - name: Check branch changes against trunk rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin ScraperX-Claude
+          python3 tools/rule_check/rule_check.py origin/ScraperX-Claude HEAD
 
       - name: Restore the compiler cache
         uses: actions/cache@v4
@@ -522,6 +532,13 @@ jobs:
           # package, and nothing that would stop it installing beside the other
           # AI branches' builds. Permanent for this branch.
           .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
+
+      - name: Verify exported story-radio package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}"
 
       - name: Record evidence boundaries
         shell: bash
