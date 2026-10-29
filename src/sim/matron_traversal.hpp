@@ -389,6 +389,8 @@ public:
     [[nodiscard]] const std::vector<Ladder> &ladders() const noexcept { return ladders_; }
     [[nodiscard]] const std::vector<Pole> &poles() const noexcept { return poles_; }
     [[nodiscard]] const std::vector<Patch> &patches() const noexcept { return patches_; }
+    // Which patches she steps between on foot (walk_path's links), by patch index.
+    [[nodiscard]] const std::vector<std::vector<int>> &patch_links() const noexcept { return patch_links_; }
     [[nodiscard]] const ScanStats &stats() const noexcept { return stats_; }
     // The region whose walkable top is under these feet (within 0.3 m), or -1.
     [[nodiscard]] int region_at(JPH::Vec3 feet) const;
