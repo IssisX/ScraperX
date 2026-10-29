@@ -132,9 +132,12 @@ func build() -> void:
 const HER_DIR := "res://presentation/audio/matron/"
 # Her recordings by clip name: how many takes, each <name>_<take>.ogg. A name
 # ending _loop plays as a loop (each file's end is crossfaded into its head).
-const HER_RECORDED := {&"matron_growl_loop": 1, &"matron_growl_rage_loop": 1, &"matron_strain_loop": 1,
-	&"matron_breath": 3, &"matron_shriek": 2, &"matron_laugh": 1, &"matron_effort": 1, &"matron_hit": 1,
-	&"matron_swallow": 1, &"matron_rip": 2, &"matron_plant": 3}
+# The owner's pick (2026-10-27) is take 0 (the shriek's and the rip's two cuts:
+# takes 0 and 1); the rest, added 2026-10-29, are the other takes auditioned
+# in that round, so no recorded family of hers has fewer than 3.
+const HER_RECORDED := {&"matron_growl_loop": 3, &"matron_growl_rage_loop": 3, &"matron_strain_loop": 3,
+	&"matron_breath": 3, &"matron_shriek": 6, &"matron_laugh": 3, &"matron_effort": 3, &"matron_hit": 3,
+	&"matron_swallow": 3, &"matron_rip": 6, &"matron_plant": 3}
 
 
 func build_her() -> void:
