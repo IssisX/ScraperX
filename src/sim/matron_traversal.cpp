@@ -2015,6 +2015,19 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
                     hang_at = below;
                 }
             }
+            // Still no room: steel under the lip stands out past it (a beam
+            // or fascia under a deck's edge). She hangs farther out off the
+            // face, her arms reaching back in to the lip, no farther out than
+            // the reach that keeps a hold (revalidate).
+            for (float k = limits_.radius + 0.12F; !capsule_free(hang_at) && k <= limits_.reach_out + 1.0e-4F; k += 0.04F) {
+                RVec3 farther = at + out * k - Vec3(0.0F, limits_.hang_below_hold, 0.0F);
+                if (float(farther.GetY()) < lowest) {
+                    farther = RVec3(farther.GetX(), lowest, farther.GetZ());
+                }
+                if (capsule_free(farther)) {
+                    hang_at = farther;
+                }
+            }
             if (!capsule_free(hang_at)) {
                 fail(Failure::BlockedSweep);
                 return status_;
