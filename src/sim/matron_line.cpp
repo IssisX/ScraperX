@@ -125,7 +125,7 @@ void Matron::notice_ridden_line(const RVec3 player) {
     // return before that ran, so a player who took the line in front of
     // her left no lead, and the Turn she had already started sat frozen
     // until the climb let go.
-    if (Vec3(player - at).Length() > kSightM || !sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0))) {
+    if (Vec3(player - at).Length() > kSightM || look_at(player - RVec3(0.0, 0.3, 0.0), kSightM) != Glimpse::Sight) {
         return;
     }
     const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
@@ -137,6 +137,7 @@ void Matron::notice_ridden_line(const RVec3 player) {
     since_heard_s_ = 0.0F;
     pursuit_s_ = 0.0F;
     lead_seen_ = true;
+    lead_sense_ = Sense::Sight;
     lead_valid_ = true;
     wary_ = false;
 }
