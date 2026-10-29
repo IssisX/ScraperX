@@ -243,53 +243,6 @@ void at_the_rail(Simulation &s, const double z) { caught_at(s, 18.0, z, 18.3, z 
 } // namespace
 
 void run_matron_grab() {
-    if (const char *e = std::getenv("SNAG_EXP")) {
-        const int mode = std::atoi(e);
-        Simulation s(InitialSpawn::Deck154);
-        at_the_rail(s, -159.5);
-        s.debug_matron_hold(0, 3.0);
-        constexpr int kArmPlayE = static_cast<int>(Matron::State::ArmPlay);
-        double snagged_at = -1.0, torn_at = -1.0, armplay_at = -1.0;
-        bool held_past_reach = false;
-        double best_far = 0.0;
-        const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
-            s.debug_set_matron_stage(1);
-            (void)s.set_move_input(0.0, 0.0);
-            const auto q = s.snapshot();
-            const double x = q.player_rot_x, y = q.player_rot_y, z = q.player_rot_z, w = q.player_rot_w;
-            const double ux = 2 * (x * y - w * z), uy = 1 - 2 * (x * x + z * z), uz = 2 * (y * z + w * x);
-            const double rx = 1 - 2 * (y * y + z * z), ry = 2 * (x * y + w * z), rz = 2 * (x * z - w * y);
-            double nearest = 1e9, ny = 0, nax = 0, nay = 0, naz = 0;
-            for (int k = -1; k <= 1; k += 2) {
-                const double ax = q.player_position.x + 0.45 * ux + k * 0.25 * rx;
-                const double ay = q.player_position.y + 0.45 * uy + k * 0.25 * ry;
-                const double az = q.player_position.z + 0.45 * uz + k * 0.25 * rz;
-                const double d = std::hypot(ax - m.position.x, az - m.position.z);
-                if (d < nearest) { nearest = d; ny = ay - (m.position.y - 1.05); nax = ax; nay = ay; naz = az; }
-            }
-            if (armplay_at < 0.0 && m.state == kArmPlayE) armplay_at = i / 90.0;
-            bool snag_now = false;
-            if (snagged_at < 0.0) {
-                if (mode == 1 && m.state == kArmPlayE) snag_now = true;
-                if (mode == 2 && m.state == kDangle && nearest > best_far) { best_far = nearest; }
-                static bool was_up = false;
-                if (mode == 3 && m.state == kDangle && uy >= 0.0) was_up = true;
-                if ((mode >= 3) && m.state == kDangle && uy >= 0.0) was_up = true;
-                if ((mode >= 3) && m.state == kDangle && was_up && uy < 0.0) snag_now = true;
-            }
-            if (snag_now) { s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN), mode >= 4 ? std::atof(std::getenv("GIVE") ? std::getenv("GIVE") : "5") : 0.0, std::getenv("UPM") ? std::atof(std::getenv("UPM")) : 0.0); snagged_at = i / 90.0; }
-            if (snagged_at >= 0.0 && m.arm_reposes == 0 && s.debug_player_snagged())
-                held_past_reach = i / 90.0 - snagged_at > Matron::kArmReachSeconds - 0.1;
-            if (torn_at < 0.0 && q.arm_tear_count > 0) torn_at = i / 90.0;
-            static double px = 0, py = 0, pz = 0;
-            const double sp = std::sqrt((q.player_position.x - px) * (q.player_position.x - px) + (q.player_position.y - py) * (q.player_position.y - py) + (q.player_position.z - pz) * (q.player_position.z - pz)) * 90.0;
-            px = q.player_position.x; py = q.player_position.y; pz = q.player_position.z;
-            if (std::getenv("EVERY") ? (i > std::atoi(std::getenv("EVERY")) && i < std::atoi(std::getenv("EVERY")) + 120) : i % 9 == 0)
-                std::cout << "E sp " << sp << " t " << i / 90.0 << " st " << int(m.state) << " arm_out " << nearest << " arm_up " << ny << " c_out " << std::hypot(q.player_position.x - m.position.x, q.player_position.z - m.position.z) << " uy " << uy << " lean " << m.hold_lean << " crouch " << m.hold_crouch << " snag " << s.debug_player_snagged() << " rep " << m.arm_reposes << " h2 " << m.hand2.x << "," << m.hand2.y << "," << m.hand2.z << " nearpt " << nax << "," << nay << "," << naz << " load " << q.grip_load_n << " hand " << m.hand.x << "," << m.hand.y << " her " << m.position.x << "," << m.position.z << "\n";
-        });
-        std::cout << "EXP snagged " << snagged_at << " armplay " << armplay_at << " held_past " << held_past_reach << " reposes " << r.m.arm_reposes << " snag_left " << s.debug_player_snagged() << " torn " << torn_at << " tears " << r.p.arm_tear_count << " claims " << r.m.claims << " ended " << r.ended << " best_far " << best_far << "\n";
-        return;
-    }
     // ---- a still body: taken, carried, dangled, let go aimed; no kill on touch ----
     std::uint64_t hash_a = 0;
     for (int pass = 0; pass < 2; ++pass) {

@@ -1135,8 +1135,11 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         // arm to her other hand (her fist kHeaveOutM out past her spot,
         // however her pull rocks her back: she leans into it).
         // (Over the drop after a re-pose, her spot a step along the rail: the
-        // body dragged after her along it, her pull rising: hauled_in().)
-        pose_hand(dt, RVec3(rim_x_, feet + kArmPlayUpM, rim_z_) + Vec3(rim_nx_, 0.0F, rim_nz_) * kHeaveOutM,
+        // body dragged after her along it and in against the rail, her pull
+        // rising, capped: hauled_in().)
+        pose_hand(dt,
+                  RVec3(rim_x_, feet + kArmPlayUpM, rim_z_) +
+                      Vec3(rim_nx_, 0.0F, rim_nz_) * (hauled_in() ? kRimStandM : kHeaveOutM),
                   0.6F * kHandSpeedMps);
         step_armplay(dt, player, at, feet);
         break;
@@ -1499,15 +1502,18 @@ void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
         // pull rising as she goes (hauled_in()): a body caught on steel out
         // there is dragged along off it. Her spot only where her deck is.
         const Vec3 along(-rim_nz_, 0.0F, rim_nx_);
-        const RVec3 step = RVec3(rim_x_, at.GetY(), rim_z_) + along * ((k % 2 == 0 ? 1.0F : -1.0F) * kArmReposeStepM);
         IgnoreMultipleBodiesFilter skip_along;
         skip_along.IgnoreBody(body_);
         skip_along.IgnoreBody(player_);
-        RayCastResult under;
-        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(step, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), under, {},
-                                                   {}, skip_along)) {
-            rim_x_ = float(step.GetX());
-            rim_z_ = float(step.GetZ());
+        for (const float way : {k % 2 == 0 ? 1.0F : -1.0F, k % 2 == 0 ? -1.0F : 1.0F}) {
+            const RVec3 step = RVec3(rim_x_, at.GetY(), rim_z_) + along * (way * kArmReposeStepM);
+            RayCastResult under;
+            if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(step, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), under,
+                                                       {}, {}, skip_along)) {
+                rim_x_ = float(step.GetX());
+                rim_z_ = float(step.GetZ());
+                break;
+            }
         }
         return;
     }
