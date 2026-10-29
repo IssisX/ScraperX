@@ -94,7 +94,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 
 ## Current position
 
-The newest handoff in `03_EXECUTION/handoffs/`, then the board and latest comments on issue #3: trunk's state, who holds what, what is next. Proof is CI (`wo000-delivery-spine.yml`). The old position table, ledgers and CI evidence are in the archive.
+The board and latest comments on issue #3 (handoffs are posted there): trunk's state, who holds what, what is next. `03_EXECUTION/handoffs/OPERATIONS_NOTES.md` says how to build, prove and playtest. Proof is CI (`wo000-delivery-spine.yml`). The old position table, ledgers and CI evidence are in the archive.
 
 ## Where things live
 
