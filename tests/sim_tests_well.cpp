@@ -364,8 +364,30 @@ void run_well_stage_b() {
     require(is_climbing(b_well.snapshot()) &&
                 b_well.snapshot().traversal_support_entity_id == Simulation::kWellBBoomEntityId,
             "B wreck: a hold on the hanging boom");
+    Snapshot wreck_prior = b_well.snapshot();
+    bool wreck_first_failure_seen = false;
     const bool reached_boom_edge = hold_stick(b_well, -1.0, 0.0, -1.0, 0.0, 40.0,
-                                             [](const Snapshot &state) { return state.player_position.y >= 219.8; });
+                                             [&](const Snapshot &state) {
+        if (!wreck_first_failure_seen &&
+            (state.climb_grip_slips > wreck_prior.climb_grip_slips ||
+             state.death_count > wreck_prior.death_count)) {
+            std::cout << "B wreck first failure: before=(" << wreck_prior.player_position.x
+                      << "," << wreck_prior.player_position.y << "," << wreck_prior.player_position.z
+                      << ") vy=" << wreck_prior.player_linear_velocity.y
+                      << " climbing=" << is_climbing(wreck_prior)
+                      << " grip_N=" << wreck_prior.climb_grip_force_n
+                      << " slips=" << wreck_prior.climb_grip_slips
+                      << " after=(" << state.player_position.x << "," << state.player_position.y
+                      << "," << state.player_position.z << ") vy=" << state.player_linear_velocity.y
+                      << " climbing=" << is_climbing(state)
+                      << " grip_N=" << state.climb_grip_force_n
+                      << " slips=" << state.climb_grip_slips
+                      << " deaths=" << state.death_count << '\n';
+            wreck_first_failure_seen = true;
+        }
+        wreck_prior = state;
+        return state.player_position.y >= 219.8;
+    });
     if (!reached_boom_edge) {
         const auto end = b_well.snapshot();
         std::cout << "B wreck climb diagnostic: y=" << end.player_position.y
