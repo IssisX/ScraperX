@@ -1,0 +1,47 @@
+name: Temporary Matron CC0 source audit
+on:
+  push:
+    branches:
+      - chatgpt/matron-mouth-takes-20261029
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Obtain Freesound HQ CC0 previews and inspect envelopes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import urllib.request,re,html,subprocess,tempfile,os,hashlib,array,statistics
+          sources=[('cluck','Vein_Adams',711535),('croak','florianreichelt',447496),('croak','CreepyKing',842294),('sniff','padpad',516473),('sniff','OwlStorm',151218)]
+          reqhead={'User-Agent':'Mozilla/5.0 (compatible; ScraperX-CC0-Audit/1.0)'}
+          for fam,user,sid in sources:
+              url=f'https://freesound.org/people/{user}/sounds/{sid}/'
+              try:
+                  req=urllib.request.Request(url,headers=reqhead)
+                  page=urllib.request.urlopen(req,timeout=25).read().decode('utf-8','replace')
+                  meta=re.search(r'<meta[^>]+(?:property|name)=["\'](?:og:audio|twitter:player:stream)["\'][^>]+>',page,re.I)
+                  if not meta:
+                      print('SOURCE_UNAVAILABLE',sid,'no og:audio'); continue
+                  a=re.search(r'content=["\']([^"\']+)',meta.group(),re.I)
+                  href=html.unescape(a.group(1))
+                  m=re.search(r'https://cdn\.freesound\.org/previews/[^"\s]+?-lq\.mp3',href)
+                  if not m: print('SOURCE_UNAVAILABLE',sid,'no CDN',href[:120]);continue
+                  preview=m.group().replace('-lq.mp3','-hq.ogg')
+                  blob=urllib.request.urlopen(urllib.request.Request(preview,headers=reqhead),timeout=35).read()
+                  with tempfile.NamedTemporaryFile(suffix='.ogg',delete=False) as f: f.write(blob); fname=f.name
+                  probe=subprocess.run(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',fname],capture_output=True,text=True,check=True)
+                  wav=subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-i',fname,'-ac','1','-ar','22050','-f','s16le','-'],capture_output=True,check=True).stdout
+                  values=array.array('h'); values.frombytes(wav)
+                  step=2205
+                  env=[round((sum(v*v for v in values[i:i+step])/max(1,len(values[i:i+step])))**.5 / 32768,3) for i in range(0,len(values),step)]
+                  print('SOURCE_OK',fam,user,sid,'url',preview,'sha256',hashlib.sha256(blob).hexdigest(),'bytes',len(blob),'duration',probe.stdout.strip())
+                  print('RMS_100MS',sid,','.join(map(str,env)))
+                  os.remove(fname)
+              except Exception as e:
+                  print('SOURCE_UNAVAILABLE',sid,type(e).__name__,str(e)[:200])
+          PY
