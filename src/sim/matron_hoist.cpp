@@ -28,7 +28,6 @@ constexpr float kLandingGapM = 1.6F;     // and this near the car's floor, acros
 constexpr float kBoardMps = 1.0F;
 constexpr float kHandPushN = 1500.0F;    // a firm shove: what a pin's shoes hold, and more
 constexpr float kPushReachM = 0.35F;     // she stands this short of what she pushes
-constexpr float kArmReachM = 0.70F;      // her hands' reach past her body
 constexpr float kWorkGiveUpS = 25.0F;
 constexpr float kRideStillS = 1.0F;
 constexpr float kExitGiveUpS = 20.0F;
@@ -234,8 +233,8 @@ void Matron::step_hoist(const float dt) {
             const Vec3 goal(std::clamp(stand.GetX(), box.mMin.GetX() + kRadius, box.mMax.GetX() - kRadius), floor_top,
                             std::clamp(stand.GetZ(), box.mMin.GetZ() + kRadius, box.mMax.GetZ() - kRadius));
             const float used = climber_->walk_between(dt, goal, kBoardMps, 0.0F);
-            // Her hands reach it from where she stands (kArmReachM past her
-            // body), as near as the car lets her get.
+            // Her hands reach it from where she stands (her one arm reach,
+            // Matron::kArmReachM), as near as the car lets her get.
             if (xz_gap(pb, feet.GetX(), feet.GetZ()) < kRadius + kArmReachM) {
                 const traversal::Limits budget;
                 const float v = std::max(0.3F, bodies.GetLinearVelocity(pin.body).Dot(along));
