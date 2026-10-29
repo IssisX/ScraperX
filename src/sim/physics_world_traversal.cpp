@@ -503,14 +503,22 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
         // Ask for the next point through force, never by replacing velocity.
         // Compensate gravity and the current momentum; the finite grip below
         // can refuse this demand, allowing any external load to pull it away.
-        const JPH::Vec3 target_v = JPH::Vec3(traversal_desired_ - current) / delta_seconds;
+        // The previous one-tick position correction demanded acceleration
+        // proportional to 1/dt^2. At 90 Hz it saturated even with no
+        // external load, so the body lagged its moving holds and could slip
+        // on ordinary climbs. Track over a hand-regrip interval instead:
+        // the finite hand force still yields to a real external pull.
+        constexpr float kClimbTrackSeconds = 0.20F;
+        const JPH::Vec3 support_v = bodies.GetPointVelocity(traversal_body_, traversal_desired_);
+        const JPH::Vec3 target_v = support_v +
+            JPH::Vec3(traversal_desired_ - current) / kClimbTrackSeconds;
         float mass = kPlayerMassKg;
         {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
             if (lock.Succeeded()) mass = 1.0F / lock.GetBody().GetMotionProperties()->GetInverseMass();
         }
         climb_grip_force_ = mass *
-            ((target_v - bodies.GetLinearVelocity(player_id_)) / delta_seconds -
+            ((target_v - bodies.GetLinearVelocity(player_id_)) / kClimbTrackSeconds -
              physics_system_.GetGravity());
         const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
         const float demand = climb_grip_force_.Length();
