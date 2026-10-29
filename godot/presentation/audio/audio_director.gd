@@ -1264,10 +1264,15 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 		if not _silent:
 			# One mouth at a time: an optional cue of her voice waits for none
 			# (it is dropped) while another of her voice, not a breath, plays.
-			if voice and rank < 3 and name != &"matron_breath" and _her_mouth_busy():
+			# A required reaction (a blow's hit, a tear's rip) is never dropped:
+			# it takes a player from whatever of hers is playing (the spec:
+			# optional voice gives way to a required reaction).
+			var required := bool(HerTakes.FAMILIES[name][5]) if HerTakes.FAMILIES.has(name) else false
+			if voice and not required and rank < 3 and name != &"matron_breath" and _her_mouth_busy():
 				her_takes.suppressed[&"busy"] = int(her_takes.suppressed.get(&"busy", 0)) + 1
 				return 0.0
-			var i := _her_free(HER_BODY_PLAYERS if voice else 0, HER_VOICE_PLAYERS if voice else HER_BODY_PLAYERS, rank)
+			var i := _her_free(HER_BODY_PLAYERS if voice else 0, HER_VOICE_PLAYERS if voice else HER_BODY_PLAYERS,
+					maxi(rank, 3) if required else rank)
 			if i < 0:
 				her_takes.suppressed[&"no_player"] = int(her_takes.suppressed.get(&"no_player", 0)) + 1
 				return 0.0
