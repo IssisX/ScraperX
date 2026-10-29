@@ -2042,6 +2042,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     edges_.clear();
     ladders_.clear();
     poles_.clear();
+    risers_.clear();
     patch_links_.clear();
     stats_ = ScanStats{};
 
@@ -2093,6 +2094,13 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             poles_.push_back({mid.GetX(), mid.GetZ(), std::max(sx, sz), leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
             continue;
         }
+        // A riser: tall, roughly square, too thick to wrap, with standing
+        // faces she can climb by friction. Recorded in addition to any patch
+        // its top makes, so existing planning over its top is unchanged.
+        if (sy >= 5.0F && std::max(sx, sz) > 0.16F && std::max(sx, sz) <= 1.50F && std::min(sx, sz) >= 0.15F &&
+            std::max(sx, sz) <= 3.0F * std::min(sx, sz)) {
+            risers_.push_back({mid.GetX(), mid.GetZ(), 0.5F * sx, 0.5F * sz, leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
+        }
         if (leaf.axis_aligned && std::min(sx, sz) >= 0.18F) {   // a board or ledge down to 0.18 m: her soles fit
             Patch p;
             p.body = leaf.body;
@@ -2129,9 +2137,31 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
                                     return ends >= 2;
                                 }),
                  poles_.end());
+    // A ladder's stile is no riser either, by the same bar-end rule.
+    risers_.erase(std::remove_if(risers_.begin(), risers_.end(),
+                                 [&](const Riser &riser) {
+                                     int ends = 0;
+                                     for (const Bar &bar : bars) {
+                                         const float y = bar.c.GetY();
+                                         if (y < riser.bottom - 0.05F || y > riser.top + 0.05F) {
+                                             continue;
+                                         }
+                                         const Vec3 along = bar.along_x ? Vec3::sAxisX() : Vec3::sAxisZ();
+                                         for (const float side : {-1.0F, 1.0F}) {
+                                             const Vec3 end = bar.c + along * (side * bar.half);
+                                             if (std::hypot(end.GetX() - riser.x, end.GetZ() - riser.z) <=
+                                                 0.5F * std::max(2.0F * riser.half_x, 2.0F * riser.half_z) + 0.12F) {
+                                                 ++ends;
+                                             }
+                                         }
+                                     }
+                                     return ends >= 2;
+                                 }),
+                  risers_.end());
     stats_.patches = static_cast<std::uint32_t>(patches_.size());
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
+    stats_.risers = static_cast<std::uint32_t>(risers_.size());
 
     // 3a. What stands on a top splits it (split_patches).
     split_patches(physics, ignore, limits);
