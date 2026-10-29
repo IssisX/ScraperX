@@ -12,6 +12,8 @@ extends "res://presentation/main_feel.gd"
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
+const PlayerIdentityStore := preload("res://presentation/identity/player_identity_store.gd")
+const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
 const TitleScreen := preload("res://presentation/ui/title_screen.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
@@ -90,6 +92,8 @@ var _touch: Control
 var _throw_arc: Node3D
 var _throw_path := PackedVector3Array()
 var _pause_menu: Control
+var _player_identity := PlayerIdentityStore.new()
+var _story_radio: Node
 var _uitest: Node
 var _force_touch := false
 var _uitest_scenario := ""
@@ -162,6 +166,10 @@ func _ready() -> void:
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle
 	add_child(_audio)
+	# Unapproved stock voice recordings must not reach the player.
+	_story_radio = StoryRadioPlayer.new()
+	_story_radio.name = "StoryRadio"
+	_audio.add_child(_story_radio)
 	_build_arms()
 	_build_hook_view()
 	_build_interface()
@@ -594,6 +602,7 @@ func _build_interface() -> void:
 	_pause_menu = PauseMenu.new()
 	_pause_menu.name = "PauseMenu"
 	_pause_menu.settings = _settings
+	_pause_menu.identity_store = _player_identity
 	pause_layer.add_child(_pause_menu)
 
 	_router.device_changed.connect(_on_device_changed)

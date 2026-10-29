@@ -694,45 +694,39 @@ public:
     // Pain is borrowed rage: a knockdown adds this, a stagger this.
     static constexpr float kKnockdownRage = 0.08F;
     static constexpr float kStaggerRage = 0.02F;
-    // The shaft's corner pipe (the owner, 2026-10-19: "She comes down the
-    // shaft after you. One shaft pipe becomes hers to climb."): the north-east
-    // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, solid
-    // from grade to 154, a 0.35 m flange reaching x 15.25 under every deck).
-    // Too thick for the climber's hands; hers wrap it. Her line runs down its
-    // west side clear of every flange (her 0.30 m against their x 15.25), so
-    // the steel she climbs is steel she meets: she is on her own layer, with
-    // gravity, and only her hands hold her (matron_pipe.cpp). From a deck she
-    // takes the north rail's top (kPipeRailTopM over the deck at kPipeRailZ),
-    // lifts herself over it and out to her line, and takes the riser; at 154,
-    // where the riser ends flush with the deck, she lowers herself on the rail
-    // until it is in reach. On it her grip is friction: her squeeze, at most
+    // Her risers (the owner, 2026-10-19: "She comes down the shaft after
+    // you. One shaft pipe becomes hers to climb"; 2026-10-27: her climbing is
+    // one general skill). Any tall vertical member her scan finds too thick
+    // to wrap (traversal::Riser), with decks beside it, is hers to climb
+    // (matron_pipe.cpp riser_routes): the decks, her stand on each, the top
+    // her hands take at its edge (a rail, or the deck's own edge), the face
+    // she climbs and her line beside it all come from the world, none
+    // authored. She is on her own layer, with gravity, and only her hands
+    // hold her. From a deck she takes the edge's top, lifts herself over it
+    // and out to her line, and takes the riser; where it ends flush with the
+    // deck she lowers herself on the edge until it is in reach; from a floor
+    // her line stands on she walks to it and takes hold. On it both her
+    // hands are on its face, her hips close to it (as close as the steel
+    // round it leaves room for: her stand-off widens past a flange) and her
+    // feet braced on it. Her grip is friction: her squeeze, at most
     // kPipeSqueezeN, times kPipeFriction holds her weight; she climbs it hand
     // over hand and lets herself down it at her stage's pace. At the other
-    // deck she takes its rail and goes over it onto the deck, done only with
+    // deck she takes its edge and goes over it onto the deck, done only with
     // her feet on its steel. Frail, she cannot take hold of it (as her
     // ladder); dangerous she slides down it held by her forearms and knees
     // and climbs it hand over hand; fully changed she comes down it head first
     // in jerks. Each kPipeHoldM her hands go is a knock on the pipe, each
-    // flange passed a bong: she is heard on it from the moment she takes hold
-    // (an 11 m story takes her at least 4 s). A blow on it past kPipeTearMps
-    // opens her hands: her legs alone slow her (kPipeSlideAccel, her squeeze
-    // against her weight) until they meet the flange under her and she slams
-    // onto it, stunned a while by how hard, alive; then she goes on.
-    static constexpr float kPipeLineX = 14.85F;
-    static constexpr float kPipeLineZ = -133.75F;
-    static constexpr float kPipeDeckX = 14.85F;    // where she stands at the rail to go over it
-    static constexpr float kPipeDeckZ = -132.55F;
-    static constexpr float kPipeCentreX = 15.8F;
-    static constexpr float kPipeCentreZ = -134.2F;
-    static constexpr float kPipeRailZ = -133.0F;
-    static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
-    static constexpr float kPipeOverRailM = 0.15F; // her feet over the rail's top, going over it
+    // collar it threads (a flange) a bong: she is heard on it from the moment
+    // she takes hold (an 11 m story takes her at least 4 s). A blow on it past
+    // kPipeTearMps opens her hands: her legs alone slow her (kPipeSlideAccel,
+    // her squeeze against her weight) until they meet the steel under her and
+    // she slams onto it, stunned a while by how hard, alive; then she goes on.
+    static constexpr float kPipeOverRailM = 0.15F; // her feet over the edge's top, going over it
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
-    static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
-    // legs' reach (her line is 0.6 m off the riser's west face).
+    // legs' reach.
     static constexpr float kBraceShinM = 0.45F;
     static constexpr float kBraceReachM = 1.0F;
     static constexpr float kPipeDownMps = 2.6F;
@@ -741,7 +735,6 @@ public:
     static constexpr float kPipeChangedUpBurstMps = 2.6F;
     static constexpr float kPipeChangedPauseMps = 0.3F;
     static constexpr float kPipeHoldM = 0.45F;
-    static constexpr float kPipeFlangeUnderDeckM = 1.225F;   // a flange's top under its deck (her bong as she passes it)
     // CHOSEN: a drum let go onto her from the rail above tears her off (0.99
     // m/s measured on her physical grip; 1.15 when she was moved by velocity),
     // a toolbox let go the same way does not (tests: matron pipe drum, toolbox).
@@ -842,6 +835,7 @@ public:
     static constexpr float kReleasePoseSeconds = 1.0F;
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
+    static constexpr float kSpareStepSeconds = 3.0F;  // a step walking him on, past three tries, that stops short
     // After any arm torn off, set down alive (spared, or pulled out of her
     // hand), her hands do not take him again for this long (the owner,
     // 2026-10-28: after an arm tear she can't grab him again right away).
@@ -1144,6 +1138,11 @@ public:
         float pipe_slam_mps = 0.0F;     // the last slam's speed
         float pipe_peak_force_n = 0.0F; // her grip's peak force on the pipe
         float pipe_peak_power_w = 0.0F;
+        // The riser she is on (her scan's, matron_pipe.cpp riser_routes): its
+        // axis (y unused) and its half section across x and z.
+        JPH::Vec3 pipe_axis = JPH::Vec3::sZero();
+        float pipe_half_x = 0.0F, pipe_half_z = 0.0F;
+        bool pipe_on_face = false;      // her hands on its face, hand over hand (not an edge's top, not her legs)
         // Her pace (Pace) and the speed it asks of her feet; getting unstuck
         // (stalls met, step-ups, clambers, sidesteps, reroutes, the longest
         // time without kStallMoveM of progress); the player's trail (crumbs
@@ -1602,9 +1601,10 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold is never saved: a checkpoint has her after the player. Nor is her death:
-        // a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
-        const bool kept_out = state_ >= State::Grab || state_ == State::Dead;
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
+        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
+                              state_ == State::Dead;
         return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
     }
     void restore(const Saved &saved);
@@ -1615,6 +1615,7 @@ public:
     [[nodiscard]] std::uint64_t catches() const noexcept { return catches_; }
     [[nodiscard]] float strain_force_peak_n() const noexcept { return plank_peak_n_; }
     [[nodiscard]] JPH::BodyID body() const noexcept { return body_; }
+    friend struct MatronStateExitAccess;
 
 private:
     struct Node {
@@ -1776,10 +1777,64 @@ private:
     // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
-    // The corner pipe's way from one deck to the other (0..3; -1 for none),
-    // and whether it may be tried now (pipe_ways_).
-    [[nodiscard]] static int pipe_way(float from_floor, float to_floor) noexcept;
+    // Her risers (matron_pipe.cpp): every tall vertical member her scan
+    // found (traversal::Riser) with two decks beside it, as her way between
+    // them: the decks, where she stands on each, the top her hands take at
+    // its edge, the face she climbs and her line beside it. Read from her
+    // scan once (again when it changes); no riser of the world is authored.
+    struct RiserDeck {
+        float floor_y = 0.0F;
+        int region = -1;
+        JPH::Vec3 stand = JPH::Vec3::sZero();   // her feet on the deck, by the riser
+        JPH::Vec3 rail = JPH::Vec3::sZero();    // the top her hands take at its edge (y: that top)
+        bool line_on_floor = false;             // her line stands on this deck: she walks to it
+    };
+    struct PipeWayMemory {
+        std::uint8_t failures = 0;
+        float blocked_until_s = 0.0F;
+        bool ruled_out = false;
+    };
+    struct RiserRoute {
+        int riser = -1;   // in her scan's risers()
+        float cx = 0.0F, cz = 0.0F, hx = 0.0F, hz = 0.0F, bottom = 0.0F, top = 0.0F;
+        JPH::Vec3 out = JPH::Vec3::sAxisX();     // level, from the face she climbs toward her side of it
+        JPH::Vec3 along = JPH::Vec3::sAxisZ();   // level, along that face
+        float face = 0.0F;      // the face's distance from the axis, along out
+        float face_half = 0.0F; // half the face's run, along along
+        float lateral = 0.0F;   // her line along the face from its middle
+        RiserDeck lo, hi;
+        std::vector<float> collars;   // tops of the steel the riser threads (a flange): a bong each passed
+        PipeWayMemory ways[2];        // up (lo to hi), down
+    };
+    const std::vector<RiserRoute> &riser_routes();
+    // Her line beside a route's face at stand-off gap (her side's surface
+    // from the face), and the least of her stand-offs that has room for all
+    // of her at height y and ahead of her (dir: her way along it).
+    [[nodiscard]] JPH::Vec3 riser_line(const RiserRoute &r, float gap) const;
+    [[nodiscard]] JPH::Vec3 riser_line_at(const RiserRoute &r, float y, float ahead) const;
+    [[nodiscard]] bool on_riser_line(const RiserRoute &r, float x, float z) const;
+    // The route that joins these two floors nearest (x, z), from the region
+    // she is on (-1: any), or -1.
+    [[nodiscard]] int riser_between(float from_floor, float to_floor, float x, float z, int region);
+    // The route's way from one of its decks to the other (route * 2, + 1
+    // going down; -1 for none), and whether it may be tried now.
+    [[nodiscard]] int pipe_way(float from_floor, float to_floor) const noexcept;
     [[nodiscard]] bool pipe_way_open(int way) const noexcept;
+    PipeWayMemory *pipe_way_memory(int way) noexcept;
+    // A hand on the riser's face: reaching from her line at height y, off
+    // her middle by side along the face, level into it.
+    struct RiserHold {
+        JPH::BodyID body;
+        JPH::SubShapeID member;
+        JPH::Vec3 local = JPH::Vec3::sZero();
+        JPH::RVec3 point = JPH::RVec3::sZero();
+    };
+    bool riser_face_probe(JPH::RVec3 at, float y, float side, RiserHold &out) const;
+    bool riser_hold_kept(const RiserHold &hold, JPH::RVec3 at) const;
+    // Her map's plan, and where the steel offers no way, one through a
+    // riser of hers (its edge ids -(2 * route + down) - 1, matron_journey.cpp).
+    [[nodiscard]] std::vector<int> plan_with_risers(int from, int goal, const std::vector<int> &avoid);
+    [[nodiscard]] traversal::Edge travel_edge(int k);
     // Her own way between levels, found in the world, no table
     // (matron_found_climb.cpp): a column of level bars from her floor toward
     // her lead's, real floor at its foot and head, climbed by routecraft.
@@ -1828,7 +1883,8 @@ private:
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
-    [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
+    // A riser of hers joins these two floors.
+    [[nodiscard]] bool riser_joins(float a, float b);
     // Her hands on the rail of the deck she is leaving: false (and nothing
     // started) when there is no rail top in her reach.
     bool get_on_pipe(float from_floor, float to_floor);
@@ -1971,6 +2027,7 @@ private:
     bool pipe_rail_hold(float deck, JPH::RVec3 at);
     bool pipe_face_hold(JPH::RVec3 at, float y);
     // Down on the steel from a blow (take_blow), the way (fall_x_, fall_z_).
+    void clear_interrupted_actions(bool keep_travel = false);
     void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
     // whose floor is `floor`, at that loudness.
@@ -2005,7 +2062,7 @@ private:
     void begin_reel(JPH::RVec3 at, JPH::RVec3 player);
     void end_reel(JPH::RVec3 player);
     [[nodiscard]] float hands_off_after_hold() const noexcept {
-        return arm_tears_ != hold_tears_at_ ? kRegrabAfterTearS : kAfterReleaseSeconds;
+        return (arm_tears_ != hold_tears_at_ || reel_) ? kRegrabAfterTearS : kAfterReleaseSeconds;
     }
     bool choose_fatal_edge(float ax, float az, float feet);
     // The speed down at which a body at `com` (rotation `rot`, moving at `v`,
@@ -2361,6 +2418,7 @@ private:
     int guess_line_ = -1;
     float lead_floor_ = kDeckTop;
     bool on_line_ = false;
+    float line_stall_s_ = 0.0F;
     std::uint32_t cable_slides_ = 0;
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.
@@ -2559,17 +2617,20 @@ private:
     PipePhase pipe_phase_ = PipePhase::Off;
     float pipe_from_ = 0.0F;   // the floor she got on from, and the one she is going to
     float pipe_to_ = 0.0F;
-    // Her pipe's four ways (pipe_way): one that failed under her is left alone
-    // kPipeWayBlockS; failed more than kPipeWayRetries times, until a restore;
-    // ruled out (a test), for good.
-    struct PipeWayMemory {
-        std::uint8_t failures = 0;
-        float blocked_until_s = 0.0F;
-        bool ruled_out = false;
-    };
+    // Each way of each riser (pipe_way): one that failed under her is left
+    // alone kPipeWayBlockS; failed more than kPipeWayRetries times, until a
+    // restore; ruled out (a test), for good.
     static constexpr float kPipeWayBlockS = 30.0F;
     static constexpr std::uint8_t kPipeWayRetries = 2;
-    std::array<PipeWayMemory, 4> pipe_ways_{};
+    std::vector<RiserRoute> riser_routes_;
+    const traversal::AffordanceMap *riser_routes_of_ = nullptr;
+    bool pipe_ruled_out_ = false;   // every riser ruled out (a test)
+    int pipe_route_ = -1;           // the route she is on, or going to
+    bool pipe_failed_ = false;      // how her last way along a riser ended
+    bool travel_riser_ = false;     // her journey has her on a riser (matron_journey.cpp)
+    float travel_riser_wait_s_ = 0.0F;   // at her stand, her hands not yet on it
+    RiserHold pipe_hand2_;          // her other hand on the riser's face
+    bool pipe_hand2_held_ = false;
     int pipe_waypoint_ = 0;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
@@ -2585,6 +2646,7 @@ private:
     JPH::Vec3 pipe_local_hand_ = JPH::Vec3::sZero();
     JPH::RVec3 pipe_hand_ = JPH::RVec3::sZero();
     bool pipe_on_face_ = false;       // the hand is on the riser (friction), not a rail's top
+    float pipe_gap_ = 0.2F;           // her stand-off from its face this tick
     bool pipe_over_ = false;          // over the rail she is crossing
     float pipe_best_ = 0.0F;          // her progress along it, for the stall
     float pipe_stall_s_ = 0.0F;

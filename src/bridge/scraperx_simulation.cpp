@@ -1816,6 +1816,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["pipe_flanges"] = static_cast<std::int64_t>(state.pipe_flanges);
     out["pipe_slams"] = static_cast<std::int64_t>(state.pipe_slams);
     out["pipe_slam_mps"] = state.pipe_slam_mps;
+    out["pipe_axis"] = godot::Vector3(static_cast<real_t>(state.pipe_axis.x), 0.0F, static_cast<real_t>(state.pipe_axis.z));
+    out["pipe_on_face"] = state.pipe_on_face;
+    out["pipe_half"] = godot::Vector2(static_cast<real_t>(state.pipe_half_x), static_cast<real_t>(state.pipe_half_z));
     out["catches"] = static_cast<std::int64_t>(state.catches);
     out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;

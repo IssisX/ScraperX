@@ -77,7 +77,16 @@ void Matron::refresh_contact_view() {
         view_.contact_hand_sub = sub;
         view_.contact_hand = bodies.GetCenterOfMassTransform(body) * local;
     }
-    // On her pipe, hand over hand (her hand on its face): her squeeze is her
+    // On a riser's face her other hand holds it too (ride_pipe checks it on
+    // its steel every step): where it is now on its body.
+    if (view_.contact_hand_held && view_.on_pipe && pipe_phase_ == PipePhase::Climb && pipe_on_face_ &&
+        pipe_hand2_held_ && bodies.IsAdded(pipe_hand2_.body)) {
+        view_.contact_hand2_held = true;
+        view_.contact_hand2_body = pipe_hand2_.body;
+        view_.contact_hand2_sub = pipe_hand2_.member;
+        view_.contact_hand2 = bodies.GetCenterOfMassTransform(pipe_hand2_.body) * pipe_hand2_.local;
+    }
+    // On a riser, hand over hand (her hands on its face): her squeeze is her
     // hands' pull against her feet's push, so her feet are on the riser too.
     // Level from her shins toward the steel her hand holds, the first steel
     // within her legs' reach, a standing face of static steel: the face they

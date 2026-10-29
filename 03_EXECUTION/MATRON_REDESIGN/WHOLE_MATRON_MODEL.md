@@ -116,6 +116,18 @@ all fours; upright has only a spring ride (`RIDE_W = 7.0 rad/s`,
 clamped -0.15...+0.30 m), no stance-phase foot lock. General repair:
 apply the all-fours world-lock idea to upright stance feet.
 
+### Her pipe climb, general (2026-10-29, exit board item 6)
+`src/sim/matron_pipe.cpp` `riser_routes` reads every riser her scan
+records (`traversal::Riser`, fb-bot J1) into her ways between the decks
+beside it: stand, edge top (rail or bare edge), face, line, collars.
+No riser coordinate is left in her code (the corner pipe's place lives
+only in its exams). On the face both hands hold (`contact_hand2`), one
+over the other; her hips sit at the least stand-off that fits (0.04 m,
+widening to 0.2 m past a flange); feet brace on it. `travel_to` takes a
+riser where her map has no other way (`plan_with_risers`). Proof:
+`matron-riser` (a 0.4 m post by a deck, up and down), `matron-pipe`
+(both hands every face tick), `touch_matron_pipe` in CI.
+
 ## Other findings, not in M1-M6, not re-claimed
 
 - No production punch: `take_blow()` frees only if

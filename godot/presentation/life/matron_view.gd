@@ -1557,6 +1557,14 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = -1.1
 		head_roll = 0.15 * sin(_clock * 1.4)
 		jaw_open = 0.45
+		if bool(data.get("on_pipe", false)):
+			# Up her pipe, its face close in front of her (the simulation has
+			# her hips at it, her feet braced on it): her chest to it and her
+			# face over her hands, not thrown back as on a ladder's rungs.
+			pitch = 0.35
+			head_pitch = 0.15
+			knees = 1.5
+			jaw_open = 0.2
 		# Gap-fillers for the climbing moves, one pose each. The main
 		# climb branches above own an active move; this block only runs
 		# inside the ladder branch, for the phases those branches do not
