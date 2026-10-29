@@ -597,6 +597,130 @@ void test_capped_launches() {
     std::cout << "PASS scraperx_sim matron capped launches: force, power, stroke, reaction, support loss, cancellation\n";
 }
 
+MoveSpec ledge_jump_spec(const float top) {
+    MoveSpec s;
+    s.kind = MoveKind::LedgeJump;
+    s.line = Vec3(0, top, -1.0F);   // the lip point, on the deck's south face
+    s.out = Vec3(0, 0, 1);
+    s.bottom_y = 0.0F;
+    s.top_y = top;
+    s.start = Vec3(0, 0, -0.6F);    // the take-off the scan insets off the lip
+    s.goal = Vec3(0, top, -2.0F);
+    s.goal_top = top;
+    return s;
+}
+
+void test_ledge_jump() {
+    // A ledge 0.5 to 1.0 m above her standing reach (2.45 m): jump, catch
+    // the lip, hang, mantle onto the deck, every tick inside her budget.
+    for (const float top : {2.95F, 3.20F, 3.45F}) {
+        ClimbWorld w;
+        w.deck(top);
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(top));
+        RVec3 prev = w.at();
+        float max_step = 0.0F;
+        const auto st = w.run(climber, 40.0F, [&](int) {
+            const RVec3 now = w.at();
+            max_step = std::max(max_step, float((now - prev).Length()));
+            prev = now;
+        });
+        const float settled = w.settle(1.0F);
+        std::cout << "  matron climb ledge jump " << top << ": " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") launches " << climber.view().launches << " catches " << climber.view().catches << " feet " << settled
+                  << " max step " << max_step << " m\n";
+        require(st == Climber::Status::Done && climber.view().launches == 1 && climber.view().catches == 1 &&
+                    std::abs(settled - top) < 0.05F && w.gravity_always && max_step <= 0.20F + 0.001F,
+                "matron climb: a ledge above her standing reach, jumped to, caught, hung from and mantled onto");
+    }
+    // The scan finds it, the planner takes it, and the scanned spec itself
+    // executes: no hand-built move in this leg. She is spawned on the
+    // scanned take-off, so the leg tests the jump, not the walk to it.
+    {
+        ClimbWorld w;
+        w.deck(3.20F);
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {BodyID(), BodyID()});
+        const int from = map.region_at(Vec3(0, 0, 1.0F));
+        const int to = map.region_at(Vec3(0, 3.20F, -2.0F));
+        require(from >= 0 && to >= 0 && from != to, "matron climb: the scan separates the floor from the deck over it");
+        const std::vector<int> plan = map.plan(from, to);
+        int ledge = -1;
+        for (const int e : plan)
+            if (map.edges()[static_cast<std::size_t>(e)].kind == MoveKind::LedgeJump) ledge = e;
+        require(ledge >= 0, "matron climb: the planner offers the ledge jump to the deck over the floor");
+        const traversal::Edge &edge = map.edges()[static_cast<std::size_t>(ledge)];
+        require(edge.usable && std::abs(edge.spec.goal_top - 3.20F) < 0.01F && std::abs(edge.spec.start.GetY()) < 0.01F,
+                "matron climb: the scanned ledge jump stands on the floor below and tops out on the deck");
+        w.spawn(RVec3(edge.spec.start.GetX(), edge.spec.start.GetY(), edge.spec.start.GetZ()));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(edge.spec);
+        const auto st = w.run(climber, 40.0F);
+        const float settled = w.settle(1.0F);
+        std::cout << "  matron climb ledge jump planned: " << int(st) << " feet " << settled << "\n";
+        require(st == Climber::Status::Done && std::abs(settled - 3.20F) < 0.05F,
+                "matron climb: the planned ledge jump ends standing on the deck");
+    }
+    // A miss: the deck is gone while she is in the air. She falls back to
+    // the floor, and a fresh scan finds no ledge jump left to replan to.
+    {
+        ClimbWorld w;
+        const BodyID deck = w.box(Vec3(5, 0.5F * 3.20F, 3), RVec3(0, 0.5F * 3.20F, -4));
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(3.20F));
+        float highest = 0.0F;
+        const auto st = w.run(climber, 20.0F, [&](int) {
+            if (climber.view().launches == 1 && w.physics.GetBodyInterface().IsAdded(deck))
+                w.physics.GetBodyInterface().RemoveBody(deck);
+            highest = std::max(highest, w.feet());
+        });
+        const float landed = w.settle();
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {w.her, BodyID()});
+        bool jump_left = false;
+        for (const traversal::Edge &e : map.edges())
+            if (e.kind == MoveKind::LedgeJump && e.usable) jump_left = true;
+        std::cout << "  matron climb ledge jump miss: " << traversal::failure_name(climber.failure()) << " highest feet " << highest
+                  << " landed " << landed << " jump left " << jump_left << "\n";
+        require(st == Climber::Status::Failed && climber.failure() == Failure::Missed && climber.view().misses == 1,
+                "matron climb: nothing to catch at the lip is a miss");
+        require(highest > 0.6F && highest < 1.6F && std::abs(landed) < 0.05F && !jump_left,
+                "matron climb: the missed ledge jump falls back to the floor and replans to nothing");
+    }
+    // Out of reach: a lip past her legs' limit is not launched for, and
+    // the planner offers no jump to a lip past the scan's lip range.
+    {
+        const traversal::Limits budget;
+        const float ballistic = budget.launch_dv_mps * budget.launch_dv_mps / (2.0F * 9.81F);
+        const float too_high = budget.center_above_feet() + budget.hand_above_center + budget.leg_travel_m + ballistic + 0.80F;
+        ClimbWorld w;
+        w.deck(too_high + 1.5F);
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(too_high + 1.5F));
+        const auto st = w.run(climber, 20.0F);
+        require(st == Climber::Status::Failed && climber.failure() == Failure::OutOfRange && climber.view().launches == 0,
+                "matron climb: a ledge jump past her legs' limit is not launched");
+    }
+    {
+        ClimbWorld w;
+        w.deck(5.0F);
+        w.spawn(RVec3(0, 0, 1.0F));
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {w.her, BodyID()});
+        const int from = map.region_at(Vec3(0, 0, 1.0F));
+        const int to = map.region_at(Vec3(0, 5.0F, -2.0F));
+        const std::vector<int> plan = from >= 0 && to >= 0 ? map.plan(from, to) : std::vector<int>{};
+        bool jump_offered = false;
+        for (const int e : plan)
+            if (map.edges()[static_cast<std::size_t>(e)].kind == MoveKind::LedgeJump) jump_offered = true;
+        require(!jump_offered, "matron climb: the planner refuses a ledge out of jump reach");
+    }
+    std::cout << "PASS scraperx_sim matron climb ledge jump: catch, planned, miss, out of range\n";
+}
+
 void test_jump() {
     MoveSpec jump = ladder_up(6.0F, 3.4F, 5.8F);
     jump.kind = MoveKind::JumpCatch;
@@ -1678,6 +1802,7 @@ void run_matron_climb() {
     test_pole();
     test_capped_launches();
     test_jump();
+    test_ledge_jump();
     test_drops_and_mantle();
     test_dynamic_support();
     test_mantle_moving_ledge();

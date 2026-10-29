@@ -42,6 +42,7 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::JumpCatch: return "jump_catch";
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
+    case MoveKind::LedgeJump: return "ledge_jump";
     }
     return "?";
 }
@@ -942,6 +943,7 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::PoleUp: step_pole(dt, budget, true); break;
     case MoveKind::PoleDown: step_pole(dt, budget, false); break;
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
+    case MoveKind::LedgeJump: step_ledge_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
     }
@@ -1840,6 +1842,101 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
     }
     (void)budget;
     (void)dt;
+    return status_;
+}
+
+// --- jump to a lip ------------------------------------------------------------
+// Phases: 0 to the take-off, 1 set, 2 leg drive, 3 in the air; caught, she
+// mantles over the lip as a Mantle (her hang, then over it onto its floor).
+// The spec's line is the lip point itself (at its height, on its edge),
+// start is her take-off feet on the floor below, goal is her stand on the
+// floor over it, goal_top is the lip's height, and out points from the
+// floor over it toward the floor below. A lip past her hands' jump reach
+// is refused by the scan, and a drive that cannot put her hands on it
+// fails OutOfRange before she leaves the floor; in the air, nothing to
+// catch is a miss, and she falls.
+Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    const float feet = float(c.GetY()) - limits_.center_above_feet();
+    const Vec3 lip(spec_.line.GetX(), spec_.goal_top, spec_.line.GetZ());
+    if (phase_ == 0) {
+        if (horizontal(spec_.start - c) > 0.15F || flat(velocity()).Length() > 0.3F) {
+            if (phase_s_ > 8.0F) {
+                fail(Failure::Stalled);
+                return status_;
+            }
+            walk(dt, Vec3(spec_.start.GetX(), feet, spec_.start.GetZ()), 1.2F, budget);
+            return status_;
+        }
+        phase_ = 1;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 1) {
+        if (phase_s_ < 0.25F) {
+            return status_;   // set
+        }
+        if (!plant_leg(spec_.goal_top)) return status_;
+        phase_ = 2;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 2) {
+        if (drive_leg(dt, budget)) {
+            ++view_.launches;
+            phase_ = 3;
+            phase_s_ = 0.0F;
+        }
+        return status_;
+    }
+    // In the air: no thrust, gravity only. Her hands are her centre plus
+    // her reach over it; a lip is caught when her hands are at its height
+    // and within her hand reach of it, while she is not still rising fast.
+    const Vec3 v = velocity();
+    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_center, 0.0F);
+    const bool near_lip = std::abs(float(hands.GetY()) - spec_.goal_top) < 0.25F &&
+                          horizontal(lip - hands) <= limits_.reach_out;
+    if (near_lip && v.GetY() < 0.8F) {
+        Hold lip_hold;
+        RVec3 lip_at;
+        if (take_hold(RVec3(lip), limits_.catch_radius_m, false, lip_hold, &lip_at)) {
+            const Vec3 support_v = bodies.GetPointVelocity(lip_hold.body, lip_at);
+            if ((v - support_v).Length() > limits_.catch_arrest_mps) {
+                ++view_.misses;
+                fail(Failure::RippedOff);
+                return status_;
+            }
+            hold_ = lip_hold;
+            hold_world_ = lip_at;
+            lip_ = lip_hold;
+            lip_world_ = lip_at;
+            ++view_.grips;
+            ++view_.catches;
+            // Over it by the mantle she already knows: the lip she hangs
+            // from, its floor as her goal, no new move invented here.
+            spec_.kind = MoveKind::Mantle;
+            view_.kind = MoveKind::Mantle;
+            begin_mantle_from_hang();
+            return status_;
+        }
+        // At the lip's height and reach, but no member there: the lip is
+        // gone, and falling past it is the miss below, not a catch.
+    }
+    float support_top = 0.0F;
+    if (supported(&support_top)) {
+        // She came down on the floor over the lip itself: that is the top,
+        // not a miss (a short lip, a high jump).
+        if (std::abs(support_top - spec_.goal_top) < 0.3F && std::abs(v.GetY()) < 0.3F) {
+            finish();
+        } else {
+            ++view_.misses;
+            fail(Failure::Missed);
+        }
+        return status_;
+    }
+    if ((v.GetY() < 0.0F && float(hands.GetY()) < spec_.goal_top - 0.3F) || phase_s_ > 2.0F) {
+        ++view_.misses;
+        fail(Failure::Missed);
+    }
     return status_;
 }
 
@@ -2956,6 +3053,28 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                             up.usable = below_ok && above_ok;
                             if (!up.usable) up.reason += "; blocked: capsule sweep";
                             add_edge(up);
+                        } else {
+                            // Past a mantle's reach, a lip she can jump to:
+                            // her planted leg puts her hands on it, she
+                            // catches it and mantles over it. The take-off
+                            // must sit close enough to the lip that her
+                            // centre, walking to it, still lands inside her
+                            // hand reach of the lip in the air.
+                            Edge jump = up;
+                            jump.kind = MoveKind::LedgeJump;
+                            jump.spec.kind = MoveKind::LedgeJump;
+                            jump.spec.line = lip;
+                            jump.cost = 3.0F + rise + 6.0F;
+                            const float speed_cap = leg_speed_cap(limits);
+                            const bool jump_ok =
+                                speed_cap > 0.0F &&
+                                rise + 0.08F <= limits.hand_reach_standing() + limits.leg_travel_m +
+                                                   speed_cap * speed_cap / (2.0F * kGravity);
+                            jump.usable = below_ok && above_ok && horizontal(below - lip) <= 0.7F && jump_ok;
+                            if (!below_ok || !above_ok) jump.reason += "; blocked: capsule sweep";
+                            if (horizontal(below - lip) > 0.7F) jump.reason += "; blocked: take-off too far from the lip";
+                            if (!jump_ok) jump.reason += "; blocked: lip past her hands' jump reach";
+                            add_edge(jump);
                         }
                         Edge down = up;
                         down.from = hi.region;
