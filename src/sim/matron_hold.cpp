@@ -1164,8 +1164,17 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // (Over the rail with him, a slow step, kTipBackMps: he comes in
             // across it with her.)
             const bool tipping = !reel_;
-            walk_toward(dt, rim_x_ - rim_nx_ * kReelBackM, rim_z_ - rim_nz_ * kReelBackM, tipping ? kTipBackMps : 1.2F,
-                        feet_accel);
+            // Her arm already at its length with his weight (caught, or
+            // heavy on it): she does not step on and drag him through it; her
+            // capped pull brings him, and she steps as her hand comes in.
+            const bool arm_full =
+                tipping && Vec3(player_ankle_ - (at + shoulder_local())).Length() >= kArmReachM - 0.02F;
+            if (arm_full) {
+                stand();
+            } else {
+                walk_toward(dt, rim_x_ - rim_nx_ * kReelBackM, rim_z_ - rim_nz_ * kReelBackM,
+                            tipping ? kTipBackMps : 1.2F, feet_accel);
+            }
             yaw_ = turn_to(facing_edge, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
         } else {
             stand();
