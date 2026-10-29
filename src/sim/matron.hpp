@@ -1207,7 +1207,8 @@ public:
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
-    // puts her back at her locker at that stage). Once dead she stays dead.
+    // puts her back at her locker at that stage). A dead Matron is kept as hunting,
+    // so a restore brings her back whole.
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
@@ -1602,10 +1603,11 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player.
-        const State saved_state =
-            (state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down) ? State::Hunting : state_;
-        return {saved_state, strain_s_, rage_, stage_, exposure_s_, handled_};
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
+        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
+                              state_ == State::Dead;
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
     }
     void restore(const Saved &saved);
 
