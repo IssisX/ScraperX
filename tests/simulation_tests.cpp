@@ -76,7 +76,7 @@ int main() {
         run_workers();
         return EXIT_SUCCESS;
     }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour-moves") {
         run_brachiation();
         run_pipe_gallery();
         run_slide();
