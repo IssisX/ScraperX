@@ -54,36 +54,40 @@ const Matron::ShapeAudit &Matron::shape_audit() noexcept { return g_shape_audit;
 
 // Her capsule in each stance, in her body frame (y up from her middle, z
 // forward along her yaw): the end points of its segment and its radius.
-// Fitted to her drawn body (her limb volumes as tools/matron_probe recorded
+// Sized to her drawn body (her limb volumes as tools/matron_probe recorded
 // them in the touch scenarios of her walk, hunt, ladder, pipe and holds:
-// tests/data/matron_drawn_limbs.inc): the capsule that least exceeds the
-// larger of how far her body (trunk, head, legs) reaches out of it and how
-// far it reaches past her drawn body, no wider than the 0.30-0.32 m her ways
-// plan her through gaps with (kRadius), so a gap planned clear stays clear.
+// tests/data/matron_drawn_limbs.inc): its top at the top of her drawn trunk,
+// head and upper arms (the 95th percentile of her frames in that stance; her
+// forearms and hands are her reach, on a rung, a rail or his ankle), not 0.3
+// to 0.9 m over it. Each stays inside her old 2.1 m capsule (her middle's
+// axis, kRadius, its bottom at her soles), so she meets nothing she did not
+// meet before: her catch (kCatchM 0.85 m middle to middle), her strike and
+// the player's contacts are tuned to a body 0.30 m deep. Her drawn trunk and
+// head lean 0.4-0.7 m ahead of her middle; a capsule set forward there
+// (tried: 0.25-0.35 m forward) stops her hand short of his ankle (her front
+// 0.64 m out, his radius 0.35 m, past her 0.85 m catch), so her body moving
+// forward waits on her catch and strike measured from her drawn front.
 Matron::StanceCapsule Matron::stance_capsule(const Stance stance) noexcept {
+    constexpr float kFoot = -kStandCentre + kRadius;   // her soles' hemisphere
     switch (stance) {
     case Stance::Low:
-        // Hunting low, on all fours or crouched: hips high over her soles,
-        // her chest, shoulders and head down and out ahead of her.
-        return {-1.05F + 0.32F, -0.01F, 0.02F, 0.32F, 0.32F};
+        // Hunting low, on all fours or crouched: 1.61 m over the steel.
+        return {kFoot, 0.0F, 0.26F, 0.0F, kRadius};
     case Stance::Climb:
-        // Hung from her hands (rungs, a line, a mantle, a cage's frame):
-        // under her hands, leaning in to the steel she climbs.
-        return {-1.05F + 0.32F, 0.06F, 0.33F, 0.33F, 0.32F};
-    case Stance::Pipe:
-        // On her pipe, hugging the riser ahead of her, her knees drawn up to
-        // her feet's brace on it (head first or feet first, the same body).
-        return {-0.73F, 0.22F, 0.31F, 0.34F, 0.30F};
+        // Hung from her hands on a climb: her shoulders under her hands,
+        // 1.82 m over her soles.
+        return {kFoot, 0.0F, 0.47F, 0.0F, kRadius};
     case Stance::Hold:
-        // On her feet with the player in her hand: stooped over him, her
-        // shoulders out over her arm.
-        return {-1.05F + 0.31F, -0.08F, 0.24F, 0.26F, 0.31F};
+        // The player in her hand, her arm and shoulder raised with him (to
+        // 2.6 m): all her old capsule.
+        return {kFoot, 0.0F, kHalfHeight, 0.0F, kRadius};
+    case Stance::Pipe:
     case Stance::Upright:
     case Stance::Down:
     default:
-        // Up and stooped: her trunk tipped forward over her soles, her head
-        // out ahead of her middle.
-        return {-1.05F + 0.32F, -0.03F, 0.12F, 0.26F, 0.32F};
+        // Up and stooped, or on her pipe: her drawn head at most 1.79 m over
+        // her soles (her rig is 1.80 m).
+        return {kFoot, 0.0F, 0.44F, 0.0F, kRadius};
     }
 }
 
@@ -184,8 +188,15 @@ void Matron::step_stance(const float dt) {
         ++g_shape_audit.per_stance[static_cast<std::size_t>(stance_)];
         const float depth = steel_depth();
         g_shape_audit.worst_depth_m = std::max(g_shape_audit.worst_depth_m, depth);
+        float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
+        worst = std::max(worst, depth);
         if (depth > kInsideSteelM) {
             ++g_shape_audit.inside_steel;
+            if (++steel_ticks_ > kInsideSteelTicks) {
+                ++g_shape_audit.sitting;
+            }
+        } else {
+            steel_ticks_ = 0;
         }
         g_shape_audit.query_s +=
             std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
@@ -202,7 +213,7 @@ bool Matron::on_planning_shape() const {
 
 // How deep her body is in the steel this tick: the deepest penetration of
 // her shape as it is into a body that does not move (the world's solids, a
-// locker), sensors aside. Read-only; the test audit's, not her movement's.
+// locker) and that her body collides with, sensors aside. Read-only; the test audit's, not her movement's.
 float Matron::steel_depth() const {
     const BodyLockRead her(physics_.GetBodyLockInterface(), body_);
     if (!her.Succeeded()) {
@@ -216,9 +227,13 @@ float Matron::steel_depth() const {
     not_us.Reserve(2);
     not_us.IgnoreBody(body_);
     not_us.IgnoreBody(player_);
+    // Only what her body meets (her layer's pairs): a body she passes
+    // through by the world's own filters is not steel she is in.
+    const ObjectLayer layer = body.GetObjectLayer();
     physics_.GetNarrowPhaseQuery().CollideShape(body.GetShape(), Vec3::sReplicate(1.0F),
                                                 body.GetCenterOfMassTransform(), settings, body.GetPosition(), hits,
-                                                {}, {}, not_us);
+                                                physics_.GetDefaultBroadPhaseLayerFilter(layer),
+                                                physics_.GetDefaultLayerFilter(layer), not_us);
     float deepest = 0.0F;
     for (const CollideShapeResult &hit : hits.mHits) {
         const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID2);

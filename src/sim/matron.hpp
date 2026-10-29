@@ -241,14 +241,21 @@ public:
     // A new family is tried once wanted this long (her drawn body takes about
     // 0.35-0.7 s to go over: matron_view.gd BLEND_W, FOURS_BLEND_W).
     static constexpr float kStanceDwellS = 0.2F;
-    // Deeper than this into a body that does not move is inside the steel
-    // (Jolt's own contact slop is 0.02 m; a landing's first tick a little more).
+    // Deeper than kInsideSteelM into a body that does not move, more than
+    // kInsideSteelTicks ticks running, is sitting in the steel (Jolt's own
+    // contact slop is 0.02 m; a hard landing's first tick or two sink a few
+    // centimetres more before her contacts push her out); deeper than
+    // kTunnelM in any one tick is going through it.
     static constexpr float kInsideSteelM = 0.05F;
+    static constexpr int kInsideSteelTicks = 3;
+    static constexpr float kTunnelM = 0.15F;
     // Test-only: every Matron's stance upkeep counted, process-wide (her
     // shape check, sim_tests_matron_shape.cpp). Observation only.
     struct ShapeAudit {
         long ticks = 0;
         long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
+        long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
+        float worst_depth_by_stance[kStanceCount] = {};
         float worst_depth_m = 0.0F;
         long switches = 0;          // family changes made
         long refused = 0;           // ticks a wanted shape did not fit and she kept hers
@@ -2577,6 +2584,7 @@ private:
     Stance stance_want_ = Stance::Upright;
     float stance_want_s_ = 0.0F;
     std::uint32_t stance_switches_ = 0;
+    int steel_ticks_ = 0;   // ticks running her shape has been in the steel (the audit's)
     std::array<std::array<JPH::Ref<JPH::Shape>, kStanceYawBins>, kStanceCount> stance_shapes_;
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
