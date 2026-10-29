@@ -868,10 +868,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          if [ -d staged-artifacts/artifacts ]; then
-            cp -a staged-artifacts/artifacts/. artifacts/
-          fi
-          find staged-artifacts -maxdepth 1 -name '*.log' -exec cp -a {} artifacts/ \;
+          # Each job uploaded its own artifacts/ folder as the artifact's root, so
+          # its apk/, screenshots/ and logs download at the top of staged-artifacts;
+          # a job that uploaded paths from two roots (android-build) keeps an
+          # artifacts/ prefix. The host binaries (build/, godot/) are not evidence.
+          for entry in staged-artifacts/* staged-artifacts/.[!.]*; do
+            [ -e "${entry}" ] || continue
+            case "$(basename "${entry}")" in
+              build|godot) ;;
+              artifacts) cp -a "${entry}/." artifacts/ ;;
+              *) cp -a "${entry}" artifacts/ ;;
+            esac
+          done
+          test -n "$(find artifacts -name '*.apk' -print -quit)"
           cat artifacts/native-tests-*.log > artifacts/native-tests.log
           cat artifacts/godot-uitest-touch-1.log artifacts/godot-uitest-touch-2.log > artifacts/godot-uitest.log
           cat > artifacts/WO-006-EVIDENCE.md <<EOF
