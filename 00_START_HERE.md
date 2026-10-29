@@ -59,7 +59,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 40. Human sounds are real (10-27: *"you can't create a voice with some sort of synthesized shit like that. It never works."*): CC0 recordings with their source, or voices made as the fear yells were; code makes steel, air, steps, beds; he picks by ear (10-19, 10-27).
 41. Rejected by ear: growl, rage growl, strain, breath (fine if light), shriek, swallow, effort, hit, laugh, rip; kept for now: beds, mouth, steps, joints, sniff; the music box stays deleted (10-27). No cluck or croak (10-29: *"She's not a freakin chicken or a frog bro."*); nothing animal-like returns renamed.
 42. While she holds him, no sound of hers plays twice running (10-28).
-43. Her lines: a condescending, merciless nurse talking to a child, profane, emasculating; the last, at the apron wipe, *"Waste not."* (10-21).
+43. Her lines: a condescending, merciless nurse talking to a child, profane, emasculating; the last, at the apron wipe, *"Waste not."* (10-21). Her lines: all of `03_EXECUTION/MATRON_REDESIGN/HER_LINES_DRAFT.md` kept, with variety: never repetitive, deeply immersive (10-29).
 44. Machines make sounds; only people have voices (10-18). Falls sound human, profanity never filtered (09-28); the fear yells are finished, their generator untouched (10-19). No "ting-ting-ping-ping" (09-26).
 
 **Camera, controls and presentation**
