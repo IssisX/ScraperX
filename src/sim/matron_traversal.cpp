@@ -123,6 +123,13 @@ float leg_speed_cap(const Limits &limits) {
 }
 
 constexpr float kGapHopM = 0.16F;
+// A jump is planted for her hands this far past what she jumps for, the
+// same margin the scan's reach check keeps (a drive that only just gets
+// her hands there loses it to the tick it toes off on).
+constexpr float kJumpOverreachM = 0.08F;
+// How near the take-off she sets for a jump to a lip; the scan checks her
+// flight from every spot inside it.
+constexpr float kTakeoffToleranceM = 0.15F;
 constexpr float kGapRunMps = 3.2F;
 constexpr float kGapDropM = 1.25F;
 constexpr float kPlanTickS = 1.0F / 90.0F;
@@ -1861,7 +1868,7 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
     const float feet = float(c.GetY()) - limits_.center_above_feet();
     const Vec3 lip(spec_.line.GetX(), spec_.goal_top, spec_.line.GetZ());
     if (phase_ == 0) {
-        if (horizontal(spec_.start - c) > 0.15F || flat(velocity()).Length() > 0.3F) {
+        if (horizontal(spec_.start - c) > kTakeoffToleranceM || flat(velocity()).Length() > 0.3F) {
             if (phase_s_ > 8.0F) {
                 fail(Failure::Stalled);
                 return status_;
@@ -1876,7 +1883,7 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
         if (phase_s_ < 0.25F) {
             return status_;   // set
         }
-        if (!plant_leg(spec_.goal_top)) return status_;
+        if (!plant_leg(spec_.goal_top + kJumpOverreachM)) return status_;
         phase_ = 2;
         phase_s_ = 0.0F;
     }
@@ -1891,6 +1898,9 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
     // In the air: no thrust, gravity only. Her hands are her centre plus
     // her reach over it; a lip is caught when her hands are at its height
     // and within her hand reach of it, while she is not still rising fast.
+    // The steel she takes must be inside the reach that keeps a hold
+    // (revalidate): a lip her hands fall short of is not caught, so it is
+    // never a hold dropped on the next tick for being out of her reach.
     const Vec3 v = velocity();
     const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_center, 0.0F);
     const bool near_lip = std::abs(float(hands.GetY()) - spec_.goal_top) < 0.25F &&
@@ -1898,7 +1908,7 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
     if (near_lip && v.GetY() < 0.8F) {
         Hold lip_hold;
         RVec3 lip_at;
-        if (take_hold(RVec3(lip), limits_.catch_radius_m, false, lip_hold, &lip_at)) {
+        if (take_hold(RVec3(lip), limits_.catch_radius_m, false, lip_hold, &lip_at) && revalidate(lip_hold, lip_at)) {
             const Vec3 support_v = bodies.GetPointVelocity(lip_hold.body, lip_at);
             if ((v - support_v).Length() > limits_.catch_arrest_mps) {
                 ++view_.misses;
@@ -1922,7 +1932,10 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
         // gone, and falling past it is the miss below, not a catch.
     }
     float support_top = 0.0F;
-    if (supported(&support_top)) {
+    // A floor under her soles while she is still rising off it is the floor
+    // she toed off (a short jump leaves it slowly), not a landing: only a
+    // floor she has come back down onto, or stands on, ends the jump.
+    if (v.GetY() < 0.3F && supported(&support_top)) {
         // She came down on the floor over the lip itself: that is the top,
         // not a miss (a short lip, a high jump).
         if (std::abs(support_top - spec_.goal_top) < 0.3F && std::abs(v.GetY()) < 0.3F) {
@@ -3066,14 +3079,51 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                             jump.spec.line = lip;
                             jump.cost = 3.0F + rise + 6.0F;
                             const float speed_cap = leg_speed_cap(limits);
+                            // A lip is a hold she jumps for: no higher over
+                            // her feet than any hold she may jump for (the
+                            // player's escape margin), and inside her legs' reach.
                             const bool jump_ok =
-                                speed_cap > 0.0F &&
-                                rise + 0.08F <= limits.hand_reach_standing() + limits.leg_travel_m +
+                                speed_cap > 0.0F && rise <= limits.jump_hold_max_m &&
+                                rise + kJumpOverreachM <= limits.hand_reach_standing() + limits.leg_travel_m +
                                                    speed_cap * speed_cap / (2.0F * kGravity);
-                            jump.usable = below_ok && above_ok && horizontal(below - lip) <= 0.7F && jump_ok;
+                            // Her flight: her capsule straight up off the
+                            // floor below until her hands are at the lip,
+                            // from every spot she may set on round the
+                            // take-off. Steel over that floor (the underside
+                            // of the floor over it, where the floor below
+                            // runs in under the lip) stops the jump under its
+                            // head, short of the lip; the take-off moves out
+                            // from the lip along the floor below until her
+                            // flight is clear, no farther than the lip's
+                            // reach from it allows.
+                            const float flight_rise = std::max(rise + kJumpOverreachM - limits.hand_reach_standing(), 0.0F);
+                            const Vec3 away = up.spec.out;
+                            const Vec3 across(-away.GetZ(), 0.0F, away.GetX());
+                            const auto flight_clear = [&](const Vec3 feet) {
+                                for (const Vec3 off : {Vec3::sZero(), away * kTakeoffToleranceM, away * -kTakeoffToleranceM,
+                                                       across * kTakeoffToleranceM, across * -kTakeoffToleranceM}) {
+                                    const Vec3 f = feet + off;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, f, f + Vec3(0.0F, flight_rise, 0.0F))) return false;
+                                }
+                                return true;
+                            };
+                            Vec3 takeoff = below;
+                            bool flight_ok = below_ok && flight_clear(takeoff);
+                            for (float k = 0.05F; below_ok && !flight_ok && k <= 0.7F + 1.0e-4F; k += 0.05F) {
+                                const Vec3 b = closest_on(lo, below + away * k, limits.radius + 0.1F);
+                                if (horizontal(b - lip) > 0.7F) break;
+                                if (capsule_free(physics, ignore, limits, b) && flight_clear(b)) {
+                                    takeoff = b;
+                                    flight_ok = true;
+                                }
+                            }
+                            jump.spec.start = takeoff;
+                            jump.usable = below_ok && above_ok && horizontal(takeoff - lip) <= 0.7F && jump_ok && flight_ok;
                             if (!below_ok || !above_ok) jump.reason += "; blocked: capsule sweep";
-                            if (horizontal(below - lip) > 0.7F) jump.reason += "; blocked: take-off too far from the lip";
+                            if (horizontal(takeoff - lip) > 0.7F) jump.reason += "; blocked: take-off too far from the lip";
                             if (!jump_ok) jump.reason += "; blocked: lip past her hands' jump reach";
+                            if (below_ok && !flight_ok) jump.reason += "; blocked: steel over her flight to the lip";
                             add_edge(jump);
                         }
                         Edge down = up;
