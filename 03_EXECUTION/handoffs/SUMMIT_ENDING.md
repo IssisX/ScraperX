@@ -62,3 +62,5 @@ unrigged again. Radio and the final descent replay per launch.
 - 15:04: Rendered touch proof exposed poor beam framing from the brake underneath the load.
   Moved the brake beside the beam with a physical drive shaft and aimed the two beam stills
   from the relocated work point. Native and touch proof on this revision remain pending.
+- Rendered screenshot proof is now a CI gate on the same real touch ending scenario; all five
+  frames must exist. Existing native and headless touch checks remain unchanged.

@@ -269,6 +269,22 @@ jobs:
           grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
           grep -F "tower_height=1600" artifacts/godot-runtime.log
 
+      # The summit's physical payoff must also be readable in the rendered game.
+      # Headless touch proofs cannot show whether the beam and both bearings are visible.
+      - name: Render the complete summit ending through touch
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 400s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+            -- --uitest=touch_summit_ending "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/summit" \
+            2>&1 | tee artifacts/summit-ending-rendered.log
+          grep -F "SCRAPERX_UITEST PASS touch_summit_ending " artifacts/summit-ending-rendered.log
+          for frame in ending_hanging_beam ending_seated_foreman ending_city ending_parachute ending_home; do
+            test -s "artifacts/screenshots/summit_${frame}.png"
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
+
       # Blocking Android delivery gate: the touch control paths
       - name: Drive every control path through the real input pipeline
         shell: bash
