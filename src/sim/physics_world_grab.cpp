@@ -170,7 +170,8 @@ void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept 
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodies) const noexcept {
-    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(kPlayerHalfHeight - 0.08F), 0.0F);
+    // Where her hand takes him: his thigh (Matron::kHeldBelowMiddleM).
+    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -Matron::kHeldBelowMiddleM, 0.0F);
 }
 
 void Simulation::PhysicsWorld::grab_reset(JPH::BodyInterface &bodies) noexcept {
@@ -331,8 +332,10 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         arm.mPoint2 = shoulder;
         arm.mMinDistance = 0.0F;
         arm.mMaxDistance = Matron::kArmReachM;
-        arm.mLimitsSpringSettings.mFrequency = 6.0F;
-        arm.mLimitsSpringSettings.mDamping = 0.8F;
+        // Stiff (Matron::kArmLimitHz): her arm gives a few centimetres under a
+        // jolt, never past her arm's length.
+        arm.mLimitsSpringSettings.mFrequency = Matron::kArmLimitHz;
+        arm.mLimitsSpringSettings.mDamping = 1.0F;
         hand_arm_ = create_constraint(arm, matron_->body(), hand_id_, false);
         hand_arm_at_ = matron_->shoulder_local();
     }
@@ -385,7 +388,23 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         // where the body already is (no snap); the point stays where it is.
         const JPH::Quat rot = bodies.GetRotation(player_id_);
         const JPH::Vec3 up = rot.RotateAxisY();
-        if (!grip_swing_ && -up.GetY() >= std::cos(kGripConeRad - 0.05F)) {
+        if (grip_swing_ && matron_->grip_free()) {
+            // Tipped across a rail: he turns free about her fingers again (a
+            // bare point, made where her hand is: no snap).
+            const JPH::RVec3 pivot = bodies.GetPosition(hand_id_);
+            JPH::PointConstraintSettings point;
+            point.mSpace = JPH::EConstraintSpace::WorldSpace;
+            point.mPoint1 = pivot;
+            point.mPoint2 = pivot;
+            JPH::Ref<JPH::TwoBodyConstraint> made = create_constraint(point, hand_id_, player_id_, false);
+            if (made != nullptr) {
+                destroy_grab_constraint(grip_);
+                grip_ = made;
+                grip_swing_ = false;
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
+            }
+        }
+        if (!grip_swing_ && !matron_->grip_free() && -up.GetY() >= std::cos(kGripConeRad - 0.05F)) {
             const JPH::RVec3 pivot = bodies.GetPosition(hand_id_);
             JPH::SwingTwistConstraintSettings hinge;
             hinge.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -458,8 +477,10 @@ void Simulation::PhysicsWorld::rehang_arm(JPH::BodyInterface &bodies, JPH::Ref<J
     arm.mPoint2 = bodies.GetPosition(hand);
     arm.mMinDistance = 0.0F;
     arm.mMaxDistance = Matron::kArmReachM;
-    arm.mLimitsSpringSettings.mFrequency = 6.0F;
-    arm.mLimitsSpringSettings.mDamping = 0.8F;
+    // Stiff (Matron::kArmLimitHz): her arm gives a few centimetres under a
+    // jolt, never past her arm's length.
+    arm.mLimitsSpringSettings.mFrequency = Matron::kArmLimitHz;
+    arm.mLimitsSpringSettings.mDamping = 1.0F;
     arm_limit = create_constraint(arm, matron_->body(), hand, false);
     hung_at = shoulder;
 }

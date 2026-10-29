@@ -1833,6 +1833,11 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["hold_s"] = m.hold_s;
     out["hand"] = to_godot(m.hand);
     out["hand2"] = to_godot(m.hand2);
+    // Her reach (sim/matron.hpp kArmReachM): her trunk's lean from the hips
+    // and her hips' crouch, and her shoulder; the drawing leans her so.
+    out["hold_lean"] = m.hold_lean;
+    out["hold_crouch"] = m.hold_crouch;
+    out["matron_shoulder"] = to_godot(p.matron_shoulder);
     out["armplay_beat"] = static_cast<std::int64_t>(m.armplay_beat);
     out["fatal_beat_view"] = static_cast<std::int64_t>(m.fatal_beat);
     out["grabs"] = static_cast<std::int64_t>(m.grabs);

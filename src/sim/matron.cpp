@@ -1141,7 +1141,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
         want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
-        yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
+        // With him in her fist, she turns no faster than her hand can bring
+        // him round with her (kCarryTurnRate).
+        yaw_ = turn_toward(yaw_, std::atan2(dx, dz), holding() && grip_on_ ? kCarryTurnRate : kTurnRate, dt);
     }
     if (floor) {
         // Speeding up along her heading is slow (foot_accel); planting a foot to
@@ -4348,6 +4350,8 @@ void Matron::refresh_view() {
     view_.hand_x = float(hand_target_.GetX());
     view_.hand_y = float(hand_target_.GetY());
     view_.hand_z = float(hand_target_.GetZ());
+    view_.hold_lean = holding() ? lean_ : 0.0F;
+    view_.hold_crouch = holding() ? crouch_ : 0.0F;
     if (shown.bar_traverse) {
         view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
         view_.support_n = shown.force_n;

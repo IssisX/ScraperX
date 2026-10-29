@@ -353,6 +353,8 @@ struct MatronSnapshot final {
     bool hold_braced = false;
     double hold_s = 0.0;
     Vector3 hand{};
+    double hold_lean = 0.0;     // her trunk leant from the hips to reach, rad
+    double hold_crouch = 0.0;   // her hips down to reach, m
     bool aim_ledge = false;
     Vector3 aim{};
     static constexpr int kPlanks = 11;
