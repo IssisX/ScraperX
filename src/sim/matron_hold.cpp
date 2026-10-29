@@ -957,7 +957,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             grip_free_ = true;
             const RVec3 lip(rim_x_ + rim_nx_ * kRimStandM, feet, rim_z_ + rim_nz_ * kRimStandM);
             const float past = float(player.GetX() - lip.GetX()) * rim_nx_ + float(player.GetZ() - lip.GetZ()) * rim_nz_;
-            const RVec3 onto = lip + Vec3(0.0F, kHeaveUpM, 0.0F);
+            const RVec3 onto = lip + out * (fatal_hold_ ? 0.0F : kHeaveOverM) + Vec3(0.0F, kHeaveUpM, 0.0F);
             const RVec3 tip = lip + out * kTipPastM + Vec3(0.0F, kTipUpM, 0.0F);
             const float tip_mps = (fatal_hold_ ? 1.0F : kTipPaceScale) * kHandSpeedMps;
             if (tip_step_ == 0) {

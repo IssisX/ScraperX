@@ -866,6 +866,10 @@ public:
     // kTipBackFwdM in from the side and kTipBackUpM up as she steps back,
     // till his middle is kTipDoneM in from it.
     static constexpr float kHeaveUpM = 1.85F;
+    // Going over, her fist that far out past the rail's line too: his body
+    // tips over the rail, out in front of her, never folded over her head
+    // (not in her fatality, whose hang and let-go are timed from the rail).
+    static constexpr float kHeaveOverM = 0.12F;
     static constexpr float kArmPlayUpM = 1.48F;   // the rip: him hauled up to her, his arm in her other hand's reach
     static constexpr float kTipPastM = 0.40F;
     static constexpr float kTipUpM = 1.0F;
@@ -1019,7 +1023,9 @@ public:
     // reach take as far as they go), and lets go on the way once his
     // middle is kFatalOpenAirM out past the lip (over open air) and his fall
     // from there, as he moves, kills.
-    static constexpr float kFatalDropOutM = 1.0F;
+    // (1.15 m: at 1.0 her band's west edge at (-6.9, -124) kept his middle
+    // 0.38-0.50 m out, never over open air in time.)
+    static constexpr float kFatalDropOutM = 1.15F;
     static constexpr float kFatalDropUpM = 1.25F;
     static constexpr float kFatalOpenAirM = 0.5F;
     // Her arm's thrust out to that pose (at kFatalLowerScale of her hand's
