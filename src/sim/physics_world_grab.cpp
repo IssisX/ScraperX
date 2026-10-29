@@ -34,6 +34,10 @@ constexpr float kHandDampNspm = 500.0F;
 // +-20 (the cone opens wide while the body comes over into the hang, and
 // closes only as far as the body already is).
 constexpr float kGripConeRad = 0.61F;
+// Her wrist on his thigh (before he hangs in her hand's cone): a turn toward
+// head down and a damping of his tumble, capped (grab_drive).
+constexpr float kWristTurnNmPerRad = 2500.0F;
+constexpr float kWristDampNms = 500.0F;
 constexpr float kGripTwistRad = 0.35F;
 // Thrashing: the stick's speed (units a second) for a full thrash; a kick
 // (a reversal of the stick, or a jump) is kKickNs along the body, away from
@@ -428,11 +432,38 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
             }
         }
+        if (!grip_swing_ && !matron_->grip_free() && matron_->wrist_steadies()) {
+            // His thigh in her fist, not yet hanging in her hand's cone: her
+            // wrist turns him toward head down and stills his tumbling about
+            // her fingers (a torque at most Matron::kFatalGripFrictionNm,
+            // its reaction on her).
+            const JPH::Vec3 w = bodies.GetAngularVelocity(player_id_);
+            const JPH::Vec3 err = up.Cross(-JPH::Vec3::sAxisY());
+            JPH::Vec3 torque = err * kWristTurnNmPerRad - w * kWristDampNms;
+            const float most = Matron::kFatalGripFrictionNm;
+            if (torque.Length() > most) {
+                torque = torque.Normalized() * most;
+            }
+            bodies.AddTorque(player_id_, torque);
+            bodies.AddTorque(matron_->body(), -torque);
+        }
         if (grip_swing_) {
-            // The fatality's grip is firm on the ankle: his swing about her
-            // fingers meets their friction (Matron::kFatalGripFrictionNm).
-            static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr())
-                ->SetMaxFrictionTorque(matron_->fatal_holding() ? Matron::kFatalGripFrictionNm : 0.0F);
+            // The fatality's grip is firm on his thigh: her wrist holds him
+            // hanging straight, head down (a spring toward it, its torque at
+            // most Matron::kFatalGripFrictionNm), stilling his swing about her
+            // fingers without freezing him crooked.
+            auto *hinge = static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr());
+            hinge->SetMaxFrictionTorque(0.0F);
+            if (matron_->fatal_holding()) {
+                JPH::MotorSettings &wrist = hinge->GetSwingMotorSettings();
+                wrist.mSpringSettings.mFrequency = Matron::kFatalWristHz;
+                wrist.mSpringSettings.mDamping = 1.0F;
+                wrist.SetTorqueLimit(Matron::kFatalGripFrictionNm);
+                hinge->SetTargetOrientationCS(JPH::Quat::sIdentity());
+                hinge->SetSwingMotorState(JPH::EMotorState::Position);
+            } else {
+                hinge->SetSwingMotorState(JPH::EMotorState::Off);
+            }
         }
         // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).
         grip_fought_ = grip_fought_ || kick_now_ || thrash_ > kFoughtThrash || brace_ != nullptr;

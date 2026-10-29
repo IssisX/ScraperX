@@ -730,10 +730,13 @@ public:
     static constexpr float kLeanRadps = 2.5F;
     static constexpr float kCrouchMaxM = 0.5F;
     static constexpr float kCrouchMps = 1.0F;
-    static constexpr float kLoadedPostureScale = 0.35F;
+    static constexpr float kLoadedPostureScale = 0.6F;
     // Her hand's poses stay kPoseReachM from her shoulder: her arm's limit is
     // met only by a jolt, not held against.
     static constexpr float kPoseReachM = kArmReachM - 0.06F;
+    // Holding him out over the drop in her fatality, her arm all the way out
+    // (his weight takes up the rest of it, a centimetre or two).
+    static constexpr float kFatalPoseReachM = kArmReachM - 0.02F;
     static constexpr float kArmLimitHz = 15.0F;   // her arm's limit, stiff: 7 cm at her grip's 3.8 kN
     // Where she holds him (the owner, 2026-10-29: "we can modify the way she
     // carries or where she holds or how she holds"): by the thigh,
@@ -754,6 +757,7 @@ public:
     static constexpr float kGripCloseM = 0.14F;       // her fingers close on an ankle this near
     static constexpr float kGrabReachSeconds = 1.2F;  // and miss it after this
     static constexpr float kGrabLiftSeconds = 0.9F;
+    static constexpr float kGrabInvertMaxS = 1.5F;   // waiting for him to hang head down, at most
     static constexpr float kGrabCooldownSeconds = 1.5F;   // after a miss
     static constexpr float kAfterReleaseSeconds = 20.0F;  // no new grab for this long after a hold ends
     // A grip the world tears from her hand before the arm she takes again
@@ -768,6 +772,10 @@ public:
     static constexpr float kCarryPaceScale = 0.5F;
     static constexpr float kCarryTurnRate = 2.5F;   // rad/s, him in her fist
     static constexpr float kCarryAccel = 2.5F;   // m/s2, him in her fist: he swings back at most 14 degrees
+    static constexpr float kFatalCarryPaceScale = 0.75F;   // of her hunt: she runs him to her fatality's edge
+    static constexpr float kFatalCarryAccel = 7.0F;   // m/s2, to her fatality's edge
+    static constexpr float kCarryComingOverMps = 1.4F;
+    static constexpr float kCarryHeadDownCos = 0.6F;   // near enough head down to carry him at pace   // her pace while he comes over head down
     static constexpr float kCarryHandUpM = 1.66F;
     static constexpr float kCarrySideM = 0.66F;
     // Her heave: her fist up kHeaveUpM over her feet (over the rail's line,
@@ -916,21 +924,30 @@ public:
     // width) as he swings. His shoulder, the punch's start, is
     // kShoulderOfMiddleM along his body's up from his middle.
     static constexpr float kFatalStandM = 0.30F;
-    static constexpr float kFatalWindowOutM = 0.85F;
-    static constexpr float kFatalWindowUpM = 1.56F;
+    static constexpr float kFatalWindowOutM = 0.9F;
+    static constexpr float kFatalWindowUpM = 1.30F;
     static constexpr float kFatalGripFrictionNm = 80.0F;
+    static constexpr float kFatalWristHz = 1.5F;   // her wrist's steadying of him, head down
     static constexpr float kFatalEaseRate = 3.0F;
     static constexpr float kFatalWindowPastM = 0.20F;
     static constexpr float kFatalReachM = 0.70F;
+    static constexpr float kFatalHeadDownCos = 0.85F;   // his window opens with him this near head down
     static constexpr float kShoulderOfMiddleM = 0.25F;
     // His window over, she takes him out over the drop toward her let-go's
-    // pose (kFatalDropOutM out from her middle and kFatalDropUpM over her
-    // feet: her arm's length that high), and lets go on the way once his
+    // pose (kFatalDropOutM out from her shoulder and kFatalDropUpM over her
+    // feet: past her arm's length, which her lean over the rail and her
+    // reach take as far as they go), and lets go on the way once his
     // middle is kFatalOpenAirM out past the lip (over open air) and his fall
     // from there, as he moves, kills.
-    static constexpr float kFatalDropOutM = 0.95F;
-    static constexpr float kFatalDropUpM = 1.40F;
+    static constexpr float kFatalDropOutM = 1.0F;
+    static constexpr float kFatalDropUpM = 1.25F;
     static constexpr float kFatalOpenAirM = 0.5F;
+    // Her arm's thrust out to that pose (at kFatalLowerScale of her hand's
+    // pace), as she lets go on the way: he leaves her hand moving out at
+    // least this fast (the edge's choice counts on it; the let-go itself
+    // foresees his fall from how he really moves).
+    static constexpr float kFatalThrustMps = 0.8F;
+    static constexpr float kFatalHeaveBackM = 0.25F;   // her heave back before a thrust out
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
     // hold, at every stage (Cory, 2026-10-27: every time she catches you she
@@ -1369,6 +1386,8 @@ public:
     [[nodiscard]] float hold_lean() const noexcept { return lean_; }
     [[nodiscard]] bool grip_free() const noexcept { return grip_free_ && holding(); }
     [[nodiscard]] float hold_crouch() const noexcept { return crouch_; }
+    // Her wrist steadies him head down (not while her other hand has his arm).
+    [[nodiscard]] bool wrist_steadies() const noexcept { return holding() && state_ != State::ArmPlay; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
@@ -1981,6 +2000,8 @@ private:
     // Her lean and crouch toward what her hand's pose (and, `both`, her
     // other hand's reach) wants, at their pace.
     void step_posture(float dt, JPH::RVec3 want, bool both) noexcept;
+    // He hangs head down in her fist (within acos(cos_down) of it).
+    [[nodiscard]] bool bodies_hung(float cos_down = kFatalHeadDownCos) const noexcept;
     // His shoulder's distance from her body (her at `at`, his middle at
     // `player`), and so as far as his swing (`swing_v`) carries it: what his
     // punch must reach (kFatalReachM).
@@ -2145,6 +2166,8 @@ private:
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
     float lean_ = 0.0F;     // her trunk leant from the hips, rad
+    bool fatal_heave_back_ = false;   // her let-go's heave: back in (else out)
+    float pose_reach_ = kPoseReachM;   // how far from her shoulder her hand's poses go now
     float crouch_ = 0.0F;   // her hips down, m
     bool hand2_leads_ = false;
     int tip_step_ = 0;          // over the rail: 0 onto it, 1 out over it
