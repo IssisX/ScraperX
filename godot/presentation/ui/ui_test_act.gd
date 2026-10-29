@@ -1129,14 +1129,17 @@ func _matron_heave_touch(device: int) -> bool:
 # after; as she climbs, a shove sends the drum off the edge onto her: torn
 # off, she slams onto the flange below, alive, and nobody is dead.
 const PIPE_DRUM_PICK := Vector2(-15.0, -125.95)
-# Set the drum inboard on the same north band, clear of the riser-side
-# approach she takes to the pipe. The old 16.6 m placement left a loose,
-# rolling drum at the inside rim through the whole descent and climb.
-# Carry it back to the same throw rail after retrieving it by touch.
-const PIPE_DRUM_SET_FROM := Vector2(20.0, -128.4)
+# Set the drum on the north band near the throw rail. It is settled in the
+# hands before it is let go and must lie still after (the checks below), so
+# it does not roll off; set at 20 m, the run to it and back brought the
+# climber to the rail only after she had climbed past it. Carried back to the
+# throw rail after retrieving it by touch.
+const PIPE_DRUM_SET_FROM := Vector2(16.6, -128.4)
 # At the rail over her line (x 15.15), west of the riser's flanges (to x
-# 15.25): the drum held out under the rail's bar, thrown down past them.
-const PIPE_THROW_FROM := Vector2(14.75, -132.55)
+# 15.25): the drum held out against the rail, thrown down past them. (Held
+# out, the drum meets the rail's steel with the climber at about z -131.7:
+# the old -132.55 the held drum could not reach.)
+const PIPE_THROW_FROM := Vector2(14.75, -131.6)
 const PIPE_WARNING_S := 4.0
 
 var _pipe_drum := 0
@@ -1294,7 +1297,12 @@ func _pipe_drum_onto_her(device: int) -> bool:
 	var drum := _pipe_drum_at()
 	if drum.y < MATRON_DECK_Y - 0.5:
 		return _fail("the staged drum left the deck before retrieval (at %s, staged at %s)" % [str(drum), str(_pipe_drum_rest)])
-	if not await _sprint_to(device, Vector2(drum.x, -127.2), 1.0, 10.0):
+	# From the riser's head round by the bay's west side and over its leaf
+	# (straight east runs off the leaf's south side into the bay, as in
+	# _act_dangerous_and_changed), then along the band to the drum.
+	if not (await _walk_to(device, ACT_BAY_WEST, 0.3, 4.0, true) and \
+			await _sprint_to(device, Vector2(16.0, -128.6), 1.0, 8.0) and \
+			await _sprint_to(device, Vector2(drum.x, drum.z + 1.3), 0.4, 10.0)):
 		return _fail("the run back round to the drum stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	await _tilt(-0.25)
@@ -1328,7 +1336,9 @@ func _pipe_drum_onto_her(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == _pipe_drum, 1.0):
 		return _fail("PICK UP did not put the drum in the hands")
 	await _tilt(-1.2)
-	if not await _walk_to(device, PIPE_THROW_FROM, 0.08, 4.0):
+	# (Within 0.2 m: with the drum in the hands the stick's least push, a
+	# quarter, no longer moves the climber the last ten centimetres.)
+	if not await _walk_to(device, PIPE_THROW_FROM, 0.2, 4.0):
 		return _fail("the step to the rail with the drum stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	var held := _pipe_drum_at()

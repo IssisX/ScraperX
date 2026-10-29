@@ -590,7 +590,7 @@ void Matron::ride_pipe(const float dt) {
     // gets off onto.)
     const float lowest = (down ? (to.line_on_floor ? to.floor_y + 0.05F : to_rail + kPipeOverRailM)
                                : (from.line_on_floor ? from.floor_y + 0.05F : from_rail + kPipeOverRailM)) + kStandCentre;
-    const float ahead_y = std::max(lowest, float(at.GetY()) + (down ? -1.0F : 1.0F) * std::max(0.35F, std::abs(v.GetY()) * 0.6F));
+    const float ahead_y = std::max(lowest, float(at.GetY()) + (down ? -1.0F : 1.0F) * std::max(0.6F, std::abs(v.GetY()) * 0.6F));
     const Vec3 line_gap = riser_line_at(r, std::max(lowest, float(at.GetY())), ahead_y - std::max(lowest, float(at.GetY())));
     pipe_gap_ = line_gap.GetY();
     const Vec3 line(line_gap.GetX(), 0.0F, line_gap.GetZ());
@@ -1027,27 +1027,31 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
 }
 
 int Matron::riser_between(const float from_floor, const float to_floor, const float x, const float z, const int region) {
-    // From this floor toward that one (to it, or to a deck between), its way open.
+    // From this floor toward that one (to it, or to a deck between), its way
+    // open; the nearest whose stand her map walks her to from the region she
+    // is on (-1: any).
     const auto &routes = riser_routes();
     const bool up = to_floor > from_floor;
-    int best = -1;
-    float best_d = std::numeric_limits<float>::max();
+    std::vector<std::pair<float, int>> near;
     for (std::size_t i = 0; i < routes.size(); ++i) {
         const RiserRoute &r = routes[i];
         const RiserDeck &from = up ? r.lo : r.hi;
         const RiserDeck &to = up ? r.hi : r.lo;
         const bool toward = up ? to.floor_y <= to_floor + 0.6F : to.floor_y >= to_floor - 0.6F;
-        if (std::abs(from.floor_y - from_floor) > kOnSteelM || !toward || (region >= 0 && from.region != region) ||
+        if (std::abs(from.floor_y - from_floor) > kOnSteelM || !toward ||
             !pipe_way_open(static_cast<int>(2 * i + (up ? 0 : 1)))) {
             continue;
         }
-        const float d = distance_xz(x, z, from.stand.GetX(), from.stand.GetZ());
-        if (d < best_d) {
-            best_d = d;
-            best = static_cast<int>(i);
+        near.emplace_back(distance_xz(x, z, from.stand.GetX(), from.stand.GetZ()), static_cast<int>(i));
+    }
+    std::sort(near.begin(), near.end());
+    for (const auto &[d, i] : near) {
+        const RiserDeck &from = up ? routes[static_cast<std::size_t>(i)].lo : routes[static_cast<std::size_t>(i)].hi;
+        if (region < 0 || scanned_ == nullptr || from.region == region || !scanned_->plan(region, from.region).empty()) {
+            return i;
         }
     }
-    return best;
+    return -1;
 }
 
 int Matron::pipe_way(const float from_floor, const float to_floor) const noexcept {
