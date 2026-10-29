@@ -1494,6 +1494,13 @@ public:
     [[nodiscard]] float hold_crouch() const noexcept { return crouch_; }
     // Her wrist steadies him head down (not while her other hand has his arm).
     [[nodiscard]] bool wrist_steadies() const noexcept { return holding() && state_ != State::ArmPlay; }
+    // Setting him down (Spare) she never pulls her own grip to tearing: her
+    // grip's strain halfway to kGripTearNs, her hand gives to kSpareGiveN,
+    // under her grip's strain floor, so a body caught on the world out there
+    // stays in her fist till it comes free (physics_world_grab.cpp; her
+    // pull's cap, kHandPullN, is unchanged).
+    static constexpr float kSpareGiveN = 0.9F * kGripStrainFloorN;
+    [[nodiscard]] bool setting_down() const noexcept { return state_ == State::Spare; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     // ArmPlay out over the rail, his arm not yet in her other hand after a
     // re-pose for it (no step back there): she hauls him in to her, her

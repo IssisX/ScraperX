@@ -401,7 +401,12 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                       kHandDampNspm * (matron_->hand_target_velocity() - hand_v);
     // She holds the weight in her hand (the body's, while she has it).
     force += JPH::Vec3(0.0F, (grip_ != nullptr ? kPlayerMassKg : 0.0F) * 9.81F * 0.9F, 0.0F);
-    const float cap = matron_->hand_pull_n();
+    float cap = matron_->hand_pull_n();
+    if (grip_ != nullptr && matron_->setting_down() && grip_strain_ns_ > 0.5F * Matron::kGripTearNs) {
+        // Setting him down, her grip straining (him caught on the world):
+        // her hand gives before her grip tears (Matron::kSpareGiveN).
+        cap = std::min(cap, Matron::kSpareGiveN);
+    }
     if (force.Length() > cap) {
         force *= cap / force.Length();
     }

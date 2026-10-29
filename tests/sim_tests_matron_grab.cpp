@@ -554,6 +554,10 @@ void run_matron_grab() {
         Simulation s(InitialSpawn::Deck154);
         at_the_rail(s, -159.5);
         s.debug_matron_hold(0, 3.0);
+        // Her pull kept under the hold (a test's arm that will not come of
+        // itself): at her real arm the rip is under a second, and it is his
+        // kicks, not her pull, that this case tears it with.
+        s.debug_matron_armplay(2);
         constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
         int kicks_from = -1;
         double torn_at = -1.0;
