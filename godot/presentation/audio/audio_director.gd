@@ -21,6 +21,8 @@ const BUS_AMBIENCE := &"Ambience"
 const BUS_INTERFACE := &"Interface"
 const BUS_VOICE := &"Voice"
 const BUS_MATRON := &"Matron"
+# Permanent mix offset: the user's Ambience slider still controls this bus.
+const AMBIENCE_TRIM_DB := -11.0
 const EFFECT_VOICES := 6
 const POSITIONAL_VOICES := 5
 
@@ -61,7 +63,7 @@ const VOICE_GAP_SECONDS := Vector2(0.08, 0.3)
 # While a line is spoken the whole ambience bed (altitude wind, the yard,
 # the falling-air rush) ducks under it: at height the wind, not the rush, is
 # what a voice has to carry over.
-const VOICE_DUCK_DB := 8.0
+const VOICE_DUCK_DB := 10.0
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
@@ -389,7 +391,8 @@ func set_volumes(master: float, effects: float, ambience: float, interface: floa
 			continue
 		var level: float = pair[1]
 		AudioServer.set_bus_mute(index, level <= 0.001)
-		AudioServer.set_bus_volume_db(index, linear_to_db(maxf(level, 0.001)))
+		var trim_db := AMBIENCE_TRIM_DB if pair[0] == BUS_AMBIENCE else 0.0
+		AudioServer.set_bus_volume_db(index, linear_to_db(maxf(level, 0.001)) + trim_db)
 
 
 # The foreman's radio (life/foreman_radio.gd): its squelch opening a line and
@@ -440,7 +443,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 			# run's footfall lands harder and deeper than a walk's.
 			var weight := smoothstep(1.5, 8.0, horizontal)
 			_play(_surface(support_entity, position.y),
-				linear_to_db(clampf(0.35 + horizontal / 8.0, 0.35, 1.0)) - (9.0 if crouched else 3.0),
+				linear_to_db(clampf(0.35 + horizontal / 8.0, 0.35, 1.0)) - (9.0 if crouched else 3.0) - 12.0,
 				randf_range(0.95, 1.05) * lerpf(1.0, 0.86, weight))
 	elif not grounded:
 		_stride = 0.5  # the first step after landing comes quickly
