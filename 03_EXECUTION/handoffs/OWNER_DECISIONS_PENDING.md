@@ -1,3 +1,5 @@
+**Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
+
 # Decisions waiting on the owner (2026-10-29)
 
 Short on purpose: he reads these on a phone. Each one is what it is, Claude's pick, and the one word
