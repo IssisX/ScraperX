@@ -15,6 +15,10 @@ func _touch_photo_id_radio() -> bool:
 	var page: Control = _main._pause_menu._identity_page
 	if not is_instance_valid(page) or not page.is_visible_in_tree() or page.choose_button.disabled:
 		return _fail("photo intake is not available on WORK ID")
+	if not page.get_child(0) is Label or "JACK MILLER" not in (page.get_child(0) as Label).text:
+		return _fail("Work ID did not show Jack Miller")
+	if page._default_button.text != "USE DEFAULT JACK":
+		return _fail("Work ID default name is not Jack")
 	if _main._pause_menu.identity_store != _main._player_identity:
 		return _fail("photo page does not share identity owner")
 	await _pose("photo_id_page")
