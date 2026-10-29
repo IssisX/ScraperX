@@ -321,7 +321,7 @@ void matron_transition() {
     Matron::Saved saved; saved.state=Matron::State::Hunting;
     matron.restore(saved);
     for(int i=0;i<300;++i) {
-        matron.pre_step(1.0F/120,{x,Matron::kDeckTop+1,z},0);
+        matron.pre_step(1.0F/120,Stimulus(RVec3(x,Matron::kDeckTop+1,z),0.0F));
         w.tick(); matron.post_step(1.0F/120);
     }
     const auto at=w.physics.GetBodyInterface().GetPosition(matron.body());
@@ -337,7 +337,7 @@ void matron_transition() {
     // bracing, her rage still fed, friction back and hostile after release.
     int braced=0;
     for(int i=0;i<120;++i) {
-        matron.pre_step(1.0F/120,at,1.0F);
+        matron.pre_step(1.0F/120,Stimulus(RVec3(at),1.0F));
         if(matron.bracing_structure()) ++braced;
         w.tick(); matron.post_step(1.0F/120);
     }

@@ -64,7 +64,7 @@ struct World {
                                                EActivation::Activate);
     }
     void tick() {
-        matron->pre_step(kDt, RVec3(300.0, 0.0, 300.0), 0.0F);
+        matron->pre_step(kDt, Stimulus(RVec3(300.0, 0.0, 300.0), 0.0F));
         physics.Update(kDt, 1, &temp, &jobs);
         matron->post_step(kDt);
     }
