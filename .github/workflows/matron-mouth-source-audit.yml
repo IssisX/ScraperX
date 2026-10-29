@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Install FFmpeg for audio inspection
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Obtain Freesound HQ CC0 previews and inspect envelopes
         shell: bash
         run: |
