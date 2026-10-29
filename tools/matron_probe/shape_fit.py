@@ -32,7 +32,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import score  # noqa: E402
 
-FAMILIES = ["upright", "low", "climb", "pipe", "down", "hold"]   # Matron::Stance
+FAMILIES = ["upright", "low", "climb", "pipe", "down", "hold", "lift"]   # Matron::Stance
 
 # Her limb volumes: a segment between two joints of her rig (matron_rig.gd),
 # the radius of her drawn flesh about it measured each frame (the 90th
@@ -58,6 +58,8 @@ def family_of(rows, i):
     state = int(g("state"))
     if state == 11:
         return "down"
+    if state in (13, 15):   # Carry, ArmPlay
+        return "lift"
     if 12 <= state <= 18:
         return "hold"
     if g("on_pipe") > 0.5:

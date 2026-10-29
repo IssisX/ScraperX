@@ -226,8 +226,8 @@ public:
     // Her collision body by stance family (matron_shape.cpp), chosen from her
     // simulated state; each a capsule in her body frame (y up from her middle,
     // z forward along her yaw), turned with her yaw in kStanceYawBins steps.
-    enum class Stance : std::uint8_t { Upright = 0, Low = 1, Climb = 2, Pipe = 3, Down = 4, Hold = 5 };
-    static constexpr int kStanceCount = 6;
+    enum class Stance : std::uint8_t { Upright = 0, Low = 1, Climb = 2, Pipe = 3, Down = 4, Hold = 5, Lift = 6 };
+    static constexpr int kStanceCount = 7;
     static constexpr int kStanceYawBins = 16;
     struct StanceCapsule {
         float ay, az;   // one end of its segment (height over her middle, forward of it)
@@ -257,6 +257,8 @@ public:
         long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
         long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
         float worst_depth_by_stance[kStanceCount] = {};
+        long placed_ticks = 0;      // ticks in steel her old capsule was as deep in there (put there, not taken)
+        float placed_worst_m = 0.0F;
         long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
         float planning_worst_m = 0.0F;
         float worst_depth_m = 0.0F;
@@ -2176,7 +2178,8 @@ private:
     void step_stance(float dt);
     [[nodiscard]] bool on_planning_shape() const;
     [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
-    [[nodiscard]] float steel_depth() const;
+    [[nodiscard]] float steel_depth(const JPH::Shape *as = nullptr) const;
+    [[nodiscard]] bool placed_by_test(float depth) const;
     void refresh_shape_view();
     // Off an edge she will not go, staggering or sliding on the steel: her
     // feet and hands take her at it (no floor within a step's drop ahead).
