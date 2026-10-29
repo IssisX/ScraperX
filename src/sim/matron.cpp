@@ -2436,10 +2436,19 @@ void Matron::step_turn(const float dt, const float distance_to_player, const flo
         const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM &&
                                      !stalking_;
         const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
-        if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
+        // Her prey leaving on a machine she can reach is no moment to stand
+        // and wind up: she keeps after him onto it (the Turn waits).
+        if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing) && !seen_on_mover_) {
             turn_ = Turn::Windup;
             turn_s_ = 0.0F;
         }
+        return;
+    }
+    // Mid-windup, him seen on a floor that can move off: she breaks it off
+    // and goes after him onto it (the Turn may start again later).
+    if (turn_ == Turn::Windup && seen_on_mover_) {
+        turn_ = Turn::None;
+        turn_s_ = 0.0F;
         return;
     }
     turn_s_ += dt;
@@ -3110,6 +3119,21 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // How far he is: from where she has him this tick, else from her lead.
         const float d = fix ? distance_xz(ax, az, px, pz) : distance_xz(ax, az, heard_x_, heard_z_);
         sees_player_ = saw;
+        // Seen standing on something that can move off with him (a cage, a
+        // car: a body, not built-in steel), read from what she sees under
+        // where she sees him. Never his body's state.
+        seen_on_mover_ = false;
+        if (saw) {
+            RayCastResult under;
+            IgnoreMultipleBodiesFilter not_us;
+            not_us.IgnoreBody(body_);
+            not_us.IgnoreBody(player_);
+            const RVec3 from = ev.seen_at + Vec3(0.0F, 0.3F, 0.0F);
+            if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -2.5F, 0.0F)), under, {}, {}, not_us) &&
+                !under.mBodyID.IsInvalid() && physics_.GetBodyInterface().GetMotionType(under.mBodyID) != EMotionType::Static) {
+                seen_on_mover_ = true;
+            }
+        }
         glimpsed_ = glimpsed;
         // His face turned to her, seen: he knows she is there.
         watched_ = ev.watched;

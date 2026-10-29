@@ -2232,6 +2232,7 @@ private:
     void step_hoist(float dt);
     std::vector<HoistFeed> hoists_;
     HoistLeg hoist_;
+    bool seen_on_mover_ = false;   // this tick: he is seen on a support that moves
     std::uint32_t hoist_rides_ = 0;
     std::vector<JPH::Vec3> hoist_path_;
     std::size_t hoist_path_i_ = 0;
