@@ -489,20 +489,22 @@ void run_matron_grab() {
         std::cout << "PASS scraperx_sim matron arm never hers: set down on her deck after " << reposes_at_cap
                   << " re-poses, player_y=" << s.snapshot().player_position.y << "\n";
     }
-    // ---- the arm never hers, his body snagged past the rail: as her arm
-    //      play begins the body, held out over the shaft, is caught on the
-    //      steel there (more than her arm's pull), and her re-pose cap comes
-    //      at once (a test's arm play): her deck-only set-down begins with
-    //      her hand over her deck and his body over the drop. She never lets
-    //      go of him without her deck close under his body ----
+    // ---- the arm never hers, his body snagged past the rail: as he goes
+    //      over the rail head first, his body is caught on the steel out
+    //      there (more than her arm's pull; the snag of "the wrist out of her
+    //      reach", so his arm stays out of her real reach), and her re-pose
+    //      cap comes at her first re-pose (a test's arm play): her deck-only
+    //      set-down begins with her hand over her deck and his body over the
+    //      drop. She never lets go of him without her deck close under his
+    //      body ----
     {
         Simulation s(InitialSpawn::Deck154);
         at_the_rail(s, -159.5);
         s.debug_matron_hold(0, 3.0);
         s.debug_matron_armplay(3);
-        constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
         const std::uint64_t deaths = s.snapshot().death_count;
         bool snagged = false;
+        bool tipped_up = false;
         bool spare_past_rail = false;
         int spare_ticks = 0;
         int open_air_lets_go = 0;
@@ -510,8 +512,10 @@ void run_matron_grab() {
         for (int i = 0; i < 40 * 90; ++i) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
-            if (!snagged && s.matron_state().state == kArmPlay) {
-                s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
+            const double his_up_y = up_y(s.snapshot());
+            tipped_up = tipped_up || (s.matron_state().state == kDangle && his_up_y >= 0.0);
+            if (!snagged && s.matron_state().state == kDangle && tipped_up && his_up_y < 0.0) {
+                s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN), 3.0, 0.3);
                 snagged = true;
             }
             tick(s);
