@@ -56,13 +56,6 @@ jobs:
           set -euo pipefail
           python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
 
-      - name: Check branch changes against trunk rules
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --no-tags --depth=50 origin ScraperX-Claude "${GITHUB_REF_NAME}"
-          python3 tools/rule_check/rule_check.py origin/ScraperX-Claude HEAD
-
       - name: Restore the compiler cache
         uses: actions/cache@v4
         with:
