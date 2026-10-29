@@ -481,20 +481,78 @@ struct MatronStateExitAccess {
     }
 
     static bool check_spare_bounded_retries(ClimbWorld &world) {
-        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
+        // Off at x -20, clear of the bodies the other checks left in this world.
+        const RVec3 him(-20.0, Matron::kDeckTop + 1.0F, -129.0);
+        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), him);
         world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
                  detail::object_layers::kOnSteel, player);
         world.awake(m);
+        world.physics.GetBodyInterface().SetPosition(
+            m.body(), RVec3(-20.0, Matron::kDeckTop + Matron::kStandCentre, -129.55), EActivation::Activate);
         m.state_ = Matron::State::Spare;
         m.grip_on_ = true;
         m.let_go_ = false;
         m.hold_phase_ = 1;
-        m.spare_walk_ = true;
+        m.spare_walk_ = false;
+        // Two timeouts of the set-down tried and not done: the third counts, and she backs up and over
+        // once more.
         m.spare_tries_ = 2;
         m.hold_s_ = 8.1F;
-        m.step_hold(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
-        return !m.spare_walk_ && m.hold_phase_ == 2 && !m.grip_on_ && m.let_go_;
+        m.step_hold(ClimbWorld::dt, him);
+        const bool counted = m.spare_tries_ == 3 && m.hold_phase_ == 0 && m.grip_on_;
+        // Her last pass down beside her, her deck close under his body: set down.
+        m.hold_phase_ = 1;
+        m.hold_s_ = 0.0F;
+        m.feel_floor(ClimbWorld::dt);
+        m.step_hold(ClimbWorld::dt, him);
+        return counted && !m.spare_walk_ && m.hold_phase_ == 2 && !m.grip_on_ && m.let_go_;
+    }
+
+    // Past the third try with open air under him she never lets go: she keeps hold and walks him on,
+    // inward, until her deck is close under his body, then sets him down (the hold ends in bounded time).
+    static bool check_spare_never_lets_go_over_the_drop(ClimbWorld &world) {
+        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(0.0, Matron::kDeckTop + 40.0F, -100.0));
+        world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, player);
+        world.awake(m);
+        // Her deck ends at z -110; she stands 1 m in from the edge, facing out, him held 1.6 m out of her.
+        const double edge_z = -110.0;
+        world.physics.GetBodyInterface().SetPosition(
+            m.body(), RVec3(0.0, Matron::kDeckTop + Matron::kStandCentre, edge_z - 1.0), EActivation::Activate);
+        m.rim_x_ = 0.0F;
+        m.rim_z_ = float(edge_z);
+        m.rim_nx_ = 0.0F;
+        m.rim_nz_ = 1.0F;
+        m.state_ = Matron::State::Spare;
+        m.grip_on_ = true;
+        m.let_go_ = false;
+        m.hold_phase_ = 1;
+        m.spare_walk_ = false;
+        m.spare_tries_ = 3;
+        m.hold_s_ = 0.0F;
+        bool released = false;
+        bool released_over_air = false;
+        int ticks = 0;
+        for (; ticks < 30 * 90 && !released; ++ticks) {
+            // Him out of her hand (fixture placement), as she holds him over the edge.
+            const RVec3 her = world.physics.GetBodyInterface().GetPosition(m.body());
+            const RVec3 him(her.GetX(), her.GetY() + 0.1, her.GetZ() + 1.6);
+            world.physics.GetBodyInterface().SetPosition(player, him, EActivation::Activate);
+            world.physics.GetBodyInterface().SetLinearVelocity(player, Vec3::sZero());
+            const float feet = float(her.GetY()) - Matron::kStandCentre;
+            const bool air_under = !m.deck_close_below(him, feet);
+            m.pre_step(ClimbWorld::dt, Stimulus(him, 0.0F));
+            released = m.let_go_ || !m.grip_on_ || m.state_ != Matron::State::Spare;
+            released_over_air = released_over_air || (released && air_under);
+            world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
+            m.post_step(ClimbWorld::dt);
+        }
+        const RVec3 end = world.physics.GetBodyInterface().GetPosition(m.body());
+        std::cout << "  spare over the drop: released " << released << " after " << float(ticks) / 90.0F << " s, over air "
+                  << released_over_air << ", she ended " << (edge_z - end.GetZ()) << " m in from the edge\n";
+        return released && !released_over_air;
     }
 
     static bool check_reel_break_and_calm_backoff(ClimbWorld &world) {
@@ -600,6 +658,7 @@ void run_matron_state_exits() {
     const bool c7 = MatronStateExitAccess::check_reel_break_and_calm_backoff(world);
     const bool c8 = MatronStateExitAccess::check_cooldowns_tick_during_mover(world);
     const bool c9 = MatronStateExitAccess::check_subphase_interruptions_and_stalls(world);
+    const bool c10 = MatronStateExitAccess::check_spare_never_lets_go_over_the_drop(world);
     std::cout << "  matron state exits: end_hold=" << c1
               << " restore=" << c2
               << " grab_reach=" << c3
@@ -608,7 +667,8 @@ void run_matron_state_exits() {
               << " spare_retry=" << c6
               << " reel_calm=" << c7
               << " mover_cooldowns=" << c8
-              << " subphase_stalls=" << c9 << "\n";
+              << " subphase_stalls=" << c9
+              << " spare_over_drop=" << c10 << "\n";
     require(c1, "matron state exits: end_hold resets all hold, armplay, spare and fatality state and signals let_go");
     require(c2, "matron state exits: save and restore clear active travel, hold, fatality and perception state");
     require(c3, "matron state exits: reaching Grab aborts cleanly on player blow or moving machine steel");
@@ -618,5 +678,6 @@ void run_matron_state_exits() {
     require(c7, "matron state exits: reel line break grants 30 s back-off and calm_s patrols away in Shuffling");
     require(c8, "matron state exits: cooldown timers tick once per step while a Mover owns her body");
     require(c9, "matron state exits: PipePhase::Slide stall, Trap mismatch/timeout and RoutecraftWay cancel clean up");
-    std::cout << "PASS matron state exits: all 9 state-exit groups verified\n";
+    require(c10, "matron state exits: a set-down blocked three times over open air never lets go over the drop; she walks him on and sets him down on her deck");
+    std::cout << "PASS matron state exits: all 10 state-exit groups verified\n";
 }

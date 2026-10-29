@@ -1022,11 +1022,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F &&
                                (spare_deck_ || rail_in > 0.5F) &&
                                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_));
-            if (ready && !deck_close_below(player, feet)) {
-                spare_walk_ = true;
-                spare_to_x_ = ax - rim_nx_ * 0.5F;
-                spare_to_z_ = az - rim_nz_ * 0.5F;
-            } else if (ready) {
+            // Let go: her hand opens, and the hold goes on to the collar put straight. True when
+            // the hold ended instead (hauled back in, or set down after his blow).
+            const auto set_down = [&]() {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
@@ -1038,36 +1036,50 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     reel_ = false;
                     reel_to_floor_ = false;
                     fatal_floor();
-                    break;
+                    return true;
                 }
                 if (reel_) {
                     // Set down after his blow: her stagger, then after him.
                     end_reel(player);
-                    break;
+                    return true;
                 }
-            } else if (hold_s_ > 8.0F) {
-                spare_walk_ = false;
-                ++spare_tries_;
-                if (spare_tries_ > 2) {
-                    let_go_ = true;
-                    let_go_push_ = Vec3::sZero();
-                    grip_on_ = false;
-                    hold_phase_ = 2;
-                    hold_s_ = 0.0F;
-                    if (reel_to_floor_) {
-                        reel_ = false;
-                        reel_to_floor_ = false;
-                        fatal_floor();
+                return false;
+            };
+            const auto walk_on = [&]() {
+                spare_walk_ = true;
+                spare_to_x_ = ax - rim_nx_ * 0.5F;
+                spare_to_z_ = az - rim_nz_ * 0.5F;
+            };
+            if (spare_tries_ > 2) {
+                // Tried three times and not set down: no more back up and over. Her deck close
+                // under his body, she sets him down; not, she keeps hold and walks him on toward
+                // her deck, a step at a time (spare_walk_), never letting go over the drop. A step
+                // that stops short of its spot is looked at again from where she is (hold_s_ times
+                // it), so each look moves her at least a little inward.
+                if (deck_close_below(player, feet)) {
+                    spare_walk_ = false;
+                    if (set_down()) {
                         break;
                     }
-                    if (reel_) {
-                        end_reel(player);
-                        break;
+                } else if (spare_walk_) {
+                    if (hold_s_ > kSpareStepSeconds) {
+                        spare_walk_ = false;
                     }
                 } else {
-                    hold_phase_ = 0;
+                    walk_on();
                     hold_s_ = 0.0F;
                 }
+            } else if (ready && !deck_close_below(player, feet)) {
+                walk_on();
+            } else if (ready) {
+                if (set_down()) {
+                    break;
+                }
+            } else if (hold_s_ > 8.0F && spare_tries_ <= 2) {
+                spare_walk_ = false;
+                ++spare_tries_;
+                hold_phase_ = 0;
+                hold_s_ = 0.0F;
             }
         } else {
             // The collar put straight; then she walks off.

@@ -842,6 +842,7 @@ public:
     static constexpr float kReleasePoseSeconds = 1.0F;
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
+    static constexpr float kSpareStepSeconds = 3.0F;  // a step walking him on, past three tries, that stops short
     // After any arm torn off, set down alive (spared, or pulled out of her
     // hand), her hands do not take him again for this long (the owner,
     // 2026-10-28: after an arm tear she can't grab him again right away).

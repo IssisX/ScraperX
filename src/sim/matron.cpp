@@ -2375,7 +2375,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         scanned_ = own_scan_.get();
     }
     if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Travel &&
-                               (dead_ || holding_state(state_) || !out(state_) || state_ == State::Emerging)) {
+                               (dead_ || holding_state(state_) || !out(state_))) {
         way->cancel();
     }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
