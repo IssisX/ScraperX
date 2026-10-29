@@ -5,6 +5,7 @@
 #include "sim/fabricated.hpp"
 #include "sim/matron.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <limits>
 #include <string>
@@ -325,6 +326,16 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
+    // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
+                                &ScraperXSimulation::debug_set_matron_stage);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_climb_way", "pipe", "down"),
+                                &ScraperXSimulation::debug_matron_climb_way);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_hear", "at"), &ScraperXSimulation::debug_matron_hear);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_player", "at", "velocity"),
+                                &ScraperXSimulation::debug_launch_player);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_lose_arm", "side"), &ScraperXSimulation::debug_lose_arm);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -1976,6 +1987,34 @@ void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
 // seconds of work. The game asks for it before play, so it never lands in
 // the tick she leaves her locker; asked again, it does nothing.
 void ScraperXSimulation::prepare_matron() { (void)simulation_->matron_affordances(); }
+
+// TEST-ONLY: the look suite's setup, the native tests' own hooks passed
+// through (ui_test_look.gd). Nothing in play calls them.
+namespace {
+[[nodiscard]] sim::Vector3 to_sim(const godot::Vector3 &value) {
+    return sim::Vector3{static_cast<double>(value.x), static_cast<double>(value.y), static_cast<double>(value.z)};
+}
+} // namespace
+
+void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
+
+void ScraperXSimulation::debug_set_matron_stage(const std::int64_t stage) {
+    simulation_->debug_set_matron_stage(static_cast<std::uint8_t>(std::clamp<std::int64_t>(stage, 0, 2)));
+}
+
+bool ScraperXSimulation::debug_matron_climb_way(const bool pipe, const bool down) {
+    return simulation_->debug_matron_climb_way(pipe, down);
+}
+
+void ScraperXSimulation::debug_matron_hear(const godot::Vector3 at) { simulation_->debug_matron_hear(to_sim(at)); }
+
+void ScraperXSimulation::debug_launch_player(const godot::Vector3 at, const godot::Vector3 velocity) {
+    simulation_->debug_launch_player(to_sim(at), to_sim(velocity));
+}
+
+void ScraperXSimulation::debug_lose_arm(const std::int64_t side) {
+    simulation_->debug_lose_arm(side == 0 ? 0 : 1);
+}
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
     const sim::SwingSnapshot state = simulation_->swing_state();
