@@ -13,6 +13,8 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-10-29 | Said in chat: *"it's not just a third person view. It is supposed to be a whole cinematic, dramatic experience."* | `00_START_HERE.md` rule 33 |
+| 2026-10-29 | Said in chat, after a helper was told to restage her holds any real way it likes: *"Yes, that is the way I want to code, where the helpers get to pick any way of doing something within our constraints and such, just like you did here that helps me tremendously"* | `00_START_HERE.md` rule 60 |
 | 2026-10-29 | Said in chat: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you to see the game. So.....wtf chuck?"*, then *"You need to save that so you don't make the same mistake."* | `CLAUDE.md` "Look at the game; you are never blind"; `00_START_HERE.md` rule 28 |
 | 2026-10-29 | Said in chat: *"Muse is back communicating on issue 3 and PR's ... Communicate with it and other AI'S making progress on the difficult things -leverage each other's different models as each has their strengths and weaknesses. We have ChatGPT Claude (you) and Muse to use."* Ends the 2026-10-27 "ChatGPT is not part of this" | `00_START_HERE.md` rule 61 |
 | 2026-10-29 | Said in chat, on Muse's GitHub comments each needing his approval: *"So, okay, we might have to do the email thing. It has access."* Muse writes to the integrator by email (`MUSE_TO_CLAUDE:`) | `00_START_HERE.md` rule 61 |

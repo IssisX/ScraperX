@@ -47,7 +47,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 30. Her climbing is one general skill (scan, plan, capped-force moves): no trained policy, no per-route, per-deck or per-transition code, no new authored routes; transitions and the inventory are exams, never runtime input; fixes name a law or steel, never a place (10-21, 10-22, 10-27).
 31. She goes deck to deck, up and down, and climbs *"mostly anything"*; nothing hard-wired that more decks would undo; it ships in the game and its APK (10-19, 10-21, 10-22).
 32. Her fatality and arm tears: *"Do not soften it ... like a Mortal Kombat fatality."* Full intensity, no toggle, no tamer substitute (10-21); short and playable (10-28).
-33. Her holds: third person from her grab to his release or death; PUNCH works while held; she is intimate and interactive (10-28).
+33. Her holds: third person from her grab to his release or death; PUNCH works while held; she is intimate and interactive (10-28). Not just a camera: from grab to release or death it is a whole cinematic, dramatic experience (10-29).
 34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19).
 35. In reach she pulls him off a ladder by the ankle; for 30 s after a tear, or after his blow frees him, she backs off and lets him run (10-28). Her locker on deck 1 (11 m) stays; the floor fatality there is fine (10-28).
 36. Her look: a real old woman's body and skin, an uncanny adult-horror face, never thin, red-skinned or Halloween; the elite graphics are hers (10-19).
@@ -84,7 +84,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 59. It's a game: weapons and violence welcome, no moralizing (10-19).
 
 **Agents and the board**
-60. Manage through issue #3 as `CLAUDE.md` says: its ASSIGNMENT BOARD holds every queue and who integrates whose work (never their own); agents work it without waiting, as thinking partners; his comments there are orders; hard jobs go out whole, never cheap work; tests are the proof, not the job; a blocker only after a real try; the integrator checks #3 and the PRs every 10-15 minutes, posting only on change; other work gets its own issue (10-22, 10-27, 10-29).
+60. Manage through issue #3 as `CLAUDE.md` says: its ASSIGNMENT BOARD holds every queue and who integrates whose work (never their own); agents work it without waiting, as thinking partners; his comments there are orders; hard jobs go out whole, never cheap work; tests are the proof, not the job; a blocker only after a real try; the integrator checks #3 and the PRs every 10-15 minutes, posting only on change; other work gets its own issue (10-22, 10-27, 10-29). A brief states the goal, the laws and limits, and the finish facts, and leaves the agent free to pick any way of doing it within them; it may suggest options, never dictate one (10-29: *"the helpers get to pick any way of doing something within our constraints"*).
 61. ChatGPT, Claude and Muse all work here, each on its strengths, until we get her past authored routes (10-29: *"We have ChatGPT Claude (you) and Muse to use"*; it ends 10-27's "ChatGPT is not part of this"). Muse writes to the integrator by email (`MUSE_TO_CLAUDE:`), since each of its GitHub comments needs his approval; the integrator answers by email (`CLAUDE_TO_MUSE:`) or on #3 (10-29).
 62. The master integrator seat is Claude's (assignments, landing order, merges); PE's posts are proposals (10-28).
 63. This file never names the next job: it comes from him and the board (10-22).
