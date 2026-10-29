@@ -364,9 +364,20 @@ void run_well_stage_b() {
     require(is_climbing(b_well.snapshot()) &&
                 b_well.snapshot().traversal_support_entity_id == Simulation::kWellBBoomEntityId,
             "B wreck: a hold on the hanging boom");
-    require(hold_stick(b_well, -1.0, 0.0, -1.0, 0.0, 40.0,
-                       [](const Snapshot &state) { return state.player_position.y >= 219.8; }),
-            "B wreck: up the boom to the 220 ring's edge");
+    const bool reached_boom_edge = hold_stick(b_well, -1.0, 0.0, -1.0, 0.0, 40.0,
+                                             [](const Snapshot &state) { return state.player_position.y >= 219.8; });
+    if (!reached_boom_edge) {
+        const auto end = b_well.snapshot();
+        std::cout << "B wreck climb diagnostic: y=" << end.player_position.y
+                  << " vy=" << end.player_linear_velocity.y
+                  << " climbing=" << is_climbing(end)
+                  << " slips=" << end.climb_grip_slips
+                  << " grip_force_N=" << end.climb_grip_force_n
+                  << " support=" << end.traversal_support_entity_id
+                  << " gravity=" << end.player_gravity_factor
+                  << " deaths=" << end.death_count << '\\n';
+    }
+    require(reached_boom_edge, "B wreck: up the boom to the 220 ring's edge");
     require(hold_stick(b_well, -1.0, 0.0, 0.0, 1.0, 4.0,
                        [](const Snapshot &state) { return standing_above(state, 220.2); }),
             "B wreck: over the 220 ring's edge from the boom");
