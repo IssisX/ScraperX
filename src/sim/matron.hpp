@@ -454,6 +454,7 @@ public:
     static constexpr float kLeapUpMps = 3.0F;
     static constexpr float kLeapForwardMps = 5.0F;
     static constexpr float kLeapReachM = 3.0F;
+    static constexpr int kLeapAcrossRays = 7;   // her leap's open way: a ray every 0.1 m across her width
     // Riding: her floor moving up or down faster than kRideMps, she clings;
     // stopped, she lets go kLetGoSeconds later. A machine floor she is
     // headed onto, still within a clamber, she steps onto with the same

@@ -1280,7 +1280,11 @@ bool Matron::leap_clear(const float fx, const float fz, const float tx, const fl
     heading = heading.Normalized();
     const Vec3 across(-heading.GetZ(), 0.0F, heading.GetX());
     const RVec3 middle(fx, feet_y_ + kStandCentre, fz);
-    for (const float side : {-kRadius, 0.0F, kRadius}) {
+    // Across her width a ray every tenth of her radius's span (kLeapAcrossRays):
+    // three rays 0.3 m apart let a post narrower than that (the 176 ring's
+    // striker post at a cage mouth) through, and she leaps into it.
+    for (int k = 0; k < kLeapAcrossRays; ++k) {
+        const float side = kRadius * (2.0F * float(k) / float(kLeapAcrossRays - 1) - 1.0F);
         for (const float rise : {0.0F, 0.9F}) {
             RayCastResult hit;
             if (physics_.GetNarrowPhaseQuery().CastRay(
@@ -2054,10 +2058,12 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             // The Turn's leap: at an edge in her way, with floor again within
             // reach beyond at about her height, she jumps the gap.
             const Vec3 heading(dx / length, 0.0F, dz / length);
-            // Nothing in the way across her width, at her middle and her head.
+            // Nothing in the way across her width (as leap_clear), at her
+            // middle and her head.
             const Vec3 across(-heading.GetZ(), 0.0F, heading.GetX());
             bool headroom = true;
-            for (const float side : {-kRadius, 0.0F, kRadius}) {
+            for (int k = 0; k < kLeapAcrossRays; ++k) {
+                const float side = kRadius * (2.0F * float(k) / float(kLeapAcrossRays - 1) - 1.0F);
                 for (const float rise : {0.0F, 0.9F}) {
                     RayCastResult clear;
                     headroom = headroom && !physics_.GetNarrowPhaseQuery().CastRay(
