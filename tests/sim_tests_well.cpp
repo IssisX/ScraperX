@@ -375,7 +375,7 @@ void run_well_stage_b() {
                   << " grip_force_N=" << end.climb_grip_force_n
                   << " support=" << end.traversal_support_entity_id
                   << " gravity=" << end.player_gravity_factor
-                  << " deaths=" << end.death_count << '\\n';
+                  << " deaths=" << end.death_count << '\n';
     }
     require(reached_boom_edge, "B wreck: up the boom to the 220 ring's edge");
     require(hold_stick(b_well, -1.0, 0.0, 0.0, 1.0, 4.0,
