@@ -333,7 +333,9 @@ void Summit::build_ending() {
     // the beam lets the climber see both bearings while the steel settles.
     constexpr float brake_dx = kWorkX - kBeamX;
     steel.push_back(box(Vec3(-brake_dx * 0.5F, 0.08F, 0.08F),
-                        Vec3(brake_dx * 0.5F, 2.45F, -0.75F), Material::Steel, 0));
+                        Vec3(brake_dx * 0.5F, 1.2F, -0.75F), Material::Steel, 0));
+    // The shaft bears on a pedestal at either end, rather than floating.
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(0, 0.6F, -0.75F), Material::Steel, 0));
     steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(brake_dx, 0.6F, -0.75F), Material::Steel, 0));
     steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(brake_dx, 1.2F, -0.75F), Material::Yellow, 0));
     ending_frame_ = kit_.add_body(kEndingFrameEntity, steel, origin, Quat::sIdentity(), 0, 0.8F);
