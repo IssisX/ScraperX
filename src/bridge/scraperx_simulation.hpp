@@ -227,6 +227,11 @@ public:
     void debug_matron_hear(godot::Vector3 at);
     void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);
     void debug_lose_arm(std::int64_t side);
+    // TEST-ONLY (looking at her moves by eye): the native tests' own setup
+    // hooks (Simulation::debug_*). debug_matron_travel_to sends her, by her
+    // own plan, to the region her scan reads under those feet (false: none,
+    // or no plan). Nothing in play calls them; they change no rule of hers.
+    [[nodiscard]] bool debug_matron_travel_to(godot::Vector3 feet);
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;

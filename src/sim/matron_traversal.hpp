@@ -7,7 +7,9 @@
 //
 //   Moves (Climber): rung climb up and down, mantle/top-out, pole grip
 //   (friction bounded: it slips under overload), jump to a hold (a bounded
-//   leg drive, then a real catch or a real miss), hang-drop. Every
+//   leg drive, then a real catch or a real miss), ledge jump (a bounded
+//   leg drive to a lip, a real hand catch on it, a hang, then its mantle),
+//   hang-drop. Every
 //   force she makes comes out of one shared budget (kTotalForceN); every
 //   force on a hold goes back, equal and opposite, onto that hold's body at
 //   the contact when the body is dynamic. Gravity is never turned off and
@@ -143,8 +145,9 @@ enum class MoveKind : std::uint8_t {
     JumpCatch = 7,  // a jump to a bar or the bottom of a ladder; then up it
     HangDrop = 8,
     GapJump = 9,    // a supported run and short leg drive, then ballistic flight to a lower floor
-    RiserUp = 10,   // up a riser's face hand over hand, feet braced (the Matron's own, matron_pipe.cpp; not the Climber's)
-    RiserDown = 11,
+    LedgeJump = 10, // a jump to a lip; then a hang and its mantle onto the floor over it
+    RiserUp = 11,   // up a riser's face hand over hand, feet braced (the Matron's own, matron_pipe.cpp; not the Climber's)
+    RiserDown = 12,
 };
 [[nodiscard]] const char *move_name(MoveKind kind) noexcept;
 
@@ -284,6 +287,7 @@ private:
     Status step_mantle(float dt, Budget &budget);
     Status step_pole(float dt, Budget &budget, bool up);
     Status step_jump(float dt, Budget &budget);
+    Status step_ledge_jump(float dt, Budget &budget);
     Status step_gap(float dt, Budget &budget);
     Status step_drop(float dt, Budget &budget, bool hang);
     Status step_walk(float dt, Budget &budget);

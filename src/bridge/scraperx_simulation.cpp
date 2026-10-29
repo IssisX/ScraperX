@@ -336,6 +336,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_player", "at", "velocity"),
                                 &ScraperXSimulation::debug_launch_player);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_lose_arm", "side"), &ScraperXSimulation::debug_lose_arm);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_travel_to", "feet"), &ScraperXSimulation::debug_matron_travel_to);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -2017,6 +2018,11 @@ void ScraperXSimulation::debug_launch_player(const godot::Vector3 at, const godo
 
 void ScraperXSimulation::debug_lose_arm(const std::int64_t side) {
     simulation_->debug_lose_arm(side == 0 ? 0 : 1);
+}
+
+bool ScraperXSimulation::debug_matron_travel_to(const godot::Vector3 feet) {
+    const int region = simulation_->matron_affordances().region_at(JPH::Vec3(feet.x, feet.y, feet.z));
+    return region >= 0 && simulation_->debug_matron_travel_region(region);
 }
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {

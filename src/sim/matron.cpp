@@ -3662,7 +3662,10 @@ void Matron::restore(const Saved &saved) {
     // A blow pending from the player's fist when the save loads belongs to
     // the world being left; it never reaches her after the load.
     clear_player_blow();
-    if (!dead_) {
+    // A restore puts her back as the checkpoint had her, dead or not: the world is put
+    // back and she is part of it (her death is not kept; matron.hpp, Saved).
+    dead_ = false;
+    {
         remove_body();
         state_ = saved.state;
         strain_s_ = saved.strain_s;

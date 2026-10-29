@@ -663,6 +663,26 @@ MoverView Matron::TravelWay::view() const {
         v.has_goal = true;
         v.goal_floor_y = m_.scanned_->regions()[static_cast<std::size_t>(m_.travel_.goal)].top;
     }
+    // The move her travel is making, shown as her journey's is (her drawn
+    // body poses the move her climber is in; a hand only once it holds).
+    if (m_.climber_ != nullptr && m_.climber_->status() == traversal::Climber::Status::Running &&
+        m_.climber_->view().active) {
+        const traversal::ClimbView &climber = m_.climber_->view();
+        v.move_active = true;
+        v.move = climber.kind;
+        v.phase = climber.phase;
+        v.airborne = climber.airborne;
+        v.sliding = climber.sliding;
+        v.leg_driving = climber.leg_driving;
+        if (climber.holding) {
+            v.hands = true;
+            v.hand_shown = true;
+            v.hand = climber.hand;
+            v.force_shown = true;
+            v.force_n = climber.force_n;
+            v.hand_held = true;
+        }
+    }
     return v;
 }
 
