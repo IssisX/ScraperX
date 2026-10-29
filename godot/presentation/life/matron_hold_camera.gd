@@ -67,6 +67,34 @@ const BLACK_HOLD_S := 0.12
 const FADE_IN_S := 0.6
 const FLOOR_BLACK_BEAT := 9     # Matron::Fatal Black (her floor version)
 const FLOOR_FADE_S := 0.35      # her floor version's fade: full inside its 0.5 s Black beat
+# The hold's beats, each framed for itself (the owner, 2026-10-29: "not just a
+# third person view ... a whole cinematic, dramatic experience"): how far out
+# (a share of the distance that fits both bodies), the camera's height over
+# the pair, and how far the pivot is drawn to what the beat is about. Eased
+# over about BEAT_EASE_S so each beat reads before the next takes the frame.
+#   grab:  close and a little high, on her hand closing on his leg;
+#   carry: low, so she looms as she walks him to the rail;
+#   over:  wide and level, both silhouettes over the drop (the tip, the hang);
+#   reach: in on her other hand going for his arm;
+#   rip:   closest, on the arm in her hand (the pull, held to her face);
+#   throw: back out as she throws it and he hangs one-armed;
+#   down:  wider, high, as she sets him back on her deck.
+const BEAT_EASE_S := 0.7
+const BEATS := {
+	&"grab": [0.8, 0.30, 0.45],
+	&"carry": [0.95, 0.08, 0.0],
+	&"over": [1.1, 0.0, 0.25],
+	&"reach": [0.85, 0.18, 0.45],
+	&"rip": [0.72, 0.16, 0.65],
+	&"throw": [0.95, 0.22, 0.2],
+	&"down": [1.05, 0.42, 0.0],
+}
+const CLOSE_DIST := 1.7         # the closest beat's least distance
+const ST_GRAB := 12
+const ST_CARRY := 13
+const ST_DANGLE := 14
+const ST_ARMPLAY := 15
+const ST_SPARE := 17
 
 var _w := 0.0                   # third person's share of the view, 0..1
 var _engaged := false
@@ -107,6 +135,11 @@ var slow_ticks_s := 0.0         # seconds of the let-go's slow motion
 var floor_black_full_after := -1.0   # seconds from her floor Black beat to full black
 var floor_black_at_death := -1.0     # the black when her floor version's death landed (before the wait to full)
 var _floor_s := 0.0
+var beat := &""                 # the beat being framed (tests, stills)
+var _beat_dist := 1.0
+var _beat_pitch := BASE_PITCH
+var _beat_focus := 0.0
+var _focus := Vector3.ZERO
 
 
 func active() -> bool:
@@ -274,6 +307,13 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		his_feet = him + body_q * Vector3(0.0, -0.85, 0.0)
 	var her_feet := her_head + Vector3(0.0, -2.3, 0.0)
 	var want_pivot := her_chest.lerp(him, PIVOT_HIS_SHARE)
+	# The beat: its framing eased in, the pivot drawn toward what it is about.
+	var shape: Array = _beat_shape(hold, him, body_q, hand, hand_on)
+	var beat_k := 1.0 - exp(-delta / BEAT_EASE_S) if not _first_frame else 1.0
+	_beat_dist = lerpf(_beat_dist, float(shape[0]), beat_k)
+	_beat_pitch = lerpf(_beat_pitch, float(shape[1]), beat_k)
+	_beat_focus = lerpf(_beat_focus, float(shape[2]), beat_k)
+	want_pivot = want_pivot.lerp(_focus, _beat_focus)
 	var falling := _since_release >= 0.0 and not held
 	if falling:
 		# Over the drop, the pivot stays where it was at the let-go.
@@ -303,6 +343,8 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		extent = maxf(extent, (q as Vector3).distance_to(p))
 	var half := deg_to_rad(clampf(vfov_deg, 30.0, 120.0)) * 0.5
 	var fit := clampf(extent / (tan(half) * FRAME_FILL) + 0.3, MIN_DIST, MAX_DIST)
+	if not falling:
+		fit = clampf(fit * _beat_dist, CLOSE_DIST, MAX_DIST)
 	# The side: across the line between them, the more open one, chosen once.
 	var line := Vector3(him.x - her_head.x, 0.0, him.z - her_head.z)
 	if line.length() < 0.2:
@@ -328,7 +370,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		_pivot = p
 	# The look orbits: its change since the view went out.
 	var yaw := _side_yaw + wrapf(look.x - _look_ref.x, -PI, PI)
-	var pitch := clampf(BASE_PITCH - (look.y - _look_ref.y), PITCH_MIN, PITCH_MAX)
+	var pitch := clampf(_beat_pitch - (look.y - _look_ref.y), PITCH_MIN, PITCH_MAX)
 	_dodge = lerp_angle(_dodge, _dodge_goal, 1.0 - exp(-DODGE_RATE * delta))
 	var dir := _orbit(yaw + _dodge, pitch)
 	var goal := _pivot + dir * fit
@@ -403,6 +445,41 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var q := eye.basis.get_rotation_quaternion().slerp(basis.get_rotation_quaternion(), s)
 	_last_view = Transform3D(Basis(q), mid)
 	return _last_view
+
+
+## The beat now, its framing [distance share, pitch, pivot pull], and its
+## focus (_focus): her hand on his leg, his body over the drop, her other hand
+## and his arm, from the hold's own state (never a guess).
+func _beat_shape(hold: Dictionary, him: Vector3, body_q: Quaternion, hand: Vector3, hand_on: bool) -> Array:
+	var st := int(hold.get("state", -1))
+	var hand1: Vector3 = hold.get("hand", hand)
+	var hand2: Vector3 = hold.get("hand2", hand1)
+	var arm_beat := int(hold.get("armplay_beat", -1))
+	var his_chest := him + body_q * Vector3(0.0, 0.35, 0.0)
+	_focus = him
+	beat = &"carry"
+	if st == ST_GRAB:
+		beat = &"grab"
+		_focus = hand1 if hand1.length_squared() > 1.0e-6 else (hand if hand_on else him)
+	elif st == ST_CARRY:
+		beat = &"carry"
+	elif st == ST_DANGLE:
+		beat = &"over"
+		_focus = him
+	elif st == ST_ARMPLAY:
+		var has_arm := int(hold.get("arm_tears", 0)) > 0 and bool(hold.get("severed_arm_present", false))
+		if arm_beat <= 0 and not has_arm:
+			beat = &"reach"
+			_focus = his_chest.lerp(hand2, 0.5) if hand2.length_squared() > 1.0e-6 else his_chest
+		elif arm_beat >= 4:
+			beat = &"throw"
+			_focus = hand2 if hand2.length_squared() > 1.0e-6 else him
+		else:
+			beat = &"rip"
+			_focus = hand2 if hand2.length_squared() > 1.0e-6 else his_chest
+	elif st == ST_SPARE:
+		beat = &"down"
+	return BEATS[beat]
 
 
 static func _orbit(yaw: float, pitch: float) -> Vector3:

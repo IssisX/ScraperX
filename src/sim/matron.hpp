@@ -1485,6 +1485,12 @@ public:
     // Her wrist steadies him head down (not while her other hand has his arm).
     [[nodiscard]] bool wrist_steadies() const noexcept { return holding() && state_ != State::ArmPlay; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
+    // ArmPlay out over the rail, his arm not yet in her other hand after a
+    // re-pose for it (no step back there): she hauls him in to her, her
+    // weight in it, her pull rising as against a braced body.
+    [[nodiscard]] bool hauled_in() const noexcept {
+        return state_ == State::ArmPlay && hold_phase_ == 0 && over_drop_ && armplay_reposes_ > 0;
+    }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;

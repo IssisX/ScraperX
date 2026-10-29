@@ -1710,8 +1710,10 @@ public:
     void debug_break_arm(int side) noexcept;
     // Tests only (never bound to the bridge): the player's body caught on
     // steel where it is (a point at its middle fixed to the world) till the
-    // load on it passes `max_n`: a body pinned on a rail's edge.
-    void debug_snag_player(double max_n) noexcept;
+    // load on it passes `max_n`: a body pinned on a rail's edge. `give_hz`
+    // above 0: a snag with a little give (a spring of that frequency on his
+    // mass), so a body still swinging is caught rather than torn off it.
+    void debug_snag_player(double max_n, double give_hz = 0.0, double up_m = 0.0) noexcept;
     [[nodiscard]] bool debug_player_snagged() const noexcept;
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).

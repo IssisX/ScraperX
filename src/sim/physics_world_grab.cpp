@@ -20,6 +20,7 @@
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 
 #include <algorithm>
@@ -156,20 +157,40 @@ void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
     matron_->grip_lost(torn, grip_fought_);
 }
 
-void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept {
+void Simulation::PhysicsWorld::snag_player_for_test(const float max_n, const float give_hz, const float up_m) noexcept {
     destroy_grab_constraint(snag_);
-    const JPH::RVec3 at = physics_system_.GetBodyInterface().GetPosition(player_id_);
-    JPH::PointConstraintSettings snag;
-    snag.mSpace = JPH::EConstraintSpace::WorldSpace;
-    snag.mPoint1 = at;
-    snag.mPoint2 = at;
+    const JPH::RVec3 at = physics_system_.GetBodyInterface().GetWorldTransform(player_id_) * JPH::Vec3(0.0F, up_m, 0.0F);
     JPH::BodyLockWrite lock(physics_system_.GetBodyLockInterface(), player_id_);
     if (lock.Succeeded()) {
-        snag_ = static_cast<JPH::TwoBodyConstraint *>(snag.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+        if (give_hz > 0.0F) {
+            // Its middle held to the spot by a stiff spring (a few cm of give
+            // under her pull), free to turn.
+            JPH::SixDOFConstraintSettings snag;
+            snag.mSpace = JPH::EConstraintSpace::WorldSpace;
+            snag.mPosition1 = at;
+            snag.mPosition2 = at;
+            for (const auto axis : {JPH::SixDOFConstraintSettings::EAxis::TranslationX,
+                                    JPH::SixDOFConstraintSettings::EAxis::TranslationY,
+                                    JPH::SixDOFConstraintSettings::EAxis::TranslationZ}) {
+                snag.SetLimitedAxis(axis, 0.0F, 0.0F);
+                snag.mLimitsSpringSettings[axis] = JPH::SpringSettings(JPH::ESpringMode::FrequencyAndDamping, give_hz, 1.0F);
+            }
+            snag.MakeFreeAxis(JPH::SixDOFConstraintSettings::EAxis::RotationX);
+            snag.MakeFreeAxis(JPH::SixDOFConstraintSettings::EAxis::RotationY);
+            snag.MakeFreeAxis(JPH::SixDOFConstraintSettings::EAxis::RotationZ);
+            snag_ = static_cast<JPH::TwoBodyConstraint *>(snag.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+        } else {
+            JPH::PointConstraintSettings snag;
+            snag.mSpace = JPH::EConstraintSpace::WorldSpace;
+            snag.mPoint1 = at;
+            snag.mPoint2 = at;
+            snag_ = static_cast<JPH::TwoBodyConstraint *>(snag.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+        }
     }
     if (snag_ != nullptr) {
         physics_system_.AddConstraint(snag_);
         snag_max_n_ = max_n;
+        snag_gives_ = give_hz > 0.0F;
     }
 }
 
@@ -543,7 +564,10 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         grip_load_n_ = 0.0F;
     }
     if (snag_ != nullptr &&
-        static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F) >
+        (snag_gives_ ? static_cast<JPH::SixDOFConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition()
+                     : static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition())
+                    .Length() /
+                std::max(dt, 1.0e-4F) >
             snag_max_n_) {
         destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
     }

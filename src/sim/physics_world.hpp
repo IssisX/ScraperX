@@ -1145,11 +1145,15 @@ public:
     void break_arm_for_test(const int side) noexcept { break_arm(side & 1); }
     // Tests only: the player's body caught on steel where it is (a point at
     // its middle fixed to the world), till the load on it passes `max_n`.
-    void snag_player_for_test(float max_n) noexcept;
+    // `give_hz` above 0: the snag gives a little (cloth on a hook, a spring
+    // of that frequency on his mass), so a body still moving is caught
+    // rather than torn off it by the jolt of one tick.
+    void snag_player_for_test(float max_n, float give_hz = 0.0F, float up_m = 0.0F) noexcept;
     [[nodiscard]] bool player_snagged_for_test() const noexcept { return snag_ != nullptr; }
 private:
     JPH::Ref<JPH::TwoBodyConstraint> snag_;   // snag_player_for_test
     float snag_max_n_ = 0.0F;
+    bool snag_gives_ = false;
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

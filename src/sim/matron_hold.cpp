@@ -131,6 +131,34 @@ void Matron::step_posture(const float dt, const RVec3 want, const bool both) noe
         posture_for(player_ankle_, 1.0F, lean_h, crouch_h);
         lean = std::max(lean, lean_h);
         crouch = std::max(crouch, crouch_h);
+        // Nor does her other hand's reach (the wrist) bend her past it: her
+        // loaded arm at its length, the nearest that hand gets is from a
+        // body that keeps it (her trunk would drag him through her arm).
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+        const auto keeps_hand = [&](const float l, const float c) {
+            return Vec3(player_ankle_ - (at + shoulder_at(l, c, 1.0F))).Length() <= kArmReachM;
+        };
+        if (both && !keeps_hand(lean, crouch)) {
+            float best = 1.0e9F;
+            lean = lean_h;
+            crouch = crouch_h;
+            constexpr int kSteps = 10;
+            for (int c = 0; c <= kSteps; ++c) {
+                const float down = kCrouchMaxM * float(c) / float(kSteps);
+                for (int t = 0; 0.05F * float(t) <= kLeanMaxRad + 1.0e-4F; ++t) {
+                    const float bend = std::min(kLeanMaxRad, 0.05F * float(t));
+                    if (!keeps_hand(bend, down)) {
+                        continue;
+                    }
+                    const float d = Vec3(hand2_want_ - (at + shoulder_at(bend, down, -1.0F))).Length();
+                    if (d < best - 1.0e-4F) {
+                        best = d;
+                        lean = bend;
+                        crouch = down;
+                    }
+                }
+            }
+        }
     }
     // With his weight in her hand, her body comes up under it slowly
     // (kLoadedPostureScale of her pace): her arm is never jerked by it.
@@ -754,9 +782,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     // carry is faster than her hand's own pace); any other hold as it was.
     const Vec3 moving = bodies.GetLinearVelocity(body_);
     const Vec3 her_v = fatal_hold_ ? Vec3(moving.GetX(), 0.0F, moving.GetZ()) : Vec3::sZero();
-    // A braced player (their hands on a rail): her pull grows, finite.
+    // A braced player (their hands on a rail): her pull grows, finite. So
+    // too her haul with her weight in it, out over the rail with his arm
+    // still out of her reach after a re-pose (hauled_in(): a body caught on
+    // steel out there).
     if (grip_on_) {
-        pull_n_ = player_braced_ ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
+        pull_n_ = player_braced_ || hauled_in() ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
     }
     const auto carry_pose = [&] {
         return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
@@ -1103,6 +1134,8 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         // The body hauled up in her fist against the rail's far side, its
         // arm to her other hand (her fist kHeaveOutM out past her spot,
         // however her pull rocks her back: she leans into it).
+        // (Over the drop after a re-pose, her spot a step along the rail: the
+        // body dragged after her along it, her pull rising: hauled_in().)
         pose_hand(dt, RVec3(rim_x_, feet + kArmPlayUpM, rim_z_) + Vec3(rim_nx_, 0.0F, rim_nz_) * kHeaveOutM,
                   0.6F * kHandSpeedMps);
         step_armplay(dt, player, at, feet);
@@ -1461,8 +1494,21 @@ void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
     away = away.LengthSq() > 1.0e-4F ? away.Normalized() : -fwd;
     const float turn = k % 3 == 0 ? 0.0F : (k % 3 == 1 ? 1.0F : -1.0F) * (kPiF / 3.0F);
     if (over_drop_) {
-        // Him out over the rail in her fist: she keeps her spot (a step back
-        // would drag him into the rail); she leans into it instead.
+        // Him out over the rail in her fist: not back (that would drag him
+        // into the rail) but a step along it, one way then the other, her
+        // pull rising as she goes (hauled_in()): a body caught on steel out
+        // there is dragged along off it. Her spot only where her deck is.
+        const Vec3 along(-rim_nz_, 0.0F, rim_nx_);
+        const RVec3 step = RVec3(rim_x_, at.GetY(), rim_z_) + along * ((k % 2 == 0 ? 1.0F : -1.0F) * kArmReposeStepM);
+        IgnoreMultipleBodiesFilter skip_along;
+        skip_along.IgnoreBody(body_);
+        skip_along.IgnoreBody(player_);
+        RayCastResult under;
+        if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(step, Vec3(0.0F, -(kStandCentre + 0.3F), 0.0F)), under, {},
+                                                   {}, skip_along)) {
+            rim_x_ = float(step.GetX());
+            rim_z_ = float(step.GetZ());
+        }
         return;
     }
     RVec3 spot = at + (Quat::sRotation(Vec3::sAxisY(), turn) * away) * kArmReposeStepM;

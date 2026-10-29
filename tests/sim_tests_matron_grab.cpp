@@ -243,6 +243,53 @@ void at_the_rail(Simulation &s, const double z) { caught_at(s, 18.0, z, 18.3, z 
 } // namespace
 
 void run_matron_grab() {
+    if (const char *e = std::getenv("SNAG_EXP")) {
+        const int mode = std::atoi(e);
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        s.debug_matron_hold(0, 3.0);
+        constexpr int kArmPlayE = static_cast<int>(Matron::State::ArmPlay);
+        double snagged_at = -1.0, torn_at = -1.0, armplay_at = -1.0;
+        bool held_past_reach = false;
+        double best_far = 0.0;
+        const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            const auto q = s.snapshot();
+            const double x = q.player_rot_x, y = q.player_rot_y, z = q.player_rot_z, w = q.player_rot_w;
+            const double ux = 2 * (x * y - w * z), uy = 1 - 2 * (x * x + z * z), uz = 2 * (y * z + w * x);
+            const double rx = 1 - 2 * (y * y + z * z), ry = 2 * (x * y + w * z), rz = 2 * (x * z - w * y);
+            double nearest = 1e9, ny = 0, nax = 0, nay = 0, naz = 0;
+            for (int k = -1; k <= 1; k += 2) {
+                const double ax = q.player_position.x + 0.45 * ux + k * 0.25 * rx;
+                const double ay = q.player_position.y + 0.45 * uy + k * 0.25 * ry;
+                const double az = q.player_position.z + 0.45 * uz + k * 0.25 * rz;
+                const double d = std::hypot(ax - m.position.x, az - m.position.z);
+                if (d < nearest) { nearest = d; ny = ay - (m.position.y - 1.05); nax = ax; nay = ay; naz = az; }
+            }
+            if (armplay_at < 0.0 && m.state == kArmPlayE) armplay_at = i / 90.0;
+            bool snag_now = false;
+            if (snagged_at < 0.0) {
+                if (mode == 1 && m.state == kArmPlayE) snag_now = true;
+                if (mode == 2 && m.state == kDangle && nearest > best_far) { best_far = nearest; }
+                static bool was_up = false;
+                if (mode == 3 && m.state == kDangle && uy >= 0.0) was_up = true;
+                if ((mode >= 3) && m.state == kDangle && uy >= 0.0) was_up = true;
+                if ((mode >= 3) && m.state == kDangle && was_up && uy < 0.0) snag_now = true;
+            }
+            if (snag_now) { s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN), mode >= 4 ? std::atof(std::getenv("GIVE") ? std::getenv("GIVE") : "5") : 0.0, std::getenv("UPM") ? std::atof(std::getenv("UPM")) : 0.0); snagged_at = i / 90.0; }
+            if (snagged_at >= 0.0 && m.arm_reposes == 0 && s.debug_player_snagged())
+                held_past_reach = i / 90.0 - snagged_at > Matron::kArmReachSeconds - 0.1;
+            if (torn_at < 0.0 && q.arm_tear_count > 0) torn_at = i / 90.0;
+            static double px = 0, py = 0, pz = 0;
+            const double sp = std::sqrt((q.player_position.x - px) * (q.player_position.x - px) + (q.player_position.y - py) * (q.player_position.y - py) + (q.player_position.z - pz) * (q.player_position.z - pz)) * 90.0;
+            px = q.player_position.x; py = q.player_position.y; pz = q.player_position.z;
+            if (std::getenv("EVERY") ? (i > std::atoi(std::getenv("EVERY")) && i < std::atoi(std::getenv("EVERY")) + 120) : i % 9 == 0)
+                std::cout << "E sp " << sp << " t " << i / 90.0 << " st " << int(m.state) << " arm_out " << nearest << " arm_up " << ny << " c_out " << std::hypot(q.player_position.x - m.position.x, q.player_position.z - m.position.z) << " uy " << uy << " lean " << m.hold_lean << " crouch " << m.hold_crouch << " snag " << s.debug_player_snagged() << " rep " << m.arm_reposes << " h2 " << m.hand2.x << "," << m.hand2.y << "," << m.hand2.z << " nearpt " << nax << "," << nay << "," << naz << " load " << q.grip_load_n << " hand " << m.hand.x << "," << m.hand.y << " her " << m.position.x << "," << m.position.z << "\n";
+        });
+        std::cout << "EXP snagged " << snagged_at << " armplay " << armplay_at << " held_past " << held_past_reach << " reposes " << r.m.arm_reposes << " snag_left " << s.debug_player_snagged() << " torn " << torn_at << " tears " << r.p.arm_tear_count << " claims " << r.m.claims << " ended " << r.ended << " best_far " << best_far << "\n";
+        return;
+    }
     // ---- a still body: taken, carried, dangled, let go aimed; no kill on touch ----
     std::uint64_t hash_a = 0;
     for (int pass = 0; pass < 2; ++pass) {
@@ -365,47 +412,67 @@ void run_matron_grab() {
         }
         std::cout << "PASS scraperx_sim matron rail: 9 spots, one arm each, retaken at " << retaken << "\n";
     }
-    // ---- the wrist out of her reach: as her arm play begins, the body (held
-    //      out over the drop at the east band's rail) caught on the steel by a
-    //      snag that holds more than her arm's pull (kHandPullN) and less than
-    //      her hard grip in arm play (kGripRipFloorN). She does not give it
-    //      up: kArmReachSeconds without the wrist, she re-poses, a step back
-    //      with her weight in it, the snag gives, and the arm comes off within
-    //      10 s of her arm play's start; no claim, no death ----
+    // ---- the wrist out of her reach: as he goes over the east band's rail
+    //      head first (his body level across the drop, his arms out past
+    //      it), his body is caught on the steel out there by a snag that
+    //      holds more than her arm's pull (kHandPullN) and less than her hard
+    //      grip in arm play (kGripRipFloorN), with a cloth's give (a body
+    //      still moving is caught, not torn off it by one tick's jolt), a
+    //      little toward his shoulders: hung there from her fist and the
+    //      snag, his arms are out past her real reach. She does not give it
+    //      up: kArmReachSeconds of her arm play without the wrist, she
+    //      re-poses, a step back with her weight in it, the snag gives, and
+    //      the arm comes off within 10 s of her arm play's start; no claim,
+    //      no death. (With her old 1.2 m arm the snag was made as her arm
+    //      play began, the body then hung past her reach; at her real arm's
+    //      length it hangs within it there, so it is caught as it goes over.)
     {
         Simulation s(InitialSpawn::Deck154);
         at_the_rail(s, -159.5);
         s.debug_matron_hold(0, 3.0);
         constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
+        constexpr double kSnagGiveHz = 3.0;   // cloth on a hook: a few cm under her pull
+        constexpr double kSnagUpM = 0.3;      // from his middle toward his shoulders
         double snagged_at = -1.0;
+        double armplay_at = -1.0;
         double torn_at = -1.0;
         bool held_past_reach = false;
+        bool tipped_up = false;
         const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
-            if (snagged_at < 0.0 && m.state == kArmPlay) {
-                s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
+            const auto q = s.snapshot();
+            // Over the rail he turns head up across it, then over head first:
+            // the snag as his body passes level.
+            const double his_up_y = up_y(q);
+            tipped_up = tipped_up || (m.state == kDangle && his_up_y >= 0.0);
+            if (snagged_at < 0.0 && m.state == kDangle && tipped_up && his_up_y < 0.0) {
+                s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN), kSnagGiveHz, kSnagUpM);
                 snagged_at = i / 90.0;
             }
-            if (snagged_at >= 0.0 && m.arm_reposes == 0 && s.debug_player_snagged()) {
-                // The snag holds while she reaches from where she stands.
-                held_past_reach = i / 90.0 - snagged_at > Matron::kArmReachSeconds - 0.1;
+            if (armplay_at < 0.0 && m.state == kArmPlay) {
+                armplay_at = i / 90.0;
             }
-            if (torn_at < 0.0 && s.snapshot().arm_tear_count > 0) {
+            if (armplay_at >= 0.0 && m.arm_reposes == 0 && s.debug_player_snagged()) {
+                // The snag holds while she reaches from where she stands.
+                held_past_reach = i / 90.0 - armplay_at > Matron::kArmReachSeconds - 0.1;
+            }
+            if (torn_at < 0.0 && q.arm_tear_count > 0) {
                 torn_at = i / 90.0;
             }
         });
-        std::cout << "  matron arm snagged: snagged at " << snagged_at << " s, held past her reach " << held_past_reach
-                  << ", re-poses " << r.m.arm_reposes << ", snag left " << s.debug_player_snagged() << ", torn at "
-                  << torn_at << " s, tears " << r.p.arm_tear_count << " claims " << r.m.claims << " deaths "
-                  << r.deaths_start << "->" << r.deaths_end << ", ended " << r.ended << "\n";
+        std::cout << "  matron arm snagged: snagged at " << snagged_at << " s, arm play at " << armplay_at
+                  << " s, held past her reach " << held_past_reach << ", re-poses " << r.m.arm_reposes
+                  << ", snag left " << s.debug_player_snagged() << ", torn at " << torn_at << " s, tears "
+                  << r.p.arm_tear_count << " claims " << r.m.claims << " deaths " << r.deaths_start << "->"
+                  << r.deaths_end << ", ended " << r.ended << "\n";
         require(snagged_at >= 0.0 && held_past_reach && r.m.arm_reposes >= 1 && !s.debug_player_snagged(),
                 "matron arm snagged: the wrist out of her reach, she re-poses and her weight pulls the body off the snag");
-        require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm && torn_at - snagged_at < 10.0,
+        require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm && torn_at - armplay_at < 10.0,
                 "matron arm snagged: the arm comes off within 10 s of her arm play's start");
         require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
                 "matron arm snagged: one arm gone, no claim and no death");
-        std::cout << "PASS scraperx_sim matron arm snagged: torn " << torn_at - snagged_at << " s into her arm play\n";
+        std::cout << "PASS scraperx_sim matron arm snagged: torn " << torn_at - armplay_at << " s into her arm play\n";
     }
     // ---- the arm never hers: her pull kept under the shoulder's hold (a
     //      test's arm that will not come). She re-poses at most

@@ -1220,8 +1220,8 @@ void Simulation::debug_break_arm(const int side) noexcept {
     physics_world_->break_arm_for_test(side);
 }
 
-void Simulation::debug_snag_player(const double max_n) noexcept {
-    physics_world_->snag_player_for_test(static_cast<float>(max_n));
+void Simulation::debug_snag_player(const double max_n, const double give_hz, const double up_m) noexcept {
+    physics_world_->snag_player_for_test(static_cast<float>(max_n), static_cast<float>(give_hz), static_cast<float>(up_m));
 }
 
 bool Simulation::debug_player_snagged() const noexcept { return physics_world_->player_snagged_for_test(); }
