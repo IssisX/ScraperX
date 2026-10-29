@@ -17,6 +17,7 @@
 #include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Core/StreamOut.h>
 #include <Jolt/Core/StreamUtils.h>
+#include <Jolt/Geometry/RayAABox.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include <algorithm>
@@ -2093,6 +2094,52 @@ std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const I
     return key;
 }
 
+// One body a column of rays may hit: its shape where it stands and the
+// bounds the broadphase holds for it.
+struct ColumnSteel {
+    TransformedShape shape;
+    AABox bounds;
+};
+
+// The bodies a ray inside this box could reach, found once, under the same
+// layer and body filters NarrowPhaseQuery::CastRay applies.
+std::vector<ColumnSteel> column_steel(const PhysicsSystem &physics, const Ignore &ignore, const BodyFilter &filter,
+                                      const AABox &column) {
+    BodyListCollector found;
+    physics.GetBroadPhaseQuery().CollideAABox(column, found, Layers(physics, ignore).bp(), Layers(physics, ignore).ol());
+    std::sort(found.ids.begin(), found.ids.end());
+    std::vector<ColumnSteel> steel;
+    steel.reserve(found.ids.size());
+    for (const BodyID id : found.ids) {
+        if (!filter.ShouldCollide(id)) continue;
+        BodyLockRead lock(physics.GetBodyLockInterface(), id);
+        if (!lock.SucceededAndIsInBroadPhase()) continue;
+        const Body &body = lock.GetBody();
+        if (!filter.ShouldCollideLocked(body)) continue;
+        steel.push_back({body.GetTransformedShape(), body.GetWorldSpaceBounds()});
+    }
+    return steel;
+}
+
+// The closest hit of a ray on that steel: the same test, body for body, as
+// NarrowPhaseQuery::CastRay (the broadphase's bounds test, RayAABox4, before
+// the shape's own), so the same nearest fraction; only the walk of the
+// broadphase tree for every ray is gone.
+bool cast_down(const std::vector<ColumnSteel> &steel, const std::vector<std::uint32_t> &in_row, const RRayCast &ray,
+               const RayInvDirection &inverse, RayCastResult &hit) {
+    const Vec3 origin(ray.mOrigin);
+    const float z = origin.GetZ();
+    for (const std::uint32_t b : in_row) {
+        const ColumnSteel &body = steel[b];
+        const Vec3 lo = body.bounds.mMin, hi = body.bounds.mMax;
+        if (!(lo.GetZ() <= z && z <= hi.GetZ())) continue;
+        const float entry = RayAABox4(origin, inverse, lo.SplatX(), lo.SplatY(), lo.SplatZ(), hi.SplatX(), hi.SplatY(),
+                                      hi.SplatZ()).GetX();
+        if (entry < hit.mFraction) (void)body.shape.CastRay(ray, hit);
+    }
+    return hit.mFraction <= 1.0F;
+}
+
 // The scans this process has made, newest last: a few worlds' worth.
 struct ScanMemo {
     std::mutex mutex;
@@ -2365,17 +2412,34 @@ void AffordanceMap::split_patches(const PhysicsSystem &physics, const Ignore &ig
         // From over her head: a beam or pipe she cannot pass under parts the
         // floor as surely as a wall does.
         const float from_y = p.top + 2.0F * limits.center_above_feet() + 0.05F;
-        for (int ix = 0; ix < nx; ++ix)
+        const float depth = from_y - p.top + 0.1F;
+        // The steel over this top, gathered once: every ray below stays
+        // inside this column (taken 5 cm wider all round), so it can only
+        // hit what is in it.
+        const std::vector<ColumnSteel> steel = column_steel(
+            physics, ignore, filter,
+            AABox(Vec3(p.min_x - 0.05F, p.top - 0.15F, p.min_z - 0.05F), Vec3(p.max_x + 0.05F, from_y + 0.05F, p.max_z + 0.05F)));
+        const Vec3 down(0.0F, -depth, 0.0F);
+        const RayInvDirection inverse(down);
+        std::vector<std::uint32_t> in_row;
+        for (int ix = 0; ix < nx; ++ix) {
+            const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
+            // The bodies whose bounds take in this x: a vertical ray outside
+            // a body's x (or z) slab misses its bounds (RayAABox4's parallel
+            // test), so it is never tried against the shape.
+            in_row.clear();
+            for (std::uint32_t b = 0; b < steel.size(); ++b) {
+                if (steel[b].bounds.mMin.GetX() <= x && x <= steel[b].bounds.mMax.GetX()) in_row.push_back(b);
+            }
             for (int iz = 0; iz < nz; ++iz) {
-                const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
                 const float z = std::min(p.min_z + (float(iz) + 0.5F) * kCell, p.max_z - 0.01F);
-                const float depth = from_y - p.top + 0.1F;
+                const RRayCast ray(RVec3(x, from_y, z), down);
                 RayCastResult hit;
-                const bool any = physics.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(x, from_y, z), Vec3(0.0F, -depth, 0.0F)), hit,
-                                                                       Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), filter);
+                const bool any = cast_down(steel, in_row, ray, inverse, hit);
                 const float h = any ? from_y - hit.mFraction * depth : p.top;
                 floor[static_cast<std::size_t>(ix * nz + iz)] = h <= p.top + limits.step_max_m ? 1 : 0;
             }
+        }
         // Connected floor cells (4-way), each component cut into rectangles
         // greedily (runs along z, grown along x while they match).
         std::vector<int> comp(floor.size(), -1);
