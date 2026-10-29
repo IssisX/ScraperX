@@ -11,14 +11,6 @@ IONA     en_US-ljspeech-high             LJ Speech (Keith Ito, Linda Johnson), p
 RO       en_US-john-medium               LibriVox recordings, public domain
          (also the terminal's RECORD and SOURCE playback)
 ARI      en_US-bryce-medium              Bryce Beattie's own voice, public domain
-DEV      en_GB-vctk-medium, speaker p227 CSTR VCTK Corpus 0.92, CC BY 4.0
-
-ATTRIBUTION (CC BY 4.0): Dev's reference voice was trained on the CSTR VCTK
-Corpus: English Multi-speaker Corpus for CSTR Voice Cloning Toolkit (version
-0.92), Junichi Yamagishi, Christophe Veaux, Kirsten MacDonald, University of
-Edinburgh, The Centre for Speech Technology Research (CSTR),
-https://doi.org/10.7488/ds/2645, licensed under CC BY 4.0
-(https://creativecommons.org/licenses/by/4.0/).
 
 
 CHATTERBOX TTS (https://github.com/resemble-ai/chatterbox)

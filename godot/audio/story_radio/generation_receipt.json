@@ -391,30 +391,13 @@
     "radio_sha256": "6b1457a26f41db2325a33750043373ded6c924f2abf97ba727f6a0931dff5022"
   },
   "handover_dev_received": {
-    "event_id": "chatterbox:handover_dev_received:seed348260",
+    "event_id": "cf6ac74ee4db4c7c8988d4835a83e9cf",
     "text": "Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature.",
     "speaker": "DEV",
-    "voice": "Chatterbox from Piper en_GB-vctk-medium speaker p227",
-    "exaggeration": 0.55,
-    "cfg_weight": 0.5,
-    "temperature": 0.8,
-    "seed": 348260,
-    "take": 0,
-    "whisper": "Dev Arlen, both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying, don't reconnect anything on the strength of a fucking signature.",
-    "match": 1.0,
-    "takes": [
-      {
-        "take": 0,
-        "seed": 348260,
-        "seconds": 8.18,
-        "match": 1.0,
-        "heard": "Dev Arlen, both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying, don't reconnect anything on the strength of a fucking signature.",
-        "rejected": null
-      }
-    ],
-    "generated_central": "2026-10-29T07:47:25-05:00",
-    "clean_sha256": "4f1b12763b1bb0a6749466fa2d902a39b962d554d6a8f42d6149599c5babcef2",
-    "radio_sha256": "dd4de0662b275b233fd67e9402a000d722ac0875b71ff2ba8f08e126f3abe007"
+    "voice_id": "bm_george",
+    "generated_utc": "2026-10-21T20:00:52.823701+00:00",
+    "clean_sha256": "9f66b1506aea536dc3f0e943d9d84e03749e3d3e631ac9d0a6cbd1de369da7cf",
+    "radio_sha256": "5b5bc70f937e0ec3a57f6107e7030384c86f71c81245571690d62c41aa68ef30"
   },
   "handover_ro_ari_first": {
     "event_id": "b7798ffa58b4408fa93b175b7bc7bd60",

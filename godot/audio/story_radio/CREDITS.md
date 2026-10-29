@@ -20,7 +20,6 @@ Every remade line is a voice made the way the climber's fear yells were (the own
 | Iona | `en_US-ljspeech-high` | LJ Speech, https://keithito.com/LJ-Speech-Dataset/ (Keith Ito, 2017; Linda Johnson's LibriVox readings); model trained from scratch and released public domain by Bryce Beattie, https://brycebeattie.com/files/tts/ | Public domain |
 | Ro; the handover terminal's RECORD and SOURCE | `en_US-john-medium` (the climber's fall voice) | LibriVox recordings, https://librivox.org, about 12.5 hours (Bryce Beattie) | Public domain |
 | Ari | `en_US-bryce-medium` | Bryce Beattie's own recorded voice, https://brycebeattie.com/files/tts/ | Public domain |
-| Dev | `en_GB-vctk-medium`, speaker `p227` | CSTR VCTK Corpus 0.92, https://datashare.ed.ac.uk/handle/10283/3443 (Junichi Yamagishi, Christophe Veaux, Kirsten MacDonald; University of Edinburgh, CSTR). Piper fine-tuned the model from its `en_US-lessac-medium` voice, whose Blizzard 2013 Lessac data has its own licence | CC BY 4.0 |
 
 ## Remade files
 
@@ -32,6 +31,7 @@ Each is mono Ogg Vorbis at 24 kHz. "Whisper heard" is the shipped file read back
 | `receiving_iona_keep_the_height.ogg` | Iona | You’ve found your way up. Keep the height. The Crown is still above you. | You found your way up. Keep the height. The crown is still above you. |
 | `receiving_iona_recovery.ogg` | Iona | Find your footing. You can try another way up. | Find your footing. You can try another way up. |
 | `double_ari_name.ogg` | Ari | Ari Ward. | Ari Ward |
-| `handover_dev_received.ogg` | Dev | Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature. | Dev Arlen, both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature. |
 
-The other 35 cues are still the stock Kokoro-82M takes (Apache-2.0, `KOKORO_LICENSE.txt`), which the owner's rule does not allow; they stay gated off until the owner's story decision says which lines are remade.
+Dev, a British man, has no voice yet: every British man's Piper voice is fine-tuned from Piper's `en_US-lessac` voice, whose Blizzard 2013 data is not cleared for a commercial game, so his line stays a Kokoro take until a cleared voice is found.
+
+The other 36 cues are still the stock Kokoro-82M takes (Apache-2.0, `KOKORO_LICENSE.txt`), which the owner's rule does not allow; they stay gated off until the owner's story decision says which lines are remade.

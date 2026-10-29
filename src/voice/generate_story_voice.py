@@ -38,7 +38,7 @@ Setup (a throwaway venv, CPU only; the same one generate_fall_voice.py uses):
   mkdir models && cd models
   B=https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd
   for v in en/en_US/ljspeech/high/en_US-ljspeech-high en/en_US/john/medium/en_US-john-medium \\
-           en/en_US/bryce/medium/en_US-bryce-medium en/en_GB/vctk/medium/en_GB-vctk-medium; do
+           en/en_US/bryce/medium/en_US-bryce-medium; do
     curl -LO $B/$v.onnx -LO $B/$v.onnx.json; done
 Run (from the repository root; ffmpeg and ffprobe on PATH):
   tts/bin/python src/voice/generate_story_voice.py --models models
@@ -114,14 +114,9 @@ VOICES = {
         "dataset_license": "Public domain",
         "training": "Fine-tuned by Bryce Beattie from an unreleased voice of his; model released public domain",
     },
-    "DEV": {
-        "piper": "en_GB-vctk-medium", "path": "en/en_GB/vctk/medium", "speaker": "p227",
-        "language": "British English", "who": "a man, British (VCTK speaker p227)",
-        "dataset": "CSTR VCTK Corpus 0.92 (Yamagishi, Veaux, MacDonald; University of Edinburgh)",
-        "dataset_url": "https://datashare.ed.ac.uk/handle/10283/3443",
-        "dataset_license": "CC BY 4.0",
-        "training": "Fine-tuned from Piper en_US-lessac-medium (Blizzard 2013 Lessac data, its own licence)",
-    },
+    # DEV (a man, British) has no voice yet: every British man's Piper voice
+    # is fine-tuned from en_US-lessac, whose Blizzard 2013 data is not
+    # cleared for a commercial game. A Dev cue fails until one is chosen.
 }
 VOICE_OF = {"RECORD": "RO", "SOURCE": "RO"}
 
@@ -136,7 +131,6 @@ LINE_DELIVERY = {
     "double_ro_name": 0.6,
     "vale_contact_iona": 0.6,
     "handover_ro_denial": 0.55,
-    "handover_dev_received": 0.55,
 }
 CFG_WEIGHT = 0.5
 TEMPERATURE = 0.8
@@ -340,6 +334,9 @@ def main():
     if unknown:
         parser.error("not cues in manifest.json: " + ", ".join(unknown))
     chosen = [cue for cue in cues if not only or cue in only]
+    voiceless = sorted({cues[cue]["speaker"] for cue in chosen} - set(VOICES) - set(VOICE_OF))
+    if voiceless and not args.reprocess:
+        parser.error("no cleared reference voice yet for " + ", ".join(voiceless) + " (VOICES)")
 
     if args.reprocess:
         for cue in chosen:
