@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_uncanny.gd"
+extends "res://presentation/ui/ui_test_identity_radio.gd"
 # The Matron look suite (tools/look/look.sh): stills of her in her key
 # moments, each from a camera placed about her own drawn body and framing all
 # of her (and the climber, in her hands), never the player's eye. Renders

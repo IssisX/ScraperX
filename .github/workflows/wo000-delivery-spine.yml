@@ -49,6 +49,12 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Verify story radio source assets and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
+
       - name: Restore the FetchContent dependency cache (Jolt, godot-cpp, Monocypher)
         uses: actions/cache@v4
         with:
@@ -465,7 +471,7 @@ jobs:
               touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn \
               touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause touch_wall_kick touch_ladder \
               touch_route_hint touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons \
-              touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
+              touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_photo_id_radio touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
               touch_stack_upper touch_stack touch_wet touch_shop touch_crane touch_service touch_c4 touch_n touch_c5; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-1.log
@@ -800,6 +806,22 @@ jobs:
           mkdir -p build/apk artifacts/apk godot/.godot
           printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
             > godot/.godot/extension_list.cfg
+          # Godot's all_resources mode can package imported audio even when
+          # export_presets.cfg excludes the source .ogg files. Temporarily
+          # stage unapproved recordings outside res:// for this export only.
+          voice_hold="$(mktemp -d)"
+          restore_story_voices() {
+            for voice in "${voice_hold}"/*; do
+              [ -e "${voice}" ] || continue
+              mv -- "${voice}" godot/audio/story_radio/
+            done
+            rmdir -- "${voice_hold}"
+          }
+          trap restore_story_voices EXIT
+          for voice in godot/audio/story_radio/*.ogg godot/audio/story_radio/*.ogg.import; do
+            [ -f "${voice}" ] || continue
+            mv -- "${voice}" "${voice_hold}/"
+          done
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
@@ -823,6 +845,13 @@ jobs:
           # package, and nothing that would stop it installing beside the other
           # AI branches' builds. Permanent for this branch.
           .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
+
+      - name: Verify exported story-radio package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}"
 
       - name: Upload checkpoint APK and logs
         uses: actions/upload-artifact@v4
