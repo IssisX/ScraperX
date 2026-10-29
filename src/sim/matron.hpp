@@ -2068,7 +2068,10 @@ private:
     static constexpr float kMovedStockM = 1.5F;
     bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
     bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
-    void take_stock(int index);
+    // True when her hands took it: never a load another constraint already
+    // holds (his carry), which her hands feel held fast (load_held_elsewhere).
+    bool take_stock(int index);
+    [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;

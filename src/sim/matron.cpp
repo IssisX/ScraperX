@@ -2001,8 +2001,10 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
     const bool player_past = (saw || heard) && px < Bay::kWestX - 0.2F && in_north_band(pz) && player.GetY() > kDeckTop;
     trap_s_ += dt;
     if (trap_ == Trap::Off) {
+        // Whether the chain is on the leaf is not part of this: she checks it
+        // by looking (below), so a chain she saw hooked and he took off again
+        // is seen gone the next time the rest holds.
         const bool can = level_ == 0 && turn_ == Turn::None && held_ < 0 && traps_ < kTrapsPerRun && bay_open_ &&
-                         !bay_hook_known_ &&
                          (state_ == State::Guarding || state_ == State::Hunting || state_ == State::Searching);
         const bool she_west = ax < Bay::kWestX - 0.3F && ax > Bay::kWestX - kTrapFromM && in_north_band(az);
         const bool player_east = on_deck && (saw || heard) && px > Bay::kEastX + 0.3F &&
@@ -3460,7 +3462,11 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
     if (distance_xz(ax, az, px, pz) <= kTakeM) {
         walk_toward(dt, ax, az, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(px - ax, pz - az), kTurnRate, dt);
-        take_stock(fetch_);
+        if (!take_stock(fetch_)) {
+            // Held fast in another's hands: she gives it up for a while.
+            fetch_refused_ |= 1U << static_cast<unsigned>(fetch_);
+            fetch_refused_s_ = kFetchRetrySeconds;
+        }
         fetch_ = -1;
         return true;
     }
@@ -3474,18 +3480,36 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
     return true;
 }
 
-void Matron::take_stock(const int index) {
+bool Matron::load_held_elsewhere(const BodyID body) const {
+    for (const Ref<Constraint> &c : physics_.GetConstraints()) {
+        if (c == nullptr || !c->GetEnabled() || c.GetPtr() == hold_.GetPtr() || c->GetType() != EConstraintType::TwoBodyConstraint) {
+            continue;
+        }
+        const auto *two = static_cast<const TwoBodyConstraint *>(c.GetPtr());
+        if (two->GetBody1()->GetID() == body || two->GetBody2()->GetID() == body) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Matron::take_stock(const int index) {
     if (hold_ != nullptr || !body_in_world_ || index < 0) {
-        return;
+        return false;
     }
     const Throwable &t = throwables_[static_cast<std::size_t>(index)];
+    // Her hands close on it and feel it held fast by another (in his hands,
+    // on a chain): it does not come away, and she does not take it.
+    if (load_held_elsewhere(t.body)) {
+        return false;
+    }
     {
         const BodyID ids[2] = {body_, t.body};
         BodyLockMultiWrite lock(physics_.GetBodyLockInterfaceNoLock(), ids, 2);
         Body *her = lock.GetBody(0);
         Body *it = lock.GetBody(1);
         if (her == nullptr || it == nullptr || !it->IsDynamic()) {
-            return;
+            return false;
         }
         // The hands close on the handle where it is; hold_stock draws it in.
         const RVec3 handle = it->GetWorldTransform() * t.handle;
@@ -3500,6 +3524,7 @@ void Matron::take_stock(const int index) {
     physics_.GetBodyInterface().ActivateBody(t.body);
     held_ = index;
     ++takes_;
+    return true;
 }
 
 void Matron::hold_stock(const float dt) {
@@ -3643,6 +3668,10 @@ void Matron::restore(const Saved &saved) {
         shoves_ = 0;
         drop_stock();
         handled_ = saved.handled;
+        // What she perceived of him and of the bay's chain belongs to the
+        // world being left.
+        ev_ = Evidence{};
+        bay_hook_known_ = false;
         throw_cooldown_s_ = 0.0F;
         fetch_ = -1;
         fetch_refused_ = 0;
