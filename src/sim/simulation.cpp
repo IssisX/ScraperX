@@ -93,6 +93,11 @@ bool Simulation::request_jump() noexcept {
     return true;
 }
 
+bool Simulation::request_strike() noexcept {
+    strike_requested_ = true;
+    return true;
+}
+
 bool Simulation::request_traversal() noexcept {
     if (snapshot_.traversal_state == TraversalState::Mantling ||
         snapshot_.traversal_state == TraversalState::Vaulting) {
@@ -524,6 +529,7 @@ void Simulation::step_fixed() noexcept {
     commands.look_pitch = look_pitch_input_;
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
+    commands.strike_requested = strike_requested_;
     commands.traversal_requested = traversal_requested_;
     commands.up_requested = up_requested_;
     commands.release_requested = release_requested_;
@@ -584,6 +590,7 @@ void Simulation::step_fixed() noexcept {
     hook_release_ = false;
     hook_take_ = false;
     jump_requested_ = false;
+    strike_requested_ = false;
     traversal_requested_ = false;
     up_requested_ = false;
     release_requested_ = false;
@@ -1120,6 +1127,14 @@ void Simulation::debug_matron_rule_out_pipe() noexcept {
     physics_world_->matron().rule_out_pipe_for_test();
 }
 
+void Simulation::debug_matron_rule_out_hang() noexcept {
+    physics_world_->matron().rule_out_hang_for_test();
+}
+
+void Simulation::debug_matron_foresee_no_kill() noexcept {
+    physics_world_->matron().foresee_no_kill_for_test();
+}
+
 void Simulation::debug_matron_hear(const Vector3 at) noexcept {
     physics_world_->matron().hear_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)));
@@ -1195,6 +1210,10 @@ void Simulation::debug_matron_armplay(const int armplay) noexcept {
 
 void Simulation::debug_lose_arm(const int side) noexcept {
     physics_world_->lose_arm_for_test(side);
+}
+
+void Simulation::debug_break_arm(const int side) noexcept {
+    physics_world_->break_arm_for_test(side);
 }
 
 void Simulation::debug_snag_player(const double max_n) noexcept {
@@ -1347,6 +1366,17 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.arm_tears = view.arm_tears;
     result.arm_throws = view.arm_throws;
     result.claims = view.claims;
+    result.fatal_path = view.fatal_path;
+    result.fatal_hang = view.fatal_hang;
+    result.fatal_window_s = view.fatal_window_s;
+    result.fatal_edge = Vector3{view.fatal_edge_x, view.fatal_edge_y, view.fatal_edge_z};
+    result.fatal_out_x = view.fatal_out_x;
+    result.fatal_out_z = view.fatal_out_z;
+    result.fatal_release_beat = view.fatal_release_beat;
+    result.fatal_escapes = view.fatal_escapes;
+    result.fatal_foreseen_mps = view.fatal_foreseen_mps;
+    result.fatal_toss_mps = view.fatal_toss_mps;
+    result.reels = view.reels;
     result.armplay_beat = view.armplay_beat;
     result.fatal_beat = view.fatal_beat;
     result.waste_not = view.waste_not;

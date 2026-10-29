@@ -24,6 +24,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_movement.cpp
     src/sim/physics_world_water.cpp
     src/sim/physics_world_grab.cpp
+    src/sim/physics_world_strike.cpp
     src/sim/physics_world_arm.cpp
     src/sim/matron_hold.cpp
     src/sim/matron_fatality.cpp
@@ -207,6 +208,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_water.cpp
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
+        tests/sim_tests_strike.cpp
         tests/sim_tests_matron_traverse.cpp
         tests/sim_tests_matron_pursuit.cpp
         tests/sim_tests_matron_stand.cpp
@@ -226,7 +228,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-ladder matron-hearing matron-climb-support matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand)
+    foreach(slice matron-ladder matron-hearing matron-climb-support matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()

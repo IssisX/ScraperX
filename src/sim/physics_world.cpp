@@ -501,6 +501,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    // A punch under way owns his hands (physics_world_strike.cpp).
+    strike_owns_hands(commands);
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;
@@ -712,11 +714,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         (void)matron_affordances();
     }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
-    matron_->set_player_ankle(player_ankle(bodies));
+    // His ankle; in her fingers, the point of it they hold.
+    matron_->set_player_ankle(grip_ != nullptr ? bodies.GetWorldTransform(player_id_) * grip_on_body_
+                                               : player_ankle(bodies));
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
     grab_drive(bodies, delta_seconds);
+    strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
         // Off the ground in her hand (or righting after): the speed it
         // carries into contact, for the fall rules once she lets go.
@@ -807,12 +812,23 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // always sets a support-relative landing velocity first -- so no
     // separate traversal exemption is needed.
     bool died_this_tick = false;
+    if (fatality_death_) {
+        // The fatality's floor version is over (black): a death where the
+        // body lies, and the checkpoint's restore, as after the hang's fall.
+        fatality_death_ = false;
+        leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), 0.0F, false);
+        restore_from_checkpoint(bodies);
+        died_this_tick = true;
+    }
     // While she is finishing it (Claimed) the run is hers: its end is the
-    // fatality's, not a death and a checkpoint.
+    // fatality's (above), not a fall's death.
     const bool hers = matron_->claimed();
-    if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None && !takeoff &&
-        grip_ == nullptr && !hers) {
+    if (!died_this_tick && grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
+        !takeoff && grip_ == nullptr && !hers) {
         last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
+        // Her fatality lets go only into a fall foreseen to land past this.
+        static_assert(static_cast<double>(Matron::kFatalLandMps) > kLethalImpactSpeedMps,
+                      "the fatality's let-go must be foreseen to kill");
         if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
             // The body stays where it hit, as it was moving into the hit.
             leave_corpse(bodies, pre_contact_velocity_, pre_contact_velocity_.Length(), false);

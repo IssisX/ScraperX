@@ -172,6 +172,8 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"jump")
 		KEY_E:
 			_verbs.append(&"action")
+		KEY_V:
+			_verbs.append(&"punch")
 		KEY_Q:
 			_verbs.append(&"drop")
 		KEY_F:
@@ -204,6 +206,8 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_verbs.append(&"jump")
 		JOY_BUTTON_X:
 			_verbs.append(&"action")
+		JOY_BUTTON_DPAD_UP:
+			_verbs.append(&"punch")
 		JOY_BUTTON_B:
 			_verbs.append(&"back")
 		JOY_BUTTON_Y:

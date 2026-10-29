@@ -225,6 +225,8 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     matron_->drop_stock();
     grab_reset(bodies);
     arm_reset(bodies);   // a death: whole again
+    fatality_death_ = false;
+    strike_reset();      // the fist back at guard, no blow pending on her
     slingshot_->detach();
     swing_->detach();
     trapeze_->detach();
@@ -684,6 +686,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wind_force_n = wind_force_n_;
     state_.wind_peak_force_n = wind_peak_force_n_;
     state_.shove_count = shove_count_;
+    read_strike_state();
     state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
     state_.grip_available = grip_affordance_.valid;
     state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
@@ -785,9 +788,17 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.upright_count = upright_count_;
         state_.upright_wedged_count = upright_wedged_count_;
         state_.max_hold_step_m = max_hold_step_m_;
+        state_.matron_hand_present = !hand_id_.IsInvalid();
         if (!hand_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
             state_.matron_hand = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
+        }
+        // The held ankle only while her fingers hold him (cleared, not left
+        // where it last was).
+        state_.held_ankle = Vector3{};
+        if (grip_ != nullptr) {
+            const JPH::RVec3 held = bodies.GetWorldTransform(player_id_) * grip_on_body_;
+            state_.held_ankle = Vector3{held.GetX(), held.GetY(), held.GetZ()};
         }
         if (!hand2_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);

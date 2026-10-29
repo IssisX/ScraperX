@@ -310,6 +310,22 @@ struct MatronSnapshot final {
     std::uint32_t arm_tears = 0;
     std::uint32_t arm_throws = 0;
     std::uint32_t claims = 0;
+    // The fatality (Matron::kFatalTargetS): its path (Matron::FatalPath: 0
+    // none, 1 the hang over the drop, 2 the floor), the hang's window and its
+    // seconds, the edge and the way out over the drop, the release beat (a
+    // count that rises as she lets go of him over the drop: the viewer's
+    // slow motion, pull-out and fade), his escapes by his blow in it, and his
+    // blows out over the drop in any hold that she reeled back from.
+    std::uint8_t fatal_path = 0;
+    bool fatal_hang = false;
+    double fatal_window_s = 0.0;
+    Vector3 fatal_edge{};
+    double fatal_out_x = 0.0, fatal_out_z = 0.0;
+    std::uint32_t fatal_release_beat = 0;
+    std::uint32_t fatal_escapes = 0;
+    double fatal_foreseen_mps = 0.0;   // in the hang: his fall from now foreseen to meet steel at this speed down
+    double fatal_toss_mps = 0.0;       // her toss out with the let-go it needs
+    std::uint32_t reels = 0;
     std::uint8_t armplay_beat = 0;
     std::uint8_t fatal_beat = 0;     // Matron::Fatal while Claimed
     std::uint32_t waste_not = 0;     // the 'Waste not.' voice hook
@@ -1043,7 +1059,13 @@ struct Snapshot final {
     std::uint64_t upright_count = 0;
     std::uint64_t upright_wedged_count = 0;
     double max_hold_step_m = 0.0;
+    // Her hand (the body her muscle drives) while it is out; and, while her
+    // fingers hold him, the held ankle point: where on his body they hold,
+    // in the world (her hand is on it, by the grip). The drawing's arm goes
+    // from her shoulder to matron_hand, his leg's end to held_ankle.
     Vector3 matron_hand{};
+    bool matron_hand_present = false;
+    Vector3 held_ankle{};
     // Arms (physics_world_arm.cpp): lost per side until a death or a
     // restart; the severed arm's body; her win.
     bool left_arm_lost = false;
@@ -1131,6 +1153,23 @@ struct Snapshot final {
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;
+    // The player's strike (Action's punch): its phase (0 guard, 1 wind-up,
+    // 2 reach, 3 recoil) and ticks in it, whether Action offers it now, the
+    // strikes thrown and landed (a landing is an edge on strike_hit_count),
+    // and the last landing's point, her surface normal there and the
+    // impulse it put into her (N*s, force times time).
+    std::uint8_t strike_phase = 0;
+    std::uint32_t strike_phase_ticks = 0;
+    bool strike_offered = false;
+    std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
+    bool strike_ready = false;    // a punch can be thrown now: the PUNCH button lit, else greyed
+
+    bool strike_landed = false;   // this strike has landed on her
+    std::uint64_t strike_count = 0;
+    std::uint64_t strike_hit_count = 0;
+    Vector3 strike_hit_point{};
+    Vector3 strike_hit_normal{};
+    double strike_impulse_ns = 0.0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;
@@ -1428,6 +1467,8 @@ public:
     [[nodiscard]] bool set_look_pitch(double radians) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
+    // The Action button's punch, one-shot (physics_world_strike.cpp).
+    [[nodiscard]] bool request_strike() noexcept;
     // The gesture controls' "up", one-shot: the native picks the move, as
     // snapshot.up_move says (UpMove), and makes it through the same paths
     // as Jump and Action. Refused where up_move is None (a mantle, vault or
@@ -1585,6 +1626,12 @@ public:
     // Tests only: the corner pipe ruled out for her, as a pipe way that has
     // failed three times is (her own found ways tested alone).
     void debug_matron_rule_out_pipe() noexcept;
+    // Tests only (never bound to the bridge): no edge of her floor counts for
+    // the fatality's hang (Matron::rule_out_hang_for_test): its floor version.
+    void debug_matron_rule_out_hang() noexcept;
+    // Tests only (never bound to the bridge): every let-go of the hang
+    // foreseen as a fall he would live (Matron::foresee_no_kill_for_test).
+    void debug_matron_foresee_no_kill() noexcept;
     // Tests only: she hears the climber at `at` (feet): evidence with an age.
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
@@ -1618,6 +1665,9 @@ public:
     // hold alone); an arm already lost.
     void debug_matron_armplay(int armplay) noexcept;
     void debug_lose_arm(int side) noexcept;
+    // Tests only (never bound to the bridge): an arm broken as a hard hit
+    // breaks it (0 the left, 1 the right), out of use a while.
+    void debug_break_arm(int side) noexcept;
     // Tests only (never bound to the bridge): the player's body caught on
     // steel where it is (a point at its middle fixed to the world) till the
     // load on it passes `max_n`: a body pinned on a rail's edge.
@@ -1809,6 +1859,7 @@ private:
     double facing_z_ = 0.0;
     double look_pitch_input_ = 0.0;
     bool jump_requested_ = false;
+    bool strike_requested_ = false;
     bool traversal_requested_ = false;
     bool up_requested_ = false;
     bool release_requested_ = false;

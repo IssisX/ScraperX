@@ -1946,39 +1946,40 @@ void run_matron_remaining() {
                     after.runs_ended_by_matron == 0,
                 "matron hands: dangerous, one arm gone is not the fatality: alive, with one arm left");
         // Set back on her deck, one-armed, standing still: she comes again on
-        // her own, still dangerous. Her second catch: the second arm, and the
-        // run is hers (Claimed), short of fully changed.
+        // her own (her hands off him kRegrabAfterTearS first), still
+        // dangerous. Her second catch is the fatality (the owner, 2026-10-28):
+        // no second arm; it ends in a death, and the run restarts from the
+        // last save, short of fully changed.
         const int hz = static_cast<int>(Simulation::kTickRateHz);
         std::uint64_t most_tears = after.arm_tear_count;
         std::uint64_t deaths_seen = after.death_count;
-        bool claimed = false;
-        int stage_claimed = -1;
-        std::uint64_t ended = 0;
-        for (int i = 0; i < 300 * hz && ended == 0; ++i) {
+        int path = 0;
+        int stage_fatal = -1;
+        for (int i = 0; i < 300 * hz && deaths_seen == after.death_count; ++i) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
             tick(s);
             const auto q = s.snapshot();
-            ended = q.runs_ended_by_matron;
-            if (ended != 0) {
+            const auto m = s.matron_state();
+            deaths_seen = q.death_count;
+            if (deaths_seen != after.death_count) {
                 break;
             }
             most_tears = std::max<std::uint64_t>(most_tears, q.arm_tear_count);
-            deaths_seen = std::max<std::uint64_t>(deaths_seen, q.death_count);
-            if (q.claimed_by_matron && !claimed) {
-                claimed = true;
-                stage_claimed = s.matron_state().stage;
+            if (m.fatal_path != 0 && path == 0) {
+                path = m.fatal_path;
+                stage_fatal = m.stage;
             }
         }
         const auto whole = s.snapshot();
-        std::cout << "  matron hands: dangerous, second catch: tears " << most_tears << " claimed " << claimed
-                  << " at stage " << stage_claimed << ", run ended " << ended << ", deaths " << deaths_seen
-                  << ", new run L/R " << whole.left_arm_lost << "/" << whole.right_arm_lost << "\n";
-        require(deaths_seen == before.death_count, "matron hands: dangerous, no death on the way");
-        require(most_tears == 2 && claimed && stage_claimed == 1 && ended == 1,
-                "matron hands: dangerous, her second catch tears the second arm off and the run is hers");
+        std::cout << "  matron hands: dangerous, second catch: tears " << most_tears << " fatality path " << path
+                  << " at stage " << stage_fatal << ", run ended " << whole.runs_ended_by_matron << ", deaths "
+                  << deaths_seen << ", new run L/R " << whole.left_arm_lost << "/" << whole.right_arm_lost << "\n";
+        require(most_tears == 1 && path != 0 && stage_fatal == 1 && deaths_seen == before.death_count + 1 &&
+                    whole.runs_ended_by_matron == 0,
+                "matron hands: dangerous, her second catch is the fatality: no second arm, and a death");
         require(!whole.left_arm_lost && !whole.right_arm_lost, "matron hands: the new run starts whole");
-        std::cout << "PASS scraperx_sim matron hands: dangerous, two catches, two arms, the run hers\n";
+        std::cout << "PASS scraperx_sim matron hands: dangerous, two catches, one arm, the fatality\n";
     }
     run_matron_mischief();
     run_matron_collision();

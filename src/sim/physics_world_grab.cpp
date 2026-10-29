@@ -289,11 +289,23 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     matron_->set_thrash(grip_ != nullptr ? thrash_ : 0.0F);
     const bool holding = matron_->holding();
     if (!holding && !hand_id_.IsInvalid()) {
-        // Her hand is her own again (the hold over, or a blow took her).
+        // Her hand is her own again (the hold over, or a blow took her). A
+        // let-go she made as the hold ended (the fatality's, with its toss
+        // out; her flinch from his blow) is made here, with its push.
+        JPH::Vec3 push;
+        const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
+        if (let_go) {
+            bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+        }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
         hand_id_ = JPH::BodyID();
+    }
+    if (!holding) {
+        // No hand to let go with: no let-go left over for the next hold.
+        JPH::Vec3 stale;
+        (void)matron_->take_let_go(stale);
     }
     if (holding && hand_id_.IsInvalid()) {
         // Her hand starts where it is: at her shoulder.
@@ -346,6 +358,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             grip_ = create_constraint(grip, hand_id_, player_id_, false);
             grip_swing_ = false;
             if (grip_ != nullptr) {
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * hand);
                 ++grip_count_;
                 grip_fought_ = false;
                 grip_strain_ns_ = 0.0F;
@@ -394,7 +407,14 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 destroy_grab_constraint(grip_);
                 grip_ = made;
                 grip_swing_ = true;
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
             }
+        }
+        if (grip_swing_) {
+            // The fatality's grip is firm on the ankle: his swing about her
+            // fingers meets their friction (Matron::kFatalGripFrictionNm).
+            static_cast<JPH::SwingTwistConstraint *>(grip_.GetPtr())
+                ->SetMaxFrictionTorque(matron_->fatal_holding() ? Matron::kFatalGripFrictionNm : 0.0F);
         }
         // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).
         grip_fought_ = grip_fought_ || kick_now_ || thrash_ > kFoughtThrash || brace_ != nullptr;

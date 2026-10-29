@@ -3,7 +3,6 @@
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
 #include "sim/mechanism_kit.hpp"
-#include <cstdio>
 #include <cstdlib>
 
 #include "sim/zipline.hpp"
@@ -74,7 +73,8 @@ void project(const float ax, const float az, const float bx, const float bz, con
 
 Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const std::uint32_t moving_layer,
                const std::uint32_t steel_layer, const BodyID player)
-    : physics_(physics), moving_layer_(moving_layer), steel_layer_(steel_layer), player_(player) {
+    : physics_(physics), static_layer_(static_layer), moving_layer_(moving_layer), steel_layer_(steel_layer),
+      player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
     // Her deck: down the middle of each band, the catwalk across, and in off
@@ -2397,6 +2397,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             return;
         }
     }
+    if (!holding_state(state_)) {
+        // His blow's tag frees him only from her hold (step_hold): outside
+        // one, it is spent.
+        player_blow_tag_ = false;
+    }
     switch (state_) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
@@ -3458,6 +3463,9 @@ void Matron::restore(const Saved &saved) {
     end_journey(false);
     journey_wait_ticks_ = 0;
     if (shared_survival_) shared_survival_->reset();
+    // A blow pending from the player's fist when the save loads belongs to
+    // the world being left; it never reaches her after the load.
+    clear_player_blow();
     if (!dead_) {
         remove_body();
         state_ = saved.state;
@@ -3530,6 +3538,27 @@ void Matron::restore(const Saved &saved) {
         wrist_on_ = false;
         arm_throw_ = false;
         pull2_n_ = kHandReachPullN;
+        // The fatality's hold forgotten (a death mid-fatality, a load): only
+        // its counts, like the hold's, run on.
+        fatal_hold_ = false;
+        fatal_path_ = FatalPath::None;
+        fatal_carry_s_ = 0.0F;
+        fatal_window_s_ = 0.0F;
+        fatal_hang_ = false;
+        fatal_dropped_ = false;
+        fatal_edge_ = RVec3::sZero();
+        fatal_s_ = 0.0F;
+        fatal_check_ticks_ = 0;
+        fatal_lethal_ = false;
+        fatal_toss_ = 0.0F;
+        fatal_lethal_mps_ = 0.0F;
+        fatal_rim0_ = Vec3::sZero();
+        watch_still_s_ = 0.0F;
+        watch_y_ = 0.0F;
+        reel_ = false;
+        reel_to_floor_ = false;
+        spare_walk_ = false;
+        player_blow_tag_ = false;
         crumb_head_ = 0;
         crumb_on_ = -1;
         crumbs_walked_ = 0;
@@ -3728,6 +3757,7 @@ void Matron::take_blow(const float dt) {
         state_ == State::Down || state_ == State::Emerging) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
+        clear_player_blow();
         return;
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -3795,6 +3825,29 @@ void Matron::take_blow(const float dt) {
             blow_faced_ = blow_faced_ || (!its_low && !its_above && -flat.Dot(facing) >= kBraceCos);
         }
     }
+    if (!player_blow_ns_.IsNearZero()) {
+        // The player's fist: a striker closing on her by definition, its
+        // impulse along the floor hers.
+        struck = true;
+        impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
+        if (blow_quiet_ >= kBlowQuietTicks) {
+            blow_low_ = false;
+            blow_from_above_ = false;
+            blow_faced_ = false;
+            blow_staggered_ = false;
+            blow_from_ = Vec3::sZero();
+        }
+        blow_low_ = blow_low_ || player_blow_low_;
+        Vec3 flat(float(at.GetX() - player_blow_at_.GetX()), 0.0F, float(at.GetZ() - player_blow_at_.GetZ()));
+        if (flat.LengthSq() > 1.0e-6F) {
+            flat = flat.Normalized();
+            if (blow_from_.IsNearZero()) {
+                blow_from_ = flat;
+            }
+            blow_faced_ = blow_faced_ || (!player_blow_low_ && -flat.Dot(facing) >= kBraceCos);
+        }
+        clear_player_blow();
+    }
     if (!struck) {
         if (++blow_quiet_ >= kBlowQuietTicks) {
             blow_change_ = Vec3::sZero();
@@ -3810,10 +3863,15 @@ void Matron::take_blow(const float dt) {
         blow_by_player_ = false;
     }
     // His own blow, tagged as it landed (player_blow_landed): read with the
-    // blow it lands in.
+    // blow it lands in. In her hold before the rip it frees him whatever its
+    // size (his_blow; step_hold reads a tag no blow came with).
+    const bool tagged = player_blow_tag_;
     blow_by_player_ = blow_by_player_ || player_blow_tag_;
     player_blow_tag_ = false;
     blow_quiet_ = 0;
+    if (tagged && his_blow()) {
+        return;
+    }
     // Her own change is the blow's only while the player's body is not
     // against her too (their push is a shove, not a blow).
     if (!physics_.WereBodiesInContact(body_, player_)) {
@@ -3856,15 +3914,11 @@ void Matron::take_blow(const float dt) {
     }
     if (body_in_hold()) {
         // Caught, he is hers (Cory, 2026-10-27, 6:51 PM): only his own blow,
-        // landed before the rip begins, takes her off her feet and him out
-        // of her hand. Any other she takes on her feet, him in her hand.
-        if (!blow_by_player_ || rip_begun()) {
-            return;
-        }
-        // Freed by it, whole: she is after him once her feet have her, her
-        // hand held off a while (as after a grip he tears out of it).
-        end_hold(State::Searching);
-        grab_cooldown_s_ = kAfterReleaseSeconds;
+        // landed before the rip begins, takes him out of her hand (his_blow,
+        // above: set down on her deck, never over open air). Any other she
+        // takes on her feet, him in her hand; and his, once the rip has
+        // begun, or while she is already setting him down after one.
+        return;
     }
     // The way it sends her: along the impulse, else her change, else away
     // from the striker.
@@ -4268,6 +4322,19 @@ void Matron::refresh_view() {
     view_.arm_tears = arm_tears_;
     view_.arm_throws = arm_throws_;
     view_.claims = claims_;
+    view_.fatal_path = static_cast<std::uint8_t>(fatal_path_);
+    view_.fatal_hang = fatal_hang_;
+    view_.fatal_window_s = fatal_hang_ ? fatal_window_s_ : 0.0F;
+    view_.fatal_edge_x = float(fatal_edge_.GetX());
+    view_.fatal_edge_y = float(fatal_edge_.GetY());
+    view_.fatal_edge_z = float(fatal_edge_.GetZ());
+    view_.fatal_out_x = fatal_path_ == FatalPath::Hang ? rim_nx_ : 0.0F;
+    view_.fatal_out_z = fatal_path_ == FatalPath::Hang ? rim_nz_ : 0.0F;
+    view_.fatal_release_beat = fatal_release_beat_;
+    view_.fatal_escapes = fatal_escapes_;
+    view_.fatal_foreseen_mps = fatal_hang_ ? fatal_lethal_mps_ : 0.0F;
+    view_.fatal_toss_mps = fatal_toss_;
+    view_.reels = reels_;
     view_.fatal_beat = state_ == State::Claimed ? static_cast<std::uint8_t>(fatal_beat_) : 0;
     view_.waste_not = waste_not_;
     view_.armplay_beat = state_ == State::ArmPlay ? static_cast<std::uint8_t>(hold_phase_) : 0;

@@ -9,9 +9,11 @@
 // kKnotTearN), she wrenches the catch's trip handle down, and the kit does
 // the rest: 800 kg of skip down the well, the torso up the rope and on past
 // the skip's buffer (a rope only pulls) into the head beam, the knot gone
-// there or when the rope next snaps taut, the fall. No death is counted in
-// it: the run is hers, and it ends (run_ended_by_matron_) when she has wiped
-// her hands.
+// there or when the rope next snaps taut, the fall. Those last beats are no
+// longer begun (the floor version is Lay, Pin, Wipe, Black). No death is
+// counted while it plays: the run is hers; once she has wiped her hands and
+// it is black, it ends in a death and the checkpoint's restore
+// (fatality_death_).
 
 #include "sim/physics_world.hpp"
 
@@ -403,7 +405,10 @@ void Simulation::PhysicsWorld::fatality_post_step(JPH::BodyInterface &bodies, co
         }
     }
     if (matron_->fatality_over()) {
-        run_ended_by_matron_ = true;
+        // Black: a death, and the checkpoint's restore (step), as after the
+        // hang's landing (the owner, 2026-10-28: the fatality restarts from
+        // the last save).
+        fatality_death_ = true;
     }
 }
 

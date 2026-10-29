@@ -63,6 +63,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_precision_landing_count);
     godot::ClassDB::bind_method(godot::D_METHOD("request_jump"),
                                 &ScraperXSimulation::request_jump);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_strike"), &ScraperXSimulation::request_strike);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_strike_state"), &ScraperXSimulation::get_strike_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_traversal"),
                                 &ScraperXSimulation::request_traversal);
     godot::ClassDB::bind_method(godot::D_METHOD("request_up"), &ScraperXSimulation::request_up);
@@ -436,6 +438,30 @@ std::int64_t ScraperXSimulation::get_precision_landing_count() const {
 
 bool ScraperXSimulation::request_jump() {
     return simulation_->request_jump();
+}
+
+bool ScraperXSimulation::request_strike() {
+    return simulation_->request_strike();
+}
+
+// The player's strike, for the view (first_person_arms.gd, strike_feel.gd,
+// matron_view.gd, gore_view.gd, the audio): read only, nothing decided here.
+godot::Dictionary ScraperXSimulation::get_strike_state() const {
+    const sim::Snapshot &p = simulation_->snapshot();
+    godot::Dictionary out;
+    out["phase"] = static_cast<std::int64_t>(p.strike_phase);
+    out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
+    out["offered"] = p.strike_offered;
+    out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
+    out["arm"] = static_cast<std::int64_t>(p.strike_arm);   // the fist: 1 right, 0 left, -1 none usable
+    out["ready"] = p.strike_ready;   // the PUNCH button lit (else greyed: in the air, a lunge, no fist)
+    out["landed"] = p.strike_landed;
+    out["strikes"] = static_cast<std::int64_t>(p.strike_count);
+    out["hits"] = static_cast<std::int64_t>(p.strike_hit_count);
+    out["hit_point"] = to_godot(p.strike_hit_point);
+    out["hit_normal"] = to_godot(p.strike_hit_normal);
+    out["impulse"] = p.strike_impulse_ns;
+    return out;
 }
 
 bool ScraperXSimulation::request_traversal() {
@@ -1784,7 +1810,24 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["arm_tears"] = static_cast<std::int64_t>(m.arm_tears);
     out["claims"] = static_cast<std::int64_t>(m.claims);
     out["waste_not"] = static_cast<std::int64_t>(m.waste_not);
-    // The body in her hand.
+    // The fatality (sim/matron.hpp kFatalTargetS): its path (0 none, 1 the
+    // hang over the drop, 2 the floor), the hang's window, the edge and the
+    // way out over the drop, and the release beat: a count that rises by one
+    // as she lets go of him over the drop (slow motion, the pull-out down the
+    // drop, the fade).
+    out["fatal_path"] = static_cast<std::int64_t>(m.fatal_path);
+    out["fatal_hang"] = m.fatal_hang;
+    out["fatal_window_s"] = m.fatal_window_s;
+    out["fatal_window_total_s"] = static_cast<double>(sim::Matron::kFatalHangWindowS);
+    out["fatal_edge"] = to_godot(m.fatal_edge);
+    out["fatal_out"] = godot::Vector2(static_cast<real_t>(m.fatal_out_x), static_cast<real_t>(m.fatal_out_z));
+    out["fatal_release_beat"] = static_cast<std::int64_t>(m.fatal_release_beat);
+    out["fatal_escapes"] = static_cast<std::int64_t>(m.fatal_escapes);
+    out["reels"] = static_cast<std::int64_t>(m.reels);
+    // The body in her hand: her hand (the body her muscle drives, while it is
+    // out) and the held ankle point (where her fingers hold him, while they do).
+    out["matron_hand_present"] = p.matron_hand_present;
+    out["held_ankle"] = to_godot(p.held_ankle);
     out["held"] = p.held_by_matron;
     out["free_rotation"] = p.player_free_rotation;
     out["body_rotation"] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);

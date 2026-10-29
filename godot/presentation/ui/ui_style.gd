@@ -251,6 +251,14 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 			for fx in [-0.6, -0.2, 0.2, 0.6]:
 				ci.draw_line(c + Vector2(r * fx, -r * 0.02), knot, with_alpha(color, 0.8), width * 0.6, true)
 			disc(ci, knot, width * 0.9, color)
+		&"fist":
+			# A closed fist, knuckles forward, and the line it travels.
+			ci.draw_rect(Rect2(c + Vector2(-r * 0.12, -r * 0.34), Vector2(r * 0.6, r * 0.62)), color, false, width)
+			for k in [-0.2, 0.0, 0.2]:
+				ci.draw_line(c + Vector2(r * 0.22, -r * 0.05 + r * k), c + Vector2(r * 0.48, -r * 0.05 + r * k),
+					with_alpha(color, 0.7), width * 0.6, true)
+			ci.draw_line(c + Vector2(-r * 0.62, -r * 0.05), c + Vector2(-r * 0.24, -r * 0.05),
+				with_alpha(color, 0.55), width, true)
 		&"pick_up":
 			# A load on the floor with an arrow lifting out of it.
 			ci.draw_rect(Rect2(c + Vector2(-r * 0.36, r * 0.1), Vector2(r * 0.72, r * 0.46)),
