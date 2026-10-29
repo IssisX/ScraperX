@@ -119,6 +119,28 @@ func _settle(data: Dictionary, frames: int) -> void:
 		await process_frame
 
 
+# Worst clearance of any hair point or segment midpoint (roots
+# excluded) from the head sphere and the face sphere, in metres,
+# negative when inside. A segment midpoint is included so a chord
+# through the face is caught even when both its endpoints clear.
+func _hair_clear(rig: RefCounted) -> float:
+	var head: Transform3D = rig.bone_world("head")
+	var skull: Vector3 = head * (rig._skull_local as Vector3)
+	var face: Vector3 = head * ((rig._skull_local as Vector3) + Vector3(0.0, -0.04, 0.06))
+	var radius: float = rig._skull_radius
+	var worst := 1.0
+	for ch in (rig._chains as Array):
+		var pts: Array = ch["pts"]
+		for k in range(1, pts.size()):
+			var p: Vector3 = pts[k]
+			worst = minf(worst, (p - skull).length() - radius)
+			worst = minf(worst, (p - face).length() - 0.07)
+			var mid: Vector3 = ((pts[k - 1] as Vector3) + p) * 0.5
+			worst = minf(worst, (mid - skull).length() - radius)
+			worst = minf(worst, (mid - face).length() - 0.07)
+	return worst
+
+
 func _shot(name: String, at: Vector3, look: Vector3, fov: float) -> void:
 	_cam.fov = fov
 	_cam.look_at_from_position(at, look)
@@ -234,6 +256,14 @@ func _run() -> void:
 	for c in chains.size():
 		swing = maxf(swing, (chains[c]["pts"][chains[c]["pts"].size() - 1] as Vector3).distance_to(before[c]))
 	_check(hang > 0.3 and swing > 0.05, "hair", "tips %.2f m under the roots, %.2f m swing on a turn" % [hang, swing])
+	# Her hair as simulated, not as hoped: every strand point and every
+	# segment midpoint must clear her head sphere and her face sphere
+	# (forward and down from the skull centre), computed here from the
+	# posed bones, not from the rig's own avoidance volumes. A chord
+	# dipping through her face between two cleared points fails on its
+	# midpoint. Roots are excluded: they sit on the scalp by design.
+	var worst_clear := _hair_clear(rig)
+	_check(worst_clear >= -0.005, "hair_clear", "worst hair-to-face clearance %.3f m (must be >= -0.005)" % worst_clear)
 	# Close shots: face front, three-quarter, her hands.
 	data = _data({"state": 7, "sees_player": true}, 0.0)
 	await _settle(data, 40)
