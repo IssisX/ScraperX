@@ -3113,11 +3113,20 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                             const Vec3 away = up.spec.out;
                             const Vec3 across(-away.GetZ(), 0.0F, away.GetX());
                             const auto flight_clear = [&](const Vec3 feet) {
+                                // Her own standing capsule, raised in steps to
+                                // where her hands meet the lip: steel she only
+                                // stands beside (a post, a rail) is not over her,
+                                // and a spot round the take-off she cannot stand
+                                // on at all is not one she sets on.
+                                const int steps = std::max(1, int(std::ceil(flight_rise / 0.1F)));
+                                if (!capsule_free(physics, ignore, limits, feet)) return false;
                                 for (const Vec3 off : {Vec3::sZero(), away * kTakeoffToleranceM, away * -kTakeoffToleranceM,
                                                        across * kTakeoffToleranceM, across * -kTakeoffToleranceM}) {
-                                    const Vec3 f = feet + off;
-                                    ++stats_.capsule_queries;
-                                    if (!gap_segment_free(physics, ignore, limits, f, f + Vec3(0.0F, flight_rise, 0.0F))) return false;
+                                    if (!capsule_free(physics, ignore, limits, feet + off)) continue;
+                                    for (int s = 1; s <= steps; ++s) {
+                                        const Vec3 f = feet + off + Vec3(0.0F, flight_rise * float(s) / float(steps), 0.0F);
+                                        if (!capsule_free(physics, ignore, limits, f)) return false;
+                                    }
                                 }
                                 return true;
                             };
