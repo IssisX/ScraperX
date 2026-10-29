@@ -611,6 +611,24 @@ public:
     [[nodiscard]] bool latch_set(LatchIndex latch) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
+    // Read only: every body on a vertical guide that a catch holds (a hoist),
+    // its guide's travel, and what frees each of its catches: a pin on its own
+    // guide (shoved clear along it), or the hanging handle a trip line pulls
+    // its lever by (weighed down).
+    struct HoistPin {
+        BodyIndex pin;
+        JPH::Vec3 axis = JPH::Vec3::sAxisZ();   // the pin's guide: travel along it frees the catch
+        float travel = 0.0F, clear = 0.0F;      // where it is, and how far it must go
+    };
+    struct HoistInfo {
+        BodyIndex car;
+        JPH::Vec3 axis = JPH::Vec3::sAxisY();
+        float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
+        bool held = false;                       // a catch latched on it now
+        std::vector<HoistPin> pins;
+        std::vector<BodyIndex> weights;          // trip-line handles that free a lever catch
+    };
+    [[nodiscard]] std::vector<HoistInfo> hoists() const;
     // True while the guide has no rail gap or its joint lies in its seat.
     [[nodiscard]] bool rail_whole(GuideIndex guide) const noexcept;
     // True while a clutched rope's clutch is in, or the rope has no clutch.

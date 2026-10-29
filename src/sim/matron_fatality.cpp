@@ -19,10 +19,9 @@ using namespace JPH;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kHoldTurnRate = 5.0F;
 // Held up short of her spot (no nearer in kWorkStallS) with the thing she
-// works on in reach less kWorkMarginM, she works from there; once at it she
-// stays until pushed kWorkSlackM past her reach.
+// works on in reach less kWorkMarginM (matron.hpp), she works from there;
+// once at it she stays until pushed kWorkSlackM past her reach.
 constexpr float kWorkStallS = 0.5F;
-constexpr float kWorkMarginM = 0.15F;
 constexpr float kWorkSlackM = 0.3F;
 // The well's skip-lift cage and the trip gantry over its open north side
 // (band_counterweight_well.cpp) stand between the deck and the bollard. She

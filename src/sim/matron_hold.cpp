@@ -1230,8 +1230,38 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         if (hold_s_ > 3.5F && !arm_throw_ && arm_throws_ < arm_tears_) {
             ++arm_throws_;
             arm_throw_ = true;
-            // Along the band beside her, low: it lands on her deck.
-            arm_throw_v_ = (right * 0.95F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
+            // Beside her, low, to whichever side (else behind her) has her
+            // deck where it comes down: steel read under the throw's landing,
+            // at her feet's height, so it lands on her deck.
+            const auto lands_on_deck = [&](const Vec3 side) {
+                const Vec3 v = (side * 0.95F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
+                const float rise = float(hand2_target_.GetY()) - feet;
+                const float vy = v.GetY();
+                const float t = (vy + std::sqrt(vy * vy + 2.0F * 9.81F * std::max(0.0F, rise))) / 9.81F;
+                // Its whole way down and the slide past it on steel at her
+                // feet, built in (not a cage or a leaf that carries it off):
+                // where it comes down, and on beyond as it skids.
+                const IgnoreSingleBodyFilter self(body_);
+                for (const float f : {0.6F, 0.8F, 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.25F, 2.5F}) {
+                    const RVec3 down_from(at.GetX() + v.GetX() * t * f, feet + 1.0F, at.GetZ() + v.GetZ() * t * f);
+                    RayCastResult hit;
+                    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(down_from, Vec3(0.0F, -2.0F, 0.0F)), hit, {}, {},
+                                                                self) ||
+                        std::abs(1.0F - 2.0F * hit.mFraction) > 0.3F ||
+                        physics_.GetBodyInterface().GetMotionType(hit.mBodyID) != EMotionType::Static) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            Vec3 side = right;
+            for (const Vec3 &c : {right, -right, -fwd}) {
+                if (lands_on_deck(c)) {
+                    side = c;
+                    break;
+                }
+            }
+            arm_throw_v_ = (side * 0.95F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
         }
         if (hold_s_ >= kArmPlaySeconds) {
             hold_phase_ = 5;
