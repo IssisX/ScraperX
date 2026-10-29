@@ -374,8 +374,10 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
         traversal_local_hold_ = to_support_local(bodies, traversal_body_, next);
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, carries.point);
     }
-    move_hands(bodies, from_support_local(bodies, traversal_body_, traversal_local_hold_),
-               up_input, side_input);
+    // Regrip relative to the actual shoulders, not the requested hold.
+    // A finite-force climber can lag the request; hands must not jump ahead
+    // of the body and then be judged out of reach in the same physics tick.
+    move_hands(bodies, bodies.GetPosition(player_id_), up_input, side_input);
 }
 
 // Hand over hand: the hand furthest behind the way the body moves
