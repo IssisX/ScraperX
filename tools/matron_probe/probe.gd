@@ -257,6 +257,8 @@ class Recorder extends Node:
 		var hand2: Vector3 = hold.get("hand2", Vector3.ZERO)
 		var ch: Vector3 = data.get("climb_hand", Vector3.ZERO)
 		var ch2: Vector3 = data.get("climb_hand2", ch)
+		var chand: Vector3 = data.get("contact_hand", Vector3.ZERO)
+		var chand2: Vector3 = data.get("contact_hand2", Vector3.ZERO)
 		var player: Vector3 = native.get_player_render_position()
 		var surf := []
 		for limb in [["an_l", "heel", "toe"], ["an_r", "heel", "toe"], ["wr_l", "knuckles", ""], ["wr_r", "knuckles", ""]]:
@@ -281,7 +283,9 @@ class Recorder extends Node:
 			int(bool(data.get("climbing", false)) and data.has("climb_hand")), "%.5f" % ch.x, "%.5f" % ch.y, "%.5f" % ch.z,
 			int(bool(data.get("climb_hand2_known", false))), "%.5f" % ch2.x, "%.5f" % ch2.y, "%.5f" % ch2.z,
 			"%.5f" % player.x, "%.5f" % player.y, "%.5f" % player.z,
-			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst)))]
+			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst))),
+			int(bool(data.get("contact_hand_held", false))), "%.5f" % chand.x, "%.5f" % chand.y, "%.5f" % chand.z,
+			int(bool(data.get("contact_hand2_held", false))), "%.5f" % chand2.x, "%.5f" % chand2.y, "%.5f" % chand2.z]
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -350,4 +354,5 @@ class Recorder extends Node:
 		"climb_airborne", "climb_move_active", "climb_move", "carrying", "bracing", "mantling", "fall_v",
 		"px", "py", "pz", "rx", "ry", "rz", "yaw", "ryaw", "floor_y", "hold_state", "held", "grip_on",
 		"hx", "hy", "hz", "h2x", "h2y", "h2z", "ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z",
-		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst"]
+		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
+		"chand_held", "chandx", "chandy", "chandz", "chand2_held", "chand2x", "chand2y", "chand2z"]
