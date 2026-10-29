@@ -3,7 +3,7 @@
 Real recordings, never made in code (the owner's rule, 2026-10-27: human sounds are real, never
 synthesized). The owner picked each by ear on 2026-10-27. Every source is CC0 1.0, a public-domain
 dedication: no credit is required, and it is given here anyway. `sound_bank.gd` `build_her()`
-loads them; the three `_loop_` files play as loops.
+loads them; the `_loop_` files play as loops.
 
 Each file is mono Ogg Vorbis at 22,050 Hz, cut from its sources (the part used is given),
 high-passed, faded in and out (the loops: crossfaded end into head), and peak-normalized to
@@ -51,3 +51,81 @@ Her palms and feet on the steel on all fours (`matron_plant_*`, 2026-10-28): eac
 (pitch and speed), high-passed at 50 Hz and low-passed at 2.5 kHz so no click is left at its head,
 faded in over 4 ms and out over 60 ms, and peak-normalized to -1 dBFS; `matron_sound.gd` plays them
 quietly (-17 to -9 dB) and low (pitch 0.80-0.95), at most one every 0.34 s.
+
+## More takes (2026-10-29)
+
+So that no family of hers has fewer than three real takes, the other candidates of the round the
+owner auditioned on 2026-10-27 (the files under `03_EXECUTION/wip_20261027/her_real/` on the
+wip-notes branch, with their `provenance.csv`) are added byte for byte, as the picks above were; the
+owner's pick stays take 0 (the shriek's and the rip's: takes 0 and 1). Prepared like those: cut,
+high-passed, faded (the loops crossfaded), peak-normalized to -1 dBFS; some were slowed when cut, as
+the laugh above was (varispeed, pitch and speed together): `matron_growl_loop_1` and `_2`,
+`matron_laugh_2` and `matron_effort_1` by 10%, `matron_growl_rage_loop_2`, `matron_shriek_3` and
+`matron_laugh_1` by 8%; `matron_effort_1` also has its hiss taken out. Each is its own performance,
+not a pitched copy of another take. The breath already had three takes of the pick and gets none.
+Sniff takes are real, individually recorded, nonoverlapping CC0 performances
+documented in the Sniff takes section below. No source is pitch-shifted into
+a second performance.
+
+| File | Source | Title | Author | License | Part used (s of the source, placed at) |
+|---|---|---|---|---|---|
+| `matron_growl_loop_1.ogg` | https://freesound.org/people/Reitanna/sounds/343979/ | the most disgusting growl | Reitanna | CC0 1.0 (LAION Freesound, train row 400470) | 1.66-4.42 |
+| `matron_growl_loop_2.ogg` | https://freesound.org/people/Reitanna/sounds/241545/ | painful growl | Reitanna | CC0 1.0 (LAION Freesound, train row 397946) | 0.06-1.25, at 0.00 |
+|  | https://freesound.org/people/Reitanna/sounds/241580/ | mmm growl | Reitanna | CC0 1.0 (LAION Freesound, train row 415524) | 0.06-1.36, at 1.27 |
+| `matron_growl_rage_loop_1.ogg` | https://freesound.org/people/hisoul/sounds/520269/ | Kali, Attack, Scream, Fanatic 3 | hisoul | CC0 1.0 (LAION Freesound, train row 76528) | 0.00-1.00, at 0.00 |
+|  | https://freesound.org/people/hisoul/sounds/520282/ | Zisa, Attack, Growl, High Pitched, Angry 7 | hisoul | CC0 1.0 (LAION Freesound, train row 286519) | 0.02-0.74, at 0.95 |
+| `matron_growl_rage_loop_2.ogg` | https://freesound.org/people/Reitanna/sounds/344005/ | gruesome growl | Reitanna | CC0 1.0 (LAION Freesound, train row 307103) | 0.00-0.95, at 0.00 |
+|  | https://freesound.org/people/Reitanna/sounds/344010/ | growly | Reitanna | CC0 1.0 (LAION Freesound, train row 363999) | 0.12-1.10, at 0.98 |
+| `matron_strain_loop_1.ogg` | https://freesound.org/people/OldCouches/sounds/559003/ | Slow Leather Stretch | OldCouches | CC0 1.0 (LAION Freesound, train row 108550) | 0.55-1.86 |
+| `matron_strain_loop_2.ogg` | https://freesound.org/people/mickdow/sounds/253327/ | Rubber Stretch Rip 1 | mickdow | CC0 1.0 (LAION Freesound, train row 228057) | 5.55-6.86 |
+| `matron_shriek_2.ogg` | https://freesound.org/people/Reitanna/sounds/241515/ | scream.wav | Reitanna | CC0 1.0 (FSD50K) | 0.17-1.67 |
+| `matron_shriek_3.ogg` | https://freesound.org/people/Reitanna/sounds/344028/ | cracky ah.wav | Reitanna | CC0 1.0 (FSD50K) | 0.02-1.00 |
+| `matron_shriek_4.ogg` | https://opengameart.org/content/evil-screech-1 | Evil Screech 1 | nocturnalvanguard (AuraVoice) | CC0 1.0 | 1.85-2.98 |
+| `matron_shriek_5.ogg` | https://opengameart.org/content/evil-screech-1 | Evil Screech 1 | nocturnalvanguard (AuraVoice) | CC0 1.0 | 3.78-4.85 |
+| `matron_laugh_1.ogg` | https://freesound.org/people/Reitanna/sounds/343987/ | evil laugh2.wav | Reitanna | CC0 1.0 (FSD50K) | 0.02-1.80 |
+| `matron_laugh_2.ogg` | https://freesound.org/people/sagetyrtle/sounds/73123/ | 0524laugh | sagetyrtle | CC0 1.0 (LAION Freesound, test row 26371) | 157.05-158.80 |
+| `matron_effort_1.ogg` | https://freesound.org/people/Reitanna/sounds/344045/ | long grunt | Reitanna | CC0 1.0 (LAION Freesound, train row 391850) | 0.00-1.00 |
+| `matron_effort_2.ogg` | https://opengameart.org/content/female-hurt-grunts-groans | Female Hurt Grunts & Groans | nocturnalvanguard (AuraVoice) | CC0 1.0 | 4.88-6.15 |
+| `matron_hit_1.ogg` | https://opengameart.org/content/37-hitspunches | 37 hits/punches (hit05) | qubodup (Independent nu ljudbank) | CC0 1.0 | 0.17-0.67, at 0.00 |
+|  | https://freesound.org/people/hisoul/sounds/520275/ | Zisa, Pain, Shout Short, Impact 6 | hisoul | CC0 1.0 (LAION Freesound, train row 281519) | 0.00-0.45, at 0.02 |
+|  | https://freesound.org/people/hisoul/sounds/520282/ | Zisa, Attack, Growl, High Pitched, Angry 7 | hisoul | CC0 1.0 (LAION Freesound, train row 286519) | 0.08-0.63, at 0.38 |
+| `matron_hit_2.ogg` | https://freesound.org/people/sagetyrtle/sounds/98155/ | washcloth | sagetyrtle | CC0 1.0 (LAION Freesound, test row 48691) | 4.65-5.00, at 0.00 |
+|  | https://opengameart.org/content/12-wet-towel-hittingfallingpunching-floor-sounds | 12 wet towel hitting/falling/punching floor sounds (wet_towel_on_floor-11.flac) | qubodup | CC0 1.0 | 0.00-0.45, at 0.00 |
+|  | https://opengameart.org/content/female-rpg-voice-starter-pack | Female RPG Voice Starter Pack (Type 3/damaged1.wav) | cicifyre | CC0 1.0 | 0.00-0.30, at 0.03 |
+|  | https://freesound.org/people/angelkunev/sounds/560592/ | Z-Fem 02b - Grunt | angelkunev | CC0 1.0 (LAION Freesound, test row 42735) | 0.15-0.70, at 0.33 |
+| `matron_swallow_1.ogg` | https://opengameart.org/content/liquid-bottle-drink-set | Liquid Bottle Drink Set (swallow-05.flac) | qubodup | CC0 1.0 | 0.06-0.76 |
+| `matron_swallow_2.ogg` | https://freesound.org/people/Wizage/sounds/418853/ | clean wet gulps.wav | Wizage | CC0 1.0 (FSD50K) | 1.84-2.40 (a different gulp of the file `matron_swallow_0` is cut from) |
+| `matron_rip_2.ogg` | https://freesound.org/people/IENBA/sounds/607909/ | Gore Cabbage | IENBA | CC0 1.0 (LAION Freesound, train row 279895) | 0.40-1.60, at 0.00 |
+|  | https://freesound.org/people/Globbie/sounds/493512/ | HOR Gore Celeri 01 | Globbie | CC0 1.0 (LAION Freesound, train row 97825) | 0.40-0.75, at 0.30 |
+|  | https://freesound.org/people/JarredGibb/sounds/217317/ | Squelch 1 | JarredGibb | CC0 1.0 (LAION Freesound, train row 168) | 0.05-0.85, at 0.55 |
+|  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 1.15-1.48, at 1.15 |
+| `matron_rip_3.ogg` | https://freesound.org/people/IENBA/sounds/607909/ | Gore Cabbage | IENBA | CC0 1.0 (LAION Freesound, train row 279895) | 11.40-12.60, at 0.00 |
+|  | https://freesound.org/people/Globbie/sounds/493521/ | HOR Gore Celeri 13 | Globbie | CC0 1.0 (LAION Freesound, train row 290072) | 0.12-0.72, at 0.25 |
+|  | https://freesound.org/people/JarredGibb/sounds/217313/ | Squelch 2 | JarredGibb | CC0 1.0 (LAION Freesound, train row 206192) | 0.10-1.00, at 0.60 |
+|  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 1.70-2.00, at 1.20 |
+| `matron_rip_4.ogg` | https://freesound.org/people/ProductionNow/sounds/234237/ | Eating Juicy Meat.wav | ProductionNow | CC0 1.0 (FSD50K) | 0.20-1.50, at 0.00 |
+|  | https://freesound.org/people/ABouch/sounds/174943/ | Breaking Frozen Celery | ABouch | CC0 1.0 (LAION Freesound, train row 193542) | 18.05-18.45, at 0.45 |
+|  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 2.28-2.50, at 1.28 |
+| `matron_rip_5.ogg` | https://freesound.org/people/ProductionNow/sounds/234237/ | Eating Juicy Meat.wav | ProductionNow | CC0 1.0 (FSD50K) | 5.14-6.44, at 0.00 |
+|  | https://freesound.org/people/ABouch/sounds/174943/ | Breaking Frozen Celery | ABouch | CC0 1.0 (LAION Freesound, train row 193542) | 19.12-19.52, at 0.35 |
+|  | https://freesound.org/people/spookymodem/sounds/249811/ | Crunching Bones.wav | spookymodem | CC0 1.0 (FSD50K) | 0.75-1.35, at 0.70 |
+|  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 3.40-3.63, at 1.27 |
+
+## Sniff takes (2026-10-29)
+
+Four independent human nose-inhales are retained: three separate performances
+from padpad and one from OwlStorm. The owner rejected the other two proposed
+mouth-sound families; their recordings and cue registrations are removed.
+
+The sources below are Freesound CC0 1.0 dedications. Delivery clips came from
+public HQ Ogg previews, not uncompressed WAVs; source SHA-256 and exact cuts
+are pinned in `tools/audio/matron_mouth_takes.py`. Clips are mono 22,050 Hz,
+high-passed at 75 Hz, boundary-faded and peak-aligned without pitch shifting.
+The owner has not yet auditioned these retained takes.
+
+| File | Source URL | Uploader | License | Exact source interval (seconds) |
+|---|---|---|---|---|
+| `matron_sniff_0.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 0.62–1.33 |
+| `matron_sniff_1.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 2.51–3.35 |
+| `matron_sniff_2.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 4.35–5.20 |
+| `matron_sniff_3.ogg` | https://freesound.org/people/OwlStorm/sounds/151218/ | OwlStorm | CC0 1.0 | 0.05–0.59 |

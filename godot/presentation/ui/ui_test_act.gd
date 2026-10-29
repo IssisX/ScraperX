@@ -275,6 +275,95 @@ func _act_punch_watch() -> void:
 		_act_punch_over += 1
 
 
+# The view while her hands have the climber (matron_hold_camera.gd), watched
+# every frame of her holds and logged: the frames held, those in third
+# person, the farthest her drawn hand is from his drawn held ankle, the least
+# free run past the camera. With --capture, a still at each moment of it
+# (grab, mid-hold, the hang window, the let-go, black, the fade in), taken
+# without holding the simulation still, so the run is the same with or
+# without pictures.
+var _act_cam := {"held": 0, "third": 0, "gap_max": 0.0, "gap_frames": 0, "clear_min": INF, "held_s": 0.0}
+var _act_snapped := {}
+
+func _act_cam_watch() -> void:
+	var hold: Dictionary = _native().get_matron_hold_state()
+	var cam: RefCounted = _main._hold_cam
+	var third := bool(cam.third_person())
+	if bool(hold["held"]):
+		_act_cam["held"] = int(_act_cam["held"]) + 1
+		_act_cam["held_s"] = float(_act_cam["held_s"]) + get_process_delta_time()
+		if third:
+			_act_cam["third"] = int(_act_cam["third"]) + 1
+		var gore: Node = _main._gore
+		if gore != null and gore.victim.visible and _main._matron_view._rig != null:
+			var ankle: Vector3 = gore.victim.held_ankle_drawn()
+			if ankle.is_finite():
+				var hand: Vector3 = _main._matron_view._rig.bone_world("wr_r").origin
+				_act_cam["gap_max"] = maxf(float(_act_cam["gap_max"]), hand.distance_to(ankle))
+				_act_cam["gap_frames"] = int(_act_cam["gap_frames"]) + 1
+		if float(_act_cam["held_s"]) >= 0.5:
+			_act_snap("act_hold_grab")
+		if float(_act_cam["held_s"]) >= 2.5:
+			_act_snap("act_hold_mid")
+	else:
+		_act_cam["held_s"] = 0.0
+	if third and float(cam.black()) < 0.01 and float(cam.clearance) < INF:
+		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
+	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
+		_act_snap("act_hold_hang_window")
+	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
+		_act_snap("act_hold_let_go")
+	if float(cam.since_let_go()) >= 0.42 and float(cam.black()) < 0.05:
+		_act_snap("act_hold_pull_out")
+	if int(cam.lets_go_seen) > 0 and float(cam.black()) >= 0.999 and int(cam.deaths_waited) == 0:
+		_act_snap("act_hold_black")
+	if int(cam.deaths_waited) > 0 and float(cam.black()) > 0.3 and float(cam.black()) < 0.7:
+		_act_snap("act_hold_fade_in")
+
+
+func _act_cam_log() -> void:
+	var cam: RefCounted = _main._hold_cam
+	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f" % [
+		int(_act_cam["held"]), int(_act_cam["third"]), int(_act_cam["gap_frames"]), float(_act_cam["gap_max"]),
+		float(_act_cam["clear_min"]), int(cam.lets_go_seen), int(cam.deaths_waited), float(cam.slow_ticks_s),
+		float(cam.black_full_after), float(cam.death_after)])
+
+
+# A still of this frame (once a pose), drawn and written two frames' ends
+# on; the simulation runs on.
+var _act_snaps_due: Array = []   # [pose, frame ends left]
+var _act_snap_drawing_was := true
+
+func _act_snap(pose: String) -> void:
+	if not _act_capturing() or _act_snapped.has(pose):
+		return
+	_act_snapped[pose] = true
+	if _act_snaps_due.is_empty():
+		_act_snap_drawing_was = _act_drawing
+	_act_draw(true)
+	_act_snaps_due.append([pose, 2])
+	if not RenderingServer.frame_post_draw.is_connected(_act_snap_post_draw):
+		RenderingServer.frame_post_draw.connect(_act_snap_post_draw)
+
+
+func _act_snap_post_draw() -> void:
+	if _act_snaps_due.is_empty():
+		return
+	var due: Array = []
+	for item in _act_snaps_due:
+		var left := int(item[1]) - 1
+		if left > 0:
+			due.append([item[0], left])
+			continue
+		var path := "%s_%s.png" % [_capture_prefix, String(item[0])]
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		if get_viewport().get_texture().get_image().save_png(path) == OK:
+			print("SCRAPERX_UITEST_SCREENSHOT %s" % path)
+	_act_snaps_due = due
+	if due.is_empty():
+		_act_draw(_act_snap_drawing_was)
+
+
 func _act_play(device: int) -> bool:
 	if not await _act_asleep(device):
 		return false
@@ -580,6 +669,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		if not await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "rail_grab"):
 			return _fail("at the rail her hands never came on the climber (state %d)" % int(_matron_state()["state"]))
 		await _act_wait(func() -> bool:
+			_act_cam_watch()
 			return int(_native().get_matron_hold_state()["grabs"]) >= 1 or not _act_in_her_hands(), 5.0, "rail_grab")
 		if int(_native().get_matron_hold_state()["grabs"]) >= 1:
 			break
@@ -595,6 +685,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	_act_log("punch_in_her_hand")
 	var torn: bool = await _act_wait(func() -> bool:
 		_act_punch_watch()
+		_act_cam_watch()
 		return int(_native().get_matron_hold_state()["arm_tears"]) >= 1 or not _act_in_her_hands(), 60.0,
 		"rail_hold")
 	_act_log("punch_watch action_punch=%d button_hidden=%d" % [_act_punch_missed, _act_punch_over])
@@ -604,7 +695,9 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if torn and _act_in_her_hands():
 		await _act_frame_her()
 		await _act_pose("act_dangerous_arm")
-	var over: bool = torn and await _act_wait(func() -> bool: return not _act_in_her_hands(), 90.0, "rail_hold")
+	var over: bool = torn and await _act_wait(func() -> bool:
+		_act_cam_watch()
+		return not _act_in_her_hands(), 90.0, "rail_hold")
 	if not over:
 		return _fail("dangerous, her hold on the climber at the rail never ended (state %d)" % int(_matron_state()["state"]))
 	await _seconds(0.5)
@@ -622,6 +715,8 @@ func _act_dangerous_and_changed(device: int) -> bool:
 			str(hold["claimed"]), int(hold["runs_ended_by_matron"]), int(_native().get_death_count())])
 	if _position().y < 150.0:
 		return _fail("her hold at the rail let the climber go below her deck (at %s)" % str(_position()))
+	if not _act_her_takes("rail", true):
+		return false
 	# One arm left: her next catch takes the second. Spared, she walks off, her
 	# hands off the climber a while (src/sim/matron.hpp kSpareCalmSeconds):
 	# sprints up and down the band beside her till she is fully changed.
@@ -639,6 +734,7 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	var deaths_before := int(_native().get_death_count())
 	_act_deaths_allowed = deaths_before + 1
 	var died: bool = await _act_watch_her(func() -> bool:
+		_act_cam_watch()
 		if int(_native().get_death_count()) > deaths_before:
 			return true
 		var h: Dictionary = _native().get_matron_hold_state()
@@ -647,12 +743,19 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		seen["released"] = bool(seen["released"]) or int(h["fatal_release_beat"]) > releases_before
 		return false, 240.0, "changed_catch", "act_changed_coming", 3.0)
 	_act_log("hers tears=%d path=%d released=%s" % [int(seen["tears"]), int(seen["path"]), str(seen["released"])])
+	# The view comes up out of black on the restored body (watched, not a check).
+	await _act_wait(func() -> bool:
+		_act_cam_watch()
+		return float(_main._hold_cam.black()) < 0.01, 3.0, "fade_in")
+	_act_cam_log()
 	if not died:
 		return _fail("fully changed, her second catch never ended in the fatality's death (tears %d, path %d, released %s)" % [
 			int(seen["tears"]), int(seen["path"]), str(seen["released"])])
 	if int(seen["tears"]) != 1 or int(seen["path"]) == 0 or (int(seen["path"]) == 1 and not bool(seen["released"])):
 		return _fail("the death came without her fatality (tears %d, path %d, released %s)" % [int(seen["tears"]),
 			int(seen["path"]), str(seen["released"])])
+	if not _act_her_takes("fatality", false):
+		return false
 	var whole: Dictionary = _native().get_matron_hold_state()
 	if bool(whole["left_arm_lost"]) or bool(whole["right_arm_lost"]):
 		return _fail("the run started again without the body whole")
@@ -701,6 +804,56 @@ func _act_rage_beside_her(device: int, catches: int, budget: float) -> bool:
 	if int(_matron_state()["stage"]) == STAGE_CHANGED:
 		return true
 	return _fail("the sprints beside her never changed her fully (rage %.3f)" % float(_matron_state()["rage"]))
+
+
+# Her takes started in her holds since the last look (audio_director.gd
+# her_takes, her_takes.gd; with no audio device each is recorded as it would
+# have started): some in them, a torn arm's rip among them if `torn`, no take
+# of hers twice running, and none of her ring's twice within her ring (her
+# last RING of them started within RING_S).
+var _act_enc_checked := 0
+
+func _act_her_takes(tag: String, torn: bool) -> bool:
+	var takes: RefCounted = _main._audio.her_takes
+	var started: Array = takes.started
+	var ring_size := int(takes.RING)
+	var ring_s := float(takes.RING_S)
+	var in_holds := 0
+	var rips := 0
+	var last_enc := _act_enc_checked
+	var names: PackedStringArray = []
+	var ring: Array = []
+	for k in started.size():
+		var e: Dictionary = started[k]
+		var enc := int(e["enc"])
+		var mine := enc > _act_enc_checked
+		var ringed := bool(takes.in_ring(StringName(e["family"])))
+		if mine:
+			in_holds += 1
+			last_enc = maxi(last_enc, enc)
+			names.append("%d:%s" % [enc, String(e["take"])])
+			if StringName(e["family"]) == &"matron_rip":
+				rips += 1
+			if k > 0 and StringName((started[k - 1] as Dictionary)["take"]) == StringName(e["take"]):
+				return _fail("%s: in her hold %d she played %s twice running (%s)" % [tag, enc, String(e["take"]),
+					", ".join(names)])
+			if ringed:
+				for r in ring:
+					if StringName(r["take"]) == StringName(e["take"]) and float(e["t"]) - float(r["t"]) < ring_s:
+						return _fail("%s: in her hold %d she played %s twice within her ring (%s)" % [tag, enc,
+							String(e["take"]), ", ".join(names)])
+		if ringed:
+			ring.append(e)
+			if ring.size() > ring_size:
+				ring.pop_front()
+	_act_log("her_takes %s holds=%d..%d played=%d [%s] suppressed=%s" % [tag, _act_enc_checked + 1, last_enc,
+		in_holds, ", ".join(names), str(takes.suppressed)])
+	_act_enc_checked = last_enc
+	if in_holds == 0:
+		return _fail("%s: no take of hers started in her hold" % tag)
+	if torn and rips == 0:
+		return _fail("%s: the arm torn off in her hold started no rip of hers" % tag)
+	return true
 
 
 # Her hands on the climber, or letting them go (Grab to Claimed).
@@ -836,6 +989,20 @@ func _heave_pitch(d: float) -> float:
 	return 0.5 * asin(minf(1.0, 9.81 * x / (5.8 * 5.8))) - 0.14
 
 
+# Where she will be when it gets there: a player leads a pest coming at him,
+# aiming the arc at the distance she will have closed to by then (her
+# closing speed, read off the frames), not where she stood as he threw. With
+# her eyes on him she comes straight at him (Matron::straight_to) at 6.8 m/s:
+# aimed at 3.3 m, the box met her at 1.7 m high and only staggered her.
+func _heave_meet(d: float, closing: float) -> float:
+	var meet := d
+	for _i in 3:
+		var x := maxf(meet - 0.65, 0.5)
+		var t := x / (5.8 * cos(_heave_pitch(meet) + 0.14))
+		meet = maxf(d - closing * t, 0.65)
+	return meet
+
+
 func _matron_heave_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _sprint_to(device, Vector2(8.0, -128.5), 1.0, 6.0):
@@ -857,10 +1024,18 @@ func _matron_heave_touch(device: int) -> bool:
 	if not await _walk_to(device, Vector2(-6.6, -128.5), 0.15, 10.0):
 		return _fail("the walk west along the band with the toolbox stalled at %s" % str(_position()))
 	# Still, until a pest comes for the climber in sight: from 9 m the view
-	# kept level on her, leading her.
+	# on her, leading her. Seen watching her, he is stalked: she stands under
+	# his gaze, so he looks away and she comes in to her band (3 m), and
+	# there he turns on her and throws.
 	var last: Vector3 = _matron_state()["position"]
 	var close := false
 	var waited := 0.0
+	var last_d := -1.0
+	var closing := 0.0
+	var turned := 0.0
+	var stepped := false
+	var box := int(_native().get_carrying_entity_id())
+	var box_was := _kit_origin(box)
 	while waited < 90.0 and not close:
 		await get_tree().process_frame
 		var dt := maxf(get_process_delta_time(), 1.0e-4)
@@ -870,20 +1045,56 @@ func _matron_heave_touch(device: int) -> bool:
 		var lead := her + (her - last) / dt * 0.22 - _position()
 		last = her
 		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
+		# Her closing speed, steadied over a few frames (the sim steps
+		# under the frame, so one frame's change is uneven).
+		if last_d > 0.0:
+			closing = lerpf(closing, maxf(0.0, (last_d - d) / dt), 0.3)
+		last_d = d
 		if int(m["state"]) == MATRON_STATE_HUNTING and int(m["stage"]) == 0 and d < 9.0:
-			_main._yaw = atan2(-lead.x, -lead.z)
-			_main._pitch = _heave_pitch(d)
-			close = d < 3.4
+			if turned > 0.0 or (bool(m["stalking"]) and d < 3.4):
+				# In at her band's edge, the view back on her; the throw once
+				# the box has come round in front and settled (thrown mid-swing
+				# it flies off her line).
+				_main._yaw = atan2(-lead.x, -lead.z)
+				_main._pitch = 0.0
+				turned += dt
+				var b := _kit_origin(box)
+				var flat := Vector2(b.x - _position().x, b.z - _position().z)
+				var to_her := Vector2(her.x - _position().x, her.z - _position().z)
+				var in_front := flat.dot(to_her) / d > 0.3
+				var swing := Vector2(b.x - box_was.x, b.z - box_was.z).length() / dt
+				box_was = b
+				if turned > 3.0:
+					return _fail("the toolbox never came round in front of him (at %s)" % str(b))
+				close = in_front and swing < 0.5 and turned >= 0.25
+				stepped = close
+			elif bool(m["stalking"]):
+				# His face seen, she stalks him (matron_stalk.cpp) and stands
+				# under his gaze: he looks off along the band and lets her in.
+				_main._yaw = atan2(her.x - _position().x, her.z - _position().z)
+				_main._pitch = 0.0
+			else:
+				_main._yaw = atan2(-lead.x, -lead.z)
+				_main._pitch = _heave_pitch(_heave_meet(d, closing))
+				close = d < 3.4
 	if not close:
 		return _fail("no pest came for the climber (state %d, stage %d)" % [int(_matron_state()["state"]),
 			int(_matron_state()["stage"])])
 	if _main._touch.gesture_hint(&"up") != "THROW":
 		return _fail("with the toolbox in the hands, up read '%s', not THROW" % _main._touch.gesture_hint(&"up"))
 	var throws := int(_native().get_throw_count())
+	# Into the throw: a step at her as the arms go, the body's speed under
+	# the load's (a still pest is felled only by a throw put into her).
+	if stepped:
+		_move(device, 1.0)
+		await _seconds(0.3)
 	var index := _swipe(-1.0, true)
 	await _frames(2)
 	var drawn: bool = _main._throw_arc.visible and _main._throw_path.size() >= 3
 	_lift(index)
+	if stepped:
+		await _frames(2)
+		_move(device, 0.0)
 	if not drawn:
 		return _fail("the throw's path was not drawn while the thumb swiped")
 	if not await _wait_until(func() -> bool: return int(_native().get_throw_count()) == throws + 1, 0.5):

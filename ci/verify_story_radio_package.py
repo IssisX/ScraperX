@@ -55,6 +55,10 @@ REQUIRED_CUES = {
 }
 
 
+def voice_entries(voice: dict) -> list:
+    return [voice] + ([voice['remade']] if 'remade' in voice else [])
+
+
 def verify_recordings(directory: Path, manifest: dict) -> None:
     receipt = json.loads((directory / 'generation_receipt.json').read_text())
     cues = manifest['cues']
@@ -62,9 +66,13 @@ def verify_recordings(directory: Path, manifest: dict) -> None:
         if key not in cues or cues[key]['speaker'] != speaker:
             raise ValueError(f'story cue {key}: required {speaker} recording is missing')
     for speaker in set(REQUIRED_CUES.values()):
-        voice = manifest['voices'][speaker]
-        if not all(voice.get(field) for field in ('generation', 'provenance', 'license', 'source')):
-            raise ValueError(f'story voice {speaker}: missing generation/license provenance')
+        # A speaker partly remade carries the new method's provenance under 'remade'.
+        for voice in voice_entries(manifest['voices'][speaker]):
+            if not all(voice.get(field) for field in ('generation', 'provenance', 'license', 'source')):
+                raise ValueError(f'story voice {speaker}: missing generation/license provenance')
+            notice = directory / voice['license'].get('notice', '')
+            if not notice.is_file() or not notice.read_text().strip():
+                raise ValueError(f'story voice {speaker}: license notice {notice.name!r} is missing or empty')
     for key, cue in cues.items():
         audio = directory / f'{key}.ogg'
         digest = hashlib.sha256(audio.read_bytes()).hexdigest()
@@ -85,9 +93,8 @@ def verify(apk: Path) -> int:
     expected = json.loads(source.read_text())
     verify_recordings(source.parent, expected)
 
-    # An export may not contain stock voice recordings while their playback
-    # approval remains false. Approval requires a separately reviewed change
-    # to this package contract, not merely a playback flag flip.
+    # The owner's approval gate: this APK may carry cue provenance and
+    # captions, but no unapproved human speech streams or remaps.
     player = (root / 'godot/presentation/audio/story_radio_player.gd').read_text()
     if not re.search(r'^const VOICE_RECORDINGS_APPROVED := false$', player, re.MULTILINE):
         raise ValueError('story voice approval gate changed; review the APK exclusion contract')
@@ -96,12 +103,12 @@ def verify(apk: Path) -> int:
         actual = json.loads(package.read('assets/audio/story_radio/manifest.json'))
         if actual != expected:
             raise ValueError('story manifest: exported copy differs from source')
-        if not package.read('assets/audio/story_radio/KOKORO_LICENSE.txt'):
-            raise ValueError('story voice license: expected nonempty packaged notice')
-
-        # Check the real APK contents, not just export_presets.cfg: Godot
-        # converts .ogg files to .godot/imported/*.ogg-<hash>.oggstr streams.
-        # Either the source, its remap, or that stream is a shipped voice.
+        # Trunk has both original and partly remade voice provenance.
+        notices = sorted({entry['license']['notice'] for voice in expected['voices'].values()
+                          for entry in voice_entries(voice)})
+        for notice in notices:
+            if not package.read('assets/audio/story_radio/' + notice):
+                raise ValueError(f'story voice license: expected nonempty packaged notice {notice}')
         names = package.namelist()
         forbidden = []
         keys = set(expected['cues'])

@@ -1,9 +1,0 @@
-Test project <repository>/build/host
-    Start 1: scraperx_sim.shared_survival
-1/2 Test #1: scraperx_sim.shared_survival .....   Passed    0.14 sec
-    Start 2: scraperx_sim.parkour_flow
-2/2 Test #2: scraperx_sim.parkour_flow ........   Passed    0.47 sec
-
-100% tests passed out of 2
-
-Total Test time (real) =   0.61 sec

@@ -1,6 +1,6 @@
 # The bay: shared survival, as built (2026-10-21)
 
-The owner, of the other agent's shared-survival core (`HANDOFF.md` here):
+The owner, of the other agent's shared-survival core (its handoff, archived: `03_EXECUTION/ARCHIVE_INDEX.md`):
 asked whether it was good, the answer was yes; then *"Go ahead and build
 it, man."* and *"Do what you can to tie it all up with polishing"*. The
 power panel the handoff proposed is left out: pushing a button is not a

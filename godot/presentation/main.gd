@@ -451,11 +451,15 @@ func _process(delta: float) -> void:
 	_native.set_room_loudness(_uncanny.room_loudness() if _uncanny != null and _settings.her_hearing else 0.0)
 
 	_launch_shot.update(delta, _native.get_slingshot_state())
-	var time_scale := _launch_shot.time_scale()
-	# The launch shot's slow time: fewer native ticks this frame, each the
-	# same 90 Hz step. Heard too: the mix slows with it.
+	# The launch shot's slow time, and the fatality's at her let-go
+	# (matron_hold_camera.gd): fewer native ticks this frame, each the same
+	# 90 Hz step. Heard too: the mix slows with it. Black, waiting on the
+	# fatality's death, the sim runs that many times as fast (more ticks a
+	# frame, each the same step).
+	var time_scale := minf(_launch_shot.time_scale(), float(_hold_cam.time_scale()))
 	AudioServer.playback_speed_scale = time_scale
-	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * time_scale, MAX_SIM_FRAME_DELTA)))
+	var sim_rate := time_scale * float(_hold_cam.fast_forward())
+	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * sim_rate, MAX_SIM_FRAME_DELTA)))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
@@ -463,10 +467,12 @@ func _process(delta: float) -> void:
 	_render_snapshot(delta)
 	_ctx = _read_context()
 	_save_climb()
-	_arms.visible = _death_cam_left <= 0.0
+	# His first-person arms and body: hidden while the view rides a death or
+	# is out of his eye in her hands (his whole body drawn then, gore_victim.gd).
+	var own_eye: bool = _death_cam_left <= 0.0 and not _hold_cam.third_person()
+	_arms.visible = own_eye
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, _arms_delta(delta))
-	# The body under them: hidden while the view rides a death.
-	_body.visible = _death_cam_left <= 0.0
+	_body.visible = own_eye
 	_body.update_body({
 		"position": _native.get_player_render_position(),
 		"velocity": _native.get_player_linear_velocity(),
