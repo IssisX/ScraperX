@@ -622,6 +622,8 @@ func _act_dangerous_and_changed(device: int) -> bool:
 			str(hold["claimed"]), int(hold["runs_ended_by_matron"]), int(_native().get_death_count())])
 	if _position().y < 150.0:
 		return _fail("her hold at the rail let the climber go below her deck (at %s)" % str(_position()))
+	if not _act_her_takes("rail", true):
+		return false
 	# One arm left: her next catch takes the second. Spared, she walks off, her
 	# hands off the climber a while (src/sim/matron.hpp kSpareCalmSeconds):
 	# sprints up and down the band beside her till she is fully changed.
@@ -653,6 +655,8 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if int(seen["tears"]) != 1 or int(seen["path"]) == 0 or (int(seen["path"]) == 1 and not bool(seen["released"])):
 		return _fail("the death came without her fatality (tears %d, path %d, released %s)" % [int(seen["tears"]),
 			int(seen["path"]), str(seen["released"])])
+	if not _act_her_takes("fatality", false):
+		return false
 	var whole: Dictionary = _native().get_matron_hold_state()
 	if bool(whole["left_arm_lost"]) or bool(whole["right_arm_lost"]):
 		return _fail("the run started again without the body whole")
@@ -701,6 +705,56 @@ func _act_rage_beside_her(device: int, catches: int, budget: float) -> bool:
 	if int(_matron_state()["stage"]) == STAGE_CHANGED:
 		return true
 	return _fail("the sprints beside her never changed her fully (rage %.3f)" % float(_matron_state()["rage"]))
+
+
+# Her takes started in her holds since the last look (audio_director.gd
+# her_takes, her_takes.gd; with no audio device each is recorded as it would
+# have started): some in them, a torn arm's rip among them if `torn`, no take
+# of hers twice running, and none of her ring's twice within her ring (her
+# last RING of them started within RING_S).
+var _act_enc_checked := 0
+
+func _act_her_takes(tag: String, torn: bool) -> bool:
+	var takes: RefCounted = _main._audio.her_takes
+	var started: Array = takes.started
+	var ring_size := int(takes.RING)
+	var ring_s := float(takes.RING_S)
+	var in_holds := 0
+	var rips := 0
+	var last_enc := _act_enc_checked
+	var names: PackedStringArray = []
+	var ring: Array = []
+	for k in started.size():
+		var e: Dictionary = started[k]
+		var enc := int(e["enc"])
+		var mine := enc > _act_enc_checked
+		var ringed := bool(takes.in_ring(StringName(e["family"])))
+		if mine:
+			in_holds += 1
+			last_enc = maxi(last_enc, enc)
+			names.append("%d:%s" % [enc, String(e["take"])])
+			if StringName(e["family"]) == &"matron_rip":
+				rips += 1
+			if k > 0 and StringName((started[k - 1] as Dictionary)["take"]) == StringName(e["take"]):
+				return _fail("%s: in her hold %d she played %s twice running (%s)" % [tag, enc, String(e["take"]),
+					", ".join(names)])
+			if ringed:
+				for r in ring:
+					if StringName(r["take"]) == StringName(e["take"]) and float(e["t"]) - float(r["t"]) < ring_s:
+						return _fail("%s: in her hold %d she played %s twice within her ring (%s)" % [tag, enc,
+							String(e["take"]), ", ".join(names)])
+		if ringed:
+			ring.append(e)
+			if ring.size() > ring_size:
+				ring.pop_front()
+	_act_log("her_takes %s holds=%d..%d played=%d [%s] suppressed=%s" % [tag, _act_enc_checked + 1, last_enc,
+		in_holds, ", ".join(names), str(takes.suppressed)])
+	_act_enc_checked = last_enc
+	if in_holds == 0:
+		return _fail("%s: no take of hers started in her hold" % tag)
+	if torn and rips == 0:
+		return _fail("%s: the arm torn off in her hold started no rip of hers" % tag)
+	return true
 
 
 # Her hands on the climber, or letting them go (Grab to Claimed).
