@@ -17,6 +17,12 @@ enum { LAY, PIN, LEG0, LEG1, DRAG, KICK, HAUL, FALL, WIPE, BLACK }
 
 ## The lens overlay (first person); a studio's outside shots turn it off.
 var lens_on := true
+## The view out of his eye (matron_hold_camera.gd's third person): his whole
+## body drawn while she has it, hung from her hand as the sim has it.
+var outside := false
+## Her drawn hand on his ankle (matron_view.gd holding_hand_world), INF when
+## it is not: his drawn held ankle goes into it.
+var grip_at := Vector3.INF
 var fx: Node3D
 var victim: Node3D
 var arm_piece: Node3D
@@ -121,10 +127,10 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 	for k in [2, 3]:
 		if not lost[k] and claimed and beat in [LEG0, LEG1] and (k - 2) == (beat - LEG0):
 			strain[k] = maxf(strain[k], clampf(load / 6000.0, 0.0, 0.35))
-	# --- the victim, seen from outside while claimed ---
+	# --- the victim, seen from outside while claimed or the view is out ---
 	# The first-person eye is in its head: hidden then, shown to any other shot.
 	var cam_close := camera != null and camera.global_position.distance_to(victim.head_position()) < 0.3
-	victim.visible = claimed and not cam_close
+	victim.visible = (claimed or outside) and not cam_close
 	victim.global_transform = Transform3D(Basis(body_q), position)
 	# --- tears ---
 	var arm_tears := int(hold.get("arm_tear_count", 0))
@@ -165,6 +171,12 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 	victim.apply(lost, strain, _crush, _soak)
 	if victim.ruined and not claimed:
 		victim.unruin()
+	# In her hand, seen from outside: hung from it (her floor version keeps
+	# the lying pose its beats are drawn on).
+	if outside and not claimed:
+		victim.hang(hold, lost, delta, grip_at)
+	elif victim.hanging:
+		victim.unhang()
 	# Drag: a smear behind the torso on the deck.
 	if claimed and beat == DRAG:
 		if _drag_last == Vector3.INF:

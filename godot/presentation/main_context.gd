@@ -107,13 +107,19 @@ var _trapeze_was_hanging := false
 # appearing and disappearing punch button ... is going to be frustrating"):
 # lit when the native says one can be thrown (on his feet, not in a lunge, a
 # fist to throw), greyed otherwise; in her hand before the rip it reads BREAK
-# FREE (and in the fatality's hang window when her hold reports one). Action
-# stays the world's (PICK UP, CLIMB, HAUL and the rest).
+# FREE, and in the fatality's hang window too, with the window's seconds left
+# over it. Lit only when the native says a press would act (its strike
+# `ready`): BREAK FREE greyed is a press that would do nothing. Action stays
+# the world's (PICK UP, CLIMB, HAUL and the rest).
 static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
 	var ready := bool(strike.get("ready", false)) and int(strike.get("arm", 1)) >= 0
-	var break_free := bool(strike.get("held", false)) and (ready or bool(hold.get("fatal_hang", false)))
-	return {"ready": ready or break_free, "break_free": break_free, "label": "BREAK FREE" if break_free else "PUNCH",
-		"lands": bool(strike.get("offered", false))}
+	var hang := bool(strike.get("held", false)) and bool(hold.get("fatal_hang", false))
+	var break_free := bool(strike.get("held", false)) and (ready or hang)
+	var count := ""
+	if hang and hold.has("fatal_window_s") and hold.has("fatal_window_total_s"):
+		count = "%.1f S" % maxf(0.0, float(hold["fatal_window_total_s"]) - float(hold["fatal_window_s"]))
+	return {"ready": ready, "break_free": break_free, "label": "BREAK FREE" if break_free else "PUNCH",
+		"count": count, "lands": bool(strike.get("offered", false))}
 
 func _read_context() -> Dictionary:
 	var landing_state: Dictionary = _native.get_landing_state()
