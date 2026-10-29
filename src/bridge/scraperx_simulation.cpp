@@ -325,6 +325,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
+    // TEST-ONLY: setup for looking at her moves (see the header); nothing in play calls these.
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_travel_to", "feet"), &ScraperXSimulation::debug_matron_travel_to);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
@@ -1976,6 +1979,17 @@ void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
 // seconds of work. The game asks for it before play, so it never lands in
 // the tick she leaves her locker; asked again, it does nothing.
 void ScraperXSimulation::prepare_matron() { (void)simulation_->matron_affordances(); }
+
+// TEST-ONLY: the native tests' own setup hooks passed through, for looking
+// at her moves by eye. Nothing in play calls them.
+void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) {
+    simulation_->debug_place_matron(sim::Vector3{static_cast<double>(feet.x), static_cast<double>(feet.y), static_cast<double>(feet.z)});
+}
+
+bool ScraperXSimulation::debug_matron_travel_to(const godot::Vector3 feet) {
+    const int region = simulation_->matron_affordances().region_at(JPH::Vec3(feet.x, feet.y, feet.z));
+    return region >= 0 && simulation_->debug_matron_travel_region(region);
+}
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
     const sim::SwingSnapshot state = simulation_->swing_state();
