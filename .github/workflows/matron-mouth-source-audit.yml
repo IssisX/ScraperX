@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import urllib.request,re,html,subprocess,tempfile,os,hashlib,array,statistics
-          sources=[('cluck','Vein_Adams',711535),('croak','florianreichelt',447496),('croak','CreepyKing',842294),('sniff','padpad',516473),('sniff','OwlStorm',151218)]
+          sources=[('cluck','Vein_Adams',711535),('croak','florianreichelt',447496),('croak','CreepyKing',842294),('croak','RavenWolfProds',586979),('croak','soumen59',822496),('sniff','padpad',516473),('sniff','OwlStorm',151218)]
           reqhead={'User-Agent':'Mozilla/5.0 (compatible; ScraperX-CC0-Audit/1.0)'}
           for fam,user,sid in sources:
               url=f'https://freesound.org/people/{user}/sounds/{sid}/'
