@@ -980,6 +980,7 @@ public:
     JPH::BodyID hand_id_;
     JPH::Ref<JPH::Shape> hand_shape_;
     JPH::Ref<JPH::TwoBodyConstraint> hand_arm_;
+    JPH::Vec3 hand_arm_at_ = JPH::Vec3::sZero();   // the shoulder (from her middle) the arm limit hangs from
     JPH::Ref<JPH::TwoBodyConstraint> grip_;
     JPH::Ref<JPH::TwoBodyConstraint> brace_;   // the player's hands on a rail against her pull
     bool player_free_rot_ = false;
@@ -1052,6 +1053,8 @@ public:
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
+    void rehang_arm(JPH::BodyInterface &bodies, JPH::Ref<JPH::TwoBodyConstraint> &arm_limit, JPH::Vec3 &hung_at,
+                    JPH::BodyID hand, JPH::Vec3 shoulder) noexcept;
     void tear_grip(bool torn) noexcept;
     [[nodiscard]] bool upright_pose_clear(JPH::RVec3 centre) const noexcept;
 
@@ -1060,6 +1063,7 @@ public:
     std::array<bool, 2> arm_lost_{false, false};
     JPH::BodyID hand2_id_;
     JPH::Ref<JPH::TwoBodyConstraint> hand2_arm_;
+    JPH::Vec3 hand2_arm_at_ = JPH::Vec3::sZero();
     JPH::Ref<JPH::TwoBodyConstraint> wrist_;
     JPH::Ref<JPH::TwoBodyConstraint> arm_in_hand_;
     JPH::BodyID severed_arm_id_;

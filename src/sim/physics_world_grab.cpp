@@ -330,17 +330,16 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         arm.mPoint1 = shoulder;
         arm.mPoint2 = shoulder;
         arm.mMinDistance = 0.0F;
-        arm.mMaxDistance = matron_->arm_reach_m();
+        arm.mMaxDistance = Matron::kArmReachM;
         arm.mLimitsSpringSettings.mFrequency = 6.0F;
         arm.mLimitsSpringSettings.mDamping = 0.8F;
         hand_arm_ = create_constraint(arm, matron_->body(), hand_id_, false);
+        hand_arm_at_ = matron_->shoulder_local();
     }
     if (hand_id_.IsInvalid()) {
         return;
     }
-    if (hand_arm_ != nullptr) {
-        static_cast<JPH::DistanceConstraint *>(hand_arm_.GetPtr())->SetDistance(0.0F, matron_->arm_reach_m());
-    }
+    rehang_arm(bodies, hand_arm_, hand_arm_at_, hand_id_, matron_->shoulder_local());
     const JPH::RVec3 hand = bodies.GetPosition(hand_id_);
     const JPH::Vec3 hand_v = bodies.GetLinearVelocity(hand_id_);
     // Her fingers close on the ankle when the hand is at it.
@@ -443,6 +442,26 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         tear_grip(false);
         bodies.AddImpulse(player_id_, push * kPlayerMassKg);
     }
+}
+
+// Her arm hung again from her shoulder where her lean and crouch have moved
+// it (more than a centimetre): the limit, kArmReachM, from where it is now.
+void Simulation::PhysicsWorld::rehang_arm(JPH::BodyInterface &bodies, JPH::Ref<JPH::TwoBodyConstraint> &arm_limit,
+                                          JPH::Vec3 &hung_at, const JPH::BodyID hand, const JPH::Vec3 shoulder) noexcept {
+    if (arm_limit == nullptr || (shoulder - hung_at).Length() <= 0.01F) {
+        return;
+    }
+    destroy_grab_constraint(arm_limit);
+    JPH::DistanceConstraintSettings arm;
+    arm.mSpace = JPH::EConstraintSpace::WorldSpace;
+    arm.mPoint1 = bodies.GetPosition(matron_->body()) + shoulder;
+    arm.mPoint2 = bodies.GetPosition(hand);
+    arm.mMinDistance = 0.0F;
+    arm.mMaxDistance = Matron::kArmReachM;
+    arm.mLimitsSpringSettings.mFrequency = 6.0F;
+    arm.mLimitsSpringSettings.mDamping = 0.8F;
+    arm_limit = create_constraint(arm, matron_->body(), hand, false);
+    hung_at = shoulder;
 }
 
 bool Simulation::PhysicsWorld::body_down_on_ground(JPH::BodyInterface &bodies) const noexcept {

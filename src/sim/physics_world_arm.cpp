@@ -169,7 +169,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     }
     if (active && hand2_id_.IsInvalid()) {
         JPH::Ref<JPH::Shape> sphere = new JPH::SphereShape(0.06F);
-        const JPH::RVec3 shoulder = her + matron_->shoulder_local();
+        const JPH::RVec3 shoulder = her + matron_->shoulder2_local();
         JPH::BodyCreationSettings settings(sphere, shoulder, JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
                                            object_layers::kHand);
         settings.mAllowedDOFs =
@@ -189,10 +189,12 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         arm.mLimitsSpringSettings.mFrequency = 6.0F;
         arm.mLimitsSpringSettings.mDamping = 0.8F;
         hand2_arm_ = create_constraint(arm, matron_->body(), hand2_id_, false);
+        hand2_arm_at_ = matron_->shoulder2_local();
     }
     if (hand2_id_.IsInvalid()) {
         return;
     }
+    rehang_arm(bodies, hand2_arm_, hand2_arm_at_, hand2_id_, matron_->shoulder2_local());
     const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
     if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 &&
         JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {

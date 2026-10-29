@@ -327,4 +327,14 @@ func _look_notes(shot: String, m: Dictionary) -> String:
 		var up: Vector3 = Quaternion(h["body_rotation"]) * Vector3.UP
 		s += " held=%d his_up_y=%.2f arm_tears=%d fatal_hang=%d window_s=%.2f" % [int(bool(h["held"])), up.y,
 			int(h["arm_tear_count"]), int(bool(h["fatal_hang"])), float(h["fatal_window_s"])]
+		# her drawn arm: shoulder to wrist, and to the ankle the native has in
+		# her hand (and from the native's own shoulder), the wrist off it
+		var sh: Vector3 = rig.bone_world("sh_r").origin
+		var wr: Vector3 = rig.bone_world("wr_r").origin
+		var ankle: Vector3 = h.get("held_ankle", Vector3.ZERO)
+		s += " drawn_arm=%.3f" % sh.distance_to(wr)
+		if ankle.length_squared() > 1.0e-6:
+			s += " drawn_sh_to_ankle=%.3f wrist_off_ankle=%.3f" % [sh.distance_to(ankle), wr.distance_to(ankle)]
+			if h.has("matron_shoulder"):
+				s += " sim_sh_to_ankle=%.3f" % (h["matron_shoulder"] as Vector3).distance_to(ankle)
 	return s

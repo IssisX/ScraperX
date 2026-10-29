@@ -3534,7 +3534,8 @@ void Matron::restore(const Saved &saved) {
         let_go_ = false;
         hold_phase_ = 0;
         pull_n_ = kHandReachPullN;
-        arm_reach_m_ = kArmReachM;
+        lean_ = 0.0F;
+        crouch_ = 0.0F;
         wrist_on_ = false;
         arm_throw_ = false;
         pull2_n_ = kHandReachPullN;

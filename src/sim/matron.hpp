@@ -698,8 +698,8 @@ public:
 
     // Her hold (matron_hold.cpp; the physics of it in physics_world_grab.cpp).
     // Her hand is a body of its own (kHandMassKg) on her arm (a soft limit of
-    // kArmReachM from her shoulder, kStoopReachM while she stoops for an
-    // ankle), driven at its pose by her muscle: a spring-damper capped at
+    // kArmReachM from her shoulder, wherever her lean and crouch have it),
+    // driven at its pose by her muscle: a spring-damper capped at
     // kHandPullN (kHandReachPullN reaching), its reaction on her body. The
     // grip itself is a SwingTwist hand-to-ankle; its load over
     // kGripMaxForceN, or its strain (load past kGripStrainFloorN, over time,
@@ -707,10 +707,30 @@ public:
     // hand. A calm hang is 0.83 kN; the player's thrashing gets there, and so
     // can the world (her heave hooking a still body on a rail), a tear she
     // takes them again from (grip_lost).
-    static constexpr float kShoulderUpM = 1.80F;      // over her feet
-    static constexpr float kArmReachM = 1.4F;
-    static constexpr float kStoopReachM = 2.1F;
-    static constexpr float kArmRetractMps = 0.9F;
+    // Her body's reach, as it is drawn (godot/presentation/life/matron/
+    // matron_rig.json; the owner, 2026-10-29: "the matron's arm is like 12
+    // feet long, bro"): her arm is kUpperArmM + kForearmM to the wrist, the
+    // ankle held in her palm kGripInHandM past it (her hand is kHandLongM).
+    // Her shoulder stands kTorsoUpM over her hips (kHipUpM over her feet),
+    // kTorsoFwdM ahead of them with her hunch, kShoulderSideM to the side; to
+    // reach further she leans from the hips (up to kLeanMaxRad, kLeanRadps)
+    // and crouches (up to kCrouchMaxM, kCrouchMps), her shoulder carried
+    // with her trunk: her hand is never further than kArmReachM from it.
+    static constexpr float kUpperArmM = 0.262F;
+    static constexpr float kForearmM = 0.248F;
+    static constexpr float kHandLongM = 0.228F;
+    static constexpr float kGripInHandM = 0.09F;
+    static constexpr float kArmReachM = kUpperArmM + kForearmM + kGripInHandM;   // 0.60
+    static constexpr float kHipUpM = 0.98F;
+    static constexpr float kTorsoUpM = 0.46F;
+    static constexpr float kTorsoFwdM = 0.08F;
+    static constexpr float kShoulderSideM = 0.157F;
+    static constexpr float kShoulderUpM = kHipUpM + kTorsoUpM;   // over her feet, standing: 1.44
+    static constexpr float kLeanMaxRad = 1.3F;
+    static constexpr float kLeanRadps = 2.5F;
+    static constexpr float kCrouchMaxM = 0.5F;
+    static constexpr float kCrouchMps = 1.0F;
+    static constexpr float kLoadedPostureScale = 0.35F;
     static constexpr float kHandMassKg = 6.0F;
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
     static constexpr float kHandReachSpeedMps = 4.0F;
@@ -733,22 +753,26 @@ public:
     // a Release: no hold loops on the same steel.
     static constexpr int kMaxRetakes = 2;
     // Carry: at kCarryPaceScale of her hunt, the body upside down at her
-    // side, her hand over her head (kCarryHandUpM over her feet), at most
+    // side, her hand up by her head (kCarryHandUpM over her feet, as high
+    // as her arm goes there: his head just off her deck), at most
     // kCarryMaxSeconds to the rail; past it she drops them where she is.
     static constexpr float kCarryPaceScale = 0.5F;
-    static constexpr float kCarryHandUpM = 2.8F;
-    static constexpr float kCarrySideM = 0.7F;
+    static constexpr float kCarryHandUpM = 1.90F;
+    static constexpr float kCarrySideM = 0.5F;
+    // Her heave: the hand up kHeaveUpM over her feet, kHeaveOutM out.
+    static constexpr float kHeaveUpM = 1.98F;
     static constexpr float kCarryMaxSeconds = 10.0F;
     static constexpr float kRimStandM = 0.42F;        // her middle this far in from the shaft's rail
     static constexpr float kRimArriveM = 0.30F;
     static constexpr float kRimBraceM = 0.9F;        // braced: her middle within this of the rail
     static constexpr float kRimSearchM = 16.0F;       // rail spots she weighs for a ledge below
-    // Dangle: the heave out over the rail (the hand up at kCarryHandUpM and
+    // Dangle: the heave out over the rail (the hand up at kHeaveUpM and
     // kHeaveOutM out from her middle), then down to kDangleHandUpM over her
-    // feet, kDangleOutM out: the body hangs below the deck's edge, head down.
-    static constexpr float kHeaveOutM = 0.55F;
-    static constexpr float kDangleOutM = 1.35F;
-    static constexpr float kDangleHandUpM = 1.35F;
+    // feet, kDangleOutM out, leant out over the rail: the body hangs past the
+    // deck's edge, head down below it.
+    static constexpr float kHeaveOutM = 0.40F;
+    static constexpr float kDangleOutM = 0.95F;
+    static constexpr float kDangleHandUpM = 1.40F;
     static constexpr float kDangleMinSeconds = 3.0F;
     static constexpr float kDangleSpanSeconds = 3.0F;
     // Then she sets them back on her deck (Spare), every time: an ordinary
@@ -867,8 +891,8 @@ public:
     // width) as he swings. His shoulder, the punch's start, is
     // kShoulderOfMiddleM along his body's up from his middle.
     static constexpr float kFatalStandM = 0.30F;
-    static constexpr float kFatalWindowOutM = 0.85F;
-    static constexpr float kFatalWindowUpM = 2.9F;
+    static constexpr float kFatalWindowOutM = 0.50F;
+    static constexpr float kFatalWindowUpM = 1.88F;
     static constexpr float kFatalGripFrictionNm = 80.0F;
     static constexpr float kFatalEaseRate = 3.0F;
     static constexpr float kFatalWindowPastM = 0.20F;
@@ -879,8 +903,8 @@ public:
     // feet: her arm's length that high), and lets go on the way once his
     // middle is kFatalOpenAirM out past the lip (over open air) and his fall
     // from there, as he moves, kills.
-    static constexpr float kFatalDropOutM = 1.35F;
-    static constexpr float kFatalDropUpM = 2.1F;
+    static constexpr float kFatalDropOutM = 0.85F;
+    static constexpr float kFatalDropUpM = 1.58F;
     static constexpr float kFatalOpenAirM = 0.5F;
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
@@ -1312,8 +1336,12 @@ public:
     [[nodiscard]] bool down() const noexcept { return state_ == State::Down; }
     [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
     [[nodiscard]] JPH::Vec3 hand_target_velocity() const noexcept { return hand_target_v_; }
-    [[nodiscard]] JPH::Vec3 shoulder_local() const noexcept;
-    [[nodiscard]] float arm_reach_m() const noexcept { return arm_reach_m_; }
+    // Her right shoulder (the ankle hand's) and left (her second hand's),
+    // from her middle, where her lean and crouch have them now.
+    [[nodiscard]] JPH::Vec3 shoulder_local() const noexcept { return shoulder_at(lean_, crouch_, 1.0F); }
+    [[nodiscard]] JPH::Vec3 shoulder2_local() const noexcept { return shoulder_at(lean_, crouch_, -1.0F); }
+    [[nodiscard]] float hold_lean() const noexcept { return lean_; }
+    [[nodiscard]] float hold_crouch() const noexcept { return crouch_; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
@@ -1913,6 +1941,18 @@ private:
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed, JPH::Vec3 carried = JPH::Vec3::sZero());
+    // Her reach (kArmReachM from a shoulder, her trunk leant `lean` from the
+    // hips and her hips down `crouch`): the shoulder from her middle; the
+    // least lean and crouch that bring `want` (in the world) into the reach
+    // of the `side` shoulder (else the nearest they come); how far `want`
+    // is from that shoulder; `want` brought into the reach of the shoulder
+    // as her body has it now.
+    [[nodiscard]] JPH::Vec3 shoulder_at(float lean, float crouch, float side) const noexcept;
+    void posture_for(JPH::RVec3 want, float side, float &lean, float &crouch) const noexcept;
+    [[nodiscard]] float reach_to(JPH::RVec3 want, float side = 1.0F) const noexcept;
+    [[nodiscard]] JPH::RVec3 in_reach(JPH::RVec3 want, float side = 1.0F) const noexcept;
+    // Her lean and crouch toward what her reaching hand wants, at their pace.
+    void step_posture(float dt, JPH::RVec3 want, float side) noexcept;
     // His shoulder's distance from her body (her at `at`, his middle at
     // `player`), and so as far as his swing (`swing_v`) carries it: what his
     // punch must reach (kFatalReachM).
@@ -2076,7 +2116,10 @@ private:
     bool player_braced_ = false;
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
-    float arm_reach_m_ = kArmReachM;
+    float lean_ = 0.0F;     // her trunk leant from the hips, rad
+    float crouch_ = 0.0F;   // her hips down, m
+    bool hand2_leads_ = false;   // her second hand's reach leads her lean (the wrist)
+    JPH::RVec3 hand2_want_ = JPH::RVec3::sZero();
     JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
     JPH::Vec3 hand_target_v_ = JPH::Vec3::sZero();
     float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
