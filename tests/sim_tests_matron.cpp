@@ -1154,7 +1154,7 @@ void run_matron() {
                 "matron: following the climber over the rotten catwalk is the end of her");
         require(crossed.end.planks_fallen >= 1, "matron: a plate she stood on is down");
         require(crossed.deaths == 0, "matron: the climber crossed alive");
-        // She does not come back: a death of the player later leaves her dead.
+        // She stays dead until something is restored (run_matron_restore: a player's death brings her back).
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
@@ -1672,6 +1672,55 @@ void run_matron() {
     run_matron_remaining();
 }
 
+// ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
+// Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
+// restores that checkpoint, and the restore must not skip her for being dead: she comes back alive, out of
+// her locker as she was at the checkpoint, and hunts again.
+void run_matron_restore() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    wake_and_wait_east(s);
+    require(wait_for_her(s, 14.0, 40.0), "matron restore: she comes (the checkpoint is where she burst out)");
+    require(s.matron_state().alive, "matron restore: alive before the fall");
+    // 16 m onto the south band's deck: a landing past kLethalLandingMps (16 m/s).
+    s.debug_place_matron(scraperx::sim::Vector3{0.0, 154.0 + 16.0, static_cast<double>(Matron::kBandSouthZ)});
+    bool dead = false;
+    for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !dead; ++i) {
+        tick(s);
+        dead = s.matron_state().state == kStateDead;
+    }
+    require(dead && !s.matron_state().alive, "matron restore: a 16 m fall is the end of her");
+    // Dead she stays dead for as long as nothing is restored.
+    stand_still(s, 3.0);
+    require(s.matron_state().state == kStateDead && !s.matron_state().alive,
+            "matron restore: dead, and nothing has brought her back");
+    // Put the world back: the player's death restores the checkpoint.
+    const auto deaths_before = s.snapshot().death_count;
+    const auto at = s.snapshot().player_position;
+    s.debug_launch_player(scraperx::sim::Vector3{0.0, at.y + 0.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
+    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().death_count == deaths_before; ++i) {
+        tick(s);
+    }
+    require(s.snapshot().death_count > deaths_before, "matron restore: the player's fall into the shaft is a death");
+    const auto back = s.matron_state();
+    require(back.alive && (back.state == kStateEmerging || back.state == kStateHunting),
+            "matron restore: the restore brings her back alive, out of her locker as she was at the checkpoint");
+    // She acts again: she hunts, and walks away from her locker.
+    bool hunting = false;
+    double walked_m = 0.0;
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !(hunting && walked_m > 3.0); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        require(m.alive, "matron restore: she stays alive once back");
+        hunting = hunting || m.state == kStateHunting;
+        walked_m = std::hypot(m.position.x - back.position.x, m.position.z - back.position.z);
+    }
+    require(hunting && walked_m > 3.0, "matron restore: restored, she hunts again and walks");
+    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, brought back by the restore, hunts again, walked "
+              << walked_m << " m\n";
+}
+
 void run_matron_remaining() {
     // ---- B: a way out rigged and left, she takes the rope off its eye; hooked on again,
     //      it rides ---------------------------------------------------------------------
@@ -2034,6 +2083,7 @@ void run_matron_remaining() {
     run_matron_balance();
     run_matron_pipe();
     run_matron_room();
+    run_matron_restore();
     run_matron_shape();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her

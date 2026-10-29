@@ -1373,9 +1373,11 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			knees = 0.8
 			head_pitch = -0.35
 			jaw_open = 0.25
-	elif climb_move_active and climb_move == "jump_catch":
+	elif climb_move_active and climb_move in ["jump_catch", "ledge_jump"]:
 		# Before the catch she winds up, drives off the planted leg, then
-		# reaches for the bar. Once caught, the native move becomes rung_up.
+		# reaches for the bar (or a ledge jump's lip, both hands up to it).
+		# Once caught, the native move becomes rung_up (a lip: mantle), and
+		# her joints spring on into that pose, never snapped.
 		if climb_phase < 2:
 			pitch = 0.35
 			hip_y = 0.92
@@ -1613,9 +1615,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 					legs_back = 0.2
 					knees = 0.6
 					pitch = 0.4
-				"jump_catch":
-					# Reaching for a bar or a ladder foot: both arms out
-					# high together, legs trailing, then the catch.
+				"jump_catch", "ledge_jump":
+					# Reaching for a bar, a ladder foot or a lip: both arms
+					# out high together, legs trailing, then the catch.
 					arms_fwd = 2.9
 					arms_splay = 0.15
 					arms_alt = 0.0

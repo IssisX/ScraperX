@@ -21,6 +21,10 @@ int main() {
         test_matron_climb_support();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-state-exits") {
+        run_matron_state_exits();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-crash") {
         run_matron_crash();
         return EXIT_SUCCESS;
