@@ -3,6 +3,7 @@
 #include "sim_tests.hpp"
 
 #include "sim/bay.hpp"
+#include "sim/summit.hpp"
 #include "sim/twin_tower.hpp"
 
 // Through the gap in D's fill line, where it crosses the walkway, onto the
@@ -198,7 +199,7 @@ void run_wet_e_guard(const bool expect) {
     using scraperx::sim::Simulation;
     Simulation world(InitialSpawn::WetFPlatform);
     // The bodies there were before E's rebuild, in order; and those built
-    // since, after them: the bay, then the second shaft's static access.
+    // since, after them: the bay, the second shaft's access, then summit rigging.
     constexpr std::uint32_t kBodiesBeforeE = 595;
     Fnv bodies;
     for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
@@ -206,7 +207,11 @@ void run_wet_e_guard(const bool expect) {
     }
     const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
                                     Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity,
-                                    scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity};
+                                    scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity,
+                                    scraperx::sim::Summit::kLeftBearingEntity,
+                                    scraperx::sim::Summit::kRightBearingEntity,
+                                    scraperx::sim::Summit::kEndingFrameEntity,
+                                    scraperx::sim::Summit::kLastBeamEntity};
     bool since_after = world.kit_body_count() == kBodiesBeforeE + std::size(kSince);
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < world.kit_body_count(); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
@@ -268,7 +273,7 @@ void run_wet_e_guard(const bool expect) {
     // As recorded on the tree before E's rebuild (its parent, 4118862).
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the bodies built since come after them: the bay's five, then the broken bridge's three");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin and four summit bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     require(world.loose_stock_count() == 325 && stock.hash == 12537791641516680014ULL,

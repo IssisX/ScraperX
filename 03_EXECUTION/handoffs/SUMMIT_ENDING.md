@@ -64,3 +64,8 @@ unrigged again. Radio and the final descent replay per launch.
   from the relocated work point. Native and touch proof on this revision remain pending.
 - Rendered screenshot proof is now a CI gate on the same real touch ending scenario; all five
   frames must exist. Existing native and headless touch checks remain unchanged.
+
+- 15:16: The first full CI compile succeeded; the Wet E exact append-order guard rejected
+  the four new summit bodies. Its original 595-body hash still matched. Extended the guard
+  to require the exact four new suffix entities after the existing eight; did not relax
+  the old prefix, hash, zipline or loose-stock assertions. Rerun pending.
