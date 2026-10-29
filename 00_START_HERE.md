@@ -40,7 +40,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 25. Test only what a change reaches; the full suite, every touch scenario and the Android build are CI's (`CLAUDE.md`; 10-18, 10-19, 10-20, 10-22).
 26. Every push changing code, assets, tests or CI runs CI; only docs-only commits carry `[skip ci]`; a red build is fixed first; every tested change is pushed (10-20).
 27. No build is green unless the ascent is played through the game's own input from its start (09-26).
-28. Drive the game with the Godot MCP tools, not the bare binary; CI's headless runs stay (10-20, 10-21, 10-27).
+28. Drive and look at the game with the Godot MCP tools (`run_project`, then screenshots), not the bare binary; visual work is checked by eye this way before it lands; never claim we can't see it; CI's headless runs stay (10-20, 10-21, 10-27, 10-29).
 
 **The Matron: laws and design**
 29. Her laws: no teleport, snap or infinite force; gravity on; every support force capped, its reaction on the support; arrival only on real support, up and down separate; her nearness never changes his grip, reach, input or holds; perception is evidence with an age; he can always recover physically; no health numbers (10-21).
