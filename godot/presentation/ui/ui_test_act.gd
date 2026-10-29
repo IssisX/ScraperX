@@ -918,11 +918,11 @@ func _matron_heave_touch(device: int) -> bool:
 # after; as she climbs, a shove sends the drum off the edge onto her: torn
 # off, she slams onto the flange below, alive, and nobody is dead.
 const PIPE_DRUM_PICK := Vector2(-15.0, -125.95)
-# The drum waits in the north band's corner by the shaft, east of where she
-# comes along the band to her pipe (walking the edge she barges through
-# whatever lies on it): set down from here, facing south, and taken up again
-# from 0.75 m off where it lies.
-const PIPE_DRUM_SET_FROM := Vector2(16.6, -128.4)
+# Set the drum inboard on the same north band, clear of the riser-side
+# approach she takes to the pipe. The old 16.6 m placement left a loose,
+# rolling drum at the inside rim through the whole descent and climb.
+# Carry it back to the same throw rail after retrieving it by touch.
+const PIPE_DRUM_SET_FROM := Vector2(20.0, -128.4)
 # At the rail over her line (x 15.15), west of the riser's flanges (to x
 # 15.25): the drum held out under the rail's bar, thrown down past them.
 const PIPE_THROW_FROM := Vector2(14.75, -132.55)
@@ -936,6 +936,11 @@ var _pipe_watch := {}
 
 
 func _matron_pipe_touch(device: int) -> bool:
+	# A captured run renders only the pose frames; the physics and touch input
+	# continue at their normal fixed rate between screenshots.
+	if _act_capturing():
+		_act_running = true
+		_act_draw(false)
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):
 		return false
@@ -957,6 +962,9 @@ func _matron_pipe_touch(device: int) -> bool:
 	_detail = "warned_s=%.2f holds=%d flanges=%d slams=%d slam_mps=%.2f knockdowns=%d" % [
 		float(_pipe_watch["warned_s"]), int(m["pipe_holds"]), int(m["pipe_flanges"]), int(m["pipe_slams"]),
 		float(m["pipe_slam_mps"]), int(m["knockdowns"])]
+	if _act_capturing():
+		_act_draw(true)
+		_act_running = false
 	return true
 
 
@@ -1061,12 +1069,36 @@ func _pipe_heard_coming() -> bool:
 # throws it down onto her (knock her down, then throw what you carry): torn
 # off, she slams onto the flange below her, alive.
 func _pipe_drum_onto_her(device: int) -> bool:
-	var take_from := Vector2(_pipe_drum_rest.x, _pipe_drum_rest.z + 0.75)
-	if not (await _sprint_to(device, Vector2(take_from.x, -127.2), 1.0, 10.0) and \
-			await _walk_to(device, take_from, 0.08, 4.0)):
+	var drum := _pipe_drum_at()
+	if drum.y < MATRON_DECK_Y - 0.5:
+		return _fail("the staged drum left the deck before retrieval (at %s, staged at %s)" % [str(drum), str(_pipe_drum_rest)])
+	if not await _sprint_to(device, Vector2(drum.x, -127.2), 1.0, 10.0):
 		return _fail("the run back round to the drum stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
-	if not await _offered(&"pick_up", "PICK UP"):
+	await _tilt(-0.25)
+	# Do not assume that the loose drum remained at the exact release point.
+	# Take small touch-stick steps toward its *current* handle, stopping as
+	# soon as the real action HUD offers PICK UP (same four-second approach).
+	var waited := 0.0
+	var offered := false
+	while waited < 4.0:
+		drum = _pipe_drum_at()
+		if drum.y < MATRON_DECK_Y - 0.5:
+			_move_dir(device, Vector2.ZERO)
+			return _fail("the staged drum fell while approaching it (at %s)" % str(drum))
+		if _ctx()["action"]["id"] == &"pick_up" and _action_label() == "PICK UP" and \
+				int(_native().get_carry_target_entity_id()) == _pipe_drum:
+			offered = true
+			break
+		var to := Vector2(drum.x, drum.z + 0.65) - Vector2(_position().x, _position().z)
+		var yaw := float(_main._yaw)
+		var right := Vector2(cos(yaw), -sin(yaw))
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		_move_dir(device, Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.2, 0.35) if to.length() > 0.08 else Vector2.ZERO)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	if not offered:
 		return _fail("Action read '%s' at the drum by the edge, not PICK UP (drum at %s, me at %s, carry target %d, pitch %.2f)" % [
 			_action_label(), str(_pipe_drum_at()), str(_position()), int(_native().get_carry_target_entity_id()),
 			float(_main._pitch)])
@@ -1089,6 +1121,13 @@ func _pipe_drum_onto_her(device: int) -> bool:
 		return _fail("she never came up the pipe below the drum (on it %s, at %s, links %d from %d)" % [
 			str(_matron_state()["on_pipe"]), str(_matron_state()["position"]), int(_matron_state()["pipe_links"]),
 			links])
+	if _act_capturing():
+		# From the throw rail the whole riser remains in the frame; aim at the
+		# middle of her body rather than only at her head or hands.
+		await _look_at_point((_matron_state()["position"] as Vector3) + Vector3(0.0, 0.6, 0.0))
+		await _pose("matron_pipe_braced_full")
+		await _look_at_point((_matron_state()["position"] as Vector3) + Vector3(0.0, 1.1, 0.0))
+		await _pose("matron_pipe_braced_grips")
 	if not _pipe_heard_coming():
 		return false
 	_act_log("pipe_throw")
