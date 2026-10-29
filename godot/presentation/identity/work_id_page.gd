@@ -20,7 +20,7 @@ func configure(owner: RefCounted, scale: float) -> void:
 
 func _ready() -> void:
 	add_theme_constant_override("separation", maxi(8, roundi(20 * _u)))
-	add_child(_label("RO VALE  /  ACCESS & RIGGING", UiStyle.PAPER))
+	add_child(_label("JACK MILLER  /  ACCESS & RIGGING", UiStyle.PAPER))
 	add_child(_label("Use a picture for your work ID and in-game character appearances. Optional; processing and storage stay on this device.", UiStyle.PAPER_DIM))
 	_portrait = Calibration.new()
 	_portrait.name = "WorkPhoto"
@@ -37,7 +37,7 @@ func _ready() -> void:
 	_align_button.pressed.connect(_start_alignment)
 	_portrait.instruction_changed.connect(func(copy: String) -> void: _status.text = copy)
 	_portrait.aligned.connect(_save_alignment)
-	_default_button = _button("USE DEFAULT RO")
+	_default_button = _button("USE DEFAULT JACK")
 	_default_button.name = "UseDefault"
 	_default_button.pressed.connect(_use_default)
 	add_child(_label("A clear, front-facing portrait works best. You can replace or remove it without restarting your climb.", UiStyle.PAPER_DIM))
@@ -72,7 +72,7 @@ func refresh() -> void:
 	_portrait.texture = store.photo_texture()
 	_default_button.disabled = _portrait.texture == null
 	_align_button.disabled = _portrait.texture == null
-	_status.text = "PHOTO SAVED ON THIS DEVICE" if _portrait.texture != null else "DEFAULT RO  /  NO PERSONAL PHOTO"
+	_status.text = "PHOTO SAVED ON THIS DEVICE" if _portrait.texture != null else "DEFAULT JACK  /  NO PERSONAL PHOTO"
 	_status.add_theme_color_override("font_color", UiStyle.SAFE if _portrait.texture != null else UiStyle.PAPER_DIM)
 
 func cancel_photo() -> void:

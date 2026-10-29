@@ -369,15 +369,10 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
 }
 
 void Matron::remove_body() {
-    end_journey(false);
-    routecraft_.cancel();
-    routecraft_recovering_ = false;
-    routecraft_mine_ = false;
-    found_ = FoundClimb{};
+    clear_interrupted_actions(false);
     if (!body_in_world_) {
         return;
     }
-    release_climb(false);
     physics_.GetBodyInterface().RemoveBody(body_);
     body_in_world_ = false;
 }
@@ -947,7 +942,28 @@ void Matron::feel_floor(const float dt) {
             // Whatever she was about, the floor going takes it from her.
             turn_ = Turn::None;
             turn_s_ = 0.0F;
-
+            pipe_listen_s_ = 0.0F;
+            found_ = FoundClimb{};
+            drop_stock();
+            if (trap_ != Trap::Off) {
+                if (shared_survival_) shared_survival_->release_hands();
+                trap_ = (level_ == bay_level_) ? Trap::ClimbOut : Trap::Off;
+                trap_s_ = 0.0F;
+                trap_lost_s_ = 0.0F;
+            }
+            if (state_ == State::Unrigging) {
+                unrig_s_ = 0.0F;
+                state_ = State::Guarding;
+            } else if (state_ == State::Peering) {
+                peer_s_ = 0.0F;
+                stand_down();
+            } else if (state_ == State::Grab && !grip_on_ && bodies.GetObjectLayer(hit.mBodyID) == moving_layer()) {
+                // Moving steel under her: not her own hand (layer kHand), which her ray also
+                // finds while it reaches and is no floor.
+                ++grab_misses_;
+                grab_cooldown_s_ = std::max(grab_cooldown_s_, kGrabCooldownSeconds);
+                end_hold(State::Hunting);
+            }
         }
         riding_ = true;
         let_go_s_ = kLetGoSeconds;
@@ -2117,6 +2133,11 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         return true;
     }
     if (trap_ == Trap::Holding) {
+        if (level_ != bay_level_) {
+            if (shared_survival_) shared_survival_->release_hands();
+            trap_ = Trap::Off;
+            return false;
+        }
         // Hands up at her spot (the shared block holds the leaf once they
         // meet it). They meet nothing within 2 s: no leaf there to hold.
         walk_toward(dt, ax, az, 0.0F);
@@ -2128,7 +2149,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         return true;
     }
     if (trap_ == Trap::ClimbOut) {
-        if (climb_way_.status() == MoverStatus::Idle && level_ != bay_level_) {
+        if ((climb_way_.status() == MoverStatus::Idle && level_ != bay_level_) || trap_s_ > 20.0F) {
             // Up and out (or off it some other way): done with it.
             trap_ = Trap::Off;
             return false;
@@ -2146,7 +2167,6 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         }
         walk_toward(dt, c.x, c.z, 0.0F);
         yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
-        climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
         take_climb(bay_climb_);
         return true;
     }
@@ -2229,9 +2249,7 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     } else if (ask(routecraft_way_, true)) {
         return true;
     }
-    // A rung way her scan found off her floor (her clock to try a start again
-    // runs down here); a line she would only wait at, last.
-    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    // A rung way her scan found off her floor; a line she would only wait at, last.
     return ask(climb_way_, true) || ask(line_way_, true);
 }
 
@@ -2292,6 +2310,19 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             routecraft_way_.cancel();
         }
     }
+    vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
+    set_s_ = std::max(0.0F, set_s_ - dt);
+    shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
+    grab_cooldown_s_ = std::max(0.0F, grab_cooldown_s_ - dt);
+    calm_s_ = std::max(0.0F, calm_s_ - dt);
+    throw_cooldown_s_ = std::max(0.0F, throw_cooldown_s_ - dt);
+    fetch_refused_s_ = std::max(0.0F, fetch_refused_s_ - dt);
+    if (fetch_refused_s_ <= 0.0F) {
+        fetch_refused_ = 0;
+    }
+    thrown_s_ = std::max(0.0F, thrown_s_ - dt);
+    look_s_ = std::max(0.0F, look_s_ - dt);
+    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     // A way she took herself (her journey, her bars) has her body until it
     // ends, first in her tick; knocked about, held or dead, it ends.
     for (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Owns; way = holder()) {
@@ -2314,18 +2345,6 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const std::size_t sound_count = sound_count_;
     sound_count_ = 0;
     step_planks(dt);
-    vault_cooldown_s_ = std::max(0.0F, vault_cooldown_s_ - dt);
-    set_s_ = std::max(0.0F, set_s_ - dt);
-    shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
-    grab_cooldown_s_ = std::max(0.0F, grab_cooldown_s_ - dt);
-    calm_s_ = std::max(0.0F, calm_s_ - dt);
-    throw_cooldown_s_ = std::max(0.0F, throw_cooldown_s_ - dt);
-    fetch_refused_s_ = std::max(0.0F, fetch_refused_s_ - dt);
-    if (fetch_refused_s_ <= 0.0F) {
-        fetch_refused_ = 0;
-    }
-    thrown_s_ = std::max(0.0F, thrown_s_ - dt);
-    look_s_ = std::max(0.0F, look_s_ - dt);
     sees_player_ = false;
     sees_far_ = false;
     glimpsed_ = false;
@@ -2354,6 +2373,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         own_scan_ = std::make_unique<traversal::AffordanceMap>();
         own_scan_->scan(physics_, physics_.GetBounds(), {body_, BodyID(), moving_layer()});
         scanned_ = own_scan_.get();
+    }
+    if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Travel &&
+                               (dead_ || holding_state(state_) || !out(state_))) {
+        way->cancel();
     }
     // On a journey over the tower's steel (travel_to) she is about nothing else.
     if (Mover *way = holder(); body_in_world_ && way != nullptr && way->view().tick == MoverTick::Travel) {
@@ -3643,14 +3666,18 @@ void Matron::set_stage_for_test(const Stage stage) noexcept {
 }
 
 void Matron::restore(const Saved &saved) {
-    routecraft_.cancel();
-    routecraft_recovering_ = false;
-    routecraft_mine_ = false;
-    found_ = FoundClimb{};
+    travel_way_.cancel();
+    travel_ = Journey{};
+    travel_edges_.clear();
+    travel_avoid_.clear();
+    travel_walk_.clear();
+    routecraft_way_.cancel();
     climb_blocks_ = {};
     find_wait_ticks_ = 0;
     end_journey(false);
     journey_wait_ticks_ = 0;
+    chase_way_held_ = false;
+    chase_plan_map_ = nullptr;
     if (shared_survival_) shared_survival_->reset();
     // A blow pending from the player's fist when the save loads belongs to
     // the world being left; it never reaches her after the load.
@@ -3660,7 +3687,23 @@ void Matron::restore(const Saved &saved) {
     dead_ = false;
     {
         remove_body();
-        state_ = saved.state;
+        end_hold(saved.state);
+        let_go_ = false;
+        armplay_done_ = false;
+        armplay_reposes_ = 0;
+        hold_retakes_ = 0;
+        hold_tears_at_ = 0;
+        fatal_beat_ = 0;
+        fatal_sub_ = 0;
+        clamber_hist_n_ = 0;
+        clamber_refused_until_ = -1.0F;
+        commit_s_ = 0.0F;
+        allow_catwalk_ = false;
+        search_s_ = 0.0F;
+        search_budget_s_ = 1.0e9F;
+        search_trip_s_ = 0.0F;
+        emerge_s_ = 0.0F;
+        sound_count_ = 0;
         strain_s_ = saved.strain_s;
         rage_ = saved.rage;
         stage_ = saved.stage;
@@ -4130,34 +4173,66 @@ void Matron::take_blow(const float dt) {
     fall_x_ = way.GetX();
     fall_z_ = way.GetZ();
     if (blow < fells || braced) {
-        resume_state_ = state_;
+        const State prev = state_;
+        clear_interrupted_actions(true);
+        resume_state_ = (prev == State::Unrigging) ? State::Guarding
+                        : (prev == State::Peering || prev == State::Grab || prev == State::Release) ? State::Searching
+                                                                                                    : prev;
         state_ = State::Staggering;
         stagger_s_ = kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
                                               std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F);
         ++staggers_;
         rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
-        throw_windup_s_ = -1.0F;
-        if (turn_ != Turn::None) {
-            // Knocked out of the Turn: not straight back into it.
-            turn_cooldown_s_ = turn_cooldown_seconds();
-            sight_far_s_ = 0.0F;
-        }
-        turn_ = Turn::None;
-        turn_s_ = 0.0F;
         return;
     }
     knock_down();
 }
 
+void Matron::clear_interrupted_actions(const bool keep_travel) {
+    drop_stock();
+    journey_way_.cancel();
+    routecraft_way_.cancel();
+    pipe_way_.cancel();
+    climb_way_.cancel();
+    line_way_.cancel();
+    if (!keep_travel) {
+        travel_way_.cancel();
+    } else if (climber_ && climber_->status() == traversal::Climber::Status::Running) {
+        climber_->cancel();
+    }
+    if (shared_survival_) {
+        shared_survival_->release_hands();
+    }
+    if (trap_ != Trap::Off) {
+        trap_ = (!dead_ && level_ == bay_level_) ? Trap::ClimbOut : Trap::Off;
+        trap_s_ = 0.0F;
+        trap_lost_s_ = 0.0F;
+    }
+    if (turn_ != Turn::None) {
+        turn_cooldown_s_ = turn_cooldown_seconds();
+        sight_far_s_ = 0.0F;
+    }
+    turn_ = Turn::None;
+    turn_s_ = 0.0F;
+    pipe_listen_s_ = 0.0F;
+    unrig_s_ = 0.0F;
+    peer_s_ = 0.0F;
+    if (state_ == State::Grab && !grip_on_) {
+        ++grab_misses_;
+        grab_cooldown_s_ = std::max(grab_cooldown_s_, kGrabCooldownSeconds);
+        end_hold(State::Searching);
+    } else if (state_ == State::Release || dead_) {
+        end_hold(dead_ ? State::Dead : State::Searching);
+    }
+}
+
 void Matron::knock_down() {
+    clear_interrupted_actions(true);
     state_ = State::Down;
     resume_state_ = State::Searching;
     down_s_ = down_seconds();
     down_for_s_ = 0.0F;
-    drop_stock();
-    turn_ = Turn::None;
-    turn_s_ = 0.0F;
     turn_cooldown_s_ = turn_cooldown_seconds();
     sight_far_s_ = 0.0F;
     if (blow_staggered_) {

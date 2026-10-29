@@ -169,8 +169,13 @@ bool Matron::get_on_pipe(const float from_floor, const float to_floor) {
 void Matron::get_off_pipe(const bool failed) {
     pipe_phase_ = PipePhase::Off;
     pipe_support_ = BodyID();
+    pipe_swat_body_ = BodyID();
     pipe_drive_dv_ = Vec3::sZero();
     pipe_force_n_ = 0.0F;
+    pipe_slide_mps_ = 0.0F;
+    pipe_stun_s_ = 0.0F;
+    pipe_overload_s_ = 0.0F;
+    pipe_stall_s_ = 0.0F;
     const int way = pipe_way(pipe_from_, pipe_to_);
     if (failed) {
         // This way of the pipe she leaves alone a while (past its retries,
@@ -217,6 +222,10 @@ void Matron::tear_off_pipe() {
                        : -std::numeric_limits<float>::max();
     pipe_slide_mps_ = std::max(0.0F, -bodies.GetLinearVelocity(body_).GetY());
     pipe_support_ = BodyID();
+    pipe_swat_body_ = BodyID();
+    pipe_best_ = -std::numeric_limits<float>::max();
+    pipe_stall_s_ = 0.0F;
+    pipe_overload_s_ = 0.0F;
     pipe_phase_ = PipePhase::Slide;
 }
 
@@ -314,6 +323,17 @@ void Matron::ride_pipe(const float dt) {
         Vec3 line = kMassKg * (Vec3(kPipeLineX - ax, 0.0F, kPipeLineZ - az) * 3.0F - Vec3(v.GetX(), 0.0F, v.GetZ())) * 7.0F;
         if (line.Length() > kPipeLegsLineN) {
             line *= kPipeLegsLineN / line.Length();
+        }
+        const float slide_progress = -feet;
+        if (slide_progress > pipe_best_ + 0.04F) {
+            pipe_best_ = slide_progress;
+            pipe_stall_s_ = 0.0F;
+        } else {
+            pipe_stall_s_ += dt;
+        }
+        if (!on_line || pipe_stall_s_ > kPipeStallS) {
+            get_off_pipe(true);
+            return;
         }
         pipe_slide_mps_ = std::max(0.0F, -v.GetY());
         apply(line + Vec3(0.0F, kMassKg * (-physics_.GetGravity().GetY() - kPipeSlideAccel), 0.0F));
@@ -592,7 +612,6 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         return true;
     }
     // Her hands on the rail: over it and onto the pipe (matron_pipe.cpp).
-    climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     walk_toward(dt, ax, az, 0.0F, accel);
     yaw_ = turn_to(yaw_, std::atan2(0.0F, kPipeRailZ - kPipeDeckZ), kTurnRate, dt);
     (void)get_on_pipe(floor_y, next);
@@ -662,7 +681,12 @@ void Matron::report_pipe() {
 void Matron::restore_pipe() noexcept {
     // Off the pipe, whatever had her on it.
     pipe_support_ = BodyID();
+    pipe_swat_body_ = BodyID();
     pipe_drive_dv_ = Vec3::sZero();
+    pipe_force_n_ = 0.0F;
+    pipe_slide_mps_ = 0.0F;
+    pipe_overload_s_ = 0.0F;
+    pipe_stall_s_ = 0.0F;
     pipe_phase_ = PipePhase::Off;
     pipe_links_ = 0;
     pipe_holds_ = 0;
@@ -689,8 +713,13 @@ MoverStatus Matron::PipeWay::step(const float dt, traversal::Budget & /*budget*/
 void Matron::PipeWay::cancel() {
     m_.pipe_phase_ = PipePhase::Off;
     m_.pipe_support_ = BodyID();
+    m_.pipe_swat_body_ = BodyID();
     m_.pipe_drive_dv_ = Vec3::sZero();
     m_.pipe_force_n_ = 0.0F;
+    m_.pipe_slide_mps_ = 0.0F;
+    m_.pipe_stun_s_ = 0.0F;
+    m_.pipe_overload_s_ = 0.0F;
+    m_.pipe_stall_s_ = 0.0F;
 }
 
 MoverStatus Matron::PipeWay::status() const {

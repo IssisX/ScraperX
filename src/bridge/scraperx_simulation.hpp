@@ -227,8 +227,7 @@ public:
     void debug_matron_hear(godot::Vector3 at);
     void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);
     void debug_lose_arm(std::int64_t side);
-    // The same, for looking at her moves by eye: debug_matron_travel_to sends her, by her own plan, to the
-    // region her scan reads under those feet (false: none, or no plan).
+    // Sends her, by her own plan, to the region her scan reads under those feet (false: none, or no plan).
     [[nodiscard]] bool debug_matron_travel_to(godot::Vector3 feet);
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
