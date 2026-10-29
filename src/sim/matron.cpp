@@ -1832,10 +1832,11 @@ void Matron::step_turn(const float dt, const float distance_to_player, const flo
     sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
     if (turn_ == Turn::None) {
         turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
-        // In a stalk her sight does not start the Turn: she is watching him
-        // on purpose (matron_stalk.cpp). His noise still can.
+        // Stalking him her sight does not start the Turn: she is watching him
+        // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). His
+        // noise still can.
         const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM &&
-                                     !stalk_encounter();
+                                     !stalking_;
         const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
         if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
             turn_ = Turn::Windup;
