@@ -377,6 +377,16 @@ void run_well_stage_b() {
                       << " climbing=" << is_climbing(wreck_prior)
                       << " grip_N=" << wreck_prior.climb_grip_force_n
                       << " slips=" << wreck_prior.climb_grip_slips
+                      << " support=" << wreck_prior.traversal_support_entity_id
+                      << " hold_left=(" << wreck_prior.traversal_left_hand.x
+                      << "," << wreck_prior.traversal_left_hand.y
+                      << "," << wreck_prior.traversal_left_hand.z << ")"
+                      << " hold_right=(" << wreck_prior.traversal_right_hand.x
+                      << "," << wreck_prior.traversal_right_hand.y
+                      << "," << wreck_prior.traversal_right_hand.z << ")"
+                      << " target=(" << wreck_prior.traversal_target_point.x
+                      << "," << wreck_prior.traversal_target_point.y
+                      << "," << wreck_prior.traversal_target_point.z << ")"
                       << " after=(" << state.player_position.x << "," << state.player_position.y
                       << "," << state.player_position.z << ") vy=" << state.player_linear_velocity.y
                       << " climbing=" << is_climbing(state)
