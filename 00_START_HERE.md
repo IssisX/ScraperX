@@ -15,7 +15,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 4. Protected changes (test checks, world geometry, her force and physics limits) go only as a PR of just that change, with a plain before/after; the numbers may be wrong, but no agent moves them alone; an insignificant test failure goes to him as a decision (`CLAUDE.md`; 10-27).
 5. The shared workflow in `CLAUDE.md` holds (10-27).
 6. Never lose work: push as you go, unfinished work to a side branch (`-wip` when usage may run out); save all before an effort drop, model switch or spin-down; after a reset, check what exists first (10-20, 10-21).
-7. Every permission is granted: decide, act, report, no permission or git questions; a prompt still appearing joins `.claude/settings.json` that day, bar his safety gates; say once what you can't grant yourself, and where he can (10-18, 10-19, 10-20).
+7. Every permission is granted: decide, act, report, no permission or git questions; a prompt still appearing joins `.claude/settings.json` that day, bar his safety gates; say once what you can't grant yourself, and where he can (10-18, 10-19, 10-20). Improve your own way of working rather than follow an earlier process rule that gets in the way (10-19).
 8. While he is away the work goes on, no turn ends early, and you take your recommended pick rather than block; a question unanswered for 10 minutes takes its pick, said on its issue; one short status when he is back (10-20, 10-27, 10-28, 10-29).
 9. Tell him plainly, every time, when he is wrong or something else is better; never take his word at face value (10-20; 10-28: *"always tell me if I am [wrong]. Always, always, always, always, always."*).
 10. Read his meaning exactly, never backwards, narrowed, widened or conflated; quote back a two-way reading; read dictation slips through, asking when one could change the meaning; explain a misreading plainly (10-20).
@@ -49,7 +49,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 32. Her fatality and arm tears: *"Do not soften it ... like a Mortal Kombat fatality."* Full intensity, no toggle, no tamer substitute (10-21); short and playable (10-28).
 33. Her holds: third person from her grab to his release or death; PUNCH works while held; she is intimate and interactive (10-28).
 34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19).
-35. In reach she pulls him off a ladder by the ankle; for 30 s after a tear, or after his blow frees him, she backs off and lets him run (10-28).
+35. In reach she pulls him off a ladder by the ankle; for 30 s after a tear, or after his blow frees him, she backs off and lets him run (10-28). Her locker on deck 1 (11 m) stays; the floor fatality there is fine (10-28).
 36. Her look: a real old woman's body and skin, an uncanny adult-horror face, never thin, red-skinned or Halloween; the elite graphics are hers (10-19).
 37. Her movement is continuous: drawn between ticks, no snapped poses, joints at most 20 rad/s, hands reaching each hold (10-27).
 38. The whole Matron is one job, led by Muse (FB Bot), all agents helping on #3: worst harm to the player first; judge the final rendered body; before/after evidence through the production path; her model on record (10-28).
