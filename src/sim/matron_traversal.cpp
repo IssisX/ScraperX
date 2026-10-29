@@ -15,6 +15,9 @@
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
+#include <Jolt/Core/StreamOut.h>
+#include <Jolt/Core/StreamUtils.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 #include <algorithm>
 #include <utility>
@@ -22,6 +25,8 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <mutex>
+#include <type_traits>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -2035,7 +2040,93 @@ bool AffordanceMap::capsule_free(const PhysicsSystem &physics, const Ignore &ign
     return !collector.HadHit();
 }
 
+namespace {
+// Everything a scan reads, written out exactly: the bounds, who she and the
+// player are, her limits, and every fixed (static or kinematic), non-sensor
+// body in the world in body-ID order: its ID, motion type, layer, user
+// data, transform and whole shape. Dynamic bodies and sensors are left out
+// because no query of the scan sees them.
+class KeyStream final : public StreamOut {
+public:
+    explicit KeyStream(std::string &out) : out_(out) {}
+    void WriteBytes(const void *data, const size_t bytes) override {
+        out_.append(static_cast<const char *>(data), bytes);
+    }
+    bool IsFailed() const override { return false; }
+
+private:
+    std::string &out_;
+};
+
+std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+    static_assert(std::is_trivially_copyable_v<Limits>);
+    std::string key;
+    KeyStream out(key);
+    out.Write(bounds.mMin);
+    out.Write(bounds.mMax);
+    out.Write(ignore.self.GetIndexAndSequenceNumber());
+    out.Write(ignore.player.GetIndexAndSequenceNumber());
+    out.Write(ignore.layer);
+    out.WriteBytes(&limits, sizeof(Limits));
+    BodyIDVector ids;
+    physics.GetBodies(ids);
+    std::sort(ids.begin(), ids.end());
+    Shape::ShapeToIDMap shapes;
+    Shape::MaterialToIDMap materials;
+    const Layers layers(physics, ignore);
+    for (const BodyID id : ids) {
+        BodyLockRead lock(physics.GetBodyLockInterface(), id);
+        if (!lock.Succeeded()) continue;
+        const Body &body = lock.GetBody();
+        if (body.IsSensor() || body.IsDynamic()) continue;
+        out.Write(id.GetIndexAndSequenceNumber());
+        out.Write(static_cast<std::uint8_t>(body.GetMotionType()));
+        out.Write(body.GetObjectLayer());
+        // Whether her probes see it at all (this world's layer filters).
+        out.Write(layers.bp().ShouldCollide(body.GetBroadPhaseLayer()));
+        out.Write(layers.ol().ShouldCollide(body.GetObjectLayer()));
+        out.Write(body.GetUserData());
+        out.Write(body.GetCenterOfMassPosition());
+        out.Write(body.GetRotation());
+        body.GetShape()->SaveWithChildren(out, shapes, materials);
+    }
+    return key;
+}
+
+// The scans this process has made, newest last: a few worlds' worth.
+struct ScanMemo {
+    std::mutex mutex;
+    std::vector<std::pair<std::string, AffordanceMap>> maps;
+};
+ScanMemo &scan_memo() {
+    static ScanMemo memo;
+    return memo;
+}
+constexpr std::size_t kScanMemoMaps = 6;
+} // namespace
+
 void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+    const auto started = std::chrono::steady_clock::now();
+    std::string key = steel_key(physics, bounds, ignore, limits);
+    ScanMemo &memo = scan_memo();
+    {
+        const std::lock_guard<std::mutex> hold(memo.mutex);
+        for (const auto &[seen, map] : memo.maps) {
+            if (seen == key) {
+                *this = map;
+                stats_.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+                return;
+            }
+        }
+    }
+    scan_steel(physics, bounds, ignore, limits);
+    const std::lock_guard<std::mutex> hold(memo.mutex);
+    if (memo.maps.size() >= kScanMemoMaps) memo.maps.erase(memo.maps.begin());
+    memo.maps.emplace_back(std::move(key), *this);
+}
+
+void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore,
+                               const Limits &limits) {
     const auto started = std::chrono::steady_clock::now();
     patches_.clear();
     regions_.clear();

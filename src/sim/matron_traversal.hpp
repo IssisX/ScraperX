@@ -382,6 +382,10 @@ struct ScanStats {
 class AffordanceMap final {
 public:
     // Reads every static (and kinematic) non-sensor body overlapping bounds.
+    // The map is a function of that fixed steel alone (no query of the scan
+    // sees a dynamic body or a sensor), so steel this process has already
+    // read, the same byte for byte, gives back the map it made then
+    // without reading it again.
     void scan(const JPH::PhysicsSystem &physics, const JPH::AABox &bounds, const Ignore &ignore,
               const Limits &limits = {});
     [[nodiscard]] const std::vector<Region> &regions() const noexcept { return regions_; }
@@ -403,6 +407,8 @@ public:
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
 
 private:
+    void scan_steel(const JPH::PhysicsSystem &physics, const JPH::AABox &bounds, const Ignore &ignore,
+                    const Limits &limits);
     void split_patches(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_regions(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
     void build_edges(const JPH::PhysicsSystem &physics, const Ignore &ignore, const Limits &limits);
