@@ -46,9 +46,11 @@ building.
   - what he lingered on turning up again in her hoard;
   - his own voice heard back, by microphone and only with consent.
 - **Dropped by the owner:** "your bodies tended". Don't build it (START_HERE, 2026-10-21).
-- **Exists:** `ui/consent_screen.gd` and `settings_store.gd` refer to it. Check what is
-  live before building more.
-- **Open:** the pages, the gaze and linger record, and the returned objects.
+- **Exists (corrected 2026-10-29):** largely built, about 2,300 lines in
+  `godot/presentation/uncanny/`: `attention.gd` (what the eyes rest on), `chart_pages.gd`,
+  `her_chart.gd`, `page_reader.gd`, `tower_clocks.gd`, and `voice_keeper.gd` (the voice heard
+  back, after consent).
+- **Open:** tying it to her encounter, so that she acts on what the chart knows.
 
 ## 3. Fight back for real: her limbs come off
 - **Owner, 2026-10-20:** *"Would be nice to have real limbs and stuff rip off if hit by
@@ -62,6 +64,8 @@ building.
   2026-10-27).
 - **Open:** all of it. The tear must be physical (a force past a real joint limit), never a
   scripted pop.
+- **Cost:** her sim body is one capsule (`matron.cpp:78`) and her limbs are drawn only, so
+  a physical tear first needs her limbs in the sim. That is a large change, not in stride.
 
 ## 4. She can die, and comes back worse
 - **Owner, 2026-10-20:** *"the harpoon can kill her, if it's a kill-shot. She can die in many
