@@ -640,8 +640,8 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
             first_hold = i;
         }
         const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
-        const bool on_line = std::hypot(m.position.x - static_cast<double>(Matron::kPipeLineX),
-                                        m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
+        const bool on_line = m.pipe_line_x != 0.0 &&
+                             std::hypot(m.position.x - m.pipe_line_x, m.position.z - m.pipe_line_z) < 0.25;
         if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && feet < drum_at_feet) {
             // Let go over the corner rail onto her, from a metre and a half up.
             s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
@@ -686,6 +686,27 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
 }
 
 void run_matron_pipe() {
+    // The scan finds more than the one riser the old fixed coordinates
+    // knew: the climbs below take whichever spanning member is nearest
+    // her, not a fixed one.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(0.1).accepted, "matron pipe: settle for the scan");
+        const scraperx::sim::traversal::AffordanceMap &map = s.matron_affordances();
+        int spanning = 0;
+        bool other = false;
+        for (const scraperx::sim::traversal::Riser &r : map.risers()) {
+            if (r.bottom <= 143.1F && r.top >= 153.9F) {
+                ++spanning;
+                if (std::hypot(r.x - 15.8, r.z + 134.2) > 1.0) {
+                    other = true;
+                }
+            }
+        }
+        std::cout << "  matron pipe: scan finds " << spanning << " risers spanning 154 to 143\n";
+        require(spanning >= 2 && other, "matron pipe: the scan finds a second spanning member besides the old one");
+    }
     // Frail, she cannot take hold of it.
     {
         const PipeRun r = pipe_run(0, 0.0, 40.0);

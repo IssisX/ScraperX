@@ -291,6 +291,10 @@ struct MatronSnapshot final {
     double pipe_slam_mps = 0.0;
     double pipe_peak_force_n = 0.0;
     double pipe_peak_power_w = 0.0;
+    double pipe_centre_x = 0.0;
+    double pipe_centre_z = 0.0;
+    double pipe_line_x = 0.0;
+    double pipe_line_z = 0.0;
     // The bay (bay.hpp): her hands holding its leaf and what they hold up, N;
     // her trap's phase (Matron::Trap: 0 none .. 4 holding, 5 climbing out)
     // and how many times she set it this run.

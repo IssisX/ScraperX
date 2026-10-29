@@ -90,14 +90,15 @@ void run_matron_traverse() {
          Deck::None},
         {"C3 duct down: the duct to the landing", false, true, {-10.5, 137.2, -143.4}, 135.5,
          Deck::None},
+        // Test fixture placement only (the world's deck stand, not runtime input).
         {"corner pipe down: 154 to 143", true, true,
-         {Matron::kPipeDeckX, 154.0, Matron::kPipeDeckZ}, 143.0, Deck::Deck143},
+         {14.85, 154.0, -132.55}, 143.0, Deck::Deck143},
         {"corner pipe up: 143 to 154", true, false,
-         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 154.0, Deck::Deck154},
+         {14.85, 143.0, -132.55}, 154.0, Deck::Deck154},
         {"corner pipe down: 143 to 132", true, true,
-         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 132.0, Deck::Deck132},
+         {14.85, 143.0, -132.55}, 132.0, Deck::Deck132},
         {"corner pipe up: 132 to 143", true, false,
-         {Matron::kPipeDeckX, 132.0, Matron::kPipeDeckZ}, 143.0, Deck::Deck143},
+         {14.85, 132.0, -132.55}, 143.0, Deck::Deck143},
     }};
     for (const Leg &leg : legs) {
         const Result r = take(leg);

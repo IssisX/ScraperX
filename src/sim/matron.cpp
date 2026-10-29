@@ -343,6 +343,9 @@ void Matron::hear_for_test(const RVec3 at) {
 }
 
 void Matron::rule_out_pipe_for_test() {
+    // Sticky, not just on the ways already made: the ways are created on
+    // first use now, so ruling out an empty list would rule out nothing.
+    pipe_ruled_out_ = true;
     for (PipeWayMemory &way : pipe_ways_) {
         way.ruled_out = true;
     }

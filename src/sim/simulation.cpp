@@ -1466,6 +1466,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_slam_mps = view.pipe_slam_mps;
     result.pipe_peak_force_n = view.pipe_peak_force_n;
     result.pipe_peak_power_w = view.pipe_peak_power_w;
+    result.pipe_centre_x = view.pipe_centre_x;
+    result.pipe_centre_z = view.pipe_centre_z;
+    result.pipe_line_x = view.pipe_line_x;
+    result.pipe_line_z = view.pipe_line_z;
     result.bracing = view.bracing_structure;
     result.support_n = view.support_n;
     result.trap = view.trap;

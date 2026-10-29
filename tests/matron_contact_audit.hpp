@@ -89,8 +89,7 @@ struct MatronContactAudit {
             }
         }
         const double hand_off_axis =
-            std::hypot(m.contact_hand.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
-                       m.contact_hand.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
+            std::hypot(m.contact_hand.x - m.pipe_centre_x, m.contact_hand.z - m.pipe_centre_z);
         if (m.on_pipe && m.contact_hand_held && hand_off_axis <= kRiserOffAxisM && !m.pipe_sliding && !m.pipe_stunned &&
             !m.pipe_head_down) {
             ++pipe_face;
@@ -99,8 +98,8 @@ struct MatronContactAudit {
         if (m.contact_braced) {
             const double shin_y = m.position.y - kStandCenterM + kShinM;
             const double reach = std::hypot(m.contact_brace.x - m.position.x, m.contact_brace.z - m.position.z);
-            const double off_axis = std::hypot(m.contact_brace.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
-                                               m.contact_brace.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
+            const double off_axis =
+                std::hypot(m.contact_brace.x - m.pipe_centre_x, m.contact_brace.z - m.pipe_centre_z);
             if (!m.on_pipe || std::abs(m.contact_brace.y - shin_y) > 0.02 || reach > kBraceReachM + 0.02 ||
                 off_axis > kRiserOffAxisM) {
                 ++brace_off_her;
