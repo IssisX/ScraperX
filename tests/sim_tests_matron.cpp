@@ -2034,6 +2034,7 @@ void run_matron_remaining() {
     run_matron_balance();
     run_matron_pipe();
     run_matron_room();
+    run_matron_shape();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

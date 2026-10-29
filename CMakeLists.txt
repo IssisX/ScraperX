@@ -55,6 +55,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_routecraft.cpp
     src/sim/matron_found_climb.cpp
     src/sim/matron_contact.cpp
+    src/sim/matron_shape.cpp
     src/sim/matron_stalk.cpp
     src/sim/matron.cpp
     src/sim/matron_traversal.cpp
@@ -215,6 +216,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_matron_traverse.cpp
         tests/sim_tests_matron_pursuit.cpp
         tests/sim_tests_matron_stand.cpp
+        tests/sim_tests_matron_shape.cpp
         tests/sim_tests_matron_chase.cpp
         tests/sim_tests_matron_climb.cpp
         tests/sim_tests_matron_climb_support.cpp
@@ -231,7 +233,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-ladder matron-hearing matron-sight matron-stalk matron-climb-support matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab)
+    foreach(slice matron-ladder matron-hearing matron-sight matron-stalk matron-climb-support matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-shape)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()

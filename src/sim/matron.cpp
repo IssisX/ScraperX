@@ -77,6 +77,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
       player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
+    build_stance_shapes();
     // Her deck: down the middle of each band, the catwalk across, and in off
     // the north band round the ladder's west rail to its foot; her post in the
     // mouth of Stage A's cage, facing out over the band; the cage's eye on its
@@ -3341,6 +3342,9 @@ void Matron::post_step(const float dt) {
     }
     fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
     refresh_view();
+    // Her collision body for the stance she is in now (matron_shape.cpp).
+    step_stance(dt);
+    refresh_shape_view();
 }
 
 bool Matron::caught(const RVec3 player) const noexcept {

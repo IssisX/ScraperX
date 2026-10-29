@@ -1806,6 +1806,10 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["down_s"] = state.down_s;
     out["down_left_s"] = state.down_left_s;
     out["on_pipe"] = state.on_pipe;
+    out["stance"] = static_cast<int>(state.stance);
+    out["shape_a"] = godot::Vector3(state.shape_a.x, state.shape_a.y, state.shape_a.z);
+    out["shape_b"] = godot::Vector3(state.shape_b.x, state.shape_b.y, state.shape_b.z);
+    out["shape_r"] = state.shape_r;
     out["pipe_head_down"] = state.pipe_head_down;
     out["pipe_sliding"] = state.pipe_sliding;
     out["pipe_stunned"] = state.pipe_stunned;
