@@ -1,9 +1,29 @@
 {
   "receiving_iona_recovery": {
-    "event_id": "7091093bee394cb986ba493394e1d02a",
+    "event_id": "chatterbox:receiving_iona_recovery:seed750040",
     "text": "Find your footing. You can try another way up.",
-    "clean_sha256": "893de819779b4e91e8b2020b61c38f3b7dba660ecdcb4b378c4854eb0136594b",
-    "radio_sha256": "05a2689a99c45ab03f3784d35682c6e441e929c09233fe559817bfc493ce3d02"
+    "speaker": "IONA",
+    "voice": "Chatterbox from Piper en_US-ljspeech-high",
+    "exaggeration": 0.5,
+    "cfg_weight": 0.5,
+    "temperature": 0.8,
+    "seed": 750040,
+    "take": 0,
+    "whisper": "Find your footing. You can try another way up.",
+    "match": 1.0,
+    "takes": [
+      {
+        "take": 0,
+        "seed": 750040,
+        "seconds": 2.68,
+        "match": 1.0,
+        "heard": "Find your footing. You can try another way up.",
+        "rejected": null
+      }
+    ],
+    "generated_central": "2026-10-29T08:46:39-05:00",
+    "clean_sha256": "5f6efff21760e200c910b3cb90b6476c34d7f2c62e39bda2faa957ba57ed8cea",
+    "radio_sha256": "ef84d292a9a3667e4f0cf068f29df301e73a40589e74078fc95f757241ad4939"
   },
   "receiving_iona_come_look": {
     "event_id": "04b69063058f479eb84a77048211a2dc",
@@ -12,10 +32,30 @@
     "radio_sha256": "164710bf0c9f48c9999b0ce30723968fd0815c4814599dbf94122c377c767ecc"
   },
   "receiving_iona_freight_one": {
-    "event_id": "4a14f252b17e4d3882974b44836af064",
+    "event_id": "chatterbox:receiving_iona_freight_one:seed589540",
     "text": "Freight One is eleven metres up. Find firm footing there. The crane yard is ahead.",
-    "clean_sha256": "4e19bad3520cd95e6de493c4f36b9bb74a62a81951a8373ce5066b12cf8fc5ed",
-    "radio_sha256": "d0c60e870ebf7c7d1d84f08e35f8103ba8a98eef62fe1ac14ce8f72e9ca29238"
+    "speaker": "IONA",
+    "voice": "Chatterbox from Piper en_US-ljspeech-high",
+    "exaggeration": 0.5,
+    "cfg_weight": 0.5,
+    "temperature": 0.8,
+    "seed": 589540,
+    "take": 0,
+    "whisper": "Freight 1 is 11 meters up. Find firm footing there. The crane yard is ahead.",
+    "match": 1.0,
+    "takes": [
+      {
+        "take": 0,
+        "seed": 589540,
+        "seconds": 5.03,
+        "match": 1.0,
+        "heard": "Freight 1 is 11 meters up. Find firm footing there. The crane yard is ahead.",
+        "rejected": null
+      }
+    ],
+    "generated_central": "2026-10-29T08:28:02-05:00",
+    "clean_sha256": "67784d52a171734fd9f2f38362f8b6510eba07a862bc42d3be8e5d75121e30ee",
+    "radio_sha256": "2dbbe321f0ef02f9b37383e2ed325898216ef78a273c1abfa53271791f77d979"
   },
   "freight_one_iona_crown": {
     "event_id": "58489907625b4939832b162455975b0e",
@@ -24,10 +64,46 @@
     "radio_sha256": "404e1a6c2d183ec4cadb5485d467f344fbbde7253ea2df4bfe7b24a3077faa18"
   },
   "receiving_iona_keep_the_height": {
-    "event_id": "47f31830c98b4793b027acc7e72c9f9e",
+    "event_id": "chatterbox:receiving_iona_keep_the_height:seed146220",
     "text": "You’ve found your way up. Keep the height. The Crown is still above you.",
-    "clean_sha256": "cc7f00a79f8372944d43f969976e565c3b766763248b82a3824073e023ce7adc",
-    "radio_sha256": "85212339e91d3ab045ca71b3c364ba6651d7edcf49c06bdce73e99bf8ac2a8ad"
+    "speaker": "IONA",
+    "voice": "Chatterbox from Piper en_US-ljspeech-high",
+    "exaggeration": 0.5,
+    "cfg_weight": 0.5,
+    "temperature": 0.8,
+    "seed": 146220,
+    "take": 0,
+    "whisper": "You found your way up. Keep the height. The crown is still above you.",
+    "match": 0.923,
+    "takes": [
+      {
+        "take": 0,
+        "seed": 146220,
+        "seconds": 3.84,
+        "match": 0.923,
+        "heard": "You found your way up. Keep the height. The crown is still above you.",
+        "rejected": null
+      },
+      {
+        "take": 1,
+        "seed": 146221,
+        "seconds": 4.3,
+        "match": 0.923,
+        "heard": "You found your way up. Keep the height. The crown is still above you.",
+        "rejected": null
+      },
+      {
+        "take": 2,
+        "seed": 146222,
+        "seconds": 4.16,
+        "match": 0.923,
+        "heard": "You found your way up, keep the height. The crown is still above you.",
+        "rejected": null
+      }
+    ],
+    "generated_central": "2026-10-29T08:43:24-05:00",
+    "clean_sha256": "039f95ff3c2fb670bbae2cb034ff1e4f40fa31bd6c73ed78b86169e2ea3742f5",
+    "radio_sha256": "4326a031aafdc5c9ddd01fbcf96e34c9133fcf02c1566b6fb54bc0073efb0875"
   },
   "vale_contact_ro": {
     "event_id": "2e1369c8a58044e2982b8b91ae968464",
@@ -54,12 +130,30 @@
     "radio_sha256": "73bc1a423ddc34def9464798ba8e1f7f974038ad603e74f57d5024e63c859114"
   },
   "double_ari_name": {
-    "event_id": "c1d1ce333da249ea98b993d5b1769db6",
+    "event_id": "chatterbox:double_ari_name:seed927050",
     "text": "Ari Ward.",
     "speaker": "ARI",
-    "voice_id": "am_adam",
-    "clean_sha256": "43fa14145410219f47dd758934d8a6ed2133aa981824a7e9987c1e462e1d7002",
-    "radio_sha256": "0aec53e44783d1db06a65a562f64ded55ec274235fd8e97797a3afcaf1530e30"
+    "voice": "Chatterbox from Piper en_US-bryce-medium",
+    "exaggeration": 0.45,
+    "cfg_weight": 0.5,
+    "temperature": 0.8,
+    "seed": 927050,
+    "take": 0,
+    "whisper": "Ari Ward.",
+    "match": 1.0,
+    "takes": [
+      {
+        "take": 0,
+        "seed": 927050,
+        "seconds": 0.89,
+        "match": 1.0,
+        "heard": "Ari Ward.",
+        "rejected": null
+      }
+    ],
+    "generated_central": "2026-10-29T07:43:11-05:00",
+    "clean_sha256": "6cb384c65efb586ceb684d3a571868ba0740234e438d314facd6028b707a4053",
+    "radio_sha256": "dc628c226d0f0d1eca775f65b2086c6f39d7b581306b91b159ef824c768d1a0d"
   },
   "double_ro_face": {
     "event_id": "54d63f99e38340af965fd8860711b2c7",
@@ -297,13 +391,30 @@
     "radio_sha256": "6b1457a26f41db2325a33750043373ded6c924f2abf97ba727f6a0931dff5022"
   },
   "handover_dev_received": {
-    "event_id": "cf6ac74ee4db4c7c8988d4835a83e9cf",
+    "event_id": "chatterbox:handover_dev_received:seed348260",
     "text": "Dev Arlen. Both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying. Don't reconnect anything on the strength of a fucking signature.",
     "speaker": "DEV",
-    "voice_id": "bm_george",
-    "generated_utc": "2026-10-21T20:00:52.823701+00:00",
-    "clean_sha256": "9f66b1506aea536dc3f0e943d9d84e03749e3d3e631ac9d0a6cbd1de369da7cf",
-    "radio_sha256": "5b5bc70f937e0ec3a57f6107e7030384c86f71c81245571690d62c41aa68ef30"
+    "voice": "Chatterbox from Piper en_GB-vctk-medium speaker p227",
+    "exaggeration": 0.55,
+    "cfg_weight": 0.5,
+    "temperature": 0.8,
+    "seed": 348260,
+    "take": 0,
+    "whisper": "Dev Arlen, both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying, don't reconnect anything on the strength of a fucking signature.",
+    "match": 1.0,
+    "takes": [
+      {
+        "take": 0,
+        "seed": 348260,
+        "seconds": 8.18,
+        "match": 1.0,
+        "heard": "Dev Arlen, both versions received. This proves the statement was changed. It doesn't tell me what the return is carrying, don't reconnect anything on the strength of a fucking signature.",
+        "rejected": null
+      }
+    ],
+    "generated_central": "2026-10-29T07:47:25-05:00",
+    "clean_sha256": "4f1b12763b1bb0a6749466fa2d902a39b962d554d6a8f42d6149599c5babcef2",
+    "radio_sha256": "dd4de0662b275b233fd67e9402a000d722ac0875b71ff2ba8f08e126f3abe007"
   },
   "handover_ro_ari_first": {
     "event_id": "b7798ffa58b4408fa93b175b7bc7bd60",
