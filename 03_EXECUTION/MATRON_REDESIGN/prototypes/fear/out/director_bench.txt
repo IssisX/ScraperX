@@ -1,1 +1,0 @@
-FEAR_BENCH frames=20000 us_per_frame=3.61 cues=0

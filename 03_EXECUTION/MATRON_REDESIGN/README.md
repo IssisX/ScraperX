@@ -66,6 +66,10 @@ on, and that agent's own records: `shared_survival/HANDOFF.md`,
 
 ## What is here
 
+> **Archived 2026-10-29:** `panel_results/`, `prototypes/`, `routecraft_evidence/` and the
+> shared-survival plan and test log below are out of the tree. Every file, what it was and how
+> to get it back is in `03_EXECUTION/ARCHIVE_INDEX.md`.
+
 - `panel_results/` holds what the design workflows returned, verbatim.
   - `wf_a3b89fc2-b78.json` is the redesign's prototype tracks. The body track
     and the technique track finished. The skin, face and eyes track, the scares
