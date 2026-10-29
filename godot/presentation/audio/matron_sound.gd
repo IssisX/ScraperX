@@ -44,10 +44,8 @@ const TURN_WINDUP_S := 0.9
 const TURN_CYCLE_S := 0.5
 const TURN_BURST_S := 0.2
 const TURN_JOINTS_S := 0.4
-# Listening: after LISTEN_CROAK_S, one time in three, a croak.
-const LISTEN_CROAK_S := 2.5
-# Idle: searching within SEARCH_M, a sniff or a croak every SEARCH_GAP_S;
-# shuffling, or at her post and still, within IDLE_M, a cluck or a swallow
+# Idle: searching within SEARCH_M, a sniff every SEARCH_GAP_S;
+# shuffling, or at her post and still, within IDLE_M, a swallow
 # every IDLE_GAP_S.
 const SEARCH_M := 30.0
 const SEARCH_GAP_S := Vector2(4.0, 8.0)
@@ -68,7 +66,6 @@ var _on := false
 var _head := Vector3.ZERO
 var _dt := 0.0
 var _was_seen := false
-var _stage_seen := -1
 var _turn_seen := 0
 var _burst := false
 var _state_seen := -1
@@ -82,7 +79,6 @@ var _leaps_seen := -1
 var _climbs_seen := -1
 var _catches_seen := -1
 var _takes_seen := -1
-var _fooled_seen := -1
 var _unrigs_seen := -1
 var _pipe_holds_seen := -1
 var _pipe_flanges_seen := -1
@@ -100,8 +96,6 @@ var _rattle_in := 0.0
 var _pipe_scrape_in := 0.0
 var _screech_in := 0.0
 var _cry_fall := false
-var _listen_s := 0.0
-var _listen_rolled := false
 var _idle_kind := 0
 var _idle_in := 0.0
 # Her hold (get_matron_hold_state), heard only on what it does (the spec's
@@ -111,14 +105,12 @@ var _idle_in := 0.0
 var _encounter := 0
 var _holding := false
 var _laughed := false
-var _grabs_seen := -1
 var _carries_seen := -1
 var _dangles_seen := -1
 var _beat_seen := -1
 var _tears_seen := -1
 var _leg_tears_seen := -1
 var _releases_seen := -1
-var _spares_seen := -1
 var _claims_seen := -1
 var _hang_seen := false
 var _let_go_seen := -1
@@ -166,10 +158,6 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		_audio.matron_dread(head, d, stage)
 		dread_in = DREAD_REST_S
 	_was_seen = sees
-	# A stage up: a croak (and her layers swap their bed and growl).
-	if on and _stage_seen >= 0 and stage > _stage_seen:
-		_cue(&"matron_croak", head, -4.0, _pitch())
-	_stage_seen = stage
 	# The Turn: her loops cut (matron_layers) and her joints going in the
 	# wind-up; the shriek as she lunges, and a slam at every burst of it.
 	if turn != _turn_seen:
@@ -225,21 +213,15 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	_throws_seen = throws
 	_leaps_seen = leaps
 	_climbs_seen = climbs
-	# A catch: she sniffs at it. A take: a cluck, then her laugh. Fooled (a
-	# noise she ran to, and nobody there): a croak.
+	# A catch: she sniffs at it. A take: her laugh follows.
 	var catches := int(data.get("catches", 0))
 	if on and _catches_seen >= 0 and catches > _catches_seen:
 		_cue(&"matron_sniff", head, 0.0, _pitch())
 	_catches_seen = catches
 	var takes := int(data.get("takes", 0))
 	if on and _takes_seen >= 0 and takes > _takes_seen:
-		_cue(&"matron_cluck", head, 0.0, _pitch())
 		_due(0.3, &"matron_laugh", head, -6.0, _pitch())
 	_takes_seen = takes
-	var fooled := int(data.get("fooled", 0))
-	if on and _fooled_seen >= 0 and fooled > _fooled_seen:
-		_cue(&"matron_croak", head, -2.0, _pitch())
-	_fooled_seen = fooled
 	# At a rigged cage's eye: the shackle rattled, then its clang off.
 	if on and state == STATE_UNRIGGING and speed < 0.3:
 		_rattle_in -= delta
@@ -307,19 +289,10 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	if _alive_seen == 1 and alive == 0 and d <= REACH_M:
 		_cue(&"hit_heavy", center, 4.0, 0.5)
 	_alive_seen = alive
-	# Listening: silent, and after a while, now and then, a croak.
+	# Listening stays silent; idle cues pause while she listens.
 	var listening := on and (state == STATE_PEERING or bool(data.get("pipe_listening", false)))
-	if listening:
-		_listen_s += delta
-		if _listen_s >= LISTEN_CROAK_S and not _listen_rolled:
-			_listen_rolled = true
-			if randf() < 1.0 / 3.0:
-				_cue(&"matron_croak", head, 0.0, _pitch())
-	else:
-		_listen_s = 0.0
-		_listen_rolled = false
-	# Idle, now and then (never while she listens): searching, a sniff or a
-	# croak; shuffling, or at her post and still, a cluck or a swallow.
+	# Idle, now and then (never while she listens): a sniff while searching,
+	# or a swallow while shuffling or guarding.
 	var idle := 0
 	if on and not listening and state == STATE_SEARCHING and d < SEARCH_M:
 		idle = 1
@@ -333,10 +306,10 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		if _idle_in <= 0.0:
 			if idle == 1:
 				_idle_in = randf_range(SEARCH_GAP_S.x, SEARCH_GAP_S.y)
-				_cue(&"matron_sniff" if randf() < 0.5 else &"matron_croak", head, 0.0, _pitch())
+				_cue(&"matron_sniff", head, 0.0, _pitch())
 			else:
 				_idle_in = randf_range(IDLE_GAP_S.x, IDLE_GAP_S.y)
-				_cue(&"matron_cluck" if randf() < 0.5 else &"matron_swallow", head, 0.0, _pitch())
+				_cue(&"matron_swallow", head, 0.0, _pitch())
 	# Her layers: the bed, her voice, her mouth.
 	_audio.matron_layers(delta, data, on, head, d, player_position.y)
 
@@ -361,11 +334,6 @@ func hear_hold(hold: Dictionary) -> void:
 		_drop_due(_encounter)
 	_holding = holding
 	_audio.matron_encounter = _encounter if holding else 0
-	# Her hand closing on the ankle: a cluck.
-	var grabs := int(hold.get("grabs", 0))
-	if on and _grabs_seen >= 0 and grabs > _grabs_seen:
-		_cue(&"matron_cluck", _head, 0.0, 1.0)
-	_grabs_seen = grabs
 	# Lifted (a carry), then held out (a dangle): a breath each.
 	var carries := int(hold.get("carries", 0))
 	if on and _carries_seen >= 0 and carries > _carries_seen:
@@ -412,7 +380,7 @@ func hear_hold(hold: Dictionary) -> void:
 		_cue(&"matron_effort", _head, -3.0, 1.0)
 	_hang_seen = hang
 	# Let go over the drop, at a ledge, set back on the deck, or claimed: the
-	# hold's laugh if it has not had it, else a breath (a spare: a cluck).
+	# hold's laugh if it has not had it, else a breath.
 	var let_go := int(hold.get("fatal_release_beat", 0))
 	var releases := int(hold.get("releases", 0))
 	var claims := int(hold.get("claims", 0))
@@ -425,10 +393,6 @@ func hear_hold(hold: Dictionary) -> void:
 	_let_go_seen = let_go
 	_releases_seen = releases
 	_claims_seen = claims
-	var spares := int(hold.get("spares", 0))
-	if on and _spares_seen >= 0 and spares > _spares_seen:
-		_cue(&"matron_cluck", _head, 0.0, 1.0)
-	_spares_seen = spares
 
 
 # One of her limbs put down on the steel on all fours (matron_view.gd hands

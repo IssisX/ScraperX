@@ -525,9 +525,15 @@ void run_matron_balance() {
         // straight along the band, and the throw's way to her is clear.
         require(walk_to(h, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "matron heave: west along the band with it");
         // Still, the toolbox held, until she comes for the climber in sight:
-        // from 9 m the view kept on her (where she will be a moment on, as a
-        // thrower leads a runner), and the throw at 3.4 m.
+        // from 9 m the view on her (where she will be a moment on, as a
+        // thrower leads a runner). His face seen, she stalks him (her stalk,
+        // matron_stalk.cpp): she stands under his gaze, so he looks off along
+        // the band and lets her come in to her band (3 m); within 3.4 m the
+        // view back on her, and the throw once the box has come round in
+        // front of him and settled (thrown mid-swing it flies off her line).
         bool coming = false;
+        int turned = 0;
+        auto box_was = h.kit_body_position(h.kit_body_index(box));
         auto last = h.matron_state().position;
         for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
             tick(h);
@@ -540,8 +546,24 @@ void run_matron_balance() {
             last = m.position;
             const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
             if (m.state == kStateHunting && m.stage == 0 && d < 9.0) {
-                (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
-                coming = d < 3.4;
+                if (turned > 0 || (m.stalking && d < 3.4)) {
+                    // In at her band's edge: the view back on her, and the
+                    // throw once the box has come round in front of him.
+                    (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                    const auto b = h.kit_body_position(h.kit_body_index(box));
+                    const bool in_front = ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
+                    ++turned;
+                    require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
+                            "matron heave: the toolbox comes round in front of him");
+                    const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
+                    box_was = b;
+                    coming = in_front && swing < 0.002 && turned >= static_cast<int>(Simulation::kTickRateHz) / 4;
+                } else if (m.stalking) {
+                    (void)h.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
+                } else {
+                    (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                    coming = d < 3.4;
+                }
             }
         }
         require(coming, "matron heave: a pest comes for the climber");
@@ -963,12 +985,15 @@ void run_matron_crash() {
         require(drawn.state == kStateHunting && !drawn.wary &&
                     !drawn.lead_seen && std::hypot(drawn.lead_x - crash.at.x, drawn.lead_z - crash.at.z) < 0.01,
                 "matron crash: the hit draws her: she goes for it, not wary");
-        // Away south, crouched; she goes to the hit, searches it, finds nobody.
+        // Away, crouched, off the band's open line to the east rim beside the
+        // crates; she goes to the hit, searches it, finds nobody. (Her sight
+        // is her eyes, 1.69 m up: crouched in the open down the band, as this
+        // went before, she sees him over the crates.)
         (void)s.set_crouch_input(true);
         double closest = 1.0e9;
         bool stood_down = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
-            (void)steer(s, 24.5, Matron::kBandSouthZ, false);
+            (void)steer(s, 26.5, -151.0, false);
             tick(s);
             const auto m = s.matron_state();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
@@ -1442,6 +1467,20 @@ void run_matron() {
         (void)s.set_move_input(0.0, 0.0);
         bool winding = false;
         for (int i = 0; i < 45 * static_cast<int>(Simulation::kTickRateHz) && !winding; ++i) {
+            // He waits looking on up the band, his face off her as she
+            // comes: a face turned to her, seen, is her stalk (matron-stalk,
+            // matron_stalk.cpp), which holds her sight's Turn back. This leg
+            // meets the Turn.
+            {
+                const auto her = s.matron_state().position;
+                const auto me = s.snapshot().player_position;
+                const double hx = her.x - me.x;
+                const double hz = her.z - me.z;
+                const double l = std::hypot(hx, hz);
+                if (l > 0.1) {
+                    (void)s.set_facing(-hx / l, -hz / l);
+                }
+            }
             tick(s);
             winding = s.matron_state().turn == static_cast<std::uint8_t>(Matron::Turn::Windup);
         }
@@ -1609,7 +1648,9 @@ void run_matron() {
         // Come within her reach and the Turn takes her over it.
         bool leapt = false;
         for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && !leapt; ++i) {
-            (void)steer(s, -2.0, Matron::kRingNorthZ, false);
+            // At a run: prey that runs at her is no stalk's (her stalk is
+            // spent on his run heard, matron_stalk.cpp), and the Turn has her.
+            (void)steer(s, -2.0, Matron::kRingNorthZ, true);
             tick(s);
             leapt = s.matron_state().leaps > 0;
         }

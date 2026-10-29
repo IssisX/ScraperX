@@ -32,6 +32,8 @@ struct ClimbWorld {
         BodyCreationSettings settings(new BoxShape(half), at, Quat::sIdentity(),
                                       EMotionType::Static, detail::object_layers::kStatic);
         settings.mIsSensor = sensor;
+        // A fixture body may be made kinematic or dynamic later (SetMotionType).
+        settings.mAllowDynamicOrKinematic = true;
         const BodyID id = physics.GetBodyInterface().CreateAndAddBody(settings, EActivation::DontActivate);
         bodies.push_back(id);
         return id;
@@ -44,7 +46,7 @@ struct ClimbWorld {
     void tick(Matron &matron) {
         // A visible noisy climber on the known ladder yields a head-of-ladder
         // lead through the normal perception and Turn initiation paths.
-        matron.pre_step(dt, RVec3(5, 160, -129.55), 1.0F);
+        matron.pre_step(dt, Stimulus(RVec3(5, 160, -129.55), 1.0F));
         physics.Update(dt, 1, &temp, &jobs);
         matron.post_step(dt);
     }
@@ -81,7 +83,7 @@ void test_board_ends_at_wall() {
     world.awake(matron);
     world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(0, g + Matron::kStandCentre, -131.5), EActivation::Activate);
     const auto tick = [&] {
-        matron.pre_step(ClimbWorld::dt, RVec3(40, g, -100), 0.0F);
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
         world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
         matron.post_step(ClimbWorld::dt);
     };
@@ -162,7 +164,7 @@ BoardWallRun board_wall_run(const unsigned seed, const bool up) {
                            : RVec3(0, g + h + Matron::kStandCentre, a_z);   // down: from atop A
     world.physics.GetBodyInterface().SetPosition(matron.body(), start, EActivation::Activate);
     const auto tick = [&] {
-        matron.pre_step(ClimbWorld::dt, RVec3(40, g, -100), 0.0F);
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
         world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
         matron.post_step(ClimbWorld::dt);
     };
@@ -518,7 +520,7 @@ struct MatronStateExitAccess {
         // (b) While calm_s_ > 0, pre_step in Hunting transitions to Shuffling (patrols away)
         m.state_ = Matron::State::Hunting;
         m.calm_s_ = 25.0F;
-        m.pre_step(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 1.0F);
+        m.pre_step(ClimbWorld::dt, Stimulus(RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 1.0F));
         const bool patrols_away = m.state_ == Matron::State::Shuffling && m.calm_s_ > 20.0F;
         return reel_backed_off && patrols_away;
     }
@@ -535,7 +537,7 @@ struct MatronStateExitAccess {
         m.throw_cooldown_s_ = 5.0F;
         m.fetch_refused_s_ = 5.0F;
         m.climb_retry_s_ = 2.0F;
-        m.pre_step(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 0.0F);
+        m.pre_step(ClimbWorld::dt, Stimulus(RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 0.0F));
         return m.grab_cooldown_s_ < 10.0F &&
                m.shove_cooldown_s_ < 2.0F &&
                m.calm_s_ < 10.0F &&
@@ -565,14 +567,14 @@ struct MatronStateExitAccess {
         m.trap_ = Matron::Trap::Holding;
         m.level_ = 0;
         m.bay_level_ = 2;
-        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false, true);
+        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false);
         const bool trap_holding_exited = m.trap_ == Matron::Trap::Off;
 
         m.trap_ = Matron::Trap::ClimbOut;
         m.level_ = 2;
         m.bay_level_ = 2;
         m.trap_s_ = 21.0F;
-        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false, true);
+        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false);
         const bool trap_climbout_exited = m.trap_ == Matron::Trap::Off;
 
         // (c) RoutecraftWay::cancel clears found_.active and routecraft_recovering_

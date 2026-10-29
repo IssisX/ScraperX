@@ -34,7 +34,7 @@ struct HearingWorld {
     }
     BodyID box(const Vec3 half, const RVec3 at) { return shape(new BoxShape(half), at); }
     void tick(Matron &matron, const RVec3 player = RVec3(80, 144, -150), const float loudness = 0.0F) {
-        matron.pre_step(dt, player, loudness);
+        matron.pre_step(dt, Stimulus(player, loudness));
         physics.Update(dt, 1, &temp, &jobs);
         matron.post_step(dt);
         require(matron.view().acoustic_queries <= Matron::kMaxAcousticQueries,
@@ -126,7 +126,9 @@ std::array<float, 6> evidence_replay() {
             matron.view().state != Matron::State::Searching,
             "matron hearing: quiet expires pursuit and even an unreachable search");
     const auto at = matron.view();
-    const RVec3 visible(at.x + 2, at.y, at.z);
+    // 2 m in front of her eyes (her sight has a field of view: matron.hpp
+    // kSightHalfFovRad); it was 2 m east of her, wherever she faced.
+    const RVec3 visible(at.x + 2 * std::sin(at.eye_yaw), at.y, at.z + 2 * std::cos(at.eye_yaw));
     world.tick(matron, visible);
     require(matron.view().sees_player && matron.view().lead_seen && matron.view().lead_valid,
             "matron hearing: real visual reacquisition replaces acoustic uncertainty");

@@ -81,7 +81,7 @@ void Matron::begin_grab(const RVec3 player) {
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     hand_target_ = at + shoulder_local();
     hand_target_v_ = Vec3::sZero();
-    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
 }
 
 void Matron::grip_taken() noexcept {
@@ -1101,7 +1101,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             over = (hold_s_ >= kFatalWatchS && watch_still_s_ >= kFatalStillS) || hold_s_ >= kFatalWatchMaxS;
         }
         if (over) {
-            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
             end_hold(State::Searching);
         }
         break;
@@ -1534,7 +1534,7 @@ void Matron::begin_reel(const RVec3 at, const RVec3 player) {
 // (Staggering), then she is after him by sound, her hands off him
 // kRegrabAfterTearS.
 void Matron::end_reel(const RVec3 player) {
-    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
     // Freed: no fatality to show (its path, its edge, and the way out over
     // its drop).
     fatal_path_ = FatalPath::None;

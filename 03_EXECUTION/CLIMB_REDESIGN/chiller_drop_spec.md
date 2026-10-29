@@ -206,7 +206,7 @@ Energy (rule 2): the rider gains 85 × 9.81 × 42.08 ≈ 35.1 kJ. The chiller re
 - `/home/user/ScraperX/03_EXECUTION/ASCENT/AS-007_WET_ISOLATION.md`: rewrite Stage E. Declare three models (door exposure, vent collar, seal friction), and update falsifier 2 and the result record.
 - `/home/user/ScraperX/03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`: cycle 10's E line.
 - `/home/user/ScraperX/00_START_HERE.md`: the 2026-10-06 row's "Replaced so far" (E on the rider's drop) and "Next: F to O".
-- `/home/user/ScraperX/03_EXECUTION/ACTIVE_GOAL_PROGRESS.md`: a new entry.
+- `/home/user/ScraperX/03_EXECUTION/ACTIVE_GOAL_PROGRESS.md`: a new entry (the log is archived since: `03_EXECUTION/ARCHIVE_INDEX.md`).
 
 ## 3. Presentation, sound and feel
 
