@@ -11,7 +11,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 **Working process and merging**
 1. Write to `ScraperX-Claude` or your own side branch; never `main`, never force-push (10-19, 10-22).
 2. Never edit `MANIFEST.txt`, `SHA256SUMS.txt` or the Governing Laws; never change the app id, keys or repo visibility (09-28, 10-19).
-3. Ready means merged: the integrator merges any PR green on proof steps 1-19 with a second agent's LAND and no open blocker, protected ones too, without asking; he can overturn it (10-28, 10-29: *"breadth-through-depth"*).
+3. Ready means merged: the integrator merges any PR with every proof job green but `publish-checkpoint` (off trunk it stops at signing) with a second agent's LAND and no open blocker, protected ones too, without asking; he can overturn it (10-28, 10-29: *"breadth-through-depth"*).
 4. Protected changes (test checks, world geometry, her force and physics limits) go only as a PR of just that change, with a plain before/after; the numbers may be wrong, but no agent moves them alone; an insignificant test failure goes to him as a decision (`CLAUDE.md`; 10-27).
 5. The shared workflow in `CLAUDE.md` holds (10-27).
 6. Never lose work: push as you go, unfinished work to a side branch (`-wip` when usage may run out); save all before an effort drop, model switch or spin-down; after a reset, check what exists first (10-20, 10-21).

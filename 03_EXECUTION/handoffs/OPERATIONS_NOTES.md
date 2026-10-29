@@ -28,3 +28,16 @@ tooling"). Each is checked against the workflow where it can be. Times are Centr
    `godot/addons/scraperx_native/bin/android/arm64/`, and zip `godot/` without `.godot/` and the
    linux library. The owner opens it in the Godot 4.7 editor on his phone (`00_START_HERE.md`
    rule 48). Source: the handoff, "Fast playtests" and "Local tooling".
+
+## The proof's layout (parallel jobs, 2026-10-29)
+
+`wo000-delivery-spine.yml` runs as parallel jobs: `host-build` (host native build, shared as an
+artifact) and `android-build` (arm64 cross-compile) start at once; then `native-tests` (4 shards:
+the unsliced athletic_traversal run with shared_survival and parkour_flow, whose log carries every
+falsifier PASS line; and three groups of the Matron ctest slices, the last of which takes every slice
+not named in the others), `godot-touch` (2 shards, the same scenario list as before, split at
+`touch_o`), `godot-audits-and-mix` (Fold runtime proof, the mix, solids, floating audit and the GDScript
+tests) and `android-apk`; last `publish-checkpoint` (evidence, signing, the trunk build artifact).
+Green means every job green but `publish-checkpoint`, which off trunk stops with the expected
+`sign-apks.py` KeyError. The old single job ran the full native binary twice (once under ctest, once
+directly for its PASS lines); it now runs once, under `ctest -V`.
