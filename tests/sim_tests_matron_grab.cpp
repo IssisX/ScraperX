@@ -182,9 +182,40 @@ void caught_at(Simulation &s, const double x, const double z, const double her_x
 
 // By the east band's rail at `z` (x 18), her 1.6 m along the band.
 void at_the_rail(Simulation &s, const double z) { caught_at(s, 18.0, z, 18.3, z + 1.6); }
+
+// The first catch is short because her pull reaches the shoulder's tear
+// load, not because a clock severs it. Measure from the actual ankle grip.
+void short_first_catch() {
+    struct Spot { double x, z, her_x, her_z; };
+    const std::array<Spot, 3> spots{{{18.0, -159.5, 18.3, -157.9},
+                                     {21.5, -145.0, 21.8, -143.4},
+                                     {-12.0, -132.0, -10.4, -131.7}}};
+    bool all_short = true;
+    for (const Spot &spot : spots) {
+        Simulation s(InitialSpawn::Deck154);
+        caught_at(s, spot.x, spot.z, spot.her_x, spot.her_z);
+        double closed = -1.0, pulling = -1.0, torn = -1.0;
+        for (int i = 0; i < 30 * 90 && torn < 0.0; ++i) {
+            s.debug_set_matron_stage(1);
+            tick(s);
+            const auto p = s.snapshot();
+            const auto m = s.matron_state();
+            if (closed < 0.0 && p.held_by_matron) closed = i / 90.0;
+            if (pulling < 0.0 && m.state == static_cast<int>(Matron::State::ArmPlay)) pulling = i / 90.0;
+            if (p.arm_tear_count > 0) torn = i / 90.0;
+        }
+        const double elapsed = torn - closed;
+        std::cout << "  matron short catch (" << spot.x << "," << spot.z << "): fingers=" << closed
+                  << " pull=" << pulling << " tear=" << torn << " elapsed=" << elapsed << " s\n";
+        all_short = all_short && closed >= 0.0 && torn >= 0.0 && elapsed >= 4.0 && elapsed <= 6.0;
+    }
+    require(all_short, "matron short catch: fingers-to-tear takes 4-6 s at the act rail and two other catch spots");
+    std::cout << "PASS scraperx_sim matron short catch: three spots, fingers-to-tear 4-6 s\n";
+}
 } // namespace
 
 void run_matron_grab() {
+    short_first_catch();
     // ---- a still body: taken, carried, dangled, let go aimed; no kill on touch ----
     std::uint64_t hash_a = 0;
     for (int pass = 0; pass < 2; ++pass) {
