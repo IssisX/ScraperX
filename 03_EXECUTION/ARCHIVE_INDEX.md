@@ -335,11 +335,22 @@ Design probes from 2026-10-20 (body, technique, skin, face and eyes, scares, fac
 | `03_EXECUTION/MATRON_REDESIGN/prototypes/skin_face_eyes/tools2/stage2_tex.py` | 19,137 | look-dev tool, pass 2: stage2_tex.py | draft | `46e65e2a` |
 | `03_EXECUTION/MATRON_REDESIGN/prototypes/skin_face_eyes/tools2/stage3_export.py` | 19,285 | look-dev tool, pass 2: stage3_export.py | draft | `46e65e2a` |
 
+## Second pass, 2026-10-29: three stale status files
+
+A second look at `03_EXECUTION/` the same day (3 files, 221,399 bytes). Every other file there is named by `00_START_HERE.md`, `README.md`, an authority document, a live document, or code, tests, CI or tools, and stays.
+
+**Get a file back:** `git show 5a663eb2:<path> > <path>`. `5a663eb2` (`ScraperX-Claude`) is the last commit that has all three.
+
+| Path | Bytes | What it was | Why archived | Back |
+|---|---|---|---|---|
+| `03_EXECUTION/ACTIVE_GOAL_PROGRESS.md` | 195,164 | the progress log of 2026-10-09 to 10-22: what each agent built, session by session, with the owner's calls inside it | handoff; a finished status log. Its facts are in the code, the tests and `00_START_HERE_ARCHIVE.md`. The owner calls in it that no rule or archive row carries were listed for the integrator (2026-10-29 report) | `5a663eb2` |
+| `03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_2026-10-28.md` | 14,672 | the first integrator's handoff of 2026-10-28, with the second integrator's evening update: landing order, CI facts, local tooling | handoff; the PRs it orders have landed or closed, and issue #3 is the board | `5a663eb2` |
+| `03_EXECUTION/MATRON_REDESIGN/shared_survival/HANDOFF.md` | 11,563 | the other agent's adoption handoff for `dot/matron-shared-survival` (2026-10-21): what was delivered, the integration contract, the falsifier table | handoff; built as the bay (`shared_survival/THE_BAY.md`); `src/sim/shared_survival.hpp` states the ownership and lifetime rules | `5a663eb2` |
+
 ## Kept, but bloated: condense next
 
 Live files left whole in this pass. Each line says what to cut and what must stay.
 
-- `03_EXECUTION/ACTIVE_GOAL_PROGRESS.md` (195,164 B): a progress log of 2026-10-09 to 10-22, but the tree's only copy of owner calls still in force: the Matron's stages and the story spine (2026-10-19, lines 1849-1886), the goal of 2026-10-19 night (1490), his running to-do (2121), the pressure ideas he has not picked (2201) and the decisions waiting on him (2214-2252). Move those to START_HERE rows or one short story document, then archive the log.
 - `03_EXECUTION/MATRON_REDESIGN/MULTI_DECK_INVENTORY.md` (156,235 B): its region and edge tables repeat `multi_deck_inventory.json`, the exam key `tools/matron/climb_inventory_diff.py` reads. Keep the runtime results and the UNVERIFIED list; let the JSON carry the rest.
 - `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` (89,297 B): code and slices cite §§2-3 (the rules and the chain). §§4-12, the as-built cycle contracts and goalsets (about 60 KB), are in code and tests and can come here.
 - `03_EXECUTION/KERNEL/` `WO-000` to `WO-013` and `03_EXECUTION/TEMPLATES/KERNEL_WORK_ORDER_TEMPLATE.md` (111,943 B): finished work orders whose content is in code and tests. Kept only because TDD §24, the Execution Protocol, `PLANNING/ASCENT_PRE_RESOLUTION.md` and START_HERE §§4 and 6 name each file. Archive them together once those pointers cite this index (authority edits: the owner's call).
@@ -347,7 +358,5 @@ Live files left whole in this pass. Each line says what to cut and what must sta
 - `03_EXECUTION/ASCENT/AS-004_NEEDLE_SEAT.md` (31,334 B) and `AS-005_CAGE_OR_SKIN.md` (15,061 B): PLANNED, not next (the stair stays), and AS-005 still quotes another branch's world. Archive them when START_HERE's ascent ledger and `ASCENT_PRE_RESOLUTION.md` §5 drop them.
 - `03_EXECUTION/MATRON_REDESIGN/HER_SOUND_VARIATION_SPEC.md` (33,273 B): the live L6 spec. Once L6 lands, cut it to the rules the code follows and the clip shortlist.
 - `03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md` (32,357 B): built and merged 2026-10-21. Cut it to the as-built facts, the deviations and what the code cites.
-- `03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_2026-10-28.md` (14,672 B): a dated handoff that still carries the landing order. Archive it when the next handoff or the issue #3 board replaces it, after its CI facts and local tooling notes move to `CLAUDE.md` or `REPO_MAP.md`.
-- `03_EXECUTION/MATRON_REDESIGN/shared_survival/HANDOFF.md` (11,563 B): fold its integration contract (ownership, lifetime, threading, what throws) into `src/sim/shared_survival.hpp`, then archive it.
 - `03_EXECUTION/MATRON_REDESIGN/README.md` (6,919 B): its "What is here" and "Left out" sections now describe archived files. Keep "In the game now" and the owner's words on her look.
 
