@@ -329,9 +329,13 @@ void Summit::build_ending() {
         steel.push_back(box(Vec3(0.12F, 0.12F, 0.5F), Vec3(x, 5.0F, 0.4F), Material::Steel, 0));
         steel.push_back(box(Vec3(0.2F, 0.2F, 0.15F), Vec3(x, 4.8F, 0), Material::Rust, 0));
     }
-    // The brake wheel and the release lever: real parts on the work side.
-    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(0, 0.6F, -0.75F), Material::Steel, 0));
-    steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(0, 1.2F, -0.75F), Material::Yellow, 0));
+    // A drive shaft brings the brake outboard of the load. Working beside
+    // the beam lets the climber see both bearings while the steel settles.
+    constexpr float brake_dx = kWorkX - kBeamX;
+    steel.push_back(box(Vec3(-brake_dx * 0.5F, 0.08F, 0.08F),
+                        Vec3(brake_dx * 0.5F, 2.45F, -0.75F), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(brake_dx, 0.6F, -0.75F), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(brake_dx, 1.2F, -0.75F), Material::Yellow, 0));
     ending_frame_ = kit_.add_body(kEndingFrameEntity, steel, origin, Quat::sIdentity(), 0, 0.8F);
     const std::vector<Part> beam{
         box(Vec3(3.35F, 0.06F, 0.3F), Vec3(0, -0.24F, 0), Material::Steel, 300),
@@ -371,7 +375,7 @@ void Summit::rig_chains(const float slack) {
 }
 
 bool Summit::work_in_reach(const RVec3 player) const noexcept {
-    const Vec3 to = Vec3(player - RVec3(kBeamX, kDeckTop + 0.9F, kWorkZ));
+    const Vec3 to = Vec3(player - RVec3(kWorkX, kDeckTop + 0.9F, kWorkZ));
     return to.LengthSq() <= 1.3F * 1.3F;
 }
 

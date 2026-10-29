@@ -59,3 +59,6 @@ unrigged again. Radio and the final descent replay per launch.
 - 14:34: Native first playthrough reached physical seating, unrigging, canopy and ground.
 - 14:36: Independent source review found the near-seat suspended-load and stowed-canopy gaps;
   tightened both predicates and added falsifiers. Candidate is rebuilding.
+- 15:04: Rendered touch proof exposed poor beam framing from the brake underneath the load.
+  Moved the brake beside the beam with a physical drive shaft and aimed the two beam stills
+  from the relocated work point. Native and touch proof on this revision remain pending.

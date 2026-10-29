@@ -1335,6 +1335,8 @@ func _pipe_drum_onto_her(device: int) -> bool:
 
 # The last beam, the foreman's admission and the way home. Only the initial
 # summit spawn is a fixture; every later move is real touch input.
+const ENDING_WORK := Vector2(-10.6, -185.25)
+const ENDING_BEAM_ENTITY := 2968
 func _summit_ending() -> bool:
 	_act_running = true
 	_act_draw(false)
@@ -1352,10 +1354,10 @@ func _play_summit_ending() -> bool:
 	if int(_native().get_summit_state()["ending"]) != 0:
 		return _fail("ending: arrival alone completed the beam")
 	if not (await _go(device, Vector2(8.0, -185.0), 0.15, 6.0) and
-			await _go(device, Vector2(-7.0, -185.25), 0.12, 12.0)):
+			await _go(device, ENDING_WORK, 0.12, 12.0)):
 		return _fail("ending: the walk to the chain block stalled at %s" % str(_position()))
-	await _face(Vector2(0.0, 1.0))
-	await _tilt(0.3)
+	await _look_at_point(_native().get_kit_body_transform(
+		_native().get_kit_body_index(ENDING_BEAM_ENTITY)).origin)
 	if not await _offered(&"summit_lower", "LOWER LAST BEAM"):
 		return _fail("ending: the chain block did not offer LOWER LAST BEAM")
 	await _pose("ending_hanging_beam")
@@ -1383,6 +1385,8 @@ func _play_summit_ending() -> bool:
 	if not await _wait_until(func() -> bool: return _main._radio.text == _main._radio.LINES[&"last_beam"], 1.0):
 		return _fail("ending: the foreman's final caption never followed seating")
 	var said := int(_main._radio.lines_said)
+	await _look_at_point(_native().get_kit_body_transform(
+		_native().get_kit_body_index(ENDING_BEAM_ENTITY)).origin)
 	await _pose("ending_seated_foreman")
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_native().get_summit_state()["sling_free"]), 0.5):

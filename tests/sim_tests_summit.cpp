@@ -209,7 +209,7 @@ void run_summit_ending() {
                 !s.summit_state().beam_seated && s.summit_state().ending == 0,
             "ending falsifier: time, summit arrival and remote commands cannot seat the beam");
     require(walk_to(s, 8.0, -185.0, 5.0, 0.15) &&
-                walk_to(s, Summit::kBeamX, Summit::kWorkZ, 12.0, 0.12),
+                walk_to(s, Summit::kWorkX, Summit::kWorkZ, 12.0, 0.12),
             "ending: walk to the chain block through the existing summit");
     (void)s.set_move_input(0, 0);
     require(s.summit_state().work_in_reach, "ending: the hands can reach the chain block");

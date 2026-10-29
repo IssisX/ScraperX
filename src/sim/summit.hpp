@@ -87,6 +87,7 @@ public:
     static constexpr float kBeamLift = 1.2F;
     static constexpr float kChainRate = 0.2F;
     static constexpr float kChainSlack = 0.25F;
+    static constexpr float kWorkX = -10.6F;
     static constexpr float kWorkZ = -185.25F;
     enum class Ending : std::uint8_t { Unfinished, Seated, Unrigged, Canopy, Home };
 
