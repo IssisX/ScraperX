@@ -1,5 +1,7 @@
 # Features the owner asked for that are not built yet (2026-10-29)
 
+**A menu only. The owner has not chosen any of these: build, plan or propose nothing from it until he says which.**
+
 Written by the outgoing integrator for the new one. These are the owner's own ideas, which
 he said more than once and which were parked, not dropped. They are ranked by how well they
 fit the work under way now: making the Matron intimate and interactive. Each one gives his
