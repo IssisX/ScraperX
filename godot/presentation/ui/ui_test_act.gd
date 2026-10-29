@@ -989,17 +989,28 @@ func _pipe_drum_to_corner(device: int) -> bool:
 	if int(_matron_state()["state"]) != MATRON_STATE_DORMANT:
 		return _fail("the carry woke her (state %d)" % int(_matron_state()["state"]))
 	await _face(Vector2(0.0, -1.0))
+	# The turn accelerates the free load around its handle. Let its actual
+	# pendulum motion die in the hands before releasing a round drum on steel;
+	# otherwise a small residual spin can roll it off the band while we climb.
+	await _seconds(2.0)
 	if not await _let_go_if_held(device):
 		return _fail("LET GO did not set the drum down")
 	await _seconds(1.0)
 	var drum := _pipe_drum_at()
 	print("SCRAPERX_PIPE drum set down at (%.2f, %.2f, %.2f), her state %d" % [drum.x, drum.y, drum.z,
 		int(_matron_state()["state"])])
-	# (The turn to set it down swings it: where it lies is near enough, in the
-	# corner and off her way along the edge.)
 	if drum.y < MATRON_DECK_Y or Vector2(drum.x, drum.z).distance_to(PIPE_DRUM_SET_FROM + Vector2(0.0, -0.6)) > 0.8:
 		return _fail("the drum did not come to rest in the corner by the shaft (at %s)" % str(drum))
-	_pipe_drum_rest = drum
+	# It must actually remain at rest without a hand on it. A one-second
+	# position check alone missed a slow roll that carried it off the deck
+	# before the player returned. Do not anchor, reset or freeze the body.
+	await _seconds(3.0)
+	var later := _pipe_drum_at()
+	var drift := Vector2(later.x - drum.x, later.z - drum.z).length()
+	print("SCRAPERX_PIPE drum after release: drift_m=%.3f at %s" % [drift, str(later)])
+	if later.y < MATRON_DECK_Y or drift > 0.15:
+		return _fail("the set-down drum kept rolling (drift %.3f m in 3 s, from %s to %s)" % [drift, str(drum), str(later)])
+	_pipe_drum_rest = later
 	return true
 
 
