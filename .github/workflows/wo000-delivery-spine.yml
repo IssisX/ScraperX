@@ -384,13 +384,32 @@ jobs:
               touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper \
               touch_stack touch_wet \
               touch_shop touch_crane \
-              touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
+              touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_pipe touch_matron_heave touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
               touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
-            timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
-              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
+            if [[ "${scenario}" == touch_matron_pipe ]]; then
+              mkdir -p artifacts/matron-pipe
+              timeout 900s xvfb-run -a -s "-screen 0 864x744x24" \
+                tools/godot/godot --path godot --resolution 864x744 --rendering-method gl_compatibility \
+                --fixed-fps 60 -- "--uitest=${scenario}" \
+                "--capture=${GITHUB_WORKSPACE}/artifacts/matron-pipe/pipe" \
+                2>&1 | tee -a artifacts/godot-uitest.log
+              test -s artifacts/matron-pipe/pipe_matron_pipe_braced_full.png
+              test -s artifacts/matron-pipe/pipe_matron_pipe_braced_grips.png
+            else
+              timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
+                -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
+            fi
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
+
+      - name: Attach Matron pipe contact stills
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Matron-pipe-contact-${{ github.sha }}
+          path: artifacts/matron-pipe/*.png
+          if-no-files-found: warn
 
       - name: Measure the mix a player hears
         shell: bash
